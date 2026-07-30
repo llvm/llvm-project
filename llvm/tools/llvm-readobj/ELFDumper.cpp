@@ -8402,7 +8402,45 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         this->reportUniqueWarning(RelSymOrErr.takeError());
         return;
       }
-      W.printString("Name", RelSymOrErr->Name);
+
+      std::string Name = RelSymOrErr->Name;
+      if (RelSymOrErr->Sym) {
+        int64_t Addend = R->Addend.value_or(0);
+        uint64_t SymValue = RelSymOrErr->Sym->st_value + Addend;
+        std::optional<const Elf_Shdr *> Sec;
+        if (Expected<const Elf_Shdr *> SecOrErr =
+                this->Obj.getSection(*RelSymOrErr->Sym, RelocSymTab,
+                                     this->getShndxTable(RelocSymTab)))
+          Sec = *SecOrErr;
+        else
+          consumeError(SecOrErr.takeError());
+
+        SmallVector<uint32_t> FuncSymIndexes =
+            this->getSymbolIndexesForFunctionAddress(SymValue, Sec);
+        if (!FuncSymIndexes.empty()) {
+          Name = this->getStaticSymbolName(FuncSymIndexes.front());
+        } else if (Addend != 0) {
+          if (Name.empty()) {
+            Name = "0x" + utohexstr(Addend);
+          } else {
+            if (Addend > 0)
+              Name += " + 0x" + utohexstr(Addend);
+            else
+              Name += " - 0x" + utohexstr(-Addend);
+          }
+        }
+      } else if (R->Addend && *R->Addend != 0) {
+        int64_t Addend = *R->Addend;
+        if (Name.empty()) {
+          Name = "0x" + utohexstr(Addend);
+        } else {
+          if (Addend > 0)
+            Name += " + 0x" + utohexstr(Addend);
+          else
+            Name += " - 0x" + utohexstr(-Addend);
+        }
+      }
+      W.printString("Name", Name);
     };
 
     auto PrintFunc = [&](uint64_t FuncPC) {

@@ -789,3 +789,138 @@ Symbols:
     Section:  .text
     Value:    0x17A0
 ...
+
+## Check relocatable object file handling with section symbol relocations and addends.
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t7 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=LLVM-RELOC-ADDEND -DFILE=%t7
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t7 2>&1 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=JSON-RELOC-ADDEND -DFILE=%t7
+
+# LLVM-RELOC-ADDEND:      CallGraph [
+# LLVM-RELOC-ADDEND-NEXT:   Function {
+# LLVM-RELOC-ADDEND-NEXT:     Name: caller
+# LLVM-RELOC-ADDEND-NEXT:     Version: 0
+# LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: Yes
+# LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x1234
+# LLVM-RELOC-ADDEND-NEXT:     NumDirectCallees: 2
+# LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
+# LLVM-RELOC-ADDEND-NEXT:       {
+# LLVM-RELOC-ADDEND-NEXT:         Name: local_func
+# LLVM-RELOC-ADDEND-NEXT:       }
+# LLVM-RELOC-ADDEND-NEXT:       {
+# LLVM-RELOC-ADDEND-NEXT:         Name: .text + 0x4
+# LLVM-RELOC-ADDEND-NEXT:       }
+# LLVM-RELOC-ADDEND-NEXT:     ]
+# LLVM-RELOC-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-RELOC-ADDEND-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-ADDEND-NEXT:   }
+# LLVM-RELOC-ADDEND-NEXT:   Function {
+# LLVM-RELOC-ADDEND-NEXT:     Name: local_func
+# LLVM-RELOC-ADDEND-NEXT:     Version: 0
+# LLVM-RELOC-ADDEND-NEXT:     IsIndirectTarget: No
+# LLVM-RELOC-ADDEND-NEXT:     TypeID: 0x0
+# LLVM-RELOC-ADDEND-NEXT:     NumDirectCallees: 0
+# LLVM-RELOC-ADDEND-NEXT:     DirectCallees [
+# LLVM-RELOC-ADDEND-NEXT:     ]
+# LLVM-RELOC-ADDEND-NEXT:     NumIndirectTargetTypeIDs: 0
+# LLVM-RELOC-ADDEND-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-ADDEND-NEXT:   }
+# LLVM-RELOC-ADDEND-NEXT: ]
+
+# JSON-RELOC-ADDEND:      [
+# JSON-RELOC-ADDEND-NEXT:   {
+# JSON-RELOC-ADDEND-NEXT:     "FileSummary": {
+# JSON-RELOC-ADDEND-NEXT:       "File": "[[FILE]]",
+# JSON-RELOC-ADDEND-NEXT:       "Format": "elf64-x86-64",
+# JSON-RELOC-ADDEND-NEXT:       "Arch": "x86_64",
+# JSON-RELOC-ADDEND-NEXT:       "AddressSize": "64bit",
+# JSON-RELOC-ADDEND-NEXT:       "LoadName": "<Not found>"
+# JSON-RELOC-ADDEND-NEXT:     },
+# JSON-RELOC-ADDEND-NEXT:     "CallGraph": [
+# JSON-RELOC-ADDEND-NEXT:       {
+# JSON-RELOC-ADDEND-NEXT:         "Function": {
+# JSON-RELOC-ADDEND-NEXT:           "Name": "caller",
+# JSON-RELOC-ADDEND-NEXT:           "Version": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": true,
+# JSON-RELOC-ADDEND-NEXT:           "TypeID": 4660,
+# JSON-RELOC-ADDEND-NEXT:           "NumDirectCallees": 2,
+# JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [
+# JSON-RELOC-ADDEND-NEXT:             {
+# JSON-RELOC-ADDEND-NEXT:               "Name": "local_func"
+# JSON-RELOC-ADDEND-NEXT:             },
+# JSON-RELOC-ADDEND-NEXT:             {
+# JSON-RELOC-ADDEND-NEXT:               "Name": ".text + 0x4"
+# JSON-RELOC-ADDEND-NEXT:             }
+# JSON-RELOC-ADDEND-NEXT:           ],
+# JSON-RELOC-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IndirectTypeIDs": []
+# JSON-RELOC-ADDEND-NEXT:         }
+# JSON-RELOC-ADDEND-NEXT:       },
+# JSON-RELOC-ADDEND-NEXT:       {
+# JSON-RELOC-ADDEND-NEXT:         "Function": {
+# JSON-RELOC-ADDEND-NEXT:           "Name": "local_func",
+# JSON-RELOC-ADDEND-NEXT:           "Version": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IsIndirectTarget": false,
+# JSON-RELOC-ADDEND-NEXT:           "TypeID": 0,
+# JSON-RELOC-ADDEND-NEXT:           "NumDirectCallees": 0,
+# JSON-RELOC-ADDEND-NEXT:           "DirectCallees": [],
+# JSON-RELOC-ADDEND-NEXT:           "NumIndirectTargetTypeIDs": 0,
+# JSON-RELOC-ADDEND-NEXT:           "IndirectTypeIDs": []
+# JSON-RELOC-ADDEND-NEXT:         }
+# JSON-RELOC-ADDEND-NEXT:       }
+# JSON-RELOC-ADDEND-NEXT:     ]
+# JSON-RELOC-ADDEND-NEXT:   }
+# JSON-RELOC-ADDEND-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    16
+    Content:         "9090909090909090909090909090909090"
+  - Name:            .llvm.callgraph
+    Type:            SHT_LLVM_CALL_GRAPH
+    Content:         "0003000000000000000034120000000000000200000000000000000000000000000000000000000000000000000000000000000000"
+  - Name:            .rela.llvm.callgraph
+    Type:            SHT_RELA
+    Link:            .symtab
+    Info:            .llvm.callgraph
+    Relocations:
+      - Offset:          0x2
+        Symbol:          caller
+        Type:            R_X86_64_64
+        Addend:          0
+      - Offset:          0x13
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          16
+      - Offset:          0x1b
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          4
+      - Offset:          0x25
+        Symbol:          .text
+        Type:            R_X86_64_64
+        Addend:          16
+Symbols:
+  - Name:            caller
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0
+    Size:            1
+  - Name:            local_func
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x10
+    Size:            1
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+...
