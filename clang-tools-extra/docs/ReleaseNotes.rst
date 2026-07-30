@@ -85,6 +85,9 @@ Objective-C
 Miscellaneous
 ^^^^^^^^^^^^^
 
+- The extract function tweak gained support for hoisting, i.e. returning decls declared
+  inside the selection that are used outside of the selection.
+
 Improvements to clang-doc
 -------------------------
 
