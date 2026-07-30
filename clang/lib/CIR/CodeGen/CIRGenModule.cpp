@@ -2036,6 +2036,10 @@ void CIRGenModule::replaceUsesOfNonProtoTypeWithRealFunction(
   // Iterate through all calls of the no-proto function.
   std::optional<mlir::SymbolTable::UseRange> symUses =
       oldFn.getSymbolUses(oldFn->getParentOp());
+
+  if (!symUses)
+    return;
+
   for (const mlir::SymbolTable::SymbolUse &use : symUses.value()) {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
@@ -3768,25 +3772,8 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
     const auto *vd = cast<VarDecl>(d);
     linkage = getCIRLinkageVarDefinition(vd);
   }
-
-  // Aliases that target weak symbols must themselves be marked weak.
-  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
-      d->isWeakImported())
-    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
-
-  // Create the alias op. If there is an existing declaration with the same
-  // name, erase it: any references to it via flat symbol reference will
-  // automatically resolve to the new alias.
-  if (entry) {
-    eraseGlobalSymbol(entry);
-    entry->erase();
-  }
-
-  // Aliases are always definitions, so the MLIR visibility should match the
-  // linkage rather than defaulting to private.
-  mlir::SymbolTable::Visibility visibility =
-      getMLIRVisibilityFromCIRLinkage(linkage);
-
+  //
+  // Create the alias op.
   // TODO(cir): Make GlobalAlias a separate op.
   cir::CIRGlobalValueInterface alias =
       isFunction ? mlir::cast<cir::CIRGlobalValueInterface>(
@@ -3796,6 +3783,30 @@ void CIRGenModule::emitAliasDefinition(GlobalDecl gd) {
                            .getOperation())
                  : mlir::cast<cir::CIRGlobalValueInterface>(
                        createGlobalOp(loc, mangledName, declTy).getOperation());
+
+  // Create the alias op. If there is an existing declaration with the same
+  // name, erase it: any references to it via flat symbol reference will
+  // automatically resolve to the new alias.
+  // However, function aliases actually change its type, so we have to replace
+  // uses of it.
+  if (entry) {
+    if (isFunction)
+      replaceUsesOfNonProtoTypeWithRealFunction(
+          entry, mlir::cast<cir::FuncOp>(alias.getOperation()));
+    eraseGlobalSymbol(entry);
+    entry->erase();
+  }
+
+  // Aliases that target weak symbols must themselves be marked weak.
+  if (d->hasAttr<WeakAttr>() || d->hasAttr<WeakRefAttr>() ||
+      d->isWeakImported())
+    linkage = cir::GlobalLinkageKind::WeakAnyLinkage;
+
+  // Aliases are always definitions, so the MLIR visibility should match the
+  // linkage rather than defaulting to private.
+  mlir::SymbolTable::Visibility visibility =
+      getMLIRVisibilityFromCIRLinkage(linkage);
+
   alias.setAliasee(aa->getAliasee());
   alias.setLinkage(linkage);
   mlir::SymbolTable::setSymbolVisibility(alias, visibility);
