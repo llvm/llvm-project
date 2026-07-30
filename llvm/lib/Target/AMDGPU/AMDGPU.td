@@ -2919,24 +2919,16 @@ def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
 
 // Byte 0 of the SDWA src_sel form is reachable through the plain VOP1 encoding
 // unless that encoding is unreliable.
-def HasCvtFP8SDWASrcSelNotVOP1Bug :
-  Predicate<"Subtarget->hasCvtFP8SDWASrcSel() &&"
-            " !Subtarget->hasCvtFP8VOP1Bug()">,
-  AssemblerPredicate<(all_of FeatureCvtFP8SDWASrcSel,
-                             (not FeatureCvtFP8VOP1Bug))>;
+def HasCvtFP8SDWASrcSelNotVOP1Bug : Predicate<"Subtarget->hasCvtFP8SDWASrcSel() && !Subtarget->hasCvtFP8VOP1Bug()">,
+  AssemblerPredicate<(all_of FeatureCvtFP8SDWASrcSel, (not FeatureCvtFP8VOP1Bug))>;
 
 // The byte_sel form of the fp8 to f32 conversion reads the source as e5m3 when
 // the clamp bit is set, replacing the plain op_sel form.
-def HasCvtFP8ByteSelE5M3 :
-  Predicate<"Subtarget->hasCvtFP8ByteSel() &&"
-            " Subtarget->hasFP8E5M3Insts()">,
+def HasCvtFP8ByteSelE5M3 : Predicate<"Subtarget->hasCvtFP8ByteSel() && Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of FeatureCvtFP8ByteSel, FeatureFP8E5M3Insts)>;
 
-def HasCvtFP8ByteSelNotE5M3 :
-  Predicate<"Subtarget->hasCvtFP8ByteSel() &&"
-            " !Subtarget->hasFP8E5M3Insts()">,
-  AssemblerPredicate<(all_of FeatureCvtFP8ByteSel,
-                             (not FeatureFP8E5M3Insts))>;
+def HasCvtFP8ByteSelNotE5M3 : Predicate<"Subtarget->hasCvtFP8ByteSel() && !Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of FeatureCvtFP8ByteSel, (not FeatureFP8E5M3Insts))>;
 
 def HasFmacLegacy32 : Predicate<"Subtarget->hasFmaLegacy32Insts() && Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureFmaLegacy32Insts, (not FeatureGFX12Insts))>;
