@@ -31,6 +31,7 @@
 #include <__memory/construct_at.h>
 #include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
+#include <__optional/comparison.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
 #include <__type_traits/desugars_to.h>
