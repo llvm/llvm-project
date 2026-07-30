@@ -22563,6 +22563,8 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash(
       "#xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
   verifyNoCrash("a &alias & =");
+  verifyNoCrash("(A*B*)");
+  verifyNoCrash("- (void)f:(NSError *__autoreleasing *)e;");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
