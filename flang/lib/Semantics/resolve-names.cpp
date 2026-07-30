@@ -10775,6 +10775,37 @@ void ResolveNamesVisitor::FinishSpecificationPart(
             context().languageFeatures().IsEnabled(
                 common::LanguageFeature::CudaPinned))
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      } else if (!object->cudaDataAttr() && !IsDummy(symbol) &&
+          !IsAllocatable(symbol) && !IsPointer(symbol) && !IsSaved(symbol) &&
+          !IsCUDADeviceContext(&symbol.owner()) &&
+          object->shape().IsExplicitShape()) {
+        // Under -gpu=mem:unified|managed, allocate adjustable / VLA automatic
+        // arrays in CUDA unified/managed memory (fixed-size automatic arrays
+        // stay on the stack). Tag those locals so lowering uses
+        // cuf.alloc/cuf.free. Unlike the allocatable managed tagging above,
+        // this does not require -fcuda: OpenACC + -gpu=mem:unified relies on
+        // it, and cuf.alloc does not go through the CUDA Fortran
+        // managed-descriptor pipeline that motivated the -fcuda gate.
+        auto boundIsNonConstant{[](const Bound &b) {
+          return !b.isExplicit() || !b.GetExplicit() ||
+              !evaluate::IsConstantExpr(*b.GetExplicit());
+        }};
+        bool hasDynamicExtent{false};
+        for (const ShapeSpec &ss : object->shape()) {
+          if (boundIsNonConstant(ss.lbound()) ||
+              boundIsNonConstant(ss.ubound())) {
+            hasDynamicExtent = true;
+            break;
+          }
+        }
+        if (hasDynamicExtent) {
+          if (context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaUnified))
+            object->set_cudaDataAttr(common::CUDADataAttr::Unified);
+          else if (context().languageFeatures().IsEnabled(
+                       common::LanguageFeature::CudaManaged))
+            object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        }
       }
     }
   }
