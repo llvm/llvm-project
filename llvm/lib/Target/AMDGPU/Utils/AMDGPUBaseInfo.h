@@ -1524,6 +1524,7 @@ bool isGFX90A(const MCSubtargetInfo &STI);
 bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
+bool hasPopsExitingWaveID(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 
