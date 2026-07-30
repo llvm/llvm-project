@@ -6054,7 +6054,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   ElementCount WideEC =
       cast<VectorType>(Deinterleave->getArgOperand(0)->getType())
           ->getElementCount();
-  bool DropTruncFlags = false;
+
   for (const ElementwiseStep &Step : Steps) {
     Instruction *NarrowInst = Step.Insts.front();
 
