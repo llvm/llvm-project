@@ -103,6 +103,12 @@ New checks
   Finds calls to ``value_or`` (and alternative spellings ``valueOr``,
   ``ValueOr``) on optional types where the return type is expensive to copy.
 
+- New :doc:`readability-use-rethrow
+  <clang-tidy/checks/readability/use-rethrow>` check.
+
+  Detects cases where a caught exception object is re-thrown using the variable 
+  name, and suggests using a bare ``throw;`` instead.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
