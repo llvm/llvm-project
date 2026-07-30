@@ -94,7 +94,7 @@ inline constexpr HostType<FTN_T> CastFortranToHost(const Scalar<FTN_T> &x) {
     return HostType<FTN_T>{CastFortranToHost<FortranPartType>(x.REAL()),
         CastFortranToHost<FortranPartType>(x.AIMAG())};
   } else {
-    static_assert(x.bytesStored() == sizeof(HostType<FTN_T>));
+    static_assert(Scalar<FTN_T>::bytesStored() == sizeof(HostType<FTN_T>));
     HostType<FTN_T> result;
     x.StoreRawBytes(&result, sizeof(result));
     return result;
