@@ -37,15 +37,23 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_exp(__CLC_GENTYPE x) {
 
   __CLC_GENTYPE y = 1.0f - (((-lo) - MATH_DIVIDE(t * v, 2.0f - v)) - hi);
 
-  // Scale by 2^p
-  __CLC_GENTYPE r = __CLC_AS_GENTYPE(__CLC_AS_INTN(y) + (p << 23));
+  // Scale by 2^p. Use ldexp so results in the subnormal range are represented
+  // exactly rather than being flushed to zero (an integer as_int(y) + (p << 23)
+  // scaling cannot encode subnormals). On flush-to-zero devices the hardware
+  // collapses the subnormal result to zero, matching the previous behavior.
+  // Clamp the exponent fed to ldexp: for extreme |x| the float->int reduction
+  // above is out of range, and an ill-formed exponent would make ldexp return
+  // NaN. Any such input over/underflows and is saturated to inf/zero by the
+  // ulim/llim selects below, so the clamp never affects a representable result.
+  __CLC_GENTYPE r = __clc_ldexp(y, __clc_clamp(p, (__CLC_INTN)-151, (__CLC_INTN)129));
 
   // ln(largest_normal) = 88.72283905206835305366
   const __CLC_GENTYPE ulim = 0x1.62e430p+6f;
-  // ln(smallest_normal) = -87.33654475055310898657
-  const __CLC_GENTYPE llim = -0x1.5d589ep+6f;
+  // ln(smallest_subnormal) = ln(2^-149) = -103.27892990343184. Below this the
+  // result genuinely underflows to zero.
+  const __CLC_GENTYPE llim = -0x1.9d1dap+6f;
 
-  r = x < llim ? 0.0f : r;
+  r = x < llim ? (__CLC_GENTYPE)0.0f : r;
   r = x < ulim ? r : __CLC_AS_GENTYPE((__CLC_UINTN)0x7f800000);
   return __clc_isnan(x) ? x : r;
 }
