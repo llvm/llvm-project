@@ -5040,17 +5040,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_for_static_loop_4u:
       case OMPRTL___kmpc_for_static_loop_8:
       case OMPRTL___kmpc_for_static_loop_8u:
-        // Parallel regions might be reached by these calls, as they take a
-        // callback argument potentially containing arbitrary user-provided
-        // code.
-        ReachedUnknownParallelRegions.insert(&CB);
-        // TODO: The presence of these calls on their own does not prevent a
-        // kernel from being SPMD-izable. We mark it as such because we need
-        // further changes in order to also consider the contents of the
-        // callbacks passed to them.
-        SPMDCompatibilityTracker.indicatePessimisticFixpoint();
-        SPMDCompatibilityTracker.insert(&CB);
-        break;
+        handleStaticLoop(A, CB);
+        return;
       default:
         // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
         // generally. However, they do not hide parallel regions.
@@ -5106,6 +5097,12 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         return indicatePessimisticFixpoint();
 
       CallBase &CB = cast<CallBase>(getAssociatedValue());
+      if (isStaticLoopRTL(It->getSecond())) {
+        handleStaticLoop(A, CB);
+        return StateBefore == getState() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+      }
+
       if (It->getSecond() == OMPRTL___kmpc_parallel_60) {
         if (!handleParallel60(A, CB))
           return indicatePessimisticFixpoint();
@@ -5169,6 +5166,54 @@ struct AAKernelInfoCallSite : AAKernelInfo {
 
   /// Deal with a __kmpc_parallel_60 call (\p CB). Returns true if the call was
   /// handled, if a problem occurred, false is returned.
+  /// The __kmpc_*_static_loop_* runtime entries take the loop body as a
+  /// callback. Analyse it when it resolves to a function instead of assuming
+  /// it hides arbitrary parallelism.
+  void handleStaticLoop(Attributor &A, CallBase &CB) {
+    const unsigned int LoopBodyArgNo = 1;
+
+    auto *LoopBody = dyn_cast<Function>(
+        CB.getArgOperand(LoopBodyArgNo)->stripPointerCasts());
+    auto *BodyAA =
+        LoopBody
+            ? A.getAAFor<AAKernelInfo>(*this, IRPosition::function(*LoopBody),
+                                       DepClassTy::OPTIONAL)
+            : nullptr;
+    if (!BodyAA || !BodyAA->getState().isValidState() ||
+        !BodyAA->ReachedKnownParallelRegions.isValidState() ||
+        !BodyAA->ReachedKnownParallelRegions.empty() ||
+        !BodyAA->ReachedUnknownParallelRegions.isValidState() ||
+        !BodyAA->ReachedUnknownParallelRegions.empty())
+      ReachedUnknownParallelRegions.insert(&CB);
+
+    // TODO: The presence of these calls on their own does not prevent a
+    // kernel from being SPMD-izable. We mark it as such because we need
+    // further changes in order to also consider the contents of the
+    // callbacks passed to them.
+    SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+    SPMDCompatibilityTracker.insert(&CB);
+  }
+
+  static bool isStaticLoopRTL(RuntimeFunction RF) {
+    switch (RF) {
+    case OMPRTL___kmpc_distribute_static_loop_4:
+    case OMPRTL___kmpc_distribute_static_loop_4u:
+    case OMPRTL___kmpc_distribute_static_loop_8:
+    case OMPRTL___kmpc_distribute_static_loop_8u:
+    case OMPRTL___kmpc_distribute_for_static_loop_4:
+    case OMPRTL___kmpc_distribute_for_static_loop_4u:
+    case OMPRTL___kmpc_distribute_for_static_loop_8:
+    case OMPRTL___kmpc_distribute_for_static_loop_8u:
+    case OMPRTL___kmpc_for_static_loop_4:
+    case OMPRTL___kmpc_for_static_loop_4u:
+    case OMPRTL___kmpc_for_static_loop_8:
+    case OMPRTL___kmpc_for_static_loop_8u:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool handleParallel60(Attributor &A, CallBase &CB) {
     const unsigned int NonWrapperFunctionArgNo = 5;
     const unsigned int WrapperFunctionArgNo = 6;
