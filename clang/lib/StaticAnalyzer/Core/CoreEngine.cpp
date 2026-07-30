@@ -326,7 +326,7 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   // Call into the ExprEngine to process entering the CFGBlock.
   BlockEntrance BE(L.getSrc(), L.getDst(), Pred->getStackFrame());
   ExplodedNodeSet DstNodes;
-  NodeBuilder Builder(Pred, DstNodes, ExprEng.getBuilderContext());
+  NodeBuilder Builder(DstNodes, ExprEng.getBuilderContext());
   bool HasGeneratedNodes = ExprEng.processCFGBlockEntrance(BE, Builder, Pred);
 
   // Auto-generate a node.
