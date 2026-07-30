@@ -104,11 +104,7 @@ jobs:
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
           ./llvm/utils/release/build-docs.sh \
-<<<<<<< HEAD
             $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm) -no-doxygen
-=======
-            $(test -n "$INPUTS_RELEASE_VERSION" && echo -release $INPUTS_RELEASE_VERSION || echo -srcdir llvm) -no-doxygen
->>>>>>> fdd1f1c979c7 (Fix)
           echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
 
 
