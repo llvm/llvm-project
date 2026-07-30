@@ -1357,12 +1357,25 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   unsigned ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
 
-  // Packed FP32 shuffles are free. InsertElement above already taxes assembling
-  // <2 x f32> pairs, and a per-lane shuffle cost stacks on top and
-  // over-penalizes SLP. f32-only on targets with packed FP32 ops.
-  if (ScalarSize == 32 && SrcTy->getElementType()->isFloatTy() &&
-      ST->hasPackedFP32Ops()) {
-    return 0;
+  // Legal <2 x f32> shuffles for v_pk_*_f32 sources. Identity and broadcasts
+  // are free via op_sel on packed ops; high-to-low lane swap within an aligned
+  // pair is lowered to v_pk_mov_b32.
+  if (ST->hasPackedFP32Ops() && ScalarSize == 32) {
+    auto *DstVecTy = dyn_cast<FixedVectorType>(DstTy);
+    auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcTy);
+    if (DstVecTy && SrcVecTy && DstVecTy->getNumElements() == 2 &&
+        SrcVecTy->getNumElements() == 2 &&
+        DstVecTy->getElementType()->isFloatTy()) {
+      switch (Kind) {
+      case TTI::SK_Broadcast:
+      case TTI::SK_PermuteSingleSrc:
+        return 0;
+      case TTI::SK_Reverse:
+        return 1;
+      default:
+        break;
+      }
+    }
   }
 
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
