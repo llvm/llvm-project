@@ -112,4 +112,37 @@ def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {
   let summary = "Propagate FortranVariableFlagsAttr attributes through HLFIR";
 }
 
+def ArraySectionReduction : Pass<"array-section-reduction"> {
+  let summary = "Promote loop-invariant array-section reductions to a local temporary";
+  let description = [{
+    Detect a loop-carried reduction into a loop-invariant array section that is
+    unconditionally defined before the loop (e.g. `a(:,i) = a(:,i) + x(:)`), and
+    promote the section to a constant-shape local temporary that is written back
+    after the loop. The loop is then annotated to enable vectorization: promoting
+    the section removes the memory dependence on the loop-invariant descriptor
+    that would otherwise block the loop vectorizer.
+  }];
+  let options = [
+      Option<"forceVectorize", "force-vectorize", "bool", /*default=*/"true",
+             "Annotate the promoted loop with llvm.loop.vectorize.enable to "
+             "override the cost model. The promoted temporary has a "
+             "compile-time constant shape, so it scalarizes into individual "
+             "registers and the loop becomes a plain reduction; disable to "
+             "leave the vectorization decision to the cost model.">,
+      Option<"maxReductionExtent", "max-reduction-extent", "unsigned",
+             /*default=*/"8",
+             "Only promote sections whose constant element count is at most "
+             "this. Each element becomes a reduction accumulator kept in a "
+             "vector register across the loop, so a too-large count exhausts "
+             "the registers and spills.">,
+      Option<"maxUnrollableTripCount", "max-unrollable-trip-count", "unsigned",
+             /*default=*/"64",
+             "A constant-bound inner loop with at most this trip count is "
+             "assumed to be fully unrolled before the vectorizer runs, so it "
+             "does not block annotating the enclosing reduction loop. This "
+             "only affects whether the vectorization hint is emitted, never "
+             "correctness.">];
+  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
+}
+
 #endif //FORTRAN_DIALECT_HLFIR_PASSES

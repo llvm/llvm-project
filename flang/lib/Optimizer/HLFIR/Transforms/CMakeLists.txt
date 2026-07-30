@@ -1,6 +1,7 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_flang_library(HLFIRTransforms
+  ArraySectionReduction.cpp
   BufferizeHLFIR.cpp
   ConvertToFIR.cpp
   ExpressionSimplification.cpp

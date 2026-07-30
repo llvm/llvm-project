@@ -265,6 +265,10 @@ defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stri
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
 
+defm experimental_array_section_reduction : BoolOptionWithoutMarshalling<"f", "experimental-array-section-reduction",
+  PosFlag<SetTrue, [], [FlangOption], "Promote loop-invariant array-section reductions to a local temporary and enable their vectorization (experimental)">,
+  NegFlag<SetFalse, [], [FlangOption], "Do not promote array-section reductions (default)">>;
+
 defm stack_repack_arrays
     : BoolOptionWithoutMarshalling<
           "f", "stack-repack-arrays",

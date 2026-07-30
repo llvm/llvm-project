@@ -290,6 +290,17 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     });
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createPropagateFortranVariableAttributes);
+    // Run createArraySectionReduction pass before OptimizedBufferization/
+    // InlineHLFIRAssign, while the reduction is still a single hlfir.assign
+    // of a designate. Opt-in via -fexperimental-array-section-reduction. Only
+    // request the vectorization hint at O2/O3, where the LLVM loop vectorizer
+    // runs; the promotion itself still applies at O1.
+    if (config.ArraySectionReduction)
+      addNestedPassToAllTopLevelOperations(pm, [&]() {
+        return hlfir::createArraySectionReduction(
+            {/*forceVectorize=*/optLevel == llvm::OptimizationLevel::O2 ||
+             optLevel == llvm::OptimizationLevel::O3});
+      });
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createOptimizedBufferization);
     addNestedPassToAllTopLevelOperations<PassConstructor>(
