@@ -9423,7 +9423,9 @@ value is an `MDString` and must be one of:
   - The software floating-point calling convention is used: floating-point
     values are passed in general-purpose (integer) registers. Note this is
     independent of whether floating-point hardware is used to perform
-    operations; see the `use-soft-float` function attribute for that.
+    operations; see the `use-soft-float` function attribute for that. For
+    instance, both ARM's soft and softfp modes would use this value, since
+    they share the same calling convention.
 
 * - `"hard"`
   - The hardware floating-point calling convention is used: floating-point
