@@ -421,7 +421,7 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                    "amdgcn compare with unsupported predicate");
       return mlir::Value{};
     }
-    
+
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Value cmp = builder.createCompare(loc, pred, lhs, rhs);
 
