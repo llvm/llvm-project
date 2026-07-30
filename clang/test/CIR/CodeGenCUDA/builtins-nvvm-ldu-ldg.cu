@@ -38,6 +38,125 @@ typedef float float2 __attribute__((ext_vector_type(2)));
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef double double2 __attribute__((ext_vector_type(2)));
 
+// CIR-LABEL: @_Z8nvvm_ldgPKv
+// LLVM-LABEL: @_Z8nvvm_ldgPKv
+__device__ void nvvm_ldg(const void *p) {
+  // CIR: cir.cast address_space %{{.*}} : !cir.ptr<!s8i> -> !cir.ptr<!s8i, target_address_space(1)>
+  // CIR: cir.load invariant align(1) %{{.*}} : !cir.ptr<!s8i, target_address_space(1)>, !s8i
+  // CIR: cir.cast address_space %{{.*}} : !cir.ptr<!u8i> -> !cir.ptr<!u8i, target_address_space(1)>
+  // CIR: cir.load invariant align(1) %{{.*}} : !cir.ptr<!u8i, target_address_space(1)>, !u8i
+  // CIR: cir.cast address_space %{{.*}} : !cir.ptr<!s8i> -> !cir.ptr<!s8i, target_address_space(1)>
+  // CIR: cir.load invariant align(1) %{{.*}} : !cir.ptr<!s8i, target_address_space(1)>, !s8i
+  // LLVM: load i8, ptr addrspace(1) {{%[0-9]+}}, align 1, !invariant.load
+  // LLVM: load i8, ptr addrspace(1) {{%[0-9]+}}, align 1, !invariant.load
+  // LLVM: load i8, ptr addrspace(1) {{%[0-9]+}}, align 1, !invariant.load
+  __nvvm_ldg_c((const char *)p);
+  __nvvm_ldg_uc((const unsigned char *)p);
+  __nvvm_ldg_sc((const signed char *)p);
+
+  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!s16i, target_address_space(1)>, !s16i
+  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!u16i, target_address_space(1)>, !u16i
+  // LLVM: load i16, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  // LLVM: load i16, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  __nvvm_ldg_s((const short *)p);
+  __nvvm_ldg_us((const unsigned short *)p);
+
+  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!s32i, target_address_space(1)>, !s32i
+  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!u32i, target_address_space(1)>, !u32i
+  // LLVM: load i32, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // LLVM: load i32, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  __nvvm_ldg_i((const int *)p);
+  __nvvm_ldg_ui((const unsigned int *)p);
+
+  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!s64i, target_address_space(1)>, !s64i
+  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!u64i, target_address_space(1)>, !u64i
+  // LLVM: load i64, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // LLVM: load i64, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  __nvvm_ldg_l((const long *)p);
+  __nvvm_ldg_ul((const unsigned long *)p);
+
+  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.float, target_address_space(1)>, !cir.float
+  // LLVM: load float, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  __nvvm_ldg_f((const float *)p);
+  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.double, target_address_space(1)>, !cir.double
+  // LLVM: load double, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  __nvvm_ldg_d((const double *)p);
+
+  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!cir.vector<2 x !s8i>, target_address_space(1)>, !cir.vector<2 x !s8i>
+  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!cir.vector<2 x !u8i>, target_address_space(1)>, !cir.vector<2 x !u8i>
+  // CIR: cir.load invariant align(2) %{{.*}} : !cir.ptr<!cir.vector<2 x !s8i>, target_address_space(1)>, !cir.vector<2 x !s8i>
+  // LLVM: load <2 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  // LLVM: load <2 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  // LLVM: load <2 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  __nvvm_ldg_c2((const char2 *)p);
+  __nvvm_ldg_uc2((const uchar2 *)p);
+  __nvvm_ldg_sc2((const schar2 *)p);
+
+  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<4 x !s8i>, target_address_space(1)>, !cir.vector<4 x !s8i>
+  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<4 x !u8i>, target_address_space(1)>, !cir.vector<4 x !u8i>
+  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<4 x !s8i>, target_address_space(1)>, !cir.vector<4 x !s8i>
+  // LLVM: load <4 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // LLVM: load <4 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // LLVM: load <4 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  __nvvm_ldg_c4((const char4 *)p);
+  __nvvm_ldg_uc4((const uchar4 *)p);
+  __nvvm_ldg_sc4((const schar4 *)p);
+
+  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<2 x !s16i>, target_address_space(1)>, !cir.vector<2 x !s16i>
+  // CIR: cir.load invariant align(4) %{{.*}} : !cir.ptr<!cir.vector<2 x !u16i>, target_address_space(1)>, !cir.vector<2 x !u16i>
+  // LLVM: load <2 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // LLVM: load <2 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  __nvvm_ldg_s2((const short2 *)p);
+  __nvvm_ldg_us2((const ushort2 *)p);
+
+  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<4 x !s16i>, target_address_space(1)>, !cir.vector<4 x !s16i>
+  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<4 x !u16i>, target_address_space(1)>, !cir.vector<4 x !u16i>
+  // LLVM: load <4 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // LLVM: load <4 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  __nvvm_ldg_s4((const short4 *)p);
+  __nvvm_ldg_us4((const ushort4 *)p);
+
+  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<2 x !s32i>, target_address_space(1)>, !cir.vector<2 x !s32i>
+  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<2 x !u32i>, target_address_space(1)>, !cir.vector<2 x !u32i>
+  // LLVM: load <2 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // LLVM: load <2 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  __nvvm_ldg_i2((const int2 *)p);
+  __nvvm_ldg_ui2((const uint2 *)p);
+
+  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<4 x !s32i>, target_address_space(1)>, !cir.vector<4 x !s32i>
+  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<4 x !u32i>, target_address_space(1)>, !cir.vector<4 x !u32i>
+  // LLVM: load <4 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // LLVM: load <4 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  __nvvm_ldg_i4((const int4 *)p);
+  __nvvm_ldg_ui4((const uint4 *)p);
+
+  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>, target_address_space(1)>, !cir.vector<2 x !s64i>
+  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>, target_address_space(1)>, !cir.vector<2 x !u64i>
+  // LLVM: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // LLVM: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  __nvvm_ldg_l2((const long2 *)p);
+  __nvvm_ldg_ul2((const ulong2 *)p);
+
+  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !s64i>, target_address_space(1)>, !cir.vector<2 x !s64i>
+  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !u64i>, target_address_space(1)>, !cir.vector<2 x !u64i>
+  // LLVM: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // LLVM: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  __nvvm_ldg_ll2((const longlong2 *)p);
+  __nvvm_ldg_ull2((const ulonglong2 *)p);
+
+  // CIR: cir.load invariant align(8) %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.float>, target_address_space(1)>, !cir.vector<2 x !cir.float>
+  // LLVM: load <2 x float>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  __nvvm_ldg_f2((const float2 *)p);
+
+  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>, target_address_space(1)>, !cir.vector<4 x !cir.float>
+  // LLVM: load <4 x float>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  __nvvm_ldg_f4((const float4 *)p);
+
+  // CIR: cir.load invariant align(16) %{{.*}} : !cir.ptr<!cir.vector<2 x !cir.double>, target_address_space(1)>, !cir.vector<2 x !cir.double>
+  // LLVM: load <2 x double>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  __nvvm_ldg_d2((const double2 *)p);
+}
+
 // CIR-LABEL: @_Z8nvvm_lduPKv
 // LLVM-LABEL: @_Z8nvvm_lduPKv
 __device__ void nvvm_ldu(const void *p) {
