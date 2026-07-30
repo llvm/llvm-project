@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__new/exceptions.h>
+#include <__optional/comparison.h>
 #include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
 #include <__utility/forward.h>
