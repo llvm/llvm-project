@@ -104,3 +104,24 @@ cir.func @cast_fenv(%a: !cir.float, %b: !cir.double, %i: !s32i) {
   %3 = cir.cast float_to_bool %a : !cir.float -> !cir.bool
   cir.return
 }
+
+// CHECK-LABEL: cir.func @cmp_fenv
+cir.func @cmp_fenv(%a: !cir.float, %b: !cir.float,
+                    %va: !cir.vector<4 x !cir.float>,
+                    %vb: !cir.vector<4 x !cir.float>) {
+  // CHECK: cir.cmp lt %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<except_mode = unmasked>}
+  %0 = cir.cmp lt %a, %b : !cir.float {fenv = #cir.fenv<except_mode = unmasked>}
+  // CHECK: cir.cmp eq %{{.*}}, %{{.*}} : !cir.float {fenv = #cir.fenv<>}
+  %1 = cir.cmp eq %a, %b : !cir.float {fenv = #cir.fenv<>}
+  // CHECK: cir.vec.cmp(gt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {fenv = #cir.fenv<strict_except = true>}
+  %2 = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {
+    fenv = #cir.fenv<strict_except = true>
+  }
+  // CHECK: cir.cmp ne %{{.*}}, %{{.*}} : !cir.float
+  // CHECK-NOT: fenv
+  %3 = cir.cmp ne %a, %b : !cir.float
+  // CHECK: cir.vec.cmp(le, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CHECK-NOT: fenv
+  %4 = cir.vec.cmp(le, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  cir.return
+}
