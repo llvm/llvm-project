@@ -1828,9 +1828,8 @@ define <2 x half> @fmul_select_v2f16_test3(<2 x half> %x, <2 x i32> %bool.arg1, 
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX10-GISEL-NEXT:    v_ldexp_f16_e32 v1, v0, v1
 ; GFX10-GISEL-NEXT:    v_med3_i32 v2, 0xffff8000, v2, v3
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX10-GISEL-NEXT:    v_ldexp_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX10-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX10-GISEL-NEXT:    v_ldexp_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: fmul_select_v2f16_test3:
@@ -1996,9 +1995,8 @@ define <2 x half> @fmul_select_v2f16_test4(<2 x half> %x, <2 x i32> %bool.arg1, 
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v2, 0, -1, vcc_lo
 ; GFX10-GISEL-NEXT:    v_ldexp_f16_e32 v1, v0, v1
 ; GFX10-GISEL-NEXT:    v_med3_i32 v2, 0xffff8000, v2, v3
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX10-GISEL-NEXT:    v_ldexp_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX10-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX10-GISEL-NEXT:    v_ldexp_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SDAG-TRUE16-LABEL: fmul_select_v2f16_test4:
