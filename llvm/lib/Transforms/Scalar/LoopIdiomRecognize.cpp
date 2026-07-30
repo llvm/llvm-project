@@ -1816,15 +1816,13 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     };
     auto HiIdx = [LoByte, CRCBW](IRBuilderBase &Builder, Value *Op,
                                  const Twine &Name) {
-      Type *OpTy = Op->getType();
-
-      // When the bitwidth of the CRC mismatches the Op's bitwidth, we need to
-      // use the CRC's bitwidth as the reference for shifting right.
-      return LoByte(Builder,
-                    CRCBW > 8 ? Builder.CreateLShr(
-                                    Op, ConstantInt::get(OpTy, CRCBW - 8), Name)
-                              : Op,
-                    Name + ".lo.byte");
+      // Shift the top bits of Op to the bottom byte by using the CRC bitwidth
+      // as a reference.
+      if (CRCBW != 8) {
+        Op = CRCBW > 8 ? Builder.CreateLShr(Op, CRCBW - 8, Name)
+                       : Builder.CreateShl(Op, 8 - CRCBW, Name);
+      }
+      return LoByte(Builder, Op, Name + ".lo.byte");
     };
 
     IRBuilder<> Builder(CurLoop->getHeader(),

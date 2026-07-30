@@ -1058,7 +1058,8 @@ define i4 @crc4.be.tc8(i8 %msg, i4 %checksum) {
 ; TABLE-NEXT:    [[DATA_INDEXER:%.*]] = shl i8 [[MSG]], [[IV_BITS]]
 ; TABLE-NEXT:    [[CRC_INDEXER_CAST:%.*]] = zext i4 [[CRC2]] to i8
 ; TABLE-NEXT:    [[CRC_DATA_INDEXER:%.*]] = xor i8 [[DATA_INDEXER]], [[CRC_INDEXER_CAST]]
-; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[CRC_DATA_INDEXER]] to i64
+; TABLE-NEXT:    [[INDEXER_HI:%.*]] = shl i8 [[CRC_DATA_INDEXER]], 4
+; TABLE-NEXT:    [[INDEXER_EXT:%.*]] = zext i8 [[INDEXER_HI]] to i64
 ; TABLE-NEXT:    [[TBL_PTRADD:%.*]] = getelementptr inbounds i4, ptr @.crctable.15, i64 [[INDEXER_EXT]]
 ; TABLE-NEXT:    [[TBL_LD]] = load i4, ptr [[TBL_PTRADD]], align 1
 ; TABLE-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
