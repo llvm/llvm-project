@@ -54,6 +54,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to LLVM infrastructure
 
+* Removed `TargetOptions::FloatABIType`. The soft float ABI should be
+  controlled by setting the `"float-abi"` module flag.
+
 ### Changes to building LLVM
 
 ### Changes to TableGen
