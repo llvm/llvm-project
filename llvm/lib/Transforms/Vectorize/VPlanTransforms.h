@@ -60,11 +60,21 @@ struct VPlanTransforms {
     static DenseMap<std::pair<Function *, StringRef /* Pass */>, unsigned>
         PassCounter;
     Function *Fn = Plan.getScalarHeader()->getIRBasicBlock()->getParent();
-    unsigned Instance = ++PassCounter[{Fn, PassName}];
+    // Computing these is expensive, so only do it if any VPlan printing has
+    // been requested.
+    unsigned Instance;
+    std::string NumberedPassName;
 
-    std::string NumberedPassName =
-        Instance == 1 ? PassName.str()
-                      : (PassName + "@" + Twine(Instance)).str();
+    if ([](auto &...Options) {
+          return (((Options.getNumOccurrences() > 0) || ...));
+        }(VPlanPrintBeforeAll, VPlanPrintAfterAll, VPlanPrintBeforePasses,
+          VPlanPrintAfterPasses)) {
+      Instance = ++PassCounter[{Fn, PassName}];
+
+      NumberedPassName = Instance == 1
+                             ? PassName.str()
+                             : (PassName + "@" + Twine(Instance)).str();
+    }
 
     auto PrintPlan = [&](StringRef BeforeOrAfterStr) {
       dbgs() << "VPlan for loop in '" << Fn->getName() << "' "
