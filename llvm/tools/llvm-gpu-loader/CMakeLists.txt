@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   TargetParser
   Support
-  FrontendOffloading
 )
 
 add_llvm_tool(llvm-gpu-loader

@@ -36,7 +36,7 @@ function(add_startup_object name)
     if (LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
       target_link_options(${fq_target_name}.exe PRIVATE
                           ${LIBC_COMPILE_OPTIONS_DEFAULT}
-                          "-nostdlib" "-flto"
+                          "-nostdlib" "-flto" "-emit-llvm"
                           )
     else()
       target_link_options(${fq_target_name}.exe PRIVATE

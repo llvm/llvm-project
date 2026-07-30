@@ -129,7 +129,7 @@ function(_get_hermetic_test_compile_options output_var)
          -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
   elseif(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
     list(APPEND compile_options
-         -nogpulib -flto)
+         -nogpulib -flto -emit-llvm)
   endif()
 
   set(${output_var} ${compile_options} PARENT_SCOPE)
@@ -652,7 +652,7 @@ function(add_integration_test test_name)
   elseif(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
-      -nostdlib -flto -Wno-multi-gpu)
+      -nostdlib -flto -Wno-multi-gpu -emit-llvm)
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
       -nolibc
@@ -925,7 +925,7 @@ function(add_libc_hermetic test_name)
   elseif(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
-      -nostdlib -flto -Wno-multi-gpu)
+      -nostdlib -flto -Wno-multi-gpu -emit-llvm)
   elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
       -nolibc

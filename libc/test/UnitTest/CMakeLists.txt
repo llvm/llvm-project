@@ -12,25 +12,19 @@ function(add_unittest_framework_library name)
   endif()
 
   foreach(lib IN ITEMS ${name}.unit ${name}.hermetic)
+    add_library(
+      ${lib}
+      STATIC
+      EXCLUDE_FROM_ALL
+      ${TEST_LIB_SRCS}
+      ${TEST_LIB_HDRS}
+    )
+
     if(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
-      add_library(
-        ${lib}
-        OBJECT
-        EXCLUDE_FROM_ALL
-        ${TEST_LIB_SRCS}
-        ${TEST_LIB_HDRS}
-      )
       target_link_options(${lib} PRIVATE
-                          "-nostdlib" "-flto")
-    else()
-      add_library(
-        ${lib}
-        STATIC
-        EXCLUDE_FROM_ALL
-        ${TEST_LIB_SRCS}
-        ${TEST_LIB_HDRS}
-      )
+                          "-nostdlib" "-flto" "-emit-llvm")
     endif()
+
     target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
     if(TARGET libc.src.time.clock)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
