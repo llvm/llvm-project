@@ -637,8 +637,7 @@ def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
     operation has a symbol attribute named `kernel` to identify the fully
     specified kernel function to launch (both the gpu.module and func).
 
-    By the default, the host implicitly blocks until kernel execution has
-    completed.
+    By default, the host implicitly blocks until kernel execution has completed.
 
     Otherwise, the operation supports two async models.
 
