@@ -954,6 +954,108 @@ TEST_F(SPIRVConvergenceRegionAnalysisTest,
                     {"", "l1_end", "end", "d"});
 }
 
+// A chain of reconverging diamonds followed by a call matching the loop's
+// convergence token. Regression test for findPathsToMatch: a naive recursive
+// enumeration of paths would revisit the common suffix once per incoming
+// path, growing exponentially with the number of diamonds.
+TEST_F(SPIRVConvergenceRegionAnalysisTest,
+       ReconvergingDiamondsWithConvergenceBranch) {
+  StringRef Assembly = R"(
+    define void @main() convergent "hlsl.numthreads"="4,8,16" "hlsl.shader"="compute" {
+      %t1 = call token @llvm.experimental.convergence.entry()
+      %1 = icmp ne i32 0, 0
+      br label %l1_header
+
+    l1_header:
+      %tl1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %t1) ]
+      br i1 %1, label %l1_body, label %l1_end
+
+    l1_body:
+      %2 = icmp ne i32 0, 0
+      br i1 %2, label %l1_condition_true, label %l1_condition_false
+
+    l1_condition_true:
+      br label %d0
+
+    d0:
+      br i1 %1, label %d0_true, label %d0_false
+
+    d0_true:
+      br label %d0_join
+
+    d0_false:
+      br label %d0_join
+
+    d0_join:
+      br label %d1
+
+    d1:
+      br i1 %1, label %d1_true, label %d1_false
+
+    d1_true:
+      br label %d1_join
+
+    d1_false:
+      br label %d1_join
+
+    d1_join:
+      br label %d2
+
+    d2:
+      br i1 %1, label %d2_true, label %d2_false
+
+    d2_true:
+      br label %d2_join
+
+    d2_false:
+      br label %d2_join
+
+    d2_join:
+      br label %c
+
+    c:
+      %call = call spir_func i32 @_Z3absi(i32 0) [ "convergencectrl"(token %tl1) ]
+      br label %end
+
+    l1_condition_false:
+      br label %l1_continue
+
+    l1_continue:
+      br label %l1_header
+
+    l1_end:
+      br label %end
+
+    end:
+      ret void
+    }
+
+    declare token @llvm.experimental.convergence.entry()
+    declare token @llvm.experimental.convergence.control()
+    declare token @llvm.experimental.convergence.loop()
+
+    ; This intrinsic is not convergent. This is only because the backend doesn't
+    ; support convergent operations yet.
+    declare spir_func i32 @_Z3absi(i32) convergent
+  )";
+
+  runAnalysis(Assembly).getTopLevelRegion();
+  const auto *L = getRegionWithEntry("l1_header");
+  ASSERT_NE(L, nullptr);
+
+  EXPECT_EQ(L->Entry, getBlock("l1_header"));
+  EXPECT_EQ(L->Exits.size(), 2ul);
+  EXPECT_THAT(L->Exits, ContainsBasicBlock("l1_header"));
+  EXPECT_THAT(L->Exits, ContainsBasicBlock("c"));
+
+  checkRegionBlocks(L,
+                    {"l1_header", "l1_body", "l1_continue",
+                     "l1_condition_false", "l1_condition_true", "d0", "d0_true",
+                     "d0_false", "d0_join", "d1", "d1_true", "d1_false",
+                     "d1_join", "d2", "d2_true", "d2_false", "d2_join", "c"},
+                    {"", "l1_end", "end"});
+}
+
 TEST_F(SPIRVConvergenceRegionAnalysisTest,
        SingleLoopWithNoConvergenceIntrinsics) {
   StringRef Assembly = R"(
