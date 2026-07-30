@@ -2494,7 +2494,7 @@ VPIRFlags::FastMathFlagsTy::FastMathFlagsTy(const FastMathFlags &FMF) {
   ApproxFunc = FMF.approxFunc();
 }
 
-VPIRFlags VPIRFlags::getDefaultFlags(unsigned Opcode) {
+VPIRFlags VPIRFlags::getDefaultFlags(unsigned Opcode, Type *ResultTy) {
   switch (Opcode) {
   case Instruction::Add:
   case Instruction::Sub:
@@ -2527,6 +2527,11 @@ VPIRFlags VPIRFlags::getDefaultFlags(unsigned Opcode) {
   case Instruction::FPExt:
   case Instruction::FPTrunc:
     return FastMathFlags();
+  case Instruction::Select:
+    // Selects only have fast-math flags if they produce a floating-point value.
+    if (ResultTy && FPMathOperator::isSupportedFloatingPointType(ResultTy))
+      return FastMathFlags();
+    return VPIRFlags();
   case Instruction::ICmp:
   case Instruction::FCmp:
   case VPInstruction::ComputeReductionResult:
