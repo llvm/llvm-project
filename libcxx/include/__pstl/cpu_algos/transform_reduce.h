@@ -18,6 +18,7 @@
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/invoke.h>
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__utility/move.h>

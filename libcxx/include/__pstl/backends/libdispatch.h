@@ -30,6 +30,7 @@
 #include <__memory/unique_ptr.h>
 #include <__new/exceptions.h>
 #include <__numeric/reduce.h>
+#include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>

@@ -29,6 +29,7 @@
 #include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__optional/nullopt_t.h>
 #include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
