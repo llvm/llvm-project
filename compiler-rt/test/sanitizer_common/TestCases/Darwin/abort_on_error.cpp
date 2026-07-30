@@ -14,12 +14,12 @@
 
 int global;
 
-int main() {
+int main() [[clang::nonblocking]] {
 #if defined(USING_ubsan)
   volatile int *null = 0;
   *null = 0;
 #else
-  volatile int *a = new int[100];
+  volatile int *a = new int[100]; // triggers RTSan report
   delete[] a;
   global = a[0]; // use-after-free: triggers ASan/TSan report.
 #endif
