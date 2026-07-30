@@ -374,6 +374,13 @@ public:
   // Report the current element as missing or added during comparison.
   virtual void report(LVComparePass Pass) {}
 
+  // Print the basic and extra information. Used mainly to debug IR.
+  void printCommon(raw_ostream &OS, bool Full = true) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void dumpCommon() const { printCommon(dbgs(), /*Full=*/true); }
+#endif
+
   static LVElementDispatch &getDispatch() { return Dispatch; }
 };
 

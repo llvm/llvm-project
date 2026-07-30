@@ -11,7 +11,7 @@
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -53,6 +53,16 @@ using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
 LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
                                          GetLayoutFnTy getLayoutOfValue);
 
+/// Propagate layouts from a region branch terminator's forwarded operands to
+/// the matching region results / successor block arguments. For each operand
+/// that a terminator (e.g. scf.yield) forwards to a successor input, the
+/// operand's layout is obtained via `getLayoutOfValue` and recorded on the
+/// successor input when it is an op result. Returns failure if a forwarded
+/// operand has no assigned layout.
+LogicalResult propagateYieldOperandsToRegionResults(
+    RegionBranchTerminatorOpInterface terminator,
+    GetLayoutFnTy getLayoutOfValue);
+
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
 /// lacks a layout attribute.
@@ -82,6 +92,15 @@ dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 /// Updates the NamedAttribute sequence by dropping inst-data information from
 /// any DistributeLayoutAttr found.
 SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
+
+//===----------------------------------------------------------------------===//
+// Backward layout inference (result layout -> source layout)
+//===----------------------------------------------------------------------===//
+//
+// The infer*SourceLayout helpers below derive the layout of an operation's
+// source operand from the layout of its result. They implement the per-op
+// transfer functions used by the backward layout propagation analysis, which
+// flows layouts from anchor ops (dpas, store_nd, ...) back to their producers.
 
 /// Infers the source layout attribute for a broadcast operation given the
 /// result layout attribute, result shape, and source shape.
@@ -159,6 +178,40 @@ DistributeLayoutAttr
 inferSourceLayoutFromResultForNonAnchorOp(OpOperand &operand,
                                           DistributeLayoutAttr resLayout);
 
+//===----------------------------------------------------------------------===//
+// Forward layout inference (source layout -> result layout)
+//===----------------------------------------------------------------------===//
+//
+// The infer*ResultLayout helpers below are the forward counterparts of the
+// infer*SourceLayout helpers above: given the layout of an operation's source
+// operand they derive the layout of its result. They are used by the local
+// forward-fill step in XeGPUPropagateLayout that assigns layouts to values not
+// reached by the backward propagation analysis (e.g. loop-carried values whose
+// only consumer is the next iteration).
+
+/// Infers the result layout attribute for a transpose operation given the
+/// source layout attribute and permutation. Inverse of
+/// inferTransposeSourceLayout.
+DistributeLayoutAttr inferTransposeResultLayout(DistributeLayoutAttr srcLayout,
+                                                ArrayRef<int64_t> permutation);
+
+/// Infers the result layout attribute for a shape cast operation given the
+/// source layout attribute, source shape, and result shape. Inverse of
+/// inferShapeCastSourceLayout. Returns nullptr for shape-cast patterns whose
+/// forward direction is ambiguous (e.g. unit-dim expansion).
+DistributeLayoutAttr inferShapeCastResultLayout(DistributeLayoutAttr srcLayout,
+                                                ArrayRef<int64_t> srcShape,
+                                                ArrayRef<int64_t> resShape);
+
+/// Infers the result layout attribute for a non-anchor operation from the
+/// layouts of its source operands (the forward counterpart of
+/// inferSourceLayoutFromResultForNonAnchorOp). `operandLayouts` is indexed by
+/// operand number; entries may be null for operands without a known layout.
+/// Returns nullptr when no forward rule applies (the result is then left
+/// un-laid-out).
+DistributeLayoutAttr inferResultLayoutFromSourceForNonAnchorOp(
+    Operation *op, ArrayRef<DistributeLayoutAttr> operandLayouts);
+
 /// Note on the `consumerLayout` argument used by the consumer-driven setup* /
 /// complete* helpers below:
 ///
@@ -234,15 +287,19 @@ DistributeLayoutAttr setupLoadMatrixAnchorLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
+/// `numSg` is only used for Subgroup-kind layouts.
 DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    VectorType vectorTy,
                                                    int contigChunkSize,
+                                                   int numSg,
                                                    const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store matrix operation.
+/// `numSg` is only used for Subgroup-kind layouts.
 DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
                                                   int contigChunkSize,
+                                                  int numSg,
                                                   const uArch::uArch *uArch);
 
 /// If the consumer layout has only inst_data (no lane_layout/lane_data),
@@ -256,7 +313,7 @@ DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
 std::optional<DistributeLayoutAttr> completeScatterLoadLaneLayoutFromInstData(
     DistributeLayoutAttr userSpecifiedLayout,
     DistributeLayoutAttr consumerLayout, Type elemTy,
-    const xegpu::uArch::LoadGatherInstructionInterface *uArchInstruction,
+    const xegpu::uArch::LoadGatherInstruction *uArchInstruction,
     const int subgroupSize);
 
 /// Like completeScatterLoadLaneLayoutFromInstData, but for scatter stores
@@ -265,7 +322,7 @@ std::optional<DistributeLayoutAttr> completeScatterLoadLaneLayoutFromInstData(
 /// with no consumer layout to reuse.
 std::optional<DistributeLayoutAttr> completeScatterStoreLaneLayoutFromInstData(
     DistributeLayoutAttr specifiedLayout, Type elemTy,
-    const xegpu::uArch::StoreScatterInstructionInterface *uArchInstruction,
+    const xegpu::uArch::StoreScatterInstruction *uArchInstruction,
     const int subgroupSize);
 
 /// Completes a user-provided 2D-block store_nd / prefetch_nd anchor that has

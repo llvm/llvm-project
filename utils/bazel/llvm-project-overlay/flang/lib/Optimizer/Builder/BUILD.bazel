@@ -55,6 +55,7 @@ cc_library(
         "//flang/lib/Support:FortranSupport",
         "//llvm:Support",
         "//mlir:AllExtensions",
+        "//mlir:ArithDialect",
         "//mlir:ComplexDialect",
         "//mlir:FuncDialect",
         "//mlir:IR",

@@ -133,8 +133,7 @@ struct CUDAKernelTy : public GenericKernelTy {
     // Set the static block memory size required by the kernel.
     StaticBlockMemSize = SharedMemSize;
 
-    // Retrieve the size of the arguments.
-    return initArgsSize();
+    return Plugin::success();
   }
 
   /// Launch the CUDA kernel function.
@@ -164,32 +163,11 @@ struct CUDAKernelTy : public GenericKernelTy {
                               uint32_t DynBlockMemSize) const override;
 
 private:
-  /// Initialize the size of the arguments.
-  Error initArgsSize() {
-    CUresult Res;
-    size_t ArgOffset, ArgSize;
-    size_t Arg = 0;
-
-    ArgsSize = 0;
-
-    // Find the last argument to know the total size of the arguments.
-    while ((Res = cuFuncGetParamInfo(Func, Arg++, &ArgOffset, &ArgSize)) ==
-           CUDA_SUCCESS)
-      ArgsSize = ArgOffset + ArgSize;
-
-    if (Res != CUDA_ERROR_INVALID_VALUE)
-      return Plugin::check(Res, "error in cuFuncGetParamInfo: %s");
-    return Plugin::success();
-  }
-
   /// The CUDA kernel function to execute.
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
   mutable uint32_t MaxDynBlockMemSize = 49152;
-
-  /// The size of the kernel arguments.
-  size_t ArgsSize;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -927,6 +905,53 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuMemset: %s");
   }
 
+  /// Prefetch managed memory to the device or back to the host.
+  // TODO: switch to cuMemPrefetchBatchAsync once the minimum supported CUDA
+  // driver is 13 or newer. That entry point takes the (Mems, Sizes, Count)
+  // arrays directly and lets the driver batch the migration.
+  Error dataPrefetchImpl(size_t Count, const void **Mems, const size_t *Sizes,
+                         bool ToHost,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (Count == 0)
+      return Plugin::success();
+    if (auto Err = setContext())
+      return Err;
+
+    // Certain cuda devices and Windows do not have support for some Unified
+    // Memory features. cuMemPrefetchAsync requires concurrent memory access
+    // for managed memory. Therefore, ignore prefetch hint if concurrent managed
+    // memory access is not available.
+    int ConcurrentManagedAccess = 0;
+    if (getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_CONCURRENT_MANAGED_ACCESS,
+                         ConcurrentManagedAccess) != CUDA_SUCCESS ||
+        !ConcurrentManagedAccess)
+      return Plugin::success();
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    CUdevice Dst = ToHost ? CU_DEVICE_CPU : Device;
+    for (size_t I = 0; I < Count; I++) {
+      if (Sizes[I] == 0)
+        continue;
+
+      // Prefetch only works with USM (managed) memory; ignore the hint
+      // otherwise.
+      unsigned int IsManaged = 0;
+      if (cuPointerGetAttribute(&IsManaged, CU_POINTER_ATTRIBUTE_IS_MANAGED,
+                                (CUdeviceptr)Mems[I]) != CUDA_SUCCESS ||
+          !IsManaged)
+        continue;
+
+      CUresult Res =
+          cuMemPrefetchAsync((CUdeviceptr)Mems[I], Sizes[I], Dst, Stream);
+      if (auto Err = Plugin::check(Res, "error in cuMemPrefetchAsync: %s"))
+        return Err;
+    }
+    return Plugin::success();
+  }
+
   /// Initialize the async info for interoperability purposes.
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     if (auto Err = setContext())
@@ -1161,7 +1186,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_WARP_SIZE, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Warp Size", TmpInt);
+      Info.add("Number of Lanes", TmpInt, "", DeviceInfo::NUM_LANES);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1510,27 +1535,9 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
-  void **KernelParams = nullptr;
-  if (KernelArgs.Flags.IsPtrArgs) {
-    KernelParams = KernelArgs.ArgPtrs;
-  } else {
-    // The args size passed in LaunchParams may have tail padding,
-    // which is not accepted by the CUDA driver.
-    if (ArgsSize > LaunchParams.Size)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "mismatch in kernel arguments");
-  }
-
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
-
-  size_t ConfigArgsSize = ArgsSize;
-  // Valid only for a contiguous buffer passed through LaunchParams.
-  void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
-                    CU_LAUNCH_PARAM_BUFFER_SIZE,
-                    reinterpret_cast<void *>(&ConfigArgsSize),
-                    CU_LAUNCH_PARAM_END};
 
   // If we are running an RPC server we want to wake up the server thread
   // whenever there is a kernel running and let it sleep otherwise.
@@ -1558,8 +1565,8 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  DynBlockMemSize, Stream,
                                  &CoopAttr,       1};
 
-  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, KernelParams,
-                                  KernelParams ? nullptr : Config);
+  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, LaunchParams.Args,
+                                  /*extra=*/nullptr);
 
   // Register a callback to indicate when the kernel is complete.
   if (GenericDevice.getRPCServer())
@@ -1840,6 +1847,43 @@ Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,
   return Plugin::check(Res, "error in cuMemcpyDtoDAsync: %s");
 }
 
+/// Map a CUDA driver result code to the corresponding offload error code.
+static ErrorCode getOffloadErrorCode(CUresult ResultCode) {
+  switch (ResultCode) {
+  case CUDA_ERROR_INVALID_VALUE:
+    return ErrorCode::INVALID_VALUE;
+  case CUDA_ERROR_OUT_OF_MEMORY:
+  case CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES:
+    return ErrorCode::OUT_OF_RESOURCES;
+  case CUDA_ERROR_NOT_INITIALIZED:
+  case CUDA_ERROR_DEINITIALIZED:
+    return ErrorCode::UNINITIALIZED;
+  case CUDA_ERROR_NO_DEVICE:
+  case CUDA_ERROR_INVALID_DEVICE:
+    return ErrorCode::INVALID_DEVICE;
+  case CUDA_ERROR_INVALID_IMAGE:
+  case CUDA_ERROR_INVALID_SOURCE:
+  case CUDA_ERROR_INVALID_PTX:
+  case CUDA_ERROR_UNSUPPORTED_PTX_VERSION:
+    return ErrorCode::INVALID_BINARY;
+  case CUDA_ERROR_FILE_NOT_FOUND:
+  case CUDA_ERROR_OPERATING_SYSTEM:
+    return ErrorCode::HOST_IO;
+  case CUDA_ERROR_JIT_COMPILER_NOT_FOUND:
+    return ErrorCode::HOST_TOOL_NOT_FOUND;
+  case CUDA_ERROR_NOT_FOUND:
+  case CUDA_ERROR_SHARED_OBJECT_SYMBOL_NOT_FOUND:
+    return ErrorCode::NOT_FOUND;
+  case CUDA_ERROR_NOT_SUPPORTED:
+    return ErrorCode::UNSUPPORTED;
+  case CUDA_ERROR_INVALID_HANDLE:
+  case CUDA_ERROR_INVALID_CONTEXT:
+    return ErrorCode::INVALID_ARGUMENT;
+  default:
+    return ErrorCode::UNKNOWN;
+  }
+}
+
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   CUresult ResultCode = static_cast<CUresult>(Code);
@@ -1851,18 +1895,7 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   if (Ret != CUDA_SUCCESS)
     REPORT() << "Unrecognized " GETNAME(TARGET_NAME) " error code " << Code;
 
-  // TODO: Add more entries to this switch
-  ErrorCode OffloadErrCode;
-  switch (ResultCode) {
-  case CUDA_ERROR_NOT_FOUND:
-    OffloadErrCode = ErrorCode::NOT_FOUND;
-    break;
-  default:
-    OffloadErrCode = ErrorCode::UNKNOWN;
-  }
-
-  // TODO: Create a map for CUDA error codes to Offload error codes
-  return Plugin::error(OffloadErrCode, ErrFmt, Args..., Desc);
+  return Plugin::error(getOffloadErrorCode(ResultCode), ErrFmt, Args..., Desc);
 }
 
 } // namespace plugin

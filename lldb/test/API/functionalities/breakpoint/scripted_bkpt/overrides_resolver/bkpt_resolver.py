@@ -1,5 +1,43 @@
 import lldb
 
+# These count how many times the resolver override was called.
+# Used to check that the masks actually work.
+
+override_count = 0
+trivial_count = 0
+override_not_file = 0
+trivial_not_name = 0
+
+
+class CheckerCommand:
+    def __init__(self, debugger, internal_dict):
+        self.debugger = debugger
+
+    def get_short_help(self):
+        return "A command that checks how many times the resolvers were called"
+
+    def __call__(self, debugger, command, exe_ctx, result):
+        global override_count
+        global trivial_count
+        global override_not_file
+        global trivial_not_name
+
+        result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
+        if command == "trivial":
+            result.AppendMessage(str(trivial_count))
+            return
+        if command == "override":
+            result.AppendMessage(str(override_count))
+            return
+        if command == "override_not_file":
+            result.AppendMessage(str(override_not_file))
+            return
+        if command == "trivial_not_name":
+            result.AppendMessage(str(trivial_not_name))
+            return
+
+        result.AppendError(f"unknown check type: {command}")
+
 
 class OverrideExample:
     def __init__(
@@ -34,12 +72,20 @@ class OverrideExample:
     def overrides_resolver(
         self, target: lldb.SBTarget, initial_resolver: lldb.SBStructuredData
     ):
+        global override_count
+        global override_not_file
+
+        override_count += 1
+
         strm = lldb.SBStream()
+
         initial_resolver.GetAsJSON(strm)
         type = initial_resolver.GetValueForKey("Type").GetStringValue(1000)
         if type == "FileAndLine":
             return True
-        return False
+        else:
+            override_not_file += 1
+            return False
 
 
 class TrivialExample:
@@ -63,5 +109,20 @@ class TrivialExample:
     def overrides_resolver(
         self, target: lldb.SBTarget, initial_resolver: lldb.SBStructuredData
     ):
+        global trivial_count
+        global trivial_not_name
+        trivial_count += 1
+
+        strm = lldb.SBStream()
+
+        initial_resolver.GetAsJSON(strm)
+        type = initial_resolver.GetValueForKey("Type").GetStringValue(1000)
+        if type != "SymbolName":
+            trivial_not_name += 1
+
         """Trivial - overrides nothing"""
         return False
+
+
+def __lldb_init_module(debugger, dict):
+    debugger.HandleCommand(f"command script add -c {__name__}.CheckerCommand checker")

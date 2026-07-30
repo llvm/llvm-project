@@ -1,5 +1,5 @@
 # RUN: llc -o - %s -mtriple=mips-unknown-linux-gnu -enable-shrink-wrap=true \
-# RUN:     -start-before=shrink-wrap -stop-after=prologepilog | FileCheck %s
+# RUN:     -start-before=shrink-wrap -stop-after=prolog-epilog | FileCheck %s
 
 --- |
   declare void @foo()

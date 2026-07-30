@@ -181,7 +181,7 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
     }
     NewCB->setCallingConv(CB->getCallingConv());
     NewCB->setAttributes(PAL);
-    NewCB->copyMetadata(*CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+    NewCB->copyProfileAndDebugMetadata(*CB);
 
     Args.clear();
 
@@ -478,6 +478,12 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
   // otherwise rely on the frame layout in a way that this analysis will not
   // see.
   if (F.hasFnAttribute(Attribute::Naked)) {
+    markFrozen(F);
+    return;
+  }
+
+  // Ensure function definition is available for interprocedural analysis.
+  if (!F.isDefinitionExact()) {
     markFrozen(F);
     return;
   }
@@ -932,7 +938,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
     }
     NewCB->setCallingConv(CB.getCallingConv());
     NewCB->setAttributes(NewCallPAL);
-    NewCB->copyMetadata(CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+    NewCB->copyProfileAndDebugMetadata(CB);
     Args.clear();
     ArgAttrVec.clear();
 

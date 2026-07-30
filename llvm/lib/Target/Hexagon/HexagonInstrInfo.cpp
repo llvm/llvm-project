@@ -2833,6 +2833,7 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::V6_vL32b_nt_cur_npred_ai:
   case Hexagon::V6_vL32b_nt_tmp_pred_ai:
   case Hexagon::V6_vL32b_nt_tmp_npred_ai:
+  case Hexagon::V6_vS32Ub_pred_ai:
   case Hexagon::V6_vS32Ub_npred_ai:
   case Hexagon::V6_vgathermh_pseudo:
   case Hexagon::V6_vgather_vscatter_mh_pseudo:
@@ -2961,6 +2962,8 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L2_ploadruhf_io:
   case Hexagon::S2_pstorerht_io:
   case Hexagon::S2_pstorerhf_io:
+  case Hexagon::S2_pstorerft_io:
+  case Hexagon::S2_pstorerff_io:
     return isShiftedUInt<6,1>(Offset);
 
   case Hexagon::L2_ploadrit_io:
@@ -4948,6 +4951,30 @@ bool HexagonInstrInfo::isQFP16Instr(MachineInstr *MI) const {
 
 bool HexagonInstrInfo::isQFPInstr(MachineInstr *MI) const {
   return isQFP32Instr(MI) || isQFP16Instr(MI);
+}
+
+// Return true if the function contains any qf-generating instructions.
+bool HexagonInstrInfo::hasQFPInstrs(const MachineFunction &MF) const {
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (isQFPInstr(const_cast<MachineInstr *>(&MI)))
+        return true;
+  return false;
+}
+
+// Returns true if A appears before B within the same basic block.
+bool HexagonInstrInfo::isMIBefore(const MachineInstr *A,
+                                  const MachineInstr *B) const {
+  if (!A || !B || A->getParent() != B->getParent())
+    return false;
+
+  for (const MachineInstr &MI : *A->getParent()) {
+    if (&MI == A)
+      return true;
+    if (&MI == B)
+      return false;
+  }
+  return false;
 }
 
 // Addressing mode relations.

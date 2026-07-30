@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -486,6 +487,28 @@ static llvm::Expected<std::vector<WasmSegment>> ParseData(DataExtractor &data) {
   return segments;
 }
 
+/// Parse the minimum size in bytes of the module's first linear memory. This is
+/// the memory guaranteed to exist at instantiation, and so the upper bound of
+/// the static data region.
+static llvm::Expected<uint64_t> ParseMemoryMinSize(DataExtractor &data) {
+  lldb::offset_t offset = 0;
+
+  llvm::Expected<uint32_t> memory_count = GetULEB32(data, offset);
+  if (!memory_count)
+    return memory_count.takeError();
+  if (*memory_count == 0)
+    return llvm::createStringError("module declares no linear memory");
+
+  // The limits of a memory are a flags byte followed by the minimum, and
+  // optionally the maximum, page count.
+  data.GetU8(&offset);
+  llvm::Expected<uint32_t> min_pages = GetULEB32(data, offset);
+  if (!min_pages)
+    return min_pages.takeError();
+
+  return static_cast<uint64_t>(*min_pages) * llvm::wasm::WasmDefaultPageSize;
+}
+
 static llvm::Expected<std::vector<Symbol>>
 ParseNames(SectionSP code_section_sp, DataExtractor &name_data,
            const std::vector<WasmFunction> &functions,
@@ -590,6 +613,16 @@ static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
   if (Name.consume_front(".debug_") || Name.consume_front(".zdebug_"))
     return ObjectFile::GetDWARFSectionTypeFromName(Name);
   return eSectionTypeOther;
+}
+
+/// A `section` attribute on a data variable lands in a named data segment on
+/// wasm, not a top-level custom section, so formatter sections appear as
+/// segment names rather than section names.
+static SectionType GetSegmentTypeFromName(llvm::StringRef Name) {
+  return llvm::StringSwitch<SectionType>(Name)
+      .Case(".lldbsummaries", eSectionTypeLLDBTypeSummaries)
+      .Case(".lldbformatters", eSectionTypeLLDBFormatters)
+      .Default(eSectionTypeData);
 }
 
 std::optional<ObjectFileWasm::section_info>
@@ -728,6 +761,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
   }
 
   lldb::user_id_t segment_id = 0;
+  lldb::addr_t static_data_end = 0;
   for (const WasmSegment &segment : segments) {
     if (segment.type == WasmSegment::Active) {
       // FIXME: Support segments with a memory index.
@@ -757,7 +791,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         /*obj_file=*/this,
         ++segment_id << 8, // 1-based segment index, shifted by 8 bits to avoid
                            // collision with section IDs.
-        ConstString(segment.name), eSectionTypeData,
+        ConstString(segment.name), GetSegmentTypeFromName(segment.name),
         /*file_vm_addr=*/file_vm_addr,
         /*vm_size=*/segment.size,
         /*file_offset=*/file_offset,
@@ -765,6 +799,36 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
         /*log2align=*/0, /*flags=*/0);
     m_sections_up->AddSection(segment_sp);
     GetModule()->GetSectionList()->AddSection(segment_sp);
+
+    if (segment.type == WasmSegment::Active)
+      static_data_end = std::max(static_data_end, file_vm_addr + segment.size);
+  }
+
+  // Zero-initialized globals (BSS) have no data segment, so the loop above
+  // leaves their linear-memory addresses uncovered by any section, and a static
+  // read of one can't be resolved. Cover the rest of linear memory with a
+  // zero-fill section. SetLoadAddress maps it like a data segment so live reads
+  // still go through process memory.
+  if (std::optional<section_info> mem_info =
+          GetSectionInfo(llvm::wasm::WASM_SEC_MEMORY)) {
+    DataExtractor mem_data = ReadImageData(mem_info->offset, mem_info->size);
+    llvm::Expected<uint64_t> memory_size = ParseMemoryMinSize(mem_data);
+    if (!memory_size) {
+      LLDB_LOG_ERROR(log, memory_size.takeError(),
+                     "Failed to parse Wasm memory section: {0}");
+    } else if (*memory_size > static_data_end) {
+      SectionSP bss_sp =
+          std::make_shared<Section>(GetModule(),
+                                    /*obj_file=*/this, ++segment_id << 8,
+                                    ConstString(".bss"), eSectionTypeZeroFill,
+                                    /*file_vm_addr=*/static_data_end,
+                                    /*vm_size=*/*memory_size - static_data_end,
+                                    /*file_offset=*/0,
+                                    /*file_size=*/0,
+                                    /*log2align=*/0, /*flags=*/0);
+      m_sections_up->AddSection(bss_sp);
+      GetModule()->GetSectionList()->AddSection(bss_sp);
+    }
   }
 }
 
@@ -803,10 +867,27 @@ bool ObjectFileWasm::SetLoadAddress(Target &target, lldb::addr_t load_address,
   const size_t num_sections = section_list->GetSize();
   for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
     SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-    if (target.SetSectionLoadAddress(
-            section_sp, load_address | section_sp->GetFileOffset())) {
-      ++num_loaded_sections;
+    lldb::addr_t section_load_addr;
+    switch (section_sp->GetType()) {
+    case eSectionTypeData:
+    case eSectionTypeZeroFill:
+    case eSectionTypeLLDBTypeSummaries:
+    case eSectionTypeLLDBFormatters:
+      // These all live in linear memory, a separate address space from code
+      // (the top two bits of the 64-bit address encode the space: 0 for Memory,
+      // 1 for Object/code), so place the section at its virtual address in the
+      // Memory space while preserving the module id.
+      section_load_addr = (load_address & ~(uint64_t(0b11) << 62)) |
+                          section_sp->GetFileAddress();
+      break;
+    default:
+      // Code (and other) sections are addressed by their offset within the
+      // module in the Object address space.
+      section_load_addr = load_address | section_sp->GetFileOffset();
+      break;
     }
+    if (target.SetSectionLoadAddress(section_sp, section_load_addr))
+      ++num_loaded_sections;
   }
 
   return num_loaded_sections > 0;

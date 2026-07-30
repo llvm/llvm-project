@@ -9,10 +9,8 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
-#include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
-#include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Transforms/AllocationPlacementPolicy.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include <memory>
@@ -44,6 +42,13 @@ enum class LICMNestedHoistingMode {
 
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
+/// Create the allocation-placement pass with the given options and a hook that
+/// can override the thresholds per allocation (e.g. for device routines or
+/// parallel regions). This complements the tablegen-generated overloads.
+std::unique_ptr<mlir::Pass>
+createAllocationPlacement(const AllocationPlacementOptions &options,
+                          AllocationPlacementHook placementHook);
+
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass>
 createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
@@ -62,7 +67,8 @@ std::unique_ptr<mlir::Pass>
 createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
 void populateFIRToSCFRewrites(mlir::RewritePatternSet &patterns,
-                              bool parallelUnordered = false);
+                              bool parallelUnordered = false,
+                              bool setNSW = true);
 
 void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                    bool forceLoopToExecuteOnce = false,

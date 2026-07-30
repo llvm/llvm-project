@@ -30,6 +30,7 @@
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/PPEmbedParameters.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
 #include "clang/Support/Compiler.h"
@@ -198,6 +199,7 @@ class Preprocessor {
   std::unique_ptr<ScratchBuffer> ScratchBuf;
   HeaderSearch      &HeaderInfo;
   ModuleLoader      &TheModuleLoader;
+  TextEncoding TE;
 
   /// External source of macros.
   ExternalPreprocessorSource *ExternalSource;
@@ -380,6 +382,9 @@ private:
 
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
+
+  /// Whether to record lexer check points for diagnostic snippet highlighting.
+  bool RecordCheckPoints = false;
 
   /// Whether we're importing a standard C++20 named Modules.
   bool ImportingCXXNamedModules = false;
@@ -1264,6 +1269,7 @@ public:
   SelectorTable &getSelectorTable() { return Selectors; }
   Builtin::Context &getBuiltinInfo() { return *BuiltinInfo; }
   llvm::BumpPtrAllocator &getPreprocessorAllocator() { return BP; }
+  TextEncoding &getTextEncoding() { return TE; }
 
   void setExternalSource(ExternalPreprocessorSource *Source) {
     ExternalSource = Source;
@@ -2542,6 +2548,15 @@ public:
   /// \returns true if the input filename was in <>'s or false if it was
   /// in ""'s.
   bool GetIncludeFilenameSpelling(SourceLocation Loc,StringRef &Buffer);
+
+  /// Turn the specified lexer token into a fully checked and spelled
+  /// filename, e.g. as an operand of \#line and \#.
+  ///
+  /// The caller is expected to provide a buffer that is large enough to hold
+  /// the spelling of the filename, but is also expected to handle the case
+  /// when this method decides to use a different buffer.
+  ///
+  void GetLineDirectiveFilenameSpelling(SourceLocation Loc, StringRef &Buffer);
 
   /// Given a "foo" or \<foo> reference, look up the indicated file.
   ///

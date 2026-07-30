@@ -315,6 +315,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  net_if_macros
+  HDR
+    net-if-macros.h
+)
+
+add_macro_header(
   sys_time_macros
   HDR
     sys-time-macros.h
@@ -401,6 +407,14 @@ add_macro_header(
 )
 
 add_macro_header(
+  langinfo_macros
+  HDR
+    langinfo-macros.h
+  DEPENDS
+    .locale_macros
+)
+
+add_macro_header(
   nl_types_macros
   HDR
     nl_types-macros.h
@@ -453,3 +467,9 @@ else()
       _LIBC_MODULAR_FORMAT_PRINTF.h
   )
 endif()
+
+add_macro_header(
+  alloca_macros
+  HDR
+    alloca-macros.h
+)
