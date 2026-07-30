@@ -3704,12 +3704,12 @@ void ACCCGToGPULowering::processAccumulateArrayOp(
     // Threads that share an element must not race, so their in-place updates
     // become atomic.
     SmallVector<Value> threadIds;
-    for (gpu::Processor proc :
-         {gpu::Processor::ThreadX, gpu::Processor::ThreadY,
-          gpu::Processor::ThreadZ}) {
-      if (Value id = getGPUThreadIdFor(proc))
-        threadIds.push_back(id);
-    }
+    if (Value xId = getGPUThreadIdFor(gpu::Processor::ThreadX))
+      threadIds.push_back(xId);
+    if (Value yId = getGPUThreadIdFor(gpu::Processor::ThreadY))
+      threadIds.push_back(yId);
+    if (Value zId = getGPUThreadIdFor(gpu::Processor::ThreadZ))
+      threadIds.push_back(zId);
     atomicizeSharedAccumulatorUpdates(accumulatorRoot(memref), kind, threadIds,
                                       rewriter);
     eraseDeadBounds();
