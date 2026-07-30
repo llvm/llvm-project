@@ -17,6 +17,7 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("amdgpu-always-inline", AMDGPUAlwaysInlinePass())
+MODULE_PASS("amdgpu-promote-uniform-args", AMDGPUPromoteUniformArgsPass())
 MODULE_PASS("amdgpu-export-kernel-runtime-handles", AMDGPUExportKernelRuntimeHandlesPass())
 MODULE_PASS("amdgpu-lower-buffer-fat-pointers",
             AMDGPULowerBufferFatPointersPass(*this))

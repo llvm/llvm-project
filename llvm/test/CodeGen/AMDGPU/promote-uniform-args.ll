@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=amdgpu-attributor < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=amdgpu-promote-uniform-args < %s | FileCheck %s
 
 ; A uniform pointer argument of an internal function, passed from a kernel,
 ; is promoted to inreg (SGPR) on both the definition and the call site.
@@ -511,7 +511,8 @@ define internal fastcc void @callee_bitcast(ptr %p) {
 
 define amdgpu_kernel void @k_bitcast(ptr %p) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_bitcast(
-; CHECK: call {{.*}} @callee_bitcast(ptr {{.*}}%p)
+; CHECK: call void {{.*}}(ptr {{.*}}%p)
+; CHECK-NOT: inreg
   %fn = bitcast ptr @callee_bitcast to ptr
   call void %fn(ptr %p)
   ret void
@@ -537,5 +538,45 @@ define amdgpu_kernel void @k_stored(ptr %p) {
   call fastcc void @callee_stored(ptr %p)
   ret void
 }
+
+; inlinehint and alwaysinline callees behave the same for inreg promotion when
+; the callee remains an out-of-line call (the motivating Kokkos case).
+
+; CHECK-LABEL: define internal fastcc void @callee_inlinehint_uniform(
+; CHECK-SAME: ptr inreg {{.*}}%p
+define internal fastcc void @callee_inlinehint_uniform(ptr %p, i32 %i) #0 {
+  %g = getelementptr float, ptr %p, i32 %i
+  %v = load float, ptr %g
+  store float %v, ptr %p
+  ret void
+}
+
+define amdgpu_kernel void @k_inlinehint_uniform(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_inlinehint_uniform(
+; CHECK: call fastcc void @callee_inlinehint_uniform(ptr inreg %p, i32 %tid)
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  call fastcc void @callee_inlinehint_uniform(ptr %p, i32 %tid)
+  ret void
+}
+
+; CHECK-LABEL: define internal fastcc void @callee_alwaysinline_uniform(
+; CHECK-SAME: ptr inreg {{.*}}%p
+define internal fastcc void @callee_alwaysinline_uniform(ptr %p, i32 %i) #1 {
+  %g = getelementptr float, ptr %p, i32 %i
+  %v = load float, ptr %g
+  store float %v, ptr %p
+  ret void
+}
+
+define amdgpu_kernel void @k_alwaysinline_uniform(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_alwaysinline_uniform(
+; CHECK: call fastcc void @callee_alwaysinline_uniform(ptr inreg %p, i32 %tid)
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  call fastcc void @callee_alwaysinline_uniform(ptr %p, i32 %tid)
+  ret void
+}
+
+attributes #0 = { inlinehint }
+attributes #1 = { alwaysinline }
 
 declare i32 @llvm.amdgcn.workitem.id.x()

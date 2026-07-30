@@ -14,16 +14,8 @@
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/UniformityAnalysis.h"
-#include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 #include <cstdint>
@@ -37,15 +29,6 @@ static cl::opt<unsigned> IndirectCallSpecializationThreshold(
     cl::desc(
         "A threshold controls whether an indirect call will be specialized"),
     cl::init(3));
-
-STATISTIC(NumPromotedInRegArgs,
-          "Number of uniform pointer arguments promoted to inreg");
-STATISTIC(NumSkippedDueToInRegBudget,
-          "Number of uniform pointer arguments not promoted due to SGPR budget");
-
-static cl::opt<unsigned> UniformArgSGPRDwordBudget(
-    "amdgpu-uniform-args-sgpr-budget", cl::Hidden, cl::init(8),
-    cl::desc("Max total SGPR dwords of inreg pointer arguments per function"));
 
 #define AMDGPU_ATTRIBUTE(Name, Str) Name##_POS,
 
@@ -1451,186 +1434,6 @@ struct AAAMDGPUMinAGPRAlloc
 
 const char AAAMDGPUMinAGPRAlloc::ID = 0;
 
-static bool hasBlockingInRegArgAttr(const Argument &A) {
-  return A.hasAttribute(Attribute::InReg) || A.hasAttribute(Attribute::ByVal) ||
-         A.hasAttribute(Attribute::ByRef) ||
-         A.hasAttribute(Attribute::StructRet) ||
-         A.hasAttribute(Attribute::InAlloca) ||
-         A.hasAttribute(Attribute::Preallocated) ||
-         A.hasAttribute(Attribute::Nest) ||
-         A.hasAttribute(Attribute::Returned) ||
-         A.hasAttribute(Attribute::SwiftError) ||
-         A.hasAttribute(Attribute::SwiftSelf) ||
-         A.hasAttribute(Attribute::SwiftAsync) ||
-         A.hasAttribute("amdgpu-hidden-argument");
-}
-
-static bool isEligibleInRegUniformCallee(const Function &F) {
-  if (F.isDeclaration() || F.isVarArg())
-    return false;
-  if (!F.hasLocalLinkage() || F.hasAddressTaken())
-    return false;
-  switch (F.getCallingConv()) {
-  case CallingConv::C:
-  case CallingConv::Fast:
-    break;
-  default:
-    return false;
-  }
-  for (const User *U : F.users()) {
-    const auto *CB = dyn_cast<CallBase>(U);
-    if (!CB || CB->getCalledFunction() != &F)
-      return false;
-    if (CB->isMustTailCall() || isa<InvokeInst>(CB))
-      return false;
-  }
-  if (F.user_empty())
-    return false;
-  for (const BasicBlock &BB : F)
-    for (const Instruction &I : BB)
-      if (const auto *CB = dyn_cast<CallBase>(&I))
-        if (CB->isMustTailCall())
-          return false;
-  return true;
-}
-
-static bool mayBePrivateDerivedPointer(const Value *V) {
-  assert(V->getType()->isPointerTy());
-  if (V->getType()->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
-    return true;
-
-  SmallVector<const Value *, 8> Objects;
-  getUnderlyingObjects(V, Objects);
-  for (const Value *Obj : Objects) {
-    if (isa<AllocaInst>(Obj))
-      return true;
-    if (Obj->getType()->isPointerTy() &&
-        Obj->getType()->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
-      return true;
-  }
-  return false;
-}
-
-static bool calleeCastsArgToPrivate(const Argument &A) {
-  SmallVector<const Value *, 16> Worklist;
-  SmallPtrSet<const Value *, 16> Visited;
-  Worklist.push_back(&A);
-  while (!Worklist.empty()) {
-    const Value *V = Worklist.pop_back_val();
-    if (!Visited.insert(V).second)
-      continue;
-    for (const User *U : V->users()) {
-      if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(U)) {
-        if (ASC->getDestAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
-          return true;
-        Worklist.push_back(ASC);
-        continue;
-      }
-      if (const auto *II = dyn_cast<IntrinsicInst>(U)) {
-        if (II->getIntrinsicID() == Intrinsic::amdgcn_addrspacecast_nonnull) {
-          if (II->getType()->getPointerAddressSpace() ==
-              AMDGPUAS::PRIVATE_ADDRESS)
-            return true;
-          Worklist.push_back(II);
-        }
-        continue;
-      }
-      if (isa<GetElementPtrInst, BitCastInst, PHINode, SelectInst>(U))
-        Worklist.push_back(U);
-    }
-  }
-  return false;
-}
-
-static bool collectCallSites(Function &F, SmallVectorImpl<CallBase *> &Calls) {
-  for (User *U : F.users()) {
-    auto *CB = dyn_cast<CallBase>(U);
-    if (!CB || CB->getCalledFunction() != &F)
-      return false;
-    if (CB->isMustTailCall())
-      return false;
-    if (isa<InvokeInst>(CB))
-      return false;
-    Calls.push_back(CB);
-  }
-  return !Calls.empty();
-}
-
-static bool promoteUniformPointerArgsToInReg(Module &M, AnalysisGetter &AG,
-                                             AMDGPUInformationCache &InfoCache) {
-  const DataLayout &DL = M.getDataLayout();
-  TargetMachine &TM = InfoCache.TM;
-  bool Changed = false;
-  bool RoundChanged = true;
-  while (RoundChanged) {
-    RoundChanged = false;
-    for (Function &F : M) {
-      if (!isEligibleInRegUniformCallee(F))
-        continue;
-
-      SmallVector<CallBase *, 8> Calls;
-      if (!collectCallSites(F, Calls))
-        continue;
-
-      unsigned UsedDwords = 0;
-      for (Argument &A : F.args())
-        if (A.hasAttribute(Attribute::InReg))
-          UsedDwords += divideCeil(DL.getTypeSizeInBits(A.getType()), 32);
-
-      bool FuncChanged = false;
-      for (Argument &A : F.args()) {
-        if (hasBlockingInRegArgAttr(A) || !A.getType()->isPointerTy())
-          continue;
-        if (calleeCastsArgToPrivate(A))
-          continue;
-
-        unsigned Need = divideCeil(DL.getTypeSizeInBits(A.getType()), 32);
-        if (UsedDwords + Need > UniformArgSGPRDwordBudget) {
-          ++NumSkippedDueToInRegBudget;
-          continue;
-        }
-
-        bool AllUniform = true;
-        for (CallBase *CB : Calls) {
-          Value *ArgOp = CB->getArgOperand(A.getArgNo());
-          if (mayBePrivateDerivedPointer(ArgOp)) {
-            AllUniform = false;
-            break;
-          }
-
-          Function *Caller = CB->getFunction();
-          const UniformityInfo *UI =
-              InfoCache.getAnalysisResultForFunction<UniformityInfoAnalysis>(
-                  *Caller);
-          if (UI && UI->isDivergentAtUse(CB->getArgOperandUse(A.getArgNo()))) {
-            AllUniform = false;
-            break;
-          }
-
-          TargetTransformInfo TTI = TM.getTargetTransformInfo(*Caller);
-          if (TTI.getValueUniformity(ArgOp) == ValueUniformity::NeverUniform) {
-            AllUniform = false;
-            break;
-          }
-        }
-        if (!AllUniform)
-          continue;
-
-        A.addAttr(Attribute::InReg);
-        for (CallBase *CB : Calls)
-          CB->addParamAttr(A.getArgNo(), Attribute::InReg);
-        UsedDwords += Need;
-        ++NumPromotedInRegArgs;
-        FuncChanged = Changed = RoundChanged = true;
-      }
-
-      if (FuncChanged)
-        InfoCache.invalidateAnalyses();
-    }
-  }
-  return Changed;
-}
-
 /// An abstract attribute to propagate the function attribute
 /// "amdgpu-cluster-dims" from kernel entry functions to device functions.
 struct AAAMDGPUClusterDims
@@ -1864,10 +1667,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
     }
   }
 
-  bool PromoteChanged =
-      promoteUniformPointerArgsToInReg(M, AG, InfoCache);
-  bool AttChanged = A.run() == ChangeStatus::CHANGED;
-  return AttChanged || PromoteChanged;
+  return A.run() == ChangeStatus::CHANGED;
 }
 } // namespace
 

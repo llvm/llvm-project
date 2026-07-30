@@ -1101,6 +1101,8 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                             ThinOrFullLTOPhase Phase) {
     if (Level != OptimizationLevel::O0) {
       if (!isLTOPreLink(Phase)) {
+        if (Level > OptimizationLevel::O1 && getTargetTriple().isAMDGCN())
+          MPM.addPass(AMDGPUPromoteUniformArgsPass());
         if (EnableAMDGPUAttributor && getTargetTriple().isAMDGCN()) {
           AMDGPUAttributorOptions Opts;
           MPM.addPass(AMDGPUAttributorPass(*this, Opts, Phase));
