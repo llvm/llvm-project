@@ -118,6 +118,13 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   if (value.GetError().Fail())
     return ToError(value.GetError(), /*show_user=*/false);
 
+  // Check the original value type before calling `Persist`, because it changes
+  // the type to const result
+  if (lldb::addr_t addr = value.GetLoadAddress();
+      addr != LLDB_INVALID_ADDRESS &&
+      value.GetValueType() != lldb::eValueTypeConstResult)
+    body.memoryReference = EncodeMemoryReference(addr);
+
   if (is_repl_context) {
     // save the new variable expression
     dap.last_valid_variable_expression = std::move(expression);
@@ -136,9 +143,6 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   if (value.MightHaveChildren() || ValuePointsToCode(value))
     body.variablesReference = dap.reference_storage.Insert(
         value, /*is_permanent=*/is_repl_context, /*is_internal=*/false);
-
-  if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
-    body.memoryReference = EncodeMemoryReference(addr);
 
   if (ValuePointsToCode(value) &&
       body.variablesReference.Kind() != eReferenceKindInvalid)

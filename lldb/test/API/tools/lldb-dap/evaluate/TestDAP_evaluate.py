@@ -155,6 +155,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         self.assertEvaluate("non_static_int", "43", want_type="int")
         self.assertEvaluate("struct1.foo", "15", want_type="int")
         self.assertEvaluate("struct2->foo", "16", want_type="int")
+        self.assertEvaluate("10", "10", want_type="int", want_memref=False)
 
         if self.isResultExpandedDescription():
             self.assertEvaluate(
