@@ -129,13 +129,19 @@ def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteVq, [A53UnitFPALU]> { let Latency = 6; }
+// The ASIMD datapath is 64 bits wide: 128-bit (Q-form) operations occupy the
+// FP/ASIMD pipe for two cycles.
+def : WriteRes<WriteVq, [A53UnitFPALU]> { let Latency = 6;
+                                          let ReleaseAtCycles = [2]; }
 
 // FP Mul, Div, Sqrt
 def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 6; }
 def : WriteRes<WriteFDiv, [A53UnitFPMDS]> { let Latency = 33;
                                             let ReleaseAtCycles = [29]; }
 def A53WriteFMAC : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 10; }
+// Q-form multiply-accumulate occupies the MAC pipe for two cycles.
+def A53WriteFMACQ : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 10;
+                                                    let ReleaseAtCycles = [2]; }
 def A53WriteFDivSP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 18;
                                                      let ReleaseAtCycles = [14]; }
 def A53WriteFDivDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 33;
@@ -287,8 +293,30 @@ def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST4Fourv(2d)_POST$")>;
 //---
 // Floating Point MAC, DIV, SQRT
 //---
+// Q-form crypto (AES/SHA/PMULL) keeps single-cycle occupancy instead of the
+// WriteVq two-cycle penalty. The crypto unit is 128 bits wide (per ARM), and,
+// crucially, this preserves back-to-back issue of fused AES pairs
+// (FeatureFuseAES): removing this exemption regresses misched-fusion-aes.ll on
+// Cortex-A53. The exact crypto throughput was NOT benchmarked --
+// the test board's A53 (Raspberry Pi 3) lacks the crypto extension -- so this
+// rests on ARM's documented 128-bit crypto datapath; the fusion behaviour it
+// protects is what the test covers. To be re-checked on crypto-capable silicon.
+def A53WriteCrypto : SchedWriteRes<[A53UnitFPALU]> { let Latency = 6; }
+def : InstRW<[A53WriteCrypto], (instregex "^AES[DE]rr$", "^AESI?MCrr$",
+                                          "^SHA1(C|M|P)rrr$", "^SHA1Hrr$",
+                                          "^SHA1SU0rrr$", "^SHA1SU1rr$",
+                                          "^SHA256H2?rrr$", "^SHA256SU0rr$",
+                                          "^SHA256SU1rrr$", "^PMULLv")>;
+
 def : InstRW<[A53WriteFMAC], (instregex "^FN?M(ADD|SUB).*")>;
-def : InstRW<[A53WriteFMAC], (instregex "^FML(A|S).*")>;
+def : InstRW<[A53WriteFMAC], (instregex "^FML(A|S)L.*")>;
+def : InstRW<[A53WriteFMAC],
+      (instregex "^FML(A|S)(v2f32|v4f16)$",
+                 "^FML(A|S)v1i(16|32|64)_indexed$",
+                 "^FML(A|S)(v2i32|v4i16)_indexed$")>;
+def : InstRW<[A53WriteFMACQ],
+      (instregex "^FML(A|S)(v4f32|v2f64|v8f16)$",
+                 "^FML(A|S)(v4i32|v2i64|v8i16)_indexed$")>;
 def : InstRW<[A53WriteFDivSP], (instrs FDIVSrr)>;
 def : InstRW<[A53WriteFDivDP], (instrs FDIVDrr)>;
 def : InstRW<[A53WriteFDivSP], (instregex "^FDIVv.*32$")>;
