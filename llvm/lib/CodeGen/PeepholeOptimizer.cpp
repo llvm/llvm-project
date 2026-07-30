@@ -67,6 +67,7 @@
 
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -858,8 +859,15 @@ bool PeepholeOptimizer::optimizeExtInstr(
 
     MachineBasicBlock *UseMBB = UseMI->getParent();
     if (UseMBB == &MBB) {
-      // Local uses that come after the extension.
-      if (!LocalMIs.count(UseMI))
+      // Only rewrite local uses that come after the extension. LocalMIs tracks
+      // instructions already visited during the forward scan, but other
+      // peephole rewrites (e.g. foldLoadInto) can insert new instructions
+      // earlier in this block. Membership in LocalMIs is therefore not a
+      // reliable same-block dominance check; walk forward from MI instead.
+      MachineBasicBlock::iterator It = MI.getIterator();
+      ++It;
+      if (llvm::any_of(llvm::make_range(It, MBB.end()),
+                       [UseMI](const MachineInstr &I) { return &I == UseMI; }))
         Uses.push_back(&UseMO);
     } else if (ReachedBBs.count(UseMBB)) {
       // Non-local uses where the result of the extension is used. Always
