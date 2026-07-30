@@ -413,6 +413,11 @@ private:
   void AddAccObjectWithDSA(DesignatorPath, Symbol::Flag);
   bool IsObjectWithVisibleDSA(const DesignatorPath &) const;
   void AdjustAccSymbolReference(const parser::Name &);
+  void enterExpressionLikeContext() { ++expressionLikeDepthCount_; }
+  void exitExpressionLikeContext() { --expressionLikeDepthCount_; }
+  bool inExpressionLikeContext() const {
+    return expressionLikeDepthCount_ != 0;
+  }
   void CheckAccDefaultNoneReference(const parser::Name &, DesignatorPath);
   template <typename A> void CheckAccDefaultNoneReferenceIn(const A &);
 
@@ -464,12 +469,11 @@ private:
 
   SemanticsContext &context_;
   std::vector<AccDirContext> dirContext_; // used as a stack
-  // Depth of the Expr, Variable, and ArrayElement nodes currently being
-  // visited.  A Name reached at depth zero is a whole-object reference that no
-  // precise Post handler covers (e.g. the object of an ALLOCATE, DEALLOCATE, or
-  // NULLIFY, or the pointer of a pointer assignment), so DEFAULT(NONE) is
-  // checked for it directly in Post(const parser::Name &).
-  int referenceContextDepth_{0};
+  // Expr, Variable, and ArrayElement visitor nodes have path-aware post
+  // handlers. A Name outside those expression-like contexts is a whole-object
+  // reference that needs DEFAULT(NONE) checking directly (e.g. ALLOCATE,
+  // DEALLOCATE, NULLIFY, or the pointer in a pointer assignment).
+  int expressionLikeDepthCount_{0};
   Scope *topScope_;
 };
 
@@ -2043,7 +2047,7 @@ void AccAttributeVisitor::CheckAccDefaultNoneReference(
 }
 
 bool AccAttributeVisitor::Pre(const parser::Expr &) {
-  ++referenceContextDepth_;
+  enterExpressionLikeContext();
   return true;
 }
 
@@ -2072,27 +2076,27 @@ void AccAttributeVisitor::CheckAccDefaultNoneReferenceIn(const A &x) {
 }
 
 void AccAttributeVisitor::Post(const parser::Expr &expr) {
-  --referenceContextDepth_;
+  exitExpressionLikeContext();
   CheckAccDefaultNoneReferenceIn(expr);
 }
 
 bool AccAttributeVisitor::Pre(const parser::Variable &) {
-  ++referenceContextDepth_;
+  enterExpressionLikeContext();
   return true;
 }
 
 void AccAttributeVisitor::Post(const parser::Variable &variable) {
-  --referenceContextDepth_;
+  exitExpressionLikeContext();
   CheckAccDefaultNoneReferenceIn(variable);
 }
 
 bool AccAttributeVisitor::Pre(const parser::ArrayElement &) {
-  ++referenceContextDepth_;
+  enterExpressionLikeContext();
   return true;
 }
 
 void AccAttributeVisitor::Post(const parser::ArrayElement &arrayElement) {
-  --referenceContextDepth_;
+  exitExpressionLikeContext();
   if (std::optional<DesignatorPath> path{
           GetDesignatorPath(context_, arrayElement)}) {
     CheckAccDefaultNoneReference(
@@ -2106,7 +2110,7 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
   // whole-object reference that no path-aware handler covers -- for instance
   // the object of an ALLOCATE, DEALLOCATE, or NULLIFY, or the pointer of a
   // pointer assignment. Its resolved name is an exact base-only path.
-  if (referenceContextDepth_ == 0) {
+  if (!inExpressionLikeContext()) {
     if (name.symbol) {
       CheckAccDefaultNoneReference(name, MakeBaseDesignatorPath(*name.symbol));
     }
@@ -2181,6 +2185,8 @@ void AccAttributeVisitor::ResolveAccObject(
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
+            // First form an exact structural path.  If any part cannot be
+            // represented, later registration deliberately does nothing.
             const bool isBareName{
                 parser::GetDesignatorNameIfDataRef(designator) != nullptr};
             DesignatorPath designatorPath;
@@ -2204,10 +2210,11 @@ void AccAttributeVisitor::ResolveAccObject(
                 return;
               }
             }
+            // Then resolve the base entity so ACC_DECLARE flags are applied.
             const bool isDataSharing{dataSharingAttributeFlags.test(accFlag)};
             if (ContainsStructureComponent(designator)) {
-              // Register component references only in the path-aware table; a
-              // component clause does not cover every reference to the base.
+              // Finally register or compare only the complete component path;
+              // a component clause does not cover every reference to its base.
               if (canCheckMultipleAppearances) {
                 const parser::Name &baseName{parser::GetFirstName(designator)};
                 if (baseName.symbol && !designatorPath.empty()) {
