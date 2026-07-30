@@ -150,9 +150,9 @@ public:
   /// When true, the checked offset may be >= the extent of the region.
   /// As an exceptional case, this is also false for idiomatic expressions that
   /// define a past-the-end pointer (and do not dereference it).
-  bool mayOverflow() const { return MayOverflowExtent.has_value(); }
+  bool mayOverflow() const { return ExtentIfMayOverflow.has_value(); }
   /// When true, the checked offset may be out of bounds.
-  bool mayBeInvalid() const { return MayUnderflow || MayOverflowExtent; }
+  bool mayBeInvalid() const { return MayUnderflow || ExtentIfMayOverflow; }
 
   /// Returns the offset of the accessed location from the beginning of the
   /// accessd region.
@@ -160,8 +160,8 @@ public:
 
   /// Returns the extent of the accessed region if it is relevant (because the
   /// offset may overflow it), otherwise returns std::nullopt.
-  std::optional<NonLoc> getExtentIfRelevant() const {
-    return MayOverflowExtent;
+  std::optional<NonLoc> getExtentIfMayOverflow() const {
+    return ExtentIfMayOverflow;
   }
 
   /// Returns the program state that should be used for continuing the analysis
@@ -185,7 +185,7 @@ private:
 
   bool IsCorruptedState = false;
   bool MayUnderflow = false;
-  std::optional<NonLoc> MayOverflowExtent = std::nullopt;
+  std::optional<NonLoc> ExtentIfMayOverflow = std::nullopt;
   ProgramStateRef ValidState = nullptr;
 };
 
@@ -501,7 +501,8 @@ static StringRef getPreposition(const bounds::CheckResult &R) {
 static BugDescription describeInvalidAccess(bounds::CheckResult Res,
                                             StringRef RegName, SizeUnit SU) {
   std::optional<int64_t> OffsetN = getConcreteValue(Res.getOffset());
-  std::optional<int64_t> ExtentN = getConcreteValue(Res.getExtentIfRelevant());
+  std::optional<int64_t> ExtentN =
+      getConcreteValue(Res.getExtentIfMayOverflow());
 
   if (SU.canExpress(OffsetN) && SU.canExpress(ExtentN)) {
     if (OffsetN)
@@ -571,7 +572,7 @@ static std::string getAssumptionNote(bounds::CheckResult Res,
                                      StringRef RegName, SizeUnit SU) {
   bool ShouldReportNonNegative = Res.mayUnderflow();
   if (!providesInformationAboutInteresting(Res.getOffset(), BR)) {
-    std::optional<NonLoc> E = Res.getExtentIfRelevant();
+    std::optional<NonLoc> E = Res.getExtentIfMayOverflow();
     if (E && providesInformationAboutInteresting(*E, BR)) {
       // Even if the byte offset isn't interesting (e.g. it's a constant value),
       // the assumption can still be interesting if it provides information
@@ -584,7 +585,8 @@ static std::string getAssumptionNote(bounds::CheckResult Res,
   }
 
   std::optional<int64_t> OffsetN = getConcreteValue(Res.getOffset());
-  std::optional<int64_t> ExtentN = getConcreteValue(Res.getExtentIfRelevant());
+  std::optional<int64_t> ExtentN =
+      getConcreteValue(Res.getExtentIfMayOverflow());
 
   if (SU.canExpress(OffsetN) && SU.canExpress(ExtentN)) {
     if (OffsetN)
@@ -682,7 +684,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     if (!Res.mayBeValid()) {
       SizeUnit SU = SizeUnit::forSVal(Location, C.getASTContext());
       BugDescription Desc = describeInvalidAccess(Res, RegName, SU);
-      reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfRelevant());
+      reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfMayOverflow());
       return;
     }
 
@@ -783,7 +785,7 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
 
     if (ExceedsUpperBound) {
       // The offset may be invalid (>= Size)...
-      Res.MayOverflowExtent = Extent;
+      Res.ExtentIfMayOverflow = Extent;
 
       if (!WithinUpperBound) {
         // ...and it cannot be within bounds, so report an error, unless we can
@@ -794,7 +796,7 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
               compareValueToThreshold(State, Offset, *Extent, SVB,
                                       /*CheckEquality=*/true);
           if (EqualsToThreshold && !NotEqualToThreshold) {
-            Res.MayOverflowExtent = std::nullopt;
+            Res.ExtentIfMayOverflow = std::nullopt;
             Res.ValidState = EqualsToThreshold;
           }
         }
