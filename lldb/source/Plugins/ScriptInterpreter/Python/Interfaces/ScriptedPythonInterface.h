@@ -220,17 +220,9 @@ public:
       std::tuple<Args...> original_args = std::forward_as_tuple(args...);
       auto transformed_args = TransformArgs(original_args);
 
-      std::string error_string;
       llvm::Expected<PythonCallable::ArgInfo> arg_info = init.GetArgInfo();
       if (!arg_info) {
-        llvm::handleAllErrors(
-            arg_info.takeError(),
-            [&](PythonException &E) { error_string.append(E.ReadBacktrace()); },
-            [&](const llvm::ErrorInfoBase &E) {
-              error_string.append(E.message());
-            });
-        return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                       error_string);
+        return ConvertPythonError(arg_info.takeError());
       }
 
       llvm::Expected<PythonObject> expected_return_object =
@@ -264,20 +256,20 @@ public:
         std::apply(
             [&init, &expected_return_object](auto &&...args) {
               llvm::consumeError(expected_return_object.takeError());
-              expected_return_object = init(args...);
+              expected_return_object = init.Call(args...);
             },
             std::tuple_cat(transformed_args, std::make_tuple(dict)));
       } else {
         std::apply(
             [&init, &expected_return_object](auto &&...args) {
               llvm::consumeError(expected_return_object.takeError());
-              expected_return_object = init(args...);
+              expected_return_object = init.Call(args...);
             },
             transformed_args);
       }
 
       if (!expected_return_object)
-        return expected_return_object.takeError();
+        return ConvertPythonError(expected_return_object.takeError());
       result = expected_return_object.get();
     }
 
@@ -454,12 +446,12 @@ public:
     std::apply(
         [&method, &expected_return_object](auto &&...args) {
           llvm::consumeError(expected_return_object.takeError());
-          expected_return_object = method(args...);
+          expected_return_object = method.Call(args...);
         },
         transformed_args);
 
     if (llvm::Error e = expected_return_object.takeError()) {
-      error = Status::FromError(std::move(e));
+      error = Status::FromError(ConvertPythonError(std::move(e)));
       return ErrorWithMessage<T>(
           caller_signature, "python static method could not be called", error);
     }
@@ -478,6 +470,18 @@ public:
   }
 
 protected:
+  static llvm::Error ConvertPythonError(llvm::Error error) {
+    if (!error)
+      return llvm::Error::success();
+
+    std::string message;
+    llvm::handleAllErrors(
+        std::move(error),
+        [&](python::PythonException &E) { message.append(E.ReadBacktrace()); },
+        [&](const llvm::ErrorInfoBase &E) { message.append(E.message()); });
+    return llvm::createStringError(llvm::inconvertibleErrorCode(), message);
+  }
+
   template <typename T = StructuredData::ObjectSP>
   T ExtractValueFromPythonObject(python::PythonObject &p, Status &error) {
     return p.CreateStructuredObject();
