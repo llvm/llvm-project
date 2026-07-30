@@ -7,6 +7,7 @@
 ! RUN: llvm-readobj -S %t.o | FileCheck --check-prefix=ZLIB %s
 
 ! ZLIB: Name: .debug_info
+! ZLIB-NOT: Section
 ! ZLIB: SHF_COMPRESSED
 
 ! Test that --compress-debug-sections=none does not compress debug sections.
@@ -15,11 +16,13 @@
 ! RUN: llvm-readobj -S %t_none.o | FileCheck --check-prefix=NONE %s
 
 ! NONE: Name: .debug_info
+! NONE-NOT: Section
 ! NONE: Flags [
 ! NONE-NOT: SHF_COMPRESSED
 
 program test
   implicit none
-  integer :: x
+  integer :: x(1000)
   x = 1
+  print *, x(1000)
 end program test
