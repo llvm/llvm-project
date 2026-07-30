@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This file contains the RISC-V CodeGen pipeline builder.
-/// TODO: Port the remaining RISC-V CodeGen passes to the new pass manager.
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
@@ -53,9 +52,9 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) const;
   void addCodeGenPrepare(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
+  void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
   void addPreRegAlloc(PassManagerWrapper &PMW) const;
   void addPostRegAlloc(PassManagerWrapper &PMW) const;
-  void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
   void addPreSched2(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMW) const;
   void addPreEmitPass2(PassManagerWrapper &PMW) const;
