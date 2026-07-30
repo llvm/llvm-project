@@ -1392,8 +1392,29 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
   return GetNbOfCUDADeviceSymbols(expr) > 0;
 }
 
-// Check if any of the symbols part of the lhs or rhs expression has a CUDA
-// device attribute.
+// True for a whole reference to a managed or unified array: a whole array
+// variable, or a whole array component that itself has the attribute (a%b where
+// b is managed). An array section, an array element, a component of a managed
+// object and a computed value are all false.
+template <typename A> inline bool IsWholeManagedArray(const A &expr) {
+  const Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
+  return expr.Rank() > 0 && sym && IsCUDAManagedOrUnifiedSymbol(*sym);
+}
+
+// CUDA Fortran Programming Guide 3.4.1 defines which assignments in host code
+// are copies. A copy that reads or writes device, managed or constant data runs
+// on stream zero, so it waits for previously launched kernels.
+// - Device or constant data on one side and host data on the other is a copy,
+//   and so is device data on both sides.
+// - A whole managed variable or array is copied when the other side is a
+//   constant, a host variable, a host array or a host array section.
+// - A managed array section is assigned by host code when the other side is
+//   host or managed data.
+// - A managed variable, array or array section is copied when the other side is
+//   device data, in both directions.
+// One difference from the guide is that a managed array section is copied when
+// the other side is a whole managed array, as the reference compiler does.
+// Return true if the assignment is one of the copies above.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   int lhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
@@ -1403,32 +1424,40 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
   if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
     return false;
 
-  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
-      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
-    return true; // Managed arrays initialization is performed on the device.
+  // The host can read and write managed data in place, and copying one section
+  // at a time in a loop is slow, so only whole arrays are copied.
+  bool wholeLhs{IsWholeManagedArray(lhs)};
+  bool wholeRhs{IsWholeManagedArray(rhs)};
+
+  if (wholeLhs && rhsNbSymbols == 0 && rhsNbManagedSymbols == 0 &&
+      (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Whole managed array copied from constant or host data.
   }
 
-  // Managed/unified data is host-addressable, so several assignments are
-  // performed on the host and need no explicit data transfer:
-  // - A whole-allocatable left-hand side involving managed/unified data: the
-  //   assignment has reallocation semantics and is performed on the host.
-  // - Element-wise (scalar) access to managed/unified data.
-  // - A right-hand side expression involving managed/unified data assigned into
-  //   a host-addressable (managed/unified or host) left-hand side: evaluating
-  //   it on the host avoids materializing a temporary.
-  // - A managed/unified left-hand side assigned from host-only data.
-  // A whole-array assignment whose right-hand side is a managed/unified
-  // variable is a synchronous data transfer that waits for previously launched
-  // kernels.
-  if ((IsAllocatableDesignator(lhs) &&
+  // The host cannot reach device or constant data, unlike managed and unified
+  // data, so an assignment with such a side is a copy, sections included.
+  bool lhsIsDeviceOnly{lhsNbManagedSymbols == 0 && HasCUDADeviceAttrs(lhs)};
+  // The right-hand side can be an expression, so one device operand is enough.
+  bool rhsHasDeviceOnly{rhsNbSymbols > rhsNbManagedSymbols};
+
+  // Assignments done on the host, with no copy.
+  // - A whole allocatable left-hand side with no device data. The assignment
+  //   may reallocate it, which is done on the host.
+  // - A managed left-hand side with no whole managed array on either side. Only
+  //   sections and elements are involved, and the host reads and writes them in
+  //   place.
+  // - A host left-hand side assigned from a managed section or element.
+  // - An expression involving managed data. Evaluating it on the host avoids a
+  //   temporary.
+  // - A managed left-hand side assigned from host data. Whole arrays are copied
+  //   by the early return above.
+  if ((IsAllocatableDesignator(lhs) && !lhsIsDeviceOnly && !rhsHasDeviceOnly &&
           (lhsNbManagedSymbols >= 1 || rhsNbManagedSymbols >= 1)) ||
-      (lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
-          lhs.Rank() == 0) ||
-      (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
-          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols &&
-          lhs.Rank() == 0) ||
-      (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) &&
-          (lhsNbManagedSymbols >= 1 || !HasCUDADeviceAttrs(lhs))) ||
+      (lhsNbManagedSymbols >= 1 && !rhsHasDeviceOnly &&
+          !(wholeLhs || wholeRhs)) ||
+      (!HasCUDADeviceAttrs(lhs) && rhsNbManagedSymbols >= 1 &&
+          !rhsHasDeviceOnly && !wholeRhs) ||
+      (rhsNbManagedSymbols >= 1 && !IsVariable(rhs) && !lhsIsDeviceOnly) ||
       (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }

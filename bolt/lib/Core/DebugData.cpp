@@ -101,6 +101,25 @@ std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
   return findAttributeInfo(DIE, AbbrevDecl, *Index);
 }
 
+void forEachDIEInUnit(DWARFUnit &Unit,
+                      function_ref<void(const DWARFDie &)> Callback) {
+  DWARFDataExtractor DebugInfoData = Unit.getDebugInfoExtractor();
+  uint64_t DIEOffset = Unit.getOffset() + Unit.getHeaderSize();
+  const uint64_t NextCUOffset = Unit.getNextUnitOffset();
+  DWARFDebugInfoEntry DIEEntry;
+  // ParentIdx is passed as 0 throughout: we visit every DIE but never
+  // reconstruct the tree, so the parent linkage extractFast would record is
+  // unused. The single reusable transient entry means no DIE vector is built.
+  while (DIEOffset < NextCUOffset &&
+         DIEEntry.extractFast(Unit, &DIEOffset, DebugInfoData, NextCUOffset,
+                              /*ParentIdx=*/0)) {
+    if (!DIEEntry.getAbbreviationDeclarationPtr())
+      continue; // Null entry: terminator of a sibling chain.
+    DWARFDie Die(&Unit, &DIEEntry);
+    Callback(Die);
+  }
+}
+
 [[maybe_unused]]
 static void printLE64(const std::string &S) {
   for (uint32_t I = 0, Size = S.size(); I < Size; ++I) {
