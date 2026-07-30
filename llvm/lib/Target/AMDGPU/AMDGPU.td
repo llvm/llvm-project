@@ -876,6 +876,22 @@ defm CvtFP8VOP1Bug : AMDGPUSubtargetFeature<"cvt-fp8-vop1-bug",
   [FeatureFP8ConversionInsts]
 >;
 
+// The fp8/bf8 to f32 conversions select which byte of the source to convert in
+// one of two ways.
+defm CvtFP8SDWASrcSel : AMDGPUSubtargetFeature<"cvt-fp8-sdwa-src-sel",
+  "FP8/BF8 conversions to F32 take the source byte from the SDWA src0_sel field",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureFP8ConversionInsts]
+>;
+
+defm CvtFP8ByteSel : AMDGPUSubtargetFeature<"cvt-fp8-byte-sel",
+  "FP8/BF8 conversions to F32 take the source byte from a byte_sel operand",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureFP8ConversionInsts]
+>;
+
 defm WMMA256bInsts : AMDGPUSubtargetFeature<"wmma-256b-insts",
   "Has WMMA instructions where A and B matrices have duplicated data"
 >;
@@ -1910,6 +1926,7 @@ def FeatureISAVersion9_5_Common : FeatureSet<
   [FeatureAddressableLocalMemorySize163840,
    FeatureFP8Insts,
    FeatureFP8ConversionInsts,
+   FeatureCvtFP8SDWASrcSel,
    FeatureGFX950Insts,
    FeaturePrngInst,
    FeatureBF16ConversionInsts,
@@ -1929,6 +1946,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
       FeatureAddressableLocalMemorySize65536,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
+      FeatureCvtFP8SDWASrcSel,
       FeatureCvtFP8VOP1Bug,
       FeatureXF32Insts
     ])>;
@@ -2119,6 +2137,7 @@ def FeatureISAVersion11_7_Common : FeatureSet<
      FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureFP8ConversionInsts,
+     FeatureCvtFP8ByteSel,
      FeatureDot11Insts,
      FeatureWMMA128bInsts,
      FeatureSWMMACGfx1200Insts,
@@ -2159,6 +2178,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureImageInsts,
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
+   FeatureCvtFP8ByteSel,
    FeatureWMMA128bInsts,
    FeatureSWMMACGfx1200Insts,
    FeatureIEEEMinimumMaximumInsts,
@@ -2221,6 +2241,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
+   FeatureCvtFP8ByteSel,
    FeatureFP8E5M3Insts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -2375,6 +2396,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
+   FeatureCvtFP8ByteSel,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -2895,39 +2917,25 @@ def NotHasMAIInsts : Predicate<"!Subtarget->hasMAIInsts()">,
 def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
 
-// The fp8/bf8 to f32 conversions have three mutually exclusive encodings, so
-// each predicate below covers the instructions and the encoding together.
-def HasFP8ConversionInstsGFX9 :
-  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
-            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
-  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureGCN3Encoding,
-                             FeatureGFX9Insts)>;
-
-def HasFP8ConversionInstsGFX9NoVOP1Bug :
-  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
-            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX9 &&"
+// Byte 0 of the SDWA src_sel form is reachable through the plain VOP1 encoding
+// unless that encoding is unreliable.
+def HasCvtFP8SDWASrcSelNotVOP1Bug :
+  Predicate<"Subtarget->hasCvtFP8SDWASrcSel() &&"
             " !Subtarget->hasCvtFP8VOP1Bug()">,
-  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureGCN3Encoding,
-                             FeatureGFX9Insts, (not FeatureCvtFP8VOP1Bug))>;
+  AssemblerPredicate<(all_of FeatureCvtFP8SDWASrcSel,
+                             (not FeatureCvtFP8VOP1Bug))>;
 
-def HasFP8ConversionInstsGFX11Plus :
-  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
-            " Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
-  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureGFX11Insts)>;
+// The byte_sel form of the fp8 to f32 conversion reads the source as e5m3 when
+// the clamp bit is set, replacing the plain op_sel form.
+def HasCvtFP8ByteSelE5M3 :
+  Predicate<"Subtarget->hasCvtFP8ByteSel() &&"
+            " Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of FeatureCvtFP8ByteSel, FeatureFP8E5M3Insts)>;
 
-def HasFP8ConversionInstsE5M3 :
-  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
-            " Subtarget->hasFP8E5M3Insts() &&"
-            " Subtarget->getGeneration() == AMDGPUSubtarget::GFX12 &&"
-            " Subtarget->hasGFX1250Insts()">,
-  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureFP8E5M3Insts,
-                             FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
-
-def HasFP8ConversionInstsGFX11PlusNoE5M3 :
-  Predicate<"Subtarget->hasFP8ConversionInsts() &&"
-            " Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&"
+def HasCvtFP8ByteSelNotE5M3 :
+  Predicate<"Subtarget->hasCvtFP8ByteSel() &&"
             " !Subtarget->hasFP8E5M3Insts()">,
-  AssemblerPredicate<(all_of FeatureFP8ConversionInsts, FeatureGFX11Insts,
+  AssemblerPredicate<(all_of FeatureCvtFP8ByteSel,
                              (not FeatureFP8E5M3Insts))>;
 
 def HasFmacLegacy32 : Predicate<"Subtarget->hasFmaLegacy32Insts() && Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
