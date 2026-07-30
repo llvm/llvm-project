@@ -1454,10 +1454,9 @@ template <typename A> inline bool IsWholeManagedArray(const A &expr) {
 //   device data, in both directions.
 // One difference from the guide is that a managed array section is copied when
 // the other side is a whole managed array, as the reference compiler does.
-// The guide does not cover unified data. It is host memory that the device can
-// also access, so it takes the place of host data in the rules above and an
-// assignment between unified sides is host code, again as the reference
-// compiler does.
+// Unified data is host memory that the device can also access, so it takes the
+// place of host data in the rules above and an assignment between unified sides
+// is host code.
 // Return true if the assignment is one of the copies above.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {

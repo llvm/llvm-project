@@ -1,9 +1,9 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
 
-! Unified data is host memory that the device can also access. CUDA Fortran
-! Programming Guide 3.4.1 does not cover it, so it takes the place of host data
-! in the rules there: an assignment is a copy when the other side is device or
-! constant data, or a whole managed array, and is done on the host otherwise.
+! Unified data is host memory that the device can also access, so it takes the
+! place of host data in the CUDA Fortran Programming Guide 3.4.1 rules: an
+! assignment is a copy when the other side is device or constant data, or a whole
+! managed array, and is done on the host otherwise.
 
 module cmod
   integer(4), constant :: ca(16)
