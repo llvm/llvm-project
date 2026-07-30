@@ -1403,7 +1403,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
     if (isa<VPIRValue>(V))
       continue;
     VPValue *TailVal = Plan.getPoison(V->getScalarType());
-    VPIRFlags Flags;
+    std::optional<VPIRFlags> Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
     auto *RedIt = find_if(Users, IsaPred<VPReductionPHIRecipe>);
