@@ -1,0 +1,149 @@
+# RUN: llc -mtriple=aarch64 -O1 -run-pass=aarch64-cond-br-tuning %s -o - \
+# RUN:   | FileCheck %s
+# RUN: llc -mtriple=aarch64 -O1 %s -o - -verify-machineinstrs
+
+# Source: an llvm-reduced version of fuzzer-generated compiler input in
+# https://github.com/llvm/llvm-project/issues/212528
+#
+# The point of this test is to ensure we don't generate an add instruction
+# involving a stack slot with xzr as the destination, e.g.
+#
+#   $xzr = ADDSXri %stack.0, 0, 0, implicit-def $nzcv
+#
+# because in this case, since there are SVE registers on the stack, that would
+# expand to a sequence of instructions such as
+#
+#    $xzr = ADDXri $sp, 12, 0
+#    $xzr = ADDVL_XXI $xzr, 1, implicit $vg
+#    $xzr = ADDSXri $xzr, 0, 0, implicit-def $nzcv
+#
+# and none of those is a legal AArch64 instruction (ADD and ADDVL can't target
+# xzr at all, and ADDS can't use it as an input). Also, if they were legal,
+# they wouldn't compute the intended value, since the results of the first two
+# instructions would be thrown away.
+#
+# We check the output of the phase that could have generated this unwanted
+# ADDS, and also check that the full code generation passes
+# -verify-machineinstrs.
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+  target triple = "aarch64"
+  
+  define void @launch(i1 %0, ptr %g28, ptr %g10) #0 {
+    %2 = alloca i8, align 4
+    br label %3
+  
+  3:                                                ; preds = %8, %6, %1
+    %4 = phi <2 x i8> [ zeroinitializer, %1 ], [ %5, %8 ], [ zeroinitializer, %6 ]
+    %5 = xor <2 x i8> %4, splat (i8 1)
+    br i1 %0, label %8, label %6
+  
+  6:                                                ; preds = %3
+    %7 = extractelement <2 x i8> %4, i64 0
+    store <4 x i16> splat (i16 1), ptr %g28, align 8
+    br label %3
+  
+  8:                                                ; preds = %3
+    %9 = call ptr @f20()
+    store i8 0, ptr %g10, align 4
+    %10 = icmp eq ptr null, %2
+    br i1 %10, label %3, label %11
+  
+  11:                                               ; preds = %8
+    ret void
+  }
+  
+  declare ptr @f20() #1
+  
+  attributes #0 = { "frame-pointer"="non-leaf-no-reserve" "target-features"="+sve,+armv9a" }
+  attributes #1 = { "target-features"="+armv9a" }
+...
+---
+name:            launch
+alignment:       4
+tracksRegLiveness: true
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: fpr64 }
+  - { id: 1, class: fpr64 }
+  - { id: 2, class: gpr32 }
+  - { id: 3, class: gpr64common }
+  - { id: 4, class: gpr64common }
+  - { id: 5, class: gpr32 }
+  - { id: 6, class: fpr64 }
+  - { id: 7, class: fpr128 }
+  - { id: 8, class: zpr }
+  - { id: 9, class: zpr }
+  - { id: 10, class: zpr }
+  - { id: 11, class: fpr64 }
+  - { id: 12, class: fpr64 }
+  - { id: 13, class: fpr128 }
+  - { id: 14, class: gpr64all }
+  - { id: 15, class: gpr32 }
+  - { id: 16, class: gpr64common }
+liveins:
+  - { reg: '$w0', virtual-reg: '%2' }
+  - { reg: '$x1', virtual-reg: '%3' }
+  - { reg: '$x2', virtual-reg: '%4' }
+frameInfo:
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  framePointerPolicy: non-leaf-no-reserve
+  maxCallFrameSize: 0
+  localFrameSize:  4
+stack:
+  - { id: 0, size: 1, alignment: 4, local-offset: -4 }
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.1):
+    liveins: $w0, $x1, $x2
+  
+    %4:gpr64common = COPY $x2
+    %3:gpr64common = COPY $x1
+    %2:gpr32 = COPY $w0
+    %5:gpr32 = COPY %2
+    %7:fpr128 = MOVIv2d_ns 0
+    %6:fpr64 = COPY %7.dsub
+  
+  bb.1 (%ir-block.3):
+    %0:fpr64 = PHI %6, %bb.0, %11, %bb.2, %1, %bb.3
+    %9:zpr = IMPLICIT_DEF
+    %8:zpr = INSERT_SUBREG %9, %0, %subreg.dsub
+    %10:zpr = EOR_ZI_PSEUDO killed %8, 0
+    %1:fpr64 = COPY %10.dsub
+    TBNZW %5, 0, %bb.3
+    B %bb.2
+  
+  bb.2 (%ir-block.6):
+    %12:fpr64 = MOVIv4i16 1, 0
+    STRDui killed %12, %3, 0 :: (store (s64) into %ir.g28)
+    %13:fpr128 = MOVIv2d_ns 0
+    %11:fpr64 = COPY %13.dsub
+    B %bb.1
+  
+  bb.3 (%ir-block.8):
+    successors: %bb.1(0x7c000000), %bb.4(0x04000000)
+  
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @f20, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %15:gpr32 = COPY $wzr
+    STRBBui %15, %4, 0 :: (store (s8) into %ir.g10, align 4)
+    %16:gpr64common = ADDXri %stack.0, 0, 0
+    CBZX killed %16, %bb.1
+    B %bb.4
+
+  ; CHECK: %16:gpr64common = ADDSXri %stack.0, 0, 0, implicit-def $nzcv
+  ; CHECK: Bcc 0, %bb.1, implicit $nzcv
+  ; CHECK: B %bb.4
+  
+  bb.4 (%ir-block.11):
+    RET_ReallyLR
+...

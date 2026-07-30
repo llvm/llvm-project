@@ -14,7 +14,7 @@ define void @foo() {
 ; CHECK-NEXT:    .cfi_offset w27, -24
 ; CHECK-NEXT:    .cfi_offset w28, -32
 ; CHECK-NEXT:    adds x8, sp, #1, lsl #12 ; =4096
-; CHECK-NEXT:    cmn x8, #32
+; CHECK-NEXT:    adds x8, x8, #32
 ; CHECK-NEXT:    b.eq LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %false
 ; CHECK-NEXT:    bl _baz

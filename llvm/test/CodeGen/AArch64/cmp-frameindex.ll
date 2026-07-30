@@ -7,7 +7,7 @@ define void @test_frameindex_cmp() {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    cmn sp, #12
+; CHECK-NEXT:    adds x8, sp, #12
 ; CHECK-NEXT:    b.eq .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %bb1
 ; CHECK-NEXT:    bl bar
