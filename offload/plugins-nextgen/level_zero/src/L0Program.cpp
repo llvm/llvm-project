@@ -43,6 +43,21 @@ Error L0GlobalHandlerTy::getGlobalMetadataFromDevice(GenericDeviceTy &Device,
   return Plugin::success();
 }
 
+Error L0GlobalHandlerTy::iterateSymbols(
+    DeviceImageTy &Image, SymbolKindTy Kind,
+    function_ref<bool(StringRef)> Callback) {
+  // The images are SPIR-V, so only the kernels the module reports are known.
+  if (Kind != SymbolKindTy::Kernel)
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "cannot enumerate global variables in a module");
+
+  for (StringRef Name : L0ProgramTy::makeL0Program(Image).getKernelNames())
+    if (!Callback(Name))
+      break;
+
+  return Plugin::success();
+}
+
 inline L0DeviceTy &L0ProgramTy::getL0Device() const {
   return L0DeviceTy::makeL0Device(getDevice());
 }

@@ -110,6 +110,11 @@ public:
   Error getSymbolMetadata(const char *Name, void **AddrPtr,
                           size_t *SizePtr) const;
 
+  /// Returns the names of every kernel in this program.
+  auto getKernelNames() const {
+    return llvm::make_first_range(KernelsToModuleMap);
+  }
+
   /// Returns the handle of a module that contains a given Kernel name.
   ze_module_handle_t findModuleFromKernelName(const char *KernelName) const {
     auto K = KernelsToModuleMap.find(std::string(KernelName));
@@ -126,6 +131,9 @@ struct L0GlobalHandlerTy final : public GenericGlobalHandlerTy {
   Error getGlobalMetadataFromDevice(GenericDeviceTy &Device,
                                     DeviceImageTy &Image,
                                     GlobalTy &DeviceGlobal) override;
+
+  Error iterateSymbols(DeviceImageTy &Image, SymbolKindTy Kind,
+                       function_ref<bool(StringRef)> Callback) override;
 };
 
 bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,

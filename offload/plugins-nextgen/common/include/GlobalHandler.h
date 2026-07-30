@@ -13,9 +13,11 @@
 #ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 #define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
 
+#include <optional>
 #include <type_traits>
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Compiler.h"
@@ -35,6 +37,9 @@ struct GenericDeviceTy;
 
 using namespace llvm::object;
 
+/// The kinds of symbols that can be enumerated in a device image.
+enum class SymbolKindTy { Kernel, GlobalVariable };
+
 /// Common abstraction for globals that live on the host and device.
 /// It simply encapsulates the symbol name, symbol size, and symbol address
 /// (which might be host or device depending on the context).
@@ -48,7 +53,7 @@ class GlobalTy {
   void *Ptr;
 
 public:
-  GlobalTy(const std::string &Name, uint32_t Size = 0, void *Ptr = nullptr)
+  GlobalTy(StringRef Name, uint32_t Size = 0, void *Ptr = nullptr)
       : Name(Name), Size(Size), Ptr(Ptr) {}
 
   const std::string &getName() const { return Name; }
@@ -216,6 +221,17 @@ public:
   /// with profiling prefixes.
   Expected<GPUProfGlobals> readProfilingGlobals(GenericDeviceTy &Device,
                                                 DeviceImageTy &Image);
+
+  /// Enumerate the names of the symbols of the given \p Kind in \p Image,
+  /// stopping early if \p Callback returns false.
+  virtual Error iterateSymbols(DeviceImageTy &Image, SymbolKindTy Kind,
+                               function_ref<bool(StringRef)> Callback);
+
+protected:
+  /// Returns the name \p Symbol is known by if it identifies a symbol of the
+  /// given \p Kind, otherwise std::nullopt.
+  virtual std::optional<StringRef>
+  matchSymbol(const ELFSymbolRef &Symbol, StringRef Name, SymbolKindTy Kind);
 };
 
 } // namespace plugin
