@@ -54,6 +54,7 @@ static void emitDiagnostics(const BoundNodes &Nodes, BugReporter &BR,
                                BR.getSourceManager());
   auto Report = std::make_unique<BasicBugReport>(BT, OS.str(), BSLoc);
   Report->addRange(CE->getSourceRange());
+  Report->setDeclWithIssue(ADC->getDecl());
   BR.emitReport(std::move(Report));
 }
 
@@ -74,6 +75,7 @@ static void emitDiagnosticsUnrelated(const BoundNodes &Nodes, BugReporter &BR,
                                BR.getSourceManager());
   auto Report = std::make_unique<BasicBugReport>(BT, OS.str(), BSLoc);
   Report->addRange(CE->getSourceRange());
+  Report->setDeclWithIssue(ADC->getDecl());
   BR.emitReport(std::move(Report));
 }
 
@@ -93,20 +95,12 @@ static void emitDiagnosticsIdArg(const BoundNodes &Nodes, BugReporter &BR,
                                BR.getSourceManager());
   auto Report = std::make_unique<BasicBugReport>(BT, OS.str(), BSLoc);
   Report->addRange(CE->getSourceRange());
+  Report->setDeclWithIssue(ADC->getDecl());
   BR.emitReport(std::move(Report));
 }
 
-namespace clang {
-namespace ast_matchers {
-AST_MATCHER_P(StringLiteral, mentionsBoundType, std::string, BindingID) {
-  return Builder->removeBindings([this, &Node](const BoundNodesMap &Nodes) {
-    const auto &BN = Nodes.getNode(this->BindingID);
-    if (const auto *ND = BN.get<NamedDecl>()) {
-      return ND->getName() != Node.getString();
-    }
-    return true;
-  });
-}
+namespace {
+using BoundNodesMap = ::clang::ast_matchers::internal::BoundNodesMap;
 
 // Matches the plain `id` type.
 AST_MATCHER(QualType, isObjCIdType) { return Node->isObjCIdType(); }
@@ -133,8 +127,7 @@ AST_MATCHER_P2(Expr, isCRTPCast, std::string, BaseID, std::string, DerivedID) {
     return true;
   });
 }
-} // end namespace ast_matchers
-} // end namespace clang
+} // end anonymous namespace
 
 static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
   return hasType(pointerType(pointee(hasDeclaration(DeclM))));
