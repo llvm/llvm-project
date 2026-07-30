@@ -25,13 +25,13 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZATIONPLANNER_H
 
 #include "VPlan.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace {
 class GeneratedRTChecks;
-} // namespace
+}
 
 namespace llvm {
 
@@ -128,9 +128,11 @@ public:
     }
 
     VPBasicBlock *getBlock() const { return Block; }
+
     operator VPRecipeBase *() const {
       return Point == Block->end() ? nullptr : &*Point;
     }
+
     template <typename T> void insert(T &R) { return Block->insert(R, Point); }
   };
 
@@ -163,7 +165,8 @@ public:
   VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
       : InsertPt(TheBB, IP) {}
 
-  /// Get the recipe at the current point.
+  /// Get the recipe at the current insert point or nullptr if the insert point
+  /// is the end of the block.
   VPRecipeBase *getRecipe() const { return InsertPt; }
 
   /// Create a VPBuilder to insert after \p R.
@@ -172,12 +175,7 @@ public:
   }
 
   /// Sets the current insert point to a previously-saved location.
-  void restoreIP(VPInsertPoint IP) {
-    if (IP)
-      setInsertPoint(IP);
-    else
-      InsertPt.clear();
-  }
+  void restoreIP(VPInsertPoint IP) { InsertPt = IP; }
 
   /// Set the current insert point.
   void setInsertPoint(const VPInsertPoint &IP) {
