@@ -97,3 +97,12 @@ end
 real module function c1547()
   func = 0.0
 end function
+
+module mod_test
+abstract interface
+  !ERROR: 'f1' has MODULE prefix, which is not allowed in an ABSTRACT interface body
+  pure integer module function f1(i)
+    integer, intent(in) :: i
+  end function
+end interface
+end module
