@@ -1009,7 +1009,6 @@ Current list of TODOs in code generation:
 
 Current list of TODOs in optimizations:
 
-- `flang/lib/Optimizer/Transforms/ArrayValueCopy.cpp:1007` not yet implemented: unhandled dynamic type parameters
 
 ---
 
