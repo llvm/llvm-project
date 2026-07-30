@@ -50,6 +50,9 @@ public:
 
   HardcodedFormatters::HardcodedSyntheticFinder
   GetHardcodedSynthetics() override;
+
+  std::vector<Language::MethodNameVariant>
+  GetMethodNameVariants(llvm::StringRef name) const override;
 };
 
 }; // namespace lldb_private

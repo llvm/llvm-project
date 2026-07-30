@@ -101,3 +101,21 @@ FortranLanguage::GetHardcodedSynthetics() {
 
   return formatters;
 }
+
+std::vector<Language::MethodNameVariant>
+FortranLanguage::GetMethodNameVariants(llvm::StringRef name) const {
+  // Flang lower-cases subprograms internally, with the exception of the main 
+  // subprogram which is upper-cased.
+  std::vector<Language::MethodNameVariant> variants;
+  std::string lower_name = name.lower();
+  if (name != lower_name) 
+    variants.emplace_back(lower_name, lldb::eFunctionNameTypeFull);
+  
+  std::string upper_name = name.upper();
+  if (name != upper_name) 
+    variants.emplace_back(upper_name, lldb::eFunctionNameTypeFull);
+  
+  variants.emplace_back(lower_name + "_", lldb::eFunctionNameTypeFull);
+
+  return variants;
+}
