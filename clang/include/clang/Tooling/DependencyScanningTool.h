@@ -168,6 +168,8 @@ class CompilerInstanceWithContext {
   // Compiler Instance
   std::unique_ptr<CompilerInstance> CIPtr;
 
+  std::shared_ptr<dependencies::ModuleDepCollector> MDC;
+
   // Source location offset.
   int32_t SrcLocOffset = 0;
 
