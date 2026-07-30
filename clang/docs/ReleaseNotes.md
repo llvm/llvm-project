@@ -367,7 +367,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
-- Fixed a crash when a structured binding was declared with an explicit
+- Fixed an assertion when a structured binding was declared with an explicit
   (non-`auto`) array type. (#GH200834)
 
 - Fixed a regression where an internal-linkage function (e.g. a `static` or
