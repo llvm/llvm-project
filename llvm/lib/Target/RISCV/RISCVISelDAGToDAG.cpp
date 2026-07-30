@@ -5099,6 +5099,10 @@ FunctionPass *llvm::createRISCVISelDag(RISCVTargetMachine &TM,
   return new RISCVDAGToDAGISelLegacy(TM, OptLevel);
 }
 
+RISCVISelDAGToDAGPass::RISCVISelDAGToDAGPass(RISCVTargetMachine &TM,
+                                             CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<RISCVDAGToDAGISel>(TM, OptLevel)) {}
+
 char RISCVDAGToDAGISelLegacy::ID = 0;
 
 RISCVDAGToDAGISelLegacy::RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TM,
