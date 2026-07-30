@@ -14,5 +14,5 @@ LoadCommands:
   - cmd:             LC_TARGET_TRIPLE
     cmdsize:         16
     triple:          8
-    Content:         'abcd'
+    Content:         'arm64-apple-macos27.0.0'
 ...

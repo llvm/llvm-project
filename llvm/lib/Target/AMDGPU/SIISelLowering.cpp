@@ -1430,6 +1430,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
       if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
         Flags |= MachineMemOperand::MOVolatile;
     }
+
     Flags |= MachineMemOperand::MODereferenceable;
 
     IntrinsicInfo Info;
@@ -8379,11 +8380,12 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
           VT.getStoreSize(), Alignment);
       SDValue LoadVal;
       if (!Offset->isDivergent()) {
-        SDValue Ops[] = {Rsrc, // source register
+        SDValue Ops[] = {DAG.getEntryNode(), // Chain
+                         Rsrc,               // source register
                          Offset, CachePolicy};
-        SDValue BufferLoad =
-            DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD_UBYTE, DL,
-                                    DAG.getVTList(MVT::i32), Ops, VT, MMO);
+        SDValue BufferLoad = DAG.getMemIntrinsicNode(
+            AMDGPUISD::SBUFFER_LOAD_UBYTE, DL,
+            DAG.getVTList(MVT::i32, MVT::Other), Ops, VT, MMO);
         LoadVal = DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
       } else {
         SDValue Ops[] = {
@@ -10760,34 +10762,48 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
                            NumVDataDwords, IsAtomicPacked16Bit, DL);
 }
 
-SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
+SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
+                                       SDValue Chain, SDValue Rsrc,
                                        SDValue Offset, SDValue CachePolicy,
-                                       SelectionDAG &DAG) const {
+                                       SelectionDAG &DAG,
+                                       MachineMemOperand *MMO) const {
   MachineFunction &MF = DAG.getMachineFunction();
+  bool HasChainResult = MMO != nullptr;
 
-  const DataLayout &DataLayout = DAG.getDataLayout();
-  Align Alignment =
-      DataLayout.getABITypeAlign(VT.getTypeForEVT(*DAG.getContext()));
+  if (!HasChainResult) {
+    const DataLayout &DataLayout = DAG.getDataLayout();
+    Align Alignment =
+        DataLayout.getABITypeAlign(MemVT.getTypeForEVT(*DAG.getContext()));
 
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-          MachineMemOperand::MOInvariant,
-      VT.getStoreSize(), Alignment);
+    MMO = MF.getMachineMemOperand(MachinePointerInfo(),
+                                  MachineMemOperand::MOLoad |
+                                      MachineMemOperand::MODereferenceable |
+                                      MachineMemOperand::MOInvariant,
+                                  MemVT.getStoreSize(), Alignment);
+  }
 
   if (!Offset->isDivergent()) {
-    SDValue Ops[] = {Rsrc, Offset, CachePolicy};
+    SDValue Ops[] = {Chain, Rsrc, Offset, CachePolicy};
 
-    // Lower llvm.amdgcn.s.buffer.load.{i16, u16} intrinsics. Initially, the
-    // s_buffer_load_u16 instruction is emitted for both signed and unsigned
-    // loads. Later, DAG combiner tries to combine s_buffer_load_u16 with sext
-    // and generates s_buffer_load_i16 (performSignExtendInRegCombine).
-    if (VT == MVT::i16 && Subtarget->hasScalarSubwordLoads()) {
-      SDValue BufferLoad =
-          DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD_USHORT, DL,
-                                  DAG.getVTList(MVT::i32), Ops, VT, MMO);
-      return DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
-    }
+    // Lower llvm.amdgcn.*s.buffer.load.{i,u}N intrinsics. First, generate
+    // s_buffer_load_u* for signed and unsigned load instructions. Next, DAG
+    // combiner tries to merge the s_buffer_load_uN with a sext instruction
+    // (performSignExtendInRegCombine()) and it replaces s_buffer_load_uN with
+    // s_buffer_load_iN.
+    auto HandleScalarSubwordLoads = [&](unsigned Opcode) -> SDValue {
+      SDValue BufferLoad = DAG.getMemIntrinsicNode(
+          Opcode, DL, DAG.getVTList(MVT::i32, MVT::Other), Ops, MemVT, MMO);
+      SDValue LoadVal = DAG.getAnyExtOrTrunc(
+          DAG.getNode(ISD::TRUNCATE, DL, MemVT, BufferLoad), DL, VT);
+      if (HasChainResult)
+        return DAG.getMergeValues({LoadVal, BufferLoad.getValue(1)}, DL);
+      return LoadVal;
+    };
+    if (MemVT == MVT::i8 && Subtarget->hasScalarSubwordLoads())
+      return HandleScalarSubwordLoads(AMDGPUISD::SBUFFER_LOAD_UBYTE);
+
+    if (MemVT == MVT::i16 && Subtarget->hasScalarSubwordLoads())
+      return HandleScalarSubwordLoads(AMDGPUISD::SBUFFER_LOAD_USHORT);
 
     // Widen vec3 load to vec4.
     if (VT.isVector() && VT.getVectorNumElements() == 3 &&
@@ -10795,21 +10811,25 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
       EVT WidenedVT =
           EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(), 4);
       auto WidenedOp = DAG.getMemIntrinsicNode(
-          AMDGPUISD::SBUFFER_LOAD, DL, DAG.getVTList(WidenedVT), Ops, WidenedVT,
+          AMDGPUISD::SBUFFER_LOAD, DL, DAG.getVTList(WidenedVT, MVT::Other),
+          Ops, WidenedVT,
           MF.getMachineMemOperand(MMO, 0, WidenedVT.getStoreSize()));
       auto Subvector = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, WidenedOp,
                                    DAG.getVectorIdxConstant(0, DL));
+      if (HasChainResult)
+        return DAG.getMergeValues({Subvector, WidenedOp.getValue(1)}, DL);
       return Subvector;
     }
 
     return DAG.getMemIntrinsicNode(AMDGPUISD::SBUFFER_LOAD, DL,
-                                   DAG.getVTList(VT), Ops, VT, MMO);
+                                   DAG.getVTList(VT, MVT::Other), Ops, MemVT,
+                                   MMO);
   }
 
   // We have a divergent offset. Emit a MUBUF buffer load instead. We can
   // assume that the buffer is unswizzled.
   SDValue Ops[] = {
-      DAG.getEntryNode(),                    // Chain
+      Chain,                                 // Chain
       Rsrc,                                  // rsrc
       DAG.getConstant(0, DL, MVT::i32),      // vindex
       {},                                    // voffset
@@ -10818,9 +10838,14 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
       CachePolicy,                           // cachepolicy
       DAG.getTargetConstant(0, DL, MVT::i1), // idxen
   };
-  if (VT == MVT::i16 && Subtarget->hasScalarSubwordLoads()) {
+  if ((MemVT == MVT::i8 || MemVT == MVT::i16) &&
+      Subtarget->hasScalarSubwordLoads()) {
     setBufferOffsets(Offset, DAG, &Ops[3], Align(4));
-    return handleByteShortBufferLoads(DAG, VT, DL, Ops, MMO);
+    SDValue Load = handleByteShortBufferLoads(DAG, MemVT, DL, Ops, MMO);
+    SDValue LoadVal = DAG.getAnyExtOrTrunc(Load.getOperand(0), DL, VT);
+    if (HasChainResult)
+      return DAG.getMergeValues({LoadVal, Load.getOperand(1)}, DL);
+    return LoadVal;
   }
 
   SmallVector<SDValue, 4> Loads;
@@ -10851,8 +10876,17 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
                                         LoadVT, LoadMMO, DAG));
   }
 
-  if (NumElts == 8 || NumElts == 16)
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Loads);
+  if (NumElts == 8 || NumElts == 16) {
+    SDValue LoadVal = DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Loads);
+    if (HasChainResult) {
+      SmallVector<SDValue, 4> LoadChains;
+      for (SDValue Load : Loads)
+        LoadChains.push_back(Load.getValue(1));
+      SDValue Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, LoadChains);
+      return DAG.getMergeValues({LoadVal, Chain}, DL);
+    }
+    return LoadVal;
+  }
 
   return Loads[0];
 }
@@ -11169,8 +11203,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                      ? AMDGPU::CPol::ALL
                      : AMDGPU::CPol::ALL_pregfx12))
       return Op;
-    return lowerSBuffer(VT, DL, Op.getOperand(1), Op.getOperand(2),
-                        Op.getOperand(3), DAG);
+    return lowerSBuffer(VT, VT, DL, DAG.getEntryNode(), Op.getOperand(1),
+                        Op.getOperand(2), Op.getOperand(3), DAG);
   }
   case Intrinsic::amdgcn_fdiv_fast:
     return lowerFDIV_FAST(Op, DAG);
@@ -11625,6 +11659,19 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getMemIntrinsicNode(AMDGPUISD::DS_ORDERED_COUNT, DL,
                                    M->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
+  }
+  case Intrinsic::amdgcn_ptr_s_buffer_load: {
+    unsigned CPol = Op.getConstantOperandVal(4);
+    if (CPol & ~((Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12)
+                     ? AMDGPU::CPol::ALL
+                     : AMDGPU::CPol::ALL_pregfx12))
+      return Op;
+
+    MemSDNode *M = cast<MemSDNode>(Op);
+    return lowerSBuffer(
+        Op.getValueType(), M->getMemoryVT(), DL, Op.getOperand(0),
+        bufferRsrcPtrToVector(Op.getOperand(2), DAG), Op.getOperand(3),
+        Op.getOperand(4), DAG, M->getMemOperand());
   }
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
@@ -15811,22 +15858,22 @@ SITargetLowering::performSignExtendInRegCombine(SDNode *N,
     assert(Subtarget->hasScalarSubwordLoads() &&
            "s_buffer_load_{u8, i8} are supported "
            "in GFX12 (or newer) architectures.");
-    EVT VT = Src.getValueType();
     unsigned Opc = (Src.getOpcode() == AMDGPUISD::SBUFFER_LOAD_UBYTE)
                        ? AMDGPUISD::SBUFFER_LOAD_BYTE
                        : AMDGPUISD::SBUFFER_LOAD_SHORT;
     SDLoc DL(N);
-    SDVTList ResList = DCI.DAG.getVTList(MVT::i32);
+    SDVTList ResList =
+        DCI.DAG.getVTList(MVT::i32, Src.getOperand(0).getValueType());
     SDValue Ops[] = {
-        Src.getOperand(0), // source register
-        Src.getOperand(1), // offset
-        Src.getOperand(2)  // cachePolicy
+        Src.getOperand(0), // Chain
+        Src.getOperand(1), // source register
+        Src.getOperand(2), // offset
+        Src.getOperand(3)  // cachePolicy
     };
     auto *M = cast<MemSDNode>(Src);
     SDValue BufferLoad = DCI.DAG.getMemIntrinsicNode(
         Opc, DL, ResList, Ops, M->getMemoryVT(), M->getMemOperand());
-    SDValue LoadVal = DCI.DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
-    return LoadVal;
+    return DCI.DAG.getMergeValues({BufferLoad, BufferLoad.getValue(1)}, DL);
   }
   if (((Src.getOpcode() == AMDGPUISD::BUFFER_LOAD_UBYTE &&
         VTSign->getVT() == MVT::i8) ||
@@ -18724,8 +18771,10 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
   if (!isFloatingPoint && !isInteger)
     return SDValue();
 
-  bool isEquality = CC == (isFloatingPoint ? ISD::SETOEQ : ISD::SETEQ);
-  bool isNonEquality = CC == (isFloatingPoint ? ISD::SETONE : ISD::SETNE);
+  // Bare SETEQ/SETNE is the builder's NaN-impossible downgrade.
+  bool isEquality = CC == ISD::SETEQ || (isFloatingPoint && CC == ISD::SETOEQ);
+  bool isNonEquality =
+      CC == ISD::SETNE || (isFloatingPoint && CC == ISD::SETONE);
   if (!isEquality && !isNonEquality)
     return SDValue();
 
@@ -18759,6 +18808,11 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
   // select (setccinv x, const), y, const -> select (setccinv x, const), y, x
   if (!(isEquality && TrueVal == ConstVal) &&
       !(isNonEquality && FalseVal == ConstVal))
+    return SDValue();
+
+  // SETONE's false arm is also taken for NaN ArgVal, so require NaN excluded.
+  if (isFloatingPoint && isNonEquality && FalseVal == ConstVal &&
+      !Cond->getFlags().hasNoNaNs() && !DCI.DAG.isKnownNeverNaN(ArgVal))
     return SDValue();
 
   SDValue SelectLHS = (isEquality && TrueVal == ConstVal) ? ArgVal : TrueVal;

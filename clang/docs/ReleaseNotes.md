@@ -379,6 +379,7 @@ features cannot lower the translation-unit ABI level;
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
+- Propagate attributes on redeclarations across modules.
 
 #### Bug Fixes to C++ Support
 
@@ -410,6 +411,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
+
+- A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
+  libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
+  compilation step would result in the fix not being applied. (#GH160314)
 
 #### Bug Fixes to AST Handling
 
