@@ -138,10 +138,10 @@ static bool AddDesignatorPath(SemanticsContext &context,
             }
             return false;
           },
-          [&](const common::Indirection<parser::CoindexedNamedObject>
-                  &coindexed) {
-            return AddDesignatorPath(
-                context, std::get<parser::DataRef>(coindexed.value().t), path);
+          [](const common::Indirection<parser::CoindexedNamedObject> &) {
+            // DesignatorPath does not represent cosubscripts yet.  Do not
+            // collapse a coindexed reference to its local base object.
+            return false;
           },
       },
       dataRef.u);
@@ -154,10 +154,7 @@ std::optional<evaluate::DesignatorPath> GetDesignatorPath(
                             [&](const parser::DataRef &dataRef) {
                               return AddDesignatorPath(context, dataRef, path);
                             },
-                            [&](const parser::Substring &substring) {
-                              return AddDesignatorPath(context,
-                                  std::get<parser::DataRef>(substring.t), path);
-                            },
+                            [](const parser::Substring &) { return false; },
                         },
       designator.u)};
   if (ok && !path.empty()) {

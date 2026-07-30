@@ -183,7 +183,6 @@ protected:
 class AccAttributeVisitor {
 private:
   struct AccDataSharingEntry {
-    SymbolRef symbol;
     Symbol::Flag flag;
     const parser::AccObject *occurrence{nullptr};
   };
@@ -268,7 +267,8 @@ public:
     if (!dirContext_.empty() && GetContext().withinConstruct) {
       if (auto *symbol{DeclareOrMarkOtherAccessEntity(
               x.Name().thing, Symbol::Flag::AccPrivate)}) {
-        AddAccObjectWithDSA(*symbol, Symbol::Flag::AccPrivate);
+        AddAccObjectWithDSA(
+            MakeBaseDesignatorPath(*symbol), Symbol::Flag::AccPrivate);
       }
     }
     return true;
@@ -409,13 +409,11 @@ private:
   void PushAccContext(const parser::CharBlock &, llvm::acc::Directive, Scope &);
   void PushAccContext(const parser::CharBlock &, llvm::acc::Directive);
   void PopAccContext();
-  void AddAccObjectWithDSA(
-      const Symbol &, Symbol::Flag, DesignatorPath designator = {});
-  bool IsObjectWithVisibleDSA(
-      const Symbol &, const std::optional<DesignatorPath> &) const;
+  static DesignatorPath MakeBaseDesignatorPath(const Symbol &);
+  void AddAccObjectWithDSA(DesignatorPath, Symbol::Flag);
+  bool IsObjectWithVisibleDSA(const DesignatorPath &) const;
   void AdjustAccSymbolReference(const parser::Name &);
-  void CheckAccDefaultNoneReference(
-      const parser::Name &, std::optional<DesignatorPath> = std::nullopt);
+  void CheckAccDefaultNoneReference(const parser::Name &, DesignatorPath);
   template <typename A> void CheckAccDefaultNoneReferenceIn(const A &);
 
   std::int64_t GetAssociatedLoopLevelFromClauses(const parser::AccClauseList &);
@@ -446,11 +444,10 @@ private:
   Symbol *ResolveAccCommonBlockName(const parser::Name *);
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
-  void CheckMultipleAppearances(const parser::Name &, const Symbol &,
-      Symbol::Flag, const parser::AccObject *occurrence = nullptr,
+  void CheckMultipleAppearances(const parser::Name &, Symbol::Flag,
+      DesignatorPath, const parser::AccObject *occurrence = nullptr,
       bool warnSameKindDuplicate = true,
-      std::optional<std::string> objectName = {},
-      DesignatorPath designator = {});
+      std::optional<std::string> objectName = {});
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -1931,30 +1928,26 @@ void AccAttributeVisitor::PopAccContext() {
   dirContext_.pop_back();
 }
 
-void AccAttributeVisitor::AddAccObjectWithDSA(
-    const Symbol &symbol, Symbol::Flag flag, DesignatorPath designator) {
-  const Symbol &ultimate{symbol.GetUltimate()};
-  if (designator.empty()) {
-    designator.SetBase(NamedEntity{ultimate});
-  }
-  GetContext().objectsWithDSA.push_back(
-      std::move(designator), {ultimate, flag, nullptr});
+DesignatorPath AccAttributeVisitor::MakeBaseDesignatorPath(
+    const Symbol &symbol) {
+  DesignatorPath path;
+  path.SetBase(NamedEntity{symbol.GetUltimate()});
+  return path;
 }
 
-bool AccAttributeVisitor::IsObjectWithVisibleDSA(const Symbol &symbol,
-    const std::optional<DesignatorPath> &reference) const {
+void AccAttributeVisitor::AddAccObjectWithDSA(
+    DesignatorPath designator, Symbol::Flag flag) {
+  if (!designator.empty()) {
+    GetContext().objectsWithDSA.push_back(
+        std::move(designator), {flag, nullptr});
+  }
+}
+
+bool AccAttributeVisitor::IsObjectWithVisibleDSA(
+    const DesignatorPath &reference) const {
   for (std::size_t i{dirContext_.size()}; i != 0; --i) {
     for (const auto &entry : dirContext_[i - 1].objectsWithDSA) {
-      if (&*entry.value.symbol != &symbol) {
-        continue;
-      }
-      if (entry.path.empty()) {
-        return true;
-      }
-      if (!reference && entry.path.HasBaseOnly()) {
-        return true;
-      }
-      if (reference && entry.path.MayContain(*reference)) {
+      if (entry.path.MayContain(reference)) {
         return true;
       }
     }
@@ -2000,12 +1993,12 @@ void AccAttributeVisitor::AdjustAccSymbolReference(const parser::Name &name) {
 }
 
 void AccAttributeVisitor::CheckAccDefaultNoneReference(
-    const parser::Name &name, std::optional<DesignatorPath> designator) {
+    const parser::Name &name, DesignatorPath designator) {
   if (name.symbol && WithinConstruct()) {
     const Symbol &symbol{name.symbol->GetUltimate()};
     if (!symbol.owner().IsDerivedType() && !symbol.has<ProcEntityDetails>() &&
         !symbol.has<SubprogramDetails>() &&
-        !IsObjectWithVisibleDSA(symbol, designator) &&
+        !IsObjectWithVisibleDSA(designator) &&
         !symbol.has<AssocEntityDetails>() && !symbol.has<MiscDetails>()) {
       if (Symbol * found{currScope().FindSymbol(name.source)}) {
         if (&symbol != found) {
@@ -2060,8 +2053,10 @@ void AccAttributeVisitor::CheckAccDefaultNoneReferenceIn(const A &x) {
           std::get_if<common::Indirection<parser::Designator>>(&x.u)}) {
     std::optional<DesignatorPath> designatorPath{
         GetDesignatorPath(context_, designator->value())};
-    CheckAccDefaultNoneReference(
-        parser::GetFirstName(designator->value()), designatorPath);
+    if (designatorPath) {
+      CheckAccDefaultNoneReference(
+          parser::GetFirstName(designator->value()), std::move(*designatorPath));
+    }
   } else if (const auto *functionReference{
                  std::get_if<common::Indirection<parser::FunctionReference>>(
                      &x.u)}) {
@@ -2070,7 +2065,7 @@ void AccAttributeVisitor::CheckAccDefaultNoneReferenceIn(const A &x) {
         name.symbol && name.symbol->has<ObjectEntityDetails>()) {
       if (std::optional<DesignatorPath> designatorPath{
               GetDesignatorPath(context_, functionReference->value())}) {
-        CheckAccDefaultNoneReference(name, designatorPath);
+        CheckAccDefaultNoneReference(name, std::move(*designatorPath));
       }
     }
   }
@@ -2101,7 +2096,7 @@ void AccAttributeVisitor::Post(const parser::ArrayElement &arrayElement) {
   if (std::optional<DesignatorPath> path{
           GetDesignatorPath(context_, arrayElement)}) {
     CheckAccDefaultNoneReference(
-        parser::GetFirstName(arrayElement.Base()), *path);
+        parser::GetFirstName(arrayElement.Base()), std::move(*path));
   }
 }
 
@@ -2110,10 +2105,11 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
   // A Name reached outside any Expr, Variable, or ArrayElement is a
   // whole-object reference that no path-aware handler covers -- for instance
   // the object of an ALLOCATE, DEALLOCATE, or NULLIFY, or the pointer of a
-  // pointer assignment. Check it for DEFAULT(NONE) here with no designator
-  // path.
+  // pointer assignment. Its resolved name is an exact base-only path.
   if (referenceContextDepth_ == 0) {
-    CheckAccDefaultNoneReference(name);
+    if (name.symbol) {
+      CheckAccDefaultNoneReference(name, MakeBaseDesignatorPath(*name.symbol));
+    }
   }
 }
 
@@ -2197,24 +2193,15 @@ void AccAttributeVisitor::ResolveAccObject(
                 designatorPath = std::move(*path);
                 canCheckMultipleAppearances = true;
               }
-              // Subscripted designator: evaluate subscripts and detect
-              // the substring case that is disallowed in OpenACC clauses.
-              if (MaybeExpr expr{AnalyzeExpr(context_, designator)}) {
-                if (std::holds_alternative<parser::Substring>(designator.u)) {
-                  context_.Say(designator.source,
-                      "Substrings are not allowed on OpenACC "
-                      "directives or clauses"_err_en_US);
-                  return;
-                }
-                if (designatorPath.empty()) {
-                  if (std::optional<DesignatorPath> path{
-                          DesignatorPath::Get(expr)}) {
-                    designatorPath = std::move(*path);
-                    canCheckMultipleAppearances = true;
-                  } else {
-                    canCheckMultipleAppearances = false;
-                  }
-                }
+              // Analyze first so a substring is recognized before emitting
+              // the OpenACC-specific restriction diagnostic.  A substring is
+              // intentionally never represented as a DesignatorPath.
+              if (AnalyzeExpr(context_, designator) &&
+                  std::holds_alternative<parser::Substring>(designator.u)) {
+                context_.Say(designator.source,
+                    "Substrings are not allowed on OpenACC directives or "
+                    "clauses"_err_en_US);
+                return;
               }
             }
             const bool isDataSharing{dataSharingAttributeFlags.test(accFlag)};
@@ -2223,14 +2210,13 @@ void AccAttributeVisitor::ResolveAccObject(
               // component clause does not cover every reference to the base.
               if (canCheckMultipleAppearances) {
                 const parser::Name &baseName{parser::GetFirstName(designator)};
-                if (baseName.symbol) {
+                if (baseName.symbol && !designatorPath.empty()) {
                   if (isDataSharing) {
-                    CheckMultipleAppearances(baseName, *baseName.symbol,
-                        accFlag, &accObject, true, designatorName,
-                        designatorPath);
+                    CheckMultipleAppearances(baseName, accFlag,
+                        std::move(designatorPath), &accObject, true,
+                        designatorName);
                   } else {
-                    AddAccObjectWithDSA(
-                        *baseName.symbol, accFlag, designatorPath);
+                    AddAccObjectWithDSA(std::move(designatorPath), accFlag);
                   }
                 }
               }
@@ -2245,22 +2231,26 @@ void AccAttributeVisitor::ResolveAccObject(
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{
                     DeclareOrMarkOtherAccessEntity(baseName, accFlag)}) {
+              if (isBareName) {
+                designatorPath = MakeBaseDesignatorPath(*symbol);
+              }
               if (isDataSharing && canCheckMultipleAppearances) {
-                CheckMultipleAppearances(baseName, *symbol, accFlag, &accObject,
-                    true, designatorName, designatorPath);
-              } else {
-                AddAccObjectWithDSA(*symbol, accFlag, designatorPath);
+                CheckMultipleAppearances(baseName, accFlag,
+                    std::move(designatorPath), &accObject, true, designatorName);
+              } else if (!designatorPath.empty()) {
+                AddAccObjectWithDSA(std::move(designatorPath), accFlag);
               }
             }
           },
           [&](const parser::Name &name) { // common block
             if (auto *symbol{ResolveAccCommonBlockName(&name)}) {
-              CheckMultipleAppearances(
-                  name, *symbol, Symbol::Flag::AccCommonBlock);
+              CheckMultipleAppearances(name, Symbol::Flag::AccCommonBlock,
+                  MakeBaseDesignatorPath(*symbol));
               for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
                 if (auto *resolvedObject{
                         DeclareOrMarkOtherAccessEntity(*object, accFlag)}) {
-                  AddAccObjectWithDSA(*resolvedObject, accFlag);
+                  AddAccObjectWithDSA(
+                      MakeBaseDesignatorPath(*resolvedObject), accFlag);
                 }
               }
             } else {
@@ -2296,29 +2286,24 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
 }
 
 void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
-    const Symbol &symbol, Symbol::Flag accFlag,
+    Symbol::Flag accFlag, DesignatorPath designator,
     const parser::AccObject *occurrence, bool warnSameKindDuplicate,
-    std::optional<std::string> objectName, DesignatorPath designator) {
-  const auto *target{&symbol};
+    std::optional<std::string> objectName) {
   if (designator.empty()) {
-    designator.SetBase(NamedEntity{*target});
+    return;
   }
   const std::string displayName{objectName.value_or(name.ToString())};
   auto &objectsWithDSA{GetContext().objectsWithDSA};
   for (auto iter{objectsWithDSA.begin()}; iter != objectsWithDSA.end();) {
     AccDataSharingEntry &entry{iter->value};
-    if (&*entry.symbol != target) {
-      ++iter;
-      continue;
-    }
     DesignatorRelation relation{iter->path.Compare(designator)};
     if (relation == DesignatorRelation::Disjoint) {
       ++iter;
       continue;
     }
 
-    // Reduction is excluded from same-kind duplicate elision: two reduction
-    // clauses with the same Symbol::Flag may still differ in operator.
+    // TODO: Record the reduction operator in AccDataSharingEntry so compatible
+    // reductions can use the ordinary same-kind duplicate handling.
     if (entry.flag != accFlag || accFlag == Symbol::Flag::AccReduction) {
       context_.Say(name.source,
           "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
@@ -2354,7 +2339,7 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     }
   }
   objectsWithDSA.push_back(
-      std::move(designator), {*target, accFlag, occurrence});
+      std::move(designator), {accFlag, occurrence});
 }
 
 #ifndef NDEBUG
