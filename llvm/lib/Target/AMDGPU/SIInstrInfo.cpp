@@ -5844,8 +5844,6 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e64) {
     const bool IsDst = Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e32 ||
                        Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e64;
-    const bool IsPreRA = !MI.getMF()->getProperties().hasNoVRegs();
-
     const unsigned StaticNumOps =
         Desc.getNumOperands() + Desc.implicit_uses().size();
     const unsigned NumImplicitOps = IsDst ? 2 : 1;
@@ -5854,7 +5852,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // post RA scheduler where the main implicit operand is killed and
     // implicit-defs are added for sub-registers that remain live after this
     // instruction.
-    if (IsPreRA && MI.getNumOperands() < StaticNumOps + NumImplicitOps) {
+    if (MI.getNumOperands() < StaticNumOps + NumImplicitOps) {
       ErrInfo = "missing implicit register operands";
       return false;
     }
@@ -5867,22 +5865,20 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
 
       unsigned UseOpIdx;
-      if (IsPreRA && (!MI.isRegTiedToUseOperand(StaticNumOps, &UseOpIdx) ||
-                      UseOpIdx != StaticNumOps + 1)) {
+      if (!MI.isRegTiedToUseOperand(StaticNumOps, &UseOpIdx) ||
+          UseOpIdx != StaticNumOps + 1) {
         ErrInfo = "movrel implicit operands should be tied";
         return false;
       }
     }
 
-    if (IsPreRA) {
-      const MachineOperand &Src0 = MI.getOperand(Src0Idx);
-      const MachineOperand &ImpUse =
-          MI.getOperand(StaticNumOps + NumImplicitOps - 1);
-      if (!ImpUse.isReg() || !ImpUse.isUse() ||
-          !isSubRegOf(RI, ImpUse, IsDst ? *Dst : Src0)) {
-        ErrInfo = "src0 should be subreg of implicit vector use";
-        return false;
-      }
+    const MachineOperand &Src0 = MI.getOperand(Src0Idx);
+    const MachineOperand &ImpUse =
+        MI.getOperand(StaticNumOps + NumImplicitOps - 1);
+    if (!ImpUse.isReg() || !ImpUse.isUse() ||
+        !isSubRegOf(RI, ImpUse, IsDst ? *Dst : Src0)) {
+      ErrInfo = "src0 should be subreg of implicit vector use";
+      return false;
     }
   }
 

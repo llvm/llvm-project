@@ -1116,6 +1116,21 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
   }
 }
 
+// Copies of v_movrel[sd]_b32 for the moves the pseudos above expand into.
+//
+// The storage a movrel indexes is normally a register tuple, and the machine
+// verifier requires an implicit use of that tuple naming the register the
+// instruction really touches. Here the storage is the whole register file,
+// which no operand can name, so these carry their own opcodes and leave those
+// rules to the tuple form. AMDGPUMCInstLower maps them back for encoding.
+let VALU = 1, VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
+    Size = V_MOV_B32_e32.Size in {
+  def V_MOVRELS_B32_as_mem
+      : VPseudoInstSI<(outs VGPR_32:$vdst), (ins VRegSrc_32:$src0)>;
+  def V_MOVRELD_B32_as_mem
+      : VPseudoInstSI<(outs), (ins VGPR_32:$vdst, VSrc_b32:$src0)>;
+}
+
 // Select the REG_LOAD/REG_STORE target nodes into the sized indexed pseudos.
 // The pointer is a byte offset into the file; SIreg_load/SIreg_store carry the
 // dword index (ptr >> 2), and an (add idx, imm) shape folds a constant dword
