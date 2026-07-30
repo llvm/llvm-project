@@ -102,7 +102,8 @@ class TestGdbRemoteExpeditedRegisters(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.stop_notification_contains_generic_register("sp")
 
     @skipIf(archs=no_match(["aarch64"]))
-    @skipIf(oslist=no_match(["linux"]))
+    @skipIf(oslist=no_match(["linux", "windows"]))
+    @skipUnlessFeature(cpu_feature.AArch64.SVE)
     def test_stop_notification_contains_vg_register(self):
         if not self.isAArch64SVE():
             self.skipTest("SVE registers must be supported.")
