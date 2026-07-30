@@ -904,6 +904,13 @@ bool AArch64FrameLowering::windowsRequiresStackProbe(
          StackSizeInBytes >= uint64_t(MFI.getStackProbeSize());
 }
 
+bool AArch64FrameLowering::darwinRequiresStackProbe(
+    const MachineFunction &MF, uint64_t StackSizeInBytes) const {
+  const AArch64FunctionInfo &MFI = *MF.getInfo<AArch64FunctionInfo>();
+  return MFI.hasDarwinStackProbe() &&
+         StackSizeInBytes >= uint64_t(MFI.getStackProbeSize());
+}
+
 static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
                                    const MachineBasicBlock &MBB) {
   const MachineFunction *MF = MBB.getParent();
@@ -978,6 +985,16 @@ bool AArch64FrameLowering::canUseAsPrologue(
   if (RegInfo->hasStackRealignment(*MF) || TLI->hasInlineStackProbe(*MF))
     if (findScratchNonCalleeSaveRegister(TmpMBB) == AArch64::NoRegister)
       return false;
+
+  if (darwinRequiresStackProbe(*MF, std::numeric_limits<uint64_t>::max())) {
+    const AArch64RegisterInfo &TRI = *Subtarget.getRegisterInfo();
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    LivePhysRegs LiveRegs(TRI);
+    getLiveRegsForEntryMBB(LiveRegs, MBB);
+    if (!LiveRegs.available(MRI, AArch64::X9) ||
+        !LiveRegs.available(MRI, AArch64::X16))
+      return false;
+  }
 
   // May need a scratch register (for return value) if require making a special
   // call

@@ -18272,12 +18272,58 @@ AArch64TargetLowering::LowerInlineDYNAMIC_STACKALLOC(SDValue Op,
 }
 
 SDValue
+AArch64TargetLowering::LowerDarwinDYNAMIC_STACKALLOC(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDNode *Node = Op.getNode();
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+  MaybeAlign Align =
+      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
+  SDLoc DL(Op);
+  EVT VT = Node->getValueType(0);
+
+  SDValue SP = DAG.getCopyFromReg(Chain, DL, AArch64::SP, MVT::i64);
+  Chain = SP.getValue(1);
+  SDValue TargetSP = DAG.getNode(ISD::SUB, DL, MVT::i64, SP, Size);
+  if (Align)
+    TargetSP = DAG.getNode(ISD::AND, DL, VT, TargetSP,
+                           DAG.getSignedConstant(-Align->value(), DL, VT));
+  SDValue ProbeSize = DAG.getNode(ISD::SUB, DL, MVT::i64, SP, TargetSP);
+
+  Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
+
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  SDValue Callee =
+      DAG.getTargetExternalSymbol("__chkstk_darwin", PtrVT, AArch64II::MO_GOT);
+  Callee = DAG.getNode(AArch64ISD::LOADgot, DL, PtrVT, Callee);
+
+  const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
+  const uint32_t *Mask = TRI->getDarwinStackProbePreservedMask();
+  if (Subtarget->hasCustomCallingConv())
+    TRI->UpdateCustomCallPreservedMask(DAG.getMachineFunction(), &Mask);
+
+  Chain = DAG.getCopyToReg(Chain, DL, AArch64::X9, ProbeSize, SDValue());
+  Chain =
+      DAG.getNode(AArch64ISD::CALL, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+                  Chain, Callee, DAG.getRegister(AArch64::X9, MVT::i64),
+                  DAG.getRegisterMask(Mask), Chain.getValue(1));
+
+  Chain = DAG.getCopyToReg(Chain, DL, AArch64::SP, TargetSP);
+  Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), DL);
+
+  SDValue Ops[2] = {TargetSP, Chain};
+  return DAG.getMergeValues(Ops, DL);
+}
+
+SDValue
 AArch64TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
                                                SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
 
   if (Subtarget->isTargetWindows())
     return LowerWindowsDYNAMIC_STACKALLOC(Op, DAG);
+  else if (MF.getInfo<AArch64FunctionInfo>()->hasDarwinStackProbe())
+    return LowerDarwinDYNAMIC_STACKALLOC(Op, DAG);
   else if (hasInlineStackProbe(MF))
     return LowerInlineDYNAMIC_STACKALLOC(Op, DAG);
   else
@@ -35574,8 +35620,7 @@ unsigned AArch64TargetLowering::getVectorTypeBreakdownForCallingConv(
 
 bool AArch64TargetLowering::hasInlineStackProbe(
     const MachineFunction &MF) const {
-  return !Subtarget->isTargetWindows() &&
-         MF.getInfo<AArch64FunctionInfo>()->hasStackProbing();
+  return MF.getInfo<AArch64FunctionInfo>()->hasInlineStackProbe();
 }
 
 bool AArch64TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {

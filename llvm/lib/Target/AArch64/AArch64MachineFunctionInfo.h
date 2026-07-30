@@ -46,6 +46,13 @@ enum class SignReturnAddress {
   All,
 };
 
+enum class StackProbeKind {
+  None,
+  Inline,
+  Darwin,
+  Windows,
+};
+
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
 class AArch64FunctionInfo final : public MachineFunctionInfo {
@@ -223,6 +230,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// True if the function need asynchronous unwind information.
   mutable std::optional<bool> NeedsAsyncDwarfUnwindInfo;
 
+  StackProbeKind StackProbe = StackProbeKind::None;
   int64_t StackProbeSize = 0;
 
   // Holds a register containing pstate.sm. This is set
@@ -603,7 +611,15 @@ public:
     HasStreamingModeChanges = HasChanges;
   }
 
-  bool hasStackProbing() const { return StackProbeSize != 0; }
+  bool hasStackProbing() const { return StackProbe != StackProbeKind::None; }
+
+  bool hasInlineStackProbe() const {
+    return StackProbe == StackProbeKind::Inline;
+  }
+
+  bool hasDarwinStackProbe() const {
+    return StackProbe == StackProbeKind::Darwin;
+  }
 
   int64_t getStackProbeSize() const { return StackProbeSize; }
 
