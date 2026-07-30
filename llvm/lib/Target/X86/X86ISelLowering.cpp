@@ -34551,7 +34551,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       // soft-promoted-half type, so scalar ops would otherwise be promoted to
       // f32. Instead widen each operand to a v8bf16 vector, perform the legal
       // packed operation, and extract the low element afterwards.
-      assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
       SmallVector<SDValue, 3> VecOps;
       for (const SDValue &Op : N->ops()) {
         SDValue AsF16 = DAG.getBitcast(MVT::f16, Op);
