@@ -174,3 +174,16 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPunified_component_assign()
 ! CHECK-NOT: cuf.data_transfer
+
+! Pinned data is host memory on both sides here, so no copy is needed.
+subroutine pinned_unified_assign(n)
+  integer :: n
+  integer(4), allocatable, pinned :: pa(:)
+  integer(4), unified :: ub(16)
+  allocate(pa(n))
+  pa = ub
+  ub = pa
+end subroutine
+
+! CHECK-LABEL: func.func @_QPpinned_unified_assign
+! CHECK-NOT: cuf.data_transfer
