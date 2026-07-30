@@ -239,6 +239,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   CompositeTypes.clear();
   TypedefTypes.clear();
   SubprogramDeclarations.clear();
+  SubprogramDefinitions.clear();
   GlobalVariableDebugInfoMap.clear();
   DebugFunctionDeclarationRegs.clear();
   ScopeToPathOpStringReg.clear();
@@ -296,7 +297,9 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   });
 
   for (const DISubprogram *SP : Finder.subprograms()) {
-    if (!SP->isDefinition())
+    if (SP->isDefinition())
+      SubprogramDefinitions.push_back(SP);
+    else
       SubprogramDeclarations.push_back(SP);
   }
 
@@ -569,7 +572,7 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
 
 // Match SPIRV-LLVM-Translator's selection logic for the Parent operand.
 std::optional<MCRegister>
-SPIRVNonSemanticDebugHandler::resolveDebugFunctionDeclarationParent(
+SPIRVNonSemanticDebugHandler::resolveDebugFunctionParent(
     const DISubprogram *SP) const {
   const DIScope *Scope = SP->getScope();
   if (Scope && !isa<DIFile>(Scope)) {
@@ -620,7 +623,7 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
     return std::nullopt;
   MCRegister FnTyReg = *FnTyRegOpt;
 
-  auto ParentRegOpt = resolveDebugFunctionDeclarationParent(SP);
+  auto ParentRegOpt = resolveDebugFunctionParent(SP);
   if (!ParentRegOpt)
     return std::nullopt;
 
@@ -648,6 +651,49 @@ SPIRVNonSemanticDebugHandler::emitDebugFunctionDeclaration(
                      {NameReg, FnTyReg, SrcReg, LineReg, ColReg, ParentReg,
                       LinkageReg, FlagsReg},
                      MAI);
+}
+
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugFunction(
+    const DISubprogram *SP, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  assert(SP && "SP must not be null in emitDebugFunction");
+  assert(SP->isDefinition() && "SP must be a definition in emitDebugFunction");
+
+  const DISubroutineType *ST = SP->getType();
+  auto FnTyRegOpt = lookupOptReg(DebugTypeRegs, ST);
+  if (!FnTyRegOpt)
+    return std::nullopt;
+
+  auto ParentRegOpt = resolveDebugFunctionParent(SP);
+  if (!ParentRegOpt)
+    return std::nullopt;
+
+  MCRegister NameReg = getCachedOpStringReg(SP->getName());
+  MCRegister LinkageReg = getCachedOpStringReg(SP->getLinkageName());
+  MCRegister FileStrReg = getCachedScopePathOpStringReg(SP);
+  MCRegister SrcReg = getOrEmitDebugSourceForFileStrReg(FileStrReg, VoidTypeReg,
+                                                        ExtInstSetReg, MAI);
+
+  MCRegister LineReg =
+      emitOpConstantI32(static_cast<uint32_t>(SP->getLine()), I32TypeReg, MAI);
+  // LLVM's DISubprogram has no column field but SPIR-V expects one in
+  // DebugFunction.
+  MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
+  MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(SP), I32TypeReg, MAI);
+  MCRegister ScopeLineReg = emitOpConstantI32(
+      static_cast<uint32_t>(SP->getScopeLine()), I32TypeReg, MAI);
+
+  SmallVector<MCRegister, 10> Ops = {NameReg,    *FnTyRegOpt, SrcReg,
+                                     LineReg,    ColReg,      *ParentRegOpt,
+                                     LinkageReg, FlagsReg,    ScopeLineReg};
+
+  if (const DISubprogram *Decl = SP->getDeclaration()) {
+    if (auto DeclRegOpt = lookupOptReg(DebugFunctionDeclarationRegs, Decl))
+      Ops.push_back(*DeclRegOpt);
+  }
+
+  return emitExtInst(SPIRV::NonSemanticExtInst::DebugFunction, VoidTypeReg,
+                     ExtInstSetReg, Ops, MAI);
 }
 
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
@@ -963,7 +1009,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticDebugStrings(
   for (const DIBasicType *BT : BasicTypes)
     emitOpStringIfNew(BT->getName(), MAI);
 
-  for (const DISubprogram *SP : SubprogramDeclarations) {
+  for (const DISubprogram *SP : concat<const DISubprogram *>(
+           SubprogramDeclarations, SubprogramDefinitions)) {
     emitOpStringIfNew(SP->getName(), MAI);
     emitOpStringIfNew(SP->getLinkageName(), MAI);
     emitAndCacheScopePathOpStringReg(SP, MAI);
@@ -1174,6 +1221,10 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
                                               I32TypeReg, ExtInstSetReg, MAI))
       DebugTypeRegs[CT] = *CompReg;
   }
+
+  // Emit DebugFunction for DISubprogram definitions.
+  for (const DISubprogram *SP : SubprogramDefinitions)
+    emitDebugFunction(SP, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
 
   // Emit DebugGlobalVariable for each collected DIGlobalVariable.
   for (const auto &[GV, Info] : GlobalVariableDebugInfoMap)
