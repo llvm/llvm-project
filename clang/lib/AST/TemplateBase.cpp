@@ -258,6 +258,54 @@ TemplateArgument::CreatePackCopy(ASTContext &Context,
   return TemplateArgument(Args.copy(Context));
 }
 
+static TemplateArgumentDependence
+TemplateArgumentDependenceForDeclaration(const ValueDecl *D) {
+  auto Deps = TemplateArgumentDependence::None;
+  auto *DC = dyn_cast<DeclContext>(D);
+  if (!DC)
+    DC = D->getDeclContext();
+  if (DC->isDependentContext())
+    Deps = TemplateArgumentDependence::Dependent |
+           TemplateArgumentDependence::Instantiation;
+  return Deps;
+}
+
+
+static TemplateArgumentDependence
+TemplateArgumentDependenceForAPValue(const APValue &Val) {
+  if (Val.isLValue()) {
+    auto Base = Val.getLValueBase();
+    if (auto *D = Base.dyn_cast<const ValueDecl*>()) {
+      return TemplateArgumentDependenceForDeclaration(D);
+    }
+  }
+  if (Val.isStruct()) {
+    auto Deps = TemplateArgumentDependence::None;
+    for (int i = 0, e = Val.getStructNumBases(); i != e; ++i)
+      Deps |= TemplateArgumentDependenceForAPValue(Val.getStructBase(i));
+    for (int i = 0, e = Val.getStructNumFields(); i != e; ++i)
+      Deps |= TemplateArgumentDependenceForAPValue(Val.getStructField(i));
+    for (int i = 0, e = Val.getStructNumVirtualBases(); i != e; ++i)
+      Deps |= TemplateArgumentDependenceForAPValue(Val.getStructVirtualBase(i));
+    llvm::errs() << "DEPS" << (int)Deps << "\n";
+    //assert(0);
+    return Deps;
+  }
+  if (Val.isUnion())
+    return TemplateArgumentDependenceForAPValue(Val.getUnionValue());
+  if (Val.isArray()) {
+    auto Deps = TemplateArgumentDependence::None;
+    for (int i = 0, e = Val.getArrayInitializedElts(); i != e; ++i) {
+      Deps |= TemplateArgumentDependenceForAPValue(Val.getArrayInitializedElt(i));
+    }
+    if (Val.hasArrayFiller())
+      Deps |= TemplateArgumentDependenceForAPValue(Val.getArrayFiller());
+    return Deps;
+  }
+  return TemplateArgumentDependence::None;
+}
+
+
 TemplateArgumentDependence TemplateArgument::getDependence() const {
   auto Deps = TemplateArgumentDependence::None;
   switch (getKind()) {
@@ -277,22 +325,24 @@ TemplateArgumentDependence TemplateArgument::getDependence() const {
     return TemplateArgumentDependence::Dependent |
            TemplateArgumentDependence::Instantiation;
 
-  case Declaration: {
-    auto *DC = dyn_cast<DeclContext>(getAsDecl());
-    if (!DC)
-      DC = getAsDecl()->getDeclContext();
-    if (DC->isDependentContext())
-      Deps = TemplateArgumentDependence::Dependent |
-             TemplateArgumentDependence::Instantiation;
-    return Deps;
+  case Declaration:
+    return TemplateArgumentDependenceForDeclaration(getAsDecl());
+
+  case StructuralValue: {
+    // A StructuralValue can point to a member of the current instantiation.
+    // In this case, it's dependent even though the expression isn't
+    // value-dependent.
+    return TemplateArgumentDependenceForAPValue(getAsStructuralValue());
   }
 
   case NullPtr:
   case Integral:
-  case StructuralValue:
     return TemplateArgumentDependence::None;
 
   case Expression:
+    if (auto *CE = dyn_cast<ConstantExpr>(getAsExpr()))
+      if (CE->hasAPValueResult())
+        return TemplateArgumentDependenceForAPValue(CE->getAPValueResult());
     Deps = toTemplateArgumentDependence(getAsExpr()->getDependence());
     if (isa<PackExpansionExpr>(getAsExpr()))
       Deps |= TemplateArgumentDependence::Dependent |

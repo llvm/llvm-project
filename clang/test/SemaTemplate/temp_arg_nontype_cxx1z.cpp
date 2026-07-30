@@ -626,3 +626,12 @@ namespace GH118190 {
   template <auto> int x;
   template <int i> int x<i>;
 }
+
+namespace non_value_dependent_current_instantiation {
+// *&xx should not be considered value-dependent: it is always zero.
+template<int x> struct A {
+  static const int xx = 0;
+  void f(decltype(*(int(*)[xx])0)); // expected-note {{previous declaration is here}}
+  void f(decltype(*(int(*)[*&xx])0)); // expected-error {{class member cannot be redeclared}}
+};
+}

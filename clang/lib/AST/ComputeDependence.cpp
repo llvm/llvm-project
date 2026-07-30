@@ -44,30 +44,25 @@ ExprDependence clang::computeDependence(UnaryOperator *E,
       toExprDependenceForImpliedType(E->getType()->getDependence()) |
       E->getSubExpr()->getDependence();
 
-  // C++ [temp.dep.constexpr]p5:
-  //   An expression of the form & qualified-id where the qualified-id names a
-  //   dependent member of the current instantiation is value-dependent. An
-  //   expression of the form & cast-expression is also value-dependent if
-  //   evaluating cast-expression as a core constant expression succeeds and
-  //   the result of the evaluation refers to a templated entity that is an
-  //   object with static or thread storage duration or a member function.
+  // [temp.dep.constexpr]p6 has an additional rule for expressions with an
+  // "&".  This rule is not necessary for consistency. The only expressions
+  // which it would apply to that aren't value-dependent anyway are:
   //
-  // What this amounts to is: constant-evaluate the operand and check whether it
-  // refers to a templated entity other than a variable with local storage.
-  if (Ctx.getLangOpts().CPlusPlus && E->getOpcode() == UO_AddrOf &&
-      !(Dep & ExprDependence::Value)) {
-    Expr::EvalResult Result;
-    // FIXME: This doesn't enforce the C++98 constant expression rules.
-    if (E->getSubExpr()->EvaluateAsConstantExpr(Result, Ctx) &&
-        !Result.DiagEmitted && Result.Val.isLValue()) {
-      auto *VD = Result.Val.getLValueBase().dyn_cast<const ValueDecl *>();
-      if (VD && VD->isTemplated()) {
-        auto *VarD = dyn_cast<VarDecl>(VD);
-        if (!VarD || !VarD->hasLocalStorage())
-          Dep |= ExprDependence::ValueInstantiation;
-      }
-    }
-  }
+  // - functions which are part of the current instantiation
+  // - variables which are part of the current instantiation, and are not
+  //   potentially-constant.
+  // - variables which are part of the current instantiation, and have a
+  //   have a non-value-dependent initializer.
+  //
+  // In all these cases, there's a limited number of things you can do with
+  // the pointer.  You can use it as a template argument, in which case
+  // we compute dependency according to [temp.dep.temp].  You can deference it,
+  // which is fine: we either know the value or know we can't compute it.  You
+  // can do pointer comparisons, which we can compute. And for function
+  // pointers, you can call them.  All of this works fine without marking the
+  // pointer value-dependent.
+  //
+  // So we'll just avoid the complexity, and pretend the rule doesn't exist.
 
   return Dep;
 }

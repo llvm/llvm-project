@@ -386,3 +386,48 @@ void test() {
     g<X>();
 }
 }
+
+namespace non_value_dependent_current_instantiation_template_argument {
+struct Obj {
+  int a;
+};
+
+template <const int* P>
+struct Target {
+  static constexpr int val = 0;
+};
+
+template <const int& P>
+struct Target2 {
+  static constexpr int val = 0;
+};
+
+union ContainsPtr { const int *p; };
+template <ContainsPtr F>
+struct Target3 {
+  static constexpr int val = 0;
+};
+
+template <typename T>
+struct S {
+  static constexpr Obj o{42};
+
+  void f() {
+    // No error: We should not instantiate Target<&o.a> because it could be
+    // specialized later.
+    switch (1) { case Target<&(o.a)>::val: case 0: ; }
+
+    // Same as above, without "&".
+    switch (1) { case Target2<o.a>::val: case 0: ; }
+
+    // Same as above with function pointer in struct.
+    // FIXME: This is currently broken: Sema will resolve this
+    // even if the TemplateArgument is dependent.  Still searching for the
+    // code that directly queries whether the underlying expression is value-dependent,
+    // instead of looking at the template argument itself.
+    switch (1) { case Target3<ContainsPtr(&o.a)>::val: case 1: ; }  // expected-error {{duplicate case value}} expected-note {{previous}}
+
+    switch (1) { case o.a: case 42: ; } // expected-error {{duplicate case value}} expected-note {{previous}}
+  }
+};
+}
