@@ -9,6 +9,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/DomConditionCache.h"
 #include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/ConstantRange.h"
@@ -3855,6 +3856,43 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
     ConstantRange CR1 = computeConstantRange(X2, /*ForSigned=*/false, SQ);
     // If we don't know the value of x.2, we don't know the value of x.1.
     EXPECT_TRUE(CR1.isFullSet());
+  }
+  {
+    // Dominating condition:
+    //  * x < 42 on the taken edge
+    //
+    // x = [0, 42)
+    auto M = parseModule(R"(
+  define i32 @test(i32 %x) {
+  entry:
+    %c = icmp ult i32 %x, 42
+    br i1 %c, label %taken, label %exit
+  taken:
+    %x.plus.one = add nsw nuw i32 %x, 1
+    ret i32 %x.plus.one
+  exit:
+    ret i32 0
+  })");
+    Function *F = M->getFunction("test");
+
+    DominatorTree DT(*F);
+    DomConditionCache DC;
+    DC.registerBranch(cast<CondBrInst>(F->getEntryBlock().getTerminator()));
+    Value *X = &*F->arg_begin();
+
+    // Without a context instruction the branch does not apply.
+    SimplifyQuery SQ(M->getDataLayout(), /*TLI=*/nullptr, &DT, /*AC=*/nullptr,
+                     /*CXTI=*/nullptr, /*UseInstrInfo=*/true,
+                     /*CanUseUndef=*/true, &DC);
+    ConstantRange CR1 = computeConstantRange(X, /*ForSigned=*/false, SQ);
+    EXPECT_TRUE(CR1.isFullSet());
+
+    // At an instruction dominated by the taken edge, x is known to be [0, 42).
+    Instruction *I = &findInstructionByName(F, "x.plus.one");
+    ConstantRange CR2 =
+        computeConstantRange(X, /*ForSigned=*/false, SQ.getWithInstruction(I));
+    EXPECT_EQ(0, CR2.getLower());
+    EXPECT_EQ(42, CR2.getUpper());
   }
 }
 

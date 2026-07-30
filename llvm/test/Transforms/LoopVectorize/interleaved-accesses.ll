@@ -861,7 +861,7 @@ define void @PR27626_0(ptr %p, i32 %z, i64 %n) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -953,7 +953,7 @@ define i32 @PR27626_1(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1045,7 +1045,7 @@ define void @PR27626_2(ptr %p, i64 %n, i32 %z) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -1141,7 +1141,7 @@ define i32 @PR27626_3(ptr %p, i64 %n, i32 %z) {
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 4, i64 [[N_MOD_VF]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[N]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

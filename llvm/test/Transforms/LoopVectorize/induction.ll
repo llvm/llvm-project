@@ -1442,7 +1442,7 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; INTERLEAVE-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 8, i64 [[N_MOD_VF]]
-; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub nsw i64 [[N]], [[TMP1]]
+; INTERLEAVE-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i64 [[N]], [[TMP1]]
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[Y:%.*]], i64 0
 ; INTERLEAVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
