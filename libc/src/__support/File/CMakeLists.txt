@@ -16,10 +16,20 @@ add_object_library(
     libc.hdr.stdint_proxy
     libc.hdr.func.realloc
     libc.hdr.types.off_t
+    libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
     libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.architectures
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.wcrtomb
+    libc.src.__support.wchar.character_converter
+    libc.src.string.memory_utils.inline_memcpy
+    libc.hdr.errno_macros
 )
 
 add_object_library(
@@ -33,6 +43,11 @@ add_object_library(
     libc.src.__support.CPP.new
     libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.alloc_checker
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_dirent
 )
 
 if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})

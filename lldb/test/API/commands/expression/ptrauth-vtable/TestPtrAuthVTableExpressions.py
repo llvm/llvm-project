@@ -8,20 +8,15 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbarm64e import Arm64eTestBase
 
 
-class TestPtrAuthVTableExpressions(TestBase):
+class TestPtrAuthVTableExpressions(Arm64eTestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False
 
-    def build_arm64e(self):
-        self.build(
-            dictionary={"TRIPLE": configuration.triple.replace("arm64", "arm64e")}
-        )
-
-    @skipUnlessArm64eSupported
     def test_virtual_call_on_debuggee_object(self):
-        self.build_arm64e()
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -29,18 +24,16 @@ class TestPtrAuthVTableExpressions(TestBase):
         self.expect_expr("d.value()", result_type="int", result_value="20")
         self.expect_expr("od.value()", result_type="int", result_value="30")
 
-    @skipUnlessArm64eSupported
     def test_virtual_call_through_base_pointer(self):
-        self.build_arm64e()
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )
 
         self.expect_expr("base_ptr->value()", result_type="int", result_value="20")
 
-    @skipUnlessArm64eSupported
     def test_virtual_call_via_helper(self):
-        self.build_arm64e()
+        self.build()
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp", False)
         )

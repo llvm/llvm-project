@@ -21,7 +21,7 @@ LLVM_LIBC_FUNCTION(long long, strtoll_l,
   if (result.has_error())
     libc_errno = result.error;
 
-  if (str_end != nullptr)
+  if (str_end != nullptr && result.error != EINVAL)
     *str_end = const_cast<char *>(str + result.parsed_len);
 
   return result;

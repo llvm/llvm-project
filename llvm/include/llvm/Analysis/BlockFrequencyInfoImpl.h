@@ -52,11 +52,11 @@
 #define DEBUG_TYPE "block-freq"
 
 namespace llvm {
-extern llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
+extern LLVM_ABI llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
 
-extern llvm::cl::opt<bool> UseIterativeBFIInference;
-extern llvm::cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock;
-extern llvm::cl::opt<double> IterativeBFIPrecision;
+extern LLVM_ABI llvm::cl::opt<bool> UseIterativeBFIInference;
+extern LLVM_ABI llvm::cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock;
+extern LLVM_ABI llvm::cl::opt<double> IterativeBFIPrecision;
 
 class BranchProbabilityInfo;
 class Function;
@@ -141,10 +141,10 @@ public:
   ///
   /// Convert to \a ScaledNumber.  \a isFull() gives 1.0, while \a isEmpty()
   /// gives slightly above 0.0.
-  ScaledNumber<uint64_t> toScaled() const;
+  LLVM_ABI ScaledNumber<uint64_t> toScaled() const;
 
-  void dump() const;
-  raw_ostream &print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
+  LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 };
 
 inline BlockMass operator+(BlockMass L, BlockMass R) {
@@ -174,7 +174,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, BlockMass X) {
 ///
 /// Nevertheless, the majority of the overall algorithm documentation lives with
 /// BlockFrequencyInfoImpl.  See there for details.
-class BlockFrequencyInfoImplBase {
+class LLVM_ABI BlockFrequencyInfoImplBase {
 public:
   using Scaled64 = ScaledNumber<uint64_t>;
   using BlockMass = bfi_detail::BlockMass;
@@ -282,17 +282,15 @@ public:
 
     bool isLoopHeader() const { return Loop && Loop->isHeader(Node); }
 
-    bool isDoubleLoopHeader() const {
-      return isLoopHeader() && Loop->Parent && Loop->Parent->isIrreducible() &&
-             Loop->Parent->isHeader(Node);
-    }
-
+    /// The innermost loop containing Node that Node does not head.
+    ///
+    /// A block can head several nested loops: createIrreducibleLoop() reuses
+    /// an SCC's entry blocks as the irreducible loop's headers.
     LoopData *getContainingLoop() const {
-      if (!isLoopHeader())
-        return Loop;
-      if (!isDoubleLoopHeader())
-        return Loop->Parent;
-      return Loop->Parent->Parent;
+      LoopData *L = Loop;
+      while (L && L->isHeader(Node))
+        L = L->Parent;
+      return L;
     }
 
     /// Resolve a node to its representative.
@@ -313,6 +311,10 @@ public:
       return L ? L->getHeader() : Node;
     }
 
+    /// The outermost loop containing Node that is currently packaged, if any.
+    ///
+    /// Packaging is transient state: this answers what represents Node at the
+    /// level being processed, not where Node sits in the loop nest.
     LoopData *getPackagedLoop() const {
       if (!Loop || !Loop->IsPackaged)
         return nullptr;
@@ -322,17 +324,14 @@ public:
       return L;
     }
 
-    /// Get the appropriate mass for a node.
-    ///
-    /// Get appropriate mass for Node.  If Node is a loop-header (whose loop
-    /// has been packaged), returns the mass of its pseudo-node.  If it's a
-    /// node inside a packaged loop, it returns the loop's mass.
+    /// The mass slot for Node: its own, or that of the outermost packaged
+    /// loop it heads.
     BlockMass &getMass() {
-      if (!isAPackage())
-        return Mass;
-      if (!isADoublePackage())
-        return Loop->Mass;
-      return Loop->Parent->Mass;
+      BlockMass *M = &Mass;
+      for (LoopData *L = Loop; L && L->IsPackaged && L->isHeader(Node);
+           L = L->Parent)
+        M = &L->Mass;
+      return *M;
     }
 
     /// Has ContainingLoop been packaged up?
@@ -340,11 +339,6 @@ public:
 
     /// Has Loop been packaged up?
     bool isAPackage() const { return isLoopHeader() && Loop->IsPackaged; }
-
-    /// Has Loop been packaged up twice?
-    bool isADoublePackage() const {
-      return isDoubleLoopHeader() && Loop->Parent->IsPackaged;
-    }
   };
 
   /// Unscaled probability weight.
@@ -409,10 +403,11 @@ public:
     /// cases, adjacent edge weights are combined by sorting WeightList and
     /// combining adjacent weights.  However, for very large edge lists an
     /// auxiliary hash table is used.
-    void normalize();
+    LLVM_ABI void normalize();
 
   private:
-    void add(const BlockNode &Node, uint64_t Amount, Weight::DistType Type);
+    LLVM_ABI void add(const BlockNode &Node, uint64_t Amount,
+                      Weight::DistType Type);
   };
 
   /// Data about each block.  This is used downstream.
@@ -520,12 +515,10 @@ public:
   Scaled64 getFloatingBlockFreq(const BlockNode &Node) const;
 
   BlockFrequency getBlockFreq(const BlockNode &Node) const;
-  std::optional<uint64_t>
-  getBlockProfileCount(const Function &F, const BlockNode &Node,
-                       bool AllowSynthetic = false) const;
-  std::optional<uint64_t>
-  getProfileCountFromFreq(const Function &F, BlockFrequency Freq,
-                          bool AllowSynthetic = false) const;
+  std::optional<uint64_t> getBlockProfileCount(const Function &F,
+                                               const BlockNode &Node) const;
+  std::optional<uint64_t> getProfileCountFromFreq(const Function &F,
+                                                  BlockFrequency Freq) const;
   bool isIrrLoopHeader(const BlockNode &Node);
 
   void setBlockFreq(const BlockNode &Node, BlockFrequency Freq);
@@ -631,20 +624,20 @@ struct IrreducibleGraph {
   template <class BlockEdgesAdder>
   void initialize(const BFIBase::LoopData *OuterLoop,
                   BlockEdgesAdder addBlockEdges);
-  void addNodesInLoop(const BFIBase::LoopData &OuterLoop);
-  void addNodesInFunction();
+  LLVM_ABI void addNodesInLoop(const BFIBase::LoopData &OuterLoop);
+  LLVM_ABI void addNodesInFunction();
 
   void addNode(const BlockNode &Node) {
     Nodes.emplace_back(Node);
     BFI.Working[Node.Index].getMass() = BlockMass::getEmpty();
   }
 
-  void indexNodes();
+  LLVM_ABI void indexNodes();
   template <class BlockEdgesAdder>
   void addEdges(const BlockNode &Node, const BFIBase::LoopData *OuterLoop,
                 BlockEdgesAdder addBlockEdges);
-  void addEdge(IrrNode &Irr, const BlockNode &Succ,
-               const BFIBase::LoopData *OuterLoop);
+  LLVM_ABI void addEdge(IrrNode &Irr, const BlockNode &Succ,
+                        const BFIBase::LoopData *OuterLoop);
 };
 
 template <class BlockEdgesAdder>
@@ -999,18 +992,14 @@ public:
     return BlockFrequencyInfoImplBase::getBlockFreq(getNode(BB));
   }
 
-  std::optional<uint64_t>
-  getBlockProfileCount(const Function &F, const BlockT *BB,
-                       bool AllowSynthetic = false) const {
-    return BlockFrequencyInfoImplBase::getBlockProfileCount(F, getNode(BB),
-                                                            AllowSynthetic);
+  std::optional<uint64_t> getBlockProfileCount(const Function &F,
+                                               const BlockT *BB) const {
+    return BlockFrequencyInfoImplBase::getBlockProfileCount(F, getNode(BB));
   }
 
-  std::optional<uint64_t>
-  getProfileCountFromFreq(const Function &F, BlockFrequency Freq,
-                          bool AllowSynthetic = false) const {
-    return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq,
-                                                               AllowSynthetic);
+  std::optional<uint64_t> getProfileCountFromFreq(const Function &F,
+                                                  BlockFrequency Freq) const {
+    return BlockFrequencyInfoImplBase::getProfileCountFromFreq(F, Freq);
   }
 
   bool isIrrLoopHeader(const BlockT *BB) {

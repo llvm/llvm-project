@@ -27,6 +27,8 @@
 // RUN: %clang_cc1 -mstack-protector-guard=sysreg -triple aarch64-linux-gnu \
 // RUN:   -mstack-protector-guard-offset=1024 -mstack-protector-guard-reg=far_el2 \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64 --check-prefix=AARCH64-FAR-EL2
+// RUN: %clang_cc1 -mstack-protector-guard-value-width=4 -triple aarch64-linux-gnu \
+// RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=AARCH64-WIDTH-4
 // RUN: %clang_cc1 -mstack-protector-guard=tls -triple riscv64-unknown-elf \
 // RUN:   -mstack-protector-guard-offset=44 -mstack-protector-guard-reg=tp \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=RISCV
@@ -56,6 +58,9 @@ void bar(int x) {
 // AARCH64-FAR-EL1: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"far_el1"}
 // AARCH64-FAR-EL2: [[ATTR2]] = !{i32 1, !"stack-protector-guard-reg", !"far_el2"}
 // AARCH64: [[ATTR3]] = !{i32 1, !"stack-protector-guard-offset", i32 1024}
+
+// AARCH64-WIDTH-4: !llvm.module.flags = !{{{.*}}[[ATTR1:![0-9]+]]}
+// AARCH64-WIDTH-4: [[ATTR1]] = !{i32 1, !"stack-protector-guard-value-width", i32 4}
 
 // RISCV: !llvm.module.flags = !{{{.*}}[[ATTR1:![0-9]+]], [[ATTR2:![0-9]+]], [[ATTR3:![0-9]+]], [[ATTR4:![0-9]+]]}
 // RISCV: [[ATTR1]] = !{i32 1, !"stack-protector-guard", !"tls"}

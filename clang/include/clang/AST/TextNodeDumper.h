@@ -208,6 +208,7 @@ public:
   void dumpType(QualType T);
   void dumpBareDeclRef(const Decl *D);
   void dumpName(const NamedDecl *ND);
+  void dumpFormalLinkage(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCleanupObject(const ExprWithCleanups::CleanupObject &C);
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
@@ -266,6 +267,9 @@ public:
   void VisitCoawaitExpr(const CoawaitExpr *Node);
   void VisitCoreturnStmt(const CoreturnStmt *Node);
   void VisitCompoundStmt(const CompoundStmt *Node);
+  void VisitCXXExpansionStmtPattern(const CXXExpansionStmtPattern *Node);
+  void
+  VisitCXXExpansionStmtInstantiation(const CXXExpansionStmtInstantiation *Node);
   void VisitConstantExpr(const ConstantExpr *Node);
   void VisitCallExpr(const CallExpr *Node);
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *Node);

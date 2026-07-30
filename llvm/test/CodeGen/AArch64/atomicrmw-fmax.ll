@@ -20,7 +20,7 @@ define half @test_atomicrmw_fmax_f16_seq_cst_align2(ptr %ptr, half %value) #0 {
 ; NOLSE-NEXT:    stlxrh w9, w8, [x0]
 ; NOLSE-NEXT:    cbnz w9, .LBB0_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fmax_f16_seq_cst_align2:
@@ -40,7 +40,7 @@ define half @test_atomicrmw_fmax_f16_seq_cst_align2(ptr %ptr, half %value) #0 {
 ; LSE-NEXT:    cmp w10, w8, uxth
 ; LSE-NEXT:    b.ne .LBB0_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
-; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fmax_f16_seq_cst_align2:
@@ -108,7 +108,7 @@ define half @test_atomicrmw_fmax_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 ; NOLSE-NEXT:    stlxrh w9, w8, [x0]
 ; NOLSE-NEXT:    cbnz w9, .LBB1_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fmax_f16_seq_cst_align4:
@@ -128,7 +128,7 @@ define half @test_atomicrmw_fmax_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 ; LSE-NEXT:    cmp w10, w8, uxth
 ; LSE-NEXT:    b.ne .LBB1_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
-; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fmax_f16_seq_cst_align4:
@@ -201,7 +201,7 @@ define bfloat @test_atomicrmw_fmax_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    stlxrh w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB2_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $d0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fmax_bf16_seq_cst_align2:
@@ -228,7 +228,7 @@ define bfloat @test_atomicrmw_fmax_bf16_seq_cst_align2(ptr %ptr, bfloat %value) 
 ; LSE-NEXT:    cmp w11, w9, uxth
 ; LSE-NEXT:    b.ne .LBB2_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
-; LSE-NEXT:    // kill: def $h0 killed $h0 killed $d0
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fmax_bf16_seq_cst_align2:
@@ -295,7 +295,7 @@ define bfloat @test_atomicrmw_fmax_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; NOLSE-NEXT:    stlxrh w10, w9, [x0]
 ; NOLSE-NEXT:    cbnz w10, .LBB3_1
 ; NOLSE-NEXT:  // %bb.2: // %atomicrmw.end
-; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $d0
+; NOLSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; NOLSE-NEXT:    ret
 ;
 ; LSE-LABEL: test_atomicrmw_fmax_bf16_seq_cst_align4:
@@ -322,7 +322,7 @@ define bfloat @test_atomicrmw_fmax_bf16_seq_cst_align4(ptr %ptr, bfloat %value) 
 ; LSE-NEXT:    cmp w11, w9, uxth
 ; LSE-NEXT:    b.ne .LBB3_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
-; LSE-NEXT:    // kill: def $h0 killed $h0 killed $d0
+; LSE-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; LSE-NEXT:    ret
 ;
 ; SOFTFP-NOLSE-LABEL: test_atomicrmw_fmax_bf16_seq_cst_align4:

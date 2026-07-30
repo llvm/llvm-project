@@ -402,6 +402,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -559,6 +564,11 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -718,6 +728,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -876,6 +891,11 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1155,6 +1175,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -1311,6 +1336,11 @@ the configuration (without a prefix: ``Auto``).
       int     *p;
       int (*f)();
 
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
+
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
@@ -1466,6 +1496,11 @@ the configuration (without a prefix: ``Auto``).
       int     &r;
       int     *p;
       int (*f)();
+
+  * ``bool EnumAssignments`` Only for ``AlignConsecutiveAssignments``.
+    Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    setting this to ``true`` forces alignment for enum assignments only.
+    If ``Enabled`` is ``true``, enum assignments are always aligned.
 
   * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
@@ -1912,8 +1947,7 @@ the configuration (without a prefix: ``Auto``).
   * ``InlineOnly``
     Only merge functions defined inside a class. Same as ``inline``,
     except it does not implies ``empty``: i.e. top level empty functions
-    are not merged either. This option is **deprecated** and is retained
-    for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
+    are not merged either. See ``Inline`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1927,9 +1961,7 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``Empty``
-    Only merge empty functions. This option is **deprecated** and is
-    retained for backwards compatibility. See ``Empty`` of
-    ``ShortFunctionStyle``.
+    Only merge empty functions. See ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -1939,9 +1971,8 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``Inline``
-    Only merge functions defined inside a class. Implies ``empty``. This
-    option is **deprecated** and is retained for backwards compatibility.
-    See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
+    Only merge functions defined inside a class. Implies ``empty``. See
+    ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
 
     .. code-block:: c++
 
@@ -3663,6 +3694,38 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _BreakBeforeReturnType:
+
+**BreakBeforeReturnType** (``BreakBeforeReturnTypeStyle``) :versionbadge:`clang-format 23` :ref:`¶ <BreakBeforeReturnType>`
+  The function declaration/definition return type breaking style to use.
+  Trailing return types (``auto f() -> T``) are not affected. To have
+  identifier macros (e.g. ``__always_inline``) treated as specifiers,
+  add them to ``AttributeMacros``.
+
+  Possible values:
+
+  * ``BBRTS_None`` (in configuration: ``None``)
+    Do not force a break before the return type.
+
+  * ``BBRTS_All`` (in configuration: ``All``)
+    Always break before the return type.
+
+    .. code-block:: c++
+
+      static inline
+      void f();
+
+  * ``BBRTS_TopLevel`` (in configuration: ``TopLevel``)
+    Break before the return type of top-level functions only.
+
+  * ``BBRTS_AllDefinitions`` (in configuration: ``AllDefinitions``)
+    Break before the return type of function definitions only.
+
+  * ``BBRTS_TopLevelDefinitions`` (in configuration: ``TopLevelDefinitions``)
+    Break before the return type of top-level definitions only.
+
+
+
 .. _BreakBeforeTemplateCloser:
 
 **BreakBeforeTemplateCloser** (``Boolean``) :versionbadge:`clang-format 21` :ref:`¶ <BreakBeforeTemplateCloser>`
@@ -3861,6 +3924,21 @@ the configuration (without a prefix: ``Auto``).
                        initializer2()
 
 
+
+.. _BreakFunctionDeclarationParameters:
+
+**BreakFunctionDeclarationParameters** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <BreakFunctionDeclarationParameters>`
+  If ``true``, clang-format will always break before function declaration
+  parameters.
+
+  .. code-block:: c++
+
+     true:
+     void functionDeclaration(
+              int A, int B);
+
+     false:
+     void functionDeclaration(int A, int B);
 
 .. _BreakFunctionDefinitionParameters:
 
@@ -6743,6 +6821,16 @@ the configuration (without a prefix: ``Auto``).
        # include "A.inc"              # include "A.h"
        # include "A-util.h"           # include "A.inc"
 
+  * ``bool Natural`` Whether or not includes are sorted by natural ordering i.e., whether
+    embedded runs of digits are compared as numbers rather than sequences of
+    characters.
+
+    .. code-block:: c++
+
+       true:                      false:
+       #include "A2.h"     vs.    #include "A10.h"
+       #include "A10.h"           #include "A2.h"
+
 
 .. _SortJavaStaticImport:
 
@@ -7312,6 +7400,35 @@ the configuration (without a prefix: ``Auto``).
   * ``SIAS_Leave`` (in configuration: ``Leave``)
     Keep a single space after ``<`` and before ``>`` if any spaces were
     present. Option ``Standard: Cpp03`` takes precedence.
+
+
+
+.. _SpacesInBlockComments:
+
+**SpacesInBlockComments** (``SpacesInBlockCommentsStyle``) :versionbadge:`clang-format 24` :ref:`¶ <SpacesInBlockComments>`
+  The SpacesInBlockCommentsStyle to use for ordinary block comments.
+  Documentation comments such as ``/** ... */`` and ``/*! ... */``
+  and parameter comments ending with ``=`` before the closing ``*/`` are
+  left unchanged.
+
+  Possible values:
+
+  * ``SIBCS_Never`` (in configuration: ``Never``)
+    Remove spaces after ``/*`` and before ``*/``.
+
+    .. code-block:: c++
+
+       /*comment*/
+
+  * ``SIBCS_Always`` (in configuration: ``Always``)
+    Add spaces after ``/*`` and before ``*/``.
+
+    .. code-block:: c++
+
+       /* comment */
+
+  * ``SIBCS_Leave`` (in configuration: ``Leave``)
+    Leave existing spaces unchanged.
 
 
 

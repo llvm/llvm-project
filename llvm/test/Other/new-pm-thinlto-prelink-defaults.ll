@@ -111,6 +111,7 @@
 ; CHECK-O23-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23-NEXT: Invalidating analysis: LazyValueAnalysis
+; CHECK-O23-NEXT: Running pass: JumpTableToSwitchPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O23-NEXT: Running pass: AggressiveInstCombinePass
@@ -118,6 +119,7 @@
 ; CHECK-O23-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
+; CHECK-O-NEXT: Running analysis: UniformityInfoAnalysis
 ; CHECK-O23-NEXT: Running pass: ConstraintEliminationPass
 ; CHECK-O23-NEXT: Running analysis: LoopAnalysis
 ; CHECK-O23-NEXT: Running analysis: ScalarEvolutionAnalysis
@@ -151,6 +153,7 @@
 ; CHECK-O-NEXT: Running pass: BDCEPass
 ; CHECK-O-NEXT: Running analysis: DemandedBitsAnalysis
 ; CHECK-O-NEXT: Running pass: InstCombinePass
+; CHECK-O23-NEXT: Running pass: DFAJumpThreadingPass
 ; CHECK-O23-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O23-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23-NEXT: Running pass: CorrelatedValuePropagationPass
@@ -181,12 +184,14 @@
 ; CHECK-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
 ; CHECK-EP-OPT-LAST-NEXT: Running pass: NoOpModulePass
 ; CHECK-O-NEXT:          Running pass: AnnotationRemarksPass on foo
+; CHECK-O-NEXT: Running pass: LowerCommentStringPass
 ; CHECK-O-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
+; CHECK-O-NEXT: Running pass: AssignGUIDPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.
-; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr {
+; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr
 ; CHECK-O-NEXT: entry:
 ; CHECK-O-NEXT:   br label %loop
 ; CHECK-O:      loop:

@@ -1,0 +1,7 @@
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename: 1.o
+    symbols:
+      - { sym: _user_func, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }
+...

@@ -75,6 +75,7 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.futex_utils)
       unix_mutex.h
     DEPENDS
       .raw_mutex
+      libc.src.__support.CPP.atomic
   )
 
   add_header_library(
@@ -111,7 +112,9 @@ add_header_library(
     thread.h
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.hdr.types.struct_sched_param
     libc.src.__support.common
+    libc.src.__support.error_or
     libc.src.__support.CPP.atomic
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
@@ -162,6 +165,7 @@ if(TARGET libc.src.__support.threads.futex_utils)
       libc.src.__support.threads.sleep
       libc.src.__support.time.monotonicity
       libc.src.__support.time.abs_timeout
+      libc.src.__support.threads.identifier
   )
 endif()
 

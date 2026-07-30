@@ -2688,7 +2688,7 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
     // printDenseElementsAttrImpl. This lambda was hitting a bug in gcc 9.1,9.2
     // and hence was replaced.
     if (llvm::isa<IntegerType>(complexElementType)) {
-      auto valueIt = attr.value_begin<std::complex<APInt>>();
+      auto valueIt = attr.value_begin<mlir::Complex<APInt>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
         auto complexValue = *(valueIt + index);
         os << "(";
@@ -2698,7 +2698,7 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
         os << ")";
       });
     } else {
-      auto valueIt = attr.value_begin<std::complex<APFloat>>();
+      auto valueIt = attr.value_begin<mlir::Complex<APFloat>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
         auto complexValue = *(valueIt + index);
         os << "(";
@@ -2805,6 +2805,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       .Case<Float8E4M3B11FNUZType>([&](Type) { os << "f8E4M3B11FNUZ"; })
       .Case<Float8E3M4Type>([&](Type) { os << "f8E3M4"; })
       .Case<Float8E8M0FNUType>([&](Type) { os << "f8E8M0FNU"; })
+      .Case<Float8E5M3FNUType>([&](Type) { os << "f8E5M3FNU"; })
       .Case<BFloat16Type>([&](Type) { os << "bf16"; })
       .Case<Float16Type>([&](Type) { os << "f16"; })
       .Case<FloatTF32Type>([&](Type) { os << "tf32"; })
@@ -2907,6 +2908,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         os << '>';
       })
       .Case<NoneType>([&](Type) { os << "none"; })
+      .Case<TokenType>([&](Type) { os << "token"; })
       .Case([&](GraphType graphTy) {
         os << '(';
         interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });

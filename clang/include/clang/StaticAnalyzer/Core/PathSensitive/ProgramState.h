@@ -272,7 +272,7 @@ public:
 
   /// Utility method for getting regions.
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const VarRegion* getRegion(const VarDecl *D, const LocationContext *LC) const;
+  const VarRegion *getRegion(const VarDecl *D, const StackFrame *SF) const;
 
   //==---------------------------------------------------------------------==//
   // Binding and retrieving values to/from the environment and symbolic store.
@@ -280,16 +280,15 @@ public:
 
   /// Create a new state by binding the value \p V to the expression \p E in
   /// the state's environment.
-  [[nodiscard]] ProgramStateRef BindExpr(const Expr *E,
-                                         const LocationContext *LCtx, SVal V,
-                                         bool Invalidate = true) const;
+  [[nodiscard]] ProgramStateRef BindExpr(const Expr *E, const StackFrame *SF,
+                                         SVal V, bool Invalidate = true) const;
 
   [[nodiscard]] ProgramStateRef bindLoc(Loc location, SVal V,
-                                        const LocationContext *LCtx,
+                                        const StackFrame *SF,
                                         bool notifyChanges = true) const;
 
   [[nodiscard]] ProgramStateRef bindLoc(SVal location, SVal V,
-                                        const LocationContext *LCtx) const;
+                                        const StackFrame *SF) const;
 
   /// Initializes the region of memory represented by \p loc with an initial
   /// value. Once initialized, all values loaded from any sub-regions of that
@@ -297,13 +296,13 @@ public:
   /// This method should not be used on regions that are already initialized.
   /// If you need to indicate that memory contents have suddenly become unknown
   /// within a certain region of memory, consider invalidateRegions().
-  [[nodiscard]] ProgramStateRef
-  bindDefaultInitial(SVal loc, SVal V, const LocationContext *LCtx) const;
+  [[nodiscard]] ProgramStateRef bindDefaultInitial(SVal loc, SVal V,
+                                                   const StackFrame *SF) const;
 
   /// Performs C++ zero-initialization procedure on the region of memory
   /// represented by \p loc.
-  [[nodiscard]] ProgramStateRef
-  bindDefaultZero(SVal loc, const LocationContext *LCtx) const;
+  [[nodiscard]] ProgramStateRef bindDefaultZero(SVal loc,
+                                                const StackFrame *SF) const;
 
   [[nodiscard]] ProgramStateRef killBinding(Loc LV) const;
 
@@ -328,17 +327,15 @@ public:
   ///        the call and should be considered directly invalidated.
   /// \param ITraits information about special handling for particular regions
   ///        or symbols.
-  [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<const MemRegion *> Regions,
-                    ConstCFGElementRef Elem, unsigned BlockCount,
-                    const LocationContext *LCtx, bool CausesPointerEscape,
-                    InvalidatedSymbols *IS = nullptr,
-                    const CallEvent *Call = nullptr,
-                    RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
+  [[nodiscard]] ProgramStateRef invalidateRegions(
+      ArrayRef<const MemRegion *> Regions, ConstCFGElementRef Elem,
+      unsigned BlockCount, const StackFrame *SF, bool CausesPointerEscape,
+      InvalidatedSymbols *IS = nullptr, const CallEvent *Call = nullptr,
+      RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
   invalidateRegions(ArrayRef<SVal> Values, ConstCFGElementRef Elem,
-                    unsigned BlockCount, const LocationContext *LCtx,
+                    unsigned BlockCount, const StackFrame *SF,
                     bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
@@ -346,11 +343,10 @@ public:
   /// enterStackFrame - Returns the state for entry to the given stack frame,
   ///  preserving the current state.
   [[nodiscard]] ProgramStateRef
-  enterStackFrame(const CallEvent &Call,
-                  const StackFrameContext *CalleeCtx) const;
+  enterStackFrame(const CallEvent &Call, const StackFrame *CalleeSF) const;
 
   /// Return the value of 'self' if available in the given context.
-  SVal getSelfSVal(const LocationContext *LC) const;
+  SVal getSelfSVal(const StackFrame *SF) const;
 
   /// Get the lvalue for a base class object reference.
   Loc getLValue(const CXXBaseSpecifier &BaseSpec, const SubRegion *Super) const;
@@ -360,10 +356,9 @@ public:
                 bool IsVirtual) const;
 
   /// Get the lvalue for a variable reference.
-  Loc getLValue(const VarDecl *D, const LocationContext *LC) const;
+  Loc getLValue(const VarDecl *D, const StackFrame *SF) const;
 
-  Loc getLValue(const CompoundLiteralExpr *literal,
-                const LocationContext *LC) const;
+  Loc getLValue(const CompoundLiteralExpr *literal, const StackFrame *SF) const;
 
   /// Get the lvalue for an ivar reference.
   SVal getLValue(const ObjCIvarDecl *decl, SVal base) const;
@@ -377,10 +372,10 @@ public:
   /// Get the lvalue for an array index.
   SVal getLValue(QualType ElementType, SVal Idx, SVal Base) const;
 
-  /// Returns the SVal bound to the statement 'S' in the state's environment.
-  SVal getSVal(const Stmt *S, const LocationContext *LCtx) const;
+  /// Returns the SVal bound to the expression \p E in the state's environment.
+  SVal getSVal(const Expr *E, const StackFrame *SF) const;
 
-  SVal getSValAsScalarOrLoc(const Stmt *Ex, const LocationContext *LCtx) const;
+  SVal getSValAsScalarOrLoc(const Expr *E, const StackFrame *SF) const;
 
   /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
@@ -478,11 +473,11 @@ public:
   }
 
   // Pretty-printing.
-  void printJson(raw_ostream &Out, const LocationContext *LCtx = nullptr,
+  void printJson(raw_ostream &Out, const StackFrame *SF = nullptr,
                  const char *NL = "\n", unsigned int Space = 0,
                  bool IsDot = false) const;
 
-  void printDOT(raw_ostream &Out, const LocationContext *LCtx = nullptr,
+  void printDOT(raw_ostream &Out, const StackFrame *SF = nullptr,
                 unsigned int Space = 0) const;
 
   void dump() const;
@@ -541,7 +536,7 @@ public:
 
   ~ProgramStateManager();
 
-  ProgramStateRef getInitialState(const LocationContext *InitLoc);
+  ProgramStateRef getInitialState(const StackFrame *InitSF);
 
   ASTContext &getContext() { return svalBuilder->getContext(); }
   const ASTContext &getContext() const { return svalBuilder->getContext(); }
@@ -584,10 +579,8 @@ public:
   }
   ExprEngine &getOwningEngine() { return *Eng; }
 
-  ProgramStateRef
-  removeDeadBindingsFromEnvironmentAndStore(ProgramStateRef St,
-                                            const StackFrameContext *LCtx,
-                                            SymbolReaper &SymReaper);
+  ProgramStateRef removeDeadBindingsFromEnvironmentAndStore(
+      ProgramStateRef St, const StackFrame *SF, SymbolReaper &SymReaper);
 
 public:
 
@@ -701,10 +694,9 @@ inline ConstraintManager &ProgramState::getConstraintManager() const {
   return stateMgr->getConstraintManager();
 }
 
-inline const VarRegion* ProgramState::getRegion(const VarDecl *D,
-                                                const LocationContext *LC) const
-{
-  return getStateManager().getRegionManager().getVarRegion(D, LC);
+inline const VarRegion *ProgramState::getRegion(const VarDecl *D,
+                                                const StackFrame *SF) const {
+  return getStateManager().getRegionManager().getVarRegion(D, SF);
 }
 
 inline ProgramStateRef ProgramState::assume(DefinedOrUnknownSVal Cond,
@@ -750,9 +742,10 @@ ProgramState::assumeInclusiveRange(DefinedOrUnknownSVal Val,
       this, Val.castAs<NonLoc>(), From, To);
 }
 
-inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V, const LocationContext *LCtx) const {
+inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V,
+                                             const StackFrame *SF) const {
   if (std::optional<Loc> L = LV.getAs<Loc>())
-    return bindLoc(*L, V, LCtx);
+    return bindLoc(*L, V, SF);
   return this;
 }
 
@@ -773,13 +766,13 @@ inline Loc ProgramState::getLValue(const CXXRecordDecl *BaseClass,
 }
 
 inline Loc ProgramState::getLValue(const VarDecl *VD,
-                               const LocationContext *LC) const {
-  return getStateManager().StoreMgr->getLValueVar(VD, LC);
+                                   const StackFrame *SF) const {
+  return getStateManager().StoreMgr->getLValueVar(VD, SF);
 }
 
 inline Loc ProgramState::getLValue(const CompoundLiteralExpr *literal,
-                               const LocationContext *LC) const {
-  return getStateManager().StoreMgr->getLValueCompoundLiteral(literal, LC);
+                                   const StackFrame *SF) const {
+  return getStateManager().StoreMgr->getLValueCompoundLiteral(literal, SF);
 }
 
 inline SVal ProgramState::getLValue(const ObjCIvarDecl *D, SVal Base) const {
@@ -792,22 +785,15 @@ inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) c
   return UnknownVal();
 }
 
-inline SVal ProgramState::getSVal(const Stmt *Ex,
-                                  const LocationContext *LCtx) const{
-  return Env.getSVal(EnvironmentEntry(Ex, LCtx),
-                     *getStateManager().svalBuilder);
+inline SVal ProgramState::getSVal(const Expr *E, const StackFrame *SF) const {
+  return Env.getSVal(EnvironmentEntry(E, SF), *getStateManager().svalBuilder);
 }
 
-inline SVal
-ProgramState::getSValAsScalarOrLoc(const Stmt *S,
-                                   const LocationContext *LCtx) const {
-  if (const Expr *Ex = dyn_cast<Expr>(S)) {
-    QualType T = Ex->getType();
-    if (Ex->isGLValue() || Loc::isLocType(T) ||
-        T->isIntegralOrEnumerationType())
-      return getSVal(S, LCtx);
-  }
-
+inline SVal ProgramState::getSValAsScalarOrLoc(const Expr *E,
+                                               const StackFrame *SF) const {
+  QualType T = E->getType();
+  if (E->isGLValue() || Loc::isLocType(T) || T->isIntegralOrEnumerationType())
+    return getSVal(E, SF);
   return UnknownVal();
 }
 

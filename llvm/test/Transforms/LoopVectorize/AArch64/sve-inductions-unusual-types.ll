@@ -5,8 +5,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv.next1295 = add i7 %indvars.iv1294, 1
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv1294 = phi i7 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
+; DEBUG: Cost of Invalid for VF vscale x 1: ir<%indvars.iv1294> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%0>
 
 define void @induction_i7(ptr %dst) #0 {
 ; CHECK-LABEL: define void @induction_i7(
@@ -17,8 +16,7 @@ define void @induction_i7(ptr %dst) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 64, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP40:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP40:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP40]], 1
@@ -69,8 +67,7 @@ for.end:
 }
 
 
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv.next1295 = add i3 %indvars.iv1294, 1
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv1294 = phi i3 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
+; DEBUG: Cost of Invalid for VF vscale x 1: ir<%indvars.iv1294> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%0>
 
 define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-LABEL: define void @induction_i3_zext(
@@ -81,8 +78,7 @@ define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 64, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP40:%.*]] = shl nuw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP40:%.*]] = shl nuw i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP40]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT_:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP40]], 1

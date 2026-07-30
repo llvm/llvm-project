@@ -119,4 +119,4 @@ str	w0, [x21, x18, lsl #2]
 # CHECK-NEXT: 3.     2     0.0    0.0    0.0       add	x3, x3, x13
 # CHECK-NEXT: 4.     2     0.0    0.0    0.0       subs	x1, x1, #1
 # CHECK-NEXT: 5.     2     0.0    0.0    0.0       str	w0, [x21, x18, lsl #2]
-# CHECK-NEXT:        2     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        12    0.0    0.0    0.0       <total>

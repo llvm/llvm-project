@@ -147,17 +147,17 @@ define ptr @test4() {
 ; POWEROF2-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer
 ; POWEROF2-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; POWEROF2-NEXT:    [[TMP15:%.*]] = fmul <2 x float> zeroinitializer, [[TMP14]]
-; POWEROF2-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP9]], i32 0
+; POWEROF2-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP9]], i64 0
 ; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP30]]
-; POWEROF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP9]], i32 1
+; POWEROF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP9]], i64 1
 ; POWEROF2-NEXT:    [[TMP19:%.*]] = fmul float [[TMP18]], 0.000000e+00
-; POWEROF2-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP13]], i32 0
+; POWEROF2-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP13]], i64 0
 ; POWEROF2-NEXT:    [[TMP21:%.*]] = fadd reassoc nsz float [[TMP20]], [[TMP17]]
-; POWEROF2-NEXT:    [[TMP22:%.*]] = extractelement <2 x float> [[TMP15]], i32 0
+; POWEROF2-NEXT:    [[TMP22:%.*]] = extractelement <2 x float> [[TMP15]], i64 0
 ; POWEROF2-NEXT:    [[TMP23:%.*]] = fadd reassoc nsz float [[TMP22]], [[TMP19]]
-; POWEROF2-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[TMP13]], i32 1
+; POWEROF2-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[TMP13]], i64 1
 ; POWEROF2-NEXT:    [[TMP25:%.*]] = fadd reassoc nsz float [[TMP21]], [[TMP24]]
-; POWEROF2-NEXT:    [[TMP26:%.*]] = extractelement <2 x float> [[TMP15]], i32 1
+; POWEROF2-NEXT:    [[TMP26:%.*]] = extractelement <2 x float> [[TMP15]], i64 1
 ; POWEROF2-NEXT:    [[TMP27:%.*]] = fadd reassoc nsz float [[TMP23]], [[TMP26]]
 ; POWEROF2-NEXT:    [[TMP28:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP25]])
 ; POWEROF2-NEXT:    [[TMP29:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP27]])
@@ -177,11 +177,10 @@ define ptr @test4() {
 ; NONPOWEROF2-NEXT:    [[TMP8:%.*]] = phi <6 x float> [ poison, [[TMP6:%.*]] ], [ [[TMP5]], [[TMP0:%.*]] ]
 ; NONPOWEROF2-NEXT:    br label [[TMP9:%.*]]
 ; NONPOWEROF2:       10:
-; NONPOWEROF2-NEXT:    [[TMP10:%.*]] = shufflevector <6 x float> [[TMP8]], <6 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
-; NONPOWEROF2-NEXT:    [[TMP11:%.*]] = fmul <3 x float> zeroinitializer, [[TMP10]]
-; NONPOWEROF2-NEXT:    [[TMP12:%.*]] = shufflevector <6 x float> [[TMP8]], <6 x float> poison, <3 x i32> <i32 3, i32 4, i32 5>
-; NONPOWEROF2-NEXT:    [[TMP13:%.*]] = fmul <3 x float> zeroinitializer, [[TMP12]]
+; NONPOWEROF2-NEXT:    [[TMP12:%.*]] = fmul <6 x float> zeroinitializer, [[TMP8]]
+; NONPOWEROF2-NEXT:    [[TMP11:%.*]] = shufflevector <6 x float> [[TMP12]], <6 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; NONPOWEROF2-NEXT:    [[TMP14:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP11]])
+; NONPOWEROF2-NEXT:    [[TMP13:%.*]] = shufflevector <6 x float> [[TMP12]], <6 x float> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; NONPOWEROF2-NEXT:    [[TMP15:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP13]])
 ; NONPOWEROF2-NEXT:    [[TMP16:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP14]])
 ; NONPOWEROF2-NEXT:    [[TMP17:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP15]])
@@ -229,7 +228,7 @@ define i32 @test5() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_END47:%.*]]
 ; CHECK:       for.end47:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <8 x double> [ <double 0x7FF8000000000000, double 0x7FF8000000000000, double 0.000000e+00, double 0.000000e+00, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0.000000e+00, double 0.000000e+00>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <8 x double> [ <double +qnan, double +qnan, double 0.000000e+00, double 0.000000e+00, double +qnan, double +qnan, double 0.000000e+00, double 0.000000e+00>, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

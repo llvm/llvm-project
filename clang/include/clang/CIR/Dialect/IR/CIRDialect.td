@@ -78,9 +78,13 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }
     static llvm::StringRef getCUDABinaryHandleAttrName() { return "cir.cu.binary_handle"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
+    static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 
     static llvm::StringRef getAMDGPUCodeObjectVersionAttrName() { return "cir.amdhsa_code_object_version"; }
     static llvm::StringRef getAMDGPUPrintfKindAttrName() { return "cir.amdgpu_printf_kind"; }
+    static llvm::StringRef getAMDGPUXnackAttrName() { return "cir.amdgpu_xnack"; }
+    static llvm::StringRef getAMDGPUSramEccAttrName() { return "cir.amdgpu_sramecc"; }
+    static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
 
     void registerAttributes();
     void registerTypes();

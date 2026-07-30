@@ -15,14 +15,15 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/ValueSymbolTable.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 
@@ -83,23 +84,21 @@ IRForTarget::IRForTarget(lldb_private::ClangExpressionDeclMap *decl_map,
 
 /* Handy utility functions used at several places in the code */
 
-static std::string PrintValue(const Value *value, bool truncate = false) {
+static std::string PrintValue(const Value *value) {
+  if (!value)
+    return {};
   std::string s;
-  if (value) {
-    raw_string_ostream rso(s);
-    value->print(rso);
-    if (truncate)
-      s.resize(s.length() - 1);
-  }
+  raw_string_ostream rso(s);
+  value->print(rso);
   return s;
 }
 
-static std::string PrintType(const llvm::Type *type, bool truncate = false) {
+static std::string PrintType(const llvm::Type *type) {
+  if (!type)
+    return {};
   std::string s;
   raw_string_ostream rso(s);
   type->print(rso);
-  if (truncate)
-    s.resize(s.length() - 1);
   return s;
 }
 
@@ -181,6 +180,11 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     // on Windows, so let's only check for Itanium guard variables.
     bool is_guard_var = isGuardVariableSymbol(result_name, /*MS ABI*/ false);
 
+    // Skip non-globals, e.g. the MS ABI dynamic initializer function that
+    // shares a mangled name with the result variable.
+    if (!isa<GlobalVariable>(value_symbol.second))
+      continue;
+
     if (result_name.contains("$__lldb_expr_result_ptr") && !is_guard_var) {
       found_result = true;
       m_result_is_pointer = true;
@@ -214,8 +218,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     return false;
   }
 
-  LLDB_LOG(log, "Found result in the IR: \"{0}\"",
-           PrintValue(result_value, false));
+  LLDB_LOG(log, "Found result in the IR: \"{0}\"", PrintValue(result_value));
 
   GlobalVariable *result_global = dyn_cast<GlobalVariable>(result_value);
 
@@ -521,16 +524,20 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
                ->getIterator());
      });
 
- if (!UnfoldConstant(ns_str, nullptr, CFSCWB_Caller, m_entry_instruction_finder,
-                     m_error_stream)) {
-   LLDB_LOG(log, "Couldn't replace the NSString with the result of the call");
+ if (auto err = UnfoldConstant(ns_str, nullptr, CFSCWB_Caller,
+                               m_entry_instruction_finder, m_error_stream)) {
+   std::string error_msg = llvm::toString(std::move(err));
+   LLDB_LOG(log,
+            "Couldn't replace the NSString with the result of the call: {0}",
+            error_msg);
 
-   m_error_stream.Printf("error [IRForTarget internal]: Couldn't replace an "
+   m_error_stream.Format("error [IRForTarget internal]: Couldn't replace an "
                          "Objective-C constant string with a dynamic "
-                         "string\n");
+                         "string\n{0}",
+                         error_msg);
 
    return false;
-  }
+ }
 
   ns_str->eraseFromParent();
 
@@ -541,6 +548,9 @@ bool IRForTarget::RewriteObjCConstStrings() {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   ValueSymbolTable &value_symbol_table = m_module->getValueSymbolTable();
+
+  std::vector<std::pair<GlobalVariable *, GlobalVariable *>>
+      nsstring_to_cstr_list;
 
   for (StringMapEntry<llvm::Value *> &value_symbol : value_symbol_table) {
     llvm::StringRef value_name = value_symbol.first();
@@ -682,14 +692,16 @@ bool IRForTarget::RewriteObjCConstStrings() {
       if (!cstr_array)
         cstr_global = nullptr;
 
-      if (!RewriteObjCConstString(nsstring_global, cstr_global)) {
-        LLDB_LOG(log, "Error rewriting the constant string");
+      // Queue up replacing the string as we are currently iterating
+      // over the module.
+      nsstring_to_cstr_list.emplace_back(nsstring_global, cstr_global);
+    }
+  }
 
-        // We don't print an error message here because RewriteObjCConstString
-        // has done so for us.
-
-        return false;
-      }
+  for (auto [nsstring_global, cstr_global] : nsstring_to_cstr_list) {
+    if (!RewriteObjCConstString(nsstring_global, cstr_global)) {
+      LLDB_LOG(log, "Error rewriting the constant string");
+      return false;
     }
   }
 
@@ -889,8 +901,7 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
       m_decl_map->GetTypeSystem()->GetType(decl->getType()));
 
   StringRef decl_name(decl->getName());
-  lldb_private::ConstString persistent_variable_name(decl_name.data(),
-                                                     decl_name.size());
+  lldb_private::ConstString persistent_variable_name(decl_name);
   if (!m_decl_map->AddPersistentVariable(decl, persistent_variable_name,
                                          result_decl_type, false, false))
     return false;
@@ -1072,7 +1083,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
 bool IRForTarget::HandleSymbol(Value *symbol) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
-  lldb_private::ConstString name(symbol->getName().str().c_str());
+  lldb_private::ConstString name(symbol->getName());
 
   lldb::addr_t symbol_addr =
       m_decl_map->GetSymbolAddress(name, lldb::eSymbolTypeAny);
@@ -1136,7 +1147,7 @@ bool IRForTarget::HandleObjCClass(Value *classlist_reference) {
     return false;
 
   StringRef name(initializer->getName());
-  lldb_private::ConstString name_cstr(name.str().c_str());
+  lldb_private::ConstString name_cstr(name);
   lldb::addr_t class_ptr =
       m_decl_map->GetSymbolAddress(name_cstr, lldb::eSymbolTypeObjCClass);
 
@@ -1175,6 +1186,7 @@ bool IRForTarget::HandleObjCClass(Value *classlist_reference) {
 
 bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
   std::vector<CallInst *> calls_to_remove;
+  llvm::SmallVector<llvm::Function *, 2> dead_atexit_callbacks;
 
   for (Instruction &inst : basic_block) {
     CallInst *call = dyn_cast<CallInst>(&inst);
@@ -1187,20 +1199,41 @@ bool IRForTarget::RemoveCXAAtExit(BasicBlock &basic_block) {
 
     llvm::Function *func = call->getCalledFunction();
 
-    if (func && func->getName() == "__cxa_atexit")
+    // Itanium ABI uses __cxa_atexit; MS ABI uses plain atexit.
+    if (func &&
+        (func->getName() == "__cxa_atexit" || func->getName() == "atexit"))
       remove = true;
 
     llvm::Value *val = call->getCalledOperand();
 
-    if (val && val->getName() == "__cxa_atexit")
+    if (val && (val->getName() == "__cxa_atexit" || val->getName() == "atexit"))
       remove = true;
 
-    if (remove)
+    if (remove) {
+      // MS ABI destructor thunks (mangled "??__F...") reference the static
+      // they destroy; track them to clear once the call is gone.
+      if (call->arg_size() > 0)
+        if (auto *cb = dyn_cast<llvm::Function>(
+                call->getArgOperand(0)->stripPointerCasts()))
+          if (cb->hasInternalLinkage() && cb->getName().starts_with("??__F"))
+            dead_atexit_callbacks.push_back(cb);
       calls_to_remove.push_back(call);
+    }
   }
 
   for (CallInst *ci : calls_to_remove)
     ci->eraseFromParent();
+
+  // Clear the body of any orphaned atexit-destructor thunk so it no longer
+  // references the statics it used to destroy.
+  for (llvm::Function *cb : dead_atexit_callbacks) {
+    if (!cb->use_empty())
+      continue;
+    cb->deleteBody();
+    llvm::BasicBlock *entry =
+        llvm::BasicBlock::Create(cb->getContext(), "", cb);
+    llvm::ReturnInst::Create(cb->getContext(), entry);
+  }
 
   return true;
 }
@@ -1309,12 +1342,12 @@ bool IRForTarget::RemoveGuards(BasicBlock &basic_block) {
   return true;
 }
 
-// This function does not report errors; its callers are responsible.
-bool IRForTarget::UnfoldConstant(Constant *old_constant,
-                                 llvm::Function *llvm_function,
-                                 FunctionValueCache &value_maker,
-                                 FunctionValueCache &entry_instruction_finder,
-                                 lldb_private::Stream &error_stream) {
+llvm::Error
+IRForTarget::UnfoldConstant(Constant *old_constant,
+                            llvm::Function *llvm_function,
+                            FunctionValueCache &value_maker,
+                            FunctionValueCache &entry_instruction_finder,
+                            lldb_private::Stream &error_stream) {
   SmallVector<User *, 16> users;
 
   // We do this because the use list might change, invalidating our iterator.
@@ -1322,19 +1355,17 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
   for (llvm::User *u : old_constant->users())
     users.push_back(u);
 
-  for (size_t i = 0; i < users.size(); ++i) {
-    User *user = users[i];
-
+  for (User *user : users) {
     if (Constant *constant = dyn_cast<Constant>(user)) {
       // synthesize a new non-constant equivalent of the constant
 
       if (ConstantExpr *constant_expr = dyn_cast<ConstantExpr>(constant)) {
         switch (constant_expr->getOpcode()) {
         default:
-          error_stream.Printf("error [IRForTarget internal]: Unhandled "
-                              "constant expression type: \"%s\"",
-                              PrintValue(constant_expr).c_str());
-          return false;
+          return llvm::createStringErrorV(
+              "unhandled constant expression type: \"{0}\".",
+              PrintValue(constant_expr));
+
         case Instruction::BitCast: {
           FunctionValueCache bit_cast_maker(
               [&value_maker, &entry_instruction_finder, old_constant,
@@ -1353,9 +1384,10 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
                         ->getIterator());
               });
 
-          if (!UnfoldConstant(constant_expr, llvm_function, bit_cast_maker,
-                              entry_instruction_finder, error_stream))
-            return false;
+          if (auto err =
+                  UnfoldConstant(constant_expr, llvm_function, bit_cast_maker,
+                                 entry_instruction_finder, error_stream))
+            return err;
         } break;
         case Instruction::GetElementPtr: {
           // GetElementPtrConstantExpr
@@ -1388,33 +1420,36 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
                         ->getIterator());
               });
 
-          if (!UnfoldConstant(constant_expr, llvm_function,
-                              get_element_pointer_maker,
-                              entry_instruction_finder, error_stream))
-            return false;
+          if (auto err = UnfoldConstant(constant_expr, llvm_function,
+                                        get_element_pointer_maker,
+                                        entry_instruction_finder, error_stream))
+            return err;
         } break;
         }
+      } else if (ConstantPtrAuth *constant_ptr_auth =
+                     dyn_cast<ConstantPtrAuth>(constant)) {
+        // No need to handle ConstantPtrAuth users if old_constant is an address
+        // discriminator.
+        if (constant_ptr_auth->hasAddressDiscriminator() &&
+            constant_ptr_auth->getAddrDiscriminator() == old_constant)
+          continue;
+
+        return llvm::createStringErrorV("unhandled constant type \"{0}\".",
+                                        PrintValue(constant_ptr_auth));
       } else {
-        error_stream.Printf(
-            "error [IRForTarget internal]: Unhandled constant type: \"%s\"",
-            PrintValue(constant).c_str());
-        return false;
+        return llvm::createStringErrorV("unhandled constant type \"{0}\".",
+                                        PrintValue(constant));
       }
+    } else if (Instruction *inst = llvm::dyn_cast<Instruction>(user)) {
+      if (llvm_function && inst->getParent()->getParent() != llvm_function)
+        return llvm::createStringError(
+            "capturing non-local variables in expressions is unsupported.");
+
+      inst->replaceUsesOfWith(
+          old_constant, value_maker.GetValue(inst->getParent()->getParent()));
     } else {
-      if (Instruction *inst = llvm::dyn_cast<Instruction>(user)) {
-        if (llvm_function && inst->getParent()->getParent() != llvm_function) {
-          error_stream.PutCString("error: Capturing non-local variables in "
-                                  "expressions is unsupported.\n");
-          return false;
-        }
-        inst->replaceUsesOfWith(
-            old_constant, value_maker.GetValue(inst->getParent()->getParent()));
-      } else {
-        error_stream.Printf(
-            "error [IRForTarget internal]: Unhandled non-constant type: \"%s\"",
-            PrintValue(user).c_str());
-        return false;
-      }
+      return llvm::createStringErrorV("unhandled non-constant type: \"{0}\".",
+                                      PrintValue(user));
     }
   }
 
@@ -1422,7 +1457,7 @@ bool IRForTarget::UnfoldConstant(Constant *old_constant,
     old_constant->destroyConstant();
   }
 
-  return true;
+  return llvm::Error::success();
 }
 
 bool IRForTarget::ReplaceVariables(Function &llvm_function) {
@@ -1581,8 +1616,10 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
           });
 
       if (Constant *constant = dyn_cast<Constant>(value)) {
-        if (!UnfoldConstant(constant, &llvm_function, body_result_maker,
-                            m_entry_instruction_finder, m_error_stream)) {
+        if (auto err =
+                UnfoldConstant(constant, &llvm_function, body_result_maker,
+                               m_entry_instruction_finder, m_error_stream)) {
+          m_error_stream.Format("{0}", llvm::toString(std::move(err)));
           return false;
         }
       } else if (Instruction *instruction = dyn_cast<Instruction>(value)) {

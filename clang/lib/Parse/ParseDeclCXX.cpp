@@ -1241,7 +1241,7 @@ DeclSpec::TST Parser::TypeTransformTokToDeclSpec() {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   case tok::kw___##Trait:                                                      \
     return DeclSpec::TST_##Trait;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   default:
     llvm_unreachable("passed in an unhandled type transformation built-in");
   }
@@ -1604,7 +1604,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       !Tok.isAnnotation() && Tok.getIdentifierInfo() &&
       Tok.isOneOf(
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
           tok::kw___is_abstract,
           tok::kw___is_aggregate,
           tok::kw___is_arithmetic,
@@ -2519,17 +2519,27 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   else
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
 
+  bool IsFunctionDeclarator = DeclaratorInfo.isFunctionDeclarator();
+  if (!IsFunctionDeclarator && !getLangOpts().MSVCCompat)
+    MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
+
   if (getLangOpts().HLSL)
     MaybeParseHLSLAnnotations(DeclaratorInfo, nullptr,
                               /*CouldBeBitField*/ true);
 
-  if (!DeclaratorInfo.isFunctionDeclarator() && TryConsumeToken(tok::colon)) {
+  if (!IsFunctionDeclarator && TryConsumeToken(tok::colon)) {
     assert(DeclaratorInfo.isPastIdentifier() &&
            "don't know where identifier would go yet?");
     BitfieldSize = ParseConstantExpression();
     if (BitfieldSize.isInvalid())
       SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
   } else if (Tok.is(tok::kw_requires)) {
+    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+    // With abbreviated function templates - we need to explicitly add depth to
+    // account for the implicit template parameter list induced by the template.
+    if (DeclaratorInfo.getTemplateParameterLists().empty() &&
+        DeclaratorInfo.getInventedTemplateParameterList())
+      ++CurTemplateDepthTracker;
     ParseTrailingRequiresClauseWithScope(DeclaratorInfo);
   } else {
     ParseOptionalCXX11VirtSpecifierSeq(
@@ -4698,21 +4708,15 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
       Diag(Tok, diag::err_cxx11_attribute_forbids_ellipsis) << AttrName;
   }
 
-  // If we hit an error and recovered by parsing up to a semicolon, eat the
-  // semicolon and don't issue further diagnostics about missing brackets.
-  if (Tok.is(tok::semi)) {
-    ConsumeToken();
-    return;
-  }
-
   SourceLocation CloseLoc = Tok.getLocation();
-  if (ExpectAndConsume(tok::r_square))
+  bool IsTokenNotFound = ExpectAndConsume(tok::r_square);
+  if (IsTokenNotFound)
     SkipUntil(tok::r_square);
   else if (Tok.is(tok::r_square))
     checkCompoundToken(CloseLoc, tok::r_square, CompoundToken::AttrEnd);
   if (EndLoc)
     *EndLoc = Tok.getLocation();
-  if (ExpectAndConsume(tok::r_square))
+  if (!IsTokenNotFound && ExpectAndConsume(tok::r_square))
     SkipUntil(tok::r_square);
 }
 

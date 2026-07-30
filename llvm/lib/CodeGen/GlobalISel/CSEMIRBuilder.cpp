@@ -282,14 +282,17 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
     break;
   }
   case TargetOpcode::G_CTLZ:
-  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+  case TargetOpcode::G_CTLZ_ZERO_POISON:
   case TargetOpcode::G_CTTZ:
-  case TargetOpcode::G_CTTZ_ZERO_UNDEF:
-  case TargetOpcode::G_CTPOP: {
+  case TargetOpcode::G_CTTZ_ZERO_POISON:
+  case TargetOpcode::G_CTPOP:
+  case TargetOpcode::G_ABS:
+  case TargetOpcode::G_BSWAP:
+  case TargetOpcode::G_BITREVERSE: {
     assert(SrcOps.size() == 1 && "Expected one source");
     assert(DstOps.size() == 1 && "Expected one dest");
-    auto Csts = ConstantFoldCountOp(Opc, DstOps[0].getLLTTy(*getMRI()),
-                                    SrcOps[0].getReg(), *getMRI());
+    auto Csts = ConstantFoldUnaryIntOp(Opc, DstOps[0].getLLTTy(*getMRI()),
+                                       SrcOps[0].getReg(), *getMRI());
     if (Csts.empty())
       break;
     if (Csts.size() == 1)
@@ -361,8 +364,10 @@ MachineInstrBuilder CSEMIRBuilder::buildFConstant(const DstOp &Res,
 
   // For vectors, CSE the element only for now.
   LLT Ty = Res.getLLTTy(*getMRI());
-  if (Ty.isVector())
+  if (Ty.isFixedVector())
     return buildSplatBuildVector(Res, buildFConstant(Ty.getElementType(), Val));
+  if (Ty.isScalableVector())
+    return buildSplatVector(Res, buildFConstant(Ty.getElementType(), Val));
 
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());

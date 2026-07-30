@@ -54,7 +54,7 @@ void MCELFStreamer::initSections(const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
   emitCodeAlignment(Align(Ctx.getObjectFileInfo()->getTextSectionAlignment()),
-                    &STI);
+                    STI);
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
@@ -360,8 +360,8 @@ void MCELFStreamer::finalizeCGProfile() {
 void MCELFStreamer::finishImpl() {
   // Emit .note.GNU-stack, similar to AsmPrinter::doFinalization.
   MCContext &Ctx = getContext();
-  auto *StackSec = Ctx.getAsmInfo()->getStackSection(Ctx,
-                                                     /*Exec=*/false);
+  auto *StackSec = Ctx.getAsmInfo().getStackSection(Ctx,
+                                                    /*Exec=*/false);
   if (StackSec && Ctx.getTargetOptions().MCNoExecStack)
     switchSection(StackSec);
 

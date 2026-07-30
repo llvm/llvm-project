@@ -101,16 +101,15 @@ public:
     return Eng.getContext().getLangOpts();
   }
 
-  const LocationContext *getLocationContext() const {
-    return Pred->getLocationContext();
+  const StackFrame *getStackFrame() const { return Pred->getStackFrame(); }
+
+  /// Iterates over the current stack frame and all of its ancestors.
+  llvm::iterator_range<StackFrame::parent_iterator> stackframes() const {
+    return getStackFrame()->parentsIncludingSelf();
   }
 
-  const StackFrameContext *getStackFrame() const {
-    return Pred->getStackFrame();
-  }
-
-  /// Return true if the current LocationContext has no caller context.
-  bool inTopFrame() const { return getLocationContext()->inTopFrame();  }
+  /// Return true if the current StackFrame has no caller context.
+  bool inTopFrame() const { return getStackFrame()->inTopFrame(); }
 
   BugReporter &getBugReporter() {
     return Eng.getBugReporter();
@@ -149,7 +148,7 @@ public:
   }
 
   AnalysisDeclContext *getCurrentAnalysisDeclContext() const {
-    return Pred->getLocationContext()->getAnalysisDeclContext();
+    return Pred->getStackFrame()->getAnalysisDeclContext();
   }
 
   /// Get the blockID.
@@ -168,9 +167,7 @@ public:
   }
 
   /// Get the value of arbitrary expressions at this point in the path.
-  SVal getSVal(const Stmt *S) const {
-    return Pred->getSVal(S);
-  }
+  SVal getSVal(const Expr *E) const { return Pred->getSVal(E); }
 
   ConstCFGElementRef getCFGElementRef() const { return Eng.getCFGElementRef(); }
 

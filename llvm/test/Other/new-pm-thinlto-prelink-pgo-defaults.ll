@@ -67,9 +67,10 @@
 ; CHECK-O-NEXT: Running pass: PGOInstrumentationUse
 ; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-O-NEXT: Running analysis: CycleAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
+; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Invalidating analysis: LazyCallGraphAnalysis on
 ; CHECK-O-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
@@ -113,19 +114,22 @@
 ; CHECK-O23-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23-NEXT: Running pass: CorrelatedValuePropagationPass
 ; CHECK-O23-NEXT: Invalidating analysis: LazyValueAnalysis
+; CHECK-O23-NEXT: Running pass: JumpTableToSwitchPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running analysis: LastRunTrackingAnalysis
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; CHECK-O-NEXT: Running analysis: CycleAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: PostDominatorTreeAnalysis on foo
+; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
 ; CHECK-O23-NEXT: Running pass: AggressiveInstCombinePass
 ; CHECK-O-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O23-NEXT: Running pass: PGOMemOPSizeOpt
 ; CHECK-O23-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
+; CHECK-O-NEXT: Running analysis: UniformityInfoAnalysis
 ; CHECK-O23-NEXT: Running pass: ConstraintEliminationPass
 ; CHECK-O23-NEXT: Running analysis: ScalarEvolutionAnalysis
 ; CHECK-O-NEXT: Running pass: LoopSimplifyPass
@@ -156,6 +160,7 @@
 ; CHECK-O-NEXT: Running pass: BDCEPass
 ; CHECK-O-NEXT: Running analysis: DemandedBitsAnalysis
 ; CHECK-O-NEXT: Running pass: InstCombinePass
+; CHECK-O23-NEXT: Running pass: DFAJumpThreadingPass
 ; CHECK-O23-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O23-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23-NEXT: Running pass: CorrelatedValuePropagationPass
@@ -164,7 +169,6 @@
 ; CHECK-O-NEXT: Running pass: ADCEPass
 ; CHECK-O23-NEXT: Running pass: MemCpyOptPass
 ; CHECK-O23-NEXT: Running pass: DSEPass
-; CHECK-O23-NEXT: Running analysis: CycleAnalysis
 ; CHECK-O23-NEXT: Running pass: MoveAutoInitPass on foo
 ; CHECK-O23-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23-NEXT: Running pass: LCSSAPass
@@ -184,12 +188,14 @@
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-EXT: Running pass: {{.*}}::Bye
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
+; CHECK-O-NEXT: Running pass: LowerCommentStringPass
 ; CHECK-O-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-O-NEXT: Running pass: NameAnonGlobalPass
+; CHECK-O-NEXT: Running pass: AssignGUIDPass
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.
-; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr {
+; CHECK-O-LABEL: define void @foo(i32 %n) local_unnamed_addr
 ; CHECK-O-NEXT: entry:
 ; CHECK-O-NEXT:   br label %loop
 ; CHECK-O:      loop:

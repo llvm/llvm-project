@@ -91,6 +91,172 @@ define i1 @squared_nsw_sgt0(i5 %x) {
   ret i1 %r
 }
 
+define i1 @squared_nuw_ult_sqr(i8 %x) {
+; CHECK-LABEL: @squared_nuw_ult_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ult i8 %m, 9
+  ret i1 %r
+}
+
+define i1 @squared_nuw_eq_sqr(i8 %x) {
+; CHECK-LABEL: @squared_nuw_eq_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp eq i8 %m, 9
+  ret i1 %r
+}
+
+define i1 @squared_nuw_eq_negative_sqr(i8 %x) {
+; CHECK-LABEL: @squared_nuw_eq_negative_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 15
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp eq i8 %m, -31
+  ret i1 %r
+}
+
+define i1 @squared_eq_non_sqr(i8 %x) {
+; CHECK-LABEL: @squared_eq_non_sqr(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp eq i8 %m, 10
+  ret i1 %r
+}
+
+define <2 x i1> @squared_nuw_sqr_v(<2 x i8> %x) {
+; CHECK-LABEL: @squared_nuw_sqr_v(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[X:%.*]], splat (i8 3)
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %m = mul nuw <2 x i8> %x, %x
+  %r = icmp ult <2 x i8> %m, <i8 9, i8 9>
+  ret <2 x i1> %r
+}
+
+; negative test - signed compare
+
+define i1 @squared_nuw_slt_sqr(i8 %x) {
+; CHECK-LABEL: @squared_nuw_slt_sqr(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i8 [[M]], 9
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp slt i8 %m, 9
+  ret i1 %r
+}
+
+; negative test - close to unsigned integer type max value
+
+define i1 @squared_nuw_ult_sqr_u32_max(i32 %x) {
+; CHECK-LABEL: @squared_nuw_ult_sqr_u32_max(
+; CHECK-NEXT:    ret i1 true
+;
+  %m = mul nuw i32 %x, %x
+  %r = icmp ult i32 %m, -1
+  ret i1 %r
+}
+
+define i1 @squared_nuw_ult_sqr_u64_max(i64 %x) {
+; CHECK-LABEL: @squared_nuw_ult_sqr_u64_max(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[X:%.*]], 4294967296
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i64 %x, %x
+  %r = icmp ult i64 %m, -2
+  ret i1 %r
+}
+
+define i1 @squared_nuw_ult_sqr_u128_max(i128 %x) {
+; CHECK-LABEL: @squared_nuw_ult_sqr_u128_max(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i128 [[X:%.*]], 18446744073709551616
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i128 %x, %x
+  %r = icmp ult i128 %m, -3
+  ret i1 %r
+}
+
+; negative test - no nuw
+
+define i1 @squared_ult_sqr(i8 %x) {
+; CHECK-LABEL: @squared_ult_sqr(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[M]], 9
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul i8 %x, %x
+  %r = icmp ult i8 %m, 9
+  ret i1 %r
+}
+
+define i1 @squared_ult_est_sqr(i8 %x) {
+; CHECK-LABEL: @squared_ult_est_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ult i8 %m, 10
+  ret i1 %r
+}
+
+define i1 @squared_ule_est_sqr(i8 %x) {
+; CHECK-LABEL: @squared_ule_est_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ule i8 %m, 10
+  ret i1 %r
+}
+
+define i1 @squared_ule_est_sqr2(i8 %x) {
+; CHECK-LABEL: @squared_ule_est_sqr2(
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ule i8 %m, 15
+  ret i1 %r
+}
+
+define i1 @squared_ugt_est_sqr(i8 %x) {
+; CHECK-LABEL: @squared_ugt_est_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp ugt i8 %m, 10
+  ret i1 %r
+}
+
+define i1 @squared_uge_est_sqr(i8 %x) {
+; CHECK-LABEL: @squared_uge_est_sqr(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp uge i8 %m, 10
+  ret i1 %r
+}
+
+define i1 @squared_uge_est_sqr2(i8 %x) {
+; CHECK-LABEL: @squared_uge_est_sqr2(
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nuw i8 %x, %x
+  %r = icmp uge i8 %m, 15
+  ret i1 %r
+}
+
 ; Tests for slt/ult
 
 define i1 @slt_positive_multip_rem_zero(i8 %x) {

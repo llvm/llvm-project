@@ -6,7 +6,7 @@
 define float @test(float %x, x86_fp80 %y) nounwind readonly  {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP67:%.*]] = fcmp uno x86_fp80 [[Y:%.*]], 0xK00000000000000000000
+; CHECK-NEXT:    [[TMP67:%.*]] = fcmp uno x86_fp80 [[Y:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP71:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[BOTHCOND:%.*]] = or i1 [[TMP67]], [[TMP71]]
 ; CHECK-NEXT:    br i1 [[BOTHCOND]], label [[BB74:%.*]], label [[BB80:%.*]]
@@ -31,7 +31,7 @@ bb80:		; preds = %entry
 define float @test_logical(float %x, x86_fp80 %y) nounwind readonly  {
 ; CHECK-LABEL: @test_logical(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP67:%.*]] = fcmp uno x86_fp80 [[Y:%.*]], 0xK00000000000000000000
+; CHECK-NEXT:    [[TMP67:%.*]] = fcmp uno x86_fp80 [[Y:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP71:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[BOTHCOND:%.*]] = select i1 [[TMP67]], i1 true, i1 [[TMP71]]
 ; CHECK-NEXT:    br i1 [[BOTHCOND]], label [[BB74:%.*]], label [[BB80:%.*]]

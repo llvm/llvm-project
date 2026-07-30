@@ -47,6 +47,7 @@
 #include "lldb/Target/UnwindLLDB.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/State.h"
@@ -1434,12 +1435,10 @@ ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
 }
 
 lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
-    bool abort_other_plans, const char *class_name,
-    StructuredData::ObjectSP extra_args_sp, bool stop_other_threads,
-    Status &status) {
+    bool abort_other_plans, const ScriptedMetadata &scripted_metadata,
+    bool stop_other_threads, Status &status) {
 
-  ThreadPlanSP thread_plan_sp(new ScriptedThreadPlan(
-      *this, class_name, StructuredDataImpl(extra_args_sp)));
+  ThreadPlanSP thread_plan_sp(new ScriptedThreadPlan(*this, scripted_metadata));
   thread_plan_sp->SetStopOthers(stop_other_threads);
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
@@ -1528,18 +1527,22 @@ StackFrameListSP Thread::GetStackFrameList() {
   //       which resumed the process via RunThreadPlan; the private state
   //       thread must process the resulting stop event, but if it tries to
   //       build the synthetic frame list it will re-enter the provider ->
-  //       deadlock.
+  //       deadlock. Detected via the policy capability below rather than
+  //       thread identity, since m_current_private_state_thread_sp may
+  //       already have been reassigned to an override PST by the time this
+  //       runs.
   //     - Any other thread: would run the provider concurrently with the
   //       thread that is already mid-construction.
   //
-  //  2. Current thread is a private state thread that should see the
-  //     private reality (PrivateStateThreadGuard::IsPrivateStateThread).
+  //  2. The current policy disallows loading frame providers (expression
+  //     evaluation on a PST), which requires the private reality.
   //
   // For case 1, if a provider is active we return its input (parent)
   // frames. For case (2), we return/create the unwinder frame list
   // without caching it in m_curr_frames_sp so that non-private-state
   // callers still get the public illusion once the process settles.
   ProcessSP process_sp = GetProcess();
+  Policy policy = PolicyStack::Get().Current();
   {
     std::lock_guard<std::mutex> pguard(m_provider_frames_mutex);
     if (!m_active_frame_providers_by_thread.empty()) {
@@ -1550,7 +1553,7 @@ StackFrameListSP Thread::GetStackFrameList() {
         return it->second.back();
 
       // Case 1b: private state thread while a provider is active elsewhere.
-      if (process_sp && process_sp->CurrentThreadIsPrivateStateThread())
+      if (!policy.capabilities.can_load_frame_providers)
         return m_active_frame_providers_by_thread.begin()->second.back();
     }
   }
@@ -1558,13 +1561,11 @@ StackFrameListSP Thread::GetStackFrameList() {
   if (m_curr_frames_sp)
     return m_curr_frames_sp;
 
-  // For case 2, PST must see the private reality, not the public illusion.
-  // PrivateStateThreadGuard is a thread_local flag set by RunThreadPlan
-  // (for the original PST) and RunPrivateStateThread (for override PSTs).
-  // We cannot use CurrentThreadIsPrivateStateThread() here because
-  // RunThreadPlan reassigns m_current_private_state_thread_sp to the
-  // override, so the original PST is no longer recognized.
-  if (PrivateStateThreadGuard::IsPrivateStateThread()) {
+  // The private state thread must see the raw unwinder frames, not the
+  // provider-augmented public view, while it is servicing expression
+  // evaluation. PushPrivateState(RunningExpression) is pushed by
+  // RunThreadPlan and by RunPrivateStateThread for override PSTs.
+  if (!policy.capabilities.can_load_frame_providers) {
     if (!m_unwinder_frames_sp)
       m_unwinder_frames_sp = std::make_shared<StackFrameList>(
           *this, m_prev_frames_sp, true, /*provider_id=*/0);
@@ -2155,21 +2156,21 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
                             bool print_json_thread, bool print_json_stopinfo) {
   const bool stop_format = false;
   DumpUsingSettingsFormat(strm, 0, stop_format);
-  strm.Printf("\n");
+  strm.PutCString("\n");
 
   StructuredData::ObjectSP thread_info = GetExtendedInfo();
 
   if (print_json_thread || print_json_stopinfo) {
     if (thread_info && print_json_thread) {
       thread_info->Dump(strm);
-      strm.Printf("\n");
+      strm.PutCString("\n");
     }
 
     if (print_json_stopinfo && m_stop_info_sp) {
       StructuredData::ObjectSP stop_info = m_stop_info_sp->GetExtendedInfo();
       if (stop_info) {
         stop_info->Dump(strm);
-        strm.Printf("\n");
+        strm.PutCString("\n");
       }
     }
 
@@ -2200,7 +2201,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     bool printed_breadcrumb = false;
     if (breadcrumb && breadcrumb->GetType() == eStructuredDataTypeDictionary) {
       if (printed_activity)
-        strm.Printf("\n");
+        strm.PutCString("\n");
       StructuredData::Dictionary *breadcrumb_dict =
           breadcrumb->GetAsDictionary();
       StructuredData::ObjectSP breadcrumb_text =
@@ -2214,7 +2215,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     }
     if (messages && messages->GetType() == eStructuredDataTypeArray) {
       if (printed_breadcrumb)
-        strm.Printf("\n");
+        strm.PutCString("\n");
       StructuredData::Array *messages_array = messages->GetAsArray();
       const size_t msg_count = messages_array->GetSize();
       if (msg_count > 0) {

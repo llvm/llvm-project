@@ -236,6 +236,11 @@ struct FormatStyle {
     ///   int (*f)();
     /// \endcode
     bool AlignFunctionPointers;
+    /// Only for ``AlignConsecutiveAssignments``.
+    /// Whether enum assignments are aligned. If ``Enabled`` is ``false``,
+    /// setting this to ``true`` forces alignment for enum assignments only.
+    /// If ``Enabled`` is ``true``, enum assignments are always aligned.
+    bool EnumAssignments;
     /// Only for ``AlignConsecutiveAssignments``.  Whether short assignment
     /// operators are left-padded to the same length as long ones in order to
     /// put all assignment operators to the right of the left hand side.
@@ -261,12 +266,48 @@ struct FormatStyle {
              AlignCompound == R.AlignCompound &&
              AlignFunctionDeclarations == R.AlignFunctionDeclarations &&
              AlignFunctionPointers == R.AlignFunctionPointers &&
+             EnumAssignments == R.EnumAssignments &&
              PadOperators == R.PadOperators;
     }
     bool operator!=(const AlignConsecutiveStyle &R) const {
       return !(*this == R);
     }
   };
+
+  /// Style of aligning consecutive assignments.
+  ///
+  /// ``Consecutive`` will result in formattings like:
+  /// \code
+  ///   int a            = 1;
+  ///   int somelongname = 2;
+  ///   double c         = 3;
+  /// \endcode
+  /// \version 3.8
+  AlignConsecutiveStyle AlignConsecutiveAssignments;
+
+  /// Style of aligning consecutive bit fields.
+  ///
+  /// ``Consecutive`` will align the bitfield separators of consecutive lines.
+  /// This will result in formattings like:
+  /// \code
+  ///   int aaaa : 1;
+  ///   int b    : 12;
+  ///   int ccc  : 8;
+  /// \endcode
+  /// \version 11
+  AlignConsecutiveStyle AlignConsecutiveBitFields;
+
+  /// Style of aligning consecutive declarations.
+  ///
+  /// ``Consecutive`` will align the declaration names of consecutive lines.
+  /// This will result in formattings like:
+  /// \code
+  ///   int         aaaa = 12;
+  ///   float       b = 23;
+  ///   std::string ccc;
+  /// \endcode
+  /// \version 3.8
+  AlignConsecutiveStyle AlignConsecutiveDeclarations;
 
   /// Style of aligning consecutive macro definitions.
   ///
@@ -280,38 +321,6 @@ struct FormatStyle {
   /// \endcode
   /// \version 9
   AlignConsecutiveStyle AlignConsecutiveMacros;
-  /// Style of aligning consecutive assignments.
-  ///
-  /// ``Consecutive`` will result in formattings like:
-  /// \code
-  ///   int a            = 1;
-  ///   int somelongname = 2;
-  ///   double c         = 3;
-  /// \endcode
-  /// \version 3.8
-  AlignConsecutiveStyle AlignConsecutiveAssignments;
-  /// Style of aligning consecutive bit fields.
-  ///
-  /// ``Consecutive`` will align the bitfield separators of consecutive lines.
-  /// This will result in formattings like:
-  /// \code
-  ///   int aaaa : 1;
-  ///   int b    : 12;
-  ///   int ccc  : 8;
-  /// \endcode
-  /// \version 11
-  AlignConsecutiveStyle AlignConsecutiveBitFields;
-  /// Style of aligning consecutive declarations.
-  ///
-  /// ``Consecutive`` will align the declaration names of consecutive lines.
-  /// This will result in formattings like:
-  /// \code
-  ///   int         aaaa = 12;
-  ///   float       b = 23;
-  ///   std::string ccc;
-  /// \endcode
-  /// \version 3.8
-  AlignConsecutiveStyle AlignConsecutiveDeclarations;
 
   /// Alignment options.
   ///
@@ -832,8 +841,7 @@ struct FormatStyle {
   /// * ``InlineOnly``
   ///   Only merge functions defined inside a class. Same as ``inline``,
   ///   except it does not implies ``empty``: i.e. top level empty functions
-  ///   are not merged either. This option is **deprecated** and is retained
-  ///   for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
+  ///   are not merged either. See ``Inline`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
@@ -846,9 +854,7 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Empty``
-  ///   Only merge empty functions. This option is **deprecated** and is
-  ///   retained for backwards compatibility. See ``Empty`` of
-  ///   ``ShortFunctionStyle``.
+  ///   Only merge empty functions. See ``Empty`` of ``ShortFunctionStyle``.
   ///   \code
   ///     void f() {}
   ///     void f2() {
@@ -857,9 +863,8 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Inline``
-  ///   Only merge functions defined inside a class. Implies ``empty``. This
-  ///   option is **deprecated** and is retained for backwards compatibility.
-  ///   See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
+  ///   Only merge functions defined inside a class. Implies ``empty``. See
+  ///   ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
@@ -2457,6 +2462,31 @@ struct FormatStyle {
   /// \version 16
   BreakBeforeInlineASMColonStyle BreakBeforeInlineASMColon;
 
+  /// Different ways to break before the function return type.
+  enum BreakBeforeReturnTypeStyle : int8_t {
+    /// Do not force a break before the return type.
+    BBRTS_None,
+    /// Always break before the return type.
+    /// \code
+    ///   static inline
+    ///   void f();
+    /// \endcode
+    BBRTS_All,
+    /// Break before the return type of top-level functions only.
+    BBRTS_TopLevel,
+    /// Break before the return type of function definitions only.
+    BBRTS_AllDefinitions,
+    /// Break before the return type of top-level definitions only.
+    BBRTS_TopLevelDefinitions,
+  };
+
+  /// The function declaration/definition return type breaking style to use.
+  /// Trailing return types (``auto f() -> T``) are not affected. To have
+  /// identifier macros (e.g. ``__always_inline``) treated as specifiers,
+  /// add them to ``AttributeMacros``.
+  /// \version 23
+  BreakBeforeReturnTypeStyle BreakBeforeReturnType;
+
   /// If ``true``, break before a template closing bracket (``>``) when there is
   /// a line break after the matching opening bracket (``<``).
   /// \code
@@ -2644,6 +2674,20 @@ struct FormatStyle {
   /// The break constructor initializers style to use.
   /// \version 5
   BreakConstructorInitializersStyle BreakConstructorInitializers;
+
+  /// If ``true``, clang-format will always break before function declaration
+  /// parameters.
+  /// \code
+  ///    true:
+  ///    void functionDeclaration(
+  ///             int A, int B);
+  ///
+  ///    false:
+  ///    void functionDeclaration(int A, int B);
+  ///
+  /// \endcode
+  /// \version 23
+  bool BreakFunctionDeclarationParameters;
 
   /// If ``true``, clang-format will always break before function definition
   /// parameters.
@@ -5030,9 +5074,18 @@ struct FormatStyle {
     ///    # include "A-util.h"           # include "A.inc"
     /// \endcode
     bool IgnoreExtension;
+    /// Whether or not includes are sorted by natural ordering i.e., whether
+    /// embedded runs of digits are compared as numbers rather than sequences of
+    /// characters.
+    /// \code
+    ///    true:                      false:
+    ///    #include "A2.h"     vs.    #include "A10.h"
+    ///    #include "A10.h"           #include "A2.h"
+    /// \endcode
+    bool Natural;
     bool operator==(const SortIncludesOptions &R) const {
       return Enabled == R.Enabled && IgnoreCase == R.IgnoreCase &&
-             IgnoreExtension == R.IgnoreExtension;
+             IgnoreExtension == R.IgnoreExtension && Natural == R.Natural;
     }
     bool operator!=(const SortIncludesOptions &R) const {
       return !(*this == R);
@@ -5545,6 +5598,30 @@ struct FormatStyle {
   /// The SpacesInAnglesStyle to use for template argument lists.
   /// \version 3.4
   SpacesInAnglesStyle SpacesInAngles;
+
+  /// Styles for controlling spacing after ``/*`` and before ``*/`` in block
+  /// comments.
+  enum SpacesInBlockCommentsStyle : int8_t {
+    /// Remove spaces after ``/*`` and before ``*/``.
+    /// \code
+    ///    /*comment*/
+    /// \endcode
+    SIBCS_Never,
+    /// Add spaces after ``/*`` and before ``*/``.
+    /// \code
+    ///    /* comment */
+    /// \endcode
+    SIBCS_Always,
+    /// Leave existing spaces unchanged.
+    SIBCS_Leave
+  };
+
+  /// The SpacesInBlockCommentsStyle to use for ordinary block comments.
+  /// Documentation comments such as ``/** ... */`` and ``/*! ... */``
+  /// and parameter comments ending with ``=`` before the closing ``*/`` are
+  /// left unchanged.
+  /// \version 24
+  SpacesInBlockCommentsStyle SpacesInBlockComments;
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.
@@ -6073,10 +6150,13 @@ struct FormatStyle {
            BreakBeforeCloseBracketSwitch == R.BreakBeforeCloseBracketSwitch &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeInlineASMColon == R.BreakBeforeInlineASMColon &&
+           BreakBeforeReturnType == R.BreakBeforeReturnType &&
            BreakBeforeTemplateCloser == R.BreakBeforeTemplateCloser &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakBinaryOperations == R.BreakBinaryOperations &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
+           BreakFunctionDeclarationParameters ==
+               R.BreakFunctionDeclarationParameters &&
            BreakFunctionDefinitionParameters ==
                R.BreakFunctionDefinitionParameters &&
            BreakInheritanceList == R.BreakInheritanceList &&
@@ -6194,6 +6274,7 @@ struct FormatStyle {
            SpaceInEmptyBraces == R.SpaceInEmptyBraces &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
+           SpacesInBlockComments == R.SpacesInBlockComments &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
            SpacesInLineCommentPrefix.Minimum ==
                R.SpacesInLineCommentPrefix.Minimum &&

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -amdgpu-spill-sgpr-to-vgpr=0 -stop-after prologepilog -verify-machineinstrs %s -o - | FileCheck -check-prefix=AFTER-PEI %s
+; RUN: llc -mtriple=amdgpu6.00-mesa-mesa3d -amdgpu-spill-sgpr-to-vgpr=0 -stop-after prolog-epilog -verify-machineinstrs %s -o - | FileCheck -check-prefix=AFTER-PEI %s
 
 ; Test that the ScavengeFI is serialized in the SIMachineFunctionInfo.
 
@@ -39,7 +39,7 @@
 ; AFTER-PEI-NEXT:   fp64-fp16-input-denormals: true
 ; AFTER-PEI-NEXT:   fp64-fp16-output-denormals: true
 ; AFTER-PEI-NEXT: highBitsOf32BitAddress: 0
-; AFTER-PEI-NEXT: occupancy: 5
+; AFTER-PEI-NEXT: occupancy: 4
 ; AFTER-PEI-NEXT: scavengeFI: '%stack.3'
 ; AFTER-PEI-NEXT: vgprForAGPRCopy: ''
 ; AFTER-PEI-NEXT: sgprForEXECCopy: ''
@@ -49,6 +49,7 @@
 ; AFTER-PEI-NEXT: scratchReservedForDynamicVGPRs: 0
 ; AFTER-PEI-NEXT: numKernargPreloadSGPRs: 0
 ; AFTER-PEI-NEXT: isWholeWaveFunction: false
+; AFTER-PEI-NEXT: minNumAGPRs: 4294967295
 ; AFTER-PEI-NEXT: body:
 define amdgpu_kernel void @scavenge_fi(ptr addrspace(1) %out, i32 %in) #0 {
   %wide.sgpr0 = call <32 x i32>  asm sideeffect "; def $0", "=s" () #0

@@ -56,17 +56,17 @@ static_assert(!archSupportsMemoryTagging() ||
 
 constexpr uptr getHeaderSize() { return sizeof(Header); }
 
-template <typename Config> static uptr addHeaderTag(uptr Ptr) {
+template <typename Config> uptr addHeaderTag(uptr Ptr) {
   if (allocatorSupportsMemoryTagging<Config>())
     return addFixedTag(Ptr, 1);
   return Ptr;
 }
 
-template <typename Config> static Header *getHeader(uptr Ptr) {
+template <typename Config> Header *getHeader(uptr Ptr) {
   return reinterpret_cast<Header *>(addHeaderTag<Config>(Ptr)) - 1;
 }
 
-template <typename Config> static Header *getHeader(const void *Ptr) {
+template <typename Config> Header *getHeader(const void *Ptr) {
   return getHeader<Config>(reinterpret_cast<uptr>(Ptr));
 }
 
@@ -217,18 +217,21 @@ class MapAllocatorCache {
 public:
   void getStats(ScopedString *Str) {
     ScopedLock L(Mutex);
+    Str->append("Config Stats Secondary: ");
+    Config::getConfigValues(Str);
     uptr Integral;
     uptr Fractional;
     computePercentage(SuccessfulRetrieves, CallsToRetrieve, &Integral,
                       &Fractional);
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
-    Str->append("Stats: MapAllocatorCache: EntriesCount: %zu, "
-                "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsSkips: "
-                "%zu, ReleaseToOsIntervalMs = %d\n",
-                LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
-                atomic_load_relaxed(&MaxEntrySize),
-                atomic_load_relaxed(&ReleaseToOsSkips),
-                Interval >= 0 ? Interval : -1);
+    Str->append(
+        "Stats: MapAllocatorCache: EntriesCount: %zu, "
+        "MaxEntriesCount: %u, MaxEntrySize: %zu, ReleaseToOsSkips: "
+        "%zu, ReleaseToOsIntervalMs = %d, Unmapped due to eviction: %u, ",
+        LRUEntries.size(), atomic_load_relaxed(&MaxEntriesCount),
+        atomic_load_relaxed(&MaxEntrySize),
+        atomic_load_relaxed(&ReleaseToOsSkips), Interval >= 0 ? Interval : -1,
+        EvictedCount);
     Str->append("Stats: CacheRetrievalStats: SuccessRate: %u/%u "
                 "(%zu.%02zu%%)\n",
                 SuccessfulRetrieves, CallsToRetrieve, Integral, Fractional);
@@ -304,8 +307,13 @@ public:
         // Fuchsia does not support replacing mappings by creating a new mapping
         // on top so we just do the two syscalls there.
         Entry.Time = 0;
-        mapSecondary<Config>(Options, Entry.CommitBase, Entry.CommitSize,
-                             Entry.CommitBase, MAP_NOACCESS, Entry.MemMap);
+        if (!mapSecondary<Config>(Options, Entry.CommitBase, Entry.CommitSize,
+                                  Entry.CommitBase, MAP_NOACCESS,
+                                  Entry.MemMap)) {
+          // A mmap failed, unmap and return.
+          unmapCallBack(Entry.MemMap);
+          return;
+        }
       } else {
         Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
                                          MAP_NOACCESS);
@@ -359,6 +367,7 @@ public:
       while (LRUEntries.size() >= atomic_load_relaxed(&MaxEntriesCount)) {
         // Save MemMaps of evicted entries to perform unmap outside of lock
         CachedBlock *Entry = LRUEntries.back();
+        EvictedCount++;
         EvictionMemMaps.push_back(Entry->MemMap);
         remove(Entry);
       }
@@ -646,6 +655,7 @@ private:
   atomic_s32 ReleaseToOsIntervalMs = {};
   u32 CallsToRetrieve GUARDED_BY(Mutex) = 0;
   u32 SuccessfulRetrieves GUARDED_BY(Mutex) = 0;
+  u32 EvictedCount GUARDED_BY(Mutex) = 0;
   atomic_uptr ReleaseToOsSkips = {};
 
   CachedBlock Entries[Config::getEntriesArraySize()] GUARDED_BY(Mutex) = {};
@@ -742,6 +752,7 @@ private:
   uptr FreedBytes GUARDED_BY(Mutex) = 0;
   uptr FragmentedBytes GUARDED_BY(Mutex) = 0;
   uptr LargestSize GUARDED_BY(Mutex) = 0;
+  u32 UncacheableUnmaps GUARDED_BY(Mutex) = 0;
   u32 NumberOfAllocs GUARDED_BY(Mutex) = 0;
   u32 NumberOfFrees GUARDED_BY(Mutex) = 0;
   LocalStats Stats GUARDED_BY(Mutex);
@@ -899,7 +910,7 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
   const uptr AllocPos = roundDown(CommitBase + CommitSize - Size, Alignment);
   if (!mapSecondary<Config>(Options, CommitBase, CommitSize, AllocPos, 0,
                             MemMap)) {
-    unmap(MemMap);
+    MemMap.unmap();
     return nullptr;
   }
   const uptr HeaderPos = AllocPos - getHeadersSize();
@@ -952,18 +963,20 @@ void MapAllocator<Config>::deallocate(const Options &Options, void *Ptr)
     // unmap() won't touch inaccessible pages.
     MemMapT MemMap = H->MemMap;
     unmap(MemMap);
+    ScopedLock L(Mutex);
+    UncacheableUnmaps++;
   }
 }
 
 template <typename Config>
 void MapAllocator<Config>::getStats(ScopedString *Str) EXCLUDES(Mutex) {
   ScopedLock L(Mutex);
-  Str->append("Stats: MapAllocator: allocated %u times (%zuK), freed %u times "
-              "(%zuK), remains %u (%zuK) max %zuM, Fragmented %zuK\n",
-              NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees,
-              FreedBytes >> 10, NumberOfAllocs - NumberOfFrees,
-              (AllocatedBytes - FreedBytes) >> 10, LargestSize >> 20,
-              FragmentedBytes >> 10);
+  Str->append(
+      "Stats: MapAllocator: allocated %u times (%zuK), freed %u times (%zuK), "
+      "remains %u (%zuK) max %zuM, Fragmented %zuK, Uncacheable unmaps: %u\n",
+      NumberOfAllocs, AllocatedBytes >> 10, NumberOfFrees, FreedBytes >> 10,
+      NumberOfAllocs - NumberOfFrees, (AllocatedBytes - FreedBytes) >> 10,
+      LargestSize >> 20, FragmentedBytes >> 10, UncacheableUnmaps);
   Cache.getStats(Str);
 }
 

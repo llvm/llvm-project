@@ -106,13 +106,12 @@ IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *Ty,
     ParamTys.push_back(Argument->getType());
 }
 
-IntrinsicCostAttributes::IntrinsicCostAttributes(Intrinsic::ID Id, Type *RTy,
-                                                 ArrayRef<const Value *> Args,
-                                                 ArrayRef<Type *> Tys,
-                                                 FastMathFlags Flags,
-                                                 const IntrinsicInst *I,
-                                                 InstructionCost ScalarCost)
-    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost) {
+IntrinsicCostAttributes::IntrinsicCostAttributes(
+    Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
+    ArrayRef<Type *> Tys, FastMathFlags Flags, const IntrinsicInst *I,
+    InstructionCost ScalarCost, VectorInstrContext VIC)
+    : II(I), RetTy(RTy), IID(Id), FMF(Flags), ScalarizationCost(ScalarCost),
+      VIC(VIC) {
   ParamTys.insert(ParamTys.begin(), Tys.begin(), Tys.end());
   Arguments.insert(Arguments.begin(), Args.begin(), Args.end());
 }
@@ -294,12 +293,13 @@ bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
 
 ValueUniformity
 llvm::TargetTransformInfo::getValueUniformity(const Value *V) const {
-  // Calls with the NoDivergenceSource attribute are always uniform.
+  ValueUniformity VU = TTIImpl->getValueUniformity(V);
   if (const auto *Call = dyn_cast<CallBase>(V)) {
-    if (Call->hasFnAttr(Attribute::NoDivergenceSource))
-      return ValueUniformity::AlwaysUniform;
+    if (VU == ValueUniformity::NeverUniform &&
+        Call->hasFnAttr(Attribute::NoDivergenceSource))
+      return ValueUniformity::Default;
   }
-  return TTIImpl->getValueUniformity(V);
+  return VU;
 }
 
 bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
@@ -616,6 +616,10 @@ bool TargetTransformInfo::shouldBuildLookupTablesForConstant(
   return TTIImpl->shouldBuildLookupTablesForConstant(C);
 }
 
+unsigned TargetTransformInfo::getMinimumLookupTableEntryBitWidth() const {
+  return TTIImpl->getMinimumLookupTableEntryBitWidth();
+}
+
 bool TargetTransformInfo::shouldBuildRelLookupTables() const {
   return TTIImpl->shouldBuildRelLookupTables();
 }
@@ -736,6 +740,10 @@ TargetTransformInfo::getPopcntSupport(unsigned IntTyWidthInBit) const {
 
 bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
+}
+
+bool TargetTransformInfo::haveFastClmul(IntegerType *Ty) const {
+  return TTIImpl->haveFastClmul(Ty);
 }
 
 bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
@@ -921,8 +929,10 @@ InstructionCost TargetTransformInfo::getPartialReductionCost(
                                           BinOp, CostKind, FMF);
 }
 
-unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
-  return TTIImpl->getMaxInterleaveFactor(VF);
+unsigned
+TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
+  return TTIImpl->getMaxInterleaveFactor(VF, HasUnorderedReductions);
 }
 
 TargetTransformInfo::OperandValueInfo
@@ -1470,6 +1480,10 @@ bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
 
 bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
   return TTIImpl->preferAlternateOpcodeVectorization();
+}
+
+bool TargetTransformInfo::preferSLPInstCountCheck() const {
+  return TTIImpl->preferSLPInstCountCheck();
 }
 
 bool TargetTransformInfo::preferPredicatedReductionSelect() const {

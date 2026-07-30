@@ -77,6 +77,11 @@ def FTZFlag : OperandWithDefaultOps<i1, (ops (getFTZFlag (i1 0)))> {
   let PrintMethod = "printFTZFlag";
 }
 
+// Flag to indicate predicate negation (@!p) for conditional branches.
+def BranchFlag : OperandWithDefaultOps<i1, (ops (i1 0))> {
+  let PrintMethod = "printNegatedPredicate";
+}
+
 // Compare modes
 // These must match the enum in NVPTX.h
 def CmpEQ : PatLeaf<(i32 0)>;
@@ -100,6 +105,21 @@ def PrmtMode : Operand<i32> {
   let PrintMethod = "printPrmtMode";
 }
 
+
+class NVPTXAddressSpace<string enum, string name, string suffix = "." # name> {
+  string Suffix = suffix;
+  string Enum = enum;
+  string Name = name;
+}
+
+def AddrSpaceGeneric : NVPTXAddressSpace<"ADDRESS_SPACE_GENERIC", "generic", "">;
+def AddrSpaceLocal   : NVPTXAddressSpace<"ADDRESS_SPACE_LOCAL", "local">;
+def AddrSpaceShared  : NVPTXAddressSpace<"ADDRESS_SPACE_SHARED", "shared">;
+def AddrSpaceGlobal  : NVPTXAddressSpace<"ADDRESS_SPACE_GLOBAL", "global">;
+def AddrSpaceConst   : NVPTXAddressSpace<"ADDRESS_SPACE_CONST", "const">;
+def AddrSpaceParam   : NVPTXAddressSpace<"ADDRESS_SPACE_ENTRY_PARAM", "param">;
+def AddrSpaceSharedCluster : NVPTXAddressSpace<"ADDRESS_SPACE_SHARED_CLUSTER",
+                                               "shared_cluster", ".shared::cluster">;
 
 //===----------------------------------------------------------------------===//
 // NVPTX Instruction Predicate Definitions
@@ -182,8 +202,8 @@ class zeroinitializer<ValueType vt> :
 
 def fpimm_pos_inf : FPImmLeaf<fAny, [{ return Imm.isPosInfinity(); }]>;
 def fpimm_0 : FPImmLeaf<fAny, [{ return Imm.isZero(); }]>;
-def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(1.0); }]>;
-def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(-1.0); }]>;
+def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isOne(); }]>;
+def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isMinusOne(); }]>;
 
 
 // Operands which can hold a Register or an Immediate.
@@ -966,10 +986,13 @@ defm SREM : I3<"rem.s", srem, commutative = false>;
 defm UREM : I3<"rem.u", urem, commutative = false>;
 
 foreach t = [I16RT, I32RT, I64RT] in {
+  // PTX abs.s is undefined for INT_MIN, so it matches ABS_MIN_POISON
+  // semantics (where INT_MIN input is poison). ISD::ABS requires
+  // abs(INT_MIN) == INT_MIN and is expanded separately.
   def ABS_S # t.Size :
     BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a),
                    "abs.s" # t.Size,
-                   [(set t.Ty:$dst, (abs t.Ty:$a))]>;
+                   [(set t.Ty:$dst, (abs_min_poison t.Ty:$a))]>;
 
   def NEG_S # t.Size :
     BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
@@ -1125,10 +1148,6 @@ class FNEG16<RegTyInfo t> :
 let Predicates = [useFP16Math, hasPTX<60>, hasSM<53>] in {
   def NEG_F16    : FNEG16<F16RT>;
   def NEG_F16x2  : FNEG16<F16X2RT>;
-}
-let Predicates = [hasBF16Math, hasPTX<70>, hasSM<80>] in {
-  def NEG_BF16   : FNEG16<BF16RT>;
-  def NEG_BF16x2 : FNEG16<BF16X2RT>;
 }
 
 //
@@ -1321,10 +1340,23 @@ def COS_APPROX_f32 :
   BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$src), (ins FTZFlag:$ftz),
                       "cos.approx$ftz.f32",
                       [(set f32:$dst, (UnaryOpAllowsApproxFn<fcos> f32:$src))]>;
-def TANH_APPROX_f32 :
-  BasicNVPTXInst<(outs B32:$dst), (ins B32:$src), "tanh.approx.f32",
-                 [(set f32:$dst, (UnaryOpAllowsApproxFn<ftanh> f32:$src))]>,
-                 Requires<[hasPTX<70>, hasSM<75>]>;
+
+class FTANHInst<RegTyInfo t> :
+      BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
+                "tanh.approx." # t.PtxType,
+                [(set t.Ty:$dst, (UnaryOpAllowsApproxFn<ftanh> t.Ty:$src))]>;
+
+def TANH_APPROX_f32 : FTANHInst<F32RT>,
+                      Requires<[hasPTX<70>, hasSM<75>]>;
+
+let Predicates = [useFP16Math, hasPTX<70>, hasSM<75>] in {
+  def TANH_APPROX_f16   : FTANHInst<F16RT>;
+  def TANH_APPROX_f16x2 : FTANHInst<F16X2RT>;
+}
+let Predicates = [hasPTX<78>, hasSM<90>] in {
+  def TANH_APPROX_bf16   : FTANHInst<BF16RT>;
+  def TANH_APPROX_bf16x2 : FTANHInst<BF16X2RT>;
+}
 
 //-----------------------------------
 // Bitwise operations
@@ -1599,7 +1631,7 @@ multiclass FSETP<RegTyInfo t, bit allow_ftz = true> {
   defvar ftz_str = !if(allow_ftz, "$ftz", "");
   defvar op_str = "setp.${cmp:FCmp}" # ftz_str # "." # t.PtxType;
   defvar flags = !con((ins CmpMode:$cmp), !if(allow_ftz, (ins  FTZFlag:$ftz), (ins)));
-  let hasSideEffects = false in {
+  let hasSideEffects = false, isCompare = 1, isCommutable = 1 in {
     def rr :
       BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.RC:$b),
                           flags, op_str>;
@@ -1625,7 +1657,7 @@ multiclass FSETP<RegTyInfo t, bit allow_ftz = true> {
 
 multiclass ISETP<RegTyInfo t> {
   defvar op_str = "setp.${cmp:ICmp}.${cmp:IType}" # t.Size;
-  let hasSideEffects = false in {
+  let hasSideEffects = false, isCompare = 1, isCommutable = 1 in {
     def rr :
       BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.RC:$b),
                           (ins CmpMode:$cmp), op_str>;
@@ -1653,7 +1685,7 @@ defm SETP_f64 : FSETP<F64RT, allow_ftz = false>;
 let Predicates = [useFP16Math] in
   defm SETP_f16 : FSETP<F16RT>;
 let Predicates = [hasBF16Math, hasPTX<78>, hasSM<90>] in
-  defm SETP_bf16 : FSETP<BF16RT>;
+  defm SETP_bf16 : FSETP<BF16RT, allow_ftz = false>;
 
 def SETP_f16x2rr :
       BasicFlagsNVPTXInst<(outs B1:$p, B1:$q),
@@ -1663,8 +1695,8 @@ def SETP_f16x2rr :
 
 def SETP_bf16x2rr :
       BasicFlagsNVPTXInst<(outs B1:$p, B1:$q),
-                (ins B32:$a, B32:$b), (ins CmpMode:$cmp, FTZFlag:$ftz),
-                "setp.${cmp:FCmp}$ftz.bf16x2">,
+                (ins B32:$a, B32:$b), (ins CmpMode:$cmp),
+                "setp.${cmp:FCmp}.bf16x2">,
                 Requires<[hasBF16Math, hasPTX<78>, hasSM<90>]>;
 
 //-----------------------------------
@@ -1752,8 +1784,8 @@ def to_texternsym : SDNodeXForm<externalsym, [{
                                          N->getTargetFlags());
 }]>;
 
-def to_tframeindex : SDNodeXForm<frameindex, [{
-  return CurDAG->getTargetFrameIndex(N->getIndex(), N->getValueType(0));
+def to_tjumptable : SDNodeXForm<jumptable, [{
+  return CurDAG->getTargetJumpTable(N->getIndex(), N->getValueType(0));
 }]>;
 
 def : Pat<(i32 globaladdr:$dst), (MOV_B32_sym (to_tglobaladdr $dst))>;
@@ -1867,18 +1899,6 @@ def : Pat<(declare_array_param externalsym:$a, imm:$align, imm:$size),
           (DECLARE_PARAM_array (to_texternsym $a), imm:$align, imm:$size)>;
 def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
           (DECLARE_PARAM_scalar (to_texternsym $a), imm:$size)>;
-
-// Call prototype wrapper, this is a dummy instruction that just prints it's
-// operand which is string defining the prototype.
-def SDTCallPrototype : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
-def CallPrototype :
-  SDNode<"NVPTXISD::CallPrototype", SDTCallPrototype,
-         [SDNPHasChain, SDNPSideEffect]>;
-def ProtoIdent : Operand<i32> { let PrintMethod = "printProtoIdent"; }
-def CALL_PROTOTYPE :
-  NVPTXInst<(outs), (ins ProtoIdent:$ident),
-            "$ident", [(CallPrototype (i32 texternalsym:$ident))]>;
-
 
 foreach t = [I32RT, I64RT] in {
   defvar inst_name = "MOV" # t.Size # "_PARAM";
@@ -2097,26 +2117,25 @@ def : Pat<(f64 (uint_to_fp i32:$a)), (CVT_f64_u32 $a, CvtRN)>;
 def : Pat<(f64 (uint_to_fp i64:$a)), (CVT_f64_u64 $a, CvtRN)>;
 
 
+// fp_to_sint/uint to i1 is custom-lowered to an fp compare
+// (NVPTXTargetLowering::LowerOperation), so no i1 patterns appear below.
+
 // f16 -> sint
-def : Pat<(i1  (fp_to_sint f16:$a)), (SETP_i16ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_sint f16:$a)), (CVT_s16_f16 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_sint f16:$a)), (CVT_s32_f16 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_sint f16:$a)), (CVT_s64_f16 $a, CvtRZI)>;
 
 // f16 -> uint
-def : Pat<(i1  (fp_to_uint f16:$a)), (SETP_i16ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_uint f16:$a)), (CVT_u16_f16 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint f16:$a)), (CVT_u32_f16 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_uint f16:$a)), (CVT_u64_f16 $a, CvtRZI)>;
 
 // bf16 -> sint
-def : Pat<(i1  (fp_to_sint bf16:$a)), (SETP_i16ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_sint bf16:$a)), (CVT_s16_bf16 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_sint bf16:$a)), (CVT_s32_bf16 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_sint bf16:$a)), (CVT_s64_bf16 $a, CvtRZI)>;
 
 // bf16 -> uint
-def : Pat<(i1 (fp_to_uint bf16:$a)),  (SETP_i16ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_uint bf16:$a)), (CVT_u16_bf16 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint bf16:$a)), (CVT_u32_bf16 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_uint bf16:$a)), (CVT_u64_bf16 $a, CvtRZI)>;
@@ -2126,7 +2145,6 @@ let Predicates = [doF32FTZ] in {
   def : Pat<(i32 (fp_to_sint f32:$a)), (CVT_s32_f32 $a, CvtRZI_FTZ)>;
   def : Pat<(i64 (fp_to_sint f32:$a)), (CVT_s64_f32 $a, CvtRZI_FTZ)>;
 }
-def : Pat<(i1  (fp_to_sint f32:$a)), (SETP_i32ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_sint f32:$a)), (CVT_s16_f32 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_sint f32:$a)), (CVT_s32_f32 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_sint f32:$a)), (CVT_s64_f32 $a, CvtRZI)>;
@@ -2137,19 +2155,16 @@ let Predicates = [doF32FTZ] in {
   def : Pat<(i32 (fp_to_uint f32:$a)), (CVT_u32_f32 $a, CvtRZI_FTZ)>;
   def : Pat<(i64 (fp_to_uint f32:$a)), (CVT_u64_f32 $a, CvtRZI_FTZ)>;
 }
-def : Pat<(i1  (fp_to_uint f32:$a)), (SETP_i32ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_uint f32:$a)), (CVT_u16_f32 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint f32:$a)), (CVT_u32_f32 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_uint f32:$a)), (CVT_u64_f32 $a, CvtRZI)>;
 
 // f64 -> sint
-def : Pat<(i1  (fp_to_sint f64:$a)), (SETP_i64ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_sint f64:$a)), (CVT_s16_f64 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_sint f64:$a)), (CVT_s32_f64 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_sint f64:$a)), (CVT_s64_f64 $a, CvtRZI)>;
 
 // f64 -> uint
-def : Pat<(i1  (fp_to_uint f64:$a)), (SETP_i64ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_uint f64:$a)), (CVT_u16_f64 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint f64:$a)), (CVT_u32_f64 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_uint f64:$a)), (CVT_u64_f64 $a, CvtRZI)>;
@@ -2450,8 +2465,9 @@ let isTerminator=1 in {
       def Return : BasicNVPTXInst<(outs), (ins), "ret", [(retglue)]>;
 
   let isBranch=1 in {
-    def CBranch : NVPTXInst<(outs), (ins B1:$a, brtarget:$target),
-                              "@$a bra \t$target;",
+    def CBranch : NVPTXInst<(outs),
+                              (ins B1:$a, brtarget:$target, BranchFlag:$negate),
+                              "@${negate}$a bra \t$target;",
                               [(brcond i1:$a, bb:$target)]>;
 
     let isBarrier=1 in
@@ -2488,21 +2504,16 @@ foreach t = [I32RT, I64RT] in {
 //
 // BRX
 //
+def brx_jt : SDNode<"ISD::BR_JT",
+                    SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisVT<1, i32>]>,
+                    [SDNPHasChain]>;
 
-let isTerminator = 1, isBranch = 1, isIndirectBranch = 1, isNotDuplicable = 1 in {
+let isTerminator = 1, isBarrier = 1, isBranch = 1, isIndirectBranch = 1,
+    isNotDuplicable = 1 in
+  def BRX_IDX : BasicNVPTXInst<(outs), (ins B32:$val, i32imm:$tgt),
+                               "brx.idx">;
 
-  def BRX_START :
-    NVPTXInst<(outs), (ins i32imm:$id), "$$L_brx_$id: .branchtargets">;
-
-  def BRX_ITEM :
-    NVPTXInst<(outs), (ins brtarget:$target), "\t$target,">;
-
-  def BRX_END :
-    NVPTXInst<(outs), (ins brtarget:$target, B32:$val, i32imm:$id),
-              "\t$target;\n\tbrx.idx \t$val, $$L_brx_$id;"> {
-      let isBarrier = 1;
-    }
-}
+def : Pat<(brx_jt jumptable:$jt, i32:$idx), (BRX_IDX $idx, (to_tjumptable $jt))>;
 
 
 foreach a_type = ["s", "u"] in {

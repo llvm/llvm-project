@@ -19,6 +19,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
@@ -218,10 +219,9 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    mlir::Value addr = emitAlloca("__retval", convertType(type), loc, alignment,
-                                  /*insertIntoFnEntryBlock=*/false);
-    fnRetAlloca = addr;
-    returnValue = Address(addr, alignment);
+    Address allocaAddr = Address::invalid();
+    returnValue = createMemTemp(type, alignment, loc, "__retval", &allocaAddr);
+    fnRetAlloca = allocaAddr.getPointer();
   }
 }
 
@@ -231,7 +231,8 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   assert(isa<NamedDecl>(var) && "Needs a named decl");
   assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
-  auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
+  Address addr(addrVal, alignment);
+  cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
   assert(allocaOp && "expected cir::AllocaOp");
 
   if (isParam)
@@ -239,7 +240,7 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
 
-  symbolTable.insert(var, allocaOp);
+  symbolTable.insert(var, addrVal);
 }
 
 void CIRGenFunction::LexicalScope::cleanup() {
@@ -514,10 +515,29 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
     }
     emitAndUpdateRetAlloca(returnType, getLoc(bodyEndLoc),
                            getContext().getTypeAlignInChars(returnType));
+
+    // If this is an implicit-return-zero function, initialize the return
+    // value. This mirrors the implicit-return-zero handling in classic
+    // codegen's EmitFunctionProlog (CGCall.cpp). It is done here, after
+    // emitAndUpdateRetAlloca, because in CIR the return slot is created
+    // after the prolog (the opposite of classic codegen, where ReturnValue
+    // is set up before EmitFunctionProlog runs).
+    // TODO(cir): Align prolog handling with classic codegen.
+    if (fd && fd->hasImplicitReturnZero()) {
+      mlir::Type cirRetTy = convertType(returnType.getUnqualifiedType());
+      mlir::Location bodyBeginMLIRLoc = getLoc(bodyBeginLoc);
+      mlir::Value zero = builder.getNullValue(cirRetTy, bodyBeginMLIRLoc);
+      builder.CIRBaseBuilderTy::createStore(bodyBeginMLIRLoc, zero,
+                                            returnValue.getPointer());
+    }
   }
 
+  // Only implicit-object member functions (without an explicit `this`
+  // parameter) receive an implicit `this` argument that the CXXABI prolog has
+  // to set up. C++23 explicit-object members (P0847R7) carry their object via a
+  // regular parameter and use the standard parameter prolog instead.
   if (isa_and_nonnull<CXXMethodDecl>(d) &&
-      cast<CXXMethodDecl>(d)->isInstance()) {
+      cast<CXXMethodDecl>(d)->isImplicitObjectMemberFunction()) {
     cgm.getCXXABI().emitInstanceFunctionProlog(loc, *this);
 
     const auto *md = cast<CXXMethodDecl>(d);
@@ -584,48 +604,7 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   }
 }
 
-void CIRGenFunction::resolveBlockAddresses() {
-  for (cir::BlockAddressOp &blockAddress : cgm.unresolvedBlockAddressToLabel) {
-    cir::LabelOp labelOp =
-        cgm.lookupBlockAddressInfo(blockAddress.getBlockAddrInfo());
-    assert(labelOp && "expected cir.labelOp to already be emitted");
-    cgm.updateResolvedBlockAddress(blockAddress, labelOp);
-  }
-  cgm.unresolvedBlockAddressToLabel.clear();
-}
-
-void CIRGenFunction::finishIndirectBranch() {
-  if (!indirectGotoBlock)
-    return;
-  llvm::SmallVector<mlir::Block *> succesors;
-  llvm::SmallVector<mlir::ValueRange> rangeOperands;
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(indirectGotoBlock);
-  for (auto &[blockAdd, labelOp] : cgm.blockAddressToLabel) {
-    succesors.push_back(labelOp->getBlock());
-    rangeOperands.push_back(labelOp->getBlock()->getArguments());
-  }
-  cir::IndirectBrOp::create(builder, builder.getUnknownLoc(),
-                            indirectGotoBlock->getArgument(0), false,
-                            rangeOperands, succesors);
-  cgm.blockAddressToLabel.clear();
-}
-
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {
-  // Resolve block address-to-label mappings, then emit the indirect branch
-  // with the corresponding targets.
-  resolveBlockAddresses();
-  finishIndirectBranch();
-
-  // If a label address was taken but no indirect goto was used, we can't remove
-  // the block argument here. Instead, we mark the 'indirectbr' op
-  // as poison so that the cleanup can be deferred to lowering, since the
-  // verifier doesn't allow the 'indirectbr' target address to be null.
-  if (indirectGotoBlock && indirectGotoBlock->hasNoPredecessors()) {
-    auto indrBr = cast<cir::IndirectBrOp>(indirectGotoBlock->front());
-    indrBr.setPoison(true);
-  }
-
   // Pop any cleanups that might have been associated with the
   // parameters.  Do this in whatever block we're currently in; it's
   // important to do this before we enter the return block or return
@@ -683,6 +662,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
       builder.setInsertionPoint(fn);
       clone = cir::FuncOp::create(builder, fn.getLoc(), fdInlineName,
                                   fn.getFunctionType());
+      cgm.insertGlobalSymbol(clone);
       clone.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
       clone.setSymVisibility("private");
       clone.setInlineKind(cir::InlineKind::AlwaysInline);
@@ -707,6 +687,7 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                   .replaceAllSymbolUses(fn.getSymNameAttr(), cgm.getModule())
                   .failed())
             llvm_unreachable("Failed to replace inline builtin symbol uses");
+          cgm.eraseGlobalSymbol(inlineFn);
           inlineFn.erase();
         }
         break;
@@ -740,6 +721,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
+    if (funcDecl->UsesFPIntrin() || funcDecl->hasAttr<StrictFPAttr>()) {
+      cgm.errorNYI(loc, "STDC FENV_ACCESS");
+      return fn;
+    }
 
     // Save parameters for coroutine function.
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
@@ -793,7 +778,7 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
           ctorType == Ctor_Complete) &&
          "can only generate complete ctor for this ABI");
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), ctor);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), ctor);
 
   if (ctorType == Ctor_Complete && isConstructorDelegationValid(ctor) &&
       cgm.getTarget().getCXXABI().hasConstructorVariants()) {
@@ -850,7 +835,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   const CXXDestructorDecl *dtor = cast<CXXDestructorDecl>(curGD.getDecl());
   CXXDtorType dtorType = curGD.getDtorType();
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), dtor);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), dtor);
 
   // For an abstract class, non-base destructors are never used (and can't
   // be emitted in general, because vbase dtors may not have been validated
@@ -1000,8 +985,11 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   const auto *fd = cast<FunctionDecl>(gd.getDecl());
   QualType retTy = fd->getReturnType();
 
+  // Only implicit-object member functions need the CXXABI-supplied `this`
+  // parameter prepended to the arg list.  Explicit-object members carry the
+  // object as a regular parameter that fd->parameters() already enumerates.
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
-  if (md && md->isInstance()) {
+  if (md && md->isImplicitObjectMemberFunction()) {
     if (cgm.getCXXABI().hasThisReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "this return");
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
@@ -1018,8 +1006,14 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   if (passedParams) {
     for (auto *param : fd->parameters()) {
       args.push_back(param);
-      if (param->hasAttr<PassObjectSizeAttr>())
-        cgm.errorNYI(param->getSourceRange(), "pass-object-size attribute");
+      if (!param->hasAttr<PassObjectSizeAttr>())
+        continue;
+
+      auto *implicit = ImplicitParamDecl::Create(
+          getContext(), param->getDeclContext(), param->getLocation(),
+          /*Id=*/nullptr, getContext().getSizeType(), ImplicitParamKind::Other);
+      sizeArguments[param] = implicit;
+      args.push_back(implicit);
     }
   }
 
@@ -1058,10 +1052,6 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
 
       // Skip unique OVEs.
       if (ov->isUnique()) {
-        // FIXME: This doesn't really affect anything, but I cannot find a test
-        // for this, so leave an ErrorNYI here until we can find one.
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "emitPseudoObjectExpr skipped for uniqueness");
         assert(ov != resultExpr &&
                "A unique OVE cannot be used as the result expression");
         continue;
@@ -1097,9 +1087,7 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
       if (forLValue)
         result = cgf.emitLValue(semantic);
       else
-        cgf.cgm.errorNYI(
-            e->getSourceRange(),
-            "emitPseudoObjectExpr as an RValue, when semantic is result");
+        result = cgf.emitAnyExpr(semantic, slot);
     } else {
       // FIXME: best I can tell, this is only reachable as an r-value, so this
       // isn't properly tested.
@@ -1113,6 +1101,12 @@ emitPseudoObjectExpr(CIRGenFunction &cgf, const PseudoObjectExpr *e,
   return result;
 }
 
+RValue CIRGenFunction::emitPseudoObjectRValue(const PseudoObjectExpr *e,
+                                              AggValueSlot slot) {
+  return std::get<RValue>(
+      emitPseudoObjectExpr(*this, e, /*forLValue=*/false, slot));
+}
+
 LValue CIRGenFunction::emitPseudoObjectLValue(const PseudoObjectExpr *e) {
   return std::get<LValue>(emitPseudoObjectExpr(*this, e, /*forLValue=*/true,
                                                AggValueSlot::ignored()));
@@ -1122,40 +1116,29 @@ LValue CIRGenFunction::emitPseudoObjectLValue(const PseudoObjectExpr *e) {
 /// of the expression.
 /// FIXME: document this function better.
 LValue CIRGenFunction::emitLValue(const Expr *e) {
-  // FIXME: ApplyDebugLocation DL(*this, e);
+  assert(!cir::MissingFeatures::generateDebugInfo());
   switch (e->getStmtClass()) {
   default:
     getCIRGenModule().errorNYI(e->getSourceRange(),
-                               std::string("l-value not implemented for '") +
-                                   e->getStmtClassName() + "'");
+                               "emitLValue: unsupported l-value class");
     return LValue();
-  case Expr::ConditionalOperatorClass:
-    return emitConditionalOperatorLValue(cast<ConditionalOperator>(e));
-  case Expr::BinaryConditionalOperatorClass:
-    return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
-  case Expr::ArraySubscriptExprClass:
-    return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
-  case Expr::ExtVectorElementExprClass:
-    return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
-  case Expr::UnaryOperatorClass:
-    return emitUnaryOpLValue(cast<UnaryOperator>(e));
-  case Expr::StringLiteralClass:
-    return emitStringLiteralLValue(cast<StringLiteral>(e));
-  case Expr::MemberExprClass:
-    return emitMemberExpr(cast<MemberExpr>(e));
-  case Expr::CompoundLiteralExprClass:
-    return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
-  case Expr::PredefinedExprClass:
-    return emitPredefinedLValue(cast<PredefinedExpr>(e));
+
+  case Expr::ObjCPropertyRefExprClass:
+    llvm_unreachable("cannot emit a property reference directly");
+
+  case Expr::ObjCSelectorExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCSelectorExpr");
+    return LValue();
+  case Expr::ObjCIsaExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ObjCIsaExpr");
+    return LValue();
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
     QualType ty = e->getType();
-    if (ty->getAs<AtomicType>()) {
-      cgm.errorNYI(e->getSourceRange(),
-                   "CompoundAssignOperator with AtomicType");
-      return LValue();
-    }
+    if (const AtomicType *at = ty->getAs<AtomicType>())
+      ty = at->getValueType();
     if (!ty->isAnyComplexType())
       return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
 
@@ -1166,11 +1149,61 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXOperatorCallExprClass:
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
+  case Expr::CXXRewrittenBinaryOperatorClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: CXXRewrittenBinaryOperator");
+    return LValue();
+  case Expr::VAArgExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: VAArgExpr");
+    return LValue();
+  case Expr::DeclRefExprClass:
+    return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  case Expr::ConstantExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ConstantExpr");
+    return LValue();
+  case Expr::ParenExprClass:
+    return emitLValue(cast<ParenExpr>(e)->getSubExpr());
+  case Expr::GenericSelectionExprClass:
+    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
+  case Expr::PredefinedExprClass:
+    return emitPredefinedLValue(cast<PredefinedExpr>(e));
+  case Expr::StringLiteralClass:
+    return emitStringLiteralLValue(cast<StringLiteral>(e));
+  case Expr::ObjCEncodeExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCEncodeExpr");
+    return LValue();
+  case Expr::PseudoObjectExprClass:
+    return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
+  case Expr::InitListExprClass:
+    return emitInitListLValue(cast<InitListExpr>(e));
+  case Expr::CXXTemporaryObjectExprClass:
+  case Expr::CXXConstructExprClass:
+    return emitCXXConstructLValue(cast<CXXConstructExpr>(e));
+  case Expr::CXXBindTemporaryExprClass:
+    return emitCXXBindTemporaryLValue(cast<CXXBindTemporaryExpr>(e));
+  case Expr::CXXUuidofExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: CXXUuidofExpr");
+    return LValue();
+  case Expr::LambdaExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: LambdaExpr");
+    return LValue();
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(e);
-    RunCleanupsScope scope(*this);
+    FullExprCleanupScope scope(*this, cleanups->getSubExpr());
     LValue lv = emitLValue(cleanups->getSubExpr());
-    assert(!cir::MissingFeatures::cleanupWithPreservedValues());
+    if (lv.isSimple()) {
+      // Defend against branches out of gnu statement expressions surrounded by
+      // cleanups.
+      Address addr = lv.getAddress();
+      mlir::Value v = addr.getPointer();
+      scope.exit({&v});
+      return LValue::makeAddr(addr.withPointer(v), lv.getType(),
+                              lv.getBaseInfo());
+    }
+    // FIXME: Is it possible to create an ExprWithCleanups that produces a
+    // bitfield lvalue or some other non-simple lvalue?
     return lv;
   }
   case Expr::CXXDefaultArgExprClass: {
@@ -1178,41 +1211,92 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     CXXDefaultArgExprScope scope(*this, dae);
     return emitLValue(dae->getExpr());
   }
-  case Expr::CXXTypeidExprClass:
-    return emitCXXTypeidLValue(cast<CXXTypeidExpr>(e));
-  case Expr::ParenExprClass:
-    return emitLValue(cast<ParenExpr>(e)->getSubExpr());
-  case Expr::GenericSelectionExprClass:
-    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
-  case Expr::DeclRefExprClass:
-    return emitDeclRefLValue(cast<DeclRefExpr>(e));
-  case Expr::ImplicitCastExprClass:
-  case Expr::CStyleCastExprClass:
-  case Expr::CXXStaticCastExprClass:
-  case Expr::CXXDynamicCastExprClass:
-  case Expr::CXXReinterpretCastExprClass:
-  case Expr::CXXConstCastExprClass:
-  case Expr::CXXFunctionalCastExprClass:
-    // TODO(cir): The above list is missing
-    // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
-    return emitCastLValue(cast<CastExpr>(e));
-  case Expr::MaterializeTemporaryExprClass:
-    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
-  case Expr::OpaqueValueExprClass:
-    return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
-  case Expr::ChooseExprClass:
-    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
-  case Expr::SubstNonTypeTemplateParmExprClass:
-    return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
-  case Expr::InitListExprClass:
-    return emitInitListLValue(cast<InitListExpr>(e));
-  case Expr::PseudoObjectExprClass:
-    return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
   case Expr::CXXDefaultInitExprClass: {
     auto *die = cast<CXXDefaultInitExpr>(e);
     CXXDefaultInitExprScope scope(*this, die);
     return emitLValue(die->getExpr());
   }
+  case Expr::CXXTypeidExprClass:
+    return emitCXXTypeidLValue(cast<CXXTypeidExpr>(e));
+  case Expr::ObjCMessageExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCMessageExpr");
+    return LValue();
+  case Expr::ObjCIvarRefExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCIvarRefExpr");
+    return LValue();
+  case Expr::StmtExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: StmtExpr");
+    return LValue();
+  case Expr::UnaryOperatorClass:
+    return emitUnaryOpLValue(cast<UnaryOperator>(e));
+  case Expr::ArraySubscriptExprClass:
+    return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
+  case Expr::MatrixSingleSubscriptExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: MatrixSingleSubscriptExpr");
+    return LValue();
+  case Expr::MatrixSubscriptExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: MatrixSubscriptExpr");
+    return LValue();
+  case Expr::ArraySectionExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ArraySectionExpr");
+    return LValue();
+  case Expr::ExtVectorElementExprClass:
+    return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
+  case Expr::MatrixElementExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: MatrixElementExpr");
+    return LValue();
+  case Expr::CXXThisExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CXXThisExpr");
+    return LValue();
+  case Expr::MemberExprClass:
+    return emitMemberExpr(cast<MemberExpr>(e));
+  case Expr::CompoundLiteralExprClass:
+    return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
+  case Expr::ConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<ConditionalOperator>(e));
+  case Expr::BinaryConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
+  case Expr::ChooseExprClass:
+    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
+  case Expr::OpaqueValueExprClass:
+    return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
+  case Expr::SubstNonTypeTemplateParmExprClass:
+    return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
+  case Expr::ImplicitCastExprClass:
+  case Expr::CStyleCastExprClass:
+  case Expr::CXXFunctionalCastExprClass:
+  case Expr::CXXStaticCastExprClass:
+  case Expr::CXXDynamicCastExprClass:
+  case Expr::CXXReinterpretCastExprClass:
+  case Expr::CXXConstCastExprClass:
+    return emitCastLValue(cast<CastExpr>(e));
+  case Expr::CXXAddrspaceCastExprClass:
+  case Expr::ObjCBridgedCastExprClass:
+    // TODO(cir): These can just be moved into the cast handling above, but
+    //            they need test cases.
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: addrspace or ObjC bridged cast");
+    return LValue();
+  case Expr::MaterializeTemporaryExprClass:
+    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::CoawaitExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoawaitExpr");
+    return LValue();
+  case Expr::CoyieldExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoyieldExpr");
+    return LValue();
+  case Expr::PackIndexingExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: PackIndexingExpr");
+    return LValue();
+  case Expr::HLSLOutArgExprClass:
+    llvm_unreachable("cannot emit a HLSL out argument directly");
   }
 }
 
@@ -1260,7 +1344,15 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
   // TODO: there are other patterns besides zero that we can usefully memset,
   // like -1, which happens to be the pattern used by member-pointers.
   if (!cgm.getTypes().isZeroInitializable(ty)) {
-    cgm.errorNYI(loc, "type is not zero initializable");
+    // Only the pointer-to-data-member case is tested here; emitNullConstant
+    // owns the NYIs for shapes it cannot build (virtual bases, non-zero-init
+    // arrays).
+    assert((ty->isMemberDataPointerType() || ty->isRecordType()) &&
+           "emitNullInitialization: only pointer-to-data-member (directly or "
+           "within a record) null initialization is implemented");
+    mlir::Value nullVal = cgm.emitNullConstant(ty, loc);
+    builder.createStore(loc, nullVal, destPtr);
+    return;
   }
 
   // In LLVM Codegen: otherwise, just memset the whole thing to zero using
@@ -1420,23 +1512,19 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
   return numElements;
 }
 
-void CIRGenFunction::instantiateIndirectGotoBlock() {
-  // If we already made the indirect branch for indirect goto, return its block.
-  if (indirectGotoBlock)
-    return;
-
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  indirectGotoBlock =
-      builder.createBlock(builder.getBlock()->getParent(), {}, {voidPtrTy},
-                          {builder.getUnknownLoc()});
-}
-
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
     mlir::Value ptrValue, QualType ty, SourceLocation loc,
     SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
   assert(!cir::MissingFeatures::sanitizers());
-  return cir::AssumeAlignedOp::create(builder, getLoc(assumptionLoc), ptrValue,
-                                      alignment, offsetValue);
+  mlir::Location assumeLoc = getLoc(assumptionLoc);
+  mlir::Value alignValue = builder.getUInt64(alignment, assumeLoc);
+  mlir::Value cond = builder.getBool(true, assumeLoc);
+  llvm::SmallVector<mlir::Value> bundleArgs{ptrValue, alignValue};
+  if (offsetValue)
+    bundleArgs.push_back(offsetValue);
+  cir::AssumeOp::create(builder, assumeLoc, cond, cir::AssumeBundleKind::Align,
+                        bundleArgs);
+  return ptrValue;
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
@@ -1510,6 +1598,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
+    case Type::LateParsedAttr:
       cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType");
       break;
 
@@ -1588,7 +1677,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
           // Always zexting here would be wrong if it weren't
           // undefined behavior to have a negative bound.
           // FIXME: What about when size's type is larger than size_t?
-          entry = builder.createIntCast(size, sizeTy);
+          entry = builder.createBoolIntToIntCast(size, sizeTy);
         }
       }
       type = vat->getElementType();

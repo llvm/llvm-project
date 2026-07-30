@@ -21,6 +21,8 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/BitmaskEnum.h"
+#include "clang/CodeGen/ModuleLinker.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/IR/Value.h"
 
@@ -372,7 +374,9 @@ private:
 /// FunctionArgList - Type for representing both the decl and type
 /// of parameters to a function. The decl must be either a
 /// ParmVarDecl or ImplicitParamDecl.
-class FunctionArgList : public SmallVector<const VarDecl *, 16> {};
+class FunctionArgList : public SmallVector<const VarDecl *, 16> {
+  using SmallVector::SmallVector;
+};
 
 /// ReturnValueSlot - Contains the address where the return value of a
 /// function can be stored, and whether the address is volatile or not.
@@ -403,55 +407,13 @@ public:
   Address getAddress() const { return Addr; }
 };
 
-/// Adds attributes to \p F according to our \p CodeGenOpts and \p LangOpts, as
-/// though we had emitted it ourselves. We remove any attributes on F that
-/// conflict with the attributes we add here.
-///
-/// This is useful for adding attrs to bitcode modules that you want to link
-/// with but don't control, such as CUDA's libdevice.  When linking with such
-/// a bitcode library, you might want to set e.g. its functions'
-/// denormal_fp_math attribute to match the attr of the functions you're
-/// codegen'ing.  Otherwise, LLVM will interpret the bitcode module's lack of
-/// denormal-fp-math attrs as tantamount to denormal-fp-math=ieee, and then LLVM
-/// will propagate denormal-fp-math=ieee up to every transitive caller of a
-/// function in the bitcode library!
-///
-/// With the exception of fast-math attrs, this will only make the attributes
-/// on the function more conservative.  But it's unsafe to call this on a
-/// function which relies on particular fast-math attributes for correctness.
-/// It's up to you to ensure that this is safe.
-void mergeDefaultFunctionDefinitionAttributes(llvm::Function &F,
-                                              const CodeGenOptions &CodeGenOpts,
-                                              const LangOptions &LangOpts,
-                                              const TargetOptions &TargetOpts,
-                                              bool WillInternalize);
-
 enum class FnInfoOpts {
   None = 0,
   IsInstanceMethod = 1 << 0,
   IsChainCall = 1 << 1,
   IsDelegateCall = 1 << 2,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/IsDelegateCall)
 };
-
-inline FnInfoOpts operator|(FnInfoOpts A, FnInfoOpts B) {
-  return static_cast<FnInfoOpts>(llvm::to_underlying(A) |
-                                 llvm::to_underlying(B));
-}
-
-inline FnInfoOpts operator&(FnInfoOpts A, FnInfoOpts B) {
-  return static_cast<FnInfoOpts>(llvm::to_underlying(A) &
-                                 llvm::to_underlying(B));
-}
-
-inline FnInfoOpts &operator|=(FnInfoOpts &A, FnInfoOpts B) {
-  A = A | B;
-  return A;
-}
-
-inline FnInfoOpts &operator&=(FnInfoOpts &A, FnInfoOpts B) {
-  A = A & B;
-  return A;
-}
 
 struct DisableDebugLocationUpdates {
   CodeGenFunction &CGF;

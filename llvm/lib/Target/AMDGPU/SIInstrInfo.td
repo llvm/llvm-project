@@ -66,22 +66,22 @@ def SDTSBufferLoad : SDTypeProfile<1, 3,
      SDTCisVT<3, i32>]>; // cachepolicy
 
 def SIsbuffer_load : SDNode<"AMDGPUISD::SBUFFER_LOAD", SDTSBufferLoad,
-                            [SDNPMayLoad, SDNPMemOperand]>;
+                            [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_byte : SDNode<"AMDGPUISD::SBUFFER_LOAD_BYTE", SDTSBufferLoad,
-                                 [SDNPMayLoad, SDNPMemOperand]>;
+                                 [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_ubyte
     : SDNode<"AMDGPUISD::SBUFFER_LOAD_UBYTE", SDTSBufferLoad,
-             [SDNPMayLoad, SDNPMemOperand]>;
+             [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_short
     : SDNode<"AMDGPUISD::SBUFFER_LOAD_SHORT", SDTSBufferLoad,
-             [SDNPMayLoad, SDNPMemOperand]>;
+             [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_ushort
     : SDNode<"AMDGPUISD::SBUFFER_LOAD_USHORT", SDTSBufferLoad,
-             [SDNPMayLoad, SDNPMemOperand]>;
+             [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIds_ordered_count : SDNode<"AMDGPUISD::DS_ORDERED_COUNT",
   SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i16>]>,
@@ -275,7 +275,7 @@ def SIpc_add_rel_offset64 : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET64",
 >;
 
 def SIlds : SDNode<"AMDGPUISD::LDS",
-  SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
+  SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisSameAs<0,1>]>
 >;
 
 def SIload_d16_lo : SDNode<"AMDGPUISD::LOAD_D16_LO",
@@ -881,11 +881,6 @@ return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
 }]>;
 
-def frameindex_to_targetframeindex : SDNodeXForm<frameindex, [{
-  auto FI = cast<FrameIndexSDNode>(N);
-  return CurDAG->getTargetFrameIndex(FI->getIndex(), MVT::i32);
-}]>;
-
 // Copied from the AArch64 backend:
 def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
 return CurDAG->getTargetConstant(
@@ -988,7 +983,7 @@ def NegSubInlineIntConst16 : ImmLeaf<i16, [{
 }], NegateImm>;
 
 def ShiftAmt32Imm : ImmLeaf <i32, [{
-  return Imm < 32;
+  return static_cast<uint32_t>(Imm) < 32;
 }]>;
 
 def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
@@ -3095,6 +3090,7 @@ def VOP_V2BF16_F32_F32_I32 : VOPProfile <[v2bf16, f32, f32, i32]>;
 def VOP_V2F16_F32_F32_I32 : VOPProfile <[v2f16, f32, f32, i32]>;
 def VOP_V6I32_V32F16_F32 : VOPProfile<[v6i32, v32f16, f32, untyped]>;
 def VOP_V6I32_V32BF16_F32 : VOPProfile<[v6i32, v32bf16, f32, untyped]>;
+def VOP_V6I32_V32F32_F32 : VOPProfile<[v6i32, v32f32, f32, untyped]>;
 def VOP_V3I32_V16F16_F32 : VOPProfile<[v3i32, v16f16, f32, untyped]>;
 def VOP_V3I32_V16BF16_F32 : VOPProfile<[v3i32, v16bf16, f32, untyped]>;
 def VOP_V3I32_V16F32_F32 : VOPProfile<[v3i32, v16f32, f32, untyped]>;
@@ -3182,6 +3178,10 @@ def VOP_V2I32_V2I32_V2I32         : VOPProfile <[v2i32,  v2i32, v2i32, untyped]>
 def VOP_V4F32_V4I16_V4I16_V4F32   : VOPProfile <[v4f32,  v4i16, v4i16, v4f32]>;
 def VOP_V16F32_V4I16_V4I16_V16F32 : VOPProfile <[v16f32, v4i16, v4i16, v16f32]>;
 def VOP_V32F32_V4I16_V4I16_V32F32 : VOPProfile <[v32f32, v4i16, v4i16, v32f32]>;
+def VOP_V2F64_V2F64_V2F64         : VOPProfile <[v2f64,  v2f64, v2f64, untyped]>;
+def VOP_V2F64_V2F64_V2F64_V2F64   : VOPProfile <[v2f64,  v2f64, v2f64, v2f64]>;
+def VOP_V2I64_V2I64_V2I64         : VOPProfile <[v2i64,  v2i64, v2i64, untyped]>;
+def VOP_V2I64_V2I64_V2I32_V2I64   : VOPProfile <[v2i64,  v2i64, v2i32, v2i64]>;
 
 def VOP_V4I32_I64_I64_V4I32       : VOPProfile <[v4i32,  i64,   i64,   v4i32]>;
 def VOP_V16I32_I64_I64_V16I32     : VOPProfile <[v16i32, i64,   i64,   v16i32]>;
@@ -3542,7 +3542,7 @@ def FP4FP8DstByteSelTable : GenericTable {
 def VOPDComponentTable : GenericTable {
   let FilterClass = "VOPD_Component";
   let CppTypeName = "VOPDComponentInfo";
-  let Fields = ["BaseVOP", "VOPDOp", "CanBeVOPDX", "CanBeVOPD3X"];
+  let Fields = ["BaseVOP", "VOPDOp"];
   let PrimaryKey = ["BaseVOP"];
   let PrimaryKeyName = "getVOPDComponentHelper";
 }
@@ -3563,6 +3563,23 @@ def VOPDPairs : GenericTable {
 def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Table = VOPDPairs;
   let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
+}
+
+def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
+  (REG_SEQUENCE VGPR_32, $op, lo16, (i16 (IMPLICIT_DEF)), hi16)>;
+
+def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
+  (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
+
+// Direct lookup table for VOPDXY eligibility, indexed by the packed
+// (VOPDOp << 5) | (Subtarget << 1) | VOPD3 key.
+def VOPDXYTable : GenericTable {
+  let FilterClass = "VOPDXY";
+  let CppTypeName = "VOPDXYInfo";
+  let Fields = ["VOPDXYKey", "IsX", "IsY"];
+  let PrimaryKey = ["VOPDXYKey"];
+  let PrimaryKeyName = "getVOPDXYInfo";
+  let DisallowSparseTable = false;
 }
 
 include "SIInstructions.td"

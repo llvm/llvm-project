@@ -15,9 +15,9 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_ALIASINGTRACKER_H
 
 #include <memory>
-#include <unordered_map>
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PackedVector.h"
 #include "llvm/MC/MCRegisterInfo.h"
 
@@ -97,9 +97,9 @@ private:
   const MCRegisterInfo &RegInfo;
   const BitVector ReservedReg;
   const BitVector EmptyRegisters;
-  mutable std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
+  mutable DenseMap<unsigned, std::unique_ptr<RegisterAliasingTracker>>
       Registers;
-  mutable std::unordered_map<unsigned, std::unique_ptr<RegisterAliasingTracker>>
+  mutable DenseMap<unsigned, std::unique_ptr<RegisterAliasingTracker>>
       RegisterClasses;
 };
 

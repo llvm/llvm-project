@@ -103,10 +103,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -150,8 +146,7 @@ bool R600VectorRegMerger::tryMergeVector(const RegSeqInfo *Untouched,
     const {
   unsigned CurrentUndexIdx = 0;
   for (auto &It : ToMerge->RegToChan) {
-    DenseMap<Register, unsigned>::const_iterator PosInUntouched =
-        Untouched->RegToChan.find(It.first);
+    auto PosInUntouched = Untouched->RegToChan.find(It.first);
     if (PosInUntouched != Untouched->RegToChan.end()) {
       Remap.emplace_back(It.second, (*PosInUntouched).second);
       continue;

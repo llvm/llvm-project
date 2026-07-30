@@ -13,10 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
-#include <numeric>
+#include <cstdint>
+#include <cstdio>
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
-#include "llvm/ADT/ArrayRef.h"
 
 #include "hip/hip_runtime.h"
 
@@ -67,6 +67,26 @@ extern "C" void mgpuLaunchKernel(hipFunction_t function, intptr_t gridX,
   HIP_REPORT_IF_ERROR(hipModuleLaunchKernel(function, gridX, gridY, gridZ,
                                             blockX, blockY, blockZ, smem,
                                             stream, params, extra));
+}
+
+// Cooperative launch entry point. The cluster dimensions are accepted to
+// match the CUDA wrapper signature, but HIP does not support thread block
+// clusters; passing nonzero cluster dimensions is a usage error.
+extern "C" void mgpuLaunchKernelCooperative(
+    hipFunction_t function, intptr_t gridX, intptr_t gridY, intptr_t gridZ,
+    intptr_t clusterX, intptr_t clusterY, intptr_t clusterZ, intptr_t blockX,
+    intptr_t blockY, intptr_t blockZ, int32_t smem, hipStream_t stream,
+    void **params, void ** /*extra*/) {
+  if (clusterX != 0 || clusterY != 0 || clusterZ != 0) {
+    fprintf(stderr,
+            "mgpuLaunchKernelCooperative: HIP does not support thread block "
+            "clusters (got cluster=%ld,%ld,%ld)\n",
+            clusterX, clusterY, clusterZ);
+    abort();
+  }
+  HIP_REPORT_IF_ERROR(
+      hipModuleLaunchCooperativeKernel(function, gridX, gridY, gridZ, blockX,
+                                       blockY, blockZ, smem, stream, params));
 }
 
 extern "C" hipStream_t mgpuStreamCreate() {
@@ -147,22 +167,17 @@ extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
 extern "C" void
 mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
                           int64_t elementSizeBytes) {
-
-  llvm::SmallVector<int64_t, 4> denseStrides(rank);
-  llvm::ArrayRef<int64_t> sizes(descriptor->sizes, rank);
-  llvm::ArrayRef<int64_t> strides(sizes.end(), rank);
-
-  std::partial_sum(sizes.rbegin(), sizes.rend(), denseStrides.rbegin(),
-                   std::multiplies<int64_t>());
-  auto sizeBytes = denseStrides.front() * elementSizeBytes;
-
+  int64_t *sizes = descriptor->sizes;
+  [[maybe_unused]] int64_t *strides = &sizes[rank];
+  int64_t runningStride = 1;
   // Only densely packed tensors are currently supported.
-  std::rotate(denseStrides.begin(), denseStrides.begin() + 1,
-              denseStrides.end());
-  denseStrides.back() = 1;
-  assert(strides == llvm::ArrayRef(denseStrides));
+  for (int64_t i = rank - 1; i >= 0; --i) {
+    assert(strides[i] == runningStride && "Mismatch in computed dense strides");
+    runningStride *= sizes[i];
+  }
+  uint64_t sizeBytes = runningStride * elementSizeBytes;
 
-  auto ptr = descriptor->data + descriptor->offset * elementSizeBytes;
+  auto *ptr = descriptor->data + descriptor->offset * elementSizeBytes;
   mgpuMemHostRegister(ptr, sizeBytes);
 }
 

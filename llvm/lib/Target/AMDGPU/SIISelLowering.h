@@ -85,8 +85,9 @@ private:
                                  MVT VT, unsigned Offset) const;
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,
                      SelectionDAG &DAG, bool WithChain) const;
-  SDValue lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc, SDValue Offset,
-                       SDValue CachePolicy, SelectionDAG &DAG) const;
+  SDValue lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL, SDValue Chain, SDValue Rsrc,
+                       SDValue Offset, SDValue CachePolicy, SelectionDAG &DAG,
+                       MachineMemOperand *MMO = nullptr) const;
 
   SDValue lowerRawBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
                                      unsigned NewOpcode) const;
@@ -163,11 +164,13 @@ private:
   /// Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitFP_ROUNDVectorOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerScalarBF16FAdd(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINIMUM_FMAXIMUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue promoteUniformOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
+  SDValue promoteUniformUnaryOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
   SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
@@ -189,6 +192,7 @@ private:
   SDValue lowerTrapHsaQueuePtr(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerTrapHsa(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDEBUGTRAP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
 
   SDNode *adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;
 
@@ -240,7 +244,6 @@ private:
 
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performPtrAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue performAddCarrySubCarryCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -541,9 +544,9 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
-  void computeKnownBitsForFrameIndex(int FrameIdx,
-                                     KnownBits &Known,
-                                     const MachineFunction &MF) const override;
+  void computeKnownBitsForStackObjectPointer(KnownBits &Known,
+                                             const MachineFunction &MF,
+                                             Align Alignment) const override;
   void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
                                       KnownBits &Known,
                                       const APInt &DemandedElts,

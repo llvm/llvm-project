@@ -38,9 +38,9 @@ public:
 
   /// Allocate a memory of size \p Size . \p HstPtr is used to assist the
   /// allocation.
-  virtual Expected<void *>
-  allocate(size_t Size, void *HstPtr,
-           TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
+  virtual Expected<void *> allocate(size_t Size, void *HstPtr,
+                                    TargetAllocTy Kind = TARGET_ALLOC_DEFAULT,
+                                    size_t Alignment = 0) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
   virtual Error free(void *TgtPtr,
@@ -143,8 +143,10 @@ class MemoryManagerTy {
   size_t SizeThreshold = 1U << 13;
 
   /// Request memory from target device
-  Expected<void *> allocateOnDevice(size_t Size, void *HstPtr) const {
-    return DeviceAllocator.allocate(Size, HstPtr, TARGET_ALLOC_DEVICE);
+  Expected<void *> allocateOnDevice(size_t Size, void *HstPtr,
+                                    size_t Alignment) const {
+    return DeviceAllocator.allocate(Size, HstPtr, TARGET_ALLOC_DEVICE,
+                                    Alignment);
   }
 
   /// Deallocate data on device
@@ -153,7 +155,8 @@ class MemoryManagerTy {
   /// This function is called when it tries to allocate memory on device but the
   /// device returns out of memory. It will first free all memory in the
   /// FreeList and try to allocate again.
-  Expected<void *> freeAndAllocate(size_t Size, void *HstPtr) {
+  Expected<void *> freeAndAllocate(size_t Size, void *HstPtr,
+                                   size_t Alignment) {
     std::vector<void *> RemoveList;
 
     // Deallocate all memory in FreeList
@@ -178,16 +181,16 @@ class MemoryManagerTy {
     }
 
     // Try allocate memory again
-    return allocateOnDevice(Size, HstPtr);
+    return allocateOnDevice(Size, HstPtr, Alignment);
   }
 
   /// The goal is to allocate memory on the device. It first tries to
   /// allocate directly on the device. If a \p nullptr is returned, it might
   /// be because the device is OOM. In that case, it will free all unused
   /// memory and then try again.
-  Expected<void *> allocateOrFreeAndAllocateOnDevice(size_t Size,
-                                                     void *HstPtr) {
-    auto TgtPtrOrErr = allocateOnDevice(Size, HstPtr);
+  Expected<void *> allocateOrFreeAndAllocateOnDevice(size_t Size, void *HstPtr,
+                                                     size_t Alignment) {
+    auto TgtPtrOrErr = allocateOnDevice(Size, HstPtr, Alignment);
     if (!TgtPtrOrErr)
       return TgtPtrOrErr.takeError();
 
@@ -197,7 +200,7 @@ class MemoryManagerTy {
     if (TgtPtr == nullptr) {
       ODBG(OLDT_Alloc) << "Failed to get memory on device. Free all memory "
                        << "in FreeLists and try again.";
-      TgtPtrOrErr = freeAndAllocate(Size, HstPtr);
+      TgtPtrOrErr = freeAndAllocate(Size, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
       TgtPtr = *TgtPtrOrErr;
@@ -231,7 +234,7 @@ public:
 
   /// Allocate memory of size \p Size from target device. \p HstPtr is used to
   /// assist the allocation.
-  Expected<void *> allocate(size_t Size, void *HstPtr) {
+  Expected<void *> allocate(size_t Size, void *HstPtr, size_t Alignment) {
     // If the size is zero, we will not bother the target device. Just return
     // nullptr directly.
     if (Size == 0)
@@ -245,7 +248,8 @@ public:
     if (Size > SizeThreshold) {
       ODBG(OLDT_Alloc) << Size << " is greater than the threshold "
                        << SizeThreshold << ". Allocate it directly from device";
-      auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
+      auto TgtPtrOrErr =
+          allocateOrFreeAndAllocateOnDevice(Size, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
@@ -281,7 +285,8 @@ public:
       ODBG(OLDT_Alloc) << "Cannot find a node in the FreeLists. "
                        << "Allocate on device.";
       // Allocate one on device
-      auto TgtPtrOrErr = allocateOrFreeAndAllocateOnDevice(Size, HstPtr);
+      auto TgtPtrOrErr =
+          allocateOrFreeAndAllocateOnDevice(Size, HstPtr, Alignment);
       if (!TgtPtrOrErr)
         return TgtPtrOrErr.takeError();
 
