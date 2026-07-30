@@ -341,41 +341,18 @@ end:
   ret void
 }
 
-; FIXME: SROA can't split memmove calls, so we can't optimize this
 define void @memmove_up(i8 %arg, ptr %dest) {
 ; CHECK-LABEL: define void @memmove_up(
 ; CHECK-SAME: i8 [[ARG:%.*]], ptr [[DEST:%.*]]) {
-; CHECK-NEXT:    [[ARR:%.*]] = alloca [5 x i8], align 1
-; CHECK-NEXT:    store i8 0, ptr [[ARR]], align 1
-; CHECK-NEXT:    [[ARR_1_ARR_1_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 1
-; CHECK-NEXT:    store i8 1, ptr [[ARR_1_ARR_1_SROA_IDX1]], align 1
-; CHECK-NEXT:    [[ARR_2_ARR_2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 2
-; CHECK-NEXT:    store i8 2, ptr [[ARR_2_ARR_2_SROA_IDX]], align 1
-; CHECK-NEXT:    [[ARR_3_ARR_3_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 3
-; CHECK-NEXT:    store i8 3, ptr [[ARR_3_ARR_3_SROA_IDX]], align 1
-; CHECK-NEXT:    [[ARR_4_ARR_4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 4
-; CHECK-NEXT:    store i8 4, ptr [[ARR_4_ARR_4_SROA_IDX]], align 1
-; CHECK-NEXT:    [[ARR_1_ARR_1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr align 1 [[ARR_1_ARR_1_SROA_IDX]], ptr align 1 [[ARR]], i32 4, i1 false)
-; CHECK-NEXT:    store i8 [[ARG]], ptr [[ARR]], align 1
 ; CHECK-NEXT:    [[DEST_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 1
 ; CHECK-NEXT:    [[DEST_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 2
 ; CHECK-NEXT:    [[DEST_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 3
 ; CHECK-NEXT:    [[DEST_4:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 4
-; CHECK-NEXT:    [[ARR_0_VAL_0:%.*]] = load i8, ptr [[ARR]], align 1
-; CHECK-NEXT:    [[ARR_1_ARR_1_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 1
-; CHECK-NEXT:    [[ARR_1_VAL_1:%.*]] = load i8, ptr [[ARR_1_ARR_1_SROA_IDX2]], align 1
-; CHECK-NEXT:    [[ARR_2_ARR_2_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 2
-; CHECK-NEXT:    [[ARR_2_VAL_2:%.*]] = load i8, ptr [[ARR_2_ARR_2_SROA_IDX3]], align 1
-; CHECK-NEXT:    [[ARR_3_ARR_3_SROA_IDX4:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 3
-; CHECK-NEXT:    [[ARR_3_VAL_3:%.*]] = load i8, ptr [[ARR_3_ARR_3_SROA_IDX4]], align 1
-; CHECK-NEXT:    [[ARR_4_ARR_4_SROA_IDX5:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 4
-; CHECK-NEXT:    [[ARR_4_VAL_4:%.*]] = load i8, ptr [[ARR_4_ARR_4_SROA_IDX5]], align 1
-; CHECK-NEXT:    store i8 [[ARR_0_VAL_0]], ptr [[DEST]], align 1
-; CHECK-NEXT:    store i8 [[ARR_1_VAL_1]], ptr [[DEST_1]], align 1
-; CHECK-NEXT:    store i8 [[ARR_2_VAL_2]], ptr [[DEST_2]], align 1
-; CHECK-NEXT:    store i8 [[ARR_3_VAL_3]], ptr [[DEST_3]], align 1
-; CHECK-NEXT:    store i8 [[ARR_4_VAL_4]], ptr [[DEST_4]], align 1
+; CHECK-NEXT:    store i8 [[ARG]], ptr [[DEST]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[DEST_1]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[DEST_2]], align 1
+; CHECK-NEXT:    store i8 2, ptr [[DEST_3]], align 1
+; CHECK-NEXT:    store i8 3, ptr [[DEST_4]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %arr = alloca [5 x i8], align 1
@@ -410,38 +387,15 @@ define void @memmove_up(i8 %arg, ptr %dest) {
 define void @memmove_down(i8 %arg, ptr %dest) {
 ; CHECK-LABEL: define void @memmove_down(
 ; CHECK-SAME: i8 [[ARG:%.*]], ptr [[DEST:%.*]]) {
-; CHECK-NEXT:    [[ARR:%.*]] = alloca [5 x i8], align 1
-; CHECK-NEXT:    store i8 0, ptr [[ARR]], align 1
-; CHECK-NEXT:    [[ARR_1_ARR_1_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 1
-; CHECK-NEXT:    store i8 1, ptr [[ARR_1_ARR_1_SROA_IDX1]], align 1
-; CHECK-NEXT:    [[ARR_2_ARR_2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 2
-; CHECK-NEXT:    store i8 2, ptr [[ARR_2_ARR_2_SROA_IDX]], align 1
-; CHECK-NEXT:    [[ARR_3_ARR_3_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 3
-; CHECK-NEXT:    store i8 3, ptr [[ARR_3_ARR_3_SROA_IDX]], align 1
-; CHECK-NEXT:    [[ARR_4_ARR_4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 4
-; CHECK-NEXT:    store i8 4, ptr [[ARR_4_ARR_4_SROA_IDX]], align 1
-; CHECK-NEXT:    [[ARR_1_ARR_1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 1
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr align 1 [[ARR]], ptr align 1 [[ARR_1_ARR_1_SROA_IDX]], i32 4, i1 false)
-; CHECK-NEXT:    [[ARR_4_ARR_4_SROA_IDX5:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 4
-; CHECK-NEXT:    store i8 [[ARG]], ptr [[ARR_4_ARR_4_SROA_IDX5]], align 1
 ; CHECK-NEXT:    [[DEST_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 1
 ; CHECK-NEXT:    [[DEST_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 2
 ; CHECK-NEXT:    [[DEST_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 3
 ; CHECK-NEXT:    [[DEST_4:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 4
-; CHECK-NEXT:    [[ARR_0_VAL_0:%.*]] = load i8, ptr [[ARR]], align 1
-; CHECK-NEXT:    [[ARR_1_ARR_1_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 1
-; CHECK-NEXT:    [[ARR_1_VAL_1:%.*]] = load i8, ptr [[ARR_1_ARR_1_SROA_IDX2]], align 1
-; CHECK-NEXT:    [[ARR_2_ARR_2_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 2
-; CHECK-NEXT:    [[ARR_2_VAL_2:%.*]] = load i8, ptr [[ARR_2_ARR_2_SROA_IDX3]], align 1
-; CHECK-NEXT:    [[ARR_3_ARR_3_SROA_IDX4:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 3
-; CHECK-NEXT:    [[ARR_3_VAL_3:%.*]] = load i8, ptr [[ARR_3_ARR_3_SROA_IDX4]], align 1
-; CHECK-NEXT:    [[ARR_4_ARR_4_SROA_IDX6:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 4
-; CHECK-NEXT:    [[ARR_4_VAL_4:%.*]] = load i8, ptr [[ARR_4_ARR_4_SROA_IDX6]], align 1
-; CHECK-NEXT:    store i8 [[ARR_0_VAL_0]], ptr [[DEST]], align 1
-; CHECK-NEXT:    store i8 [[ARR_1_VAL_1]], ptr [[DEST_1]], align 1
-; CHECK-NEXT:    store i8 [[ARR_2_VAL_2]], ptr [[DEST_2]], align 1
-; CHECK-NEXT:    store i8 [[ARR_3_VAL_3]], ptr [[DEST_3]], align 1
-; CHECK-NEXT:    store i8 [[ARR_4_VAL_4]], ptr [[DEST_4]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[DEST]], align 1
+; CHECK-NEXT:    store i8 2, ptr [[DEST_1]], align 1
+; CHECK-NEXT:    store i8 3, ptr [[DEST_2]], align 1
+; CHECK-NEXT:    store i8 4, ptr [[DEST_3]], align 1
+; CHECK-NEXT:    store i8 [[ARG]], ptr [[DEST_4]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %arr = alloca [5 x i8], align 1
@@ -456,6 +410,72 @@ define void @memmove_down(i8 %arg, ptr %dest) {
   store i8 4, ptr %arr.4, align 1
   call void @llvm.memmove.p0.p0.i32(ptr %arr, ptr %arr.1, i32 4, i1 false)
   store i8 %arg, ptr %arr.4, align 1
+  %dest.1 = getelementptr inbounds nuw i8, ptr %dest, i64 1
+  %dest.2 = getelementptr inbounds nuw i8, ptr %dest, i64 2
+  %dest.3 = getelementptr inbounds nuw i8, ptr %dest, i64 3
+  %dest.4 = getelementptr inbounds nuw i8, ptr %dest, i64 4
+  %val.0 = load i8, ptr %arr, align 1
+  %val.1 = load i8, ptr %arr.1, align 1
+  %val.2 = load i8, ptr %arr.2, align 1
+  %val.3 = load i8, ptr %arr.3, align 1
+  %val.4 = load i8, ptr %arr.4, align 1
+  store i8 %val.0, ptr %dest, align 1
+  store i8 %val.1, ptr %dest.1, align 1
+  store i8 %val.2, ptr %dest.2, align 1
+  store i8 %val.3, ptr %dest.3, align 1
+  store i8 %val.4, ptr %dest.4, align 1
+  ret void
+}
+
+; We shouldn't split the memmove if it's too large.
+define void @memmove_too_large(i8 %arg, ptr %dest) {
+; CHECK-LABEL: define void @memmove_too_large(
+; CHECK-SAME: i8 [[ARG:%.*]], ptr [[DEST:%.*]]) {
+; CHECK-NEXT:    [[ARR:%.*]] = alloca [513 x i8], align 1
+; CHECK-NEXT:    store i8 0, ptr [[ARR]], align 1
+; CHECK-NEXT:    [[ARR_1_ARR_1_SROA_IDX1:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 1
+; CHECK-NEXT:    store i8 1, ptr [[ARR_1_ARR_1_SROA_IDX1]], align 1
+; CHECK-NEXT:    [[ARR_2_ARR_2_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 2
+; CHECK-NEXT:    store i8 2, ptr [[ARR_2_ARR_2_SROA_IDX]], align 1
+; CHECK-NEXT:    [[ARR_3_ARR_3_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 3
+; CHECK-NEXT:    store i8 3, ptr [[ARR_3_ARR_3_SROA_IDX]], align 1
+; CHECK-NEXT:    [[ARR_4_ARR_4_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 4
+; CHECK-NEXT:    store i8 4, ptr [[ARR_4_ARR_4_SROA_IDX]], align 1
+; CHECK-NEXT:    [[ARR_1_ARR_1_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i32(ptr align 1 [[ARR_1_ARR_1_SROA_IDX]], ptr align 1 [[ARR]], i32 512, i1 false)
+; CHECK-NEXT:    store i8 [[ARG]], ptr [[ARR]], align 1
+; CHECK-NEXT:    [[DEST_1:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 1
+; CHECK-NEXT:    [[DEST_2:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 2
+; CHECK-NEXT:    [[DEST_3:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 3
+; CHECK-NEXT:    [[DEST_4:%.*]] = getelementptr inbounds nuw i8, ptr [[DEST]], i64 4
+; CHECK-NEXT:    [[ARR_0_VAL_0:%.*]] = load i8, ptr [[ARR]], align 1
+; CHECK-NEXT:    [[ARR_1_ARR_1_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 1
+; CHECK-NEXT:    [[ARR_1_VAL_1:%.*]] = load i8, ptr [[ARR_1_ARR_1_SROA_IDX2]], align 1
+; CHECK-NEXT:    [[ARR_2_ARR_2_SROA_IDX3:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 2
+; CHECK-NEXT:    [[ARR_2_VAL_2:%.*]] = load i8, ptr [[ARR_2_ARR_2_SROA_IDX3]], align 1
+; CHECK-NEXT:    [[ARR_3_ARR_3_SROA_IDX4:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 3
+; CHECK-NEXT:    [[ARR_3_VAL_3:%.*]] = load i8, ptr [[ARR_3_ARR_3_SROA_IDX4]], align 1
+; CHECK-NEXT:    [[ARR_4_ARR_4_SROA_IDX5:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i64 4
+; CHECK-NEXT:    [[ARR_4_VAL_4:%.*]] = load i8, ptr [[ARR_4_ARR_4_SROA_IDX5]], align 1
+; CHECK-NEXT:    store i8 [[ARR_0_VAL_0]], ptr [[DEST]], align 1
+; CHECK-NEXT:    store i8 [[ARR_1_VAL_1]], ptr [[DEST_1]], align 1
+; CHECK-NEXT:    store i8 [[ARR_2_VAL_2]], ptr [[DEST_2]], align 1
+; CHECK-NEXT:    store i8 [[ARR_3_VAL_3]], ptr [[DEST_3]], align 1
+; CHECK-NEXT:    store i8 [[ARR_4_VAL_4]], ptr [[DEST_4]], align 1
+; CHECK-NEXT:    ret void
+;
+  %arr = alloca [513 x i8], align 1
+  %arr.1 = getelementptr inbounds nuw i8, ptr %arr, i64 1
+  %arr.2 = getelementptr inbounds nuw i8, ptr %arr, i64 2
+  %arr.3 = getelementptr inbounds nuw i8, ptr %arr, i64 3
+  %arr.4 = getelementptr inbounds nuw i8, ptr %arr, i64 4
+  store i8 0, ptr %arr, align 1
+  store i8 1, ptr %arr.1, align 1
+  store i8 2, ptr %arr.2, align 1
+  store i8 3, ptr %arr.3, align 1
+  store i8 4, ptr %arr.4, align 1
+  call void @llvm.memmove.p0.p0.i32(ptr %arr.1, ptr %arr, i32 512, i1 false)
+  store i8 %arg, ptr %arr, align 1
   %dest.1 = getelementptr inbounds nuw i8, ptr %dest, i64 1
   %dest.2 = getelementptr inbounds nuw i8, ptr %dest, i64 2
   %dest.3 = getelementptr inbounds nuw i8, ptr %dest, i64 3
