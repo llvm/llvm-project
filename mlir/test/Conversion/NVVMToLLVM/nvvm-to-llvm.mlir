@@ -602,16 +602,16 @@ llvm.func @init_mbarrier_memory_clobber(
     %count : i32,
     %pred : i1) {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.init.b64 [$0], $1;", "l,r,~{memory}"
-  nvvm.inline_ptx "mbarrier.init.b64 [{$r0}], {$r1};" ro (%barrier_gen, %count : !llvm.ptr, i32) memory_clobber
+  nvvm.inline_ptx "mbarrier.init.b64 [{$r0}], {$r1};" ro (%barrier_gen, %count : !llvm.ptr, i32) memory_clobber = true
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "@$2 mbarrier.init.b64 [$0], $1;", "l,r,b,~{memory}"
-  nvvm.inline_ptx "mbarrier.init.b64 [{$r0}], {$r1};" ro (%barrier_gen, %count : !llvm.ptr, i32) memory_clobber, predicate = %pred
+  nvvm.inline_ptx "mbarrier.init.b64 [{$r0}], {$r1};" ro (%barrier_gen, %count : !llvm.ptr, i32) memory_clobber = true, predicate = %pred
   llvm.return
 }
 // -----
 
 llvm.func @memory_clobber_no_operands() {
   // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "fence.sc.cta;", "~{memory}"
-  nvvm.inline_ptx "fence.sc.cta;" memory_clobber
+  nvvm.inline_ptx "fence.sc.cta;" memory_clobber = true
   llvm.return
 }
 // -----
@@ -698,7 +698,7 @@ llvm.func @inline_ptx_multi_rw_memory_clobber(%a : i32, %b : i32,  %rw_c : f32, 
 // CHECK-SAME: : (f32, f32, i32, i32) -> !llvm.struct<(f32, f32)>
     nvvm.inline_ptx "{.reg .pred p; setp.ge.s32 p, {$r0}, {$r1}; selp.s32 {$rw0}, {$r0},{$r1}, p; selp.s32 {$rw1}, {$r0},{$r1}, p;}"
     ro (%a, %b : i32,i32)
-    rw (%rw_c, %rw_d: f32,f32) memory_clobber
+    rw (%rw_c, %rw_d: f32,f32) memory_clobber = true
    %r4 = llvm.fadd %rw_c, %rw_d : f32
    llvm.return %r4 : f32
 }

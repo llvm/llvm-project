@@ -394,7 +394,7 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
 
     Example 1: Read-only Parameters
     ```mlir
-    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" ro(%barrier_gen, %count : !llvm.ptr, i32) memory_clobber
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" ro(%barrier_gen, %count : !llvm.ptr, i32) memory_clobber = true
 
     // Lowers to:
     llvm.inline_asm has_side_effects asm_dialect = att
@@ -426,7 +426,7 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
                        Variadic<AnyType>:$readWriteArgs,
                        StrAttr:$ptxCode,
                        PtxPredicate:$predicate,
-                       UnitAttr:$memoryClobber);
+                       DefaultValuedAttr<BoolAttr, "false">:$memoryClobber);
 
   let results = (outs Variadic<AnyType>:$writeOnlyArgs);
 
@@ -434,7 +434,7 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
     $ptxCode
     ( `ro` `(` $readOnlyArgs^ `:` type($readOnlyArgs) `)` )?
     ( `rw` `(` $readWriteArgs^ `:` type($readWriteArgs) `)` )?
-    ( `memory_clobber` $memoryClobber^ )?
+    ( `memory_clobber` `=` $memoryClobber^ )?
     (`,` `predicate` `=` $predicate^)?
     attr-dict
     ( `->` type($writeOnlyArgs)^ )?
