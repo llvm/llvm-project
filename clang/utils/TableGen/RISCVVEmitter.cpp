@@ -59,12 +59,13 @@ struct SemaRecord {
   // Number of field, large than 1 if it's segment load/store.
   unsigned NF;
 
-  bool HasMasked :1;
-  bool HasVL :1;
-  bool HasMaskedOffOperand :1;
+  bool HasMasked : 1;
+  bool HasVL : 1;
+  bool HasMaskedOffOperand : 1;
   bool HasTailPolicy : 1;
   bool HasMaskPolicy : 1;
   bool HasFRMRoundModeOp : 1;
+  bool MaskedPrototypeHasResultMask : 1;
   bool AltFmt : 1;
   bool IsTuple : 1;
   LLVM_PREFERRED_TYPE(PolicyScheme)
@@ -668,6 +669,8 @@ void RVVEmitter::createRVVIntrinsics(
     std::vector<int64_t> Log2LMULList = R->getValueAsListOfInts("Log2LMUL");
     bool HasTailPolicy = R->getValueAsBit("HasTailPolicy");
     bool HasMaskPolicy = R->getValueAsBit("HasMaskPolicy");
+    bool MaskedPrototypeHasResultMask =
+        R->getValueAsBit("MaskedPrototypeHasResultMask");
     bool AltFmt = R->getValueAsBit("AltFmt");
     bool SupportOverloading = R->getValueAsBit("SupportOverloading");
     bool HasBuiltinAlias = R->getValueAsBit("HasBuiltinAlias");
@@ -702,13 +705,15 @@ void RVVEmitter::createRVVIntrinsics(
     // Compute Builtin types
     auto Prototype = RVVIntrinsic::computeBuiltinTypes(
         BasicPrototype, /*IsMasked=*/false,
-        /*HasMaskedOffOperand=*/false, HasVL, NF, UnMaskedPolicyScheme,
+        /*HasMaskedOffOperand=*/false,
+        /*MaskedPrototypeHasResultMask=*/false, HasVL, NF, UnMaskedPolicyScheme,
         DefaultPolicy, IsTuple);
     SmallVector<PrototypeDescriptor> MaskedPrototype;
     if (HasMasked)
       MaskedPrototype = RVVIntrinsic::computeBuiltinTypes(
-          BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL, NF,
-          MaskedPolicyScheme, DefaultPolicy, IsTuple);
+          BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand,
+          MaskedPrototypeHasResultMask, HasVL, NF, MaskedPolicyScheme,
+          DefaultPolicy, IsTuple);
 
     // Create Intrinsics for each type and LMUL.
     for (char I : TypeRange) {
@@ -736,7 +741,8 @@ void RVVEmitter::createRVVIntrinsics(
             SmallVector<PrototypeDescriptor> PolicyPrototype =
                 RVVIntrinsic::computeBuiltinTypes(
                     BasicPrototype, /*IsMasked=*/false,
-                    /*HasMaskedOffOperand=*/false, HasVL, NF,
+                    /*HasMaskedOffOperand=*/false,
+                    /*MaskedPrototypeHasResultMask=*/false, HasVL, NF,
                     UnMaskedPolicyScheme, P, IsTuple);
             std::optional<RVVTypes> PolicyTypes =
                 TypeCache.computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
@@ -763,8 +769,9 @@ void RVVEmitter::createRVVIntrinsics(
         for (auto P : SupportedMaskedPolicies) {
           SmallVector<PrototypeDescriptor> PolicyPrototype =
               RVVIntrinsic::computeBuiltinTypes(
-                  BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,
-                  NF, MaskedPolicyScheme, P, IsTuple);
+                  BasicPrototype, /*IsMasked=*/true, HasMaskedOffOperand,
+                  MaskedPrototypeHasResultMask, HasVL, NF, MaskedPolicyScheme,
+                  P, IsTuple);
           std::optional<RVVTypes> PolicyTypes =
               TypeCache.computeTypes(BT, Log2LMUL, NF, PolicyPrototype);
           Out.push_back(std::make_unique<RVVIntrinsic>(
@@ -810,6 +817,7 @@ void RVVEmitter::createRVVIntrinsics(
     SR.HasMaskedOffOperand = HasMaskedOffOperand;
     SR.HasTailPolicy = HasTailPolicy;
     SR.HasMaskPolicy = HasMaskPolicy;
+    SR.MaskedPrototypeHasResultMask = MaskedPrototypeHasResultMask;
     SR.AltFmt = AltFmt;
     SR.UnMaskedPolicyScheme = static_cast<uint8_t>(UnMaskedPolicyScheme);
     SR.MaskedPolicyScheme = static_cast<uint8_t>(MaskedPolicyScheme);
@@ -855,6 +863,7 @@ void RVVEmitter::createRVVIntrinsicRecords(std::vector<RVVIntrinsicRecord> &Out,
     R.HasMaskedOffOperand = SR.HasMaskedOffOperand;
     R.HasTailPolicy = SR.HasTailPolicy;
     R.HasMaskPolicy = SR.HasMaskPolicy;
+    R.MaskedPrototypeHasResultMask = SR.MaskedPrototypeHasResultMask;
     R.AltFmt = SR.AltFmt;
     R.UnMaskedPolicyScheme = SR.UnMaskedPolicyScheme;
     R.MaskedPolicyScheme = SR.MaskedPolicyScheme;

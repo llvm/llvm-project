@@ -917,7 +917,7 @@ def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
 
 // Vector Reordering Structured Data
 def FeatureStdExtZvzip
-    : RISCVExperimentalExtension<0, 1, "Vector Reordering Structured Data",
+    : RISCVExperimentalExtension<0, 2, "Vector Reordering Structured Data",
                                  [FeatureStdExtZve32x]>;
 def HasStdExtZvzip : Predicate<"Subtarget->hasStdExtZvzip()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvzip),

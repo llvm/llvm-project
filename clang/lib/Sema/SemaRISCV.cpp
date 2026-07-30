@@ -264,15 +264,16 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
     llvm::SmallVector<PrototypeDescriptor> ProtoSeq =
         RVVIntrinsic::computeBuiltinTypes(
             BasicProtoSeq, /*IsMasked=*/false,
-            /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
+            /*HasMaskedOffOperand=*/false,
+            /*MaskedPrototypeHasResultMask=*/false, Record.HasVL, Record.NF,
             UnMaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
     llvm::SmallVector<PrototypeDescriptor> ProtoMaskSeq;
     if (Record.HasMasked)
       ProtoMaskSeq = RVVIntrinsic::computeBuiltinTypes(
           BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-          Record.HasVL, Record.NF, MaskedPolicyScheme, DefaultPolicy,
-          Record.IsTuple);
+          Record.MaskedPrototypeHasResultMask, Record.HasVL, Record.NF,
+          MaskedPolicyScheme, DefaultPolicy, Record.IsTuple);
 
     bool UnMaskedHasPolicy = UnMaskedPolicyScheme != PolicyScheme::SchemeNone;
     bool MaskedHasPolicy = MaskedPolicyScheme != PolicyScheme::SchemeNone;
@@ -318,8 +319,9 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
             llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
                 RVVIntrinsic::computeBuiltinTypes(
                     BasicProtoSeq, /*IsMasked=*/false,
-                    /*HasMaskedOffOperand=*/false, Record.HasVL, Record.NF,
-                    UnMaskedPolicyScheme, P, Record.IsTuple);
+                    /*HasMaskedOffOperand=*/false,
+                    /*MaskedPrototypeHasResultMask=*/false, Record.HasVL,
+                    Record.NF, UnMaskedPolicyScheme, P, Record.IsTuple);
             std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
                 BaseType, Log2LMUL, Record.NF, PolicyPrototype);
             InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,
@@ -341,8 +343,8 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
           llvm::SmallVector<PrototypeDescriptor> PolicyPrototype =
               RVVIntrinsic::computeBuiltinTypes(
                   BasicProtoSeq, /*IsMasked=*/true, Record.HasMaskedOffOperand,
-                  Record.HasVL, Record.NF, MaskedPolicyScheme, P,
-                  Record.IsTuple);
+                  Record.MaskedPrototypeHasResultMask, Record.HasVL, Record.NF,
+                  MaskedPolicyScheme, P, Record.IsTuple);
           std::optional<RVVTypes> PolicyTypes = TypeCache.computeTypes(
               BaseType, Log2LMUL, Record.NF, PolicyPrototype);
           InitRVVIntrinsic(Record, SuffixStr, OverloadedSuffixStr,

@@ -15,18 +15,20 @@
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZvzip], Constraints = "@earlyclobber $vd" in {
-  let VS1VS2Constraint = WidenV in
-  def VZIP_VV : VALUVV<0b111110, OPMVV, "vzip.vv">;
-
-  let VS1VS2Constraint = VS2Constraint in {
-    def VUNZIPE_V : VALUVs2<0b010010, 0b01011, OPMVV, "vunzipe.v">;
-    def VUNZIPO_V : VALUVs2<0b010010, 0b01111, OPMVV, "vunzipo.v">;
+let Predicates = [HasStdExtZvzip] in {
+  let Constraints = "@earlyclobber $vd" in {
+    let VS1VS2Constraint = WidenV in
+    def VZIP_VV : VALUVV<0b111110, OPMVV, "vzip.vv">;
   }
 
-  let VS1VS2Constraint = Vrgather in {
-    def VPAIRE_VV : VALUVV<0b001111, OPIVV, "vpaire.vv">;
-    def VPAIRO_VV : VALUVV<0b001111, OPMVV, "vpairo.vv">;
+  def VUNZIPE_V : VALUVs2NoVm<0b010010, 0b01011, OPMVV, "vunzipe.v">;
+  def VUNZIPO_V : VALUVs2NoVm<0b010010, 0b01111, OPMVV, "vunzipo.v">;
+
+  let Constraints = "@earlyclobber $vd" in {
+    let VS1VS2Constraint = Vrgather in {
+      def VPAIRE_VV : VALUVV<0b001111, OPIVV, "vpaire.vv">;
+      def VPAIRO_VV : VALUVV<0b001111, OPMVV, "vpairo.vv">;
+    }
   }
 } // Predicates = [HasStdExtZvzip]
 
@@ -80,52 +82,68 @@ defset list<VTypeInfoToWide> AllZvzipVectors = {
 }
 
 multiclass VPseudoVZIP {
-  foreach m = MxListW in
-    defm "" : VPseudoBinaryW_VV<m, Commutable=0>,
-              SchedBinary<"WriteVIWALUV", "ReadVIWALUV", "ReadVIWALUV", m.MX,
-                          forcePassthruRead=true>;
+  foreach m = MxListW in {
+    defvar wm = !cast<LMULInfo>("V_" # octuple_to_str<!shl(m.octuple, 1)>.ret);
+    defm "_VV" : VPseudoBinary<wm.vrclass, m.vrclass, m.vrclass, wm,
+                               "@earlyclobber $rd", TargetConstraintType=3>,
+                 SchedBinary<"WriteVIWALUV", "ReadVIWALUV", "ReadVIWALUV",
+                             m.MX, forcePassthruRead=true>;
+  }
 }
 
+// vunzipe.v/vunzipo.v is narrowing-like and don't need @earlyclobber 
+// if the source has an LMUL <= 1. The destination register group
+// can overlap with the lowest-numbered part of the source register group.
 multiclass VPseudoVUNZIP {
   foreach m = MxListW in {
-    defvar mx = m.MX;
-    let VLMul = m.value in {
-      def "_V_" # mx : VPseudoUnaryNoMask<m.vrclass, m.wvrclass>,
-                       SchedUnary<"WriteVIALUV", "ReadVIALUV", mx,
-                                  forcePassthruRead=true>;
-      def "_V_" # mx # "_MASK" :
-        VPseudoUnaryMask<m.vrclass, m.wvrclass>,
-        RISCVMaskedPseudo<MaskIdx=2>,
-        SchedUnary<"WriteVIALUV", "ReadVIALUV", mx, forcePassthruRead=true>;
+    defvar wm = !cast<LMULInfo>("V_" # octuple_to_str<!shl(m.octuple, 1)>.ret);
+    let VLMul = wm.value in {
+      def "_V_" # wm.MX : VPseudoUnaryNoMask<m.vrclass, wm.vrclass,
+                            !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""),
+                            TargetConstraintType=2>,
+                          SchedUnary<"WriteVIALUV", "ReadVIALUV", m.MX,
+                                      forcePassthruRead=true>;
     }
   }
 }
 
-let Predicates = [HasStdExtZvzip],
-    Constraints = "@earlyclobber $rd, $rd = $passthru" in {
+let Predicates = [HasStdExtZvzip] in {
   defm PseudoVZIP    : VPseudoVZIP;
   defm PseudoVUNZIPE : VPseudoVUNZIP;
   defm PseudoVUNZIPO : VPseudoVUNZIP;
-  defm PseudoVPAIRE  : VPseudoVALU_VV;
-  defm PseudoVPAIRO  : VPseudoVALU_VV;
+  let Constraints = "@earlyclobber $rd, $rd = $passthru" in {
+    defm PseudoVPAIRE  : VPseudoVALU_VV;
+    defm PseudoVPAIRO  : VPseudoVALU_VV;
+  }
 }
 
+let Predicates = [HasStdExtZvzip] in {
 multiclass VPatVUnzipIntrinsic<string intrinsic_name,
                                string instruction_name> {
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypeMinimalPredicates<wti>.Predicates,
-                                 [HasStdExtZvzip]) in {
+    let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
       def : VPatUnaryNoMask<intrinsic_name, instruction_name, "V",
                             vti.Vector, wti.Vector, vti.Log2SEW,
-                            vti.LMul, vti.RegClass, wti.RegClass>;
-      def : VPatUnaryMask<intrinsic_name, instruction_name, "V",
-                          vti.Vector, wti.Vector, vti.Mask, vti.Log2SEW,
-                          vti.LMul, vti.RegClass, wti.RegClass>;
+                            wti.LMul, vti.RegClass, wti.RegClass>;
     }
   }
 }
+
+multiclass VPatVZipIntrinsic<string intrinsic_name,
+                             string instruction_name> {
+  foreach VtiToWti = AllZvzipVectors in {
+    defvar vti = VtiToWti.Vti;
+    defvar wti = VtiToWti.Wti;
+    let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
+      defm : VPatBinary<intrinsic_name, instruction_name # "_VV_" # wti.LMul.MX,
+                        wti.Vector, vti.Vector, vti.Vector, wti.Mask,
+                        vti.Log2SEW, wti.RegClass, vti.RegClass, vti.RegClass>;
+    }
+  }
+}
+} // Predicates = [HasStdExtZvzip]
 
 defm : VPatVUnzipIntrinsic<"int_riscv_vunzipe", "PseudoVUNZIPE">;
 defm : VPatVUnzipIntrinsic<"int_riscv_vunzipo", "PseudoVUNZIPO">;
@@ -135,9 +153,7 @@ defm : VPatBinaryV_VV<"int_riscv_vpaire", "PseudoVPAIRE", AllVectors,
 defm : VPatBinaryV_VV<"int_riscv_vpairo", "PseudoVPAIRO", AllVectors,
                       ExtraPreds = [HasStdExtZvzip],
                       requireMinimal = true>;
-defm : VPatBinaryW_VV<"int_riscv_vzip", "PseudoVZIP", AllZvzipVectors,
-                      ExtraPreds = [HasStdExtZvzip],
-                      requireMinimal = true>;
+defm : VPatVZipIntrinsic<"int_riscv_vzip", "PseudoVZIP">;
 
 // (vd (op vs2, vs1, passthru, mask, vl))
 def SDT_RISCVZip_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisVec<1>,
@@ -145,16 +161,14 @@ def SDT_RISCVZip_VL : SDTypeProfile<1, 5, [SDTCisVec<0>, SDTCisVec<1>,
                                            SDTCisSameAs<1, 2>,
                                            SDTCisSameAs<0, 3>,
                                            SDTCVecEltisVT<4, i1>,
-                                           SDTCisSameNumEltsAs<1, 4>,
+                                           SDTCisSameNumEltsAs<0, 4>,
                                            SDTCisVT<5, XLenVT>]>;
 
-// (vd (op vs2, passthru, mask, vl))
-def SDT_RISCVUnzip_VL : SDTypeProfile<1, 4, [SDTCisVec<0>, SDTCisVec<1>,
+// (vd (op vs2, passthru, vl))
+def SDT_RISCVUnzip_VL : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>,
                                              SDTCisSubVecOfVec<0, 1>,
                                              SDTCisSameAs<0, 2>,
-                                             SDTCVecEltisVT<3, i1>,
-                                             SDTCisSameNumEltsAs<0, 3>,
-                                             SDTCisVT<4, XLenVT>]>;
+                                             SDTCisVT<3, XLenVT>]>;
 
 def SDT_RISCVVecBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
@@ -168,19 +182,22 @@ let HasPassthruOp = true, HasMaskOp = true in {
 def vpaire_vl  : RVSDNode<"VPAIRE_VL", SDT_RISCVVecBinOp_VL>;
 def vpairo_vl  : RVSDNode<"VPAIRO_VL", SDT_RISCVVecBinOp_VL>;
 def vzip_vl    : RVSDNode<"VZIP_VL", SDT_RISCVZip_VL>;
-def vunzipe_vl : RVSDNode<"VUNZIPE_VL", SDT_RISCVUnzip_VL>;
-def vunzipo_vl : RVSDNode<"VUNZIPO_VL", SDT_RISCVUnzip_VL>;
 } // HasPassthruOp = true, HasMaskOp = true
 
+let HasPassthruOp = true in {
+def vunzipe_vl : RVSDNode<"VUNZIPE_VL", SDT_RISCVUnzip_VL>;
+def vunzipo_vl : RVSDNode<"VUNZIPO_VL", SDT_RISCVUnzip_VL>;
+} // HasPassthruOp = true
+
+let Predicates = [HasStdExtZvzip] in {
 multiclass VPatVZIP<SDPatternOperator vop, string instruction_name> {
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat([HasStdExtZvzip],
-                                 GetVTypeMinimalPredicates<vti>.Predicates) in {
+    let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
       def : VPatBinaryVL_V<vop, instruction_name, "VV",
-                           wti.Vector, vti.Vector, vti.Vector, vti.Mask,
-                           vti.Log2SEW, vti.LMul, wti.RegClass, vti.RegClass,
+                           wti.Vector, vti.Vector, vti.Vector, wti.Mask,
+                           vti.Log2SEW, wti.LMul, wti.RegClass, vti.RegClass,
                            vti.RegClass>;
     }
   }
@@ -190,14 +207,14 @@ multiclass VPatVUNZIP<SDPatternOperator op, string instruction_name> {
   foreach VtiToWti = AllZvzipVectors in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
-    let Predicates = !listconcat([HasStdExtZvzip],
-                                 GetVTypeMinimalPredicates<vti>.Predicates) in {
-      def : VPatUnaryVL_V<op, instruction_name, "V",
-                          vti.Vector, wti.Vector, vti.Mask, vti.Log2SEW,
-                          vti.LMul, vti.RegClass, wti.RegClass>;
+    let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
+      def : VPatUnaryVLNoMask_V<op, instruction_name, "V",
+                                vti.Vector, wti.Vector, vti.Log2SEW,
+                                wti.LMul, vti.RegClass, wti.RegClass>;
     }
   }
 }
+} // Predicates = [HasStdExtZvzip]
 
 defm : VPatVZIP<vzip_vl, "PseudoVZIP">;
 defm : VPatVUNZIP<vunzipe_vl, "PseudoVUNZIPE">;

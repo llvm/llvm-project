@@ -37,6 +37,7 @@ enum class VectorTypeModifier : uint8_t {
   Widening8XVector,
   DoubleLMULVector,
   MaskVector,
+  DoubleLMULMaskVector,
   Log2EEW3,
   Log2EEW4,
   Log2EEW5,
@@ -482,7 +483,8 @@ public:
 
   static llvm::SmallVector<PrototypeDescriptor>
   computeBuiltinTypes(llvm::ArrayRef<PrototypeDescriptor> Prototype,
-                      bool IsMasked, bool HasMaskedOffOperand, bool HasVL,
+                      bool IsMasked, bool HasMaskedOffOperand,
+                      bool MaskedPrototypeHasResultMask, bool HasVL,
                       unsigned NF, PolicyScheme DefaultScheme,
                       Policy PolicyAttrs, bool IsTuple);
 
@@ -543,6 +545,7 @@ struct RVVIntrinsicRecord {
   bool HasTailPolicy : 1;
   bool HasMaskPolicy : 1;
   bool HasFRMRoundModeOp : 1;
+  bool MaskedPrototypeHasResultMask : 1;
   bool AltFmt : 1;
   bool IsTuple : 1;
   LLVM_PREFERRED_TYPE(PolicyScheme)

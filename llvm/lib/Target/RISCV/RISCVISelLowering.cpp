@@ -5343,12 +5343,41 @@ static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
   return SDValue();
 }
 
-static bool isLegalVTForZvzipOperand(MVT VT, const RISCVSubtarget &Subtarget) {
+static unsigned getLMULOctuple(MVT ContainerVT) {
+  assert(ContainerVT.isScalableVector() && "Expected scalable vector type");
+  unsigned MinSize = ContainerVT.getSizeInBits().getKnownMinValue();
+  if (ContainerVT.getVectorElementType() == MVT::i1)
+    MinSize *= 8;
+  assert(isPowerOf2_32(MinSize) && MinSize >= 8 && MinSize <= 512 &&
+         "Unexpected LMUL");
+  return MinSize / (RISCV::RVVBitsPerBlock / 8);
+}
+
+static bool
+isLegalVTForZvzipDeinterleavedOperand(MVT VT, const RISCVSubtarget &Subtarget) {
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector())
     ContainerVT = getContainerForFixedLengthVector(VT, Subtarget);
   // Determine LMUL of the container vector.
-  return RISCVTargetLowering::getLMUL(ContainerVT) != RISCVVType::LMUL_8;
+  unsigned EltBits = VT.getScalarSizeInBits();
+  unsigned LMULOctuple = getLMULOctuple(ContainerVT);
+  // The interleaved operand is described by the vtype LMUL. Since VT is a
+  // deinterleaved operand, check the constraint against twice VT's LMUL.
+  return EltBits * 8 <= LMULOctuple * std::min(Subtarget.getELen(),
+                                               Subtarget.getRealMinVLen()) &&
+         RISCVTargetLowering::getLMUL(ContainerVT) != RISCVVType::LMUL_8;
+}
+
+static bool
+isLegalVTForZvzipInterleavedOperand(MVT VT, const RISCVSubtarget &Subtarget) {
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector())
+    ContainerVT = getContainerForFixedLengthVector(VT, Subtarget);
+  unsigned EltBits = VT.getScalarSizeInBits();
+  unsigned LMULOctuple = getLMULOctuple(ContainerVT);
+  // Perform 2 * SEW <= LMUL * min(ELEN, VLEN) check.
+  return EltBits * 16 <= LMULOctuple * std::min(Subtarget.getELen(),
+                                                Subtarget.getRealMinVLen());
 }
 
 /// Is this shuffle interleaving contiguous elements from one vector into the
@@ -5364,7 +5393,7 @@ static bool isInterleaveShuffle(ArrayRef<int> Mask, MVT VT, int &EvenSrc,
   if (VT.getScalarSizeInBits() >= Subtarget.getELen()) {
     if (!Subtarget.hasStdExtZvzip())
       return false;
-    if (!isLegalVTForZvzipOperand(VT, Subtarget))
+    if (!isLegalVTForZvzipInterleavedOperand(VT, Subtarget))
       return false;
   }
 
@@ -5863,7 +5892,8 @@ static SDValue lowerZvzipVZIP(SDValue Op0, SDValue Op1, const SDLoc &DL,
     Op1 = convertToScalableVector(ContainerVT, Op1, DAG, Subtarget);
   }
   MVT ResVT = ContainerVT.getDoubleNumVectorElementsVT();
-  auto [Mask, VL] = getDefaultVLOps(IntVT, ContainerVT, DL, DAG, Subtarget);
+  MVT ResIntVT = IntVT.getDoubleNumVectorElementsVT();
+  auto [Mask, VL] = getDefaultVLOps(ResIntVT, ResVT, DL, DAG, Subtarget);
   SDValue Passthru = DAG.getUNDEF(ResVT);
   SDValue Res =
       DAG.getNode(RISCVISD::VZIP_VL, DL, ResVT, Op0, Op1, Passthru, Mask, VL);
@@ -5886,25 +5916,15 @@ static SDValue lowerZvzipVUNZIP(unsigned Opc, SDValue Op, const SDLoc &DL,
   MVT ContainerVT = IntVT;
   if (VT.isFixedLengthVector()) {
     ContainerVT = getContainerForFixedLengthVector(IntVT, Subtarget);
-    // For E64 with LMUL <= 1, we can't represent a smaller fractional LMUL for
-    // the result (LMUL <= 1/2 is not valid for E64). We must widen the input
-    // container to at least LMUL=2 so the result can be LMUL=1.
-    if (ContainerVT.getVectorElementType() == MVT::i64 &&
-        RISCVTargetLowering::getLMUL(ContainerVT) == RISCVVType::LMUL_1) {
-      ContainerVT = MVT::getScalableVectorVT(MVT::i64, 2);
-    }
     Op = convertToScalableVector(ContainerVT, Op, DAG, Subtarget);
   }
 
   MVT ResVT = ContainerVT.getHalfNumVectorElementsVT();
   MVT HalfVT = VT.getHalfNumVectorElementsVT();
   MVT HalfIntVT = IntVT.getHalfNumVectorElementsVT();
-  auto [Mask, VL] = getDefaultVLOps(ResVT, ResVT, DL, DAG, Subtarget);
-  if (VT.isFixedLengthVector())
-    VL = DAG.getConstant(VT.getVectorNumElements() / 2, DL,
-                         Subtarget.getXLenVT());
+  SDValue VL = getDefaultVLOps(IntVT, ContainerVT, DL, DAG, Subtarget).second;
   SDValue Passthru = DAG.getUNDEF(ResVT);
-  SDValue Res = DAG.getNode(Opc, DL, ResVT, Op, Passthru, Mask, VL);
+  SDValue Res = DAG.getNode(Opc, DL, ResVT, Op, Passthru, VL);
   if (HalfIntVT.isFixedLengthVector())
     Res = convertFromScalableVector(HalfIntVT, Res, DAG, Subtarget);
   Res = DAG.getBitcast(HalfVT, Res);
@@ -6830,10 +6850,11 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
         1 < count_if(Mask,
                      [&Mask](int Idx) { return Idx >= (int)Mask.size(); });
 
-    if (isLegalVTForZvzipOperand(VT, Subtarget)) {
+    if (isLegalVTForZvzipDeinterleavedOperand(VT, Subtarget)) {
       unsigned Opc = Index == 0 ? RISCVISD::VUNZIPE_VL : RISCVISD::VUNZIPO_VL;
       MVT NewVT = VT.getDoubleNumVectorElementsVT();
-      if (isTypeLegal(NewVT)) {
+      if (isTypeLegal(NewVT) &&
+          isLegalVTForZvzipInterleavedOperand(NewVT, Subtarget)) {
         SDValue Op;
         if (V2.isUndef()) {
           Op = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
@@ -6848,6 +6869,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
       }
 
       if (UsesBothSources &&
+          isLegalVTForZvzipInterleavedOperand(V1.getSimpleValueType(),
+                                              Subtarget) &&
           V1.getSimpleValueType().getVectorMinNumElements() >= 2 &&
           V2.getSimpleValueType().getVectorMinNumElements() >= 2) {
         SDValue Lo = lowerZvzipVUNZIP(Opc, V1, DL, DAG, Subtarget);
@@ -6897,7 +6920,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
 
     // Prefer vzip if available.
     // TODO: Extend to matching vzip if EvenSrc and OddSrc allow.
-    if (Subtarget.hasStdExtZvzip() && isLegalVTForZvzipOperand(VT, Subtarget))
+    if (Subtarget.hasStdExtZvzip() &&
+        isLegalVTForZvzipInterleavedOperand(VT, Subtarget))
       return lowerZvzipVZIP(EvenV, OddV, DL, DAG, Subtarget);
     return getWideningInterleave(EvenV, OddV, DL, DAG, Subtarget);
   }
@@ -13694,7 +13718,8 @@ SDValue RISCVTargetLowering::lowerVECTOR_DEINTERLEAVE(SDValue Op,
   if (Subtarget.hasStdExtZvzip() && Factor == 2 && !IsFixedVector) {
     MVT VT = Op->getSimpleValueType(0);
     MVT NewVT = VT.getDoubleNumVectorElementsVT();
-    if (isTypeLegal(NewVT) && isLegalVTForZvzipOperand(VT, Subtarget)) {
+    if (isTypeLegal(NewVT) &&
+        isLegalVTForZvzipDeinterleavedOperand(VT, Subtarget)) {
       SDValue V1 = Op->getOperand(0);
       SDValue V2 = Op->getOperand(1);
       SDValue V = DAG.getNode(ISD::CONCAT_VECTORS, DL, NewVT, V1, V2);
@@ -13979,7 +14004,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   if (Subtarget.hasStdExtZvzip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
     MVT VT = Op->getSimpleValueType(0);
-    if (isLegalVTForZvzipOperand(VT, Subtarget)) {
+    if (isLegalVTForZvzipDeinterleavedOperand(VT, Subtarget) &&
+        isLegalVTForZvzipInterleavedOperand(VT.getDoubleNumVectorElementsVT(),
+                                            Subtarget)) {
       // Freeze the sources so we can increase their use count.
       SDValue V1 = DAG.getFreeze(Op->getOperand(0));
       SDValue V2 = DAG.getFreeze(Op->getOperand(1));

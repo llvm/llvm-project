@@ -774,6 +774,12 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     Scale = LMUL.getScale(ElementBitwidth);
     ElementBitwidth = 1;
     break;
+  case VectorTypeModifier::DoubleLMULMaskVector:
+    ScalarType = ScalarTypeKind::Boolean;
+    LMUL.MulLog2LMUL(1);
+    Scale = LMUL.getScale(ElementBitwidth);
+    ElementBitwidth = 1;
+    break;
   case VectorTypeModifier::Log2EEW3:
     applyLog2EEW(3);
     break;
@@ -1098,8 +1104,8 @@ std::string RVVIntrinsic::getSuffixStr(
 
 llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
     llvm::ArrayRef<PrototypeDescriptor> Prototype, bool IsMasked,
-    bool HasMaskedOffOperand, bool HasVL, unsigned NF,
-    PolicyScheme DefaultScheme, Policy PolicyAttrs, bool IsTuple) {
+    bool HasMaskedOffOperand, bool MaskedPrototypeHasResultMask, bool HasVL,
+    unsigned NF, PolicyScheme DefaultScheme, Policy PolicyAttrs, bool IsTuple) {
   SmallVector<PrototypeDescriptor> NewPrototype(Prototype);
   bool HasPassthruOp = DefaultScheme == PolicyScheme::HasPassthruOperand;
   if (IsMasked) {
@@ -1140,7 +1146,14 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
                             PrototypeDescriptor::Mask);
     } else {
       // If IsMasked, insert PrototypeDescriptor:Mask as first input operand.
-      NewPrototype.insert(NewPrototype.begin() + 1, PrototypeDescriptor::Mask);
+      if (MaskedPrototypeHasResultMask)
+        NewPrototype.insert(
+            NewPrototype.begin() + 1,
+            PrototypeDescriptor(BaseTypeModifier::Vector,
+                                VectorTypeModifier::DoubleLMULMaskVector));
+      else
+        NewPrototype.insert(NewPrototype.begin() + 1,
+                            PrototypeDescriptor::Mask);
     }
   } else {
     if (NF == 1) {
@@ -1164,7 +1177,7 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
         NewPrototype.insert(NewPrototype.begin() + NF + 1, NF, MaskoffType);
       }
     }
- }
+  }
 
   // If HasVL, append PrototypeDescriptor:VL to last operand
   if (HasVL)
@@ -1301,6 +1314,8 @@ raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << "/*HasTailPolicy=*/" << (int)Record.HasTailPolicy << ", ";
   OS << "/*HasMaskPolicy=*/" << (int)Record.HasMaskPolicy << ", ";
   OS << "/*HasFRMRoundModeOp=*/" << (int)Record.HasFRMRoundModeOp << ", ";
+  OS << "/*MaskedPrototypeHasResultMask=*/"
+     << (int)Record.MaskedPrototypeHasResultMask << ", ";
   OS << "/*AltFmt=*/" << (int)Record.AltFmt << ",";
   OS << "/*IsTuple=*/" << (int)Record.IsTuple << ", ";
   OS << "/*UnMaskedPolicyScheme=*/" << (PolicyScheme)Record.UnMaskedPolicyScheme

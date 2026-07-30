@@ -785,6 +785,28 @@ class VPatUnaryVL_V<SDPatternOperator vop,
                    op1_reg_class:$rs2,
                    (mask_type VMV0:$vm), GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
 
+class VPatUnaryVLNoMask_V<SDPatternOperator vop,
+                          string instruction_name,
+                          string suffix,
+                          ValueType result_type,
+                          ValueType op1_type,
+                          int log2sew,
+                          LMULInfo vlmul,
+                          VReg result_reg_class,
+                          VReg op1_reg_class,
+                          bit isSEWAware = 0>
+    : Pat<(result_type (vop
+                       (op1_type op1_reg_class:$rs2),
+                       (result_type result_reg_class:$passthru),
+                       VLOpFrag)),
+      (!cast<Instruction>(
+                   !if(isSEWAware,
+                       instruction_name#"_"#suffix#"_"#vlmul.MX#"_E"#!shl(1, log2sew),
+                       instruction_name#"_"#suffix#"_"#vlmul.MX))
+                   result_reg_class:$passthru,
+                   op1_reg_class:$rs2,
+                   GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
+
 class VPatBinaryVL_V<SDPatternOperator vop,
                      string instruction_name,
                      string suffix,

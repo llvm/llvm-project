@@ -1637,7 +1637,7 @@ Experimental extensions
     zvvmm                0.1
     zvvmtls              0.1
     zvvmttls             0.1
-    zvzip                0.1
+    zvzip                0.2
     smpmpmt              0.6
     svukte               0.3
     xqccmt               0.1

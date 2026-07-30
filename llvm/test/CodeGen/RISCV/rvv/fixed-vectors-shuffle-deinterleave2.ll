@@ -415,8 +415,9 @@ define void @vnsrl_0_i64(ptr %in, ptr %out) {
 ; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vle64.v v8, (a0)
 ; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVZIP-NEXT:    vunzipe.v v10, v8
-; ZVZIP-NEXT:    vse64.v v10, (a1)
+; ZVZIP-NEXT:    vslidedown.vi v9, v8, 2
+; ZVZIP-NEXT:    vslideup.vi v8, v9, 1
+; ZVZIP-NEXT:    vse64.v v8, (a1)
 ; ZVZIP-NEXT:    ret
 entry:
   %0 = load <4 x i64>, ptr %in, align 8
@@ -450,7 +451,8 @@ define void @vnsrl_64_i64(ptr %in, ptr %out) {
 ; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vle64.v v8, (a0)
 ; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVZIP-NEXT:    vunzipo.v v10, v8
+; ZVZIP-NEXT:    vslidedown.vi v9, v8, 2
+; ZVZIP-NEXT:    vpairo.vv v10, v8, v9
 ; ZVZIP-NEXT:    vse64.v v10, (a1)
 ; ZVZIP-NEXT:    ret
 entry:
@@ -484,8 +486,9 @@ define void @vnsrl_0_double(ptr %in, ptr %out) {
 ; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vle64.v v8, (a0)
 ; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVZIP-NEXT:    vunzipe.v v10, v8
-; ZVZIP-NEXT:    vse64.v v10, (a1)
+; ZVZIP-NEXT:    vslidedown.vi v9, v8, 2
+; ZVZIP-NEXT:    vslideup.vi v8, v9, 1
+; ZVZIP-NEXT:    vse64.v v8, (a1)
 ; ZVZIP-NEXT:    ret
 entry:
   %0 = load <4 x double>, ptr %in, align 8
@@ -519,7 +522,8 @@ define void @vnsrl_64_double(ptr %in, ptr %out) {
 ; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; ZVZIP-NEXT:    vle64.v v8, (a0)
 ; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVZIP-NEXT:    vunzipo.v v10, v8
+; ZVZIP-NEXT:    vslidedown.vi v9, v8, 2
+; ZVZIP-NEXT:    vpairo.vv v10, v8, v9
 ; ZVZIP-NEXT:    vse64.v v10, (a1)
 ; ZVZIP-NEXT:    ret
 entry:
@@ -1525,13 +1529,15 @@ define <4 x i64> @unzip2a_dual_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; ZVZIP-LABEL: unzip2a_dual_v4i64:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVZIP-NEXT:    vmv1r.v v10, v9
-; ZVZIP-NEXT:    vunzipe.v v12, v10
-; ZVZIP-NEXT:    vunzipe.v v10, v8
+; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; ZVZIP-NEXT:    vmv.v.i v0, 8
+; ZVZIP-NEXT:    vslideup.vi v10, v9, 2
+; ZVZIP-NEXT:    vslideup.vi v10, v9, 1, v0.t
+; ZVZIP-NEXT:    vmv.v.i v0, 12
+; ZVZIP-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
+; ZVZIP-NEXT:    vunzipe.v v11, v8
 ; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; ZVZIP-NEXT:    vslideup.vi v10, v12, 2
-; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmerge.vvm v8, v11, v10, v0
 ; ZVZIP-NEXT:    ret
 entry:
   %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -1661,10 +1667,9 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ;
 ; ZVZIP-LABEL: unzip2a_dual_v16i64:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
+; ZVZIP-NEXT:    vsetivli zero, 16, e64, m4, ta, ma
 ; ZVZIP-NEXT:    vunzipe.v v16, v12
 ; ZVZIP-NEXT:    vunzipe.v v12, v8
-; ZVZIP-NEXT:    vsetivli zero, 16, e64, m4, ta, ma
 ; ZVZIP-NEXT:    vslideup.vi v12, v16, 8
 ; ZVZIP-NEXT:    vmv.v.v v8, v12
 ; ZVZIP-NEXT:    ret
@@ -1712,9 +1717,9 @@ define <4 x i64> @unzip2a_dual_v4i64_exact(<4 x i64> %a, <4 x i64> %b) vscale_ra
 ;
 ; ZVZIP-LABEL: unzip2a_dual_v4i64_exact:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; ZVZIP-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
 ; ZVZIP-NEXT:    vunzipe.v v10, v8
-; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmv1r.v v8, v10
 ; ZVZIP-NEXT:    ret
 entry:
   %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -1760,13 +1765,14 @@ define <4 x i64> @unzip2a_dual_v4i64_exact_nf2(<4 x i64> %a, <4 x i64> %b) vscal
 ;
 ; ZVZIP-LABEL: unzip2a_dual_v4i64_exact_nf2:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVZIP-NEXT:    vmv1r.v v10, v9
-; ZVZIP-NEXT:    vunzipe.v v12, v10
-; ZVZIP-NEXT:    vunzipe.v v10, v8
-; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, tu, ma
-; ZVZIP-NEXT:    vslideup.vi v10, v12, 2
-; ZVZIP-NEXT:    vmv1r.v v8, v10
+; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; ZVZIP-NEXT:    vmv.v.i v0, 8
+; ZVZIP-NEXT:    vslideup.vi v10, v9, 2
+; ZVZIP-NEXT:    vslideup.vi v10, v9, 1, v0.t
+; ZVZIP-NEXT:    vmv.v.i v0, 2
+; ZVZIP-NEXT:    vslidedown.vi v8, v8, 1, v0.t
+; ZVZIP-NEXT:    vmv.v.i v0, 12
+; ZVZIP-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; ZVZIP-NEXT:    ret
 entry:
   %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -1891,9 +1897,9 @@ define <16 x i64> @unzip2a_dual_v16i64_exact(<16 x i64> %a, <16 x i64> %b) vscal
 ;
 ; ZVZIP-LABEL: unzip2a_dual_v16i64_exact:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 16, e64, m4, ta, ma
+; ZVZIP-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; ZVZIP-NEXT:    vunzipe.v v16, v8
-; ZVZIP-NEXT:    vmv.v.v v8, v16
+; ZVZIP-NEXT:    vmv4r.v v8, v16
 ; ZVZIP-NEXT:    ret
 entry:
   %c = shufflevector <16 x i64> %a, <16 x i64> %b, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -1940,13 +1946,15 @@ define <4 x i64> @unzip2b_dual_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ;
 ; ZVZIP-LABEL: unzip2b_dual_v4i64:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; ZVZIP-NEXT:    vmv.v.i v0, 4
 ; ZVZIP-NEXT:    vmv1r.v v10, v9
-; ZVZIP-NEXT:    vunzipo.v v12, v10
-; ZVZIP-NEXT:    vunzipo.v v10, v8
+; ZVZIP-NEXT:    vslideup.vi v10, v9, 1, v0.t
+; ZVZIP-NEXT:    vmv.v.i v0, 12
+; ZVZIP-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
+; ZVZIP-NEXT:    vunzipo.v v11, v8
 ; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
-; ZVZIP-NEXT:    vslideup.vi v10, v12, 2
-; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmerge.vvm v8, v11, v10, v0
 ; ZVZIP-NEXT:    ret
 entry:
   %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -1993,9 +2001,9 @@ define <4 x i64> @unzip2b_dual_v4i64_exact(<4 x i64> %a, <4 x i64> %b) vscale_ra
 ;
 ; ZVZIP-LABEL: unzip2b_dual_v4i64_exact:
 ; ZVZIP:       # %bb.0: # %entry
-; ZVZIP-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; ZVZIP-NEXT:    vsetivli zero, 8, e64, m2, ta, ma
 ; ZVZIP-NEXT:    vunzipo.v v10, v8
-; ZVZIP-NEXT:    vmv.v.v v8, v10
+; ZVZIP-NEXT:    vmv1r.v v8, v10
 ; ZVZIP-NEXT:    ret
 entry:
   %c = shufflevector <4 x i64> %a, <4 x i64> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
