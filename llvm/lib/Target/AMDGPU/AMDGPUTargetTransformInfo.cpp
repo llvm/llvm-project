@@ -78,6 +78,27 @@ static cl::opt<size_t> InlineMaxBB(
     cl::desc("Maximum number of BBs allowed in a function after inlining"
              " (compile time constraint)"));
 
+static bool shouldDiscountPackedFP32Arithmetic(const GCNSubtarget *ST,
+                                               MVT LegalVT, unsigned ISDOpcode) {
+  if (!ST->hasPackedFP32Ops() || LegalVT.getScalarType() != MVT::f32)
+    return false;
+
+  if (!LegalVT.isVector() || LegalVT.getVectorNumElements() != 2)
+    return true;
+
+  // On gfx94x/gfx950, blindly applying the 2-for-1 packed-FP32 discount to
+  // simple arithmetic can make SLP form v2f32 trees that increase live packed
+  // values and block a better unpacked FMA-heavy shape. Keep the packed discount
+  // for fused/intrinsic operations, but make non-fused add/sub/mul pay their
+  // true lane cost on these subtargets.
+  if ((ST->hasGFX940Insts() || ST->hasGFX950Insts()) &&
+      (ISDOpcode == ISD::FADD || ISDOpcode == ISD::FSUB ||
+       ISDOpcode == ISD::FMUL))
+    return false;
+
+  return true;
+}
+
 // This default unroll factor is based on microbenchmarks on gfx1030.
 static cl::opt<unsigned> MemcpyLoopUnroll(
     "amdgpu-memcpy-loop-unroll",
@@ -605,7 +626,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
-    if (ST->hasPackedFP32Ops() && SLT == MVT::f32)
+    if (shouldDiscountPackedFP32Arithmetic(ST, LT.second, ISD))
       NElts = (NElts + 1) / 2;
     if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
       NElts = (NElts + 1) / 2;
