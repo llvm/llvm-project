@@ -62,6 +62,10 @@ Potentially breaking changes
   but causes programs which rely on these includes to not compile anymore. The ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23``
   macro that was provided in LLVM 23 to ease the transition has been removed in this release.
 
+- Libc++ now diagnoses when a method of ``std::vector<T>`` is used and ``T`` is an incomplete type. The Standard requires
+  ``T`` to be complete before any member function is used, however this worked unreliably for a few member functions. In
+  LLVM 24, this is diagnosed uniformly.
+
 Announcements About Future Releases
 -----------------------------------
 

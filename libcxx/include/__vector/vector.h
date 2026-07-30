@@ -65,6 +65,7 @@
 #include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <__utility/require_complete.h>
 #include <__utility/swap.h>
 #include <initializer_list>
 #include <limits>
@@ -348,43 +349,55 @@ public:
   // Iterators
   //
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return __make_iter(__add_alignment_assumption(this->__layout_.__begin_ptr()));
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return __make_iter(__add_alignment_assumption(this->__layout_.__begin_ptr()));
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return __make_iter(__add_alignment_assumption(__layout_.__end_ptr()));
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return __make_iter(__add_alignment_assumption(__layout_.__end_ptr()));
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return reverse_iterator(end());
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reverse_iterator
   rbegin() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return const_reverse_iterator(end());
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reverse_iterator rend() _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return reverse_iterator(begin());
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rend() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return const_reverse_iterator(begin());
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return begin();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return end();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reverse_iterator
   crbegin() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return rbegin();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reverse_iterator crend() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return rend();
   }
 
@@ -392,16 +405,20 @@ public:
   // [vector.capacity], capacity
   //
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return __layout_.__size();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type capacity() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return __layout_.__capacity();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return __layout_.__empty();
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
+    std::__require_complete<_Tp>();
     return std::min<size_type>(__alloc_traits::max_size(__layout_.__alloc()), numeric_limits<difference_type>::max());
   }
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void reserve(size_type __n);
