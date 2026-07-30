@@ -225,7 +225,7 @@ private:
   RT_API_ATTRS void CommitWrites();
   RT_API_ATTRS bool CheckDirectAccess(IoErrorHandler &);
   RT_API_ATTRS void HitEndOnRead(IoErrorHandler &);
-  RT_API_ATTRS std::uint32_t ReadHeaderOrFooter(std::int64_t frameOffset);
+  RT_API_ATTRS void ResetSequentialUnformattedStream();
 
   Lock lock_;
 
@@ -241,6 +241,10 @@ private:
   // manage the frame and the current record therein separately.
   std::int64_t frameOffsetInFile_{0};
   std::size_t recordOffsetInFrame_{0}; // of currentRecordNumber
+  std::int64_t unformattedDiskExtent_{0};
+  FileOffset streamReadPos_{0};
+  std::size_t streamReadRemain_{0};
+  bool streamRead_{false};
   bool swapEndianness_{false};
   bool createdForInternalChildIo_{false};
   common::BitSet<64> asyncIdAvailable_[maxAsyncIds / 64];
