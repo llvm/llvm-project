@@ -37,7 +37,7 @@ end module brute_force
 ! PASS-O2-PIPE-NOT:  Running pass: IPSCCPPass on [module]
 ! PASS-O2-PIPE:      Running pass: DeadArgumentEliminationPass on [module]
 
-! PASS-O2-IR-NOT:    .specialized.
+! PASS-O2-IR-NOT:    define {{.*}}@{{.*}}.specialized.
 
 ! PASS-O3-PIPE:      Running pass: IPSCCPPass on [module]
 ! PASS-O3-PIPE:      Running pass: InlinerPass on (
@@ -45,6 +45,4 @@ end module brute_force
 ! PASS-O3-PIPE:      Running pass: DeadArgumentEliminationPass on [module]
 
 ! PASS-O3-IR:        define void @{{.*}}top_level_caller
-! PASS-O3-IR:        call fastcc void @{{.*}}digits_2{{.*}}.specialized.{{.*}}()
-! PASS-O3-IR:        define internal fastcc void @{{.*}}digits_2{{.*}}.specialized.1()
-! PASS-O3-IR:        define internal fastcc void @{{.*}}digits_2{{.*}}.specialized.2()
+! PASS-O3-IR:        label %{{.*}}digits_2{{.*}}.specialized.

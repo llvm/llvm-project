@@ -1325,7 +1325,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // Run a second IPSCCP pass at O3 to resolve function specialization
   // opportunities exposed by loop rotation reference parameters
   // (e.g., Fortran pass-by-reference).
-  if (Level.getSpeedupLevel() >= 3 && Phase == ThinOrFullLTOPhase::None)
+  if (Level == OptimizationLevel::O3 && Phase == ThinOrFullLTOPhase::None)
     MPM.addPass(llvm::IPSCCPPass(IPSCCPOptions(/*AllowFuncSpec=*/true)));
 
   // Remove any dead arguments exposed by cleanups, constant folding globals,
