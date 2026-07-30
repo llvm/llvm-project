@@ -35,12 +35,12 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/AttrSubjectMatchRules.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
 #include "clang/Basic/LangOptions.h"
@@ -54,7 +54,6 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
@@ -157,6 +156,7 @@ enum class OverloadCandidateParamOrder : char;
 enum OverloadCandidateRewriteKind : unsigned;
 class OverloadCandidateSet;
 class Preprocessor;
+struct APINotesSelectorDiagnosticState;
 class SemaAMDGPU;
 class SemaARM;
 class SemaAVR;
@@ -1313,6 +1313,8 @@ public:
   SourceManager &SourceMgr;
   api_notes::APINotesManager APINotes;
 
+  std::unique_ptr<APINotesSelectorDiagnosticState> APINotesSelectorDiagnostics;
+
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {
   public:
@@ -1664,6 +1666,10 @@ public:
   void ApplyNullability(Decl *D, NullabilityKind Nullability);
   /// Apply the 'Type:' annotation to the specified declaration
   void ApplyAPINotesType(Decl *D, StringRef TypeString);
+
+  /// Diagnose exact API notes selectors that were not matched by any
+  /// declaration processed in this translation unit.
+  void DiagnoseUnusedAPINotesSelectors();
 
   /// Whether APINotes should be gathered for all applicable Swift language
   /// versions, without being applied. Leaving clients of the current module

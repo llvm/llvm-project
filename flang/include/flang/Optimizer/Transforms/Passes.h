@@ -9,6 +9,7 @@
 #ifndef FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 #define FORTRAN_OPTIMIZER_TRANSFORMS_PASSES_H
 
+#include "flang/Optimizer/Transforms/AllocationPlacementPolicy.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -40,6 +41,13 @@ enum class LICMNestedHoistingMode {
 #define GEN_PASS_DECL
 
 #include "flang/Optimizer/Transforms/Passes.h.inc"
+
+/// Create the allocation-placement pass with the given options and a hook that
+/// can override the thresholds per allocation (e.g. for device routines or
+/// parallel regions). This complements the tablegen-generated overloads.
+std::unique_ptr<mlir::Pass>
+createAllocationPlacement(const AllocationPlacementOptions &options,
+                          AllocationPlacementHook placementHook);
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
 std::unique_ptr<mlir::Pass>

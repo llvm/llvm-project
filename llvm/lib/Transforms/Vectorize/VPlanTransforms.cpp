@@ -885,10 +885,6 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
   if (!WideIV)
     return nullptr;
 
-  auto *WideIntOrFp = dyn_cast<VPWidenIntOrFpInductionRecipe>(WideIV);
-  if (WideIntOrFp && WideIntOrFp->getTruncInst())
-    return nullptr;
-
   // Calculate the final index.
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *CanonicalIV = LoopRegion->getCanonicalIV();
@@ -2660,14 +2656,18 @@ void VPlanTransforms::replaceSymbolicStrides(
     const VPDominatorTree &VPDT) {
   // Replace VPValues for known constant strides guaranteed by predicated scalar
   // evolution that are guaranteed to be guarded by the runtime checks; that is,
-  // blocks dominated by the vector preheader.
+  // blocks dominated by the vector header.
   assert(!Plan.getVectorLoopRegion() &&
          "expected to run before loop regions are created");
-  VPBlockBase *Preheader = Plan.getEntry()->getSuccessors()[1];
-  auto CanUseVersionedStride = [&VPDT, Preheader](VPUser &U, unsigned) {
+  const auto &[Header, _] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
+  auto CanUseVersionedStride = [&VPDT, Header = Header, &Plan](VPUser &U,
+                                                               unsigned Idx) {
     auto *R = cast<VPRecipeBase>(&U);
-    VPBlockBase *Parent = R->getParent();
-    return VPDT.dominates(Preheader, Parent);
+    // Skip phis if the loop if loop is not yet guarded.
+    if (isa<VPPhiAccessors>(R) &&
+        Header == Plan.getEntry()->getSingleSuccessor())
+      return false;
+    return VPDT.dominates(Header, R->getParent());
   };
   ValueToSCEVMapTy RewriteMap;
   for (const SCEV *Stride : StridesMap.values()) {
