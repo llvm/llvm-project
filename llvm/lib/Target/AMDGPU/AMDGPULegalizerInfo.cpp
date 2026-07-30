@@ -294,7 +294,6 @@ static LegalityPredicate elementTypeIsLegal(unsigned TypeIdx) {
   };
 }
 
-const LLT I16 = LLT::integer(16);
 constexpr LLT F16 = LLT::float16();
 constexpr LLT BF16 = LLT::bfloat16();
 constexpr LLT F32 = LLT::float32();
@@ -740,6 +739,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                                      V2S64};
 
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
+  const LLT MinExtendedFPTy = ST.has16BitInsts() ? F16 : F32;
+  const LLT I1 = LLT::integer(1);
+  const LLT I16 = LLT::integer(16);
+  const LLT I32 = LLT::integer(32);
+  const LLT I64 = LLT::integer(64);
+  const LLT V2I16 = LLT::fixed_vector(2, I16);
 
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
 
@@ -1224,48 +1229,45 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // TODO: Split s1->s64 during regbankselect for VALU.
   auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
-                    .legalFor({{S32, S32}, {S64, S32}})
-                    .widenScalarFor({{S16, S32}}, changeElementSizeTo(0, S32))
-                    .lowerIf(typeIs(1, S1))
-                    .customFor({{S32, S64}, {S64, S64}});
+                    .legalFor({{F32, I32}, {F64, I32}})
+                    .widenScalarFor({{F16, I32}}, changeElementSizeTo(0, F32))
+                    .lowerIf(typeIs(1, I1))
+                    .customFor({{F32, I64}, {F64, I64}});
   if (ST.has16BitInsts())
-    IToFP.legalFor({{S16, S16}});
-  IToFP.clampScalar(1, S32, S64)
-       .minScalar(0, S32)
-       .scalarize(0)
-       .widenScalarToNextPow2(1);
+    IToFP.legalFor({{F16, I16}});
+  IToFP.clampScalar(1, I32, I64)
+      .minScalar(0, F32)
+      .scalarize(0)
+      .widenScalarToNextPow2(1);
 
   auto &FPToI = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-                    .legalFor({{S32, S32}, {S32, S64}})
-                    .customFor({{S64, S32}, {S64, S64}})
-                    .widenScalarFor({{S32, S16}}, changeElementSizeTo(1, S32))
-                    .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32));
+                    .legalFor({{I32, F32}, {I32, F64}})
+                    .customFor({{I64, F32}, {I64, F64}})
+                    .widenScalarFor({{I32, F16}}, changeElementSizeTo(1, F32))
+                    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32));
   if (ST.has16BitInsts())
-    FPToI.legalFor({{S16, S16}});
+    FPToI.legalFor({{I16, F16}});
   else
-    FPToI.minScalar(1, S32);
+    FPToI.minScalar(1, F32);
 
-  FPToI.minScalar(0, S32)
-       .widenScalarToNextPow2(0, 32)
-       .scalarize(0)
-       .lower();
+  FPToI.minScalar(0, I32).widenScalarToNextPow2(0, 32).scalarize(0).lower();
 
   // clang-format off
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
-    .legalFor({{S32, S32}, {S32, S64}, {S16, S32}})
-    .legalFor(ST.has16BitInsts(), {{S16, S16}})
-    .legalFor(ST.hasVCvtPkIU16F32(), {{V2S16, V2S32}})
-    .narrowScalarFor({{S64, S16}}, changeElementSizeTo(0, S32));
+    .legalFor({{I32, F32}, {I32, F64}, {I16, F32}})
+    .legalFor(ST.has16BitInsts(), {{I16, F16}})
+    .legalFor(ST.hasVCvtPkIU16F32(), {{V2I16, V2F32}})
+    .narrowScalarFor({{I64, F16}}, changeElementSizeTo(0, I32));
 
   // If available, widen width <16 to i16, intead of i32 so v_cvt_i16/u16_f16 can be used.
   if (ST.has16BitInsts())
-    FPToISat.minScalarIf(typeIs(1, S16), 0, S16);
+    FPToISat.minScalarIf(typeIs(1, F16), 0, I16);
 
   if (ST.hasVCvtPkIU16F32())
-    FPToISat.clampMaxNumElements(0, S16, 2);
+    FPToISat.clampMaxNumElements(0, I16, 2);
 
-  FPToISat.minScalar(1, S32);
-  FPToISat.minScalar(0, S32)
+  FPToISat.minScalar(1, F32);
+  FPToISat.minScalar(0, I32)
        .widenScalarToNextPow2(0, 32)
        .scalarize(0)
        .lower();
@@ -1277,7 +1279,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
   getActionDefinitionsBuilder(G_INTRINSIC_FPTRUNC_ROUND)
-      .legalFor({S16, S32})
+      .legalFor({F16, F32})
       .scalarize(0)
       .lower();
 
@@ -1364,15 +1366,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // FIXME: fpow has a selection pattern that should move to custom lowering.
   auto &ExpOps = getActionDefinitionsBuilder(G_FPOW);
   if (ST.has16BitInsts())
-    ExpOps.customFor({{S32}, {S16}});
+    ExpOps.customFor({{F32}, {F16}});
   else
-    ExpOps.customFor({S32});
-  ExpOps.clampScalar(0, MinScalarFPTy, S32)
-        .scalarize(0);
+    ExpOps.customFor({F32});
+  ExpOps.clampScalar(0, MinExtendedFPTy, F32).scalarize(0);
 
   getActionDefinitionsBuilder(G_FPOWI)
-    .clampScalar(0, MinScalarFPTy, S32)
-    .lower();
+      .clampScalar(0, MinExtendedFPTy, F32)
+      .lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {S16})
