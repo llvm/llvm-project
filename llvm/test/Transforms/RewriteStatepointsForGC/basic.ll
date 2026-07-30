@@ -8,7 +8,7 @@ define ptr addrspace(1) @f0(ptr addrspace(1) %arg) gc "statepoint-example" {
 ; CHECK-LABEL: @f0(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @g, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(ptr addrspace(1) [[ARG:%.*]]) ]
-; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[ARG_RELOCATED]]
 ;
   entry:
@@ -23,12 +23,12 @@ define ptr addrspace(1) @f1(ptr addrspace(1) %arg) gc "statepoint-example"  pers
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @g, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(ptr addrspace(1) [[ARG:%.*]]) ]
 ; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
-; CHECK-NEXT:    [[ARG_RELOCATED1:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_RELOCATED1:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[ARG_RELOCATED1]]
 ; CHECK:       unwind_dest:
 ; CHECK-NEXT:    [[LPAD:%.*]] = landingpad token
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 0)
 ; CHECK-NEXT:    resume token undef
 ;
   entry:
@@ -47,7 +47,7 @@ define ptr addrspace(1) @f2(ptr addrspace(1) %arg) gc "statepoint-example" {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(i32 ()) @h, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 100), "gc-live"(ptr addrspace(1) [[ARG:%.*]]) ]
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.experimental.gc.result.i32(token [[STATEPOINT_TOKEN]])
-; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    store i32 [[VAL1]], ptr addrspace(1) [[ARG_RELOCATED]], align 4
 ; CHECK-NEXT:    ret ptr addrspace(1) [[ARG_RELOCATED]]
 ;
@@ -66,13 +66,13 @@ define ptr addrspace(1) @f3(ptr addrspace(1) %arg) gc "statepoint-example"  pers
 ; CHECK-NEXT:    to label [[NORMAL_DEST:%.*]] unwind label [[UNWIND_DEST:%.*]]
 ; CHECK:       normal_dest:
 ; CHECK-NEXT:    [[VAL1:%.*]] = call i32 @llvm.experimental.gc.result.i32(token [[STATEPOINT_TOKEN]])
-; CHECK-NEXT:    [[ARG_RELOCATED2:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_RELOCATED2:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    store i32 [[VAL1]], ptr addrspace(1) [[ARG_RELOCATED2]], align 4
 ; CHECK-NEXT:    ret ptr addrspace(1) [[ARG_RELOCATED2]]
 ; CHECK:       unwind_dest:
 ; CHECK-NEXT:    [[LPAD:%.*]] = landingpad token
 ; CHECK-NEXT:    cleanup
-; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[LPAD]], i32 0, i32 0)
 ; CHECK-NEXT:    resume token undef
 ;
   entry:
@@ -93,7 +93,7 @@ define ptr addrspace(1) @f4(ptr addrspace(1) %arg) gc "statepoint-example" {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @g, i32 0, i32 1, i32 0, i32 0) [ "gc-transition"(i32 400, i8 90), "gc-live"(ptr addrspace(1) [[ARG:%.*]]) ]
-; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[ARG_RELOCATED]]
 ;
   entry:

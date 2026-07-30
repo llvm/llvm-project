@@ -23,7 +23,7 @@ unwind_dest:                                      ; preds = %entry
 normal_dest:                                      ; preds = %entry
 ; CHECK: normal_dest:
 ; CHECK-NEXT: gc.statepoint
-; CHECK-NEXT: %obj.relocated = call coldcc ptr addrspace(1)
+; CHECK-NEXT: %obj.relocated = call ptr addrspace(1)
 
   call void @gc_call() [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0) ]
   ret ptr addrspace(1) %obj

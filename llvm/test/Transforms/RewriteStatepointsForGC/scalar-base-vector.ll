@@ -22,8 +22,8 @@ define ptr addrspace(1) @test1(ptr addrspace(1) %base1, <2 x i64> %offsets, i1 %
 ; CHECK-NEXT:    [[PTR_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[DOTSPLAT_BASE]], i32 1, !is_base_value !0
 ; CHECK-NEXT:    [[PTR:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC]], i32 1
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN2:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "deopt"(i32 0, i32 -1, i32 0, i32 0, i32 0), "gc-live"(ptr addrspace(1) [[PTR]], ptr addrspace(1) [[PTR_BASE]]) ]
-; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN2]], i32 1, i32 0)
-; CHECK-NEXT:    [[PTR_BASE_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN2]], i32 1, i32 1)
+; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN2]], i32 1, i32 0)
+; CHECK-NEXT:    [[PTR_BASE_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN2]], i32 1, i32 1)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[PTR_RELOCATED]]
 ;
 entry:
@@ -52,8 +52,8 @@ define ptr addrspace(1) @test2(ptr addrspace(1) %base, <2 x i64> %offsets) gc "s
 ; CHECK-NEXT:    [[PTR_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[DOTSPLAT_BASE]], i32 1, !is_base_value !0
 ; CHECK-NEXT:    [[PTR:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC]], i32 1
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[PTR]], ptr addrspace(1) [[PTR_BASE]]) ]
-; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[PTR_BASE_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[PTR_BASE_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[PTR_RELOCATED]]
 ;
 entry:
@@ -71,8 +71,8 @@ define ptr addrspace(1) @test3(<2 x ptr addrspace(1)> %base, <2 x i64> %offsets)
 ; CHECK-NEXT:    [[BASE_EE:%.*]] = extractelement <2 x ptr addrspace(1)> [[BASE]], i32 1, !is_base_value !0
 ; CHECK-NEXT:    [[PTR:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC]], i32 1
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) [[PTR]], ptr addrspace(1) [[BASE_EE]]) ]
-; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[BASE_EE_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[PTR_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[BASE_EE_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[PTR_RELOCATED]]
 ;
 entry:
@@ -92,8 +92,8 @@ define ptr addrspace(1) @test4(ptr addrspace(1) %base, <2 x i64> %offsets) gc "s
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x ptr addrspace(1)> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x ptr addrspace(1)> [[VEC]], <2 x ptr addrspace(1)> [[DOTSPLAT_BASE]]) ]
-; CHECK-NEXT:    [[VEC_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
-; CHECK-NEXT:    [[DOTSPLAT_BASE_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
+; CHECK-NEXT:    [[VEC_RELOCATED:%.*]] = call <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[DOTSPLAT_BASE_RELOCATED:%.*]] = call <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 1, i32 1)
 ; CHECK-NEXT:    [[PTR:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_RELOCATED]], i32 1
 ; CHECK-NEXT:    ret ptr addrspace(1) [[PTR]]
 ;
@@ -110,7 +110,7 @@ define ptr addrspace(1) @test5(<2 x ptr addrspace(1)> %base, <2 x i64> %offsets)
 ; CHECK-NEXT:    [[BASE_I32:%.*]] = bitcast <2 x ptr addrspace(1)> [[BASE:%.*]] to <2 x ptr addrspace(1)>
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x ptr addrspace(1)> [[BASE_I32]], <2 x i64> [[OFFSETS:%.*]]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x ptr addrspace(1)> [[BASE]]) ]
-; CHECK-NEXT:    [[BASE_RELOCATED:%.*]] = call coldcc <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[BASE_RELOCATED:%.*]] = call <2 x ptr addrspace(1)> @llvm.experimental.gc.relocate.v2p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    [[BASE_I32_REMAT:%.*]] = bitcast <2 x ptr addrspace(1)> [[BASE_RELOCATED]] to <2 x ptr addrspace(1)>
 ; CHECK-NEXT:    [[VEC_REMAT:%.*]] = getelementptr i32, <2 x ptr addrspace(1)> [[BASE_I32_REMAT]], <2 x i64> [[OFFSETS]]
 ; CHECK-NEXT:    [[PTR:%.*]] = extractelement <2 x ptr addrspace(1)> [[VEC_REMAT]], i32 0
@@ -133,7 +133,7 @@ define void @test6(i1 %c) gc "statepoint-example" {
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @spam, i32 0, i32 0, i32 0, i32 0) [ "deopt"(ptr addrspace(1) [[TMP]]), "gc-live"(ptr addrspace(1) [[TMP]]) ]
-; CHECK-NEXT:    [[TMP_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[TMP_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    br label [[BB25:%.*]]
 ; CHECK:       bb25:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN1:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(<2 x ptr addrspace(1)> ()) @baz, i32 0, i32 0, i32 0, i32 0)

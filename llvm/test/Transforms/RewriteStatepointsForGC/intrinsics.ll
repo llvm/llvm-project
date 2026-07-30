@@ -28,7 +28,7 @@ define ptr addrspace(1) @test_simple(ptr addrspace(1) %obj1, ptr addrspace(1) %o
 ; CHECK-NEXT:    [[OBJ_Y_INT:%.*]] = ptrtoint ptr addrspace(1) [[OBJ_Y]] to i64
 ; CHECK-NEXT:    [[OBJ_YA_OFFSET:%.*]] = sub i64 [[OBJ_Y_INT]], [[OBJ_Y_BASE_INT]]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(ptr addrspace(1) [[OBJ_X_BASE1]], i64 [[OBJ_X_OFFSET]], ptr addrspace(1) [[OBJ_X_BASE1]], i64 [[OBJ_X_OFFSET]], ptr addrspace(1) [[OBJ_Y_BASE]], i64 [[OBJ_YA_OFFSET]]), "gc-live"(ptr addrspace(1) [[OBJ_Y]], ptr addrspace(1) [[OBJ_Y_BASE]]) ]
-; CHECK-NEXT:    [[OBJ_Y_RELOCATED:%.*]] = call coldcc nonnull ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
+; CHECK-NEXT:    [[OBJ_Y_RELOCATED:%.*]] = call nonnull ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 1, i32 0)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[OBJ_Y_RELOCATED]]
 ;
 entry:
@@ -73,7 +73,7 @@ define ptr addrspace(1) @test_chained(ptr addrspace(1) %obj1, ptr addrspace(1) %
 ; CHECK-NEXT:    [[OBJ_X_BASE_OF_BASE_GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[OBJ_X_BASE1]], i64 20
 ; CHECK-NEXT:    [[OBJ_X_BASE_OF_BASE_OF_BASE_GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[OBJ_X_BASE1]], i64 24
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(void ()) @foo, i32 0, i32 0, i32 0, i32 0) [ "deopt"(ptr addrspace(1) [[OBJ_X_BASE1]], ptr addrspace(1) [[OBJ_X_BASE1]], ptr addrspace(1) [[OBJ_X_BASE1]], ptr addrspace(1) [[OBJ_X_BASE_GEP]], ptr addrspace(1) [[OBJ_X_BASE_OF_BASE_GEP]], ptr addrspace(1) [[OBJ_X_BASE_OF_BASE_OF_BASE_GEP]], ptr addrspace(1) [[OBJ_X_BASE1]], ptr addrspace(1) [[OBJ_X_BASE1]], ptr addrspace(1) [[OBJ_X_BASE1]], i64 0, i64 0, i64 0, i64 8, i64 20, i64 24, i64 0, i64 0, i64 0), "gc-live"(ptr addrspace(1) [[OBJ_X_BASE1]]) ]
-; CHECK-NEXT:    [[OBJ_X_BASE1_RELOCATED:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
+; CHECK-NEXT:    [[OBJ_X_BASE1_RELOCATED:%.*]] = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[STATEPOINT_TOKEN]], i32 0, i32 0)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[OBJ_X_BASE1_RELOCATED]]
 ;
 entry:
