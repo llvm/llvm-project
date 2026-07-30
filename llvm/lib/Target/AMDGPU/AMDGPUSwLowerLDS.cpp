@@ -303,17 +303,21 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSArguments(const CallGraph &CG) {
   }
 }
 
-// True if flat pointer V is derived from an LDS-carrying argument in LDSArgs,
-// looking through GEP/bitcast/phi/select; Visited breaks phi cycles. When
-// AcceptLocalCast is set, a flat<-local addrspacecast also counts as an origin.
-// Detection (getNonKernelsWithLDSFlatArguments) sets it, since that cast is how
-// LDS first enters a flat pointer; the rewrite
-// (getFlatPtrForRoundTripLDSAccess) leaves it clear so only argument origins
-// qualify.
-static bool flatPtrDerivesFromLDS(Value *V,
-                                  const SmallPtrSetImpl<Argument *> &LDSArgs,
-                                  SmallPtrSetImpl<Value *> &Visited,
-                                  bool AcceptLocalCast) {
+/// Returns true if the flat pointer \p V is derived from an LDS-carrying
+/// argument in \p LDSArgs, looking through GEP/bitcast/phi/select.
+///
+/// \param V The flat pointer value to test.
+/// \param LDSArgs Arguments known to carry LDS-backed storage.
+/// \param Visited Set of already-visited values, used to break phi cycles.
+/// \param AcceptLocalCast If set, a flat<-local addrspacecast also counts as
+///        an origin. Detection (getNonKernelsWithLDSFlatArguments) sets this,
+///        since that cast is how LDS first enters a flat pointer; the
+///        rewrite (getFlatPtrForRoundTripLDSAccess) leaves it clear so only
+///        argument origins qualify.
+static bool isFlatPtrDerivedFromLDS(Value *V,
+                                    const SmallPtrSetImpl<Argument *> &LDSArgs,
+                                    SmallPtrSetImpl<Value *> &Visited,
+                                    bool AcceptLocalCast) {
   if (!V->getType()->isPointerTy() || !Visited.insert(V).second)
     return false;
   if (auto *A = dyn_cast<Argument>(V))
@@ -328,23 +332,23 @@ static bool flatPtrDerivesFromLDS(Value *V,
     Value *Src = Op->getOperand(0);
     if (Src->getType()->getPointerAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
       return true;
-    return flatPtrDerivesFromLDS(Src, LDSArgs, Visited, AcceptLocalCast);
+    return isFlatPtrDerivedFromLDS(Src, LDSArgs, Visited, AcceptLocalCast);
   }
   case Instruction::GetElementPtr:
   case Instruction::BitCast:
-    return flatPtrDerivesFromLDS(Op->getOperand(0), LDSArgs, Visited,
-                                 AcceptLocalCast);
+    return isFlatPtrDerivedFromLDS(Op->getOperand(0), LDSArgs, Visited,
+                                   AcceptLocalCast);
   case Instruction::PHI:
     for (Value *In : cast<PHINode>(Op)->incoming_values())
-      if (flatPtrDerivesFromLDS(In, LDSArgs, Visited, AcceptLocalCast))
+      if (isFlatPtrDerivedFromLDS(In, LDSArgs, Visited, AcceptLocalCast))
         return true;
     return false;
   case Instruction::Select: {
     auto *SI = cast<SelectInst>(Op);
-    return flatPtrDerivesFromLDS(SI->getTrueValue(), LDSArgs, Visited,
-                                 AcceptLocalCast) ||
-           flatPtrDerivesFromLDS(SI->getFalseValue(), LDSArgs, Visited,
-                                 AcceptLocalCast);
+    return isFlatPtrDerivedFromLDS(SI->getTrueValue(), LDSArgs, Visited,
+                                   AcceptLocalCast) ||
+           isFlatPtrDerivedFromLDS(SI->getFalseValue(), LDSArgs, Visited,
+                                   AcceptLocalCast);
   }
   default:
     return false;
@@ -374,8 +378,8 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSFlatArguments() {
           Function *Callee = CB->getCalledFunction();
           if (!Callee || Callee->isDeclaration() || AMDGPU::isKernel(*Callee))
             continue;
-          unsigned NumArgs =
-              std::min(CB->arg_size(), (unsigned)Callee->arg_size());
+          unsigned NumArgs = std::min(
+              CB->arg_size(), static_cast<unsigned>(Callee->arg_size()));
           for (unsigned ArgNo = 0; ArgNo < NumArgs; ++ArgNo) {
             Argument *CalleeArg = Callee->getArg(ArgNo);
             Type *ArgTy = CalleeArg->getType();
@@ -384,8 +388,8 @@ void AMDGPUSwLowerLDS::getNonKernelsWithLDSFlatArguments() {
               continue;
             Value *Actual = CB->getArgOperand(ArgNo);
             SmallPtrSet<Value *, 8> Visited;
-            if (!flatPtrDerivesFromLDS(Actual, CallerLDSArgs, Visited,
-                                       /*AcceptLocalCast=*/true))
+            if (!isFlatPtrDerivedFromLDS(Actual, CallerLDSArgs, Visited,
+                                         /*AcceptLocalCast=*/true))
               continue;
             if (FlatArgMap[Callee].insert(CalleeArg).second)
               Changed = true;
@@ -958,17 +962,16 @@ Value *AMDGPUSwLowerLDS::getFlatPtrForRoundTripLDSAccess(Function *Func,
     Cur = GEP->getPointerOperand();
   }
 
-  auto *ASC = dyn_cast<Operator>(Cur);
-  if (!ASC || ASC->getOpcode() != Instruction::AddrSpaceCast)
+  auto *ASC = dyn_cast<AddrSpaceCastOperator>(Cur);
+  if (!ASC || ASC->getSrcAddressSpace() != AMDGPUAS::FLAT_ADDRESS ||
+      ASC->getDestAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
     return nullptr;
-  Value *FlatSrc = ASC->getOperand(0);
-  if (FlatSrc->getType()->getPointerAddressSpace() != AMDGPUAS::FLAT_ADDRESS)
-    return nullptr;
+  Value *FlatSrc = ASC->getPointerOperand();
 
   // The flat source must trace back to an LDS-carrying arg.
   SmallPtrSet<Value *, 8> Visited;
-  if (!flatPtrDerivesFromLDS(FlatSrc, LDSArgs, Visited,
-                             /*AcceptLocalCast=*/false))
+  if (!isFlatPtrDerivedFromLDS(FlatSrc, LDSArgs, Visited,
+                               /*AcceptLocalCast=*/false))
     return nullptr;
 
   // Re-apply the peeled GEPs in the flat address space.
