@@ -10,6 +10,7 @@
 #define _LIBCPP___PSTL_BACKENDS_STD_THREAD_H
 
 #include <__config>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
@@ -23,7 +24,6 @@
 #include <__pstl/cpu_algos/transform_reduce.h>
 #include <__utility/empty.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

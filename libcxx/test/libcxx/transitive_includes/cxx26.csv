@@ -637,7 +637,6 @@ memory cwchar
 memory cwctype
 memory initializer_list
 memory limits
-memory optional
 memory ratio
 memory tuple
 memory typeinfo
@@ -674,7 +673,6 @@ numeric cwchar
 numeric cwctype
 numeric initializer_list
 numeric limits
-numeric optional
 numeric ratio
 numeric tuple
 numeric version
@@ -772,7 +770,6 @@ random initializer_list
 random iosfwd
 random limits
 random numeric
-random optional
 random ratio
 random stdexcept
 random string

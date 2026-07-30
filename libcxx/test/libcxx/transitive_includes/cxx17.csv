@@ -143,7 +143,6 @@ barrier iterator
 barrier limits
 barrier memory
 barrier new
-barrier optional
 barrier ratio
 barrier stdexcept
 barrier tuple
@@ -1390,9 +1389,7 @@ memory initializer_list
 memory iosfwd
 memory iterator
 memory limits
-memory memory
 memory new
-memory optional
 memory ratio
 memory stdexcept
 memory tuple
@@ -1553,7 +1550,6 @@ optional iterator
 optional limits
 optional memory
 optional new
-optional optional
 optional ratio
 optional stdexcept
 optional tuple
@@ -1859,7 +1855,6 @@ scoped_allocator iterator
 scoped_allocator limits
 scoped_allocator memory
 scoped_allocator new
-scoped_allocator optional
 scoped_allocator ratio
 scoped_allocator stdexcept
 scoped_allocator tuple
