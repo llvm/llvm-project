@@ -44,7 +44,8 @@ private:
   bool expandMovImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandMovAddr(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandMERGE(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
-  bool expandAddUpperImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
+  bool expandAddUpperImm(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI);
 };
 
 char RISCVPostRAExpandPseudo::ID = 0;
@@ -124,8 +125,8 @@ bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
   return true;
 }
 
-bool RISCVPostRAExpandPseudo::expandAddUpperImm(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator MBBI) {
+bool RISCVPostRAExpandPseudo::expandAddUpperImm(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = MBBI->getDebugLoc();
 
   Register DstReg = MBBI->getOperand(0).getReg();
