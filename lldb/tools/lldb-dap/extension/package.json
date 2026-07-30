@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.6.1",
+  "version": "0.6.2-dev.9",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -57,12 +57,13 @@
   "scripts": {
     "bundle-extension": "npx tsc -p ./ --noEmit && npx esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node22 --minify",
     "bundle-symbols-table-view": "npx tsc -p src/webview --noEmit && npx esbuild src/webview/symbols-table-view.ts --bundle --format=iife --outdir=./out/webview",
-    "bundle-tabulator": "cp node_modules/tabulator-tables/dist/js/tabulator.min.js ./out/webview/ && cp node_modules/tabulator-tables/dist/css/tabulator_midnight.min.css ./out/webview/ && cp node_modules/tabulator-tables/dist/css/tabulator_simple.min.css ./out/webview/",
+    "bundle-tabulator": "node -e \"const fs=require('fs'),path=require('path');for(const f of ['dist/js/tabulator.min.js','dist/css/tabulator_midnight.min.css','dist/css/tabulator_simple.min.css'])fs.copyFileSync('node_modules/tabulator-tables/'+f,'./out/webview/'+path.basename(f))\"",
     "bundle-webview": "npm run bundle-symbols-table-view && npm run bundle-tabulator",
-    "vscode:prepublish": "npm run bundle-webview && npm run bundle-extension",
+    "sync-readme": "node -e \"require('fs').copyFileSync('../README.md', './README.md')\"",
+    "vscode:prepublish": "npm run sync-readme && npm run bundle-webview && npm run bundle-extension",
     "watch": "npm run bundle-webview && tsc -watch -p ./",
     "format": "npx prettier . --write",
-    "package": "rm -rf ./out && vsce package --out ./out/lldb-dap.vsix",
+    "package": "node -e \"require('fs').rmSync('./out',{recursive:true,force:true})\" && vsce package --out ./out/lldb-dap.vsix",
     "compile-debug": "npm run bundle-webview && npx esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node22 --sourcemap",
     "compile": "tsc -p ./",
     "publish": "vsce publish",
@@ -143,7 +144,7 @@
             "scope": "resource",
             "type": "object",
             "default": {},
-            "description": "The environment of the lldb-dap process.",
+            "markdownDescription": "The environment of the `lldb-dap` process.\n\nOn Windows, the extension does not auto-set `LLDB_PYTHON_LIBRARY` from `PYTHONHOME` or `PATH`. LLDB can still discover Python using its normal runtime search and the inherited process environment. Set `LLDB_PYTHON_LIBRARY` only when you need to force a specific Python DLL.",
             "additionalProperties": {
               "type": "string"
             }
@@ -452,7 +453,7 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`.\n\nOn Windows, the extension does not auto-set `LLDB_PYTHON_LIBRARY` from `PYTHONHOME` or `PATH`. LLDB can still discover Python using its normal runtime search and the inherited process environment. Set `LLDB_PYTHON_LIBRARY` only when you need to force a specific Python DLL.",
                     "patternProperties": {
                       ".*": {
                         "type": "string"
@@ -462,7 +463,7 @@
                   },
                   {
                     "type": "array",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`.\n\nOn Windows, the extension does not auto-set `LLDB_PYTHON_LIBRARY` from `PYTHONHOME` or `PATH`. LLDB can still discover Python using its normal runtime search and the inherited process environment. Set `LLDB_PYTHON_LIBRARY` only when you need to force a specific Python DLL.",
                     "items": {
                       "type": "string",
                       "pattern": "^\\w+(=.*)?$"
@@ -734,7 +735,7 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `{ \"FOO\": \"1\" }`.\n\nOn Windows, the extension does not auto-set `LLDB_PYTHON_LIBRARY` from `PYTHONHOME` or `PATH`. LLDB can still discover Python using its normal runtime search and the inherited process environment. Set `LLDB_PYTHON_LIBRARY` only when you need to force a specific Python DLL.",
                     "patternProperties": {
                       ".*": {
                         "type": "string"
@@ -744,7 +745,7 @@
                   },
                   {
                     "type": "array",
-                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`",
+                    "markdownDescription": "Additional environment variables to set when launching the debug adapter executable. For example `[\"FOO=1\", \"BAR\"]`.\n\nOn Windows, the extension does not auto-set `LLDB_PYTHON_LIBRARY` from `PYTHONHOME` or `PATH`. LLDB can still discover Python using its normal runtime search and the inherited process environment. Set `LLDB_PYTHON_LIBRARY` only when you need to force a specific Python DLL.",
                     "items": {
                       "type": "string",
                       "pattern": "^\\w+(=.*)?$"

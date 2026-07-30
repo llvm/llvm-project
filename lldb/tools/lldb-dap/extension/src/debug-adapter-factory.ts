@@ -3,6 +3,11 @@ import * as fs from "node:fs/promises";
 import * as path from "path";
 import * as util from "util";
 import * as vscode from "vscode";
+import {
+  applyEnvironmentOverrides,
+  getEnvironmentKey,
+  setEnvironmentValue,
+} from "./compatibility-utils";
 import { LogFilePathProvider, LogType } from "./logging";
 import { ErrorWithNotification } from "./ui/error-with-notification";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
@@ -17,6 +22,61 @@ async function isExecutable(path: string): Promise<Boolean> {
     return false;
   }
   return true;
+}
+
+export function resolveWindowsPythonRuntimeLibrary(
+  env: { [key: string]: string },
+  platform: NodeJS.Platform = process.platform,
+): string | undefined {
+  if (platform !== "win32") {
+    return undefined;
+  }
+
+  const configuredKey = getEnvironmentKey(env, "LLDB_PYTHON_LIBRARY");
+  if (!configuredKey) {
+    return undefined;
+  }
+
+  const configured = env[configuredKey];
+  return configured && configured.length > 0 ? configured : undefined;
+}
+
+function configureWindowsPythonEnvironment(
+  env: { [key: string]: string },
+  pythonRuntimeLibrary: string,
+): void {
+  const pythonDirectory = path.dirname(pythonRuntimeLibrary);
+  setEnvironmentValue(env, "LLDB_PYTHON_LIBRARY", pythonRuntimeLibrary);
+
+  const pathKey = getEnvironmentKey(env, "PATH") ?? "PATH";
+  const pathValue = env[pathKey] ?? "";
+  const pathEntries = pathValue.length > 0 ? pathValue.split(path.delimiter) : [];
+  const normalizedPythonDirectory = path.normalize(pythonDirectory).toLowerCase();
+  const hasPythonDirectory = pathEntries.some(
+    (entry) => path.normalize(entry).toLowerCase() === normalizedPythonDirectory,
+  );
+  if (!hasPythonDirectory) {
+    env[pathKey] =
+      pathEntries.length > 0
+        ? `${pythonDirectory}${path.delimiter}${pathValue}`
+        : pythonDirectory;
+  }
+}
+
+function sanitizeEnvironmentForLogging(env: { [key: string]: string }): {
+  [key: string]: string;
+} {
+  const redactedEnvironment: { [key: string]: string } = {};
+  const sensitiveKeyPattern =
+    /(token|secret|password|passphrase|api[_-]?key|auth|credential|pat)/i;
+
+  for (const [key, value] of Object.entries(env)) {
+    redactedEnvironment[key] = sensitiveKeyPattern.test(key)
+      ? "<redacted>"
+      : value;
+  }
+
+  return redactedEnvironment;
 }
 
 async function findWithXcrun(executable: string): Promise<string | undefined> {
@@ -274,19 +334,47 @@ export async function createDebugAdapterExecutable(
   );
   const dapPath = await getDAPExecutable(workspaceFolder, configuration);
 
+  // Preserve the extension host environment (including PATH and Python-
+  // related variables) so lldb-dap can resolve its runtime dependencies.
+  const inheritedEnvironment: { [key: string]: string } = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) {
+      inheritedEnvironment[key] = value;
+    }
+  }
+
+  // Apply overrides through applyEnvironmentOverrides rather than spreading:
+  // on Windows, environment variable names are case-insensitive, so a naive
+  // spread could leave both an inherited "Path" and a configured "PATH" in
+  // the resulting object, silently ignoring the configured override.
+  const mergedEnvironment: { [key: string]: string } = {
+    ...inheritedEnvironment,
+  };
+  applyEnvironmentOverrides(mergedEnvironment, configEnvironment);
+  applyEnvironmentOverrides(mergedEnvironment, env);
+
   const dbgOptions = {
-    env: {
-      ...configEnvironment,
-      ...env,
-    },
+    env: mergedEnvironment,
     cwd: configuration.cwd ?? workspaceFolder?.uri.fsPath,
   };
+
+  const pythonRuntimeLibrary = resolveWindowsPythonRuntimeLibrary(
+    dbgOptions.env,
+  );
+  if (pythonRuntimeLibrary) {
+    configureWindowsPythonEnvironment(dbgOptions.env, pythonRuntimeLibrary);
+  }
+
   const dbgArgs = await getDAPArguments(workspaceFolder, configuration);
 
   logger.info(`lldb-dap path: ${dapPath}`);
   logger.info(`lldb-dap args: ${dbgArgs}`);
   logger.info(`cwd: ${dbgOptions.cwd}`);
-  logger.info(`env: ${JSON.stringify(dbgOptions.env)}`);
+  logger.info(
+    `configured env: ${JSON.stringify(
+      sanitizeEnvironmentForLogging(configEnvironment),
+    )}`,
+  );
 
   return new vscode.DebugAdapterExecutable(dapPath, dbgArgs, dbgOptions);
 }

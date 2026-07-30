@@ -1,5 +1,10 @@
 # LLDB DAP
 
+> **Windows:** the extension does not auto-set `LLDB_PYTHON_LIBRARY` from `PYTHONHOME`
+> or `PATH`. LLDB can still discover Python using its normal runtime search and the
+> inherited process environment. Set `LLDB_PYTHON_LIBRARY` only when you need to
+> force a specific Python DLL.
+
 ## Procuring the `lldb-dap` binary
 
 The extension requires the `lldb-dap` (formerly `lldb-vscode`) binary.
