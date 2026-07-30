@@ -367,6 +367,22 @@ add_entrypoint_object(
     libc.hdr.types.size_t
 )
 
+add_entrypoint_object(
+  qsort_s
+  SRCS
+    qsort_s.cpp
+  HDRS
+    qsort_s.h
+  DEPENDS
+    .qsort_util
+    libc.hdr.stdint_proxy
+    libc.hdr.types.errno_t
+    libc.hdr.types.rsize_t
+    libc.src.__support.common
+    libc.src.__support.constraint_handler
+    libc.src.__support.macros.config
+)
+
 add_object_library(
   rand_util
   SRCS

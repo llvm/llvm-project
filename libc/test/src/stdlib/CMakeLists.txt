@@ -367,6 +367,22 @@ add_libc_test(
 )
 
 add_libc_test(
+  qsort_s_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    qsort_s_test.cpp
+  HDRS
+    QsortReentrantTest.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.errno_t
+    libc.hdr.types.rsize_t
+    libc.src.stdlib.qsort_s
+    libc.test.UnitTest.ConstraintHandlerCheckingTest
+)
+
+add_libc_test(
   rand_test
   SUITE
     libc-stdlib-tests
