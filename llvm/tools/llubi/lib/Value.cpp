@@ -48,7 +48,7 @@ void Pointer::print(raw_ostream &OS) const {
     OS << (Prov->isWildcard() ? "wildcard" : "nullary");
   }
   CaptureComponents CC = Prov->capability();
-  if (CC != CaptureComponents::All)
+  if (CC != CaptureComponents::Provenance)
     OS << ' ' << CC;
   OS << "]";
 }

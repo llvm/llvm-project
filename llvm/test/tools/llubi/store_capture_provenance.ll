@@ -17,7 +17,7 @@ define void @main() {
 ; CHECK-NEXT:   ptr %p = ptr 0x8 [@g]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: address_read_provenance
-; CHECK-NEXT:   %g_address_read_provenance = call ptr @address_read_provenance(ptr @g) => ptr 0x8 [@g address, read_provenance]
+; CHECK-NEXT:   %g_address_read_provenance = call ptr @address_read_provenance(ptr @g) => ptr 0x8 [@g read_provenance]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   store i8 1, ptr %g_address_read_provenance, align 1 at @main <stdin>:12
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.

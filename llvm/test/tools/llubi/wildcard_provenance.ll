@@ -29,7 +29,7 @@ define void @main() {
 ; CHECK-NEXT:   ptr %p = ptr 0x8 [p]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: identity
-; CHECK-NEXT:   %p_provenance_only = call ptr @identity(ptr captures(provenance) %p) => ptr 0x8 [p provenance]
+; CHECK-NEXT:   %p_provenance_only = call ptr @identity(ptr captures(provenance) %p) => ptr 0x8 [p]
 ; CHECK-NEXT:   %addr1 = ptrtoint ptr %p_read_provenance_only to i64 => i64 8
 ; CHECK-NEXT:   %addr2 = ptrtoint ptr %p_provenance_only to i64 => i64 8
 ; CHECK-NEXT:   %p_wildcard = inttoptr i64 %addr1 to ptr => ptr 0x8 [wildcard]

@@ -2556,33 +2556,6 @@ public:
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
-      if (LHS.isPointer()) {
-        auto &LHSPtr = LHS.asPointer();
-        auto &RHSPtr = RHS.asPointer();
-        unsigned AS = I.getOperand(0)->getType()->getPointerAddressSpace();
-        // Check provenance
-        bool LHSIsNull = LHSPtr.isNullPtr(AS, DL);
-        bool RHSIsNull = RHSPtr.isNullPtr(AS, DL);
-
-        auto IsValidCompare = [&](const Pointer &Ptr,
-                                  bool OtherIsNull) -> bool {
-          return Ctx.checkProvenance(
-              Ptr,
-              [&](const Provenance &Prov) {
-                CaptureComponents CC = Prov.capability();
-                CaptureComponents Mask = OtherIsNull
-                                             ? CaptureComponents::AddressIsNull
-                                             : CaptureComponents::Address;
-                return (CC & Mask) == Mask;
-              },
-              /*HasSideEffect=*/false);
-        };
-
-        if (!LHSIsNull && !IsValidCompare(LHSPtr, RHSIsNull))
-          return AnyValue::poison();
-        if (!RHSIsNull && !IsValidCompare(RHSPtr, LHSIsNull))
-          return AnyValue::poison();
-      }
       const APInt &LHSVal =
           LHS.isPointer() ? LHS.asPointer().address() : LHS.asInteger();
       const APInt &RHSVal =
@@ -2747,9 +2720,8 @@ public:
   }
 
   void visitLoadInst(LoadInst &LI) {
-    auto RetVal =
-        load(getValue(LI.getPointerOperand()), LI.getAlign(), LI.getType(),
-             LI.hasMetadata(LLVMContext::MD_noundef), LI.isVolatile());
+    auto RetVal = load(getValue(LI.getPointerOperand()), LI.getAlign(),
+                       LI.getType(), LI.hasMetadata(LLVMContext::MD_noundef));
     // TODO: track volatile loads
     handleMetadata(LI.getType(), RetVal, LI);
     setResult(LI, std::move(RetVal));
@@ -2760,8 +2732,7 @@ public:
     auto &Val = getValue(SI.getValueOperand());
     // TODO: track volatile stores
     // TODO: handle metadata
-    store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType(),
-          SI.isVolatile());
+    store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
     if (!hasProgramExited() && !Handler.onInstructionExecuted(SI, AnyValue()))
       setFailed();
   }

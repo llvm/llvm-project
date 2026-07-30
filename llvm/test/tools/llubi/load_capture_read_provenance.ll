@@ -17,7 +17,7 @@ define void @main() {
 ; CHECK-NEXT:   ptr %p = ptr 0x8 [@g]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: address_only
-; CHECK-NEXT:   %g_address_only = call ptr @address_only(ptr @g) => ptr 0x8 [@g address]
+; CHECK-NEXT:   %g_address_only = call ptr @address_only(ptr @g) => ptr 0x8 [@g none]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   %res = load i8, ptr %g_address_only, align 1 at @main <stdin>:12
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.

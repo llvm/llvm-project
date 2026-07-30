@@ -200,6 +200,8 @@ class Provenance : public RefCountedBase<Provenance> {
   // Null if it is concrete.
   IntrusiveRefCntPtr<WildcardProvenance> Wildcard;
 
+  // Controls whether we can read/write to the memory object via this
+  // provenance. Address and AddressIsNull is not supported.
   CaptureComponents Capability;
 
   // TODO: modeling nofree
@@ -212,7 +214,7 @@ class Provenance : public RefCountedBase<Provenance> {
 
 public:
   Provenance(IntrusiveRefCntPtr<MemoryObject> Obj,
-             CaptureComponents Capability = CaptureComponents::All)
+             CaptureComponents Capability = CaptureComponents::Provenance)
       : Obj(std::move(Obj)), Capability(Capability) {}
   static IntrusiveRefCntPtr<Provenance> nullary();
   IntrusiveRefCntPtr<Provenance> clone() const {

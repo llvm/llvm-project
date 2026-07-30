@@ -17,8 +17,8 @@ define void @main() {
 ; CHECK-NEXT:   ptr %p = ptr 0x8 [@g]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: address_only
-; CHECK-NEXT:   %g_address_only = call ptr @address_only(ptr @g) => ptr 0x8 [@g address]
+; CHECK-NEXT:   %g_address_only = call ptr @address_only(ptr @g) => ptr 0x8 [@g none]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %g_address_only, i32 1) ] at @main <stdin>:12
-; CHECK-NEXT: Immediate UB detected: The pointer ptr 0x8 [@g address] violates dereferenceable(1) assumption.
+; CHECK-NEXT: Immediate UB detected: The pointer ptr 0x8 [@g none] violates dereferenceable(1) assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

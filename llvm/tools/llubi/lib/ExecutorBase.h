@@ -109,14 +109,15 @@ public:
 
   /// Check if the upcoming memory access is valid. Returns the resolved memory
   /// object and offset if it is valid.
-  std::pair<MemoryObject *, uint64_t>
-  verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize, Align Alignment,
-                  bool IsStore, bool IsVolatile);
+  std::pair<MemoryObject *, uint64_t> verifyMemAccess(const Pointer &Ptr,
+                                                      uint64_t AccessSize,
+                                                      Align Alignment,
+                                                      bool IsStore);
 
-  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy, bool NoUndef,
-                bool IsVolatile);
+  AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
+                bool NoUndef);
   void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
-             Type *ValTy, bool IsVolatile);
+             Type *ValTy);
 
   void requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                           uint64_t ExitCode = 0);

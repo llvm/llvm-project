@@ -36,11 +36,6 @@ define void @main() {
   %p_poison = call ptr @address_only(ptr poison)
   %p_address_only = call ptr @address_only(ptr %p)
   %p_address_is_null_only = call ptr @address_is_null_only(ptr %p)
-  %cmp1 = icmp eq ptr %p_address_only, %p_address_only
-  %cmp2 = icmp eq ptr %p_address_is_null_only, %p_address_is_null_only
-  %cmp3 = icmp eq ptr %p_address_is_null_only, null
-  %cmp4 = icmp eq ptr null, %p_address_is_null_only
-  %cmp5 = icmp eq ptr null, null
 
   %p_read_provenance = call ptr @read_provenance_only(ptr %p)
   %p_provenance = call ptr @provenance_only(ptr %p)
@@ -74,17 +69,12 @@ define void @main() {
 ; CHECK-NEXT:   ptr %p = ptr 0x11 [p]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: address_only
-; CHECK-NEXT:   %p_address_only = call ptr @address_only(ptr %p) => ptr 0x11 [p address]
+; CHECK-NEXT:   %p_address_only = call ptr @address_only(ptr %p) => ptr 0x11 [p none]
 ; CHECK-NEXT: Entering function: address_is_null_only
 ; CHECK-NEXT:   ptr %p = ptr 0x11 [p]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: address_is_null_only
-; CHECK-NEXT:   %p_address_is_null_only = call ptr @address_is_null_only(ptr %p) => ptr 0x11 [p address_is_null]
-; CHECK-NEXT:   %cmp1 = icmp eq ptr %p_address_only, %p_address_only => T
-; CHECK-NEXT:   %cmp2 = icmp eq ptr %p_address_is_null_only, %p_address_is_null_only => poison
-; CHECK-NEXT:   %cmp3 = icmp eq ptr %p_address_is_null_only, null => F
-; CHECK-NEXT:   %cmp4 = icmp eq ptr null, %p_address_is_null_only => F
-; CHECK-NEXT:   %cmp5 = icmp eq ptr null, null => T
+; CHECK-NEXT:   %p_address_is_null_only = call ptr @address_is_null_only(ptr %p) => ptr 0x11 [p none]
 ; CHECK-NEXT: Entering function: read_provenance_only
 ; CHECK-NEXT:   ptr %p = ptr 0x11 [p]
 ; CHECK-NEXT:   ret ptr %p
@@ -94,14 +84,14 @@ define void @main() {
 ; CHECK-NEXT:   ptr %p = ptr 0x11 [p]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: provenance_only
-; CHECK-NEXT:   %p_provenance = call ptr @provenance_only(ptr %p) => ptr 0x11 [p provenance]
+; CHECK-NEXT:   %p_provenance = call ptr @provenance_only(ptr %p) => ptr 0x11 [p]
 ; CHECK-NEXT: Entering function: read_provenance_only
-; CHECK-NEXT:   ptr %p = ptr 0x11 [p provenance]
+; CHECK-NEXT:   ptr %p = ptr 0x11 [p]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: read_provenance_only
 ; CHECK-NEXT:   %p_read_provenance_2 = call ptr @read_provenance_only(ptr %p_provenance) => ptr 0x11 [p read_provenance]
 ; CHECK-NEXT: Entering function: provenance_only
-; CHECK-NEXT:   ptr %p = ptr 0x11 [p address]
+; CHECK-NEXT:   ptr %p = ptr 0x11 [p none]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: provenance_only
 ; CHECK-NEXT:   %p_none = call ptr @provenance_only(ptr %p_address_only) => ptr 0x11 [p none]
@@ -112,7 +102,7 @@ define void @main() {
 ; CHECK-NEXT:   ret ptr %p2
 ; CHECK-NEXT: Exiting function: ret_capture_read_provenance_other_capture_address
 ; CHECK-NEXT:   %p_read_provenance2 = call ptr @ret_capture_read_provenance_other_capture_address(ptr %p) => ptr 0x11 [p read_provenance]
-; CHECK-NEXT:   %p_address_only2 = load ptr, ptr @g, align 8 => ptr 0x11 [p address]
+; CHECK-NEXT:   %p_address_only2 = load ptr, ptr @g, align 8 => ptr 0x11 [p none]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %p_read_provenance, i32 1) ]
 ; CHECK-NEXT:   %val = load i8, ptr %p_read_provenance, align 1 => i8 1
 ; CHECK-NEXT:   store i8 0, ptr %p_provenance, align 1
