@@ -204,8 +204,8 @@ Any access to `addrspace(0)` (aka flat or global) always results in a
 flat address resolves to `addrspace(3)`.
 
 ```{note}
-This is independent of the `syncscope` of an atomic access. For example, Even if
-a `store atomic` specifies a smaller `syncscope` such as "wavefront", the
+This is independent of the `syncscope` of an atomic access. For example, even if
+a `store atomic` to `addrspace(3)` specifies a smaller `syncscope` such as "wavefront", the
 side-effects are made available at "workgroup" scope. In other words, the scope
 for atomicity is not always the same as the scope for availability/visibility.
 ```
