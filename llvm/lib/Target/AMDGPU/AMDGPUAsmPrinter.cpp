@@ -866,9 +866,14 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
          static_cast<uint64_t>(PGM_Rsrc3) == 0);
   KernelDescriptor.compute_pgm_rsrc3 = CurrentProgramInfo.ComputePGMRSrc3;
 
-  KernelDescriptor.kernarg_preload = MCConstantExpr::create(
-      AMDGPU::hasKernargPreload(STM) ? Info->getNumKernargPreloadedSGPRs() : 0,
-      Ctx);
+  unsigned KernargPreload = 0;
+  if (AMDGPU::hasKernargPreload(STM)) {
+    KernargPreload = Info->getNumKernargPreloadedSGPRs();
+    KernargPreload |= Info->getKernargPreloadOffset()
+                      << amdhsa::KERNARG_PRELOAD_SPEC_OFFSET_SHIFT;
+  }
+  KernelDescriptor.kernarg_preload =
+      MCConstantExpr::create(KernargPreload, Ctx);
 
   return KernelDescriptor;
 }

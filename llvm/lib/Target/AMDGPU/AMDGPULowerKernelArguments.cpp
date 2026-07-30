@@ -235,14 +235,12 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : std::nullopt;
-    Align ABITypeAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
 
     uint64_t Size = DL.getTypeSizeInBits(ArgTy);
-    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
-
-    uint64_t EltOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + BaseOffset;
-    ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
+    AMDGPU::KernArgLayout Layout =
+        AMDGPU::getKernArgLayout(Arg, DL, ExplicitArgOffset);
+    uint64_t EltOffset = Layout.Begin + BaseOffset;
+    ExplicitArgOffset = Layout.End;
 
     // Skip inreg arguments which should be preloaded.
     if (Arg.use_empty() || Arg.hasInRegAttr())

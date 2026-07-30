@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=none -o - %s | FileCheck %s
+
+--- |
+  define amdgpu_kernel void @kernarg_preload_offset() {
+    ret void
+  }
+...
+---
+name: kernarg_preload_offset
+machineFunctionInfo:
+  numKernargPreloadSGPRs: 1
+  kernargPreloadOffset: 2
+body: |
+  bb.0:
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: kernarg_preload_offset
+# CHECK: numKernargPreloadSGPRs: 1
+# CHECK: kernargPreloadOffset: 2

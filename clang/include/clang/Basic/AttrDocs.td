@@ -3574,6 +3574,62 @@ An error will be given if:
     attributes;
   - The AMDGPU target backend is unable to create machine code that can meet the
     request.
+}];
+}
+
+def AMDGPUKernargPreloadDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+Clang supports the
+``[[clang::amdgpu_kernarg_preload(<first>, <last>)]]`` and
+``__attribute__((amdgpu_kernarg_preload(<first>, <last>)))`` attributes on
+AMDGPU kernel functions.
+
+In HIP, the standard C++ spelling follows the function name::
+
+  __global__ void kernel(int *out, int value)
+      [[clang::amdgpu_kernarg_preload(1, 1)]];
+
+Kernel argument preloading can reduce kernel launch latency. Without
+preloading, the kernel may need to load explicit kernel arguments from kernel
+argument segment memory. On targets that support kernel argument preloading,
+the hardware can copy part of the kernel argument segment into user SGPRs
+before the kernel starts, avoiding those initial kernel argument memory loads.
+This attribute is a performance hint and is only applied when optimization is
+enabled. For example, compile with ``-O2`` to apply the hint. At ``-O0``, the
+hint is ignored.
+
+The ``<first>`` and ``<last>`` values select an inclusive range of explicit
+kernel arguments to preload. Argument indices are zero based. For example,
+``amdgpu_kernarg_preload(2, 4)`` preloads the third, fourth, and fifth
+arguments. The backend derives the hardware offset and number of SGPRs from
+the selected arguments. ABI padding within the selected range is also
+preloaded.
+
+The SGPR budget for preloading is limited and is shared with other uniform
+values. Selecting a range lets the user spend that budget on
+performance-sensitive kernel arguments. The derived preload offset and SGPR
+cap avoid preloading earlier or later arguments that are unused or less
+useful, leaving more SGPRs available for other uniform values.
+
+Both indices must name explicit kernel arguments, and ``<first>`` must not be
+greater than ``<last>``. The complete selected range must fit in the user SGPRs
+available for kernel argument preloading. Support for a source-language
+aggregate argument depends on how the target ABI lowers it. An aggregate
+lowered to a supported scalar or vector type can be preloaded. The backend
+reports an error if a selected argument is lowered as an LLVM aggregate or
+with the LLVM ``byref`` parameter attribute.
+
+Kernel argument preloading is only supported on AMDGPU targets with the
+``kernarg-preload`` target feature. In the current backend, the known
+processors with this feature are ``gfx90a``, ``gfx942``, ``gfx950``,
+``gfx1250``, and ``gfx1251``. The generic aliases ``gfx9-4-generic`` and
+``gfx12-5-generic`` also include the feature. Future processors may also
+support it if their feature set includes ``FeatureKernargPreload`` in
+``llvm/lib/Target/AMDGPU/AMDGPU.td``. On targets that do not support kernel
+argument preloading, this attribute has no effect.
+
+Omitting the attribute keeps the default command-line behavior.
   }];
 }
 

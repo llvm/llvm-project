@@ -28,6 +28,8 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/MathExtras.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "amdgpu-preload-kernel-arguments"
 
@@ -182,6 +184,10 @@ public:
     return ExplicitArgOffset <= NumFreeUserSGPRs * 4;
   }
 
+  bool canPreloadKernArgRange(uint64_t Begin, uint64_t End) {
+    return End - Begin <= NumFreeUserSGPRs * 4;
+  }
+
   // Try to allocate SGPRs to preload hidden kernel arguments.
   void
   tryAllocHiddenArgPreloadSGPRs(uint64_t ImplicitArgsBaseOffset,
@@ -291,54 +297,145 @@ static bool markKernelArgsAsInreg(Module &M, const TargetMachine &TM) {
         F.getCallingConv() != CallingConv::AMDGPU_KERNEL)
       continue;
 
+    bool HasFirstPreloadArg =
+        F.hasFnAttribute(AMDGPU::KernargPreloadFirstArgAttr);
+    bool HasLastPreloadArg =
+        F.hasFnAttribute(AMDGPU::KernargPreloadLastArgAttr);
+    if (HasFirstPreloadArg != HasLastPreloadArg) {
+      F.getContext().emitError("incomplete amdgpu kernarg preload range");
+      continue;
+    }
+    bool HasKernargPreloadRange = HasFirstPreloadArg;
+    uint64_t FirstPreloadArg = HasKernargPreloadRange
+                                   ? F.getFnAttributeAsParsedInteger(
+                                         AMDGPU::KernargPreloadFirstArgAttr)
+                                   : 0;
+    uint64_t LastPreloadArg =
+        HasKernargPreloadRange
+            ? F.getFnAttributeAsParsedInteger(AMDGPU::KernargPreloadLastArgAttr)
+            : 0;
+    if (HasKernargPreloadRange &&
+        (!isUInt<32>(FirstPreloadArg) || !isUInt<32>(LastPreloadArg))) {
+      F.getContext().emitError(
+          "amdgpu kernarg preload argument index exceeds the 32-bit limit");
+      continue;
+    }
+    if (HasKernargPreloadRange &&
+        (FirstPreloadArg > LastPreloadArg || LastPreloadArg >= F.arg_size())) {
+      F.getContext().emitError("invalid amdgpu kernarg preload argument range");
+      continue;
+    }
+
     PreloadKernelArgInfo PreloadInfo(F, ST);
     uint64_t ExplicitArgOffset = 0;
     const DataLayout &DL = F.getDataLayout();
     const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
     unsigned NumPreloadsRequested = KernargPreloadCount;
+    uint64_t PreloadRangeBegin = 0;
+    uint64_t PreloadRangeEnd = 0;
+    bool FailedPreloadRange = false;
+    SmallVector<Argument *, 8> RequestedPreloadArgs;
+
     unsigned NumPreloadedExplicitArgs = 0;
     for (Argument &Arg : F.args()) {
+      unsigned ArgNo = Arg.getArgNo();
       // Avoid incompatible attributes and guard against running this pass
       // twice.
       //
       // TODO: Preload byref kernel arguments
-      if (Arg.hasByRefAttr() || Arg.hasNestAttr() ||
-          Arg.hasAttribute("amdgpu-hidden-argument"))
+      if (Arg.hasAttribute("amdgpu-hidden-argument"))
         break;
+
+      bool IsByRef = Arg.hasByRefAttr();
+      Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
+      AMDGPU::KernArgLayout Layout =
+          AMDGPU::getKernArgLayout(Arg, DL, ExplicitArgOffset);
+      ExplicitArgOffset = Layout.End;
+
+      bool InRequestedRange = HasKernargPreloadRange &&
+                              ArgNo >= FirstPreloadArg &&
+                              ArgNo <= LastPreloadArg;
+      if (HasKernargPreloadRange && !InRequestedRange)
+        continue;
 
       // Inreg may be pre-existing on some arguments, try to preload these.
-      if (NumPreloadsRequested == 0 && !Arg.hasInRegAttr())
+      if (!HasKernargPreloadRange && NumPreloadsRequested == 0 &&
+          !Arg.hasInRegAttr())
         break;
 
-      // FIXME: Preload aggregates.
-      if (Arg.getType()->isAggregateType())
+      // FIXME: Preload aggregates and byref arguments.
+      if (IsByRef || Arg.hasNestAttr() || ArgTy->isAggregateType()) {
+        if (HasKernargPreloadRange) {
+          F.getContext().emitError(
+              "unsupported argument in amdgpu kernarg preload range");
+        }
+        FailedPreloadRange = HasKernargPreloadRange;
+        break;
+      }
+
+      if (HasKernargPreloadRange) {
+        if (ArgNo == FirstPreloadArg)
+          PreloadRangeBegin = alignDown(Layout.Begin + BaseOffset, 4);
+        if (ArgNo == LastPreloadArg)
+          PreloadRangeEnd = alignTo(ExplicitArgOffset + BaseOffset, 4);
+      }
+
+      if (!HasKernargPreloadRange &&
+          !PreloadInfo.canPreloadKernArgAtOffset(ExplicitArgOffset))
         break;
 
-      Type *ArgTy = Arg.getType();
-      Align ABITypeAlign = DL.getABITypeAlign(ArgTy);
-      uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
-      ExplicitArgOffset = alignTo(ExplicitArgOffset, ABITypeAlign) + AllocSize;
+      if (HasKernargPreloadRange) {
+        RequestedPreloadArgs.push_back(&Arg);
+      } else {
+        bool HadInRegAttr = Arg.hasInRegAttr();
+        Arg.addAttr(Attribute::InReg);
+        Changed |= !HadInRegAttr;
+        NumPreloadedExplicitArgs++;
+        if (NumPreloadsRequested > 0)
+          NumPreloadsRequested--;
+      }
+    }
 
-      if (!PreloadInfo.canPreloadKernArgAtOffset(ExplicitArgOffset))
-        break;
+    if (FailedPreloadRange)
+      continue;
 
-      Arg.addAttr(Attribute::InReg);
-      NumPreloadedExplicitArgs++;
-      if (NumPreloadsRequested > 0)
-        NumPreloadsRequested--;
+    if (HasKernargPreloadRange &&
+        RequestedPreloadArgs.size() != LastPreloadArg - FirstPreloadArg + 1) {
+      F.getContext().emitError(
+          "amdgpu kernarg preload range must contain explicit arguments");
+      continue;
+    }
+
+    if (HasKernargPreloadRange && !isUInt<9>(PreloadRangeBegin / 4)) {
+      F.getContext().emitError(
+          "amdgpu kernarg preload offset exceeds the hardware limit");
+      continue;
+    }
+
+    if (HasKernargPreloadRange && !PreloadInfo.canPreloadKernArgRange(
+                                      PreloadRangeBegin, PreloadRangeEnd)) {
+      F.getContext().emitError(
+          "amdgpu kernarg preload range exceeds available user SGPRs");
+      continue;
+    }
+
+    if (HasKernargPreloadRange) {
+      for (Argument *Arg : RequestedPreloadArgs) {
+        bool HadInRegAttr = Arg->hasInRegAttr();
+        Arg->addAttr(Attribute::InReg);
+        Changed |= !HadInRegAttr;
+      }
     }
 
     // Only try preloading hidden arguments if we can successfully preload the
     // last explicit argument.
-    if (NumPreloadedExplicitArgs == F.arg_size()) {
+    if (!HasKernargPreloadRange && NumPreloadedExplicitArgs == F.arg_size()) {
       uint64_t ImplicitArgsBaseOffset =
           alignTo(ExplicitArgOffset, ST.getAlignmentForImplicitArgPtr()) +
           BaseOffset;
       PreloadInfo.tryAllocHiddenArgPreloadSGPRs(ImplicitArgsBaseOffset,
                                                 FunctionsToErase);
     }
-
-    Changed |= NumPreloadedExplicitArgs > 0;
   }
 
   Changed |= !FunctionsToErase.empty();

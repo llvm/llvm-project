@@ -1231,16 +1231,12 @@ void AMDGPUTargetLowering::analyzeFormalArgumentsCompute(
   unsigned InIndex = 0;
 
   for (const Argument &Arg : Fn.args()) {
-    const bool IsByRef = Arg.hasByRefAttr();
     Type *BaseArgTy = Arg.getType();
-    Type *MemArgTy = IsByRef ? Arg.getParamByRefType() : BaseArgTy;
-    Align Alignment = DL.getValueOrABITypeAlignment(
-        IsByRef ? Arg.getParamAlign() : std::nullopt, MemArgTy);
-    MaxAlign = std::max(Alignment, MaxAlign);
-    uint64_t AllocSize = DL.getTypeAllocSize(MemArgTy);
-
-    uint64_t ArgOffset = alignTo(ExplicitArgOffset, Alignment) + ExplicitOffset;
-    ExplicitArgOffset = alignTo(ExplicitArgOffset, Alignment) + AllocSize;
+    AMDGPU::KernArgLayout Layout =
+        AMDGPU::getKernArgLayout(Arg, DL, ExplicitArgOffset);
+    MaxAlign = std::max(Layout.Alignment, MaxAlign);
+    uint64_t ArgOffset = Layout.Begin + ExplicitOffset;
+    ExplicitArgOffset = Layout.End;
 
     // We're basically throwing away everything passed into us and starting over
     // to get accurate in-memory offsets. The "PartOffset" is completely useless

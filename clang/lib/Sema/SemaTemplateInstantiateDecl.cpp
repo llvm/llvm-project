@@ -677,6 +677,24 @@ static void instantiateDependentAMDGPUWavesPerEUAttr(
   S.AMDGPU().addAMDGPUWavesPerEUAttr(New, Attr, MinExpr, MaxExpr);
 }
 
+static void instantiateDependentAMDGPUKernargPreloadAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const AMDGPUKernargPreloadAttr &Attr, Decl *New) {
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult FirstArgResult = S.SubstExpr(Attr.getFirstArg(), TemplateArgs);
+  if (FirstArgResult.isInvalid())
+    return;
+
+  ExprResult LastArgResult = S.SubstExpr(Attr.getLastArg(), TemplateArgs);
+  if (LastArgResult.isInvalid())
+    return;
+
+  S.AMDGPU().addAMDGPUKernargPreloadAttr(
+      New, Attr, FirstArgResult.getAs<Expr>(), LastArgResult.getAs<Expr>());
+}
+
 static void instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
     Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
     const AMDGPUMaxNumWorkGroupsAttr &Attr, Decl *New) {
@@ -961,6 +979,13 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             dyn_cast<AMDGPUWavesPerEUAttr>(TmplAttr)) {
       instantiateDependentAMDGPUWavesPerEUAttr(*this, TemplateArgs,
                                                *AMDGPUFlatWorkGroupSize, New);
+    }
+
+    if (const auto *AMDGPUKernargPreload =
+            dyn_cast<AMDGPUKernargPreloadAttr>(TmplAttr)) {
+      instantiateDependentAMDGPUKernargPreloadAttr(*this, TemplateArgs,
+                                                   *AMDGPUKernargPreload, New);
+      continue;
     }
 
     if (const auto *AMDGPUMaxNumWorkGroups =

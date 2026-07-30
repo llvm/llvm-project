@@ -12,6 +12,9 @@
 // RUN:     -check-prefix=NAMD
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm \
 // RUN:     -verify -Wno-deprecated-declarations -o - -x hip %s | FileCheck -check-prefix=NAMD %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -x hip \
+// RUN:     -ast-dump -ast-dump-filter=template_kernarg_preload %s \
+// RUN:     | FileCheck -check-prefix=AST %s
 
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -foffload-uniform-block \
 // RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
@@ -45,6 +48,30 @@ __attribute__((amdgpu_num_vgpr(64))) // expected-no-diagnostics
 __global__ void num_vgpr_64() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z11num_vgpr_64v() [[NUM_VGPR_64:#[0-9]+]]
 }
+extern "C" __global__ void kernarg_preload_1_2
+    [[clang::amdgpu_kernarg_preload(1, 2)]] (int a, int b, int c) { // expected-no-diagnostics
+// CHECK: define{{.*}} amdgpu_kernel void @kernarg_preload_1_2({{.*}}) [[KERNARG_PRELOAD_1_2:#[0-9]+]]
+}
+
+struct KernargScalarizedAggregate {
+  int value;
+};
+
+extern "C" __attribute__((amdgpu_kernarg_preload(0, 0)))
+__global__ void kernarg_preload_scalarized_aggregate(
+    KernargScalarizedAggregate arg) {
+// CHECK: define{{.*}} amdgpu_kernel void @kernarg_preload_scalarized_aggregate(i32{{.*}}) [[KERNARG_PRELOAD_SCALARIZED_AGGREGATE:#[0-9]+]]
+}
+
+template<unsigned First, unsigned Last>
+__attribute__((amdgpu_kernarg_preload(First, Last)))
+__global__ void template_kernarg_preload(int a, int b, int c, int d) {}
+template __global__ void template_kernarg_preload<2, 3>(int, int, int, int);
+// CHECK: define{{.*}} amdgpu_kernel void @{{.*template_kernarg_preload.*}}({{.*}}) [[KERNARG_PRELOAD_2_3:#[0-9]+]]
+// AST-LABEL: FunctionDecl {{.*}} template_kernarg_preload {{.*}} explicit_instantiation_definition
+// AST: AMDGPUKernargPreloadAttr
+// AST-NOT: AMDGPUKernargPreloadAttr
+
 __attribute__((amdgpu_max_num_work_groups(32, 4, 2))) // expected-no-diagnostics
 __global__ void max_num_work_groups_32_4_2() {
 // CHECK: define{{.*}} amdgpu_kernel void @_Z26max_num_work_groups_32_4_2v() [[MAX_NUM_WORK_GROUPS_32_4_2:#[0-9]+]]
@@ -101,6 +128,8 @@ template __global__ void template_a_b_c_max_num_work_groups<32, 4, 2>();
 // NAMD-NOT: "amdgpu-waves-per-eu"
 // NAMD-NOT: "amdgpu-num-vgpr"
 // NAMD-NOT: "amdgpu-num-sgpr"
+// NAMD-NOT: "amdgpu-kernarg-preload-first-arg"
+// NAMD-NOT: "amdgpu-kernarg-preload-last-arg"
 // NAMD-NOT: "amdgpu-max-num-work-groups"
 
 // DEFAULT-DAG: attributes [[FLAT_WORK_GROUP_SIZE_DEFAULT]] = {{.*}}"amdgpu-flat-work-group-size"="1,1024"{{.*}}"uniform-work-group-size"
@@ -111,6 +140,9 @@ template __global__ void template_a_b_c_max_num_work_groups<32, 4, 2>();
 // CHECK-DAG: attributes [[WAVES_PER_EU_2]] = {{.*}}"amdgpu-waves-per-eu"="2"
 // CHECK-DAG: attributes [[NUM_SGPR_32]] = {{.*}}"amdgpu-num-sgpr"="32"
 // CHECK-DAG: attributes [[NUM_VGPR_64]] = {{.*}}"amdgpu-num-vgpr"="64"
+// CHECK-DAG: attributes [[KERNARG_PRELOAD_1_2]] = {{.*}}"amdgpu-kernarg-preload-first-arg"="1"{{.*}}"amdgpu-kernarg-preload-last-arg"="2"
+// CHECK-DAG: attributes [[KERNARG_PRELOAD_SCALARIZED_AGGREGATE]] = {{.*}}"amdgpu-kernarg-preload-first-arg"="0"{{.*}}"amdgpu-kernarg-preload-last-arg"="0"
+// CHECK-DAG: attributes [[KERNARG_PRELOAD_2_3]] = {{.*}}"amdgpu-kernarg-preload-first-arg"="2"{{.*}}"amdgpu-kernarg-preload-last-arg"="3"
 // CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_32_4_2]] = {{.*}}"amdgpu-max-num-workgroups"="32,4,2"
 // CHECK-DAG: attributes [[MAX_NUM_WORK_GROUPS_32_1_1]] = {{.*}}"amdgpu-max-num-workgroups"="32,1,1"
 

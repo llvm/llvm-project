@@ -3734,6 +3734,11 @@ def err_swift_abi_parameter_wrong_type : Error<
 def err_attribute_argument_invalid : Error<
   "%0 attribute argument is invalid: %select{max must be 0 since min is 0|"
   "min must not be greater than max}1">;
+def err_attribute_amdgpu_kernarg_preload_invalid_range : Error<
+  "%0 attribute requires the first argument index to be no greater than "
+  "the last argument index">;
+def err_attribute_amdgpu_kernarg_preload_index_out_of_range : Error<
+  "%0 attribute argument index %1 is out of range for this function">;
 def err_attribute_amdgpu_flat_work_group_size_mismatch : Error<
   "'amdgpu_flat_work_group_size' attribute must match "
   "'reqd_work_group_size' product">;

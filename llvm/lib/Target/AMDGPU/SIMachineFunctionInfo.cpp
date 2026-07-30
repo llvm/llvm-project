@@ -756,6 +756,7 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
       NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()),
+      KernargPreloadOffset(MFI.getKernargPreloadOffset()),
       MinNumAGPRs(MFI.getMinNumAGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
@@ -810,6 +811,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
     DynamicVGPRBlockSize = *YamlMFI.DynamicVGPRBlockSize;
 
   UserSGPRInfo.allocKernargPreloadSGPRs(YamlMFI.NumKernargPreloadSGPRs);
+  KernargPreloadOffset = YamlMFI.KernargPreloadOffset;
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());

@@ -10,16 +10,21 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPU_H
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/CodeGen.h"
+#include <cstdint>
 
 namespace llvm {
 
 class AMDGPUTargetMachine;
+class Argument;
+class DataLayout;
 class LazyCallGraph;
 class GCNTargetMachine;
 class TargetMachine;
@@ -606,6 +611,20 @@ struct AMDGPUUniformIntrinsicCombinePass
 };
 
 namespace AMDGPU {
+struct KernArgLayout {
+  uint64_t Begin;
+  uint64_t End;
+  Align Alignment;
+};
+
+KernArgLayout getKernArgLayout(const Argument &Arg, const DataLayout &DL,
+                               uint64_t CurrentOffset);
+
+inline constexpr StringLiteral KernargPreloadFirstArgAttr =
+    "amdgpu-kernarg-preload-first-arg";
+inline constexpr StringLiteral KernargPreloadLastArgAttr =
+    "amdgpu-kernarg-preload-last-arg";
+
 enum TargetIndex {
   TI_CONSTDATA_START,
   TI_SCRATCH_RSRC_DWORD0,

@@ -597,16 +597,13 @@ bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
     }
 
     const bool IsByRef = Arg.hasByRefAttr();
-    Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
-    if (AllocSize == 0)
+    AMDGPU::KernArgLayout Layout =
+        AMDGPU::getKernArgLayout(Arg, DL, ExplicitArgOffset);
+    if (Layout.Begin == Layout.End)
       continue;
 
-    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : std::nullopt;
-    Align ABIAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
-
-    uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
-    ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
+    uint64_t ArgOffset = Layout.Begin + BaseOffset;
+    ExplicitArgOffset = Layout.End;
 
     if (Arg.use_empty()) {
       ++i;

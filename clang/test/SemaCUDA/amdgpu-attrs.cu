@@ -205,6 +205,13 @@ __global__ void non_cexpr_waves_per_eu_2() {}
 __attribute__((amdgpu_waves_per_eu(2, ipow2(2))))
 __global__ void non_cexpr_waves_per_eu_2_4() {}
 
+// expected-error@+3{{integer constant expression evaluates to value 4294967296 that cannot be represented in a 32-bit unsigned integer type}}
+// expected-note@+4{{in instantiation of}}
+template<unsigned long long Last>
+__attribute__((amdgpu_kernarg_preload(0, Last)))
+__global__ void template_kernarg_preload_too_large(int x) {}
+template __global__ void template_kernarg_preload_too_large<4294967296ULL>(int);
+
 __attribute__((amdgpu_max_num_work_groups(32)))
 __global__ void max_num_work_groups_32() {}
 
@@ -324,5 +331,3 @@ template<unsigned b>
 __attribute__((amdgpu_max_num_work_groups(32, 1, b)))
 __global__ void template_32_1_b_max_num_work_groups() {}
 template __global__ void template_32_1_b_max_num_work_groups<0>();
-
-

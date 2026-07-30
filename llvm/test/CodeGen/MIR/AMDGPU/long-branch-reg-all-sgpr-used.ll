@@ -48,6 +48,7 @@
 ; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT:   numKernargPreloadSGPRs: 0
+; CHECK-NEXT:   kernargPreloadOffset: 0
 ; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT:   minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:
@@ -321,6 +322,7 @@
 ; CHECK-NEXT:   dynamicVGPRBlockSize: 0
 ; CHECK-NEXT:   scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT:   numKernargPreloadSGPRs: 0
+; CHECK-NEXT:   kernargPreloadOffset: 0
 ; CHECK-NEXT:   isWholeWaveFunction: false
 ; CHECK-NEXT:   minNumAGPRs: 4294967295
 ; CHECK-NEXT: body:

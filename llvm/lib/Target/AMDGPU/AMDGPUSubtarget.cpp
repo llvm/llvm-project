@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUSubtarget.h"
+#include "AMDGPU.h"
 #include "AMDGPUCallLowering.h"
 #include "AMDGPUInstructionSelector.h"
 #include "AMDGPULegalizerInfo.h"
@@ -31,6 +32,17 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-subtarget"
+
+AMDGPU::KernArgLayout AMDGPU::getKernArgLayout(const Argument &Arg,
+                                               const DataLayout &DL,
+                                               uint64_t CurrentOffset) {
+  const bool IsByRef = Arg.hasByRefAttr();
+  Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
+  Align Alignment = DL.getValueOrABITypeAlignment(
+      IsByRef ? Arg.getParamAlign() : std::nullopt, ArgTy);
+  uint64_t Begin = alignTo(CurrentOffset, Alignment);
+  return {Begin, Begin + DL.getTypeAllocSize(ArgTy), Alignment};
+}
 
 // Returns the maximum per-workgroup LDS allocation size (in bytes) that still
 // allows the given function to achieve an occupancy of NWaves waves per
@@ -378,13 +390,10 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
     if (Arg.hasAttribute("amdgpu-hidden-argument"))
       continue;
 
-    const bool IsByRef = Arg.hasByRefAttr();
-    Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    Align Alignment = DL.getValueOrABITypeAlignment(
-        IsByRef ? Arg.getParamAlign() : std::nullopt, ArgTy);
-    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
-    ExplicitArgBytes = alignTo(ExplicitArgBytes, Alignment) + AllocSize;
-    MaxAlign = std::max(MaxAlign, Alignment);
+    AMDGPU::KernArgLayout Layout =
+        AMDGPU::getKernArgLayout(Arg, DL, ExplicitArgBytes);
+    ExplicitArgBytes = Layout.End;
+    MaxAlign = std::max(MaxAlign, Layout.Alignment);
   }
 
   return ExplicitArgBytes;

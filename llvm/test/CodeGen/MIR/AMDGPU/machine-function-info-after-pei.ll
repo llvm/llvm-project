@@ -48,6 +48,7 @@
 ; AFTER-PEI-NEXT: dynamicVGPRBlockSize: 0
 ; AFTER-PEI-NEXT: scratchReservedForDynamicVGPRs: 0
 ; AFTER-PEI-NEXT: numKernargPreloadSGPRs: 0
+; AFTER-PEI-NEXT: kernargPreloadOffset: 0
 ; AFTER-PEI-NEXT: isWholeWaveFunction: false
 ; AFTER-PEI-NEXT: minNumAGPRs: 4294967295
 ; AFTER-PEI-NEXT: body:

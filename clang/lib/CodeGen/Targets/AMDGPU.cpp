@@ -377,6 +377,16 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
       F->addFnAttr("amdgpu-num-vgpr", llvm::utostr(NumVGPR));
   }
 
+  if (const auto *Attr = FD->getAttr<AMDGPUKernargPreloadAttr>()) {
+    unsigned FirstArg = Attr->getFirstArg()
+                            ->EvaluateKnownConstInt(M.getContext())
+                            .getExtValue();
+    unsigned LastArg =
+        Attr->getLastArg()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    F->addFnAttr("amdgpu-kernarg-preload-first-arg", llvm::utostr(FirstArg));
+    F->addFnAttr("amdgpu-kernarg-preload-last-arg", llvm::utostr(LastArg));
+  }
+
   if (const auto *Attr = FD->getAttr<AMDGPUMaxNumWorkGroupsAttr>()) {
     uint32_t X = Attr->getMaxNumWorkGroupsX()
                      ->EvaluateKnownConstInt(M.getContext())

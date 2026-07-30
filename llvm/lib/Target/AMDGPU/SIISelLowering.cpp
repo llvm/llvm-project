@@ -3118,8 +3118,7 @@ void SITargetLowering::allocateHSAUserSGPRs(CCState &CCInfo,
   // these from the dispatch pointer.
 }
 
-// Allocate pre-loaded kernel arguemtns. Arguments to be preloading must be
-// sequential starting from the first argument.
+// Allocate a sequential range of preloaded kernel arguments.
 void SITargetLowering::allocatePreloadKernArgSGPRs(
     CCState &CCInfo, SmallVectorImpl<CCValAssign> &ArgLocs,
     const SmallVectorImpl<ISD::InputArg> &Ins, MachineFunction &MF,
@@ -3127,26 +3126,41 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
   Function &F = MF.getFunction();
   unsigned LastExplicitArgOffset = Subtarget->getExplicitKernelArgOffset();
   GCNUserSGPRUsageInfo &SGPRInfo = Info.getUserSGPRInfo();
+  bool HasPreloadRange = F.hasFnAttribute(AMDGPU::KernargPreloadFirstArgAttr) &&
+                         F.hasFnAttribute(AMDGPU::KernargPreloadLastArgAttr);
+  uint64_t FirstPreloadArg =
+      HasPreloadRange
+          ? F.getFnAttributeAsParsedInteger(AMDGPU::KernargPreloadFirstArgAttr)
+          : 0;
+  uint64_t LastPreloadArg =
+      HasPreloadRange
+          ? F.getFnAttributeAsParsedInteger(AMDGPU::KernargPreloadLastArgAttr)
+          : 0;
   bool InPreloadSequence = true;
   unsigned InIdx = 0;
   bool AlignedForImplictArgs = false;
   unsigned ImplicitArgOffset = 0;
   for (auto &Arg : F.args()) {
-    if (!InPreloadSequence || !Arg.hasInRegAttr())
+    if (!InPreloadSequence)
       break;
 
     unsigned ArgIdx = Arg.getArgNo();
-    // Don't preload non-original args or parts not in the current preload
-    // sequence.
+    unsigned FirstInIdx = InIdx;
     if (InIdx < Ins.size() &&
         (!Ins[InIdx].isOrigArg() || Ins[InIdx].getOrigArgIndex() != ArgIdx))
       break;
+    while (InIdx < Ins.size() && Ins[InIdx].isOrigArg() &&
+           Ins[InIdx].getOrigArgIndex() == ArgIdx)
+      ++InIdx;
 
-    for (; InIdx < Ins.size() && Ins[InIdx].isOrigArg() &&
-           Ins[InIdx].getOrigArgIndex() == ArgIdx;
-         InIdx++) {
-      assert(ArgLocs[ArgIdx].isMemLoc());
-      auto &ArgLoc = ArgLocs[InIdx];
+    if (HasPreloadRange && ArgIdx < FirstPreloadArg)
+      continue;
+    if ((HasPreloadRange && ArgIdx > LastPreloadArg) || !Arg.hasInRegAttr())
+      break;
+
+    for (unsigned PartIdx = FirstInIdx; PartIdx < InIdx; ++PartIdx) {
+      assert(ArgLocs[PartIdx].isMemLoc());
+      CCValAssign &ArgLoc = ArgLocs[PartIdx];
       const Align KernelArgBaseAlign = Align(16);
       unsigned ArgOffset = ArgLoc.getLocMemOffset();
       Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
@@ -3165,18 +3179,29 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
         ArgOffset += ImplicitArgOffset;
       }
 
+      unsigned ArgDwordOffset = alignDown(ArgOffset, 4);
+      bool IsFirstPreload = Info.getNumKernargPreloadedSGPRs() == 0;
+      if (IsFirstPreload) {
+        Info.setKernargPreloadOffset(ArgDwordOffset / 4);
+        LastExplicitArgOffset = ArgDwordOffset;
+      }
+
       // Arg is preloaded into the previous SGPR.
-      if (ArgLoc.getLocVT().getStoreSize() < 4 && Alignment < 4) {
-        assert(InIdx >= 1 && "No previous SGPR");
-        Info.getArgInfo().PreloadKernArgs[InIdx].Regs.push_back(
-            Info.getArgInfo().PreloadKernArgs[InIdx - 1].Regs[0]);
+      if (!IsFirstPreload && ArgLoc.getLocVT().getStoreSize() < 4 &&
+          Alignment < 4 && ArgDwordOffset < LastExplicitArgOffset) {
+        assert(PartIdx >= 1 && "No previous SGPR");
+        Info.getArgInfo().PreloadKernArgs[PartIdx].Regs.push_back(
+            Info.getArgInfo().PreloadKernArgs[PartIdx - 1].Regs[0]);
         continue;
       }
 
-      unsigned Padding = ArgOffset - LastExplicitArgOffset;
-      unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
+      unsigned PaddingSGPRs = (ArgDwordOffset - LastExplicitArgOffset) / 4;
       // Check for free user SGPRs for preloading.
       if (PaddingSGPRs + NumAllocSGPRs > SGPRInfo.getNumFreeUserSGPRs()) {
+        if (HasPreloadRange) {
+          F.getContext().emitError(
+              "amdgpu kernarg preload range exceeds available user SGPRs");
+        }
         InPreloadSequence = false;
         break;
       }
@@ -3184,8 +3209,8 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
       // Preload this argument.
       const TargetRegisterClass *RC =
           TRI.getSGPRClassForBitWidth(NumAllocSGPRs * 32);
-      SmallVectorImpl<MCRegister> *PreloadRegs =
-          Info.addPreloadedKernArg(TRI, RC, NumAllocSGPRs, InIdx, PaddingSGPRs);
+      SmallVectorImpl<MCRegister> *PreloadRegs = Info.addPreloadedKernArg(
+          TRI, RC, NumAllocSGPRs, PartIdx, PaddingSGPRs);
 
       if (PreloadRegs->size() > 1)
         RC = &AMDGPU::SGPR_32RegClass;
@@ -3195,7 +3220,7 @@ void SITargetLowering::allocatePreloadKernArgSGPRs(
         CCInfo.AllocateReg(Reg);
       }
 
-      LastExplicitArgOffset = NumAllocSGPRs * 4 + ArgOffset;
+      LastExplicitArgOffset = ArgDwordOffset + NumAllocSGPRs * 4;
     }
   }
 }

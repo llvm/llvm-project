@@ -730,6 +730,70 @@ void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
 }
 
 static bool
+checkAMDGPUKernargPreloadArguments(Sema &S, Decl *D, Expr *FirstArgExpr,
+                                   Expr *LastArgExpr,
+                                   const AMDGPUKernargPreloadAttr &Attr) {
+  if (S.DiagnoseUnexpandedParameterPack(FirstArgExpr) ||
+      S.DiagnoseUnexpandedParameterPack(LastArgExpr))
+    return true;
+
+  if (FirstArgExpr->isValueDependent() || LastArgExpr->isValueDependent())
+    return false;
+
+  uint32_t FirstArg = 0;
+  if (!S.checkUInt32Argument(Attr, FirstArgExpr, FirstArg, 0))
+    return true;
+
+  uint32_t LastArg = 0;
+  if (!S.checkUInt32Argument(Attr, LastArgExpr, LastArg, 1))
+    return true;
+
+  if (FirstArg > LastArg) {
+    S.Diag(Attr.getLocation(),
+           diag::err_attribute_amdgpu_kernarg_preload_invalid_range)
+        << &Attr;
+    return true;
+  }
+
+  const auto *FD = dyn_cast<FunctionDecl>(D);
+  if (FD && LastArg >= FD->getNumParams()) {
+    S.Diag(LastArgExpr->getBeginLoc(),
+           diag::err_attribute_amdgpu_kernarg_preload_index_out_of_range)
+        << &Attr << LastArg << LastArgExpr->getSourceRange();
+    return true;
+  }
+
+  return false;
+}
+
+AMDGPUKernargPreloadAttr *SemaAMDGPU::CreateAMDGPUKernargPreloadAttr(
+    Decl *D, const AttributeCommonInfo &CI, Expr *FirstArgExpr,
+    Expr *LastArgExpr) {
+  ASTContext &Context = getASTContext();
+  AMDGPUKernargPreloadAttr TmpAttr(Context, CI, FirstArgExpr, LastArgExpr);
+
+  if (checkAMDGPUKernargPreloadArguments(SemaRef, D, FirstArgExpr, LastArgExpr,
+                                         TmpAttr))
+    return nullptr;
+
+  return ::new (Context)
+      AMDGPUKernargPreloadAttr(Context, CI, FirstArgExpr, LastArgExpr);
+}
+
+void SemaAMDGPU::addAMDGPUKernargPreloadAttr(Decl *D,
+                                             const AttributeCommonInfo &CI,
+                                             Expr *FirstArgExpr,
+                                             Expr *LastArgExpr) {
+  if (auto *Attr =
+          CreateAMDGPUKernargPreloadAttr(D, CI, FirstArgExpr, LastArgExpr))
+    D->addAttr(Attr);
+}
+
+void SemaAMDGPU::handleAMDGPUKernargPreloadAttr(Decl *D, const ParsedAttr &AL) {
+  addAMDGPUKernargPreloadAttr(D, AL, AL.getArgAsExpr(0), AL.getArgAsExpr(1));
+}
+
+static bool
 checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
                                      Expr *ZExpr,
                                      const AMDGPUMaxNumWorkGroupsAttr &Attr) {
