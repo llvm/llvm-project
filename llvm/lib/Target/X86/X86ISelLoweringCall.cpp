@@ -2318,7 +2318,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SmallVector<std::pair<Register, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
-
+  SmallVector<int, 8> CallTemporaries;
   // The next loop assumes that the locations are in the same order of the
   // input arguments.
   assert(isSortedByValueNo(ArgLocs) &&
@@ -2365,17 +2365,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       Arg = DAG.getBitcast(RegVT, Arg);
       break;
     case CCValAssign::Indirect: {
+      SDValue SetupChain;
       if (isByVal) {
         // Memcpy the argument to a temporary stack slot to prevent
         // the caller from seeing any modifications the callee may make
         // as guaranteed by the `byval` attribute.
+        uint64_t Size = Flags.getByValSize();
         int FrameIdx = MF.getFrameInfo().CreateStackObject(
-            Flags.getByValSize(),
-            std::max(Align(16), Flags.getNonZeroByValAlign()), false);
+            Size, std::max(Align(16), Flags.getNonZeroByValAlign()), false);
+        CallTemporaries.push_back(FrameIdx);
+        SDValue LifetimeStart = DAG.getLifetimeNode(true, dl, Chain, FrameIdx);
         SDValue StackSlot =
             DAG.getFrameIndex(FrameIdx, getPointerTy(DAG.getDataLayout()));
-        Chain =
-            CreateCopyOfByValArgument(Arg, StackSlot, Chain, Flags, DAG, dl);
+        SDValue Memcpy = CreateCopyOfByValArgument(Arg, StackSlot, Chain,
+                                               Flags, DAG, dl);
+        SetupChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LifetimeStart, Memcpy);
         // From now on treat this as a regular pointer
         Arg = StackSlot;
         isByVal = false;
@@ -2383,11 +2387,15 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         // Store the argument.
         SDValue SpillSlot = DAG.CreateStackTemporary(VA.getValVT());
         int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
-        Chain = DAG.getStore(
+        CallTemporaries.push_back(FI);
+        SDValue LifetimeStart = DAG.getLifetimeNode(true, dl, Chain, FI);
+        SDValue Store = DAG.getStore(
             Chain, dl, Arg, SpillSlot,
             MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
+        SetupChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LifetimeStart, Store);
         Arg = SpillSlot;
       }
+      MemOpChains.push_back(SetupChain);
       break;
     }
     }
@@ -2790,8 +2798,12 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return LowerCallResult(Chain, InGlue, CallConv, isVarArg, Ins, dl, DAG,
-                         InVals, RegMask);
+  SDValue ResChain = LowerCallResult(Chain, InGlue, CallConv, isVarArg, Ins, dl,
+                                     DAG, InVals, RegMask);
+  for (int FI : CallTemporaries) {
+    ResChain = DAG.getLifetimeNode(false, dl, ResChain, FI);
+  }
+  return ResChain;
 }
 
 //===----------------------------------------------------------------------===//

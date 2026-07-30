@@ -12,11 +12,11 @@ define void @foo(ptr nocapture %P) nounwind {
 ; CHECK-NEXT:    calll _test
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd %xmm0, (%esp) ## 8-byte Spill
+; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    calll _test
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd (%esp), %xmm1 ## 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 ## 8-byte Reload
 ; CHECK-NEXT:    ## xmm1 = mem[0],zero
 ; CHECK-NEXT:    mulsd %xmm1, %xmm1
 ; CHECK-NEXT:    mulsd %xmm0, %xmm0

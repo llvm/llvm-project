@@ -706,9 +706,9 @@ define void @call_leading_args(PrimTy %x) nounwind {
 ; CHECK-MSVC64-F128:       # %bb.0:
 ; CHECK-MSVC64-F128-NEXT:    subq $88, %rsp
 ; CHECK-MSVC64-F128-NEXT:    movaps (%rcx), %xmm0
-; CHECK-MSVC64-F128-NEXT:    movaps %xmm0, 48(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    leaq 48(%rsp), %rax
 ; CHECK-MSVC64-F128-NEXT:    movq %rax, 40(%rsp)
+; CHECK-MSVC64-F128-NEXT:    movaps %xmm0, 48(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    movq $0, 32(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    leaq 64(%rsp), %rcx
 ; CHECK-MSVC64-F128-NEXT:    xorl %edx, %edx
@@ -735,9 +735,9 @@ define void @call_leading_args(PrimTy %x) nounwind {
 ; CHECK-MINGW-F128:       # %bb.0:
 ; CHECK-MINGW-F128-NEXT:    subq $88, %rsp
 ; CHECK-MINGW-F128-NEXT:    movaps (%rcx), %xmm0
-; CHECK-MINGW-F128-NEXT:    movaps %xmm0, 48(%rsp)
 ; CHECK-MINGW-F128-NEXT:    leaq 48(%rsp), %rax
 ; CHECK-MINGW-F128-NEXT:    movq %rax, 40(%rsp)
+; CHECK-MINGW-F128-NEXT:    movaps %xmm0, 48(%rsp)
 ; CHECK-MINGW-F128-NEXT:    movq $0, 32(%rsp)
 ; CHECK-MINGW-F128-NEXT:    leaq 64(%rsp), %rcx
 ; CHECK-MINGW-F128-NEXT:    xorl %edx, %edx
@@ -857,13 +857,13 @@ define void @call_many_leading_args(PrimTy %x) nounwind {
 ; CHECK-MSVC64-F128:       # %bb.0:
 ; CHECK-MSVC64-F128-NEXT:    subq $120, %rsp
 ; CHECK-MSVC64-F128-NEXT:    movaps (%rcx), %xmm0
-; CHECK-MSVC64-F128-NEXT:    xorps %xmm1, %xmm1
-; CHECK-MSVC64-F128-NEXT:    movaps %xmm1, 80(%rsp)
+; CHECK-MSVC64-F128-NEXT:    leaq 64(%rsp), %rax
+; CHECK-MSVC64-F128-NEXT:    movq %rax, 48(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    leaq 80(%rsp), %rax
 ; CHECK-MSVC64-F128-NEXT:    movq %rax, 40(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    movaps %xmm0, 64(%rsp)
-; CHECK-MSVC64-F128-NEXT:    leaq 64(%rsp), %rax
-; CHECK-MSVC64-F128-NEXT:    movq %rax, 48(%rsp)
+; CHECK-MSVC64-F128-NEXT:    xorps %xmm0, %xmm0
+; CHECK-MSVC64-F128-NEXT:    movaps %xmm0, 80(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    movq $0, 32(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    leaq 96(%rsp), %rcx
 ; CHECK-MSVC64-F128-NEXT:    xorl %edx, %edx
@@ -892,13 +892,13 @@ define void @call_many_leading_args(PrimTy %x) nounwind {
 ; CHECK-MINGW-F128:       # %bb.0:
 ; CHECK-MINGW-F128-NEXT:    subq $120, %rsp
 ; CHECK-MINGW-F128-NEXT:    movaps (%rcx), %xmm0
-; CHECK-MINGW-F128-NEXT:    xorps %xmm1, %xmm1
-; CHECK-MINGW-F128-NEXT:    movaps %xmm1, 80(%rsp)
+; CHECK-MINGW-F128-NEXT:    leaq 64(%rsp), %rax
+; CHECK-MINGW-F128-NEXT:    movq %rax, 48(%rsp)
 ; CHECK-MINGW-F128-NEXT:    leaq 80(%rsp), %rax
 ; CHECK-MINGW-F128-NEXT:    movq %rax, 40(%rsp)
 ; CHECK-MINGW-F128-NEXT:    movaps %xmm0, 64(%rsp)
-; CHECK-MINGW-F128-NEXT:    leaq 64(%rsp), %rax
-; CHECK-MINGW-F128-NEXT:    movq %rax, 48(%rsp)
+; CHECK-MINGW-F128-NEXT:    xorps %xmm0, %xmm0
+; CHECK-MINGW-F128-NEXT:    movaps %xmm0, 80(%rsp)
 ; CHECK-MINGW-F128-NEXT:    movq $0, 32(%rsp)
 ; CHECK-MINGW-F128-NEXT:    leaq 96(%rsp), %rcx
 ; CHECK-MINGW-F128-NEXT:    xorl %edx, %edx
@@ -1021,9 +1021,9 @@ define void @call_trailing_arg(PrimTy %x) nounwind {
 ; CHECK-MSVC64-F128:       # %bb.0:
 ; CHECK-MSVC64-F128-NEXT:    subq $88, %rsp
 ; CHECK-MSVC64-F128-NEXT:    movaps (%rcx), %xmm0
-; CHECK-MSVC64-F128-NEXT:    movaps %xmm0, 48(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    leaq 48(%rsp), %rax
 ; CHECK-MSVC64-F128-NEXT:    movq %rax, 40(%rsp)
+; CHECK-MSVC64-F128-NEXT:    movaps %xmm0, 48(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    movq $0, 32(%rsp)
 ; CHECK-MSVC64-F128-NEXT:    leaq 64(%rsp), %rcx
 ; CHECK-MSVC64-F128-NEXT:    xorl %edx, %edx
@@ -1050,9 +1050,9 @@ define void @call_trailing_arg(PrimTy %x) nounwind {
 ; CHECK-MINGW-F128:       # %bb.0:
 ; CHECK-MINGW-F128-NEXT:    subq $88, %rsp
 ; CHECK-MINGW-F128-NEXT:    movaps (%rcx), %xmm0
-; CHECK-MINGW-F128-NEXT:    movaps %xmm0, 48(%rsp)
 ; CHECK-MINGW-F128-NEXT:    leaq 48(%rsp), %rax
 ; CHECK-MINGW-F128-NEXT:    movq %rax, 40(%rsp)
+; CHECK-MINGW-F128-NEXT:    movaps %xmm0, 48(%rsp)
 ; CHECK-MINGW-F128-NEXT:    movq $0, 32(%rsp)
 ; CHECK-MINGW-F128-NEXT:    leaq 64(%rsp), %rcx
 ; CHECK-MINGW-F128-NEXT:    xorl %edx, %edx

@@ -928,31 +928,6 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   for (const std::pair<int, int> &SI : SlotRemap) {
     const AllocaInst *From = MFI->getObjectAllocation(SI.first);
     const AllocaInst *To = MFI->getObjectAllocation(SI.second);
-    assert(To && From && "Invalid allocation object");
-    Allocas[From] = To;
-
-    // If From is before wo, its possible that there is a use of From between
-    // them.
-    if (From->comesBefore(To))
-      const_cast<AllocaInst *>(To)->moveBefore(
-          const_cast<AllocaInst *>(From)->getIterator());
-
-    // AA might be used later for instruction scheduling, and we need it to be
-    // able to deduce the correct aliasing releationships between pointers
-    // derived from the alloca being remapped and the target of that remapping.
-    // The only safe way, without directly informing AA about the remapping
-    // somehow, is to directly update the IR to reflect the change being made
-    // here.
-    Instruction *Inst = const_cast<AllocaInst *>(To);
-    if (From->getType() != To->getType()) {
-      BitCastInst *Cast = new BitCastInst(Inst, From->getType());
-      Cast->insertAfter(Inst->getIterator());
-      Inst = Cast;
-    }
-
-    // We keep both slots to maintain AliasAnalysis metadata later.
-    MergedAllocas.insert(From);
-    MergedAllocas.insert(To);
 
     // Transfer the stack protector layout tag, but make sure that SSPLK_AddrOf
     // does not overwrite SSPLK_SmallArray or SSPLK_LargeArray, and make sure
@@ -966,21 +941,49 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
           FromKind != MachineFrameInfo::SSPLK_AddrOf)))
       MFI->setObjectSSPLayout(SI.second, FromKind);
 
-    // The new alloca might not be valid in a llvm.dbg.declare for this
-    // variable, so poison out the use to make the verifier happy.
-    AllocaInst *FromAI = const_cast<AllocaInst *>(From);
-    if (FromAI->isUsedByMetadata())
-      ValueAsMetadata::handleRAUW(FromAI, PoisonValue::get(FromAI->getType()));
-    for (auto &Use : FromAI->uses()) {
-      if (BitCastInst *BCI = dyn_cast<BitCastInst>(Use.get()))
-        if (BCI->isUsedByMetadata())
-          ValueAsMetadata::handleRAUW(BCI, PoisonValue::get(BCI->getType()));
-    }
+    if (From && To) {
+      Allocas[From] = To;
 
-    // Note that this will not replace uses in MMOs (which we'll update below),
-    // or anywhere else (which is why we won't delete the original
-    // instruction).
-    FromAI->replaceAllUsesWith(Inst);
+      // If From is before wo, its possible that there is a use of From between
+      // them.
+      if (From->comesBefore(To))
+        const_cast<AllocaInst *>(To)->moveBefore(
+            const_cast<AllocaInst *>(From)->getIterator());
+
+      // AA might be used later for instruction scheduling, and we need it to be
+      // able to deduce the correct aliasing releationships between pointers
+      // derived from the alloca being remapped and the target of that
+      // remapping. The only safe way, without directly informing AA about the
+      // remapping somehow, is to directly update the IR to reflect the change
+      // being made here.
+      Instruction *Inst = const_cast<AllocaInst *>(To);
+      if (From->getType() != To->getType()) {
+        BitCastInst *Cast = new BitCastInst(Inst, From->getType());
+        Cast->insertAfter(Inst->getIterator());
+        Inst = Cast;
+      }
+
+      // We keep both slots to maintain AliasAnalysis metadata later.
+      MergedAllocas.insert(From);
+      MergedAllocas.insert(To);
+
+      // The new alloca might not be valid in a llvm.dbg.declare for this
+      // variable, so poison out the use to make the verifier happy.
+      AllocaInst *FromAI = const_cast<AllocaInst *>(From);
+      if (FromAI->isUsedByMetadata())
+        ValueAsMetadata::handleRAUW(FromAI,
+                                    PoisonValue::get(FromAI->getType()));
+      for (auto &Use : FromAI->uses()) {
+        if (BitCastInst *BCI = dyn_cast<BitCastInst>(Use.get()))
+          if (BCI->isUsedByMetadata())
+            ValueAsMetadata::handleRAUW(BCI, PoisonValue::get(BCI->getType()));
+      }
+
+      // Note that this will not replace uses in MMOs (which we'll update
+      // below), or anywhere else (which is why we won't delete the original
+      // instruction).
+      FromAI->replaceAllUsesWith(Inst);
+    }
   }
 
   // Remap all instructions to the new stack slots.

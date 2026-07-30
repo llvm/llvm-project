@@ -323,9 +323,9 @@ define dso_local x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, 
 ; WIN64-NEXT:    .seh_setframe %rbp, 128
 ; WIN64-NEXT:    .seh_endprologue
 ; WIN64-NEXT:    andq $-32, %rsp
-; WIN64-NEXT:    kmovd %edx, %k0
-; WIN64-NEXT:    kmovd %eax, %k1
-; WIN64-NEXT:    kmovd %ecx, %k2
+; WIN64-NEXT:    kmovd %eax, %k0
+; WIN64-NEXT:    kmovd %ecx, %k1
+; WIN64-NEXT:    kmovd %edx, %k2
 ; WIN64-NEXT:    vpmovm2b %k2, %zmm0
 ; WIN64-NEXT:    vmovdqa %ymm0, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    vpmovm2b %k1, %zmm0
@@ -549,9 +549,9 @@ define dso_local x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, 
 ; WIN64-NEXT:    subq $88, %rsp
 ; WIN64-NEXT:    .seh_stackalloc 88
 ; WIN64-NEXT:    .seh_endprologue
-; WIN64-NEXT:    kmovd %edx, %k0
-; WIN64-NEXT:    kmovd %eax, %k1
-; WIN64-NEXT:    kmovd %ecx, %k2
+; WIN64-NEXT:    kmovd %eax, %k0
+; WIN64-NEXT:    kmovd %ecx, %k1
+; WIN64-NEXT:    kmovd %edx, %k2
 ; WIN64-NEXT:    vpmovm2b %k2, %zmm0
 ; WIN64-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    vpmovm2b %k1, %zmm0
@@ -779,9 +779,9 @@ define dso_local x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x
 ; WIN64-NEXT:    subq $88, %rsp
 ; WIN64-NEXT:    .seh_stackalloc 88
 ; WIN64-NEXT:    .seh_endprologue
-; WIN64-NEXT:    kmovd %edx, %k0
-; WIN64-NEXT:    kmovd %eax, %k1
-; WIN64-NEXT:    kmovd %ecx, %k2
+; WIN64-NEXT:    kmovd %eax, %k0
+; WIN64-NEXT:    kmovd %ecx, %k1
+; WIN64-NEXT:    kmovd %edx, %k2
 ; WIN64-NEXT:    vpmovm2w %k2, %zmm0
 ; WIN64-NEXT:    vmovdqa %xmm0, {{[0-9]+}}(%rsp)
 ; WIN64-NEXT:    vpmovm2w %k1, %zmm0

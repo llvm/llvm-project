@@ -599,9 +599,9 @@ define fp128 @fma(fp128 %x, fp128 %y, fp128 %z) nounwind strictfp {
 ; WIN-NEXT:    pushq %rsi
 ; WIN-NEXT:    subq $96, %rsp
 ; WIN-NEXT:    movq %rcx, %rsi
-; WIN-NEXT:    movaps (%r9), %xmm0
-; WIN-NEXT:    movaps (%rdx), %xmm1
-; WIN-NEXT:    movaps (%r8), %xmm2
+; WIN-NEXT:    movaps (%rdx), %xmm0
+; WIN-NEXT:    movaps (%r8), %xmm1
+; WIN-NEXT:    movaps (%r9), %xmm2
 ; WIN-NEXT:    movaps %xmm2, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)

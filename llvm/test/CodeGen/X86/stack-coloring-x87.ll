@@ -11,8 +11,8 @@ define void @test_byval(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-NEXT:    .seh_pushreg %rsi
 ; CHECK-NEXT:    pushq %rdi
 ; CHECK-NEXT:    .seh_pushreg %rdi
-; CHECK-NEXT:    subq $136, %rsp
-; CHECK-NEXT:    .seh_stackalloc 136
+; CHECK-NEXT:    subq $72, %rsp
+; CHECK-NEXT:    .seh_stackalloc 72
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    movq %r8, %rsi
 ; CHECK-NEXT:    movq %rdx, %rdi
@@ -48,7 +48,7 @@ define void @test_byval(ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-NEXT:    callq use_byval
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    addq $136, %rsp
+; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    popq %rdi
 ; CHECK-NEXT:    popq %rsi
 ; CHECK-NEXT:    .seh_endepilogue
@@ -65,8 +65,8 @@ declare void @use_f80(x86_fp80)
 define void @test_f80(x86_fp80 %p1, x86_fp80 %p2, x86_fp80 %p3) {
 ; CHECK-LABEL: test_f80:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $104, %rsp
-; CHECK-NEXT:    .seh_stackalloc 104
+; CHECK-NEXT:    subq $72, %rsp
+; CHECK-NEXT:    .seh_stackalloc 72
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    fldt (%r8)
 ; CHECK-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
@@ -86,7 +86,7 @@ define void @test_f80(x86_fp80 %p1, x86_fp80 %p2, x86_fp80 %p3) {
 ; CHECK-NEXT:    callq use_f80
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    addq $104, %rsp
+; CHECK-NEXT:    addq $72, %rsp
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .seh_endproc

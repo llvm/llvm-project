@@ -63,21 +63,21 @@ define void @test() {
 ; CHECK-NEXT:    subq $136, %rsp
 ; CHECK-NEXT:    .seh_stackalloc 136
 ; CHECK-NEXT:    .seh_endprologue
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq .refptr.G(%rip), %rax
 ; CHECK-NEXT:    movq (%rax), %rcx
 ; CHECK-NEXT:    movq 8(%rax), %rax
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq $10, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx

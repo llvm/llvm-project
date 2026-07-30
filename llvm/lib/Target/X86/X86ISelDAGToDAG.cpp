@@ -1457,17 +1457,53 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
 
       // FIXME: optimize the case where the src/dest is a load or store?
 
-      SDValue Store = CurDAG->getTruncStore(
-          CurDAG->getEntryNode(), dl, N->getOperand(0), MemTmp, MPI, MemVT);
+      // Mark the start of the stack temporary's lifetime.
+      SDValue LifetimeStart =
+          CurDAG->getLifetimeNode(true, dl, CurDAG->getEntryNode(), SPFI);
+
+      SDValue StoreVal = N->getOperand(0);
+
+      SDValue Store = CurDAG->getTruncStore(LifetimeStart, dl, StoreVal, MemTmp,
+                                            MPI, MemVT);
       SDValue Result = CurDAG->getExtLoad(ISD::EXTLOAD, dl, DstVT, Store,
                                           MemTmp, MPI, MemVT);
+
+      // Mark the end of the stack temporary's lifetime. Anchor it before the
+      // DAG root to prevent dead code elimination and avoid placing it after
+      // terminators.
+      SDValue LifetimeEnd =
+          CurDAG->getLifetimeNode(false, dl, Result.getValue(1), SPFI);
+      SDValue Root = CurDAG->getRoot();
+      SDValue GluedNode = Root;
+      // Walk up the glued sequence to find the start of the glued chain.
+      // This prevents inserting TokenFactors between glued nodes, which would
+      // break the scheduler.
+      while (GluedNode->getNumOperands() > 0 &&
+             GluedNode->getOperand(GluedNode->getNumOperands() - 1)
+                     .getValueType() == MVT::Glue) {
+        GluedNode = GluedNode->getOperand(GluedNode->getNumOperands() - 1);
+      }
+
+      if (GluedNode.getNode() && GluedNode.getNumOperands() > 0 &&
+          GluedNode.getOperand(0).getValueType() == MVT::Other &&
+          GluedNode.getOpcode() != ISD::TokenFactor) {
+        SDValue NewChain =
+            CurDAG->getNode(ISD::TokenFactor, dl, MVT::Other,
+                            GluedNode.getOperand(0), LifetimeEnd);
+        SmallVector<SDValue, 4> Ops(GluedNode->op_begin(), GluedNode->op_end());
+        Ops[0] = NewChain;
+        CurDAG->UpdateNodeOperands(GluedNode.getNode(), Ops);
+      } else {
+        CurDAG->setRoot(CurDAG->getNode(ISD::TokenFactor, dl, MVT::Other, Root,
+                                        LifetimeEnd));
+      }
 
       // We're about to replace all uses of the FP_ROUND/FP_EXTEND with the
       // extload we created.  This will cause general havok on the dag because
       // anything below the conversion could be folded into other existing nodes.
       // To avoid invalidating 'I', back it up to the convert node.
       --I;
-      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Result);
+      CurDAG->ReplaceAllUsesWith(N, Result.getNode());
       break;
     }
 
@@ -1513,11 +1549,15 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
 
       // FIXME: optimize the case where the src/dest is a load or store?
 
+      // Mark the start of the stack temporary's lifetime.
+      SDValue LifetimeStart =
+          CurDAG->getLifetimeNode(true, dl, N->getOperand(0), SPFI);
+
       //Since the operation is StrictFP, use the preexisting chain.
       SDValue Store, Result;
       if (!SrcIsSSE) {
         SDVTList VTs = CurDAG->getVTList(MVT::Other);
-        SDValue Ops[] = {N->getOperand(0), N->getOperand(1), MemTmp};
+        SDValue Ops[] = {LifetimeStart, N->getOperand(1), MemTmp};
         Store = CurDAG->getMemIntrinsicNode(X86ISD::FST, dl, VTs, Ops, MemVT,
                                             MPI, /*Align*/ std::nullopt,
                                             MachineMemOperand::MOStore);
@@ -1528,8 +1568,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
         }
       } else {
         assert(SrcVT == MemVT && "Unexpected VT!");
-        Store = CurDAG->getStore(N->getOperand(0), dl, N->getOperand(1), MemTmp,
-                                 MPI);
+        Store =
+            CurDAG->getStore(LifetimeStart, dl, N->getOperand(1), MemTmp, MPI);
       }
 
       if (!DstIsSSE) {
@@ -1546,6 +1586,36 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       } else {
         assert(DstVT == MemVT && "Unexpected VT!");
         Result = CurDAG->getLoad(DstVT, dl, Store, MemTmp, MPI);
+      }
+
+      // Mark the end of the stack temporary's lifetime. Anchor it before the
+      // DAG root to prevent dead code elimination and avoid placing it after
+      // terminators.
+      SDValue LifetimeEnd =
+          CurDAG->getLifetimeNode(false, dl, Result.getValue(1), SPFI);
+      SDValue Root = CurDAG->getRoot();
+      SDValue GluedNode = Root;
+      // Walk up the glued sequence to find the start of the glued chain.
+      // This prevents inserting TokenFactors between glued nodes, which would
+      // break the scheduler.
+      while (GluedNode->getNumOperands() > 0 &&
+             GluedNode->getOperand(GluedNode->getNumOperands() - 1)
+                     .getValueType() == MVT::Glue) {
+        GluedNode = GluedNode->getOperand(GluedNode->getNumOperands() - 1);
+      }
+
+      if (GluedNode.getNode() && GluedNode.getNumOperands() > 0 &&
+          GluedNode.getOperand(0).getValueType() == MVT::Other &&
+          GluedNode.getOpcode() != ISD::TokenFactor) {
+        SDValue NewChain =
+            CurDAG->getNode(ISD::TokenFactor, dl, MVT::Other,
+                            GluedNode.getOperand(0), LifetimeEnd);
+        SmallVector<SDValue, 4> Ops(GluedNode->op_begin(), GluedNode->op_end());
+        Ops[0] = NewChain;
+        CurDAG->UpdateNodeOperands(GluedNode.getNode(), Ops);
+      } else {
+        CurDAG->setRoot(CurDAG->getNode(ISD::TokenFactor, dl, MVT::Other, Root,
+                                        LifetimeEnd));
       }
 
       // We're about to replace all uses of the FP_ROUND/FP_EXTEND with the

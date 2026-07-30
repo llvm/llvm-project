@@ -549,12 +549,12 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; CHECK-I686-NEXT:    pushl %esi
 ; CHECK-I686-NEXT:    subl $104, %esp
 ; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-I686-NEXT:    pinsrw $0, 6(%eax), %xmm0
-; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
-; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
-; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; CHECK-I686-NEXT:    pinsrw $0, 2(%eax), %xmm0
-; CHECK-I686-NEXT:    pinsrw $0, 4(%eax), %xmm1
+; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    pinsrw $0, 4(%eax), %xmm0
+; CHECK-I686-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; CHECK-I686-NEXT:    pinsrw $0, 6(%eax), %xmm0
+; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm1
 ; CHECK-I686-NEXT:    pextrw $0, %xmm1, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %esi
@@ -577,10 +577,10 @@ define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; CHECK-I686-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstpl {{[0-9]+}}(%esp)
-; CHECK-I686-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-I686-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; CHECK-I686-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; CHECK-I686-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
+; CHECK-I686-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-I686-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; CHECK-I686-NEXT:    addl $104, %esp
 ; CHECK-I686-NEXT:    popl %esi
 ; CHECK-I686-NEXT:    retl
