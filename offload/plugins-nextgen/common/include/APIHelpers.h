@@ -27,9 +27,8 @@
 // _Pragma("weak name") retroactively downgrades any prior strong declaration
 // (e.g. from a vendor header included before this macro) to weak.
 #define API_HELPER_OPTIONAL(return_type, name, ...)                            \
-  _Pragma(API_HELPER_STRINGIFY(weak name))                                     \
-  namespace dlwrap {                                                           \
-  bool name##_loaded() __attribute__((weak));                                  \
+  _Pragma(API_HELPER_STRINGIFY(weak name)) namespace dlwrap {                  \
+    bool name##_loaded() __attribute__((weak));                                \
   }                                                                            \
   extern "C" return_type name(__VA_ARGS__) __attribute__((weak));              \
   template <> inline bool api_helper::canCall<name>() {                        \
