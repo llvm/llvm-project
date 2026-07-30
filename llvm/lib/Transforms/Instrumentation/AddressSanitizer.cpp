@@ -475,6 +475,10 @@ STATISTIC(NumOptimizedAccessesToGlobalVar,
           "Number of optimized accesses to global vars");
 STATISTIC(NumOptimizedAccessesToStackVar,
           "Number of optimized accesses to stack vars");
+static cl::opt<unsigned> ClAsanPreserveTopBits(
+    "asan-preserve-topbits",
+    cl::desc("Number of address top bits to preserve during shadow mapping"),
+    cl::Hidden, cl::init(0));
 
 namespace {
 
@@ -488,6 +492,7 @@ struct ShadowMapping {
   uint64_t Offset;
   bool OrShadowOffset;
   bool InGlobal;
+  unsigned PreserveTopBits;
 };
 
 } // end anonymous namespace
@@ -623,6 +628,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                            !(Mapping.Offset & (Mapping.Offset - 1)) &&
                            Mapping.Offset != kDynamicShadowSentinel;
   Mapping.InGlobal = ClWithIfunc && IsAndroid && IsArmOrThumb;
+  Mapping.PreserveTopBits = ClAsanPreserveTopBits;
 
   return Mapping;
 }
@@ -1431,19 +1437,41 @@ Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
     Shadow = IRB.CreateAnd(Shadow,
                            ConstantInt::get(IntptrTy, ~(uint64_t(0x0f) << 56)));
   }
-  // Shadow >> scale
-  Shadow = IRB.CreateLShr(Shadow, Mapping.Scale);
-  if (Mapping.Offset == 0) return Shadow;
-  // (Shadow >> scale) | offset
+  // PtrMask to ensure bit operations stay in platform address range
+  uint64_t PtrMask = IntptrTy->getIntegerBitWidth() == 64
+                         ? ~0ULL
+                         : ((1ULL << IntptrTy->getIntegerBitWidth()) - 1);
+
   Value *ShadowBase;
   if (LocalDynamicShadow)
     ShadowBase = LocalDynamicShadow;
   else
-    ShadowBase = ConstantInt::get(IntptrTy, Mapping.Offset);
+    ShadowBase = ConstantInt::get(IntptrTy, Mapping.Offset & PtrMask);
+
+  if (Mapping.PreserveTopBits > 0) {
+    unsigned BitWidth = IntptrTy->getIntegerBitWidth();
+    uint64_t PreservedMask = 0;
+    if (Mapping.PreserveTopBits < BitWidth)
+      PreservedMask = (~0ULL << (BitWidth - Mapping.PreserveTopBits)) & PtrMask;
+    uint64_t OffsetMask = ~PreservedMask & PtrMask;
+
+    Value *TopBits =
+        IRB.CreateAnd(Shadow, ConstantInt::get(IntptrTy, PreservedMask));
+    Value *BottomBits =
+        IRB.CreateAnd(Shadow, ConstantInt::get(IntptrTy, OffsetMask));
+    BottomBits = IRB.CreateLShr(BottomBits, Mapping.Scale);
+    Shadow = IRB.CreateOr(TopBits, BottomBits);
+    return IRB.CreateAdd(Shadow, ShadowBase);
+  }
+
+  // Shadow >> scale
+  Shadow = IRB.CreateLShr(Shadow, Mapping.Scale);
+  if (Mapping.Offset == 0)
+    return Shadow;
+  // (Shadow >> scale) | offset
   if (Mapping.OrShadowOffset)
     return IRB.CreateOr(Shadow, ShadowBase);
-  else
-    return IRB.CreateAdd(Shadow, ShadowBase);
+  return IRB.CreateAdd(Shadow, ShadowBase);
 }
 
 // Instrument memset/memmove/memcpy
