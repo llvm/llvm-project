@@ -26,14 +26,14 @@
 #include <cstdio>
 
 #ifdef _WIN32
-  #ifndef WIN32_LEAN_AND_MEAN
-  #define WIN32_LEAN_AND_MEAN
-  #endif
-  #define NOGDI
-  #ifndef NOMINMAX
-    #define NOMINMAX
-  #endif
-  #include <windows.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#define NOGDI
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
 #endif
 
 using namespace clang::driver;
