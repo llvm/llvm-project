@@ -5673,25 +5673,24 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // TODO: Remove this code after stepping away from the legacy cost model and
   // adding code to simplify VPlans before calculating their costs.
   auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-  bool IsFullyUnrolled = TC == VF && !Plan.hasTailFolded();
   SmallPtrSet<const Value *, 4> WidenedIVs;
-  if (IsFullyUnrolled) {
+  if (TC == VF && !Plan.hasTailFolded()) {
     addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
                                          CostCtx.SkipCostComputation);
   } else {
     // Inductions represented by a VPWidenIntOrFpInductionRecipe have their cost
     // computed by the recipe, so collect their phis to skip the legacy
     // increment cost below.
-    if (VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion())
-      for (VPRecipeBase &R : *LoopRegion->getEntryBasicBlock())
-        if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-          if (PHINode *IVPhi = WideIV->getPHINode())
-            WidenedIVs.insert(IVPhi);
-        }
+    VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+    for (VPRecipeBase &R : *LoopRegion->getEntryBasicBlock())
+      if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
+        if (PHINode *IVPhi = WideIV->getPHINode())
+          WidenedIVs.insert(IVPhi);
+      }
   }
 
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
-    if (!IsFullyUnrolled && WidenedIVs.contains(IV))
+    if (WidenedIVs.contains(IV))
       continue;
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
