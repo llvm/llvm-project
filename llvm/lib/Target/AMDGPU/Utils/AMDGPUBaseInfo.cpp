@@ -2558,6 +2558,10 @@ bool isGFX9Plus(const MCSubtargetInfo &STI) {
 
 bool isNotGFX9Plus(const MCSubtargetInfo &STI) { return !isGFX9Plus(STI); }
 
+bool hasPopsExitingWaveID(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeaturePopsExitingWaveID);
+}
+
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);
 }
@@ -3766,7 +3770,7 @@ bool isPacked64BitInst(unsigned Opc) {
   }
 }
 
-bool isPackedFP32or64BitInst(unsigned Opc) {
+bool isSingleSGPRReadInst(unsigned Opc) {
   return isPackedFP32Inst(Opc) || isPacked64BitInst(Opc);
 }
 

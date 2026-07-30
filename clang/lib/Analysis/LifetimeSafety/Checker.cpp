@@ -190,9 +190,9 @@ public:
       LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
       for (LoanID HeldLoanID : HeldLoans) {
         const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
-        if (ExpiredPath != HeldLoan->getAccessPath())
+        if (!ExpiredPath.isPrefixOf(HeldLoan->getAccessPath()))
           continue;
-        // HeldLoan is expired because its AccessPath is expired.
+        // HeldLoan is expired because its base or itself is expired.
         PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
         const Expr *MovedExpr = nullptr;
         if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
@@ -225,7 +225,7 @@ public:
     auto IsInvalidated = [&](const Loan *L) {
       for (LoanID InvalidID : DirectlyInvalidatedLoans) {
         const Loan *InvalidL = FactMgr.getLoanMgr().getLoan(InvalidID);
-        if (InvalidL->getAccessPath() == L->getAccessPath())
+        if (InvalidL->getAccessPath().isPrefixOf(L->getAccessPath()))
           return true;
       }
       return false;

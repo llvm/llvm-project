@@ -2549,6 +2549,15 @@ public:
   /// in ""'s.
   bool GetIncludeFilenameSpelling(SourceLocation Loc,StringRef &Buffer);
 
+  /// Turn the specified lexer token into a fully checked and spelled
+  /// filename, e.g. as an operand of \#line and \#.
+  ///
+  /// The caller is expected to provide a buffer that is large enough to hold
+  /// the spelling of the filename, but is also expected to handle the case
+  /// when this method decides to use a different buffer.
+  ///
+  void GetLineDirectiveFilenameSpelling(SourceLocation Loc, StringRef &Buffer);
+
   /// Given a "foo" or \<foo> reference, look up the indicated file.
   ///
   /// Returns std::nullopt on failure.  \p isAngled indicates whether the file

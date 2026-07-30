@@ -31,8 +31,7 @@ std::string join(IteratorT Begin, IteratorT End, std::string_view Separator) {
 
   std::string Result;
   Result.reserve(Size + (Count - 1) * Separator.size());
-  const size_t PrevCapacity = Result.capacity();
-  [maybe_used]] PrevCapacity;
+  [[maybe_unused]] const size_t PrevCapacity = Result.capacity();
 
   Result += std::string_view(*Begin);
   while (++Begin != End) {

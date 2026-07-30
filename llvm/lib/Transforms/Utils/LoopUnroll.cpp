@@ -1627,7 +1627,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   // LoopInfo should not be valid, confirm that.
   if (UnrollVerifyLoopInfo)
-    LI->verify(*DT);
+    LI->verify();
 
   // After complete unrolling most of the blocks should be contained in OuterL.
   // However, some of them might happen to be out of OuterL (e.g. if they
