@@ -49,12 +49,12 @@ public:
   // Following 2 enums are documented at:
   //   - https://llvm.org/docs/AMDGPUUsage.html#trap-handler-abi
   enum class TrapHandlerAbi {
-    NONE   = 0x00,
+    NONE = 0x00,
     AMDHSA = 0x01,
   };
 
   enum class TrapID {
-    LLVMAMDHSATrap      = 0x02,
+    LLVMAMDHSATrap = 0x02,
     LLVMAMDHSADebugTrap = 0x03,
   };
 
@@ -79,6 +79,9 @@ protected:
 
   // Instruction cache line size in bytes; set from TableGen subtarget features.
   unsigned InstCacheLineSize = 0;
+
+  // Data (VMEM) cache line size in bytes; set from TableGen subtarget features.
+  unsigned DataCacheLineSize = 0;
 
   // Dynamically set bits that enable features.
   bool DynamicVGPR = false;
@@ -199,6 +202,10 @@ public:
   /// Instruction cache line size in bytes (64 for pre-GFX11, 128 for GFX11+).
   unsigned getInstCacheLineSize() const { return InstCacheLineSize; }
 
+  /// Data (VMEM) cache line size in bytes (128 for gfx12), has no use before
+  /// GFX12.
+  unsigned getDataCacheLineSize() const { return DataCacheLineSize; }
+
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
     return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize
                                                        : 16;
@@ -210,12 +217,6 @@ public:
   /// a 32-bit register implicitly zeroes the high 16-bits, rather than preserve
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
-
-  bool supportsWGP() const {
-    if (HasGFX1250Insts)
-      return false;
-    return getGeneration() >= GFX10;
-  }
 
   bool hasHWFP64() const { return HasFP64; }
 
@@ -382,11 +383,6 @@ public:
 
   bool hasVINTERPEncoding() const {
     return HasGFX11Insts && !hasGFX1250Insts();
-  }
-
-  // DS_ADD_F64/DS_ADD_RTN_F64
-  bool hasLdsAtomicAddF64() const {
-    return hasGFX90AInsts() || hasGFX1250Insts();
   }
 
   bool hasMultiDwordFlatScratchAddressing() const {
@@ -755,7 +751,7 @@ public:
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
-    return AMDGPU::IsaInfo::getSGPRAllocGranule(*this);
+    return AMDGPU::getSGPRAllocGranule(getTargetID().getGPUKind());
   }
 
   /// \returns SGPR encoding granularity supported by the subtarget.
@@ -765,12 +761,12 @@ public:
 
   /// \returns Total number of SGPRs supported by the subtarget.
   unsigned getTotalNumSGPRs() const {
-    return AMDGPU::IsaInfo::getTotalNumSGPRs(*this);
+    return AMDGPU::getTotalNumSGPRs(getTargetID().getGPUKind());
   }
 
   /// \returns Addressable number of SGPRs supported by the subtarget.
   unsigned getAddressableNumSGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumSGPRs(*this);
+    return AMDGPU::getAddressableNumSGPRs(getTargetID().getGPUKind());
   }
 
   /// \returns Minimum number of SGPRs that meets the given number of waves per
@@ -899,10 +895,6 @@ public:
   /// subtarget's specifications, or does not meet number of waves per execution
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
-
-  bool supportsWave32() const { return getGeneration() >= GFX10; }
-
-  bool supportsWave64() const { return !hasGFX1250Insts() || HasGFX13Insts; }
 
   bool isWave32() const { return getWavefrontSize() == 32; }
 

@@ -160,10 +160,12 @@ private:
   using _Base _LIBCPP_NODEBUG   = __maybe_const<_Const, _View>;
   sentinel_t<_Base> __end_      = sentinel_t<_Base>();
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(_Parent& __parent) : __end_(ranges::end(__parent.__base_)) {}
+
+  friend class join_view<_View>;
+
 public:
   _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(_Parent& __parent) : __end_(ranges::end(__parent.__base_)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __sentinel(__sentinel<!_Const> __s)
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>

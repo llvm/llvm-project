@@ -12,6 +12,7 @@
 #include "RegisterContextWasm.h"
 #include "UnwindWasm.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/Unwind.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,6 +33,15 @@ llvm::Expected<std::vector<lldb::addr_t>> ThreadWasm::GetWasmCallStack() {
     return wasm_process->GetWasmCallStack(GetID());
   }
   return llvm::createStringError("no process");
+}
+
+lldb::addr_t ThreadWasm::GetConcreteFramePC(uint32_t concrete_frame_idx) {
+  lldb::addr_t cfa, pc;
+  bool behaves_like_zeroth_frame;
+  if (GetUnwinder().GetFrameInfoAtIndex(concrete_frame_idx, cfa, pc,
+                                        behaves_like_zeroth_frame))
+    return pc;
+  return LLDB_INVALID_ADDRESS;
 }
 
 lldb::RegisterContextSP

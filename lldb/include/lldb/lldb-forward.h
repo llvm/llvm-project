@@ -193,12 +193,14 @@ class ScriptedFrameInterface;
 class ScriptedFrameProviderInterface;
 class ScriptedMetadata;
 class ScriptedBreakpointInterface;
+class ScriptedCommandInterface;
 class ScriptedHookInterface;
 class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
 class ScriptedThreadInterface;
 class ScriptedThreadPlanInterface;
 class ScriptedStackFrameRecognizerInterface;
+class ScriptedStringSummaryInterface;
 class ScriptedSyntheticChildren;
 class SearchFilter;
 class Section;
@@ -438,6 +440,10 @@ typedef std::shared_ptr<lldb_private::ScriptedBreakpointInterface>
     ScriptedBreakpointInterfaceSP;
 typedef std::shared_ptr<lldb_private::ScriptedStackFrameRecognizerInterface>
     ScriptedStackFrameRecognizerInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedCommandInterface>
+    ScriptedCommandInterfaceSP;
+typedef std::shared_ptr<lldb_private::ScriptedStringSummaryInterface>
+    ScriptedStringSummaryInterfaceSP;
 typedef std::shared_ptr<lldb_private::Section> SectionSP;
 typedef std::unique_ptr<lldb_private::SectionList> SectionListUP;
 typedef std::weak_ptr<lldb_private::Section> SectionWP;
