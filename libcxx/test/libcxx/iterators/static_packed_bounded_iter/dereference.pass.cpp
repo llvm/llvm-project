@@ -11,8 +11,7 @@
 //
 // Dereference and indexing operators
 
-// REQUIRES: has-unix-headers, std-at-least-c++26
-// UNSUPPORTED: libcpp-hardening-mode=none
+// REQUIRES: std-at-least-c++26
 
 #include <__iterator/static_packed_bounded_iter.h>
 #include <cassert>

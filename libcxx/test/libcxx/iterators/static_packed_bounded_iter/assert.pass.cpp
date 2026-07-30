@@ -18,8 +18,9 @@
 #include <iterator>
 
 #include "check_assertion.h"
+#include "test_macros.h"
 
-struct alignas(4) Foo {
+struct TEST_ALIGNAS(4) Foo {
   char x;
   Foo(int y) : x(y) {}
 };

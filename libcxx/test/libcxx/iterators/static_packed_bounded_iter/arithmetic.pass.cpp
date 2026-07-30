@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-struct alignas(8) Foo {
+struct TEST_ALIGNAS(8) Foo {
   int x;
 
   constexpr Foo(int y) : x(y) {}
