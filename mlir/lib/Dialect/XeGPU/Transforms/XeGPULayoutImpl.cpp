@@ -2683,10 +2683,15 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
                     "insertStridedSlice.");
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
     for (int dim = 0; dim < srcRank; dim++) {
-      assert(srcShape[dim] % consumerLaneLayout[dim] == 0 &&
-             "srcShape must be divisible by laneLayout for all dimensions");
-      laneDataValue = std::min(srcShape[dim] / consumerLaneLayout[dim],
-                               consumerLaneData[dim]);
+      // A size-1 source dim is broadcast across the lanes of that dim.
+      if (srcShape[dim] == 1) {
+        laneDataValue = 1;
+      } else {
+        assert(srcShape[dim] % consumerLaneLayout[dim] == 0 &&
+               "srcShape must be divisible by laneLayout for all dimensions");
+        laneDataValue = std::min(srcShape[dim] / consumerLaneLayout[dim],
+                                 consumerLaneData[dim]);
+      }
       requiredResLayout =
           requiredResLayout.setDimData(dim, -1, -1, laneDataValue);
     }
