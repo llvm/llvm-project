@@ -241,12 +241,9 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
                                        mlir::ValueRange{src0, src1, src2});
   }
   case AMDGPU::BI__builtin_amdgcn_trig_preop:
-  case AMDGPU::BI__builtin_amdgcn_trig_preopf: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_trig_preopf:
+    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.trig.preop")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_rcp:
   case AMDGPU::BI__builtin_amdgcn_rcpf:
   case AMDGPU::BI__builtin_amdgcn_rcph:
