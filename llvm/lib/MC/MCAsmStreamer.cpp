@@ -299,6 +299,7 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
+  void emitTargetTriple(StringRef TargetTriple) override;
   void EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
                              bool PtrAuthKernelABIVersion) override;
 
@@ -822,6 +823,11 @@ void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
     unsigned Platform, unsigned Major, unsigned Minor, unsigned Update,
     VersionTuple SDKVersion) {
   emitBuildVersion(Platform, Major, Minor, Update, SDKVersion);
+}
+
+void MCAsmStreamer::emitTargetTriple(StringRef TargetTriple) {
+  OS << "\t.target_triple \"" << TargetTriple << '"';
+  EmitEOL();
 }
 
 void MCAsmStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,

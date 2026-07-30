@@ -854,6 +854,18 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
     LoadCommandsSize += sizeof(MachO::build_version_command);
   }
 
+  // Add the target triple load command size, if used.
+  uint32_t TargetTripleCommandSize = 0;
+  if (TargetTriple) {
+    ++NumLoadCommands;
+    // The full command is the command struct plus the NUL terminated triple
+    // string, all padded to align.
+    TargetTripleCommandSize =
+        alignTo(sizeof(MachO::target_triple_command) + TargetTriple->size() + 1,
+                is64Bit() ? 8 : 4);
+    LoadCommandsSize += TargetTripleCommandSize;
+  }
+
   // Add the data-in-code load command size, if used.
   unsigned NumDataRegions = DataRegions.size();
   if (NumDataRegions) {
@@ -999,6 +1011,24 @@ void MachObjectWriter::writeMachOHeader(MCAssembler &Asm) {
     EmitDeploymentTargetVersion(VersionInfo);
   if (TargetVariantVersionInfo.Major != 0)
     EmitDeploymentTargetVersion(TargetVariantVersionInfo);
+
+  // Write the target triple load command, if used.
+  if (TargetTriple) {
+    assert((TargetTripleCommandSize > sizeof(MachO::target_triple_command)) &&
+           "target triple load command size is too small");
+
+    // Write the command struct
+    W.write<uint32_t>(MachO::LC_TARGET_TRIPLE);
+    W.write<uint32_t>(TargetTripleCommandSize);
+    W.write<uint32_t>(sizeof(
+        MachO::target_triple_command)); // Offset to the triple string - right
+                                        // after the command struct.
+
+    // Write the triple string, NUL byte, and command padding.
+    uint64_t RemainingSize =
+        TargetTripleCommandSize - sizeof(MachO::target_triple_command);
+    writeWithPadding(*TargetTriple, RemainingSize);
+  }
 
   // Write the data-in-code load command, if used.
   uint64_t DataInCodeTableEnd = RelocTableEnd + NumDataRegions * 8;
