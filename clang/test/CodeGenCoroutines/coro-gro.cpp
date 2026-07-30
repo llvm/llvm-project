@@ -61,6 +61,7 @@ int f() {
   // CHECK-NEXT: br i1 %InRamp, label %[[GroConv:.+]], label %[[AfterGroConv:.+]]
 
   // CHECK: [[GroConv]]:
+  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %[[RetVal]])
   // CHECK-NEXT: %[[Conv:.+]] = call noundef i32 @_ZN7GroTypecviEv(
   // CHECK-NEXT: store i32 %[[Conv]], ptr %[[RetVal]]
   // CHECK-NEXT: %[[IsActive:.+]] = load i1, ptr %[[GroActive]]

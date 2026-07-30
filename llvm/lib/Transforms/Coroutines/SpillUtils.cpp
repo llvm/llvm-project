@@ -340,11 +340,6 @@ private:
     // every basic block that uses the pointer to see if they cross suspension
     // points. The uses cover both direct uses as well as indirect uses.
     if (ShouldUseLifetimeStartInfo && !LifetimeStarts.empty()) {
-      // If there is no explicit lifetime.end, then assume the address can
-      // cross suspension points.
-      if (LifetimeEndBBs.empty())
-        return true;
-
       // If there is a path from a lifetime.start to a suspend without a
       // corresponding lifetime.end, then the alloca's lifetime persists
       // beyond that suspension point and the alloca must go on the frame.

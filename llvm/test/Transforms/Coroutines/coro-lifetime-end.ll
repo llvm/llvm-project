@@ -8,8 +8,8 @@ declare void @consume.i8.array(ptr)
 
 @testbool = external local_unnamed_addr global i8, align 1
 
-; testval does not contain an explicit lifetime end. We must assume that it may
-; live across suspension.
+; testval does not contain an explicit lifetime.end between lifetime.start and coro.suspend
+; We must assume that it may live across suspension.
 define void @HasNoLifetimeEnd() presplitcoroutine {
 ; CHECK-LABEL: define void @HasNoLifetimeEnd() {
 ; CHECK-NEXT:  entry:

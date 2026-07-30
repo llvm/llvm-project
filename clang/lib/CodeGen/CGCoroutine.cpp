@@ -880,6 +880,10 @@ struct GetReturnObjectManager {
     Builder.CreateCondBr(InRamp, ConvBB, AfterConvBB);
 
     CGF.EmitBlock(ConvBB);
+    // Emit lifetime.start after all suspending points, ensuring the return
+    // alloca does not go into the coroutine frame.
+    if (auto *AI = dyn_cast<llvm::AllocaInst>(CGF.ReturnValue.getBasePointer()))
+      CGF.EmitLifetimeStart(AI);
     CGF.EmitAnyExprToMem(S.getReturnValue(), CGF.ReturnValue,
                          S.getReturnValue()->getType().getQualifiers(),
                          /*IsInit*/ true);
