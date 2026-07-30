@@ -14,6 +14,7 @@
 #ifndef BOLT_CORE_DEBUG_DATA_H
 #define BOLT_CORE_DEBUG_DATA_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -62,6 +63,20 @@ findAttributeInfo(const DWARFDie DIE,
 /// \return an optional AttrInfo with DWARFFormValue and Offset.
 std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
                                           dwarf::Attribute Attr);
+
+/// Streams the DIEs of \p Unit one at a time via
+/// DWARFDebugInfoEntry::extractFast, invoking \p Callback on each non-null DIE,
+/// without ever materializing the unit's full DIE vector (as
+/// DWARFUnit::dies() / extractDIEsToVector() would). Keeping those vectors out
+/// of memory is a meaningful RSS win during debug-info processing -- BOLT's
+/// memory-heaviest phase -- especially for split-DWARF binaries with tens of
+/// thousands of .dwo units.
+///
+/// Only DIE attributes should be inspected in \p Callback: the tree structure
+/// is not reconstructed, so DWARFDie::children() / getParent() / getSibling()
+/// are unavailable on the visited DIEs.
+void forEachDIEInUnit(DWARFUnit &Unit,
+                      llvm::function_ref<void(const DWARFDie &)> Callback);
 
 // DWARF5 Header in order of encoding.
 // Types represent encoding sizes.

@@ -6527,6 +6527,8 @@ lowerVECTOR_SHUFFLEAsRV32PNarrowingShift(ShuffleVectorSDNode *SVN,
 
 // Match a strided-interleave shuffle that forms a P-extension packed pair:
 //   <a0, b0, a2, b2, ...> -> ppaire.*
+//   <a0, b1, a2, b3, ...> -> ppaireo.*
+//   <a1, b0, a3, b2, ...> -> ppairoe.*
 //   <a1, b1, a3, b3, ...> -> ppairo.*
 static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
                                           SelectionDAG &DAG) {
@@ -6549,32 +6551,37 @@ static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
   bool V1IsSplat = DAG.isSplatValue(V1);
   bool V2IsSplat = DAG.isSplatValue(V2);
 
-  // Match <start, N+start, start+2, N+start+2, ...>: even lanes come from V1
-  // and odd lanes from V2 (start=0, ppaire) or vice versa (start=1, ppairo).
-  // Trailing lanes may be undef when a 4-byte source was widened to v8i8.
-  auto IsStrided = [&](unsigned Start) {
+  // Match the packed pair shuffle forms:
+  //   <V1Start, N+V2Start, V1Start+2, N+V2Start+2, ...>
+  // where each start is 0 for even lanes or 1 for odd lanes. This covers all
+  // four PPAIRE/PPAIREO/PPAIROE/PPAIRO combinations. Trailing lanes may be
+  // undef when a 4-byte source was widened to v8i8.
+  auto IsStrided = [&](unsigned V1Start, unsigned V2Start) {
     for (unsigned I = 0; I != NumElts / 2; ++I) {
       int M0 = Mask[2 * I];
       int M1 = Mask[2 * I + 1];
       if (M0 >= 0 &&
-          (V1IsSplat ? M0 >= (int)NumElts : M0 != (int)(Start + 2 * I)))
+          (V1IsSplat ? M0 >= (int)NumElts : M0 != (int)(V1Start + 2 * I)))
         return false;
       if (M1 >= 0 && (V2IsSplat ? M1 < (int)NumElts
-                                : M1 != (int)(NumElts + Start + 2 * I)))
+                                : M1 != (int)(NumElts + V2Start + 2 * I)))
         return false;
     }
     return true;
   };
 
-  bool IsOdd;
-  if (IsStrided(0))
-    IsOdd = false;
-  else if (IsStrided(1))
-    IsOdd = true;
+  unsigned Opc;
+  if (IsStrided(0, 0))
+    Opc = RISCVISD::PPAIRE;
+  else if (IsStrided(1, 1))
+    Opc = RISCVISD::PPAIRO;
+  else if (IsStrided(0, 1))
+    Opc = RISCVISD::PPAIREO;
+  else if (IsStrided(1, 0))
+    Opc = RISCVISD::PPAIROE;
   else
     return SDValue();
 
-  unsigned Opc = IsOdd ? RISCVISD::PPAIRO : RISCVISD::PPAIRE;
   return DAG.getNode(Opc, DL, VT, V1, V2);
 }
 
