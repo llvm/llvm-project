@@ -90,3 +90,17 @@ cir.func @ternary_fp_builtin_fenv(%a: !cir.float, %b: !cir.float, %c: !cir.float
   %1 = cir.fma %a, %b, %c : !cir.float
   cir.return
 }
+
+// CHECK-LABEL: cir.func @cast_fenv
+cir.func @cast_fenv(%a: !cir.float, %b: !cir.double, %i: !s32i) {
+  // CHECK: cir.cast floating %{{.*}} : !cir.double -> !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+  %0 = cir.cast floating %b : !cir.double -> !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+  // CHECK: cir.cast int_to_float %{{.*}} : !s32i -> !cir.float {fenv = #cir.fenv<>}
+  %1 = cir.cast int_to_float %i : !s32i -> !cir.float {fenv = #cir.fenv<>}
+  // CHECK: cir.cast float_to_int %{{.*}} : !cir.float -> !s32i {fenv = #cir.fenv<except_mode = unmasked, strict_except = true>}
+  %2 = cir.cast float_to_int %a : !cir.float -> !s32i {fenv = #cir.fenv<except_mode = unmasked, strict_except = true>}
+  // CHECK: cir.cast float_to_bool %{{.*}} : !cir.float -> !cir.bool
+  // CHECK-NOT: fenv
+  %3 = cir.cast float_to_bool %a : !cir.float -> !cir.bool
+  cir.return
+}

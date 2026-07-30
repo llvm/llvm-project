@@ -50,8 +50,6 @@ createAllocationPlacement(const AllocationPlacementOptions &options,
                           AllocationPlacementHook placementHook);
 
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
-std::unique_ptr<mlir::Pass>
-createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass>
