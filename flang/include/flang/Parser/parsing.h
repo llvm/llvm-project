@@ -21,6 +21,8 @@
 
 namespace Fortran::parser {
 
+class UserState;
+
 class Parsing {
 public:
   explicit Parsing(AllCookedSources &);
@@ -55,6 +57,11 @@ public:
   }
 
 private:
+  // Adds a note suggesting -flogical-abbreviations when the parse failed on a
+  // source line bearing a logical abbreviation (.T./.F./.N./.A./.O.) that the
+  // disabled LogicalAbbreviations feature would otherwise accept.
+  void SuggestLogicalAbbreviations(const UserState &, Messages &);
+
   Options options_;
   AllCookedSources &allCooked_;
   CookedSource *currentCooked_{nullptr};

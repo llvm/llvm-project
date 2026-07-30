@@ -13,7 +13,10 @@
 #include "flang/Parser/preprocessor.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
+#include "flang/Parser/user-state.h"
 #include "llvm/Support/raw_ostream.h"
+#include <set>
+#include <utility>
 
 namespace Fortran::parser {
 
@@ -292,8 +295,52 @@ void Parsing::Parse(llvm::raw_ostream &out) {
   CHECK(
       !parseState.anyErrorRecovery() || parseState.messages().AnyFatalError());
   consumedWholeFile_ = parseState.IsAtEnd();
-  messages_.Annex(std::move(parseState.messages()));
   finalRestingPlace_ = parseState.GetLocation();
+  SuggestLogicalAbbreviations(userState, parseState.messages());
+  messages_.Annex(std::move(parseState.messages()));
+}
+
+// When the LogicalAbbreviations feature is disabled, the parser records the
+// location of every logical abbreviation (.T./.F./.N./.A./.O.) it sees.  For
+// each such occurrence that lies on a source line where the parse failed,
+// suggest the -flogical-abbreviations option.  Tying each suggestion to
+// a failing source line keeps it from appearing for an occurrence that parses
+// successfully as a defined operator (those fail later in semantics, not here)
+// or on a line that failed for an unrelated reason.  Line granularity is a
+// heuristic, though: a valid defined-operator use that happens to share its
+// source line with an unrelated parse error still receives the suggestion.
+void Parsing::SuggestLogicalAbbreviations(
+    const UserState &userState, Messages &messages) {
+  const std::set<CharBlock, UserState::CharBlockByPosition> &abbreviations{
+      userState.disabledLogicalAbbreviations()};
+  if (abbreviations.empty()) {
+    return;
+  }
+  std::set<std::pair<const SourceFile *, int>> errorLines;
+  for (const Message &message : messages.messages()) {
+    if (!message.IsFatal()) {
+      continue;
+    }
+    if (std::optional<CharBlock> errorLoc{message.GetCookedSourceLocation()}) {
+      if (auto pos{allCooked_.GetSourcePositionRange(*errorLoc)}) {
+        errorLines.emplace(&*pos->first.sourceFile, pos->first.line);
+      }
+    }
+  }
+  if (errorLines.empty()) {
+    return;
+  }
+  // The set is keyed by source position, so iterating it visits each
+  // occurrence once, in increasing source order: a note is emitted for every
+  // .T./.F. usage on a failing line, even when spellings repeat.
+  for (const CharBlock &abbreviation : abbreviations) {
+    if (auto pos{allCooked_.GetSourcePositionRange(abbreviation)}) {
+      if (errorLines.count({&*pos->first.sourceFile, pos->first.line}) > 0) {
+        messages.Say(abbreviation,
+            "This nonstandard logical abbreviation requires the '-flogical-abbreviations' option"_en_US);
+      }
+    }
+  }
 }
 
 void Parsing::ClearLog() { log_.clear(); }

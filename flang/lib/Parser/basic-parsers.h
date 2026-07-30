@@ -846,6 +846,37 @@ public:
   std::optional<resultType> Parse(ParseState &state) const {
     if (UserState * ustate{state.userState()}) {
       if (!ustate->features().IsEnabled(LF)) {
+        if constexpr (LF == LanguageFeature::LogicalAbbreviations) {
+          // The feature is disabled, but if the source actually spells a
+          // logical abbreviation here, remember its location so that a later
+          // parse failure at this spot can suggest -flogical-abbreviations.
+          // Every such abbreviation begins with '.', so only attempt the
+          // speculative parse (which copies the parse state) when the next
+          // non-blank character could start one.  The forked parse state
+          // shares this state's UserState pointer, so the speculatively run
+          // inner parser must have no side effects on it (the wrapped
+          // abbreviation parsers are pure token matchers).
+          const char *p{state.GetLocation()};
+          const char *limit{p + state.BytesRemaining()};
+          while (p < limit && *p == ' ') {
+            ++p;
+          }
+          if (p < limit && *p == '.') {
+            ParseState fork{state};
+            if (parser_.Parse(fork)) {
+              // Anchor the recorded span at the first non-blank character so
+              // that re-attempts at the same occurrence from different
+              // productions record the same position, and trim any trailing
+              // blanks the token parser consumed so the span covers exactly
+              // the abbreviation.
+              const char *end{std::max(fork.GetLocation(), p + 1)};
+              while (end > p + 1 && end[-1] == ' ') {
+                --end;
+              }
+              ustate->NoteDisabledLogicalAbbreviation(CharBlock{p, end});
+            }
+          }
+        }
         return std::nullopt;
       }
     }
