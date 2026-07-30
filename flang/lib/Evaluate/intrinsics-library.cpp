@@ -28,7 +28,9 @@
 #include "flang/Common/float128.h"
 #include "flang/Common/float80.h"
 #include <type_traits>
-#include <unistd.h>
+#ifndef _WIN32
+#include <unistd.h> // _POSIX_VERSION, _XOPEN_VERSION
+#endif
 
 namespace Fortran::evaluate {
 
