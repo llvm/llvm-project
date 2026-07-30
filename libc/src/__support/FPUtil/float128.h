@@ -79,9 +79,7 @@ struct Float128 {
       return x_bits.is_neg() ? MIN_T : MAX_T;
     }
     int exponent = x_bits.get_explicit_exponent();
-    constexpr int EXPONENT_LIMIT = cpp::is_signed_v<T>
-                                       ? static_cast<int>(sizeof(T) * 8) - 1
-                                       : static_cast<int>(sizeof(T) * 8);
+    constexpr int EXPONENT_LIMIT = cpp::numeric_limits<T>::digits;
     if (exponent > EXPONENT_LIMIT) {
       raise_except_if_required(FE_INVALID);
       return x_bits.is_neg() ? MIN_T : MAX_T;
