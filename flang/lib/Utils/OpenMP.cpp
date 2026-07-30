@@ -240,8 +240,7 @@ mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
     return mlir::FlatSymbolRefAttr::get(
         firOpBuilder.getContext(), mapperNameStr);
 
-  if (std::string kindlessMapperName =
-          getKindlessDefaultMapperName(recordType);
+  if (std::string kindlessMapperName = getKindlessDefaultMapperName(recordType);
       !kindlessMapperName.empty() && kindlessMapperName != mapperNameStr) {
     if (auto explicitMapper = moduleOp.lookupSymbol<mlir::omp::DeclareMapperOp>(
             kindlessMapperName);
