@@ -12,8 +12,11 @@
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
+#include "hdr/stdint_proxy.h"
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
+#include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -35,6 +38,17 @@ char *realloc_or_die(char *ptr, size_t size) {
 }
 
 char *malloc_or_die(size_t size) { return realloc_or_die(nullptr, size); }
+
+// Returns whether the address of a is less than or equal to the address of b.
+LIBC_INLINE bool ptr_le(const char *a, const char *b) {
+  return reinterpret_cast<uintptr_t>(a) <= reinterpret_cast<uintptr_t>(b);
+}
+
+// Whether the memory spanned by a and b have any overlap.
+LIBC_INLINE bool memory_overlaps(cpp::string_view a, cpp::string_view b) {
+  return !(ptr_le(b.data() + b.size(), a.data()) ||
+           ptr_le(a.data() + a.size(), b.data()));
+}
 
 } // namespace
 
@@ -94,17 +108,21 @@ private:
     return new_capacity;
   }
 
-  // Replaces the current buffer with a new larger one containing the first
-  // keep_prefix_size bytes of the current buffer concatenated with new_data.
+  // Replaces the current buffer with a new larger one that is the concatenation
+  // the first keep_prefix_size bytes of the current string, new_data, and the
+  // last keep_suffix_size bytes of the current string.
   LIBC_INLINE void grow_and_replace(size_t keep_prefix_size,
-                                    cpp::string_view new_data) {
-    size_t new_size = keep_prefix_size + new_data.size();
+                                    cpp::string_view new_data,
+                                    size_t keep_suffix_size) {
+    size_t new_size = keep_prefix_size + new_data.size() + keep_suffix_size;
     size_t new_capacity = amortized_capacity(new_size);
     char *new_buffer = malloc_or_die(new_capacity);
 
     inline_memcpy(new_buffer, buffer_, keep_prefix_size);
     inline_memcpy(new_buffer + keep_prefix_size, new_data.data(),
                   new_data.size());
+    inline_memcpy(new_buffer + keep_prefix_size + new_data.size(),
+                  buffer_ + size_ - keep_suffix_size, keep_suffix_size);
 
     move_assign_from_buffer(new_buffer, new_capacity, new_size);
     set_size_and_add_null_character(new_size);
@@ -138,7 +156,8 @@ public:
     }
 
     if (capacity() < view.size()) {
-      grow_and_replace(/* keep_prefix_size= */ 0, view);
+      grow_and_replace(/* keep_prefix_size= */ 0, view,
+                       /* keep_suffix_size= */ 0);
       return *this;
     }
 
@@ -257,7 +276,8 @@ public:
       return *this;
 
     if (capacity() - size_ < view.size()) {
-      grow_and_replace(/* keep_prefix_size= */ size_, view);
+      grow_and_replace(/* keep_prefix_size= */ size_, view,
+                       /* keep_suffix_size= */ 0);
       return *this;
     }
 
@@ -271,6 +291,40 @@ public:
 
   LIBC_INLINE string &operator+=(const char c) {
     return append(string_view(&c, 1));
+  }
+
+  // Replaces the span [pos, pos + count) in this string with `str`.
+  LIBC_INLINE string &replace(size_t pos, size_t count, string_view str) {
+    LIBC_ASSERT(pos <= size_); // Out of bounds.
+
+    count = min(count, size_ - pos);
+    size_t new_size = str.size() + size_ - count;
+
+    if (new_size > capacity()) {
+      grow_and_replace(/* keep_prefix_size= */ pos, str, size_ - pos - count);
+      return *this;
+    }
+
+    // If the input references a section of this string that will be edited,
+    // fall back to a slow approach. libc++ implements this efficiently via
+    // pointer arithmetic. If self-referential replace is used frequently,
+    // this can be updated to avoid the extra temporary.
+    bool has_overlap =
+        memory_overlaps(str, string_view(buffer_ + pos, size_ - pos));
+    string tmp;
+    if (LIBC_UNLIKELY(has_overlap)) {
+      // Save str in a temp string, then update the view to reference it.
+      tmp = str;
+      str = tmp;
+    }
+
+    if (str.size() != count)
+      inline_memmove(buffer_ + pos + str.size(), buffer_ + pos + count,
+                     size_ - pos - count);
+
+    inline_memcpy(buffer_ + pos, str.data(), str.size());
+    set_size_and_add_null_character(new_size);
+    return *this;
   }
 };
 

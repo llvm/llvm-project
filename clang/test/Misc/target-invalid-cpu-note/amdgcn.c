@@ -86,6 +86,20 @@
 // CHECK-SAME: {{^}}, gfx13-generic
 // CHECK-SAME: {{$}}
 
+// The pseudo targets "generic"/"generic-hsa" may not be used.
+// RUN: not %clang_cc1 -triple amdgcn--- -target-cpu generic -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC %s
+// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu generic -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC %s
+// GENERIC: error: unknown target CPU 'generic'
+// GENERIC-NEXT: note: valid target CPU values are:
+// GENERIC-NOT: {{[ ,]}}generic{{[,$]}}
+// GENERIC-NOT: generic-hsa
+
+// RUN: not %clang_cc1 -triple amdgcn--- -target-cpu generic-hsa -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC-HSA %s
+// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu generic-hsa -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GENERIC-HSA %s
+// GENERIC-HSA: error: unknown target CPU 'generic-hsa'
+// GENERIC-HSA-NEXT: note: valid target CPU values are:
+// GENERIC-HSA-NOT: generic-hsa
+
 // When the triple carries a major-family subarch, only the GPUs in that family
 // are valid (a CPU from another family is rejected).
 // RUN: not %clang_cc1 -triple amdgpu9--- -target-cpu gfx1030 -fsyntax-only %s 2>&1 | FileCheck --check-prefix=GFX9 %s
