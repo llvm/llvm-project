@@ -17,7 +17,7 @@
 //     SM_ID    - Numeric compute-capability id (sm_90 -> 900).
 //     MIN_VER  - Earliest supporting CudaVersion
 //     MAX_VER  - Latest supporting CudaVersion.
-//     SUFFIX   - Arch suffix class: NONE, ACCELERATED (sm_90a), FAMILY (sm_90f).
+//     SUFFIX   - Arch suffix class: NONE, ACCELERATED (sm_100a), FAMILY (sm_100f).
 //
 //===----------------------------------------------------------------------===//
 
