@@ -275,20 +275,16 @@ char member_subregion_dangling_deref_increment() {
 void chain() {
   int *ptr = nullptr;
   {
-    int local = 5;
+    int local = 5;  // expected-note  {{'local' initialized to 5}}
     int *a = &local; // expected-note {{'a' initialized here}}
-    int *b = a;
-    int *c = b;
-    ptr = c;
+    int *b = a; // expected-note      {{'b' initialized to the value of 'a'}}
+    int *c = b; // expected-note      {{'c' initialized to the value of 'b'}}
+    ptr = c; // expected-note         {{The value of 'c' is assigned to 'ptr'}}
   }
+  // expected-note@-1    {{'local' is destroyed here}}
   *ptr = 6;
   // expected-warning@-1 {{Use of 'local' after its lifetime ended}}
   // expected-note@-2    {{Use of 'local' after its lifetime ended}}
-  // expected-note@-9    {{'local' initialized to 5}}
-  // expected-note@-8    {{'b' initialized to the value of 'a'}}
-  // expected-note@-8    {{'c' initialized to the value of 'b'}}
-  // expected-note@-8    {{The value of 'c' is assigned to 'ptr'}}
-  // expected-note@-8    {{'local' is destroyed here}}
 }
 
 void branch(bool cond) {
@@ -296,14 +292,15 @@ void branch(bool cond) {
   {
     int x = 1; // expected-note {{'x' initialized to 1}}
     int y = 2; // expected-note {{'y' initialized to 2}}
-    if (cond)
+    if (cond) {
       // expected-note@-1 {{Assuming 'cond' is true}}
       // expected-note@-2 {{Taking true branch}}
       // expected-note@-3 {{Assuming 'cond' is false}}
       // expected-note@-4 {{Taking false branch}}
       ptr = &x; // expected-note {{Value assigned to 'ptr'}}
-    else
+    } else {
       ptr = &y; // expected-note {{Value assigned to 'ptr'}}
+    }
   }
   // expected-note@-1 {{'x' is destroyed here}}
   // expected-note@-2 {{'y' is destroyed here}}

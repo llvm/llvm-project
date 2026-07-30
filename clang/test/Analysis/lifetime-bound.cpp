@@ -359,3 +359,22 @@ int *array_member_subobject_dangling() {
   // expected-note@-4    {{Address of stack memory associated with local variable 'buf' returned to caller}}
   // expected-warning@-5 {{address of stack memory associated with local variable 'buf' returned}}
 }
+
+// FIXME: Heap allocated memory regions are not yet handled by the lifetime checkers.
+int *heap_dangling_source_lifetimebound() {
+  int *i = new int(5);
+  int *p = test_func(i);
+  delete i;
+  return p; // no-warning
+}
+
+struct CustomStringView {
+  CustomStringView(const char *s [[clang::lifetimebound]]);
+};
+
+// FIXME: The StringView return is a struct returned by value which is represented
+// as a LazyCompoundVal that the lifetime checkers do not support as of now.
+CustomStringView dangling_sv() {
+  char s[] = "dangling";
+  return CustomStringView(s); // expected-warning {{address of stack memory associated with local variable 's' returned}} 
+}
