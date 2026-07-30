@@ -749,6 +749,10 @@ public:
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
 
+  bool hasAnyPackedFP32Ops() const {
+    return hasPackedFP32Ops() || hasPackedFP32SingleSGPROps();
+  };
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::getSGPRAllocGranule(getTargetID().getGPUKind());
