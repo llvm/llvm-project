@@ -325,31 +325,31 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     1.00                        fcmeq	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     0.50                        facge	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      6     1.00                        fcmgt	v0.4s, v1.4s, #0.0
-# CHECK-NEXT:  1      6     0.50                        add	d0, d1, d2
-# CHECK-NEXT:  1      6     0.50                        add	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        add	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        sub	v0.4h, v1.4h, v2.4h
-# CHECK-NEXT:  1      6     1.00                        sub	v0.8h, v1.8h, v2.8h
-# CHECK-NEXT:  1      6     0.50                        neg	v0.2s, v1.2s
-# CHECK-NEXT:  1      6     1.00                        neg	v0.4s, v1.4s
-# CHECK-NEXT:  1      6     0.50                        shadd	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        urhadd	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     1.00                        uhsub	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     0.50                        abs	v0.8b, v1.8b
-# CHECK-NEXT:  1      6     1.00                        abs	v0.16b, v1.16b
-# CHECK-NEXT:  1      6     0.50                        addp	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        addp	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     0.50                        sabd	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        uabd	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        saddlp	v0.4h, v1.8b
-# CHECK-NEXT:  1      6     1.00                        uaddlp	v0.8h, v1.16b
-# CHECK-NEXT:  1      6     0.50                        sqadd	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        uqsub	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     1.00                        sqneg	v0.4s, v1.4s
-# CHECK-NEXT:  1      6     0.50                        suqadd	v0.2s, v1.2s
-# CHECK-NEXT:  1      6     0.50                        addv	b0, v1.8b
-# CHECK-NEXT:  1      6     1.00                        addv	b0, v1.16b
-# CHECK-NEXT:  1      6     1.00                        saddlv	h0, v1.16b
+# CHECK-NEXT:  1      2     0.50                        add	d0, d1, d2
+# CHECK-NEXT:  1      2     0.50                        add	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      2     1.00                        add	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      2     0.50                        sub	v0.4h, v1.4h, v2.4h
+# CHECK-NEXT:  1      2     1.00                        sub	v0.8h, v1.8h, v2.8h
+# CHECK-NEXT:  1      2     0.50                        neg	v0.2s, v1.2s
+# CHECK-NEXT:  1      2     1.00                        neg	v0.4s, v1.4s
+# CHECK-NEXT:  1      2     0.50                        shadd	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      2     1.00                        urhadd	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      2     1.00                        uhsub	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      3     0.50                        abs	v0.8b, v1.8b
+# CHECK-NEXT:  1      3     1.00                        abs	v0.16b, v1.16b
+# CHECK-NEXT:  1      3     0.50                        addp	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      3     1.00                        addp	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      3     0.50                        sabd	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      3     1.00                        uabd	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      3     0.50                        saddlp	v0.4h, v1.8b
+# CHECK-NEXT:  1      3     1.00                        uaddlp	v0.8h, v1.16b
+# CHECK-NEXT:  1      3     0.50                        sqadd	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      3     1.00                        uqsub	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      3     1.00                        sqneg	v0.4s, v1.4s
+# CHECK-NEXT:  1      3     0.50                        suqadd	v0.2s, v1.2s
+# CHECK-NEXT:  1      3     0.50                        addv	b0, v1.8b
+# CHECK-NEXT:  1      3     0.50                        addv	b0, v1.16b
+# CHECK-NEXT:  1      3     0.50                        saddlv	h0, v1.16b
 # CHECK-NEXT:  1      6     0.50                        sqabs	v0.8b, v1.8b
 # CHECK-NEXT:  1      6     1.00                        sqabs	v0.16b, v1.16b
 # CHECK-NEXT:  1      6     0.50                        smaxv	b0, v1.8b
@@ -473,7 +473,7 @@ sqshrun	v0.2s, v1.2d, #1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     146.00 146.00 92.50  92.50   -      -
+# CHECK-NEXT:  -      -      -      -     145.00 145.00 92.50  92.50   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -575,8 +575,8 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     sqneg	v0.4s, v1.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     suqadd	v0.2s, v1.2s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     addv	b0, v1.8b
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     addv	b0, v1.16b
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     saddlv	h0, v1.16b
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     addv	b0, v1.16b
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     saddlv	h0, v1.16b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     sqabs	v0.8b, v1.8b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     sqabs	v0.16b, v1.16b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smaxv	b0, v1.8b

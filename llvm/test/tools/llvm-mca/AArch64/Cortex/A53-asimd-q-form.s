@@ -42,8 +42,8 @@ faddp	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      10    0.50                        fmadd	s0, s1, s2, s3
 # CHECK-NEXT:  1      6     1.00                        fadd	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     0.50                        fadd	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        add	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     0.50                        add	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      2     1.00                        add	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      2     0.50                        add	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      6     1.00                        zip1	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     0.50                        zip1	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      6     1.00                        trn1	v0.16b, v1.16b, v2.16b
