@@ -190,3 +190,54 @@ func.func @select_case_block_args(%arg0: !fir.ref<i32>, %arg1: !fir.ref<!fir.arr
 // CHECK-LABEL: func.func @select_case_block_args
 // CHECK:         cf.cond_br %{{.*}}, ^{{.*}}(%{{.*}} : !fir.ref<!fir.array<2xi32>>), ^{{.*}}
 // CHECK:       ^{{.*}}(%{{.*}}: !fir.ref<!fir.array<2xi32>>):
+
+// -----
+
+// Fortran `UNSIGNED` selectors have `ui*` type. The pass converts the
+// selector and every compare operand to signless via `fir.convert`
+// before feeding them to `arith.cmpi`, and picks the unsigned compare
+// predicate (`ule`) for range checks. The point case still uses `eq`
+// since equality is signedness-neutral.
+
+func.func @select_case_unsigned(%arg0: ui32, %lo: ui32, %hi: ui32, %pt: ui32) -> i32 {
+  %r_lo = arith.constant 11 : i32
+  %r_hi = arith.constant 22 : i32
+  %r_pt = arith.constant 33 : i32
+  %r_df = arith.constant 44 : i32
+  fir.select_case %arg0 : ui32 [
+    #fir.interval, %lo, %hi, ^lb(%r_lo : i32),
+    #fir.point,    %pt,      ^ptb(%r_pt : i32),
+    #fir.lower,    %pt,      ^hb(%r_hi : i32),
+    unit,                    ^db(%r_df : i32)
+  ]
+^lb(%vlo: i32): cf.br ^join(%vlo : i32)
+^ptb(%vpt: i32): cf.br ^join(%vpt : i32)
+^hb(%vhi: i32): cf.br ^join(%vhi : i32)
+^db(%vdf: i32): cf.br ^join(%vdf : i32)
+^join(%v: i32): return %v : i32
+}
+
+// CHECK-LABEL: func.func @select_case_unsigned(
+// CHECK-SAME:                                  %[[ARG0:arg[0-9]+]]: ui32,
+// CHECK-SAME:                                  %[[LO:arg[0-9]+]]: ui32,
+// CHECK-SAME:                                  %[[HI:arg[0-9]+]]: ui32,
+// CHECK-SAME:                                  %[[PT:arg[0-9]+]]: ui32)
+// Selector + compare operands are all bit-cast to signless before use.
+// CHECK:         %[[SEL:.*]] = fir.convert %[[ARG0]] : (ui32) -> i32
+// Interval `case (lo:hi)` — both bounds use the unsigned predicate.
+// CHECK:         %[[LO_SL:.*]] = fir.convert %[[LO]] : (ui32) -> i32
+// CHECK:         %[[HI_SL:.*]] = fir.convert %[[HI]] : (ui32) -> i32
+// CHECK:         %[[CMP_LO:.*]] = arith.cmpi ule, %[[LO_SL]], %[[SEL]] : i32
+// CHECK:         cf.cond_br %[[CMP_LO]], ^{{.*}}, ^{{.*}}
+// CHECK:         %[[CMP_HI:.*]] = arith.cmpi ule, %[[SEL]], %[[HI_SL]] : i32
+// CHECK:         cf.cond_br %[[CMP_HI]], ^{{.*}}, ^{{.*}}
+// Point `case (pt)` — signedness-neutral `eq`.
+// CHECK:         %[[PT_SL:.*]] = fir.convert %[[PT]] : (ui32) -> i32
+// CHECK:         %[[CMP_PT:.*]] = arith.cmpi eq, %[[SEL]], %[[PT_SL]] : i32
+// CHECK:         cf.cond_br %[[CMP_PT]], ^{{.*}}, ^{{.*}}
+// Lower `case (pt:)` — unsigned predicate.
+// CHECK:         %[[PT_SL2:.*]] = fir.convert %[[PT]] : (ui32) -> i32
+// CHECK:         %[[CMP_LB:.*]] = arith.cmpi ule, %[[PT_SL2]], %[[SEL]] : i32
+// CHECK:         cf.cond_br %[[CMP_LB]], ^{{.*}}, ^{{.*}}
+// Unit-default fall-through.
+// CHECK:         cf.br ^{{.*}}
