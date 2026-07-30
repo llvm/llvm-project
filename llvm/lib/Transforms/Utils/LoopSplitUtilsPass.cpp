@@ -1,4 +1,4 @@
-//===- LoopSplitTestPass.cpp - Test driver for LoopSplitUtils -------------===//
+//===- LoopSplitUtilsPass.cpp - Test driver for LoopSplitUtils ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/LoopSplitTestPass.h"
+#include "llvm/Transforms/Utils/LoopSplitUtilsPass.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -29,7 +29,7 @@
 using namespace llvm;
 using namespace llvm::SCEVPatternMatch;
 
-#define DEBUG_TYPE "loop-split-test"
+#define DEBUG_TYPE "loop-split-utils"
 
 static cl::list<unsigned>
     SplitPoints("loop-split-points",
@@ -49,7 +49,7 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
                       LoopInfo &LI) {
   LoopSplitUtils LSU(L, &LI, &SE, &DT);
   if (!LSU.isLegal()) {
-    LLVM_DEBUG(dbgs() << "loop-split-test: loop is not legal for splitting\n");
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop is not legal for splitting\n");
     return false;
   }
 
@@ -125,8 +125,8 @@ static bool splitLoop(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   return true;
 }
 
-PreservedAnalyses LoopSplitTestPass::run(Function &F,
-                                         FunctionAnalysisManager &AM) {
+PreservedAnalyses LoopSplitUtilsPass::run(Function &F,
+                                          FunctionAnalysisManager &AM) {
   if (SplitPoints.empty())
     return PreservedAnalyses::all();
 

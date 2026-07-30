@@ -40,7 +40,8 @@ class ScalarEvolution;
 /// \endcode
 class LoopSplitUtils {
 public:
-  LoopSplitUtils(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT)
+  LLVM_ABI LoopSplitUtils(Loop *L, LoopInfo *LI, ScalarEvolution *SE,
+                          DominatorTree *DT)
       : L(L), LI(LI), SE(SE), DT(DT) {}
 
   /// Analyze \p L and return true if it is a counted loop this utility can
@@ -50,7 +51,9 @@ public:
   LLVM_ABI bool isLegal();
 
   /// Return the loop's induction variable. Valid only after isLegal() succeeds.
-  PHINode *getInductionVariable() const { return L->getInductionVariable(*SE); }
+  LLVM_ABI PHINode *getInductionVariable() const {
+    return L->getInductionVariable(*SE);
+  }
 
   /// Append an inclusive partition range [Start, End] in iteration order.
   /// Partitions must tile the whole space: first Start = induction start, each
@@ -72,7 +75,7 @@ public:
   /// iteration.
   LLVM_ABI void avoidPartitionGuard(unsigned PartitionIndex);
 
-  unsigned getNumPartitions() const { return Partitions.size(); }
+  LLVM_ABI unsigned getNumPartitions() const { return Partitions.size(); }
 
   /// Perform the split. Requires a successful isLegal() and at least two
   /// partitions. Returns true if the loop was rewritten.

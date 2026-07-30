@@ -80,14 +80,13 @@ using namespace llvm::SCEVPatternMatch;
 
 /// Per-split() scratch shared by the phase helpers; lives for one split() call.
 struct LoopSplitUtils::SplitState {
-  BasicBlock *OrigPreheader = nullptr; // also partition 0's preheader.
-  BasicBlock *ExitBlock = nullptr;     // also partition 0's exit.
-  BasicBlock *FinalExit = nullptr;     // where live-outs merge.
-  BasicBlock *EntryGuard = nullptr;    // guard ahead of partition 0.
-  Loop *OuterLoop = nullptr;           // parent of the new blocks, if any.
-  PHINode *Induction = nullptr;        // the loop's induction variable.
-  bool Descending = false;             // step is negative (loop counts down).
-  bool LatchComparesPHI = false;       // latch compares the PHI, not the step.
+  // Partition 0 reuses the original loop's preheader, exit, and entry guard;
+  // those blocks live in Partitions[0] rather than being duplicated here.
+  BasicBlock *FinalExit = nullptr; // where live-outs merge.
+  Loop *OuterLoop = nullptr;       // parent of the new blocks, if any.
+  PHINode *Induction = nullptr;    // the loop's induction variable.
+  bool Descending = false;         // step is negative (loop counts down).
+  bool LatchComparesPHI = false;   // latch compares the PHI, not the step.
 
   /// A value that must be reconstructed after cloning because it is
   /// loop-carried (feeds a later partition), live-out (used after the loop), or
@@ -154,10 +153,7 @@ Value *LoopSplitUtils::getPartitionValue(Value *V,
 // On success \p LatchIndOperand is set to the compared induction operand.
 static const SCEVAddRecExpr *analyzeInduction(Loop *L, ScalarEvolution *SE,
                                               Value *&LatchIndOperand) {
-  // The loop must exit on an integer compare living in the latch.
   ICmpInst *LatchCmp = L->getLatchCmpInst();
-  if (!LatchCmp || LatchCmp->getParent() != L->getLoopLatch())
-    return nullptr;
 
   // SCEV's induction variable, restricted to a unit-step affine recurrence.
   PHINode *Induction = L->getInductionVariable(*SE);
@@ -196,45 +192,47 @@ static const SCEVAddRecExpr *analyzeInduction(Loop *L, ScalarEvolution *SE,
 static std::optional<bool> computeSignedness(Loop *L,
                                              const SCEVAddRecExpr *IndAR) {
   ICmpInst::Predicate P = L->getLatchCmpInst()->getPredicate();
-  // Relational predicate gives the ordering; for eq/ne use the no-wrap flags.
-  if (ICmpInst::isSigned(P))
-    return true;
-  if (ICmpInst::isUnsigned(P))
-    return false;
+  // A relational predicate gives the ordering directly; for eq/ne fall back to
+  // the recurrence's no-wrap flags.
+  if (ICmpInst::isRelational(P))
+    return ICmpInst::isSigned(P);
   if (IndAR->hasNoSignedWrap())
     return true;
   if (IndAR->hasNoUnsignedWrap())
     return false;
-  LLVM_DEBUG(dbgs() << "LS: cannot prove iteration ordering signedness\n");
+  LLVM_DEBUG(dbgs() << DEBUG_TYPE
+             ": cannot prove iteration ordering signedness\n");
   return std::nullopt;
 }
 
 // Check every structural precondition and record the induction analysis.
 bool LoopSplitUtils::isLegal() {
-  if (!L->getLoopPreheader() || !L->getLoopLatch()) {
-    LLVM_DEBUG(dbgs() << "LS: missing preheader/latch\n");
+  // Require a bottom-tested single-exit loop in LCSSA form with a preheader.
+  if (!L->getLoopPreheader() || !L->getLoopLatch() || !L->getExitingBlock() ||
+      !L->getExitBlock() || L->getExitingBlock() != L->getLoopLatch() ||
+      !L->isLCSSAForm(*DT)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop not in expected form\n");
     return false;
   }
-  if (!L->getExitingBlock() || !L->getExitBlock() ||
-      L->getExitingBlock() != L->getLoopLatch()) {
-    LLVM_DEBUG(dbgs() << "LS: not a bottom-tested single-exit loop\n");
-    return false;
-  }
-  if (!L->isLCSSAForm(*DT)) {
-    LLVM_DEBUG(dbgs() << "LS: loop is not in LCSSA form\n");
+
+  // The latch compare must exist and reside in the latch.
+  ICmpInst *LatchCmp = L->getLatchCmpInst();
+  if (!LatchCmp || LatchCmp->getParent() != L->getLoopLatch()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": latch compare not in the loop latch\n");
     return false;
   }
 
   // A computable backedge-taken count fixes the iteration space we rebuild.
   const SCEV *BTC = SE->getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BTC)) {
-    LLVM_DEBUG(dbgs() << "LS: no computable trip count\n");
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop trip count uncomputable\n");
     return false;
   }
 
   const SCEVAddRecExpr *IndAR = analyzeInduction(L, SE, LatchIndOperand);
   if (!IndAR) {
-    LLVM_DEBUG(dbgs() << "LS: no unique unit-step integer induction\n");
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+               ": no unique unit-step integer induction\n");
     return false;
   }
 
@@ -246,7 +244,7 @@ bool LoopSplitUtils::isLegal() {
   InductionEnd = IndAR->evaluateAtIteration(BTC, *SE);
   // Start and end must share the induction type; reject any width mismatch.
   if (InductionEnd->getType() != IndAR->getStart()->getType()) {
-    LLVM_DEBUG(dbgs() << "LS: induction end/start type mismatch\n");
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": induction end/start type mismatch\n");
     return false;
   }
   return true;
@@ -291,9 +289,14 @@ bool LoopSplitUtils::split() {
     return false;
 
   SplitState S;
-  S.OrigPreheader = L->getLoopPreheader();
-  S.ExitBlock = L->getExitBlock();
-  S.OuterLoop = LI->getLoopFor(S.ExitBlock);
+  // Partition 0 reuses the original loop; record its preheader/exit/guard up
+  // front.
+  PartitionInfo &P0 = Partitions[0];
+  P0.Preheader = L->getLoopPreheader();
+  P0.Exit = L->getExitBlock();
+  P0.SubLoop = L;
+  P0.LatchIndOp = LatchIndOperand;
+  S.OuterLoop = LI->getLoopFor(P0.Exit);
   S.Induction = Induction;
   // Derive the iteration direction and latch shape once, before transforming.
   const auto *IndAR = cast<SCEVAddRecExpr>(SE->getSCEV(Induction));
@@ -303,13 +306,13 @@ bool LoopSplitUtils::split() {
   S.LatchComparesPHI = (LatchIndOperand == Induction);
 
   collectEscapingValues(S);
-  buildEntryGuard(S.OrigPreheader, S.EntryGuard, DT, LI);
+  buildEntryGuard(P0.Preheader, P0.GuardBlock, DT, LI);
 
   // Keep the expander (and its cleaner) alive for the whole transform: the
   // bounds it materializes are consumed by the later phases. If we bail before
   // committing, the cleaner reclaims the expanded instructions; on success we
   // mark them used so they are kept.
-  SCEVExpander Expander(*SE, "ls");
+  SCEVExpander Expander(*SE, DEBUG_TYPE);
   SCEVExpanderCleaner ExpanderCleaner(Expander);
   expandPartitionBounds(S, Expander);
   clonePartitions(S);
@@ -323,16 +326,17 @@ bool LoopSplitUtils::split() {
 // loop exit, seeding partition 0's slots for each escaping value.
 void LoopSplitUtils::collectEscapingValues(SplitState &S) {
   BasicBlock *Latch = L->getLoopLatch();
+  BasicBlock *OrigExit = Partitions[0].Exit;
+  BasicBlock *OrigPreheader = Partitions[0].Preheader;
 
   // Separate FinalExit from the loop exit. Split at begin() so the LCSSA PHIs
   // move into FinalExit (SplitBlock would advance past them).
-  S.FinalExit =
-      S.ExitBlock->splitBasicBlock(S.ExitBlock->begin(), "ls.final.exit");
+  S.FinalExit = OrigExit->splitBasicBlock(OrigExit->begin(), "ls.final.exit");
   if (S.OuterLoop)
     S.OuterLoop->addBasicBlockToLoop(S.FinalExit, *LI);
   // splitBasicBlock does not update the dominator tree; the new exit's sole
   // predecessor is the original exit block.
-  DT->addNewBlock(S.FinalExit, S.ExitBlock);
+  DT->addNewBlock(S.FinalExit, OrigExit);
 
   // (1) Carried values: each non-induction header PHI whose backedge value
   // differs from its initial value must resume in later partitions.
@@ -341,7 +345,7 @@ void LoopSplitUtils::collectEscapingValues(SplitState &S) {
     if (&HeaderPHI == S.Induction)
       continue;
     Value *CarriedValue = HeaderPHI.getIncomingValueForBlock(Latch);
-    Value *InitialValue = HeaderPHI.getIncomingValueForBlock(S.OrigPreheader);
+    Value *InitialValue = HeaderPHI.getIncomingValueForBlock(OrigPreheader);
     if (CarriedValue == InitialValue)
       continue; // invariant and equal to the initial value: nothing to carry.
     auto &EV = S.addEscaping(CarriedValue);
@@ -401,7 +405,7 @@ static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
 void LoopSplitUtils::expandPartitionBounds(SplitState &S,
                                            SCEVExpander &Expander) {
   Type *IndTy = S.Induction->getType();
-  Instruction *EntryGuardTerm = S.EntryGuard->getTerminator();
+  Instruction *EntryGuardTerm = Partitions[0].GuardBlock->getTerminator();
 
   // Expand all partition bounds in the entry guard, which dominates the whole
   // chain (a skipped partition bypasses the original preheader).
@@ -442,13 +446,8 @@ void LoopSplitUtils::clonePartitions(SplitState &S) {
   LLVMContext &Ctx = F.getContext();
 
   const unsigned N = getNumPartitions();
-  // Partition 0 reuses the original blocks; its map stays null (identity).
-  PartitionInfo &P0 = Partitions[0];
-  P0.GuardBlock = S.EntryGuard;
-  P0.Preheader = S.OrigPreheader;
-  P0.Exit = S.ExitBlock;
-  P0.SubLoop = L;
-  P0.LatchIndOp = LatchIndOperand;
+  // Partition 0 reuses the original loop; clone the rest off its preheader.
+  BasicBlock *OrigPreheader = Partitions[0].Preheader;
 
   for (unsigned I = 1; I < N; ++I) {
     PartitionInfo &P = Partitions[I];
@@ -457,7 +456,7 @@ void LoopSplitUtils::clonePartitions(SplitState &S) {
     P.VMap = std::make_unique<ValueToValueMapTy>();
     ValueToValueMapTy &VMap = *P.VMap;
     SmallVector<BasicBlock *, 8> ClonedBlocks;
-    Loop *PL = cloneLoopWithPreheader(S.FinalExit, S.OrigPreheader, L, VMap,
+    Loop *PL = cloneLoopWithPreheader(S.FinalExit, OrigPreheader, L, VMap,
                                       ".ls" + Twine(I), LI, DT, ClonedBlocks);
     remapInstructionsInBlocks(ClonedBlocks, VMap);
     BasicBlock *PHi = PL->getLoopPreheader();
@@ -588,11 +587,11 @@ void LoopSplitUtils::reconstructSSA(SplitState &S) {
 
     // Value before any partition runs: carried PHI's initial value, else
     // poison.
-    Value *Init =
-        EV.CarriedHeaderPHI
-            ? EV.CarriedHeaderPHI->getIncomingValueForBlock(S.OrigPreheader)
-            : PoisonValue::get(EV.Def->getType());
-    Updater.AddAvailableValue(S.EntryGuard, Init);
+    Value *Init = EV.CarriedHeaderPHI
+                      ? EV.CarriedHeaderPHI->getIncomingValueForBlock(
+                            Partitions[0].Preheader)
+                      : PoisonValue::get(EV.Def->getType());
+    Updater.AddAvailableValue(Partitions[0].GuardBlock, Init);
     for (unsigned I = 0; I < N; ++I)
       Updater.AddAvailableValue(Partitions[I].Exit, EV.PerPartitionDef[I]);
 

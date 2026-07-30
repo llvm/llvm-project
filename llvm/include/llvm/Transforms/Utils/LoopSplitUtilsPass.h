@@ -1,4 +1,4 @@
-//===- LoopSplitTestPass.h - Test driver for LoopSplitUtils -----*- C++ -*-===//
+//===- LoopSplitUtilsPass.h - Test driver for LoopSplitUtils ----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,19 +12,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_LOOPSPLITTESTPASS_H
-#define LLVM_TRANSFORMS_UTILS_LOOPSPLITTESTPASS_H
+#ifndef LLVM_TRANSFORMS_UTILS_LOOPSPLITUTILSPASS_H
+#define LLVM_TRANSFORMS_UTILS_LOOPSPLITUTILSPASS_H
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-class LoopSplitTestPass : public PassInfoMixin<LoopSplitTestPass> {
+class LoopSplitUtilsPass : public PassInfoMixin<LoopSplitUtilsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm
 
-#endif // LLVM_TRANSFORMS_UTILS_LOOPSPLITTESTPASS_H
+#endif // LLVM_TRANSFORMS_UTILS_LOOPSPLITUTILSPASS_H
