@@ -22,6 +22,8 @@
 #include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
 #endif
 
+#include <optional>
+
 namespace lldb_private {
 
 class NativeThreadWindows;
@@ -50,6 +52,9 @@ public:
 
   void InvalidateAllRegisters() override;
 
+  std::vector<uint32_t>
+  GetExpeditedRegisters(ExpeditedRegs expType) const override;
+
 protected:
   Status GPRRead(const uint32_t reg, RegisterValue &reg_value);
 
@@ -73,6 +78,7 @@ private:
   XSAVE_ARM64_SVE_HEADER *m_sve_header;
   bool m_sve_header_is_valid;
   SVEState m_sve_state;
+  std::optional<DWORD> m_sve_vl;
   std::shared_ptr<DataBufferHeap> m_sve_z_buffer;
   bool m_sve_z_buffer_is_valid;
 
@@ -93,8 +99,6 @@ private:
 
 #if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
   bool IsSVE(uint32_t reg_index) const;
-
-  uint32_t GetSVERegVG() const { return m_sve_header->VectorLength / 8; }
 
   void ConfigureRegisterContext();
 

@@ -20,8 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 
-#include <optional>
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -143,7 +141,8 @@ NativeRegisterContextWindows_arm64::NativeRegisterContextWindows_arm64(
 #if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
       ,
       m_sve_header(nullptr), m_sve_header_is_valid(false),
-      m_sve_z_buffer(nullptr), m_sve_z_buffer_is_valid(false)
+      m_sve_vl(std::nullopt), m_sve_z_buffer(nullptr),
+      m_sve_z_buffer_is_valid(false)
 #endif
 {
   assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
@@ -847,10 +846,21 @@ void NativeRegisterContextWindows_arm64::InvalidateAllRegisters() {
   m_sve_header_is_valid = false;
   m_sve_z_buffer.reset();
   m_sve_z_buffer_is_valid = false;
-
-  // Update SVE registers in case there is any change in the configuration.
-  ConfigureRegisterContext();
 #endif
+}
+
+std::vector<uint32_t> NativeRegisterContextWindows_arm64::GetExpeditedRegisters(
+    ExpeditedRegs expType) const {
+  std::vector<uint32_t> expedited_reg_nums =
+      NativeRegisterContext::GetExpeditedRegisters(expType);
+
+#if defined(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE)
+  // SVE, non-streaming vector length.
+  if (m_sve_vl)
+    expedited_reg_nums.push_back(GetRegisterInfo().GetRegNumSVEVG());
+#endif
+
+  return expedited_reg_nums;
 }
 
 Status NativeRegisterContextWindows_arm64::CacheAllRegisterValues() {
@@ -919,6 +929,9 @@ Status NativeRegisterContextWindows_arm64::CacheAllRegisterValues() {
     if (error.Fail())
       return error;
 
+    // Configure SVE vector length.
+    ConfigureRegisterContext();
+
     error = CacheSVEZRegisters();
     if (error.Fail())
       return error;
@@ -941,30 +954,16 @@ bool NativeRegisterContextWindows_arm64::IsSVE(uint32_t reg_index) const {
 }
 
 void NativeRegisterContextWindows_arm64::ConfigureRegisterContext() {
-  // ConfigureRegisterContext gets called from InvalidateAllRegisters
-  // on every stop and configures the SVE vector length.
+  if (m_sve_state == SVEState::Disabled)
+    return;
 
-  Log *log = GetLog(WindowsLog::Registers);
+  if (m_sve_vl && m_sve_state == SVEState::Full) {
+    uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
 
-  // If m_sve_state is found to be set to SVEState::Disabled on the first stop,
-  // then ConfigureRegisterContext is deemed non-operational for the lifetime of
-  // the current process.
-  if (!m_sve_header_is_valid && m_sve_state != SVEState::Disabled) {
-    Status error = CacheAllRegisterValues();
-    if (error.Fail())
-      LLDB_LOG(log, "failed to cache all register values: {0}", error);
+    if (sve::vl_valid(*m_sve_vl))
+      vq = sve::vq_from_vl(*m_sve_vl);
 
-    if (!m_sve_header_is_valid)
-      LLDB_LOG(log, "failed to read SVE header: {0}", error);
-
-    if (m_sve_header_is_valid && m_sve_state == SVEState::Full) {
-      uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
-
-      if (sve::vl_valid(m_sve_header->VectorLength))
-        vq = sve::vq_from_vl(m_sve_header->VectorLength);
-
-      GetRegisterInfo().ConfigureVectorLengthSVE(vq);
-    }
+    GetRegisterInfo().ConfigureVectorLengthSVE(vq);
   }
 }
 
@@ -1029,6 +1028,7 @@ Status NativeRegisterContextWindows_arm64::ReadSVEHeader() {
 
   m_sve_header_is_valid = true;
   m_sve_state = SVEState::Full;
+  m_sve_vl = m_sve_header->VectorLength;
 
   return error;
 }
@@ -1036,8 +1036,14 @@ Status NativeRegisterContextWindows_arm64::ReadSVEHeader() {
 Status NativeRegisterContextWindows_arm64::SVERead(const uint32_t reg,
                                                    RegisterValue &reg_value) {
   Log *log = GetLog(WindowsLog::Registers);
+  Status error;
 
-  Status error = CacheAllRegisterValues();
+  if (GetRegisterInfo().IsSVERegVG(reg) && m_sve_vl) {
+    reg_value.SetUInt64(*m_sve_vl / 8);
+    return error;
+  }
+
+  error = CacheAllRegisterValues();
   if (error.Fail())
     return error;
 
@@ -1047,8 +1053,14 @@ Status NativeRegisterContextWindows_arm64::SVERead(const uint32_t reg,
     return error;
   }
 
+  if (!m_sve_vl) {
+    error = Status::FromErrorString("failed to read SVE vector length");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
   if (GetRegisterInfo().IsSVERegVG(reg)) {
-    reg_value.SetUInt64(GetSVERegVG());
+    reg_value.SetUInt64(*m_sve_vl / 8);
     return error;
   }
 
@@ -1056,7 +1068,7 @@ Status NativeRegisterContextWindows_arm64::SVERead(const uint32_t reg,
     // For VL == sizeof(ARM64_NT_NEON128), Z[i] has no architectural high bits
     // beyond V[i]. So, route through FPRRead to avoid touching the SVE feature
     // area.
-    if (m_sve_header->VectorLength == sizeof(ARM64_NT_NEON128))
+    if (*m_sve_vl == sizeof(ARM64_NT_NEON128))
       return FPRRead(reg - GetRegisterInfo().GetRegNumSVEZ0() +
                          k_first_fpr_arm64,
                      reg_value);
@@ -1067,17 +1079,17 @@ Status NativeRegisterContextWindows_arm64::SVERead(const uint32_t reg,
       return error;
     }
 
-    const uint32_t vl = m_sve_header->VectorLength;
-    const uint32_t offset = (reg - GetRegisterInfo().GetRegNumSVEZ0()) * vl;
+    const uint32_t offset =
+        (reg - GetRegisterInfo().GetRegNumSVEZ0()) * *m_sve_vl;
 
-    reg_value.SetBytes(m_sve_z_buffer->GetBytes() + offset, vl,
+    reg_value.SetBytes(m_sve_z_buffer->GetBytes() + offset, *m_sve_vl,
                        endian::InlHostByteOrder());
     return error;
   }
 
   if (GetRegisterInfo().IsSVEPReg(reg) ||
       reg == GetRegisterInfo().GetRegNumSVEFFR()) {
-    const uint32_t pl = m_sve_header->VectorLength / 8;
+    const uint32_t pl = *m_sve_vl / 8;
     const uint8_t *src = reinterpret_cast<const uint8_t *>(m_sve_header) +
                          m_sve_header->PredicateRegisterOffset;
     const uint32_t offset = (reg - GetRegisterInfo().GetRegNumSVEP0()) * pl;
@@ -1108,9 +1120,13 @@ Status NativeRegisterContextWindows_arm64::CacheSVEZRegisters() {
   if (error.Fail())
     return error;
 
-  const uint32_t vl = m_sve_header->VectorLength;
+  if (!m_sve_vl) {
+    error = Status::FromErrorString("failed to read SVE vector length");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
 
-  if (vl < k_z_low_bits_size) {
+  if (*m_sve_vl < k_z_low_bits_size) {
     error = Status::FromErrorString("invalid SVE vector length");
     LLDB_LOG(log, "{0}", error);
     return error;
@@ -1120,9 +1136,10 @@ Status NativeRegisterContextWindows_arm64::CacheSVEZRegisters() {
       GetRegisterInfo().GetRegNumSVEP0() - GetRegisterInfo().GetRegNumSVEZ0();
 
   if (m_sve_z_buffer)
-    m_sve_z_buffer->SetByteSize(vl * num_z_regs);
+    m_sve_z_buffer->SetByteSize(*m_sve_vl * num_z_regs);
   else
-    m_sve_z_buffer = std::make_shared<DataBufferHeap>(vl * num_z_regs, 0);
+    m_sve_z_buffer =
+        std::make_shared<DataBufferHeap>(*m_sve_vl * num_z_regs, 0);
 
   // The lower 128 bits (16 bytes) are stored in the NEON V registers within the
   // standard CONTEXT structure (m_context->V[n].B). The upper bits
@@ -1134,7 +1151,7 @@ Status NativeRegisterContextWindows_arm64::CacheSVEZRegisters() {
   // register, we copy the 16-byte V register value into the output buffer first
   // and then append the corresponding high bits from the XState area, yielding
   // a contiguous VectorLength-byte representation.
-  const uint32_t z_high_bits_size = vl - k_z_low_bits_size;
+  const uint32_t z_high_bits_size = *m_sve_vl - k_z_low_bits_size;
   uint8_t *dst = m_sve_z_buffer->GetBytes();
   const uint8_t *src = reinterpret_cast<const uint8_t *>(m_sve_header) +
                        m_sve_header->VectorRegisterOffset;
@@ -1189,25 +1206,29 @@ NativeRegisterContextWindows_arm64::SVEWrite(const uint32_t reg,
     return error;
   }
 
+  if (!m_sve_vl) {
+    error = Status::FromErrorString("failed to read SVE vector length");
+    LLDB_LOG(log, "{0}", error);
+    return error;
+  }
+
   if (GetRegisterInfo().IsSVEZReg(reg)) {
     // For VL == sizeof(ARM64_NT_NEON128), Z[i] has no architectural high bits
     // beyond V[i]. So, route through FPRWrite to avoid touching the SVE feature
     // area.
-    if (m_sve_header->VectorLength == sizeof(ARM64_NT_NEON128))
+    if (*m_sve_vl == sizeof(ARM64_NT_NEON128))
       return FPRWrite(reg - GetRegisterInfo().GetRegNumSVEZ0() +
                           k_first_fpr_arm64,
                       reg_value);
 
-    const uint32_t vl = m_sve_header->VectorLength;
-
-    if (vl < k_z_low_bits_size) {
+    if (*m_sve_vl < k_z_low_bits_size) {
       error = Status::FromErrorString("invalid SVE vector length");
       LLDB_LOG(log, "{0}", error);
       return error;
     }
 
     const uint32_t z_index = reg - GetRegisterInfo().GetRegNumSVEZ0();
-    const uint32_t z_high_bits_size = vl - k_z_low_bits_size;
+    const uint32_t z_high_bits_size = *m_sve_vl - k_z_low_bits_size;
 
     const uint8_t *src =
         reinterpret_cast<const uint8_t *>(reg_value.GetBytes());
@@ -1233,7 +1254,7 @@ NativeRegisterContextWindows_arm64::SVEWrite(const uint32_t reg,
 
   if (GetRegisterInfo().IsSVEPReg(reg) ||
       reg == GetRegisterInfo().GetRegNumSVEFFR()) {
-    const uint32_t pl = m_sve_header->VectorLength / 8;
+    const uint32_t pl = *m_sve_vl / 8;
     const uint32_t offset = (reg - GetRegisterInfo().GetRegNumSVEP0()) * pl;
 
     const uint8_t *src =

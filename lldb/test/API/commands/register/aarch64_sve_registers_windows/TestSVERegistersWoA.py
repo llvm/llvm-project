@@ -29,54 +29,62 @@ class SVETestCase(TestBase):
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
+        self.expect(
+            "thread backtrace",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stop reason = breakpoint 1."],
+        )
+
         # Stopped at 'breakpoint 1', with all SVE registers set.
 
-        # The default non-streaming mode vector length is 128 bits (16 bytes).
-        byte_length = 16
+        target = self.dbg.GetSelectedTarget()
+        process = target.GetProcess()
+
+        registers = process.GetThreadAtIndex(0).GetFrameAtIndex(0).GetRegisters()
+        sve_registers = registers.GetFirstValueByName(
+            "Scalable Vector Extension Registers"
+        )
+        self.assertTrue(sve_registers)
+
+        vg = sve_registers.GetChildMemberWithName("vg").GetValueAsUnsigned()
+        z_reg_size = vg * 8
 
         # Load 'zregs' with a byte pattern consisting of register number
-        # followed by 0-7:
-        # 00 00 00 01 00 02 00 03 ... 00 07
-        # 01 00 01 01 01 02 01 03 ... 01 07
+        # followed by 0 - (upto) 7f:
+        # 00 00 00 01 00 02 00 03 ... 00 7f
+        # 01 00 01 01 01 02 01 03 ... 01 7f
         # ...
-        # 31 00 31 01 31 02 31 03 ... 31 07
+        # 31 00 31 01 31 02 31 03 ... 31 7f
         zregs = ["" for i in range(32)]
 
         for i in range(32):
             bytes_list = []
-            for j in range(byte_length // 2):
+            for j in range(z_reg_size // 2):
                 bytes_list.append("0x%02x" % i)
                 bytes_list.append("0x%02x" % j)
             zregs[i] = "{" + " ".join(bytes_list) + "}"
 
         # Load 'pregs' with a byte pattern consisting of register number
-        # followed by 0:
-        # 00 00
-        # 01 00
+        # followed by 0 - (upto) 1f:
+        # 00 00 00 01 00 02 00 03 ... 00 1f
+        # 01 00 01 01 01 02 01 03 ... 01 1f
         # ...
-        # 31 00
+        # 0f 00 0f 01 of 02 0f 03 ... 0f 1f
         pregs = ["" for i in range(16)]
 
         for i in range(16):
             bytes_list = []
-            for j in range(byte_length // 16):
+            for j in range(vg // 2):
                 bytes_list.append("0x%02x" % i)
                 bytes_list.append("0x%02x" % j)
             pregs[i] = "{" + " ".join(bytes_list) + "}"
 
         # load 'ffr' bytes with a byte pattern consisting of all 1s:
-        # ff ff
+        # ff ff ff ff ff ff ff ff ... ff ff
         bytes_list = []
-        for i in range(byte_length // 8):
+        for i in range(vg):
             bytes_list.append("0xff")
         ffr = "{" + " ".join(bytes_list) + "}"
-
-        # Test that 'vg' has the correct value.
-        self.expect(
-            "register read vg",
-            "vg is correct",
-            substrs=["vg = 0x00000000000000%02x" % (byte_length // 8)],
-        )
 
         # Test that Z registers have the correct values.
         for i in range(32):
@@ -124,7 +132,8 @@ class SVETestCase(TestBase):
         ]
 
         bytes_list = []
-        bytes_list.extend("0x" + b for b in bytes_pattern)
+        for i in range(vg // 2):
+            bytes_list.extend("0x" + b for b in bytes_pattern)
         my_z7 = "{" + " ".join(bytes_list) + "}"
 
         self.runCmd("register write z7 '" + my_z7 + "'")

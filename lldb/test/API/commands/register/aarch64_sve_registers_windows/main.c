@@ -16,7 +16,7 @@ void setup_z_and_p_regs() {
   pregs = malloc(NUM_P_REGS * p_size);
 
   // Load 'zregs' with a byte pattern consisting of register number followed by
-  // 0-(up to)7f depending on vector size:
+  // 0 - (upto) 7f depending on vector size:
   // 00 00 00 01 00 02 00 03 ... 00 7f
   // 01 00 01 01 01 02 01 03 ... 01 7f
   // ...
@@ -29,11 +29,11 @@ void setup_z_and_p_regs() {
   }
 
   // Load 'pregs' with a byte pattern consisting of register number followed by
-  // 0-(up to)7f depending on vector size:
-  // 00 00 00 01 00 02 00 03 ... 00 7f
-  // 01 00 01 01 01 02 01 03 ... 01 7f
+  // 0 - (upto) 1f depending on vector size:
+  // 00 00 00 01 00 02 00 03 ... 00 1f
+  // 01 00 01 01 01 02 01 03 ... 01 1f
   // ...
-  // 31 00 31 01 31 02 31 03 ... 31 7f
+  // 0f 00 0f 01 0f 02 0f 03 ... 0f 1f
   for (i = 0; i < NUM_P_REGS; ++i) {
     for (j = 0; j < p_size; j += 2) {
       pregs[i * p_size + j] = i;
