@@ -18,6 +18,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
 }
 
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
@@ -33,6 +34,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
 }
 
 def DupA : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
@@ -48,6 +50,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
 }
 
 def : ProcessorModel<"gfx900", NoSchedModel, []>, AMDGPUGPUInfo<[9, 0, 0]>;
@@ -63,6 +66,7 @@ class AMDGPUGPUInfo<list<int> isa = []> {
   list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
+  bit IsPseudoTarget = false;
 }
 // A malformed IsaVersion is reported (not asserted), so this stays a clean
 // diagnostic in release builds.
