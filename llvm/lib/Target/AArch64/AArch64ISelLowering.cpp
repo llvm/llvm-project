@@ -8140,13 +8140,15 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
 SDValue AArch64TargetLowering::LowerSMULFIXSAT(SDValue Op,
                                                SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
+  assert((VT == MVT::v4i16 || VT == MVT::v8i16 || VT == MVT::v2i32 ||
+          VT == MVT::v4i32) &&
+         "Unexpected type for SMULFIXSAT lowering");
+
   unsigned Scale = Op.getConstantOperandVal(2);
   if (Scale != VT.getScalarSizeInBits() - 1)
     return SDValue();
 
-  SDLoc DL(Op);
-  SDValue ID = DAG.getConstant(Intrinsic::aarch64_neon_sqdmulh, DL, MVT::i32);
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, ID, Op.getOperand(0),
+  return DAG.getNode(AArch64ISD::SQDMULH, SDLoc(Op), VT, Op.getOperand(0),
                      Op.getOperand(1));
 }
 

@@ -19,6 +19,10 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for vec_v8i32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for vec_v2i64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for vec_v4i64
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for vec_sqdmulh_v8i16
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for vec_sqdmulh_v4i16
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for vec_sqdmulh_v4i32
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for vec_sqdmulh_v2i32
 
 define i32 @func(i32 %x, i32 %y) {
 ; CHECK-LABEL: func:
@@ -411,7 +415,7 @@ define <4 x i64> @vec_v4i64(<4 x i64> %x, <4 x i64> %y) {
   ret <4 x i64> %tmp
 }
 
-define <8 x i16> @vec_sqdmulh_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
+define <8 x i16> @vec_sqdmulh_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: vec_sqdmulh_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqdmulh v0.8h, v0.8h, v1.8h
@@ -420,7 +424,7 @@ define <8 x i16> @vec_sqdmulh_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
   ret <8 x i16> %tmp
 }
 
-define <4 x i16> @vec_sqdmulh_v4i16(<4 x i16> %x, <4 x i16> %y) nounwind {
+define <4 x i16> @vec_sqdmulh_v4i16(<4 x i16> %x, <4 x i16> %y) {
 ; CHECK-LABEL: vec_sqdmulh_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqdmulh v0.4h, v0.4h, v1.4h
@@ -429,7 +433,7 @@ define <4 x i16> @vec_sqdmulh_v4i16(<4 x i16> %x, <4 x i16> %y) nounwind {
   ret <4 x i16> %tmp
 }
 
-define <4 x i32> @vec_sqdmulh_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
+define <4 x i32> @vec_sqdmulh_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: vec_sqdmulh_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqdmulh v0.4s, v0.4s, v1.4s
@@ -438,7 +442,7 @@ define <4 x i32> @vec_sqdmulh_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
   ret <4 x i32> %tmp
 }
 
-define <2 x i32> @vec_sqdmulh_v2i32(<2 x i32> %x, <2 x i32> %y) nounwind {
+define <2 x i32> @vec_sqdmulh_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: vec_sqdmulh_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sqdmulh v0.2s, v0.2s, v1.2s
