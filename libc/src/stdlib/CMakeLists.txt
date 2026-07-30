@@ -696,6 +696,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  putenv
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.putenv
+)
+
+add_entrypoint_object(
   unsetenv
   ALIAS
   DEPENDS

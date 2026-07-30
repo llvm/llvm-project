@@ -1323,7 +1323,7 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
   // operations that use a different counter (like SAMPLE_CNT).
   static constexpr AMDGPU::InstCounterType VmemCounters[] = {
       AMDGPU::LOAD_CNT, AMDGPU::STORE_CNT, AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT,
-      AMDGPU::DS_CNT};
+      AMDGPU::DS_CNT,   AMDGPU::ASYNC_CNT};
   HWEvents VmemEvents = llvm::accumulate(
       VmemCounters, HWEvents(), [&](HWEvents Acc, AMDGPU::InstCounterType T) {
         return Acc | Context->getWaitEvents(T);
@@ -3701,11 +3701,14 @@ bool SIInsertWaitcnts::run() {
 
   if (MFI->isEntryFunction() && ST.hasRequiresInitialUnclausedVmem()) {
     // Hardware entrypoints must begin with a specific sequence:
-    //   GLOBAL_WB SCOPE:SCOPE_CU
+    //   GLOBAL_PREFETCH_B8 V0, S[0:1] SCOPE:SCOPE_SE
     //   V_NOP
     MachineBasicBlock::iterator I = EntryBB.begin();
-    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_CU);
+    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_PREFETCH_B8_SADDR))
+        .addReg(AMDGPU::SGPR0_SGPR1, RegState::Undef)
+        .addReg(AMDGPU::VGPR0, RegState::Undef)
+        .addImm(0)
+        .addImm(AMDGPU::CPol::SCOPE_SE | AMDGPU::CPol::TH_RT);
     BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
     Modified = true;
   }

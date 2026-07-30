@@ -11356,18 +11356,20 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
   // AArch64::ORRWrs and AArch64::ORRXrs with WZR/XZR reg
   // and zero immediate operands used as an alias for mov instruction.
-  if (((MI.getOpcode() == AArch64::ORRWrs &&
-        MI.getOperand(1).getReg() == AArch64::WZR &&
-        MI.getOperand(3).getImm() == 0x0) ||
-       (MI.getOpcode() == AArch64::ORRWrr &&
-        MI.getOperand(1).getReg() == AArch64::WZR)) &&
-      // Check that the w->w move is not a zero-extending w->x mov.
-      (!MI.getOperand(0).getReg().isVirtual() ||
-       MI.getOperand(0).getSubReg() == 0) &&
-      (!MI.getOperand(0).getReg().isPhysical() ||
-       MI.findRegisterDefOperandIdx(getXRegFromWReg(MI.getOperand(0).getReg()),
-                                    /*TRI=*/nullptr) == -1))
-    return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+  if ((MI.getOpcode() == AArch64::ORRWrs &&
+       MI.getOperand(1).getReg() == AArch64::WZR &&
+       MI.getOperand(3).getImm() == 0x0) ||
+      (MI.getOpcode() == AArch64::ORRWrr &&
+       MI.getOperand(1).getReg() == AArch64::WZR)) {
+    // Check that the w->w move is not a zero-extending w->x mov.
+    if ((MI.getOperand(0).getReg().isPhysical() &&
+         MI.findRegisterDefOperandIdx(
+             getXRegFromWReg(MI.getOperand(0).getReg()),
+             /*TRI=*/nullptr) == -1) ||
+        (MI.getOperand(0).getReg().isVirtual() &&
+         !MI.getOperand(0).getSubReg()))
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+  }
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
       MI.getOperand(1).getReg() == AArch64::XZR &&
@@ -12161,6 +12163,18 @@ bool AArch64InstrInfo::verifyInstruction(const MachineInstr &MI,
           (AArch64_AM::getShiftValue(MO.getImm()) != 8 &&
            AArch64_AM::getShiftValue(MO.getImm()) != 16)) {
         ErrInfo = "OPERAND_SHIFT_MSL should be msl shift of 8 or 16";
+        return false;
+      }
+      break;
+    case AArch64::OPERAND_IMM_UINT1:
+      if (!MO.isImm() || (MO.getImm() != 0 && MO.getImm() != 1)) {
+        ErrInfo = "OPERAND_IMM_UINT1 should be 0 or 1";
+        return false;
+      }
+      break;
+    case AArch64::OPERAND_IMM_UINT4plus1:
+      if (!MO.isImm() || MO.getImm() <= 0 || MO.getImm() > 16) {
+        ErrInfo = "OPERAND_IMM_UINT4plus1 should be in the range 1 to 16";
         return false;
       }
       break;
