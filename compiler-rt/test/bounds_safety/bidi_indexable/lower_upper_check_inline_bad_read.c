@@ -1,3 +1,5 @@
+// This is a variant of `lower_upper_check` that requests inlining of `bad_read`
+// that can lead to LLVM discovering UB in soft trap mode.
 // RUN: %clang_bsafe %s -o %t
 // RUN: %expect-no-trap %t
 // RUN: %expect-trap --verify-prefix=lower-trap %s %t arg1
@@ -6,12 +8,9 @@
 #include <stdio.h>
 #include "soft_trap_runtime_impl.h"
 
-// `noinline` here is used to prevent inlining which can indirectly lead to
-// LLVM figuring out UB is happening during soft traps and emit a hard trap
-// after the soft trap call. This is a workaround for rdar://183581715
 // lower-trap-merged{bad_read}
 // upper-trap-merged{bad_read}
-__attribute__((noinline)) int bad_read(int *__bidi_indexable ptr, int idx) {
+__attribute__((always_inline)) int bad_read(int *__bidi_indexable ptr, int idx) {
   // lower-trap@+2{indexing below lower bound in 'ptr[idx]'}
   // upper-trap@+1{indexing above upper bound in 'ptr[idx]'}
   return ptr[idx];
