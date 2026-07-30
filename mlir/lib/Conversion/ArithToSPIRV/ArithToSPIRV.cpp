@@ -497,6 +497,128 @@ struct RemSIOpCLPattern final : public OpConversionPattern<arith::RemSIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// CeilDivUIOp
+//===----------------------------------------------------------------------===//
+
+/// Converts arith.ceildivui to SPIR-V ops. Convert `ceildivui(n, m)` into
+/// `n == 0 ? 0 : (n-1)/m + 1`. Formula taken from the equivalent conversion
+/// in IndexToSPIRV.
+struct CeilDivUIOpPattern final : OpConversionPattern<arith::CeilDivUIOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(arith::CeilDivUIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    if (!getElementTypeOrSelf(op.getType()).isIndex() &&
+        dstType != op.getType())
+      return op.emitError("bitwidth emulation is not implemented yet on "
+                          "unsigned op pattern version");
+
+    Location loc = op.getLoc();
+    Value n = adaptor.getLhs();
+    Value m = adaptor.getRhs();
+
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
+
+    Value minusOne = spirv::ISubOp::create(rewriter, loc, n, one);
+    Value quotient = spirv::UDivOp::create(rewriter, loc, minusOne, m);
+    Value plusOne = spirv::IAddOp::create(rewriter, loc, quotient, one);
+
+    Value cmp = spirv::IEqualOp::create(rewriter, loc, n, zero);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cmp, zero, plusOne);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// CeilDivSIOp
+//===----------------------------------------------------------------------===//
+
+/// Converts arith.ceildivsi to SPIR-V ops. Convert `ceildivsi(a, b)` into
+/// `q = a/b; (q*b != a && (a<0) == (b<0)) ? q+1 : q`. Formula taken from the
+/// equivalent conversion in ExpandOps.
+struct CeilDivSIOpPattern final : OpConversionPattern<arith::CeilDivSIOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(arith::CeilDivSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    Location loc = op.getLoc();
+    Value a = adaptor.getLhs();
+    Value b = adaptor.getRhs();
+
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
+
+    Value quotient = spirv::SDivOp::create(rewriter, loc, a, b);
+    Value product = spirv::IMulOp::create(rewriter, loc, quotient, b);
+    Value notEqual = spirv::INotEqualOp::create(rewriter, loc, a, product);
+
+    Value aNeg = spirv::SLessThanOp::create(rewriter, loc, a, zero);
+    Value bNeg = spirv::SLessThanOp::create(rewriter, loc, b, zero);
+    Value sameSign = spirv::LogicalEqualOp::create(rewriter, loc, aNeg, bNeg);
+    Value cond = spirv::LogicalAndOp::create(rewriter, loc, notEqual, sameSign);
+
+    Value quotientPlusOne = spirv::IAddOp::create(rewriter, loc, quotient, one);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cond, quotientPlusOne,
+                                                 quotient);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// FloorDivSIOp
+//===----------------------------------------------------------------------===//
+
+/// Converts arith.floordivsi to SPIR-V ops. Convert `floordivsi(a, b)` into
+/// `q = a/b; (q*b != a && (a<0) != (b<0)) ? q-1 : q`. Formula taken from the
+/// equivalent conversion in ExpandOps.
+struct FloorDivSIOpPattern final : OpConversionPattern<arith::FloorDivSIOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(arith::FloorDivSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    Location loc = op.getLoc();
+    Value a = adaptor.getLhs();
+    Value b = adaptor.getRhs();
+
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value minusOne = getScalarOrVectorConstInt(
+        dstType, static_cast<uint64_t>(-1), rewriter, loc);
+
+    Value quotient = spirv::SDivOp::create(rewriter, loc, a, b);
+    Value product = spirv::IMulOp::create(rewriter, loc, quotient, b);
+    Value notEqual = spirv::INotEqualOp::create(rewriter, loc, a, product);
+
+    Value aNeg = spirv::SLessThanOp::create(rewriter, loc, a, zero);
+    Value bNeg = spirv::SLessThanOp::create(rewriter, loc, b, zero);
+    Value diffSign =
+        spirv::LogicalNotEqualOp::create(rewriter, loc, aNeg, bNeg);
+    Value cond = spirv::LogicalAndOp::create(rewriter, loc, notEqual, diffSign);
+
+    Value quotientMinusOne =
+        spirv::IAddOp::create(rewriter, loc, quotient, minusOne);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cond, quotientMinusOne,
+                                                 quotient);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // BitwiseOp
 //===----------------------------------------------------------------------===//
 
@@ -1476,6 +1598,9 @@ void mlir::arith::populateArithToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
     BoolIOpPattern<arith::DivSIOp, spirv::LogicalAndOp>,     // same as divui on i1
     spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
+    CeilDivUIOpPattern,
+    CeilDivSIOpPattern,
+    FloorDivSIOpPattern,
     BoolIOpAndNotPattern<arith::RemUIOp>,  // remui(a,b) = a & ~b (see pattern comment)
     spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
     BoolIOpAndNotPattern<arith::RemSIOp>,  // remsi(a,b) = a & ~b (see pattern comment)
