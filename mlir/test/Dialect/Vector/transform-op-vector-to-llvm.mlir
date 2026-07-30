@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -transform-interpreter -verify-diagnostics -allow-unregistered-dialect -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -transform-interpreter -verify-diagnostics
 
 // CHECK-LABEL: func @lower_to_llvm
 //   CHECK-NOT:   vector.bitcast
@@ -22,7 +23,6 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// RUN: mlir-opt %s -transform-interpreter -verify-diagnostics
 // Regression test for bug #204100.
 // Assertion idx < size() in SmallVector.h used to happen here.
 // CHECK-LABEL: func @add_dynamic
@@ -41,7 +41,3 @@ module {
     }
   }
 }
-
-
-
-
