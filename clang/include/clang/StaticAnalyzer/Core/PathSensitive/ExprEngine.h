@@ -388,7 +388,8 @@ public:
                             ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
-  void processCFGBlockEntrance(const BlockEntrance &BE, NodeBuilder &Builder,
+  /// Returns true if it has generated a new node.
+  bool processCFGBlockEntrance(const BlockEntrance &BE, NodeBuilder &Builder,
                                ExplodedNode *Pred);
 
   void runCheckersForBlockEntrance(const BlockEntrance &Entrance,

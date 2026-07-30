@@ -2390,9 +2390,10 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 }
 
 /// Block entrance.  (Update counters).
-void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
+bool ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
                                          NodeBuilder &Builder,
                                          ExplodedNode *Pred) {
+  bool HasGeneratedNodes = false;
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
@@ -2402,15 +2403,16 @@ void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
                                                  Pred, maxBlockVisitOnPath);
       if (NewState != Pred->getState()) {
+        HasGeneratedNodes = true;
         ExplodedNode *UpdatedNode = Builder.generateNode(BE, NewState, Pred);
         if (!UpdatedNode)
-          return;
+          return HasGeneratedNodes;
         Pred = UpdatedNode;
       }
     }
     // Is we are inside an unrolled loop then no need the check the counters.
     if(isUnrolledState(Pred->getState()))
-      return;
+      return HasGeneratedNodes;
   }
 
   // If this block is terminated by a loop and it has already been visited the
@@ -2420,7 +2422,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
       AMgr.options.ShouldWidenLoops) {
     const Stmt *Term = getCurrBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
-      return;
+      return HasGeneratedNodes;
 
     // Widen.
     const StackFrame *SF = Pred->getStackFrame();
@@ -2433,14 +2435,16 @@ void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState = getWidenedLoopState(
         Pred->getState(), SF, BlockCount, *getCurrBlock()->ref_begin());
+    HasGeneratedNodes = true;
     Builder.generateNode(BE, WidenedState, Pred);
-    return;
+    return HasGeneratedNodes;
   }
 
   // FIXME: Refactor this into a checker.
   if (BlockCount >= AMgr.options.maxBlockVisitOnPath) {
     static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
     const ProgramPoint TaggedLoc = BE.withTag(&Tag);
+    HasGeneratedNodes = true;
     const ExplodedNode *Sink =
         Builder.generateSink(TaggedLoc, Pred->getState(), Pred);
 
@@ -2462,7 +2466,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
       // the list. Replay should almost never fail. Use the stats to catch it
       // if it does.
       if ((!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, SF)))
-        return;
+        return HasGeneratedNodes;
       NumMaxBlockCountReachedInInlined++;
     } else
       NumMaxBlockCountReached++;
@@ -2470,6 +2474,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     // Make sink nodes as exhausted(for stats) only if retry failed.
     Engine.blocksExhausted.push_back(std::make_pair(BE, Sink));
   }
+  return HasGeneratedNodes;
 }
 
 void ExprEngine::runCheckersForBlockEntrance(const BlockEntrance &Entrance,
