@@ -141,8 +141,6 @@ void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
   }
 }
 
-
-
 void RISCVCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
   // TODO: RISCVPostRAExpandPseudoPass
 
