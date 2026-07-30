@@ -21,10 +21,10 @@ namespace math {
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 LIBC_INLINE constexpr float128 ceilf128(float128 x) {
-  return static_cast<float128>(fputil::ceil(fputil::Float128(x)));
+  return static_cast<float128>(fputil::ceil(Float128(x)));
 }
 #else
-LIBC_INLINE constexpr fputil::Float128 ceilf128(fputil::Float128 x) {
+LIBC_INLINE constexpr Float128 ceilf128(Float128 x) {
   return fputil::ceil(x);
 }
 #endif // LIBC_TYPES_HAS_FLOAT128
