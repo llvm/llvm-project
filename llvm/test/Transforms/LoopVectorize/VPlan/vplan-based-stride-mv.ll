@@ -283,6 +283,85 @@ exit:
   ret void
 }
 
+; Like @byte_gep_under_scaled_stride, but with an extra-narrow use of %stride
+; in the loop to exercise MV replacement through `trunc ... to i1`.
+define void @byte_gep_under_scaled_stride_extra_narrow_use(ptr noalias %p.out, ptr %p, i64 %stride) {
+; CHECK-LABEL: VPlan for loop in 'byte_gep_under_scaled_stride_extra_narrow_use'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<128> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %stride.i1 = trunc i64 %stride to i1
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%stride.x8> = mul ir<%stride>, ir<4>
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.x8>
+; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
+; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%ld>, ir<2>
+; CHECK-NEXT:      EMIT ir<%val> = select ir<%stride.i1>, ir<%ld>, ir<%mul>
+; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i64, ir<%gep.st>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%val>
+; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<header>
+;
+entry:
+  %stride.i1 = trunc i64 %stride to i1
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %header ]
+  %iv.next = add nsw i64 %iv, 1
+
+  %stride.x8 = mul i64 %stride, 4
+  %idx = mul i64 %iv, %stride.x8
+
+  %gep.ld = getelementptr i8, ptr %p, i64 %idx
+  %ld = load i64, ptr %gep.ld, align 8
+
+  %mul = mul i64 %ld, 2
+  %val = select i1 %stride.i1, i64 %ld, i64 %mul
+
+  %gep.st = getelementptr i64, ptr %p.out, i64 %iv
+  store i64 %val, ptr %gep.st, align 8
+
+  %exitcond = icmp slt i64 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
 ; Another variation for constant multiplier with byte gep. This time the
 ; multiplier is bigger than load access type so this cannot be speculated for
 ; unit-strideness.
@@ -2398,6 +2477,85 @@ header:
 
   %gep.st = getelementptr i32, ptr %p.out, i32 %iv
   store i32 %ld, ptr %gep.st, align 8
+
+  %exitcond = icmp slt i32 %iv.next, 128
+  br i1 %exitcond, label %header, label %exit
+
+exit:
+  ret void
+}
+
+define void @trunc_stride_extra_narrow_use(ptr noalias %p.out, ptr %p, i64 %stride.i64) {
+; CHECK-LABEL: VPlan for loop in 'trunc_stride_extra_narrow_use'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<128> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %stride.i1 = trunc i64 %stride.i64 to i1
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%stride> = trunc ir<%stride.i64> to i32
+; CHECK-NEXT:      EMIT ir<%stride.byte> = mul ir<%stride>, ir<4>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride.byte>
+; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>
+; CHECK-NEXT:      EMIT ir<%mul> = mul ir<%ld>, ir<2>
+; CHECK-NEXT:      EMIT ir<%val> = select ir<%stride.i1>, ir<%ld>, ir<%mul>
+; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer i32, ir<%gep.st>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%val>
+; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<header>
+;
+entry:
+  %stride.i1 = trunc i64 %stride.i64 to i1
+  br label %header
+
+header:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %header ]
+  %stride = trunc i64 %stride.i64 to i32
+  %stride.byte = mul i32 %stride, 4
+  %iv.next = add nsw i32 %iv, 1
+
+  %idx = mul i32 %iv, %stride.byte
+
+  %gep.ld = getelementptr i8, ptr %p, i32 %idx
+  %ld = load i32, ptr %gep.ld, align 8
+
+  %mul = mul i32 %ld, 2
+  %val = select i1 %stride.i1, i32 %ld, i32 %mul
+
+  %gep.st = getelementptr i32, ptr %p.out, i32 %iv
+  store i32 %val, ptr %gep.st, align 8
 
   %exitcond = icmp slt i32 %iv.next, 128
   br i1 %exitcond, label %header, label %exit
