@@ -83,10 +83,11 @@ static cl::opt<unsigned>
     UnrollThreshold("unroll-threshold", cl::Hidden,
                     cl::desc("The cost threshold for loop unrolling"));
 
-static cl::opt<unsigned> UnrollOptSizeThreshold(
-    "unroll-optsize-threshold", cl::init(0), cl::Hidden,
-    cl::desc("The cost threshold for loop unrolling when optimizing for "
-             "size"));
+static cl::opt<unsigned>
+    UnrollOptSizeThreshold(
+      "unroll-optsize-threshold", cl::init(0), cl::Hidden,
+      cl::desc("The cost threshold for loop unrolling when optimizing for "
+               "size"));
 
 static cl::opt<unsigned> UnrollPartialThreshold(
     "unroll-partial-threshold", cl::Hidden,
@@ -156,9 +157,9 @@ static cl::opt<unsigned> FlatLoopTripCountThreshold(
              "threshold, the loop is considered as flat and will be less "
              "aggressively unrolled."));
 
-static cl::opt<bool>
-    UnrollUnrollRemainder("unroll-remainder", cl::Hidden,
-                          cl::desc("Allow the loop remainder to be unrolled."));
+static cl::opt<bool> UnrollUnrollRemainder(
+  "unroll-remainder", cl::Hidden,
+  cl::desc("Allow the loop remainder to be unrolled."));
 
 // This option isn't ever intended to be enabled, it serves to allow
 // experiments to check the assumptions about when this kind of revisit is
@@ -401,9 +402,9 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
     assert(PHIUsedList.empty() && "Must start with an empty phi used list");
     CostWorklist.push_back(&RootI);
     TargetTransformInfo::TargetCostKind CostKind =
-        RootI.getFunction()->hasMinSize()
-            ? TargetTransformInfo::TCK_CodeSize
-            : TargetTransformInfo::TCK_SizeAndLatency;
+      RootI.getFunction()->hasMinSize() ?
+      TargetTransformInfo::TCK_CodeSize :
+      TargetTransformInfo::TCK_SizeAndLatency;
     for (;; --Iteration) {
       do {
         Instruction *I = CostWorklist.pop_back_val();
@@ -495,9 +496,8 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
              << "Starting LoopUnroll profitability analysis...\n");
 
   TargetTransformInfo::TargetCostKind CostKind =
-      L->getHeader()->getParent()->hasMinSize()
-          ? TargetTransformInfo::TCK_CodeSize
-          : TargetTransformInfo::TCK_SizeAndLatency;
+    L->getHeader()->getParent()->hasMinSize() ?
+    TargetTransformInfo::TCK_CodeSize : TargetTransformInfo::TCK_SizeAndLatency;
   // Simulate execution of each iteration of the loop counting instructions,
   // which would be simplified.
   // Since the same load will take different values on different iterations,
@@ -555,10 +555,9 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
         // and if the visitor returns true, mark the instruction as free after
         // unrolling and continue.
         bool IsFree = Analyzer.visit(I);
-        bool Inserted = InstCostMap
-                            .insert({&I, (int)Iteration, (unsigned)IsFree,
-                                     /*IsCounted*/ false})
-                            .second;
+        bool Inserted = InstCostMap.insert({&I, (int)Iteration,
+                                           (unsigned)IsFree,
+                                           /*IsCounted*/ false}).second;
         (void)Inserted;
         assert(Inserted && "Cannot have a state for an unvisited instruction!");
 
@@ -1774,9 +1773,8 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
       MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  auto *BFI = (PSI && PSI->hasProfileSummary())
-                  ? &AM.getResult<BlockFrequencyAnalysis>(F)
-                  : nullptr;
+  auto *BFI = (PSI && PSI->hasProfileSummary()) ?
+      &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 
   bool Changed = false;
 
