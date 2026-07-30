@@ -5,7 +5,7 @@
 
 ; On little-endian powerpc the bit position of the sign bit is bit 63, not
 ; bit 127. However, APFloat reports that the sign bit is the MSB. Ensure
-; that we do not incorrectly optimize based on the (false!) assumption that 
+; that we do not incorrectly optimize based on the (false!) assumption that
 ; fabs just clears the MSB.
 
 define i1 @msb_set(ppc_fp128 %x) {
@@ -33,4 +33,30 @@ entry:
   ret i1 %cmp
 }
 
-declare ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128)
+; Check that fabs on negative ppc_fp128 produces a non-negative value.
+define i1 @fabs_clears_sign_le(ppc_fp128 %x) {
+; LE-LABEL: fabs_clears_sign_le:
+; LE:       # %bb.0: # %entry
+; LE-NEXT:    mffprd 3, 1
+; LE-NEXT:    mffprd 4, 2
+; LE-NEXT:    xor 3, 4, 3
+; LE-NEXT:    rldicl 3, 3, 1, 63
+; LE-NEXT:    blr
+;
+; BE-LABEL: fabs_clears_sign_le:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    li 3, 0
+; BE-NEXT:    blr
+;
+; BE32-LABEL: fabs_clears_sign_le:
+; BE32:       # %bb.0: # %entry
+; BE32-NEXT:    li 3, 0
+; BE32-NEXT:    blr
+entry:
+  %neg = fneg ppc_fp128 %x
+  %a = call ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128 %neg)
+  %v = bitcast ppc_fp128 %a to i128
+  %cmp = icmp slt i128 %v, 0
+  ret i1 %cmp
+}
+

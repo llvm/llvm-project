@@ -4159,7 +4159,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::FABS: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known.makeNonNegative();
     EVT SVT = Op.getValueType().getScalarType();
     if (SVT == MVT::ppcf128) {
       // The sign bit position depends on endianness: ppc_fp128 is two doubles
