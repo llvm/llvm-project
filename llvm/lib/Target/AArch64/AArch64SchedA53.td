@@ -45,8 +45,12 @@ def A53UnitMAC    : ProcResource<1> { let BufferSize = 0; } // Int MAC
 def A53UnitDiv    : ProcResource<1> { let BufferSize = 0; } // Int Division
 def A53UnitLdSt   : ProcResource<1> { let BufferSize = 0; } // Load/Store
 def A53UnitB      : ProcResource<1> { let BufferSize = 0; } // Branch
-def A53UnitFPALU  : ProcResource<1> { let BufferSize = 0; } // FP ALU
-def A53UnitFPMDS  : ProcResource<1> { let BufferSize = 0; } // FP Mult/Div/Sqrt
+// The FP/ASIMD datapath moves 128 bits per cycle, which it can spend either on
+// one 128-bit (Q-form) operation or on two 64-bit ones. Model each FP/ASIMD
+// pipe as two lanes: 64-bit and scalar operations take a single lane, Q-form
+// operations take both.
+def A53UnitFPALU  : ProcResource<2> { let BufferSize = 0; } // FP ALU
+def A53UnitFPMDS  : ProcResource<2> { let BufferSize = 0; } // FP Mult/Div/Sqrt
 
 
 //===----------------------------------------------------------------------===//
@@ -125,26 +129,45 @@ def : WriteRes<WriteHint, [A53UnitB]>;
 
 // FP ALU
 def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteFCmp, [A53UnitFPALU]> { let Latency = 6; }
+// The compares write NZCV, and only one instruction per cycle can do that, so
+// they do not dual-issue: they take both lanes even though they are scalar.
+def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteVq, [A53UnitFPALU]> { let Latency = 6; }
+// A 128-bit (Q-form) operation fills the whole 128-bit datapath, so it takes
+// both lanes.
+def : WriteRes<WriteVq, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
 
-// FP Mul, Div, Sqrt
+// FP Mul, Div, Sqrt. Divide and square root are not pipelined and block the
+// whole unit, so they hold both lanes for their full occupancy.
 def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 6; }
-def : WriteRes<WriteFDiv, [A53UnitFPMDS]> { let Latency = 33;
-                                            let ReleaseAtCycles = [29]; }
+def : WriteRes<WriteFDiv, [A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 33;
+  let ReleaseAtCycles = [29, 29];
+}
 def A53WriteFMAC : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 10; }
-def A53WriteFDivSP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 18;
-                                                     let ReleaseAtCycles = [14]; }
-def A53WriteFDivDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 33;
-                                                     let ReleaseAtCycles = [29]; }
-def A53WriteFSqrtSP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 17;
-                                                      let ReleaseAtCycles = [13]; }
-def A53WriteFSqrtDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 32;
-                                                      let ReleaseAtCycles = [28]; }
+// Q-form multiply-accumulate fills the datapath and takes both lanes.
+def A53WriteFMACQ : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 10;
+}
+def A53WriteFDivSP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 18;
+  let ReleaseAtCycles = [14, 14];
+}
+def A53WriteFDivDP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 33;
+  let ReleaseAtCycles = [29, 29];
+}
+def A53WriteFSqrtSP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 17;
+  let ReleaseAtCycles = [13, 13];
+}
+def A53WriteFSqrtDP : SchedWriteRes<[A53UnitFPMDS, A53UnitFPMDS]> {
+  let Latency = 32;
+  let ReleaseAtCycles = [28, 28];
+}
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
@@ -288,8 +311,20 @@ def : InstRW<[WriteAdr, A53WriteVST2], (instregex "ST4Fourv(2d)_POST$")>;
 //---
 // Floating Point MAC, DIV, SQRT
 //---
+// Q-form crypto (AES/SHA/PMULL) needs no special case: taking both datapath
+// lanes for one cycle is exactly the throughput of the 128-bit-wide crypto
+// unit, and it leaves fused AES pairs (FeatureFuseAES) free to issue
+// back-to-back.
+
 def : InstRW<[A53WriteFMAC], (instregex "^FN?M(ADD|SUB).*")>;
-def : InstRW<[A53WriteFMAC], (instregex "^FML(A|S).*")>;
+def : InstRW<[A53WriteFMAC], (instregex "^FML(A|S)L.*")>;
+def : InstRW<[A53WriteFMAC],
+      (instregex "^FML(A|S)(v2f32|v4f16)$",
+                 "^FML(A|S)v1i(16|32|64)_indexed$",
+                 "^FML(A|S)(v2i32|v4i16)_indexed$")>;
+def : InstRW<[A53WriteFMACQ],
+      (instregex "^FML(A|S)(v4f32|v2f64|v8f16)$",
+                 "^FML(A|S)(v4i32|v2i64|v8i16)_indexed$")>;
 def : InstRW<[A53WriteFDivSP], (instrs FDIVSrr)>;
 def : InstRW<[A53WriteFDivDP], (instrs FDIVDrr)>;
 def : InstRW<[A53WriteFDivSP], (instregex "^FDIVv.*32$")>;
