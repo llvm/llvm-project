@@ -2951,6 +2951,25 @@ static bool useOwnerIsAddi(MlirOpOperand opOperand, void *userData) {
   return mlirStringRefEqual(name, mlirStringRefCreateFromCString("arith.addi"));
 }
 
+// User data threaded through mlirValueReplaceUsesWithIf below.
+struct ReplaceUsesFilterData {
+  // Only uses at this operand number are replaced.
+  intptr_t operandNumber;
+  // Every visited use is expected to be a use of this value.
+  MlirValue expectedValue;
+  // Number of times the filter has been invoked.
+  int numCalls;
+};
+
+// Replace-uses filter that accepts a single operand number, and checks along
+// the way that the use it is handed carries the value being replaced.
+static bool useIsAtOperandNumber(MlirOpOperand opOperand, void *userData) {
+  struct ReplaceUsesFilterData *data = (struct ReplaceUsesFilterData *)userData;
+  assert(mlirValueEqual(mlirOpOperandGetValue(opOperand), data->expectedValue));
+  data->numCalls++;
+  return mlirOpOperandGetOperandNumber(opOperand) == data->operandNumber;
+}
+
 int testReplaceUsesWithIf(MlirContext ctx) {
   fprintf(stderr, "@testReplaceUsesWithIf\n");
   // CHECK-LABEL: @testReplaceUsesWithIf
@@ -2961,6 +2980,7 @@ int testReplaceUsesWithIf(MlirContext ctx) {
                           "  %0 = arith.addi %arg0, %arg0 : i32\n"
                           "  %1 = arith.muli %arg0, %arg0 : i32\n"
                           "  %2 = arith.addi %0, %1 : i32\n"
+                          "  %3 = arith.muli %arg1, %arg1 : i32\n"
                           "  return %2 : i32\n"
                           "}\n";
   MlirModule module =
@@ -2985,6 +3005,27 @@ int testReplaceUsesWithIf(MlirContext ctx) {
   // The muli is not an addi, so its operands are untouched (still arg0).
   assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 0), arg0));
   assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 1), arg0));
+
+  // The filter can also discriminate between the individual uses inside a
+  // single operation: arg0 is now only used by the muli, twice, and only the
+  // use at operand number 1 is replaced. `userData` is threaded through to the
+  // callback, which records how many uses it saw.
+  struct ReplaceUsesFilterData data = {/*operandNumber=*/1,
+                                       /*expectedValue=*/arg0,
+                                       /*numCalls=*/0};
+  mlirValueReplaceUsesWithIf(arg0, arg1, useIsAtOperandNumber, &data);
+  assert(data.numCalls == 2);
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 0), arg0));
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 1), arg1));
+
+  // Replacing the uses of a value that has none never invokes the filter.
+  MlirOperation unusedOp = mlirOperationGetNextInBlock(
+      mlirOperationGetNextInBlock(mulOp)); // %3 = muli %arg1, %arg1
+  MlirValue unused = mlirOperationGetResult(unusedOp, 0);
+  data.expectedValue = unused;
+  data.numCalls = 0;
+  mlirValueReplaceUsesWithIf(unused, arg1, useIsAtOperandNumber, &data);
+  assert(data.numCalls == 0);
 
   mlirModuleDestroy(module);
 

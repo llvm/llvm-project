@@ -1138,7 +1138,8 @@ typedef bool (*MlirOpOperandReplaceFilterCallback)(MlirOpOperand opOperand,
                                                    void *userData);
 
 /// Replace uses of 'of' value with 'with' value, but only for the uses for
-/// which the `filter` callback returns true. `filter` must not be NULL.
+/// which the `filter` callback returns true. `filter` must not be NULL; this is
+/// only checked by an assertion, i.e. in builds with assertions enabled.
 MLIR_CAPI_EXPORTED void
 mlirValueReplaceUsesWithIf(MlirValue of, MlirValue with,
                            MlirOpOperandReplaceFilterCallback filter,
