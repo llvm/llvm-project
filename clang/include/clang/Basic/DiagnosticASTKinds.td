@@ -24,6 +24,8 @@ def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
   "value %0 is outside the range of representable values of type %1">;
+def note_constexpr_offsetof_overflow : Note<
+  "overflow in offsetof">;
 def note_constexpr_negative_shift : Note<"negative shift count %0">;
 def note_constexpr_large_shift : Note<
   "shift count %0 >= width of type %1 (%2 bit%s2)">;
@@ -168,7 +170,7 @@ def note_constexpr_depth_limit_exceeded : Note<
 def note_constexpr_call_limit_exceeded : Note<
   "constexpr evaluation hit maximum call limit">;
 def note_constexpr_step_limit_exceeded : Note<
-  "constexpr evaluation hit maximum step limit; possible infinite loop?">;
+  "constexpr evaluation hit maximum step limit of %0; possible infinite loop?">;
 def note_constexpr_heap_alloc_limit_exceeded : Note<
   "constexpr evaluation hit maximum heap allocation limit">;
 def note_constexpr_this : Note<
@@ -353,8 +355,9 @@ def note_constexpr_new_negative : Note<
 def note_constexpr_new_too_large : Note<
   "cannot allocate array; evaluated array bound %0 is too large">;
 def note_constexpr_new_exceeds_limits : Note<
-  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1); "
-  "use '-fconstexpr-steps' to increase this limit">;
+  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1)">;
+def note_constexpr_steps : Note<
+  "use -fconstexpr-steps= to increase this limit (=0 will remove the limit)">;
 def note_constexpr_new_too_small : Note<
   "cannot allocate array; evaluated array bound %0 is too small to hold "
   "%1 explicitly initialized elements">;

@@ -15,6 +15,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedInterface.h"
 #include "lldb/Utility/DataBufferHeap.h"
 
@@ -251,10 +252,15 @@ public:
       size_t num_args = sizeof...(Args);
       if (arg_info->max_positional_args != PythonCallable::ArgInfo::UNBOUNDED &&
           num_args != arg_info->max_positional_args) {
-        if (num_args != arg_info->max_positional_args - 1)
+        if (num_args != arg_info->max_positional_args - 1) {
+          // `expected_return_object` starts in an error state; consume it
+          // before we return with a different error, or its destructor
+          // will abort.
+          llvm::consumeError(expected_return_object.takeError());
           return create_error("Passed arguments ({0}) doesn't match the number "
                               "of expected arguments ({1}).",
                               num_args, arg_info->max_positional_args);
+        }
 
         std::apply(
             [&init, &expected_return_object](auto &&...args) {
@@ -663,6 +669,26 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::DebuggerSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(const std::vector<std::string> &arg) {
+    python::PythonList list(python::PyInitialValue::Empty);
+    for (const std::string &s : arg)
+      list.AppendItem(python::PythonString(s));
+    return list;
+  }
+
+  python::ScopedPythonObject<lldb::SBCommandReturnObject>
+  Transform(CommandReturnObject *arg) {
+    return python::SWIGBridge::ToSWIGWrapper(*arg);
+  }
+
+  python::PythonObject Transform(const TypeSummaryOptions &arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
@@ -673,6 +699,14 @@ protected:
                         Status &error) {
     original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
   }
+
+  // Read-only arguments (passed as `const T&`) have nothing to write back:
+  // there's no `T` value to reassign into a const reference, and no
+  // `ExtractValueFromPythonObject<T>` specialization should be required just
+  // to satisfy this round-trip for a value the callee never mutates.
+  template <typename T>
+  void ReverseTransform(const T &original_arg,
+                        python::PythonObject transformed_arg, Status &error) {}
 
   void ReverseTransform(bool &original_arg,
                         python::PythonObject transformed_arg, Status &error) {
@@ -702,6 +736,15 @@ protected:
   void TransformBack(T &original_arg, U transformed_arg, Status &error) {
     ReverseTransform(original_arg, transformed_arg, error);
   }
+
+  // ScopedPythonObject is non-copyable — passing it through the generic
+  // TransformBack would trigger the deleted copy ctor. It manages its own
+  // cleanup via the destructor when the transformed-args tuple destructs, so
+  // there is nothing to reverse-transform back into the original arg.
+  template <typename T, typename SB>
+  void TransformBack(T &original_arg,
+                     python::ScopedPythonObject<SB> &transformed_arg,
+                     Status &error) {}
 
   template <std::size_t... I, typename... Ts, typename... Us>
   bool ReassignPtrsOrRefsArgs(std::tuple<Ts...> &original_args,
@@ -834,6 +877,21 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::TargetSP>(
 template <>
 lldb::ValueObjectListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+std::optional<lldb::ValueType>
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    std::optional<lldb::ValueType>>(python::PythonObject &p, Status &error);
+
+template <>
+lldb::DebuggerSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DebuggerSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+std::vector<std::string>
+ScriptedPythonInterface::ExtractValueFromPythonObject<std::vector<std::string>>(
     python::PythonObject &p, Status &error);
 
 } // namespace lldb_private

@@ -35,6 +35,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -118,17 +119,7 @@ namespace llvm {
 template <> struct DenseMapInfo<MemOpKey> {
   using PtrInfo = DenseMapInfo<const MachineOperand *>;
 
-  static inline MemOpKey getEmptyKey() {
-    return MemOpKey(PtrInfo::getEmptyKey(), PtrInfo::getEmptyKey(),
-                    PtrInfo::getEmptyKey(), PtrInfo::getEmptyKey(),
-                    PtrInfo::getEmptyKey());
-  }
-
   static unsigned getHashValue(const MemOpKey &Val) {
-    // Checking any field of MemOpKey is enough to determine if the key is
-    // empty.
-    assert(Val.Disp != PtrInfo::getEmptyKey() && "Cannot hash the empty key");
-
     hash_code Hash = hash_combine(*Val.Operands[0], *Val.Operands[1],
                                   *Val.Operands[2], *Val.Operands[3]);
 
@@ -166,10 +157,6 @@ template <> struct DenseMapInfo<MemOpKey> {
   }
 
   static bool isEqual(const MemOpKey &LHS, const MemOpKey &RHS) {
-    // Checking any field of MemOpKey is enough to determine if the key is
-    // empty.
-    if (RHS.Disp == PtrInfo::getEmptyKey())
-      return LHS.Disp == PtrInfo::getEmptyKey();
     return LHS == RHS;
   }
 };
@@ -299,6 +286,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };

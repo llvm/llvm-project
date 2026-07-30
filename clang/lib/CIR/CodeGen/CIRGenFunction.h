@@ -724,15 +724,6 @@ public:
     }
   };
 
-  /// IndirectBranch - The first time an indirect goto is seen we create a block
-  /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
-  /// is emitted at the end of the function, once all block destinations have
-  /// been resolved.
-  mlir::Block *indirectGotoBlock = nullptr;
-
-  void resolveBlockAddresses();
-  void finishIndirectBranch();
-
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
@@ -1088,6 +1079,13 @@ public:
                         ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock(bool forDeactivation = false);
 
+  /// Emit the cleanups captured for a loop's condition variable (those pushed
+  /// above \p depth while EHScopeStack was capturing condition cleanups) at
+  /// the current insertion point, which must be inside the loop op's cleanup
+  /// region, and pop them off the EH stack.
+  void emitLoopConditionCleanups(EHScopeStack::stable_iterator depth,
+                                 mlir::Location loc);
+
   void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
 
   /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
@@ -1315,6 +1313,52 @@ public:
   private:
     FullExprCleanupScope(const FullExprCleanupScope &) = delete;
     void operator=(const FullExprCleanupScope &) = delete;
+  };
+
+  /// Captures the destructor cleanup for a loop's condition variable so that it
+  /// can be emitted into the loop op's per-iteration cleanup region.
+  class DeferredLoopConditionCleanup {
+    CIRGenFunction &cgf;
+    EHScopeStack::stable_iterator depth;
+    bool active;
+
+  public:
+    DeferredLoopConditionCleanup(CIRGenFunction &cgf, bool active)
+        : cgf(cgf), depth(cgf.ehStack.stable_begin()), active(active) {}
+
+    /// An RAII class that suppresses cir.cleanup.scope creation for cleanups
+    /// pushed onto the EH stack while a loop condition variable is being
+    /// emitted and instead captures these cleanups so that they can be emitted
+    /// into the loop op's cleanup region after the condition region is built.
+    class CaptureScope {
+      EHScopeStack &ehStack;
+
+    public:
+      explicit CaptureScope(DeferredLoopConditionCleanup &scope)
+          : ehStack(scope.cgf.ehStack) {
+        // Capturing wraps only the condition variable's own destructor push,
+        // which emits no nested code, so it can never already be active.
+        assert(!ehStack.isCapturingLoopConditionCleanups() &&
+               "loop condition cleanup capturing should not nest");
+        if (scope.active)
+          ehStack.setCapturingLoopConditionCleanups(true);
+      }
+      ~CaptureScope() { ehStack.setCapturingLoopConditionCleanups(false); }
+
+      CaptureScope(const CaptureScope &) = delete;
+      void operator=(const CaptureScope &) = delete;
+    };
+
+    /// Emit the captured condition-variable cleanups into the current insertion
+    /// point (the loop's cleanup region).
+    void emitIntoLoopCleanupRegion(mlir::Location loc) {
+      if (active)
+        cgf.emitLoopConditionCleanups(depth, loc);
+    }
+
+  private:
+    DeferredLoopConditionCleanup(const DeferredLoopConditionCleanup &) = delete;
+    void operator=(const DeferredLoopConditionCleanup &) = delete;
   };
 
 public:
@@ -1643,6 +1687,12 @@ public:
       const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
       llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
 
+  mlir::Value makeBinaryAtomicValue(
+      cir::AtomicFetchKind kind, const clang::CallExpr *expr,
+      mlir::Type *originalArgType = nullptr,
+      mlir::Value *emittedArgValue = nullptr,
+      cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent);
+
   mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
@@ -1658,6 +1708,12 @@ public:
   void emitAutoVarDecl(const clang::VarDecl &d);
 
   void emitAutoVarCleanups(const AutoVarEmission &emission);
+
+  /// Emit a loop's condition-variable declaration. This needs special handling
+  /// so that we can manage per-iteration cleanups for the loop condition.
+  void emitLoopConditionVariable(const clang::VarDecl &d,
+                                 DeferredLoopConditionCleanup &condCleanup);
+
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the
   /// emission is not directly an alloca), the allocatedSeparately parameter can
@@ -1703,18 +1759,21 @@ public:
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
-  void instantiateIndirectGotoBlock();
-
-  /// Emit a simple LLVM intrinsic that takes N scalar arguments and whose
-  /// return type matches the type of the first argument. The intrinsic name is
-  /// used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be baked
-  /// into \p intrinName by the caller.
+  /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
+  /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
+  /// baked into \p intrinName by the caller.  The result type defaults to the
+  /// type of the first argument; pass \p resultType for intrinsics whose result
+  /// differs from the operand, such as a vector reduction that returns the
+  /// element type.  Unlike classic CodeGen, CIR has no intrinsic registry to
+  /// derive the result type from the operand, so it must be supplied here.
   template <unsigned N>
   [[maybe_unused]] RValue
   emitBuiltinWithOneOverloadedType(const CallExpr *e,
-                                   llvm::StringRef intrinName) {
+                                   llvm::StringRef intrinName,
+                                   mlir::Type resultType = {}) {
     static_assert(N, "expect non-empty argument");
-    mlir::Type cirTy = convertType(e->getArg(0)->getType());
+    mlir::Type cirTy =
+        resultType ? resultType : convertType(e->getArg(0)->getType());
     SmallVector<mlir::Value, N> args;
     for (unsigned i = 0; i < N; ++i)
       args.push_back(emitScalarExpr(e->getArg(i)));
@@ -1753,6 +1812,9 @@ public:
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
+
+  LValue emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e);
+  LValue emitCXXConstructLValue(const CXXConstructExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
@@ -2092,7 +2154,8 @@ public:
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
   mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
-                               SourceLocation loc, LValueBaseInfo baseInfo);
+                               SourceLocation loc, LValueBaseInfo baseInfo,
+                               bool isNontemporal = false);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -2248,7 +2311,16 @@ public:
 
   std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
-
+  cir::GetGlobalOp createGetCpuModel(mlir::Location loc);
+  cir::GetGlobalOp createGetCpuFeatures2(mlir::Location loc);
+  mlir::Value emitX86CpuIs(const CallExpr *expr);
+  mlir::Value emitX86CpuIs(mlir::Location loc, StringRef cpuStr);
+  mlir::Value emitX86CpuSupports(const CallExpr *expr);
+  mlir::Value emitX86CpuSupports(mlir::Location loc,
+                                 ArrayRef<StringRef> FeatureStrs);
+  mlir::Value emitX86CpuSupports(mlir::Location loc,
+                                 std::array<uint32_t, 4> FeatureMask);
+  mlir::Value emitX86CpuInit(mlir::Location loc);
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 
@@ -2302,6 +2374,7 @@ public:
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
       builder.createStore(
           value.getLoc(), value, addr, /*isVolatile=*/false,
+          /*isNontemporal=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
@@ -2555,10 +2628,6 @@ public:
   void emitOMPDeclareReduction(const OMPDeclareReductionDecl &d);
   void emitOMPDeclareMapper(const OMPDeclareMapperDecl &d);
   void emitOMPRequiresDecl(const OMPRequiresDecl &d);
-
-private:
-  template <typename Op>
-  void emitOpenMPClauses(Op &op, ArrayRef<const OMPClause *> clauses);
 
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission

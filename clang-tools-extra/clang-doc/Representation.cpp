@@ -108,7 +108,7 @@ static llvm::Expected<Info *> reduce(SmallVectorImpl<Info *> &Values) {
                                    "no value to reduce");
   T *Merged = allocateTransient<T>(Values[0]->USR);
   for (auto &I : Values)
-    Merged->merge(std::move(*static_cast<T *>(I)));
+    Merged->merge(std::move(*cast<T>(I)));
   return Merged;
 }
 
@@ -180,77 +180,38 @@ void mergeUnkeyed<CommentInfo>(DocList<CommentInfo> &Target,
   }
 }
 
+template <typename T>
+static llvm::Error mergeTypedInfo(Info *&Reduced, Info *NewInfo,
+                                  llvm::BumpPtrAllocator &Arena) {
+  if (!Reduced)
+    Reduced = allocatePtr<T>(Arena, NewInfo->USR);
+  cast<T>(Reduced)->merge(std::move(*cast<T>(NewInfo)));
+  return llvm::Error::success();
+}
+
 llvm::Error mergeSingleInfo(doc::Info *&Reduced, doc::Info *NewInfo,
                             llvm::BumpPtrAllocator &Arena) {
-  if (!Reduced) {
-    switch (NewInfo->IT) {
-    case InfoType::IT_namespace:
-      Reduced = allocatePtr<NamespaceInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_record:
-      Reduced = allocatePtr<RecordInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_enum:
-      Reduced = allocatePtr<EnumInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_function:
-      Reduced = allocatePtr<FunctionInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_typedef:
-      Reduced = allocatePtr<TypedefInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_concept:
-      Reduced = allocatePtr<ConceptInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_variable:
-      Reduced = allocatePtr<VarInfo>(Arena, NewInfo->USR);
-      break;
-    case InfoType::IT_friend:
-      Reduced = allocatePtr<FriendInfo>(Arena, NewInfo->USR);
-      break;
-    default:
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "unknown info type");
-    }
-  }
-
-  if (Reduced->IT != NewInfo->IT)
+  if (Reduced && Reduced->IT != NewInfo->IT)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "info types mismatch");
 
-  switch (Reduced->IT) {
+  switch (NewInfo->IT) {
   case InfoType::IT_namespace:
-    static_cast<NamespaceInfo *>(Reduced)->merge(
-        std::move(*static_cast<NamespaceInfo *>(NewInfo)));
-    break;
+    return mergeTypedInfo<NamespaceInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_record:
-    static_cast<RecordInfo *>(Reduced)->merge(
-        std::move(*static_cast<RecordInfo *>(NewInfo)));
-    break;
+    return mergeTypedInfo<RecordInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_enum:
-    static_cast<EnumInfo *>(Reduced)->merge(
-        std::move(*static_cast<EnumInfo *>(NewInfo)));
-    break;
+    return mergeTypedInfo<EnumInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_function:
-    static_cast<FunctionInfo *>(Reduced)->merge(
-        std::move(*static_cast<FunctionInfo *>(NewInfo)));
-    break;
+    return mergeTypedInfo<FunctionInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_typedef:
-    static_cast<TypedefInfo *>(Reduced)->merge(
-        std::move(*static_cast<TypedefInfo *>(NewInfo)));
-    break;
+    return mergeTypedInfo<TypedefInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_concept:
-    static_cast<ConceptInfo *>(Reduced)->merge(
-        std::move(*static_cast<ConceptInfo *>(NewInfo)));
-    break;
+    return mergeTypedInfo<ConceptInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_variable:
-    static_cast<VarInfo *>(Reduced)->merge(
-        std::move(*static_cast<VarInfo *>(NewInfo)));
-    break;
+    return mergeTypedInfo<VarInfo>(Reduced, NewInfo, Arena);
   case InfoType::IT_friend:
-    static_cast<FriendInfo *>(Reduced)->merge(
-        std::move(*static_cast<FriendInfo *>(NewInfo)));
-    break;
+    return mergeTypedInfo<FriendInfo>(Reduced, NewInfo, Arena);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unknown info type");
@@ -524,11 +485,6 @@ void NamespaceInfo::merge(NamespaceInfo &&Other) {
 RecordInfo::RecordInfo(SymbolID USR, StringRef Name, StringRef Path)
     : SymbolInfo(InfoType::IT_record, USR, Name, Path) {}
 
-// FIXME: This constructor is currently unsafe for cross-arena copies of
-// populated records. Because a default copy of ScopeChildren will shallow-copy
-// the intrusive pointers, leading to a use-after-free when the TransientArena
-// is reset. Subsequent patches will address this by deep-copying children
-// individually via reduceChildren.
 RecordInfo::RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena)
     : SymbolInfo(Other, Arena), TagType(Other.TagType),
       IsTypeDef(Other.IsTypeDef) {

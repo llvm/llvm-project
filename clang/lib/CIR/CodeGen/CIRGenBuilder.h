@@ -239,6 +239,16 @@ public:
   // Operation creation helpers
   // --------------------------
   //
+  using CIRBaseBuilderTy::createCopy;
+  cir::CopyOp createCopy(Address dst, Address src, bool isVolatile = false,
+                         bool skipTailPadding = false) {
+    cir::CopyOp op = createCopy(dst.getPointer(), src.getPointer(), isVolatile,
+                                skipTailPadding);
+    op.setDstAlignment(dst.getAlignment().getQuantity());
+    op.setSrcAlignment(src.getAlignment().getQuantity());
+    return op;
+  }
+
   cir::MemCpyOp createMemCpy(mlir::Location loc, mlir::Value dst,
                              mlir::Value src, mlir::Value len) {
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
@@ -264,8 +274,8 @@ public:
   // ---------------------------
 
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
-                                        unsigned memberIndex) {
-    return cir::DataMemberAttr::get(ty, memberIndex);
+                                        llvm::ArrayRef<int32_t> path) {
+    return cir::DataMemberAttr::get(ty, path);
   }
 
   cir::DataMemberAttr getNullDataMemberAttr(cir::DataMemberType ty) {
@@ -467,27 +477,17 @@ public:
   //===--------------------------------------------------------------------===//
   // UnaryOp creation helpers
   //===--------------------------------------------------------------------===//
-  mlir::Value createNeg(mlir::Value value, bool nsw = false) {
+  mlir::Value createNeg(mlir::Location loc, mlir::Value value,
+                        bool nsw = false) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
-      return createMinus(value.getLoc(), value, nsw);
+      return createMinus(loc, value, nsw);
     }
 
     llvm_unreachable("negation for the given type is NYI");
-  }
-
-  mlir::Value createFNeg(mlir::Value value) {
-    assert(mlir::isa<cir::FPTypeInterface>(value.getType()) &&
-           "Non-fp input type!");
-
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return createMinus(value.getLoc(), value);
   }
 
   //===--------------------------------------------------------------------===//
@@ -571,6 +571,13 @@ public:
   //===--------------------------------------------------------------------===//
   cir::IsFPClassOp createIsFPClass(mlir::Location loc, mlir::Value src,
                                    cir::FPClassTest flags) {
+    // FPClassTest occupies bits 0-9 (fcAllFlags).  Sema rejects an
+    // out-of-range __builtin_isfpclass mask, so any extra bit here is an
+    // internal error; assert and mask it off so lowering stays well-formed.
+    uint32_t raw = static_cast<uint32_t>(flags);
+    uint32_t all = static_cast<uint32_t>(cir::FPClassTest::All);
+    assert((raw & ~all) == 0 && "FPClassTest mask has bits outside 0-9");
+    flags = static_cast<cir::FPClassTest>(raw & all);
     return cir::IsFPClassOp::create(*this, loc, src, flags);
   }
 
@@ -587,12 +594,14 @@ public:
   }
 
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
-                         bool isVolatile = false) {
+                         bool isVolatile = false, bool isNontemporal = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
     return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
-                               isVolatile, /*alignment=*/align,
+                               isVolatile, isNontemporal,
+                               /*alignment=*/align,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
@@ -602,9 +611,11 @@ public:
     uint64_t alignment = align ? align->value() : 0;
     mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
-                               /*isVolatile=*/false, alignAttr,
+                               /*isVolatile=*/false, /*isNontemporal=*/false,
+                               alignAttr,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp
@@ -614,14 +625,14 @@ public:
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
-                           bool isVolatile = false,
+                           bool isVolatile = false, bool isNontemporal = false,
                            mlir::IntegerAttr align = {},
                            cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
     if (!align)
       align = getAlignmentAttr(dst.getAlignment());
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), isVolatile,
-                                         align, scope, order);
+                                         isNontemporal, align, scope, order);
   }
 
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
@@ -651,6 +662,29 @@ public:
   Address createComplexImagPtr(mlir::Location loc, Address addr) {
     return Address{createComplexImagPtr(loc, addr.getPointer()),
                    addr.getAlignment()};
+  }
+
+  using CIRBaseBuilderTy::createGetMember;
+  Address createGetMember(mlir::Location loc, Address base,
+                          llvm::StringRef name, unsigned index) {
+    auto recordTy = mlir::cast<cir::RecordType>(base.getElementType());
+
+    assert(index < recordTy.getMembers().size() &&
+           "member index out of bounds");
+    mlir::Type memberTy = recordTy.getMembers()[index];
+    mlir::Type memberPtrTy = getPointerTo(memberTy);
+
+    auto moduleOp =
+        getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+    mlir::DataLayout layout(moduleOp);
+    auto memberOffset =
+        CharUnits::fromQuantity(recordTy.getElementOffset(layout, index));
+
+    mlir::Value memberPtr =
+        createGetMember(loc, memberPtrTy, base.getBasePointer(), name, index);
+    return Address(memberPtr, memberTy,
+                   base.getAlignment().alignmentAtOffset(memberOffset),
+                   base.isKnownNonNull());
   }
 
   cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,

@@ -290,9 +290,6 @@ LLVM_ABI void printTypeIndex(ScopedPrinter &Printer, StringRef FieldName,
 }
 
 template <> struct DenseMapInfo<codeview::TypeIndex> {
-  static inline codeview::TypeIndex getEmptyKey() {
-    return codeview::TypeIndex{DenseMapInfo<uint32_t>::getEmptyKey()};
-  }
   static unsigned getHashValue(const codeview::TypeIndex &TI) {
     return DenseMapInfo<uint32_t>::getHashValue(TI.getIndex());
   }

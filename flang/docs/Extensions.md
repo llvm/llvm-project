@@ -203,6 +203,10 @@ end
 ## Extensions, deletions, and legacy features supported by default
 
 * Tabs in source
+* A bare carriage return (CR, 0x0d) in the interior of a source line -- e.g.
+  from a file with Windows line endings that has been mishandled -- is treated
+  as a blank, except within a character or Hollerith literal where it is
+  retained.
 * `<>` as synonym for `.NE.` and `/=`
 * `$` and `@` as legal characters in names
 * Initialization in type declaration statements using `/values/`
@@ -228,6 +232,12 @@ end
   `c_float128_complex` (both with the value 16), the kind parameter for
   128-bit (quad precision) real and complex C interoperable types. These
   extensions are gfortran-compatible.
+* The `ISO_C_BINDING` module exports the named constants `c_float16` and
+  `c_float16_complex` (both with the value 2), the kind parameter for
+  16-bit (half precision) real and complex C interoperable types,
+  corresponding to C `_Float16` (ISO/IEC TS 18661-3). `REAL(KIND=2)` and
+  `COMPLEX(KIND=2)` are accordingly accepted as interoperable types. These
+  extensions are gfortran-compatible.
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
 * Support for using bare `L` in FORMAT statement
@@ -242,6 +252,7 @@ end
 * `ASSIGN` statement, assigned `GO TO`, and assigned format
 * `PAUSE` statement
 * Hollerith literals and edit descriptors
+* Binary logical edit descriptor B (1/0 vs T/F)
 * `NAMELIST` allowed in the execution part
 * Omitted colons on type declaration statements with attributes
 * COMPLEX constructor expression, e.g. `(x+y,z)`
@@ -340,6 +351,10 @@ end
   expression, such as an array bound, in a scope with IMPLICIT NONE(TYPE)
   if the name of the variable would have caused it to be implicitly typed
   as default INTEGER if IMPLICIT NONE(TYPE) were absent.
+* A named constant defined by a `PARAMETER` statement is permitted to appear
+  before its explicit type declaration in a scope with IMPLICIT NONE(TYPE);
+  it acquires the type it would have had under implicit typing rules (F2023 8.7),
+  and a later explicit declaration must specify that same type (F2023 8.6.11 p2).
 * OPEN(ACCESS='APPEND') is interpreted as OPEN(POSITION='APPEND')
   to ease porting from Sun Fortran.
 * Intrinsic subroutines EXIT([status]) and ABORT()
@@ -560,6 +575,8 @@ end program
   unexpected behavior. This is for compatibility with
   legacy code; legacy code should be updated to be correct.
   This could be removed at any time.
+  Use `-Wrelaxed-c-loc-checks` (alongside `-frelaxed-c-loc-checks`) to
+  enable a diagnostic warning for affected call sites.
   [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported

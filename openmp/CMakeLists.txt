@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "OpenMP")
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -160,13 +168,22 @@ add_custom_target(install-openmp-stripped
 add_dependencies(install-openmp openmp)
 add_dependencies(install-openmp-stripped openmp)
 
+# Whether this build targets a GPU. "amdgcn" is the legacy spelling of "amdgpu";
+# both reach here, and the offload cache files use "amdgpu-amd-amdhsa".
+set(LIBOMP_GPU_TRIPLE_REGEX "^amdgpu|^amdgcn|^nvptx|^spirv64")
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "${LIBOMP_GPU_TRIPLE_REGEX}" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "${LIBOMP_GPU_TRIPLE_REGEX}" OR
+   "${CMAKE_Fortran_COMPILER_TARGET}" MATCHES "${LIBOMP_GPU_TRIPLE_REGEX}")
+  set(LIBOMP_TARGET_IS_GPU TRUE)
+else()
+  set(LIBOMP_TARGET_IS_GPU FALSE)
+endif()
+
 if(LIBOMP_FORTRAN_MODULES)
   add_subdirectory(module)
 endif()
 
-# Use the current compiler target to determine the appropriate runtime to build.
-if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
-   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
+if(LIBOMP_TARGET_IS_GPU)
   add_subdirectory(device)
 else()
   # Build host runtime library, after LIBOMPTARGET variables are set since they

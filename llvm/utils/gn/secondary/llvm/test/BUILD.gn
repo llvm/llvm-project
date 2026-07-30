@@ -171,11 +171,13 @@ write_lit_config("lit_site_cfg") {
   if (host_os == "mac") {
     extra_values += [
       "CMAKE_OSX_SYSROOT=" + rebase_path(mac_sdk_path, dir),
+      "CMAKE_XCRUN=xcrun",
       "LD64_EXECUTABLE=ld",
     ]
   } else {
     extra_values += [
       "CMAKE_OSX_SYSROOT=",
+      "CMAKE_XCRUN=",
       "LD64_EXECUTABLE=",
     ]
   }

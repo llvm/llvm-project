@@ -273,9 +273,7 @@ public:
 #undef HANDLEBINOP
 
   mlir::Value VisitCXXRewrittenBinaryOperator(CXXRewrittenBinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitCXXRewrittenBinaryOperator");
-    return {};
+    return Visit(e->getSemanticForm());
   }
 
   // Compound assignments.
@@ -595,12 +593,28 @@ mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e,
     op = cgf.emitPromotedComplexExpr(e->getSubExpr(), promotionType);
   else
     op = Visit(e->getSubExpr());
-  return builder.createMinus(cgf.getLoc(e->getExprLoc()), op);
+
+  // Negate each component of the complex value.
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  mlir::Value real = builder.createComplexReal(loc, op);
+  mlir::Value imag = builder.createComplexImag(loc, op);
+
+  mlir::Value resultReal;
+  mlir::Value resultImag;
+  if (cir::isFPOrVectorOfFPType(real.getType())) {
+    resultReal = builder.createFNeg(loc, real);
+    resultImag = builder.createFNeg(loc, imag);
+  } else {
+    resultReal = builder.createMinus(loc, real);
+    resultImag = builder.createMinus(loc, imag);
+  }
+
+  return builder.createComplexCreate(loc, resultReal, resultImag);
 }
 
 mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *e) {
   mlir::Value op = Visit(e->getSubExpr());
-  return builder.createNot(op);
+  return builder.createComplexConj(cgf.getLoc(e->getExprLoc()), op);
 }
 
 mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
@@ -831,11 +845,6 @@ ComplexExprEmitter::emitBinOps(const BinaryOperator *e, QualType promotionTy) {
 LValue ComplexExprEmitter::emitCompoundAssignLValue(
     const CompoundAssignOperator *e,
     mlir::Value (ComplexExprEmitter::*func)(const BinOpInfo &), RValue &value) {
-  if (e->getLHS()->getType()->getAs<AtomicType>()) {
-    cgf.cgm.errorNYI("emitCompoundAssignLValue AtmoicType");
-    return {};
-  }
-
   QualType lhsTy = e->getLHS()->getType().getAtomicUnqualifiedType();
   QualType rhsTy = e->getRHS()->getType();
   SourceLocation exprLoc = e->getExprLoc();
@@ -1108,8 +1117,24 @@ mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
                                                      LValue lv) {
   mlir::Value inVal = emitLoadOfComplex(lv, e->getExprLoc());
   mlir::Location loc = getLoc(e->getExprLoc());
-  mlir::Value incVal = e->isIncrementOp() ? builder.createInc(loc, inVal)
-                                          : builder.createDec(loc, inVal);
+
+  // Increment/decrement only the real component of the complex value.
+  mlir::Value real = builder.createComplexReal(loc, inVal);
+  mlir::Value imag = builder.createComplexImag(loc, inVal);
+
+  mlir::Value resultReal;
+  if (cir::isFPOrVectorOfFPType(real.getType())) {
+    auto fpType = mlir::cast<cir::FPTypeInterface>(real.getType());
+    mlir::Value amount = builder.getConstFP(
+        loc, real.getType(), llvm::APFloat(fpType.getFloatSemantics(), 1));
+    resultReal = e->isIncrementOp() ? builder.createFAdd(loc, real, amount)
+                                    : builder.createFSub(loc, real, amount);
+  } else {
+    resultReal = e->isIncrementOp() ? builder.createInc(loc, real)
+                                    : builder.createDec(loc, real);
+  }
+
+  mlir::Value incVal = builder.createComplexCreate(loc, resultReal, imag);
 
   // Store the updated result through the lvalue.
   emitStoreOfComplex(loc, incVal, lv, /*isInit=*/false);

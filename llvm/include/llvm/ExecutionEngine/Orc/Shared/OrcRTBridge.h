@@ -65,6 +65,9 @@ LLVM_ABI extern const char *RunAsMainWrapperName;
 LLVM_ABI extern const char *RunAsVoidFunctionWrapperName;
 LLVM_ABI extern const char *RunAsIntFunctionWrapperName;
 
+LLVM_ABI extern const char *const DispatchName;
+LLVM_ABI extern const char *const DispatchCtxName;
+
 /// Symbol names for memory management implementation.
 /// FIXME: We should find a better home for this struct.
 struct SimpleExecutorMemoryManagerSymbolNames {
@@ -77,7 +80,7 @@ struct SimpleExecutorMemoryManagerSymbolNames {
 
 /// Default symbol names for the ORC runtime's SimpleNativeMemoryMap SPS
 /// interface.
-extern const SimpleExecutorMemoryManagerSymbolNames
+extern const LLVM_ABI SimpleExecutorMemoryManagerSymbolNames
     orc_rt_SimpleNativeMemoryMapSPSSymbols;
 
 /// Symbol names for dylib management implementation.
@@ -90,8 +93,20 @@ struct SimpleExecutorDylibManagerSymbolNames {
 
 /// Default symbol names for the ORC runtime's NativeDylibManager SPS
 /// interface.
-extern const SimpleExecutorDylibManagerSymbolNames
+extern const LLVM_ABI SimpleExecutorDylibManagerSymbolNames
     orc_rt_NativeDylibManagerSPSSymbols;
+
+/// Symbol names for the ORC runtime's StandaloneMachOUnwindInfoRegistrar
+/// SPS interface.
+struct MachOUnwindInfoRegistrarSymbolNames {
+  StringRef RegisterSectionsName;
+  StringRef DeregisterSectionsName;
+};
+
+/// Default symbol names for the ORC runtime's
+/// StandaloneMachOUnwindInfoRegistrar SPS interface.
+extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
 
 using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
