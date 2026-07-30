@@ -61,8 +61,6 @@ public:
   using value_type        = iter_value_t<_Ptr>;
 
 private:
-  friend class __static_packed_bounded_iterator;
-
   static constexpr size_t __bits_available_ = std::countr_zero(_LIBCPP_ALIGNOF(value_type));
   static constexpr uintptr_t __count_mask_  = (1 << __bits_available_) - 1;
   static constexpr uintptr_t __ptr_mask_    = ~__count_mask_;
