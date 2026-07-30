@@ -107,3 +107,22 @@ entry:
   %val = load i32, ptr addrspace(11) %ptr, align 4
   ret void
 }
+
+@slot = internal global target("spirv.VulkanBuffer", [0 x i8], 12, 0) poison, align 8
+
+; Regression for issue #192523: handle flows through memory before getpointer
+; (as in local RWByteAddressBuffer arrays), then typed store hits i8->i32 ptrcast.
+
+define spir_func void @byteBufferStoreViaLoadedHandle() #0 {
+; CHECK-LABEL: define spir_func void @byteBufferStoreViaLoadedHandle(
+; CHECK-NOT: call {{.*}}@llvm.spv.ptrcast
+; CHECK: load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot
+; CHECK: store i32 42, ptr addrspace(11)
+entry:
+  %handle = tail call target("spirv.VulkanBuffer", [0 x i8], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  store target("spirv.VulkanBuffer", [0 x i8], 12, 0) %handle, ptr @slot, align 8
+  %loaded = load target("spirv.VulkanBuffer", [0 x i8], 12, 0), ptr @slot, align 8
+  %ptr = call ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i8], 12, 0) %loaded, i32 0)
+  store i32 42, ptr addrspace(11) %ptr, align 4
+  ret void
+}
