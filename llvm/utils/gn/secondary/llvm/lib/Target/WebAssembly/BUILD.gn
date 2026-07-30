@@ -72,10 +72,12 @@ static_library("LLVMWebAssemblyCodeGen") {
     "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
+    "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
+     "//llvm/lib/Transforms/ObjCARC",
   ]
   include_dirs = [ "." ]
   sources = [
@@ -91,6 +93,8 @@ static_library("LLVMWebAssemblyCodeGen") {
     "WebAssemblyCFGSort.cpp",
     "WebAssemblyCFGStackify.cpp",
     "WebAssemblyCleanCodeAfterTrap.cpp",
+    "WebAssemblyCoalesceFeaturesAndStripAtomics.cpp",
+    "WebAssemblyCodeGenPassBuilder.cpp",
     "WebAssemblyDebugFixup.cpp",
     "WebAssemblyDebugValueManager.cpp",
     "WebAssemblyExceptionInfo.cpp",

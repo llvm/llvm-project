@@ -102,6 +102,9 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
 
+  // Only record check points if we might highlight diagnostic snippets.
+  RecordCheckPoints = getDiagnostics().getShowColors();
+
   // Default to discarding comments.
   KeepComments = false;
   KeepMacroComments = false;
@@ -155,6 +158,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
     Ident_GetExceptionInfo = Ident_GetExceptionCode = nullptr;
     Ident_AbnormalTermination = nullptr;
   }
+
+  Ident__GLIBCXX__ = getIdentifierInfo("__GLIBCXX__");
 
   // Default incremental processing to -fincremental-extensions, clients can
   // override with `enableIncrementalProcessing` if desired.
@@ -1014,7 +1019,8 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
-  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+  if (RecordCheckPoints && CurLexer &&
+      ++CheckPointCounter == CheckPointStepSize) {
     CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
     CheckPointCounter = 0;
   }
@@ -1348,6 +1354,8 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
       return false;
   } else if (!Result.isAtPhysicalStartOfLine())
     return false;
+
+  assert(CurPPLexer && "CurPPLexer must not be null");
 
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);

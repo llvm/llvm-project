@@ -541,6 +541,7 @@ static int run(int argc, char **argv) {
                   "failed to create cache");
 
   check(Lto->run(AddStream, Cache), "LTO::run failed");
+  Lto->waitForCleanup();
   return static_cast<int>(HasErrors);
 }
 

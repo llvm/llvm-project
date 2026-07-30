@@ -753,6 +753,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivBRC}, {{VgprBRC}, {VgprBRC}}});
 
   addRulesForGOpcs({G_BITCAST})
+      .Any({{UniS16}, {{Sgpr16}, {Sgpr16}}})
+      .Any({{DivS16}, {{Vgpr16}, {Vgpr16}}})
       .Any({{UniBRC}, {{SgprBRC}, {SgprBRC}}})
       .Any({{DivBRC}, {{VgprBRC}, {VgprBRC}}});
 
@@ -874,6 +876,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS64, S1}, {{Vgpr64}, {Vcc}, VccExtToSel}})
       .Any({{UniS64, S32}, {{Sgpr64}, {Sgpr32}, Ext32To64}})
       .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}, Ext32To64}})
+      .Any({{UniS64, S16}, {{Sgpr64}, {Sgpr32AExt}, Ext32To64}})
+      .Any({{DivS64, S16}, {{Vgpr64}, {Vgpr32AExt}, Ext32To64}})
       .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}});
 
@@ -2227,6 +2231,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       Standard)
       .Any({{DivV6S32}, {{VgprV6S32}, {IntrId, VgprV32S16, Vgpr32}}})
       .Any({{UniV6S32}, {{UniInVgprV6S32}, {IntrId, VgprV32S16, Vgpr32}}});
+
+  addRulesForIOpcs(
+      {amdgcn_cvt_scalef32_pk32_bf6_f32, amdgcn_cvt_scalef32_pk32_fp6_f32},
+      Standard)
+      .Any({{DivV6S32}, {{VgprV6S32}, {IntrId, VgprV32S32, Vgpr32}}})
+      .Any({{UniV6S32}, {{UniInVgprV6S32}, {IntrId, VgprV32S32, Vgpr32}}});
 
   addRulesForIOpcs(
       {amdgcn_cvt_scalef32_pk_fp8_f32, amdgcn_cvt_scalef32_pk_bf8_f32},

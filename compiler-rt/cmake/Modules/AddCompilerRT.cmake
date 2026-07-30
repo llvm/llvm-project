@@ -564,23 +564,6 @@ function(add_compiler_rt_test test_suite test_name arch)
   add_dependencies(${test_suite} T${test_name})
 endfunction()
 
-macro(add_compiler_rt_resource_file target_name file_name component)
-  set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
-  set(dst_file "${COMPILER_RT_OUTPUT_DIR}/share/${file_name}")
-  add_custom_command(OUTPUT ${dst_file}
-    DEPENDS ${src_file}
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dst_file}
-    COMMENT "Copying ${file_name}...")
-  add_custom_target(${target_name} DEPENDS ${dst_file})
-  # Install in Clang resource directory.
-  install(FILES ${file_name}
-    DESTINATION ${COMPILER_RT_INSTALL_DATA_DIR}
-    COMPONENT ${component})
-  add_dependencies(${component} ${target_name})
-
-  set_target_properties(${target_name} PROPERTIES FOLDER "Compiler-RT/Resources")
-endmacro()
-
 macro(add_compiler_rt_script name)
   set(dst ${COMPILER_RT_EXEC_OUTPUT_DIR}/${name})
   set(src ${CMAKE_CURRENT_SOURCE_DIR}/${name})
@@ -812,6 +795,19 @@ function(rt_externalize_debuginfo name)
     message(FATAL_ERROR "COMPILER_RT_EXTERNALIZE_DEBUGINFO isn't implemented for non-darwin platforms!")
   endif()
 endfunction()
+
+
+# Wire a sanitizer runtime target up to the sanitizer-ignorelists target so
+# that building/installing the runtime also builds/installs the ignorelists.
+macro(add_sanitizer_ignorelists_dependency name)
+  add_dependencies(${name} sanitizer-ignorelists)
+  if(TARGET install-${name})
+    add_dependencies(install-${name} install-sanitizer-ignorelists)
+  endif()
+  if(TARGET install-${name}-stripped)
+    add_dependencies(install-${name}-stripped install-sanitizer-ignorelists)
+  endif()
+endmacro()
 
 
 # Configure lit configuration files, including compiler-rt specific variables.

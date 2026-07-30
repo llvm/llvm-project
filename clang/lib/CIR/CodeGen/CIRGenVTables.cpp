@@ -365,7 +365,6 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
                    : cir::GlobalLinkageKind::InternalLinkage;
       return cir::GlobalLinkageKind::ExternalLinkage;
 
-    case TSK_FriendDeclaration:
     case TSK_ImplicitInstantiation:
       return cir::GlobalLinkageKind::LinkOnceODRLinkage;
 
@@ -398,7 +397,6 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
   case TSK_Undeclared:
   case TSK_ExplicitSpecialization:
   case TSK_ImplicitInstantiation:
-  case TSK_FriendDeclaration:
     return discardableODRLinkage;
 
   case TSK_ExplicitInstantiationDeclaration:

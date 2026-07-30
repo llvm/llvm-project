@@ -1,6 +1,6 @@
 ; RUN: opt -passes=fix-irreducible,unify-loop-exits,structurizecfg -S %s | FileCheck %s
 ;
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 ;
 ; Reduced from rocPRIM block_sort_kernel compiled with code coverage.
 ; The sort comparator `operator<` for custom_type uses nested short-circuit:

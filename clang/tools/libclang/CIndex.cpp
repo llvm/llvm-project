@@ -732,7 +732,6 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
   switch (D->getSpecializationKind()) {
   case TSK_Undeclared:
   case TSK_ImplicitInstantiation:
-  case TSK_FriendDeclaration:
     // Nothing to visit
     return false;
 
@@ -1739,6 +1738,10 @@ bool CursorVisitor::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
   return Visit(TL.getInnerLoc());
 }
 
+bool CursorVisitor::VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+  return Visit(TL.getInnerLoc());
+}
+
 bool CursorVisitor::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   return Visit(TL.getWrappedLoc());
 }
@@ -2418,6 +2421,9 @@ void OMPClauseEnqueue::VisitOMPWriteClause(const OMPWriteClause *) {}
 
 void OMPClauseEnqueue::VisitOMPUpdateClause(const OMPUpdateClause *) {}
 
+void OMPClauseEnqueue::VisitOMPUpdateDependObjectsClause(
+    const OMPUpdateDependObjectsClause *) {}
+
 void OMPClauseEnqueue::VisitOMPCaptureClause(const OMPCaptureClause *) {}
 
 void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}
@@ -2534,6 +2540,8 @@ void OMPClauseEnqueue::VisitOMPNumTeamsClause(const OMPNumTeamsClause *C) {
 
 void OMPClauseEnqueue::VisitOMPThreadLimitClause(
     const OMPThreadLimitClause *C) {
+  if (const Expr *Modifier = C->getModifierExpr())
+    Visitor->AddStmt(Modifier);
   VisitOMPClauseList(C);
   VisitOMPClauseWithPreInit(C);
 }
@@ -3923,19 +3931,20 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
       for (LambdaExpr::capture_iterator C = E->explicit_capture_begin(),
                                         CEnd = E->explicit_capture_end();
            C != CEnd; ++C) {
+
         if (!C->capturesVariable())
           continue;
-        // TODO: handle structured bindings here ?
-        if (!isa<VarDecl>(C->getCapturedVar()))
-          continue;
-        if (Visit(MakeCursorVariableRef(cast<VarDecl>(C->getCapturedVar()),
-                                        C->getLocation(), TU)))
-          return true;
-      }
-      // Visit init captures
-      for (auto InitExpr : E->capture_inits()) {
-        if (InitExpr && Visit(InitExpr))
-          return true;
+
+        if (const auto *CV = dyn_cast_or_null<VarDecl>(C->getCapturedVar())) {
+          if (CV->isInitCapture()) {
+            // Init capture is a declaration, create VarDecl cursor
+            if (Visit(MakeCXCursor(CV, TU, RegionOfInterest)))
+              return true;
+          } else
+            // Non init capture is a VariableRef
+            if (Visit(MakeCursorVariableRef(CV, C->getLocation(), TU)))
+              return true;
+        }
       }
 
       TypeLoc TL = E->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
@@ -7289,6 +7298,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::UnresolvedUsingIfExists:
   case Decl::OpenACCDeclare:
   case Decl::OpenACCRoutine:
+  case Decl::CXXExpansionStmt:
     return C;
 
   // Declaration kinds that don't make any sense here, but are

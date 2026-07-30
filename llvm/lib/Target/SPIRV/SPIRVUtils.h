@@ -100,6 +100,10 @@ public:
   // Build the visitor to operate on the function F.
   PartialOrderingVisitor(Function &F);
 
+  // Returns the dominator tree computed for the function this visitor
+  // operates on.
+  const DomTreeBuilder::BBDomTree &getDominatorTree() const { return DT; }
+
   // Returns true is |LHS| comes before |RHS| in the partial ordering.
   // If |LHS| and |RHS| have the same rank, the traversal order determines the
   // order (order is stable).
@@ -302,6 +306,10 @@ bool isSpvIntrinsic(const Value *Arg);
 
 // Get type of i-th operand of the metadata node.
 Type *getMDOperandAsType(const MDNode *N, unsigned I);
+
+// Get the i-th operand of the metadata node as a ConstantInt, or nullptr if it
+// is out of range or not a ConstantInt.
+ConstantInt *getMDOperandAsConstInt(const MDNode *N, unsigned I);
 
 // If OpenCL or SPIR-V builtin function name is recognized, return a demangled
 // name, otherwise return an empty string.

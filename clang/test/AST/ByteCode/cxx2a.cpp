@@ -54,6 +54,39 @@ namespace Covariant {
   static_assert(cb1->f()->a == 'Z');
 }
 
+namespace Covariant2 {
+  struct A {
+  };
+  struct B : A {
+  };
+  struct C : A {
+  };
+  struct D :  B, C {
+  };
+
+  // Check that we apply a proper adjustment for a covariant return type.
+  struct Covariant1 {
+    D d;
+    virtual const A *f() const;
+  };
+
+  template<typename T>
+  struct Covariant2 : Covariant1 {
+    virtual const T *f() const;
+  };
+
+  template<typename T>
+  struct Covariant3 : Covariant2<T> {
+    constexpr virtual const D *f() const { return &this->d; }
+  };
+
+  constexpr       Covariant3<C>  cc;
+  constexpr const Covariant1    *cc1 = &cc;
+
+  // LHS static type is A*.
+  static_assert(cc1->f() == (C*)&cc.d); // expected-error {{static assertion failed}}
+}
+
 namespace DtorOrder {
   struct Buf {
     char buf[64];
@@ -268,4 +301,16 @@ namespace PseudoDtorOnGlobal {
   constexpr void destroy2() { // both-error {{never produces a constant expression}}
     a.m.~T(); // both-note {{cannot modify an object that is visible outside}}
   }
+}
+
+namespace UninitializedAndLifetime {
+  struct A { int n; };
+  constexpr void use_after_destroy() {
+    A a; // both-note {{declared here}}
+    a.~A();
+    A b = a; // both-note {{in call}} \
+             // both-note {{read of object outside its lifetime}}
+  }
+  static_assert((use_after_destroy(), true)); // both-error {{not an integral constant expression}} \
+                                              // both-note {{in call}}
 }
