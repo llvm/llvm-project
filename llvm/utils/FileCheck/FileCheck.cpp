@@ -906,7 +906,8 @@ public:
       //
       //   at: command line: 1
       assert(ImpPatBufferIDRange.first <= CheckBufferID &&
-             CheckBufferID < ImpPatBufferIDRange.second);
+             CheckBufferID < ImpPatBufferIDRange.second &&
+             "expected check location to be for an implicit pattern");
     }
   }
 };
