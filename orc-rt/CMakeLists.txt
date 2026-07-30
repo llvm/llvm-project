@@ -28,6 +28,10 @@ list(INSERT CMAKE_MODULE_PATH 0
   )
 
 include(GNUInstallDirs)
+include(LLVMRuntimeCompilerDependency)
+
+llvm_defer_compiler_dependency_tracking(
+  "${CMAKE_C_COMPILER}" "${CMAKE_CXX_COMPILER}" "${CMAKE_ASM_COMPILER}")
 
 # --- C++ standard ---
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
