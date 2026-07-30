@@ -866,11 +866,8 @@ add_header_macro(
   sys/statfs.h
   DEPENDS
     .llvm_libc_common_h
-    .llvm-libc-types.fsblkcnt_t
-    .llvm-libc-types.fsfilcnt_t
-    .llvm-libc-types.fsid_t
-    .llvm-libc-types.struct_statfs
     .llvm-libc-macros.sys_statfs_macros
+    .llvm-libc-types.struct_statfs
 )
 
 add_header_macro(
