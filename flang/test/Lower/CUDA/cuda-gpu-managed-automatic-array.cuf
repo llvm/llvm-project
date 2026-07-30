@@ -1,0 +1,29 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | FileCheck %s --check-prefix=MANAGED
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s --check-prefix=STACK
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s --check-prefix=STACK
+
+! Check that -gpu=managed implicitly treats automatic arrays as managed
+
+subroutine test_automatic_array(n)
+  integer :: n
+  real :: a(n)
+  call use_it(a)
+end subroutine
+
+! MANAGED-LABEL: func.func @_QPtest_automatic_array(
+! MANAGED: cuf.alloc !fir.array<?xf32>, %{{.*}} {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtest_automatic_arrayEa"}
+! MANAGED: cuf.free %{{.*}} : !fir.ref<!fir.array<?xf32>> {data_attr = #cuf.cuda<managed>}
+
+! STACK-LABEL: func.func @_QPtest_automatic_array(
+! STACK: fir.alloca !fir.array<?xf32>, %{{.*}} {bindc_name = "a", uniq_name = "_QFtest_automatic_arrayEa"}
+
+! Automatic but not an array
+
+subroutine test_automatic_char(n)
+  integer :: n
+  character(len=n) :: c
+  call use_char(c)
+end subroutine
+
+! MANAGED-LABEL: func.func @_QPtest_automatic_char(
+! MANAGED: fir.alloca !fir.char<1,?>{{.*}} {bindc_name = "c", uniq_name = "_QFtest_automatic_charEc"}

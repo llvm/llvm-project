@@ -10645,14 +10645,17 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
 
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
+      // Automatic arrays would otherwise be host allocations the device cannot
+      // reach, needing a copy around every compute region that uses them.
+      const bool isAutomaticArray{IsAutomatic(symbol) && object->IsArray()};
+      if ((IsAllocatable(symbol) || IsPointer(symbol) || isAutomaticArray) &&
           !object->cudaDataAttr()) {
-        // Implicitly treat allocatable/pointer arrays as managed when feature
-        // is enabled. This is done after all explicit CUDA attributes have
-        // been processed. Only applies when CUDA Fortran is enabled; otherwise
-        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
-        // OpenACC) would incorrectly route every allocatable through the CUDA
-        // Fortran managed descriptor pipeline.
+        // Implicitly treat allocatable/pointer arrays and automatic arrays as
+        // managed when feature is enabled. This is done after all explicit
+        // CUDA attributes have been processed. Only applies when CUDA Fortran
+        // is enabled; otherwise -gpu=mem:managed on a non-CUDA-Fortran
+        // translation unit (e.g. pure OpenACC) would incorrectly route every
+        // allocatable through the CUDA Fortran managed descriptor pipeline.
         if (context().languageFeatures().IsEnabled(
                 common::LanguageFeature::CudaManaged) &&
             context().languageFeatures().IsEnabled(
