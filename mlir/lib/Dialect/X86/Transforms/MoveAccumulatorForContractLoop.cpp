@@ -48,9 +48,9 @@ struct MoveAccumulatorForContractLoop
       return rewriter.notifyMatchFailure(
           contractOp, "Final acc write might have multiple users.");
 
-    Operation *resultWriteOp = *contractValue.getUsers().begin();
+    Operation *resultUserOp = *contractValue.getUsers().begin();
 
-    if (!accReadOp || !resultWriteOp)
+    if (!accReadOp || !resultUserOp)
       return rewriter.notifyMatchFailure(
           contractOp, "Read from acc matrix is not by "
                       "transfer_read/load/constant_zero or multiple users of "
@@ -62,7 +62,7 @@ struct MoveAccumulatorForContractLoop
           "The input acc to contract is already a constant vector.");
 
     if ((accReadOp->getBlock() == contractOp->getBlock()) ||
-        (resultWriteOp->getBlock() == contractOp->getBlock()))
+        (resultUserOp->getBlock() == contractOp->getBlock()))
       return rewriter.notifyMatchFailure(
           contractOp, "Acc read/write should be in a separate block.");
 
@@ -86,8 +86,8 @@ struct MoveAccumulatorForContractLoop
 
     // Adds the initial acc value with contract results before storing to acc
     // matrix.
-    rewriter.setInsertionPoint(resultWriteOp);
-    Location locUser = resultWriteOp->getLoc();
+    rewriter.setInsertionPoint(resultUserOp);
+    Location locUser = resultUserOp->getLoc();
 
     Value addition;
 
@@ -101,7 +101,7 @@ struct MoveAccumulatorForContractLoop
       llvm_unreachable("expected floating-point or integer element type");
     }
 
-    resultWriteOp->replaceUsesOfWith(contractValue, addition);
+    resultUserOp->replaceUsesOfWith(contractValue, addition);
     return success();
   }
 };
