@@ -2134,6 +2134,12 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
   bool BreakBeforeParameter = false;
   unsigned NestedBlockIndent = std::max(CurrentState.StartOfFunctionCall,
                                         CurrentState.NestedBlockIndent);
+
+  if (Style.isCpp() &&
+      Style.LambdaBodyIndentation == FormatStyle::LBI_Signature &&
+      Current.BlockParameterCount > 0) {
+    NestedBlockIndent = CurrentState.NestedBlockIndent;
+  }
   if (Current.isOneOf(tok::l_brace, TT_ArrayInitializerLSquare) ||
       opensProtoMessageField(Current, Style)) {
     if (Current.opensBlockOrBlockTypeList(Style)) {

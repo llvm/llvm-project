@@ -21498,6 +21498,21 @@ TEST_F(FormatTest, FormatsLambdas) {
                "} // namespace test",
                LLVMWithBeforeLambdaBody);
 
+  FormatStyle PipelineStyle = getLLVMStyleWithColumns(30);
+  PipelineStyle.AlignOperands = FormatStyle::OAS_DontAlign;
+  PipelineStyle.LambdaBodyIndentation = FormatStyle::LBI_Signature;
+  PipelineStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  verifyFormat("void f() {\n"
+               "  auto result = input |\n"
+               "      rv::filter([] {\n"
+               "        return true;\n"
+               "      }) |\n"
+               "      rv::transform([] {\n"
+               "        return 0;\n"
+               "      });\n"
+               "}",
+               PipelineStyle);
+
   // Lambdas with different indentation styles.
   Style = getLLVMStyleWithColumns(60);
   verifyFormat("Result doSomething(Promise promise) {\n"
