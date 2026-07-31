@@ -492,10 +492,12 @@ static SmallVector<Value> createTileZeros(OpBuilder &rewriter, Location loc,
   return loopItrArgs;
 }
 
-static Value getIndxToLoadStoreFromPckBuffer(
-    OpBuilder &rewriter, Location loc, Value ivInnerLoop, Value ivOuterLoop,
-    bool isInnerLoopUBHasOddQuot, bool isInnerLoopUBLarger, bool pack,
-    Value blockStride) {
+static Value getIndxToLoadStoreFromPckBuffer(OpBuilder &rewriter, Location loc,
+                                             Value ivInnerLoop,
+                                             Value ivOuterLoop,
+                                             bool isInnerLoopUBHasOddQuot,
+                                             bool isInnerLoopUBLarger,
+                                             bool pack, Value blockStride) {
 
   Value c2 = arith::ConstantIndexOp::create(rewriter, loc, 2);
 
