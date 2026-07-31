@@ -50,6 +50,7 @@ public:
 
 APINotesManager::APINotesManager(SourceManager &SM, const LangOptions &LangOpts)
     : SM(SM), ImplicitAPINotes(LangOpts.APINotes),
+      HasAPINotes(LangOpts.APINotes),
       VersionIndependentSwift(LangOpts.SwiftVersionIndependentAPINotes) {}
 
 APINotesManager::~APINotesManager() {
@@ -319,6 +320,8 @@ bool APINotesManager::loadCurrentModuleAPINotes(
       M->APINotesFile = File.getName().str();
   }
 
+  if (NumReaders > 0)
+    HasAPINotes = true;
   return NumReaders > 0;
 }
 
@@ -331,6 +334,8 @@ bool APINotesManager::loadCurrentModuleAPINotesFromBuffer(
 
     CurrentModuleReaders[NumReader++] = Reader.release();
   }
+  if (NumReader > 0)
+    HasAPINotes = true;
   return NumReader;
 }
 

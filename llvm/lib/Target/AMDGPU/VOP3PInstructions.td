@@ -87,11 +87,13 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
 }
 
 multiclass VOP3PInstDotWithDual<string OpName, VOPProfile P,
-                                SDPatternOperator node = null_frag> {
+                                SDPatternOperator node = null_frag,
+                                bits<6> VOPDOp, string VOPDName> {
   def NAME : VOP3P_Pseudo<OpName, P,
                           getVOP3PModPat<P, node,
                                          1 /*HasExplicitClamp*/, 1/*IsDOT*/,
-                                         VOP3PModsDOT, VOP3PModsF32>.ret>;
+                                         VOP3PModsDOT, VOP3PModsF32>.ret>,
+             VOPD_Component<VOPDOp, VOPDName>;
   let SubtargetPredicate = isGFX11Plus in {
   if P.HasExtVOP3DPP then
     def _dpp : VOP3_DPP_Pseudo<OpName, P> {
@@ -142,6 +144,24 @@ def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACK
   let Src2RC64 = VSrc_v2f64;
 }
 
+def V_PK_VOP2_I64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let Src0RC64 = VSrc_v2b64;
+  let Src1RC64 = VSrc_v2b64;
+}
+
+def V_PK_LSHL_ADD_U64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I32_V2I64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let HasClamp = 0;
+  let HasNeg = 0;
+  let Src0RC64 = VSrc_v2b64;
+  let Src1RC64 = VSrc_v2b32;
+  let Src2RC64 = VSrc_v2b64;
+  let InsVOP3P = getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                          HasClamp, HasModifiers, HasSrc2Mods,
+                          HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
+}
+
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
 defm V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
@@ -164,11 +184,19 @@ defm V_PK_MIN_U16 : VOP3PInst<"v_pk_min_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_MAX_I16 : VOP3PInst<"v_pk_max_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, smax>;
 defm V_PK_MAX_U16 : VOP3PInst<"v_pk_max_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umax>;
 
+let SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble] in {
+defm V_PK_MAX_NUM_F64 : VOP3PInst<"v_pk_max_num_f64", V_PK_VOP2_F64_Profile, fmaxnum_like>;
+defm V_PK_MIN_NUM_F64 : VOP3PInst<"v_pk_min_num_f64", V_PK_VOP2_F64_Profile, fminnum_like>;
+}
+
+let SubtargetPredicate = HasPackedU64SingleSGPROps, SchedRW = [Write64Bit] in
+defm V_PK_ADD_NC_U64 : VOP3PInst<"v_pk_add_nc_u64", V_PK_VOP2_I64_Profile, add>;
+
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
 defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fmaximum>;
 defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fminimum>;
 } // End SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0
-}
+} // End isCommutable = 1
 
 defm V_PK_SUB_U16 : VOP3PInst<"v_pk_sub_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>>;
 defm V_PK_SUB_I16 : VOP3PInst<"v_pk_sub_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, sub>;
@@ -176,6 +204,11 @@ defm V_PK_SUB_I16 : VOP3PInst<"v_pk_sub_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_LSHLREV_B16 : VOP3PInst<"v_pk_lshlrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshl_rev_16>;
 defm V_PK_ASHRREV_I16 : VOP3PInst<"v_pk_ashrrev_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, cashr_rev_16>;
 defm V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, clshr_rev_16>;
+
+let SubtargetPredicate = HasPackedU64SingleSGPROps, SchedRW = [Write64Bit] in {
+defm V_PK_SUB_NC_U64 : VOP3PInst<"v_pk_sub_nc_u64", V_PK_VOP2_I64_Profile, sub>;
+defm V_PK_LSHL_ADD_U64 : VOP3PInst<"v_pk_lshl_add_u64", V_PK_LSHL_ADD_U64_Profile>;
+} // End SubtargetPredicate = HasPackedU64SingleSGPROps, , SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
 let SubtargetPredicate = HasVOP3PInsts in {
@@ -538,6 +571,41 @@ def : ThreeOp_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
 def : ThreeOp_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
 }
 
+let SubtargetPredicate = HasPackedU64SingleSGPROps in {
+let AddedComplexity = 5 in
+def : GCNPat<
+  (v2i64 (DivergentBinFrag<shl_0_to_4> (v2i64 (VOP3PMods v2i64:$src0, i32:$src0_mods)),
+                                       (v2i64 (VOP3PMods v2i64:$src1, i32:$src1_mods)))),
+  (v2i64 (V_PK_LSHL_ADD_U64 $src0_mods, $src0,
+    $src1_mods, (v2i32 (REG_SEQUENCE VReg_64,
+                  (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+                  (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    0, (v2i64 (as_i64imm (i32 0)))))
+>;
+
+def : GCNPat<
+  (v2i64 (DivergentBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (REG_SEQUENCE VReg_128,
+                       (V_LSHLREV_B64_pseudo_e64 (i32 (EXTRACT_SUBREG $src1, sub0)),
+                                                 (EXTRACT_SUBREG $src0, sub0_sub1)),
+                       sub0_sub1,
+                       (V_LSHLREV_B64_pseudo_e64 (i32 (EXTRACT_SUBREG $src1, sub2)),
+                                                 (EXTRACT_SUBREG $src0, sub2_sub3)),
+                       sub2_sub3))
+>;
+
+def : GCNPat<
+  (ThreeOpFrag<shl_0_to_4, add> (v2i64 (VOP3PMods v2i64:$src0, i32:$src0_mods)),
+                                (v2i64 (VOP3PMods v2i64:$src1, i32:$src1_mods)),
+                                (v2i64 (VOP3PMods v2i64:$src2, i32:$src2_mods))),
+  (V_PK_LSHL_ADD_U64 $src0_mods, VSrc_v2b64:$src0,
+    $src1_mods, (v2i32 (REG_SEQUENCE VReg_64,
+                  (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+                  (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    $src2_mods, VSrc_v2b64:$src2)
+>;
+} // End SubtargetPredicate = HasPackedU64SingleSGPROps
+
 // Defines patterns that extract signed 4bit from each Idx[0].
 foreach Idx = [[0,28],[4,24],[8,20],[12,16],[16,12],[20,8],[24,4]] in
   def ExtractSigned4bit_#Idx[0] : PatFrag<(ops node:$src),
@@ -629,12 +697,12 @@ defm V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16",
   VOP3P_Profile<VOP_I32_V2I16_V2I16_I32>, int_amdgcn_udot2, 1>;
 } // End OtherPredicates = [HasDot2Insts]
 
-let OtherPredicates = [HasDot10Insts] in
+let OtherPredicates = [HasDot10Insts], isCommutable = 1, usesCustomInserter = 1 in
 defm V_DOT2_F32_F16 :
   VOP3PInstDotWithDual<"v_dot2_f32_f16",
                        VOP3P_Profile<VOP_F32_V2F16_V2F16_F32, VOP3_REGULAR,
                                      /*HasDPP*/ 1>,
-                       AMDGPUfdot2>;
+                       AMDGPUfdot2, 0xC, "v_dot2acc_f32_f16">;
 
 let OtherPredicates = [HasDot7Insts] in {
 defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
@@ -658,9 +726,10 @@ def DOT2_BF16_Profile
 
 let SubtargetPredicate = HasDot12Insts  in {
 
+let isCommutable = 1, usesCustomInserter = 1 in
 defm V_DOT2_F32_BF16 :
   VOP3PInstDotWithDual<"v_dot2_f32_bf16", DOT2_BF16_Profile,
-                       int_amdgcn_fdot2_f32_bf16>;
+                       int_amdgcn_fdot2_f32_bf16, 0xD, "v_dot2acc_f32_bf16">;
 
 } // End SubtargetPredicate = HasDot12Insts
 
@@ -1380,7 +1449,12 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
     defm V_PK_MUL_F32 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
     defm V_PK_ADD_F32 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
-  } // End SubtargetPredicate = HasPackedFP32Ops
+  }
+  let SubtargetPredicate = HasPackedFP32SingleSGPROps in {
+    defm V_PK_FMA_F32_gfx1250 : VOP3PInst<"v_pk_fma_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
+    defm V_PK_MUL_F32_gfx1250 : VOP3PInst<"v_pk_mul_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fmul>;
+    defm V_PK_ADD_F32_gfx1250 : VOP3PInst<"v_pk_add_f32", VOP3P_Profile<VOP_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fadd>;
+  }
 
   let SubtargetPredicate = HasPkMovB32, isAsCheapAsAMove = 1 in
   defm V_PK_MOV_B32 : VOP3PInst<"v_pk_mov_b32", VOP3P_Profile<VOP_V2I32_V2I32_V2I32, VOP3_PACKED>>;
@@ -1399,11 +1473,11 @@ let isCommutable = 1, isReMaterializable = 1 in {
     defm V_MAX_BF16_PSEUDO : VOP3Inst <"v_max_bf16", VOP_BF16_BF16_BF16>;
   }
 
-  let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+  let SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble] in {
     defm V_PK_FMA_F64 : VOP3PInst<"v_pk_fma_f64", V_PK_VOP3_F64_Profile, any_fma>;
     defm V_PK_MUL_F64 : VOP3PInst<"v_pk_mul_f64", V_PK_VOP2_F64_Profile, any_fmul>;
     defm V_PK_ADD_F64 : VOP3PInst<"v_pk_add_f64", V_PK_VOP2_F64_Profile, any_fadd>;
-  } // End SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble]
+  } // End SubtargetPredicate = HasPackedFP64SingleSGPROps, SchedRW = [WriteDouble]
 } // End isCommutable = 1, isReMaterializable = 1
 
 def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
@@ -2671,9 +2745,9 @@ multiclass VOP3P_Realtriple_gfx1250_gfx13<bits<8> op> :
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12_gfx13<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 
-defm V_PK_FMA_F32 : VOP3P_Real_gfx12<0x1f>;
-defm V_PK_MUL_F32 : VOP3P_Real_gfx12<0x28>;
-defm V_PK_ADD_F32 : VOP3P_Real_gfx12<0x29>;
+defm V_PK_FMA_F32_gfx1250 : VOP3P_Real_gfx12<0x1f>;
+defm V_PK_MUL_F32_gfx1250 : VOP3P_Real_gfx12<0x28>;
+defm V_PK_ADD_F32_gfx1250 : VOP3P_Real_gfx12<0x29>;
 
 defm V_PK_ADD_MAX_I16  : VOP3P_Real_gfx1250<0x14>;
 defm V_PK_ADD_MAX_U16  : VOP3P_Real_gfx1250<0x15>;
@@ -2705,6 +2779,11 @@ let PostEncoderMethod = "postEncodeVOP3<true, true, false>" in {
 defm V_PK_FMA_F64      : VOP3P_Real_gfx1250<0x3b>;
 defm V_PK_MUL_F64      : VOP3P_Real_gfx1250<0x3c>;
 defm V_PK_ADD_F64      : VOP3P_Real_gfx1250<0x4b>;
+defm V_PK_ADD_NC_U64   : VOP3P_Real_gfx1250<0x4c>;
+defm V_PK_SUB_NC_U64   : VOP3P_Real_gfx1250<0x4d>;
+defm V_PK_MAX_NUM_F64  : VOP3P_Real_gfx1250<0x4e>;
+defm V_PK_MIN_NUM_F64  : VOP3P_Real_gfx1250<0x4f>;
+defm V_PK_LSHL_ADD_U64 : VOP3P_Real_gfx1250<0x7e>;
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
@@ -3175,3 +3254,50 @@ defm V_DOT8_U32_U4  : VOP3P_Real_gfx10_gfx11_gfx12_gfx13<0x19>;
 
 defm V_DOT4_I32_I8  : VOP3P_Real_gfx10 <0x16>;
 defm V_DOT8_I32_I4  : VOP3P_Real_gfx10 <0x18>;
+
+//===----------------------------------------------------------------------===//
+// GFX11+ Patterns
+//===----------------------------------------------------------------------===//
+
+multiclass FPToIntSatI16Pat<dag lhs, dag rhs> {
+  let True16Predicate = UseRealTrue16Insts in
+    def : GCNPat<lhs, (EXTRACT_SUBREG rhs, lo16)>;
+  let True16Predicate = NotUseRealTrue16Insts in
+    def : GCNPat<lhs, rhs>;
+}
+
+// Packed f32 -> i16 saturated conversion.
+multiclass CvtPkF32ToI16Pat<SDPatternOperator dagOp, Instruction inst> {
+  def : GCNPat<(v2i16 (dagOp (v2f32 VReg_64:$src), i16)),
+               (inst 0, (EXTRACT_SUBREG VReg_64:$src, sub0),
+                     0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
+  def : GCNPat<(v2i16 (dagOp (v2f32 SReg_64:$src), i16)),
+               (inst 0, (EXTRACT_SUBREG SReg_64:$src, sub0),
+                     0, (EXTRACT_SUBREG SReg_64:$src, sub1))>;
+  // Single value conversion: use a packed instruction with a dummy second input.
+  defm : FPToIntSatI16Pat<(i16 (dagOp (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)),
+                          (inst $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
+}
+
+multiclass FPToSSatI16Pat<dag lhs, int hi, int lo> {
+  defm : FPToIntSatI16Pat<lhs,
+      (V_MED3_I32_e64 (V_CVT_I32_F32_e64 $src0_modifiers, $src0),
+                      (V_MOV_B32_e32 (i32 lo)), (S_MOV_B32 (i32 hi)))>;
+}
+multiclass FPToUSatI16Pat<dag lhs, int hi> {
+  defm : FPToIntSatI16Pat<lhs,
+      (V_MIN_U32_e64 (V_CVT_U32_F32_e64 $src0_modifiers, $src0), (S_MOV_B32 (i32 hi)))>;
+}
+
+let SubtargetPredicate = isGFX11Plus in {
+  // f32 -> i16 saturated conversion (vector and scalar types).
+  defm : CvtPkF32ToI16Pat<fp_to_sint_sat, V_CVT_PK_I16_F32_e64>;
+  defm : CvtPkF32ToI16Pat<fp_to_uint_sat, V_CVT_PK_U16_F32_e64>;
+}
+
+// Fallback for f32 -> i16 saturated conversion on pre-GFX11. Required because
+// f32 -> i16 has to be legal so that the packed pattern above can match.
+let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
+  defm : FPToSSatI16Pat<(i16 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0x7fff, 0xffff8000>;
+  defm : FPToUSatI16Pat<(i16 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0xffff>;
+}

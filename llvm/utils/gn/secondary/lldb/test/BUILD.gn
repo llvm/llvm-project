@@ -1,5 +1,6 @@
 import("//llvm/triples.gni")
 
+import("//llvm/lib/Target/targets.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 
 import("//clang/resource_dir.gni")
@@ -87,6 +88,7 @@ write_lit_cfg("lit_api_site_cfg") {
             "$target_gen_dir/lldb-test-build.noindex/module-cache-lldb"),
     "LLDB_TEST_PLATFORM_URL=",
     "LLDB_TEST_PLATFORM_WORKING_DIR=",
+    "LLDB_TEST_RESOURCE_DIR=",
     "LLDB_TEST_SYSROOT=",
     "LLDB_TEST_USE_LLDB_SERVER=0",
     "LLVM_BUILD_MODE=.",
@@ -122,6 +124,17 @@ write_lit_cfg("lit_shell_site_cfg") {
   # Fully-qualified instead of relative for LIT_SITE_CFG_IN_HEADER.
   input = "//lldb/test/Shell/lit.site.cfg.py.in"
   output = lldb_lit_shell_site_cfg_file
+
+  # A single string with all built targets, separated by semicoli.
+  # (That's why this can't use //llvm/lib/Target/targets_string.gni)
+  llvm_targets_to_build_string_semi = ""
+  foreach(target, llvm_targets_to_build) {
+    if (llvm_targets_to_build_string_semi != "") {
+      llvm_targets_to_build_string_semi += ";"
+    }
+    llvm_targets_to_build_string_semi += target
+  }
+
   extra_values = [
     "CLANG_RESOURCE_DIR=" + rebase_path(clang_resource_dir),
     "DEFAULT_SYSROOT=",
@@ -155,6 +168,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLVM_ENABLE_DIA_SDK=0",  # FIXME: option? just enable on windows?
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_USE_SANITIZER=",
+    "LLVM_TARGETS_TO_BUILD=" + llvm_targets_to_build_string_semi,
     "Python3_EXECUTABLE=$python_path",
     "Python3_ROOT_DIR=",  # FIXME
   ]

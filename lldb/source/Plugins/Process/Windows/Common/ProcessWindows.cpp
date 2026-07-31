@@ -15,11 +15,13 @@
 #include <psapi.h>
 
 #include "lldb/Breakpoint/Watchpoint.h"
+#include "lldb/Core/Address.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeProcessBase.h"
@@ -97,11 +99,14 @@ ProcessSP ProcessWindows::CreateInstance(lldb::TargetSP target_sp,
 }
 
 static bool ShouldUseLLDBServer() {
-  llvm::StringRef use_lldb_server = ::getenv("LLDB_USE_LLDB_SERVER");
-  return use_lldb_server.equals_insensitive("on") ||
-         use_lldb_server.equals_insensitive("yes") ||
-         use_lldb_server.equals_insensitive("1") ||
-         use_lldb_server.equals_insensitive("true");
+  if (const char *env = ::getenv("LLDB_USE_LLDB_SERVER")) {
+    llvm::StringRef use_lldb_server(env);
+    return use_lldb_server.equals_insensitive("on") ||
+           use_lldb_server.equals_insensitive("yes") ||
+           use_lldb_server.equals_insensitive("1") ||
+           use_lldb_server.equals_insensitive("true");
+  }
+  return LLDB_ENABLE_LIBXML2;
 }
 
 void ProcessWindows::Initialize() {
@@ -227,6 +232,9 @@ ProcessWindows::DoAttachToProcessWithID(lldb::pid_t pid,
   Status error = AttachProcess(pid, attach_info, delegate);
   if (error.Success())
     SetID(GetDebuggedProcessId());
+
+  m_expecting_loader_int3 = true;
+
   return error;
 }
 
@@ -293,8 +301,12 @@ Status ProcessWindows::DoDestroy() {
 
 Status ProcessWindows::DoHalt(bool &caused_stop) {
   StateType state = GetPrivateState();
-  if (state != eStateStopped)
-    return HaltProcess(caused_stop);
+  if (state != eStateStopped) {
+    m_pending_halt = true;
+    Status error = HaltProcess(caused_stop);
+    if (error.Fail() || !caused_stop)
+      m_pending_halt = false;
+  }
   caused_stop = false;
   return Status();
 }
@@ -600,7 +612,7 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
     ModuleSP executable_module = target->GetExecutableModule();
     ModuleList unloaded_modules;
     unloaded_modules.Append(executable_module);
-    target->ModulesDidUnload(unloaded_modules, true);
+    target->ModulesDidUnload(unloaded_modules, false);
   }
 
   SetExitStatus(exit_code, /*exit_string=*/"");
@@ -641,25 +653,23 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   LLDB_LOG(log, "Debugger connected to process {0}.  Image base = {1:x}",
            debugger->GetProcess().GetProcessId(), image_base);
 
-  ModuleSP module;
-  // During attach, we won't have the executable module, so find it now.
-  const DWORD pid = debugger->GetProcess().GetProcessId();
-  const std::string file_name = GetProcessExecutableName(pid);
-  if (file_name.empty()) {
-    return;
-  }
-
-  FileSpec executable_file(file_name);
-  FileSystem::Instance().Resolve(executable_file);
-  ModuleSpec module_spec(executable_file);
-  Status error;
-  module =
-      GetTarget().GetOrCreateModule(module_spec, true /* notify */, &error);
+  ModuleSP module = GetTarget().GetExecutableModule();
   if (!module) {
-    return;
-  }
+    const DWORD pid = debugger->GetProcess().GetProcessId();
+    const std::string file_name = GetProcessExecutableName(pid);
+    if (file_name.empty())
+      return;
 
-  GetTarget().SetExecutableModule(module, eLoadDependentsNo);
+    FileSpec executable_file(file_name);
+    FileSystem::Instance().Resolve(executable_file);
+    ModuleSpec module_spec(executable_file);
+    Status error;
+    module =
+        GetTarget().GetOrCreateModule(module_spec, /*notify=*/true, &error);
+    if (!module)
+      return;
+    GetTarget().SetExecutableModule(module, eLoadDependentsNo);
+  }
 
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(module, ModuleSpec(), image_base);
@@ -710,7 +720,22 @@ ProcessWindows::OnDebugException(bool first_chance,
 
   ExceptionResult result = ExceptionResult::SendToApplication;
   switch (record.GetExceptionValue()) {
-  case EXCEPTION_BREAKPOINT:
+  case EXCEPTION_BREAKPOINT: {
+    const lldb::addr_t bp_addr = record.GetExceptionAddress();
+    if (m_pending_halt) {
+      m_pending_halt = false;
+    } else if (m_expecting_loader_int3 && first_chance &&
+               m_session_data->m_initial_stop_received &&
+               !GetBreakpointSiteList().FindByAddress(bp_addr) &&
+               IsSystemModuleAddress(bp_addr)) {
+      m_expecting_loader_int3 = false;
+      LLDB_LOG(log,
+               "Skipping expected loader breakpoint at address {0:x} in a "
+               "system module.",
+               bp_addr);
+      return ExceptionResult::MaskException;
+    }
+
     // Handle breakpoints at the first chance.
     result = ExceptionResult::BreakInDebugger;
 
@@ -733,6 +758,7 @@ ProcessWindows::OnDebugException(bool first_chance,
     DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
+  }
   case EXCEPTION_SINGLE_STEP:
     result = ExceptionResult::BreakInDebugger;
     DrainProcessStdout();
@@ -793,15 +819,19 @@ void ProcessWindows::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
     m_session_data->m_exited_threads.insert(thread_id);
 }
 
-void ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
-                               lldb::addr_t module_addr) {
+DllEventAction ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
+                                         lldb::addr_t module_addr,
+                                         lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(nullptr, module_spec, module_addr);
+  return DllEventAction::ContinueDebugLoop;
 }
 
-void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
+DllEventAction ProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
+                                           lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnUnloadModule(module_addr);
+  return DllEventAction::ContinueDebugLoop;
 }
 
 void ProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,
@@ -837,57 +867,6 @@ void ProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,
   } else {
     AppendSTDOUT(buffer.data(), buffer.size());
   }
-}
-
-llvm::Error
-ProcessWindows::ReadDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
-                                uint16_t length_lower_word,
-                                llvm::SmallVectorImpl<char> &output) {
-  if (is_unicode && length_lower_word % 2 != 0)
-    return llvm::createStringError(
-        "Utf16 string can't have uneven size in bytes");
-
-  const auto is_zero_terminated = [&] {
-    // The zero terminator is always at the end of the buffer.
-    if (is_unicode)
-      return output.size() >= 2 && output.back() == 0 &&
-             output[output.size() - 2] == 0;
-
-    return !output.empty() && output.back() == 0;
-  };
-
-  // Read at most 1 MiB ((1 << 16) * 16 - 1 Bytes) since we don't know the exact
-  // size of the string. We know that `strlen(string) & 0xffff ==
-  // length_lower_word`, so we read in chunks until we reach the terminator:
-  // - 0: `length_lower_word` Bytes
-  // - 1..16: 64 KiB (= 2^16 Bytes)
-  size_t start = length_lower_word == 0 ? 1 : 0;
-  for (size_t i = start; i < 16; ++i) {
-    output.resize_for_overwrite(length_lower_word + i * (1 << 16));
-    size_t chunk_size = i == 0 ? length_lower_word : (1 << 16);
-    lldb::addr_t addr = debug_string_addr + output.size_in_bytes() - chunk_size;
-
-    Status error;
-    size_t bytes_read =
-        DoReadMemory(addr, output.end() - chunk_size, chunk_size, error);
-    if (error.Fail())
-      return error.takeError();
-
-    if (bytes_read != chunk_size) {
-      return llvm::createStringErrorV(
-          "Expected to read {0} bytes, but read {1}", chunk_size, bytes_read);
-    }
-
-    if (is_zero_terminated())
-      break;
-  }
-
-  if (!is_zero_terminated())
-    return llvm::createStringError("String is 1 MiB or larger");
-
-  // Remove null terminator.
-  output.pop_back_n(is_unicode ? 2 : 1);
-  return llvm::Error::success();
 }
 
 void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {

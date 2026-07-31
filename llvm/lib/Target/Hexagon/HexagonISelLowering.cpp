@@ -113,6 +113,7 @@ static bool CC_SkipOdd(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "HexagonGenCallingConv.inc"
 
 unsigned HexagonTargetLowering::getVectorTypeBreakdownForCallingConv(
@@ -644,6 +645,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   unsigned OpCode = DoesNotReturn ? HexagonISD::CALLnr : HexagonISD::CALL;
   Chain = DAG.getNode(OpCode, dl, {MVT::Other, MVT::Glue}, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   Glue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -798,6 +801,45 @@ HexagonTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
   DAG.ReplaceAllUsesOfValueWith(Op, AA);
   return AA;
+}
+
+SDValue HexagonTargetLowering::LowerFMINFMAX(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  EVT OpVT = Op.getValueType();
+  MVT SimpleVT = OpVT.getSimpleVT();
+  SDLoc DL(Op);
+
+  // Check if any of the inputs are NaN. If so, propagate the NaN
+  // to the output, otherwise return the maximum/minimum of the inputs.
+  // We can safely use ISD::FMINNUM/ISD::FMAXNUM to run
+  // Hexagon's F2_sfmin/F2_sfmax, when no operand is NaN.
+  // Note: We cannot directly compare nodes against NaN node to find NaNs,
+  // because comparing NaN with anything always returns False (except for !=0
+  // which always return True). To work around that, we compare input operands
+  // with themselves under ISD::SETUO, which only returns true if the operand is
+  // NaN.
+
+  SDValue Op1 = Op.getOperand(0);
+  SDValue Op2 = Op.getOperand(1);
+  SDValue isOp1NaN = DAG.getSetCC(DL, MVT::i1, Op1, Op1, ISD::SETUO);
+  SDValue isOp2NaN = DAG.getSetCC(DL, MVT::i1, Op2, Op2, ISD::SETUO);
+
+  switch (Op.getOpcode()) {
+  case ISD::FMAXIMUM: {
+    SDValue FmaxNode = DAG.getNode(ISD::FMAXNUM, DL, SimpleVT, Op1, Op2);
+    SDValue result =
+        DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp2NaN, Op2, FmaxNode);
+    return DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp1NaN, Op1, result);
+  }
+  case ISD::FMINIMUM: {
+    SDValue FminNode = DAG.getNode(ISD::FMINNUM, DL, SimpleVT, Op1, Op2);
+    SDValue result =
+        DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp2NaN, Op2, FminNode);
+    return DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp1NaN, Op1, result);
+  }
+  default:
+    llvm_unreachable("Invalid opcode for LowerFMINFMAX");
+  }
 }
 
 SDValue HexagonTargetLowering::LowerFormalArguments(
@@ -1063,10 +1105,8 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   MVT OpTy = ty(LHS);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
-    MVT WideTy = MVT::getVectorVT(MVT::getIntegerVT(2*ElemTy.getSizeInBits()),
-                                  OpTy.getVectorNumElements());
+    assert(OpTy.getVectorElementType().isScalarInteger());
+    MVT WideTy = OpTy.widenIntegerElementType();
     return DAG.getSetCC(dl, ResTy,
                         DAG.getSExtOrTrunc(LHS, SDLoc(LHS), WideTy),
                         DAG.getSExtOrTrunc(RHS, SDLoc(RHS), WideTy), CC);
@@ -1121,10 +1161,8 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
-    MVT WideTy = MVT::getVectorVT(MVT::getIntegerVT(2*ElemTy.getSizeInBits()),
-                                  OpTy.getVectorNumElements());
+    assert(OpTy.getVectorElementType().isScalarInteger());
+    MVT WideTy = OpTy.widenIntegerElementType();
     // Generate (trunc (select (_, sext, sext))).
     return DAG.getSExtOrTrunc(
               DAG.getSelect(dl, WideTy, PredOp,
@@ -1809,6 +1847,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FMINIMUMNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMAXIMUMNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMAXIMUM, MVT::f32, Custom);
+  setOperationAction(ISD::FMAXIMUM, MVT::f16, Custom);
+  setOperationAction(ISD::FMINIMUM, MVT::f32, Custom);
+  setOperationAction(ISD::FMINIMUM, MVT::f16, Custom);
 
   setOperationAction(ISD::FP_TO_UINT, MVT::i1,  Promote);
   setOperationAction(ISD::FP_TO_UINT, MVT::i8,  Promote);
@@ -1864,6 +1908,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasV67Ops()) {
     setOperationAction(ISD::FMINIMUMNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXIMUMNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMUL,    MVT::f64, Legal);
   }
 
@@ -2854,16 +2900,15 @@ HexagonTargetLowering::getCombine(SDValue Hi, SDValue Lo, const SDLoc &dl,
 
   if (!ElemTy.isVector()) {
     assert(ElemTy.isScalarInteger());
-    MVT PairTy = MVT::getIntegerVT(2 * ElemTy.getSizeInBits());
+    MVT PairTy = ElemTy.widenIntegerElementType();
     SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, PairTy, Lo, Hi);
     return DAG.getBitcast(ResTy, Pair);
   }
 
   unsigned Width = ElemTy.getSizeInBits();
   MVT IntTy = MVT::getIntegerVT(Width);
-  MVT PairTy = MVT::getIntegerVT(2 * Width);
   SDValue Pair =
-      DAG.getNode(ISD::BUILD_PAIR, dl, PairTy,
+      DAG.getNode(ISD::BUILD_PAIR, dl, IntTy.widenIntegerElementType(),
                   {DAG.getBitcast(IntTy, Lo), DAG.getBitcast(IntTy, Hi)});
   return DAG.getBitcast(ResTy, Pair);
 }
@@ -3323,6 +3368,9 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::INTRINSIC_VOID:       return LowerINTRINSIC_VOID(Op, DAG);
     case ISD::PREFETCH:
       return LowerPREFETCH(Op, DAG);
+    case ISD::FMAXIMUM:
+    case ISD::FMINIMUM:
+      return LowerFMINFMAX(Op, DAG);
       break;
   }
 
@@ -3971,6 +4019,31 @@ MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
   }
 }
 
+MachineInstr *
+HexagonTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::instr_iterator &MBBI,
+                                     const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  switch (MBBI->getOpcode()) {
+  case Hexagon::J2_callr:
+  case Hexagon::PS_callr_nr:
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  MachineOperand &Target = MBBI->getOperand(0);
+  assert(Target.isReg() && "Invalid target operand for an indirect call");
+  Target.setIsRenamable(false);
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Hexagon::KCFI_CHECK))
+      .addReg(Target.getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
+}
+
 bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(
     const Instruction &AndI) const {
   // Only sink 'and' mask to cmp use block if it is masking a single bit since
@@ -4017,4 +4090,22 @@ bool HexagonTargetLowering::isUsedByReturnOnly(SDNode *N,
 
   Chain = Copy->getOperand(0);
   return true;
+}
+
+bool HexagonTargetLowering::hasInlineStackProbe(
+    const MachineFunction &MF) const {
+  if (MF.getFunction().hasFnAttribute("probe-stack"))
+    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
+           "inline-asm";
+  return false;
+}
+
+unsigned HexagonTargetLowering::getStackProbeSize(const MachineFunction &MF,
+                                                  Align StackAlign) const {
+  const Function &Fn = MF.getFunction();
+  unsigned StackProbeSize =
+      Fn.getFnAttributeAsParsedInteger("stack-probe-size", 4096);
+  // Round down to the stack alignment.
+  StackProbeSize = alignDown(StackProbeSize, StackAlign.value());
+  return StackProbeSize ? StackProbeSize : StackAlign.value();
 }

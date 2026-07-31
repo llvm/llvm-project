@@ -42,8 +42,7 @@ void MemoryCache::Clear(bool clear_invalid_ranges) {
 
 void MemoryCache::AddL1CacheData(lldb::addr_t addr, const void *src,
                                  size_t src_len) {
-  AddL1CacheData(
-      addr, DataBufferSP(new DataBufferHeap(DataBufferHeap(src, src_len))));
+  AddL1CacheData(addr, std::make_shared<DataBufferHeap>(src, src_len));
 }
 
 void MemoryCache::AddL1CacheData(lldb::addr_t addr,
@@ -58,18 +57,18 @@ void MemoryCache::Flush(addr_t addr, size_t size) {
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  // Erase any blocks from the L1 cache that intersect with the flush range
+  // L1 chunks can overlap, and a chunk starting below addr can still reach
+  // into the flushed range, so scan the whole L1 cache and erase every chunk
+  // that intersects it.
   if (!m_L1_cache.empty()) {
     AddrRange flush_range(addr, size);
-    BlockMap::iterator pos = m_L1_cache.upper_bound(addr);
-    if (pos != m_L1_cache.begin()) {
-      --pos;
-    }
+    BlockMap::iterator pos = m_L1_cache.begin();
     while (pos != m_L1_cache.end()) {
       AddrRange chunk_range(pos->first, pos->second->GetByteSize());
-      if (!chunk_range.DoesIntersect(flush_range))
-        break;
-      pos = m_L1_cache.erase(pos);
+      if (chunk_range.DoesIntersect(flush_range))
+        pos = m_L1_cache.erase(pos);
+      else
+        ++pos;
     }
   }
 

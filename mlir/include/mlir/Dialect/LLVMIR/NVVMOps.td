@@ -383,16 +383,22 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
     `BasicPtxBuilderInterface` to abstract away low-level details of 
     PTX assembly formatting.
 
-    The `predicate` attribute is used to specify a predicate for the 
+    The `predicate` attribute is used to specify a predicate for the
     PTX instruction.
+
+    The `memory_clobber` attribute appends a "~{memory}" clobber to the
+    constraints of the generated inline assembly. Set it when the PTX reads
+    or writes memory beyond its listed operands (e.g. stores, atomics, or
+    instructions with acquire/release semantics such as mbarrier), so that
+    LLVM does not reorder memory accesses across the inline assembly.
 
     Example 1: Read-only Parameters
     ```mlir
-    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" (%barrier_gen, %count) : !llvm.ptr, i32
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" ro(%barrier_gen, %count : !llvm.ptr, i32) memory_clobber = true
 
     // Lowers to:
-    llvm.inline_asm has_side_effects asm_dialect = att 
-      "mbarrier.init.b64 [$0], $1;", "l,r" %arg0, %arg2 : (!llvm.ptr, i32) -> ()
+    llvm.inline_asm has_side_effects asm_dialect = att
+      "mbarrier.init.b64 [$0], $1;", "l,r,~{memory}" %arg0, %arg2 : (!llvm.ptr, i32) -> ()
     ```
 
     Example 2: Read-only and Write-only Parameters
@@ -416,22 +422,24 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
     ```
   }];
 
-  let arguments = (ins Variadic<AnyType>:$readOnlyArgs, 
-                       Variadic<AnyType>:$readWriteArgs, 
+  let arguments = (ins Variadic<AnyType>:$readOnlyArgs,
+                       Variadic<AnyType>:$readWriteArgs,
                        StrAttr:$ptxCode,
-                       PtxPredicate:$predicate);
-                      
+                       PtxPredicate:$predicate,
+                       DefaultValuedAttr<BoolAttr, "false">:$memoryClobber);
+
   let results = (outs Variadic<AnyType>:$writeOnlyArgs);
-  
+
   let assemblyFormat = [{
     $ptxCode
     ( `ro` `(` $readOnlyArgs^ `:` type($readOnlyArgs) `)` )?
     ( `rw` `(` $readWriteArgs^ `:` type($readWriteArgs) `)` )?
-    (`,` `predicate` `=` $predicate^)? 
+    ( `memory_clobber` `=` $memoryClobber^ )?
+    (`,` `predicate` `=` $predicate^)?
     attr-dict
     ( `->` type($writeOnlyArgs)^ )?
   }];
-  
+
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
       StringRef ptxInstStr = getPtxCode();
@@ -441,6 +449,7 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
 
   let extraClassDeclaration = [{
     bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
+    bool hasMemoryClobber() { return getMemoryClobber(); }
   }];
 }
 
@@ -2705,9 +2714,13 @@ class NVVM_MMA_OPS {
   list<list<WMMA_REGS>> bit_mma_ops = MMA_OPS<
             [GEOM<8,8,128>, GEOM<16,8,128>, GEOM<16,8,256>],
             ["b1"], [], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> fp8_mma_ops = MMA_OPS<
+            [GEOM<16,8,16>, GEOM<16,8,32>],
+            ["e4m3", "e5m2"], ["e4m3", "e5m2"], ["f16", "f32"], []>.ret;
   list<list<WMMA_REGS>> all_mma_sync_ops = !listconcat(
             tf32_mma_ops, bf16_mma_ops, f64_mma_ops,
-            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops);
+            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops,
+            fp8_mma_ops);
 
   list<list<WMMA_REGS>> bf16_mma_sp_ops = MMA_OPS<
             [GEOM<16,8,16>, GEOM<16,8,32>],
@@ -3384,9 +3397,9 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     `intOverflowBehavior` is only relevant when the `multiplicandType` attribute
     is one of `u8, s8, u4, s4`, this attribute describes how overflow is handled
     in the accumulator. When the attribute is `satfinite`, the accumulator values
-    are clamped in the int32 range on overflow. This is the default behavior.
-    Alternatively, accumulator behavior `wrapped` can also be specified, in
-    which case overflow wraps from one end of the range to the other.
+    are clamped in the int32 range on overflow. Alternatively, accumulator
+    behavior `wrapped` can be specified (this is the default), in which case
+    overflow wraps from one end of the range to the other.
 
     `layoutA` and `layoutB` are required and should generally be set to
     `#nvvm.mma_layout<row>` and `#nvvm.mma_layout<col>` respectively, but other
@@ -3477,9 +3490,16 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 
   string llvmBuilder = [{
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+    // `intOverflowBehavior` is optional and defaults to `wrapped` when omitted.
+    // We initialize it to a concrete value so that the intrinsic selector never
+    // speculatively reads an empty optional's uninitialized payload (benign,
+    // but flagged by Valgrind).
+    std::optional<mlir::NVVM::MMAIntOverflow> intOverflow = mlir::NVVM::MMAIntOverflow::wrapped;
+    if (mlir::NVVM::MMAIntOverflowAttr satAttr = op.getIntOverflowBehaviorAttr())
+      intOverflow = satAttr.getValue();
     auto intId = mlir::NVVM::MmaOp::getIntrinsicID(
         $shape.getM(), $shape.getN(), $shape.getK(),
-        $b1Op, $intOverflowBehavior,
+        $b1Op, intOverflow,
         $layoutA, $layoutB,
         *$multiplicandAPtxType,
         *$multiplicandBPtxType,
@@ -5538,8 +5558,8 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]>
     Optional<I64>:$offset
   );
 
-  let results = (outs AnyTypeOf<[I32, VectorOfLengthAndType<
-                                  [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$res);
+  let results = (outs VectorOfLengthAndType<
+                        [1, 2, 4, 8, 16, 32, 64, 128], [I32]>:$res);
 
   let assemblyFormat = [{
     $tmemAddr (`,` $offset^)? (`pack` $pack^)? attr-dict `:` type($res)
@@ -5598,11 +5618,9 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]>
     llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
     auto Pack = llvm::ConstantInt::get(Context, llvm::APInt(1, $pack));
 
-    unsigned num = $_resultType->isVectorTy()
-                       ? llvm::cast<llvm::VectorType>($_resultType)
+    unsigned num = llvm::cast<llvm::VectorType>($_resultType)
                              ->getElementCount()
-                             .getFixedValue()
-                       : 1;
+                             .getFixedValue();
 
     auto ID = getTcgen05LdIntrinsicID($shape, num);
     if (ID == llvm::Intrinsic::not_intrinsic)
@@ -5676,11 +5694,11 @@ def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
 
     Example:
     ```mlir
-      %data, %redval = nvvm.tcgen05.ld,red %addr, %offset {
+      %data, %redval = nvvm.tcgen05.ld.red %addr, %offset {
         shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
       } : <2xi32>, i32
 
-      %data, %redval = nvvm.tcgen05.ld,red %addr {
+      %data, %redval = nvvm.tcgen05.ld.red %addr {
         shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>,
       } : <2xf32>, f32
     ```
@@ -5717,8 +5735,7 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]>
     Tcgen05LdStShapeAttr:$shape,
     // Arguments
     LLVM_PointerTensor:$tmemAddr,
-    AnyTypeOf<[I32, VectorOfLengthAndType<
-                      [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$val,
+    VectorOfLengthAndType<[1, 2, 4, 8, 16, 32, 64, 128], [I32]>:$val,
     Optional<I64>:$offset
   );
 
@@ -5777,10 +5794,9 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]>
     auto Unpack = llvm::ConstantInt::get(Context, llvm::APInt(1, $unpack));
 
     auto valTy = $val->getType();
-    uint32_t num = valTy->isVectorTy() ? llvm::cast<llvm::VectorType>(valTy)
+    uint32_t num = llvm::cast<llvm::VectorType>(valTy)
                                              ->getElementCount()
-                                             .getFixedValue()
-                                       : 1;
+                                             .getFixedValue();
 
     auto ID = getTcgen05StIntrinsicID($shape, num);
     if (ID == llvm::Intrinsic::not_intrinsic)
@@ -6896,7 +6912,7 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     TensormapFieldAttr:$field,
     AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr,
     Optional<AnyTypeOf<[I64, I32]>>:$new_value,
-    OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<1>, IntMaxValue<5>]>>:$ord,
+    OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<4>]>>:$ord,
     OptionalAttr<TensormapFieldValueAttr>:$new_value_attr
   );
 

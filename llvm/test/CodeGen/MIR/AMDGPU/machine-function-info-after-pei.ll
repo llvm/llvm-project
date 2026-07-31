@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -amdgpu-spill-sgpr-to-vgpr=0 -stop-after prologepilog -verify-machineinstrs %s -o - | FileCheck -check-prefix=AFTER-PEI %s
+; RUN: llc -mtriple=amdgpu6.00-mesa-mesa3d -amdgpu-spill-sgpr-to-vgpr=0 -stop-after prolog-epilog -verify-machineinstrs %s -o - | FileCheck -check-prefix=AFTER-PEI %s
 
 ; Test that the ScavengeFI is serialized in the SIMachineFunctionInfo.
 
@@ -39,7 +39,7 @@
 ; AFTER-PEI-NEXT:   fp64-fp16-input-denormals: true
 ; AFTER-PEI-NEXT:   fp64-fp16-output-denormals: true
 ; AFTER-PEI-NEXT: highBitsOf32BitAddress: 0
-; AFTER-PEI-NEXT: occupancy: 5
+; AFTER-PEI-NEXT: occupancy: 4
 ; AFTER-PEI-NEXT: scavengeFI: '%stack.3'
 ; AFTER-PEI-NEXT: vgprForAGPRCopy: ''
 ; AFTER-PEI-NEXT: sgprForEXECCopy: ''

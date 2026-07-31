@@ -2,8 +2,6 @@
 User Guide for RISC-V Target
 =============================
 
-.. contents::
-   :local:
 
 Introduction
 ============
@@ -385,6 +383,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zvqwbdota8i``, ``experimental-zvqwbdota16i``, ``experimental-zvfqwbdota8f``, ``experimental-zvfwbdota16bf``, ``experimental-zvfbdota32f``
   LLVM implements the `0.2 draft specification <https://github.com/aswaterman/riscv-misc/blob/main/isa/ldot-bdot/ldot-bdot.adoc>`__.
 
+``experimental-zilx``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/riscv-zilx>`__.
+
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 
 Vendor Extensions
@@ -586,7 +587,11 @@ The current vendor extensions supported are:
 
 ``XSMTVDot``
   SpacemiT defines `Integrated Matrix Extension (IME) specification <https://github.com/spacemit-com/riscv-ime-extension-spec/releases/tag/v1.0>`__.
-  LLVM implement the hardware-adapted subset for SpacemiT X60, defined in the `feature document <https://developer.spacemit.com/documentation?token=BWbGwbx7liGW21kq9lucSA6Vnpb#2.1>`__ by SpacemiT. All instructions are prefixed with `smt.` as described in the implementation guide. Note that this implemented subset is `version 1.0.0 of the SpacemiT Vector Dot Product Extension specification`, which is strictly a subset of the full IME specification to reflect the capabilities of SpacemiT X60 hardware correctly.
+  LLVM implements the hardware-adapted subset for SpacemiT X60, defined in the `feature document <https://developer.spacemit.com/documentation?token=BWbGwbx7liGW21kq9lucSA6Vnpb#2.1>`__ by SpacemiT. All instructions are prefixed with `smt.` as described in the implementation guide. Note that this implemented subset is `version 1.0.0 of the SpacemiT Vector Dot Product Extension specification`, which is strictly a subset of the full IME specification to reflect the capabilities of SpacemiT X60 hardware correctly.
+
+``XSMTVDotII``
+  SpacemiT defines the `Integrated Matrix Extension (IME) specification <https://github.com/spacemit-com/docs-ai/blob/main/en/architecture/ime_extension.md>`__
+  LLVM implements the hardware-adapted subset for SpacemiT A100
 
 Experimental C Intrinsics
 =========================
@@ -627,7 +632,7 @@ To use this functionality, you need to be doing all of the following:
 
 LLD will relax (rewrite) any code sequences that materialize an address within 2048 bytes of ``__global_pointer$`` (which will be defined if it is used and does not already exist) to instead generate the address using ``gp`` and the correct (signed) 12-bit immediate. This usually saves at least one instruction compared to materialising a full 32-bit address value.
 
-There can only be one ``gp`` value in a process (as ``gp`` is not changed when calling into a function in a shared library), so the symbol is is only defined and this relaxation is only done for executables, and not for shared libraries. The linker expects executable startup code to put the value of ``__global_pointer$`` (from the executable) into ``gp`` before any user code is run.
+There can only be one ``gp`` value in a process (as ``gp`` is not changed when calling into a function in a shared library), so the symbol is only defined and this relaxation is only done for executables, and not for shared libraries. The linker expects executable startup code to put the value of ``__global_pointer$`` (from the executable) into ``gp`` before any user code is run.
 
 Arguably, the most efficient use for this addressing mode is for smaller global variables, as larger global variables likely need many more loads or stores when they are being accessed anyway, so the cost of materializing the upper bits can be shared.
 

@@ -75,6 +75,7 @@ add_fp_unittest(
     libc.src.__support.math.cbrt
     libc.src.__support.math.cbrtbf16
     libc.src.__support.math.cbrtf
+    libc.src.__support.math.cbrtf16
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
     libc.src.__support.math.ceilf
@@ -124,6 +125,7 @@ add_fp_unittest(
     libc.src.__support.math.exp10f
     libc.src.__support.math.exp10f16
     libc.src.__support.math.expf
+    libc.src.__support.math.expbf16
     libc.src.__support.math.expf16
     libc.src.__support.math.f16add
     libc.src.__support.math.f16addf
@@ -345,6 +347,7 @@ add_fp_unittest(
     libc.src.__support.math.ldexpf
     libc.src.__support.math.ldexpf128
     libc.src.__support.math.ldexpf16
+    libc.src.__support.math.lgammaf16
     libc.src.__support.math.llogbf
     libc.src.__support.math.llogbf128
     libc.src.__support.math.llogbf16
@@ -478,6 +481,7 @@ add_fp_unittest(
     libc.src.__support.math.sqrtf
     libc.src.__support.math.sqrtl
     libc.src.__support.math.tan
+    libc.src.__support.math.tanbf16
     libc.src.__support.math.tanf
     libc.src.__support.math.tanf16
     libc.src.__support.math.tanhf
@@ -818,6 +822,37 @@ add_fp_unittest(
 endif() # LIBC_TEST_SKIP_SHARED_MATH_TESTS
 
 add_fp_unittest(
+  shared_builtins_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_builtins_test.cpp
+  DEPENDS
+    libc.src.__support.builtins.adddf3
+    libc.src.__support.builtins.addsf3
+    libc.src.__support.builtins.addtf3
+    libc.src.__support.builtins.divdf3
+    libc.src.__support.builtins.divsf3
+    libc.src.__support.builtins.divtf3
+    libc.src.__support.builtins.extenddftf2
+    libc.src.__support.builtins.extendsfdf2
+    libc.src.__support.builtins.extendsftf2
+    libc.src.__support.builtins.extendxftf2
+    libc.src.__support.builtins.muldf3
+    libc.src.__support.builtins.mulsf3
+    libc.src.__support.builtins.multf3
+    libc.src.__support.builtins.negdf3
+    libc.src.__support.builtins.negsf3
+    libc.src.__support.builtins.subdf3
+    libc.src.__support.builtins.subsf3
+    libc.src.__support.builtins.subtf3
+    libc.src.__support.builtins.truncdfsf2
+    libc.src.__support.builtins.trunctfdf2
+    libc.src.__support.builtins.trunctfsf2
+    libc.src.__support.builtins.trunctfxf2
+)
+
+add_fp_unittest(
   shared_str_to_num_test
   SUITE
     libc-shared-tests
@@ -838,9 +873,9 @@ add_libc_test(
   SRCS
     shared_rpc_test.cpp
   DEPENDS
-    libc.src.stdio.printf_core.converter
-    libc.src.stdio.printf_core.parser
-    libc.src.stdio.printf_core.writer
+    libc.src.__support.printf_core.converter
+    libc.src.__support.printf_core.parser
+    libc.src.__support.printf_core.writer
     libc.src.__support.arg_list
 )
 endif()

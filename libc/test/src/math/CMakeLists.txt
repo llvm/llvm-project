@@ -202,6 +202,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    tanbf16_test.cpp
+  DEPENDS
+    libc.src.math.tanbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   tanf_test
   NEED_MPFR
   SUITE
@@ -241,6 +254,17 @@ add_fp_unittest(
     libc.src.math.tanpif
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  lgammaf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    lgammaf16_test.cpp
+  DEPENDS
+    libc.src.math.lgammaf16
 )
 
 add_fp_unittest(
@@ -1181,6 +1205,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  expbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    expbf16_test.cpp
+  DEPENDS
+    libc.src.math.expbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   exp2_test
   NEED_MPFR
   SUITE
@@ -1314,8 +1350,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.copysign
     libc.src.__support.FPUtil.fp_bits
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1329,8 +1363,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.copysignf
     libc.src.__support.FPUtil.fp_bits
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1344,8 +1376,6 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.copysignl
     libc.src.__support.FPUtil.fp_bits
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1527,8 +1557,6 @@ add_fp_unittest(
     libc.src.math.modf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # Requires C++ limits.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1543,8 +1571,6 @@ add_fp_unittest(
     libc.src.math.modff
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # Requires C++ limits.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -2262,8 +2288,6 @@ add_fp_unittest(
     libc.src.math.fmodf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -2279,8 +2303,6 @@ add_fp_unittest(
     libc.src.math.fmod
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # FIXME: Currently fails on the GPU build.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -3141,6 +3163,18 @@ add_fp_unittest(
     cbrt_test.cpp
   DEPENDS
     libc.src.math.cbrt
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  cbrtf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cbrtf16_test.cpp
+  DEPENDS
+    libc.src.math.cbrtf16
     libc.src.__support.FPUtil.fp_bits
 )
 
