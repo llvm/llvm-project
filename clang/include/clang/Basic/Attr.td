@@ -5256,7 +5256,7 @@ def HLSLIsROV : TypeAttr {
 def HLSLIsCounter : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_counter">];
   let LangOpts = [HLSL];
-  let Documentation = [HLSLIsCounter];
+  let Documentation = [HLSLIsCounterDocs];
 }
 
 def HLSLGroupSharedAddressSpace : TypeAttr {
