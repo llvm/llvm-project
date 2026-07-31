@@ -167,6 +167,13 @@ def A53WriteFRecpStepQ : SchedWriteRes<[A53UnitFPALU]> { let Latency = 8;
 def A53WriteFRecpEst   : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
 def A53WriteFRecpEstQ  : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4;
                                                          let ReleaseAtCycles = [2]; }
+// Bitwise Advanced SIMD logic forwards in a single cycle.
+def A53WriteLogicD : SchedWriteRes<[A53UnitFPALU]> { let Latency = 1; }
+def A53WriteLogicQ : SchedWriteRes<[A53UnitFPALU]> { let Latency = 1;
+                                                     let ReleaseAtCycles = [2]; }
+// Scalar floating-point select, and the float-to-float register move.
+def A53WriteFSel : SchedWriteRes<[A53UnitFPALU]> { let Latency = 2; }
+def A53WriteFMov : SchedWriteRes<[A53UnitFPALU]> { let Latency = 1; }
 // Advanced SIMD arithmetic that runs at the same 4-cycle latency as its scalar
 // counterpart: floating-point arithmetic and conversion, and the integer vector
 // multiply. Q-form keeps the two-cycle datapath occupancy.
@@ -403,6 +410,48 @@ def : InstRW<[A53WriteVecQ_4],
                  "^FCVT(L|N)2?v(2i32|4i16|4i32|8i16)$",
                  "^FCVTXN2?v(2f32|4f32)$",
                  "^MULv(4i32|8i16|16i8)$", "^MULv(4i32|8i16)_indexed$")>;
+
+// Bitwise ASIMD logic: one cycle.
+def : InstRW<[A53WriteLogicD],
+      (instregex "^(AND|BIC|EOR|ORN|ORR|NOT)v8i8$", "^(ORR|BIC)v(2i32|4i16)$")>;
+def : InstRW<[A53WriteLogicQ],
+      (instregex "^(AND|BIC|EOR|ORN|ORR|NOT)v16i8$", "^(ORR|BIC)v(4i32|8i16)$")>;
+
+// ASIMD compare, permute and insert/select: two cycles. The integer and
+// floating-point compares, EXT/REV/DUP/INS/TBL and the bit-select family all
+// measure 2 on the source-to-result path.
+def : InstRW<[A53WriteIVecD_2],
+      (instregex "^CM(EQ|GE|GT|HI|HS|LE|LT)v(1i64|2i32|4i16|8i8)(rz)?$",
+                 "^(FCM(EQ|GE|GT)|FACG[ET])(v2f32|v4f16|v1i32|v1i64)(rz)?$",
+                 "^(EXT|BIF|BIT|BSL)v8i8$",
+                 "^REV(16|32|64)v(2i32|4i16|8i8)$",
+                 "^(DUP|INS)v.*(8|16|32|64)(gpr|lane)$",
+                 "^TB[LX]v8i8.*$")>;
+def : InstRW<[A53WriteIVecQ_2],
+      (instregex "^CM(EQ|GE|GT|HI|HS|LE|LT)v(2i64|4i32|8i16|16i8)(rz)?$",
+                 "^(FCM(EQ|GE|GT)|FACG[ET])(v4f32|v2f64|v8f16)(rz)?$",
+                 "^(EXT|BIF|BIT|BSL)v16i8$",
+                 "^REV(16|32|64)v(4i32|8i16|16i8)$",
+                 "^TB[LX]v16i8.*$")>;
+// Absolute-difference accumulate, pairwise accumulate and the rounding
+// add/subtract-narrow take four cycles from their source operands. (A chain
+// through the tied accumulator alone recurs faster, but that is a forwarding
+// path, not the latency, and is not modelled here.)
+def : InstRW<[A53WriteVecD_4],
+      (instregex "^[SU]ABAv(2i32|4i16|8i8)$",
+                 "^[SU]ADALPv(2i32_v1i64|4i16_v2i32|8i8_v4i16)$")>;
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^[SU]ABAv(16i8|4i32|8i16)$", "^[SU]ABALv",
+                 "^[SU]ADALPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$",
+                 "^R(ADD|SUB)HNv")>;
+def : InstRW<[A53WriteFSel], (instregex "^FCSEL[HSD]rrr$")>;
+def : InstRW<[A53WriteFMov], (instregex "^FMOV[HSD]r$")>;
+
+// CMTST and CLS take a cycle more than the plain compares.
+def : InstRW<[A53WriteIVecD_3],
+      (instregex "^CMTSTv(1i64|2i32|4i16|8i8)$", "^CLSv(2i32|4i16|8i8)$")>;
+def : InstRW<[A53WriteIVecQ_3],
+      (instregex "^CMTSTv(2i64|4i32|8i16|16i8)$", "^CLSv(4i32|8i16|16i8)$")>;
 
 // Integer ASIMD arithmetic (see the write classes above). Accumulate, widening
 // and reduction-narrowing ops are intentionally left on the default here: their
