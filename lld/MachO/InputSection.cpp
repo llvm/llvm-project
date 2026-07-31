@@ -204,13 +204,18 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy,
   for (auto &copySym : copy->symbols)
     copySym->identicalCodeFoldingKind = foldKind;
 
+  const size_t numSymbols = symbols.size();
   symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
   copy->symbols.clear();
 
   // Remove duplicate compact unwind info for symbols at the same address.
   if (symbols.empty())
     return;
-  for (auto it = symbols.begin() + 1; it != symbols.end(); ++it) {
+  // Only the symbols just appended still need clearing -- everything before
+  // numSymbols was cleared by an earlier fold. std::max() keeps the first
+  // symbol's entry when numSymbols == 0.
+  for (auto it = symbols.begin() + std::max<size_t>(numSymbols, 1);
+       it != symbols.end(); ++it) {
     assert((*it)->value == 0);
     (*it)->originalUnwindEntry = nullptr;
   }
