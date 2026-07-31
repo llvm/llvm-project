@@ -3,6 +3,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/NVPTXTargetParser.h"
 
 namespace clang {
 
@@ -85,59 +86,10 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
     return CudaVersion::CUDA_70;
 
   switch (A) {
-  case OffloadArch::SM_20:
-  case OffloadArch::SM_21:
-  case OffloadArch::SM_30:
-  case OffloadArch::SM_32_:
-  case OffloadArch::SM_35:
-  case OffloadArch::SM_37:
-  case OffloadArch::SM_50:
-  case OffloadArch::SM_52:
-  case OffloadArch::SM_53:
-    return CudaVersion::CUDA_70;
-  case OffloadArch::SM_60:
-  case OffloadArch::SM_61:
-  case OffloadArch::SM_62:
-    return CudaVersion::CUDA_80;
-  case OffloadArch::SM_70:
-    return CudaVersion::CUDA_90;
-  case OffloadArch::SM_72:
-    return CudaVersion::CUDA_91;
-  case OffloadArch::SM_75:
-    return CudaVersion::CUDA_100;
-  case OffloadArch::SM_80:
-    return CudaVersion::CUDA_110;
-  case OffloadArch::SM_86:
-    return CudaVersion::CUDA_111;
-  case OffloadArch::SM_87:
-    return CudaVersion::CUDA_114;
-  case OffloadArch::SM_89:
-  case OffloadArch::SM_90:
-    return CudaVersion::CUDA_118;
-  case OffloadArch::SM_90a:
-    return CudaVersion::CUDA_120;
-  case OffloadArch::SM_100:
-  case OffloadArch::SM_100a:
-  case OffloadArch::SM_101:
-  case OffloadArch::SM_101a:
-  case OffloadArch::SM_120:
-  case OffloadArch::SM_120a:
-    return CudaVersion::CUDA_128;
-  case OffloadArch::SM_100f:
-  case OffloadArch::SM_101f:
-  case OffloadArch::SM_103:
-  case OffloadArch::SM_103a:
-  case OffloadArch::SM_103f:
-  case OffloadArch::SM_120f:
-  case OffloadArch::SM_121:
-  case OffloadArch::SM_121a:
-  case OffloadArch::SM_121f:
-    return CudaVersion::CUDA_129;
-  case OffloadArch::SM_88:
-  case OffloadArch::SM_110:
-  case OffloadArch::SM_110a:
-  case OffloadArch::SM_110f:
-    return CudaVersion::CUDA_130;
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  case OffloadArch::KIND:                                                      \
+    return CudaVersion::MIN_VER;
+#include "llvm/TargetParser/NVPTXTargetParser.def"
   default:
     llvm_unreachable("invalid enum");
   }
@@ -151,19 +103,10 @@ CudaVersion MaxVersionForOffloadArch(OffloadArch A) {
   switch (A) {
   case OffloadArch::Unknown:
     return CudaVersion::UNKNOWN;
-  case OffloadArch::SM_20:
-  case OffloadArch::SM_21:
-    return CudaVersion::CUDA_80;
-  case OffloadArch::SM_30:
-  case OffloadArch::SM_32_:
-    return CudaVersion::CUDA_102;
-  case OffloadArch::SM_35:
-  case OffloadArch::SM_37:
-    return CudaVersion::CUDA_118;
-  case OffloadArch::SM_101:
-  case OffloadArch::SM_101a:
-  case OffloadArch::SM_101f:
-    return CudaVersion::CUDA_129;
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  case OffloadArch::KIND:                                                      \
+    return CudaVersion::MAX_VER;
+#include "llvm/TargetParser/NVPTXTargetParser.def"
   default:
     return CudaVersion::NEW;
   }
@@ -185,107 +128,32 @@ bool CudaFeatureEnabled(CudaVersion Version, CudaFeature Feature) {
 
 unsigned CudaArchToID(OffloadArch Arch) {
   switch (Arch) {
-  case OffloadArch::SM_20:
-    return 200;
-  case OffloadArch::SM_21:
-    return 210;
-  case OffloadArch::SM_30:
-    return 300;
-  case OffloadArch::SM_32_:
-    return 320;
-  case OffloadArch::SM_35:
-    return 350;
-  case OffloadArch::SM_37:
-    return 370;
-  case OffloadArch::SM_50:
-    return 500;
-  case OffloadArch::SM_52:
-    return 520;
-  case OffloadArch::SM_53:
-    return 530;
-  case OffloadArch::SM_60:
-    return 600;
-  case OffloadArch::SM_61:
-    return 610;
-  case OffloadArch::SM_62:
-    return 620;
-  case OffloadArch::SM_70:
-    return 700;
-  case OffloadArch::SM_72:
-    return 720;
-  case OffloadArch::SM_75:
-    return 750;
-  case OffloadArch::SM_80:
-    return 800;
-  case OffloadArch::SM_86:
-    return 860;
-  case OffloadArch::SM_87:
-    return 870;
-  case OffloadArch::SM_88:
-    return 880;
-  case OffloadArch::SM_89:
-    return 890;
-  case OffloadArch::SM_90:
-  case OffloadArch::SM_90a:
-    return 900;
-  case OffloadArch::SM_100:
-  case OffloadArch::SM_100a:
-  case OffloadArch::SM_100f:
-    return 1000;
-  case OffloadArch::SM_101:
-  case OffloadArch::SM_101a:
-  case OffloadArch::SM_101f:
-    return 1010;
-  case OffloadArch::SM_103:
-  case OffloadArch::SM_103a:
-  case OffloadArch::SM_103f:
-    return 1030;
-  case OffloadArch::SM_110:
-  case OffloadArch::SM_110a:
-  case OffloadArch::SM_110f:
-    return 1100;
-  case OffloadArch::SM_120:
-  case OffloadArch::SM_120a:
-  case OffloadArch::SM_120f:
-    return 1200;
-  case OffloadArch::SM_121:
-  case OffloadArch::SM_121a:
-  case OffloadArch::SM_121f:
-    return 1210;
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  case OffloadArch::KIND:                                                      \
+    return SM_ID;
+#include "llvm/TargetParser/NVPTXTargetParser.def"
   default:
     break;
   }
   llvm_unreachable("invalid NVIDIA GPU architecture");
 }
 
-bool IsNVIDIAAcceleratedOffloadArch(OffloadArch Arch) {
+static llvm::NVPTX::GPUKind OffloadArchToNVPTXKind(OffloadArch Arch) {
   switch (Arch) {
-  case OffloadArch::SM_90a:
-  case OffloadArch::SM_100a:
-  case OffloadArch::SM_101a:
-  case OffloadArch::SM_103a:
-  case OffloadArch::SM_110a:
-  case OffloadArch::SM_120a:
-  case OffloadArch::SM_121a:
-    return true;
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  case OffloadArch::KIND:                                                      \
+    return llvm::NVPTX::GK_##KIND;
+#include "llvm/TargetParser/NVPTXTargetParser.def"
   default:
-    return false;
+    return llvm::NVPTX::GK_NONE;
   }
 }
 
+bool IsNVIDIAAcceleratedOffloadArch(OffloadArch Arch) {
+  return llvm::NVPTX::isAcceleratedArch(OffloadArchToNVPTXKind(Arch));
+}
+
 bool IsNVIDIAFamilySpecificOffloadArch(OffloadArch Arch) {
-  if (IsNVIDIAAcceleratedOffloadArch(Arch))
-    return true;
-  switch (Arch) {
-  case OffloadArch::SM_100f:
-  case OffloadArch::SM_101f:
-  case OffloadArch::SM_103f:
-  case OffloadArch::SM_110f:
-  case OffloadArch::SM_120f:
-  case OffloadArch::SM_121f:
-    return true;
-  default:
-    return false;
-  }
+  return llvm::NVPTX::isFamilySpecificArch(OffloadArchToNVPTXKind(Arch));
 }
 } // namespace clang

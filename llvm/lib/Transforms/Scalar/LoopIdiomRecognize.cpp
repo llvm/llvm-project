@@ -1870,7 +1870,15 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
     Value *CRCTableGEP =
         Builder.CreateInBoundsGEP(CRCTy, GV, Indexer, "tbl.ptradd");
-    Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+    Instruction *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+
+    // Update MemorySSA since we just created a new load instruction.
+    if (MSSAU) {
+      auto *NewMemAcc = MSSAU->createMemoryAccessInBB(
+          CRCTableLd, /*Definition=*/nullptr, CRCTableLd->getParent(),
+          MemorySSA::Beginning);
+      MSSAU->insertUse(cast<MemoryUse>(NewMemAcc), /*RenameUses=*/true);
+    }
 
     // CRCNext = (CRC (<<|>>) 8) ^ CRCTableLd, or simply CRCTableLd in case of
     // CRC-8.
@@ -1893,6 +1901,8 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     for (PHINode *PN : Cleanup)
       RecursivelyDeleteDeadPHINode(PN);
     SE->forgetLoop(CurLoop);
+    if (MSSAU && VerifyMemorySSA)
+      MSSAU->getMemorySSA()->verifyMemorySSA();
   }
 }
 
