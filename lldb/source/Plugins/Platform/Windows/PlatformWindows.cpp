@@ -8,6 +8,7 @@
 
 #include "PlatformWindows.h"
 
+#include <chrono>
 #include <cstdio>
 #include <optional>
 #if defined(_WIN32)
