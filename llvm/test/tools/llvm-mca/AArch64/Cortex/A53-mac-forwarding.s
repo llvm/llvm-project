@@ -175,12 +175,12 @@ madd	x0, x0, x2, x3
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      601
+# CHECK-NEXT: Total Cycles:      401
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.17
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    0.25
+# CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [10] Code Region - madd-w-accumulator
