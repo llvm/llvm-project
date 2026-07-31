@@ -400,13 +400,9 @@ uint64_t DataExtractor::GetU64_unchecked(offset_t *offset_ptr) const {
 void *DataExtractor::GetU16(offset_t *offset_ptr, void *void_dst,
                             uint32_t count) const {
   const size_t src_size = sizeof(uint16_t) * count;
-  // GetData() returns a pointer to an arbitrary byte offset within the
-  // underlying buffer, so it carries no guarantee of being aligned for a
-  // uint16_t. Both the source and the caller-supplied destination are
-  // therefore treated as raw bytes: reading or writing a uint16_t through a
-  // typed pointer that is not 2-byte aligned is undefined behavior (and is
-  // flagged by UBSan's alignment check). Access each element through a byte
-  // pointer and copy it with memcpy, which imposes no alignment requirement.
+  // GetData() and void_dst are only byte-aligned, so read and write through
+  // byte pointers and memcpy each swapped value to avoid forming a misaligned
+  // typed pointer.
   const uint8_t *src =
       static_cast<const uint8_t *>(GetData(offset_ptr, src_size));
   if (src) {
@@ -453,13 +449,7 @@ uint32_t DataExtractor::GetU32(offset_t *offset_ptr) const {
 void *DataExtractor::GetU32(offset_t *offset_ptr, void *void_dst,
                             uint32_t count) const {
   const size_t src_size = sizeof(uint32_t) * count;
-  // GetData() returns a pointer to an arbitrary byte offset within the
-  // underlying buffer, so it carries no guarantee of being aligned for a
-  // uint32_t. Both the source and the caller-supplied destination are
-  // therefore treated as raw bytes: reading or writing a uint32_t through a
-  // typed pointer that is not 4-byte aligned is undefined behavior (and is
-  // flagged by UBSan's alignment check). Access each element through a byte
-  // pointer and copy it with memcpy, which imposes no alignment requirement.
+  // Byte-aligned access only; see GetU16.
   const uint8_t *src =
       static_cast<const uint8_t *>(GetData(offset_ptr, src_size));
   if (src) {
@@ -505,13 +495,7 @@ uint64_t DataExtractor::GetU64(offset_t *offset_ptr) const {
 void *DataExtractor::GetU64(offset_t *offset_ptr, void *void_dst,
                             uint32_t count) const {
   const size_t src_size = sizeof(uint64_t) * count;
-  // GetData() returns a pointer to an arbitrary byte offset within the
-  // underlying buffer, so it carries no guarantee of being aligned for a
-  // uint64_t. Both the source and the caller-supplied destination are
-  // therefore treated as raw bytes: reading or writing a uint64_t through a
-  // typed pointer that is not 8-byte aligned is undefined behavior (and is
-  // flagged by UBSan's alignment check). Access each element through a byte
-  // pointer and copy it with memcpy, which imposes no alignment requirement.
+  // Byte-aligned access only; see GetU16.
   const uint8_t *src =
       static_cast<const uint8_t *>(GetData(offset_ptr, src_size));
   if (src) {
