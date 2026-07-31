@@ -90,6 +90,33 @@ static inline uint64_t ReadMaxInt64(const uint8_t *data, size_t byte_size,
   return res;
 }
 
+/// Implements DataExtractor::GetU16/GetU32/GetU64(offset_ptr, dst, count); see
+/// DataExtractor.h for the contract.
+///
+/// \a data's buffer and \a dst are only byte-aligned, so every value is
+/// transferred with memcpy: loading or storing a \c T through a pointer that is
+/// not sizeof(T)-aligned is undefined behavior, and trips UBSan.
+template <typename T>
+static void *GetUInt(const DataExtractor &data, offset_t *offset_ptr, void *dst,
+                     uint32_t count) {
+  const size_t src_size = sizeof(T) * count;
+  const uint8_t *src =
+      static_cast<const uint8_t *>(data.GetData(offset_ptr, src_size));
+  if (!src)
+    return nullptr;
+
+  if (data.GetByteOrder() == endian::InlHostByteOrder()) {
+    memcpy(dst, src, src_size);
+  } else {
+    uint8_t *dst_bytes = static_cast<uint8_t *>(dst);
+    for (uint32_t i = 0; i < count; ++i) {
+      T value = ReadSwap<T>(src, i * sizeof(T));
+      memcpy(dst_bytes + i * sizeof(T), &value, sizeof(T));
+    }
+  }
+  return dst;
+}
+
 DataExtractor::DataExtractor()
     : m_byte_order(endian::InlHostByteOrder()), m_addr_size(sizeof(void *)),
       m_data_sp() {}
@@ -361,35 +388,9 @@ uint64_t DataExtractor::GetU64_unchecked(offset_t *offset_ptr) const {
   return val;
 }
 
-// Extract "count" uint16_t values from the binary data and update the offset
-// pointed to by "offset_ptr". The extracted data is copied into "dst".
-//
-// RETURNS the non-nullptr buffer pointer upon successful extraction of
-// all the requested bytes, or nullptr when the data is not available in the
-// buffer due to being out of bounds, or insufficient data.
-void *DataExtractor::GetU16(offset_t *offset_ptr, void *void_dst,
+void *DataExtractor::GetU16(offset_t *offset_ptr, void *dst,
                             uint32_t count) const {
-  const size_t src_size = sizeof(uint16_t) * count;
-  // GetData() and void_dst are only byte-aligned, so read and write through
-  // byte pointers and memcpy each swapped value to avoid forming a misaligned
-  // typed pointer.
-  const uint8_t *src =
-      static_cast<const uint8_t *>(GetData(offset_ptr, src_size));
-  if (src) {
-    if (m_byte_order != endian::InlHostByteOrder()) {
-      uint8_t *dst_pos = static_cast<uint8_t *>(void_dst);
-      for (uint32_t i = 0; i < count; ++i) {
-        uint16_t value = ReadSwap<uint16_t>(src, i * sizeof(uint16_t));
-        memcpy(dst_pos + i * sizeof(uint16_t), &value, sizeof(value));
-      }
-    } else {
-      memcpy(void_dst, src, src_size);
-    }
-    // Return a non-nullptr pointer to the converted data as an indicator of
-    // success
-    return void_dst;
-  }
-  return nullptr;
+  return GetUInt<uint16_t>(*this, offset_ptr, dst, count);
 }
 
 // Extract a single uint32_t from the data and update the offset pointed to by
@@ -410,33 +411,9 @@ uint32_t DataExtractor::GetU32(offset_t *offset_ptr) const {
   return val;
 }
 
-// Extract "count" uint32_t values from the binary data and update the offset
-// pointed to by "offset_ptr". The extracted data is copied into "dst".
-//
-// RETURNS the non-nullptr buffer pointer upon successful extraction of
-// all the requested bytes, or nullptr when the data is not available in the
-// buffer due to being out of bounds, or insufficient data.
-void *DataExtractor::GetU32(offset_t *offset_ptr, void *void_dst,
+void *DataExtractor::GetU32(offset_t *offset_ptr, void *dst,
                             uint32_t count) const {
-  const size_t src_size = sizeof(uint32_t) * count;
-  // Byte-aligned access only; see GetU16.
-  const uint8_t *src =
-      static_cast<const uint8_t *>(GetData(offset_ptr, src_size));
-  if (src) {
-    if (m_byte_order != endian::InlHostByteOrder()) {
-      uint8_t *dst_pos = static_cast<uint8_t *>(void_dst);
-      for (uint32_t i = 0; i < count; ++i) {
-        uint32_t value = ReadSwap<uint32_t>(src, i * sizeof(uint32_t));
-        memcpy(dst_pos + i * sizeof(uint32_t), &value, sizeof(value));
-      }
-    } else {
-      memcpy(void_dst, src, src_size);
-    }
-    // Return a non-nullptr pointer to the converted data as an indicator of
-    // success
-    return void_dst;
-  }
-  return nullptr;
+  return GetUInt<uint32_t>(*this, offset_ptr, dst, count);
 }
 
 // Extract a single uint64_t from the data and update the offset pointed to by
@@ -457,32 +434,9 @@ uint64_t DataExtractor::GetU64(offset_t *offset_ptr) const {
   return val;
 }
 
-// GetU64
-//
-// Get multiple consecutive 64 bit values. Return true if the entire read
-// succeeds and increment the offset pointed to by offset_ptr, else return
-// false and leave the offset pointed to by offset_ptr unchanged.
-void *DataExtractor::GetU64(offset_t *offset_ptr, void *void_dst,
+void *DataExtractor::GetU64(offset_t *offset_ptr, void *dst,
                             uint32_t count) const {
-  const size_t src_size = sizeof(uint64_t) * count;
-  // Byte-aligned access only; see GetU16.
-  const uint8_t *src =
-      static_cast<const uint8_t *>(GetData(offset_ptr, src_size));
-  if (src) {
-    if (m_byte_order != endian::InlHostByteOrder()) {
-      uint8_t *dst_pos = static_cast<uint8_t *>(void_dst);
-      for (uint32_t i = 0; i < count; ++i) {
-        uint64_t value = ReadSwap<uint64_t>(src, i * sizeof(uint64_t));
-        memcpy(dst_pos + i * sizeof(uint64_t), &value, sizeof(value));
-      }
-    } else {
-      memcpy(void_dst, src, src_size);
-    }
-    // Return a non-nullptr pointer to the converted data as an indicator of
-    // success
-    return void_dst;
-  }
-  return nullptr;
+  return GetUInt<uint64_t>(*this, offset_ptr, dst, count);
 }
 
 uint32_t DataExtractor::GetMaxU32(offset_t *offset_ptr,
