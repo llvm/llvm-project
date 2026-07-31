@@ -124,20 +124,24 @@ public:
   /// slot.
   /// SlotIndex is the 0-based index of the prefetch instruction (0-15).
   /// CodeSizeBytes is the total code size in bytes.
+  /// PrefetchBlockOffset is the byte offset of the first prefetch instruction
+  /// from the function entry.
   /// Returns the requested cacheline count minus one, encoded for the 5-bit
   /// sdata field.
   static const AMDGPUMCExpr *
   createPrefetchCachelines(const MCExpr *SlotIndex, const MCExpr *CodeSizeBytes,
-                           MCContext &Ctx);
+                           const MCExpr *PrefetchBlockOffset, MCContext &Ctx);
 
   /// Create an expression for computing the byte offset for a prefetch slot.
   /// SlotIndex is the 0-based index of the prefetch instruction (0-15).
   /// CodeSizeBytes is the total code size in bytes.
-  /// Returns the cumulative byte offset where this slot should start
-  /// prefetching.
-  static const AMDGPUMCExpr *createPrefetchOffset(const MCExpr *SlotIndex,
-                                                  const MCExpr *CodeSizeBytes,
-                                                  MCContext &Ctx);
+  /// PrefetchBlockOffset is the byte offset of the first prefetch instruction
+  /// from the function entry.
+  /// Returns the byte offset from the PC of the corresponding prefetch
+  /// instruction to where this slot should start prefetching.
+  static const AMDGPUMCExpr *
+  createPrefetchOffset(const MCExpr *SlotIndex, const MCExpr *CodeSizeBytes,
+                       const MCExpr *PrefetchBlockOffset, MCContext &Ctx);
 
   static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
                                        MCContext &Ctx);

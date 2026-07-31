@@ -477,8 +477,13 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         constexpr unsigned OffsetIdx = 0;
         constexpr unsigned SdataIdx = 2;
 
-        // The sdata operand contains the slot index (0-15) set by the pass.
+        // The sdata operand contains the slot index [0, N) set by the pass.
         int64_t SlotIndex = TmpInst.getOperand(SdataIdx).getImm();
+
+        // If this is the first slot, emit the prefetch block start symbol
+        // before the instruction.
+        if (SlotIndex == 0)
+          OutStreamer->emitLabel(getPrefetchBlockStartSym());
 
         // Create MCExpr for code size using label subtraction.
         // This gives the exact code size at assembly time.
@@ -490,12 +495,18 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
         const MCExpr *SlotIndexExpr =
             MCConstantExpr::create(SlotIndex, OutContext);
 
+        // Create MCExpr for the offset of the first prefetch instruction in the
+        // function.
+        const MCExpr *PrefetchBlockOffset = MCBinaryExpr::createSub(
+            MCSymbolRefExpr::create(getPrefetchBlockStartSym(), OutContext),
+            MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
+
         // Create MCExprs that will be evaluated at fixup time when symbol
         // positions are known.
         const MCExpr *CachelinesExpr = AMDGPUMCExpr::createPrefetchCachelines(
-            SlotIndexExpr, CodeSizeExpr, OutContext);
+            SlotIndexExpr, CodeSizeExpr, PrefetchBlockOffset, OutContext);
         const MCExpr *OffsetExpr = AMDGPUMCExpr::createPrefetchOffset(
-            SlotIndexExpr, CodeSizeExpr, OutContext);
+            SlotIndexExpr, CodeSizeExpr, PrefetchBlockOffset, OutContext);
 
         // Replace the offset and sdata operands with MCExprs.
         TmpInst.getOperand(OffsetIdx) = MCOperand::createExpr(OffsetExpr);

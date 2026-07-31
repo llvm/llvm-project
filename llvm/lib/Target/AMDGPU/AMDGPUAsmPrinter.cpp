@@ -193,10 +193,13 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   const GCNSubtarget &STM = MF->getSubtarget<GCNSubtarget>();
   const Function &F = MF->getFunction();
 
-  // If ICache prefetch is enabled, create the function end symbol early so
-  // it can be referenced by the prefetch MCExprs during instruction emission.
-  if (MFI.hasICachePrefetch())
+  // If ICache prefetch is enabled, create the function end symbol and prefetch
+  // block start symbol early so it can be referenced by the prefetch MCExprs
+  // during instruction emission.
+  if (MFI.hasICachePrefetch()) {
     PrefetchEndSym = createTempSymbol("pref_func_end");
+    PrefetchBlockStartSym = createTempSymbol("pref_block_start");
+  }
 
   // TODO: We're checking this late, would be nice to check it earlier.
   if (STM.requiresCodeObjectV6() && CodeObjectVersion < AMDGPU::AMDHSA_COV6) {
@@ -230,8 +233,9 @@ void AMDGPUAsmPrinter::emitFunctionBodyEnd() {
   // This symbol was created in emitFunctionBodyStart for this function.
   if (PrefetchEndSym) {
     OutStreamer->emitLabel(PrefetchEndSym);
-    PrefetchEndSym = nullptr;
   }
+  PrefetchEndSym = nullptr;
+  PrefetchBlockStartSym = nullptr;
 }
 
 /// Set bits in a kernel descriptor MCExpr field:
