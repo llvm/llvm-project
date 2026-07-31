@@ -121,6 +121,7 @@ TEST(LlvmLibcFloat128Test, IntegerConversion) {
   ASSERT_EQ(static_cast<int>(Float128(-1e-300)), 0);
   ASSERT_EQ(static_cast<int>(Float128(0.5)), 0);
   ASSERT_EQ(static_cast<int>(Float128(-0.5)), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
 }
 
 TEST(LlvmLibcFloat128Test, FromIntegralTypes) {
@@ -139,4 +140,5 @@ TEST(LlvmLibcFloat128Test, FromIntegralTypes) {
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   ASSERT_EQ(static_cast<unsigned>(Float128(2147483648.0)), 2147483648U);
+  EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
 }
