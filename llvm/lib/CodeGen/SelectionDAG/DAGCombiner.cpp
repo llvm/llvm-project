@@ -20062,6 +20062,11 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
   if (VT != N1.getValueType())
     return SDValue();
 
+  // ppcf128 has two sign bits (in bits 127 and 63), the logic below is invalid.
+  EVT SVT = VT.getScalarType();
+  if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
+    return SDValue();
+
   // If this is equivalent to a disjoint or, replace it with one. This can
   // happen if the sign operand is a sign mask (i.e., x << sign_bit_position).
   if (DAG.SignBitIsZeroFP(N0) &&
