@@ -15821,7 +15821,7 @@ public:
       return;
     Value *SplatVal = E->Scalars.front();
     if (isa<VectorType>(SplatVal->getType()) ||
-        !isa<ExtractElementInst>(SplatVal))
+        isa<ExtractElementInst>(SplatVal))
       return;
     SmallVector<TreeEntry *> MatchingTEs;
     for (const auto &TE : R.VectorizableTree) {
