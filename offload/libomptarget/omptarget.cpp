@@ -881,9 +881,9 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
     // \p AllowHostPointer permits the lookup to succeed for storage shared with
     // the host. That is correct for the pointer being attached: the device
     // dereferences the same storage, so attaching writes the device pointee
-    // address into it and the original value is restored at the end of the region
-    // through the shadow-pointer mechanism. It is not correct for the pointee,
-    // where a host address would mean there is nothing to attach to.
+    // address into it and the original value is restored at the end of the
+    // region through the shadow-pointer mechanism. It is not correct for the
+    // pointee, where a host address would mean there is nothing to attach to.
     auto LookupTargetPointer =
         [&](void *Ptr, int64_t Size, const char *PtrType,
             bool AllowHostPointer) -> std::optional<TargetPointerResultTy> {
@@ -998,9 +998,9 @@ postProcessingTargetDataEnd(DeviceTy *Device,
   for (auto &[HstPtrBegin, DataSize, ArgType, TPR] : EntriesInfo) {
     // The reuse entry recorded on the unified-shared-memory host path has no
     // device allocation, but it does occupy a slot in the mapping table and has
-    // to be reclaimed with the region that created it. Otherwise it lingers with
-    // a zero reference count and a later map(close, ...) of the same storage
-    // finds it and concludes the data is already on the device.
+    // to be reclaimed with the region that created it. Otherwise it lingers
+    // with a zero reference count and a later map(close, ...) of the same
+    // storage finds it and concludes the data is already on the device.
     const bool IsHostBackedEntry =
         TPR.getEntry() != nullptr &&
         TPR.getEntry()->TgtAllocBegin == TPR.getEntry()->HstPtrBegin;

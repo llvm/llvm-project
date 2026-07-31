@@ -31,7 +31,7 @@ int enter_var;
 
 // enter_var with USM: pointer-reference indirection
 // HOST-DAG: @enter_var_decl_tgt_ref_ptr = weak global ptr @enter_var
-// HOST-DAG: @.offloading.entry.enter_var_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr @enter_var_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i64 0, ptr null }, section "llvm_offload_entries"
+// HOST-DAG: @.offloading.entry.enter_var_decl_tgt_ref_ptr = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 1, i32 0, ptr @enter_var_decl_tgt_ref_ptr, ptr @.offloading.entry_name{{.*}}, i64 8, i64 4, ptr null }, section "llvm_offload_entries"
 
 // Device: local_var is a direct global, enter_var uses ref ptr
 // DEVICE-DAG: @local_var = protected addrspace(1) global i32 0

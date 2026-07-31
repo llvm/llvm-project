@@ -308,7 +308,8 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       LR.TPR.setEntry(Emplaced.first->HDTT);
 
       // The mapping is new for this construct, which is what pointer attachment
-      // is governed by, so record it even though no device memory was allocated.
+      // is governed by, so record it even though no device memory was
+      // allocated.
       if (Emplaced.second && StateInfo)
         StateInfo->NewMappings[HstPtrBegin] = Size;
       if (Device.notifyDataMapped(HstPtrBegin, Size))

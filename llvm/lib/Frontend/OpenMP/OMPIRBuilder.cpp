@@ -11874,11 +11874,12 @@ std::unique_ptr<CodeExtractor> DeviceSharedMemOutlineInfo::createCodeExtractor(
 void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          uint64_t Size, int32_t Flags,
                                          GlobalValue::LinkageTypes,
-                                         StringRef Name) {
+                                         StringRef Name, uint64_t PointeeSize) {
   if (!Config.isGPU()) {
     llvm::offloading::emitOffloadingEntry(
         M, object::OffloadKind::OFK_OpenMP, ID,
-        Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0);
+        Name.empty() ? Addr->getName() : Name, Size, Flags,
+        /*Data=*/PointeeSize);
     return;
   }
   // TODO: Add support for global variables on the device after declare target
@@ -12051,7 +12052,8 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
                            Flags, CE->getLinkage(), CE->getVarName());
       else
         createOffloadEntry(CE->getAddress(), CE->getAddress(), CE->getVarSize(),
-                           Flags, CE->getLinkage());
+                           Flags, CE->getLinkage(), /*Name=*/"",
+                           CE->getPointeeSize());
 
     } else {
       llvm_unreachable("Unsupported entry kind.");
@@ -12224,6 +12226,7 @@ void OpenMPIRBuilder::registerTargetGlobalVariable(
   OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind Flags;
   StringRef VarName;
   int64_t VarSize;
+  int64_t PointeeSize = 0;
   GlobalValue::LinkageTypes Linkage;
 
   if ((CaptureClause == OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo ||
@@ -12280,10 +12283,25 @@ void OpenMPIRBuilder::registerTargetGlobalVariable(
     }
     VarSize = M.getDataLayout().getPointerSize();
     Linkage = GlobalValue::WeakAnyLinkage;
+
+    // Under unified shared memory Addr is a device reference pointer to the
+    // host variable, so VarSize above is the size of that pointer. Record the
+    // size of the variable itself as well: the runtime needs it to register the
+    // variable's storage, which is what a map of the variable refers to.
+    //
+    // This only applies to storage that lives on the host for the whole
+    // program. A "declare target link" variable without unified shared memory
+    // is also reached through a reference pointer, but its storage is on the
+    // device, so there is nothing for the runtime to register here.
+    if (Config.hasRequiresUnifiedSharedMemory() && !IsDeclaration &&
+        !Config.isTargetDevice())
+      if (GlobalValue *LlvmVal = M.getNamedValue(MangledName))
+        PointeeSize = divideCeil(
+            M.getDataLayout().getTypeSizeInBits(LlvmVal->getValueType()), 8);
   }
 
-  OffloadInfoManager.registerDeviceGlobalVarEntryInfo(VarName, Addr, VarSize,
-                                                      Flags, Linkage);
+  OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
+      VarName, Addr, VarSize, Flags, Linkage, PointeeSize);
 }
 
 /// Loads all the offload entries information from the host IR
@@ -12728,7 +12746,8 @@ void OffloadEntriesInfoManager::initializeDeviceGlobalVarEntryInfo(
 
 void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
     StringRef VarName, Constant *Addr, int64_t VarSize,
-    OMPTargetGlobalVarEntryKind Flags, GlobalValue::LinkageTypes Linkage) {
+    OMPTargetGlobalVarEntryKind Flags, GlobalValue::LinkageTypes Linkage,
+    int64_t PointeeSize) {
   if (OMPBuilder->Config.isTargetDevice()) {
     // This could happen if the device compilation is invoked standalone.
     if (!hasDeviceGlobalVarEntryInfo(VarName))
@@ -12742,6 +12761,7 @@ void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
       return;
     }
     Entry.setVarSize(VarSize);
+    Entry.setPointeeSize(PointeeSize);
     Entry.setLinkage(Linkage);
     Entry.setAddress(Addr);
   } else {
@@ -12764,6 +12784,7 @@ void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
     else
       OffloadEntriesDeviceGlobalVar.try_emplace(
           VarName, OffloadingEntriesNum, Addr, VarSize, Flags, Linkage, "");
+    OffloadEntriesDeviceGlobalVar[VarName].setPointeeSize(PointeeSize);
     ++OffloadingEntriesNum;
   }
 }

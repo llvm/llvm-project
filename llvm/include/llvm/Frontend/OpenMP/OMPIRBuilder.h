@@ -423,6 +423,9 @@ public:
   class OffloadEntryInfoDeviceGlobalVar final : public OffloadEntryInfo {
     /// Type of the global variable.
     int64_t VarSize;
+    /// Size of the variable a device reference pointer refers to, or 0 when the
+    /// entry describes the variable itself. See createOffloadEntry().
+    int64_t PointeeSize = 0;
     GlobalValue::LinkageTypes Linkage;
     const std::string VarName;
 
@@ -445,6 +448,8 @@ public:
     int64_t getVarSize() const { return VarSize; }
     StringRef getVarName() const { return VarName; }
     void setVarSize(int64_t Size) { VarSize = Size; }
+    int64_t getPointeeSize() const { return PointeeSize; }
+    void setPointeeSize(int64_t Size) { PointeeSize = Size; }
     GlobalValue::LinkageTypes getLinkage() const { return Linkage; }
     void setLinkage(GlobalValue::LinkageTypes LT) { Linkage = LT; }
     static bool classof(const OffloadEntryInfo *Info) {
@@ -460,7 +465,8 @@ public:
   /// Register device global variable entry.
   LLVM_ABI void registerDeviceGlobalVarEntryInfo(
       StringRef VarName, Constant *Addr, int64_t VarSize,
-      OMPTargetGlobalVarEntryKind Flags, GlobalValue::LinkageTypes Linkage);
+      OMPTargetGlobalVarEntryKind Flags, GlobalValue::LinkageTypes Linkage,
+      int64_t PointeeSize = 0);
   /// Checks if the variable with the given name has been registered already.
   bool hasDeviceGlobalVarEntryInfo(StringRef VarName) const {
     return OffloadEntriesDeviceGlobalVar.count(VarName) > 0;
@@ -3014,9 +3020,16 @@ public:
 
   /// Creates offloading entry for the provided entry ID \a ID, address \a
   /// Addr, size \a Size, and flags \a Flags.
+  ///
+  /// \a PointeeSize is nonzero only for a declare-target variable under unified
+  /// shared memory, where \a Addr is a device reference pointer to the host
+  /// variable and \a Size is therefore the size of that pointer. It carries the
+  /// size of the variable itself, which the runtime needs in order to register
+  /// the variable's storage rather than the pointer's.
   LLVM_ABI void createOffloadEntry(Constant *ID, Constant *Addr, uint64_t Size,
                                    int32_t Flags, GlobalValue::LinkageTypes,
-                                   StringRef Name = "");
+                                   StringRef Name = "",
+                                   uint64_t PointeeSize = 0);
 
   /// The kind of errors that can occur when emitting the offload entries and
   /// metadata.

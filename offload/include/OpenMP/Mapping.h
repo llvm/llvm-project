@@ -562,8 +562,8 @@ public:
     return findEntryForPtr(Ptr, NewAllocations);
   }
 
-  /// Check if a pointer's mapping was newly created in this construct, whether or
-  /// not device memory was allocated for it. Used by pointer attachment.
+  /// Check if a pointer's mapping was newly created in this construct, whether
+  /// or not device memory was allocated for it. Used by pointer attachment.
   std::optional<std::pair<void *, int64_t>> wasNewlyMapped(void *Ptr) const {
     if (auto Alloc = findEntryForPtr(Ptr, NewAllocations))
       return Alloc;

@@ -516,6 +516,36 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           CurrDeviceEntryAddr = DevPtr;
         }
 
+        // Under unified shared memory a declare-target variable is represented
+        // on the device by a reference pointer to the host storage, so the
+        // entry below describes that pointer. Code generation records the size
+        // of the variable itself in Data; register its storage as well, so that
+        // it is reported as present and a mapping of it, or of part of it, is
+        // recognized as referring to storage already on the device.
+        //
+        // The host copy of the reference pointer holds the variable's address,
+        // so no device read is needed to find it.
+        if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
+             PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) &&
+            CurrHostEntry->Data) {
+          void *HostVar = *reinterpret_cast<void **>(CurrHostEntry->Address);
+          uint64_t VarSize = CurrHostEntry->Data;
+
+          ODBG(ODT_Mapping)
+              << "Add mapping from host " << HostVar << " to device " << HostVar
+              << " with size " << VarSize << ", name \""
+              << CurrDeviceEntry->SymbolName << "\" (declare-target storage)";
+
+          HDTTMap->emplace(new HostDataToTargetTy(
+              (uintptr_t)HostVar, (uintptr_t)HostVar,
+              (uintptr_t)HostVar + VarSize, (uintptr_t)HostVar,
+              (uintptr_t)HostVar, false /*UseHoldRefCount*/,
+              CurrHostEntry->SymbolName, true /*IsRefCountINF*/));
+
+          if (Device.notifyDataMapped(HostVar, VarSize))
+            return OFFLOAD_FAIL;
+        }
+
         ODBG(ODT_Mapping) << "Add mapping from host " << CurrHostEntry->Address
                           << " to device " << CurrDeviceEntry->Address
                           << " with size " << CurrDeviceEntry->Size

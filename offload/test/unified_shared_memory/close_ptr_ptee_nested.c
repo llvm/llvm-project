@@ -84,11 +84,10 @@ int main() {
   printf("After tgt: p %s p_host\n", p == &x[0] ? "==" : "!=");
   printf("p[0] = %d\n", x[0]);
 
-  // When the pointee has a device allocation of its own, the pointer is attached
-  // to it and its original host value is restored at the end of the region.
-  // ATTACHED: ATTACH entry {{.*}} processed successfully
-  // ATTACHED: Restoring host pointer
-
+  // When the pointee has a device allocation of its own, the pointer is
+  // attached to it and its original host value is restored at the end of the
+  // region. ATTACHED: ATTACH entry {{.*}} processed successfully ATTACHED:
+  // Restoring host pointer
 
   // ALL: Before tgt: p == p_host
 
