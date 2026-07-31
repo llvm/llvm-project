@@ -39,7 +39,7 @@ define void @test_full() {
   %idx64 = zext i32 %idx to i64
   %idx2_64 = zext i32 %idx2 to i64
 
-  ; Insertelement with dynamic index spills to stack
+  ; Insertelement with dynamic index spills to stack.
   ; CHECK: %[[#inserted:]] = OpVectorInsertDynamic %[[#vec17]] %[[#loaded]] %[[#val_val]] %[[#idx64]]
   %inserted = insertelement <17 x i32> %loaded, i32 %val, i64 %idx64
 
