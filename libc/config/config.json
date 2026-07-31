@@ -73,6 +73,10 @@
     "LIBC_CONF_SCANF_DISABLE_INDEX_MODE": {
       "value": false,
       "doc": "Disable index mode in the scanf format string."
+    },
+    "LIBC_CONF_SCANF_PROVIDE_ISO99_ALIASES": {
+      "value": false,
+      "doc": "Add __iso99_* aliases for scanf's functions."
     }
   },
   "str_to_float": {
