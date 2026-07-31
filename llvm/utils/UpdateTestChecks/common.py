@@ -2964,17 +2964,18 @@ def get_check_prefix_order(all_run_lines):
                 continue
             seen.add(prefix)
             prefix_order.append(prefix)
-    return prefix_order
+    if not prefix_order:
+        return None
+    return {prefix: index for index, prefix in enumerate(prefix_order)}
 
 
 def sort_check_blocks(lines, all_run_lines, comment_string):
     """Reorder per-prefix check blocks at function starts to match RUN-line order."""
     # Preserve the first-seen FileCheck prefix order implied by the full set of
     # RUN lines, not just any selected subset being regenerated.
-    prefix_order = get_check_prefix_order(all_run_lines)
-    if not prefix_order:
+    ordered_prefixes = get_check_prefix_order(all_run_lines)
+    if not ordered_prefixes:
         return lines
-    ordered_prefixes = {prefix: index for index, prefix in enumerate(prefix_order)}
 
     FUNCTION_START = object()
     PROLOGUE_NON_CHECK = object()
