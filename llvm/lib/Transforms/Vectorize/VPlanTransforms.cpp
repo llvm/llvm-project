@@ -5418,8 +5418,10 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
              "all members in group must agree on IsSingleScalar");
       VPValue *Mask = Group[I]->getMask();
       VPValue *Value = Group[I]->getOperand(0);
-      SelectedValue = Builder.createSelect(Mask, Value, SelectedValue,
-                                           Group[I]->getDebugLoc());
+      SelectedValue = Builder.createSelect(
+          Mask, Value, SelectedValue, Group[I]->getDebugLoc(), "",
+          VPIRFlags::getDefaultFlags(Instruction::Select,
+                                     Value->getScalarType()));
     }
 
     // Find the store with minimum alignment to use.
