@@ -72,6 +72,39 @@ namespace llvm {
     PPCDoubleDouble,
   };
 
+  /// Returns the IR floating-point type name for a LongDoubleFormat.
+  inline StringRef getLongDoubleFormatName(LongDoubleFormat Format) {
+    switch (Format) {
+    case LongDoubleFormat::IEEEsingle:
+      return "float";
+    case LongDoubleFormat::IEEEdouble:
+      return "double";
+    case LongDoubleFormat::X87DoubleExtended:
+      return "x86_fp80";
+    case LongDoubleFormat::IEEEquad:
+      return "fp128";
+    case LongDoubleFormat::PPCDoubleDouble:
+      return "ppc_fp128";
+    }
+    return "";
+  }
+
+  /// Parses an IR floating-point type name into a LongDoubleFormat, returning
+  /// std::nullopt if it does not name a supported long double format.
+  inline std::optional<LongDoubleFormat> parseLongDoubleFormat(StringRef Name) {
+    if (Name == "float")
+      return LongDoubleFormat::IEEEsingle;
+    if (Name == "double")
+      return LongDoubleFormat::IEEEdouble;
+    if (Name == "x86_fp80")
+      return LongDoubleFormat::X87DoubleExtended;
+    if (Name == "fp128")
+      return LongDoubleFormat::IEEEquad;
+    if (Name == "ppc_fp128")
+      return LongDoubleFormat::PPCDoubleDouble;
+    return std::nullopt;
+  }
+
   namespace FloatABI {
   enum ABIType {
     Default, // Target-specific (either soft or hard depending on triple, etc).

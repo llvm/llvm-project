@@ -370,6 +370,8 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
+- Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
+  format warnings to errors. (#GH211943)
 
 #### Bug Fixes to Attribute Support
 
@@ -379,6 +381,7 @@ features cannot lower the translation-unit ABI level;
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
+- Propagate attributes on redeclarations across modules.
 
 #### Bug Fixes to C++ Support
 
@@ -493,6 +496,9 @@ features cannot lower the translation-unit ABI level;
 ### AST Matchers
 
 ### clang-format
+
+- Add `SpacesInBlockComments` option to control spacing after `/*` and
+  before `*/` in ordinary block comments.
 
 ### libclang
 

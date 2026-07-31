@@ -5288,7 +5288,12 @@ private:
                       continue;
                     for (ScheduleCopyableData *CD :
                          getScheduleCopyableData(In, U.getOperandNo(), OpI)) {
-                      DecrUnsched(CD, /*IsControl=*/false);
+                      // Deps of reassoc scalars modeled as copyable tree
+                      // operands are released by the operand scan above;
+                      // release each remaining dep only once.
+                      if (Checked.insert(std::make_pair(CD, U.getOperandNo()))
+                              .second)
+                        DecrUnsched(CD, /*IsControl=*/false);
                       ReleasedAsCopyable = true;
                     }
                   }
@@ -11333,9 +11338,12 @@ class InstructionsCompatibilityAnalysis {
       return {V, V};
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
-    // fmuladd(0.0, -0.0, V) == V.
     if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
       Type *Ty = MainOp->getType();
+      // fmuladd(V, 1.0, -0.0) == V.
+      if (S.getCopyableOpIdx() == 0)
+        return {V, ConstantFP::get(Ty, 1.0), ConstantFP::getNegativeZero(Ty)};
+      // fmuladd(0.0, -0.0, V) == V.
       return {ConstantFP::getZero(Ty), ConstantFP::getNegativeZero(Ty), V};
     }
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
@@ -11858,7 +11866,7 @@ public:
         return OrigS;
       return S;
     }
-    // fmuladd is the only 3-operand copyable; the value sits in the addend.
+    // fmuladd is the only 3-operand copyable.
     assert((Operands.size() == 2 ||
             (Operands.size() == 3 &&
              RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
@@ -11911,8 +11919,9 @@ public:
         }
       }
     }
-    // 2. Check, if operands can be vectorized. Skip for fmuladd; its addend
-    // is checked below and may legitimately hold many instructions.
+    // 2. Check, if operands can be vectorized. Skip for fmuladd; the
+    // copyable operand is checked below and may legitimately hold many
+    // instructions.
     if (Operands.size() == 2 &&
         count_if(Operands.back(), IsaPred<Instruction>) > 1)
       return OrigS;
@@ -11949,10 +11958,16 @@ public:
           count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
       return CopyableNum <= VL.size() / 2;
     };
-    // Check the addend for fmuladd, first operand otherwise.
-    if (!CheckOperand(Operands.size() == 2 ? Operands.front()
-                                           : Operands.back()))
-      return OrigS;
+    // Check the operand holding the copyable values.
+    if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
+      if (Operands.size() == 2)
+        return OrigS;
+      // Retry with the copyable modeled as the first multiplicand.
+      S.setCopyableOpIdx(0);
+      Operands = buildOperands(S, VL);
+      if (!CheckOperand(Operands[S.getCopyableOpIdx()]))
+        return OrigS;
+    }
 
     return S;
   }
