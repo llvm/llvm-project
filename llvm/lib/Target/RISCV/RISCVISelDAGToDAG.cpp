@@ -23,6 +23,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <queue>
 
 using namespace llvm;
 
@@ -555,6 +556,91 @@ void RISCVDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
                 CurDAG->getMachineNode(PseudoOpCode, DL, XLenVT,
                                        Node->getOperand(1), Log2SEW, TWiden));
   }
+}
+
+bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
+  using namespace SDPatternMatch;
+
+  EVT VT = Node->getValueType(0);
+  SDLoc DL(Node);
+
+  APInt ConstMask;
+
+  // auto m_AddOrSub = [](Value_match N0 = m_Value(), Value_match N1 =
+  // m_Value(),
+  //                      Value_match N2 = m_Value(), Value_match N3 =
+  //                      m_Value()) {
+  //   return m_AnyOf(m_Add(N0, N1), m_Sub(N2, N3));
+  // };
+
+  if (sd_match(Node,
+               m_And(m_Add(m_Value(), m_Value()), m_ConstInt(ConstMask)))) {
+    uint64_t ConstMaskVal = ConstMask.getZExtValue();
+    if (ConstMaskVal != 255 && ConstMaskVal != 65535)
+      return false;
+
+    uint64_t OpCode = (ConstMaskVal == 255) ? RISCV::PADD_B : RISCV::PADD_H;
+
+    std::queue<SDNode *> Worklist;
+    Worklist.push(Node->getOperand(0).getNode());
+
+    std::vector<SDNode *> Ops;
+    while (!Worklist.empty()) {
+      SDNode *CurNode = Worklist.front();
+      Worklist.pop();
+
+      SDValue N0, N1, N2, N3;
+      SDValue A0, A1;
+      if (sd_match(CurNode, m_Add(m_Add(m_Value(N0), m_Value(N1)),
+                                  m_Add(m_Value(N2), m_Value(N3))))) {
+        Worklist.push(N3.getNode());
+        Worklist.push(N2.getNode());
+        Worklist.push(N1.getNode());
+        Worklist.push(N0.getNode());
+      } else if (sd_match(CurNode, m_Add(m_Add(m_Value(N0), m_Value(N1)),
+                                         m_Node(ISD::AssertZext, m_Value(),
+                                                m_Value())))) {
+        Worklist.push(N1.getNode());
+        Worklist.push(N0.getNode());
+        Worklist.push(CurNode->getOperand(1).getNode());
+      } else if (sd_match(
+                     CurNode,
+                     m_Add(m_Node(ISD::AssertZext, m_Value(A0), m_Value()),
+                           m_Node(ISD::AssertZext, m_Value(A1), m_Value())))) {
+        Worklist.push(CurNode->getOperand(0).getNode());
+        Worklist.push(CurNode->getOperand(1).getNode());
+      } else if (sd_match(CurNode,
+                          m_Node(ISD::AssertZext, m_Value(A0), m_Value()))) {
+        Ops.push_back(A0.getNode());
+      }
+    }
+
+    uint64_t Idx = 0, NumOps = Ops.size();
+    bool IsFirst = true;
+
+    SDValue LastOp;
+    while (Idx < NumOps) {
+      SDNode *Op0 = Ops[Idx++];
+      SDValue PAddNode;
+      if (IsFirst) {
+        SDNode *Op1 = Ops[Idx++];
+        PAddNode =
+            SDValue(CurDAG->getMachineNode(OpCode, DL, VT, SDValue(Op0, 0),
+                                           SDValue(Op1, 0)),
+                    0);
+        IsFirst = false;
+      } else {
+        PAddNode = SDValue(
+            CurDAG->getMachineNode(OpCode, DL, VT, LastOp, SDValue(Op0, 0)), 0);
+      }
+      LastOp = PAddNode;
+    }
+
+    ReplaceNode(Node, LastOp.getNode());
+    return true;
+  }
+
+  return false;
 }
 
 bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
@@ -1813,6 +1899,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
 
     if (tryShrinkShlLogicImm(Node))
+      return;
+
+    if (Subtarget->hasStdExtP() && tryPExtNarrowUnsigned(Node))
       return;
 
     break;
