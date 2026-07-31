@@ -1677,11 +1677,10 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   };
 
   switch (CRCStrategy) {
-  default: {
+  default:
     ReportMissed("disabled by user");
     return false;
-  }
-  case CRCStrategyKind::Table: {
+  case CRCStrategyKind::Table:
     // The table strategy is not possible in its current form without a byte-
     // multiple trip count.
     if (Info.TripCount % 8 == 0) {
@@ -1691,13 +1690,11 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     }
     ReportMissed("table strategy forced, but not possible");
     return false;
-  }
-  case CRCStrategyKind::Clmul: {
+  case CRCStrategyKind::Clmul:
     optimizeCRCLoopUsingClmul(Info);
     ReportOptimized("clmul", "forced by user");
     return true;
-  }
-  case CRCStrategyKind::Auto: {
+  case CRCStrategyKind::Auto:
     // When using the auto strategy, bail if we are optimizing for size since
     // there's usually not a clear size benefit.
     // TODO: The clmul optimization is around the same size in many cases, so it
@@ -1722,7 +1719,6 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       ReportOptimized("clmul", "most profitable strategy");
     }
     return true;
-  }
   }
 }
 
