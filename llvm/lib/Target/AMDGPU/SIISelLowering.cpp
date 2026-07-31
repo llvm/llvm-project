@@ -15970,8 +15970,10 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   //   Never quiets: DIV_SCALE passes sNaN through even at MODE.IEEE=1.
   //
   // GFX12+: all exception-producing ops unconditionally quiet sNaN regardless
-  // of MODE.IEEE.
-  const bool IsGFX12Plus = Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12;
+  // of MODE.IEEE.  This coincides with the removal of DX10Clamp/IEEE kernel
+  // descriptor bits, so FeatureDX10ClampAndIEEEMode distinguishes the two.
+  const bool IsGFX12Plus =
+      !Subtarget->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode);
   const bool QuietsSignalNaN =
       IsGFX12Plus ||
       DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>()->getMode().IEEE;
@@ -16200,7 +16202,8 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   //   amdgcn_div_scale: passes sNaN through on pre-GFX12.
   //   All other ops: quiet sNaN only when MODE.IEEE=1 (or unconditionally on
   //   GFX12+).
-  const bool IsGFX12Plus = Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12;
+  const bool IsGFX12Plus =
+      !Subtarget->hasFeature(AMDGPU::FeatureDX10ClampAndIEEEMode);
   const bool QuietsSignalNaN =
       IsGFX12Plus || MF.getInfo<SIMachineFunctionInfo>()->getMode().IEEE;
 
