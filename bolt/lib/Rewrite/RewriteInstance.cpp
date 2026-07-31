@@ -5990,7 +5990,7 @@ void RewriteInstance::patchELFAllocatableRelrSection(
       RelOffset = RelOffset == 0 ? SectionAddress + Rel.Offset : RelOffset;
       assert((RelOffset & 1) == 0 && "Wrong relocation offset");
       RelOffsets.emplace(RelOffset);
-      FixAddend(Section, Rel, RelOffset);
+      FixAddend(Section, Rel, getFileOffsetForAddress(RelOffset));
     }
   }
 

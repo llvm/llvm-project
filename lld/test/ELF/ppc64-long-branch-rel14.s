@@ -5,28 +5,28 @@
 # RUN:       }' > %t.lds
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
-# RUN: ld.lld -z nosort-thunks -T %t.lds %t.o -o %t
+# RUN: ld.lld -T %t.lds %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
-# RUN: ld.lld -z nosort-thunks -pie -T %t.lds %t.o -o %t
+# RUN: ld.lld -pie -T %t.lds %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # SEC: There are no relocations in this file.
 
 # CHECK-LABEL: <_start>:
-# CHECK-NEXT:  2000: bt 2, 0x2020
-# CHECK-NEXT:        bt+ 2, 0x2020
+# CHECK-NEXT:  2000: bt 2, 0x2040
+# CHECK-NEXT:        bt+ 2, 0x2040
 # CHECK-NEXT:        bf 2, 0xa004
-# CHECK-NEXT:        bt 2, 0x2040
+# CHECK-NEXT:        bt 2, 0x2020
 # CHECK-NEXT:        blr
 # CHECK-NEXT:        trap
 # CHECK-NEXT:        trap
 # CHECK-NEXT:        trap
 # CHECK-EMPTY:
-# CHECK-NEXT: <__long_branch_high>:
+# CHECK-NEXT: <__long_branch_>:
 # CHECK-NEXT:  2020: addis 12, 2, 0
 # CHECK-NEXT:        ld 12, {{.*}}(12)
 # CHECK-NEXT:        mtctr 12
@@ -34,7 +34,7 @@
 # CHECK-NEXT:        ...
 # CHECK-EMPTY:
 
-# CHECK-NEXT: <__long_branch_>:
+# CHECK-NEXT: <__long_branch_high>:
 # CHECK-NEXT:  2040: addis 12, 2, 0
 # CHECK-NEXT:        ld 12, {{.*}}(12)
 # CHECK-NEXT:        mtctr 12

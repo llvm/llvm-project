@@ -2786,7 +2786,6 @@ public:
     AU.setPreservesCFG();
     AU.addRequired<UniformityInfoWrapperPass>();
     AU.addPreserved<AAResultsWrapperPass>();
-    AU.addPreserved<BasicAAWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
   }
 };
