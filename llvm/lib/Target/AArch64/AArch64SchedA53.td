@@ -138,10 +138,16 @@ def : WriteRes<WriteVq, [A53UnitFPALU]> { let Latency = 6;
 def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 6; }
 def : WriteRes<WriteFDiv, [A53UnitFPMDS]> { let Latency = 33;
                                             let ReleaseAtCycles = [29]; }
-def A53WriteFMAC : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 10; }
+// FP multiply-accumulate has an 8-cycle result latency, but the MAC pipe reads
+// the addend late and has a dedicated forwarding path that feeds one MAC's
+// result into the next MAC's addend, so a dependent MAC chain recurs every 4
+// cycles. Only the addend forwards; the multiplicands do not.
+def A53WriteFMAC : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 8; }
 // Q-form multiply-accumulate occupies the MAC pipe for two cycles.
-def A53WriteFMACQ : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 10;
+def A53WriteFMACQ : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 8;
                                                     let ReleaseAtCycles = [2]; }
+def A53ReadFPM   : SchedReadAdvance<0>;
+def A53ReadFPMA4 : SchedReadAdvance<4, [A53WriteFMAC, A53WriteFMACQ]>;
 def A53WriteFDivSP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 18;
                                                      let ReleaseAtCycles = [14]; }
 def A53WriteFDivDP : SchedWriteRes<[A53UnitFPMDS]> { let Latency = 33;
@@ -328,13 +334,17 @@ def : InstRW<[A53WriteCrypto], (instregex "^AES[DE]rr$", "^AESI?MCrr$",
                                           "^SHA256H2?rrr$", "^SHA256SU0rr$",
                                           "^SHA256SU1rrr$", "^PMULLv")>;
 
-def : InstRW<[A53WriteFMAC], (instregex "^FN?M(ADD|SUB).*")>;
-def : InstRW<[A53WriteFMAC], (instregex "^FML(A|S)L.*")>;
-def : InstRW<[A53WriteFMAC],
+// The scalar forms take the addend as their third source operand, so only the
+// third read forwards; the ASIMD forms accumulate into the tied destination,
+// which is their first source operand.
+def : InstRW<[A53WriteFMAC, A53ReadFPM, A53ReadFPM, A53ReadFPMA4],
+      (instregex "^FN?M(ADD|SUB).*")>;
+def : InstRW<[A53WriteFMAC, A53ReadFPMA4], (instregex "^FML(A|S)L.*")>;
+def : InstRW<[A53WriteFMAC, A53ReadFPMA4],
       (instregex "^FML(A|S)(v2f32|v4f16)$",
                  "^FML(A|S)v1i(16|32|64)_indexed$",
                  "^FML(A|S)(v2i32|v4i16)_indexed$")>;
-def : InstRW<[A53WriteFMACQ],
+def : InstRW<[A53WriteFMACQ, A53ReadFPMA4],
       (instregex "^FML(A|S)(v4f32|v2f64|v8f16)$",
                  "^FML(A|S)(v4i32|v2i64|v8i16)_indexed$")>;
 def : InstRW<[A53WriteFDivSP], (instrs FDIVSrr)>;
