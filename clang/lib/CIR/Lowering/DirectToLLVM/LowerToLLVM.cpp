@@ -4039,6 +4039,21 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   if (failed(applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
 
+  // Drop the cir.ptr-keyed data-layout entries: they drove pointer-width
+  // queries up to this point, but the LLVM IR exporter rejects CIR types.
+  if (auto dlSpec = mlir::dyn_cast_or_null<mlir::DataLayoutSpecAttr>(
+          module->getAttr(mlir::DLTIDialect::kDataLayoutAttrName))) {
+    llvm::SmallVector<mlir::DataLayoutEntryInterface> kept;
+    for (mlir::DataLayoutEntryInterface entry : dlSpec.getEntries()) {
+      if (entry.isTypeEntry() &&
+          mlir::isa<cir::PointerType>(mlir::cast<mlir::Type>(entry.getKey())))
+        continue;
+      kept.push_back(entry);
+    }
+    module->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
+                    mlir::DataLayoutSpecAttr::get(module.getContext(), kept));
+  }
+
   // Emit the llvm.global_ctors array.
   buildCtorDtorList(module, cir::CIRDialect::getGlobalCtorsAttrName(),
                     "llvm.global_ctors", [](mlir::Attribute attr) {

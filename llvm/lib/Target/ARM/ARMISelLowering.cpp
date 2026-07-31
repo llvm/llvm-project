@@ -1709,8 +1709,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
     if (!getTM().isAAPCS_ABI())
       return CallingConv::ARM_APCS;
     else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
-             getTargetMachine().Options.FloatABIType == FloatABI::Hard &&
-             !isVarArg)
+             Subtarget->isTargetHardFloat() && !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
       return CallingConv::ARM_AAPCS;
@@ -2989,7 +2988,7 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     SDValue Arg = OutVals[realRVLocIdx];
     bool ReturnF16 = false;
 
-    if (Subtarget->hasFullFP16() && getTM().isTargetHardFloat()) {
+    if (Subtarget->hasFullFP16() && Subtarget->isTargetHardFloat()) {
       // Half-precision return values can be returned like this:
       //
       // t11 f16 = fadd ...
