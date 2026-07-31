@@ -64,9 +64,6 @@ public:
                   const lldb::TargetSP &target_sp, const SymbolContext &sym_ctx,
                   std::vector<std::string> &cpu_features);
 
-  /// Destructor
-  ~IRExecutionUnit() override;
-
   ConstString GetFunctionName() { return m_name; }
 
   llvm::Module *GetModule() { return m_module; }
