@@ -523,6 +523,7 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
       ATOMIC_CASE(minu, AtomicUMinOp);
       ATOMIC_CASE(ori, AtomicOrOp);
       ATOMIC_CASE(andi, AtomicAndOp);
+      ATOMIC_CASE(xori, AtomicXorOp);
     default:
       return rewriter.notifyMatchFailure(atomicOp, "unimplemented atomic kind");
     }
