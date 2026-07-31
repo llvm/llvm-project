@@ -303,6 +303,24 @@ def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
   }];
 }
 
+def LoopIterArgDestinationFoldingPass : Pass<"loop-iter-arg-destination-folding"> {
+  let summary = "Fold a yielded write's destination onto its loop iter_arg";
+  let description = [{
+    Redirects the destination of a whole-tensor `vector.transfer_write` that
+    produces a loop-carried yield value from a fresh `tensor.empty` onto the
+    corresponding `scf.for` iter_arg, when the iter_arg is read-then-overwritten
+    (all in-loop reads precede the write). This exposes in-place reuse of the
+    carried buffer so one-shot bufferization keeps it in place instead of
+    allocating and copying a fresh buffer each iteration.
+
+    The rewrite is a hint: one-shot bufferization's in-place analysis remains the
+    correctness arbiter and reinserts a copy if the reuse is unsound, so the
+    transform never changes program semantics.
+  }];
+  let dependentDialects = ["tensor::TensorDialect", "vector::VectorDialect",
+                           "scf::SCFDialect"];
+}
+
 def BufferResultsToOutParamsPass
     : Pass<"buffer-results-to-out-params", "ModuleOp"> {
   let summary = "Converts memref-typed function results to out-params";

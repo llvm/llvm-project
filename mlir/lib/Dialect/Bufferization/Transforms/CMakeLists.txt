@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   EmptyTensorElimination.cpp
   EmptyTensorToAllocTensor.cpp
   FuncBufferizableOpInterfaceImpl.cpp
+  LoopIterArgDestinationFolding.cpp
   LowerDeallocations.cpp
   OneShotAnalysis.cpp
   OneShotModuleBufferize.cpp
@@ -41,6 +42,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRSideEffectInterfaces
   MLIRSubsetOpInterface
   MLIRTransforms
+  MLIRVectorDialect
   MLIRViewLikeInterface
   MLIRSupport
 )
