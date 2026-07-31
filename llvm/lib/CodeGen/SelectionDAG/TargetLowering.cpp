@@ -13864,6 +13864,37 @@ SDValue TargetLowering::expandCttzElts(SDNode *Node, SelectionDAG &DAG) const {
   return DAG.getZExtOrTrunc(Sub, DL, VT);
 }
 
+SDValue TargetLowering::expandVectorMatch(SDNode *N, SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  SDValue Source = N->getOperand(0);
+  SDValue Needle = N->getOperand(1);
+  SDValue Mask = N->getOperand(2);
+  EVT SourceVT = Source.getValueType();
+  EVT NeedleVT = Needle.getValueType();
+  EVT ResVT = N->getValueType(0);
+  EVT CmpVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SourceVT);
+
+  assert(NeedleVT.isFixedLengthVector() && "Needle must be a fixed vector");
+
+  SDValue Ret = DAG.getConstant(0, DL, CmpVT);
+  EVT NeedleEltVT = NeedleVT.getVectorElementType();
+  for (unsigned I = 0, E = NeedleVT.getVectorNumElements(); I != E; ++I) {
+    SDValue NeedleElt = DAG.getExtractVectorElt(DL, NeedleEltVT, Needle, I);
+    SDValue Splat = DAG.getNode(ISD::SPLAT_VECTOR, DL, SourceVT, NeedleElt);
+    SDValue Cmp = DAG.getSetCC(DL, CmpVT, Source, Splat, ISD::SETEQ);
+    Ret = DAG.getNode(ISD::OR, DL, CmpVT, Ret, Cmp);
+  }
+
+  if (Mask.getValueType() != CmpVT)
+    Mask = DAG.getBoolExtOrTrunc(Mask, DL, CmpVT, Mask.getValueType());
+
+  Ret = DAG.getNode(ISD::AND, DL, CmpVT, Ret, Mask);
+  if (Ret.getValueType() != ResVT)
+    Ret = DAG.getBoolExtOrTrunc(Ret, DL, ResVT, Ret.getValueType());
+  return Ret;
+}
+
 SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
                                                SelectionDAG &DAG) const {
   SDLoc DL(N);
