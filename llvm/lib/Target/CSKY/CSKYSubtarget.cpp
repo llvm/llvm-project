@@ -93,7 +93,8 @@ CSKYSubtarget::CSKYSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                              const TargetMachine &TM)
     : CSKYGenSubtargetInfo(TT, CPU, TuneCPU, FS),
       FrameLowering(initializeSubtargetDependencies(TT, CPU, TuneCPU, FS)),
-      InstrInfo(*this, RegInfo), TLInfo(TM, *this), FloatABIType(FloatABI) {
+      InstrInfo(*this, RegInfo), TLInfo(TM, *this),
+      UseHardFloatABI(FloatABI == FloatABI::Hard) {
   TSInfo = std::make_unique<CSKYSelectionDAGInfo>();
 }
 
@@ -101,10 +102,4 @@ CSKYSubtarget::~CSKYSubtarget() = default;
 
 const SelectionDAGTargetInfo *CSKYSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
-}
-
-bool CSKYSubtarget::useHardFloatABI() const {
-  if (FloatABIType == FloatABI::Default)
-    return UseHardFloatABI;
-  return FloatABIType == FloatABI::Hard;
 }
