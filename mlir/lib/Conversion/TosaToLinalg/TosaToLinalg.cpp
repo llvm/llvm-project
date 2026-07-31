@@ -2551,6 +2551,7 @@ public:
             rewriter.getContext()),
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
 
+    Value kSzVal = rewriter.createOrFold<tensor::DimOp>(loc, input, 1);
     auto genericOp = linalg::GenericOp::create(
         rewriter, loc, ArrayRef<Type>({resultTy}), ValueRange{indices},
         ValueRange{emptyTensor}, affineMaps,
@@ -2560,6 +2561,12 @@ public:
           auto index0 = linalg::IndexOp::create(rewriter, loc, 0);
           Value index1 = arith::IndexCastOp::create(
               rewriter, loc, rewriter.getIndexType(), indexValue);
+          auto outOfBound = arith::CmpIOp::create(
+              rewriter, loc, rewriter.getI1Type(), arith::CmpIPredicate::uge,
+              index1, kSzVal);
+          index1 =
+              arith::SelectOp::create(rewriter, loc, rewriter.getIndexType(),
+                                      outOfBound, kSzVal, index1);
           auto index2 = linalg::IndexOp::create(rewriter, loc, 2);
           Value extract = tensor::ExtractOp::create(
               rewriter, loc, input, ValueRange{index0, index1, index2});

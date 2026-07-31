@@ -120,15 +120,22 @@ public:
     auto lbs = Repeated<Value>(2, zero);
     auto steps = Repeated<Value>(2, one);
     auto ubs = llvm::SmallVector<Value>{{dimN, dimW}};
+    Value kSzVal = rewriter.createOrFold<tensor::DimOp>(loc, valuesIn, 1);
 
     auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                          ValueRange args) -> scf::ValueVector {
       auto n = ivs[0];
 
-      // Read the index and cast it to index type
+      // Read the index, cast it to index type and clamp it
       auto index = tensor::ExtractOp::create(builder, loc, indices, ivs);
       auto castIndex = arith::IndexCastOp::create(
           builder, loc, builder.getIndexType(), index);
+      auto outOfBound = arith::CmpIOp::create(
+          builder, loc, builder.getI1Type(), arith::CmpIPredicate::uge,
+          castIndex, kSzVal);
+      auto clampedIndex =
+          arith::SelectOp::create(builder, loc, builder.getIndexType(),
+                                  outOfBound, kSzVal, castIndex);
 
       // Offset, sizes, and strides for the input tensor
       auto inputOffset = llvm::to_vector(ivs);
@@ -141,7 +148,7 @@ public:
                                                   inputOffset, sizes, strides);
 
       // Insert the slice into the output accumulator tensor.
-      llvm::SmallVector<Value> outputOffset = {n, castIndex, zero};
+      llvm::SmallVector<Value> outputOffset = {n, clampedIndex, zero};
       auto updated = tensor::InsertSliceOp::create(
           builder, loc, slice, args[0], outputOffset, sizes, strides);
 
