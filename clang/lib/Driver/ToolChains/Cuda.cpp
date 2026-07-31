@@ -235,14 +235,12 @@ CudaInstallationDetector::CudaInstallationDetector(
       // CUDA-9+ uses single libdevice file for all GPU variants.
       std::string FilePath = LibDevicePath + "/libdevice.10.bc";
       if (FS.exists(FilePath)) {
-        for (int Arch = (int)OffloadArch::SM_30, E = (int)OffloadArch::LAST;
-             Arch < E; ++Arch) {
-          OffloadArch OA = static_cast<OffloadArch>(Arch);
-          if (!IsNVIDIAOffloadArch(OA))
-            continue;
-          std::string OffloadArchName(OffloadArchToString(OA));
-          LibDeviceMap[OffloadArchName] = FilePath;
-        }
+        // CUDA-9+ uses a single libdevice file for every NVIDIA GPU variant
+        // (sm_30 and newer).
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  if ((SM_ID) >= 300)                                                          \
+    LibDeviceMap[NAME] = FilePath;
+#include "llvm/TargetParser/NVPTXTargetParser.def"
       }
     } else {
       std::error_code EC;
@@ -326,14 +324,15 @@ void CudaInstallationDetector::AddCudaIncludeArgs(
 
 void CudaInstallationDetector::CheckCudaVersionSupportsArch(
     OffloadArch Arch) const {
-  if (Arch == OffloadArch::Unknown || Version == CudaVersion::UNKNOWN ||
-      ArchsWithBadVersion[(int)Arch])
+  // Only NVIDIA architectures depend on the CUDA toolkit version.
+  if (!Arch.isNVPTX() || Version == CudaVersion::UNKNOWN ||
+      ArchsWithBadVersion[Arch.nvptxKind()])
     return;
 
   auto MinVersion = MinVersionForOffloadArch(Arch);
   auto MaxVersion = MaxVersionForOffloadArch(Arch);
   if (Version < MinVersion || Version > MaxVersion) {
-    ArchsWithBadVersion[(int)Arch] = true;
+    ArchsWithBadVersion[Arch.nvptxKind()] = true;
     D.Diag(diag::err_drv_cuda_version_unsupported)
         << OffloadArchToString(Arch) << CudaVersionToString(MinVersion)
         << CudaVersionToString(MaxVersion) << InstallPath
@@ -414,7 +413,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Obtain architecture from the action.
-  assert(GPUArch.Arch != OffloadArch::Unknown &&
+  assert(!GPUArch.Arch.isUnknown() &&
          "Device action expected to have an architecture.");
 
   // Check that our installation's ptxas supports gpu_arch.
@@ -772,7 +771,7 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   if (!DAL->hasArg(options::OPT_march_EQ) && OffloadKind != Action::OFK_None) {
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_march_EQ),
-                      OffloadArchToString(OffloadArch::CudaDefault));
+                      OffloadArchToString(OffloadArch::CudaDefault()));
   } else if (DAL->getLastArgValue(options::OPT_march_EQ) == "generic" &&
              OffloadKind == Action::OFK_None) {
     DAL->eraseArg(options::OPT_march_EQ);
