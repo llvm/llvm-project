@@ -11,6 +11,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -37,6 +38,7 @@ protected:
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
     FAM.registerPass([&] { return PostDominatorTreeAnalysis(); });
     FAM.registerPass([&] { return LoopAnalysis(); });
+    FAM.registerPass([&] { return CycleAnalysis(); });
     FAM.registerPass([&] { return BranchProbabilityAnalysis(); });
     FAM.registerPass([&] { return BlockFrequencyAnalysis(); });
     FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
