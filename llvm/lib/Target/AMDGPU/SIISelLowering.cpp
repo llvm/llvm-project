@@ -16280,14 +16280,13 @@ SITargetLowering::performFCanonicalizeCombine(SDNode *N,
         }
       }
 
-      // If one half is undef, and one is constant, prefer a splat vector rather
-      // than the normal qNaN. If it's a register, prefer 0.0 since that's
-      // cheaper to use and may be free with a packed operation.
+      // If one half is undef, and one is constant, prefer a splat vector.
+      // Otherwise, convert the undef to 0.0 since that's cheaper to use and may
+      // be free with a packed operation.
       if (NewElts[0].isUndef()) {
-        if (isa<ConstantFPSDNode>(NewElts[1]))
-          NewElts[0] = isa<ConstantFPSDNode>(NewElts[1])
-                           ? NewElts[1]
-                           : DAG.getConstantFP(0.0f, SL, EltVT);
+        NewElts[0] = isa<ConstantFPSDNode>(NewElts[1])
+                         ? NewElts[1]
+                         : DAG.getConstantFP(0.0f, SL, EltVT);
       }
 
       if (NewElts[1].isUndef()) {
