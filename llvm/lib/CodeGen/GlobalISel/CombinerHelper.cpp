@@ -2872,6 +2872,11 @@ void CombinerHelper::applyCombineTruncOfShift(
   Register ShiftSrc = ShiftMI->getOperand(1).getReg();
   ShiftSrc = Builder.buildTrunc(NewShiftTy, ShiftSrc).getReg(0);
 
+  const auto &TL = getTargetLowering();
+  LLT PrefShiftTy = TL.getPreferredShiftAmountTy(NewShiftTy);
+  if (MRI.getType(ShiftAmt) != PrefShiftTy)
+    ShiftAmt = Builder.buildZExtOrTrunc(PrefShiftTy, ShiftAmt).getReg(0);
+
   Register NewShift =
       Builder
           .buildInstr(ShiftMI->getOpcode(), {NewShiftTy}, {ShiftSrc, ShiftAmt})
