@@ -4011,11 +4011,6 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
 }
 
 const TargetRegisterClass *
-SIRegisterInfo::getConstrainedRegClass(const TargetRegisterClass *RC) const {
-  return getProperlyAlignedRC(RC);
-}
-
-const TargetRegisterClass *
 SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
                                          const MachineRegisterInfo &MRI) const {
   const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());

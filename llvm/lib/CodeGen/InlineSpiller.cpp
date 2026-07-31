@@ -1418,10 +1418,6 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     const TargetRegisterClass *NewRC =
         SubReg ? TRI.getSubRegisterClass(OrigRC, SubReg) : nullptr;
 
-    // Check if the target needs to constrain the RC further.
-    if (NewRC)
-      NewRC = TRI.getConstrainedRegClass(NewRC);
-
     Register NewVReg = Edit->createFrom(Reg, NewRC);
 
     if (RI.Reads)

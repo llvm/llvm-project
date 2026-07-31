@@ -379,9 +379,6 @@ public:
   }
 
   const TargetRegisterClass *
-  getConstrainedRegClass(const TargetRegisterClass *RC) const override;
-
-  const TargetRegisterClass *
   getConstrainedRegClassForOperand(const MachineOperand &MO,
                                  const MachineRegisterInfo &MRI) const override;
 
