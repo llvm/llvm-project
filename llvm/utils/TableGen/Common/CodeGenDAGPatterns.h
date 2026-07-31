@@ -1157,9 +1157,7 @@ public:
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Record *R) const {
-    auto I = IntrinsicIDs.find(R);
-    assert(I != IntrinsicIDs.end() && "Unknown intrinsic!");
-    return Intrinsics[I->second];
+    return Intrinsics[getIntrinsicID(R)];
   }
 
   const CodeGenIntrinsic &getIntrinsicInfo(unsigned IID) const {
