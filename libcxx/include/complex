@@ -263,6 +263,7 @@ template<class T> complex<T> tanh (const complex<T>&);
 #  include <__cstddef/size_t.h>
 #  include <__fwd/complex.h>
 #  include <__fwd/tuple.h>
+#  include <__math/traits.h>
 #  include <__tuple/tuple_element.h>
 #  include <__tuple/tuple_size.h>
 #  include <__type_traits/conditional.h>
@@ -972,9 +973,9 @@ template <class _Tp, __enable_if_t<is_same<_Tp, float>::value, int> = 0>
 
 template <class _Tp>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp norm(const complex<_Tp>& __c) {
-  if (std::__constexpr_isinf(__c.real()))
+  if (__math::__isinf(__c.real()))
     return std::abs(__c.real());
-  if (std::__constexpr_isinf(__c.imag()))
+  if (__math::__isinf(__c.imag()))
     return std::abs(__c.imag());
   return __c.real() * __c.real() + __c.imag() * __c.imag();
 }
