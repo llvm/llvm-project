@@ -5022,12 +5022,21 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
 static DeclRefExpr *buildCapture(Sema &S, ValueDecl *D, Expr *CaptureExpr,
                                  bool WithInit) {
   OMPCapturedExprDecl *CD;
-  if (VarDecl *VD = S.OpenMP().isOpenMPCapturedDecl(D))
-    CD = cast<OMPCapturedExprDecl>(VD);
-  else
+  // For BindingDecls, always create a new capture instead of reusing the
+  // decomposed decl, since the decomposed decl is a regular VarDecl, not an
+  // OMPCapturedExprDecl.
+  if (!isa<BindingDecl>(D)) {
+    if (VarDecl *VD = S.OpenMP().isOpenMPCapturedDecl(D))
+      CD = cast<OMPCapturedExprDecl>(VD);
+    else
+      CD = buildCaptureDecl(S, D->getIdentifier(), CaptureExpr, WithInit,
+                            S.CurContext,
+                            /*AsExpression=*/false);
+  } else {
     CD = buildCaptureDecl(S, D->getIdentifier(), CaptureExpr, WithInit,
                           S.CurContext,
                           /*AsExpression=*/false);
+  }
   return buildDeclRefExpr(S, CD, CD->getType().getNonReferenceType(),
                           CaptureExpr->getExprLoc());
 }
@@ -20819,9 +20828,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
         if (!isOpenMPCapturedDecl(D))
           ExprCaptures.push_back(Ref->getDecl());
       }
-      if ((TopDVar.CKind == OMPC_firstprivate && !TopDVar.PrivateCopy) ||
-          (!isOpenMPCapturedDecl(D) &&
-           Ref->getDecl()->hasAttr<OMPCaptureNoInitAttr>())) {
+      if (Ref && ((TopDVar.CKind == OMPC_firstprivate && !TopDVar.PrivateCopy) ||
+                  (!isOpenMPCapturedDecl(D) &&
+                   Ref->getDecl()->hasAttr<OMPCaptureNoInitAttr>()))) {
         ExprResult RefRes = SemaRef.DefaultLvalueConversion(Ref);
         if (!RefRes.isUsable())
           continue;
