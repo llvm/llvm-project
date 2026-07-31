@@ -34,3 +34,23 @@ define <8 x i8> @shl_v8i8(<8 x i8> %v) {
   %r = shufflevector <8 x i8> %v, <8 x i8> zeroinitializer, <8 x i32> <i32 8, i32 0, i32 8, i32 2, i32 8, i32 4, i32 8, i32 6>
   ret <8 x i8> %r
 }
+
+; i16 element case: <8 x i16> zero-interleave --> shl <4 x i32>, #16
+define <8 x i16> @shl_v8i16(<8 x i16> %v) {
+; CHECK-LABEL: shl_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.4s, v0.4s, #16
+; CHECK-NEXT:    ret
+  %r = shufflevector <8 x i16> %v, <8 x i16> zeroinitializer, <8 x i32> <i32 8, i32 0, i32 8, i32 2, i32 8, i32 4, i32 8, i32 6>
+  ret <8 x i16> %r
+}
+
+; i32 element case: <4 x i32> zero-interleave --> shl <2 x i64>, #32
+define <4 x i32> @shl_v4i32(<4 x i32> %v) {
+; CHECK-LABEL: shl_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl v0.2d, v0.2d, #32
+; CHECK-NEXT:    ret
+  %r = shufflevector <4 x i32> %v, <4 x i32> zeroinitializer, <4 x i32> <i32 4, i32 0, i32 4, i32 2>
+  ret <4 x i32> %r
+}

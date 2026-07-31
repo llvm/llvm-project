@@ -15145,7 +15145,8 @@ static unsigned checkLaneSlide(ArrayRef<int> Mask, unsigned LaneStart,
 
 static SDValue isSlideWithZerosMask(ArrayRef<int> M, EVT VT, SDValue V1,
                                     SDValue V2, unsigned &ShiftAmount,
-                                    bool &IsRightShift) {
+                                    bool &IsRightShift,
+                                    unsigned &MatchedLaneSize) {
   unsigned VTSize = VT.getSizeInBits();
   if (VTSize != 64 && VTSize != 128)
     return SDValue();
@@ -15198,8 +15199,10 @@ static SDValue isSlideWithZerosMask(ArrayRef<int> M, EVT VT, SDValue V1,
 
     ShiftAmount = FirstSlideAmt * EltSize;
     IsRightShift = FirstIsLeftSlide;
-    if (ShiftAmount > 0 && ShiftAmount < LaneSize)
+    if (ShiftAmount > 0 && ShiftAmount < LaneSize) {
+      MatchedLaneSize = LaneSize;
       return DataVec;
+    }
   }
   return SDValue();
 }
@@ -15961,15 +15964,12 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   {
     unsigned ShiftAmount;
     bool IsRightShift;
-    if (SDValue DataVec = isSlideWithZerosMask(ShuffleMask, VT, V1, V2,
-                                               ShiftAmount, IsRightShift)) {
-      MVT ShiftVT;
-      if (ShiftAmount >= 32)
-        ShiftVT = VT.getSizeInBits() == 64 ? MVT::v1i64 : MVT::v2i64;
-      else if (ShiftAmount >= 16)
-        ShiftVT = VT.getSizeInBits() == 64 ? MVT::v2i32 : MVT::v4i32;
-      else
-        ShiftVT = VT.getSizeInBits() == 64 ? MVT::v4i16 : MVT::v8i16;
+    unsigned MatchedLaneSize;
+    if (SDValue DataVec =
+            isSlideWithZerosMask(ShuffleMask, VT, V1, V2, ShiftAmount,
+                                 IsRightShift, MatchedLaneSize)) {
+      MVT ShiftVT = MVT::getVectorVT(MVT::getIntegerVT(MatchedLaneSize),
+                                     VT.getSizeInBits() / MatchedLaneSize);
       SDValue Vec = DAG.getNode(AArch64ISD::NVCAST, DL, ShiftVT, DataVec);
 
       SDValue ShiftAmt = DAG.getTargetConstant(ShiftAmount, DL, MVT::i32);
