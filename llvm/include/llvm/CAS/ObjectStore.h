@@ -30,6 +30,7 @@ namespace cas {
 
 class ObjectStore;
 class ObjectProxy;
+class ActionCache;
 
 /// Content-addressable storage for objects.
 ///
@@ -363,6 +364,20 @@ LLVM_ABI bool isOnDiskCASEnabled();
 /// Create a persistent on-disk path at \p Path.
 LLVM_ABI Expected<std::unique_ptr<ObjectStore>>
 createOnDiskCAS(const Twine &Path);
+
+/// Create \c ObjectStore and \c ActionCache instances backed by a plugin that
+/// implements the C API in \c "llvm-c/CAS/PluginAPI_functions.h".
+///
+/// \param PluginPath path of the dynamic library to load.
+/// \param OnDiskPath local path that the plugin should use for any on-disk
+/// resources/caches.
+/// \param PluginArgs name/value pairs passed to the plugin as custom options;
+/// they are opaque to the client.
+LLVM_ABI Expected<
+    std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+createPluginCASDatabases(
+    StringRef PluginPath, StringRef OnDiskPath,
+    ArrayRef<std::pair<std::string, std::string>> PluginArgs);
 
 } // namespace cas
 } // namespace llvm
