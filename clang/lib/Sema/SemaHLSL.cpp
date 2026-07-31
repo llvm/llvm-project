@@ -3381,12 +3381,12 @@ static bool CheckAllArgTypesAreCorrect(
 static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
                                      int ArgOrdinal,
                                      clang::QualType PassedType) {
-  clang::QualType BaseType =
-      PassedType->isVectorType()
-          ? PassedType->castAs<clang::VectorType>()->getElementType()
-      : PassedType->getAs<clang::ConstantMatrixType>()
-          ? PassedType->castAs<clang::ConstantMatrixType>()->getElementType()
-          : PassedType;
+  clang::QualType BaseType = PassedType;
+  if (const auto *VT = PassedType->getAs<clang::VectorType>())
+    BaseType = VT->getElementType();
+  else if (const auto *MT = PassedType->getAs<clang::MatrixType>())
+    BaseType = MT->getElementType();
+
   if (!BaseType->isFloat32Type())
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
