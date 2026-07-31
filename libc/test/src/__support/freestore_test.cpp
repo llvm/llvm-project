@@ -92,7 +92,8 @@ TEST(LlvmLibcFreeStore, RemoveFit) {
   ASSERT_GE(block3.inner_size(), smallest.inner_size() + 1);
   store.insert(block3);
 
-  // Requesting largest_small inner_size + 1 returns a valid block fitting the size.
+  // Requesting largest_small inner_size + 1 returns a valid block fitting the
+  // size.
   BlockRef block4 = store.remove_best_fit(largest_small.inner_size() + 1);
   ASSERT_NE(block4.addr(), BlockRef().addr());
   ASSERT_GE(block4.inner_size(), largest_small.inner_size() + 1);
@@ -127,7 +128,7 @@ TEST(LlvmLibcFreeStore, IndexToMinSize) {
   EXPECT_EQ(min_size_0, static_cast<size_t>(0));
 
   constexpr size_t min_size_1 = FreeStore::index_to_min_size(1);
-  EXPECT_EQ(min_size_1, static_cast<size_t>(BlockRef::MIN_ALIGN));
+  EXPECT_EQ(min_size_1, static_cast<size_t>(FreeStore::MIN_INNER_SIZE + 1));
 
   size_t prev_size = 0;
   for (size_t i = 1; i < 64; ++i) {
