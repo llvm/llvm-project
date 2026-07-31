@@ -6,13 +6,6 @@
 # RUN: llvm-objdump --macho --section-headers %t | FileCheck %s --check-prefix=SECT
 # RUN: llvm-objdump --macho --syms %t | FileCheck %s --check-prefix=SYMS
 
-## Wall clock on single class, --icf=all:
-##      N     re-walk   incremental
-##   64 Ki      3.5 s        0.09 s
-##  128 Ki     14.5 s        0.16 s
-##  256 Ki     66.8 s        0.32 s
-##  512 Ki    408.6 s        0.68 s
-
 ## Every body folds into one, so __text holds a single 6-byte body plus _main
 ## rather than the 3 MiB (0x30000d) the unfolded copies occupy.
 # SECT:      Idx Name          Size
