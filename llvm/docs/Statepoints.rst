@@ -434,7 +434,7 @@ This special section is encoded per the
 The general expectation is that a JIT compiler will parse and discard this
 format; it is not particularly memory efficient.  If you need an alternate
 format (e.g. for an ahead of time compiler), see discussion under
-:ref: `open work items <OpenWork>` below.
+:ref:`open work items <OpenWork>` below.
 
 Each statepoint generates the following Locations:
 
