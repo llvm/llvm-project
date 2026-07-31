@@ -261,8 +261,8 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      33    29.00                       fdiv	d0, d1, d2
 # CHECK-NEXT:  1      6     1.00                        fcmp	s0, s1
 # CHECK-NEXT:  1      6     1.00                        fcmp	d0, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcsel	s0, s1, s2, eq
-# CHECK-NEXT:  1      4     0.50                        fmov	s0, s1
+# CHECK-NEXT:  1      2     0.50                        fcsel	s0, s1, s2, eq
+# CHECK-NEXT:  1      1     0.50                        fmov	s0, s1
 # CHECK-NEXT:  1      6     0.50                        fmov	s0, w1
 # CHECK-NEXT:  1      6     0.50                        fmov	w0, s1
 # CHECK-NEXT:  1      6     0.50                        fmov	d0, x1
@@ -321,9 +321,9 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      4     0.50                        frecpx	s0, s1
 # CHECK-NEXT:  1      4     0.50                        urecpe	v0.2s, v1.2s
 # CHECK-NEXT:  1      4     1.00                        ursqrte	v0.4s, v1.4s
-# CHECK-NEXT:  1      6     0.50                        fcmeq	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        fcmeq	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     0.50                        facge	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      2     0.50                        fcmeq	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      2     1.00                        fcmeq	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      2     0.50                        facge	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      6     1.00                        fcmgt	v0.4s, v1.4s, #0.0
 # CHECK-NEXT:  1      2     0.50                        add	d0, d1, d2
 # CHECK-NEXT:  1      2     0.50                        add	v0.8b, v1.8b, v2.8b
@@ -354,52 +354,52 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     1.00                        sqabs	v0.16b, v1.16b
 # CHECK-NEXT:  1      6     0.50                        smaxv	b0, v1.8b
 # CHECK-NEXT:  1      6     1.00                        uminv	h0, v1.8h
-# CHECK-NEXT:  1      6     0.50                        cmeq	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        cmge	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     1.00                        cmgt	v0.4s, v1.4s, #0
-# CHECK-NEXT:  1      6     0.50                        cmhi	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     0.50                        cmtst	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        cmtst	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        cls	v0.8b, v1.8b
-# CHECK-NEXT:  1      6     1.00                        cls	v0.4s, v1.4s
-# CHECK-NEXT:  1      6     0.50                        and	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        and	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        eor	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        eor	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     1.00                        orn	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        mvn	v0.8b, v1.8b
-# CHECK-NEXT:  1      6     0.50                        orr	v0.2s, #1
-# CHECK-NEXT:  1      6     1.00                        bic	v0.8h, #1
-# CHECK-NEXT:  1      6     0.50                        bsl	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        bit	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        bif	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      2     0.50                        cmeq	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      2     1.00                        cmge	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      2     1.00                        cmgt	v0.4s, v1.4s, #0
+# CHECK-NEXT:  1      2     0.50                        cmhi	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      3     0.50                        cmtst	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      3     1.00                        cmtst	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      3     0.50                        cls	v0.8b, v1.8b
+# CHECK-NEXT:  1      3     1.00                        cls	v0.4s, v1.4s
+# CHECK-NEXT:  1      1     0.50                        and	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      1     1.00                        and	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      1     0.50                        eor	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      1     1.00                        eor	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      1     1.00                        orn	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      1     0.50                        mvn	v0.8b, v1.8b
+# CHECK-NEXT:  1      1     0.50                        orr	v0.2s, #1
+# CHECK-NEXT:  1      1     1.00                        bic	v0.8h, #1
+# CHECK-NEXT:  1      2     0.50                        bsl	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      2     1.00                        bit	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      2     0.50                        bif	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  1      6     0.50                        cnt	v0.8b, v1.8b
 # CHECK-NEXT:  1      6     1.00                        rbit	v0.16b, v1.16b
 # CHECK-NEXT:  1      6     0.50                        clz	v0.4h, v1.4h
 # CHECK-NEXT:  1      6     1.00                        clz	v0.4s, v1.4s
-# CHECK-NEXT:  1      6     0.50                        ext	v0.8b, v1.8b, v2.8b, #1
-# CHECK-NEXT:  1      6     1.00                        ext	v0.16b, v1.16b, v2.16b, #1
-# CHECK-NEXT:  1      6     0.50                        rev64	v0.8b, v1.8b
-# CHECK-NEXT:  1      6     1.00                        rev32	v0.16b, v1.16b
-# CHECK-NEXT:  1      6     0.50                        rev16	v0.8b, v1.8b
-# CHECK-NEXT:  1      6     0.50                        dup	v0.8b, w1
-# CHECK-NEXT:  1      6     1.00                        dup	v0.4s, v1.s[1]
-# CHECK-NEXT:  1      6     1.00                        mov	v0.s[1], w1
-# CHECK-NEXT:  1      6     1.00                        mov	v0.s[1], v1.s[0]
+# CHECK-NEXT:  1      2     0.50                        ext	v0.8b, v1.8b, v2.8b, #1
+# CHECK-NEXT:  1      2     1.00                        ext	v0.16b, v1.16b, v2.16b, #1
+# CHECK-NEXT:  1      2     0.50                        rev64	v0.8b, v1.8b
+# CHECK-NEXT:  1      2     1.00                        rev32	v0.16b, v1.16b
+# CHECK-NEXT:  1      2     0.50                        rev16	v0.8b, v1.8b
+# CHECK-NEXT:  1      2     0.50                        dup	v0.8b, w1
+# CHECK-NEXT:  1      2     0.50                        dup	v0.4s, v1.s[1]
+# CHECK-NEXT:  1      2     0.50                        mov	v0.s[1], w1
+# CHECK-NEXT:  1      2     0.50                        mov	v0.s[1], v1.s[0]
 # CHECK-NEXT:  1      6     0.50                        smov	w0, v1.b[1]
 # CHECK-NEXT:  1      6     0.50                        umov	w0, v1.h[1]
-# CHECK-NEXT:  1      6     0.50                        tbl	v0.8b, { v1.16b }, v2.8b
-# CHECK-NEXT:  1      6     1.00                        tbl	v0.16b, { v1.16b }, v2.16b
-# CHECK-NEXT:  1      6     0.50                        tbx	v0.8b, { v1.16b, v2.16b }, v3.8b
+# CHECK-NEXT:  1      2     0.50                        tbl	v0.8b, { v1.16b }, v2.8b
+# CHECK-NEXT:  1      2     1.00                        tbl	v0.16b, { v1.16b }, v2.16b
+# CHECK-NEXT:  1      2     0.50                        tbx	v0.8b, { v1.16b, v2.16b }, v3.8b
 # CHECK-NEXT:  1      6     0.50                        zip1	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  1      6     1.00                        zip1	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  1      6     0.50                        uzp2	v0.4h, v1.4h, v2.4h
 # CHECK-NEXT:  1      6     1.00                        trn1	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     0.50                        saba	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        uaba	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     1.00                        sabal	v0.8h, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     0.50                        sadalp	v0.4h, v1.8b
-# CHECK-NEXT:  1      6     1.00                        uadalp	v0.8h, v1.16b
+# CHECK-NEXT:  1      4     0.50                        saba	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      4     1.00                        uaba	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      4     1.00                        sabal	v0.8h, v1.8b, v2.8b
+# CHECK-NEXT:  1      4     0.50                        sadalp	v0.4h, v1.8b
+# CHECK-NEXT:  1      4     1.00                        uadalp	v0.8h, v1.16b
 # CHECK-NEXT:  1      4     0.50                        mul	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  1      4     1.00                        mul	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  1      4     0.50                        mul	v0.4h, v1.4h, v2.h[1]
@@ -426,8 +426,8 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     1.00                        sqxtun	v0.2s, v1.2d
 # CHECK-NEXT:  1      6     1.00                        addhn	v0.8b, v1.8h, v2.8h
 # CHECK-NEXT:  1      6     1.00                        subhn2	v0.16b, v1.8h, v2.8h
-# CHECK-NEXT:  1      6     1.00                        raddhn	v0.8b, v1.8h, v2.8h
-# CHECK-NEXT:  1      6     1.00                        rsubhn2	v0.16b, v1.8h, v2.8h
+# CHECK-NEXT:  1      4     1.00                        raddhn	v0.8b, v1.8h, v2.8h
+# CHECK-NEXT:  1      4     1.00                        rsubhn2	v0.16b, v1.8h, v2.8h
 # CHECK-NEXT:  1      6     0.50                        shl	d0, d1, #1
 # CHECK-NEXT:  1      6     0.50                        shl	v0.8b, v1.8b, #1
 # CHECK-NEXT:  1      6     1.00                        shl	v0.16b, v1.16b, #1
@@ -473,7 +473,7 @@ sqshrun	v0.2s, v1.2d, #1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     146.00 146.00 92.50  92.50   -      -
+# CHECK-NEXT:  -      -      -      -     144.50 144.50 92.50  92.50   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -610,9 +610,9 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     rev32	v0.16b, v1.16b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     rev16	v0.8b, v1.8b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     dup	v0.8b, w1
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     dup	v0.4s, v1.s[1]
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     mov	v0.s[1], w1
-# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     mov	v0.s[1], v1.s[0]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     dup	v0.4s, v1.s[1]
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mov	v0.s[1], w1
+# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mov	v0.s[1], v1.s[0]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smov	w0, v1.b[1]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umov	w0, v1.h[1]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     tbl	v0.8b, { v1.16b }, v2.8b
