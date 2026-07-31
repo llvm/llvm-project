@@ -7,6 +7,7 @@ set(
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_clang_library(clangCIR
+  CIRDataLayoutSpec.cpp
   CIRGenerator.cpp
   CIRGenAsm.cpp
   CIRGenAtomic.cpp

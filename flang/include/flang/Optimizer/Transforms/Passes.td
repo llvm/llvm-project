@@ -76,6 +76,22 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
+def SelectOpsConversion : Pass<"fir-select-ops-conversion", "::mlir::func::FuncOp"> {
+  let summary = "Lower fir.select / fir.select_case / fir.select_rank to cf.*";
+
+  let description = [{
+    Lowers FIR multi-way branch terminators to control-flow dialect ops
+    (`cf.switch`, `cf.cond_br`, `cf.br`), keeping the same CFG shape (block
+    count, branch directions, destination operand forwarding).
+
+    `fir.select_type` is intentionally NOT handled here since it's already
+    handled by `PolymorphicOpConversion`.
+  }];
+
+  let dependentDialects = ["mlir::arith::ArithDialect",
+      "mlir::cf::ControlFlowDialect", "fir::FIROpsDialect"];
+}
+
 def FIRToSCFPass : Pass<"fir-to-scf"> {
   let summary = "Convert FIR structured control flow ops to SCF dialect.";
   let description = [{
@@ -87,7 +103,10 @@ def FIRToSCFPass : Pass<"fir-to-scf"> {
   let options = [Option<"parallelUnordered", "parallel-unordered", "bool",
                         /*default=*/"false",
                         "Allow converting a fir.do_loop with the `unordered` "
-                        "attribute to scf.parallel (experimental).">];
+                        "attribute to scf.parallel (experimental).">,
+                 Option<"setNSW", "set-nsw", "bool",
+                        /*default=*/"true",
+                        "Add nsw flag to loop variable increments.">];
 }
 
 def AnnotateConstantOperands : Pass<"annotate-constant"> {
@@ -105,32 +124,6 @@ def AnnotateConstantOperands : Pass<"annotate-constant"> {
   }];
   let constructor = "::fir::createAnnotateConstantOperandsPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
-}
-
-def ArrayValueCopy : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
-  let summary = "Convert array value operations to memory operations.";
-  let description = [{
-    Transform the set of array value primitives to a memory-based array
-    representation.
-
-    The Ops `array_load`, `array_store`, `array_fetch`, and `array_update` are
-    used to manage abstract aggregate array values. A simple analysis is done
-    to determine if there are potential dependences between these operations.
-    If not, these array operations can be lowered to work directly on the memory
-    representation. If there is a potential conflict, a temporary is created
-    along with appropriate copy-in/copy-out operations. Here, a more refined
-    analysis might be deployed, such as using the affine framework.
-
-    This pass is required before code gen to the LLVM IR dialect.
-  }];
-  let constructor = "::fir::createArrayValueCopyPass()";
-  let dependentDialects = [ "fir::FIROpsDialect" ];
-  let options = [
-    Option<"optimizeConflicts", "optimize-conflicts", "bool",
-           /*default=*/"false",
-           "do more detailed conflict analysis to reduce the number "
-           "of temporaries">
-  ];
 }
 
 def CharacterConversion : Pass<"character-conversion"> {
@@ -309,6 +302,32 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   ];
 }
 
+def AllocationPlacement : Pass<"allocation-placement", "mlir::func::FuncOp"> {
+  let summary = "Place array allocations on the stack or the heap by policy.";
+  let description = [{
+    Unified array allocation placement. Converts fir.alloca to fir.allocmem and
+    fir.allocmem to fir.alloca based on tunable byte-size thresholds, a
+    per-function stack budget, and whether the allocation is a user variable or
+    a compiler temporary. Heap-to-stack conversions are only performed where the
+    allocation is provably freed on all paths through the function.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect",
+    "mlir::arith::ArithDialect"
+  ];
+  let options = [
+    Option<"stackArrays", "stack-arrays", "bool", /*default=*/"false",
+           "Place all array allocations on the stack (-fstack-arrays); "
+           "otherwise use the size/kind-based placement policy.">,
+    Option<"smallArrayThresholdBytes", "small-array-threshold", "std::size_t",
+           /*default=*/"64",
+           "Constant-size arrays up to this many bytes are considered small.">,
+    Option<"totalStackLimitBytes", "total-stack-limit", "std::size_t",
+           /*default=*/"4194304",
+           "Per-function budget (bytes) for small arrays placed on the stack.">
+  ];
+}
+
 // This needs to be a "mlir::ModuleOp" pass, because it inserts global constants
 def ConstantArgumentGlobalisationOpt : Pass<"constant-argument-globalisation-opt", "mlir::ModuleOp"> {
   let summary = "Convert constant function arguments to global constants.";
@@ -382,8 +401,8 @@ def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "mlir::ModuleOp"> {
   let summary =
     "Simplify operations on polymorphic types";
   let description = [{
-    This pass breaks up the lowering of operations on polymorphic types by 
-    introducing an intermediate FIR level that simplifies code geneation. 
+    This pass breaks up the lowering of operations on polymorphic types by
+    introducing an intermediate FIR level that simplifies code generation.
   }];
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
@@ -553,9 +572,12 @@ def CUFAddConstructor : Pass<"cuf-add-constructor", "mlir::ModuleOp"> {
     Option<"cudaUnified", "cuda-unified", "bool", /*default=*/"false",
            "Treat host module globals as unified memory (-gpu=mem:unified): "
            "register every plain host module global that is mirrored in the "
-           "GPU module via CUFRegisterExternalVariable, so the CUDA driver "
+           "GPU module via cuf.register_variable_static, so the CUDA driver "
            "maps the device-side symbol to the host pointer at module-load "
-           "time and HMM/ATS handles migration.">
+           "time and HMM/ATS handles migration.">,
+    Option<"priority", "priority", "int32_t", /*default=*/"0",
+           "Priority for the CUDA Fortran global constructor in "
+           "llvm.mlir.global_ctors.">
   ];
 }
 

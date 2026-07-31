@@ -282,17 +282,15 @@ public:
 
     bool isLoopHeader() const { return Loop && Loop->isHeader(Node); }
 
-    bool isDoubleLoopHeader() const {
-      return isLoopHeader() && Loop->Parent && Loop->Parent->isIrreducible() &&
-             Loop->Parent->isHeader(Node);
-    }
-
+    /// The innermost loop containing Node that Node does not head.
+    ///
+    /// A block can head several nested loops: createIrreducibleLoop() reuses
+    /// an SCC's entry blocks as the irreducible loop's headers.
     LoopData *getContainingLoop() const {
-      if (!isLoopHeader())
-        return Loop;
-      if (!isDoubleLoopHeader())
-        return Loop->Parent;
-      return Loop->Parent->Parent;
+      LoopData *L = Loop;
+      while (L && L->isHeader(Node))
+        L = L->Parent;
+      return L;
     }
 
     /// Resolve a node to its representative.
@@ -313,6 +311,10 @@ public:
       return L ? L->getHeader() : Node;
     }
 
+    /// The outermost loop containing Node that is currently packaged, if any.
+    ///
+    /// Packaging is transient state: this answers what represents Node at the
+    /// level being processed, not where Node sits in the loop nest.
     LoopData *getPackagedLoop() const {
       if (!Loop || !Loop->IsPackaged)
         return nullptr;
@@ -322,17 +324,14 @@ public:
       return L;
     }
 
-    /// Get the appropriate mass for a node.
-    ///
-    /// Get appropriate mass for Node.  If Node is a loop-header (whose loop
-    /// has been packaged), returns the mass of its pseudo-node.  If it's a
-    /// node inside a packaged loop, it returns the loop's mass.
+    /// The mass slot for Node: its own, or that of the outermost packaged
+    /// loop it heads.
     BlockMass &getMass() {
-      if (!isAPackage())
-        return Mass;
-      if (!isADoublePackage())
-        return Loop->Mass;
-      return Loop->Parent->Mass;
+      BlockMass *M = &Mass;
+      for (LoopData *L = Loop; L && L->IsPackaged && L->isHeader(Node);
+           L = L->Parent)
+        M = &L->Mass;
+      return *M;
     }
 
     /// Has ContainingLoop been packaged up?
@@ -340,11 +339,6 @@ public:
 
     /// Has Loop been packaged up?
     bool isAPackage() const { return isLoopHeader() && Loop->IsPackaged; }
-
-    /// Has Loop been packaged up twice?
-    bool isADoublePackage() const {
-      return isDoubleLoopHeader() && Loop->Parent->IsPackaged;
-    }
   };
 
   /// Unscaled probability weight.
@@ -1179,16 +1173,17 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::initializeLoops() {
 }
 
 template <class BT> void BlockFrequencyInfoImpl<BT>::computeMassInLoops() {
-  // Visit loops with the deepest first, and the top-level loops last.
-  for (auto L = Loops.rbegin(), E = Loops.rend(); L != E; ++L) {
+  // Visit loops with the deepest first, and the top-level loops last. The first
+  // computeMassInLoop returns false if *L contains an irreducible sub-SCC.
+  // computeIrreducibleMass then packages each such SCC into a new loop,
+  // inserted immediately after *L.
+  for (auto L = Loops.end(), B = Loops.begin(); L != B;) {
+    --L;
     if (computeMassInLoop(*L))
       continue;
-    auto Next = std::next(L);
-    computeIrreducibleMass(&*L, L.base());
-    L = std::prev(Next);
-    if (computeMassInLoop(*L))
-      continue;
-    llvm_unreachable("unhandled irreducible control flow");
+    computeIrreducibleMass(&*L, std::next(L));
+    if (!computeMassInLoop(*L))
+      llvm_unreachable("unhandled irreducible control flow");
   }
 }
 

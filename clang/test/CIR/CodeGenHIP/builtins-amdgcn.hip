@@ -1,14 +1,14 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN: -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN: -fcuda-is-device -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -x hip -std=c++11 \
+// RUN: -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 #define __device__ __attribute__((device))
@@ -222,4 +222,20 @@ __device__ void test_frexp_mant_f32(float* out, float a) {
 // LLVM: call{{.*}} double @llvm.amdgcn.frexp.mant.f64(double %{{.*}})
 __device__ void test_frexp_mant_f64(double* out, double a) {
   *out = __builtin_amdgcn_frexp_mant(a);
+}
+
+// CIR-LABEL: @_Z19test_trig_preop_f32Pffi
+// CIR: cir.call_llvm_intrinsic "amdgcn.trig.preop" {{.*}} : (!cir.float, !s32i) -> !cir.float
+// LLVM: define{{.*}} void @_Z19test_trig_preop_f32Pffi
+// LLVM: call{{.*}} float @llvm.amdgcn.trig.preop.f32(float %{{.+}}, i32 %{{.+}})
+__device__ void test_trig_preop_f32(float* out, float a, int b) {
+  *out = __builtin_amdgcn_trig_preopf(a, b);
+}
+
+// CIR-LABEL: @_Z19test_trig_preop_f64Pddi
+// CIR: cir.call_llvm_intrinsic "amdgcn.trig.preop" {{.*}} : (!cir.double, !s32i) -> !cir.double
+// LLVM: define{{.*}} void @_Z19test_trig_preop_f64Pddi
+// LLVM: call{{.*}} double @llvm.amdgcn.trig.preop.f64(double %{{.+}}, i32 %{{.+}})
+__device__ void test_trig_preop_f64(double* out, double a, int b) {
+  *out = __builtin_amdgcn_trig_preop(a, b);
 }
