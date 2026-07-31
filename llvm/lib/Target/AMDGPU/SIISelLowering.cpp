@@ -10426,7 +10426,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       VData = Op.getOperand(2);
 
       MVT StoreVT = VData.getSimpleValueType();
-      if (StoreVT.getScalarType() == MVT::f16) {
+      if (StoreVT.getScalarSizeInBits() == 16) {
         if (!Subtarget->hasD16Images() || !BaseOpcode->HasD16)
           return Op; // D16 is unsupported for this instruction
 
@@ -10439,7 +10439,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       // Work out the num dwords based on the dmask popcount and underlying type
       // and whether packing is supported.
       MVT LoadVT = ResultTypes[0].getSimpleVT();
-      if (LoadVT.getScalarType() == MVT::f16) {
+      if (LoadVT.getScalarSizeInBits() == 16) {
         if (!Subtarget->hasD16Images() || !BaseOpcode->HasD16)
           return Op; // D16 is unsupported for this instruction
 
