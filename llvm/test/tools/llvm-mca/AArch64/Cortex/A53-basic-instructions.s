@@ -515,32 +515,32 @@
 # CHECK-NEXT:  1      3     0.50                        ror	x19, x23, #24
 # CHECK-NEXT:  1      3     0.50                        ror	x29, xzr, #63
 # CHECK-NEXT:  1      3     0.50                        ror	w9, w13, #31
-# CHECK-NEXT:  1      6     1.00                        fcmp	h5, h21
-# CHECK-NEXT:  1      6     1.00                        fcmp	h5, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmpe	h22, h21
-# CHECK-NEXT:  1      6     1.00                        fcmpe	h13, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmp	s3, s5
-# CHECK-NEXT:  1      6     1.00                        fcmp	s31, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmpe	s29, s30
-# CHECK-NEXT:  1      6     1.00                        fcmpe	s15, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmp	d4, d12
-# CHECK-NEXT:  1      6     1.00                        fcmp	d23, #0.0
-# CHECK-NEXT:  1      6     1.00                        fcmpe	d26, d22
-# CHECK-NEXT:  1      6     1.00                        fcmpe	d29, #0.0
-# CHECK-NEXT:  1      6     1.00                        fccmp	s1, s31, #0, eq
-# CHECK-NEXT:  1      6     1.00                        fccmp	s3, s0, #15, hs
-# CHECK-NEXT:  1      6     1.00                        fccmp	s31, s15, #13, hs
-# CHECK-NEXT:  1      6     1.00                        fccmp	d9, d31, #0, le
-# CHECK-NEXT:  1      6     1.00                        fccmp	d3, d0, #15, gt
-# CHECK-NEXT:  1      6     1.00                        fccmp	d31, d5, #7, ne
-# CHECK-NEXT:  1      6     1.00                        fccmp	h31, h3, #11, hs
-# CHECK-NEXT:  1      6     1.00                        fccmpe	h6, h1, #12, ne
-# CHECK-NEXT:  1      6     1.00                        fccmpe	s1, s31, #0, eq
-# CHECK-NEXT:  1      6     1.00                        fccmpe	s3, s0, #15, hs
-# CHECK-NEXT:  1      6     1.00                        fccmpe	s31, s15, #13, hs
-# CHECK-NEXT:  1      6     1.00                        fccmpe	d9, d31, #0, le
-# CHECK-NEXT:  1      6     1.00                        fccmpe	d3, d0, #15, gt
-# CHECK-NEXT:  1      6     1.00                        fccmpe	d31, d5, #7, ne
+# CHECK-NEXT:  1      3     1.00                        fcmp	h5, h21
+# CHECK-NEXT:  1      3     1.00                        fcmp	h5, #0.0
+# CHECK-NEXT:  1      3     1.00                        fcmpe	h22, h21
+# CHECK-NEXT:  1      3     1.00                        fcmpe	h13, #0.0
+# CHECK-NEXT:  1      3     1.00                        fcmp	s3, s5
+# CHECK-NEXT:  1      3     1.00                        fcmp	s31, #0.0
+# CHECK-NEXT:  1      3     1.00                        fcmpe	s29, s30
+# CHECK-NEXT:  1      3     1.00                        fcmpe	s15, #0.0
+# CHECK-NEXT:  1      3     1.00                        fcmp	d4, d12
+# CHECK-NEXT:  1      3     1.00                        fcmp	d23, #0.0
+# CHECK-NEXT:  1      3     1.00                        fcmpe	d26, d22
+# CHECK-NEXT:  1      3     1.00                        fcmpe	d29, #0.0
+# CHECK-NEXT:  1      3     1.00                        fccmp	s1, s31, #0, eq
+# CHECK-NEXT:  1      3     1.00                        fccmp	s3, s0, #15, hs
+# CHECK-NEXT:  1      3     1.00                        fccmp	s31, s15, #13, hs
+# CHECK-NEXT:  1      3     1.00                        fccmp	d9, d31, #0, le
+# CHECK-NEXT:  1      3     1.00                        fccmp	d3, d0, #15, gt
+# CHECK-NEXT:  1      3     1.00                        fccmp	d31, d5, #7, ne
+# CHECK-NEXT:  1      3     1.00                        fccmp	h31, h3, #11, hs
+# CHECK-NEXT:  1      3     1.00                        fccmpe	h6, h1, #12, ne
+# CHECK-NEXT:  1      3     1.00                        fccmpe	s1, s31, #0, eq
+# CHECK-NEXT:  1      3     1.00                        fccmpe	s3, s0, #15, hs
+# CHECK-NEXT:  1      3     1.00                        fccmpe	s31, s15, #13, hs
+# CHECK-NEXT:  1      3     1.00                        fccmpe	d9, d31, #0, le
+# CHECK-NEXT:  1      3     1.00                        fccmpe	d3, d0, #15, gt
+# CHECK-NEXT:  1      3     1.00                        fccmpe	d31, d5, #7, ne
 # CHECK-NEXT:  1      4     0.50                        fcsel	s3, s20, s9, pl
 # CHECK-NEXT:  1      4     0.50                        fcsel	d9, d10, d11, mi
 # CHECK-NEXT:  1      4     0.50                        fcsel	h26, h2, h11, hs
