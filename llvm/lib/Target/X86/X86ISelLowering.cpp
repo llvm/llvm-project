@@ -2610,6 +2610,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
     setOperationAction(ISD::FMA, MVT::bf16, Custom);
 
+    for (unsigned Opc : {ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                         ISD::FNEARBYINT, ISD::FROUNDEVEN})
+      setOperationAction(Opc, MVT::bf16, Custom);
+
     setOperationAction(ISD::FADD, MVT::v32bf16, Legal);
     setOperationAction(ISD::FSUB, MVT::v32bf16, Legal);
     setOperationAction(ISD::FMUL, MVT::v32bf16, Legal);
@@ -2618,6 +2622,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FMA, MVT::v32bf16, Legal);
     setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
     SetFPMinMaxAction(MVT::v32bf16);
+    for (auto VT : {MVT::v8bf16, MVT::v16bf16, MVT::v32bf16})
+      for (unsigned Opc : {ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
+                           ISD::FNEARBYINT, ISD::FROUNDEVEN})
+        setOperationAction(Opc, VT, Legal);
     for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setOperationAction(ISD::FADD, VT, Legal);
       setOperationAction(ISD::FSUB, VT, Legal);
@@ -34549,12 +34557,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FMUL:
   case ISD::FSQRT:
   case ISD::FDIV:
-  case ISD::FMA: {
+  case ISD::FMA:
+  case ISD::FFLOOR:
+  case ISD::FCEIL:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
+  case ISD::FROUNDEVEN: {
     assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
-    // AVX10.2 has no scalar bf16 arithmetic instructions, and bf16 is a
-    // soft-promoted-half type, so scalar ops would otherwise be promoted to
-    // f32. Instead widen each operand to a v8bf16 vector, perform the legal
-    // packed operation, and extract the low element afterwards.
+    // AVX10.2 has no scalar bf16 arithmetic or round-to-integer instructions,
+    // and bf16 is a soft-promoted-half type, so scalar ops would otherwise be
+    // promoted to f32. Instead widen each operand to a v8bf16 vector, perform
+    // the legal packed operation, and extract the low element afterwards.
     SmallVector<SDValue, 3> VecOps;
     for (const SDValue &Op : N->ops()) {
       SDValue AsF16 = DAG.getBitcast(MVT::f16, Op);
