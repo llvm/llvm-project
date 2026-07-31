@@ -1416,6 +1416,16 @@ static unsigned parseSyncscopeMDArg(const CallBase &CI, unsigned ArgIdx) {
   return CI.getContext().getOrInsertSyncScopeID(Scope);
 }
 
+// Recovers the scope AMDGPULowerBufferFatPointers stashed as metadata,
+// since buffer intrinsics have no scope operand of their own.
+static std::optional<SyncScope::ID> parseAtomicScopeMD(const CallBase &CI) {
+  MDNode *ScopeMD = CI.getMetadata("amdgpu.buffer.atomic.scope");
+  if (!ScopeMD)
+    return std::nullopt;
+  StringRef Scope = cast<MDString>(ScopeMD->getOperand(0))->getString();
+  return CI.getContext().getOrInsertSyncScopeID(Scope);
+}
+
 void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                                           const CallBase &CI,
                                           MachineFunction &MF,
@@ -1503,6 +1513,12 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         Info.memVT = getValueType(MF.getDataLayout(), DataTy);
 
       Info.flags = Flags | MachineMemOperand::MOStore;
+      if (std::optional<SyncScope::ID> SSID = parseAtomicScopeMD(CI)) {
+        // Pretend to be atomic so SIMemoryLegalizer::expandStore sets cache
+        // bypass bits, since atomic and plain buffer stores look identical.
+        Info.order = AtomicOrdering::Monotonic;
+        Info.ssid = *SSID;
+      }
     } else {
       // Atomic, NoReturn Sampler or prefetch
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID
@@ -1521,6 +1537,12 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
           // XXX - Should this be volatile without known ordering?
           Info.flags |= MachineMemOperand::MOVolatile;
           Info.memVT = MVT::getVT(CI.getArgOperand(0)->getType());
+          if (std::optional<SyncScope::ID> SSID = parseAtomicScopeMD(CI)) {
+            // Pretend to be atomic so expandAtomicCmpxchgOrRmw sets cache
+            // bypass bits.
+            Info.order = AtomicOrdering::Monotonic;
+            Info.ssid = *SSID;
+          }
         }
         break;
       case Intrinsic::amdgcn_raw_buffer_load_lds:
@@ -1561,6 +1583,11 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
             memVTFromLoadIntrReturn(*this, MF.getDataLayout(), CI.getType(),
                                     std::numeric_limits<unsigned>::max());
         Info.flags = Flags | MachineMemOperand::MOLoad;
+        if (std::optional<SyncScope::ID> SSID = parseAtomicScopeMD(CI)) {
+          // Pretend to be atomic so expandLoad sets cache bypass bits.
+          Info.order = AtomicOrdering::Monotonic;
+          Info.ssid = *SSID;
+        }
         Infos.push_back(Info);
         return;
       }

@@ -22,7 +22,7 @@ define void @buffer_fat_ptr_agent_atomic_add_noret_i32(ptr addrspace(7) inreg %p
 ; GFX1250-NEXT:    s_mov_b32 s3, s8
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s16
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    buffer_atomic_add_u32 v0, v1, s[0:3], null offen
+; GFX1250-NEXT:    buffer_atomic_add_u32 v0, v1, s[0:3], null offen scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %unused = atomicrmw add ptr addrspace(7) %ptr, i32 %val syncscope("agent") monotonic
   ret void
@@ -49,11 +49,162 @@ define i32 @buffer_fat_ptr_agent_atomic_add_ret_i32(ptr addrspace(7) inreg %ptr,
 ; GFX1250-NEXT:    s_mov_b32 s3, s8
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s16
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    buffer_atomic_add_u32 v0, v1, s[0:3], null offen th:TH_ATOMIC_RETURN
+; GFX1250-NEXT:    buffer_atomic_add_u32 v0, v1, s[0:3], null offen th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %ret = atomicrmw add ptr addrspace(7) %ptr, i32 %val syncscope("agent") monotonic
   ret i32 %ret
+}
+
+define void @buffer_fat_ptr_seq_cst_atomic_add_noret_i32(ptr addrspace(7) inreg %ptr, i32 %val) {
+; GFX1250-LABEL: buffer_fat_ptr_seq_cst_atomic_add_noret_i32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s6, s2
+; GFX1250-NEXT:    s_mov_b32 s4, s0
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    s_mov_b32 s7, s3
+; GFX1250-NEXT:    s_mov_b32 s8, s7
+; GFX1250-NEXT:    s_mov_b32 s9, s6
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    s_mov_b32 s5, s1
+; GFX1250-NEXT:    s_mov_b32 s10, s5
+; GFX1250-NEXT:    s_mov_b32 s0, s4
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    s_mov_b32 s1, s10
+; GFX1250-NEXT:    s_mov_b32 s2, s9
+; GFX1250-NEXT:    s_mov_b32 s3, s8
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s16
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    buffer_atomic_add_u32 v0, v1, s[0:3], null offen scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %unused = atomicrmw add ptr addrspace(7) %ptr, i32 %val seq_cst
+  ret void
+}
+
+define i32 @buffer_fat_ptr_seq_cst_cmpxchg_i32(ptr addrspace(7) inreg %ptr, i32 %cmp, i32 %new) {
+; GFX1250-LABEL: buffer_fat_ptr_seq_cst_cmpxchg_i32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    scratch_store_b32 off, v1, s32 nv ; 4-byte Folded Spill
+; GFX1250-NEXT:    v_mov_b32_e32 v2, v0
+; GFX1250-NEXT:    scratch_load_b32 v0, off, s32 nv ; 4-byte Folded Reload
+; GFX1250-NEXT:    s_mov_b32 s6, s2
+; GFX1250-NEXT:    s_mov_b32 s4, s0
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    s_mov_b32 s7, s3
+; GFX1250-NEXT:    s_mov_b32 s8, s7
+; GFX1250-NEXT:    s_mov_b32 s9, s6
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    s_mov_b32 s5, s1
+; GFX1250-NEXT:    s_mov_b32 s10, s5
+; GFX1250-NEXT:    s_mov_b32 s0, s4
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    s_mov_b32 s1, s10
+; GFX1250-NEXT:    s_mov_b32 s2, s9
+; GFX1250-NEXT:    s_mov_b32 s3, s8
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x1
+; GFX1250-NEXT:    v_mov_b32_e32 v1, v2
+; GFX1250-NEXT:    v_mov_b32_e32 v2, s16
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v2, s[0:3], null offen th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX1250-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $vgpr0_vgpr1 killed $exec
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %pair = cmpxchg ptr addrspace(7) %ptr, i32 %cmp, i32 %new seq_cst seq_cst
+  %ret = extractvalue { i32, i1 } %pair, 0
+  ret i32 %ret
+}
+
+define i32 @buffer_fat_ptr_seq_cst_load_i32(ptr addrspace(7) inreg %ptr) {
+; GFX1250-LABEL: buffer_fat_ptr_seq_cst_load_i32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s6, s2
+; GFX1250-NEXT:    s_mov_b32 s4, s0
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    s_mov_b32 s7, s3
+; GFX1250-NEXT:    s_mov_b32 s8, s7
+; GFX1250-NEXT:    s_mov_b32 s9, s6
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    s_mov_b32 s5, s1
+; GFX1250-NEXT:    s_mov_b32 s10, s5
+; GFX1250-NEXT:    s_mov_b32 s0, s4
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    s_mov_b32 s1, s10
+; GFX1250-NEXT:    s_mov_b32 s2, s9
+; GFX1250-NEXT:    s_mov_b32 s3, s8
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v0, s16
+; GFX1250-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  %ret = load atomic i32, ptr addrspace(7) %ptr seq_cst, align 4
+  ret i32 %ret
+}
+
+define void @buffer_fat_ptr_seq_cst_store_i32(ptr addrspace(7) inreg %ptr, i32 %val) {
+; GFX1250-LABEL: buffer_fat_ptr_seq_cst_store_i32:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s6, s2
+; GFX1250-NEXT:    s_mov_b32 s4, s0
+; GFX1250-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GFX1250-NEXT:    s_mov_b32 s7, s3
+; GFX1250-NEXT:    s_mov_b32 s8, s7
+; GFX1250-NEXT:    s_mov_b32 s9, s6
+; GFX1250-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
+; GFX1250-NEXT:    s_mov_b32 s5, s1
+; GFX1250-NEXT:    s_mov_b32 s10, s5
+; GFX1250-NEXT:    s_mov_b32 s0, s4
+; GFX1250-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1_sgpr2_sgpr3
+; GFX1250-NEXT:    s_mov_b32 s1, s10
+; GFX1250-NEXT:    s_mov_b32 s2, s9
+; GFX1250-NEXT:    s_mov_b32 s3, s8
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s16
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    buffer_store_b32 v0, v1, s[0:3], null offen scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+  store atomic i32 %val, ptr addrspace(7) %ptr seq_cst, align 4
+  ret void
 }
 
 define void @raw_buffer_atomic_add_v2f16_noret(<2 x half> %val, <4 x i32> inreg %rsrc, i32 %voffset, i32 inreg %soffset) {

@@ -1566,6 +1566,10 @@ class SplitPtrStructs : public InstVisitor<SplitPtrStructs, PtrParts> {
   void setAlign(CallInst *Intr, Align A, unsigned RsrcArgIdx);
   void insertPreMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
   void insertPostMemOpFence(AtomicOrdering Order, SyncScope::ID SSID);
+  // Buffer intrinsics have no ordering/scope operand, so stash it as
+  // metadata for SIISelLowering::getTgtMemIntrinsic to recover.
+  void attachAtomicScopeMD(CallInst *Call, AtomicOrdering Order,
+                           SyncScope::ID SSID);
   Value *handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr, Type *Ty,
                           Align Alignment, AtomicOrdering Order,
                           bool IsVolatile, SyncScope::ID SSID);
@@ -1872,6 +1876,16 @@ void SplitPtrStructs::setAlign(CallInst *Intr, Align A, unsigned RsrcArgIdx) {
   Intr->addParamAttr(RsrcArgIdx, Attribute::getWithAlignment(Ctx, A));
 }
 
+void SplitPtrStructs::attachAtomicScopeMD(CallInst *Call, AtomicOrdering Order,
+                                          SyncScope::ID SSID) {
+  if (Order == AtomicOrdering::NotAtomic)
+    return;
+  LLVMContext &Ctx = Call->getContext();
+  StringRef Scope = Ctx.getSyncScopeName(SSID).value_or("");
+  Call->setMetadata("amdgpu.buffer.atomic.scope",
+                    MDNode::get(Ctx, MDString::get(Ctx, Scope)));
+}
+
 void SplitPtrStructs::insertPreMemOpFence(AtomicOrdering Order,
                                           SyncScope::ID SSID) {
   switch (Order) {
@@ -2023,6 +2037,7 @@ Value *SplitPtrStructs::handleMemoryInst(Instruction *I, Value *Arg, Value *Ptr,
 
   CallInst *Call = IRB.CreateIntrinsicWithoutFolding(IID, Ty, Args);
   copyMetadata(Call, I);
+  attachAtomicScopeMD(Call, Order, SSID);
   setAlign(Call, Alignment, Arg ? 1 : 0);
   Call->takeName(I);
 
@@ -2093,6 +2108,7 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
       {AI.getNewValOperand(), AI.getCompareOperand(), Rsrc, Off,
        IRB.getInt32(0), IRB.getInt32(Aux)});
   copyMetadata(Call, &AI);
+  attachAtomicScopeMD(Call, Order, SSID);
   setAlign(Call, AI.getAlign(), 2);
   Call->takeName(&AI);
   insertPostMemOpFence(Order, SSID);
