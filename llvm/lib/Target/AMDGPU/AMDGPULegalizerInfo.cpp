@@ -739,7 +739,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const std::initializer_list<LLT> FPTypesPK16_64 = {S32, S64, S16, V2S16,
                                                      V2S64};
 
-  const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
   const LLT MinExtendedFPTy = ST.has16BitInsts() ? F16 : F32;
   const LLT I1 = LLT::integer(1);
   const LLT I16 = LLT::integer(16);
@@ -1104,12 +1103,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
     getActionDefinitionsBuilder(G_FFREXP)
-      .customFor({{S32, S32}, {S64, S32}, {S16, S16}, {S16, S32}})
-      .scalarize(0)
-      .lower();
+        .customFor({{F32, I32}, {F64, I32}, {F16, I16}, {F16, I32}})
+        .scalarize(0)
+        .lower();
 
     getActionDefinitionsBuilder(G_FMODF)
-        .lowerFor({S16, S32, S64})
+        .lowerFor({F16, F32, F64})
         .scalarize(0)
         .lower();
   } else {
@@ -1140,14 +1139,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
     getActionDefinitionsBuilder(G_FFREXP)
-      .customFor({{S32, S32}, {S64, S32}})
-      .scalarize(0)
-      .minScalar(0, S32)
-      .clampScalar(1, S32, S32)
-      .lower();
+        .customFor({{F32, I32}, {F64, I32}})
+        .scalarize(0)
+        .minScalar(0, F32)
+        .clampScalar(1, I32, I32)
+        .lower();
 
     getActionDefinitionsBuilder(G_FMODF)
-        .lowerFor({S32, S64})
+        .lowerFor({F32, F64})
         .scalarize(0)
         .lower();
   }
@@ -1292,26 +1291,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .lower();
 
-  if (ST.has16BitInsts()) {
-    getActionDefinitionsBuilder(
-        {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
-        .legalFor({S16, S32, S64})
-        .clampScalar(0, S16, S64)
-        .scalarize(0);
-  } else if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
-    getActionDefinitionsBuilder(
-        {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
-        .legalFor({S32, S64})
-        .clampScalar(0, S32, S64)
-        .scalarize(0);
-  } else {
-    getActionDefinitionsBuilder(
-        {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
-        .legalFor({S32})
-        .customFor({S64})
-        .clampScalar(0, S32, S64)
-        .scalarize(0);
-  }
+  auto &RoundingActions = getActionDefinitionsBuilder(
+      {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN});
+  if (ST.has16BitInsts())
+    RoundingActions.legalFor({F16, F32, F64});
+  else if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS)
+    RoundingActions.legalFor({F32, F64});
+  else
+    RoundingActions.legalFor({F32}).customFor({F64});
+
+  RoundingActions.scalarize(0);
+  if (!ST.has16BitInsts())
+    RoundingActions.minScalar(0, F32);
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .unsupportedFor({BufferFatPtr, BufferStridedPtr, RsrcPtr})
@@ -1375,22 +1366,24 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
-      .legalFor(ST.has16BitInsts(), {S16})
-      .customFor({S32, S16})
+      .legalFor(ST.has16BitInsts(), {F16})
+      .customFor({F32, F16})
       .scalarize(0)
       .lower();
 
   getActionDefinitionsBuilder(G_FEXP2)
-      .legalFor(ST.has16BitInsts(), {S16})
-      .customFor({S32, S64, S16})
+      .legalFor(ST.has16BitInsts(), {F16})
+      .customFor({F32, F64, F16})
       .scalarize(0)
       .lower();
 
-  auto &LogOps =
-      getActionDefinitionsBuilder({G_FLOG, G_FLOG10, G_FEXP, G_FEXP10});
-  LogOps.customFor({S32, S16, S64});
-  LogOps.clampScalar(0, MinScalarFPTy, S32)
-        .scalarize(0);
+  getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
+      .customFor({F16, F32})
+      .scalarize(0);
+
+  getActionDefinitionsBuilder({G_FEXP, G_FEXP10})
+      .customFor({F16, F32, F64})
+      .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder(G_CTPOP)
@@ -3802,8 +3795,10 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
     auto CH = B.buildFConstant(Ty, IsLog10 ? ch_log10 : ch_log);
     auto CT = B.buildFConstant(Ty, IsLog10 ? ct_log10 : ct_log);
 
-    auto MaskConst = B.buildConstant(Ty, 0xfffff000);
-    auto YH = B.buildAnd(Ty, Y, MaskConst);
+    const LLT I32 = LLT::integer(32);
+    auto YInt = B.buildBitcast(I32, Y);
+    auto MaskConst = B.buildConstant(I32, 0xfffff000);
+    auto YH = B.buildBitcast(Ty, B.buildAnd(I32, YInt, MaskConst));
     auto YT = B.buildFSub(Ty, Y, YH, Flags);
     // This adds correction terms for which contraction may lead to an increase
     // in the error of the approximation, so disable it.
@@ -4236,8 +4231,10 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
     const float ch_exp10 = 0x1.a92000p+1f;
     const float cl_exp10 = 0x1.4f0978p-11f;
 
-    auto MaskConst = B.buildConstant(Ty, 0xfffff000);
-    auto XH = B.buildAnd(Ty, X, MaskConst);
+    const LLT I32 = LLT::integer(32);
+    auto XInt = B.buildBitcast(I32, X);
+    auto MaskConst = B.buildConstant(I32, 0xfffff000);
+    auto XH = B.buildBitcast(Ty, B.buildAnd(I32, XInt, MaskConst));
     auto XL = B.buildFSub(Ty, X, XH, Flags);
 
     auto CH = B.buildFConstant(Ty, IsExp10 ? ch_exp10 : ch_exp);
