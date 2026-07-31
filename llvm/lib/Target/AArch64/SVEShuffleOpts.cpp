@@ -222,6 +222,64 @@ static bool optimizeSVEDeinterleavedExtends(Loop &L,
 
   return !Deinterleaves.empty();
 }
+
+// Match a bitcasted tbl intrinsic, and bind the tbl along with the mask.
+template <typename TblT, typename MaskT>
+static auto m_Tbl(TblT &&Tbl, MaskT &&Mask) {
+  return m_OneUse(
+      m_BitCast(m_OneUse(m_Value(Tbl, m_Intrinsic<Intrinsic::aarch64_sve_tbl>(
+                                          m_Value(), m_Value(Mask))))));
+}
+
+// Match a tbl intrinsic whose result is converted to a floating point value.
+template <typename TblT, typename MaskT>
+static auto m_UIToFPTbl(TblT &&Tbl, MaskT &&Mask) {
+  return m_OneUse(m_UIToFP(m_Tbl(Tbl, Mask)));
+}
+
+// Match either of the above tbls, and recalculate the index of the
+// deinterleaved subvector. Bind the tbl and the index.
+template <typename T> struct deinterleaving_tbl_match {
+  T *&Tbl;
+  unsigned &Idx;
+
+  deinterleaving_tbl_match(T *&Tbl, unsigned &Idx) : Tbl(Tbl), Idx(Idx) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    // Match the tbl.
+    Value *Mask;
+    if (!PatternMatch::match(
+            V, m_CombineOr(m_Tbl(Tbl, Mask), m_UIToFPTbl(Tbl, Mask))))
+      return false;
+
+    // For a deinterleaving+extending tbl, we will have a known constant values
+    // for the starting index and the step.
+    const APInt *Start;
+    const APInt *Step;
+    if (!PatternMatch::match(
+            Mask, m_BitCast(m_Add(m_Mul(m_Intrinsic<Intrinsic::stepvector>(),
+                                        m_APInt(Step)),
+                                  m_APInt(Start)))))
+      return false;
+
+    unsigned SrcSize = Tbl->getType()->getScalarType()->getScalarSizeInBits();
+    unsigned ResSize = V->getType()->getScalarType()->getScalarSizeInBits();
+    // If the top bits are all ones, we know we're forcing an out-of-range
+    // index. With a deinterleave of 4, we should have 3 invalid indices for
+    // every valid one.
+    if (Start->countLeadingOnes() != ResSize - SrcSize)
+      return false;
+
+    // The start of the valid indices must be between 0 and 3, for the 4
+    // subvectors we're extracting.
+    Idx = Start->getZExtValue() & SrcSize - 1;
+    return Idx >= 0 && Idx < 4;
+  }
+};
+
+template <typename T> static auto m_DeinterleavingTbl(T *&Tbl, unsigned &Idx) {
+  return deinterleaving_tbl_match<T>(Tbl, Idx);
+}
 }
 
 static bool processLoop(Loop &L, const AArch64Subtarget &ST, DataLayout DL) {
