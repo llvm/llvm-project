@@ -19,10 +19,12 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/ThreadPool.h"
 
 #include <functional>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -93,6 +95,12 @@ public:
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
   virtual Error run(AddStreamFn AddStream, FileCache Cache = {}) override;
+
+  /// Wait for LTO cleanup. Clients may call this after run() once subsequent
+  /// linking work that can overlap with cleanup is complete. Cleanup may emit
+  /// time trace events, so this must be called before time trace data is
+  /// finalized.
+  void waitForCleanup() override;
 
 private:
   /// DTLTO archive support.
@@ -355,6 +363,20 @@ private:
 
   // Cleanup files list.
   std::vector<std::string> CleanupList;
+
+  // There can be many temporary files to remove. Performing deletion in the
+  // background can save a few seconds on Windows hosts.
+  struct BackgroundDeletion : DefaultThreadPool {
+    BackgroundDeletion();
+    ~BackgroundDeletion();
+
+    void removeFiles(std::vector<std::string> &&Files, const Config &Conf);
+    void waitForTasks();
+
+    std::vector<std::string> Warnings;
+  };
+
+  BackgroundDeletion BackgroundDeleter;
 
   // Record a file for cleanup and register signal-time removal if requested.
   void addToCleanup(StringRef Filename) {

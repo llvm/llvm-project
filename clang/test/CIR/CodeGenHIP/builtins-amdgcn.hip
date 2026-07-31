@@ -1,14 +1,14 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN: -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -x hip -std=c++11 -fclangir \
+// RUN: -fcuda-is-device -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
-// RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu6.00-amd-amdhsa -x hip -std=c++11 \
+// RUN: -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 #define __device__ __attribute__((device))
@@ -198,4 +198,28 @@ __device__ void test_cosf_f32(float* out, float a) {
 // LLVM: call{{.*}} float @llvm.amdgcn.exp2.f32(float %{{.*}})
 __device__ void test_exp2_f32(float* out, float a) {
   *out = __builtin_amdgcn_exp2f(a);
+}
+
+// CIR-LABEL: @_Z12test_log_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.log" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z12test_log_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.log.f32(float %{{.*}})
+__device__ void test_log_f32(float* out, float a) {
+  *out = __builtin_amdgcn_logf(a);
+}
+
+// CIR-LABEL: @_Z19test_frexp_mant_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z19test_frexp_mant_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.frexp.mant.f32(float %{{.*}})
+__device__ void test_frexp_mant_f32(float* out, float a) {
+  *out = __builtin_amdgcn_frexp_mantf(a);
+}
+
+// CIR-LABEL: @_Z19test_frexp_mant_f64Pdd
+// CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.double) -> !cir.double
+// LLVM: define{{.*}} void @_Z19test_frexp_mant_f64Pdd
+// LLVM: call{{.*}} double @llvm.amdgcn.frexp.mant.f64(double %{{.*}})
+__device__ void test_frexp_mant_f64(double* out, double a) {
+  *out = __builtin_amdgcn_frexp_mant(a);
 }

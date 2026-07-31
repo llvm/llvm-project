@@ -776,7 +776,7 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           if (!lowerBounds.empty()) {
             mlir::Value lb = lowerBounds[i];
             auto constLb = fir::getIntIfConstant(lb);
-            if (!(constLb && *constLb == 1)) {
+            if (!(constLb && constLb->isOne())) {
               mlir::Location loc = op.getLoc();
               mlir::Value extLb =
                   fir::ConvertOp::create(rewriter, loc, idxTy, lb);
@@ -1262,218 +1262,6 @@ std::optional<std::int64_t> fir::ArrayCoorOp::getViewOffset(mlir::OpResult) {
 }
 
 //===----------------------------------------------------------------------===//
-// ArrayLoadOp
-//===----------------------------------------------------------------------===//
-
-static mlir::Type adjustedElementType(mlir::Type t) {
-  if (auto ty = mlir::dyn_cast<fir::ReferenceType>(t)) {
-    auto eleTy = ty.getEleTy();
-    if (fir::isa_char(eleTy))
-      return eleTy;
-    if (fir::isa_derived(eleTy))
-      return eleTy;
-    if (mlir::isa<fir::SequenceType>(eleTy))
-      return eleTy;
-  }
-  return t;
-}
-
-std::vector<mlir::Value> fir::ArrayLoadOp::getExtents() {
-  if (auto sh = getShape())
-    if (auto *op = sh.getDefiningOp()) {
-      if (auto shOp = mlir::dyn_cast<fir::ShapeOp>(op)) {
-        auto extents = shOp.getExtents();
-        return {extents.begin(), extents.end()};
-      }
-      return mlir::cast<fir::ShapeShiftOp>(op).getExtents();
-    }
-  return {};
-}
-
-void fir::ArrayLoadOp::getEffects(
-    llvm::SmallVectorImpl<
-        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getMemrefMutable(),
-                       mlir::SideEffects::DefaultResource::get());
-  addVolatileMemoryEffects({getMemref().getType()}, effects);
-}
-
-llvm::LogicalResult fir::ArrayLoadOp::verify() {
-  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(getMemref().getType());
-  auto arrTy = mlir::dyn_cast<fir::SequenceType>(eleTy);
-  if (!arrTy)
-    return emitOpError("must be a reference to an array");
-  auto arrDim = arrTy.getDimension();
-
-  if (auto shapeOp = getShape()) {
-    auto shapeTy = shapeOp.getType();
-    unsigned shapeTyRank = 0u;
-    if (auto s = mlir::dyn_cast<fir::ShapeType>(shapeTy)) {
-      shapeTyRank = s.getRank();
-    } else if (auto ss = mlir::dyn_cast<fir::ShapeShiftType>(shapeTy)) {
-      shapeTyRank = ss.getRank();
-    } else {
-      auto s = mlir::cast<fir::ShiftType>(shapeTy);
-      shapeTyRank = s.getRank();
-      if (!mlir::isa<fir::BaseBoxType>(getMemref().getType()))
-        return emitOpError("shift can only be provided with fir.box memref");
-    }
-    if (arrDim && arrDim != shapeTyRank)
-      return emitOpError("rank of dimension mismatched");
-  }
-
-  if (auto sliceOp = getSlice()) {
-    if (auto sl = mlir::dyn_cast_or_null<fir::SliceOp>(sliceOp.getDefiningOp()))
-      if (!sl.getSubstr().empty())
-        return emitOpError("array_load cannot take a slice with substring");
-    if (auto sliceTy = mlir::dyn_cast<fir::SliceType>(sliceOp.getType()))
-      if (sliceTy.getRank() != arrDim)
-        return emitOpError("rank of dimension in slice mismatched");
-  }
-
-  if (!validTypeParams(getMemref().getType(), getTypeparams()))
-    return emitOpError("invalid type parameters");
-
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayMergeStoreOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult fir::ArrayMergeStoreOp::verify() {
-  if (!mlir::isa<fir::ArrayLoadOp>(getOriginal().getDefiningOp()))
-    return emitOpError("operand #0 must be result of a fir.array_load op");
-  if (auto sl = getSlice()) {
-    if (auto sliceOp =
-            mlir::dyn_cast_or_null<fir::SliceOp>(sl.getDefiningOp())) {
-      if (!sliceOp.getSubstr().empty())
-        return emitOpError(
-            "array_merge_store cannot take a slice with substring");
-      if (!sliceOp.getFields().empty()) {
-        // This is an intra-object merge, where the slice is projecting the
-        // subfields that are to be overwritten by the merge operation.
-        auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(getMemref().getType());
-        if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy)) {
-          auto projTy =
-              fir::applyPathToType(seqTy.getEleTy(), sliceOp.getFields());
-          if (fir::unwrapSequenceType(getOriginal().getType()) != projTy)
-            return emitOpError(
-                "type of origin does not match sliced memref type");
-          if (fir::unwrapSequenceType(getSequence().getType()) != projTy)
-            return emitOpError(
-                "type of sequence does not match sliced memref type");
-          return mlir::success();
-        }
-        return emitOpError("referenced type is not an array");
-      }
-    }
-    return mlir::success();
-  }
-  auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(getMemref().getType());
-  if (getOriginal().getType() != eleTy)
-    return emitOpError("type of origin does not match memref element type");
-  if (getSequence().getType() != eleTy)
-    return emitOpError("type of sequence does not match memref element type");
-  if (!validTypeParams(getMemref().getType(), getTypeparams()))
-    return emitOpError("invalid type parameters");
-  return mlir::success();
-}
-
-void fir::ArrayMergeStoreOp::getEffects(
-    llvm::SmallVectorImpl<
-        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
-        &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Write::get(), &getMemrefMutable(),
-                       mlir::SideEffects::DefaultResource::get());
-  addVolatileMemoryEffects({getMemref().getType()}, effects);
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayFetchOp
-//===----------------------------------------------------------------------===//
-
-// Template function used for both array_fetch and array_update verification.
-template <typename A>
-mlir::Type validArraySubobject(A op) {
-  auto ty = op.getSequence().getType();
-  return fir::applyPathToType(ty, op.getIndices());
-}
-
-llvm::LogicalResult fir::ArrayFetchOp::verify() {
-  auto arrTy = mlir::cast<fir::SequenceType>(getSequence().getType());
-  auto indSize = getIndices().size();
-  if (indSize < arrTy.getDimension())
-    return emitOpError("number of indices != dimension of array");
-  if (indSize == arrTy.getDimension() &&
-      ::adjustedElementType(getElement().getType()) != arrTy.getEleTy())
-    return emitOpError("return type does not match array");
-  auto ty = validArraySubobject(*this);
-  if (!ty || ty != ::adjustedElementType(getType()))
-    return emitOpError("return type and/or indices do not type check");
-  if (!mlir::isa<fir::ArrayLoadOp>(getSequence().getDefiningOp()))
-    return emitOpError("argument #0 must be result of fir.array_load");
-  if (!validTypeParams(arrTy, getTypeparams()))
-    return emitOpError("invalid type parameters");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayAccessOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult fir::ArrayAccessOp::verify() {
-  auto arrTy = mlir::cast<fir::SequenceType>(getSequence().getType());
-  std::size_t indSize = getIndices().size();
-  if (indSize < arrTy.getDimension())
-    return emitOpError("number of indices != dimension of array");
-  if (indSize == arrTy.getDimension() &&
-      getElement().getType() != fir::ReferenceType::get(arrTy.getEleTy()))
-    return emitOpError("return type does not match array");
-  mlir::Type ty = validArraySubobject(*this);
-  if (!ty || fir::ReferenceType::get(ty) != getType())
-    return emitOpError("return type and/or indices do not type check");
-  if (!validTypeParams(arrTy, getTypeparams()))
-    return emitOpError("invalid type parameters");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayUpdateOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult fir::ArrayUpdateOp::verify() {
-  if (fir::isa_ref_type(getMerge().getType()))
-    return emitOpError("does not support reference type for merge");
-  auto arrTy = mlir::cast<fir::SequenceType>(getSequence().getType());
-  auto indSize = getIndices().size();
-  if (indSize < arrTy.getDimension())
-    return emitOpError("number of indices != dimension of array");
-  if (indSize == arrTy.getDimension() &&
-      ::adjustedElementType(getMerge().getType()) != arrTy.getEleTy())
-    return emitOpError("merged value does not have element type");
-  auto ty = validArraySubobject(*this);
-  if (!ty || ty != ::adjustedElementType(getMerge().getType()))
-    return emitOpError("merged value and/or indices do not type check");
-  if (!validTypeParams(arrTy, getTypeparams()))
-    return emitOpError("invalid type parameters");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// ArrayModifyOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult fir::ArrayModifyOp::verify() {
-  auto arrTy = mlir::cast<fir::SequenceType>(getSequence().getType());
-  auto indSize = getIndices().size();
-  if (indSize < arrTy.getDimension())
-    return emitOpError("number of indices must match array dimension");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
 // BoxAddrOp
 //===----------------------------------------------------------------------===//
 
@@ -1501,6 +1289,15 @@ mlir::OpFoldResult fir::BoxAddrOp::fold(FoldAdaptor adaptor) {
     if (auto box = mlir::dyn_cast<fir::EmboxOp>(v)) {
       // Fold only if not sliced
       if (!box.getSlice() && box.getMemref().getType() == getType()) {
+        propagateAttributes(getOperation(), box.getMemref().getDefiningOp());
+        return box.getMemref();
+      }
+    }
+    // fir.create_box always describes the whole array (no slice), so the
+    // base address is exactly its memref operand. The verifier guarantees the
+    // result box preserves the memref storage kind, so the types match.
+    if (auto box = mlir::dyn_cast<fir::CreateBoxOp>(v)) {
+      if (box.getMemref().getType() == getType()) {
         propagateAttributes(getOperation(), box.getMemref().getDefiningOp());
         return box.getMemref();
       }
@@ -1603,6 +1400,49 @@ void fir::BoxEleSizeOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 // BoxDimsOp
 //===----------------------------------------------------------------------===//
+
+namespace {
+/// fir.box_dims of a descriptor built by fir.create_box with a statically known
+/// dimension forwards the lower bound, extent, and byte stride operands that
+/// built that dimension. These are plain SSA operands of the create_box, so
+/// replacing the box_dims results with them is a value forwarding; the
+/// create_box dominates the box_dims, so the operands are already available.
+struct SimplifyBoxDimsFromCreateBox
+    : public mlir::OpRewritePattern<fir::BoxDimsOp> {
+  using mlir::OpRewritePattern<fir::BoxDimsOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxDimsOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto createBox = op.getVal().getDefiningOp<fir::CreateBoxOp>();
+    if (!createBox)
+      return mlir::failure();
+
+    std::optional<llvm::APInt> constantDim = fir::getIntIfConstant(op.getDim());
+    std::optional<std::int64_t> dim =
+        constantDim ? constantDim->trySExtValue() : std::nullopt;
+    if (!dim || *dim < 0 || *dim >= createBox.getRank())
+      return mlir::failure();
+
+    // The create_box operands are AnyIntegerType and may differ from the
+    // index-typed box_dims results, so convert them.
+    mlir::Location loc = op.getLoc();
+    rewriter.replaceOp(op,
+                       {rewriter.createOrFold<fir::ConvertOp>(
+                            loc, op.getType(0), createBox.getLbounds()[*dim]),
+                        rewriter.createOrFold<fir::ConvertOp>(
+                            loc, op.getType(1), createBox.getExtents()[*dim]),
+                        rewriter.createOrFold<fir::ConvertOp>(
+                            loc, op.getType(2), createBox.getStrides()[*dim])});
+    return mlir::success();
+  }
+};
+} // namespace
+
+void fir::BoxDimsOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.insert<SimplifyBoxDimsFromCreateBox>(context);
+}
 
 /// Get the result types packed in a tuple tuple
 mlir::Type fir::BoxDimsOp::getTupleType() {
@@ -2045,7 +1885,7 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
       matchPattern(getValue(), mlir::m_Op<fir::BitcastOp>())) {
     auto bitcast = mlir::cast<fir::BitcastOp>(getValue().getDefiningOp());
     if (auto cst = fir::getIntIfConstant(bitcast.getValue()))
-      return mlir::IntegerAttr::get(getType(), cst != 0 ? 1 : 0);
+      return mlir::IntegerAttr::get(getType(), cst->isZero() ? 0 : 1);
   }
   return {};
 }
@@ -2060,7 +1900,7 @@ static std::optional<bool> getLogicalConstant(mlir::Value value) {
   if (auto convertOp = value.getDefiningOp<fir::ConvertOp>())
     maybeConvertInput = convertOp.getValue();
   if (auto cst = fir::getIntIfConstant(maybeConvertInput))
-    return *cst != 0;
+    return !cst->isZero();
   return std::nullopt;
 }
 
@@ -2701,7 +2541,7 @@ static bool isBoxLb(mlir::Value box, std::int64_t dim, mlir::Value lb,
         return *dimOperand == dim;
   } else if (!mayHaveNonDefaultLowerBounds) {
     if (auto constantLb = fir::getIntIfConstant(lb))
-      return *constantLb == 1;
+      return constantLb->isOne();
   }
   return false;
 }
@@ -2718,7 +2558,7 @@ static bool isBoxUb(mlir::Value box, std::int64_t dim, mlir::Value ub,
                     bool mayHaveNonDefaultLowerBounds = true) {
   if (auto sub1 = ub.getDefiningOp<mlir::arith::SubIOp>()) {
     auto one = fir::getIntIfConstant(sub1.getOperand(1));
-    if (!one || *one != 1)
+    if (!one || !one->isOne())
       return false;
     if (auto add = sub1.getOperand(0).getDefiningOp<mlir::arith::AddIOp>())
       if ((isBoxLb(box, dim, add.getOperand(0)) &&
@@ -2781,7 +2621,7 @@ static bool isContiguousArraySlice(fir::SliceOp sliceOp, bool checkWhole = true,
             return false;
         }
         auto constantStep = fir::getIntIfConstant(triples[i + 2]);
-        if (!constantStep || *constantStep != 1)
+        if (!constantStep || !constantStep->isOne())
           return false;
       }
     }
@@ -2819,6 +2659,73 @@ mlir::Speculation::Speculatability fir::EmboxOp::getSpeculatability() {
   return (getSourceBox() && mayBeAbsentBox(getSourceBox()))
              ? mlir::Speculation::NotSpeculatable
              : mlir::Speculation::Speculatable;
+}
+
+//===----------------------------------------------------------------------===//
+// CreateBoxOp
+//===----------------------------------------------------------------------===//
+
+unsigned fir::CreateBoxOp::getRank() {
+  auto boxTy = mlir::cast<fir::BaseBoxType>(getResult().getType());
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(
+          fir::unwrapRefType(boxTy.getEleTy())))
+    return seqTy.getDimension();
+  return 0;
+}
+
+llvm::LogicalResult fir::CreateBoxOp::verify() {
+  auto memEleTy = fir::dyn_cast_ptrEleTy(getMemref().getType());
+  auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(memEleTy);
+  if (!seqTy)
+    return emitOpError("memref must be a reference to an array");
+
+  auto boxTy = mlir::cast<fir::BaseBoxType>(getResult().getType());
+  auto boxSeqTy =
+      mlir::dyn_cast<fir::SequenceType>(fir::unwrapRefType(boxTy.getEleTy()));
+  if (!boxSeqTy)
+    return emitOpError("result box must describe an array");
+
+  // The result box must preserve the memref's storage kind so that the
+  // descriptor's CFI attribute field is set correctly and the value matches a
+  // box loaded from the corresponding !fir.ref<!fir.box<...>>:
+  //   !fir.heap<...> -> !fir.box<!fir.heap<...>> (allocatable)
+  //   !fir.ptr<...>  -> !fir.box<!fir.ptr<...>>  (pointer)
+  //   !fir.ref<...>  -> !fir.box<...>            (plain)
+  mlir::Type memrefTy = getMemref().getType();
+  mlir::Type boxEleTy = boxTy.getEleTy();
+  if (mlir::isa<fir::HeapType>(memrefTy) !=
+          mlir::isa<fir::HeapType>(boxEleTy) ||
+      mlir::isa<fir::PointerType>(memrefTy) !=
+          mlir::isa<fir::PointerType>(boxEleTy))
+    return emitOpError(
+        "result box element storage kind must match the memref storage kind");
+
+  unsigned rank = boxSeqTy.getDimension();
+  if (seqTy.getDimension() != rank)
+    return emitOpError("memref rank does not match result box rank");
+  if (getLbounds().size() != rank || getExtents().size() != rank ||
+      getStrides().size() != rank)
+    return emitOpError("expected ")
+           << rank << " values for each of lbounds, extents, and strides";
+
+  mlir::Type eleTy = boxSeqTy.getEleTy();
+  if (fir::isPolymorphicType(boxTy))
+    return emitOpError("result box element type must not be polymorphic");
+  if (fir::characterWithDynamicLen(eleTy) ||
+      fir::isRecordWithTypeParameters(eleTy))
+    return emitOpError("result box element type must be statically sized");
+  if (failed(verifyEmboxOpVolatilityInvariants(getMemref().getType(),
+                                               getResult().getType())))
+    return emitOpError(
+               "cannot convert between volatile and non-volatile types:")
+           << " " << getMemref().getType() << " " << getResult().getType();
+  return mlir::success();
+}
+
+std::optional<std::int64_t> fir::CreateBoxOp::getViewOffset(mlir::OpResult) {
+  // The base pointer is the view source and the descriptor addresses relative
+  // to it, so the view offset onto the source is zero.
+  return 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3715,7 +3622,7 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
                           {1, 1, 1, static_cast<int32_t>(reduceOperands.size()),
                            static_cast<int32_t>(iterArgs.size())}));
   if (finalCountValue) {
-    result.addTypes(builder.getIndexType());
+    result.addTypes(lb.getType());
     result.addAttribute(getFinalValueAttrName(result.name),
                         builder.getUnitAttr());
   }
@@ -3725,7 +3632,7 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
   bodyRegion->push_back(new mlir::Block{});
   if (iterArgs.empty() && !finalCountValue)
     fir::DoLoopOp::ensureTerminator(*bodyRegion, builder, result.location);
-  bodyRegion->front().addArgument(builder.getIndexType(), result.location);
+  bodyRegion->front().addArgument(lb.getType(), result.location);
   bodyRegion->front().addArguments(
       iterArgs.getTypes(),
       llvm::SmallVector<mlir::Location>(iterArgs.size(), result.location));
@@ -3748,13 +3655,9 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
     return mlir::failure();
 
   // Parse loop bounds.
-  auto indexType = builder.getIndexType();
-  if (parser.parseOperand(lb) ||
-      parser.resolveOperand(lb, indexType, result.operands) ||
-      parser.parseKeyword("to") || parser.parseOperand(ub) ||
-      parser.resolveOperand(ub, indexType, result.operands) ||
-      parser.parseKeyword("step") || parser.parseOperand(step) ||
-      parser.resolveOperand(step, indexType, result.operands))
+  if (parser.parseOperand(lb) || parser.parseKeyword("to") ||
+      parser.parseOperand(ub) || parser.parseKeyword("step") ||
+      parser.parseOperand(step))
     return mlir::failure();
 
   if (mlir::succeeded(parser.parseOptionalKeyword("unordered")))
@@ -3809,9 +3712,10 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
                                 std::get<1>(operand_type), result.operands))
         return mlir::failure();
   } else if (succeeded(parser.parseOptionalArrow())) {
-    if (parser.parseKeyword("index"))
+    mlir::Type finalValueType;
+    if (parser.parseType(finalValueType))
       return mlir::failure();
-    result.types.push_back(indexType);
+    result.types.push_back(finalValueType);
     prependCount = true;
   }
 
@@ -3821,6 +3725,18 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
                           {1, 1, 1, static_cast<int32_t>(reduceOperands.size()),
                            static_cast<int32_t>(iterOperands.size())}));
 
+  mlir::Type controlType = builder.getIndexType();
+  if (succeeded(parser.parseOptionalColon()) && parser.parseType(controlType))
+    return mlir::failure();
+
+  llvm::SmallVector<mlir::Value> controlOperands;
+  if (parser.resolveOperand(lb, controlType, controlOperands) ||
+      parser.resolveOperand(ub, controlType, controlOperands) ||
+      parser.resolveOperand(step, controlType, controlOperands))
+    return mlir::failure();
+  result.operands.insert(result.operands.begin(), controlOperands.begin(),
+                         controlOperands.end());
+
   if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
     return mlir::failure();
 
@@ -3828,10 +3744,12 @@ mlir::ParseResult fir::DoLoopOp::parse(mlir::OpAsmParser &parser,
   if (prependCount)
     result.addAttribute(DoLoopOp::getFinalValueAttrName(result.name),
                         builder.getUnitAttr());
-  else
-    argTypes.push_back(indexType);
+  argTypes.push_back(controlType);
   // Loop carried variables
-  argTypes.append(result.types.begin(), result.types.end());
+  mlir::TypeRange iterArgTypes = result.types;
+  if (prependCount)
+    iterArgTypes = iterArgTypes.drop_front();
+  argTypes.append(iterArgTypes.begin(), iterArgTypes.end());
   // Parse the body region.
   auto *body = result.addRegion();
   if (regionArgs.size() != argTypes.size())
@@ -3863,10 +3781,9 @@ llvm::LogicalResult fir::DoLoopOp::verify() {
   // Check that the body defines as single block argument for the induction
   // variable.
   auto *body = getBody();
-  if (!body->getArgument(0).getType().isIndex())
-    return emitOpError(
-        "expected body first argument to be an index argument for "
-        "the induction variable");
+  if (body->getArgument(0).getType() != getLowerBound().getType())
+    return emitOpError("expected induction variable to have the same type as "
+                       "the loop control");
 
   auto opNumResults = getNumResults();
   if (opNumResults == 0)
@@ -3875,6 +3792,9 @@ llvm::LogicalResult fir::DoLoopOp::verify() {
   if (getFinalValue()) {
     if (getUnordered())
       return emitOpError("unordered loop has no final value");
+    if (getResult(0).getType() != getLowerBound().getType())
+      return emitOpError("expected final value to have the same type as the "
+                         "loop control");
     opNumResults--;
   }
   if (getNumIterOperands() != opNumResults)
@@ -3934,6 +3854,8 @@ void fir::DoLoopOp::print(mlir::OpAsmPrinter &p) {
     p << " -> " << getResultTypes();
     printBlockTerminators = true;
   }
+  if (!getInductionVar().getType().isIndex())
+    p << " : " << getInductionVar().getType();
   p.printOptionalAttrDictWithKeyword(
       (*this)->getAttrs(),
       {"unordered", "finalValue", "reduceAttrs", "operandSegmentSizes"});
@@ -5989,14 +5911,14 @@ bool fir::anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr) {
   return false;
 }
 
-std::optional<std::int64_t> fir::getIntIfConstant(mlir::Value value) {
+std::optional<llvm::APInt> fir::getIntIfConstant(mlir::Value value) {
   if (auto *definingOp = value.getDefiningOp()) {
     if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
       if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue()))
-        return intAttr.getInt();
+        return intAttr.getValue();
     if (auto llConstOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(definingOp))
       if (auto attr = mlir::dyn_cast<mlir::IntegerAttr>(llConstOp.getValue()))
-        return attr.getValue().getSExtValue();
+        return attr.getValue();
   }
   return {};
 }

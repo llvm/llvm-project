@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -mattr=+xnack -amdgpu-use-amdgpu-trackers=1  2>&1  < %s | FileCheck -check-prefixes=ERR-GCNTRACKERS %s
-; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -mattr=+xnack 2>&1  < %s | FileCheck -check-prefixes=GCN %s
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa --amdgpu-xnack=true -amdgpu-use-amdgpu-trackers=1  2>&1  < %s | FileCheck -check-prefixes=ERR-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa --amdgpu-xnack=true 2>&1  < %s | FileCheck -check-prefixes=GCN %s
 
 %asm.output = type { <16 x i32>, <16 x i32>, <16 x i32>, <8 x i32>, <2 x i32>, i32, ; sgprs
                      <16 x i32>, <7 x i32>, ; vgprs

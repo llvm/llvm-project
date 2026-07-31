@@ -13,6 +13,7 @@ class TestWasHit(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @skipIfWasm  # no expression evaluation (was_hit evaluates change_him())
     def test_was_hit_resolver(self):
         """Use facade breakpoints to emulate hitting some locations"""
         self.build()

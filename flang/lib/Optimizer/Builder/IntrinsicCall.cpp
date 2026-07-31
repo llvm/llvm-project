@@ -8254,15 +8254,16 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
 
   // Get the DIM argument.
   mlir::Value dim = fir::getBase(args[1]);
+  std::optional<std::int64_t> cstDim;
   if (!args[0].hasAssumedRank())
-    if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
-      // If both DIM and the rank are compile time constants, skip the runtime
-      // call.
-      return builder.createConvert(
-          loc, resultType,
-          fir::factory::readExtent(builder, loc, fir::BoxValue{array},
-                                   cstDim.value() - 1));
-    }
+    if (std::optional<llvm::APInt> constantDim = fir::getIntIfConstant(dim))
+      cstDim = constantDim->trySExtValue();
+  // If both DIM and the rank are compile time constants, skip the runtime call.
+  if (cstDim)
+    return builder.createConvert(loc, resultType,
+                                 fir::factory::readExtent(builder, loc,
+                                                          fir::BoxValue{array},
+                                                          cstDim.value() - 1));
   if (!fir::isa_ref_type(dim.getType()))
     return builder.createConvert(
         loc, resultType, fir::runtime::genSizeDim(builder, loc, array, dim));
@@ -8465,14 +8466,16 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
 
   // If it is a compile time constant and the rank is known, skip the runtime
   // call.
+  std::optional<std::int64_t> cstDim;
   if (!array.hasAssumedRank())
-    if (std::optional<std::int64_t> cstDim = fir::getIntIfConstant(dim)) {
-      mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
-      mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
-      mlir::Value lb =
-          computeLBOUND(builder, loc, array, *cstDim - 1, zero, one);
-      return builder.createConvert(loc, resultType, lb);
-    }
+    if (std::optional<llvm::APInt> constantDim = fir::getIntIfConstant(dim))
+      cstDim = constantDim->trySExtValue();
+  if (cstDim) {
+    mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
+    mlir::Value zero = builder.createIntegerConstant(loc, indexType, 0);
+    mlir::Value lb = computeLBOUND(builder, loc, array, *cstDim - 1, zero, one);
+    return builder.createConvert(loc, resultType, lb);
+  }
 
   fir::ExtendedValue box = createBoxForRuntimeBoundInquiry(loc, builder, array);
   return builder.createConvert(
