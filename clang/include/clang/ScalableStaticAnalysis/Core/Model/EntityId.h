@@ -34,6 +34,7 @@ class EntityId {
   friend class TestFixture;
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const EntityId &Id);
+  friend struct llvm::DenseMapInfo<EntityId>;
 
   size_t Index;
 
@@ -50,5 +51,15 @@ public:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityId &Id);
 
 } // namespace clang::ssaf
+
+namespace llvm {
+template <> struct DenseMapInfo<clang::ssaf::EntityId> {
+  using EntityId = clang::ssaf::EntityId;
+  static unsigned getHashValue(EntityId Val) {
+    return densemap::detail::mix(Val.Index);
+  }
+  static bool isEqual(EntityId LHS, EntityId RHS) { return LHS == RHS; }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSIS_CORE_MODEL_ENTITYID_H
