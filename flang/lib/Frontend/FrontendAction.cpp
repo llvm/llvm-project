@@ -162,7 +162,9 @@ bool FrontendAction::runParse(bool emitMessages) {
   CompilerInstance &ci = this->getInstance();
 
   // Parse. In case of failure, report and return.
-  ci.getParsing().Parse(llvm::outs());
+  const common::LangOptions &langOpts =
+      getInstance().getInvocation().getLangOpts();
+  ci.getParsing().Parse(llvm::outs(), langOpts);
 
   if (reportFatalParsingErrors()) {
     return false;
