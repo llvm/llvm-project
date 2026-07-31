@@ -692,8 +692,8 @@ This pass would produce the following IR:
 In this case, we've added an (unconditional) entry safepoint poll.  Note that
 despite appearances, the entry poll is not necessarily redundant.  We'd have to
 know that ``foo`` and ``test`` were not mutually recursive for the poll to be
-redundant.  In practice, you'd probably want to your poll definition to contain
-a conditional branch of some form.
+redundant.  In practice, you'd probably want your poll definition to contain a
+conditional branch of some form.
 
 At the moment, PlaceSafepoints can insert safepoint polls at method entry and
 loop backedges locations.  Extending this to work with return polls would be
@@ -735,7 +735,7 @@ Mixing References and Raw Pointers
 
 Support for languages which allow unmanaged pointers to garbage collected
 objects (i.e. pass a pointer to an object to a C routine) in the abstract
-machine model.  At the moment, the best idea on how to approach this
+machine model is lacking.  At the moment, the best idea on how to approach this
 involves an intrinsic or opaque function which hides the connection between
 the reference value and the raw pointer.  The problem is that having a
 ptrtoint or inttoptr cast (which is common for such use cases) breaks the
