@@ -18,7 +18,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
+#include "llvm/DebugInfo/DWARF/DWARFObject.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -31,9 +33,11 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
@@ -91,6 +95,13 @@ static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
                          cl::ZeroOrMore, cl::cat(BoltCategory));
+
+static cl::opt<bool> DropDWOPageCache(
+    "drop-dwo-page-cache",
+    cl::desc("Treat .dwo files as streaming input: reclaim their page-cache "
+             "pages as soon as BOLT is done reading each one. Keeps the "
+             "file-backed footprint of large split-DWARF inputs bounded."),
+    cl::Hidden, cl::init(false), cl::cat(BoltCategory));
 } // namespace opts
 
 namespace llvm {
@@ -1738,6 +1749,26 @@ BinaryFunctionListType BinaryContext::getAllBinaryFunctions() {
   return AllFunctions;
 }
 
+/// Return the path of the file backing \p DWOCU's DWARF context, or "" .
+static StringRef getDWOFilePath(const DWARFUnit *DWOCU) {
+  if (!DWOCU)
+    return StringRef();
+  return DWOCU->getContext().getDWARFObj().getFileName();
+}
+
+/// Reclaim the page-cache pages of the still-mapped .dwo backing \p DWOCU.
+static void pageOutDWOMapping(const DWARFUnit *DWOCU) {
+  if (!opts::DropDWOPageCache || !DWOCU)
+    return;
+  const object::ObjectFile *File = DWOCU->getContext().getDWARFObj().getFile();
+  if (!File)
+    return;
+  // mmap-backed MemoryBuffers are page-aligned; the malloc-backed fallback
+  // used for small files is not, and pageOutMemory() ignores it.
+  MemoryBufferRef Buf = File->getMemoryBufferRef();
+  pageOutMemory(Buf.getBufferStart(), Buf.getBufferSize());
+}
+
 /// Compute the absolute path of the .dwo/.dwp file backing \p SkeletonCU,
 /// honoring --comp-dir-override and relative-path fallbacks. If
 /// \p FellBackToRelative is non-null, it is set to true when the compilation
@@ -1799,8 +1830,16 @@ void BinaryContext::releaseDWOCU(uint64_t DWOId) {
   if (UsesDWP)
     return;
   auto Iter = DWOIdToSkeletonCU.find(DWOId);
-  if (Iter != DWOIdToSkeletonCU.end())
-    Iter->second->clearDWO();
+  if (Iter == DWOIdToSkeletonCU.end())
+    return;
+  DWARFUnit *DWOCU = Iter->second->getDWO();
+  if (!DWOCU)
+    return;
+  const std::string Path = getDWOFilePath(DWOCU).str();
+  Iter->second->clearDWO();
+  // Only effective now that the last mapping of the file is gone.
+  if (opts::DropDWOPageCache)
+    dropFileFromPageCache(Path);
 }
 
 void BinaryContext::releaseAllDWOContexts() {
@@ -1808,8 +1847,25 @@ void BinaryContext::releaseAllDWOContexts() {
   // it was opened (preprocessDWODebugInfo, the line-table name loop, or
   // collectDebugScopeBoundaries, which opens CUs directly via
   // getNonSkeletonUnitDIE).
+  std::vector<std::string> Paths;
+  if (opts::DropDWOPageCache) {
+    Paths.reserve(UsesDWP ? 1 : DWOIdToSkeletonCU.size());
+    for (auto &KV : DWOIdToSkeletonCU) {
+      DWARFUnit *DWOCU = KV.second->getDWO();
+      if (!DWOCU)
+        continue;
+      StringRef Path = getDWOFilePath(DWOCU);
+      if (!Path.empty())
+        Paths.emplace_back(Path.str());
+      if (UsesDWP)
+        break;
+    }
+  }
   for (auto &KV : DWOIdToSkeletonCU)
     KV.second->clearDWO();
+  // Only effective now that the last mapping of each file is gone.
+  for (const std::string &Path : Paths)
+    dropFileFromPageCache(Path);
 }
 
 bool BinaryContext::isValidDwarfUnit(DWARFUnit &DU) const {
@@ -1869,6 +1925,10 @@ void BinaryContext::preprocessDWODebugInfo() {
     // Remember the skeleton CU so its DWO context can be (re-)opened lazily by
     // getDWOCU() after it is released (see releaseAllDWOContexts).
     DWOIdToSkeletonCU[*DWOId] = DwarfUnit;
+    // In this loop we're touching a large number of pages, in streaming fashion
+    // -- so keep OS file cache usage under control.
+    if (!UsesDWP)
+      pageOutDWOMapping(DWOCU);
   }
   if (!DWOIdToSkeletonCU.empty())
     this->outs() << "BOLT-INFO: processing split DWARF\n";
@@ -2091,6 +2151,12 @@ void BinaryContext::collectDebugScopeBoundaries() {
     // vector (as DWARFUnit's extractDIEsToVector() does): only DIE tags/ranges
     // are inspected, so the tree structure is not needed.
     forEachDIEInUnit(*DIEUnit, processScopeDie);
+
+    // Done streaming this .dwo's DIEs. Release it right away and give the
+    // opportunity for any used page cache to also be reclaimed by OS, if
+    // --drop-dwo-page-cache is in effect.
+    if (std::optional<uint64_t> DWOId = CU->getDWOId())
+      releaseDWOCU(*DWOId);
   }
 }
 
