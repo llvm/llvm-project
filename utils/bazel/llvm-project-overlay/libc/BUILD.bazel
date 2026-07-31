@@ -175,10 +175,7 @@ LLVM_LIBC_HEADERS = [
     libc_header_info("ctype"),
     libc_header_info("dirent"),
     libc_header_info("dlfcn"),
-    libc_header_info(
-        "elf",
-        has_def_template = True,
-    ),
+    libc_header_info("elf"),
     libc_header_info("endian"),
     libc_header_info("fcntl"),
     libc_header_info("features"),
