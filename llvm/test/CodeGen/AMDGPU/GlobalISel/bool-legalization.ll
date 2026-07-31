@@ -7,6 +7,7 @@
 define amdgpu_ps float @select_vgpr_sgpr_trunc_cond(i32 inreg %a, i32 %b, i32 %c) {
 ; WAVE64-LABEL: select_vgpr_sgpr_trunc_cond:
 ; WAVE64:       ; %bb.0:
+; WAVE64-NEXT:    s_and_b32 s0, s0, 1
 ; WAVE64-NEXT:    s_cmp_lg_u32 s0, 0
 ; WAVE64-NEXT:    s_cselect_b64 vcc, exec, 0
 ; WAVE64-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
@@ -14,6 +15,7 @@ define amdgpu_ps float @select_vgpr_sgpr_trunc_cond(i32 inreg %a, i32 %b, i32 %c
 ;
 ; WAVE32-LABEL: select_vgpr_sgpr_trunc_cond:
 ; WAVE32:       ; %bb.0:
+; WAVE32-NEXT:    s_and_b32 s0, s0, 1
 ; WAVE32-NEXT:    s_cmp_lg_u32 s0, 0
 ; WAVE32-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; WAVE32-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
@@ -28,6 +30,7 @@ define amdgpu_ps float @select_vgpr_sgpr_trunc_and_cond(i32 inreg %a.0, i32 inre
 ; WAVE64-LABEL: select_vgpr_sgpr_trunc_and_cond:
 ; WAVE64:       ; %bb.0:
 ; WAVE64-NEXT:    s_and_b32 s0, s0, s1
+; WAVE64-NEXT:    s_and_b32 s0, s0, 1
 ; WAVE64-NEXT:    s_cmp_lg_u32 s0, 0
 ; WAVE64-NEXT:    s_cselect_b64 vcc, exec, 0
 ; WAVE64-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
@@ -36,6 +39,7 @@ define amdgpu_ps float @select_vgpr_sgpr_trunc_and_cond(i32 inreg %a.0, i32 inre
 ; WAVE32-LABEL: select_vgpr_sgpr_trunc_and_cond:
 ; WAVE32:       ; %bb.0:
 ; WAVE32-NEXT:    s_and_b32 s0, s0, s1
+; WAVE32-NEXT:    s_and_b32 s0, s0, 1
 ; WAVE32-NEXT:    s_cmp_lg_u32 s0, 0
 ; WAVE32-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; WAVE32-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo

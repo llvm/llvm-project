@@ -34,17 +34,16 @@ namespace {
 static Value *emitAMDGPUSBufferLoadBuiltin(CodeGenFunction &CGF,
                                            const CallExpr *E) {
   llvm::Type *RetTy = CGF.ConvertType(E->getType());
-  Function *F = CGF.CGM.getIntrinsic(Intrinsic::amdgcn_s_buffer_load, RetTy);
+  Function *F =
+      CGF.CGM.getIntrinsic(Intrinsic::amdgcn_ptr_s_buffer_load, RetTy);
 
   Value *RsrcPtr = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Type *I128Ty = llvm::IntegerType::get(CGF.getLLVMContext(), 128);
-  llvm::Type *RsrcVecTy =
-      llvm::FixedVectorType::get(CGF.Builder.getInt32Ty(), 4);
-  Value *RsrcInt = CGF.Builder.CreatePtrToInt(RsrcPtr, I128Ty);
-  Value *Rsrc = CGF.Builder.CreateBitCast(RsrcInt, RsrcVecTy);
-
-  return CGF.Builder.CreateCall(F, {Rsrc, CGF.EmitScalarExpr(E->getArg(1)),
-                                    CGF.EmitScalarExpr(E->getArg(2))});
+  CallInst *Call =
+      CGF.Builder.CreateCall(F, {RsrcPtr, CGF.EmitScalarExpr(E->getArg(1)),
+                                 CGF.EmitScalarExpr(E->getArg(2))});
+  Call->setMetadata(llvm::LLVMContext::MD_invariant_load,
+                    llvm::MDNode::get(CGF.Builder.getContext(), {}));
+  return Call;
 }
 
 // Has second type mangled argument.

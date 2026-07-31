@@ -1,5 +1,6 @@
 #include "LifetimeModeling.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 
 using namespace clang;
@@ -32,8 +33,8 @@ public:
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
-  PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
-                                    const ExplodedNode *N,
+  PathDiagnosticPieceRef getEndPath(const ExplodedNode *N,
+                                    BugReporterContext &BRC,
                                     PathSensitiveBugReport &BR) override;
   PathDiagnosticPieceRef createSourcePiece(const ExplodedNode *N,
                                            BugReporterContext &BRC,
@@ -93,7 +94,7 @@ static SourceRange getRegionDeclRange(const MemRegion *Source) {
 }
 
 void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Source,
-                                               SVal Val, ExplodedNode *N,
+                                               SVal RetVal, ExplodedNode *N,
                                                CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
@@ -104,7 +105,8 @@ void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Source,
   if (SourceRange Range = getRegionDeclRange(Source); Range.isValid())
     BR->addRange(Range);
 
-  BR->addVisitor<UseAfterLifetimeEndBRVisitor>(Val, Source);
+  BR->addVisitor<UseAfterLifetimeEndBRVisitor>(RetVal, Source);
+  bugreporter::trackStoredValue(RetVal, Source, *BR);
   C.emitReport(std::move(BR));
 }
 
@@ -153,8 +155,8 @@ UseAfterLifetimeEndBRVisitor::VisitNode(const ExplodedNode *N,
 }
 
 PathDiagnosticPieceRef
-UseAfterLifetimeEndBRVisitor::getEndPath(BugReporterContext &BRC,
-                                         const ExplodedNode *N,
+UseAfterLifetimeEndBRVisitor::getEndPath(const ExplodedNode *N,
+                                         BugReporterContext &BRC,
                                          PathSensitiveBugReport &BR) {
   auto Piece = createSourcePiece(
       N, BRC,

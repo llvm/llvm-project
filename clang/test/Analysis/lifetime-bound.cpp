@@ -1,7 +1,34 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
 // RUN:   -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugLifetimeModeling \
+// RUN:   -analyzer-config c++-container-inlining=false -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
 
 struct A {};
+
+struct Pair {
+  int a;
+  int b;
+};
+
+struct Base {
+  int x;
+};
+
+struct Derived : Base {
+  int y;
+};
+
+struct Inner {
+  int val;
+};
+
+struct Outer {
+  Inner inner;
+};
+
+struct Buffer {
+  int arr[4];
+};
 
 void clang_analyzer_dumpLifetimeOriginsOf(int*);
 void clang_analyzer_dumpLifetimeOriginsOf(int&);
@@ -20,8 +47,8 @@ void caller() {
   X obj;
   int &r = obj.choose(v);
   clang_analyzer_dumpLifetimeOriginsOf(r);
-  // expected-warning@-1 {{Origin &v bound to v}}
-  // expected-note@-2    {{Origin &v bound to v}}
+  // expected-warning@-1 {{Origin '&v' bound to 'v'}}
+  // expected-note@-2    {{Origin '&v' bound to 'v'}}
 }
 
 // Obj ref type function return annotated case.
@@ -35,8 +62,8 @@ void caller_two() {
   Y y;
   A &f = y.getA();
   clang_analyzer_dumpLifetimeOriginsOf(f);
-  // expected-warning@-1 {{Origin &y.a bound to y}}
-  // expected-note@-2    {{Origin &y.a bound to y}}
+  // expected-warning@-1 {{Origin '&y.a' bound to 'y'}}
+  // expected-note@-2    {{Origin '&y.a' bound to 'y'}}
 }
 
 // Obj ptr type function return annotated case.
@@ -49,8 +76,8 @@ void caller_three() {
   Z z;
   A *func = z.getA();
   clang_analyzer_dumpLifetimeOriginsOf(func);
-  // expected-warning@-1 {{Origin &z.a bound to z}}
-  // expected-note@-2    {{Origin &z.a bound to z}}
+  // expected-warning@-1 {{Origin '&z.a' bound to 'z'}}
+  // expected-note@-2    {{Origin '&z.a' bound to 'z'}}
 }
 
 // Free function with annotated param and ref return.
@@ -60,8 +87,8 @@ void caller_four() {
   int num = 5;
   int &s = foo(num);
   clang_analyzer_dumpLifetimeOriginsOf(s);
-  // expected-warning@-1 {{Origin &num bound to num}}
-  // expected-note@-2    {{Origin &num bound to num}}
+  // expected-warning@-1 {{Origin '&num' bound to 'num'}}
+  // expected-note@-2    {{Origin '&num' bound to 'num'}}
 }
 
 // Free function with annotated param and ptr return.
@@ -73,8 +100,8 @@ void caller_five() {
   int *s = boo(n_ptr);
 
   clang_analyzer_dumpLifetimeOriginsOf(s);
-  // expected-warning@-1 {{Origin &n bound to n}}
-  // expected-note@-2    {{Origin &n bound to n}}
+  // expected-warning@-1 {{Origin '&n' bound to 'n'}}
+  // expected-note@-2    {{Origin '&n' bound to 'n'}}
 }
 
 // Free function with both annotated and non-annotated parameters.
@@ -86,13 +113,11 @@ void caller_six() {
   int &s = fn(even, odd);
 
   clang_analyzer_dumpLifetimeOriginsOf(s);
-  // expected-warning@-1 {{Origin &odd bound to odd}}
-  // expected-note@-2    {{Origin &odd bound to odd}}
+  // expected-warning@-1 {{Origin '&odd' bound to 'odd'}}
+  // expected-note@-2    {{Origin '&odd' bound to 'odd'}}
 }
 
-
-
-// These are the cases when the result of function calls are SymbolRefs.
+// Test cases for testing when the result of function calls are SymbolRefs.
 
 // Function returns ptr and has an annotated parameter.
 int *foo(int *n [[clang::lifetimebound]]);
@@ -103,8 +128,8 @@ void caller_seven() {
   auto *bind = foo(y_ptr);
 
   clang_analyzer_dumpLifetimeOriginsOf(bind);
-  // expected-warning-re@-1 {{Origin &SymRegion{{.*}} bound to y}}
-  // expected-note-re@-2    {{Origin &SymRegion{{.*}} bound to y}}
+  // expected-warning-re@-1 {{Origin '&SymRegion{{.*}}' bound to 'y'}}
+  // expected-note-re@-2    {{Origin '&SymRegion{{.*}}' bound to 'y'}}
 }
 
 // Function returns a reference and has an annotated parameter.
@@ -115,8 +140,8 @@ void caller_eight() {
   auto &bind = func(f);
 
   clang_analyzer_dumpLifetimeOriginsOf(bind);
-  // expected-warning-re@-1 {{Origin &SymRegion{{.*}} bound to f}}
-  // expected-note-re@-2    {{Origin &SymRegion{{.*}} bound to f}}
+  // expected-warning-re@-1 {{Origin '&SymRegion{{.*}}' bound to 'f'}}
+  // expected-note-re@-2    {{Origin '&SymRegion{{.*}}' bound to 'f'}}
 }
 
 // Function returns a reference and has two annotated parameters.
@@ -128,8 +153,8 @@ void caller_nine() {
   int &numbers = f(first_num, second_num);
 
   clang_analyzer_dumpLifetimeOriginsOf(numbers);
-  // expected-warning-re@-1 {{Origin &SymRegion{{.*}} bound to first_num, second_num}}
-  // expected-note-re@-2    {{Origin &SymRegion{{.*}} bound to first_num, second_num}}
+  // expected-warning-re@-1 {{Origin '&SymRegion{{.*}}' bound to 'first_num', 'second_num'}}
+  // expected-note-re@-2    {{Origin '&SymRegion{{.*}}' bound to 'first_num', 'second_num'}}
 }
 
 struct View {
@@ -155,21 +180,20 @@ int *test_func(int *p [[clang::lifetimebound]]);
 
 
 int *direct_return() {
-  int i = 5;
+  int i = 5; // expected-note {{'i' initialized here}}
   return test_func(&i);
   // expected-warning@-1 {{Returning value bound to 'i' that will go out of scope}}
-  // expected-note@-2    {{Value's lifetime bound to the lifetime of 'i' here}}
-  // expected-note@-3    {{Lifetime of 'i' ended here}}
-  // expected-warning@-4 {{address of stack memory associated with local variable 'i' returned}}
+  // expected-warning@-2 {{address of stack memory associated with local variable 'i' returned}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'i' here}}
+  // expected-note@-4    {{Lifetime of 'i' ended here}}
 }
 
 int *variable_return() {
-  int y = 5;
-  int *p = test_func(&y);
+  int y = 5; // expected-note {{'y' initialized here}}
+  int *p = test_func(&y); // expected-note {{Value's lifetime bound to the lifetime of 'y' here}}
   return p;
   // expected-warning@-1 {{Returning value bound to 'y' that will go out of scope}}
-  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'y' here}}
-  // expected-note@-3    {{Lifetime of 'y' ended here}}
+  // expected-note@-2    {{Lifetime of 'y' ended here}}
 }
 
 int *borrow_from_caller(int *b [[clang::lifetimebound]]) {
@@ -194,15 +218,17 @@ int &multi_param_test_ref(int &a [[clang::lifetimebound]], int &b [[clang::lifet
 // Return value bound to annotated parameters (two dangling sources).
 int &dangling_sources_ref() {
   int x = 1, y = 2;
+  // expected-note@-1 {{'x' initialized here}}
+  // expected-note@-2 {{'y' initialized here}}
   return multi_param_test_ref(x, y);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
-  // expected-note@-2    {{Value's lifetime bound to the lifetime of 'x' here}}
-  // expected-note@-3    {{Lifetime of 'x' ended here}}
-  // expected-warning@-4 {{reference to stack memory associated with local variable 'x' returned}}
-  // expected-warning@-5 {{Returning value bound to 'y' that will go out of scope}}
+  // expected-warning@-2 {{Returning value bound to 'y' that will go out of scope}}
+  // expected-warning@-3 {{reference to stack memory associated with local variable 'x' returned}}
+  // expected-warning@-4 {{reference to stack memory associated with local variable 'y' returned}}
+  // expected-note@-5    {{Value's lifetime bound to the lifetime of 'x' here}}
   // expected-note@-6    {{Value's lifetime bound to the lifetime of 'y' here}}
-  // expected-note@-7    {{Lifetime of 'y' ended here}}
-  // expected-warning@-8 {{reference to stack memory associated with local variable 'y' returned}}
+  // expected-note@-7    {{Lifetime of 'x' ended here}}
+  // expected-note@-8    {{Lifetime of 'y' ended here}}
 }
 
 // Return value bound to annotated parameters (no dangling sources).
@@ -212,12 +238,12 @@ int &no_dangling_sources_ref(int &a [[clang::lifetimebound]], int &b [[clang::li
 
 // Return value bound to annotated parameters (one dangling source).
 int &one_dangling_source_ref(int &a [[clang::lifetimebound]]) {
-  int x = 1;
+  int x = 1; // expected-note {{'x' initialized here}} 
   return multi_param_test_ref(a, x);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
-  // expected-note@-2    {{Value's lifetime bound to the lifetime of 'x' here}}
-  // expected-note@-3    {{Lifetime of 'x' ended here}}
-  // expected-warning@-4 {{reference to stack memory associated with local variable 'x' returned}}
+  // expected-warning@-2 {{reference to stack memory associated with local variable 'x' returned}}
+  // expected-note@-3    {{Value's lifetime bound to the lifetime of 'x' here}}
+  // expected-note@-4    {{Lifetime of 'x' ended here}}
 }
 
 int *multi_param_test_ptr(int *a [[clang::lifetimebound]], int *b [[clang::lifetimebound]]);
@@ -225,6 +251,8 @@ int *multi_param_test_ptr(int *a [[clang::lifetimebound]], int *b [[clang::lifet
 // Return value bound to annotated parameters (two dangling sources).
 int *dangling_sources_ptr() {
   int x = 1, y = 2;
+  // expected-note@-1 {{'x' initialized here}}
+  // expected-note@-2 {{'y' initialized here}}
   int *x_ptr = &x;
   int *y_ptr = &y;
   return multi_param_test_ptr(x_ptr, y_ptr);
@@ -243,7 +271,7 @@ int *no_dangling_sources_ptr(int *a [[clang::lifetimebound]], int *b [[clang::li
 
 // Return value bound to annotated parameters (one dangling source).
 int *one_dangling_source_ptr(int *a [[clang::lifetimebound]]) {
-  int x = 1;
+  int x = 1; // expected-note {{'x' initialized here}} 
   int *x_ptr = &x;
   return multi_param_test_ptr(a, x_ptr);
   // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
@@ -269,10 +297,10 @@ void outer() {
 }
 
 int *danglingLocal() {
-  S s;
+  S s; // expected-note {{'s' initialized here}}
   return s.get();
   // expected-warning@-1 {{Returning value bound to 's' that will go out of scope}}
-  // expected-warning@-2 {{Address of stack memory associated with local variable 's' returned}}
+  // expected-warning@-2 {{Address of stack memory associated with local variable 's' returned to caller}}
   // expected-warning@-3 {{address of stack memory associated with local variable 's' returned}}
   // expected-note@-4    {{Address of stack memory associated with local variable 's' returned to caller}}
   // expected-note@-5    {{Value's lifetime bound to the lifetime of 's' here}}
@@ -282,10 +310,86 @@ int *danglingLocal() {
 int *danglingParam(S param) {
   return param.get();
   // expected-warning@-1 {{Returning value bound to 'param' that will go out of scope}}
-  // expected-warning@-2 {{Address of stack memory associated with local variable 'param' returned}}
+  // expected-warning@-2 {{Address of stack memory associated with local variable 'param' returned to caller}}
   // expected-warning@-3 {{address of stack memory associated with parameter 'param' returned}}
   // expected-note@-4    {{Address of stack memory associated with local variable 'param' returned to caller}}
   // expected-note@-5    {{Value's lifetime bound to the lifetime of 'param' here}}
   // expected-note@-6    {{Lifetime of 'param' ended here}}
 }
 
+int *getFieldPtr(Pair &p [[clang::lifetimebound]]) { return &p.a; }
+
+int *field_subobject_dangling() {
+  Pair pair{3, 5}; // expected-note {{'pair' initialized here}}
+  return getFieldPtr(pair);
+  // expected-warning@-1 {{Returning value bound to 'pair' that will go out of scope}}
+  // expected-warning@-2 {{Address of stack memory associated with local variable 'pair' returned to caller}}
+  // expected-warning@-3 {{address of stack memory associated with local variable 'pair' returned}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 'pair' returned to caller}}
+  // expected-note@-5    {{Value's lifetime bound to the lifetime of 'pair' here}}
+  // expected-note@-6    {{Lifetime of 'pair' ended here}}
+}
+
+int *getBasePtr(Derived &d [[clang::lifetimebound]]) {
+  return &static_cast<Base &>(d).x;
+}
+
+int *base_subobject_dangling() {
+  Derived derived{}; // expected-note {{'derived' initialized here}}
+  return getBasePtr(derived);
+  // expected-warning@-1 {{Returning value bound to 'derived' that will go out of scope}}
+  // expected-warning@-2 {{Address of stack memory associated with local variable 'derived' returned to caller}}
+  // expected-warning@-3 {{address of stack memory associated with local variable 'derived' returned}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 'derived' returned to caller}}
+  // expected-note@-5    {{Value's lifetime bound to the lifetime of 'derived' here}}
+  // expected-note@-6    {{Lifetime of 'derived' ended here}}
+}
+
+int *getNestedFieldPtr(Outer &o [[clang::lifetimebound]]) {
+  return &o.inner.val;
+}
+
+int *nested_subobject_dangling() {
+  Outer outer{}; // expected-note {{'outer' initialized here}}
+  return getNestedFieldPtr(outer);
+  // expected-warning@-1 {{Returning value bound to 'outer' that will go out of scope}}
+  // expected-warning@-2 {{Address of stack memory associated with local variable 'outer' returned to caller}}
+  // expected-warning@-3 {{address of stack memory associated with local variable 'outer' returned}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 'outer' returned to caller}}
+  // expected-note@-5    {{Value's lifetime bound to the lifetime of 'outer' here}}
+  // expected-note@-6    {{Lifetime of 'outer' ended here}}
+}
+
+int *getArrayElementPtr(Buffer &b [[clang::lifetimebound]]) {
+  return &b.arr[0];
+}
+
+int *array_member_subobject_dangling() {
+  Buffer buf{}; // expected-note {{'buf' initialized here}}
+  return getArrayElementPtr(buf);
+  // expected-warning@-1 {{Returning value bound to 'buf' that will go out of scope}}
+  // expected-warning@-2 {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-warning@-3 {{address of stack memory associated with local variable 'buf' returned}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-note@-5    {{Value's lifetime bound to the lifetime of 'buf' here}}
+  // expected-note@-6    {{Lifetime of 'buf' ended here}}
+}
+
+// FIXME: Heap allocated memory regions are not yet handled by the lifetime checkers.
+int *heap_dangling_source_lifetimebound() {
+  int *i = new int(5);
+  int *p = test_func(i);
+  delete i;
+  return p; // no-warning
+}
+
+struct CustomStringView {
+  CustomStringView(const char *s [[clang::lifetimebound]]);
+};
+
+// FIXME: The StringView return is a struct returned by value which is represented
+// as a LazyCompoundVal that the lifetime checkers do not support as of now.
+CustomStringView dangling_sv() {
+  char s[] = "dangling";
+  return CustomStringView(s); // expected-warning {{address of stack memory associated with local variable 's' returned}} 
+}
