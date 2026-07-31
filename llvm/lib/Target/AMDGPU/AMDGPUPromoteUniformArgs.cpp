@@ -23,12 +23,12 @@
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -38,32 +38,21 @@ STATISTIC(NumPromotedInRegArgs,
           "Number of uniform pointer arguments promoted to inreg");
 STATISTIC(NumPromotedInRegFuncs,
           "Number of functions with a promoted uniform pointer argument");
-STATISTIC(
-    NumSkippedDueToInRegBudget,
-    "Number of uniform pointer arguments not promoted due to SGPR budget");
 
 static cl::opt<bool> EnablePromoteUniformPointerArgs(
     "amdgpu-promote-uniform-pointer-args", cl::Hidden, cl::init(true),
     cl::desc("Promote provably uniform internal pointer arguments to inreg"));
 
-static cl::opt<unsigned> UniformArgSGPRDwordBudget(
-    "amdgpu-uniform-args-sgpr-budget", cl::Hidden, cl::init(8),
-    cl::desc("Max total SGPR dwords of inreg pointer arguments per function"));
-
 namespace {
 
-static bool hasBlockingInRegArgAttr(const Argument &A) {
-  return A.hasAttribute(Attribute::InReg) || A.hasAttribute(Attribute::ByVal) ||
-         A.hasAttribute(Attribute::ByRef) ||
-         A.hasAttribute(Attribute::StructRet) ||
-         A.hasAttribute(Attribute::InAlloca) ||
-         A.hasAttribute(Attribute::Preallocated) ||
-         A.hasAttribute(Attribute::Nest) ||
-         A.hasAttribute(Attribute::Returned) ||
-         A.hasAttribute(Attribute::SwiftError) ||
-         A.hasAttribute(Attribute::SwiftSelf) ||
-         A.hasAttribute(Attribute::SwiftAsync) ||
-         A.hasAttribute("amdgpu-hidden-argument");
+static bool canPromoteArgToInReg(const Argument &A) {
+  if (!A.getType()->isPointerTy() || A.hasInRegAttr())
+    return false;
+  if (A.hasPointeeInMemoryValueAttr() || A.hasNestAttr() ||
+      A.hasReturnedAttr() || A.hasSwiftSelfAttr() || A.hasSwiftErrorAttr() ||
+      A.hasAttribute(Attribute::SwiftAsync))
+    return false;
+  return !A.hasAttribute("amdgpu-hidden-argument");
 }
 
 static bool isEligibleInRegUniformCallee(const Function &F) {
@@ -87,12 +76,29 @@ static bool isEligibleInRegUniformCallee(const Function &F) {
   }
   if (F.user_empty())
     return false;
-  for (const BasicBlock &BB : F)
-    for (const Instruction &I : BB)
-      if (const auto *CB = dyn_cast<CallBase>(&I))
-        if (CB->isMustTailCall())
-          return false;
   return true;
+}
+
+static bool argForwardedByMustTail(const Argument &A) {
+  SmallVector<const Value *, 8> Worklist;
+  SmallPtrSet<const Value *, 8> Visited;
+  Worklist.push_back(&A);
+  while (!Worklist.empty()) {
+    const Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    for (const User *U : V->users()) {
+      if (const auto *CB = dyn_cast<CallBase>(U)) {
+        if (CB->isMustTailCall())
+          return true;
+        continue;
+      }
+      if (isa<BitCastInst, GetElementPtrInst, AddrSpaceCastInst, PHINode,
+              SelectInst>(U))
+        Worklist.push_back(cast<Instruction>(U));
+    }
+  }
+  return false;
 }
 
 static bool mayBePrivateDerivedPointer(const Value *V) {
@@ -160,7 +166,6 @@ static bool collectCallSites(Function &F, SmallVectorImpl<CallBase *> &Calls) {
 static bool promoteUniformPointerArgsToInReg(Module &M,
                                              ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  const DataLayout &DL = M.getDataLayout();
   bool Changed = false;
   bool RoundChanged = true;
   while (RoundChanged) {
@@ -173,23 +178,14 @@ static bool promoteUniformPointerArgsToInReg(Module &M,
       if (!collectCallSites(F, Calls))
         continue;
 
-      unsigned UsedDwords = 0;
-      for (Argument &A : F.args())
-        if (A.hasAttribute(Attribute::InReg))
-          UsedDwords += divideCeil(DL.getTypeSizeInBits(A.getType()), 32);
-
       bool FuncChanged = false;
       for (Argument &A : F.args()) {
-        if (hasBlockingInRegArgAttr(A) || !A.getType()->isPointerTy())
+        if (!canPromoteArgToInReg(A))
+          continue;
+        if (argForwardedByMustTail(A))
           continue;
         if (calleeCastsArgToPrivate(A))
           continue;
-
-        unsigned Need = divideCeil(DL.getTypeSizeInBits(A.getType()), 32);
-        if (UsedDwords + Need > UniformArgSGPRDwordBudget) {
-          ++NumSkippedDueToInRegBudget;
-          continue;
-        }
 
         bool AllUniform = true;
         for (CallBase *CB : Calls) {
@@ -219,19 +215,21 @@ static bool promoteUniformPointerArgsToInReg(Module &M,
         A.addAttr(Attribute::InReg);
         for (CallBase *CB : Calls)
           CB->addParamAttr(A.getArgNo(), Attribute::InReg);
-        UsedDwords += Need;
         ++NumPromotedInRegArgs;
         FuncChanged = Changed = RoundChanged = true;
       }
 
       if (FuncChanged) {
         ++NumPromotedInRegFuncs;
-        FAM.invalidate(F, PreservedAnalyses::none());
+        PreservedAnalyses FuncPA;
+        // Attribute-only change; the CFG is unchanged.
+        FuncPA.preserveSet<CFGAnalyses>();
+        FAM.invalidate(F, FuncPA);
         SmallPtrSet<Function *, 8> InvalidatedCallers;
         for (CallBase *CB : Calls) {
           Function *Caller = CB->getFunction();
           if (Caller != &F && InvalidatedCallers.insert(Caller).second)
-            FAM.invalidate(*Caller, PreservedAnalyses::none());
+            FAM.invalidate(*Caller, FuncPA);
         }
       }
     }
@@ -246,6 +244,9 @@ PreservedAnalyses AMDGPUPromoteUniformArgsPass::run(Module &M,
   if (!EnablePromoteUniformPointerArgs ||
       !Triple(M.getTargetTriple()).isAMDGCN())
     return PreservedAnalyses::all();
-  return promoteUniformPointerArgsToInReg(M, AM) ? PreservedAnalyses::none()
-                                                 : PreservedAnalyses::all();
+  if (!promoteUniformPointerArgsToInReg(M, AM))
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

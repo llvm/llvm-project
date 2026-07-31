@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=amdgpu-promote-uniform-args < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu9.0a-amd-amdhsa -passes=amdgpu-promote-uniform-args < %s | FileCheck %s
 
 ; A uniform pointer argument of an internal function, passed from a kernel,
 ; is promoted to inreg (SGPR) on both the definition and the call site.
@@ -172,11 +172,10 @@ define amdgpu_kernel void @k_flat_load(ptr %p) {
   ret void
 }
 
-; SGPR dword budget (default 8): only the first four pointer arguments fit;
-; the fifth is left in VGPRs.
+; Multiple uniform pointer arguments are all promoted opportunistically.
 
 ; CHECK-LABEL: define internal fastcc void @callee_budget(
-; CHECK-SAME: ptr inreg %p0, ptr inreg %p1, ptr inreg %p2, ptr inreg %p3, ptr %p4
+; CHECK-SAME: ptr inreg %p0, ptr inreg %p1, ptr inreg %p2, ptr inreg %p3, ptr inreg %p4
 define internal fastcc void @callee_budget(ptr %p0, ptr %p1, ptr %p2, ptr %p3,
                                            ptr %p4) {
   ret void
@@ -185,7 +184,7 @@ define internal fastcc void @callee_budget(ptr %p0, ptr %p1, ptr %p2, ptr %p3,
 define amdgpu_kernel void @k_budget(ptr %p0, ptr %p1, ptr %p2, ptr %p3,
                                     ptr %p4) {
 ; CHECK-LABEL: define amdgpu_kernel void @k_budget(
-; CHECK: call fastcc void @callee_budget(ptr inreg %p0, ptr inreg %p1, ptr inreg %p2, ptr inreg %p3, ptr %p4)
+; CHECK: call fastcc void @callee_budget(ptr inreg %p0, ptr inreg %p1, ptr inreg %p2, ptr inreg %p3, ptr inreg %p4)
   call fastcc void @callee_budget(ptr %p0, ptr %p1, ptr %p2, ptr %p3, ptr %p4)
   ret void
 }
@@ -536,6 +535,27 @@ define amdgpu_kernel void @k_stored(ptr %p) {
 ; CHECK: call fastcc void @callee_stored(ptr %p)
   store ptr @callee_stored, ptr @fn_slot
   call fastcc void @callee_stored(ptr %p)
+  ret void
+}
+
+; musttail forwarding of an argument blocks inreg promotion for that argument.
+
+define internal fastcc void @tail_target(ptr %q) {
+  ret void
+}
+
+; CHECK-LABEL: define internal fastcc void @callee_musttail_forward(
+; CHECK-SAME: ptr %p
+; CHECK-NOT: ptr inreg
+define internal fastcc void @callee_musttail_forward(ptr %p) {
+  musttail call fastcc void @tail_target(ptr %p)
+  ret void
+}
+
+define amdgpu_kernel void @k_musttail_forward(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_musttail_forward(
+; CHECK: call fastcc void @callee_musttail_forward(ptr %p)
+  call fastcc void @callee_musttail_forward(ptr %p)
   ret void
 }
 
