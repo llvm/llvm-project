@@ -219,13 +219,6 @@ LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     const Triple &TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 
-// TODO: Remove after llvm 23 branches
-LLVM_DEPRECATED("Use the Triple overload instead",
-                "createTargetMachineForTriple")
-LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
-    StringRef TargetTriple,
-    CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
-
 /// Conditionally enables the collection of LLVM statistics during the tool run,
 /// based on the value of the flag. Must be called before the tool run to
 /// actually collect data.

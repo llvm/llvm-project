@@ -111,9 +111,12 @@ static mlir::Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
 /// Extract constant from a value that must be the result of one of the
 /// ConstantOp operations.
 static int64_t getConstantIntValue(mlir::Value val) {
-  if (auto constVal = fir::getIntIfConstant(val))
-    return *constVal;
-  fir::emitFatalError(val.getLoc(), "must be a constant");
+  std::optional<llvm::APInt> constVal = fir::getIntIfConstant(val);
+  if (!constVal)
+    fir::emitFatalError(val.getLoc(), "must be a constant");
+  if (std::optional<std::int64_t> constVal64 = constVal->trySExtValue())
+    return *constVal64;
+  fir::emitFatalError(val.getLoc(), "constant must fit in a 64-bit integer");
 }
 
 static unsigned getTypeDescFieldId(mlir::Type ty) {
@@ -1062,8 +1065,8 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
 
       // Do folding for constant inputs.
       if (auto constVal = fir::getIntIfConstant(op0)) {
-        mlir::Value normVal =
-            fir::genConstantIndex(loc, toTy, rewriter, *constVal ? 1 : 0);
+        mlir::Value normVal = fir::genConstantIndex(loc, toTy, rewriter,
+                                                    constVal->isZero() ? 0 : 1);
         rewriter.replaceOp(convert, normVal);
         return mlir::success();
       }
@@ -3072,17 +3075,28 @@ struct XArrayCoorOpConversion
         if (normalSlice)
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
+      // Wrap flags from the pre-cast step (keeps constants recognizable).
+      // Known positive: nsw|nuw. Else drop nuw (product may be < 0); keep nsw.
+      mlir::LLVM::IntegerOverflowFlags indexFlags = addMulFlags;
+      if (normalSlice) {
+        mlir::Value stepOperand = operands[sliceOffset + 2];
+        if (std::optional<llvm::APInt> stepCst =
+                fir::getIntIfConstant(stepOperand);
+            !stepCst || !stepCst->isStrictlyPositive()) {
+          indexFlags = nsw;
+        }
+      }
       auto idx =
           mlir::LLVM::SubOp::create(rewriter, loc, idxTy, index, lb, subFlags);
       mlir::Value diff = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, idx,
-                                                   step, addMulFlags);
+                                                   step, indexFlags);
       if (normalSlice) {
         mlir::Value sliceLb =
             integerCast(loc, rewriter, idxTy, operands[sliceOffset]);
         auto adj = mlir::LLVM::SubOp::create(rewriter, loc, idxTy, sliceLb, lb,
                                              subFlags);
         diff = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, diff, adj,
-                                         addMulFlags);
+                                         indexFlags);
       }
       // Update the offset given the stride and the zero based index `diff`
       // that was just computed.
@@ -3097,9 +3111,9 @@ struct XArrayCoorOpConversion
       } else {
         // Use stride computed at last iteration.
         auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, prevExt,
-                                            addMulFlags);
+                                            indexFlags);
         offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
-                                           addMulFlags);
+                                           indexFlags);
         // Compute next stride assuming contiguity of the base array
         // (in element number).
         auto nextExt = integerCast(loc, rewriter, idxTy, operands[shapeOffset]);

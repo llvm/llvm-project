@@ -776,7 +776,7 @@ struct SimplifyArrayCoorOp : public mlir::OpRewritePattern<fir::ArrayCoorOp> {
           if (!lowerBounds.empty()) {
             mlir::Value lb = lowerBounds[i];
             auto constLb = fir::getIntIfConstant(lb);
-            if (!(constLb && *constLb == 1)) {
+            if (!(constLb && constLb->isOne())) {
               mlir::Location loc = op.getLoc();
               mlir::Value extLb =
                   fir::ConvertOp::create(rewriter, loc, idxTy, lb);
@@ -1505,6 +1505,15 @@ mlir::OpFoldResult fir::BoxAddrOp::fold(FoldAdaptor adaptor) {
         return box.getMemref();
       }
     }
+    // fir.create_box always describes the whole array (no slice), so the
+    // base address is exactly its memref operand. The verifier guarantees the
+    // result box preserves the memref storage kind, so the types match.
+    if (auto box = mlir::dyn_cast<fir::CreateBoxOp>(v)) {
+      if (box.getMemref().getType() == getType()) {
+        propagateAttributes(getOperation(), box.getMemref().getDefiningOp());
+        return box.getMemref();
+      }
+    }
     if (auto box = mlir::dyn_cast<fir::EmboxCharOp>(v))
       if (box.getMemref().getType() == getType())
         return box.getMemref();
@@ -1603,6 +1612,49 @@ void fir::BoxEleSizeOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 // BoxDimsOp
 //===----------------------------------------------------------------------===//
+
+namespace {
+/// fir.box_dims of a descriptor built by fir.create_box with a statically known
+/// dimension forwards the lower bound, extent, and byte stride operands that
+/// built that dimension. These are plain SSA operands of the create_box, so
+/// replacing the box_dims results with them is a value forwarding; the
+/// create_box dominates the box_dims, so the operands are already available.
+struct SimplifyBoxDimsFromCreateBox
+    : public mlir::OpRewritePattern<fir::BoxDimsOp> {
+  using mlir::OpRewritePattern<fir::BoxDimsOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxDimsOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto createBox = op.getVal().getDefiningOp<fir::CreateBoxOp>();
+    if (!createBox)
+      return mlir::failure();
+
+    std::optional<llvm::APInt> constantDim = fir::getIntIfConstant(op.getDim());
+    std::optional<std::int64_t> dim =
+        constantDim ? constantDim->trySExtValue() : std::nullopt;
+    if (!dim || *dim < 0 || *dim >= createBox.getRank())
+      return mlir::failure();
+
+    // The create_box operands are AnyIntegerType and may differ from the
+    // index-typed box_dims results, so convert them.
+    mlir::Location loc = op.getLoc();
+    rewriter.replaceOp(op,
+                       {rewriter.createOrFold<fir::ConvertOp>(
+                            loc, op.getType(0), createBox.getLbounds()[*dim]),
+                        rewriter.createOrFold<fir::ConvertOp>(
+                            loc, op.getType(1), createBox.getExtents()[*dim]),
+                        rewriter.createOrFold<fir::ConvertOp>(
+                            loc, op.getType(2), createBox.getStrides()[*dim])});
+    return mlir::success();
+  }
+};
+} // namespace
+
+void fir::BoxDimsOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.insert<SimplifyBoxDimsFromCreateBox>(context);
+}
 
 /// Get the result types packed in a tuple tuple
 mlir::Type fir::BoxDimsOp::getTupleType() {
@@ -2045,7 +2097,7 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
       matchPattern(getValue(), mlir::m_Op<fir::BitcastOp>())) {
     auto bitcast = mlir::cast<fir::BitcastOp>(getValue().getDefiningOp());
     if (auto cst = fir::getIntIfConstant(bitcast.getValue()))
-      return mlir::IntegerAttr::get(getType(), cst != 0 ? 1 : 0);
+      return mlir::IntegerAttr::get(getType(), cst->isZero() ? 0 : 1);
   }
   return {};
 }
@@ -2060,7 +2112,7 @@ static std::optional<bool> getLogicalConstant(mlir::Value value) {
   if (auto convertOp = value.getDefiningOp<fir::ConvertOp>())
     maybeConvertInput = convertOp.getValue();
   if (auto cst = fir::getIntIfConstant(maybeConvertInput))
-    return *cst != 0;
+    return !cst->isZero();
   return std::nullopt;
 }
 
@@ -2701,7 +2753,7 @@ static bool isBoxLb(mlir::Value box, std::int64_t dim, mlir::Value lb,
         return *dimOperand == dim;
   } else if (!mayHaveNonDefaultLowerBounds) {
     if (auto constantLb = fir::getIntIfConstant(lb))
-      return *constantLb == 1;
+      return constantLb->isOne();
   }
   return false;
 }
@@ -2718,7 +2770,7 @@ static bool isBoxUb(mlir::Value box, std::int64_t dim, mlir::Value ub,
                     bool mayHaveNonDefaultLowerBounds = true) {
   if (auto sub1 = ub.getDefiningOp<mlir::arith::SubIOp>()) {
     auto one = fir::getIntIfConstant(sub1.getOperand(1));
-    if (!one || *one != 1)
+    if (!one || !one->isOne())
       return false;
     if (auto add = sub1.getOperand(0).getDefiningOp<mlir::arith::AddIOp>())
       if ((isBoxLb(box, dim, add.getOperand(0)) &&
@@ -2781,7 +2833,7 @@ static bool isContiguousArraySlice(fir::SliceOp sliceOp, bool checkWhole = true,
             return false;
         }
         auto constantStep = fir::getIntIfConstant(triples[i + 2]);
-        if (!constantStep || *constantStep != 1)
+        if (!constantStep || !constantStep->isOne())
           return false;
       }
     }
@@ -6071,14 +6123,14 @@ bool fir::anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr) {
   return false;
 }
 
-std::optional<std::int64_t> fir::getIntIfConstant(mlir::Value value) {
+std::optional<llvm::APInt> fir::getIntIfConstant(mlir::Value value) {
   if (auto *definingOp = value.getDefiningOp()) {
     if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
       if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(cst.getValue()))
-        return intAttr.getInt();
+        return intAttr.getValue();
     if (auto llConstOp = mlir::dyn_cast<mlir::LLVM::ConstantOp>(definingOp))
       if (auto attr = mlir::dyn_cast<mlir::IntegerAttr>(llConstOp.getValue()))
-        return attr.getValue().getSExtValue();
+        return attr.getValue();
   }
   return {};
 }

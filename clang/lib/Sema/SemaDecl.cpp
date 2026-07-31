@@ -4768,7 +4768,11 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     New->setInvalidDecl();
   }
 
+  if (NewTemplate && OldTemplate)
+    mergeDeclAttributes(NewTemplate, OldTemplate);
+
   mergeDeclAttributes(New, Old);
+
   // Warn if an already-defined variable is made a weak_import in a subsequent
   // declaration
   if (New->hasAttr<WeakImportAttr>())
@@ -6226,7 +6230,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   case DeclSpec::TST_typeofType:
   case DeclSpec::TST_typeof_unqualType:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   case DeclSpec::TST_atomic: {
     // Grab the type from the parser.
     TypeSourceInfo *TSI = nullptr;
@@ -7506,7 +7510,7 @@ static bool hasParsedAttr(Scope *S, const Declarator &PD,
 }
 
 bool Sema::adjustContextForLocalExternDecl(DeclContext *&DC) {
-  if (!DC->isFunctionOrMethod())
+  if (!DC->getEnclosingNonExpansionStatementContext()->isFunctionOrMethod())
     return false;
 
   // If this is a local extern function or variable declared within a function
@@ -16256,6 +16260,7 @@ LambdaScopeInfo *Sema::RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator) {
   // substituting into it. In this case the flag needs to be true such that
   // tryCaptureVariable can correctly handle potential captures thereof.
   LSI->AfterParameterList = CurContext == CallOperator;
+  LSI->BeforeCompoundStatement = false;
 
   // GLTemplateParameterList is necessary for getCurGenericLambda() which is
   // used at the point of dealing with potential captures.
@@ -20964,17 +20969,7 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
   assert(ED->isCompleteDefinition() && "expected enum definition");
 
-  auto R = FlagBitsCache.try_emplace(ED);
-  llvm::APInt &FlagBits = R.first->second;
-
-  if (R.second) {
-    for (auto *E : ED->enumerators()) {
-      const auto &EVal = E->getInitVal();
-      // Only single-bit enumerators introduce new flag values.
-      if (EVal.isPowerOf2())
-        FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
-    }
-  }
+  llvm::APInt FlagBits = FlagBitsCache.at(ED);
 
   // A value is in a flag enum if either its bits are a subset of the enum's
   // flag bits (the first condition) or we are allowing masks and the same is
@@ -21184,6 +21179,20 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   CheckForDuplicateEnumValues(*this, Elements, Enum, EnumType);
   CheckForComparisonInEnumInitializer(*this, Enum);
+
+  if (Enum->hasAttr<FlagEnumAttr>()) {
+    auto R = FlagBitsCache.try_emplace(Enum);
+    llvm::APInt &FlagBits = R.first->second;
+
+    if (R.second) {
+      for (auto *E : Enum->enumerators()) {
+        const auto &EVal = E->getInitVal();
+        // Only single-bit enumerators introduce new flag values.
+        if (EVal.isPowerOf2())
+          FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
+      }
+    }
+  }
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {

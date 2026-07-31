@@ -2881,13 +2881,10 @@ public:
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addRequired<PostDominatorTreeWrapperPass>();
     AU.addRequired<MemorySSAWrapperPass>();
-    AU.addPreserved<PostDominatorTreeWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
     AU.addRequired<CycleInfoWrapperPass>();
-    AU.addPreserved<CycleInfoWrapperPass>();
     AU.addRequired<AssumptionCacheTracker>();
   }
 };

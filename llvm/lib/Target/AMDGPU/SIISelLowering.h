@@ -85,8 +85,9 @@ private:
                                  MVT VT, unsigned Offset) const;
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,
                      SelectionDAG &DAG, bool WithChain) const;
-  SDValue lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc, SDValue Offset,
-                       SDValue CachePolicy, SelectionDAG &DAG) const;
+  SDValue lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL, SDValue Chain, SDValue Rsrc,
+                       SDValue Offset, SDValue CachePolicy, SelectionDAG &DAG,
+                       MachineMemOperand *MMO = nullptr) const;
 
   SDValue lowerRawBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
                                      unsigned NewOpcode) const;

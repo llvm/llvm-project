@@ -2397,7 +2397,7 @@ def : GCNPat <
       (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
                      (i32 (S_MOV_B32 (i32 0x80000000)))), sub1)
 > {
-  let SubtargetPredicate = HasPackedFP32Ops;
+  let SubtargetPredicate = HasAnyPackedFP32Ops;
 }
 
 def : GCNPat <
@@ -2580,12 +2580,12 @@ foreach vt = Reg32Types.types in {
 // unnecessary copy from SGPR to VGPR.
 def : GCNPat <
   (VGPRImm<(p5 frameindex)>:$fi),
-  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
+  (V_MOV_B32_e32 (p5 (to_tframeindex $fi)))
 >;
 
 def : GCNPat <
   (p5 frameindex:$fi),
-  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
+  (S_MOV_B32 (p5 (to_tframeindex $fi)))
 >;
 
 def : GCNPat <
@@ -2764,12 +2764,6 @@ def : GCNPat <(i1 imm:$imm),
               (S_MOV_B32 imm:$imm)> {
   let WaveSizePredicate = isWave32;
 }
-
-let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <
-  (i32 (DivergentBinFrag<srl> VGPR_32:$src, (i32 16))),
-  (REG_SEQUENCE VGPR_32, (i16 (EXTRACT_SUBREG $src, hi16)), lo16, (V_MOV_B16_t16_e64 0, (i16 0x0000), 0), hi16)
->;
 
 /********** ================== **********/
 /********** Intrinsic Patterns **********/
@@ -3825,16 +3819,28 @@ def : GCNPat<
 >;
 
 let SubtargetPredicate = HasPackedFP32Ops in {
-def : GCNPat<
-  (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
-  (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
->;
+  def : GCNPat<
+    (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
+    (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
+  >;
 
-def : GCNPat<
-  (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
-  (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
->;
+  def : GCNPat<
+    (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
+    (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+  >;
 } // End SubtargetPredicate = HasPackedFP32Ops
+
+let SubtargetPredicate = HasPackedFP32SingleSGPROps in {
+  def : GCNPat<
+    (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
+    (V_PK_MUL_F32_gfx1250 0, (i64 CONST.FP32_ONE), $src_mods, $src)
+  >;
+
+  def : GCNPat<
+    (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
+    (V_PK_MUL_F32_gfx1250 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+  >;
+} // End SubtargetPredicate = HasPackedFP32SingleSGPROps
 
 // TODO: Handle fneg like other types.
 let SubtargetPredicate = isNotGFX12Plus in {
@@ -4106,9 +4112,9 @@ def : GCNPat <
     (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi))))),
     i32:$src2)),
   (REG_SEQUENCE VGPR_32,
-    (i16 (EXTRACT_SUBREG $src2, lo16)), lo16,
+    (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), lo16)), lo16,
     (V_OR_B16_t16_e64 (i32 0), VGPR_16:$src_hi,
-                      (i32 0), (i16 (EXTRACT_SUBREG $src2, hi16))), hi16)
+                      (i32 0), (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), hi16))), hi16)
 >;
 
 // With multiple uses of the shift, this will duplicate the shift and
