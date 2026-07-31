@@ -97,6 +97,11 @@ MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
   return wrap(unwrap(context)->getOrLoadDialect(unwrap(name)));
 }
 
+MlirDialect mlirContextGetLoadedDialect(MlirContext context,
+                                        MlirStringRef name) {
+  return wrap(unwrap(context)->getLoadedDialect(unwrap(name)));
+}
+
 bool mlirContextIsRegisteredOperation(MlirContext context, MlirStringRef name) {
   return unwrap(context)->isOperationRegistered(unwrap(name));
 }

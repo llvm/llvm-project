@@ -35,54 +35,61 @@ enum GPUKind : uint32_t {
   // Not specified processor.
   GK_NONE = 0,
 
-#define R600_GPU(NAME, ENUM, FEATURES) ENUM,
-#define AMDGCN_GPU(NAME, ENUM, SUBARCH, ISAVERSION, FEATURES) ENUM,
-#include "AMDGPUTargetParser.def"
+#define GET_R600_GPU_ENUM
+#include "llvm/TargetParser/R600TargetParserDef.inc"
 
-  GK_AMDGCN_GENERIC_FIRST = GK_GFX9_GENERIC,
-  GK_AMDGCN_GENERIC_LAST = GK_GFX13_GENERIC,
+#define GET_AMDGPU_GPU_ENUM
+#include "llvm/TargetParser/AMDGPUTargetParserDef.inc"
 };
 
 /// Instruction set architecture version.
 struct IsaVersion {
-  unsigned Major;
-  unsigned Minor;
-  unsigned Stepping;
+  uint8_t Major;
+  uint8_t Minor;
+  uint8_t Stepping;
 
   bool operator==(const IsaVersion &Other) const {
     return Major == Other.Major && Minor == Other.Minor &&
            Stepping == Other.Stepping;
   }
+  bool operator!=(const IsaVersion &Other) const { return !(*this == Other); }
 };
 
 // This isn't comprehensive for now, just things that are needed from the
 // frontend driver.
+enum R600FeatureKind : uint32_t {
+  R600_FEATURE_NONE = 0,
+
+  // Has fma instructions.
+  R600_FEATURE_FMA = 1 << 0,
+};
+
+// GFX6+ features. This isn't comprehensive for now, just things that are needed
+// from the frontend driver.
 enum ArchFeatureKind : uint32_t {
   FEATURE_NONE = 0,
 
-  // These features only exist for r600, and are implied true for amdgcn.
-  FEATURE_FMA = 1 << 1,
-  FEATURE_LDEXP = 1 << 2,
-  FEATURE_FP64 = 1 << 3,
-
   // Common features.
-  FEATURE_FAST_FMA_F32 = 1 << 4,
-  FEATURE_FAST_DENORMAL_F32 = 1 << 5,
+  FEATURE_FAST_FMA_F32 = 1 << 0,
+  FEATURE_FAST_DENORMAL_F32 = 1 << 1,
 
   // Wavefront 32 is available.
-  FEATURE_WAVE32 = 1 << 6,
+  FEATURE_WAVE32 = 1 << 2,
 
   // Xnack is available.
-  FEATURE_XNACK = 1 << 7,
+  FEATURE_XNACK = 1 << 3,
 
   // Sram-ecc is available.
-  FEATURE_SRAMECC = 1 << 8,
+  FEATURE_SRAMECC = 1 << 4,
 
   // WGP mode is supported.
-  FEATURE_WGP = 1 << 9,
+  FEATURE_WGP = 1 << 5,
 
   // Xnack on/off modes are supported.
-  FEATURE_XNACK_ON_OFF_MODES = 1 << 10
+  FEATURE_XNACK_ON_OFF_MODES = 1 << 6,
+
+  // VI SGPR initialization bug requiring a fixed SGPR allocation size.
+  FEATURE_SGPR_INIT_BUG = 1 << 7
 };
 
 enum FeatureError : uint32_t {
@@ -111,6 +118,16 @@ LLVM_ABI bool isCPUValidForSubArch(Triple::SubArchType SubArch, GPUKind AK);
 /// is parsed via parseArchAMDGCN. An unrecognized name is never valid.
 LLVM_ABI bool isCPUValidForSubArch(Triple::SubArchType SubArch, StringRef CPU);
 
+/// Return true if \p AK is a pseudo target (e.g. "generic"/"generic-hsa"): a
+/// recognized AMDGCN GPU that represents no concrete hardware and has no
+/// subarch of its own. Such targets are resolved by the backend as a default
+/// device but are not valid as an explicit -mcpu.
+LLVM_ABI bool isPseudoTarget(GPUKind AK);
+
+/// Convenience overload of isPseudoTarget taking a GPU name \p CPU, which is
+/// parsed via parseArchAMDGCN.
+LLVM_ABI bool isPseudoTarget(StringRef CPU);
+
 /// Returns the effective triple appropriate to use when linking \p B into \p A
 /// by merging the subarches in case of inexact match.
 ///
@@ -127,13 +144,17 @@ LLVM_ABI StringRef getArchNameR600(GPUKind AK);
 /// subarch. The major-only subarches map to their generic/lowest
 /// representative, matching the default subtarget for an unspecified -mcpu.
 LLVM_ABI StringRef getArchNameFromSubArch(Triple::SubArchType SubArch);
+
+/// Returns the triple subarch name for an AMDGPU subarch, e.g.
+/// AMDGPUSubArch900 -> "amdgpu9.00". Returns "amdgpu" for NoSubArch.
+LLVM_ABI StringRef getSubArchName(Triple::SubArchType SubArch);
 LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
 LLVM_ABI GPUKind parseArchR600(StringRef CPU);
 LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
 LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
-LLVM_ABI unsigned getArchAttrR600(GPUKind AK);
+LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
 
 /// Append the valid AMDGCN GPU names to \p Values. If \p SubArch is not
 /// NoSubArch, only GPUs compatible with that subarch (see isCPUValidForSubArch)
@@ -145,6 +166,17 @@ LLVM_ABI void fillValidArchListR600(SmallVectorImpl<StringRef> &Values);
 
 LLVM_ABI IsaVersion getIsaVersion(StringRef GPU);
 LLVM_ABI IsaVersion getIsaVersion(Triple::SubArchType SubArch);
+
+enum { FIXED_NUM_SGPRS_FOR_INIT_BUG = 96 };
+
+LLVM_ABI unsigned getTotalNumSGPRs(GPUKind AK);
+LLVM_ABI unsigned getTotalNumSGPRs(Triple::SubArchType SubArch);
+
+LLVM_ABI unsigned getAddressableNumSGPRs(GPUKind AK);
+LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
+
+LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
+LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns
@@ -165,6 +197,10 @@ private:
 public:
   TargetID(GPUKind Arch, const Triple &TT, TargetIDSetting XnackSetting,
            TargetIDSetting SramEccSetting);
+
+  /// Construct a TargetID from a triple \p TT and the processor+features string
+  /// e.g. "gfx90a", "gfx90a:xnack+:sramecc-", "".
+  TargetID(const Triple &TT, StringRef TargetIDStr);
 
   ~TargetID() = default;
 
@@ -222,8 +258,6 @@ public:
     SramEccSetting = NewSramEccSetting;
   }
 
-  void setTargetIDFromTargetIDStream(StringRef TargetID);
-
   GPUKind getGPUKind() const { return Arch; }
 
   StringRef getTargetTripleString() const { return TargetTripleString; }
@@ -231,12 +265,41 @@ public:
   /// \returns True if this is an AMDHSA target.
   bool isAMDHSA() const { return IsAMDHSA; }
 
+  /// Parse and validate a TargetID for triple \p TT from the processor+features
+  /// string \p ProcAndFeatures (e.g. "gfx90a", "gfx90a:xnack+:sramecc-", "").
+  /// Returns std::nullopt if the triple is not AMDGCN, the processor is
+  /// unrecognized, or a feature modifier is invalid for the processor.
+  static std::optional<TargetID> parse(const Triple &TT,
+                                       StringRef ProcAndFeatures);
+
+  /// Parse and validate a TargetID from a full
+  /// "<triple>-<processor>:<features>" directive string.
   static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
+
+  /// Returns true if \p Other denotes the same target as *this, i.e. the same
+  /// processor and xnack/sramecc settings on a compatible triple. This is a
+  /// semantic equality that looks through spelling differences.
+  bool isEquivalent(const TargetID &Other) const;
+
+  /// Returns true if a device image for *this can provide the device code for a
+  /// request for \p Other. This is directional and models logical-linking
+  /// compatibility.
+  bool providesFor(const TargetID &Other) const;
 
   void print(raw_ostream &OS) const;
 
   std::string toString() const;
+
+  /// Print the canonical processor name followed by any explicit xnack and
+  /// sramecc feature modifiers (e.g. "gfx908:sramecc-:xnack+"), without the
+  /// triple prefix.
+  void printCanonicalTargetIDString(raw_ostream &OS) const;
+
+  /// \returns the canonical processor name followed by any explicit xnack and
+  /// sramecc feature modifiers order (e.g.  "gfx908:sramecc-:xnack+"), without
+  /// the triple prefix.
+  std::string getCanonicalFeatureString() const;
 
   bool operator==(const TargetID &Other) const;
   bool operator!=(const TargetID &Other) const { return !(*this == Other); }

@@ -204,6 +204,13 @@ def FeatureZilsdWordAlign
     : SubtargetFeature<"zilsd-word-align", "AllowZilsdWordAlign", "true",
                        "Allow 4-byte alignment for Zilsd LD/SD instructions">;
 
+def FeatureStdExtZilx
+    : RISCVExperimentalExtension<0, 1, "Indexed Integer Load Instructions">;
+def HasStdExtZilx
+    : Predicate<"Subtarget->hasStdExtZilx()">,
+      AssemblerPredicate<(all_of FeatureStdExtZilx),
+                          "'Zilx' (Indexed Integer Load Instructions)">;
+
 // Multiply Extensions
 
 def FeatureStdExtZmmul
@@ -1855,6 +1862,14 @@ def HasVendorXSMTVDot
     : Predicate<"Subtarget->hasVendorXSMTVDot()">,
       AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
                          "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
+
+def FeatureVendorXSMTVDotII
+    : RISCVExtension<1, 0, "SpacemiT Vector Extension for Matrix 2.0",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSMTVDotII
+    : Predicate<"Subtarget->hasVendorXSMTVDotII()">,
+      AssemblerPredicate<(all_of FeatureVendorXSMTVDotII),
+                         "'XSMTVDotII' (SpacemiT Vector Extension for Matrix 2.0)">;
 
 def FeatureVendorXAIFET
     : RISCVExtension<1, 0, "AI Foundry ET Extension", [FeatureStdExtF]>;

@@ -4,28 +4,10 @@
 User Guide for AMDGPU Backend
 =============================
 
-.. contents::
-   :local:
 
 .. toctree::
    :hidden:
 
-   AMDGPU/AMDGPUAsmGFX7
-   AMDGPU/AMDGPUAsmGFX8
-   AMDGPU/AMDGPUAsmGFX9
-   AMDGPU/AMDGPUAsmGFX900
-   AMDGPU/AMDGPUAsmGFX904
-   AMDGPU/AMDGPUAsmGFX906
-   AMDGPU/AMDGPUAsmGFX908
-   AMDGPU/AMDGPUAsmGFX90a
-   AMDGPU/AMDGPUAsmGFX940
-   AMDGPU/AMDGPUAsmGFX950
-   AMDGPU/AMDGPUAsmGFX10
-   AMDGPU/AMDGPUAsmGFX1011
-   AMDGPU/AMDGPUAsmGFX1013
-   AMDGPU/AMDGPUAsmGFX1030
-   AMDGPU/AMDGPUAsmGFX11
-   AMDGPU/AMDGPUAsmGFX12
    AMDGPUModifierSyntax
    AMDGPUOperandSyntax
    AMDGPUInstructionSyntax
@@ -685,7 +667,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                            work-item
                                                                            IDs
 
-     ``gfx1250``                 ``amdgpu12.50``  APU                    - Architected                   *TBA*
+     ``gfx1250``                 ``amdgpu12.50``  APU   - sramecc        - Architected                   *TBA*
                                                                            flat
                                                                            scratch                         .. TODO::
                                                                          - Packed
@@ -697,7 +679,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                          - Workgroup
                                                                            Clusters
 
-     ``gfx1251``                 ``amdgpu12.51``  APU                    - Architected                   *TBA*
+     ``gfx1251``                 ``amdgpu12.51``  APU   - sramecc        - Architected                   *TBA*
                                                                            flat
                                                                            scratch                       .. TODO::
                                                                          - Packed
@@ -834,7 +816,7 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                                 work-item
                                                                                 IDs
 
-     ``gfx12-5-generic``  ``amdgpu12.5`` - ``gfx1250``                        - Architected     Functionally equivalent to
+     ``gfx12-5-generic``  ``amdgpu12.5`` - ``gfx1250``     - sramecc          - Architected     Functionally equivalent to
                                          - ``gfx1251``                          flat scratch    gfx1250.
                                                                               - Packed
                                                                                 work-item
@@ -1012,10 +994,48 @@ consumed by the AMDGPU backend during code generation.
      - Same as above, but for typed buffer instructions (``tbuffer_load`` /
        ``tbuffer_store``).
 
+   * - ``amdgpu.xnack``
+     - ``i32``
+     - Error
+     - Controls XNACK (page fault) replay mode. This is ignored on
+       targets which do not support xnack.
+
+       - absent: **any**. The module can be loaded and executed in a process
+         with XNACK replay either enabled or disabled. Code generation
+         assumes XNACK may be enabled.
+       - ``0``: **off**. The module can only be loaded and executed in a
+         process with XNACK replay disabled. Code generation is optimized
+         for XNACK disabled.
+       - ``1``: **on**. The module can only be loaded and executed in a
+         process with XNACK replay enabled. Code generation assumes XNACK
+         is enabled.
+
+       At link time, modules with conflicting settings (``0`` vs ``1``)
+       produce an error. Modules with **any** (absent flag) are compatible
+       with any setting.
+
+   * - ``amdgpu.sramecc``
+     - ``i32``
+     - Error
+     - Controls SRAMECC mode. This is ignored on targets which do not
+       support sramecc.
+
+       - absent: **any**. The module can be loaded and executed in a process
+         with SRAMECC either enabled or disabled.
+       - ``0``: **off**. The module can only be loaded and executed in a
+         process with SRAMECC disabled.
+       - ``1``: **on**. The module can only be loaded and executed in a
+         process with SRAMECC enabled. Some instructions behave differently
+         (e.g., D16 memory instructions).
+
+       At link time, modules with conflicting settings (``0`` vs ``1``)
+       produce an error. Modules with **any** (absent flag) are compatible
+       with any setting.
+
 .. note::
 
    Frontends that require misaligned-access merging for performance should
-   set both flags to ``1`` (relaxed).  Frontends that require strict
+   set both buffer OOB flags to ``1`` (relaxed).  Frontends that require strict
    per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
    Modules that do not use buffer operations or are indifferent to OOB semantics
    (e.g. device libraries) should leave the flags absent.
@@ -2094,6 +2114,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+.. _amdgpu-av-load-store:
+
 '``llvm.amdgcn.av``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -2440,6 +2462,28 @@ and
 
   !0 = !{}
 
+.. _amdgpu_expected_active_lanes:
+
+'``amdgpu.expected.active.lanes``' Metadata
+-------------------------------------------------
+
+A profiling-derived hint describing how many lanes of the wavefront are
+expected to be active. The metadata has a single ``i32`` constant operand
+giving the expected number of active lanes as an absolute count (the same
+value is used for both wave32 and wave64 targets). This structure is
+enforced by the verifier.
+
+The AMDGPU atomic optimizer uses this metadata on LDS atomics to decide
+whether to skip the DPP optimization.
+
+.. code-block:: llvm
+
+  ; Few expected active lanes: the atomic optimizer may skip the DPP optimization.
+  %old0 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 4}
+
+  ; Many expected active lanes: the DPP optimization is not skipped.
+  %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
+
 
 LLVM IR Attributes
 ==================
@@ -2643,9 +2687,6 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       any AGPRs.
 
                                                       This is only relevant on targets with AGPRs which support accum_offset (gfx90a+).
-
-     "amdgpu-sgpr-hazard-wait"                        Disabled SGPR hazard wait insertion if set to 0.
-                                                      Exists for testing performance impact of SGPR hazard waits only.
 
      "amdgpu-sgpr-hazard-boundary-cull"               Enable insertion of SGPR hazard cull sequences at function call boundaries.
                                                       Cull sequence reduces future hazard waits, but has a performance cost.
@@ -20382,7 +20423,7 @@ after the source language arguments in the following order:
 
 1.  Work-Item ID (1 VGPR)
 
-    The X, Y and Z work-item ID are packed into a single VGRP with the following
+    The X, Y and Z work-item ID are packed into a single VGPR with the following
     layout. Only fields actually used by the function are set. The other bits
     are undefined.
 
@@ -21142,67 +21183,6 @@ An instruction has the following :doc:`syntax<AMDGPUInstructionSyntax>`:
 The order of operands and modifiers is fixed.
 Most modifiers are optional and may be omitted.
 
-Links to detailed instruction syntax description may be found in the following
-table. Note that features under development are not included
-in this description.
-
-    ============= ============================================= =======================================
-    Architecture  Core ISA                                      ISA Variants and Extensions
-    ============= ============================================= =======================================
-    GCN 2         :doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`             \-
-    GCN 3, GCN 4  :doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`             \-
-    GCN 5         :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx900<AMDGPU/AMDGPUAsmGFX900>`
-
-                                                                :doc:`gfx902<AMDGPU/AMDGPUAsmGFX900>`
-
-                                                                :doc:`gfx904<AMDGPU/AMDGPUAsmGFX904>`
-
-                                                                :doc:`gfx906<AMDGPU/AMDGPUAsmGFX906>`
-
-                                                                :doc:`gfx909<AMDGPU/AMDGPUAsmGFX900>`
-
-                                                                :doc:`gfx90c<AMDGPU/AMDGPUAsmGFX900>`
-
-    CDNA 1        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx908<AMDGPU/AMDGPUAsmGFX908>`
-
-    CDNA 2        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx90a<AMDGPU/AMDGPUAsmGFX90a>`
-
-    CDNA 3        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx942<AMDGPU/AMDGPUAsmGFX940>`
-
-    CDNA 4        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx950<AMDGPU/AMDGPUAsmGFX950>`
-
-    RDNA 1        :doc:`GFX10 RDNA1<AMDGPU/AMDGPUAsmGFX10>`     :doc:`gfx1010<AMDGPU/AMDGPUAsmGFX10>`
-
-                                                                :doc:`gfx1011<AMDGPU/AMDGPUAsmGFX1011>`
-
-                                                                :doc:`gfx1012<AMDGPU/AMDGPUAsmGFX1011>`
-
-                                                                :doc:`gfx1013<AMDGPU/AMDGPUAsmGFX1013>`
-
-    RDNA 2        :doc:`GFX10 RDNA2<AMDGPU/AMDGPUAsmGFX1030>`   :doc:`gfx1030<AMDGPU/AMDGPUAsmGFX1030>`
-
-                                                                :doc:`gfx1031<AMDGPU/AMDGPUAsmGFX1030>`
-
-                                                                :doc:`gfx1032<AMDGPU/AMDGPUAsmGFX1030>`
-
-                                                                :doc:`gfx1033<AMDGPU/AMDGPUAsmGFX1030>`
-
-                                                                :doc:`gfx1034<AMDGPU/AMDGPUAsmGFX1030>`
-
-                                                                :doc:`gfx1035<AMDGPU/AMDGPUAsmGFX1030>`
-
-                                                                :doc:`gfx1036<AMDGPU/AMDGPUAsmGFX1030>`
-
-    RDNA 3        :doc:`GFX11<AMDGPU/AMDGPUAsmGFX11>`           :doc:`gfx1100<AMDGPU/AMDGPUAsmGFX11>`
-
-                                                                :doc:`gfx1101<AMDGPU/AMDGPUAsmGFX11>`
-
-                                                                :doc:`gfx1102<AMDGPU/AMDGPUAsmGFX11>`
-
-                                                                :doc:`gfx1103<AMDGPU/AMDGPUAsmGFX11>`
-    RDNA 4        :doc:`GFX12<AMDGPU/AMDGPUAsmGFX12>`           :doc:`gfx1200<AMDGPU/AMDGPUAsmGFX12>`
-    ============= ============================================= =======================================
-
 For more information about instructions, their semantics and supported
 combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX6]_, [AMD-GCN-GFX7]_, [AMD-GCN-GFX8]_,
@@ -21210,6 +21190,10 @@ combinations of operands, refer to one of instruction set architecture manuals
 [AMD-GCN-GFX908-CDNA1]_, [AMD-GCN-GFX90A-CDNA2]_,
 [AMD-GCN-GFX942-CDNA3]_, [AMD-GCN-GFX10-RDNA1]_, [AMD-GCN-GFX10-RDNA2]_,
 [AMD-GCN-GFX11-RDNA3]_, [AMD-GCN-GFX11-RDNA3.5]_ and [AMD-GCN-GFX12-RDNA4]_.
+
+Additionally, instruction syntax description can also be found at the `ROCm
+LLVM Compiler Infrastructure website
+<https://rocm.docs.amd.com/projects/llvm-project/en/latest/index.html>`_.
 
 Operands
 ~~~~~~~~

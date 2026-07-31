@@ -1536,6 +1536,7 @@ void ASTStmtWriter::VisitObjCSelectorExpr(ObjCSelectorExpr *E) {
   VisitExpr(E);
   Record.AddSelectorRef(E->getSelector());
   Record.AddSourceLocation(E->getAtLoc());
+  Record.AddSourceLocation(E->getSelectorNameLoc());
   Record.AddSourceLocation(E->getRParenLoc());
   Code = serialization::EXPR_OBJC_SELECTOR_EXPR;
 }
@@ -1755,6 +1756,37 @@ void ASTStmtWriter::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   Record.AddStmt(S->getLoopVarStmt());
   Record.AddStmt(S->getBody());
   Code = serialization::STMT_CXX_FOR_RANGE;
+}
+
+void ASTStmtWriter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
+  VisitStmt(S);
+  Record.push_back(static_cast<unsigned>(S->getKind()));
+  Record.AddSourceLocation(S->getLParenLoc());
+  Record.AddSourceLocation(S->getColonLoc());
+  Record.AddSourceLocation(S->getRParenLoc());
+  Record.AddDeclRef(S->getDecl());
+  for (Stmt *SubStmt : S->children())
+    Record.AddStmt(SubStmt);
+  Code = serialization::STMT_CXX_EXPANSION_PATTERN;
+}
+
+void ASTStmtWriter::VisitCXXExpansionStmtInstantiation(
+    CXXExpansionStmtInstantiation *S) {
+  VisitStmt(S);
+  Record.push_back(S->getInstantiations().size());
+  Record.push_back(S->getPreambleStmts().size());
+  Record.AddDeclRef(S->getParent());
+  for (Stmt *St : S->getAllSubStmts())
+    Record.AddStmt(St);
+  Record.push_back(S->shouldApplyLifetimeExtensionToPreamble());
+  Code = serialization::STMT_CXX_EXPANSION_INSTANTIATION;
+}
+
+void ASTStmtWriter::VisitCXXExpansionSelectExpr(CXXExpansionSelectExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getRangeExpr());
+  Record.AddStmt(E->getIndexExpr());
+  Code = serialization::EXPR_CXX_EXPANSION_SELECT;
 }
 
 void ASTStmtWriter::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ \
 // RUN:   -triple x86_64-unknown-unknown %s
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -x c++ \
-// RUN:   -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa %s
+// RUN:   -triple x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa %s
 
 // OpenMP 6.0 [7.9.6]: device-local variable must not appear in map clause.
 

@@ -3179,7 +3179,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       }
 
       // Copy over various properties and the new attributes.
-      NewCB->copyMetadata(*OldCB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+      NewCB->copyProfileAndDebugMetadata(*OldCB);
       NewCB->setCallingConv(OldCB->getCallingConv());
       NewCB->takeName(OldCB);
       NewCB->setAttributes(AttributeList::get(
@@ -3868,7 +3868,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS,
 
 static bool runAttributorOnFunctions(InformationCache &InfoCache,
                                      SetVector<Function *> &Functions,
-                                     AnalysisGetter &AG,
                                      CallGraphUpdater &CGUpdater,
                                      FunctionAnalysisManager &FAM,
                                      bool DeleteFns, bool IsModulePass) {
@@ -3980,7 +3979,6 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
 
 static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
                                           SetVector<Function *> &Functions,
-                                          AnalysisGetter &AG,
                                           CallGraphUpdater &CGUpdater,
                                           FunctionAnalysisManager &FAM,
                                           bool IsModulePass) {
@@ -4099,13 +4097,14 @@ PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
+  Functions.reserve(M.size());
   for (Function &F : M)
     Functions.insert(&F);
 
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                /* DeleteFns */ true, /* IsModulePass */ true)) {
     // FIXME: Think about passes we will preserve and add them here.
     return PreservedAnalyses::none();
@@ -4122,6 +4121,7 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
+  Functions.reserve(C.size());
   for (LazyCallGraph::Node &N : C)
     Functions.insert(&N.getFunction());
 
@@ -4133,7 +4133,7 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-  if (runAttributorOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                /* DeleteFns */ false,
                                /* IsModulePass */ false)) {
     // FIXME: Think about passes we will preserve and add them here.
@@ -4151,13 +4151,14 @@ PreservedAnalyses AttributorLightPass::run(Module &M,
   AnalysisGetter AG(FAM, /* CachedOnly */ true);
 
   SetVector<Function *> Functions;
+  Functions.reserve(M.size());
   for (Function &F : M)
     Functions.insert(&F);
 
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
-  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorLightOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                     /* IsModulePass */ true)) {
     PreservedAnalyses PA;
     // We have not added or removed functions.
@@ -4189,7 +4190,7 @@ PreservedAnalyses AttributorLightCGSCCPass::run(LazyCallGraph::SCC &C,
   CGUpdater.initialize(CG, C, AM, UR);
   BumpPtrAllocator Allocator;
   InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
-  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+  if (runAttributorLightOnFunctions(InfoCache, Functions, CGUpdater, FAM,
                                     /* IsModulePass */ false)) {
     PreservedAnalyses PA;
     // We have not added or removed functions.

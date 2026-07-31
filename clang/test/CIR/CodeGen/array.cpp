@@ -534,11 +534,12 @@ void bitint_index_access(_BitInt(7) i) {
 // CIR:   cir.store{{.*}} %[[VAL]], %[[N_ADDR]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define{{.*}} @_Z19bitint_index_accessDB7_(i7 {{[^)]*}})
-// LLVM:   %[[I_ADDR:.*]] = alloca i7
+// LLVM:   %[[I_ADDR:.*]] = alloca i8
 // LLVM:   %[[ARR_ADDR:.*]] = alloca [10 x i32]
 // LLVM:   %[[N_ADDR:.*]] = alloca i32
-// LLVM:   %[[I:.*]] = load i7, ptr %[[I_ADDR]]
-// LLVM:   %[[IDX:.*]] = sext i7 %[[I]] to i64
+// LLVM:   %[[I:.*]] = load i8, ptr %[[I_ADDR]]
+// LLVM:   %[[I_CAST:.*]] = trunc i8 %[[I]] to i7
+// LLVM:   %[[IDX:.*]] = sext i7 %[[I_CAST]] to i64
 // LLVM:   %[[ELE:.*]] = getelementptr [10 x i32], ptr %[[ARR_ADDR]], i32 0, i64 %[[IDX]]
 // LLVM:   %[[VAL:.*]] = load i32, ptr %[[ELE]]
 // LLVM:   store i32 %[[VAL]], ptr %[[N_ADDR]]

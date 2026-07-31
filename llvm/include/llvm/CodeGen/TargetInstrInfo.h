@@ -50,6 +50,7 @@ class MachineLoop;
 class MachineLoopInfo;
 class MachineMemOperand;
 class MachineModuleInfo;
+class MachineOptimizationRemarkEmitter;
 class MachineRegisterInfo;
 class MCAsmInfo;
 class MCInst;
@@ -897,8 +898,11 @@ public:
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.
-  virtual std::unique_ptr<PipelinerLoopInfo>
-  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
+  /// \p ORE, if non-null, may be used by targets to emit optimization remarks
+  /// explaining why the loop was rejected for pipelining.
+  virtual std::unique_ptr<PipelinerLoopInfo> analyzeLoopForPipelining(
+      MachineBasicBlock *LoopBB,
+      MachineOptimizationRemarkEmitter *ORE = nullptr) const {
     return nullptr;
   }
 
@@ -1916,7 +1920,8 @@ public:
                                    SDNode *Node) const;
 
   /// Return the default expected latency for a def based on its opcode.
-  unsigned defaultDefLatency(const MCSchedModel &SchedModel,
+  unsigned defaultDefLatency(const TargetSubtargetInfo &STI,
+                             const MCSchedModel &SchedModel,
                              const MachineInstr &DefMI) const;
 
   /// Return true if this opcode has high latency to its result.
