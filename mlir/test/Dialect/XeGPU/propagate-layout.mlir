@@ -128,8 +128,7 @@ func.func @extf_truncf(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.tensor
   %3 = arith.truncf %2 : vector<16x16xf32> to vector<16x16xf16>
   %4 = xegpu.dpas %0, %3 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
     %5 = xegpu.convert_layout %4
-     <{input_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
-      target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
+     <{target_layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
      : vector<8x16xf32>
   return %4 : vector<8x16xf32>
 }
@@ -956,6 +955,23 @@ func.func @insert_strided_slice_with_slice_layout(%arg0: memref<8x16xf32>) {
   %cst_small8x16 = vector.transpose %cst_small16x8, [1, 0] : vector<16x8xf32> to vector<8x16xf32>
   %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
   xegpu.store_nd %cst_small8x16, %tdesc[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>: vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
+  return
+}
+}
+
+// -----
+gpu.module @test {
+// CHECK-LABEL: func.func @insert_strided_slice_lane_broadcast_dim(
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x1xf32>) {
+// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<1.000000e+00> : vector<1x1xf32>
+// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.000000e+00> : vector<8x1xf32>
+// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, offsets = [0, 0], strides = [1, 1]} : vector<1x1xf32> into vector<8x1xf32>
+func.func @insert_strided_slice_lane_broadcast_dim(%arg0: memref<8x1xf32>) {
+  %cst_small = arith.constant dense<1.0> : vector<1x1xf32>
+  %cst_large = arith.constant dense<0.0> : vector<8x1xf32>
+  %insert = vector.insert_strided_slice %cst_small, %cst_large {offsets = [0, 0], strides = [1, 1]} : vector<1x1xf32> into vector<8x1xf32>
+  %tdesc = xegpu.create_nd_tdesc %arg0 : memref<8x1xf32> -> !xegpu.tensor_desc<8x1xf32>
+  xegpu.store_nd %insert, %tdesc[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x1xf32>, !xegpu.tensor_desc<8x1xf32>
   return
 }
 }

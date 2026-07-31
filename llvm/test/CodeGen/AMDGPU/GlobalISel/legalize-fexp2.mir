@@ -305,20 +305,20 @@ body: |
     ; GFX6: liveins: $vgpr0
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; GFX6-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX6-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
-    ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX6-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX6-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX6-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; GFX6-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](i32)
+    ; GFX6-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; GFX6-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; GFX6-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](i32)
     ; GFX6-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[TRUNC]](s16)
     ; GFX6-NEXT: [[INT:%[0-9]+]]:_(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), [[FPEXT]](f32)
     ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT]](f32)
     ; GFX6-NEXT: [[FPEXT1:%[0-9]+]]:_(f32) = G_FPEXT [[TRUNC1]](s16)
     ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(f32) = G_INTRINSIC intrinsic(@llvm.amdgcn.exp2), [[FPEXT1]](f32)
     ; GFX6-NEXT: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[INT1]](f32)
-    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC]](s16)
-    ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FPTRUNC1]](s16)
-    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
+    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[FPTRUNC]](s16)
+    ; GFX6-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[FPTRUNC1]](s16)
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
     ; GFX6-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX6-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
@@ -327,16 +327,16 @@ body: |
     ; GFX8: liveins: $vgpr0
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
-    ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX8-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](i32)
+    ; GFX8-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](i32)
     ; GFX8-NEXT: [[FEXP2_:%[0-9]+]]:_(s16) = G_FEXP2 [[TRUNC]]
     ; GFX8-NEXT: [[FEXP2_1:%[0-9]+]]:_(s16) = G_FEXP2 [[TRUNC1]]
-    ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[FEXP2_]](s16)
-    ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[FEXP2_1]](s16)
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
+    ; GFX8-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[FEXP2_]](s16)
+    ; GFX8-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[FEXP2_1]](s16)
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
     ; GFX8-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
     ; GFX8-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](i32)
     ; GFX8-NEXT: $vgpr0 = COPY [[BITCAST1]](<2 x s16>)
@@ -345,11 +345,11 @@ body: |
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
-    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](<2 x s16>)
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](i32)
+    ; GFX9-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](i32)
     ; GFX9-NEXT: [[FEXP2_:%[0-9]+]]:_(s16) = G_FEXP2 [[TRUNC]]
     ; GFX9-NEXT: [[FEXP2_1:%[0-9]+]]:_(s16) = G_FEXP2 [[TRUNC1]]
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[FEXP2_]](s16), [[FEXP2_1]](s16)

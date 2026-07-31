@@ -41,12 +41,12 @@ jobs:
           sudo apt-get install python3-github
 
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
       - id: app-token
-        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
         with:
           app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
@@ -65,6 +65,10 @@ jobs:
     needs:
       - validate-tag
       - release-create
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     uses: ./.github/workflows/release-documentation.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
@@ -102,7 +106,7 @@ jobs:
     environment: pypi
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           ref: "llvmorg-${{ needs.validate-tag.outputs.release-version }}"
@@ -135,7 +139,7 @@ jobs:
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: lit-${{ inputs.release-version }}-release-binary
+          name: lit-${{ needs.validate-tag.outputs.release-version }}-release-binary
           path: |
             llvm/utils/lit/dist
 
@@ -201,7 +205,7 @@ jobs:
           sudo apt-get install python3-github
 
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           sparse-checkout: llvm/utils/release/github-upload-release.py

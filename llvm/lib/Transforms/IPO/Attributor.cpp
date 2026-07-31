@@ -3179,7 +3179,7 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
       }
 
       // Copy over various properties and the new attributes.
-      NewCB->copyMetadata(*OldCB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+      NewCB->copyProfileAndDebugMetadata(*OldCB);
       NewCB->setCallingConv(OldCB->getCallingConv());
       NewCB->takeName(OldCB);
       NewCB->setAttributes(AttributeList::get(

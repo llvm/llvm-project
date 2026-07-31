@@ -426,7 +426,7 @@ LANGOPT(ForceEmitVTables, 1, 0, NotCompatible, "whether to emit all vtables")
 LANGOPT(AllowEditorPlaceholders, 1, 0, Benign,
         "allow editor placeholders in source")
 
-ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest, NotCompatible,
+ENUM_LANGOPT(ClangABICompat, ClangABI, 5, ClangABI::Latest, NotCompatible,
              "version of Clang that we should attempt to be ABI-compatible "
              "with")
 
@@ -533,6 +533,8 @@ LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, Benign, "Lifetime safety at transl
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
 LANGOPT(Reflection      , 1, 0, NotCompatible, "C++26 Reflection")
+
+LANGOPT(StablePointerSubtraction, 1, 0, NotCompatible, "Make unaligned pointer subtraction stable")
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

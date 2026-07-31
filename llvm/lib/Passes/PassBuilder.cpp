@@ -165,6 +165,7 @@
 #include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegUsageInfoCollector.h"
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
@@ -261,6 +262,7 @@
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
+#include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -309,6 +311,7 @@
 #include "llvm/Transforms/Scalar/JumpTableToSwitch.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Scalar/LICM.h"
+#include "llvm/Transforms/Scalar/LogicalSROA.h"
 #include "llvm/Transforms/Scalar/LoopAccessAnalysisPrinter.h"
 #include "llvm/Transforms/Scalar/LoopBoundSplit.h"
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
@@ -916,6 +919,8 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
       UnrollOpts.setRuntime(Enable);
     } else if (ParamName == "upperbound") {
       UnrollOpts.setUpperBound(Enable);
+    } else if (ParamName == "prepare-for-lto") {
+      UnrollOpts.setPrepareForLTO(Enable);
     } else {
       return make_error<StringError>(
           formatv("invalid LoopUnrollPass parameter '{}'", ParamName).str(),
@@ -2860,7 +2865,7 @@ PassBuilder::parseRegAllocFilter(StringRef FilterName) {
 
 LLVM_ATTRIBUTE_NOINLINE static void printPassNameList(StringTable PassNames,
                                                       raw_ostream &OS) {
-  for (StringRef PassName : drop_begin(PassNames))
+  for (StringRef PassName : PassNames)
     OS << "  " << PassName << '\n';
 }
 
@@ -2868,7 +2873,6 @@ LLVM_ATTRIBUTE_NOINLINE static void
 printPassNameListWithParams(StringTable PassNames, raw_ostream &OS) {
   auto I = PassNames.begin();
   auto End = PassNames.end();
-  ++I;
   while (I != End) {
     StringRef Name = *I;
     ++I;

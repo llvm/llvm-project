@@ -737,8 +737,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .lowerIf(all(typeInSet(0, {s8, s16, s32, s64}), typeIs(2, p0)));
 
   getActionDefinitionsBuilder({G_ATOMIC_CMPXCHG, G_ATOMICRMW_ADD,
-                               G_ATOMICRMW_AND, G_ATOMICRMW_OR,
-                               G_ATOMICRMW_XOR})
+                               G_ATOMICRMW_XCHG, G_ATOMICRMW_AND,
+                               G_ATOMICRMW_OR, G_ATOMICRMW_XOR})
       .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
       .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen);
@@ -747,6 +747,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor(!ST.hasStdExtA(), {{s8, p0}, {s16, p0}, {s32, p0}, {s64, p0}})
       .clampScalar(0, sXLen, sXLen)
       .lower();
+
+  getActionDefinitionsBuilder(
+      {G_ATOMICRMW_MAX, G_ATOMICRMW_MIN, G_ATOMICRMW_UMAX, G_ATOMICRMW_UMIN})
+      .legalFor(ST.hasStdExtA(), {{sXLen, p0}})
+      .clampScalar(0, sXLen, sXLen)
+      .unsupported();
 
   LegalityPredicate InsertVectorEltPred = [=](const LegalityQuery &Query) {
     LLT VecTy = Query.Types[0];
@@ -832,6 +838,11 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::riscv_vsetvlimax:
   case Intrinsic::riscv_masked_atomicrmw_add:
   case Intrinsic::riscv_masked_atomicrmw_sub:
+  case Intrinsic::riscv_masked_atomicrmw_xchg:
+  case Intrinsic::riscv_masked_atomicrmw_max:
+  case Intrinsic::riscv_masked_atomicrmw_min:
+  case Intrinsic::riscv_masked_atomicrmw_umax:
+  case Intrinsic::riscv_masked_atomicrmw_umin:
   case Intrinsic::riscv_masked_cmpxchg:
     return true;
   }

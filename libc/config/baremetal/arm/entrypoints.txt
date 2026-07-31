@@ -674,6 +674,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
@@ -974,6 +975,14 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivulr
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
+    libc.src.stdfix.divir
+    libc.src.stdfix.divilr
+    libc.src.stdfix.divik
+    libc.src.stdfix.divilk
+    libc.src.stdfix.diviur
+    libc.src.stdfix.diviulr
+    libc.src.stdfix.diviuk
+    libc.src.stdfix.diviulk
   )
 endif()
 

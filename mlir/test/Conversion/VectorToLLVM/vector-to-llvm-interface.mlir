@@ -1944,13 +1944,13 @@ func.func @negative_scatter_on_strided_memref(%arg0: memref<?xf32, strided<[2], 
 // vector.expandload
 //===----------------------------------------------------------------------===//
 
-func.func @expand_load_op(%arg0: memref<?xf32>, %arg1: vector<11xi1>, %arg2: vector<11xf32>) -> vector<11xf32> {
+func.func @expandload(%arg0: memref<?xf32>, %arg1: vector<11xi1>, %arg2: vector<11xf32>) -> vector<11xf32> {
   %c0 = arith.constant 0: index
   %0 = vector.expandload %arg0[%c0], %arg1, %arg2 : memref<?xf32>, vector<11xi1>, vector<11xf32> into vector<11xf32>
   return %0 : vector<11xf32>
 }
 
-// CHECK-LABEL: func @expand_load_op
+// CHECK-LABEL: func @expandload
 // CHECK: %[[CO:.*]] = arith.constant 0 : index
 // CHECK: %[[C:.*]] = builtin.unrealized_conversion_cast %[[CO]] : index to i64
 // CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%[[C]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
@@ -1959,21 +1959,36 @@ func.func @expand_load_op(%arg0: memref<?xf32>, %arg1: vector<11xi1>, %arg2: vec
 
 // -----
 
-func.func @expand_load_op_index(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>) -> vector<11xindex> {
+func.func @expandload_scalable(%arg0: memref<?xf32>, %arg1: vector<[11]xi1>, %arg2: vector<[11]xf32>) -> vector<[11]xf32> {
+  %c0 = arith.constant 0: index
+  %0 = vector.expandload %arg0[%c0], %arg1, %arg2 : memref<?xf32>, vector<[11]xi1>, vector<[11]xf32> into vector<[11]xf32>
+  return %0 : vector<[11]xf32>
+}
+
+// CHECK-LABEL: func @expandload_scalable
+// CHECK: %[[CO:.*]] = arith.constant 0 : index
+// CHECK: %[[C:.*]] = builtin.unrealized_conversion_cast %[[CO]] : index to i64
+// CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%[[C]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[E:.*]] = "llvm.intr.masked.expandload"(%[[P]], %{{.*}}, %{{.*}}) : (!llvm.ptr, vector<[11]xi1>, vector<[11]xf32>) -> vector<[11]xf32>
+// CHECK: return %[[E]] : vector<[11]xf32>
+
+// -----
+
+func.func @expandload_index(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>) -> vector<11xindex> {
   %c0 = arith.constant 0: index
   %0 = vector.expandload %arg0[%c0], %arg1, %arg2 : memref<?xindex>, vector<11xi1>, vector<11xindex> into vector<11xindex>
   return %0 : vector<11xindex>
 }
-// CHECK-LABEL: func @expand_load_op_index
+// CHECK-LABEL: func @expandload_index
 // CHECK: %{{.*}} = "llvm.intr.masked.expandload"(%{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr, vector<11xi1>, vector<11xi64>) -> vector<11xi64>
 
 // -----
 
-func.func @expand_load_op_with_alignment(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>, %c0: index) -> vector<11xindex> {
+func.func @expandload_with_alignment(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>, %c0: index) -> vector<11xindex> {
   %0 = vector.expandload %arg0[%c0], %arg1, %arg2 { alignment = 8 } : memref<?xindex>, vector<11xi1>, vector<11xindex> into vector<11xindex>
   return %0 : vector<11xindex>
 }
-// CHECK-LABEL: func @expand_load_op_with_alignment
+// CHECK-LABEL: func @expandload_with_alignment
 // CHECK: %{{.*}} = "llvm.intr.masked.expandload"(%{{.*}}, %{{.*}}, %{{.*}}) <{arg_attrs = [{llvm.align = 8 : i64}, {}, {}]}> : (!llvm.ptr, vector<11xi1>, vector<11xi64>) -> vector<11xi64>
 
 // -----
@@ -1982,13 +1997,13 @@ func.func @expand_load_op_with_alignment(%arg0: memref<?xindex>, %arg1: vector<1
 // vector.compressstore
 //===----------------------------------------------------------------------===//
 
-func.func @compress_store_op(%arg0: memref<?xf32>, %arg1: vector<11xi1>, %arg2: vector<11xf32>) {
+func.func @compressstore(%arg0: memref<?xf32>, %arg1: vector<11xi1>, %arg2: vector<11xf32>) {
   %c0 = arith.constant 0: index
   vector.compressstore %arg0[%c0], %arg1, %arg2 : memref<?xf32>, vector<11xi1>, vector<11xf32>
   return
 }
 
-// CHECK-LABEL: func @compress_store_op
+// CHECK-LABEL: func @compressstore
 // CHECK: %[[CO:.*]] = arith.constant 0 : index
 // CHECK: %[[C:.*]] = builtin.unrealized_conversion_cast %[[CO]] : index to i64
 // CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%[[C]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
@@ -1996,21 +2011,35 @@ func.func @compress_store_op(%arg0: memref<?xf32>, %arg1: vector<11xi1>, %arg2: 
 
 // -----
 
-func.func @compress_store_op_index(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>) {
+func.func @compressstore_scalable(%arg0: memref<?xf32>, %arg1: vector<[11]xi1>, %arg2: vector<[11]xf32>) {
+  %c0 = arith.constant 0: index
+  vector.compressstore %arg0[%c0], %arg1, %arg2 : memref<?xf32>, vector<[11]xi1>, vector<[11]xf32>
+  return
+}
+
+// CHECK-LABEL: func @compressstore_scalable
+// CHECK: %[[CO:.*]] = arith.constant 0 : index
+// CHECK: %[[C:.*]] = builtin.unrealized_conversion_cast %[[CO]] : index to i64
+// CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%[[C]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: "llvm.intr.masked.compressstore"(%{{.*}}, %[[P]], %{{.*}}) : (vector<[11]xf32>, !llvm.ptr, vector<[11]xi1>) -> ()
+
+// -----
+
+func.func @compressstore_index(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>) {
   %c0 = arith.constant 0: index
   vector.compressstore %arg0[%c0], %arg1, %arg2 : memref<?xindex>, vector<11xi1>, vector<11xindex>
   return
 }
-// CHECK-LABEL: func @compress_store_op_index
+// CHECK-LABEL: func @compressstore_index
 // CHECK: "llvm.intr.masked.compressstore"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<11xi64>, !llvm.ptr, vector<11xi1>) -> ()
 
 // -----
 
-func.func @compress_store_op_with_alignment(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>, %c0: index) {
+func.func @compressstore_with_alignment(%arg0: memref<?xindex>, %arg1: vector<11xi1>, %arg2: vector<11xindex>, %c0: index) {
   vector.compressstore %arg0[%c0], %arg1, %arg2 { alignment = 8 } : memref<?xindex>, vector<11xi1>, vector<11xindex>
   return
 }
-// CHECK-LABEL: func @compress_store_op_with_alignment
+// CHECK-LABEL: func @compressstore_with_alignment
 // CHECK: "llvm.intr.masked.compressstore"(%{{.*}}, %{{.*}}, %{{.*}}) <{arg_attrs = [{}, {llvm.align = 8 : i64}, {}]}> : (vector<11xi64>, !llvm.ptr, vector<11xi1>) -> ()
 
 // -----

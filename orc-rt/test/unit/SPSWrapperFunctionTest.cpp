@@ -33,11 +33,12 @@ ORC_RT_SPS_WRAPPER(add_via_function_sps_wrapper, int32_t(int32_t, int32_t),
 
 using namespace orc_rt;
 
-static void void_noop_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+static void void_noop_sps_wrapper(orc_rt_SessionRef S,
+                                  orc_rt_WrapperFunctionBuffer ArgBytes,
                                   orc_rt_WrapperFunctionReturn Return,
-                                  orc_rt_WrapperFunctionBuffer ArgBytes) {
+                                  uint64_t CallId) {
   SPSWrapperFunction<void()>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       [](move_only_function<void()> Return) { Return(); });
 }
 
@@ -51,11 +52,12 @@ TEST(SPSWrapperFunctionUtilsTest, VoidNoop) {
   EXPECT_TRUE(Ran);
 }
 
-static void add_via_lambda_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+static void add_via_lambda_sps_wrapper(orc_rt_SessionRef S,
+                                       orc_rt_WrapperFunctionBuffer ArgBytes,
                                        orc_rt_WrapperFunctionReturn Return,
-                                       orc_rt_WrapperFunctionBuffer ArgBytes) {
+                                       uint64_t CallId) {
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       [](move_only_function<void(int32_t)> Return, int32_t X, int32_t Y) {
         Return(X + Y);
       });
@@ -77,12 +79,11 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunction) {
   EXPECT_EQ(Result, 42);
 }
 
-static void
-add_via_function_pointer_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
-                                     orc_rt_WrapperFunctionReturn Return,
-                                     orc_rt_WrapperFunctionBuffer ArgBytes) {
+static void add_via_function_pointer_sps_wrapper(
+    orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes,
+    orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::handle(
-      S, CallId, Return, ArgBytes, &add_via_function);
+      S, ArgBytes, Return, CallId, &add_via_function);
 }
 
 TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunctionPointer) {
@@ -93,12 +94,11 @@ TEST(SPSWrapperFunctionUtilsTest, BinaryOpViaFunctionPointer) {
   EXPECT_EQ(Result, 42);
 }
 
-static void
-round_trip_string_via_span_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
-                                       orc_rt_WrapperFunctionReturn Return,
-                                       orc_rt_WrapperFunctionBuffer ArgBytes) {
+static void round_trip_string_via_span_sps_wrapper(
+    orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes,
+    orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
   SPSWrapperFunction<SPSString(SPSString)>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       [](move_only_function<void(std::string)> Return, span<const char> S) {
         Return({S.data(), S.size()});
       });
@@ -116,11 +116,12 @@ TEST(SPSWrapperFunctionUtilsTest, RoundTripStringViaSpan) {
   EXPECT_EQ(Result, "hello, world!");
 }
 
-static void improbable_feat_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+static void improbable_feat_sps_wrapper(orc_rt_SessionRef S,
+                                        orc_rt_WrapperFunctionBuffer ArgBytes,
                                         orc_rt_WrapperFunctionReturn Return,
-                                        orc_rt_WrapperFunctionBuffer ArgBytes) {
+                                        uint64_t CallId) {
   SPSWrapperFunction<SPSError(bool)>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       [](move_only_function<void(Error)> Return, bool LuckyHat) {
         if (LuckyHat)
           Return(Error::success());
@@ -152,11 +153,12 @@ TEST(SPSWrapperFunctionUtilsTest, TransparentConversionErrorFailureCase) {
   EXPECT_EQ(ErrMsg, "crushed by boulder");
 }
 
-static void halve_number_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+static void halve_number_sps_wrapper(orc_rt_SessionRef S,
+                                     orc_rt_WrapperFunctionBuffer ArgBytes,
                                      orc_rt_WrapperFunctionReturn Return,
-                                     orc_rt_WrapperFunctionBuffer ArgBytes) {
+                                     uint64_t CallId) {
   SPSWrapperFunction<SPSExpected<int32_t>(int32_t)>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       [](move_only_function<void(Expected<int32_t>)> Return, int N) {
         if (N % 2 == 0)
           Return(N >> 1);
@@ -203,13 +205,12 @@ public:
 };
 } // namespace orc_rt
 
-static void
-handle_with_reference_types_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
-                                        orc_rt_WrapperFunctionReturn Return,
-                                        orc_rt_WrapperFunctionBuffer ArgBytes) {
+static void handle_with_reference_types_sps_wrapper(
+    orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes,
+    orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
   SPSWrapperFunction<void(
       SPSOpCounter<0>, SPSOpCounter<1>, SPSOpCounter<2>,
-      SPSOpCounter<3>)>::handle(S, CallId, Return, ArgBytes,
+      SPSOpCounter<3>)>::handle(S, ArgBytes, Return, CallId,
                                 [](move_only_function<void()> Return,
                                    OpCounter<0>, OpCounter<1> &,
                                    const OpCounter<2> &,
@@ -274,13 +275,14 @@ public:
     Return(addSync(X, Y));
   }
 };
-} // anonymous namespace
+} // namespace
 
-static void adder_add_async_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+static void adder_add_async_sps_wrapper(orc_rt_SessionRef S,
+                                        orc_rt_WrapperFunctionBuffer ArgBytes,
                                         orc_rt_WrapperFunctionReturn Return,
-                                        orc_rt_WrapperFunctionBuffer ArgBytes) {
+                                        uint64_t CallId) {
   SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       WrapperFunction::handleWithAsyncMethod(&Adder::addAsync));
 }
 
@@ -295,11 +297,12 @@ TEST(SPSWrapperFunctionUtilsTest, HandleWtihAsyncMethod) {
   EXPECT_EQ(Result, 42);
 }
 
-static void adder_add_sync_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
+static void adder_add_sync_sps_wrapper(orc_rt_SessionRef S,
+                                       orc_rt_WrapperFunctionBuffer ArgBytes,
                                        orc_rt_WrapperFunctionReturn Return,
-                                       orc_rt_WrapperFunctionBuffer ArgBytes) {
+                                       uint64_t CallId) {
   SPSWrapperFunction<int32_t(SPSExecutorAddr, int32_t, int32_t)>::handle(
-      S, CallId, Return, ArgBytes,
+      S, ArgBytes, Return, CallId,
       WrapperFunction::handleWithSyncMethod(&Adder::addSync));
 }
 
