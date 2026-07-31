@@ -97,6 +97,17 @@ constexpr fltSemantics APFloatBase::semFloat8E8M0FNU = {
     false,
     false};
 
+constexpr fltSemantics APFloatBase::semFloat8E5M3FNU = {
+    16,
+    -14,
+    4,
+    8,
+    fltNonfiniteBehavior::NanOnly,
+    fltNanEncoding::AllOnes,
+    true,
+    false,
+    false};
+
 constexpr fltSemantics APFloatBase::semFloat6E3M2FN = {
     4, -2, 3, 6, fltNonfiniteBehavior::FiniteOnly};
 constexpr fltSemantics APFloatBase::semFloat6E2M3FN = {
@@ -154,6 +165,8 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return FloatTF32();
   case S_Float8E8M0FNU:
     return Float8E8M0FNU();
+  case S_Float8E5M3FNU:
+    return Float8E5M3FNU();
   case S_Float6E3M2FN:
     return Float6E3M2FN();
   case S_Float6E2M3FN:
@@ -200,6 +213,8 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_FloatTF32;
   else if (&Sem == &llvm::APFloat::Float8E8M0FNU())
     return S_Float8E8M0FNU;
+  else if (&Sem == &llvm::APFloat::Float8E5M3FNU())
+    return S_Float8E5M3FNU;
   else if (&Sem == &llvm::APFloat::Float6E3M2FN())
     return S_Float6E3M2FN;
   else if (&Sem == &llvm::APFloat::Float6E2M3FN())
@@ -319,7 +334,7 @@ exponentNaN(const fltSemantics &semantics) {
   if (semantics.nonFiniteBehavior == fltNonfiniteBehavior::NanOnly) {
     if (semantics.nanEncoding == fltNanEncoding::NegativeZero)
       return exponentZero(semantics);
-    if (semantics.hasSignedRepr)
+    if (semantics.hasSignedRepr || semantics.precision > 1)
       return semantics.maxExponent;
   }
   return semantics.maxExponent + 1;
@@ -3575,6 +3590,11 @@ APInt IEEEFloat::convertFloat8E8M0FNUAPFloatToAPInt() const {
   return convertIEEEFloatToAPInt<APFloatBase::semFloat8E8M0FNU>();
 }
 
+APInt IEEEFloat::convertFloat8E5M3FNUAPFloatToAPInt() const {
+  assert(partCount() == 1);
+  return convertIEEEFloatToAPInt<APFloatBase::semFloat8E5M3FNU>();
+}
+
 APInt IEEEFloat::convertFloat6E3M2FNAPFloatToAPInt() const {
   assert(partCount() == 1);
   return convertIEEEFloatToAPInt<APFloatBase::semFloat6E3M2FN>();
@@ -3641,6 +3661,9 @@ APInt IEEEFloat::bitcastToAPInt() const {
 
   if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat8E8M0FNU)
     return convertFloat8E8M0FNUAPFloatToAPInt();
+
+  if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat8E5M3FNU)
+    return convertFloat8E5M3FNUAPFloatToAPInt();
 
   if (semantics == (const llvm::fltSemantics *)&APFloatBase::semFloat6E3M2FN)
     return convertFloat6E3M2FNAPFloatToAPInt();
@@ -3714,6 +3737,10 @@ void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
 // Bias is 127.
 void IEEEFloat::initFromFloat8E8M0FNUAPInt(const APInt &api) {
   initFromIEEEAPInt<APFloatBase::semFloat8E8M0FNU>(api);
+}
+
+void IEEEFloat::initFromFloat8E5M3FNUAPInt(const APInt &api) {
+  initFromIEEEAPInt<APFloatBase::semFloat8E5M3FNU>(api);
 }
 
 template <const fltSemantics &S>
@@ -3953,6 +3980,8 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
     return initFromFloatTF32APInt(api);
   if (Sem == &APFloatBase::semFloat8E8M0FNU)
     return initFromFloat8E8M0FNUAPInt(api);
+  if (Sem == &APFloatBase::semFloat8E5M3FNU)
+    return initFromFloat8E5M3FNUAPInt(api);
   if (Sem == &APFloatBase::semFloat6E3M2FN)
     return initFromFloat6E3M2FNAPInt(api);
   if (Sem == &APFloatBase::semFloat6E2M3FN)
@@ -6017,17 +6046,31 @@ float APFloat::convertToFloat() const {
   return Temp.getIEEE().convertToFloat();
 }
 
+unsigned APFloatBase::getArbitraryFPFormatSizeInBits(StringRef Format) {
+  return StringSwitch<unsigned>(Format)
+      .Case("Float8E5M2", getSizeInBits(semFloat8E5M2))
+      .Case("Float8E5M2FNUZ", getSizeInBits(semFloat8E5M2FNUZ))
+      .Case("Float8E4M3", getSizeInBits(semFloat8E4M3))
+      .Case("Float8E4M3FN", getSizeInBits(semFloat8E4M3FN))
+      .Case("Float8E4M3FNUZ", getSizeInBits(semFloat8E4M3FNUZ))
+      .Case("Float8E4M3B11FNUZ", getSizeInBits(semFloat8E4M3B11FNUZ))
+      .Case("Float8E3M4", getSizeInBits(semFloat8E3M4))
+      .Case("Float8E8M0FNU", getSizeInBits(semFloat8E8M0FNU))
+      .Case("Float6E3M2FN", getSizeInBits(semFloat6E3M2FN))
+      .Case("Float6E2M3FN", getSizeInBits(semFloat6E2M3FN))
+      .Case("Float4E2M1FN", getSizeInBits(semFloat4E2M1FN))
+      .Case("Float8E5M3FNU", getSizeInBits(semFloat8E5M3FNU))
+      .Default(0);
+}
+
 bool APFloatBase::isValidArbitraryFPFormat(StringRef Format) {
-  static constexpr StringLiteral ValidFormats[] = {
-      "Float8E5M2",     "Float8E5M2FNUZ",    "Float8E4M3",  "Float8E4M3FN",
-      "Float8E4M3FNUZ", "Float8E4M3B11FNUZ", "Float8E3M4",  "Float8E8M0FNU",
-      "Float6E3M2FN",   "Float6E2M3FN",      "Float4E2M1FN"};
-  return llvm::is_contained(ValidFormats, Format);
+  return getArbitraryFPFormatSizeInBits(Format) != 0;
 }
 
 const fltSemantics *APFloatBase::getArbitraryFPSemantics(StringRef Format) {
   // TODO: extend to remaining arbitrary FP types: Float8E4M3, Float8E3M4,
-  // Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ, Float8E8M0FNU.
+  // Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ, Float8E8M0FNU,
+  // Float8E5M3FNU.
   return StringSwitch<const fltSemantics *>(Format)
       .Case("Float8E5M2", &semFloat8E5M2)
       .Case("Float8E4M3FN", &semFloat8E4M3FN)

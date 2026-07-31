@@ -23,12 +23,10 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
-#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/Utils.h"
@@ -39,14 +37,12 @@
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1152,8 +1148,6 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     Fortran::semantics::Symbol &symbol = getSymbolFromAccObject(accObject);
     Fortran::semantics::MaybeExpr designator = Fortran::common::visit(
         [&](auto &&s) { return ea.Analyze(s); }, accObject.u);
-    bool isWholeSymbol =
-        !designator || Fortran::evaluate::UnwrapWholeSymbolDataRef(*designator);
     fir::factory::AddrAndBoundsInfo info =
         Fortran::lower::gatherDataOperandAddrAndBounds<
             mlir::acc::DataBoundsOp, mlir::acc::DataBoundsType>(
@@ -1175,13 +1169,9 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     mlir::acc::ReductionOperator mlirOp =
         getReductionOperator(op, reductionTy, converter);
 
-    if (designator) {
-      Fortran::semantics::SomeExpr someExpr = *designator;
-      if (Fortran::lower::detail::getRef<Fortran::evaluate::Component>(
-              someExpr)) {
-        TODO(operandLocation,
-             "OpenACC reduction with component reference not yet supported");
-      }
+    if (extractComponentFromDesignator(designator)) {
+      TODO(operandLocation,
+           "OpenACC reduction with component reference not yet supported");
     }
 
     auto op = createDataEntryOp<mlir::acc::ReductionOp>(
@@ -1199,7 +1189,10 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     reductionOperands.push_back(op.getAccVar());
     // Track the symbol and its corresponding mlir::Value if requested so that
     // accesses inside the compute/loop regions use the acc.reduction variable.
-    if (dataMap && isWholeSymbol)
+    // Remap even for array-section reductions: otherwise element accesses
+    // inside the region keep referring to the original array instead of the
+    // private reduction copy.
+    if (dataMap)
       dataMap->emplaceSymbol(op.getAccVar(),
                              Fortran::semantics::SymbolRef(symbol));
   }
@@ -1812,6 +1805,7 @@ static void processDoConcurrentLocalitySpecs(
 // for both DO CONCURRENT and regular do loops
 static void processDoLoopBounds(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext,
     mlir::Location currentLocation, Fortran::lower::StatementContext &stmtCtx,
     fir::FirOpBuilder &builder,
     const Fortran::parser::DoConstruct &outerDoConstruct,
@@ -1832,7 +1826,6 @@ static void processDoLoopBounds(
         std::pair<Fortran::semantics::SymbolRef, Fortran::semantics::SymbolRef>>
         &localSymPairs) {
   assert(loopsToProcess > 0 && "expect at least one loop");
-  locs.push_back(currentLocation); // Location of the directive
   bool isDoConcurrent = outerDoConstruct.IsDoConcurrent();
 
   if (isDoConcurrent) {
@@ -1872,6 +1865,25 @@ static void processDoLoopBounds(
       const auto &name = std::get<Fortran::parser::Name>(control.t);
       privatizeIv(converter, *name.symbol, currentLocation, ivTypes, ivLocs,
                   privateOperands, ivPrivate, isDoConcurrent);
+
+      // A DO CONCURRENT index-name is a construct entity living in the
+      // construct's own (Forall-kind) scope, distinct from any like-named
+      // variable in the enclosing subprogram scope. `privatizeIv` above binds
+      // the symbol referenced by the loop control (which, inside an OpenACC
+      // compute construct, is the enclosing-scope variable). References to the
+      // index from within a *nested* explicit `!$acc loop` construct instead
+      // resolve to the construct entity, which would otherwise never be bound
+      // and trip the "lowering symbol to HLFIR" TODO. Bind that construct
+      // entity to the same privatized storage so such references resolve.
+      if (name.symbol) {
+        const Fortran::semantics::Scope &constructScope =
+            semanticsContext.FindScope(name.source);
+        auto iter = constructScope.find(name.source);
+        if (iter != constructScope.end() && &*iter->second != &*name.symbol)
+          localSymPairs.emplace_back(
+              Fortran::semantics::SymbolRef(*iter->second),
+              Fortran::semantics::SymbolRef(*name.symbol));
+      }
 
       inclusiveBounds.push_back(true);
     }
@@ -2109,7 +2121,7 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
                llvm::SmallVector<mlir::Value> &cacheOperands,
                llvm::SmallVector<mlir::Value> &reductionOperands,
                llvm::SmallVector<mlir::Type> &retTy, mlir::Value yieldValue,
-               uint64_t loopsToProcess) {
+               uint64_t loopsToProcess, bool hasDirective) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<std::pair<mlir::Value, Fortran::semantics::SymbolRef>>
@@ -2128,11 +2140,12 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   // this loop is lowered in an unstructured fashion, in which case bounds are
   // not represented on acc.loop and explicit control flow is used inside body.
   if (!eval.lowerAsUnstructured()) {
-    processDoLoopBounds(
-        converter, currentLocation, stmtCtx, builder, outerDoConstruct, eval,
-        lowerbounds, upperbounds, steps, privateOperands, ivPrivate, ivTypes,
-        ivLocs, inclusiveBounds, locs, loopsToProcess, reductionOperands,
-        firstprivateOperands, dataMap, localSymPairs);
+    processDoLoopBounds(converter, semanticsContext, currentLocation, stmtCtx,
+                        builder, outerDoConstruct, eval, lowerbounds,
+                        upperbounds, steps, privateOperands, ivPrivate, ivTypes,
+                        ivLocs, inclusiveBounds, locs, loopsToProcess,
+                        reductionOperands, firstprivateOperands, dataMap,
+                        localSymPairs);
   } else {
     // When the loop contains early exits, privatize induction variables, but do
     // not create acc.loop bounds. The control flow of the loop will be
@@ -2155,10 +2168,26 @@ buildACCLoopOp(Fortran::lower::AbstractConverter &converter,
   addOperands(operands, operandSegments, firstprivateOperands);
   addOperands(operands, operandSegments, reductionOperands);
 
+  // list of locations to build FusedLoc to be attached to acc loop
+  llvm::SmallVector<mlir::Location> fusedLocs;
+  if (hasDirective)
+    fusedLocs.push_back(currentLocation);
+  fusedLocs.append(locs.begin(), locs.end());
+
+  // list of only loop locations used to build an `mlir::acc::LoopLocAttr` to be
+  // attached to the `FusedLoc` as metadata so that consumers of location
+  // information can separate out the directive's location from the loops'
+  // locations
+  llvm::SmallVector<mlir::LocationAttr> loopLocAttrs(locs.begin(), locs.end());
+  auto loopLocMeta = mlir::acc::LoopLocAttr::get(
+      builder.getContext(),
+      hasDirective ? mlir::LocationAttr(currentLocation) : mlir::LocationAttr{},
+      loopLocAttrs);
+
   auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
-      builder, builder.getFusedLoc(locs), currentLocation, eval, operands,
-      operandSegments, /*outerCombined=*/false, retTy, yieldValue, ivTypes,
-      ivLocs);
+      builder, builder.getFusedLoc(fusedLocs, loopLocMeta), currentLocation,
+      eval, operands, operandSegments, /*outerCombined=*/false, retTy,
+      yieldValue, ivTypes, ivLocs);
   // Ensure the iv symbol is mapped to private iv SSA value for the scope of
   // the loop even if it did not appear explicitly in a PRIVATE clause (if it
   // appeared explicitly in such clause, that is also fine because duplicates
@@ -2423,7 +2452,7 @@ static mlir::acc::LoopOp createLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
       eval, privateOperands, dataMap, gangOperands, workerNumOperands,
       vectorOperands, tileOperands, cacheOperands, reductionOperands, retTy,
-      yieldValue, loopsToProcess);
+      yieldValue, loopsToProcess, /*hasDirective=*/true);
 
   if (!gangDeviceTypes.empty())
     loopOp.setGangAttr(builder.getArrayAttr(gangDeviceTypes));
@@ -5359,7 +5388,8 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
       converter, converter.getCurrentLocation(), semanticsContext, stmtCtx,
       doConstruct, eval, privateOperands, dataMap, gangOperands,
       workerNumOperands, vectorOperands, tileOperands, cacheOperands,
-      reductionOperands, retTy, yieldValue, loopsToProcess);
+      reductionOperands, retTy, yieldValue, loopsToProcess,
+      /*hasDirective=*/false);
 
   // Normal do loops which are not annotated with `acc loop` should be
   // left for analysis by marking with `auto`. This is the case even in the case

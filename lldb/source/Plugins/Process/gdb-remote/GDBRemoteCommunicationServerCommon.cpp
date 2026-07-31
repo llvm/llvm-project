@@ -365,32 +365,32 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
           return SendErrorResponse(2);
       } else if (key == "pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        if (value.getAsInteger(0, pid))
+        if (value.getAsInteger(BASE_10, pid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetProcessID(pid);
       } else if (key == "parent_pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        if (value.getAsInteger(0, pid))
+        if (value.getAsInteger(BASE_10, pid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetParentProcessID(pid);
       } else if (key == "uid") {
         uint32_t uid = UINT32_MAX;
-        if (value.getAsInteger(0, uid))
+        if (value.getAsInteger(BASE_10, uid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetUserID(uid);
       } else if (key == "gid") {
         uint32_t gid = UINT32_MAX;
-        if (value.getAsInteger(0, gid))
+        if (value.getAsInteger(BASE_10, gid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetGroupID(gid);
       } else if (key == "euid") {
         uint32_t uid = UINT32_MAX;
-        if (value.getAsInteger(0, uid))
+        if (value.getAsInteger(BASE_10, uid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetEffectiveUserID(uid);
       } else if (key == "egid") {
         uint32_t gid = UINT32_MAX;
-        if (value.getAsInteger(0, gid))
+        if (value.getAsInteger(BASE_10, gid))
           return SendErrorResponse(2);
         match_info.GetProcessInfo().SetEffectiveGroupID(gid);
       } else if (key == "all_users") {
@@ -480,7 +480,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSpeedTest(
   bool success = packet.GetNameColonValue(key, value);
   if (success && key == "response_size") {
     uint32_t response_size = 0;
-    if (!value.getAsInteger(0, response_size)) {
+    if (!value.getAsInteger(BASE_16, response_size)) {
       if (response_size == 0)
         return SendOKResponse();
       StreamString response;
@@ -987,7 +987,8 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDIOWindowSize(
     else
       continue;
     unsigned parsed = 0;
-    if (value.empty() || value.getAsInteger(10, parsed) || parsed > UINT16_MAX)
+    if (value.empty() || value.getAsInteger(BASE_10, parsed) ||
+        parsed > UINT16_MAX)
       continue;
     *dest = static_cast<uint16_t>(parsed);
   }

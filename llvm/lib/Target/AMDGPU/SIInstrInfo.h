@@ -19,6 +19,7 @@
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 
@@ -70,20 +71,19 @@ struct SIInstrWorklist {
 
   void insert(MachineInstr *MI);
 
-  MachineInstr *top() const {
-    const auto *iter = InstrList.begin();
-    return *iter;
-  }
+  MachineInstr *top() const { return InstrList[Front]; }
 
   void erase_top() {
-    const auto *iter = InstrList.begin();
-    InstrList.erase(iter);
+    InSet.erase(InstrList[Front]);
+    ++Front;
   }
 
-  bool empty() const { return InstrList.empty(); }
+  bool empty() const { return Front == InstrList.size(); }
 
   void clear() {
     InstrList.clear();
+    Front = 0;
+    InSet.clear();
     DeferredList.clear();
   }
 
@@ -93,7 +93,9 @@ struct SIInstrWorklist {
 
 private:
   /// InstrList contains the MachineInstrs.
-  SetVector<MachineInstr *> InstrList;
+  SmallVector<MachineInstr *> InstrList;
+  SmallPtrSet<MachineInstr *, 8> InSet;
+  unsigned Front = 0;
   /// Deferred instructions are specific MachineInstr
   /// that will be added by insert method.
   SetVector<MachineInstr *> DeferredList;
@@ -1486,17 +1488,19 @@ public:
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
 
-  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32 or
-  /// 64 instructions. Packed math FP32/FP64/U64 instructions typically accept
-  /// SGPRs or VGPRs as source operands. On gfx12+, if a source operand uses
-  /// SGPRs, the HW can only read the first SGPR and use it for both the low and
-  /// high operations.
-  /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
-  /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
-  /// be used.
-  bool isLegalGFX12PlusPackedMathFP32or64BitOperand(
-      const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
-      const MachineOperand *MO = nullptr) const;
+  /// Check if \p MO would be a legal operand for a single-SGPR-read
+  /// instruction.
+  ///
+  /// Single-SGPR-read instructions typically accept VGPRs, SGPRs, or immediates
+  /// as source operands. On gfx12+, if a source operand uses SGPRs, the HW can
+  /// only read the first SGPR and replicate the value across all lanes. \p SrcN
+  /// can be 0, 1, or 2, representing src0, src1, and src2, respectively. If \p
+  /// MO is nullptr, the operand corresponding to \p SrcN will be used. Non-SGPR
+  /// operands are always considered legal.
+  bool
+  isLegalSingleSGPRReadInstOperand(const MachineRegisterInfo &MRI,
+                                   const MachineInstr &MI, unsigned SrcN,
+                                   const MachineOperand *MO = nullptr) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.

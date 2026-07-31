@@ -91,6 +91,7 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
@@ -1127,7 +1128,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     if (CodeGenOpts.FatLTO) {
       MPM.addPass(PB.buildFatLTODefaultPipeline(
           Level, PrepareForThinLTO,
-          PrepareForThinLTO || shouldEmitRegularLTOSummary()));
+          PrepareForThinLTO || shouldEmitRegularLTOSummary(),
+          CodeGenOpts.VerifyModule));
     } else if (PrepareForThinLTO) {
       MPM.addPass(PB.buildThinLTOPreLinkDefaultPipeline(Level));
     } else if (PrepareForLTO) {
@@ -1138,8 +1140,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   }
 
   // Link against bitcodes supplied via the -mlink-builtin-bitcode option
-  if (CodeGenOpts.LinkBitcodePostopt)
+  if (CodeGenOpts.LinkBitcodePostopt) {
     MPM.addPass(LinkInModulesPass(BC));
+    MPM.addPass(AssignGUIDPass());
+  }
 
   if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
       LangOpts.HIPStdParInterposeAlloc)
@@ -1301,6 +1305,7 @@ void EmitAssemblyHelper::RunCodegenPipelineNewPM(
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
   CGPassBuilderOption Opt = getCGPassBuilderOption();
+  Opt.DisableVerify = !CodeGenOpts.VerifyModule;
   MachineModuleInfo MMI(TM.get());
   PassInstrumentationCallbacks PIC;
   PipelineTuningOptions PTOptions;

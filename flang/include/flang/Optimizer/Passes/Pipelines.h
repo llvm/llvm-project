@@ -22,7 +22,6 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
@@ -82,9 +81,9 @@ void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm);
 void addCfgConversionPass(mlir::PassManager &pm,
                           const MLIRToLLVMPassPipelineConfig &config);
 
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel);
-
 void addMemoryAllocationOpt(mlir::PassManager &pm);
+
+void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays);
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 

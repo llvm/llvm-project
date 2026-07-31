@@ -8,6 +8,7 @@
 
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -15,6 +16,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -104,6 +106,7 @@ template <ARM::ISAKind ISAKind> struct AssertSameExtensionFlags {
                             FormatExtensionFlags(GotFlags), GotFlags, CPUName,
                             FormatExtensionFlags(ExpectedFlags ^ GotFlags));
   }
+
 private:
   StringRef CPUName;
 };
@@ -1210,6 +1213,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("gb10", "armv9.2-a"),
                       AArch64CPUTestParams("grace", "armv9-a"),
                       AArch64CPUTestParams("olympus", "armv9.2-a"),
+                      AArch64CPUTestParams("rigel", "armv9.2-a"),
                       AArch64CPUTestParams("saphira", "armv8.4-a"),
                       AArch64CPUTestParams("oryon-1", "armv8.6-a")),
     AArch64CPUTestParams::PrintToStringParamName);
@@ -1305,7 +1309,7 @@ INSTANTIATE_TEST_SUITE_P(
     AArch64CPUAliasTestParams::PrintToStringParamName);
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 100;
+static constexpr unsigned NumAArch64CPUArchs = 101;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -2398,6 +2402,842 @@ TEST(TargetParserTest, checkFindSinglePrecisionFPU) {
         ARM::appendArchExtFeatures(X.Cpu, X.Arch, X.Archext, X.Features, FPU));
     EXPECT_EQ(FPU, X.Output);
   }
+}
+
+TEST(TargetParserTest, testAMDGPUArch) {
+  EXPECT_EQ(Triple("amdgpu--").getArch(), Triple::amdgpu);
+  EXPECT_EQ(Triple("amdgpu--").getSubArch(), Triple::NoSubArch);
+  EXPECT_EQ(Triple("amdgpu0--").getSubArch(), Triple::NoSubArch);
+  EXPECT_EQ(Triple("amdgpufoo--").getSubArch(), Triple::NoSubArch);
+
+  {
+    EXPECT_EQ(Triple("amdgpu6--").getSubArch(), Triple::AMDGPUSubArch6);
+    EXPECT_EQ(Triple("amdgpu6.0").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu6.00").getSubArch(), Triple::AMDGPUSubArch600);
+    EXPECT_EQ(Triple("amdgpu6.01").getSubArch(), Triple::AMDGPUSubArch601);
+    EXPECT_EQ(Triple("amdgpu6.02").getSubArch(), Triple::AMDGPUSubArch602);
+    EXPECT_EQ(Triple("amdgpu6.03").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu60").getSubArch(), Triple::NoSubArch);   // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu7--").getSubArch(), Triple::AMDGPUSubArch7);
+    EXPECT_EQ(Triple("amdgpu7.0--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu7.00").getSubArch(), Triple::AMDGPUSubArch700);
+    EXPECT_EQ(Triple("amdgpu7.01").getSubArch(), Triple::AMDGPUSubArch701);
+    EXPECT_EQ(Triple("amdgpu7.02").getSubArch(), Triple::AMDGPUSubArch702);
+    EXPECT_EQ(Triple("amdgpu7.03").getSubArch(), Triple::AMDGPUSubArch703);
+    EXPECT_EQ(Triple("amdgpu7.04").getSubArch(), Triple::AMDGPUSubArch704);
+    EXPECT_EQ(Triple("amdgpu7.05").getSubArch(), Triple::AMDGPUSubArch705);
+    EXPECT_EQ(Triple("amdgpu7.06").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu71").getSubArch(), Triple::NoSubArch);   // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu8--").getSubArch(), Triple::AMDGPUSubArch8);
+    EXPECT_EQ(Triple("amdgpu8.0--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu8.01--").getSubArch(), Triple::AMDGPUSubArch801);
+    EXPECT_EQ(Triple("amdgpu8.02--").getSubArch(), Triple::AMDGPUSubArch802);
+    EXPECT_EQ(Triple("amdgpu8.03--").getSubArch(), Triple::AMDGPUSubArch803);
+    EXPECT_EQ(Triple("amdgpu8.05--").getSubArch(), Triple::AMDGPUSubArch805);
+    EXPECT_EQ(Triple("amdgpu8.1--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu8.10--").getSubArch(), Triple::AMDGPUSubArch810);
+    EXPECT_EQ(Triple("amdgpu81--").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu9--").getArch(), Triple::amdgpu);
+    EXPECT_EQ(Triple("amdgpu9--").getSubArch(), Triple::AMDGPUSubArch9);
+    EXPECT_EQ(Triple("amdgpu9.0--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu9.00--").getSubArch(), Triple::AMDGPUSubArch900);
+    EXPECT_EQ(Triple("amdgpu9.02--").getSubArch(), Triple::AMDGPUSubArch902);
+    EXPECT_EQ(Triple("amdgpu9.04--").getSubArch(), Triple::AMDGPUSubArch904);
+    EXPECT_EQ(Triple("amdgpu9.06--").getSubArch(), Triple::AMDGPUSubArch906);
+    EXPECT_EQ(Triple("amdgpu9.08--").getSubArch(), Triple::AMDGPUSubArch908);
+    EXPECT_EQ(Triple("amdgpu9.0a--").getSubArch(), Triple::AMDGPUSubArch90A);
+    EXPECT_EQ(Triple("amdgpu9.0c--").getSubArch(), Triple::AMDGPUSubArch90C);
+
+    EXPECT_EQ(Triple("amdgpu9.4--").getSubArch(), Triple::AMDGPUSubArch9_4);
+    EXPECT_EQ(Triple("amdgpu9.42--").getSubArch(), Triple::AMDGPUSubArch942);
+    EXPECT_EQ(Triple("amdgpu9.50--").getSubArch(), Triple::AMDGPUSubArch950);
+    EXPECT_EQ(Triple("amdgpu99").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu10--").getArch(), Triple::amdgpu);
+    EXPECT_EQ(Triple("amdgpu10--").getSubArch(), Triple::AMDGPUSubArch10_1);
+    EXPECT_EQ(Triple("amdgpu10.1--").getSubArch(), Triple::AMDGPUSubArch10_1);
+    EXPECT_EQ(Triple("amdgpu10.10--").getSubArch(), Triple::AMDGPUSubArch1010);
+    EXPECT_EQ(Triple("amdgpu10.11--").getSubArch(), Triple::AMDGPUSubArch1011);
+    EXPECT_EQ(Triple("amdgpu10.12--").getSubArch(), Triple::AMDGPUSubArch1012);
+    EXPECT_EQ(Triple("amdgpu10.13--").getSubArch(), Triple::AMDGPUSubArch1013);
+    EXPECT_EQ(Triple("amdgpu101").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu10.3--").getSubArch(), Triple::AMDGPUSubArch10_3);
+    EXPECT_EQ(Triple("amdgpu10.30--").getSubArch(), Triple::AMDGPUSubArch1030);
+    EXPECT_EQ(Triple("amdgpu10.31--").getSubArch(), Triple::AMDGPUSubArch1031);
+    EXPECT_EQ(Triple("amdgpu10.32--").getSubArch(), Triple::AMDGPUSubArch1032);
+    EXPECT_EQ(Triple("amdgpu10.33--").getSubArch(), Triple::AMDGPUSubArch1033);
+    EXPECT_EQ(Triple("amdgpu10.34--").getSubArch(), Triple::AMDGPUSubArch1034);
+    EXPECT_EQ(Triple("amdgpu10.35--").getSubArch(), Triple::AMDGPUSubArch1035);
+    EXPECT_EQ(Triple("amdgpu10.36--").getSubArch(), Triple::AMDGPUSubArch1036);
+    EXPECT_EQ(Triple("amdgpu10.39").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu11--").getSubArch(), Triple::AMDGPUSubArch11);
+    EXPECT_EQ(Triple("amdgpu11.0--").getSubArch(),
+              Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu11.00--").getSubArch(), Triple::AMDGPUSubArch1100);
+    EXPECT_EQ(Triple("amdgpu11.01--").getSubArch(), Triple::AMDGPUSubArch1101);
+    EXPECT_EQ(Triple("amdgpu11.02--").getSubArch(), Triple::AMDGPUSubArch1102);
+    EXPECT_EQ(Triple("amdgpu11.03--").getSubArch(), Triple::AMDGPUSubArch1103);
+    EXPECT_EQ(Triple("amdgpu11.5--").getSubArch(),
+              Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu11.50--").getSubArch(), Triple::AMDGPUSubArch1150);
+    EXPECT_EQ(Triple("amdgpu11.51--").getSubArch(), Triple::AMDGPUSubArch1151);
+    EXPECT_EQ(Triple("amdgpu11.52--").getSubArch(), Triple::AMDGPUSubArch1152);
+    EXPECT_EQ(Triple("amdgpu11.53--").getSubArch(), Triple::AMDGPUSubArch1153);
+    EXPECT_EQ(Triple("amdgpu11.54--").getSubArch(), Triple::AMDGPUSubArch1154);
+    EXPECT_EQ(Triple("amdgpu11.7--").getSubArch(), Triple::AMDGPUSubArch11_7);
+    EXPECT_EQ(Triple("amdgpu11.70--").getSubArch(), Triple::AMDGPUSubArch1170);
+    EXPECT_EQ(Triple("amdgpu11.71--").getSubArch(), Triple::AMDGPUSubArch1171);
+    EXPECT_EQ(Triple("amdgpu11.72--").getSubArch(), Triple::AMDGPUSubArch1172);
+    EXPECT_EQ(Triple("amdgpu111--").getSubArch(), Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu12--").getSubArch(), Triple::AMDGPUSubArch12);
+    EXPECT_EQ(Triple("amdgpu12.0--").getSubArch(),
+              Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu12.00--").getSubArch(), Triple::AMDGPUSubArch1200);
+    EXPECT_EQ(Triple("amdgpu12.01--").getSubArch(), Triple::AMDGPUSubArch1201);
+    EXPECT_EQ(Triple("amdgpu12.5--").getSubArch(), Triple::AMDGPUSubArch12_5);
+    EXPECT_EQ(Triple("amdgpu12.50--").getSubArch(), Triple::AMDGPUSubArch1250);
+    EXPECT_EQ(Triple("amdgpu12.51--").getSubArch(), Triple::AMDGPUSubArch1251);
+    EXPECT_EQ(Triple("amdgpu122--").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu12.59--").getSubArch(),
+              Triple::NoSubArch); // Unknown
+  }
+
+  {
+    EXPECT_EQ(Triple("amdgpu13--").getSubArch(), Triple::AMDGPUSubArch13);
+    EXPECT_EQ(Triple("amdgpu13.10--").getSubArch(), Triple::AMDGPUSubArch1310);
+    EXPECT_EQ(Triple("amdgpu13.1").getSubArch(), Triple::NoSubArch); // Unknown
+    EXPECT_EQ(Triple("amdgpu131").getSubArch(), Triple::NoSubArch);  // Unknown
+  }
+}
+
+TEST(TargetParserTest, testAMDGPUgetMajorSubArch) {
+  // Make sure every subarch is handled by the function
+  for (unsigned SubArch = Triple::FirstAMDGPUSubArch;
+       SubArch <= Triple::LastAMDGPUSubArch; ++SubArch) {
+
+    EXPECT_NE(
+        AMDGPU::getMajorSubArch(static_cast<Triple::SubArchType>(SubArch)),
+        Triple::NoSubArch);
+  }
+}
+
+TEST(TargetParserTest, testAMDGPUisSubArchCompatible) {
+  // A major-family subarch is compatible with itself and with any specific
+  // subarch in its family.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                          Triple::AMDGPUSubArch9));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                          Triple::AMDGPUSubArch900));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch900,
+                                          Triple::AMDGPUSubArch9));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                          Triple::AMDGPUSubArch90C));
+
+  // NoSubArch is compatible with anything.
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9, Triple::NoSubArch));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::AMDGPUSubArch9));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch900, Triple::NoSubArch));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::AMDGPUSubArch900));
+
+  // gfx9 and gfx9.4 are distinct major families.
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch9_4));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch942));
+
+  // gfx908 and gfx90a are their own major families, not part of gfx9-generic,
+  // because they have ABI-incompatible feature differences (e.g. gfx90a
+  // requires aligned VGPRs).
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch908));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch90A));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch90A,
+                                          Triple::AMDGPUSubArch90A));
+
+  // gfx11 and gfx11.7 are distinct major families.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch11_7,
+                                          Triple::AMDGPUSubArch11_7));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch11_7,
+                                          Triple::AMDGPUSubArch1170));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1172,
+                                          Triple::AMDGPUSubArch11_7));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch11,
+                                           Triple::AMDGPUSubArch11_7));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch11,
+                                           Triple::AMDGPUSubArch1170));
+
+  // Two specific subarches in the same family are not compatible with each
+  // other; only the major-family subarch is.
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch900,
+                                           Triple::AMDGPUSubArch90A));
+
+  // Different major families are incompatible.
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9,
+                                           Triple::AMDGPUSubArch10_3));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch10_3,
+                                           Triple::AMDGPUSubArch9));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch900,
+                                           Triple::AMDGPUSubArch1030));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch1030,
+                                           Triple::AMDGPUSubArch900));
+
+  // NoSubArch is compatible with anything.
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::NoSubArch));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::AMDGPUSubArch9));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::AMDGPUSubArch9, Triple::NoSubArch));
+  EXPECT_TRUE(
+      AMDGPU::isSubArchCompatible(Triple::NoSubArch, Triple::AMDGPUSubArch900));
+
+  // The Triple-based overload checks the same compatibility.
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple("amdgpu9-amd-amdhsa"),
+                                          Triple("amdgpu9.00-amd-amdhsa")));
+  EXPECT_TRUE(AMDGPU::isSubArchCompatible(Triple("amdgpu-amd-amdhsa"),
+                                          Triple("amdgpu9.00-amd-amdhsa")));
+
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9.00-amd-amdhsa"),
+                                           Triple("amdgpu9.0a-amd-amdhsa")));
+
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9.0a-amd-amdhsa"),
+                                           Triple("amdgpu9.00-amd-amdhsa")));
+
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9-amd-amdhsa"),
+                                           Triple("amdgpu10.3-amd-amdhsa")));
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu10.3-amd-amdhsa"),
+                                           Triple("amdgpu9-amd-amdhsa")));
+
+  // An unrecognized subarch is incompatible with any recognized subarch.
+  EXPECT_FALSE(AMDGPU::isSubArchCompatible(Triple("amdgpu9.99-amd-amdhsa"),
+                                           Triple("amdgpu9.00-amd-amdhsa")));
+}
+
+TEST(TargetParserTest, testAMDGPUisCPUValidForSubArch) {
+  EXPECT_TRUE(
+      AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch9, AMDGPU::GK_GFX900));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch9, "gfx900"));
+
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900,
+                                           AMDGPU::GK_GFX900));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900, "gfx900"));
+
+  EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900,
+                                            AMDGPU::GK_GFX902));
+  EXPECT_FALSE(
+      AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900, "gfx902"));
+
+  EXPECT_TRUE(
+      AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_GFX900));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, "gfx900"));
+
+  EXPECT_FALSE(
+      AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_NONE));
+  EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, ""));
+}
+
+TEST(TargetParserTest, testAMDGPUparseArchR600) {
+  // Canonical R600 GPU names map to their own GPUKind and round-trip through
+  // getArchNameR600.
+  struct CanonicalGPU {
+    StringRef Name;
+    AMDGPU::GPUKind Kind;
+    AMDGPU::R600FeatureKind Features;
+  };
+  static const CanonicalGPU Canonicals[] = {
+      {"r600", AMDGPU::GK_R600, AMDGPU::R600_FEATURE_NONE},
+      {"r630", AMDGPU::GK_R630, AMDGPU::R600_FEATURE_NONE},
+      {"rs880", AMDGPU::GK_RS880, AMDGPU::R600_FEATURE_NONE},
+      {"rv670", AMDGPU::GK_RV670, AMDGPU::R600_FEATURE_NONE},
+      {"rv710", AMDGPU::GK_RV710, AMDGPU::R600_FEATURE_NONE},
+      {"rv730", AMDGPU::GK_RV730, AMDGPU::R600_FEATURE_NONE},
+      {"rv770", AMDGPU::GK_RV770, AMDGPU::R600_FEATURE_NONE},
+      {"cedar", AMDGPU::GK_CEDAR, AMDGPU::R600_FEATURE_NONE},
+      {"cypress", AMDGPU::GK_CYPRESS, AMDGPU::R600_FEATURE_FMA},
+      {"juniper", AMDGPU::GK_JUNIPER, AMDGPU::R600_FEATURE_NONE},
+      {"redwood", AMDGPU::GK_REDWOOD, AMDGPU::R600_FEATURE_NONE},
+      {"sumo", AMDGPU::GK_SUMO, AMDGPU::R600_FEATURE_NONE},
+      {"barts", AMDGPU::GK_BARTS, AMDGPU::R600_FEATURE_NONE},
+      {"caicos", AMDGPU::GK_CAICOS, AMDGPU::R600_FEATURE_NONE},
+      {"cayman", AMDGPU::GK_CAYMAN, AMDGPU::R600_FEATURE_FMA},
+      {"turks", AMDGPU::GK_TURKS, AMDGPU::R600_FEATURE_NONE},
+  };
+  for (const CanonicalGPU &G : Canonicals) {
+    EXPECT_EQ(AMDGPU::parseArchR600(G.Name), G.Kind) << G.Name;
+    EXPECT_EQ(AMDGPU::getArchNameR600(G.Kind), G.Name) << G.Name;
+    EXPECT_EQ(AMDGPU::getArchAttrR600(G.Kind), G.Features) << G.Name;
+  }
+
+  // Aliases resolve to the canonical GPUKind but are not returned by
+  // getArchNameR600.
+  struct AliasGPU {
+    StringRef Alias;
+    AMDGPU::GPUKind Kind;
+  };
+  static const AliasGPU Aliases[] = {
+      {"rv630", AMDGPU::GK_R600},  {"rv635", AMDGPU::GK_R600},
+      {"rs780", AMDGPU::GK_RS880}, {"rv610", AMDGPU::GK_RS880},
+      {"rv620", AMDGPU::GK_RS880}, {"rv740", AMDGPU::GK_RV770},
+      {"palm", AMDGPU::GK_CEDAR},  {"hemlock", AMDGPU::GK_CYPRESS},
+      {"sumo2", AMDGPU::GK_SUMO},  {"aruba", AMDGPU::GK_CAYMAN},
+  };
+  for (const AliasGPU &A : Aliases) {
+    EXPECT_EQ(AMDGPU::parseArchR600(A.Alias), A.Kind) << A.Alias;
+    EXPECT_NE(AMDGPU::getArchNameR600(A.Kind), A.Alias) << A.Alias;
+  }
+
+  // Unknown and AMDGCN names do not parse as R600 GPUs.
+  EXPECT_EQ(AMDGPU::parseArchR600(""), AMDGPU::GK_NONE);
+  EXPECT_EQ(AMDGPU::parseArchR600("not-a-cpu"), AMDGPU::GK_NONE);
+  EXPECT_EQ(AMDGPU::parseArchR600("gfx900"), AMDGPU::GK_NONE);
+
+  // All canonical and alias names appear in the valid-arch list.
+  SmallVector<StringRef, 0> Values;
+  AMDGPU::fillValidArchListR600(Values);
+  for (const CanonicalGPU &G : Canonicals)
+    EXPECT_TRUE(llvm::is_contained(Values, G.Name)) << G.Name;
+  for (const AliasGPU &A : Aliases)
+    EXPECT_TRUE(llvm::is_contained(Values, A.Alias)) << A.Alias;
+}
+
+TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
+  SmallVector<StringRef, 0> All;
+  AMDGPU::fillValidArchListAMDGCN(All, Triple::NoSubArch);
+  EXPECT_FALSE(All.empty());
+
+  SmallVector<StringRef, 16> Filtered;
+
+  // For every subarch, the filtered list must agree exactly with
+  // isCPUValidForSubArch over the full set of names.
+  for (unsigned SA = Triple::FirstAMDGPUSubArch;
+       SA <= Triple::LastAMDGPUSubArch; ++SA) {
+    auto SubArch = static_cast<Triple::SubArchType>(SA);
+    Triple::SubArchType Major = AMDGPU::getMajorSubArch(SubArch);
+
+    AMDGPU::fillValidArchListAMDGCN(Filtered, SubArch);
+
+    for (StringRef Name : All) {
+      AMDGPU::GPUKind Kind = AMDGPU::parseArchAMDGCN(Name);
+      bool Valid = AMDGPU::isCPUValidForSubArch(SubArch, Kind);
+      EXPECT_EQ(Valid, llvm::is_contained(Filtered, Name))
+          << "subarch " << Triple::getArchName(Triple::amdgpu, SubArch)
+          << " name " << Name;
+    }
+
+    for (StringRef Name : Filtered)
+      EXPECT_TRUE(llvm::is_contained(All, Name)) << Name;
+
+    // A specific subarch matches its own concrete GPU, plus the family-generic
+    // GPU. Names may repeat through aliases, so compare distinct GPUKinds.
+    if (Major != SubArch) {
+      SmallSet<AMDGPU::GPUKind, 2> Kinds;
+      for (StringRef Name : Filtered)
+        Kinds.insert(AMDGPU::parseArchAMDGCN(Name));
+
+      bool FamilyHasGeneric =
+          AMDGPU::getGPUKindFromSubArch(Major) != AMDGPU::GK_NONE;
+      EXPECT_EQ(Kinds.size(), FamilyHasGeneric ? 2u : 1u)
+          << "subarch " << Triple::getArchName(Triple::amdgpu, SubArch);
+    }
+
+    Filtered.clear();
+  }
+}
+
+TEST(TargetParserTest, testAMDGPUgetGPUKindFromSubArch) {
+  EXPECT_EQ(AMDGPU::getGPUKindFromSubArch(Triple::NoSubArch), AMDGPU::GK_NONE);
+
+  struct SubArchMapping {
+    Triple::SubArchType SubArch;
+    AMDGPU::GPUKind Kind;
+  };
+
+  static const SubArchMapping Mappings[] = {
+      // GFX6 family
+      {Triple::AMDGPUSubArch6, AMDGPU::GK_NONE},
+      {Triple::AMDGPUSubArch600, AMDGPU::GK_GFX600},
+      {Triple::AMDGPUSubArch601, AMDGPU::GK_GFX601},
+      {Triple::AMDGPUSubArch602, AMDGPU::GK_GFX602},
+
+      // GFX7 family
+      {Triple::AMDGPUSubArch7, AMDGPU::GK_NONE},
+      {Triple::AMDGPUSubArch700, AMDGPU::GK_GFX700},
+      {Triple::AMDGPUSubArch701, AMDGPU::GK_GFX701},
+      {Triple::AMDGPUSubArch702, AMDGPU::GK_GFX702},
+      {Triple::AMDGPUSubArch703, AMDGPU::GK_GFX703},
+      {Triple::AMDGPUSubArch704, AMDGPU::GK_GFX704},
+      {Triple::AMDGPUSubArch705, AMDGPU::GK_GFX705},
+
+      // GFX8 family
+      {Triple::AMDGPUSubArch8, AMDGPU::GK_NONE},
+      {Triple::AMDGPUSubArch801, AMDGPU::GK_GFX801},
+      {Triple::AMDGPUSubArch802, AMDGPU::GK_GFX802},
+      {Triple::AMDGPUSubArch803, AMDGPU::GK_GFX803},
+      {Triple::AMDGPUSubArch805, AMDGPU::GK_GFX805},
+      {Triple::AMDGPUSubArch810, AMDGPU::GK_GFX810},
+
+      // GFX9 family
+      {Triple::AMDGPUSubArch9, AMDGPU::GK_GFX9_GENERIC},
+      {Triple::AMDGPUSubArch900, AMDGPU::GK_GFX900},
+      {Triple::AMDGPUSubArch902, AMDGPU::GK_GFX902},
+      {Triple::AMDGPUSubArch904, AMDGPU::GK_GFX904},
+      {Triple::AMDGPUSubArch906, AMDGPU::GK_GFX906},
+      {Triple::AMDGPUSubArch908, AMDGPU::GK_GFX908},
+      {Triple::AMDGPUSubArch909, AMDGPU::GK_GFX909},
+      {Triple::AMDGPUSubArch90A, AMDGPU::GK_GFX90A},
+      {Triple::AMDGPUSubArch90C, AMDGPU::GK_GFX90C},
+      {Triple::AMDGPUSubArch9_4, AMDGPU::GK_GFX9_4_GENERIC},
+      {Triple::AMDGPUSubArch942, AMDGPU::GK_GFX942},
+      {Triple::AMDGPUSubArch950, AMDGPU::GK_GFX950},
+
+      // GFX10 family
+      {Triple::AMDGPUSubArch10_1, AMDGPU::GK_GFX10_1_GENERIC},
+      {Triple::AMDGPUSubArch1010, AMDGPU::GK_GFX1010},
+      {Triple::AMDGPUSubArch1011, AMDGPU::GK_GFX1011},
+      {Triple::AMDGPUSubArch1012, AMDGPU::GK_GFX1012},
+      {Triple::AMDGPUSubArch1013, AMDGPU::GK_GFX1013},
+      {Triple::AMDGPUSubArch10_3, AMDGPU::GK_GFX10_3_GENERIC},
+      {Triple::AMDGPUSubArch1030, AMDGPU::GK_GFX1030},
+      {Triple::AMDGPUSubArch1031, AMDGPU::GK_GFX1031},
+      {Triple::AMDGPUSubArch1032, AMDGPU::GK_GFX1032},
+      {Triple::AMDGPUSubArch1033, AMDGPU::GK_GFX1033},
+      {Triple::AMDGPUSubArch1034, AMDGPU::GK_GFX1034},
+      {Triple::AMDGPUSubArch1035, AMDGPU::GK_GFX1035},
+      {Triple::AMDGPUSubArch1036, AMDGPU::GK_GFX1036},
+
+      // GFX11 family
+      {Triple::AMDGPUSubArch11, AMDGPU::GK_GFX11_GENERIC},
+      {Triple::AMDGPUSubArch1100, AMDGPU::GK_GFX1100},
+      {Triple::AMDGPUSubArch1101, AMDGPU::GK_GFX1101},
+      {Triple::AMDGPUSubArch1102, AMDGPU::GK_GFX1102},
+      {Triple::AMDGPUSubArch1103, AMDGPU::GK_GFX1103},
+      {Triple::AMDGPUSubArch1150, AMDGPU::GK_GFX1150},
+      {Triple::AMDGPUSubArch1151, AMDGPU::GK_GFX1151},
+      {Triple::AMDGPUSubArch1152, AMDGPU::GK_GFX1152},
+      {Triple::AMDGPUSubArch1153, AMDGPU::GK_GFX1153},
+      {Triple::AMDGPUSubArch1154, AMDGPU::GK_GFX1154},
+      {Triple::AMDGPUSubArch11_7, AMDGPU::GK_GFX11_7_GENERIC},
+      {Triple::AMDGPUSubArch1170, AMDGPU::GK_GFX1170},
+      {Triple::AMDGPUSubArch1171, AMDGPU::GK_GFX1171},
+      {Triple::AMDGPUSubArch1172, AMDGPU::GK_GFX1172},
+
+      // GFX12 family
+      {Triple::AMDGPUSubArch12, AMDGPU::GK_GFX12_GENERIC},
+      {Triple::AMDGPUSubArch1200, AMDGPU::GK_GFX1200},
+      {Triple::AMDGPUSubArch1201, AMDGPU::GK_GFX1201},
+      {Triple::AMDGPUSubArch12_5, AMDGPU::GK_GFX12_5_GENERIC},
+      {Triple::AMDGPUSubArch1250, AMDGPU::GK_GFX1250},
+      {Triple::AMDGPUSubArch1251, AMDGPU::GK_GFX1251},
+
+      // GFX13 family
+      {Triple::AMDGPUSubArch13, AMDGPU::GK_GFX13_GENERIC},
+      {Triple::AMDGPUSubArch1310, AMDGPU::GK_GFX1310},
+  };
+
+  for (const auto &Mapping : Mappings)
+    EXPECT_EQ(AMDGPU::getGPUKindFromSubArch(Mapping.SubArch), Mapping.Kind);
+}
+
+TEST(TargetParserTest, testAMDGPUgetIsaVersionFromSubArch) {
+  // Concrete subarches map to their exact ISA version.
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch600),
+            (AMDGPU::IsaVersion{6, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch900),
+            (AMDGPU::IsaVersion{9, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1250),
+            (AMDGPU::IsaVersion{12, 5, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1251),
+            (AMDGPU::IsaVersion{12, 5, 1}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch1310),
+            (AMDGPU::IsaVersion{13, 1, 0}));
+
+  // Generic subarches map to the generic target's version.
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch9),
+            (AMDGPU::IsaVersion{9, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch12),
+            (AMDGPU::IsaVersion{12, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch12_5),
+            (AMDGPU::IsaVersion{12, 5, 0}));
+
+  // Major-family subarches with no associated GPU have no version.
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch6),
+            (AMDGPU::IsaVersion{0, 0, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::AMDGPUSubArch13),
+            (AMDGPU::IsaVersion{13, 1, 0}));
+  EXPECT_EQ(AMDGPU::getIsaVersion(Triple::NoSubArch),
+            (AMDGPU::IsaVersion{0, 0, 0}));
+}
+
+TEST(TargetParserTest, testAMDGPUgetNumSGPRs) {
+  // getTotalNumSGPRs: 800 for GFX8+, 512 otherwise.
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch600), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch700), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch900), 800u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(Triple::AMDGPUSubArch1030), 800u);
+
+  // getAddressableNumSGPRs resolves the SGPR init bug from the device kind:
+  // 106 for GFX10+, 102 for GFX8/GFX9, 104 otherwise; gfx802/gfx805 have the
+  // init bug and return the fixed size.
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch600), 104u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch803), 102u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch900), 102u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch1030), 106u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch802),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(Triple::AMDGPUSubArch805),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+
+  // The GPUKind overloads resolve to the same values.
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(AMDGPU::GK_GFX600), 512u);
+  EXPECT_EQ(AMDGPU::getTotalNumSGPRs(AMDGPU::GK_GFX900), 800u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX900), 102u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX1030), 106u);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX802),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+  EXPECT_EQ(AMDGPU::getAddressableNumSGPRs(AMDGPU::GK_GFX805),
+            AMDGPU::FIXED_NUM_SGPRS_FOR_INIT_BUG);
+}
+
+TEST(TargetParserTest, testAMDGPUgetSGPRAllocGranule) {
+  // 8 for pre-GFX8, 16 for GFX8/GFX9, addressable count for GFX10+.
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch600), 8u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch802), 16u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch900), 16u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(Triple::AMDGPUSubArch1030), 106u);
+
+  // The GPUKind overload resolves to the same values.
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX600), 8u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX802), 16u);
+  EXPECT_EQ(AMDGPU::getSGPRAllocGranule(AMDGPU::GK_GFX1030), 106u);
+}
+
+TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
+  using AMDGPU::TargetID;
+  using AMDGPU::TargetIDSetting;
+
+  // A well-formed target id parses, canonicalizing the processor and
+  // features.
+  {
+    std::optional<TargetID> TID =
+        TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx90a");
+    ASSERT_TRUE(TID.has_value());
+    EXPECT_EQ(TID->getGPUKind(), AMDGPU::GK_GFX90A);
+    EXPECT_EQ(TID->getXnackSetting(), TargetIDSetting::Any);
+    EXPECT_EQ(TID->getSramEccSetting(), TargetIDSetting::Any);
+  }
+
+  // Explicit feature modifiers are applied.
+  {
+    std::optional<TargetID> TID = TargetID::parseTargetIDString(
+        "amdgcn-amd-amdhsa-unknown-gfx90a:xnack+:sramecc-");
+    ASSERT_TRUE(TID.has_value());
+    EXPECT_EQ(TID->getXnackSetting(), TargetIDSetting::On);
+    EXPECT_EQ(TID->getSramEccSetting(), TargetIDSetting::Off);
+  }
+
+  // The processor+features field may be empty; the ISA is taken from the
+  // triple subarch.
+  EXPECT_TRUE(TargetID::parseTargetIDString("amdgpu9.0a-amd-amdhsa-unknown-")
+                  .has_value());
+
+  // Structurally malformed strings (missing the processor+features field or a
+  // non-AMDGCN triple) are rejected.
+  EXPECT_FALSE(TargetID::parseTargetIDString("not-a-valid-target-id"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("x86_64-unknown-linux-gnu-gfx90a"));
+
+  // An unrecognized processor is rejected.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfxbogus"));
+
+  // A feature the processor does not support is rejected: gfx600 has neither
+  // xnack nor sramecc.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx600:xnack+"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx900:sramecc+"));
+
+  // xnack is only a valid modifier when the processor supports on/off modes.
+  // gfx1250 has xnack permanently enabled (FEATURE_XNACK without
+  // FEATURE_XNACK_ON_OFF_MODES), so an xnack modifier is rejected.
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx1250:xnack+"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx1250:xnack-"));
+
+  // A feature modifier with no "+"/"-" sign is rejected.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx908:xnack"));
+
+  // An unknown feature name is rejected, even alongside a valid one.
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx908:unknown+"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx908:sramecc+:unknown+"));
+
+  // A repeated feature is rejected.
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx908:xnack+:xnack+"));
+
+  // Empty processor and/or feature components must be handled without
+  // crashing.
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-:"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-::"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx900:"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgcn-amd-amdhsa-unknown-gfx900::"));
+  EXPECT_FALSE(TargetID::parseTargetIDString(
+      "amdgcn-amd-amdhsa-unknown-gfx900:xnack+:"));
+
+  // A processor inconsistent with the triple's subarch is rejected.
+  EXPECT_TRUE(
+      TargetID::parseTargetIDString("amdgpu9.00-amd-amdhsa-unknown-gfx900")
+          .has_value());
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu9.00-amd-amdhsa-unknown-gfx803"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu9.00-amd-amdhsa-unknown-gfx90a"));
+
+  // A major-family subarch accepts any processor it covers, but not one from a
+  // different family or one that is its own major subarch.
+  EXPECT_TRUE(TargetID::parseTargetIDString("amdgpu9-amd-amdhsa-unknown-gfx900")
+                  .has_value());
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu9-amd-amdhsa-unknown-gfx908"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu11-amd-amdhsa-unknown-gfx1200"));
+
+  // A subarchless "amdgpu" or an unrecognized "amdgpu<x>" arch is rejected,
+  // even with an otherwise valid processor.
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-gfx900"));
+  EXPECT_FALSE(
+      TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown-gfx900"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgpu-amd-amdhsa-unknown-"));
+  EXPECT_FALSE(TargetID::parseTargetIDString("amdgpufoo-amd-amdhsa-unknown"));
+
+  // Constructing directly from a triple and processor+features string must
+  // also be crash-safe on empty components.
+  Triple AMDHSA("amdgcn-amd-amdhsa");
+  (void)TargetID(AMDHSA, ":");
+  (void)TargetID(AMDHSA, "::");
+  (void)TargetID(AMDHSA, "gfx900:");
+
+  // TargetID::parse validates a separate triple + processor/features string.
+  {
+    std::optional<TargetID> TID = TargetID::parse(AMDHSA, "gfx90a:xnack+");
+    ASSERT_TRUE(TID.has_value());
+    EXPECT_EQ(TID->getGPUKind(), AMDGPU::GK_GFX90A);
+    EXPECT_EQ(TID->getXnackSetting(), AMDGPU::TargetIDSetting::On);
+  }
+
+  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908:xnack+:sramecc-")
+                ->getCanonicalFeatureString(),
+            "gfx908:sramecc-:xnack+");
+  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908")->getCanonicalFeatureString(),
+            "gfx908");
+  EXPECT_EQ(TargetID::parse(Triple("amdgcn-amd-amdpal"), "gfx908:xnack-")
+                ->getCanonicalFeatureString(),
+            "gfx908:xnack-");
+  EXPECT_TRUE(TargetID::parse(AMDHSA, "").has_value());
+  EXPECT_FALSE(TargetID::parse(AMDHSA, "gfxbogus").has_value());
+  EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx600:xnack+").has_value());
+  EXPECT_FALSE(TargetID::parse(AMDHSA, "gfx900:").has_value());
+  // A non-AMDGCN triple has no target-id features.
+  EXPECT_FALSE(
+      TargetID::parse(Triple("r600-unknown-unknown"), "cypress").has_value());
+}
+
+TEST(TargetParserTest, testAMDGPUTargetIDProvidesFor) {
+  using AMDGPU::TargetID;
+  Triple AMDHSA("amdgcn-amd-amdhsa");
+  Triple AMDHSACanon("amdgpu-amd-amdhsa");
+
+  // TargetID::providesFor is directional: it asks whether an image built
+  // for *this target can provide the device code for a request for the other
+  // target. An unspecified feature acts as a wildcard that can provide for a
+  // specific request, but not the other way around.
+
+  // Exact match provides for itself.
+  EXPECT_TRUE(
+      TargetID(AMDHSA, "gfx90a").providesFor(TargetID(AMDHSA, "gfx90a")));
+
+  // Different processors are never compatible.
+  EXPECT_FALSE(
+      TargetID(AMDHSA, "gfx90a").providesFor(TargetID(AMDHSA, "gfx908")));
+
+  // The pure "generic"/empty wildcard processor provides for any specific
+  // processor, in both directions (unknown arch acts as a wildcard).
+  EXPECT_TRUE(
+      TargetID(AMDHSA, "generic").providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_TRUE(
+      TargetID(AMDHSA, "gfx90a").providesFor(TargetID(AMDHSA, "generic")));
+  EXPECT_TRUE(TargetID(AMDHSA, "").providesFor(TargetID(AMDHSA, "gfx908")));
+
+  // A major-family/generic processor provides for a specific member of its
+  // family (gfx900), but a specific processor does not provide for the
+  // generic family.
+  Triple AMDHSAMajor9("amdgpu9-amd-amdhsa");
+  EXPECT_TRUE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx900")));
+  EXPECT_TRUE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx902")));
+
+  EXPECT_TRUE(TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "")));
+  EXPECT_TRUE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx9-generic")));
+  EXPECT_TRUE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "generic")));
+  EXPECT_TRUE(TargetID(AMDHSAMajor9, "gfx9-generic")
+                  .providesFor(TargetID(AMDHSA, "gfx9-generic")));
+
+  EXPECT_FALSE(
+      TargetID(AMDHSA, "gfx900").providesFor(TargetID(AMDHSAMajor9, "")));
+  // A specific processor and a member of a different major family do not
+  // provide for each other.
+  EXPECT_FALSE(
+      TargetID(AMDHSAMajor9, "").providesFor(TargetID(AMDHSA, "gfx1030")));
+
+  // xnack: an unspecified (wildcard) image provides for an explicit request,
+  // but an explicit image does not provide for a request that lacks it, and
+  // explicit On vs Off never match.
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:xnack+")));
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:xnack-")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:xnack+")
+                   .providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:xnack-")
+                   .providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a:xnack+")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:xnack+")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:xnack+")
+                   .providesFor(TargetID(AMDHSA, "gfx90a:xnack-")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:xnack-")
+                   .providesFor(TargetID(AMDHSA, "gfx90a:xnack+")));
+
+  // sramecc behaves the same way as xnack.
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+")));
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:sramecc-")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:sramecc+")
+                   .providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:sramecc-")
+                   .providesFor(TargetID(AMDHSA, "gfx90a")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:sramecc+")
+                   .providesFor(TargetID(AMDHSA, "gfx90a:sramecc-")));
+
+  // Both feature modifiers together: a wildcard provides for a
+  // fully-specified request, but a partially-specified image only provides
+  // when its explicit features match.
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
+  EXPECT_TRUE(TargetID(AMDHSA, "gfx90a:sramecc+")
+                  .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
+  EXPECT_FALSE(TargetID(AMDHSA, "gfx90a:sramecc-")
+                   .providesFor(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
+
+  // The legacy "amdgcn" and canonical "amdgpu" triple spellings are unified.
+  EXPECT_TRUE(
+      TargetID(AMDHSA, "gfx90a").providesFor(TargetID(AMDHSACanon, "gfx90a")));
+  EXPECT_TRUE(
+      TargetID(AMDHSACanon, "gfx90a").providesFor(TargetID(AMDHSA, "gfx90a")));
+}
+
+TEST(TargetParserTest, testAMDGPUTargetIDEquivalent) {
+  using AMDGPU::TargetID;
+  Triple AMDHSA("amdgcn-amd-amdhsa");
+  Triple AMDHSACanon("amdgpu-amd-amdhsa");
+
+  // TargetID::isEquivalent is a symmetric semantic equality: same processor
+  // and features, looking through triple spelling differences.
+  auto Equivalent = [](const TargetID &A, const TargetID &B) {
+    EXPECT_EQ(A.isEquivalent(B), B.isEquivalent(A));
+    return A.isEquivalent(B);
+  };
+
+  // Same target is equivalent to itself.
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSA, "gfx90a")));
+
+  // Different processors are not equivalent.
+  EXPECT_FALSE(
+      Equivalent(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSA, "gfx908")));
+
+  // A specific processor and a member of its generic family are distinct and
+  // not equivalent (this is the over-merge that produced duplicate symbols).
+  EXPECT_FALSE(
+      Equivalent(TargetID(AMDHSA, "gfx900"), TargetID(AMDHSA, "gfx9-generic")));
+
+  // Legacy "amdgcn" and canonical "amdgpu" spellings are equivalent.
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSA, "gfx90a"), TargetID(AMDHSACanon, "gfx90a")));
+
+  // The same processor spelled via the triple subarch (with no processor
+  // name) and via the processor name (with a major-family subarch triple) are
+  // equivalent, e.g. amdgpu9-amd-amdhsa + "gfx900" and amdgpu9.00-amd-amdhsa.
+  Triple AMDHSAMajor9("amdgpu9-amd-amdhsa");
+  Triple AMDHSASub900("amdgpu9.00-amd-amdhsa");
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSAMajor9, "gfx900"), TargetID(AMDHSASub900, "")));
+  EXPECT_TRUE(
+      Equivalent(TargetID(AMDHSASub900, ""), TargetID(AMDHSA, "gfx900")));
+  EXPECT_TRUE(Equivalent(TargetID(AMDHSAMajor9, "gfx9-generic"),
+                         TargetID(AMDHSAMajor9, "")));
+
+  // The same processor with different feature settings is not equivalent.
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a"),
+                          TargetID(AMDHSA, "gfx90a:xnack+")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:xnack-")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc-")));
+  EXPECT_TRUE(Equivalent(TargetID(AMDHSA, "gfx90a:xnack+"),
+                         TargetID(AMDHSA, "gfx90a:xnack+")));
+
+  // Target IDs that set both xnack and sramecc are equivalent only when both
+  // settings match; a difference in either feature makes them distinct.
+  EXPECT_TRUE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                         TargetID(AMDHSA, "gfx90a:sramecc+:xnack+")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc+:xnack-")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc-:xnack+")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc-:xnack-")));
+  // A fully-specified target ID is not equivalent to one that leaves a
+  // feature unspecified, even if the specified features agree.
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a:sramecc+")));
+  EXPECT_FALSE(Equivalent(TargetID(AMDHSA, "gfx90a:sramecc+:xnack+"),
+                          TargetID(AMDHSA, "gfx90a")));
 }
 
 } // namespace

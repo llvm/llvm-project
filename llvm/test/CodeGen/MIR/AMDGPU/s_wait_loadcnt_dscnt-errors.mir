@@ -1,7 +1,7 @@
 # RUN: split-file %s %t
 
 ;--- bad-expression.mir
-# RUN: not llc %t/bad-expression.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/bad-expression.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/bad-expression.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/bad-expression.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} expected <CounterName>_<CounterNum>
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .BadExpression
@@ -13,7 +13,7 @@ body: |
 ...
 
 ;--- loadcnt-too-large.mir
-# RUN: not llc %t/loadcnt-too-large.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/loadcnt-too-large.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/loadcnt-too-large.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/loadcnt-too-large.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} counter value too large
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Loadcnt_99999
@@ -25,7 +25,7 @@ body: |
 ...
 
 ;--- dscnt-too-large.mir
-# RUN: not llc %t/dscnt-too-large.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/dscnt-too-large.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/dscnt-too-large.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/dscnt-too-large.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} counter value too large
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Dscnt_99999
@@ -37,7 +37,7 @@ body: |
 ...
 
 ;--- expected-prefix.mir
-# RUN: not llc %t/expected-prefix.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/expected-prefix.mir
+# RUN: not llc %t/expected-prefix.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/expected-prefix.mir
 ---
 # CHECK: error: {{.*}}
 name: MissingDotPrefix
@@ -47,7 +47,7 @@ body: |
 ...
 
 ;--- invalid-counter-name.mir
-# RUN: not llc %t/invalid-counter-name.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/invalid-counter-name.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/invalid-counter-name.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/invalid-counter-name.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} invalid counter name
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .InvalidCounterName_1
@@ -59,7 +59,7 @@ body: |
 ...
 
 ;--- loadcnt-non-integer.mir
-# RUN: not llc %t/loadcnt-non-integer.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/loadcnt-non-integer.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/loadcnt-non-integer.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/loadcnt-non-integer.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} expected non-negative integer counter number
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Loadcnt_BadCnt
@@ -71,7 +71,7 @@ body: |
 ...
 
 ;--- dscnt-non-integer.mir
-# RUN: not llc %t/dscnt-non-integer.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/dscnt-non-integer.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/dscnt-non-integer.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/dscnt-non-integer.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} expected non-negative integer counter number
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Dscnt_BadCnt
@@ -83,7 +83,7 @@ body: |
 ...
 
 ;--- loadcnt-negative.mir
-# RUN: not llc %t/loadcnt-negative.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/loadcnt-negative.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/loadcnt-negative.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/loadcnt-negative.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} expected non-negative integer counter number
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Loadcnt_-1
@@ -95,7 +95,7 @@ body: |
 ...
 
 ;--- dscnt-negative.mir
-# RUN: not llc %t/dscnt-negative.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/dscnt-negative.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/dscnt-negative.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/dscnt-negative.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} expected non-negative integer counter number
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Dscnt_-1
@@ -107,7 +107,7 @@ body: |
 ...
 
 ;--- valid-loadcnt-invalid-dscnt.mir
-# RUN: not llc %t/valid-loadcnt-invalid-dscnt.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-loadcnt-invalid-dscnt.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/valid-loadcnt-invalid-dscnt.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-loadcnt-invalid-dscnt.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} counter value too large
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_99999
@@ -119,7 +119,7 @@ body: |
 ...
 
 ;--- valid-loadcnt-invalid-name.mir
-# RUN: not llc %t/valid-loadcnt-invalid-name.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-loadcnt-invalid-name.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/valid-loadcnt-invalid-name.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-loadcnt-invalid-name.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} invalid counter name
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Loadcnt_0_BadName_1
@@ -131,7 +131,7 @@ body: |
 ...
 
 ;--- valid-loadcnt-non-integer-dscnt.mir
-# RUN: not llc %t/valid-loadcnt-non-integer-dscnt.mir -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-loadcnt-non-integer-dscnt.mir --strict-whitespace --match-full-lines
+# RUN: not llc %t/valid-loadcnt-non-integer-dscnt.mir -mtriple=amdgpu12.00 -run-pass=none -filetype=null 2>&1 | FileCheck %t/valid-loadcnt-non-integer-dscnt.mir --strict-whitespace --match-full-lines
 ---
 # CHECK:error: {{.*}} expected non-negative integer counter number
 # CHECK-NEXT:    S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_abc

@@ -74,13 +74,13 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/ASTMatchers/LowLevelHelpers.h"
 #include "clang/Basic/AttrKinds.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -5751,11 +5751,6 @@ AST_MATCHER_P(IfStmt, hasThen, internal::Matcher<Stmt>, InnerMatcher) {
 AST_MATCHER_P(IfStmt, hasElse, internal::Matcher<Stmt>, InnerMatcher) {
   const Stmt *const Else = Node.getElse();
   return (Else != nullptr && InnerMatcher.matches(*Else, Finder, Builder));
-}
-
-/// Matches a declaration if it declares the same entity as the node.
-AST_MATCHER_P(Decl, declaresSameEntityAsNode, const Decl *, Other) {
-  return clang::declaresSameEntity(&Node, Other);
 }
 
 /// Matches if a node equals a previously bound node.

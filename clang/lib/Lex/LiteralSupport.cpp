@@ -388,7 +388,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
   if (!HadError && EvalMethod != StringLiteralEvalMethod::Unevaluated &&
       Transcode && Converter) {
     // Invalid escapes are written as '?' and then translated.
-    assert(ResultChar <= std::numeric_limits<char>::max());
+    assert(ResultChar <=
+           static_cast<unsigned>(std::numeric_limits<char>::max()));
     char ByteChar = Invalid ? '?' : ResultChar;
     auto ErrorOrChar = convertCharacter(StringRef(&ByteChar, 1), *Converter);
     if (ErrorOrChar)
