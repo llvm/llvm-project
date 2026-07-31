@@ -39,9 +39,7 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub)
 #### HashRecognize
 
 Ramkumar Ramachandra \
-r@artagnon.com (email), [artagnon](https://github.com/artagnon) (GitHub), artagnon (Discourse) \
-Piotr Fusik \
-p.fusik@samsung.com (email), [pfusik](https://github.com/pfusik) (GitHub)
+r@artagnon.com (email), [artagnon](https://github.com/artagnon) (GitHub), artagnon (Discourse)
 
 #### InferAddressSpaces
 
