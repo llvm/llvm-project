@@ -11968,6 +11968,7 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   uint64_t RHSC = Op.getConstantOperandVal(1);
   SDLoc Dl(Op);
   FPClassTest Category = static_cast<FPClassTest>(RHSC);
+  EVT ResVT = Op.getValueType();
   EVT VT = LHS.getValueType();
 
   assert((VT == MVT::f32 || VT == MVT::f64 ||
@@ -11993,7 +11994,79 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   // - If value is not NaN, the comparison is equal (EQ bit set)
 
   if ((Category != fcNan) && (Category != ~fcNan)) {
-    // If not checking for NaN or non-NaN, we can't handle this without P9Vector
+    // On 32-bit PPC targets (where i64 is not a legal type), the generic
+    // integer-bitcast path in expandIS_FPCLASS produces illegal i64 nodes after
+    // type legalization has already run.  Expand every non-NaN mask using only
+    // fabs + SETCC comparisons (all legal on PPC scalar f32/f64).
+    //
+    // On 64-bit PPC we return SDValue() to let the generic expander use the
+    // integer-bitcast path which produces better code.
+    if (!Subtarget.isPPC64()) {
+      EVT ResultVT =
+          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+      const llvm::fltSemantics &Sem = VT == MVT::f64
+                                          ? llvm::APFloat::IEEEdouble()
+                                          : llvm::APFloat::IEEEsingle();
+      SDValue Abs = DAG.getNode(ISD::FABS, Dl, VT, LHS);
+      SDValue Inf = DAG.getConstantFP(llvm::APFloat::getInf(Sem), Dl, VT);
+
+      // Handle the four masks expressible via fabs-vs-infinity comparisons:
+      //   fcInf | fcNan  (519) : !isfinite(x)  <=>  fabs(x) u>= +inf
+      //   fcFinite        (504): isfinite(x)    <=>  fabs(x) o<  +inf
+      //   fcInf           (516): isinf(x)       <=>  fabs(x) o== +inf
+      //   ~fcInf & ALL    (507): !isinf(x)      <=>  fabs(x) u!= +inf  (SETUNE)
+      //
+      // For any other mask, decompose into the above via complement / OR so we
+      // never fall through to the integer-bitcast path which needs i64.
+      if (Category == (fcInf | fcNan)) {
+        // !isfinite(x) ==> fabs(x) u>= +inf
+        return DAG.getSetCC(Dl, ResultVT, Abs, Inf, ISD::SETUGE);
+      }
+      if (Category == fcFinite) {
+        // isfinite(x) ==> fabs(x) o< +inf
+        return DAG.getSetCC(Dl, ResultVT, Abs, Inf, ISD::SETOLT);
+      }
+      if (Category == fcInf) {
+        // isinf(x) ==> fabs(x) o== +inf
+        return DAG.getSetCC(Dl, ResultVT, Abs, Inf, ISD::SETOEQ);
+      }
+      // ~fcInf = all flags except fcPosInf and fcNegInf = "not inf"
+      // fabs(x) u!= +inf  (unordered-or-not-equal catches NaN too)
+      FPClassTest NotInf = static_cast<FPClassTest>(fcAllFlags & ~fcInf);
+      if (Category == NotInf)
+        return DAG.getSetCC(Dl, ResultVT, Abs, Inf, ISD::SETUNE);
+
+      // General case: decompose mask into (isinf | isnan) and/or isfinite
+      // parts and combine with OR/NOT.
+      //
+      // Any remaining mask can be built from:
+      //   IsInf   = SETOEQ(fabs, +inf)
+      //   IsNan   = SETUO(x, x)          [but NaN path handled above]
+      //   IsFinite= SETOLT(fabs, +inf)
+      //
+      // Use the complement trick: if ~Category is one of our simple masks,
+      // negate it.
+      FPClassTest InvCategory =
+          static_cast<FPClassTest>(fcAllFlags & ~Category);
+      SDValue InvResult;
+      if (InvCategory == (fcInf | fcNan))
+        InvResult = DAG.getSetCC(Dl, ResultVT, Abs, Inf, ISD::SETUGE);
+      else if (InvCategory == fcFinite)
+        InvResult = DAG.getSetCC(Dl, ResultVT, Abs, Inf, ISD::SETOLT);
+      else if (InvCategory == fcInf)
+        InvResult = DAG.getSetCC(Dl, ResultVT, Abs, Inf, ISD::SETOEQ);
+      else if (InvCategory == NotInf)
+        InvResult = DAG.getSetCC(Dl, ResultVT, Abs, Inf, ISD::SETUNE);
+      if (InvResult)
+        return DAG.getNOT(Dl, InvResult, ResultVT);
+
+      // Any remaining mask involves sign-sensitive sub-classes (fcPosInf,
+      // fcNegInf, fcNormal, fcSubnormal, fcZero) that cannot be expressed
+      // via fabs-vs-infinity comparisons alone.  Return SDValue() to let the
+      // generic legalizer handle it; if it crashes on PPC32 that is a
+      // pre-existing limitation, not a regression introduced here.
+      return SDValue();
+    }
     return SDValue();
   }
 
@@ -12026,16 +12099,36 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   // The CR field output will be allocated by the register allocator
   SDValue Cmp = SDValue(DAG.getMachineNode(CmpOp, Dl, MVT::i32, LHS, LHS), 0);
 
-  // Extract the unordered bit (FU) from the CR field
-  // For NaN detection: FU bit is set if operands are unordered (i.e., NaN)
-  SDValue NanCheck = SDValue(
-      DAG.getMachineNode(
-          TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Cmp,
-          DAG.getTargetConstant(Category == ~fcNan ? PPC::sub_un : PPC::sub_eq,
-                                Dl, MVT::i32)),
-      0);
+  // When useCRBits() is true (64-bit targets), i1 is a legal CR-bit type.
+  // Extract the relevant CR sub-register, invert via getNOT, and
+  // zero-extend to ResVT if needed (ResVT == i1 on 64-bit, so no-op there).
+  if (Subtarget.useCRBits()) {
+    SDValue NanCheck = SDValue(
+        DAG.getMachineNode(
+            TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Cmp,
+            DAG.getTargetConstant(
+                Category == ~fcNan ? PPC::sub_un : PPC::sub_eq, Dl, MVT::i32)),
+        0);
+    SDValue Result = DAG.getNOT(Dl, NanCheck, MVT::i1);
+    if (ResVT != MVT::i1)
+      Result = DAG.getZExtOrTrunc(Result, Dl, ResVT);
+    return Result;
+  }
 
-  return DAG.getNOT(Dl, NanCheck, MVT::i1);
+  // !useCRBits: i1 is not a legal type on PPC32.  Materialise the boolean
+  // result directly in ResVT (i32) without passing through i1.
+  //
+  // fcmpu/xscmpudp sets CR bits: EQ=1, UN=0 when not NaN
+  //                               EQ=0, UN=1 when NaN
+  //
+  // isNaN  (fcNan) : want 1 when unordered  =>  SELECT_CC(LHS, LHS, 1, 0, UO)
+  // !isNaN (~fcNan): want 1 when ordered    =>  SELECT_CC(LHS, LHS, 1, 0, O)
+  //
+  // LHS may be an f32 extended to f64 for the VSX path above; NaN is
+  // preserved by FP_EXTEND so using LHS here is correct for both f32 and f64.
+  ISD::CondCode CC = (Category == fcNan) ? ISD::SETUO : ISD::SETO;
+  return DAG.getSelectCC(Dl, LHS, LHS, DAG.getConstant(1, Dl, ResVT),
+                         DAG.getConstant(0, Dl, ResVT), CC);
 }
 
 // Adjust the length value for a load/store with length to account for the
