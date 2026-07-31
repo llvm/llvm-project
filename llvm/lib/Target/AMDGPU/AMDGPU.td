@@ -891,6 +891,11 @@ defm FP8F16ConversionInsts : AMDGPUSubtargetFeature<"fp8-f16-conversion-insts",
   "Has fp8 and bf8 conversion to f16 instructions"
 >;
 
+// The opposite direction of FP8F16ConversionInsts above.
+defm F16FP8ConversionInsts : AMDGPUSubtargetFeature<"f16-fp8-conversion-insts",
+  "Has f16 conversion to fp8 and bf8 instructions"
+>;
+
 defm FP8E5M3Insts : AMDGPUSubtargetFeature<"fp8e5m3-insts",
   "Has fp8 e5m3 format support"
 >;
@@ -902,17 +907,17 @@ defm CvtFP8VOP1Bug : AMDGPUSubtargetFeature<"cvt-fp8-vop1-bug",
   [FeatureFP8ConversionInsts]
 >;
 
-// The fp8/bf8 to f32 conversions select which byte of the source to convert in
-// one of two ways.
+// The fp8/bf8 conversions take the byte index in one of two ways, and a
+// subtarget uses the same one in both directions.
 defm CvtFP8SDWASrcSel : AMDGPUSubtargetFeature<"cvt-fp8-sdwa-src-sel",
-  "FP8/BF8 conversions to F32 take the source byte from the SDWA src0_sel field",
+  "FP8/BF8 conversions take the byte index from the SDWA src0_sel or op_sel field",
   /*GenPredicate=*/1,
   /*GenAssemblerPredicate=*/1,
   [FeatureFP8ConversionInsts]
 >;
 
 defm CvtFP8ByteSel : AMDGPUSubtargetFeature<"cvt-fp8-byte-sel",
-  "FP8/BF8 conversions to F32 take the source byte from a byte_sel operand",
+  "FP8/BF8 conversions take the byte index from a byte_sel operand",
   /*GenPredicate=*/1,
   /*GenAssemblerPredicate=*/1,
   [FeatureFP8ConversionInsts]
@@ -2286,6 +2291,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureCvtFP8ByteSel,
    FeatureOCPFP8ConversionInsts,
    FeatureFP8F16ConversionInsts,
+   FeatureF16FP8ConversionInsts,
    FeatureFP8E5M3Insts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -2444,6 +2450,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtFP8ByteSel,
    FeatureOCPFP8ConversionInsts,
    FeatureFP8F16ConversionInsts,
+   FeatureF16FP8ConversionInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
