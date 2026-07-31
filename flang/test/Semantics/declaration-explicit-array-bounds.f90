@@ -69,6 +69,32 @@ subroutine s1()
   !ERROR: Invalid specification expression: reference to impure function 'impf'
   !ERROR: Invalid specification expression: reference to impure function 'impurezerosize'
   integer :: z3(impf() : impureZeroSize())
+  
+  !Now test using the dimension attribute, and a mixture of both (overriding the dimension attribute).
+  !We must validate dimension even if overridden. 
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  integer, dimension(impf() : [integer::]) :: z4
+
+  !The overridden dimension spec should still be checked and error
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  integer, dimension(impf() : [integer::]) :: z5(5)
+
+  !The overridden dimension spec should still be checked as above with z2, but x
+  !should also error. So, it should be emitted once for z6 and once for z7.
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  integer, dimension(impf() : [integer::]) :: z6(5), z7
+
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  integer, dimension([impf(),2,3]) :: z9
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  integer, dimension([1,2,3] : [4,5,impf()]) :: z10
+
+  ! An entity-decl's own array-spec overrides the DIMENSION attribute, but the
+  ! attribute's bounds remain specification expressions that must be validated.
+  !ERROR: Invalid specification expression: reference to impure function 'impf'
+  integer, dimension([impf(),2,3]) :: z11([1,2,3])
+
 end subroutine
 ! The bounds of a zero-size (scalar) declaration are validated during
 ! declaration checking, when the scope is complete -- not during name
