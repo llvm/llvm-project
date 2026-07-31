@@ -9,8 +9,23 @@ struct S {
     int *end;
 };
 
+__attribute__((noinline))
+__attribute__((optnone))
+__attribute__((pure))
+// CHECK-LABEL: define dso_local i32 @opaque(
+// CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+int opaque(int x) {
+  return x;
+}
+
 // CHECK-LABEL: define dso_local noundef i32 @TestOK(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i32 0
 //
@@ -22,11 +37,39 @@ int TestOK() {
   return 0;
 }
 
-// CHECK-LABEL: define dso_local noundef i32 @TestStartFail(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-LABEL: define dso_local noundef i32 @TestOKOpaque(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR5:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR7:[0-9]+]]
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
+// CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @opaque(i32 noundef 10) #[[ATTR8:[0-9]+]]
+// CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CALL]] to i64
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP22_NOT:%.*]] = icmp ugt ptr [[ARR]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[CMP22_NOT]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP]]:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR9:[0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       [[CONT]]:
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
+// CHECK-NEXT:    ret i32 0
+//
+int TestOKOpaque() {
+  int arr[10];
+  struct S s;
+  s.start = arr;
+  s.end = arr + opaque(10);
+  return 0;
+}
+
+// CHECK-LABEL: define dso_local noundef i32 @TestStartFail(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 -4
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
 // CHECK-NEXT:    [[CMP24_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
@@ -34,10 +77,10 @@ int TestOK() {
 // CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP24_NOT]], [[CMP35_NOT]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6:[0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
 // CHECK-NEXT:    ret i32 0
 //
 int TestStartFail() {
@@ -48,23 +91,45 @@ int TestStartFail() {
     return 0;
 }
 
-// CHECK-LABEL: define dso_local noundef i32 @TestEndFail(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+// CHECK-LABEL: define dso_local noundef i32 @TestStartFailOpaque(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @opaque(i32 noundef 1) #[[ATTR8]]
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
-// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[ARR]], i64 44
-// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[CMP22_NOT:%.*]] = icmp ugt ptr [[ARR]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[CMP22_NOT]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CALL]] to i64
+// CHECK-NEXT:    [[IDX_NEG:%.*]] = sub nsw i64 0, [[IDXPROM]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [4 x i8], ptr [[ARR]], i64 [[IDX_NEG]]
+// CHECK-NEXT:    [[CALL2:%.*]] = tail call i32 @opaque(i32 noundef 10) #[[ATTR8]]
+// CHECK-NEXT:    [[IDXPROM6:%.*]] = sext i32 [[CALL2]] to i64
+// CHECK-NEXT:    [[BOUND_PTR_ARITH7:%.*]] = getelementptr [4 x i8], ptr [[ARR]], i64 [[IDXPROM6]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH7]], [[UPPER]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP26_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[BOUND_PTR_ARITH7]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP37_NOT:%.*]] = icmp ugt ptr [[ARR]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[CMP37_NOT]], [[CMP26_NOT]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND54:%.*]] = select i1 [[CMP_NOT]], i1 true, i1 [[TMP0]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND54]], label %[[TRAP:.*]], label %[[CONT:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
 // CHECK-NEXT:    ret i32 0
+//
+int TestStartFailOpaque() {
+    int arr[10];
+    struct S s;
+    s.start = arr - opaque(1);
+    s.end = arr + opaque(10);
+    return 0;
+}
+
+// CHECK-LABEL: define dso_local noundef i32 @TestEndFail(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR6:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 int TestEndFail() {
   int arr[10];
@@ -74,16 +139,64 @@ int TestEndFail() {
   return 0;
 }
 
-// CHECK-LABEL: define dso_local noundef i32 @TestRangeFail(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// CHECK-LABEL: define dso_local noundef i32 @TestEndFailOpaque(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[ARR:%.*]] = alloca [10 x i32], align 16
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
+// CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 40
+// CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @opaque(i32 noundef 11) #[[ATTR8]]
+// CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[CALL]] to i64
+// CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP22_NOT:%.*]] = icmp ugt ptr [[ARR]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[CMP22_NOT]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP]]:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       [[CONT]]:
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR]]) #[[ATTR7]]
+// CHECK-NEXT:    ret i32 0
+//
+int TestEndFailOpaque() {
+  int arr[10];
+  struct S s;
+  s.start = arr;
+  s.end = arr + opaque(11);
+  return 0;
+}
+
+// CHECK-LABEL: define dso_local noundef i32 @TestRangeFail(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR6]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 int TestRangeFail() {
   int arr[10];
   struct S s;
   s.start = arr + 1;
+  s.end = arr;
+  return 0;
+}
+
+// CHECK-LABEL: define dso_local noundef i32 @TestRangeFailOpaque(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @opaque(i32 noundef 1) #[[ATTR8]]
+// CHECK-NEXT:    [[OR_COND_NOT:%.*]] = icmp eq i32 [[CALL]], 0, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND_NOT]], label %[[CONT:.*]], label %[[TRAP:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP]]:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       [[CONT]]:
+// CHECK-NEXT:    ret i32 0
+//
+int TestRangeFailOpaque() {
+  int arr[10];
+  struct S s;
+  s.start = arr + opaque(1);
   s.end = arr;
   return 0;
 }

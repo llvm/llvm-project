@@ -4,6 +4,21 @@
 
 #include <ptrcheck.h>
 
+__attribute__((noinline))
+__attribute__((optnone))
+__attribute__((pure))
+// CHECK-LABEL: define dso_local i32 @opaque(
+// CHECK-SAME: i32 noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    store i32 [[X]], ptr [[X_ADDR]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4, {{!tbaa ![0-9]+}}
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
+int opaque(int x) {
+  return x;
+}
+
 static inline void TestOKImpl(int *__ended_by(*out_end) *out_start,
                               int **out_end) {
   int arr[10];
@@ -12,7 +27,7 @@ static inline void TestOKImpl(int *__ended_by(*out_end) *out_start,
 }
 
 // CHECK-LABEL: define dso_local void @TestOK(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
@@ -20,6 +35,39 @@ void TestOK() {
   int *end;
   int *__ended_by(end) start;
   TestOKImpl(&start, &end);
+}
+
+static inline void TestOKOpaqueImpl(int *__ended_by(*out_end) *out_start,
+                                    int **out_end) {
+  int arr[10];
+  *out_start = arr;
+  *out_end = arr + opaque(10);
+}
+
+// CHECK-LABEL: define dso_local void @TestOKOpaque(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARR_I:%.*]] = alloca [10 x i32], align 16
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR_I]]) #[[ATTR7:[0-9]+]]
+// CHECK-NEXT:    [[UPPER_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR_I]], i64 40
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @opaque(i32 noundef 10) #[[ATTR8:[0-9]+]]
+// CHECK-NEXT:    [[IDXPROM_I:%.*]] = sext i32 [[CALL_I]] to i64
+// CHECK-NEXT:    [[BOUND_PTR_ARITH_I:%.*]] = getelementptr [4 x i8], ptr [[ARR_I]], i64 [[IDXPROM_I]]
+// CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH_I]], [[UPPER_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP22_NOT_I:%.*]] = icmp ugt ptr [[ARR_I]], [[BOUND_PTR_ARITH_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND_I:%.*]] = or i1 [[CMP_NOT_I]], [[CMP22_NOT_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND_I]], label %[[TRAP_I:.*]], label %[[TESTOKOPAQUEIMPL_EXIT:.*]], {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP_I]]:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR9:[0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       [[TESTOKOPAQUEIMPL_EXIT]]:
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR_I]]) #[[ATTR7]]
+// CHECK-NEXT:    ret void
+//
+void TestOKOpaque() {
+  int *end;
+  int *__ended_by(end) start;
+  TestOKOpaqueImpl(&start, &end);
 }
 
 static inline void TestStartFailImpl(int *__ended_by(*out_end) *out_start,
@@ -30,10 +78,10 @@ static inline void TestStartFailImpl(int *__ended_by(*out_end) *out_start,
 }
 
 // CHECK-LABEL: define dso_local void @TestStartFail(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR5:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ARR_I:%.*]] = alloca [10 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR_I]]) #[[ATTR5:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR_I]]) #[[ATTR7]]
 // CHECK-NEXT:    [[UPPER_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR_I]], i64 40
 // CHECK-NEXT:    [[BOUND_PTR_ARITH_I:%.*]] = getelementptr i8, ptr [[ARR_I]], i64 -4
 // CHECK-NEXT:    [[CMP24_NOT_I:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH_I]], [[UPPER_I]], {{!annotation ![0-9]+}}
@@ -41,16 +89,55 @@ static inline void TestStartFailImpl(int *__ended_by(*out_end) *out_start,
 // CHECK-NEXT:    [[OR_COND_I:%.*]] = or i1 [[CMP24_NOT_I]], [[CMP35_NOT_I]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    br i1 [[OR_COND_I]], label %[[TRAP_I:.*]], label %[[TESTSTARTFAILIMPL_EXIT:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK:       [[TRAP_I]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6:[0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       [[TESTSTARTFAILIMPL_EXIT]]:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR_I]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR_I]]) #[[ATTR7]]
 // CHECK-NEXT:    ret void
 //
 void TestStartFail() {
   int *end;
   int *__ended_by(end) start;
   TestStartFailImpl(&start, &end);
+}
+
+static inline void TestStartFailOpaqueImpl(int *__ended_by(*out_end) *out_start,
+                                           int **out_end) {
+  int arr[10];
+  *out_start = arr - opaque(1);
+  *out_end = arr + opaque(10);
+}
+
+// CHECK-LABEL: define dso_local void @TestStartFailOpaque(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARR_I:%.*]] = alloca [10 x i32], align 16
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR_I]]) #[[ATTR7]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @opaque(i32 noundef 1) #[[ATTR8]]
+// CHECK-NEXT:    [[UPPER_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR_I]], i64 40
+// CHECK-NEXT:    [[IDXPROM_I:%.*]] = sext i32 [[CALL_I]] to i64
+// CHECK-NEXT:    [[IDX_NEG_I:%.*]] = sub nsw i64 0, [[IDXPROM_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[BOUND_PTR_ARITH_I:%.*]] = getelementptr [4 x i8], ptr [[ARR_I]], i64 [[IDX_NEG_I]]
+// CHECK-NEXT:    [[CALL2_I:%.*]] = tail call i32 @opaque(i32 noundef 10) #[[ATTR8]]
+// CHECK-NEXT:    [[IDXPROM6_I:%.*]] = sext i32 [[CALL2_I]] to i64
+// CHECK-NEXT:    [[BOUND_PTR_ARITH7_I:%.*]] = getelementptr [4 x i8], ptr [[ARR_I]], i64 [[IDXPROM6_I]]
+// CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH7_I]], [[UPPER_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP26_NOT_I:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH_I]], [[BOUND_PTR_ARITH7_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP37_NOT_I:%.*]] = icmp ugt ptr [[ARR_I]], [[BOUND_PTR_ARITH_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[TMP0:%.*]] = or i1 [[CMP37_NOT_I]], [[CMP26_NOT_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND52_I:%.*]] = select i1 [[CMP_NOT_I]], i1 true, i1 [[TMP0]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND52_I]], label %[[TRAP_I:.*]], label %[[TESTSTARTFAILOPAQUEIMPL_EXIT:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP_I]]:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       [[TESTSTARTFAILOPAQUEIMPL_EXIT]]:
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR_I]]) #[[ATTR7]]
+// CHECK-NEXT:    ret void
+//
+void TestStartFailOpaque() {
+  int *end;
+  int *__ended_by(end) start;
+  TestStartFailOpaqueImpl(&start, &end);
 }
 
 static inline void TestEndFailImpl(int *__ended_by(*out_end) *out_start,
@@ -61,27 +148,48 @@ static inline void TestEndFailImpl(int *__ended_by(*out_end) *out_start,
 }
 
 // CHECK-LABEL: define dso_local void @TestEndFail(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[ARR_I:%.*]] = alloca [10 x i32], align 16
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR_I]]) #[[ATTR5]]
-// CHECK-NEXT:    [[UPPER_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR_I]], i64 40
-// CHECK-NEXT:    [[BOUND_PTR_ARITH_I:%.*]] = getelementptr i8, ptr [[ARR_I]], i64 44
-// CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH_I]], [[UPPER_I]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[CMP22_NOT_I:%.*]] = icmp ugt ptr [[ARR_I]], [[BOUND_PTR_ARITH_I]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    [[OR_COND_I:%.*]] = or i1 [[CMP_NOT_I]], [[CMP22_NOT_I]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND_I]], label %[[TRAP_I:.*]], label %[[TESTENDFAILIMPL_EXIT:.*]], {{!annotation ![0-9]+}}
-// CHECK:       [[TRAP_I]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
-// CHECK:       [[TESTENDFAILIMPL_EXIT]]:
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR_I]]) #[[ATTR5]]
-// CHECK-NEXT:    ret void
 //
 void TestEndFail() {
   int *end;
   int *__ended_by(end) start;
   TestEndFailImpl(&start, &end);
+}
+
+static inline void TestEndFailOpaqueImpl(int *__ended_by(*out_end) *out_start,
+                                         int **out_end) {
+  int arr[10];
+  *out_start = arr;
+  *out_end = arr + opaque(11);
+}
+
+// CHECK-LABEL: define dso_local void @TestEndFailOpaque(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[ARR_I:%.*]] = alloca [10 x i32], align 16
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[ARR_I]]) #[[ATTR7]]
+// CHECK-NEXT:    [[UPPER_I:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR_I]], i64 40
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @opaque(i32 noundef 11) #[[ATTR8]]
+// CHECK-NEXT:    [[IDXPROM_I:%.*]] = sext i32 [[CALL_I]] to i64
+// CHECK-NEXT:    [[BOUND_PTR_ARITH_I:%.*]] = getelementptr [4 x i8], ptr [[ARR_I]], i64 [[IDXPROM_I]]
+// CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH_I]], [[UPPER_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP22_NOT_I:%.*]] = icmp ugt ptr [[ARR_I]], [[BOUND_PTR_ARITH_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[OR_COND_I:%.*]] = or i1 [[CMP_NOT_I]], [[CMP22_NOT_I]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND_I]], label %[[TRAP_I:.*]], label %[[TESTENDFAILOPAQUEIMPL_EXIT:.*]], {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP_I]]:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       [[TESTENDFAILOPAQUEIMPL_EXIT]]:
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[ARR_I]]) #[[ATTR7]]
+// CHECK-NEXT:    ret void
+//
+void TestEndFailOpaque() {
+  int *end;
+  int *__ended_by(end) start;
+  TestEndFailOpaqueImpl(&start, &end);
 }
 
 static inline void TestRangeFailImpl(int *__ended_by(*out_end) *out_start,
@@ -92,13 +200,38 @@ static inline void TestRangeFailImpl(int *__ended_by(*out_end) *out_start,
 }
 
 // CHECK-LABEL: define dso_local void @TestRangeFail(
-// CHECK-SAME: ) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR6]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void TestRangeFail() {
   int *end;
   int *__ended_by(end) start;
   TestRangeFailImpl(&start, &end);
+}
+
+static inline void TestRangeFailOpaqueImpl(int *__ended_by(*out_end) *out_start,
+                                           int **out_end) {
+  int arr[10];
+  *out_start = arr + opaque(1);
+  *out_end = arr;
+}
+
+// CHECK-LABEL: define dso_local void @TestRangeFailOpaque(
+// CHECK-SAME: ) local_unnamed_addr #[[ATTR4]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[CALL_I:%.*]] = tail call i32 @opaque(i32 noundef 1) #[[ATTR8]]
+// CHECK-NEXT:    [[OR_COND_NOT_I:%.*]] = icmp eq i32 [[CALL_I]], 0, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND_NOT_I]], label %[[TESTRANGEFAILOPAQUEIMPL_EXIT:.*]], label %[[TRAP_I:.*]], {{!prof ![0-9]+}}, {{!annotation ![0-9]+}}
+// CHECK:       [[TRAP_I]]:
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR9]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
+// CHECK:       [[TESTRANGEFAILOPAQUEIMPL_EXIT]]:
+// CHECK-NEXT:    ret void
+//
+void TestRangeFailOpaque() {
+  int *end;
+  int *__ended_by(end) start;
+  TestRangeFailOpaqueImpl(&start, &end);
 }
