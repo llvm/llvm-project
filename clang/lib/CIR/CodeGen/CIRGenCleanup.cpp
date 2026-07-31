@@ -30,7 +30,7 @@ namespace {
 /// to be deferred via pushFullExprCleanup.
 class ConditionalEvaluationFinder
     : public RecursiveASTVisitor<ConditionalEvaluationFinder> {
-  const ASTContext &astContext;      
+  const ASTContext &astContext;
   bool foundConditional = false;
 
 public:
