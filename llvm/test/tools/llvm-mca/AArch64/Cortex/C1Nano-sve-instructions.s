@@ -3907,21 +3907,21 @@
 # STREAMING-NEXT:     1      1     1.00                        ctermne	wzr, w30
 # STREAMING-NEXT:     1      1     1.00                        ctermne	x30, xzr
 # STREAMING-NEXT:     1      1     1.00                        ctermne	xzr, x30
-# STREAMING-NEXT:     1      1     1.00                        decb	x0
-# STREAMING-NEXT:     1      1     1.00                        decb	x0, #14
-# STREAMING-NEXT:     1      1     1.00                        decb	x0, all, mul #16
-# STREAMING-NEXT:     1      1     1.00                        decb	x0, pow2
-# STREAMING-NEXT:     1      1     1.00                        decb	x0, vl1
-# STREAMING-NEXT:     1      1     1.00                        decd	x0
-# STREAMING-NEXT:     1      1     1.00                        decd	x0, #14
-# STREAMING-NEXT:     1      1     1.00                        decd	x0, all, mul #16
-# STREAMING-NEXT:     1      1     1.00                        decd	x0, pow2
-# STREAMING-NEXT:     1      1     1.00                        decd	x0, vl1
-# STREAMING-NEXT:     1      1     1.00                        dech	x0
-# STREAMING-NEXT:     1      1     1.00                        dech	x0, #14
-# STREAMING-NEXT:     1      1     1.00                        dech	x0, all, mul #16
-# STREAMING-NEXT:     1      1     1.00                        dech	x0, pow2
-# STREAMING-NEXT:     1      1     1.00                        dech	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        decb	x0
+# STREAMING-NEXT:     1      4     0.50                        decb	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        decb	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        decb	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        decb	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        decd	x0
+# STREAMING-NEXT:     1      4     0.50                        decd	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        decd	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        decd	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        decd	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        dech	x0
+# STREAMING-NEXT:     1      4     0.50                        dech	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        dech	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        dech	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        dech	x0, vl1
 # STREAMING-NEXT:     1      1     1.00                        decp	x0, p0.b
 # STREAMING-NEXT:     1      1     1.00                        decp	x0, p0.d
 # STREAMING-NEXT:     1      1     1.00                        decp	x0, p0.h
@@ -3933,11 +3933,11 @@
 # STREAMING-NEXT:     1      3     1.00                        decp	z31.d, p15.d
 # STREAMING-NEXT:     1      3     1.00                        decp	z31.h, p15.h
 # STREAMING-NEXT:     1      3     1.00                        decp	z31.s, p15.s
-# STREAMING-NEXT:     1      1     1.00                        decw	x0
-# STREAMING-NEXT:     1      1     1.00                        decw	x0, #14
-# STREAMING-NEXT:     1      1     1.00                        decw	x0, all, mul #16
-# STREAMING-NEXT:     1      1     1.00                        decw	x0, pow2
-# STREAMING-NEXT:     1      1     1.00                        decw	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        decw	x0
+# STREAMING-NEXT:     1      4     0.50                        decw	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        decw	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        decw	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        decw	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        dupm	z0.d, #0xfffffffffffffff9
 # STREAMING-NEXT:     1      4     0.50                        dupm	z0.s, #0xfffffff9
 # STREAMING-NEXT:     1      4     0.50                        dupm	z23.h, #0xfff9
@@ -4324,23 +4324,23 @@
 # STREAMING-NEXT:     1      6     4.00                        histcnt	z0.s, p0/z, z1.s, z2.s
 # STREAMING-NEXT:     1      6     4.00                        histcnt	z29.d, p7/z, z30.d, z31.d
 # STREAMING-NEXT:     1      6     4.00                        histseg	z0.b, z1.b, z31.b
-# STREAMING-NEXT:     1      1     1.00                        incb	x0
-# STREAMING-NEXT:     1      1     1.00                        incb	x0, #14
-# STREAMING-NEXT:     1      1     1.00                        incb	x0, all, mul #16
-# STREAMING-NEXT:     1      1     1.00                        incb	x0, pow2
-# STREAMING-NEXT:     1      1     1.00                        incb	x0, vl1
-# STREAMING-NEXT:     1      1     1.00                        incd	x0
-# STREAMING-NEXT:     1      1     1.00                        incd	x0, #14
-# STREAMING-NEXT:     1      1     1.00                        incd	x0, all, mul #16
-# STREAMING-NEXT:     1      1     1.00                        incd	x0, pow2
-# STREAMING-NEXT:     1      1     1.00                        incd	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        incb	x0
+# STREAMING-NEXT:     1      4     0.50                        incb	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        incb	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        incb	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        incb	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        incd	x0
+# STREAMING-NEXT:     1      4     0.50                        incd	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        incd	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        incd	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        incd	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        incd	z0.d
 # STREAMING-NEXT:     1      4     0.50                        incd	z0.d, all, mul #16
-# STREAMING-NEXT:     1      1     1.00                        inch	x0
-# STREAMING-NEXT:     1      1     1.00                        inch	x0, #14
-# STREAMING-NEXT:     1      1     1.00                        inch	x0, all, mul #16
-# STREAMING-NEXT:     1      1     1.00                        inch	x0, pow2
-# STREAMING-NEXT:     1      1     1.00                        inch	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        inch	x0
+# STREAMING-NEXT:     1      4     0.50                        inch	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        inch	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        inch	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        inch	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        inch	z0.h
 # STREAMING-NEXT:     1      4     0.50                        inch	z0.h, all, mul #16
 # STREAMING-NEXT:     1      1     1.00                        incp	x0, p0.b
@@ -4354,11 +4354,11 @@
 # STREAMING-NEXT:     1      3     1.00                        incp	z31.d, p15.d
 # STREAMING-NEXT:     1      3     1.00                        incp	z31.h, p15.h
 # STREAMING-NEXT:     1      3     1.00                        incp	z31.s, p15.s
-# STREAMING-NEXT:     1      1     1.00                        incw	x0
-# STREAMING-NEXT:     1      1     1.00                        incw	x0, #14
-# STREAMING-NEXT:     1      1     1.00                        incw	x0, all, mul #16
-# STREAMING-NEXT:     1      1     1.00                        incw	x0, pow2
-# STREAMING-NEXT:     1      1     1.00                        incw	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        incw	x0
+# STREAMING-NEXT:     1      4     0.50                        incw	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        incw	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        incw	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        incw	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        incw	z0.s
 # STREAMING-NEXT:     1      4     0.50                        incw	z0.s, all, mul #16
 # STREAMING-NEXT:     1      12    2.50                        index	z0.b, #0, #0
@@ -4639,46 +4639,46 @@
 # STREAMING-NEXT:     1      2     1.00    *                   ld2w	{ z21.s, z22.s }, p5/z, [x10, #10, mul vl]
 # STREAMING-NEXT:     1      2     1.00    *                   ld2w	{ z23.s, z24.s }, p3/z, [x13, #-16, mul vl]
 # STREAMING-NEXT:     1      2     1.00    *                   ld2w	{ z5.s, z6.s }, p3/z, [x17, x16, lsl #2]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3b	{ z0.b - z2.b }, p0/z, [x0, x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3b	{ z0.b - z2.b }, p0/z, [x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3b	{ z21.b - z23.b }, p5/z, [x10, #15, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3b	{ z23.b - z25.b }, p3/z, [x13, #-24, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3b	{ z5.b - z7.b }, p3/z, [x17, x16]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3d	{ z0.d - z2.d }, p0/z, [x0, x0, lsl #3]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3d	{ z0.d - z2.d }, p0/z, [x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3d	{ z21.d - z23.d }, p5/z, [x10, #15, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3d	{ z23.d - z25.d }, p3/z, [x13, #-24, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3d	{ z5.d - z7.d }, p3/z, [x17, x16, lsl #3]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3h	{ z0.h - z2.h }, p0/z, [x0, x0, lsl #1]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3h	{ z0.h - z2.h }, p0/z, [x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3h	{ z21.h - z23.h }, p5/z, [x10, #15, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3h	{ z23.h - z25.h }, p3/z, [x13, #-24, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3h	{ z5.h - z7.h }, p3/z, [x17, x16, lsl #1]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3w	{ z0.s - z2.s }, p0/z, [x0, x0, lsl #2]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3w	{ z0.s - z2.s }, p0/z, [x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3w	{ z21.s - z23.s }, p5/z, [x10, #15, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3w	{ z23.s - z25.s }, p3/z, [x13, #-24, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld3w	{ z5.s - z7.s }, p3/z, [x17, x16, lsl #2]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4b	{ z0.b - z3.b }, p0/z, [x0, x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4b	{ z0.b - z3.b }, p0/z, [x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4b	{ z21.b - z24.b }, p5/z, [x10, #20, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4b	{ z23.b - z26.b }, p3/z, [x13, #-32, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4b	{ z5.b - z8.b }, p3/z, [x17, x16]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4d	{ z0.d - z3.d }, p0/z, [x0, x0, lsl #3]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4d	{ z0.d - z3.d }, p0/z, [x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4d	{ z21.d - z24.d }, p5/z, [x10, #20, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4d	{ z23.d - z26.d }, p3/z, [x13, #-32, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4d	{ z5.d - z8.d }, p3/z, [x17, x16, lsl #3]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4h	{ z0.h - z3.h }, p0/z, [x0, x0, lsl #1]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4h	{ z0.h - z3.h }, p0/z, [x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4h	{ z21.h - z24.h }, p5/z, [x10, #20, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4h	{ z23.h - z26.h }, p3/z, [x13, #-32, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4h	{ z5.h - z8.h }, p3/z, [x17, x16, lsl #1]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4w	{ z0.s - z3.s }, p0/z, [x0, x0, lsl #2]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4w	{ z0.s - z3.s }, p0/z, [x0]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4w	{ z21.s - z24.s }, p5/z, [x10, #20, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4w	{ z23.s - z26.s }, p3/z, [x13, #-32, mul vl]
-# STREAMING-NEXT:     1      2     0.50    *                   ld4w	{ z5.s - z8.s }, p3/z, [x17, x16, lsl #2]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3b	{ z0.b - z2.b }, p0/z, [x0, x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3b	{ z0.b - z2.b }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3b	{ z21.b - z23.b }, p5/z, [x10, #15, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3b	{ z23.b - z25.b }, p3/z, [x13, #-24, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3b	{ z5.b - z7.b }, p3/z, [x17, x16]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3d	{ z0.d - z2.d }, p0/z, [x0, x0, lsl #3]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3d	{ z0.d - z2.d }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3d	{ z21.d - z23.d }, p5/z, [x10, #15, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3d	{ z23.d - z25.d }, p3/z, [x13, #-24, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3d	{ z5.d - z7.d }, p3/z, [x17, x16, lsl #3]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3h	{ z0.h - z2.h }, p0/z, [x0, x0, lsl #1]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3h	{ z0.h - z2.h }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3h	{ z21.h - z23.h }, p5/z, [x10, #15, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3h	{ z23.h - z25.h }, p3/z, [x13, #-24, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3h	{ z5.h - z7.h }, p3/z, [x17, x16, lsl #1]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3w	{ z0.s - z2.s }, p0/z, [x0, x0, lsl #2]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3w	{ z0.s - z2.s }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3w	{ z21.s - z23.s }, p5/z, [x10, #15, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3w	{ z23.s - z25.s }, p3/z, [x13, #-24, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld3w	{ z5.s - z7.s }, p3/z, [x17, x16, lsl #2]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4b	{ z0.b - z3.b }, p0/z, [x0, x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4b	{ z0.b - z3.b }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4b	{ z21.b - z24.b }, p5/z, [x10, #20, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4b	{ z23.b - z26.b }, p3/z, [x13, #-32, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4b	{ z5.b - z8.b }, p3/z, [x17, x16]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4d	{ z0.d - z3.d }, p0/z, [x0, x0, lsl #3]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4d	{ z0.d - z3.d }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4d	{ z21.d - z24.d }, p5/z, [x10, #20, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4d	{ z23.d - z26.d }, p3/z, [x13, #-32, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4d	{ z5.d - z8.d }, p3/z, [x17, x16, lsl #3]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4h	{ z0.h - z3.h }, p0/z, [x0, x0, lsl #1]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4h	{ z0.h - z3.h }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4h	{ z21.h - z24.h }, p5/z, [x10, #20, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4h	{ z23.h - z26.h }, p3/z, [x13, #-32, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4h	{ z5.h - z8.h }, p3/z, [x17, x16, lsl #1]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4w	{ z0.s - z3.s }, p0/z, [x0, x0, lsl #2]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4w	{ z0.s - z3.s }, p0/z, [x0]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4w	{ z21.s - z24.s }, p5/z, [x10, #20, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4w	{ z23.s - z26.s }, p3/z, [x13, #-32, mul vl]
+# STREAMING-NEXT:     1      2     2.00    *                   ld4w	{ z5.s - z8.s }, p3/z, [x17, x16, lsl #2]
 # STREAMING-NEXT:     1      3     1.00    *             U     ldff1b	{ z0.d }, p0/z, [x0, x0]
 # STREAMING-NEXT:     1      7     6.00    *             U     ldff1b	{ z0.d }, p0/z, [z0.d]
 # STREAMING-NEXT:     1      3     1.00    *             U     ldff1b	{ z0.h }, p0/z, [x0, x0]
@@ -5644,37 +5644,37 @@
 # STREAMING-NEXT:     1      4     0.50                        sqcadd	z31.d, z31.d, z31.d, #270
 # STREAMING-NEXT:     1      4     0.50                        sqcadd	z31.h, z31.h, z31.h, #270
 # STREAMING-NEXT:     1      4     0.50                        sqcadd	z31.s, z31.s, z31.s, #270
-# STREAMING-NEXT:     1      5     1.00                        sqdecb	x0
-# STREAMING-NEXT:     1      5     1.00                        sqdecb	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        sqdecb	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdecb	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqdecb	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        sqdecb	x0, w0
-# STREAMING-NEXT:     1      5     1.00                        sqdecb	x0, w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdecb	x0, w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqdecb	x0, w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdecd	x0
-# STREAMING-NEXT:     1      5     1.00                        sqdecd	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        sqdecd	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdecd	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqdecd	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        sqdecd	x0, w0
-# STREAMING-NEXT:     1      5     1.00                        sqdecd	x0, w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdecd	x0, w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqdecd	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdecb	x0
+# STREAMING-NEXT:     1      4     0.50                        sqdecb	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        sqdecb	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdecb	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqdecb	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        sqdecb	x0, w0
+# STREAMING-NEXT:     1      4     0.50                        sqdecb	x0, w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdecb	x0, w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqdecb	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdecd	x0
+# STREAMING-NEXT:     1      4     0.50                        sqdecd	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        sqdecd	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdecd	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqdecd	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        sqdecd	x0, w0
+# STREAMING-NEXT:     1      4     0.50                        sqdecd	x0, w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdecd	x0, w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqdecd	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqdecd	z0.d
 # STREAMING-NEXT:     1      4     0.50                        sqdecd	z0.d, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqdecd	z0.d, pow2
 # STREAMING-NEXT:     1      4     0.50                        sqdecd	z0.d, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdech	x0
-# STREAMING-NEXT:     1      5     1.00                        sqdech	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        sqdech	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdech	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqdech	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        sqdech	x0, w0
-# STREAMING-NEXT:     1      5     1.00                        sqdech	x0, w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdech	x0, w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqdech	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdech	x0
+# STREAMING-NEXT:     1      4     0.50                        sqdech	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        sqdech	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdech	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqdech	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        sqdech	x0, w0
+# STREAMING-NEXT:     1      4     0.50                        sqdech	x0, w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdech	x0, w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqdech	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqdech	z0.h
 # STREAMING-NEXT:     1      4     0.50                        sqdech	z0.h, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqdech	z0.h, pow2
@@ -5690,15 +5690,15 @@
 # STREAMING-NEXT:     1      4     0.50                        sqdecp	z0.d, p0.d
 # STREAMING-NEXT:     1      4     0.50                        sqdecp	z0.h, p0.h
 # STREAMING-NEXT:     1      4     0.50                        sqdecp	z0.s, p0.s
-# STREAMING-NEXT:     1      5     1.00                        sqdecw	x0
-# STREAMING-NEXT:     1      5     1.00                        sqdecw	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        sqdecw	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdecw	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqdecw	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        sqdecw	x0, w0
-# STREAMING-NEXT:     1      5     1.00                        sqdecw	x0, w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqdecw	x0, w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqdecw	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdecw	x0
+# STREAMING-NEXT:     1      4     0.50                        sqdecw	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        sqdecw	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdecw	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqdecw	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        sqdecw	x0, w0
+# STREAMING-NEXT:     1      4     0.50                        sqdecw	x0, w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqdecw	x0, w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqdecw	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqdecw	z0.s
 # STREAMING-NEXT:     1      4     0.50                        sqdecw	z0.s, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqdecw	z0.s, pow2
@@ -5746,37 +5746,37 @@
 # STREAMING-NEXT:     1      4     0.50                        sqdmullt	z0.s, z1.h, z7.h[7]
 # STREAMING-NEXT:     1      4     0.50                        sqdmullt	z29.s, z30.h, z31.h
 # STREAMING-NEXT:     1      4     0.50                        sqdmullt	z31.d, z31.s, z31.s
-# STREAMING-NEXT:     1      5     1.00                        sqincb	x0
-# STREAMING-NEXT:     1      5     1.00                        sqincb	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        sqincb	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqincb	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqincb	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        sqincb	x0, w0
-# STREAMING-NEXT:     1      5     1.00                        sqincb	x0, w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqincb	x0, w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqincb	x0, w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqincd	x0
-# STREAMING-NEXT:     1      5     1.00                        sqincd	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        sqincd	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqincd	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqincd	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        sqincd	x0, w0
-# STREAMING-NEXT:     1      5     1.00                        sqincd	x0, w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqincd	x0, w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqincd	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqincb	x0
+# STREAMING-NEXT:     1      4     0.50                        sqincb	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        sqincb	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqincb	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqincb	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        sqincb	x0, w0
+# STREAMING-NEXT:     1      4     0.50                        sqincb	x0, w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqincb	x0, w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqincb	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqincd	x0
+# STREAMING-NEXT:     1      4     0.50                        sqincd	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        sqincd	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqincd	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqincd	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        sqincd	x0, w0
+# STREAMING-NEXT:     1      4     0.50                        sqincd	x0, w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqincd	x0, w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqincd	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqincd	z0.d
 # STREAMING-NEXT:     1      4     0.50                        sqincd	z0.d, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqincd	z0.d, pow2
 # STREAMING-NEXT:     1      4     0.50                        sqincd	z0.d, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqinch	x0
-# STREAMING-NEXT:     1      5     1.00                        sqinch	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        sqinch	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqinch	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqinch	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        sqinch	x0, w0
-# STREAMING-NEXT:     1      5     1.00                        sqinch	x0, w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqinch	x0, w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqinch	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqinch	x0
+# STREAMING-NEXT:     1      4     0.50                        sqinch	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        sqinch	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqinch	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqinch	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        sqinch	x0, w0
+# STREAMING-NEXT:     1      4     0.50                        sqinch	x0, w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqinch	x0, w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqinch	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqinch	z0.h
 # STREAMING-NEXT:     1      4     0.50                        sqinch	z0.h, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqinch	z0.h, pow2
@@ -5792,15 +5792,15 @@
 # STREAMING-NEXT:     1      4     0.50                        sqincp	z0.d, p0.d
 # STREAMING-NEXT:     1      4     0.50                        sqincp	z0.h, p0.h
 # STREAMING-NEXT:     1      4     0.50                        sqincp	z0.s, p0.s
-# STREAMING-NEXT:     1      5     1.00                        sqincw	x0
-# STREAMING-NEXT:     1      5     1.00                        sqincw	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        sqincw	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqincw	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqincw	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        sqincw	x0, w0
-# STREAMING-NEXT:     1      5     1.00                        sqincw	x0, w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        sqincw	x0, w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        sqincw	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqincw	x0
+# STREAMING-NEXT:     1      4     0.50                        sqincw	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        sqincw	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqincw	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqincw	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        sqincw	x0, w0
+# STREAMING-NEXT:     1      4     0.50                        sqincw	x0, w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        sqincw	x0, w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        sqincw	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqincw	z0.s
 # STREAMING-NEXT:     1      4     0.50                        sqincw	z0.s, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        sqincw	z0.s, pow2
@@ -6493,37 +6493,37 @@
 # STREAMING-NEXT:     1      4     0.50                        uqadd	z31.d, z31.d, #65280
 # STREAMING-NEXT:     1      4     0.50                        uqadd	z31.h, z31.h, #65280
 # STREAMING-NEXT:     1      4     0.50                        uqadd	z31.s, z31.s, #65280
-# STREAMING-NEXT:     1      5     1.00                        uqdecb	w0
-# STREAMING-NEXT:     1      5     1.00                        uqdecb	w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdecb	w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqdecb	w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdecb	x0
-# STREAMING-NEXT:     1      5     1.00                        uqdecb	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        uqdecb	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdecb	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqdecb	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        uqdecd	w0
-# STREAMING-NEXT:     1      5     1.00                        uqdecd	w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdecd	w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqdecd	w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdecd	x0
-# STREAMING-NEXT:     1      5     1.00                        uqdecd	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        uqdecd	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdecd	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqdecd	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        uqdecb	w0
+# STREAMING-NEXT:     1      4     0.50                        uqdecb	w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdecb	w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqdecb	w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdecb	x0
+# STREAMING-NEXT:     1      4     0.50                        uqdecb	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        uqdecb	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdecb	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqdecb	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        uqdecd	w0
+# STREAMING-NEXT:     1      4     0.50                        uqdecd	w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdecd	w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqdecd	w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdecd	x0
+# STREAMING-NEXT:     1      4     0.50                        uqdecd	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        uqdecd	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdecd	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqdecd	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        uqdecd	z0.d
 # STREAMING-NEXT:     1      4     0.50                        uqdecd	z0.d, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        uqdecd	z0.d, pow2
 # STREAMING-NEXT:     1      4     0.50                        uqdecd	z0.d, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdech	w0
-# STREAMING-NEXT:     1      5     1.00                        uqdech	w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdech	w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqdech	w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdech	x0
-# STREAMING-NEXT:     1      5     1.00                        uqdech	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        uqdech	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdech	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqdech	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        uqdech	w0
+# STREAMING-NEXT:     1      4     0.50                        uqdech	w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdech	w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqdech	w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdech	x0
+# STREAMING-NEXT:     1      4     0.50                        uqdech	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        uqdech	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdech	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqdech	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        uqdech	z0.h
 # STREAMING-NEXT:     1      4     0.50                        uqdech	z0.h, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        uqdech	z0.h, pow2
@@ -6539,50 +6539,50 @@
 # STREAMING-NEXT:     1      4     0.50                        uqdecp	z0.d, p0.d
 # STREAMING-NEXT:     1      4     0.50                        uqdecp	z0.h, p0.h
 # STREAMING-NEXT:     1      4     0.50                        uqdecp	z0.s, p0.s
-# STREAMING-NEXT:     1      5     1.00                        uqdecw	w0
-# STREAMING-NEXT:     1      5     1.00                        uqdecw	w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdecw	w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqdecw	w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdecw	x0
-# STREAMING-NEXT:     1      5     1.00                        uqdecw	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        uqdecw	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqdecw	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqdecw	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        uqdecw	w0
+# STREAMING-NEXT:     1      4     0.50                        uqdecw	w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdecw	w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqdecw	w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdecw	x0
+# STREAMING-NEXT:     1      4     0.50                        uqdecw	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        uqdecw	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqdecw	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqdecw	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        uqdecw	z0.s
 # STREAMING-NEXT:     1      4     0.50                        uqdecw	z0.s, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        uqdecw	z0.s, pow2
 # STREAMING-NEXT:     1      4     0.50                        uqdecw	z0.s, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincb	w0
-# STREAMING-NEXT:     1      5     1.00                        uqincb	w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincb	w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqincb	w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincb	x0
-# STREAMING-NEXT:     1      5     1.00                        uqincb	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        uqincb	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincb	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqincb	x0, vl1
-# STREAMING-NEXT:     1      5     1.00                        uqincd	w0
-# STREAMING-NEXT:     1      5     1.00                        uqincd	w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincd	w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqincd	w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincd	x0
-# STREAMING-NEXT:     1      5     1.00                        uqincd	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        uqincd	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincd	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqincd	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        uqincb	w0
+# STREAMING-NEXT:     1      4     0.50                        uqincb	w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqincb	w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqincb	w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqincb	x0
+# STREAMING-NEXT:     1      4     0.50                        uqincb	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        uqincb	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqincb	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqincb	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        uqincd	w0
+# STREAMING-NEXT:     1      4     0.50                        uqincd	w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqincd	w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqincd	w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqincd	x0
+# STREAMING-NEXT:     1      4     0.50                        uqincd	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        uqincd	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqincd	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqincd	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        uqincd	z0.d
 # STREAMING-NEXT:     1      4     0.50                        uqincd	z0.d, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        uqincd	z0.d, pow2
 # STREAMING-NEXT:     1      4     0.50                        uqincd	z0.d, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqinch	w0
-# STREAMING-NEXT:     1      5     1.00                        uqinch	w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqinch	w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqinch	w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqinch	x0
-# STREAMING-NEXT:     1      5     1.00                        uqinch	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        uqinch	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqinch	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqinch	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        uqinch	w0
+# STREAMING-NEXT:     1      4     0.50                        uqinch	w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqinch	w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqinch	w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqinch	x0
+# STREAMING-NEXT:     1      4     0.50                        uqinch	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        uqinch	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqinch	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqinch	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        uqinch	z0.h
 # STREAMING-NEXT:     1      4     0.50                        uqinch	z0.h, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        uqinch	z0.h, pow2
@@ -6598,15 +6598,15 @@
 # STREAMING-NEXT:     1      4     0.50                        uqincp	z0.d, p0.d
 # STREAMING-NEXT:     1      4     0.50                        uqincp	z0.h, p0.h
 # STREAMING-NEXT:     1      4     0.50                        uqincp	z0.s, p0.s
-# STREAMING-NEXT:     1      5     1.00                        uqincw	w0
-# STREAMING-NEXT:     1      5     1.00                        uqincw	w0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincw	w0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqincw	w0, pow2, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincw	x0
-# STREAMING-NEXT:     1      5     1.00                        uqincw	x0, #14
-# STREAMING-NEXT:     1      5     1.00                        uqincw	x0, all, mul #16
-# STREAMING-NEXT:     1      5     1.00                        uqincw	x0, pow2
-# STREAMING-NEXT:     1      5     1.00                        uqincw	x0, vl1
+# STREAMING-NEXT:     1      4     0.50                        uqincw	w0
+# STREAMING-NEXT:     1      4     0.50                        uqincw	w0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqincw	w0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqincw	w0, pow2, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqincw	x0
+# STREAMING-NEXT:     1      4     0.50                        uqincw	x0, #14
+# STREAMING-NEXT:     1      4     0.50                        uqincw	x0, all, mul #16
+# STREAMING-NEXT:     1      4     0.50                        uqincw	x0, pow2
+# STREAMING-NEXT:     1      4     0.50                        uqincw	x0, vl1
 # STREAMING-NEXT:     1      4     0.50                        uqincw	z0.s
 # STREAMING-NEXT:     1      4     0.50                        uqincw	z0.s, all, mul #16
 # STREAMING-NEXT:     1      4     0.50                        uqincw	z0.s, pow2
@@ -6936,7 +6936,7 @@
 
 # STREAMING:         Resource pressure per iteration:
 # STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]
-# STREAMING-NEXT:    2.67   2.67   2.67    -      -      -      -      -     369.00 54.00  9.00   205.00 211.00  -      -     372.50 175.50  -      -      -      -     122.00 1283.50 1.50  179.00 730.50 1.50   179.00  -     181.50 2033.50  -     -     184.50 172.50 6.00   6.00   435.00
+# STREAMING-NEXT:    2.67   2.67   2.67    -      -      -      -      -     225.00 14.00  9.00   245.00 211.00  -      -     464.50 267.50  -      -      -      -     122.00 1283.50 1.50  179.00 730.50 1.50   179.00  -     241.50 2093.50  -     -     184.50 172.50 6.00   6.00   435.00
 
 # NONSTREAMING:      Resource pressure by instruction:
 # NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [1.3]  [1.4]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [12.2] [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   Instructions:
@@ -10829,21 +10829,21 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ctermne	wzr, w30
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ctermne	x30, xzr
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     ctermne	xzr, x30
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decb	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decd	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dech	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decp	x0, p0.b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decp	x0, p0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decp	x0, p0.h
@@ -10855,11 +10855,11 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decp	z31.d, p15.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decp	z31.h, p15.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decp	z31.s, p15.s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     decw	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dupm	z0.d, #0xfffffffffffffff9
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dupm	z0.s, #0xfffffff9
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     dupm	z23.h, #0xfff9
@@ -11246,23 +11246,23 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     histcnt	z0.s, p0/z, z1.s, z2.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     histcnt	z29.d, p7/z, z30.d, z31.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -      -     histseg	z0.b, z1.b, z31.b
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incb	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incd	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     incd	z0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     incd	z0.d, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     inch	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     inch	z0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     inch	z0.h, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incp	x0, p0.b
@@ -11276,11 +11276,11 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incp	z31.d, p15.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incp	z31.h, p15.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incp	z31.s, p15.s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     incw	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     incw	z0.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     incw	z0.s, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.50   2.50    -      -      -      -      -     3.00    -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     index	z0.b, #0, #0
@@ -11561,46 +11561,46 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld2w	{ z21.s, z22.s }, p5/z, [x10, #10, mul vl]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld2w	{ z23.s, z24.s }, p3/z, [x13, #-16, mul vl]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld2w	{ z5.s, z6.s }, p3/z, [x17, x16, lsl #2]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3b	{ z0.b - z2.b }, p0/z, [x0, x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3b	{ z0.b - z2.b }, p0/z, [x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3b	{ z21.b - z23.b }, p5/z, [x10, #15, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3b	{ z23.b - z25.b }, p3/z, [x13, #-24, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3b	{ z5.b - z7.b }, p3/z, [x17, x16]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3d	{ z0.d - z2.d }, p0/z, [x0, x0, lsl #3]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3d	{ z0.d - z2.d }, p0/z, [x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3d	{ z21.d - z23.d }, p5/z, [x10, #15, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3d	{ z23.d - z25.d }, p3/z, [x13, #-24, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3d	{ z5.d - z7.d }, p3/z, [x17, x16, lsl #3]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3h	{ z0.h - z2.h }, p0/z, [x0, x0, lsl #1]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3h	{ z0.h - z2.h }, p0/z, [x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3h	{ z21.h - z23.h }, p5/z, [x10, #15, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3h	{ z23.h - z25.h }, p3/z, [x13, #-24, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3h	{ z5.h - z7.h }, p3/z, [x17, x16, lsl #1]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3w	{ z0.s - z2.s }, p0/z, [x0, x0, lsl #2]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3w	{ z0.s - z2.s }, p0/z, [x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3w	{ z21.s - z23.s }, p5/z, [x10, #15, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3w	{ z23.s - z25.s }, p3/z, [x13, #-24, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld3w	{ z5.s - z7.s }, p3/z, [x17, x16, lsl #2]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4b	{ z0.b - z3.b }, p0/z, [x0, x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4b	{ z0.b - z3.b }, p0/z, [x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4b	{ z21.b - z24.b }, p5/z, [x10, #20, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4b	{ z23.b - z26.b }, p3/z, [x13, #-32, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4b	{ z5.b - z8.b }, p3/z, [x17, x16]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4d	{ z0.d - z3.d }, p0/z, [x0, x0, lsl #3]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4d	{ z0.d - z3.d }, p0/z, [x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4d	{ z21.d - z24.d }, p5/z, [x10, #20, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4d	{ z23.d - z26.d }, p3/z, [x13, #-32, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4d	{ z5.d - z8.d }, p3/z, [x17, x16, lsl #3]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4h	{ z0.h - z3.h }, p0/z, [x0, x0, lsl #1]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4h	{ z0.h - z3.h }, p0/z, [x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4h	{ z21.h - z24.h }, p5/z, [x10, #20, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4h	{ z23.h - z26.h }, p3/z, [x13, #-32, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4h	{ z5.h - z8.h }, p3/z, [x17, x16, lsl #1]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4w	{ z0.s - z3.s }, p0/z, [x0, x0, lsl #2]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4w	{ z0.s - z3.s }, p0/z, [x0]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4w	{ z21.s - z24.s }, p5/z, [x10, #20, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4w	{ z23.s - z26.s }, p3/z, [x13, #-32, mul vl]
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -     ld4w	{ z5.s - z8.s }, p3/z, [x17, x16, lsl #2]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3b	{ z0.b - z2.b }, p0/z, [x0, x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3b	{ z0.b - z2.b }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3b	{ z21.b - z23.b }, p5/z, [x10, #15, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3b	{ z23.b - z25.b }, p3/z, [x13, #-24, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3b	{ z5.b - z7.b }, p3/z, [x17, x16]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3d	{ z0.d - z2.d }, p0/z, [x0, x0, lsl #3]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3d	{ z0.d - z2.d }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3d	{ z21.d - z23.d }, p5/z, [x10, #15, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3d	{ z23.d - z25.d }, p3/z, [x13, #-24, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3d	{ z5.d - z7.d }, p3/z, [x17, x16, lsl #3]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3h	{ z0.h - z2.h }, p0/z, [x0, x0, lsl #1]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3h	{ z0.h - z2.h }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3h	{ z21.h - z23.h }, p5/z, [x10, #15, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3h	{ z23.h - z25.h }, p3/z, [x13, #-24, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3h	{ z5.h - z7.h }, p3/z, [x17, x16, lsl #1]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3w	{ z0.s - z2.s }, p0/z, [x0, x0, lsl #2]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3w	{ z0.s - z2.s }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3w	{ z21.s - z23.s }, p5/z, [x10, #15, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3w	{ z23.s - z25.s }, p3/z, [x13, #-24, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld3w	{ z5.s - z7.s }, p3/z, [x17, x16, lsl #2]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4b	{ z0.b - z3.b }, p0/z, [x0, x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4b	{ z0.b - z3.b }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4b	{ z21.b - z24.b }, p5/z, [x10, #20, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4b	{ z23.b - z26.b }, p3/z, [x13, #-32, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4b	{ z5.b - z8.b }, p3/z, [x17, x16]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4d	{ z0.d - z3.d }, p0/z, [x0, x0, lsl #3]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4d	{ z0.d - z3.d }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4d	{ z21.d - z24.d }, p5/z, [x10, #20, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4d	{ z23.d - z26.d }, p3/z, [x13, #-32, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4d	{ z5.d - z8.d }, p3/z, [x17, x16, lsl #3]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4h	{ z0.h - z3.h }, p0/z, [x0, x0, lsl #1]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4h	{ z0.h - z3.h }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4h	{ z21.h - z24.h }, p5/z, [x10, #20, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4h	{ z23.h - z26.h }, p3/z, [x13, #-32, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4h	{ z5.h - z8.h }, p3/z, [x17, x16, lsl #1]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4w	{ z0.s - z3.s }, p0/z, [x0, x0, lsl #2]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4w	{ z0.s - z3.s }, p0/z, [x0]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4w	{ z21.s - z24.s }, p5/z, [x10, #20, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4w	{ z23.s - z26.s }, p3/z, [x13, #-32, mul vl]
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -     ld4w	{ z5.s - z8.s }, p3/z, [x17, x16, lsl #2]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1b	{ z0.d }, p0/z, [x0, x0]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     6.00    -      -      -      -      -      -      -     ldff1b	{ z0.d }, p0/z, [z0.d]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -     ldff1b	{ z0.h }, p0/z, [x0, x0]
@@ -12566,37 +12566,37 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqcadd	z31.d, z31.d, z31.d, #270
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqcadd	z31.h, z31.h, z31.h, #270
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqcadd	z31.s, z31.s, z31.s, #270
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecb	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	z0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	z0.d, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	z0.d, pow2
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdecd	z0.d, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdech	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdech	z0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdech	z0.h, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdech	z0.h, pow2
@@ -12612,15 +12612,15 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sqdecp	z0.d, p0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sqdecp	z0.h, p0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sqdecp	z0.s, p0.s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	z0.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	z0.s, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqdecw	z0.s, pow2
@@ -12668,37 +12668,37 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -     sqdmullt	z0.s, z1.h, z7.h[7]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -     sqdmullt	z29.s, z30.h, z31.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -     sqdmullt	z31.d, z31.s, z31.s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincb	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincd	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqincd	z0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqincd	z0.d, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqincd	z0.d, pow2
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqincd	z0.d, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqinch	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqinch	z0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqinch	z0.h, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqinch	z0.h, pow2
@@ -12714,15 +12714,15 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sqincp	z0.d, p0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sqincp	z0.h, p0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     sqincp	z0.s, p0.s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sqincw	x0, w0, pow2, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqincw	z0.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqincw	z0.s, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     sqincw	z0.s, pow2
@@ -13415,37 +13415,37 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqadd	z31.d, z31.d, #65280
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqadd	z31.h, z31.h, #65280
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqadd	z31.s, z31.s, #65280
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecb	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	z0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	z0.d, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	z0.d, pow2
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdecd	z0.d, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdech	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdech	z0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdech	z0.h, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdech	z0.h, pow2
@@ -13461,50 +13461,50 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uqdecp	z0.d, p0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uqdecp	z0.h, p0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uqdecp	z0.s, p0.s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	z0.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	z0.s, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	z0.s, pow2
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqdecw	z0.s, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0, vl1
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincb	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincd	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqincd	z0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqincd	z0.d, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqincd	z0.d, pow2
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqincd	z0.d, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqinch	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqinch	z0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqinch	z0.h, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqinch	z0.h, pow2
@@ -13520,15 +13520,15 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uqincp	z0.d, p0.d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uqincp	z0.h, p0.h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     uqincp	z0.s, p0.s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	w0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	w0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	w0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	w0, pow2, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0, #14
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0, all, mul #16
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0, pow2
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0, vl1
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	w0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	w0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	w0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	w0, pow2, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0, #14
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0, all, mul #16
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0, pow2
+# STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uqincw	x0, vl1
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqincw	z0.s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqincw	z0.s, all, mul #16
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -     uqincw	z0.s, pow2

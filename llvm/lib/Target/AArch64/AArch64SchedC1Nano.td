@@ -107,6 +107,7 @@ def C1NanoUnitCMEPERM  : ProcResGroup<[C1NanoUnitCMEPERMS, C1NanoUnitCMEPERMF]>;
 // Workaround for throughput being fractional on a single resource
 def C1NanoUnit2CMEPERM  : ProcResGroup<[C1NanoUnitCMEPERMS, C1NanoUnitCMEPERMS, C1NanoUnitCMEPERMF, C1NanoUnitCMEPERMF]>;
 def C1NanoUnit2CMEPERMF : ProcResGroup<[C1NanoUnitCMEPERMF, C1NanoUnitCMEPERMF]>;
+def C1NanoUnit2CMEPF : ProcResGroup<[C1NanoUnitCMEPF, C1NanoUnitCMEPF]>;
 def C1NanoUnit2CMEVX0ALU : ProcResGroup<[C1NanoUnitCMEVX0ALU, C1NanoUnitCMEVX0ALU]>;
 def C1NanoUnit2CMELD : ProcResGroup<[C1NanoUnitCMELD, C1NanoUnitCMELD]>;
 def C1NanoUnit3CMEPERMF : ProcResource<3>;
@@ -357,12 +358,14 @@ def C1NanoWrite_1c_1CMERNMRET    : C1NanoCMEWrite<1, [C1NanoUnitCMERNMRET]>;
 
 def C1NanoWrite_2c_1CMELD        : C1NanoCMEWrite<2, [C1NanoUnitCMELD]>;
 def C1NanoWrite_2c_1CMELD_1rc    : C1NanoCMEWriteRC<2, [C1NanoUnitCMELD], [1]>;
+def C1NanoWrite_2c_1CMELD_2rc    : C1NanoCMEWriteRC<2, [C1NanoUnitCMELD], [2]>;
 
 def C1NanoWrite_2c_1Ld_1CMELD    : C1NanoCMEWrite<2, [C1NanoUnitLd, C1NanoUnitCMELD]>;
-def C1NanoWrite_2c_1Ld_1CMELD_1d2rc: C1NanoCMEWriteRC<2, [C1NanoUnit2Ld, C1NanoUnit2CMELD], [1, 1]>;
+def C1NanoWrite_2c_1Ld_1CMELD_2rc: C1NanoCMEWriteRC<2, [C1NanoUnitLd, C1NanoUnitCMELD], [4, 2]>;
 
 def C1NanoWrite_2c_1CMEST        : C1NanoCMEWrite<2, [C1NanoUnitCMEST]>;
 def C1NanoWrite_2c_1CMEST_1rc    : C1NanoCMEWriteRC<2, [C1NanoUnitCMEST], [1]>;
+def C1NanoWrite_2c_1CMEST_2rc    : C1NanoCMEWriteRC<2, [C1NanoUnitCMEST], [2]>;
 
 def C1NanoWrite_2c_1LdSt_1CMEST  : C1NanoCMEWrite<2, [C1NanoUnitLdSt, C1NanoUnitCMEST]>;
 def C1NanoWrite_2c_2LdSt_1CMEST  : C1NanoCMEWrite<2, [C1NanoUnitLdSt, C1NanoUnitLdSt,
@@ -373,6 +376,7 @@ def C1NanoWrite_1c_1CMEPERM_1rc  : C1NanoCMEWriteRC<1, [C1NanoUnitCMEPERM], [2]>
 def C1NanoWrite_4c_1CMEPERM      : C1NanoCMEWrite<4, [C1NanoUnit2CMEPERM]>;
 def C1NanoWrite_4c_1CMEPERM_1rc  : C1NanoCMEWriteRC<4, [C1NanoUnitCMEPERM], [2]>;
 def C1NanoWrite_4c_1CMEPERM_2rc  : C1NanoCMEWriteRC<4, [C1NanoUnitCMEPERM], [2]>;
+def C1NanoWrite_5c_1CMEPERM      : C1NanoCMEWrite<5, [C1NanoUnit2CMEPERM]>;
 def C1NanoWrite_5c_1CMEPERM_2rc  : C1NanoCMEWriteRC<5, [C1NanoUnitCMEPERM], [4]>;
 
 def C1NanoWrite_4c_1CMEPERMF     : C1NanoCMEWrite<4, [C1NanoUnitCMEPERMF]>;
@@ -436,6 +440,7 @@ def C1NanoWrite_4c_1CMEVXMUL     : C1NanoCMEWrite<4, [C1NanoUnitCMEVXMUL]>;
 def C1NanoWrite_8c_1CMEVXMUL_rc1 : C1NanoCMEWriteRC<8, [C1NanoUnitCMEVXMUL], [2]>;
 
 def C1NanoWrite_2c_1CMEPF_2rc : C1NanoCMEWriteRC<2, [C1NanoUnitCMEPF], [2]>;
+def C1NanoWrite_1c_1CMEPF : C1NanoCMEWrite<1, [C1NanoUnit2CMEPF]>;
 
 def C1NanoWrite_4c_1CMEVXALU_5d6rc : C1NanoCMEWriteRC<4, [C1NanoUnit5CMEVXALU], [6]>;
 def C1NanoWrite_5c_1CMEVXALU_1rc : C1NanoCMEWriteRC<5, [C1NanoUnitCMEVXALU], [2]>;
@@ -1494,10 +1499,12 @@ def : InstRW<[C1NanoWrite_1c_1ALU], (instrs ADDPL_XXI, ADDVL_XXI, RDVLI_XI)>;
 def : InstRW<[C1NanoWrite_1c_1ALU0],
              (instregex "^CNT[BHWD]_XPiI")>;
 
-def : InstRW<[C1NanoWrite<1, C1NanoUnitALU1>],
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEPERM,
+                                        C1NanoWrite<1, C1NanoUnitALU1>>],
              (instregex "^(INC|DEC)[BHWD]_XPiI")>;
 
-def : InstRW<[C1NanoWrite_5c_1ALU0],
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_4c_1CMEPERM,
+                                        C1NanoWrite_5c_1ALU0>],
              (instregex "^(SQINC|SQDEC|UQINC|UQDEC)[BHWD]_[XW]Pi(Wd)?I")>;
 
 // Predicate counting scalar, active predicate
@@ -2434,22 +2441,22 @@ def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_2c_1Ld_1CMELD,
                (instregex "^LD2[BHWD]$")>;
 
 // Contiguous Load three structures to three vectors, scalar + imm
-def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_2c_1Ld_1CMELD_1d2rc,
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_2c_1Ld_1CMELD_2rc,
                                         C1NanoWrite_5c_1LdSt_3rc>],
                (instregex "^LD3[BHWD]_IMM$")>;
 
 // Contiguous Load three structures to three vectors, scalar + scalar
-def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_2c_1Ld_1CMELD_1d2rc,
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_2c_1Ld_1CMELD_2rc,
                                         C1NanoWrite_5c_1LdSt_4rc>],
                (instregex "^LD3[BHWD]$")>;
 
 // Contiguous Load four structures to four vectors, scalar + imm
-def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_2c_1Ld_1CMELD_1d2rc,
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_2c_1Ld_1CMELD_2rc,
                                         C1NanoWrite_5c_1LdSt_3rc>],
                (instregex "^LD4[BHWD]_IMM$")>;
 
 // Contiguous Load four structures to four vectors, scalar + scalar
-def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_2c_1Ld_1CMELD_1d2rc,
+def : InstRW<[C1NanoStreamingSchedWrite<C1NanoWrite_2c_1Ld_1CMELD_2rc,
                                         C1NanoWrite_5c_1LdSt_4rc>],
                (instregex "^LD4[BHWD]$")>;
 
@@ -2824,7 +2831,7 @@ def : InstRW<[C1NanoWrite_4c_1CMEPERM_2rc],
                         "^(ZIP|UZP)_VG4_4Z4Z")>;
 def : InstRW<[C1NanoWrite_4c_1CMEPERM_1rc],
              (instregex "^SEL_VG2_2ZC2Z2Z_")>;
-def : InstRW<[C1NanoWrite_5c_1CMEPERM_2rc],
+def : InstRW<[C1NanoWrite_5c_1CMEPERM],
              (instregex "^SEL_VG4_4ZC4Z4Z_")>;
 def : InstRW<[C1NanoWrite_5c_1CMEMML0_1rc],
              (instregex "^MOVA_MXI2Z_", "^MOVA_VG2_MXI2Z(_PSEUDO)?$",
@@ -2857,30 +2864,42 @@ def : InstRW<[C1NanoWrite_2c_1CMELD],
              (instregex "^LD(NT)?1(B|H|W|D)_2Z(_.*)?$",
                         "^LDR_(PPXI|TX(_PSEUDO)?)$",
                         "^LDR_ZZXI(_STRIDED_CONTIGUOUS)?$")>;
-def : InstRW<[C1NanoWrite_2c_1CMELD_1rc],
+def : InstRW<[C1NanoWrite_2c_1CMELD_2rc],
              // 3-reg fill pseudos expand to repeated 1-reg loads, so reuse the
              // widest SME load bucket when there is no dedicated guide row.
              (instregex "^LD(NT)?1(B|H|W|D)_4Z(_.*)?$",
                         "^LDR_ZZZXI$",
                         "^LDR_ZZZZXI(_STRIDED_CONTIGUOUS)?$")>;
 def : InstRW<[C1NanoWrite_7c_1Ld_1CMELD],
-             (instregex "^LD1_MXIPXX_[HV](_PSEUDO)?_[BDHSQ]$")>;
+             (instregex "^LD1_MXIPXX_[HV](_PSEUDO)?_[BDHS]$")>;
+def : InstRW<[C1NanoWrite_2c_1Ld_1CMELD],
+             (instregex "^LD1_MXIPXX_[HV](_PSEUDO)?_Q$")>;
 def : InstRW<[C1NanoWrite_7c_1Ld_1CMELD],
              (instregex "^LDR_ZA(_PSEUDO)?")>;
 def : InstRW<[C1NanoWrite_2c_1CMEST],
              (instregex "^([Ss][Tt](NT)?1([Bb]|[Hh]|[Ww]|[Dd]))_2[Zz](_.*)?$",
                         "^STR_(PPXI|TX(_PSEUDO)?)$",
                         "^STR_ZZXI(_STRIDED_CONTIGUOUS)?$")>;
-def : InstRW<[C1NanoWrite_2c_1CMEST_1rc],
+def : InstRW<[C1NanoWrite_2c_1CMEST_2rc],
              // 3-reg spill pseudos expand to repeated 1-reg stores, so reuse the
              // widest SME store bucket when there is no dedicated guide row.
              (instregex "^([Ss][Tt](NT)?1([Bb]|[Hh]|[Ww]|[Dd]))_4[Zz](_.*)?$",
                         "^STR_ZZZXI$",
                         "^STR_ZZZZXI(_STRIDED_CONTIGUOUS)?$")>;
 def : InstRW<[C1NanoWrite_11c_1LdSt_1CMEST],
-             (instregex "^ST1_MXIPXX_[HV]_[BDHSQ]$")>;
+             (instregex "^ST1_MXIPXX_[HV]_[BDHS]$")>;
+def : InstRW<[C1NanoWrite_2c_1LdSt_1CMEST],
+             (instregex "^ST1_MXIPXX_[HV]_Q$")>;
 def : InstRW<[C1NanoWrite_11c_1LdSt_1CMEST],
              (instregex "^STR_ZA(_PSEUDO)?")>;
 def : InstRW<[C1NanoWrite_2c_1CMEPF_2rc],
              (instrs RPRFM)>;
+
+// SYS instructions
+// -----------------------------------------------------------------------------
+// This should have a latency of 0.5, but we cannot specify fractional
+// latencies so defaulting to 1
+def : InstRW<[C1NanoWrite_1c_1CMEPF],
+             (instrs SYSxt)>;
+
 }
