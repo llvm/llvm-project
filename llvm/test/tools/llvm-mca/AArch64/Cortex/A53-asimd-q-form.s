@@ -35,10 +35,10 @@ faddp	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      10    2.00                        fmla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      10    2.00                        fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT:  1      10    1.00                        fmla	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      10    1.00                        fmadd	s0, s1, s2, s3
+# CHECK-NEXT:  1      8     2.00                        fmla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      8     2.00                        fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT:  1      8     1.00                        fmla	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      8     1.00                        fmadd	s0, s1, s2, s3
 # CHECK-NEXT:  1      6     2.00                        fadd	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     1.00                        fadd	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      2     2.00                        add	v0.4s, v1.4s, v2.4s
