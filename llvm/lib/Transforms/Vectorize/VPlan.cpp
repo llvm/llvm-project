@@ -1110,8 +1110,24 @@ static VPRegionBlock *findVectorLoopRegion(VPBlockBase *Entry) {
   return nullptr;
 }
 
+#ifdef EXPENSIVE_CHECKS
+// Reference lookup that scans every top-level block. Used only to validate
+// findVectorLoopRegion() when the invariants of the last-successor walk change.
+static VPRegionBlock *findVectorLoopRegionByScan(VPBlockBase *Entry) {
+  for (VPBlockBase *B : vp_depth_first_shallow(Entry))
+    if (auto *R = dyn_cast<VPRegionBlock>(B))
+      return R->isReplicator() ? nullptr : R;
+  return nullptr;
+}
+#endif
+
 VPRegionBlock *VPlan::getVectorLoopRegion() {
-  return findVectorLoopRegion(getEntry());
+  VPRegionBlock *LoopRegion = findVectorLoopRegion(getEntry());
+#ifdef EXPENSIVE_CHECKS
+  assert(LoopRegion == findVectorLoopRegionByScan(getEntry()) &&
+         "fast vector loop region lookup disagrees with full CFG scan");
+#endif
+  return LoopRegion;
 }
 
 const VPRegionBlock *VPlan::getVectorLoopRegion() const {
