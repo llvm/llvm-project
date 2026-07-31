@@ -641,25 +641,33 @@ exit:
 define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double(ptr %src, ptr %src2, ptr %dst, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    index z7.d, #0, #4
-; CHECK-NEXT:    mov z2.d, #0xffffffffffff0000
-; CHECK-NEXT:    mov z5.d, #0xffffffffffff0001
-; CHECK-NEXT:    mov x9, #-65534 // =0xffffffffffff0002
-; CHECK-NEXT:    mov z24.d, #0xffffffffffff0003
+; CHECK-NEXT:    cnth x9
+; CHECK-NEXT:    index z7.d, #0, #-4
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z6.d, x9
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    add x9, x1, #8
-; CHECK-NEXT:    add z4.d, z7.d, z2.d
+; CHECK-NEXT:    sub x10, x9, #16, lsl #12 // =65536
+; CHECK-NEXT:    sub x11, x9, #16, lsl #12 // =65536
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEXT:    sub x10, x10, #4
+; CHECK-NEXT:    sub x11, x11, #3
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    cntw x10
+; CHECK-NEXT:    mov z1.d, x10
+; CHECK-NEXT:    sub x10, x9, #16, lsl #12 // =65536
+; CHECK-NEXT:    sub x9, x9, #16, lsl #12 // =65536
+; CHECK-NEXT:    sub x10, x10, #2
+; CHECK-NEXT:    sub x9, x9, #1
+; CHECK-NEXT:    mov z5.d, x11
+; CHECK-NEXT:    mov z6.d, x10
+; CHECK-NEXT:    mov z24.d, x9
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    add z3.d, z7.d, z1.d
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    add z5.d, z7.d, z5.d
+; CHECK-NEXT:    add x9, x1, #8
+; CHECK-NEXT:    cntw x10
 ; CHECK-NEXT:    add z6.d, z7.d, z6.d
-; CHECK-NEXT:    rdvl x11, #2
 ; CHECK-NEXT:    add z7.d, z7.d, z24.d
+; CHECK-NEXT:    rdvl x11, #2
 ; CHECK-NEXT:  .LBB8_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1h { z24.h }, p0/z, [x0]
@@ -667,11 +675,10 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double(ptr 
 ; CHECK-NEXT:    sub x8, x8, x10
 ; CHECK-NEXT:    cmn x8, #2048
 ; CHECK-NEXT:    add x0, x0, x11
-; CHECK-NEXT:    tbl z25.h, { z24.h }, z4.h
+; CHECK-NEXT:    tbl z25.h, { z24.h }, z3.h
 ; CHECK-NEXT:    tbl z26.h, { z24.h }, z5.h
 ; CHECK-NEXT:    tbl z27.h, { z24.h }, z6.h
 ; CHECK-NEXT:    tbl z24.h, { z24.h }, z7.h
-; CHECK-NEXT:    rev z28.d, z28.d
 ; CHECK-NEXT:    ucvtf z25.d, p1/m, z25.d
 ; CHECK-NEXT:    ucvtf z26.d, p1/m, z26.d
 ; CHECK-NEXT:    ucvtf z27.d, p1/m, z27.d
@@ -681,18 +688,18 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double(ptr 
 ; CHECK-NEXT:    fmul z27.d, z27.d, z28.d
 ; CHECK-NEXT:    fmul z24.d, z24.d, z28.d
 ; CHECK-NEXT:    fadd z0.d, z0.d, z25.d
-; CHECK-NEXT:    fadd z3.d, z3.d, z26.d
-; CHECK-NEXT:    fadd z1.d, z1.d, z27.d
-; CHECK-NEXT:    fadd z2.d, z2.d, z24.d
+; CHECK-NEXT:    fadd z4.d, z4.d, z26.d
+; CHECK-NEXT:    fadd z2.d, z2.d, z27.d
+; CHECK-NEXT:    fadd z1.d, z1.d, z24.d
 ; CHECK-NEXT:    b.ne .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    faddv d0, p1, z0.d
-; CHECK-NEXT:    faddv d3, p1, z3.d
-; CHECK-NEXT:    faddv d1, p1, z1.d
+; CHECK-NEXT:    faddv d3, p1, z4.d
 ; CHECK-NEXT:    faddv d2, p1, z2.d
+; CHECK-NEXT:    faddv d1, p1, z1.d
 ; CHECK-NEXT:    mov v0.d[1], v3.d[0]
-; CHECK-NEXT:    mov v1.d[1], v2.d[0]
-; CHECK-NEXT:    stp q0, q1, [x2]
+; CHECK-NEXT:    mov v2.d[1], v1.d[0]
+; CHECK-NEXT:    stp q0, q2, [x2]
 ; CHECK-NEXT:    ret
 entry:
   %vscale = tail call i64 @llvm.vscale.i64()
@@ -751,25 +758,30 @@ exit:
 define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_partial_coverage(ptr %src, ptr %src2, ptr %dst, <vscale x 8 x i1> %mask) #0 {
 ; CHECK-LABEL: uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_partial_coverage:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cnth x9
 ; CHECK-NEXT:    index z7.d, #0, #4
-; CHECK-NEXT:    mov z2.d, #0xffffffffffff0000
-; CHECK-NEXT:    mov z5.d, #0xffffffffffff0001
-; CHECK-NEXT:    mov x9, #-65534 // =0xffffffffffff0002
+; CHECK-NEXT:    index z5.d, #0, #-4
+; CHECK-NEXT:    sub x10, x9, #16, lsl #12 // =65536
+; CHECK-NEXT:    sub x9, x9, #16, lsl #12 // =65536
+; CHECK-NEXT:    mov z6.d, #0xffffffffffff0001
+; CHECK-NEXT:    sub x10, x10, #4
+; CHECK-NEXT:    sub x9, x9, #2
 ; CHECK-NEXT:    mov z24.d, #0xffffffffffff0003
+; CHECK-NEXT:    mov z4.d, x10
+; CHECK-NEXT:    mov z25.d, x9
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    mov z6.d, x9
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    add x9, x1, #8
-; CHECK-NEXT:    add z4.d, z7.d, z2.d
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    cntw x10
-; CHECK-NEXT:    add z5.d, z7.d, z5.d
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    add z6.d, z7.d, z6.d
-; CHECK-NEXT:    rdvl x11, #2
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    add z4.d, z5.d, z4.d
+; CHECK-NEXT:    add z5.d, z5.d, z25.d
 ; CHECK-NEXT:    add z7.d, z7.d, z24.d
+; CHECK-NEXT:    add x9, x1, #8
+; CHECK-NEXT:    cntw x10
+; CHECK-NEXT:    rdvl x11, #2
 ; CHECK-NEXT:  .LBB9_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld1h { z24.h }, p0/z, [x0]
@@ -778,31 +790,30 @@ define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_partial_cov
 ; CHECK-NEXT:    cmn x8, #2048
 ; CHECK-NEXT:    add x0, x0, x11
 ; CHECK-NEXT:    tbl z25.h, { z24.h }, z4.h
-; CHECK-NEXT:    tbl z26.h, { z24.h }, z5.h
-; CHECK-NEXT:    tbl z27.h, { z24.h }, z6.h
+; CHECK-NEXT:    tbl z26.h, { z24.h }, z6.h
+; CHECK-NEXT:    tbl z27.h, { z24.h }, z5.h
 ; CHECK-NEXT:    tbl z24.h, { z24.h }, z7.h
-; CHECK-NEXT:    rev z29.d, z28.d
 ; CHECK-NEXT:    ucvtf z25.d, p1/m, z25.d
 ; CHECK-NEXT:    ucvtf z26.d, p1/m, z26.d
 ; CHECK-NEXT:    ucvtf z27.d, p1/m, z27.d
 ; CHECK-NEXT:    ucvtf z24.d, p1/m, z24.d
-; CHECK-NEXT:    fmul z25.d, z25.d, z29.d
+; CHECK-NEXT:    fmul z25.d, z25.d, z28.d
 ; CHECK-NEXT:    fmul z26.d, z26.d, z28.d
-; CHECK-NEXT:    fmul z27.d, z27.d, z29.d
+; CHECK-NEXT:    fmul z27.d, z27.d, z28.d
 ; CHECK-NEXT:    fmul z24.d, z24.d, z28.d
 ; CHECK-NEXT:    fadd z0.d, z0.d, z25.d
 ; CHECK-NEXT:    fadd z3.d, z3.d, z26.d
-; CHECK-NEXT:    fadd z1.d, z1.d, z27.d
-; CHECK-NEXT:    fadd z2.d, z2.d, z24.d
+; CHECK-NEXT:    fadd z2.d, z2.d, z27.d
+; CHECK-NEXT:    fadd z1.d, z1.d, z24.d
 ; CHECK-NEXT:    b.ne .LBB9_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    faddv d0, p1, z0.d
 ; CHECK-NEXT:    faddv d3, p1, z3.d
-; CHECK-NEXT:    faddv d1, p1, z1.d
 ; CHECK-NEXT:    faddv d2, p1, z2.d
+; CHECK-NEXT:    faddv d1, p1, z1.d
 ; CHECK-NEXT:    mov v0.d[1], v3.d[0]
-; CHECK-NEXT:    mov v1.d[1], v2.d[0]
-; CHECK-NEXT:    stp q0, q1, [x2]
+; CHECK-NEXT:    mov v2.d[1], v1.d[0]
+; CHECK-NEXT:    stp q0, q2, [x2]
 ; CHECK-NEXT:    ret
 entry:
   %vscale = tail call i64 @llvm.vscale.i64()
