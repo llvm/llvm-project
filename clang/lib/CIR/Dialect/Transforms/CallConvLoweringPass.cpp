@@ -321,17 +321,38 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   return ArgClassification::getIgnore();
 }
 
+/// The number of leading arguments the classifier must treat as declared
+/// parameters, which is meaningful only for a variadic signature: an argument
+/// past the ellipsis is unnamed, and the x86_64 rules pass some unnamed types
+/// differently.  std::nullopt for a non-variadic signature, where every
+/// argument is declared.
+///
+/// The only x86_64 rule that reads this boundary today sends an unnamed vector
+/// wider than 128 bits to memory, and isSupportedType rejects every vector, so
+/// no input that currently reaches classification can observe the difference.
+static std::optional<unsigned> requiredArgCount(cir::FuncType fnTy) {
+  if (!fnTy.isVarArg())
+    return std::nullopt;
+  return fnTy.getNumInputs();
+}
+
 /// Classify an x86_64 SysV signature (return type + argument types) using the
-/// LLVM ABI library.  Shared by the cir.func path and the indirect-call path
-/// (which classifies from the callee function pointer's pointee FuncType).
-/// Returns std::nullopt and emits an NYI error via \p emitError if the
-/// signature uses a type the bridge does not handle yet.
+/// LLVM ABI library.  Shared by the cir.func path, the variadic-call path and
+/// the indirect-call path (the latter classifies from the callee function
+/// pointer's pointee FuncType).  \p numRequired is the number of leading
+/// entries in \p inputs that are declared parameters, set only for a variadic
+/// signature: the classifier treats the rest as arguments passed through the
+/// ellipsis.  Returns std::nullopt and emits an NYI error via \p emitError if
+/// the signature uses a type the bridge does not handle yet.
 static std::optional<FunctionClassification> classifyX86_64Signature(
-    mlir::Type retCIR, mlir::TypeRange inputs, MLIRContext *ctx,
-    const DataLayout &dl, mlir::abi::ABITypeMapper &typeMapper,
+    mlir::Type retCIR, mlir::TypeRange inputs,
+    std::optional<unsigned> numRequired, MLIRContext *ctx, const DataLayout &dl,
+    mlir::abi::ABITypeMapper &typeMapper,
     const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
   assert(retCIR && "signature return type must be non-null");
+  assert((!numRequired || *numRequired <= inputs.size()) &&
+         "declared parameters cannot outnumber the classified arguments");
   bool voidRet = isa<cir::VoidType>(retCIR);
 
   auto reject = [&](mlir::Type t) -> bool {
@@ -355,8 +376,8 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   for (mlir::Type a : inputs)
     argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
 
-  std::unique_ptr<llvm::abi::FunctionInfo> fi =
-      llvm::abi::FunctionInfo::create(llvm::CallingConv::C, retAbi, argAbi);
+  std::unique_ptr<llvm::abi::FunctionInfo> fi = llvm::abi::FunctionInfo::create(
+      llvm::CallingConv::C, retAbi, argAbi, numRequired);
   targetInfo.computeInfo(*fi);
 
   // convertABIArgInfo returns nullopt when the classifier picks a coercion
@@ -369,6 +390,7 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   };
 
   FunctionClassification fc;
+  fc.returnsVoid = voidRet;
   mlir::Type origRet = voidRet ? mlir::Type() : retCIR;
   std::optional<ArgClassification> retAc =
       convertABIArgInfo(fi->getReturnInfo(), ctx, origRet);
@@ -400,15 +422,67 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
                        ModuleOp modOp) {
   cir::FuncType fnTy = func.getFunctionType();
   return classifyX86_64Signature(fnTy.getReturnType(), fnTy.getInputs(),
-                                 func->getContext(), dl, typeMapper, targetInfo,
-                                 modOp, [&]() { return func.emitOpError(); });
+                                 requiredArgCount(fnTy), func->getContext(), dl,
+                                 typeMapper, targetInfo, modOp,
+                                 [&]() { return func.emitOpError(); });
 }
+
+/// Classify a call that passes arguments through an ellipsis.  The callee's
+/// own classification covers only its declared parameters, but an ellipsis
+/// argument competes for the same argument registers as a declared one, so
+/// what the ABI does with it depends on the whole argument list: the same
+/// small struct is passed in registers early in the list and in memory once
+/// the integer registers are gone.  Classifying from the call's operands
+/// rather than the callee's signature is what makes that accounting right.
+static std::optional<FunctionClassification> classifyX86_64VariadicCall(
+    cir::CIRCallOpInterface call, cir::FuncType calleeTy, const DataLayout &dl,
+    mlir::abi::ABITypeMapper &typeMapper,
+    const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp) {
+  assert(calleeTy.isVarArg() &&
+         "only a variadic callee can take more operands than it declares");
+  Operation *op = call.getOperation();
+  return classifyX86_64Signature(
+      calleeTy.getReturnType(), call.getArgOperands().getTypes(),
+      requiredArgCount(calleeTy), op->getContext(), dl, typeMapper, targetInfo,
+      modOp, [&]() { return op->emitOpError(); });
+}
+
+#ifndef NDEBUG
+/// Whether \p callFc classifies a call's leading arguments and its return
+/// exactly as \p calleeFc classifies the callee's declared parameters and
+/// return.  A function definition and its call sites are rewritten from
+/// separate classifications, so the two would silently disagree on the wire
+/// format if an ellipsis argument could ever change how a declared parameter
+/// is passed.
+static bool classifiesSamePrefix(const FunctionClassification &calleeFc,
+                                 const FunctionClassification &callFc) {
+  if (callFc.argInfos.size() < calleeFc.argInfos.size())
+    return false;
+  return calleeFc.returnInfo == callFc.returnInfo &&
+         std::equal(calleeFc.argInfos.begin(), calleeFc.argInfos.end(),
+                    callFc.argInfos.begin());
+}
+#endif
 
 struct CallConvLoweringPass
     : public impl::CallConvLoweringBase<CallConvLoweringPass> {
   using CallConvLoweringBase::CallConvLoweringBase;
   void runOnOperation() override;
 };
+
+/// Record on \p fc whether \p returnType is CIR's void.  The x86_64 classifier
+/// answers this itself, but the other two drivers cannot: the test target is
+/// dialect-neutral and has no notion of CIR's void, and the
+/// classification-attr schema carries no return type at all.  Both route
+/// through here so a classification always reaches needsRewrite paired with
+/// the return type it was built from.
+static std::optional<FunctionClassification>
+withReturnVoidness(std::optional<FunctionClassification> fc,
+                   mlir::Type returnType) {
+  if (fc)
+    fc->returnsVoid = mlir::isa<cir::VoidType>(returnType);
+  return fc;
+}
 
 /// Classify \p func using whichever driver mode is configured.  Returns
 /// std::nullopt and emits an error on the function if classification fails
@@ -428,15 +502,17 @@ classifyFunction(cir::FuncOp func, const DataLayout &dl,
           << "' (CallConvLowering driver mode 'classification-attr')";
       return std::nullopt;
     }
-    return mlir::abi::test::parseClassificationAttr(
-        attr, [&]() { return func.emitOpError(); });
+    return withReturnVoidness(mlir::abi::test::parseClassificationAttr(
+                                  attr, [&]() { return func.emitOpError(); }),
+                              returnType);
   }
 
   // The x86_64 target is handled directly in runOnOperation (it needs a shared
   // ABITypeMapper and TargetInfo), so only the test target reaches here.
   assert(target == cir::CallConvTarget::Test &&
          "classifyFunction only handles the test target");
-  return mlir::abi::test::classify(argTypes, returnType, dl);
+  return withReturnVoidness(mlir::abi::test::classify(argTypes, returnType, dl),
+                            returnType);
 }
 
 /// Find the cir.func declaration matching a direct cir.call / cir.try_call
@@ -455,6 +531,31 @@ cir::FuncOp lookupCallee(Operation *callOp, SymbolTable &symbolTable) {
   if (!callee)
     return nullptr;
   return symbolTable.lookup<cir::FuncOp>(callee.getValue());
+}
+
+/// The callee pointer of an indirect cir.call / cir.try_call, or nullptr for a
+/// direct call.  Both ops spell this the same way, but they inherit it from a
+/// shared TableGen base rather than a common C++ type, so reaching it needs
+/// this dispatch.
+mlir::Value indirectCallee(Operation *callOp) {
+  if (auto call = dyn_cast<cir::CallOp>(callOp))
+    return call.isIndirect() ? call.getIndirectCall() : nullptr;
+  if (auto tryCall = dyn_cast<cir::TryCallOp>(callOp))
+    return tryCall.isIndirect() ? tryCall.getIndirectCall() : nullptr;
+  return nullptr;
+}
+
+/// The signature an indirect call reaches its callee through, or a null type
+/// for a direct call.  The callee's pointer-to-function shape is asserted
+/// rather than verified: the dialect checks operand types against the callee
+/// only for a direct call, so IR that breaks it fails here instead of in the
+/// verifier.
+cir::FuncType indirectCalleeType(Operation *callOp) {
+  mlir::Value callee = indirectCallee(callOp);
+  if (!callee)
+    return {};
+  return cast<cir::FuncType>(
+      cast<cir::PointerType>(callee.getType()).getPointee());
 }
 
 void CallConvLoweringPass::runOnOperation() {
@@ -519,13 +620,53 @@ void CallConvLoweringPass::runOnOperation() {
   // cir.call / cir.try_call to each cir.func; the loop below rewrites a
   // function and all of its call sites together.  Indirect or unresolved
   // callees are skipped here; rewriteCallSite errors on those at the end.
+  //
+  // A call that passes arguments through an ellipsis gets its own
+  // classification, recorded here while every signature is still in its
+  // original form.  The callee's classification covers only its declared
+  // parameters and cannot describe those extra arguments.
   llvm::DenseMap<cir::FuncOp, SmallVector<Operation *>> callers;
+  // Keyed on the call op collected below, looked up once when that same op is
+  // rewritten.  A key must never come from an op created during the rewrite:
+  // a recycled address could match an unrelated entry.
+  llvm::DenseMap<Operation *, FunctionClassification> variadicCallSites;
   moduleOp.walk([&](Operation *op) {
-    if (!isa<cir::CallOp, cir::TryCallOp>(op))
+    auto call = dyn_cast<cir::CIRCallOpInterface>(op);
+    if (!call)
       return;
-    if (cir::FuncOp callee = lookupCallee(op, symbolTable))
-      callers[callee].push_back(op);
+    cir::FuncOp callee = lookupCallee(op, symbolTable);
+    if (!callee)
+      return;
+    callers[callee].push_back(op);
+
+    // Only the x86_64 driver classifies per call site.  Under the other
+    // drivers the classification comes from a fixed per-function source, so
+    // such a call stays short a classification and rewriteCallSite reports it.
+    cir::FuncType calleeTy = callee.getFunctionType();
+    if (!x86Target || call.getNumArgOperands() <= calleeTy.getNumInputs())
+      return;
+    // A callee declared without a prototype also takes more operands than it
+    // declares, and the verifier allows it.  Those extra arguments are named
+    // rather than passed through an ellipsis, so the accounting below does not
+    // describe them.
+    if (!calleeTy.isVarArg()) {
+      op->emitOpError() << "extra arguments to a callee without a prototype "
+                           "not yet implemented in CallConvLowering";
+      anyFailed = true;
+      return;
+    }
+    std::optional<FunctionClassification> fc = classifyX86_64VariadicCall(
+        call, calleeTy, dl, *x86TypeMapper, *x86Target, moduleOp);
+    if (!fc) {
+      anyFailed = true;
+      return;
+    }
+    variadicCallSites.insert({op, std::move(*fc)});
   });
+  if (anyFailed) {
+    signalPassFailure();
+    return;
+  }
 
   // Rewrite each function together with every direct call to it.  By the
   // time we move on to function F+1, F's signature and every direct call to
@@ -547,7 +688,15 @@ void CallConvLoweringPass::runOnOperation() {
       return;
     }
     for (Operation *callOp : callers.lookup(func)) {
-      if (failed(rewriteCtx.rewriteCallSite(callOp, fc, builder))) {
+      const FunctionClassification *callFc = &fc;
+      if (auto it = variadicCallSites.find(callOp);
+          it != variadicCallSites.end()) {
+        callFc = &it->second;
+        assert(classifiesSamePrefix(fc, *callFc) &&
+               "a call site's declared parameters must be classified the same "
+               "way as the callee's");
+      }
+      if (failed(rewriteCtx.rewriteCallSite(callOp, *callFc, builder))) {
         signalPassFailure();
         return;
       }
@@ -560,38 +709,71 @@ void CallConvLoweringPass::runOnOperation() {
   // when an sret rewrite reuses a single-use store's destination as the return
   // slot it erases that store, which is the operation a live walk has already
   // cached as the next one to visit.
-  SmallVector<cir::CallOp> indirectCalls;
-  moduleOp.walk([&](cir::CallOp c) {
-    if (c.isIndirect())
-      indirectCalls.push_back(c);
+  SmallVector<cir::CIRCallOpInterface> indirectCalls;
+  moduleOp.walk([&](cir::CIRCallOpInterface c) {
+    cir::FuncType calleeTy = indirectCalleeType(c.getOperation());
+    if (!calleeTy)
+      return;
+    // A cir.try_call is in this walk so that a variadic one reaches the
+    // ellipsis accounting below.  CIRABIRewriteContext cannot rebuild a
+    // cir.try_call at all, so a non-variadic one has never been rewritten
+    // here.  Keep it out rather than start reporting a gap that has nothing
+    // to do with the ellipsis.
+    if (!calleeTy.isVarArg() && isa<cir::TryCallOp>(c.getOperation()))
+      return;
+    indirectCalls.push_back(c);
   });
-  for (cir::CallOp c : indirectCalls) {
+  for (cir::CIRCallOpInterface c : indirectCalls) {
     // classification-attr mode injects a per-function classification, which
     // cannot describe a callee resolved at run time.  Report it rather than
     // leave the indirect call unrewritten while direct calls are coerced.
     if (!classificationAttr.empty()) {
-      c.emitOpError() << "indirect call cannot be classified in the "
-                         "'classification-attr' driver mode";
+      c->emitOpError() << "indirect call cannot be classified in the "
+                          "'classification-attr' driver mode";
       signalPassFailure();
       return;
     }
-    // The CallOp verifier guarantees an indirect callee is a pointer to a
-    // function type.
-    auto ptrTy = cast<cir::PointerType>(c.getIndirectCall().getType());
-    auto funcTy = cast<cir::FuncType>(ptrTy.getPointee());
-    std::optional<FunctionClassification> fc;
-    if (x86Target)
-      fc = classifyX86_64Signature(funcTy.getReturnType(), funcTy.getInputs(),
-                                   ctx, dl, *x86TypeMapper, *x86Target,
-                                   moduleOp, [&]() { return c.emitOpError(); });
-    else
-      fc = mlir::abi::test::classify(funcTy.getInputs(), funcTy.getReturnType(),
-                                     dl);
+    cir::FuncType funcTy = indirectCalleeType(c.getOperation());
+    auto classifySignature =
+        [&](mlir::TypeRange argTypes) -> std::optional<FunctionClassification> {
+      if (x86Target)
+        return classifyX86_64Signature(funcTy.getReturnType(), argTypes,
+                                       requiredArgCount(funcTy), ctx, dl,
+                                       *x86TypeMapper, *x86Target, moduleOp,
+                                       [&]() { return c->emitOpError(); });
+      return withReturnVoidness(
+          mlir::abi::test::classify(argTypes, funcTy.getReturnType(), dl),
+          funcTy.getReturnType());
+    };
+
+    // An argument passed through an ellipsis has no counterpart in the
+    // pointee's parameter list, so classify the call's own operands to learn
+    // what the ABI does with it.  If nothing in the full list needs a rewrite
+    // the call already carries its wire form and can stand as written.
+    // Anything else needs a rewrite the pointee's signature cannot describe,
+    // since it has no entry for the arguments past the ellipsis.
+    if (c.getNumArgOperands() > funcTy.getNumInputs()) {
+      std::optional<FunctionClassification> callFc =
+          classifySignature(c.getArgOperands().getTypes());
+      if (!callFc) {
+        signalPassFailure();
+        return;
+      }
+      if (!callFc->needsRewrite())
+        continue;
+      c->emitOpError() << "variadic arguments to an indirect call not yet "
+                          "implemented in CallConvLowering";
+      signalPassFailure();
+      return;
+    }
+
+    std::optional<FunctionClassification> fc =
+        classifySignature(funcTy.getInputs());
     if (!fc) {
       signalPassFailure();
       return;
     }
-    if (failed(rewriteCtx.rewriteCallSite(c, *fc, builder))) {
+    if (failed(rewriteCtx.rewriteCallSite(c.getOperation(), *fc, builder))) {
       signalPassFailure();
       return;
     }
