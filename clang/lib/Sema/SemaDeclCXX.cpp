@@ -15383,36 +15383,6 @@ static void diagnoseDeprecatedCopyOperation(Sema &S, CXXMethodDecl *CopyOp) {
   }
 }
 
-// A defaulted copy or move assignment operator for a union copies the object
-// representation as if by a memcpy, the same way the defaulted union copy
-// constructor does.  The memberwise loops in DefineImplicitCopyAssignment and
-// DefineImplicitMoveAssignment skip union members, so the whole-object copy is
-// emitted here instead.  Marks AssignOp invalid and returns false on failure.
-static bool buildUnionAssignmentCopy(Sema &S, SourceLocation Loc,
-                                     CXXRecordDecl *ClassDecl,
-                                     std::optional<RefBuilder> &ExplicitObject,
-                                     std::optional<DerefBuilder> &DerefThis,
-                                     const ExprBuilder &From,
-                                     CXXMethodDecl *AssignOp,
-                                     SmallVectorImpl<Stmt *> &Statements) {
-  ExprBuilder &To = ExplicitObject ? static_cast<ExprBuilder &>(*ExplicitObject)
-                                   : static_cast<ExprBuilder &>(*DerefThis);
-
-  // Copying the object representation is correct even for a union that is not
-  // trivially copyable, so -Wnontrivial-memcall is a false positive here.
-  // Ignoring warnings rather than casting the arguments to void* keeps them
-  // typed, which preserves their address space.
-  IgnoreAllWarningDiagRAII IgnoreWarnings(S.Diags);
-  StmtResult Copy = buildMemcpyForAssignmentOp(
-      S, Loc, S.Context.getCanonicalTagType(ClassDecl), To, From);
-  if (Copy.isInvalid()) {
-    AssignOp->setInvalidDecl();
-    return false;
-  }
-  Statements.push_back(Copy.getAs<Stmt>());
-  return true;
-}
-
 void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
                                         CXXMethodDecl *CopyAssignOperator) {
   DefaultedFunctionFPFeaturesRAII RestoreFP(*this, CopyAssignOperator);
@@ -15537,13 +15507,26 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     Statements.push_back(Copy.getAs<Expr>());
   }
 
-  // A union's defaulted copy assignment copies the whole object; see
-  // buildUnionAssignmentCopy.
-  if (ClassDecl->isUnion() &&
-      !buildUnionAssignmentCopy(*this, Loc, ClassDecl, ExplicitObject,
-                                DerefThis, OtherRef, CopyAssignOperator,
-                                Statements))
-    return;
+  // A defaulted copy assignment operator for a union copies the object
+  // representation as if by a memcpy, the same way the defaulted union copy
+  // constructor does.  The memberwise loop below skips union members.
+  if (ClassDecl->isUnion()) {
+    ExprBuilder &To = ExplicitObject
+                          ? static_cast<ExprBuilder &>(*ExplicitObject)
+                          : static_cast<ExprBuilder &>(*DerefThis);
+    // Copying the object representation is correct even for a union that is
+    // not trivially copyable, so -Wnontrivial-memcall is a false positive
+    // here.  Ignoring warnings rather than casting the arguments to void*
+    // keeps them typed, which preserves their address space.
+    IgnoreAllWarningDiagRAII IgnoreWarnings(Diags);
+    StmtResult Copy = buildMemcpyForAssignmentOp(
+        *this, Loc, Context.getCanonicalTagType(ClassDecl), To, OtherRef);
+    if (Copy.isInvalid()) {
+      CopyAssignOperator->setInvalidDecl();
+      return;
+    }
+    Statements.push_back(Copy.getAs<Stmt>());
+  }
 
   // Assign non-static members.
   for (auto *Field : ClassDecl->fields()) {
@@ -15934,13 +15917,26 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
     Statements.push_back(Move.getAs<Expr>());
   }
 
-  // A union's defaulted move assignment copies the whole object; see
-  // buildUnionAssignmentCopy.
-  if (ClassDecl->isUnion() &&
-      !buildUnionAssignmentCopy(*this, Loc, ClassDecl, ExplicitObject,
-                                DerefThis, OtherRef, MoveAssignOperator,
-                                Statements))
-    return;
+  // A defaulted move assignment operator for a union copies the object
+  // representation as if by a memcpy, the same way the defaulted union copy
+  // constructor does.  The memberwise loop below skips union members.
+  if (ClassDecl->isUnion()) {
+    ExprBuilder &To = ExplicitObject
+                          ? static_cast<ExprBuilder &>(*ExplicitObject)
+                          : static_cast<ExprBuilder &>(*DerefThis);
+    // Copying the object representation is correct even for a union that is
+    // not trivially copyable, so -Wnontrivial-memcall is a false positive
+    // here.  Ignoring warnings rather than casting the arguments to void*
+    // keeps them typed, which preserves their address space.
+    IgnoreAllWarningDiagRAII IgnoreWarnings(Diags);
+    StmtResult Copy = buildMemcpyForAssignmentOp(
+        *this, Loc, Context.getCanonicalTagType(ClassDecl), To, OtherRef);
+    if (Copy.isInvalid()) {
+      MoveAssignOperator->setInvalidDecl();
+      return;
+    }
+    Statements.push_back(Copy.getAs<Stmt>());
+  }
 
   // Assign non-static members.
   for (auto *Field : ClassDecl->fields()) {
