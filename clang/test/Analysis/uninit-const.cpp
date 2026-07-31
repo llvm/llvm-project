@@ -38,7 +38,7 @@ int f9(void) {
                  // a pointer to an uninitialized value is stored.
   ptr = new int; // expected-note{{Storing uninitialized value}}
                  // expected-note@-1{{Value assigned to 'ptr'}}
-  doStuff_uninit(ptr); // expected-warning{{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function [core.CallAndMessage]}}
+  doStuff_uninit(ptr); // expected-warning{{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function [core.CallAndMessage]}}
                        // expected-note@-1{{1st function call argument points to an uninitialized value;}}
   delete ptr;
   return 0;

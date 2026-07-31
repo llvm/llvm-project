@@ -30,16 +30,16 @@ void doStuff_variadic(const int *u, ...){};
 void f_1(void) {
   int t;               // expected-note {{'t' declared without an initial value}}
   int* tp = &t;        // expected-note {{'tp' initialized here}}
-  doStuff_pointerToConstInt(tp);  // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                       // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_pointerToConstInt(tp);  // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                       // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 void f_1_1(void) {
   int t;                 // expected-note {{'t' declared without an initial value}}
   int *tp1 = &t;         // expected-note {{'tp1' initialized here}}
   int *tp2 = tp1;        // expected-note {{'tp2' initialized to the value of 'tp1'}}
-  doStuff_pointerToConstInt(tp2);  // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                       // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_pointerToConstInt(tp2);  // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                       // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 
@@ -54,8 +54,8 @@ void f_2(void) {
                         // expected-note@-2{{Returning from 'f_2_sub'}}
                         // expected-note@-3{{'p' initialized here}}
   int *tp = p;          // expected-note {{'tp' initialized to the value of 'p'}}
-  doStuff_pointerToConstInt(tp); // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                      // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_pointerToConstInt(tp); // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                      // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 int z;
@@ -71,14 +71,14 @@ void f_4(void) {
 void f_5(void) {
   int ta[5];           // expected-note {{'ta' declared without an initial value}}
   int *tp = ta;        // expected-note {{'tp' initialized here}}
-  doStuff_pointerToConstInt(tp);  // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                       // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_pointerToConstInt(tp);  // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                       // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 void f_5_1(void) {
   int ta[5];        // expected-note {{'ta' declared without an initial value}}
-  doStuff_pointerToConstInt(ta);  // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                       // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_pointerToConstInt(ta);  // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                       // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 void f_6(void) {
@@ -108,20 +108,20 @@ void f_8(void) {
 void f_9(void) {
   int a[6];                        // expected-note {{'a' declared without an initial value}}
   int const *ptau = a;             // expected-note {{'ptau' initialized here}}
-  doStuff_arrayOfConstInt(ptau);    // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                                   // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_arrayOfConstInt(ptau);    // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                                   // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 void f_10(void) {
   int  a[6];                     // expected-note {{'a' declared without an initial value}}
-  doStuff_arrayOfConstInt(a);    // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                                 // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_arrayOfConstInt(a);    // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                                 // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 void f_11(void) {
   int t[10];                    //expected-note {{'t' declared without an initial value}}
-  doStuff_constStaticSizedArray(t);  // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                                // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_constStaticSizedArray(t);  // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                                // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 void f_12(void) {
@@ -161,8 +161,8 @@ int f_malloc_1(void) {
 
   ptr = (int *)malloc(sizeof(int)); // expected-note {{Value assigned to 'ptr'}}
 
-  doStuff_pointerToConstInt(ptr); // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                       // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_pointerToConstInt(ptr); // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                       // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
   free(ptr);
   return 0;
 }
@@ -183,16 +183,16 @@ void f_variadic_unp_unv(void) {
   int t; // expected-note {{'t' declared without an initial value}}
   int v;
   int* tp = &t;           // expected-note {{'tp' initialized here}}
-  doStuff_variadic(tp,v);  // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                          // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_variadic(tp,v);  // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                          // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 // uninit pointer, init val
 void f_variadic_unp_inv(void) {
   int t; // expected-note {{'t' declared without an initial value}}
   int v = 3;
   int* tp = &t;           // expected-note {{'tp' initialized here}}
-  doStuff_variadic(tp,v);  // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                          // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_variadic(tp,v);  // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                          // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 // init pointer, uninit val
@@ -227,8 +227,8 @@ void f_variadic_unp_inp(void) {
   int u=3;
   int *vp = &u ;
   int *tp = &t;             // expected-note {{'tp' initialized here}}
-  doStuff_variadic(tp,vp); // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                            // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_variadic(tp,vp); // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                            // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }
 
 //init pointer, uninit pointer
@@ -246,6 +246,6 @@ void f_variadic_unp_unp(void) {
   int u;
   int *vp = &u ;
   int *tp = &t;             // expected-note {{'tp' initialized here}}
-  doStuff_variadic(tp,vp); // expected-warning {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
-                            // expected-note@-1 {{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function}}
+  doStuff_variadic(tp,vp); // expected-warning {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
+                            // expected-note@-1 {{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function}}
 }

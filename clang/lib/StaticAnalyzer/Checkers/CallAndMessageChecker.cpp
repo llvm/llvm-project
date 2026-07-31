@@ -325,12 +325,12 @@ bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
                            &Call](bool ArgIsStruct) -> std::string {
     if (PointeeT.isConstQualified())
       return llvm::formatv(
-          "This argument is const{0} and {1} input data of the function",
+          "this argument is const{0} and {1} input data of the function",
           ParamT->isPointerType() ? " pointer" : "",
           ArgIsStruct ? "may contain" : "is likely");
     else
       return llvm::formatv(
-          "Function '{0}' expects {1}this argument to be initialized",
+          "function '{0}' expects {1}this argument to be initialized",
           cast<NamedDecl>(Call.getDecl())->getNameAsString(),
           ParamT->isPointerType() ? "memory pointed to by " : "");
   };

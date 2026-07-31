@@ -21,7 +21,7 @@ void doStuff_pointerToConstInt(const int *u){};
 void pointee_uninit(void) {
   int i;
   int *p = &i;
-  doStuff_pointerToConstInt(p); // expected-warning{{1st function call argument points to an uninitialized value; This argument is const pointer and is likely input data of the function [core.CallAndMessage]}}
+  doStuff_pointerToConstInt(p); // expected-warning{{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function [core.CallAndMessage]}}
 }
 
 typedef struct S {
@@ -33,12 +33,12 @@ void doStuff_pointerToConstStruct(const S *s){};
 void pointee_uninit_struct(void) {
   S s;
   S *p = &s;
-  doStuff_pointerToConstStruct(p); // expected-warning{{1st function call argument points to an uninitialized value (e.g., field: 'a'); This argument is const pointer and may contain input data of the function [core.CallAndMessage]}}
+  doStuff_pointerToConstStruct(p); // expected-warning{{1st function call argument points to an uninitialized value (e.g., field: 'a'); this argument is const pointer and may contain input data of the function [core.CallAndMessage]}}
 }
 void pointee_uninit_struct_1(void) {
   S s;
   s.a = 2;
-  doStuff_pointerToConstStruct(&s); // expected-warning{{1st function call argument points to an uninitialized value (e.g., field: 'b'); This argument is const pointer and may contain input data of the function [core.CallAndMessage]}}
+  doStuff_pointerToConstStruct(&s); // expected-warning{{1st function call argument points to an uninitialized value (e.g., field: 'b'); this argument is const pointer and may contain input data of the function [core.CallAndMessage]}}
 }
 void pointee_uninit_struct_2(void) {
   S s = {};

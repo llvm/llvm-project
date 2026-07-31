@@ -31,7 +31,7 @@ static void f2(void *buf) {
 // what type of value do we expect.
 void f3(void *dest) {
   void *src = __builtin_alloca(5);
-  memcpy(dest, src, 1); // expected-warning{{2nd function call argument points to an uninitialized value; Function 'memcpy' expects memory pointed to by this argument to be initialized}}
+  memcpy(dest, src, 1); // expected-warning{{2nd function call argument points to an uninitialized value; function 'memcpy' expects memory pointed to by this argument to be initialized}}
 }
 
 // Reproduce crash from GH#94496. When array is used as subcript to another array, CSA cannot model it

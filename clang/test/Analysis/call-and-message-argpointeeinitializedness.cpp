@@ -31,8 +31,8 @@ void uninit_val_p() {
 
 void uninit_val_r() {
   S s;
-  doStuffR(s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., field: 'a'); This argument is const and may contain input data of the function}} \
-               // initializedness-complete-warning{{1st function call argument is an uninitialized value; This argument is const and may contain input data of the function}}
+  doStuffR(s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., field: 'a'); this argument is const and may contain input data of the function}} \
+               // initializedness-complete-warning{{1st function call argument is an uninitialized value; this argument is const and may contain input data of the function}}
 }
 
 S *uninit_new() {
@@ -88,11 +88,11 @@ void uninit_static() {
 void uninit_val_partial_1() {
   S s;
   s.a = 1;
-  doStuffR(s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., via the field chain: 'b.c'); This argument is const and may contain input data of the function}}
+  doStuffR(s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., via the field chain: 'b.c'); this argument is const and may contain input data of the function}}
 }
 
 void uninit_val_partial_2() {
   S s;
   s.b.c = 1;
-  doStuffR(s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., field: 'a'); This argument is const and may contain input data of the function}}
+  doStuffR(s); // initializedness-partial-warning{{1st function call argument is an uninitialized value (e.g., field: 'a'); this argument is const and may contain input data of the function}}
 }
