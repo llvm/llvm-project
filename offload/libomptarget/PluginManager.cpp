@@ -516,28 +516,6 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           CurrDeviceEntryAddr = DevPtr;
         }
 
-        if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
-            PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
-          AsyncInfoTy AsyncInfo(Device);
-          void *DevPtr;
-          Device.retrieveData(&DevPtr, CurrDeviceEntryAddr, sizeof(void *),
-                              AsyncInfo, /*Entry=*/nullptr, &HDTTMap);
-          if (AsyncInfo.synchronize() != OFFLOAD_SUCCESS)
-            return OFFLOAD_FAIL;
-
-          ODBG(ODT_Mapping)
-              << "Add mapping from host " << DevPtr << " to device " << DevPtr
-              << " with size " << CurrDeviceEntry->Size;
-
-          HDTTMap->emplace(new HostDataToTargetTy(
-              (uintptr_t)DevPtr /*HstPtrBase*/,
-              (uintptr_t)DevPtr /*HstPtrBegin*/,
-              (uintptr_t)DevPtr + CurrHostEntry->Size /*HstPtrEnd*/,
-              (uintptr_t)DevPtr /*TgtAllocBegin*/,
-              (uintptr_t)DevPtr /*TgtPtrBegin*/, false /*UseHoldRefCount*/,
-              nullptr, true /*IsRefCountINF*/));
-        }
-
         ODBG(ODT_Mapping) << "Add mapping from host " << CurrHostEntry->Address
                           << " to device " << CurrDeviceEntry->Address
                           << " with size " << CurrDeviceEntry->Size

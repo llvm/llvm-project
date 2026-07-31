@@ -16,6 +16,7 @@
 // matching entry doesn't already exist on the device.
 
 #include <assert.h>
+#include <stdio.h>
 
 int x, y;
 #pragma omp requires unified_shared_memory
@@ -32,4 +33,8 @@ int main() {
 
   assert(xaddr_device == &x && "Mapped variable should not allocate on close.");
   assert(yaddr_device != &y && "Unmapped variable should allocate on close.");
+
+  // CHECK: Done!
+  printf("Done!\n");
+  return 0;
 }

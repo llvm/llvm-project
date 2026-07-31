@@ -264,17 +264,21 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
               DPxPTR(HstPtrBegin), Size);
   } else if ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY &&
               (!HasCloseModifier ||
-               // A close mapping should not incur a new
-               // allocation under USM when it is already
-               // "present" on the device. That can either
-               // be due to an overlap with a previously
-               // encountered map (with/without the close
-               // modifier), or it being declare_target
-               // (infinite ref-count).
+               // A close mapping should not incur a new allocation under USM
+               // when the storage it refers to is already on the device, i.e.
+               // when it overlaps a previously encountered map, with or without
+               // the close modifier.
+               //
+               // Storage that is present for the whole program, such as a
+               // declare-target variable, should be covered by this as well but
+               // is not: under USM the entry registered for such a variable
+               // describes the device reference pointer rather than the
+               // variable, so a mapping of the variable does not overlap it.
+               // Communicating the variable's extent is a code-generation
+               // change.
                (LR.TPR.getEntry() != nullptr &&
                 (LR.Flags.IsContained || LR.Flags.ExtendsBefore ||
-                 LR.Flags.ExtendsAfter ||
-                 LR.TPR.getEntry()->isDynRefCountInf())))) ||
+                 LR.Flags.ExtendsAfter)))) ||
              (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
 
     // If unified shared memory is active, implicitly mapped variables that are
@@ -462,14 +466,6 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
              "expected correct IsLast prediction for reset");
     }
 
-    if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
-        PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY) {
-      LR.TPR.Flags.IsHostPointer = true;
-      if (!LR.TPR.getEntry()->getTotalRefCount()) {
-        LR.TPR.Flags.IsPresent = false;
-      }
-    }
-
     // Increment the number of threads that is using the entry on a
     // targetDataEnd, tracking the number of possible "deleters". A thread may
     // come to own the entry deletion even if it was not the last one querying
@@ -577,7 +573,12 @@ int MappingInfoTy::deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
     return OFFLOAD_FAIL;
   }
 
-  int Ret = Device.deleteData((void *)Entry->TgtAllocBegin);
+  // The reuse entry recorded on the unified-shared-memory host path owns no
+  // device allocation: its allocation maps to the host address itself, so it
+  // must not be handed to deleteData().
+  int Ret = OFFLOAD_SUCCESS;
+  if (Entry->TgtAllocBegin != Entry->HstPtrBegin)
+    Ret = Device.deleteData((void *)Entry->TgtAllocBegin);
 
   // Notify the plugin about the unmapped memory.
   Ret |= Device.notifyDataUnmapped((void *)Entry->HstPtrBegin);

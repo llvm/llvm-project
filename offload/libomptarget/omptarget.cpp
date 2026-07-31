@@ -988,7 +988,15 @@ postProcessingTargetDataEnd(DeviceTy *Device,
   int Ret = OFFLOAD_SUCCESS;
 
   for (auto &[HstPtrBegin, DataSize, ArgType, TPR] : EntriesInfo) {
-    bool DelEntry = !TPR.isHostPointer();
+    // The reuse entry recorded on the unified-shared-memory host path has no
+    // device allocation, but it does occupy a slot in the mapping table and has
+    // to be reclaimed with the region that created it. Otherwise it lingers with
+    // a zero reference count and a later map(close, ...) of the same storage
+    // finds it and concludes the data is already on the device.
+    const bool IsHostBackedEntry =
+        TPR.getEntry() != nullptr &&
+        TPR.getEntry()->TgtAllocBegin == TPR.getEntry()->HstPtrBegin;
+    bool DelEntry = !TPR.isHostPointer() || IsHostBackedEntry;
 
     // If the last element from the mapper (for end transfer args comes in
     // reverse order), do not remove the partial entry, the parent struct still
