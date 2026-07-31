@@ -5,6 +5,14 @@
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S %s | FileCheck %s --check-prefix LLVM
 
 define void @simple(ptr %p, i64 %n) {
+; Some comment
+; CHECK-LABEL: @simple
+; CHECK-NEXT: something stale
+; NOTE: This is not a check directive.
+; Another comment
+; LLVM-LABEL: @simple
+; LLVM-NEXT: another stale
+; And another non-CHECK: comment
 entry:
   br label %loop
 loop:
