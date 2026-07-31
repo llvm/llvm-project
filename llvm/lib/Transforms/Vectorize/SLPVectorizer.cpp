@@ -15812,7 +15812,35 @@ public:
     VectorizedVals.clear();
     SameNodesEstimated = true;
   }
-  void addContextHint(TTI::VectorInstrContext Ctx) { ContextHint = Ctx; }
+  void checkForFoldingSplat(const TreeEntry *E, ArrayRef<int> ReuseMask) {
+    // Backends may have a fast path for splatting scalar operands (i.e. rather
+    // than generating the splat vector, the vector instruction may be able to
+    // take a scalar operand), for example RISCV vfoo.vx instructions. Pass a
+    // hint to the TTI when costing the insert/shuffle sequence in such cases.
+    if (!ShuffleVectorInst::isZeroEltSplatMask(ReuseMask, ReuseMask.size()))
+      return;
+    Value *SplatVal = E->Scalars.front();
+    if (isa<VectorType>(SplatVal->getType()) ||
+        !isa<ExtractElementInst>(SplatVal))
+      return;
+    SmallVector<TreeEntry *> MatchingTEs;
+    for (const auto &TE : R.VectorizableTree) {
+      if (R.DeletedNodes.contains(TE.get()))
+        continue;
+      if (TE->isGather() && E->isSame(TE->Scalars))
+        MatchingTEs.emplace_back(TE.get());
+    }
+    assert(MatchingTEs.size() && "Ought to at least match with current entry");
+    if (all_of(MatchingTEs, [this](auto *TE) {
+          auto *UserTE = TE->UserTreeIndex.UserTE;
+          if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
+            return false;
+          return TTI.canSplatOperand(UserTE->getOpcode(),
+                                     TE->UserTreeIndex.EdgeIdx);
+        }))
+      ContextHint = TTI::VectorInstrContext::SplatOpFolded;
+  }
+
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
     BVValues.reset();
     if (&E1 == &E2) {
@@ -21859,7 +21887,6 @@ public:
     CommonMask.clear();
     InVectors.clear();
   }
-  void addContextHint(TTI::VectorInstrContext Ctx) { (void)Ctx; }
   /// Adds 2 input vectors (in form of tree entries) and the mask for their
   /// shuffling.
   void add(const TreeEntry &E1, const TreeEntry &E2, ArrayRef<int> Mask) {
@@ -22643,33 +22670,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     // Gather unique scalars and all constants.
     SmallVector<int> ReuseMask(GatheredScalars.size(), PoisonMaskElem);
     TryPackScalars(GatheredScalars, ReuseMask, /*IsRootPoison=*/true);
-    // Backends may have a fast path for splatting scalar operands (i.e. rather
-    // than generating the splat vector, the vector instruction may be able to
-    // take a scalar operand), for example RISCV vfoo.vx instructions. Pass a
-    // hint to the TTI when costing the insert/shuffle sequence in such cases.
-    if (ShuffleVectorInst::isZeroEltSplatMask(ReuseMask, ReuseMask.size())) {
-      Value *SplatVal = E->Scalars.front();
-      if (!isa<VectorType>(SplatVal->getType()) &&
-          !isa<ExtractElementInst>(SplatVal)) {
-        SmallVector<TreeEntry *> MatchingTEs;
-        for (const auto &TE : VectorizableTree) {
-          if (DeletedNodes.contains(TE.get()))
-            continue;
-          if (TE->isGather() && E->isSame(TE->Scalars))
-            MatchingTEs.emplace_back(TE.get());
-        }
-        assert(MatchingTEs.size() &&
-               "Ought to at least match with current entry");
-        if (all_of(MatchingTEs, [this](auto *TE) {
-              auto *UserTE = TE->UserTreeIndex.UserTE;
-              if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
-                return false;
-              return TTI->canSplatOperand(UserTE->getOpcode(),
-                                          TE->UserTreeIndex.EdgeIdx);
-            }))
-          ShuffleBuilder.addContextHint(TTI::VectorInstrContext::SplatOpFolded);
-      }
-    }
+    if constexpr (std::is_same_v<BVTy, ShuffleCostEstimator>)
+      ShuffleBuilder.checkForFoldingSplat(E, ReuseMask);
+
     Value *BV = ShuffleBuilder.gather(GatheredScalars, ReuseMask.size());
     ShuffleBuilder.add(BV, ReuseMask);
     Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices, SubVectors,
