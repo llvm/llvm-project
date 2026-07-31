@@ -4594,38 +4594,107 @@ DiagnosedSilenceableFailure transform::DecomposeWinogradOp::applyToOne(
 }
 
 //===----------------------------------------------------------------------===//
-// LinAlgToAffine
+// LinalgToAffine
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::LinAlgToAffineOp::applyToOne(
+DiagnosedSilenceableFailure transform::LinalgToAffineOp::applyToOne(
     transform::TransformRewriter &rewriter, linalg::LinalgOp target,
     ApplyToEachResultList &results, TransformState &state) {
-  if (! isa<GenericOp>(target)) {
-    return DiagnosedSilenceableFailure::definiteFailure();
+  if (!isa<GenericOp>(target)) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "this operation is not a linalg.generic";
+    diag.attachNote(target.getLoc()) << "target op";
+    return diag;
+  }
+  if (!target.hasPureBufferSemantics()) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError() << "this operation does not use only memRef";
+    diag.attachNote(target.getLoc()) << "target op";
+    return diag;
   }
 
   rewriter.setInsertionPoint(target);
 
-  FailureOr<LinalgLoops> generic = linalgOpToAffineLoops(rewriter, target);
-  if (succeeded(generic)) {
-    assert(! generic->empty() && "expected at least one loop");
+  // Special case where the generic operator is 0-dimensional
+  // We create a scf::ExecuteRegionOp in order to be able to output a single
+  // operation in this case
+  if (target.getNumLoops() == 0) {
+    scf::ExecuteRegionOp opReg = scf::ExecuteRegionOp::create(
+        rewriter, target->getLoc(), target->getResultTypes());
+    Block *blOpReg = &opReg.getRegion().emplaceBlock();
+    rewriter.setInsertionPointToStart(blOpReg);
 
-    // "generic" contains all new "AffineForOp", while we need to topmost one.
-    // Since all linalg operators are perfectly nested loops, these operators
-    //   are totally ordered through the ancestor relation.
-    Operation* opFirst = *(generic->begin());
-    for (auto itop = generic->begin(); itop!=generic->end(); itop++) {
-      if ( (*itop)->isProperAncestor(opFirst)) {
-        opFirst = *itop;
-      }
+    Block *blockTarget = target.getBlock();
+    IRMapping map; // Old value |--> New value
+
+    // a. Load (convert memref<X> to X)
+    SmallVector<Value> indexedValues; // New load values
+    indexedValues.reserve(target.getNumDpsInputs());
+    for (OpOperand *inputOperand : target.getDpsInputOperands()) {
+      Value valNewInput = affine::AffineLoadOp::create(
+          rewriter, target.getLoc(), inputOperand->get());
+      indexedValues.push_back(valNewInput);
+    }
+    for (OpOperand &outputOperand : target.getDpsInitsMutable()) {
+      Value valNewOutput = affine::AffineLoadOp::create(
+          rewriter, target.getLoc(), outputOperand.get());
+      indexedValues.push_back(valNewOutput);
+    }
+    map.map(blockTarget->getArguments(), indexedValues);
+
+    // b. Operations
+    for (auto &op : blockTarget->without_terminator()) {
+      Operation *newOp = rewriter.clone(op, map);
+      map.map(op.getResults(), newOp->getResults());
     }
 
-    rewriter.replaceOp(target, opFirst);
+    // c. Store (convert X to memref<X>)
+    SmallVector<Value> outputBuffers;
+    for (OpOperand &outputOperand : target.getDpsInitsMutable()) {
+      if (!isa<MemRefType>(outputOperand.get().getType()))
+        continue;
+      outputBuffers.push_back(outputOperand.get());
+    }
 
-    results.push_back(opFirst);
+    Operation *terminator = blockTarget->getTerminator();
+    for (OpOperand &operand : terminator->getOpOperands()) {
+      Value valtoStore = map.lookupOrDefault(operand.get());
+      affine::AffineStoreOp::create(
+        rewriter, target.getLoc(), valtoStore,
+        outputBuffers[operand.getOperandNumber()], {});
+    }
+
+    // d. Terminator
+    SmallVector<Value> emptyYield;
+    scf::YieldOp::create(rewriter, target.getLoc(), emptyYield);
+
+    rewriter.replaceOp(target, opReg.getResults());
+    results.push_back(opReg);
     return DiagnosedSilenceableFailure::success();
   }
-  return DiagnosedSilenceableFailure::definiteFailure();
+
+  // At least one dimension in the targeted linalg.generic
+  FailureOr<LinalgLoops> genericLoops = linalgOpToAffineLoops(rewriter, target);
+  if (!succeeded(genericLoops)) {
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  assert(!genericLoops->empty() && "expected at least one loop");
+
+  // "genericLoops" contains all new "AffineForOp", while we need to topmost
+  // one. Since all linalg operators are perfectly nested loops, these operators
+  //   are totally ordered through the ancestor relation.
+  Operation *opFirst = *(genericLoops->begin());
+  for (auto itop = genericLoops->begin(); itop != genericLoops->end(); itop++) {
+    if ((*itop)->isProperAncestor(opFirst)) {
+      opFirst = *itop;
+    }
+  }
+
+  rewriter.replaceOp(target, opFirst);
+
+  results.push_back(opFirst);
+  return DiagnosedSilenceableFailure::success();
 }
 
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOpsEnums.cpp.inc"

@@ -3076,19 +3076,20 @@ def DecomposeWinogradOp : Op<Transform_Dialect,
 }
 
 //===----------------------------------------------------------------------===//
-// LinAlgToAffine
+// LinalgToAffine
 //===----------------------------------------------------------------------===//
 
-def LinAlgToAffineOp : Op<Transform_Dialect, "structured.linalg_to_affine",
+def LinalgToAffineOp : Op<Transform_Dialect, "structured.to_affine",
     [FunctionalStyleTransformOpTrait,
      MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
-    Convert a linalg operator into affine for loops.
+    Convert a linalg operation into affine for loops.
     The hypothesis are the same than the convert-linalg-to-affine
-    pass: we assume that the linalg operator is already generalized
-    (into linalg.generic operators) and that "memref" are used.
+    pass: we assume that the linalg operation is already generalized
+    (into a linalg.generic operation) and that "memref" are used.
+    If these hypothesis are not satisfied, a silenceable failure is raised.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target);
