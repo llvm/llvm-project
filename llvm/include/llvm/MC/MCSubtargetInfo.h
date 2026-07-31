@@ -110,6 +110,10 @@ struct SubtargetSubTypeAliasKV {
   uint16_t KeyStrOff;  ///< Relative offset to the alias name.
   uint16_t SubTypeIdx; ///< Index into the SubtargetSubTypeKV array.
 
+  // MSVC STL before VS2022 value-initializes an element of std::array<T, 0>,
+  // which every target defining no processor aliases instantiates.
+  constexpr SubtargetSubTypeAliasKV() : KeyStrOff(0), SubTypeIdx(0) {}
+
   constexpr SubtargetSubTypeAliasKV(uint16_t KeyStrOff, uint16_t SubTypeIdx)
       : KeyStrOff(KeyStrOff), SubTypeIdx(SubTypeIdx) {}
 

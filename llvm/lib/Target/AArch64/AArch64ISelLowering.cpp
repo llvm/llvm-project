@@ -141,12 +141,6 @@ static cl::opt<bool> EnableExtToTBL("aarch64-enable-ext-to-tbl", cl::Hidden,
                                     cl::desc("Combine ext and trunc to TBL"),
                                     cl::init(true));
 
-static cl::opt<bool> EnableSME2MultiVectorStoreLowering(
-    "aarch64-enable-sme2-multivector-store-lowering", cl::Hidden,
-    cl::desc("Enable lowering of oversized SVE stores to SME2 multi-vector "
-             "operations."),
-    cl::init(false));
-
 // All of the XOR, OR and CMP use ALU ports, and data dependency will become the
 // bottleneck after this transform on high end CPU. So this max leaf node
 // limitation is guard cmp+ccmp will be profitable.
@@ -2117,12 +2111,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
          (Subtarget->hasSME2() && Subtarget->isStreaming()))) {
 
       for (unsigned Opcode : {ISD::LOAD, ISD::STORE}) {
-        // FIXME: Remove this guard on SME2 once new register classes and
-        // pseudos for multi-vector stores have been added.
-        if (Opcode == ISD::STORE && Subtarget->hasSME2() &&
-            Subtarget->isStreaming() && !EnableSME2MultiVectorStoreLowering)
-          continue;
-
         // 2x multi-vector load/stores
         setOperationAction(Opcode, MVT::nxv32i8, Custom);
         setOperationAction(Opcode, MVT::nxv16i16, Custom);
@@ -5717,8 +5705,7 @@ AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
     return convertFromScalableVector(DAG, VT, MaskAsInt);
   }
 
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Mask,
-                     DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getExtractSubvector(DL, VT, Mask, 0);
 }
 
 SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
@@ -6195,9 +6182,8 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
     assert(Op0.getValueType().is64BitVector() &&
            Op1.getValueType().is64BitVector() &&
            "unexpected types for extended operands to VMULL");
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OVT,
-                       DAG.getNode(NewOpc, DL, VT, Op0, Op1),
-                       DAG.getConstant(0, DL, MVT::i64));
+    return DAG.getExtractSubvector(DL, OVT,
+                                   DAG.getNode(NewOpc, DL, VT, Op0, Op1), 0);
   }
   // Optimizing (zext A + zext B) * C, to (S/UMULL A, C) + (S/UMULL B, C) during
   // isel lowering to take advantage of no-stall back to back s/umul + s/umla.
@@ -6741,8 +6727,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       // extract_high_v2i64; this way aarch64_neon_pmull64 could
       // re-use the dag-combiner function with aarch64_neon_{pmull,smull,umull}.
       if (NLane == 1)
-        return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v1i64,
-                           N.getOperand(0), DAG.getConstant(1, DL, MVT::i64));
+        return DAG.getExtractSubvector(DL, MVT::v1i64, N.getOperand(0), 1);
 
       // Operand N is not a higher half but the other operand is.
       if (OtherLane == 1) {
@@ -6753,11 +6738,11 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         //   mov x8, v0.d[1]
         //   fmov d0, x8
         if (NLane == 0)
-          return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v1i64,
-                             DAG.getNode(AArch64ISD::DUPLANE64, DL, MVT::v2i64,
-                                         N.getOperand(0),
-                                         DAG.getConstant(0, DL, MVT::i64)),
-                             DAG.getConstant(1, DL, MVT::i64));
+          return DAG.getExtractSubvector(
+              DL, MVT::v1i64,
+              DAG.getNode(AArch64ISD::DUPLANE64, DL, MVT::v2i64,
+                          N.getOperand(0), DAG.getConstant(0, DL, MVT::i64)),
+              1);
 
         // Otherwise just dup from main to all lanes.
         return DAG.getNode(AArch64ISD::DUP, DL, MVT::v1i64, N);
@@ -7762,15 +7747,12 @@ static SDValue LowerNTStore(StoreSDNode *StoreNode, EVT VT, EVT MemVT,
          MemVT.getScalarSizeInBits() == 16u ||
          MemVT.getScalarSizeInBits() == 32u ||
          MemVT.getScalarSizeInBits() == 64u)) {
-      SDValue Lo =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
-                      MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
-                      StoreNode->getValue(), DAG.getConstant(0, DL, MVT::i64));
-      SDValue Hi =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
-                      MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
-                      StoreNode->getValue(),
-                      DAG.getConstant(EC.getKnownMinValue() / 2, DL, MVT::i64));
+      SDValue Lo = DAG.getExtractSubvector(
+          DL, MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
+          StoreNode->getValue(), 0);
+      SDValue Hi = DAG.getExtractSubvector(
+          DL, MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
+          StoreNode->getValue(), EC.getKnownMinValue() / 2);
       SDValue Result = DAG.getMemIntrinsicNode(
           AArch64ISD::STNP, DL, DAG.getVTList(MVT::Other),
           {StoreNode->getChain(), DAG.getBitcast(MVT::v2i64, Lo),
@@ -7847,9 +7829,8 @@ static SDValue tryLowerMultiVectorStore(StoreSDNode *StoreNode,
 
   unsigned RegElts = MultiVecInfo.RegVT.getVectorMinNumElements();
   for (unsigned i = 0; i != MultiVecInfo.NumVecs; ++i)
-    Ops.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MultiVecInfo.RegVT,
-                              Value,
-                              DAG.getVectorIdxConstant(i * RegElts, DL)));
+    Ops.push_back(
+        DAG.getExtractSubvector(DL, MultiVecInfo.RegVT, Value, i * RegElts));
 
   Ops.push_back(PNg);
   Ops.push_back(StoreNode->getBasePtr());
@@ -8038,8 +8019,7 @@ static SDValue tryLowerSmallVectorExtLoad(LoadSDNode *Load, SelectionDAG &DAG) {
       CurrentNumElts = CurrentNumElts / 2;
       MVT ExtractVT =
           MVT::getVectorVT(MVT::getIntegerVT(CurrentEltBits), CurrentNumElts);
-      Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ExtractVT, Res,
-                        DAG.getConstant(0, DL, MVT::i64));
+      Res = DAG.getExtractSubvector(DL, ExtractVT, Res, 0);
     }
     CurrentEltBits = CurrentEltBits * 2;
     MVT ExtVT =
@@ -8049,8 +8029,7 @@ static SDValue tryLowerSmallVectorExtLoad(LoadSDNode *Load, SelectionDAG &DAG) {
 
   if (CurrentNumElts != NumElts) {
     MVT FinalVT = MVT::getVectorVT(MVT::getIntegerVT(CurrentEltBits), NumElts);
-    Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, FinalVT, Res,
-                      DAG.getConstant(0, DL, MVT::i64));
+    Res = DAG.getExtractSubvector(DL, FinalVT, Res, 0);
   }
 
   return DAG.getMergeValues({Res, ScalarLoad.getValue(1)}, DL);
@@ -8482,16 +8461,10 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   APInt HiWordMask = APInt::getBitsSet(ScalarSize, ScalarSize / 2, ScalarSize);
 
   if (VT == MVT::v4i32) {
-    SDValue LoIdx = DAG.getVectorIdxConstant(0, DL);
-    SDValue HiIdx = DAG.getVectorIdxConstant(2, DL);
-    SDValue LoA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
-                              Op.getOperand(0), LoIdx);
-    SDValue LoB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
-                              Op.getOperand(1), LoIdx);
-    SDValue HiA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
-                              Op.getOperand(0), HiIdx);
-    SDValue HiB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
-                              Op.getOperand(1), HiIdx);
+    SDValue LoA = DAG.getExtractSubvector(DL, MVT::v2i32, Op.getOperand(0), 0);
+    SDValue LoB = DAG.getExtractSubvector(DL, MVT::v2i32, Op.getOperand(1), 0);
+    SDValue HiA = DAG.getExtractSubvector(DL, MVT::v2i32, Op.getOperand(0), 2);
+    SDValue HiB = DAG.getExtractSubvector(DL, MVT::v2i32, Op.getOperand(1), 2);
     SDValue LoCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, LoA, LoB);
     SDValue HiCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, HiA, HiB);
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoCLMUL, HiCLMUL);
@@ -14511,8 +14484,7 @@ static SDValue WidenVector(SDValue V64Reg, SelectionDAG &DAG) {
   MVT WideTy = MVT::getVectorVT(EltTy, 2 * NarrowSize);
   SDLoc DL(V64Reg);
 
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, WideTy, DAG.getPOISON(WideTy),
-                     V64Reg, DAG.getConstant(0, DL, MVT::i64));
+  return DAG.getInsertSubvector(DL, DAG.getPOISON(WideTy), V64Reg, 0);
 }
 
 /// getExtFactor - Determine the adjustment factor for the position when
@@ -14807,22 +14779,16 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     if (Src.MinElt >= NumSrcElts) {
       // The extraction can just take the second half
       Src.ShuffleVec =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, DestVT, Src.ShuffleVec,
-                      DAG.getConstant(NumSrcElts, DL, MVT::i64));
+          DAG.getExtractSubvector(DL, DestVT, Src.ShuffleVec, NumSrcElts);
       Src.WindowBase = -NumSrcElts;
     } else if (Src.MaxElt < NumSrcElts) {
       // The extraction can just take the first half
-      Src.ShuffleVec =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, DestVT, Src.ShuffleVec,
-                      DAG.getConstant(0, DL, MVT::i64));
+      Src.ShuffleVec = DAG.getExtractSubvector(DL, DestVT, Src.ShuffleVec, 0);
     } else {
       // An actual VEXT is needed
-      SDValue VEXTSrc1 =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, DestVT, Src.ShuffleVec,
-                      DAG.getConstant(0, DL, MVT::i64));
+      SDValue VEXTSrc1 = DAG.getExtractSubvector(DL, DestVT, Src.ShuffleVec, 0);
       SDValue VEXTSrc2 =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, DestVT, Src.ShuffleVec,
-                      DAG.getConstant(NumSrcElts, DL, MVT::i64));
+          DAG.getExtractSubvector(DL, DestVT, Src.ShuffleVec, NumSrcElts);
       unsigned Imm = Src.MinElt * getExtFactor(VEXTSrc1);
 
       if (!SrcVT.is64BitVector()) {
@@ -15420,12 +15386,10 @@ static SDValue tryFormConcatFromShuffle(SDValue Op, SelectionDAG &DAG) {
 
   EVT CastVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
   if (SplitV0) {
-    V0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, CastVT, V0,
-                     DAG.getConstant(0, DL, MVT::i64));
+    V0 = DAG.getExtractSubvector(DL, CastVT, V0, 0);
   }
   if (V1.getValueSizeInBits() == 128) {
-    V1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, CastVT, V1,
-                     DAG.getConstant(0, DL, MVT::i64));
+    V1 = DAG.getExtractSubvector(DL, CastVT, V1, 0);
   }
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, V0, V1);
 }
@@ -16162,10 +16126,10 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
       DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, DL, MVT::i64);
   SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
   if (VT == MVT::nxv1i1)
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::nxv1i1,
-                       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv2i1, ID,
-                                   Zero, SplatVal),
-                       Zero);
+    return DAG.getExtractSubvector(DL, MVT::nxv1i1,
+                                   DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL,
+                                               MVT::nxv2i1, ID, Zero, SplatVal),
+                                   0);
   return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, ID, Zero, SplatVal);
 }
 
@@ -17132,12 +17096,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
       break;
     }
     if (Even || Odd) {
-      SDValue LHS =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SDValue(Vector, 0),
-                      DAG.getConstant(0, DL, MVT::i64));
+      SDValue LHS = DAG.getExtractSubvector(DL, VT, SDValue(Vector, 0), 0);
       SDValue RHS =
-          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SDValue(Vector, 0),
-                      DAG.getConstant(NumElts, DL, MVT::i64));
+          DAG.getExtractSubvector(DL, VT, SDValue(Vector, 0), NumElts);
 
       if (Even && !Odd)
         return DAG.getNode(AArch64ISD::UZP1, DL, VT, LHS, RHS);
@@ -17609,9 +17570,8 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
     EVT PackedVT = getPackedSVEVectorVT(InVT.getVectorElementType());
     if (PackedVT != InVT) {
       // Pack input into the bottom part of an SVE register and try again.
-      SDValue Container = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, PackedVT,
-                                      DAG.getPOISON(PackedVT), Vec,
-                                      DAG.getVectorIdxConstant(0, DL));
+      SDValue Container =
+          DAG.getInsertSubvector(DL, DAG.getPOISON(PackedVT), Vec, 0);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Container, Idx);
     }
 
@@ -17652,16 +17612,12 @@ SDValue AArch64TargetLowering::LowerINSERT_SUBVECTOR(SDValue Op,
       EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
 
       SDValue Lo, Hi;
-      Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Vec0,
-                       DAG.getVectorIdxConstant(0, DL));
-      Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Vec0,
-                       DAG.getVectorIdxConstant(NumElts / 2, DL));
+      Lo = DAG.getExtractSubvector(DL, HalfVT, Vec0, 0);
+      Hi = DAG.getExtractSubvector(DL, HalfVT, Vec0, NumElts / 2);
       if (Idx < (NumElts / 2))
-        Lo = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Lo, Vec1,
-                         DAG.getVectorIdxConstant(Idx, DL));
+        Lo = DAG.getInsertSubvector(DL, Lo, Vec1, Idx);
       else
-        Hi = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, HalfVT, Hi, Vec1,
-                         DAG.getVectorIdxConstant(Idx - (NumElts / 2), DL));
+        Hi = DAG.getInsertSubvector(DL, Hi, Vec1, Idx - (NumElts / 2));
 
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
@@ -18475,6 +18431,14 @@ setInfoSVEStN(const AArch64TargetLowering &TLI, const DataLayout &DL,
                                 EC * NumVecs);
   Info.ptrVal = CI.getArgOperand(CI.arg_size() - 1);
   Info.offset = 0;
+  // Unless all predicate lanes are known to be active, the full scalable
+  // vector size is only an upper bound on the memory accessed, which
+  // MachineMemOperand cannot represent so set it unknown.
+  // `NumVecs` used in operand below because predicate is after
+  // all vector i.e. stN(vec0, ..., vecN-1, predicate, pointer)
+  const auto *Pred = dyn_cast<Constant>(CI.getArgOperand(NumVecs));
+  if (!Pred || !Pred->isAllOnesValue())
+    Info.size = MemoryLocation::UnknownSize;
   Info.align.reset();
   Info.flags = MachineMemOperand::MOStore;
 }
@@ -18489,14 +18453,17 @@ void AArch64TargetLowering::getTgtMemIntrinsic(
   auto &DL = I.getDataLayout();
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_st2:
+  case Intrinsic::aarch64_sve_st2q:
     setInfoSVEStN<2>(*this, DL, Info, I);
     Infos.push_back(Info);
     return;
   case Intrinsic::aarch64_sve_st3:
+  case Intrinsic::aarch64_sve_st3q:
     setInfoSVEStN<3>(*this, DL, Info, I);
     Infos.push_back(Info);
     return;
   case Intrinsic::aarch64_sve_st4:
+  case Intrinsic::aarch64_sve_st4q:
     setInfoSVEStN<4>(*this, DL, Info, I);
     Infos.push_back(Info);
     return;
@@ -20452,22 +20419,18 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 
   // First, create the node pattern of UABD/SABD.
   SDValue UABDHigh8Op0 =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT0->getOperand(0),
-                  DAG.getConstant(8, DL, MVT::i64));
+      DAG.getExtractSubvector(DL, MVT::v8i8, EXT0->getOperand(0), 8);
   SDValue UABDHigh8Op1 =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT1->getOperand(0),
-                  DAG.getConstant(8, DL, MVT::i64));
+      DAG.getExtractSubvector(DL, MVT::v8i8, EXT1->getOperand(0), 8);
   SDValue UABDHigh8 = DAG.getNode(IsZExt ? ISD::ABDU : ISD::ABDS, DL, MVT::v8i8,
                                   UABDHigh8Op0, UABDHigh8Op1);
   SDValue UABDL = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v8i16, UABDHigh8);
 
   // Second, create the node pattern of UABAL.
   SDValue UABDLo8Op0 =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT0->getOperand(0),
-                  DAG.getConstant(0, DL, MVT::i64));
+      DAG.getExtractSubvector(DL, MVT::v8i8, EXT0->getOperand(0), 0);
   SDValue UABDLo8Op1 =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, EXT1->getOperand(0),
-                  DAG.getConstant(0, DL, MVT::i64));
+      DAG.getExtractSubvector(DL, MVT::v8i8, EXT1->getOperand(0), 0);
   SDValue UABDLo8 = DAG.getNode(IsZExt ? ISD::ABDU : ISD::ABDS, DL, MVT::v8i8,
                                 UABDLo8Op0, UABDLo8Op1);
   SDValue ZExtUABD = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::v8i16, UABDLo8);
@@ -20708,10 +20671,8 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   for (; I < VecReduce16Num; I += 1) {
     SDValue Zeros = DAG.getConstant(0, DL, MVT::v4i32);
     SDValue Op0 =
-        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v16i8, A.getOperand(0),
-                    DAG.getConstant(I * 16, DL, MVT::i64));
-    SDValue Op1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v16i8, B,
-                              DAG.getConstant(I * 16, DL, MVT::i64));
+        DAG.getExtractSubvector(DL, MVT::v16i8, A.getOperand(0), I * 16);
+    SDValue Op1 = DAG.getExtractSubvector(DL, MVT::v16i8, B, I * 16);
     SDValue Dot =
         DAG.getNode(DotOpcode, DL, Zeros.getValueType(), Zeros, Op0, Op1);
     SDotVec16.push_back(Dot);
@@ -20730,10 +20691,8 @@ static SDValue performVecReduceAddCombine(SDNode *N, SelectionDAG &DAG,
   // Generate the remainder Dot operation that is multiple of 8.
   SDValue Zeros = DAG.getConstant(0, DL, MVT::v2i32);
   SDValue Vec8Op0 =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, A.getOperand(0),
-                  DAG.getConstant(I * 16, DL, MVT::i64));
-  SDValue Vec8Op1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v8i8, B,
-                                DAG.getConstant(I * 16, DL, MVT::i64));
+      DAG.getExtractSubvector(DL, MVT::v8i8, A.getOperand(0), I * 16);
+  SDValue Vec8Op1 = DAG.getExtractSubvector(DL, MVT::v8i8, B, I * 16);
   SDValue Dot =
       DAG.getNode(DotOpcode, DL, Zeros.getValueType(), Zeros, Vec8Op0, Vec8Op1);
   SDValue VecReduceAdd8 =
@@ -22898,11 +22857,9 @@ performInsertSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue Lo, Hi;
   if (IdxVal == 0) {
     Lo = SubVec;
-    Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, Vec,
-                     DAG.getVectorIdxConstant(NumSubElts, DL));
+    Hi = DAG.getExtractSubvector(DL, SubVT, Vec, NumSubElts);
   } else {
-    Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, SubVT, Vec,
-                     DAG.getVectorIdxConstant(0, DL));
+    Lo = DAG.getExtractSubvector(DL, SubVT, Vec, 0);
     Hi = SubVec;
   }
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VecVT, Lo, Hi);
@@ -23008,8 +22965,7 @@ static SDValue tryExtendDUPToExtractHigh(SDValue N, SelectionDAG &DAG) {
     N = DAG.getNode(N->getOpcode(), DL, NewVT, N->ops());
   }
 
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, N,
-                     DAG.getConstant(NumElems, DL, MVT::i64));
+  return DAG.getExtractSubvector(DL, VT, N, NumElems);
 }
 
 static bool isEssentiallyExtractHighSubvector(SDValue N) {
@@ -23594,11 +23550,9 @@ static SDValue performBuildVectorCombine(SDNode *N,
     if (!DAG.getTargetLoweringInfo().isTypeLegal(ExtVT))
       return SDValue();
 
-    SDValue SubvectorIdx = DAG.getVectorIdxConstant(Elt0->getConstantOperandVal(1), DL);
-
     SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, DL, ExtVT, VecToExtend);
-    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, Ext,
-                       SubvectorIdx);
+    return DAG.getExtractSubvector(DL, MVT::v2i32, Ext,
+                                   Elt0->getConstantOperandVal(1));
   }
 
   return SDValue();
@@ -24200,11 +24154,9 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
   // the result then extract the lanes if the two operands match as it produces
   // slightly smaller code.
   if (Other.getOpcode() != Shift.getOperand(0).getOpcode()) {
-    SDValue SubL = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, Op0.getValueType(),
-                               NewOp, DAG.getConstant(0, DL, MVT::i64));
-    SDValue SubH =
-        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, Op0.getValueType(), NewOp,
-                    DAG.getConstant(NumSubElts * NumSubLoads, DL, MVT::i64));
+    SDValue SubL = DAG.getExtractSubvector(DL, Op0.getValueType(), NewOp, 0);
+    SDValue SubH = DAG.getExtractSubvector(DL, Op0.getValueType(), NewOp,
+                                           NumSubElts * NumSubLoads);
     SDValue Extr0 =
         DAG.getVectorShuffle(Op0.getValueType(), DL, SubL, SubH, LowMask);
     SDValue Extr1 =
@@ -24214,11 +24166,9 @@ static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
   } else {
     EVT DVT = VT.getDoubleNumVectorElementsVT(*DAG.getContext());
     SDValue Ext = DAG.getNode(Other.getOpcode(), DL, DVT, NewOp);
-    SDValue SubL = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Ext,
-                               DAG.getConstant(0, DL, MVT::i64));
+    SDValue SubL = DAG.getExtractSubvector(DL, VT, Ext, 0);
     SDValue SubH =
-        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Ext,
-                    DAG.getConstant(NumSubElts * NumSubLoads, DL, MVT::i64));
+        DAG.getExtractSubvector(DL, VT, Ext, NumSubElts * NumSubLoads);
     Ext0 = DAG.getVectorShuffle(VT, DL, SubL, SubH, LowMask);
     Ext1 = DAG.getVectorShuffle(VT, DL, SubL, SubH, HighMask);
   }
@@ -26285,10 +26235,8 @@ static SDValue splitStores(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // Split VT into two.
   EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
   unsigned NumElts = HalfVT.getVectorNumElements();
-  SDValue SubVector0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, StVal,
-                                   DAG.getConstant(0, DL, MVT::i64));
-  SDValue SubVector1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, StVal,
-                                   DAG.getConstant(NumElts, DL, MVT::i64));
+  SDValue SubVector0 = DAG.getExtractSubvector(DL, HalfVT, StVal, 0);
+  SDValue SubVector1 = DAG.getExtractSubvector(DL, HalfVT, StVal, NumElts);
   SDValue BasePtr = S->getBasePtr();
   SDValue NewST1 =
       DAG.getStore(S->getChain(), DL, SubVector0, BasePtr, S->getPointerInfo(),
@@ -26477,12 +26425,10 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
     uint64_t ExtIdx1 = Op1.getConstantOperandVal(1);
     uint64_t NumElements = SourceVec.getValueType().getVectorMinNumElements();
     if (ExtIdx0 == 0 && ExtIdx1 == NumElements / 2) {
-      EVT OpVT = Op0.getOperand(1).getValueType();
       EVT WidenedResVT = ResVT.getDoubleNumVectorElementsVT(*DAG.getContext());
       SDValue Uzp = DAG.getNode(N->getOpcode(), DL, WidenedResVT, SourceVec,
                                 DAG.getPOISON(WidenedResVT));
-      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ResVT, Uzp,
-                         DAG.getConstant(0, DL, OpVT));
+      return DAG.getExtractSubvector(DL, ResVT, Uzp, 0);
     }
   }
 
@@ -26736,8 +26682,7 @@ static SDValue performSunpkloCombine(SDNode *N, SelectionDAG &DAG) {
           MVT::i1) {
     SDValue CC = N->getOperand(0)->getOperand(0);
     auto VT = CC->getValueType(0).getHalfNumVectorElementsVT(*DAG.getContext());
-    SDValue Unpk = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), VT, CC,
-                               DAG.getVectorIdxConstant(0, SDLoc(N)));
+    SDValue Unpk = DAG.getExtractSubvector(SDLoc(N), VT, CC, 0);
     return DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), N->getValueType(0), Unpk);
   }
 
@@ -26955,8 +26900,7 @@ static SDValue combineV3I8LoadExt(LoadSDNode *LD, SelectionDAG &DAG) {
   SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::v4i8, Or);
 
   // Extract v3i8 again.
-  SDValue Extract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MemVT, Cast,
-                                DAG.getConstant(0, DL, MVT::i64));
+  SDValue Extract = DAG.getExtractSubvector(DL, MemVT, Cast, 0);
   SDValue TokenFactor = DAG.getNode(
       ISD::TokenFactor, DL, MVT::Other,
       {SDValue(cast<SDNode>(L16), 1), SDValue(cast<SDNode>(L8), 1)});
@@ -27050,10 +26994,8 @@ static SDValue performLOADCombine(SDNode *N,
                   LD->getPointerInfo().getWithOffset(PtrOffset), NewAlign,
                   LD->getMemOperand()->getFlags(), LD->getAAInfo());
   SDValue PoisonVector = DAG.getPOISON(NewVT);
-  SDValue InsertIdx = DAG.getVectorIdxConstant(0, DL);
   SDValue ExtendedRemainingLoad =
-      DAG.getNode(ISD::INSERT_SUBVECTOR, DL, NewVT,
-                  {PoisonVector, RemainingLoad, InsertIdx});
+      DAG.getInsertSubvector(DL, PoisonVector, RemainingLoad, 0);
   LoadOps.push_back(ExtendedRemainingLoad);
   LoadOpsChain.push_back(SDValue(cast<SDNode>(RemainingLoad), 1));
   EVT ConcatVT =
@@ -27063,8 +27005,7 @@ static SDValue performLOADCombine(SDNode *N,
       DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, LoadOps);
   // Extract the original vector type size.
   SDValue ExtractSubVector =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MemVT,
-                  {ConcatVectors, DAG.getVectorIdxConstant(0, DL)});
+      DAG.getExtractSubvector(DL, MemVT, ConcatVectors, 0);
   SDValue TokenFactor =
       DAG.getNode(ISD::TokenFactor, DL, MVT::Other, LoadOpsChain);
   return DAG.getMergeValues({ExtractSubVector, TokenFactor}, DL);
@@ -27349,8 +27290,7 @@ static SDValue performCTTZCombine(SDNode *N,
     } else {
       // Split into Q-reg-sized halves so each ShrnPair stays in range.
       EVT HalfVT = CurVT.getHalfNumVectorElementsVT(Ctx);
-      SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
-                               DAG.getConstant(0, DL, MVT::i64));
+      SDValue Lo = DAG.getExtractSubvector(DL, HalfVT, Cur, 0);
       SDValue Hi = DAG.getNode(
           ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
           DAG.getConstant(HalfVT.getVectorNumElements(), DL, MVT::i64));
@@ -29800,8 +29740,7 @@ static SDValue performDUPCombine(SDNode *N,
     SmallVector<SDValue> Ops(N->ops());
     if (SDNode *LN = DCI.DAG.getNodeIfExists(N->getOpcode(),
                                              DCI.DAG.getVTList(LVT), Ops)) {
-      return DCI.DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SDValue(LN, 0),
-                             DCI.DAG.getConstant(0, DL, MVT::i64));
+      return DCI.DAG.getExtractSubvector(DL, VT, SDValue(LN, 0), 0);
     }
   }
 
@@ -30725,10 +30664,8 @@ static SDValue tryCombineMULLWithUZP1(SDNode *N,
 
   SDValue UZP1 =
       DAG.getNode(AArch64ISD::UZP1, DL, UZP1VT, TruncLowOp, TruncHighOp);
-  SDValue HighIdxCst =
-      DAG.getConstant(TruncHighVT.getVectorNumElements(), DL, MVT::i64);
-  SDValue NewTruncHigh =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, TruncHighVT, UZP1, HighIdxCst);
+  SDValue NewTruncHigh = DAG.getExtractSubvector(
+      DL, TruncHighVT, UZP1, TruncHighVT.getVectorNumElements());
   DAG.ReplaceAllUsesWith(TruncHigh, NewTruncHigh);
 
   if (HasFoundMULLow) {
@@ -30828,13 +30765,35 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   // Let's generate new sequence with AArch64ISD::NVCAST.
-  SDValue EXTRACT_SUBVEC =
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32, UADDLV,
-                  DAG.getConstant(0, DL, MVT::i64));
+  SDValue EXTRACT_SUBVEC = DAG.getExtractSubvector(DL, MVT::v2i32, UADDLV, 0);
   SDValue NVCAST =
       DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, EXTRACT_SUBVEC);
 
   return NVCAST;
+}
+
+static bool isDeinterleave4ForWideningUToFP(SDNode *N) {
+  if (N->getNumOperands() != 4)
+    return false;
+
+  if (N->getValueType(0).isScalableVector())
+    return false;
+  SmallVector<SDNode *, 4> Users(4, nullptr);
+  for (SDUse &Use : N->uses()) {
+    unsigned ResNo = Use.getResNo();
+    SDNode *User = Use.getUser();
+    if (Users[ResNo])
+      return false; // return if more than 1 uses
+    if (User->getOpcode() != ISD::UINT_TO_FP)
+      return false;
+    unsigned InBits = N->getValueType(ResNo).getScalarSizeInBits();
+    unsigned OutBits = User->getValueType(0).getScalarSizeInBits();
+    if (OutBits != InBits * 4)
+      return false;
+    Users[ResNo] = User;
+  }
+
+  return llvm::all_of(Users, [](SDNode *User) { return User != nullptr; });
 }
 
 static SDValue performVectorDeinterleaveCombine(
@@ -30875,6 +30834,12 @@ static SDValue performVectorDeinterleaveCombine(
 
   SDValue WideVec = Op0->getOperand(0);
   SDLoc DL(N);
+
+  // A fixed-length factor-4 deinterleave whose results are only used by
+  // 4x widening unsigned-to-float conversions can be lowered more efficiently
+  // using shifts and masks on the original loaded vectors.
+  if (isDeinterleave4ForWideningUToFP(N))
+    return SDValue();
 
   SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
   ResVTs.push_back(MVT::Other);
@@ -31722,9 +31687,7 @@ static void CustomNonLegalBITCASTResults(SDNode *N,
   // Use SCALAR_TO_VECTOR for lane zero
   SDValue Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ExtendVT, Op);
   SDValue CastVal = DAG.getNode(ISD::BITCAST, DL, CastVT, Vec);
-  SDValue IdxZero = DAG.getVectorIdxConstant(0, DL);
-  Results.push_back(
-      DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, CastVal, IdxZero));
+  Results.push_back(DAG.getExtractSubvector(DL, VT, CastVal, 0));
 }
 
 void AArch64TargetLowering::ReplaceBITCASTResults(
@@ -33436,9 +33399,7 @@ static SDValue convertToScalableVector(SelectionDAG &DAG, EVT VT, SDValue V) {
          "Expected to convert into a scalable vector!");
   assert(V.getValueType().isFixedLengthVector() &&
          "Expected a fixed length vector operand!");
-  SDLoc DL(V);
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getPOISON(VT), V, Zero);
+  return DAG.getInsertSubvector(SDLoc(V), DAG.getPOISON(VT), V, 0);
 }
 
 // Shrink V so it's just big enough to maintain a VT's worth of data.
@@ -33447,9 +33408,7 @@ static SDValue convertFromScalableVector(SelectionDAG &DAG, EVT VT, SDValue V) {
          "Expected to convert into a fixed length vector!");
   assert(V.getValueType().isScalableVector() &&
          "Expected a scalable vector operand!");
-  SDLoc DL(V);
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, V, Zero);
+  return DAG.getExtractSubvector(SDLoc(V), VT, V, 0);
 }
 
 // Convert all fixed length vector loads larger than NEON to masked_loads.
@@ -33764,11 +33723,9 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
 
   auto HalveAndExtendVector = [&DAG, &DL, &HalfVT, &PromVT,
                                &ExtendOpcode](SDValue Op) {
-    SDValue IdxZero = DAG.getConstant(0, DL, MVT::i64);
-    SDValue IdxHalf =
-        DAG.getConstant(HalfVT.getVectorNumElements(), DL, MVT::i64);
-    SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Op, IdxZero);
-    SDValue Hi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Op, IdxHalf);
+    SDValue Lo = DAG.getExtractSubvector(DL, HalfVT, Op, 0);
+    SDValue Hi =
+        DAG.getExtractSubvector(DL, HalfVT, Op, HalfVT.getVectorNumElements());
     return std::pair<SDValue, SDValue>(
         {DAG.getNode(ExtendOpcode, DL, PromVT, Lo),
          DAG.getNode(ExtendOpcode, DL, PromVT, Hi)});
@@ -34515,7 +34472,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
-
+    MachinePointerInfo StackPtrInfo = MachinePointerInfo::getFixedStack(
+        DAG.getMachineFunction(), cast<FrameIndexSDNode>(StackPtr)->getIndex());
     SmallVector<SDValue, 6> Ops;
     Ops.push_back(DAG.getEntryNode());
     Ops.push_back(
@@ -34529,7 +34487,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
                          OpVT.getVectorNumElements() * 3);
     SDValue Chain = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, TripleOpVT,
-        MachinePointerInfo(), Alignment, MachineMemOperand::MOStore);
+        StackPtrInfo, Alignment, MachineMemOperand::MOStore);
 
     SmallVector<SDValue, 3> Results;
     for (unsigned I = 0; I < 3; ++I) {
@@ -34551,6 +34509,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     Align Alignment = DAG.getReducedAlign(PackedVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(PackedVT.getStoreSize() * 3, Alignment);
+    MachinePointerInfo StackPtrInfo = MachinePointerInfo::getFixedStack(
+        DAG.getMachineFunction(), cast<FrameIndexSDNode>(StackPtr)->getIndex());
 
     Intrinsic::ID IntID = Intrinsic::aarch64_sve_st3;
     EVT PredVT = PackedVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
@@ -34563,7 +34523,12 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     Ops.push_back(StackPtr);
 
     // Interleave operands and store.
-    SDValue Chain = DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops);
+    EVT TriplePackedVT =
+        EVT::getVectorVT(*DAG.getContext(), PackedVT.getVectorElementType(),
+                         PackedVT.getVectorElementCount() * 3);
+    SDValue Chain = DAG.getMemIntrinsicNode(
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, TriplePackedVT,
+        StackPtrInfo, Alignment, MachineMemOperand::MOStore);
 
     // Read back the interleaved data.
     SmallVector<SDValue, 3> Results;
@@ -34812,8 +34777,7 @@ AArch64TargetLowering::LowerGET_ACTIVE_LANE_MASK(SDValue Op,
   SDValue Mask = DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, WhileVT,
                              Op.getOperand(0), Op.getOperand(1));
   SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
-  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, MaskAsInt,
-                     DAG.getVectorIdxConstant(0, DL));
+  return DAG.getExtractSubvector(DL, VT, MaskAsInt, 0);
 }
 
 static unsigned getSVEOpcodeForFPToInt(unsigned Opc) {

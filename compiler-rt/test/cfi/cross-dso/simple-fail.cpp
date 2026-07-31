@@ -79,6 +79,7 @@ int main(int argc, char *argv[]) {
     // Test cast. BOOM.
     // CFI-DIAG-CAST: runtime error: control flow integrity check for type 'A' failed during cast to unrelated type
     // CFI-DIAG-CAST-NEXT: note: vtable is of type '{{(struct )?}}B'
+    // CFI-DIAG-CAST: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     a = (A*)p;
   } else {
     // Invisible to CFI. Test virtual call later.
@@ -92,6 +93,7 @@ int main(int argc, char *argv[]) {
 
   // CFI-DIAG-CALL: runtime error: control flow integrity check for type 'A' failed during virtual call
   // CFI-DIAG-CALL-NEXT: note: vtable is of type '{{(struct )?}}B'
+  // CFI-DIAG-CALL: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
   a->f(); // UB here
 
   // CFI-NOT: =2=
