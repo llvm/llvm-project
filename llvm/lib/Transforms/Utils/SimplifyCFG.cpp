@@ -316,6 +316,8 @@ class SimplifyCFGOpt {
   bool simplifyBranchOnICmpChain(CondBrInst *BI, IRBuilder<> &Builder,
                                  const DataLayout &DL);
   bool simplifySwitchOnSelect(SwitchInst *SI, SelectInst *Select);
+  bool simplifySwitchOnSelectRemap(SwitchInst *SI, SelectInst *Select, Value *X,
+                                   ConstantInt *C, bool Negate);
   bool simplifyIndirectBrOnSelect(IndirectBrInst *IBI, SelectInst *SI);
   bool turnSwitchRangeIntoICmp(SwitchInst *SI, IRBuilder<> &Builder);
   bool simplifyDuplicatePredecessors(BasicBlock *Succ, DomTreeUpdater *DTU);
@@ -4995,12 +4997,78 @@ bool SimplifyCFGOpt::simplifyTerminatorOnSelect(Instruction *OldTerm,
   return true;
 }
 
+// Folds switch(select(icmp eq X, C, K, X)) into switch(X), retargeting
+// (or adding) the case for C to wherever K currently dispatches to:
+//   %cmp = icmp eq T %x, C
+//   %key = select i1 %cmp, T K, T %x
+//   switch T %key, label %default [ T K, label %case_k ... ]
+// becomes
+//   switch T %x, label %default [ T C, label %case_k
+//                                  T K, label %case_k ... ]
+bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
+                                                 SelectInst *Select, Value *X,
+                                                 ConstantInt *C, bool Negate) {
+  Value *TrueVal = Select->getTrueValue();
+  Value *FalseVal = Select->getFalseValue();
+  if (Negate)
+    std::swap(TrueVal, FalseVal);
+  if (FalseVal != X)
+    return false;
+  auto *K = dyn_cast<ConstantInt>(TrueVal);
+  if (!K)
+    return false;
+
+  BasicBlock *DestFork = SI->findCaseValue(K)->getCaseSuccessor();
+  auto CaseC = SI->findCaseValue(C);
+  bool IsDefault = CaseC == SI->case_default();
+  // Save before setSuccessor()/addCase() change it.
+  BasicBlock *OldDest = CaseC->getCaseSuccessor();
+  BasicBlock *BB = SI->getParent();
+
+  if (OldDest != DestFork) {
+    // Case list is changing so we should drop stale profile weights.
+    SI->setMetadata(LLVMContext::MD_prof, nullptr);
+    if (!IsDefault)
+      OldDest->removePredecessor(BB);
+    if (IsDefault)
+      SI->addCase(C, DestFork);
+    else
+      CaseC->setSuccessor(DestFork);
+    // Not a new edge (BB->DestFork exists via K), just adding the PHI
+    // entry.
+    addPredecessorToBlock(DestFork, BB, BB);
+
+    if (!IsDefault) {
+      // Edge to OldDest is gone only if nothing else still uses it.
+      bool OldDestStillTargeted = any_of(
+          successors(SI), [&](BasicBlock *Succ) { return Succ == OldDest; });
+      if (DTU && !OldDestStillTargeted)
+        DTU->applyUpdates({{DominatorTree::Delete, BB, OldDest}});
+    }
+  }
+
+  // X replaces the condition so compare/select are now dead.
+  SI->setCondition(X);
+  RecursivelyDeleteTriviallyDeadInstructions(Select);
+  return true;
+}
+
 // Replaces
 //   (switch (select cond, X, Y)) on constant X, Y
 // with a branch - conditional if X and Y lead to distinct BBs,
 // unconditional otherwise.
 bool SimplifyCFGOpt::simplifySwitchOnSelect(SwitchInst *SI,
                                             SelectInst *Select) {
+  CmpPredicate Pred;
+  Value *X;
+  ConstantInt *C;
+  if (Select->hasOneUse() &&
+      match(Select->getCondition(),
+            m_ICmp(Pred, m_Value(X), m_ConstantInt(C))) &&
+      ICmpInst::isEquality(Pred) &&
+      simplifySwitchOnSelectRemap(SI, Select, X, C, Pred == ICmpInst::ICMP_NE))
+    return true;
+
   // Check for constant integer values in the select.
   ConstantInt *TrueVal = dyn_cast<ConstantInt>(Select->getTrueValue());
   ConstantInt *FalseVal = dyn_cast<ConstantInt>(Select->getFalseValue());
