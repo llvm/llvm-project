@@ -1,9 +1,9 @@
-file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/proxy)
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-proxy)
 
 add_gen_header(
   elf_proxy
   YAML_FILE
-    ../libc/include/proxy/elf_proxy.yaml
+    ../libc/include/llvm-libc-proxy/elf_proxy.yaml
   GEN_HDR
     elf_proxy.h
   DEPENDS

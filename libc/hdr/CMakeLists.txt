@@ -354,9 +354,7 @@ add_proxy_header_library(
   HDRS
     elf_proxy.h
   FULL_BUILD_DEPENDS
-    libc.include.proxy.elf_proxy
-  DEPENDS
-    libc.include.proxy.elf_proxy
+    libc.include.llvm-libc-proxy.elf_proxy
 )
 
 add_proxy_header_library(

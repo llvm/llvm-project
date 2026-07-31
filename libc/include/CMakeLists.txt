@@ -10,6 +10,7 @@ endif()
 
 add_subdirectory(llvm-libc-macros)
 add_subdirectory(llvm-libc-types)
+add_subdirectory(llvm-libc-proxy)
 
 add_header(
   llvm_libc_common_h
@@ -17,7 +18,6 @@ add_header(
     __llvm-libc-common.h
 )
 
-add_subdirectory(proxy)
 
 # TODO: Can we simplify this macro expansion?
 # https://github.com/llvm/llvm-project/issues/117254
@@ -558,7 +558,7 @@ add_header_macro(
   ../libc/include/elf.yaml
   elf.h
   DEPENDS
-    .proxy.elf_proxy
+    .llvm-libc-proxy.elf_proxy
     .llvm_libc_common_h
 )
 
