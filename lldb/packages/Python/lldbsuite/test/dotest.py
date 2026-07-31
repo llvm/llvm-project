@@ -504,6 +504,19 @@ def registerFaulthandler():
     if getattr(faulthandler, "register", None):
         faulthandler.register(signal.SIGTERM, chain=True)
 
+    if sys.platform != "win32":
+        return
+
+    # lit kills a hung test with TerminateProcess on Windows, so the SIGTERM
+    # handler above never runs and a timeout is reported with no indication of
+    # where it hung. Dump every thread's stack while the process is still alive.
+    try:
+        secs = float(os.environ.get("LLDB_TEST_STACK_DUMP_SECS", 300))
+    except ValueError:
+        secs = 300
+    if secs > 0:
+        faulthandler.dump_traceback_later(secs, exit=False)
+
 
 def setupSysPath():
     """
