@@ -10,6 +10,7 @@ Checks: >
   misc-non-copyable-objects,
   misc-uniqueptr-reset-release,
 
+  modernize-loop-convert,
   modernize-redundant-void-arg,
 
   readability-duplicate-include,
@@ -47,7 +48,6 @@ CheckOptions:
 # TODO: Enable these checks
 # llvm-include-order,
 # llvm-namespace-comment,
-# modernize-loop-convert,
 # modernize-use-equals-delete,
 # modernize-use-nullptr,
 # modernize-use-override,
