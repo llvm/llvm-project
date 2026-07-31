@@ -228,6 +228,10 @@ public:
                                function_ref<bool(StringRef)> Callback);
 
 protected:
+  /// Returns whether a symbol with the given \p Flags is defined by and
+  /// exported from the image, and therefore usable by the runtime.
+  virtual bool isExportedSymbol(uint32_t Flags);
+
   /// Returns the name \p Symbol is known by if it identifies a symbol of the
   /// given \p Kind, otherwise std::nullopt.
   virtual std::optional<StringRef>

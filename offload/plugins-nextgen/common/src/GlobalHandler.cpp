@@ -193,6 +193,12 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
   return Plugin::success();
 }
 
+bool GenericGlobalHandlerTy::isExportedSymbol(uint32_t Flags) {
+  uint32_t Ignored = SymbolRef::SF_Undefined | SymbolRef::SF_Hidden |
+                     SymbolRef::SF_FormatSpecific;
+  return (Flags & SymbolRef::SF_Global) && !(Flags & Ignored);
+}
+
 std::optional<StringRef>
 GenericGlobalHandlerTy::matchSymbol(const ELFSymbolRef &Symbol, StringRef Name,
                                     SymbolKindTy Kind) {
@@ -220,10 +226,7 @@ Error GenericGlobalHandlerTy::iterateSymbols(
       return Plugin::error(ErrorCode::INVALID_BINARY, FlagsOrErr.takeError(),
                            "error reading ELF symbol");
 
-    // Only symbols that are defined by and exported from the image can be used.
-    uint32_t Ignored = SymbolRef::SF_Undefined | SymbolRef::SF_Hidden |
-                       SymbolRef::SF_FormatSpecific;
-    if (!(*FlagsOrErr & SymbolRef::SF_Global) || (*FlagsOrErr & Ignored))
+    if (!isExportedSymbol(*FlagsOrErr))
       continue;
 
     auto NameOrErr = Symbol.getName();
