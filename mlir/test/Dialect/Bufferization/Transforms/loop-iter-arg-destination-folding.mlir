@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -loop-iter-arg-destination-folding -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -loop-iter-arg-destination-folding -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // A read-then-fully-overwritten iter_arg whose yielded value is a whole-tensor
 // transfer_write into an outside tensor.empty has its write destination folded
@@ -23,16 +23,19 @@ func.func @fold_read_then_write(%init: tensor<128xf32>, %lb: index, %ub: index, 
 
 // -----
 
-// The iter_arg is read a SECOND time after the write, so folding would make the
-// later read observe this iteration's own store. Must NOT fold: the write keeps
-// its scratch destination.
+// The iter_arg is read a SECOND time after the write. Folding is still legal:
+// the write only feeds the yield, so it is sunk below every read of the iter_arg
+// before its destination is folded onto the iter_arg. Both reads therefore still
+// observe the incoming value; only the final store defines the next iteration.
 
-// CHECK-LABEL: func.func @no_fold_read_after_write
-//       CHECK:   %[[S:.*]] = tensor.empty() : tensor<128xf32>
+// CHECK-LABEL: func.func @fold_read_after_write_via_sink
 //       CHECK:   scf.for {{.*}} iter_args(%[[A:.*]] = %{{.*}})
-//       CHECK:     vector.transfer_write %{{.*}}, %[[S]]
-//       CHECK:     vector.transfer_read %[[A]]
-func.func @no_fold_read_after_write(%init: tensor<128xf32>, %lb: index, %ub: index, %st: index, %pad: f32) -> tensor<128xf32> {
+//       CHECK:     %[[V1:.*]] = vector.transfer_read %[[A]]
+//       CHECK:     %[[V2:.*]] = vector.transfer_read %[[A]]
+//       CHECK:     arith.subf %[[V2]]
+//       CHECK:     %[[W:.*]] = vector.transfer_write %{{.*}}, %[[A]]
+//       CHECK:     scf.yield %[[W]]
+func.func @fold_read_after_write_via_sink(%init: tensor<128xf32>, %lb: index, %ub: index, %st: index, %pad: f32) -> tensor<128xf32> {
   %c0 = arith.constant 0 : index
   %scratch = tensor.empty() : tensor<128xf32>
   %r = scf.for %i = %lb to %ub step %st iter_args(%a = %init) -> (tensor<128xf32>) {

@@ -49,7 +49,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/IR/Dominance.h"
 
 namespace mlir {
 namespace bufferization {
@@ -96,22 +95,27 @@ getFoldableYieldWrite(Value value, ForOp loop) {
   return write;
 }
 
-/// Checks that folding the yielded write for iter_arg index `idx` onto the
-/// iter_arg is legal: the iter_arg's every in-loop read must not observe the
-/// write, i.e. all reads must properly precede the write in the (single-block)
-/// loop body. A read after the write would, once the buffer is reused, observe
-/// this iteration's own store instead of the incoming value.
-static bool readsPrecedeWrite(ForOp loop, unsigned idx,
-                              vector::TransferWriteOp write,
-                              DominanceInfo &dominance) {
-  BlockArgument iterArg = loop.getRegionIterArgs()[idx];
-  for (OpOperand &use : iterArg.getUses()) {
+/// The yielded value's write only produces the loop-carried result, so it may
+/// be moved down to just before the terminator. Doing so places it after every
+/// other operation in the (single-block) body, in particular after every read
+/// of the iter_arg, which is what makes the in-place fold sound: the reads still
+/// observe the incoming value and only the final store defines what the next
+/// iteration reads. Moving down is legal because the write's result feeds solely
+/// the yield (checked by the caller) and its operands dominate the terminator
+/// (they are defined earlier in the same block).
+///
+/// Returns false only if the write cannot be scheduled after all reads, i.e. a
+/// read of the iter_arg transitively *depends on* the write's result. That
+/// cannot happen here (the result is yield-only), but the check is kept explicit
+/// for safety against future callers.
+static bool canScheduleWriteLast(ForOp loop, unsigned idx,
+                                 vector::TransferWriteOp write) {
+  // The write's result must not be consumed by anything other than the yield,
+  // otherwise moving it could break a dependency. The caller already ensures a
+  // single use that is the yield; re-verify defensively.
+  for (OpOperand &use : write.getResult().getUses()) {
     Operation *user = use.getOwner();
-    // The yield use is the loop-carry itself; ignore it.
-    if (isa<scf::YieldOp>(user) && user->getParentOp() == loop)
-      continue;
-    // Any read must strictly dominate the write within the body.
-    if (!dominance.properlyDominates(user, write.getOperation()))
+    if (!(isa<scf::YieldOp>(user) && user->getParentOp() == loop))
       return false;
   }
   return true;
@@ -119,7 +123,7 @@ static bool readsPrecedeWrite(ForOp loop, unsigned idx,
 
 /// Attempts to fold the yielded write of iter_arg `idx` onto the iter_arg.
 /// Returns true if the IR was modified.
-static bool tryFoldIterArg(ForOp loop, unsigned idx, DominanceInfo &dominance) {
+static bool tryFoldIterArg(ForOp loop, unsigned idx) {
   // Only shaped (tensor) iter_args participate.
   BlockArgument iterArg = loop.getRegionIterArgs()[idx];
   if (!isa<TensorType>(iterArg.getType()))
@@ -144,11 +148,14 @@ static bool tryFoldIterArg(ForOp loop, unsigned idx, DominanceInfo &dominance) {
   if (write.getBase().getType() != iterArg.getType())
     return false;
 
-  if (!readsPrecedeWrite(loop, idx, write, dominance))
+  if (!canScheduleWriteLast(loop, idx, write))
     return false;
 
-  // Redirect the write's destination from the fresh empty to the iter_arg.
+  // Move the write to just before the terminator so it follows every read of
+  // the iter_arg, then redirect its destination from the fresh empty to the
+  // iter_arg. Reads still see the incoming value; the store defines the carry.
   // The now-dead empty is left for later DCE/canonicalization.
+  write->moveBefore(yieldOp);
   write.getBaseMutable().assign(iterArg);
   return true;
 }
@@ -158,10 +165,9 @@ struct LoopIterArgDestinationFoldingPass
     : public bufferization::impl::LoopIterArgDestinationFoldingPassBase<
           LoopIterArgDestinationFoldingPass> {
   void runOnOperation() override {
-    DominanceInfo dominance(getOperation());
     getOperation()->walk([&](ForOp loop) {
       for (unsigned i = 0, e = loop.getInitArgs().size(); i < e; ++i)
-        (void)tryFoldIterArg(loop, i, dominance);
+        (void)tryFoldIterArg(loop, i);
     });
   }
 };
