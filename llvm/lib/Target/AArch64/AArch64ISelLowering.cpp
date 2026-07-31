@@ -23643,8 +23643,59 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, SQDMULH);
 }
 
+// Fold a shift by half the source element width followed by a truncation into
+// extraction of the upper half of each source element.
+static SDValue tryShiftTruncateCombine(SDNode *N, SelectionDAG &DAG,
+                                       TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  EVT DstVT = N->getValueType(0);
+  SDValue Shift = N->getOperand(0);
+
+  if (!DstVT.isScalableVector() || !DstVT.getVectorElementType().isInteger() ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(DstVT))
+    return SDValue();
+
+  if ((Shift.getOpcode() != ISD::SRL && Shift.getOpcode() != ISD::SRA) ||
+      !Shift.hasOneUse())
+    return SDValue();
+
+  EVT SrcVT = Shift.getValueType();
+  if (!SrcVT.isScalableVector() || !SrcVT.getVectorElementType().isInteger() ||
+      SrcVT.getVectorElementCount() != DstVT.getVectorElementCount() ||
+      SrcVT.getScalarSizeInBits() != 2 * DstVT.getScalarSizeInBits())
+    return SDValue();
+
+  ConstantSDNode *ShiftAmount = isConstOrConstSplat(Shift.getOperand(1));
+  if (!ShiftAmount ||
+      ShiftAmount->getAsZExtVal() != DstVT.getScalarSizeInBits())
+    return SDValue();
+
+  SDLoc DL(N);
+
+  EVT BitcastVT = DstVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+  SDValue Bitcast = DAG.getBitcast(BitcastVT, Shift.getOperand(0));
+
+  SDValue Lo = DAG.getExtractSubvector(DL, DstVT, Bitcast, 0);
+  SDValue Hi = DAG.getExtractSubvector(DL, DstVT, Bitcast,
+                                       DstVT.getVectorMinNumElements());
+
+  SDValue Deinterleave = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                                     DAG.getVTList(DstVT, DstVT), {Lo, Hi});
+
+  // After bitcasting, the byte containing the shifted result is in the odd
+  // deinterleave result on little-endian targets, and the in the even result
+  // on big-endian targets.
+  unsigned Res = DAG.getDataLayout().isLittleEndian() ? 1 : 0;
+  return Deinterleave.getValue(Res);
+}
+
 static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI) {
+  if (SDValue V = tryShiftTruncateCombine(N, DAG, DCI))
+    return V;
+
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
