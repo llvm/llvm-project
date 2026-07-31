@@ -67,43 +67,13 @@ static inline uint16_t ReadInt16(const void *ptr) {
   return value;
 }
 
-static inline uint16_t ReadSwapInt16(const unsigned char *ptr,
-                                     offset_t offset) {
-  uint16_t value;
-  memcpy(&value, ptr + offset, 2);
-  return llvm::byteswap<uint16_t>(value);
-}
-
-static inline uint32_t ReadSwapInt32(const unsigned char *ptr,
-                                     offset_t offset) {
-  uint32_t value;
-  memcpy(&value, ptr + offset, 4);
-  return llvm::byteswap<uint32_t>(value);
-}
-
-static inline uint64_t ReadSwapInt64(const unsigned char *ptr,
-                                     offset_t offset) {
-  uint64_t value;
-  memcpy(&value, ptr + offset, 8);
-  return llvm::byteswap<uint64_t>(value);
-}
-
-static inline uint16_t ReadSwapInt16(const void *ptr) {
-  uint16_t value;
-  memcpy(&value, ptr, 2);
-  return llvm::byteswap<uint16_t>(value);
-}
-
-static inline uint32_t ReadSwapInt32(const void *ptr) {
-  uint32_t value;
-  memcpy(&value, ptr, 4);
-  return llvm::byteswap<uint32_t>(value);
-}
-
-static inline uint64_t ReadSwapInt64(const void *ptr) {
-  uint64_t value;
-  memcpy(&value, ptr, 8);
-  return llvm::byteswap<uint64_t>(value);
+/// Read a byte-swapped \c T from \a ptr + \a offset, which need not be aligned
+/// for \c T.
+template <typename T>
+static inline T ReadSwap(const uint8_t *ptr, offset_t offset = 0) {
+  T value;
+  memcpy(&value, ptr + offset, sizeof(T));
+  return llvm::byteswap<T>(value);
 }
 
 static inline uint64_t ReadMaxInt64(const uint8_t *data, size_t byte_size,
@@ -354,7 +324,7 @@ uint16_t DataExtractor::GetU16(offset_t *offset_ptr) const {
       static_cast<const uint8_t *>(GetData(offset_ptr, sizeof(val)));
   if (data) {
     if (m_byte_order != endian::InlHostByteOrder())
-      val = ReadSwapInt16(data);
+      val = ReadSwap<uint16_t>(data);
     else
       val = ReadInt16(data);
   }
@@ -366,7 +336,7 @@ uint16_t DataExtractor::GetU16_unchecked(offset_t *offset_ptr) const {
   if (m_byte_order == endian::InlHostByteOrder())
     val = ReadInt16(m_start, *offset_ptr);
   else
-    val = ReadSwapInt16(m_start, *offset_ptr);
+    val = ReadSwap<uint16_t>(m_start, *offset_ptr);
   *offset_ptr += sizeof(val);
   return val;
 }
@@ -376,7 +346,7 @@ uint32_t DataExtractor::GetU32_unchecked(offset_t *offset_ptr) const {
   if (m_byte_order == endian::InlHostByteOrder())
     val = ReadInt32(m_start, *offset_ptr);
   else
-    val = ReadSwapInt32(m_start, *offset_ptr);
+    val = ReadSwap<uint32_t>(m_start, *offset_ptr);
   *offset_ptr += sizeof(val);
   return val;
 }
@@ -386,7 +356,7 @@ uint64_t DataExtractor::GetU64_unchecked(offset_t *offset_ptr) const {
   if (m_byte_order == endian::InlHostByteOrder())
     val = ReadInt64(m_start, *offset_ptr);
   else
-    val = ReadSwapInt64(m_start, *offset_ptr);
+    val = ReadSwap<uint64_t>(m_start, *offset_ptr);
   *offset_ptr += sizeof(val);
   return val;
 }
@@ -409,7 +379,7 @@ void *DataExtractor::GetU16(offset_t *offset_ptr, void *void_dst,
     if (m_byte_order != endian::InlHostByteOrder()) {
       uint8_t *dst_pos = static_cast<uint8_t *>(void_dst);
       for (uint32_t i = 0; i < count; ++i) {
-        uint16_t value = ReadSwapInt16(src, i * sizeof(uint16_t));
+        uint16_t value = ReadSwap<uint16_t>(src, i * sizeof(uint16_t));
         memcpy(dst_pos + i * sizeof(uint16_t), &value, sizeof(value));
       }
     } else {
@@ -432,7 +402,7 @@ uint32_t DataExtractor::GetU32(offset_t *offset_ptr) const {
       static_cast<const uint8_t *>(GetData(offset_ptr, sizeof(val)));
   if (data) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      val = ReadSwapInt32(data);
+      val = ReadSwap<uint32_t>(data);
     } else {
       memcpy(&val, data, 4);
     }
@@ -456,7 +426,7 @@ void *DataExtractor::GetU32(offset_t *offset_ptr, void *void_dst,
     if (m_byte_order != endian::InlHostByteOrder()) {
       uint8_t *dst_pos = static_cast<uint8_t *>(void_dst);
       for (uint32_t i = 0; i < count; ++i) {
-        uint32_t value = ReadSwapInt32(src, i * sizeof(uint32_t));
+        uint32_t value = ReadSwap<uint32_t>(src, i * sizeof(uint32_t));
         memcpy(dst_pos + i * sizeof(uint32_t), &value, sizeof(value));
       }
     } else {
@@ -479,7 +449,7 @@ uint64_t DataExtractor::GetU64(offset_t *offset_ptr) const {
       static_cast<const uint8_t *>(GetData(offset_ptr, sizeof(val)));
   if (data) {
     if (m_byte_order != endian::InlHostByteOrder()) {
-      val = ReadSwapInt64(data);
+      val = ReadSwap<uint64_t>(data);
     } else {
       memcpy(&val, data, 8);
     }
@@ -502,7 +472,7 @@ void *DataExtractor::GetU64(offset_t *offset_ptr, void *void_dst,
     if (m_byte_order != endian::InlHostByteOrder()) {
       uint8_t *dst_pos = static_cast<uint8_t *>(void_dst);
       for (uint32_t i = 0; i < count; ++i) {
-        uint64_t value = ReadSwapInt64(src, i * sizeof(uint64_t));
+        uint64_t value = ReadSwap<uint64_t>(src, i * sizeof(uint64_t));
         memcpy(dst_pos + i * sizeof(uint64_t), &value, sizeof(value));
       }
     } else {
