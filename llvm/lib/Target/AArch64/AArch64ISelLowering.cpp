@@ -18431,6 +18431,14 @@ setInfoSVEStN(const AArch64TargetLowering &TLI, const DataLayout &DL,
                                 EC * NumVecs);
   Info.ptrVal = CI.getArgOperand(CI.arg_size() - 1);
   Info.offset = 0;
+  // Unless all predicate lanes are known to be active, the full scalable
+  // vector size is only an upper bound on the memory accessed, which
+  // MachineMemOperand cannot represent so set it unknown.
+  // `NumVecs` used in operand below because predicate is after
+  // all vector i.e. stN(vec0, ..., vecN-1, predicate, pointer)
+  const auto *Pred = dyn_cast<Constant>(CI.getArgOperand(NumVecs));
+  if (!Pred || !Pred->isAllOnesValue())
+    Info.size = MemoryLocation::UnknownSize;
   Info.align.reset();
   Info.flags = MachineMemOperand::MOStore;
 }
@@ -18445,14 +18453,17 @@ void AArch64TargetLowering::getTgtMemIntrinsic(
   auto &DL = I.getDataLayout();
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_st2:
+  case Intrinsic::aarch64_sve_st2q:
     setInfoSVEStN<2>(*this, DL, Info, I);
     Infos.push_back(Info);
     return;
   case Intrinsic::aarch64_sve_st3:
+  case Intrinsic::aarch64_sve_st3q:
     setInfoSVEStN<3>(*this, DL, Info, I);
     Infos.push_back(Info);
     return;
   case Intrinsic::aarch64_sve_st4:
+  case Intrinsic::aarch64_sve_st4q:
     setInfoSVEStN<4>(*this, DL, Info, I);
     Infos.push_back(Info);
     return;
@@ -34431,7 +34442,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     Align Alignment = DAG.getReducedAlign(OpVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(OpVT.getStoreSize() * 3, Alignment);
-
+    MachinePointerInfo StackPtrInfo = MachinePointerInfo::getFixedStack(
+        DAG.getMachineFunction(), cast<FrameIndexSDNode>(StackPtr)->getIndex());
     SmallVector<SDValue, 6> Ops;
     Ops.push_back(DAG.getEntryNode());
     Ops.push_back(
@@ -34445,7 +34457,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
                          OpVT.getVectorNumElements() * 3);
     SDValue Chain = DAG.getMemIntrinsicNode(
         ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, TripleOpVT,
-        MachinePointerInfo(), Alignment, MachineMemOperand::MOStore);
+        StackPtrInfo, Alignment, MachineMemOperand::MOStore);
 
     SmallVector<SDValue, 3> Results;
     for (unsigned I = 0; I < 3; ++I) {
@@ -34467,6 +34479,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     Align Alignment = DAG.getReducedAlign(PackedVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(PackedVT.getStoreSize() * 3, Alignment);
+    MachinePointerInfo StackPtrInfo = MachinePointerInfo::getFixedStack(
+        DAG.getMachineFunction(), cast<FrameIndexSDNode>(StackPtr)->getIndex());
 
     Intrinsic::ID IntID = Intrinsic::aarch64_sve_st3;
     EVT PredVT = PackedVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
@@ -34479,7 +34493,12 @@ SDValue AArch64TargetLowering::LowerVECTOR_INTERLEAVE(SDValue Op,
     Ops.push_back(StackPtr);
 
     // Interleave operands and store.
-    SDValue Chain = DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Ops);
+    EVT TriplePackedVT =
+        EVT::getVectorVT(*DAG.getContext(), PackedVT.getVectorElementType(),
+                         PackedVT.getVectorElementCount() * 3);
+    SDValue Chain = DAG.getMemIntrinsicNode(
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, TriplePackedVT,
+        StackPtrInfo, Alignment, MachineMemOperand::MOStore);
 
     // Read back the interleaved data.
     SmallVector<SDValue, 3> Results;
