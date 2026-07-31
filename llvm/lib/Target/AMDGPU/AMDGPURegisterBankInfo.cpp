@@ -385,7 +385,8 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
     const MachineInstr &MI, const MachineRegisterInfo &MRI) const {
 
   switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
-  case Intrinsic::amdgcn_s_buffer_load: {
+  case Intrinsic::amdgcn_s_buffer_load:
+  case Intrinsic::amdgcn_ptr_s_buffer_load: {
     static const OpRegBankEntry<2> Table[4] = {
       // Perfectly legal.
       { { AMDGPU::SGPRRegBankID, AMDGPU::SGPRRegBankID }, 1 },
@@ -1367,9 +1368,9 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
   LLT Ty = MRI.getType(Dst);
 
   const RegisterBank *RSrcBank =
-    OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
+      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
   const RegisterBank *OffsetBank =
-    OpdMapper.getInstrMapping().getOperandMapping(2).BreakDown[0].RegBank;
+      OpdMapper.getInstrMapping().getOperandMapping(2).BreakDown[0].RegBank;
   if (RSrcBank == &AMDGPU::SGPRRegBank &&
       OffsetBank == &AMDGPU::SGPRRegBank)
     return true; // Legal mapping
@@ -1415,6 +1416,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
   Register RSrc = MI.getOperand(1).getReg();
   Register VIndex = B.buildConstant(S32, 0).getReg(0);
   B.getMRI()->setRegBank(VIndex, AMDGPU::VGPRRegBank);
+  unsigned CachePolicy = MI.getOperand(3).getImm();
 
   SmallVector<Register, 4> LoadParts(NumLoads);
 
@@ -1439,7 +1441,7 @@ bool AMDGPURegisterBankInfo::applyMappingSBufferLoad(
         .addUse(VOffset)            // voffset
         .addUse(SOffset)            // soffset
         .addImm(ImmOffset + 16 * i) // offset(imm)
-        .addImm(0)                  // cachepolicy, swizzled buffer(imm)
+        .addImm(CachePolicy)        // cachepolicy, swizzled buffer(imm)
         .addImm(0)                  // idxen(imm)
         .addMemOperand(BaseMMO);
   }
@@ -4067,7 +4069,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       LLT Ty = MRI.getType(MI.getOperand(0).getReg());
       unsigned Size = Ty.getSizeInBits();
       // Packed add and sub are VALU only.
-      if (Subtarget.hasPackedU64Ops() && Ty.isVector() && Size == 128)
+      if (Subtarget.hasAnyPackedU64Ops() && Ty.isVector() && Size == 128)
         return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
     }
@@ -5471,6 +5473,12 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_wqm_demote:
     case Intrinsic::amdgcn_kill: {
       OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
+      break;
+    }
+    case Intrinsic::amdgcn_ptr_s_buffer_load: {
+      OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+      OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
       break;
     }
     case Intrinsic::amdgcn_raw_buffer_load:

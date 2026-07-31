@@ -672,11 +672,25 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
                                    const TargetSubtargetInfo &TSI,
                                    const MachineInstr *FirstMI,
-                                   const MachineInstr &SecondMI) {
+                                   const MachineInstr &SecondMI,
+                                   const SDep *Dep) {
   const AArch64Subtarget &ST = static_cast<const AArch64Subtarget&>(TSI);
+  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
 
   // All checking functions assume that the 1st instr is a wildcard if it is
   // unspecified.
+
+  // FuseAppleSMECompute does not require a specific dependency kind
+  if (ST.hasFuseAppleSMECompute() &&
+      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI)) {
+    ++NumFusedAppleSMECompute;
+    return true;
+  }
+
+  // All the other fusions require RAW dependency
+  if (isNonDataDep(Dep))
+    return false;
+
   if (ST.hasCmpBccFusion() || ST.hasArithmeticBccFusion()) {
     bool CmpOnly = !ST.hasArithmeticBccFusion();
     if (isArithmeticBccPair(FirstMI, SecondMI, CmpOnly)) {
@@ -727,12 +741,6 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   if (ST.hasFuseAddSub2RegAndConstOne() &&
       isAddSub2RegAndConstOnePair(FirstMI, SecondMI)) {
     ++NumFusedAddSub2RegAndConstOne;
-    return true;
-  }
-  const TargetRegisterInfo *TRI = TSI.getRegisterInfo();
-  if (ST.hasFuseAppleSMECompute() &&
-      isAppleSMEComputePair(FirstMI, SecondMI, TII, TRI)) {
-    ++NumFusedAppleSMECompute;
     return true;
   }
   if (ST.hasFuseFMinFMax() && isFMinFMaxPair(FirstMI, SecondMI)) {

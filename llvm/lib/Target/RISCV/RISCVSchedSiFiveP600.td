@@ -981,12 +981,16 @@ foreach mx = SchedMxList in {
   defvar LMulLat = SiFiveP600GetLMulCycles<mx>.c;
   defvar IsWorstCase = SiFiveP600IsWorstCaseMX<mx, SchedMxList>.c;
   let ReleaseAtCycles = [LMulLat] in {
-    let Latency = SiFiveP600VSlideI<mx>.c in
-    defm "" : LMULWriteResMX<"WriteVSlideI",  [SiFiveP600VEXQ0], mx, IsWorstCase>;
+    let Latency = SiFiveP600VSlideI<mx>.c in {
+      defm "" : LMULWriteResMX<"WriteVSlideUpI",  [SiFiveP600VEXQ0], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVSlideDownI",  [SiFiveP600VEXQ0], mx, IsWorstCase>;
+    }
 
     let Latency = SiFiveP600VSlide1<mx>.c in {
-      defm "" : LMULWriteResMX<"WriteVISlide1X", [SiFiveP600VEXQ0], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVFSlide1F", [SiFiveP600VEXQ0], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVISlide1Up", [SiFiveP600VEXQ0], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVISlide1Down", [SiFiveP600VEXQ0], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVFSlide1Up", [SiFiveP600VEXQ0], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVFSlide1Down", [SiFiveP600VEXQ0], mx, IsWorstCase>;
     }
   }
 }

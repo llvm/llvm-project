@@ -109,4 +109,31 @@ def ACCOptimizeFirstprivateMap
   let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
 }
 
+def ACCDevicePtrToCUFKernel
+    : Pass<"acc-device-ptr-to-cuf-kernel", "mlir::ModuleOp"> {
+  let summary = "Pass device addresses to CUDA Fortran kernels launched inside "
+                "OpenACC data regions";
+  let description = [{
+    A CUDA Fortran kernel launched inside an OpenACC data region must receive
+    the device address of any host variable that OpenACC has made present, not
+    the host address. Otherwise the kernel dereferences a host pointer, which is
+    only valid on shared-memory/unified-addressing systems and is illegal on a
+    device with a separate address space.
+
+    For each cuf.kernel_launch whose reference arguments resolve to a variable
+    mapped by an enclosing acc.data region, this pass wraps the launch in an
+    acc.host_data construct with acc.use_device operands for the mapped
+    variables, and rebuilds the launch argument addressing on top of the
+    use_device result so the kernel receives the device pointer.
+
+    Both directly-addressed variables (e.g. static arrays, whose data address is
+    the mapped varPtr) and descriptor-based variables (e.g. allocatables and
+    pointers, whose data address is box_addr(load(<descriptor>))) are handled.
+
+    This must run before the pass that lowers cuf.kernel_launch to
+    gpu.launch_func.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
 #endif // FORTRAN_OPTIMIZER_OPENACC_PASSES
