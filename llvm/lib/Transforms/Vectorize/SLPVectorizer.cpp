@@ -329,6 +329,11 @@ static cl::opt<unsigned> SLPRuntimeAliasChecksMaxScalarCostPercent(
              "guarded scalar region cost, before versioning is rejected to "
              "avoid pessimizing the scalar fallback path."));
 
+static cl::opt<bool> EnableSLPStoreLoadForwardCheck(
+    "slp-store-load-forward-check", cl::init(true), cl::Hidden,
+    cl::desc("Add a cost penalty to store chains whose vectorization would "
+             "break store-to-load forwarding in SLP"));
+
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
 static const unsigned AliasedCheckLimit = 10;
@@ -1005,6 +1010,13 @@ public:
   /// holding live values over call sites.
   InstructionCost getSpillCost();
 
+  /// \returns true if widening the store chain anchored at \p BaseStore into a
+  /// vector store of \p VF elements would break store-to-load forwarding for a
+  /// nearby loop-carried load (a short, misaligned backward dependence). Used
+  /// to add an STLF penalty to the store entry's cost. Result is memoized in
+  /// StlfConflictCache.
+  bool findStoreLoadForwardingConflict(StoreInst *BaseStore, unsigned VF);
+
   /// Calculates the cost of the subtrees, trims non-profitable ones and returns
   /// final cost.
   InstructionCost
@@ -1240,6 +1252,9 @@ public:
     TreeEntryToStridedPtrInfoMap.clear();
     CurrentLoopNest.clear();
     MergedLoopBTCs.clear();
+    // Loads/stores may be reconstructed on the next vectorization attempt, so
+    // stale STLF decisions must not carry over.
+    StlfConflictCache.clear();
   }
 
   unsigned getTreeSize() const { return VectorizableTree.size(); }
@@ -5684,6 +5699,11 @@ private:
   DemandedBits *DB;
   const DataLayout *DL;
   OptimizationRemarkEmitter *ORE;
+
+  /// Cached STLF conflict decisions keyed by (base store of chain, VF), to
+  /// avoid re-walking the tree when the store entry is costed repeatedly.
+  /// Cleared on each buildTree() via deleteTree().
+  SmallDenseMap<std::pair<const StoreInst *, unsigned>, bool> StlfConflictCache;
 
   unsigned MaxVecRegSize; // This is set by TTI or overridden by cl::opt.
   unsigned MinVecRegSize; // Set by cl::opt (default: 128).
@@ -17721,6 +17741,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               BaseSI->getPointerAddressSpace(), CostKind, OpInfo);
         }
       }
+      // Widening this store chain can break store-to-load forwarding for a
+      // nearby loop-carried load. Rather than reject the tree outright, add
+      // the target's modeled STLF penalty so a chain that is still profitable
+      // after paying it can vectorize.
+      if (EnableSLPStoreLoadForwardCheck && E->State == TreeEntry::Vectorize &&
+          !E->getInterleaveFactor() &&
+          findStoreLoadForwardingConflict(BaseSI, E->getVectorFactor()))
+        VecStCost += TTI->getStoreLoadForwardingConflictCost(VecTy, CostKind);
       return VecStCost + CommonCost;
     };
     SmallVector<Value *> PointerOps(VL.size());
@@ -28255,6 +28283,109 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   // caller can drop CFG-analysis preservation only when necessary.
   CFGChanged = R.isCFGChanged();
   return Changed;
+}
+
+bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
+                                              unsigned VF) {
+  if (!BaseStore)
+    return false;
+
+  StoreInst *FirstStore = BaseStore;
+
+  // Memoize per (store, VF); the entry is re-costed repeatedly.
+  auto Key = std::make_pair(FirstStore, VF);
+  auto CacheIt = StlfConflictCache.find(Key);
+  if (CacheIt != StlfConflictCache.end())
+    return CacheIt->second;
+
+  auto CacheAndReturn = [&](bool Result) -> bool {
+    StlfConflictCache[Key] = Result;
+    // No conflict at VF implies none at any smaller power-of-2 VF, so seed
+    // those entries too. Conflicts do not propagate downward.
+    if (!Result && isPowerOf2_32(VF))
+      for (unsigned V = VF / 2; V >= 2; V /= 2)
+        StlfConflictCache.try_emplace(std::make_pair(FirstStore, V), false);
+    return Result;
+  };
+
+  Loop *L = LI->getLoopFor(FirstStore->getParent());
+  if (!L)
+    return CacheAndReturn(false);
+
+  Type *ValueTy = FirstStore->getValueOperand()->getType();
+  TypeSize StoreSize = DL->getTypeStoreSize(ValueTy);
+  if (StoreSize.isScalable())
+    return CacheAndReturn(false);
+  uint64_t ElementSize = StoreSize.getFixedValue();
+  if (ElementSize == 0)
+    return CacheAndReturn(false);
+  uint64_t VectorStoreBytes = uint64_t(VF) * ElementSize;
+  LLVM_DEBUG(dbgs() << "SLP: STLF check: VF=" << VF
+                    << " ElementSize=" << ElementSize
+                    << " VectorStoreBytes=" << VectorStoreBytes << "\n");
+
+  // Enumerate candidate loads from the tree, not the whole loop. A conflicting
+  // load feeds the vectorized nodes, so it is reachable by walking operands
+  // from the tree scalars (including through gather leaves such as splats).
+  // Stay inside the loop to bound the walk by the tree's cone.
+  Value *StoreBase = getUnderlyingObject(FirstStore->getPointerOperand());
+  SmallPtrSet<LoadInst *, 8> CandidateLoads;
+  SmallPtrSet<const Value *, 32> Visited;
+  SmallVector<Value *, 32> Worklist;
+  for (const std::unique_ptr<TreeEntry> &TEPtr : VectorizableTree) {
+    const TreeEntry *TE = TEPtr.get();
+    if (DeletedNodes.contains(TE))
+      continue;
+    Worklist.append(TE->Scalars.begin(), TE->Scalars.end());
+  }
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    if (auto *LoadI = dyn_cast<LoadInst>(V)) {
+      if (LoadI->isSimple() &&
+          getUnderlyingObject(LoadI->getPointerOperand()) == StoreBase)
+        CandidateLoads.insert(LoadI);
+      continue;
+    }
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I || !L->contains(I))
+      continue;
+    Worklist.append(I->op_begin(), I->op_end());
+  }
+
+  if (CandidateLoads.empty())
+    return CacheAndReturn(false);
+
+  // For each candidate load, the widened chain becomes one wide store at the
+  // base; check whether the load straddles two such wide stores.
+  for (LoadInst *LoadI : CandidateLoads) {
+    std::optional<int64_t> Diff =
+        getPointersDiff(ValueTy, FirstStore->getPointerOperand(),
+                        LoadI->getType(), LoadI->getPointerOperand(), *DL, *SE,
+                        /*StrictCheck=*/true, /*CheckType=*/false);
+    if (!Diff || *Diff >= 0)
+      continue;
+
+    uint64_t Distance = -static_cast<uint64_t>(*Diff) * ElementSize;
+    LLVM_DEBUG(dbgs() << "SLP: STLF: load=" << *LoadI << " distance="
+                      << Distance << " bytes from chain base\n");
+
+    // Conflict if the load is misaligned to the wide store within the recency
+    // window.
+    if (MemoryDepChecker::isStoreLoadForwardingConflict(
+            Distance, VectorStoreBytes, ElementSize)) {
+      LLVM_DEBUG(dbgs() << "SLP: Store-load forwarding conflict: "
+                        << (isVectorized(LoadI) ? "widened" : "scalar")
+                        << " load, distance " << Distance
+                        << " bytes, vector store width " << VectorStoreBytes
+                        << " bytes, misalignment "
+                        << (Distance % VectorStoreBytes) << "\n");
+      return CacheAndReturn(true);
+    }
+  }
+
+  return CacheAndReturn(false);
 }
 
 std::optional<bool>

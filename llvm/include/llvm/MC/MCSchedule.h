@@ -326,6 +326,17 @@ struct MCSchedModel {
   unsigned MispredictPenalty;
   static constexpr unsigned DefaultMispredictPenalty = 10;
 
+  // StoreLoadForwardingPenalty is the typical number of extra cycles a load
+  // stalls when hardware store-to-load forwarding fails (the load's bytes are
+  // not fully contained in a single, recent store, so it must wait for the
+  // store to drain to cache). Consumed by the SLP vectorizer when a widened
+  // store would break forwarding for a nearby loop-carried load.
+  // The failed-forwarding stall is roughly 10-15 cycles on current cores, so
+  // the default uses a conservative 10 cycles for targets that do not override
+  // it; individual targets may set a more precise value (e.g. Zen4 uses 13).
+  unsigned StoreLoadForwardingPenalty;
+  static const unsigned DefaultStoreLoadForwardingPenalty = 10;
+
   bool PostRAScheduler; // default value is false
 
   bool CompleteModel;
