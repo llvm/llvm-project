@@ -618,6 +618,12 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(
         "--ptxas-path=" + Args.getLastArgValue(options::OPT_ptxas_path_EQ)));
 
+  // The wrapper runs 'ptxas' itself when doing LTO, so it needs these.
+  for (const Arg *A : Args.filtered(options::OPT_Xcuda_ptxas)) {
+    A->claim();
+    CmdArgs.append({"-Xptxas", A->getValue()});
+  }
+
   if (Args.hasArg(options::OPT_cuda_path_EQ) || TC.CudaInstallation.isValid()) {
     StringRef CudaPath = Args.getLastArgValue(
         options::OPT_cuda_path_EQ,
