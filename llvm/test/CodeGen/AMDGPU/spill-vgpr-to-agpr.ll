@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu9.08 < %s | FileCheck -check-prefixes=GFX908 %s
+; RUN: llc -mtriple=amdgpu9.08 -amdgpu-stress-vgpr=11 -amdgpu-stress-agpr=11 < %s | FileCheck -check-prefixes=GFX908 %s
 
 ; GFX908-LABEL: {{^}}max_11_vgprs_used_9a:
 ; GFX908-NOT: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
@@ -105,4 +105,4 @@ define amdgpu_kernel void @max_11_vgprs_used_1a_partial_spill(ptr addrspace(1) %
   ret void
 }
 
-attributes #0 = { nounwind "amdgpu-num-vgpr"="11" }
+attributes #0 = { nounwind }

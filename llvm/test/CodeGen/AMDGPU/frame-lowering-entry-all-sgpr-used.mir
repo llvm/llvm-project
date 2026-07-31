@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -verify-machineinstrs -run-pass=prolog-epilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -amdgpu-stress-sgpr=8 -verify-machineinstrs -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 # CHECK-LABEL: all_sgpr_used
 # CHECK: V_CMP_LT_U32_e64
@@ -6,7 +6,7 @@
   define amdgpu_kernel void @all_sgpr_used() #0 {
     ret void
   }
-  attributes #0 = { "amdgpu-num-sgpr"="8" "frame-pointer"="all"}
+  attributes #0 = { "frame-pointer"="all"}
 ...
 ---
 name:            all_sgpr_used

@@ -373,9 +373,8 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
 
 GCNRPTarget::GCNRPTarget(const MachineFunction &MF, const GCNRegPressure &RP)
     : GCNRPTarget(RP, MF) {
-  const Function &F = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  setTarget(ST.getMaxNumSGPRs(F), ST.getMaxNumVGPRs(F));
+  setTarget(ST.getMaxNumSGPRs(MF), ST.getMaxNumVGPRs(MF));
 }
 
 GCNRPTarget::GCNRPTarget(unsigned NumSGPRs, unsigned NumVGPRs,

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu9.00--amdhsa -run-pass si-optimize-exec-masking -verify-machineinstrs -o -  %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00--amdhsa -amdgpu-stress-sgpr=16 -run-pass si-optimize-exec-masking -verify-machineinstrs -o -  %s | FileCheck %s
 --- |
   define amdgpu_kernel void @undefined_physreg_sgpr_spill() #0 {
     unreachable
@@ -8,7 +8,7 @@
     unreachable
   }
 
-  attributes #0 = { nounwind "amdgpu-num-sgpr"="16" }
+  attributes #0 = { nounwind }
 
 ...
 ---

@@ -1,11 +1,14 @@
-; RUN: llc -mtriple=amdgpu8.03--amdhsa < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -enable-misched=0 -amdgpu-stress-vgpr=20 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
+; RUN: llc --amdgpu-xnack=false -mtriple=amdgpu8.03-amd-amdhsa -enable-misched=0 -amdgpu-stress-vgpr=20 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
+; RUN: llc --amdgpu-xnack=false -mtriple=amdgpu9.00-amd-amdhsa -enable-misched=0 -amdgpu-stress-vgpr=20 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
+; RUN: llc --amdgpu-xnack=false -mtriple=amdgpu10.10-amd-amdhsa -enable-misched=0 -amdgpu-stress-vgpr=20 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
 
 @var = addrspace(1) global float 0.0
 
-; CHECK-LABEL: {{^}}max_20_vgprs:
-; CHECK: VGPRBlocks: 4
-; CHECK: NumVGPRsForWavesPerEU: 20
-define amdgpu_kernel void @max_20_vgprs() #1 {
+; CHECK:   .name:       num_spilled_vgprs
+; CHECK:   .symbol:     num_spilled_vgprs.kd
+; CHECK:   .vgpr_spill_count: {{13|14}}
+define amdgpu_kernel void @num_spilled_vgprs() nounwind {
   %val0 = load volatile float, ptr addrspace(1) @var
   %val1 = load volatile float, ptr addrspace(1) @var
   %val2 = load volatile float, ptr addrspace(1) @var
@@ -72,4 +75,6 @@ define amdgpu_kernel void @max_20_vgprs() #1 {
 
   ret void
 }
-attributes #1 = {"amdgpu-num-vgpr"="20"}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdhsa_code_object_version", i32 400}

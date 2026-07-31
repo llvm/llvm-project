@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00 -amdgpu-stress-vgpr=9 < %s | FileCheck -check-prefix=GCN %s
 
 ; Interleave loads and stores to fit into 9 VGPR limit.
 ; This requires to avoid load/store clustering.
@@ -15,7 +15,7 @@
 ; GCN: NumVgprs: {{[0-9]$}}
 ; GCN: ScratchSize: 0{{$}}
 
-define amdgpu_kernel void @load_store_max_9vgprs(ptr addrspace(1) nocapture noalias readonly %arg, ptr addrspace(1) nocapture noalias %arg1, i1 %cnd) #1 {
+define amdgpu_kernel void @load_store_max_9vgprs(ptr addrspace(1) nocapture noalias readonly %arg, ptr addrspace(1) nocapture noalias %arg1, i1 %cnd) {
 bb:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %base = getelementptr inbounds <4 x i32>, ptr addrspace(1) %arg, i32 %id
@@ -42,4 +42,3 @@ bb2:
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { "amdgpu-num-vgpr"="9" }

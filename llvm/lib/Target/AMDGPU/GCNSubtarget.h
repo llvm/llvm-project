@@ -811,24 +811,8 @@ public:
                               unsigned ReservedNumSGPRs) const;
 
   /// \returns Maximum number of SGPRs that meets number of waves per execution
-  /// unit requirement for function \p MF, or number of SGPRs explicitly
-  /// requested using "amdgpu-num-sgpr" attribute attached to function \p MF.
-  ///
-  /// \returns Value that meets number of waves per execution unit requirement
-  /// if explicitly requested value cannot be converted to integer, violates
-  /// subtarget's specifications, or does not meet number of waves per execution
-  /// unit requirement.
+  /// unit requirement for function \p MF.
   unsigned getMaxNumSGPRs(const MachineFunction &MF) const;
-
-  /// \returns Maximum number of SGPRs that meets number of waves per execution
-  /// unit requirement for function \p F, or number of SGPRs explicitly
-  /// requested using "amdgpu-num-sgpr" attribute attached to function \p F.
-  ///
-  /// \returns Value that meets number of waves per execution unit requirement
-  /// if explicitly requested value cannot be converted to integer, violates
-  /// subtarget's specifications, or does not meet number of waves per execution
-  /// unit requirement.
-  unsigned getMaxNumSGPRs(const Function &F) const;
 
   /// \returns VGPR allocation granularity supported by the subtarget.
   unsigned getVGPRAllocGranule(unsigned DynamicVGPRBlockSize) const {
@@ -872,36 +856,14 @@ public:
                                            DynamicVGPRBlockSize);
   }
 
-  /// \returns max num VGPRs. This is the common utility function
-  /// called by MachineFunction and Function variants of getMaxNumVGPRs.
-  unsigned
-  getBaseMaxNumVGPRs(const Function &F,
-                     std::pair<unsigned, unsigned> NumVGPRBounds) const;
-
-  /// \returns Maximum number of VGPRs that meets number of waves per execution
-  /// unit requirement for function \p F, or number of VGPRs explicitly
-  /// requested using "amdgpu-num-vgpr" attribute attached to function \p F.
-  ///
-  /// \returns Value that meets number of waves per execution unit requirement
-  /// if explicitly requested value cannot be converted to integer, violates
-  /// subtarget's specifications, or does not meet number of waves per execution
-  /// unit requirement.
-  unsigned getMaxNumVGPRs(const Function &F) const;
-
-  unsigned getMaxNumAGPRs(const Function &F) const { return getMaxNumVGPRs(F); }
-
   /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
-  /// of waves per execution unit required for the function \p MF.
+  /// of waves per execution unit required for the function \p F.
   std::pair<unsigned, unsigned> getMaxNumVectorRegs(const Function &F) const;
 
-  /// \returns Maximum number of VGPRs that meets number of waves per execution
-  /// unit requirement for function \p MF, or number of VGPRs explicitly
-  /// requested using "amdgpu-num-vgpr" attribute attached to function \p MF.
-  ///
-  /// \returns Value that meets number of waves per execution unit requirement
-  /// if explicitly requested value cannot be converted to integer, violates
-  /// subtarget's specifications, or does not meet number of waves per execution
-  /// unit requirement.
+  /// \returns Total vector register budget (VGPRs + AGPRs) for function \p F.
+  unsigned getMaxNumVGPRs(const Function &F) const;
+
+  /// \returns Total vector register budget (VGPRs + AGPRs) for function \p MF.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
 
   bool isWave32() const { return getWavefrontSize() == 32; }

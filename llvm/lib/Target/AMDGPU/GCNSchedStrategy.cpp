@@ -1389,7 +1389,8 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
   RegionsWithExcessArchVGPR.reset();
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++) {
     GCNRegPressure PressureBefore = DAG.Pressure[Region];
-    if (PressureBefore.getArchVGPRNum() > ST.getAddressableNumArchVGPRs())
+    if (PressureBefore.getArchVGPRNum() >
+        DAG.RegClassInfo->getNumAllocatableRegs(&AMDGPU::VGPR_32RegClass))
       RegionsWithExcessArchVGPR[Region] = true;
   }
 
@@ -2959,11 +2960,9 @@ unsigned PreRARematStage::getStageTargetOccupancy() const {
 }
 
 bool PreRARematStage::setObjective() {
-  const Function &F = MF.getFunction();
-
   // Set up "spilling targets" for all regions.
-  unsigned MaxSGPRs = ST.getMaxNumSGPRs(F);
-  unsigned MaxVGPRs = ST.getMaxNumVGPRs(F);
+  unsigned MaxSGPRs = ST.getMaxNumSGPRs(MF);
+  unsigned MaxVGPRs = ST.getMaxNumVGPRs(MF);
   bool HasVectorRegisterExcess = false;
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
     const GCNRegPressure &RP = DAG.Pressure[I];

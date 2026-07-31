@@ -1,5 +1,3 @@
-; RUN: llc -mtriple=amdgpu11.00--amdpal -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL %s
-; RUN: llc -mtriple=amdgpu11.00--amdpal -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=GFX11-PAL-GCNTRACKERS %s
 ; RUN: llc -mtriple=amdgpu8.02 -amdgpu-scalarize-global-loads=false -verify-misched < %s | FileCheck --check-prefixes=TONGA %s
 ; RUN: llc -mtriple=amdgpu8.02 -amdgpu-scalarize-global-loads=false -amdgpu-use-amdgpu-trackers=1 -verify-misched < %s | FileCheck --check-prefixes=TONGA-GCNTRACKERS %s
 ; RUN: llc -mtriple=amdgpu9.08 -verify-misched < %s | FileCheck --check-prefixes=GFX908 %s
@@ -9,37 +7,6 @@
 
 ; GCN Trackers are sensitive to minor changes in RP, and will avoid scheduling certain instructions, which, if scheduled,
 ; allow scheduling of other instructions which reduce RP
-
-; CHECK-LABEL: {{^}}return_72xi32:
-; GFX11-PAL:    NumSgprs: 33
-; GFX11-PAL-GCNTRACKERS:    NumSgprs: 33
-; GFX11-PAL:    NumVgprs: 64
-; GFX11-PAL-GCNTRACKERS:    NumVgprs: 64
-; GFX11-PAL:    ScratchSize: 220
-; GFX11-PAL-GCNTRACKERS:    ScratchSize: 248
-
-
-; CHECK-LABEL: {{^}}call_72xi32:
-; GFX11-PAL:    NumSgprs: 40
-; GFX11-PAL-GCNTRACKERS:    NumSgprs: 37
-; GFX11-PAL:    NumVgprs: 64
-; GFX11-PAL-GCNTRACKERS:    NumVgprs: 64
-; GFX11-PAL:    ScratchSize: 2780
-; GFX11-PAL-GCNTRACKERS:    ScratchSize: 2808
-
-
-define amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val) #1 {
-  ret <72 x i32> %val
-}
-
-define amdgpu_gfx void @call_72xi32() #1 {
-entry:
-  %ret.0 = call amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> zeroinitializer)
-  %val.0 = insertelement <72 x i32> %ret.0, i32 42, i32 0
-  %val.1 = insertelement <72 x i32> %val.0, i32 24, i32 58
-  %ret.1 = call amdgpu_gfx <72 x i32> @return_72xi32(<72 x i32> %val.1)
-  ret void
-}
 
 ; CHECK-LABEL: {{^}}global_extload_v16f16_to_v16f64:
 ; TONGA:    NumSgprs: 96
@@ -632,6 +599,5 @@ declare align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #3
 !5 = !{i32 0, i32 1024}
 
 attributes #0 = { nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-work-group-size"="1,1" }
-attributes #1 = { nounwind "amdgpu-num-vgpr"="64" }
 attributes #2 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #3 = { nounwind readnone speculatable willreturn }
