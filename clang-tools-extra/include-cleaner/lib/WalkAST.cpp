@@ -61,8 +61,11 @@ public:
         if (Prop) {
           if (auto Getter = Prop->getGetterName(); !Getter.isNull())
             Map[Getter].push_back(Prop);
-          if (auto Setter = Prop->getSetterName(); !Setter.isNull())
-            Map[Setter].push_back(Prop);
+          if (!Prop->isReadOnly()) {
+            if (auto Setter = Prop->getSetterName(); !Setter.isNull()) {
+              Map[Setter].push_back(Prop);
+            }
+          }
         }
       }
     }

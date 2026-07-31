@@ -1208,6 +1208,21 @@ TEST(WalkAST, ObjCSelectorExprPropertySetter) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, ObjCSelectorExprReadOnlyPropertySetter) {
+  // Read-only properties do not generate setter selectors.
+  testWalk(R"objc(
+    @interface MyClass
+    @property(readonly, nonatomic) int foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      SEL s = @selector(^setFoo:);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
 TEST(WalkAST, ObjCSelectorExprMultipleMatches) {
   testWalk(R"objc(
     @interface MyClass1
