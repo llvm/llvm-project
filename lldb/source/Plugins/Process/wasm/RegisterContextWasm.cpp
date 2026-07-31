@@ -29,6 +29,10 @@ RegisterContextWasm::RegisterContextWasm(ThreadGDBRemote &thread,
 
 RegisterContextWasm::~RegisterContextWasm() = default;
 
+uint32_t RegisterContextWasm::GetModuleID() {
+  return GetWasmModuleID(GetPC(LLDB_INVALID_ADDRESS));
+}
+
 uint32_t RegisterContextWasm::ConvertRegisterKindToRegisterNumber(
     lldb::RegisterKind kind, uint32_t num) {
   return num;
@@ -92,11 +96,15 @@ bool RegisterContextWasm::ReadRegister(const RegisterInfo *reg_info,
       static_cast<WasmVirtualRegisterInfo *>(
           const_cast<RegisterInfo *>(reg_info));
 
-  llvm::Expected<DataBufferSP> maybe_buffer = process->GetWasmVariable(
-      wasm_reg_info->kind, frame_index, wasm_reg_info->index);
+  llvm::Expected<DataBufferSP> maybe_buffer =
+      wasm_reg_info->kind == eWasmTagGlobal
+          ? process->GetWasmGlobal(GetModuleID(), wasm_reg_info->index,
+                                   frame_index)
+          : process->GetWasmVariable(wasm_reg_info->kind, frame_index,
+                                     wasm_reg_info->index);
   if (!maybe_buffer) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Process), maybe_buffer.takeError(),
-                   "Failed to read Wasm local: {0}");
+                   "Failed to read Wasm value: {0}");
     return false;
   }
 

@@ -13,6 +13,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <cstring>
 
 #include "lldb/Target/UnixSignals.h"
@@ -90,24 +91,14 @@ std::shared_ptr<ThreadGDBRemote> ProcessWasm::CreateThread(lldb::tid_t tid) {
 
 size_t ProcessWasm::ReadGlobal(uint32_t module_id, uint32_t index, void *buf,
                                size_t size, Status &error) {
-  // FIXME: The module id is what should select the instance holding the global,
-  // but the qWasmGlobal packet takes a frame index instead, so the selected
-  // frame has to stand in for the instance. That leaves a global in an instance
-  // with no active frame out of reach. See
-  // https://github.com/llvm/llvm-project/issues/212833.
-  ThreadSP thread = GetThreadList().GetSelectedThread();
-  StackFrameSP frame =
-      thread ? thread->GetSelectedFrame(DoNoSelectMostRelevantFrame) : nullptr;
-  if (!frame) {
-    error = Status::FromErrorStringWithFormatv(
-        "Wasm global read failed: no frame to read global {0} of module {1:x} "
-        "from",
-        index, module_id);
-    return 0;
-  }
+  // Looking for a frame drives the unwinder, so only pay for it when the read
+  // has to go through one.
+  const uint32_t frame_index = CanNameInstance(module_id)
+                                   ? LLDB_INVALID_INDEX32
+                                   : GetFallbackFrameIndex(module_id);
 
   llvm::Expected<lldb::DataBufferSP> buffer =
-      GetWasmVariable(eWasmTagGlobal, frame->GetConcreteFrameIndex(), index);
+      GetWasmGlobal(module_id, index, frame_index);
   if (!buffer) {
     error = Status::FromError(buffer.takeError());
     return 0;
@@ -127,8 +118,28 @@ size_t ProcessWasm::ReadGlobal(uint32_t module_id, uint32_t index, void *buf,
   return size;
 }
 
+uint32_t ProcessWasm::GetFallbackFrameIndex(uint32_t module_id) {
+  ThreadSP thread = GetThreadList().GetSelectedThread();
+  StackFrameSP frame =
+      thread ? thread->GetSelectedFrame(DoNoSelectMostRelevantFrame) : nullptr;
+  if (!frame)
+    return LLDB_INVALID_INDEX32;
+
+  // A frame can only stand in for the module the stub reports it executing.
+  const uint32_t frame_index = frame->GetConcreteFrameIndex();
+  ThreadWasm &wasm_thread = static_cast<ThreadWasm &>(*thread);
+  if (GetWasmModuleID(wasm_thread.GetConcreteFramePC(frame_index)) != module_id)
+    return LLDB_INVALID_INDEX32;
+
+  return frame_index;
+}
+
 size_t ProcessWasm::ReadMemory(const ProcessAddress &process_addr, void *buf,
                                size_t size, Status &error) {
+  // A caller may reuse one error across reads, as the overridden
+  // Process::ReadMemory allows.
+  error.Clear();
+
   lldb::addr_t vm_addr = process_addr.GetValue();
   wasm_addr_t wasm_addr(vm_addr);
 
@@ -184,34 +195,68 @@ ProcessWasm::GetWasmCallStack(lldb::tid_t tid) {
 }
 
 llvm::Expected<lldb::DataBufferSP>
-ProcessWasm::GetWasmVariable(WasmVirtualRegisterKinds kind, int frame_index,
-                             int index) {
-  StreamString packet;
-  switch (kind) {
-  case eWasmTagLocal:
-    packet.Printf("qWasmLocal:");
-    break;
-  case eWasmTagGlobal:
-    packet.Printf("qWasmGlobal:");
-    break;
-  case eWasmTagOperandStack:
-    packet.PutCString("qWasmStackValue:");
-    break;
-  case eWasmTagNotAWasmLocation:
-    return llvm::createStringError("not a Wasm location");
-  }
-  packet.Printf("%d;%d", frame_index, index);
-
+ProcessWasm::SendWasmValueQuery(llvm::StringRef packet) {
   StringExtractorGDBRemote response;
-  if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetString(), response) !=
+  if (m_gdb_comm.SendPacketAndWaitForResponse(packet, response) !=
       GDBRemoteCommunication::PacketResult::Success)
-    return llvm::createStringError("failed to send Wasm variable");
+    return llvm::createStringErrorV("failed to send {0}", packet);
 
   if (!response.IsNormalResponse())
-    return llvm::createStringError("failed to get response for Wasm variable");
+    return llvm::createStringErrorV("failed to get response for {0}", packet);
 
   WritableDataBufferSP buffer_sp(
       new DataBufferHeap(response.GetStringRef().size() / 2, 0));
   response.GetHexBytes(buffer_sp->GetData(), '\xcc');
   return buffer_sp;
+}
+
+llvm::Expected<lldb::DataBufferSP>
+ProcessWasm::GetWasmVariable(WasmVirtualRegisterKinds kind,
+                             uint32_t frame_index, uint32_t index) {
+  switch (kind) {
+  case eWasmTagLocal:
+    return SendWasmValueQuery(
+        llvm::formatv("qWasmLocal:{0};{1}", frame_index, index).str());
+  case eWasmTagOperandStack:
+    return SendWasmValueQuery(
+        llvm::formatv("qWasmStackValue:{0};{1}", frame_index, index).str());
+  case eWasmTagGlobal:
+    // A global belongs to a module rather than a frame. See GetWasmGlobal.
+    return llvm::createStringError("a Wasm global does not belong to a frame");
+  case eWasmTagNotAWasmLocation:
+    return llvm::createStringError("not a Wasm location");
+  }
+  llvm_unreachable("unhandled Wasm virtual register kind");
+}
+
+llvm::Expected<lldb::DataBufferSP>
+ProcessWasm::GetWasmGlobal(uint32_t module_id, uint32_t index,
+                           uint32_t frame_index) {
+  // The global index space belongs to a module instance, so an index only names
+  // a global together with the instance holding it.
+  if (CanNameInstance(module_id))
+    return SendWasmValueQuery(
+        llvm::formatv("qWasmGlobal:{0};instance:{1};", index, module_id).str());
+
+  // A frame stands in for the instance it is executing only where that instance
+  // cannot be named.
+  if (frame_index != LLDB_INVALID_INDEX32)
+    return SendWasmValueQuery(
+        llvm::formatv("qWasmGlobal:{0};{1}", frame_index, index).str());
+
+  if (module_id == kWasmInvalidModuleID)
+    return llvm::createStringErrorV(
+        "global {0} belongs to no known module instance, and no frame is "
+        "executing one to read it through",
+        index);
+
+  return llvm::createStringErrorV(
+      "the Wasm stub can only read a global through a frame, and no frame is "
+      "executing module {0:x} to read global {1} through",
+      module_id, index);
+}
+
+bool ProcessWasm::CanNameInstance(uint32_t module_id) {
+  return module_id != kWasmInvalidModuleID &&
+         m_gdb_comm.GetWasmInstanceSupported();
 }
