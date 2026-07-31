@@ -90,8 +90,6 @@ namespace {
       AU.addRequired<AAResultsWrapperPass>();
       AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
       AU.addRequired<MachineLoopInfoWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineLoopInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 

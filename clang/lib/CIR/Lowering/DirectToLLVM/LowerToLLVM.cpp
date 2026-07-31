@@ -3176,19 +3176,12 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     return mlir::success();
   }
 
-  if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(type)) {
+  if (mlir::isa<cir::BoolType, cir::PointerType, cir::VPtrType>(type)) {
+    // Booleans, including enums with a boolean underlying type, compare as
+    // unsigned integers, as do pointers and !cir.vptr, which lowers to a
+    // pointer.
     mlir::LLVM::ICmpPredicate kind =
-        convertCmpKindToICmpPredicate(cmpOp.getKind(),
-                                      /* isSigned=*/false);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
-        cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
-    return mlir::success();
-  }
-
-  if (auto vptrTy = mlir::dyn_cast<cir::VPtrType>(type)) {
-    // !cir.vptr is a special case, but it's just a pointer to LLVM.
-    auto kind = convertCmpKindToICmpPredicate(cmpOp.getKind(),
-                                              /* isSigned=*/false);
+        convertCmpKindToICmpPredicate(cmpOp.getKind(), /*isSigned=*/false);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
     return mlir::success();
@@ -4045,6 +4038,21 @@ void ConvertCIRToLLVMPass::runOnOperation() {
 
   if (failed(applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
+
+  // Drop the cir.ptr-keyed data-layout entries: they drove pointer-width
+  // queries up to this point, but the LLVM IR exporter rejects CIR types.
+  if (auto dlSpec = mlir::dyn_cast_or_null<mlir::DataLayoutSpecAttr>(
+          module->getAttr(mlir::DLTIDialect::kDataLayoutAttrName))) {
+    llvm::SmallVector<mlir::DataLayoutEntryInterface> kept;
+    for (mlir::DataLayoutEntryInterface entry : dlSpec.getEntries()) {
+      if (entry.isTypeEntry() &&
+          mlir::isa<cir::PointerType>(mlir::cast<mlir::Type>(entry.getKey())))
+        continue;
+      kept.push_back(entry);
+    }
+    module->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
+                    mlir::DataLayoutSpecAttr::get(module.getContext(), kept));
+  }
 
   // Emit the llvm.global_ctors array.
   buildCtorDtorList(module, cir::CIRDialect::getGlobalCtorsAttrName(),

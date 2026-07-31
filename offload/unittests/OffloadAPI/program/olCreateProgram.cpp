@@ -27,6 +27,26 @@ TEST_P(olCreateProgramTest, Success) {
   ASSERT_SUCCESS(olDestroyProgram(Program));
 }
 
+TEST_P(olCreateProgramTest, JITSuccess) {
+  SKIP_KNOWN_FAILURE(AMDGPU{"problem finding lld"});
+
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo_jit", Device, DeviceBin));
+  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+
+  ol_program_handle_t Program;
+  ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+                                 DeviceBin->getBufferSize(), &Program));
+  ASSERT_NE(Program, nullptr);
+
+  ol_symbol_handle_t Symbol;
+  ASSERT_SUCCESS(olGetSymbol(Program, "foo", OL_SYMBOL_KIND_KERNEL, &Symbol));
+
+  ASSERT_NE(Symbol, nullptr);
+
+  ASSERT_SUCCESS(olDestroyProgram(Program));
+}
+
 TEST_P(olCreateProgramTest, NullDeviceHandle) {
 
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;

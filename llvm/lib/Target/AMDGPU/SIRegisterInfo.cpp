@@ -3138,13 +3138,14 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         assert(Offset == 0);
         MI->removeOperand(3);
         MI->removeOperand(OtherOpIdx);
-        MI->setDesc(TII->get(FIOp->isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
+        MachineOperand &Src = MI->getOperand(1);
+        MI->setDesc(TII->get(Src.isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
       } else if (DeadSCC && FIOp->isImm() && FIOp->getImm() == 0) {
         assert(Offset == 0);
         MI->removeOperand(3);
         MI->removeOperand(FIOperandNum);
-        MI->setDesc(
-            TII->get(OtherOp.isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
+        MachineOperand &Src = MI->getOperand(1);
+        MI->setDesc(TII->get(Src.isReg() ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
       }
 
       assert(!FIOp->isFI());

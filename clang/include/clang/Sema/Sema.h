@@ -156,6 +156,7 @@ enum class OverloadCandidateParamOrder : char;
 enum OverloadCandidateRewriteKind : unsigned;
 class OverloadCandidateSet;
 class Preprocessor;
+struct APINotesSelectorDiagnosticState;
 class SemaAMDGPU;
 class SemaARM;
 class SemaAVR;
@@ -1312,6 +1313,8 @@ public:
   SourceManager &SourceMgr;
   api_notes::APINotesManager APINotes;
 
+  std::unique_ptr<APINotesSelectorDiagnosticState> APINotesSelectorDiagnostics;
+
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {
   public:
@@ -1663,6 +1666,10 @@ public:
   void ApplyNullability(Decl *D, NullabilityKind Nullability);
   /// Apply the 'Type:' annotation to the specified declaration
   void ApplyAPINotesType(Decl *D, StringRef TypeString);
+
+  /// Diagnose exact API notes selectors that were not matched by any
+  /// declaration processed in this translation unit.
+  void DiagnoseUnusedAPINotesSelectors();
 
   /// Whether APINotes should be gathered for all applicable Swift language
   /// versions, without being applied. Leaving clients of the current module

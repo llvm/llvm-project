@@ -119,6 +119,8 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 // PASSES-NEXT: PolymorphicOpConversion
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT: SelectOpsConversion
 // PASSES-NEXT: AssumedRankOpConversion
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   OptimizeArrayRepacking

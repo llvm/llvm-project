@@ -708,7 +708,6 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_any:
   case Intrinsic::spv_bitcast:
   case Intrinsic::spv_const_composite:
-  case Intrinsic::spv_cross:
   case Intrinsic::spv_degrees:
   case Intrinsic::spv_distance:
   case Intrinsic::spv_extractelt:
@@ -5344,8 +5343,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_any:
     return selectAny(ResVReg, ResType, I);
-  case Intrinsic::spv_cross:
-    return selectExtInst(ResVReg, ResType, I, CL::cross, GL::Cross);
   case Intrinsic::spv_distance:
     return selectExtInst(ResVReg, ResType, I, CL::distance, GL::Distance);
   case Intrinsic::spv_lerp:
@@ -6452,7 +6449,8 @@ void SPIRVInstructionSelector::decorateUsesAsNonUniform(
 
     if (!IsDecorated) {
       MachineBasicBlock &MBB = *DefMI->getParent();
-      MachineInstr &InsertPt = DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI;
+      MachineInstr &InsertPt =
+          DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI->getNextNode();
       buildOpDecorate(CurrentReg, InsertPt, TII,
                       SPIRV::Decoration::NonUniformEXT, {});
     }

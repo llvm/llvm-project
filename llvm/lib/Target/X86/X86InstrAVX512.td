@@ -7382,6 +7382,15 @@ def : Pat<(f64 (any_sint_to_fp GR32:$src)),
 def : Pat<(f64 (any_sint_to_fp GR64:$src)),
           (VCVTSI642SDZrr (f64 (IMPLICIT_DEF)), GR64:$src)>;
 
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))))),
+          (VCVTSI2SSZrr_Int (v4f32 (AVX512_128_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))))),
+          (VCVTSI642SSZrr_Int (v4f32 (AVX512_128_SET0)), GR64:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR32:$src)))))),
+          (VCVTSI2SDZrr_Int (v2f64 (AVX512_128_SET0)), GR32:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR64:$src)))))),
+          (VCVTSI642SDZrr_Int (v2f64 (AVX512_128_SET0)), GR64:$src)>;
+
 defm VCVTUSI2SSZ   : avx512_vcvtsi_common<0x7B, X86UintToFp, X86UintToFpRnd,
                                   WriteCvtI2SS, GR32,
                                   v4f32x_info, i32mem, loadi32,
@@ -7420,6 +7429,15 @@ def : Pat<(f64 (any_uint_to_fp GR32:$src)),
           (VCVTUSI2SDZrr (f64 (IMPLICIT_DEF)), GR32:$src)>;
 def : Pat<(f64 (any_uint_to_fp GR64:$src)),
           (VCVTUSI642SDZrr (f64 (IMPLICIT_DEF)), GR64:$src)>;
+
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_uint_to_fp GR32:$src)))))),
+          (VCVTUSI2SSZrr_Int (v4f32 (AVX512_128_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_uint_to_fp GR64:$src)))))),
+          (VCVTUSI642SSZrr_Int (v4f32 (AVX512_128_SET0)), GR64:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_uint_to_fp GR32:$src)))))),
+          (VCVTUSI2SDZrr_Int (v2f64 (AVX512_128_SET0)), GR32:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_uint_to_fp GR64:$src)))))),
+          (VCVTUSI642SDZrr_Int (v2f64 (AVX512_128_SET0)), GR64:$src)>;
 }
 
 //===----------------------------------------------------------------------===//
