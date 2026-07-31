@@ -16,7 +16,7 @@
 
 #ifdef LIBC_FULL_BUILD
 
-#include "proxy/elf_proxy.h"
+#include "llvm-libc-proxy/elf_proxy.h"
 
 #else // Overlay mode
 
