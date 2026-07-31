@@ -75,7 +75,7 @@ define dso_local void @run_test() local_unnamed_addr uwtable {
 ; CHECK-NEXT:    ldr x16, [x9]
 ; CHECK-NEXT:    stp q15, q4, [sp] // 32-byte Folded Spill
 ; CHECK-NEXT:    add x5, x10, x11
-; CHECK-NEXT:    mul x1, x15, x18
+; CHECK-NEXT:    mul x1, x18, x15
 ; CHECK-NEXT:    ldr x2, [x13], #64
 ; CHECK-NEXT:    stp q6, q23, [sp, #32] // 32-byte Folded Spill
 ; CHECK-NEXT:    ldr q23, [sp, #80] // 16-byte Reload
