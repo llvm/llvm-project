@@ -637,16 +637,7 @@ void CodeGenFunction::EmitCXXConstructExpr(const CXXConstructExpr *E,
     return;
 
   // Elide the constructor if we're constructing from a temporary.
-  bool DisableElision = false;
-  if (E->getNumArgs() > 0) {
-    if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(
-            E->getArg(0)->IgnoreImpCasts())) {
-      if (hasPreEvaluatedTemporary(MTE))
-        DisableElision = true;
-    }
-  }
-
-  if (getLangOpts().ElideConstructors && E->isElidable() && !DisableElision) {
+  if (getLangOpts().ElideConstructors && E->isElidable()) {
     // FIXME: This only handles the simplest case, where the source object
     //        is passed directly as the first argument to the constructor.
     //        This should also handle stepping though implicit casts and
