@@ -28,6 +28,7 @@ TEST_P(olCreateProgramTest, Success) {
 }
 
 TEST_P(olCreateProgramTest, JITSuccess) {
+  SKIP_KNOWN_FAILURE(AMDGPU{"problem finding lld"});
 
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
   ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo_jit", Device, DeviceBin));
