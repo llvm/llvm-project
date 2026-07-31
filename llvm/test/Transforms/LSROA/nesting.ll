@@ -4,7 +4,8 @@
 declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare ptr @llvm.structured.alloca.p0()
-declare ptr @llvm.structured.gep.p0(ptr, ...)
+declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...)
+declare ptr @llvm.structured.gep.p0.v2i32(ptr, <2 x i32>, ...)
 
 %S = type { i32, { i32, i32 } }
 
@@ -15,7 +16,7 @@ define i32 @test_nested_struct() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call elementtype(i32) ptr @llvm.structured.alloca.p0()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP1]], i32 0)
+; CHECK-NEXT:    [[TMP2:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) [[TMP1]], <1 x i32> splat (i32 7), i32 0)
 ; CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    store i32 1, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -25,8 +26,8 @@ define i32 @test_nested_struct() {
 ;
 entry:
   %tmp = call elementtype(%S) ptr @llvm.structured.alloca.p0()
-  %0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%S) %tmp, i32 0)
-  %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%S) %tmp, i32 1, i32 0)
+  %0 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%S) %tmp, <1 x i32> splat (i32 7), i32 0)
+  %1 = call ptr (ptr, <2 x i32>, ...) @llvm.structured.gep.p0.v2i32(ptr elementtype(%S) %tmp, <2 x i32> splat (i32 7), i32 1, i32 0)
 
 
   store i32 0, ptr %0

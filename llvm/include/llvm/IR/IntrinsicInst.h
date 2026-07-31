@@ -23,6 +23,8 @@
 #ifndef LLVM_IR_INTRINSICINST_H
 #define LLVM_IR_INTRINSICINST_H
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -31,6 +33,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -1853,44 +1856,131 @@ public:
   }
 
   static unsigned getPointerOperandIndex() { return 0; }
+  static unsigned getFlagsOperandIndex() { return 1; }
+  static unsigned getFirstIndexOperandIndex() { return 2; }
 
   Value *getPointerOperand() const {
     return getOperand(getPointerOperandIndex());
+  }
+
+  Constant *getFlagsOperand() const {
+    return cast<Constant>(getOperand(getFlagsOperandIndex()));
+  }
+
+  SmallVector<StructuredGEPFlags, 4> getFlagValues() const {
+    Constant *Flags = getFlagsOperand();
+    unsigned NumFlagValues =
+        cast<FixedVectorType>(Flags->getType())->getNumElements();
+    SmallVector<StructuredGEPFlags, 4> FlagValues;
+    FlagValues.reserve(NumFlagValues);
+    for (unsigned I = 0; I < NumFlagValues; ++I) {
+      auto *FlagValue = cast<ConstantInt>(Flags->getAggregateElement(I));
+      FlagValues.push_back(
+          StructuredGEPFlags::fromRaw(FlagValue->getZExtValue()));
+    }
+    return FlagValues;
   }
 
   Type *getBaseType() const {
     return getParamAttr(0, Attribute::ElementType).getValueAsType();
   }
 
-  unsigned getNumIndices() const { return arg_size() - 1; }
+  unsigned getNumIndices() const {
+    return arg_size() - getFirstIndexOperandIndex();
+  }
 
   Value *getIndexOperand(size_t Index) const {
     assert(Index < getNumIndices());
-    return getOperand(Index + 1);
+    return getOperand(Index + getFirstIndexOperandIndex());
   }
 
-  inline iterator_range<op_iterator> indices() {
-    return make_range(op_begin() + 1, op_begin() + 1 + getNumIndices());
+  StructuredGEPFlags getIndexFlags(size_t Index) const {
+    assert(Index < getNumIndices());
+    return getFlagValues()[Index];
   }
 
-  Type *getResultElementType() const {
+  Type *getTypeAtIndexDepth(size_t Depth) const {
+    if (Depth > getNumIndices())
+      return nullptr;
+
     Type *CurrentType = getBaseType();
-    for (unsigned I = 0; I < getNumIndices(); I++) {
+    for (unsigned I = 0; I < Depth; ++I) {
       if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
         CurrentType = AT->getElementType();
       } else if (VectorType *VT = dyn_cast<VectorType>(CurrentType)) {
         CurrentType = VT->getElementType();
       } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
-        ConstantInt *CI = cast<ConstantInt>(getIndexOperand(I));
+        auto *CI = dyn_cast<ConstantInt>(getIndexOperand(I));
+        if (!CI || CI->getZExtValue() >= ST->getNumElements())
+          return nullptr;
         CurrentType = ST->getElementType(CI->getZExtValue());
+      } else if (auto *TET = dyn_cast<TargetExtType>(CurrentType);
+                 TET && TET->hasProperty(TargetExtType::CanBeSGEPIndexed)) {
+        CurrentType = TET;
       } else {
-        // FIXME(Keenuts): add testing reaching those places once initial
-        // implementation has landed.
-        llvm_unreachable("unimplemented");
+        return nullptr;
       }
     }
 
     return CurrentType;
+  }
+
+  StructuredGEPFlags getRequiredIndexFlags(size_t Index) const {
+    if (Index >= getNumIndices())
+      return StructuredGEPFlags::none();
+
+    if (isa_and_nonnull<StructType>(getTypeAtIndexDepth(Index)))
+      return StructuredGEPFlags::inBounds() | StructuredGEPFlags::nneg() |
+             StructuredGEPFlags::fromStart();
+
+    return StructuredGEPFlags::none();
+  }
+
+  SmallVector<StructuredGEPFlags, 4> getRequiredFlagValues() const {
+    unsigned NumFlagValues =
+        cast<FixedVectorType>(getFlagsOperand()->getType())->getNumElements();
+    SmallVector<StructuredGEPFlags, 4> RequiredFlagValues;
+    RequiredFlagValues.reserve(NumFlagValues);
+    for (unsigned I = 0; I < NumFlagValues; ++I)
+      RequiredFlagValues.push_back(getRequiredIndexFlags(I));
+    return RequiredFlagValues;
+  }
+
+  bool isIndexInBounds(size_t Index) const {
+    return getIndexFlags(Index).isInBounds();
+  }
+
+  bool isIndexNNeg(size_t Index) const { return getIndexFlags(Index).isNNeg(); }
+
+  bool isIndexFromStart(size_t Index) const {
+    return getIndexFlags(Index).isFromStart();
+  }
+
+  bool isIndexUnsigned(size_t Index) const {
+    return getIndexFlags(Index).isUnsignedIndex();
+  }
+
+  bool isInBounds() const {
+    return all_of(seq<unsigned>(0, getNumIndices()),
+                  [this](unsigned Index) { return isIndexInBounds(Index); });
+  }
+
+  bool isFromStart() const {
+    return all_of(seq<unsigned>(0, getNumIndices()),
+                  [this](unsigned Index) { return isIndexFromStart(Index); });
+  }
+
+  inline iterator_range<op_iterator> indices() {
+    return make_range(op_begin() + getFirstIndexOperandIndex(),
+                      op_begin() + getFirstIndexOperandIndex() +
+                          getNumIndices());
+  }
+
+  Type *getResultElementType() const {
+    Type *ResultType = getTypeAtIndexDepth(getNumIndices());
+    if (!ResultType)
+      llvm_unreachable("invalid structured gep type path");
+    return ResultType;
   }
 };
 

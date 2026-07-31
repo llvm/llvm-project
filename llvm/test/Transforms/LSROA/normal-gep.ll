@@ -6,7 +6,7 @@ define i32 @test_normal_gep() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[TMP]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP]], i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) [[TMP]], <1 x i32> splat (i32 7), i32 1)
 ; CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    store i32 1, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[TMP0]], align 4
@@ -17,7 +17,7 @@ define i32 @test_normal_gep() {
 entry:
   %tmp = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
   %0 = getelementptr i8, ptr %tmp, i32 0
-  %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 1)
+  %1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 1)
 
   store i32 0, ptr %0
   store i32 1, ptr %1
@@ -27,3 +27,6 @@ entry:
   %c = add i32 %a, %b
   ret i32 %c
 }
+
+declare ptr @llvm.structured.alloca.p0()
+declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...)

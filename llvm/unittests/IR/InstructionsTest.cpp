@@ -21,6 +21,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -861,6 +862,130 @@ TEST_F(ModuleWithFunctionTest, DropPoisonGeneratingFlags) {
     GI->dropPoisonGeneratingFlags();
     ASSERT_FALSE(GI->isInBounds());
   }
+
+  {
+    std::unique_ptr<Module> M = parseIR(Ctx, R"(
+      declare ptr @llvm.structured.gep.p0.v2i32(ptr, <2 x i32>, ...) #0
+
+      define ptr @sgep(ptr %p, i32 %i) {
+      entry:
+        %sgep = call ptr (ptr, <2 x i32>, ...) @llvm.structured.gep.p0.v2i32(ptr elementtype([10 x { i32, i32 }]) %p, <2 x i32> <i32 13, i32 7>, i32 %i, i32 1)
+        ret ptr %sgep
+      }
+
+      attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+    )");
+    ASSERT_TRUE(M);
+    auto &Inst = *M->getFunction("sgep")->getEntryBlock().begin();
+    auto *SGEP = dyn_cast<StructuredGEPInst>(&Inst);
+    ASSERT_NE(SGEP, nullptr);
+
+    EXPECT_TRUE(isa<ArrayType>(SGEP->getTypeAtIndexDepth(0)));
+    EXPECT_TRUE(isa<StructType>(SGEP->getTypeAtIndexDepth(1)));
+    EXPECT_TRUE(SGEP->getTypeAtIndexDepth(2)->isIntegerTy(32));
+    EXPECT_EQ(SGEP->getTypeAtIndexDepth(3), nullptr);
+
+    ASSERT_TRUE(SGEP->isIndexUnsigned(0));
+    ASSERT_TRUE(SGEP->isIndexInBounds(0));
+    ASSERT_TRUE(SGEP->isIndexFromStart(0));
+    ASSERT_TRUE(SGEP->isIndexInBounds(1));
+    ASSERT_TRUE(SGEP->isIndexNNeg(1));
+    ASSERT_TRUE(SGEP->isIndexFromStart(1));
+    ASSERT_TRUE(SGEP->hasPoisonGeneratingFlags());
+
+    SGEP->dropPoisonGeneratingFlags();
+
+    ASSERT_FALSE(SGEP->hasPoisonGeneratingFlags());
+    ASSERT_TRUE(SGEP->isIndexUnsigned(0));
+    ASSERT_FALSE(SGEP->isIndexInBounds(0));
+    ASSERT_FALSE(SGEP->isIndexFromStart(0));
+    ASSERT_FALSE(SGEP->isIndexUnsigned(1));
+    ASSERT_TRUE(SGEP->isIndexInBounds(1));
+    ASSERT_TRUE(SGEP->isIndexNNeg(1));
+    ASSERT_TRUE(SGEP->isIndexFromStart(1));
+  }
+
+  {
+    std::unique_ptr<Module> M = parseIR(Ctx, R"(
+      declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...) #0
+
+      define ptr @sgep(ptr %p) {
+      entry:
+        %sgep = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %p, <1 x i32> <i32 7>, i32 1)
+        ret ptr %sgep
+      }
+
+      attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+    )");
+    ASSERT_TRUE(M);
+    auto &Inst = *M->getFunction("sgep")->getEntryBlock().begin();
+    auto *SGEP = dyn_cast<StructuredGEPInst>(&Inst);
+    ASSERT_NE(SGEP, nullptr);
+
+    ASSERT_FALSE(SGEP->hasPoisonGeneratingFlags());
+
+    SGEP->dropPoisonGeneratingFlags();
+
+    ASSERT_FALSE(SGEP->hasPoisonGeneratingFlags());
+    ASSERT_TRUE(SGEP->isIndexInBounds(0));
+    ASSERT_TRUE(SGEP->isIndexNNeg(0));
+    ASSERT_TRUE(SGEP->isIndexFromStart(0));
+  }
+}
+
+TEST_F(ModuleWithFunctionTest, StructuredGEPTargetExtMultipleIndices) {
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    declare ptr addrspace(9) @llvm.structured.gep.p9.v4i32(ptr addrspace(9), <4 x i32>, ...) #0
+
+    define ptr addrspace(9) @sgep(ptr addrspace(9) %p, i32 %i, i32 %j) {
+    entry:
+      %sgep = call ptr addrspace(9) (ptr addrspace(9), <4 x i32>, ...) @llvm.structured.gep.p9.v4i32(ptr addrspace(9) elementtype([0 x target("amdgpu.stridemark")]) %p, <4 x i32> <i32 4, i32 4, i32 4, i32 4>, i32 %i, i32 %j, i32 0, i32 1)
+      ret ptr addrspace(9) %sgep
+    }
+
+    attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+  )");
+  ASSERT_TRUE(M);
+  auto &Inst = *M->getFunction("sgep")->getEntryBlock().begin();
+  auto *SGEP = dyn_cast<StructuredGEPInst>(&Inst);
+  ASSERT_NE(SGEP, nullptr);
+
+  EXPECT_TRUE(isa<ArrayType>(SGEP->getTypeAtIndexDepth(0)));
+  EXPECT_EQ(SGEP->getTypeAtIndexDepth(5), nullptr);
+
+  auto *TET = dyn_cast<TargetExtType>(SGEP->getResultElementType());
+  ASSERT_NE(TET, nullptr);
+  EXPECT_EQ(TET->getName(), "amdgpu.stridemark");
+  for (unsigned Depth = 1; Depth <= SGEP->getNumIndices(); ++Depth)
+    EXPECT_EQ(SGEP->getTypeAtIndexDepth(Depth), TET);
+}
+
+TEST_F(ModuleWithFunctionTest, StructuredGEPZeroIndexFlagValues) {
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...) #0
+
+    define ptr @sgep(ptr %p) {
+    entry:
+      %sgep = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %p, <1 x i32> <i32 0>)
+      ret ptr %sgep
+    }
+
+    attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+  )");
+  ASSERT_TRUE(M);
+  auto &Inst = *M->getFunction("sgep")->getEntryBlock().begin();
+  auto *SGEP = dyn_cast<StructuredGEPInst>(&Inst);
+  ASSERT_NE(SGEP, nullptr);
+
+  EXPECT_EQ(SGEP->getNumIndices(), 0u);
+  SmallVector<StructuredGEPFlags, 4> FlagValues = SGEP->getFlagValues();
+  ASSERT_EQ(FlagValues.size(), 1u);
+  EXPECT_EQ(FlagValues[0].getRaw(), 0u);
+  SmallVector<StructuredGEPFlags, 4> RequiredFlagValues =
+      SGEP->getRequiredFlagValues();
+  ASSERT_EQ(RequiredFlagValues.size(), FlagValues.size());
+  EXPECT_EQ(RequiredFlagValues[0], StructuredGEPFlags::none());
+  EXPECT_EQ(SGEP->getRequiredIndexFlags(0), StructuredGEPFlags::none());
 }
 
 TEST(InstructionsTest, GEPIndices) {

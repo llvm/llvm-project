@@ -4,7 +4,7 @@
 declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare ptr @llvm.structured.alloca.p0()
-declare ptr @llvm.structured.gep.p0(ptr, ...)
+declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...)
 
 define i32 @test_simple_scalar() {
 ; CHECK-LABEL: define i32 @test_simple_scalar() {
@@ -43,8 +43,8 @@ define i32 @test_simple_struct_entire_write_read() {
 ;
 entry:
   %tmp = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
-  %ptr0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 0)
-  %ptr1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 1)
+  %ptr0 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 0)
+  %ptr1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 1)
 
   call void @llvm.lifetime.start.p0(ptr %tmp)
   store i32 0, ptr %ptr0
@@ -72,8 +72,8 @@ define i32 @test_simple_struct_aliasing() {
 ;
 entry:
   %tmp = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
-  %ptr0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 0)
-  %ptr1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 0)
+  %ptr0 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 0)
+  %ptr1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 0)
 
   call void @llvm.lifetime.start.p0(ptr %tmp)
   store i32 0, ptr %ptr0
@@ -99,7 +99,7 @@ define i32 @test_simple_struct_partial_write_read() {
 entry:
   %tmp = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
   call void @llvm.lifetime.start.p0(ptr %tmp)
-  %ptr0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 0)
+  %ptr0 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 0)
   store i32 0, ptr %ptr0
   %a = load i32, ptr %ptr0
   call void @llvm.lifetime.end.p0(ptr %tmp)
@@ -129,8 +129,8 @@ define i32 @test_struct_use_across_lifetime() {
 ;
 entry:
   %tmp = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
-  %ptr0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 0)
-  %ptr1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 1)
+  %ptr0 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 0)
+  %ptr1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 1)
 
   call void @llvm.lifetime.start.p0(ptr %tmp)
   store i32 0, ptr %ptr0

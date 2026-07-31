@@ -6669,8 +6669,6 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
     if (isSplatValue(Op0))
       return Op0;
     break;
-  case Intrinsic::structured_gep:
-    return Op0;
   default:
     break;
   }
@@ -7327,6 +7325,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (IID != Intrinsic::not_intrinsic && intrinsicPropagatesPoison(IID) &&
       any_of(Args, IsaPred<PoisonValue>))
     return PoisonValue::get(ReturnType);
+
+  if (IID == Intrinsic::structured_gep)
+    return NumOperands == 2 ? Args[0] : nullptr;
 
   // Most of the intrinsics with no operands have some kind of side effect.
   // Don't simplify.

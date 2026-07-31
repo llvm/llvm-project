@@ -14,7 +14,7 @@ entry:
   ; CHECK: %[[#arr_var:]] = OpFunctionParameter %[[#ptr_array]]
   ; CHECK: %[[#idx_var:]] = OpFunctionParameter %[[#int]]
 
-  %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) %arr, i32 %idx)
+  %1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) %arr, <1 x i32> <i32 5>, i32 %idx)
   ; CHECK: %[[#ptr_elem:]] = OpInBoundsAccessChain %[[#ptr_int]] %[[#arr_var]] %[[#idx_var]]
 
   %2 = load i32, ptr %1, align 4
@@ -30,7 +30,7 @@ entry:
   ; CHECK: %[[#arr_var2:]] = OpFunctionParameter %[[#ptr_array]]
   ; CHECK: %[[#idx_var2:]] = OpFunctionParameter %[[#long]]
 
-  %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) %arr, i64 %idx)
+  %1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) %arr, <1 x i32> <i32 5>, i64 %idx)
   ; CHECK: %[[#ptr_elem2:]] = OpInBoundsAccessChain %[[#ptr_int]] %[[#arr_var2]] %[[#idx_var2]]
 
   %2 = load i32, ptr %1, align 4
@@ -40,8 +40,24 @@ entry:
   ; CHECK: OpReturnValue %[[#val2]]
 }
 
+define spir_func i32 @dynamic_access_not_inbounds(ptr %arr, i32 %idx) convergent {
+entry:
+  %0 = call token @llvm.experimental.convergence.entry()
+  ; CHECK: %[[#arr_var3:]] = OpFunctionParameter %[[#ptr_array]]
+  ; CHECK: %[[#idx_var3:]] = OpFunctionParameter %[[#int]]
+
+  %1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) %arr, <1 x i32> <i32 4>, i32 %idx)
+  ; CHECK: %[[#ptr_elem3:]] = OpAccessChain %[[#ptr_int]] %[[#arr_var3]] %[[#idx_var3]]
+
+  %2 = load i32, ptr %1, align 4
+  ; CHECK: %[[#val3:]] = OpLoad %[[#int]] %[[#ptr_elem3]]
+
+  ret i32 %2
+  ; CHECK: OpReturnValue %[[#val3]]
+}
+
 declare token @llvm.experimental.convergence.entry() #1
-declare ptr @llvm.structured.gep.p0(ptr, ...) #3
+declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...) #3
 
 attributes #1 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

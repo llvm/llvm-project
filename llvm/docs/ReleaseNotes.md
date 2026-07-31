@@ -52,6 +52,14 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
+* The `llvm.structured.gep` intrinsic has gained an extra `flags` argument,
+  allowing the in-bounds nature of array indices, whether indexing starts from
+  the logical beginning of the object, their signedness, and their
+  non-negativity to be provided on a per-index basis, removing the old
+  `[0 x T]` element type that conflated an array having unknown extent with
+  potentially in-bounds indexing. The default interpretation of indices has been
+  updated to be signed, matching GEP.
+
 ### Changes to LLVM infrastructure
 
 ### Changes to building LLVM

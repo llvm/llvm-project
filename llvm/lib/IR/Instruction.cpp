@@ -483,6 +483,24 @@ void Instruction::dropPoisonGeneratingFlags() {
       case Intrinsic::abs:
         II->setOperand(1, ConstantInt::getFalse(getContext()));
         break;
+      case Intrinsic::structured_gep: {
+        auto *SGEP = cast<StructuredGEPInst>(II);
+        Type *Int32Ty = Type::getInt32Ty(getContext());
+        SmallVector<StructuredGEPFlags, 4> IndexFlagValues =
+            SGEP->getFlagValues();
+        SmallVector<StructuredGEPFlags, 4> RequiredFlagValues =
+            SGEP->getRequiredFlagValues();
+        SmallVector<Constant *> FlagValues;
+        for (auto [IndexFlags, RequiredFlags] :
+             zip_equal(IndexFlagValues, RequiredFlagValues)) {
+          StructuredGEPFlags Flags = IndexFlags.withoutPoisonGeneratingFlags();
+          Flags |= IndexFlags & RequiredFlags;
+          FlagValues.push_back(ConstantInt::get(Int32Ty, Flags.getRaw()));
+        }
+        II->setOperand(StructuredGEPInst::getFlagsOperandIndex(),
+                       ConstantVector::get(FlagValues));
+        break;
+      }
       }
     }
     break;

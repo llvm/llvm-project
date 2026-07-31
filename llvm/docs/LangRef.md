@@ -13666,7 +13666,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -13675,7 +13675,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-   
+
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -13684,7 +13684,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-   
+
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -13700,14 +13700,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-   
+
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {
@@ -15050,7 +15050,8 @@ See the description for {ref}`llvm.stacksave <int_stacksave>`.
 
 ```
 declare <ret_type>
-@llvm.structured.gep(ptr elementtype(<basetype>) <source>
+@llvm.structured.gep(ptr elementtype(<basetype>) <source>,
+                     <[number of indices] x i32> flags,
                      {, [i32/i64] <index> }*)
 ```
 
@@ -15068,10 +15069,10 @@ at runtime.
 A pointer to the memory location used as base for the address computation.
 
 The `source` argument must be annotated with an {ref}`elementtype <attr_elementtype>` attribute at the call-site. This attribute specifies the
-type of the element pointed to by the pointer source. This type will be
+type of the value pointed into by the pointer `source`. This type will be
 used along with the provided indices and source operand to compute a new
 pointer representing the result of a logical indexing into the basetype
-pointed by source.
+pointed to by `source`.
 
 The `basetype` is only associated with `<source>` for this particular
 call. A frontend could possibly emit multiple structured
@@ -15079,50 +15080,110 @@ GEP with the same source pointer but a different `basetype`.
 
 `[i32/i64] index, ...`:
 Indices used to traverse into the `basetype` and compute a pointer to the
-target element. Indices can be 32-bit or 64-bit unsigned integers. Indices being
-handled one by one, both sizes can be mixed in the same instruction. The
+target element. Indices can be 32-bit or 64-bit integers, which are
+treated as signed unless the `unsigned` bit is set in that index's flag. As
+indices are handled one by one, both sizes can be mixed in the same instruction. The
 precision used to compute the resulting pointer is target-dependent.
 When used to index into a struct, only integer constants are allowed.
+
+`<[number of indices] x i32> flags`:
+The semantic flags associated with each index application. The flags may differ
+for each index application. This operand must be a constant fixed vector of
+`i32` values.
+
+Bits not given a meaning below are reserved and should be set to 0 for
+portability. The 0 value of such a bit preserves the most conservative default
+semantics. Bits 16-31 (`1 << 16` and up) are reserved for target-specific
+flags. The verifier accepts reserved bits without assigning semantics to them.
+
+LLVM IR does not have zero-length vector types. If there are no indices, the
+flags operand must be `<1 x i32> zeroinitializer` and is ignored. This is
+the sole exception to the `<[number of indices] x i32>` notation above.
+Otherwise, the flags operand must have one element per index.
 
 ##### Semantics:
 
 The `llvm.structured.gep` performs a logical traversal of the type
 `basetype` using the list of provided indices, computing the pointer
-addressing the targeted element/field assuming `source` points to a
-physically laid out `basetype`. The physical layout of the source depends
-on the target and does not necessarily match the one described by the
-datalayout.
+addressing the targeted element/field assuming `source` points to memory
+interpretable as an object of type `basetype` (or to locations within that object
+if the corresponding indexing levels are not marked `fromstart`).
+The physical layout of the source depends on the target and does not necessarily
+match the one described by the datalayout.
 
 The first index determines which element/field of `basetype` is selected,
 computes the pointer to access this element/field assuming `source` points
-to the start of `basetype`.
+into memory interpretable as a `basetype` or, if the `fromstart` flag is set,
+to the start of such memory.
 This pointer becomes the new `source`, the current type the new
-`basetype`, and the next indices is consumed until a scalar type is
+`basetype`, and the next index is consumed until a scalar type is
 reached or all indices are consumed.
 
-All indices must be consumed, and it is illegal to index into a scalar type.
-Meaning the maximum number of indices depends on the depth of the basetype.
+In the case of such non-`fromstart` array pointers, the corresponding `index`
+moves logically within the array. Unlike with normal GEP, there is no requirement
+that indices "overflow" to the next dimension - that is,
+`sgep [8 x [8 x i8]], ptr %source, i32 0, i32 8` is not necessarily the same
+location as `sgep [8 x [8 x i8]], ptr %source, i32 1, i32 0`. The indices for each axis
+in a multidimensional array *may*, but are not *required to be*, tracked separately:
+the overflow flags apply to the ultimate, target-specific tracking mechanism.
 
-Because this instruction performs a logical addressing, all indices are
-assumed to be inbounds. This means it is not possible to access the next
-element in the logical layout by overflowing:
+All indices must be consumed, and it is illegal to index into a scalar type,
+meaning the maximum number of indices depends on the depth of the basetype.
 
-- If the indexed type is a struct with N fields, the index must be an
-  immediate/constant value in the range `[0; N[`.
-- If indexing into an array or vector, the index can be a variable, but
-  is assumed to be inbounds with regards to the current basetype logical layout.
-- If the traversed type is an array or vector of N elements with `N > 0`,
-  the index is assumed to belong to `[0; N[`.
-- If the traversed type is an array of size `0`, the array size is assumed
-  to be known at runtime, and the instruction assumes the index is always
-  inbounds.
+Targets may mark target extension types as SGEP-indexable. Such types may appear
+as the innermost type of a `basetype`, where their presence permits (but does not
+require) additional indices.
 
-In all cases **except** when the accessed type is a 0-sized array, indexing
-out of bounds yields `poison`. When the index value is unknown, optimizations
-can use the type bounds to determine the range of values the index can have.
+Targets, such as SPIR-V, may require that `fromstart` is present on some or all
+indices.
+
+If the indexed type is a struct with N fields, the index must be an
+integer constant in the range `[0, N)`.
+
+If the constraints implied by a flag bit are violated, the result is `poison`.
 If the source pointer is poison, the instruction returns poison.
 The resulting pointer belongs to the same address space as `source`.
 This instruction does not dereference the pointer.
+
+##### Defined flag bits:
+
+`inbounds`
+: Bit 0 (`1 << 0`) - specifies that this index is within the bounds of the type
+  being indexed at that level. In particular, when indexing an array or vector
+  `[N x T]`, implies that the index is in the range `[0, N)`. As an exception,
+  if `N` is 0, the bound is treated as an unknown, dynamic value, but the flag
+  still implies that the index is inside that runtime bound.
+  Structure accesses are always `inbounds` and must be marked as
+  such. A structured GEP is said to be inbounds if all of its indices are inbounds.
+
+`nneg`
+: Bit 1 (`1 << 1`) - specifies that the value of this index is non-negative.
+  This is not necessarily implied by `inbounds`. For example, consider
+
+  ```llvm
+  %q = sgep [8 x target("amdgpu.stridemark")],
+    <inbounds|nneg, inbounds|nneg|fromstart>,
+    ptr addrspace(9) %p, i32 4, i32 0
+  %r = sgep [8 x target("amdgpu.stridemark")],
+    <inbounds, inbounds|nneg|fromstart>,
+    ptr addrspace(9) %q, i32 %x, i32 2
+  ```
+
+  where `inbounds` only implies that `-4 <= %x <= 4`.
+
+`fromstart`
+: Bit 2 (`1 << 2`) - specifies that the pointer at this indexing level points to
+  the beginning of the array or vector being indexed. If a type is indexed with a
+  `fromstart` annotation, the lack of a `fromstart` annotation on a subsequent
+  indexing level is only permitted with target-specific knowledge that the index
+  accumulation "resets" at that level.
+
+`unsigned`
+: Bit 3 (`1 << 3`) - specifies that the index should be interpreted as an
+  unsigned number if extension or truncation is required.
+
+The `inbounds`, `nneg`, and `fromstart` flags must currently be set when indexing
+into structures.
 
 ##### Aliasing rules:
 
@@ -15143,7 +15204,7 @@ undefined.
 ```
 
 This implies that two `llvm.structured.gep` calls with the same pointer
-and element type do not alias unless the index sequence of one if a prefix
+and element type do not alias unless the index sequence of one is a prefix
 of the other.
 
 ##### Example:
@@ -15159,7 +15220,7 @@ Could be translated to:
 
 ```llvm
 %A = type { i32, i32, i32, i32 }
-%src = call ptr @llvm.structured.gep(ptr elementtype(%A) %my_struct, i32 1)
+%src = call ptr @llvm.structured.gep(ptr elementtype(%A) %my_struct, <1 x i32> <i32 7>, i32 1)
 %val = load i32, ptr %src
 ```
 
@@ -15190,20 +15251,68 @@ This means it is valid to lower the following code to either:
 
 ```llvm
 %S = type { i32, i32, i32, i32 }
-%src = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, i32 1)
+%src = call ptr @llvm.structured.gep(ptr elementtype(%S) %my_struct, <1 x i32> <i32 7>, i32 1)
 load i32, ptr %src
 ```
 
 Or:
 
 ```llvm
-%src = call ptr @llvm.structured.gep(ptr elementtype([ 4 x i32 ]) %my_struct, i32 1)
+%src = call ptr @llvm.structured.gep(ptr elementtype([4 x i32]) %my_struct, <1 x i32> <i32 7>, i32 1)
 load i32, ptr %src
 ```
 
 This is, however, dependent on context that codegen has an insight on. The
 fact that `[ i32 x 4 ]` and `%S` are equivalent depends on the target.
 
+**Bounds handling**
+
+```cpp
+// Type that treats indices separately, such as by allowing swizzling or
+// per-dimension bounds checks.
+tensor2d<float, M, N> array;
+float val = array[i, j];
+```
+
+Could be translated to:
+
+```llvm
+;; No knowledge about if 0 <= %i < M or 0 <= %j < N
+%src = call ptr @llvm.structured.gep(ptr elementtype([M x [N x float]]) %array,
+  <2 x i32> <i32 0, i32 0>, i64 %i, i64 %j)
+%val = load float, ptr %src
+```
+
+or as something with more flags, such as
+
+```llvm
+;; 0 sle %i slt M follows from this, as does %j ult N, as does knowledge that
+;; %array points to the beginning of memory that can be interpreted as an
+;; M x N x float array.
+%src = call ptr @llvm.structured.gep(ptr elementtype([M x [N x float]]) %array,
+  <2 x i32> <i32 7, i32 13>, i64 %i, i64 %j)
+%val = load float, ptr %src
+```
+
+depending on the semantics the frontend assigns to the program.
+
+When dealing with dynamic bounds, a "0-sized" array is used, so
+
+```cpp
+tensor1d<float, kDynamic> array[];
+float val = array[i];
+```
+
+could be translated to:
+
+```llvm
+%src = call ptr @llvm.structured.gep(ptr elementtype([0 x float]) %array,
+  <1 x i32> <i32 7>, i64 %i)
+%val = load float, ptr %src
+```
+
+if the frontend knows that the dynamic index is non-negative and bounded by the
+size of `array`.
 
 (i_structured_alloca)=
 
@@ -15261,7 +15370,7 @@ the backend's layout rules.
 %ptr = call elementtype(%S) ptr @llvm.structured.alloca()
 
 ; Access the second field of the allocated struct
-%field_ptr = call ptr @llvm.structured.gep(ptr elementtype(%S) %ptr, i32 1)
+%field_ptr = call ptr @llvm.structured.gep(ptr elementtype(%S) %ptr, <1 x i32> <i32 7>, i32 1)
 %val = load i32, ptr %field_ptr
 
 ; Allocate an array of 10 i32s on the stack

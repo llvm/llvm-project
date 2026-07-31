@@ -159,9 +159,13 @@ static void rewriteSGEPChain(IRBuilder<> &B, StructuredGEPInst *SGEP,
   }
 
   SmallVector<Value *, 4> Indices(llvm::drop_begin(SGEP->indices()));
+  SmallVector<StructuredGEPFlags, 4> Flags;
+  Flags.reserve(SGEP->getNumIndices() - 1);
+  for (unsigned I = 1; I < SGEP->getNumIndices(); ++I)
+    Flags.push_back(SGEP->getIndexFlags(I));
   B.SetInsertPoint(SGEP);
   auto *I = B.CreateStructuredGEP(FieldAlloca->getAllocationType(), FieldAlloca,
-                                  Indices, SGEP->getName());
+                                  Indices, Flags, SGEP->getName());
   SGEP->replaceAllUsesWith(I);
   SGEP->eraseFromParent();
 }

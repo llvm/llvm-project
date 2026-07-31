@@ -4,7 +4,7 @@
 declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare ptr @llvm.structured.alloca.p0()
-declare ptr @llvm.structured.gep.p0(ptr, ...)
+declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...)
 declare void @foo(ptr)
 
 ; The alloca ptr is escaping, we cannot know if splitting is safe.
@@ -12,8 +12,8 @@ define i32 @test_simple_escape() {
 ; CHECK-LABEL: define i32 @test_simple_escape() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[PTR0:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP]], i32 0)
-; CHECK-NEXT:    [[PTR1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP]], i32 1)
+; CHECK-NEXT:    [[PTR0:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) [[TMP]], <1 x i32> splat (i32 7), i32 0)
+; CHECK-NEXT:    [[PTR1:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) [[TMP]], <1 x i32> splat (i32 7), i32 1)
 ; CHECK-NEXT:    store i32 0, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    store i32 1, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    call void @foo(ptr [[TMP]])
@@ -25,8 +25,8 @@ define i32 @test_simple_escape() {
 entry:
   %tmp = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
 
-  %ptr0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 0)
-  %ptr1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 1)
+  %ptr0 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 0)
+  %ptr1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 1)
 
   store i32 0, ptr %ptr0
   store i32 1, ptr %ptr1
@@ -43,8 +43,8 @@ define i32 @test_derived_escape() {
 ; CHECK-LABEL: define i32 @test_derived_escape() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[PTR0:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP]], i32 0)
-; CHECK-NEXT:    [[PTR1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP]], i32 1)
+; CHECK-NEXT:    [[PTR0:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) [[TMP]], <1 x i32> splat (i32 7), i32 0)
+; CHECK-NEXT:    [[PTR1:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) [[TMP]], <1 x i32> splat (i32 7), i32 1)
 ; CHECK-NEXT:    store i32 0, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    store i32 1, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    call void @foo(ptr [[PTR0]])
@@ -56,8 +56,8 @@ define i32 @test_derived_escape() {
 entry:
   %tmp = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
 
-  %ptr0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 0)
-  %ptr1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 1)
+  %ptr0 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 0)
+  %ptr1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 1)
 
   store i32 0, ptr %ptr0
   store i32 1, ptr %ptr1
@@ -75,7 +75,7 @@ define i32 @test_normal_gep() {
 ; CHECK-LABEL: define i32 @test_normal_gep() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[PTR0:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) [[TMP]], i32 0)
+; CHECK-NEXT:    [[PTR0:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) [[TMP]], <1 x i32> splat (i32 7), i32 0)
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr i8, ptr [[PTR0]], i32 4
 ; CHECK-NEXT:    store i32 0, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    store i32 1, ptr [[PTR1]], align 4
@@ -87,7 +87,7 @@ define i32 @test_normal_gep() {
 entry:
   %tmp = call elementtype({ i32, i32 }) ptr @llvm.structured.alloca.p0()
 
-  %ptr0 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, i32 }) %tmp, i32 0)
+  %ptr0 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype({ i32, i32 }) %tmp, <1 x i32> splat (i32 7), i32 0)
   %ptr1 = getelementptr i8, ptr %ptr0, i32 4
 
   store i32 0, ptr %ptr0

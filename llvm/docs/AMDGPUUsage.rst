@@ -1602,29 +1602,33 @@ element type metadata. No value of this type can be created.
 
 The marker type has one optional parameter - an integer indicating the constant
 value of the stride of the buffer(s) being addressed if known. That integer, if
-given, must be non-negative (but can be 0, indicating the degenarate case where
+given, must be non-negative (but can be 0, indicating the degenerate case where
 no stride is set but the index field should be used anyway).
 
 When creating a structured GEP, arrays of ``amdgpu.stridemark``s are used to
-represent indexing into the *index* component of the structured/strided buffer,
-while a subsequent bare ``getelementptr`` - is used to manipulate the *offset*
-part.
+represent indexing into the components of the structured/strided buffer:
+the first index manipulates the *index* part, and the second index (or a subsequent
+bare ``getelementptr``) manipulates the *offset* part.
 
 Example usage:
 
 .. code-block:: llvm
 
-      ;; A 2-D array of unknown length and stride.
-      %q1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+      ;; A 2-D array of unknown length and stride. Indices are specified as being
+      ;; interpreted as unsigned. No guarantee is made that the index or offset
+      ;; are 0.
+      call ptr addrspace(9) (ptr addrspace(9), ...)
         (ptr addrspace(9) elementtype([0 x target("amdgpu.stridemark") ]) %p,
-        i32 %index)
-      %q = getelementptr i8, ptr addrspace(9) %q1, i32 %offset
+        <2 x i32> <i32 8, i32 8>,
+        i32 %index, i32 %offset)
 
-      ;; Known bounds on index and offset.
-      %y1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+      ;; Known bounds on index and offset. Indices are known to be inbounds,
+      ;; non-negative, start from the logical beginning, and are treated as
+      ;; unsigned per the SGEP flags.
+      %y = call ptr addrspace(9) (ptr addrspace(9), ...),
+        <2 x i32> <i32 15, i32 15>
         (ptr addrspace(9) elementtype([256 x target("amdgpu.stridemark", 16) ]) %p,
-        i32 %index)
-      %y = getelementptr ptr addrspace(9) %y1, i32 %offset
+        i32 %index, i32 %offset)
 
 Note that the lowering for these examples is not yet implemented and will
 be added in future changes.

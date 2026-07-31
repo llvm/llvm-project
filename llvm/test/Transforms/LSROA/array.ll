@@ -4,20 +4,21 @@
 declare void @llvm.lifetime.start.p0(ptr nocapture)
 declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare ptr @llvm.structured.alloca.p0()
-declare ptr @llvm.structured.gep.p0(ptr, ...)
+declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...)
+declare ptr @llvm.structured.gep.p0.v2i32(ptr, <2 x i32>, ...)
 
 define i32 @test_simple_array() {
 ; CHECK-LABEL: define i32 @test_simple_array() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = call elementtype([10 x i32]) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[PTR:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) [[TMP]], i32 0)
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) [[TMP]], <1 x i32> splat (i32 5), i32 0)
 ; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %tmp = call elementtype([10 x i32]) ptr @llvm.structured.alloca.p0()
-  %ptr = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) %tmp, i32 0)
+  %ptr = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) %tmp, <1 x i32> splat (i32 5), i32 0)
   store i32 0, ptr %ptr
   %res = load i32, ptr %ptr
   ret i32 %res
@@ -28,14 +29,14 @@ define i32 @test_simple_array_dynamic_index(i32 %i) {
 ; CHECK-SAME: i32 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = call elementtype([10 x i32]) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[PTR:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) [[TMP]], i32 [[I]])
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) [[TMP]], <1 x i32> splat (i32 5), i32 [[I]])
 ; CHECK-NEXT:    store i32 0, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %tmp = call elementtype([10 x i32]) ptr @llvm.structured.alloca.p0()
-  %ptr = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) %tmp, i32 %i)
+  %ptr = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) %tmp, <1 x i32> splat (i32 5), i32 %i)
   store i32 0, ptr %ptr
   %res = load i32, ptr %ptr
   ret i32 %res
@@ -46,14 +47,14 @@ define i32 @test_simple_array_dynamic_index_in_child(i32 %i) {
 ; CHECK-SAME: i32 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call elementtype([10 x i32]) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[PTR1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) [[TMP0]], i32 [[I]])
+; CHECK-NEXT:    [[PTR1:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) [[TMP0]], <1 x i32> splat (i32 5), i32 [[I]])
 ; CHECK-NEXT:    store i32 0, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %tmp = call elementtype({ i32, [10 x i32]}) ptr @llvm.structured.alloca.p0()
-  %ptr = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({ i32, [10 x i32] }) %tmp, i32 1, i32 %i)
+  %ptr = call ptr (ptr, <2 x i32>, ...) @llvm.structured.gep.p0.v2i32(ptr elementtype({ i32, [10 x i32] }) %tmp, <2 x i32> <i32 7, i32 5>, i32 1, i32 %i)
   store i32 0, ptr %ptr
   %res = load i32, ptr %ptr
   ret i32 %res
@@ -64,14 +65,14 @@ define i32 @test_simple_array_dynamic_index_only_child(i32 %i) {
 ; CHECK-SAME: i32 [[I:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call elementtype([10 x i32]) ptr @llvm.structured.alloca.p0()
-; CHECK-NEXT:    [[PTR1:%.*]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) [[TMP0]], i32 [[I]])
+; CHECK-NEXT:    [[PTR1:%.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) [[TMP0]], <1 x i32> splat (i32 5), i32 [[I]])
 ; CHECK-NEXT:    store i32 0, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = load i32, ptr [[PTR1]], align 4
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 entry:
   %tmp = call elementtype({[10 x i32]}) ptr @llvm.structured.alloca.p0()
-  %ptr = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype({[10 x i32]}) %tmp, i32 0, i32 %i)
+  %ptr = call ptr (ptr, <2 x i32>, ...) @llvm.structured.gep.p0.v2i32(ptr elementtype({[10 x i32]}) %tmp, <2 x i32> <i32 7, i32 5>, i32 0, i32 %i)
   store i32 0, ptr %ptr
   %res = load i32, ptr %ptr
   ret i32 %res

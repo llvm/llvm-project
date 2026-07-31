@@ -14,6 +14,7 @@
 
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -43,6 +44,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -1309,6 +1311,14 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
+static bool isOldStructuredGEPIntrinsic(Function *F, StringRef Name) {
+  if (Name != "structured.gep" && !Name.starts_with("structured.gep."))
+    return false;
+
+  FunctionType *FTy = F->getFunctionType();
+  return FTy->getNumParams() < 2 || !FTy->getParamType(1)->isVectorTy();
+}
+
 static bool upgradeIntrinsicDeclWithDefaultArgs(Function *F, Function *&NewFn) {
   Intrinsic::ID IID = Intrinsic::lookupIntrinsicID(F->getName());
   if (IID == Intrinsic::not_intrinsic)
@@ -1893,6 +1903,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
 
   case 's':
     if (Name == "stackprotectorcheck") {
+      NewFn = nullptr;
+      return true;
+    }
+    if (isOldStructuredGEPIntrinsic(F, Name)) {
       NewFn = nullptr;
       return true;
     }
@@ -5126,6 +5140,78 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
+// Return the flags that represent the semantics of a structured GEP before
+// flags were added. Always sets `unsigned` and `fromstart`. If the structured
+// GEP is malformed, will fill in one `unsigned|fromstart` per index.
+static Constant *getLegacyStructuredGEPFlags(CallBase *CI) {
+  Type *CurrentType = nullptr;
+  if (CI->paramHasAttr(0, Attribute::ElementType))
+    CurrentType = CI->getParamAttr(0, Attribute::ElementType).getValueAsType();
+
+  Type *Int32Ty = Type::getInt32Ty(CI->getContext());
+  unsigned NumIndices = CI->arg_size() - 1;
+  SmallVector<StructuredGEPFlags> FlagValues(
+      std::max({NumIndices, 1u}), NumIndices
+                                      ? StructuredGEPFlags::unsignedIndex() |
+                                            StructuredGEPFlags::fromStart()
+                                      : StructuredGEPFlags::none());
+  for (auto [I, Flags] : llvm::enumerate(FlagValues)) {
+    // Safety valve for malformed SGEP.
+    if (!CurrentType)
+      break;
+
+    if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      if (AT->getNumElements() != 0)
+        Flags |= StructuredGEPFlags::inBounds();
+      CurrentType = AT->getElementType();
+    } else if (auto *VT = dyn_cast<VectorType>(CurrentType)) {
+      Flags |= StructuredGEPFlags::inBounds();
+      CurrentType = VT->getElementType();
+    } else if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      Flags |= StructuredGEPFlags::inBounds() | StructuredGEPFlags::nneg();
+      if (auto *ConstArg = dyn_cast<ConstantInt>(CI->getOperand(I + 1)))
+        CurrentType = ST->getElementType(ConstArg->getZExtValue());
+      else
+        break;
+    } else {
+      break;
+    }
+  }
+
+  SmallVector<Constant *> FlagConsts =
+      llvm::map_to_vector(FlagValues, [&](auto V) {
+        return ConstantInt::get(Int32Ty, V.getRaw());
+      });
+  return ConstantVector::get(FlagConsts);
+}
+
+static Value *upgradeStructuredGEPIntrinsicCall(CallBase *CI, Function *F,
+                                                IRBuilder<> &Builder) {
+  Constant *Flags = getLegacyStructuredGEPFlags(CI);
+  SmallVector<Value *> Args;
+  Args.reserve(CI->arg_size() + 1);
+  Args.push_back(CI->getArgOperand(0));
+  Args.push_back(Flags);
+  for (unsigned I = 1; I < CI->arg_size(); ++I)
+    Args.push_back(CI->getArgOperand(I));
+
+  Function *NewFn = Intrinsic::getOrInsertDeclaration(
+      F->getParent(), Intrinsic::structured_gep,
+      {CI->getType(), Flags->getType()});
+  SmallVector<OperandBundleDef, 1> Bundles;
+  CI->getOperandBundlesAsDefs(Bundles);
+
+  CallInst *NewCall = Builder.CreateCall(NewFn, Args, Bundles);
+  NewCall->setCallingConv(CI->getCallingConv());
+  NewCall->setDebugLoc(CI->getDebugLoc());
+  NewCall->copyMetadata(*CI);
+  NewCall->addParamAttrs(
+      0, AttrBuilder(CI->getContext(), CI->getParamAttributes(0)));
+  NewCall->addRetAttrs(AttrBuilder(CI->getContext(), CI->getRetAttributes()));
+  NewCall->takeName(CI);
+  return NewCall;
+}
+
 static bool upgradeIntrinsicCallWithDefaultArgs(CallBase *CI, Function *NewFn,
                                                 IRBuilder<> &Builder) {
   Intrinsic::ID IID = NewFn->getIntrinsicID();
@@ -5231,6 +5317,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeVectorSplice(CI, Builder);
     } else if (Name.consume_front("convert.")) {
       Rep = upgradeConvertIntrinsicCall(Name, CI, F, Builder);
+    } else if (Name == "structured.gep" ||
+               Name.starts_with("structured.gep.")) {
+      Rep = upgradeStructuredGEPIntrinsicCall(CI, F, Builder);
     } else if (Name == "lifetime.start.i64" || Name == "lifetime.end.i64") {
       // Delete calls to invalid @llvm.lifetime.{start,end}.i64 intrinsics.
       Rep = nullptr;

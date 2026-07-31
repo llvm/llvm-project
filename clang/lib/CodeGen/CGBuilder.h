@@ -18,6 +18,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GEPNoWrapFlags.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 #include "llvm/IR/Type.h"
 
 namespace clang {
@@ -366,11 +367,30 @@ public:
   llvm::Value *CreateAccessChain(bool Logical, llvm::Type *BaseType,
                                  llvm::Value *PtrBase,
                                  ArrayRef<llvm::Value *> IdxList,
+                                 ArrayRef<llvm::StructuredGEPFlags> Flags,
                                  const Twine &Name = "") {
-
     if (Logical)
-      return CreateStructuredGEP(BaseType, PtrBase, IdxList, Name);
+      return CreateStructuredGEP(BaseType, PtrBase, IdxList, Flags, Name);
     return CreateInBoundsGEP(BaseType, PtrBase, IdxList, Name);
+  }
+
+  llvm::Value *CreateAccessChain(bool Logical, llvm::Type *BaseType,
+                                 llvm::Value *PtrBase,
+                                 ArrayRef<llvm::Value *> IdxList,
+                                 const Twine &Name = "") {
+    assert(!Logical && "logical access chains require structured GEP flags");
+    return CreateInBoundsGEP(BaseType, PtrBase, IdxList, Name);
+  }
+
+  Address CreateAccessChain(bool Logical, Address Addr,
+                            ArrayRef<llvm::Value *> IdxList,
+                            ArrayRef<llvm::StructuredGEPFlags> Flags,
+                            llvm::Type *ElementType, CharUnits Align,
+                            const Twine &Name = "") {
+    return RawAddress(CreateAccessChain(Logical, Addr.getElementType(),
+                                        emitRawPointerFromAddress(Addr),
+                                        IdxList, Flags, Name),
+                      ElementType, Align, Addr.isKnownNonNull());
   }
 
   Address CreateAccessChain(bool Logical, Address Addr,
