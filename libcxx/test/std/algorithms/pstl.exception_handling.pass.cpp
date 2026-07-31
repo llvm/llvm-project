@@ -211,6 +211,22 @@ int main(int, char**) {
       }
 
       {
+        auto pred = maybe_throw(tokens[5], [](int, int) -> bool { return true; });
+
+        // lexicographical_compare(first1, last1, first2, last2)
+        assert_non_throwing([=, &policy] {
+          (void)std::lexicographical_compare(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2));
+        });
+
+        // lexicographical_compare(first1, last1, first2, last2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::lexicographical_compare(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(last2), pred);
+        });
+      }
+
+      {
         // reverse_copy(first, last, dest)
         assert_non_throwing([=, &policy] {
           (void)std::reverse_copy(policy, std::move(first1), std::move(last1), std::move(dest));
