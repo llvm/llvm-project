@@ -513,6 +513,10 @@ defm CvtPkF16F32Inst : AMDGPUSubtargetFeature<"cvt-pk-f16-f32-inst",
   "Has cvt_pk_f16_f32 instruction"
 >;
 
+defm CvtSrPkBF16F32Inst : AMDGPUSubtargetFeature<"cvt-sr-pk-bf16-f32-inst",
+  "Has cvt_sr_pk_bf16_f32 instruction"
+>;
+
 defm McastLoadInsts : AMDGPUSubtargetFeature<"mcast-load-insts",
   "Has multicast load instructions"
 >;
@@ -2283,6 +2287,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureBF16PackedInsts,
    FeatureBF16InlineConstFromUpperFP32,
    FeatureCvtPkF16F32Inst,
+   FeatureCvtSrPkBF16F32Inst,
    FeatureFmaMixBF16Insts,
    FeatureMin3Max3PKF16,
    FeatureMinimum3Maximum3PKF16,
@@ -2444,6 +2449,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureFmaMixBF16Insts,
    FeatureGloballyAddressableScratch,
    FeatureCvtPkF16F32Inst,
+   FeatureCvtSrPkBF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToFP6BF6ConversionScaleInsts,
    FeatureIEEEMinimumMaximumInsts,

@@ -5,6 +5,8 @@
 
 typedef unsigned int __attribute__((ext_vector_type(6))) uint6;
 typedef float __attribute__((ext_vector_type(32))) float32;
+typedef __bf16 __attribute__((ext_vector_type(2))) bfloat2;
+typedef unsigned int uint;
 
 // CHECK-LABEL: @test_cvt_scalef32_pk32_bf6_f32(
 // CHECK-NEXT:  entry:
@@ -98,6 +100,29 @@ void test_raw_ptr_buffer_atomic_fmin_fmax(global float *fout, global double *dou
   *fout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32(f, rsrc, offset, soffset, 0);
   *dout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64(d, rsrc, offset, soffset, 0);
   *dout = __builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64(d, rsrc, offset, soffset, 0);
+}
+
+// CHECK-LABEL: @test_cvt_sr_pk_bf16_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[B_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[SR_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store float [[A:%.*]], ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    store float [[B:%.*]], ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    store i32 [[SR:%.*]], ptr addrspace(5) [[SR_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[A_ADDR]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[B_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(5) [[SR_ADDR]], align 4
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x bfloat> @llvm.amdgcn.cvt.sr.pk.bf16.f32(float [[TMP0]], float [[TMP1]], i32 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store <2 x bfloat> [[TMP3]], ptr addrspace(1) [[TMP4]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_sr_pk_bf16_f32(global bfloat2* out, float a, float b, uint sr)
+{
+  *out = __builtin_amdgcn_cvt_sr_pk_bf16_f32(a, b, sr);
 }
 
 // CHECK-LABEL: @test_mqsad_pk_u16_u8(
