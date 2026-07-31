@@ -503,6 +503,14 @@ public:
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
 
+  /// Variants taking the denormal mode directly, for IR level callers which
+  /// have no MachineFunction to read it from. \p VT is the legalized type of
+  /// the operation.
+  bool isFMAFasterThanFMulAndFAdd(EVT VT, bool FlushF32Denormals,
+                                  bool FlushF64F16Denormals) const;
+  bool isFMADLegal(EVT VT, bool FlushF32Denormals,
+                   bool FlushF64F16Denormals) const;
+
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitBinaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitTernaryVectorOp(SDValue Op, SelectionDAG &DAG) const;

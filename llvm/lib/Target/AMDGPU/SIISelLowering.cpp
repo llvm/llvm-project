@@ -7420,8 +7420,8 @@ LLT SITargetLowering::getPreferredShiftAmountTy(LLT Ty) const {
 // however does not support denormals, so we do report fma as faster if we have
 // a fast fma device and require denormals.
 //
-bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
-                                                  EVT VT) const {
+bool SITargetLowering::isFMAFasterThanFMulAndFAdd(
+    EVT VT, bool FlushF32Denormals, bool FlushF64F16Denormals) const {
   VT = VT.getScalarType();
 
   switch (VT.getSimpleVT().SimpleTy) {
@@ -7433,7 +7433,7 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
     // Otherwise f32 mad is always full rate and returns the same result as
     // the separate operations so should be preferred over fma.
     // However does not support denormals.
-    if (!denormalModeIsFlushAllF32(MF))
+    if (!FlushF32Denormals)
       return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
 
     // If the subtarget has v_fmac_f32, that's just as good as v_mac_f32.
@@ -7443,12 +7443,18 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
     return true;
   case MVT::f16:
   case MVT::bf16:
-    return Subtarget->has16BitInsts() && !denormalModeIsFlushAllF64F16(MF);
+    return Subtarget->has16BitInsts() && !FlushF64F16Denormals;
   default:
     break;
   }
 
   return false;
+}
+
+bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                                  EVT VT) const {
+  return isFMAFasterThanFMulAndFAdd(VT, denormalModeIsFlushAllF32(MF),
+                                    denormalModeIsFlushAllF64F16(MF));
 }
 
 bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
@@ -7467,33 +7473,38 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return false;
 }
 
+bool SITargetLowering::isFMADLegal(EVT VT, bool FlushF32Denormals,
+                                   bool FlushF64F16Denormals) const {
+  // TODO: Check future ftz flag
+  // v_mad_f32/v_mac_f32 do not support denormals.
+  if (VT == MVT::f32)
+    return Subtarget->hasMadMacF32Insts() && FlushF32Denormals;
+  if (VT == MVT::f16)
+    return Subtarget->hasMadF16() && FlushF64F16Denormals;
+
+  return false;
+}
+
 bool SITargetLowering::isFMADLegal(const MachineInstr &MI, LLT Ty) const {
   if (!Ty.isScalar())
     return false;
 
+  const MachineFunction &MF = *MI.getMF();
   if (Ty.getScalarSizeInBits() == 16)
-    return Subtarget->hasMadF16() && denormalModeIsFlushAllF64F16(*MI.getMF());
+    return isFMADLegal(MVT::f16, denormalModeIsFlushAllF32(MF),
+                       denormalModeIsFlushAllF64F16(MF));
   if (Ty.getScalarSizeInBits() == 32)
-    return Subtarget->hasMadMacF32Insts() &&
-           denormalModeIsFlushAllF32(*MI.getMF());
+    return isFMADLegal(MVT::f32, denormalModeIsFlushAllF32(MF),
+                       denormalModeIsFlushAllF64F16(MF));
 
   return false;
 }
 
 bool SITargetLowering::isFMADLegal(const SelectionDAG &DAG,
                                    const SDNode *N) const {
-  // TODO: Check future ftz flag
-  // v_mad_f32/v_mac_f32 do not support denormals.
-  EVT VT = N->getValueType(0);
-  if (VT == MVT::f32)
-    return Subtarget->hasMadMacF32Insts() &&
-           denormalModeIsFlushAllF32(DAG.getMachineFunction());
-  if (VT == MVT::f16) {
-    return Subtarget->hasMadF16() &&
-           denormalModeIsFlushAllF64F16(DAG.getMachineFunction());
-  }
-
-  return false;
+  const MachineFunction &MF = DAG.getMachineFunction();
+  return isFMADLegal(N->getValueType(0), denormalModeIsFlushAllF32(MF),
+                     denormalModeIsFlushAllF64F16(MF));
 }
 
 //===----------------------------------------------------------------------===//
