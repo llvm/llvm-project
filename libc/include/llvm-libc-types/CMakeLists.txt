@@ -11,6 +11,7 @@ add_header(
     .size_t
     libc.include.llvm-libc-macros.annex_k_macros
 )
+add_header(reclen_t HDR reclen_t.h)
 add_header(ssize_t HDR ssize_t.h)
 add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__search_compare_t HDR __search_compare_t.h)
@@ -38,8 +39,23 @@ add_header(cookie_io_functions_t HDR cookie_io_functions_t.h DEPENDS .off64_t .s
 add_header(cpu_set_t HDR cpu_set_t.h)
 add_header(double_t HDR double_t.h)
 add_header(DIR HDR DIR.h)
+add_header(caddr_t HDR caddr_t.h)
 add_header(dev_t HDR dev_t.h)
 add_header(div_t HDR div_t.h)
+add_header(id_t HDR id_t.h)
+add_header(ino64_t HDR ino64_t.h)
+add_header(u_int HDR u_int.h)
+add_header(u_int16_t HDR u_int16_t.h)
+add_header(u_int8_t HDR u_int8_t.h)
+add_header(u_long HDR u_long.h)
+add_header(u_short HDR u_short.h)
+add_header(ulong HDR ulong.h)
+add_header(ushort HDR ushort.h)
+add_header(useconds_t HDR useconds_t.h)
+add_header(__off_t HDR __off_t.h)
+add_header(__off64_t HDR __off64_t.h)
+add_header(__uint64_t HDR __uint64_t.h)
+
 add_header(errno_t HDR errno_t.h DEPENDS libc.include.llvm-libc-macros.annex_k_macros)
 add_header(
   constraint_handler_t
@@ -107,7 +123,8 @@ add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
 add_header(sighandler_t HDR sighandler_t.h)
 add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
-add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t)
+add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t .reclen_t)
+add_header(struct_posix_dent HDR struct_posix_dent.h DEPENDS .ino_t .off_t .reclen_t)
 add_header(struct_dl_phdr_info HDR struct_dl_phdr_info.h DEPENDS .size_t libc.include.llvm-libc-macros.link_macros)
 add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
@@ -181,6 +198,7 @@ add_header(
     .blksize_t .blkcnt_t
 )
 add_header(struct_tm HDR struct_tm.h)
+add_header(struct_passwd HDR struct_passwd.h DEPENDS .uid_t .gid_t)
 add_header(struct_utsname HDR struct_utsname.h)
 add_header(thrd_start_t HDR thrd_start_t.h)
 add_header(thrd_t HDR thrd_t.h DEPENDS .__thread_type)
@@ -289,6 +307,16 @@ HDR
 DEPENDS
   .fsblkcnt_t
   .fsfilcnt_t
+)
+add_header(fsid_t HDR fsid_t.h)
+add_header(
+  struct_statfs
+HDR
+  struct_statfs.h
+DEPENDS
+  .fsblkcnt_t
+  .fsfilcnt_t
+  .fsid_t
 )
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)

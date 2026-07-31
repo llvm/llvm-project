@@ -393,6 +393,27 @@ Value *VPTransformState::packScalarIntoVectorizedValue(const VPValue *Def,
   return WideValue;
 }
 
+void VPTransformState::fixupHeaderPhis() {
+  for (VPBlockBase *VPB : vp_depth_first_shallow(Plan->getEntry())) {
+    if (!VPBlockUtils::isHeader(VPB, VPDT))
+      continue;
+    auto *Header = cast<VPBasicBlock>(VPB);
+    auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+    BasicBlock *VectorLatchBB = CFG.VPBB2IRBB[LatchVPBB];
+
+    for (VPRecipeBase &R : Header->phis()) {
+      auto *PhiR = cast<VPSingleDefRecipe>(&R);
+      bool NeedsScalar =
+          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
+                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+
+      Value *Phi = get(PhiR, NeedsScalar);
+      Value *Val = get(PhiR->getOperand(1), NeedsScalar);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+    }
+  }
+}
+
 BasicBlock *VPBasicBlock::createEmptyBasicBlock(VPTransformState &State) {
   auto &CFG = State.CFG;
   // BB stands for IR BasicBlocks. VPBB stands for VPlan VPBasicBlocks.
@@ -738,6 +759,13 @@ VPBlockUtils::cloneFrom(VPBlockBase *Entry) {
                         Exiting ? Old2NewVPBlocks[Exiting] : nullptr);
 }
 
+const VPBranchOnMaskRecipe *VPRegionBlock::getEntryBranchOnMask() const {
+  const auto *EntryBB = cast<VPBasicBlock>(getEntry());
+  assert(isReplicator() && EntryBB && EntryBB->size() == 1 &&
+         "not a valid replicating region");
+  return cast<VPBranchOnMaskRecipe>(&EntryBB->front());
+}
+
 VPRegionBlock *VPRegionBlock::clone() {
   const auto &[NewEntry, NewExiting] = VPBlockUtils::cloneFrom(getEntry());
   VPlan &Plan = *getPlan();
@@ -902,8 +930,10 @@ VPlan::~VPlan() {
       for (unsigned I = 0, E = R.getNumOperands(); I != E; I++)
         R.setOperand(I, &DummyValue);
 
-  for (auto *VPB : CreatedBlocks)
+  for (auto [Idx, VPB] : enumerate(CreatedBlocks)) {
+    assert(VPB->getNumber() == Idx && "block with mismatched number");
     delete VPB;
+  }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
   delete BackedgeTakenCount;
@@ -1023,24 +1053,7 @@ void VPlan::execute(VPTransformState *State) {
   State->CFG.DTU.flush();
 
   // Fix the latch (backedge) value of all header phis in all loop headers.
-  for (VPBlockBase *VPB : vp_depth_first_shallow(getEntry())) {
-    if (!VPBlockUtils::isHeader(VPB, State->VPDT))
-      continue;
-    auto *Header = cast<VPBasicBlock>(VPB);
-    auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
-    BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
-
-    for (VPRecipeBase &R : Header->phis()) {
-      auto *PhiR = cast<VPSingleDefRecipe>(&R);
-      bool NeedsScalar =
-          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
-                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
-
-      Value *Phi = State->get(PhiR, NeedsScalar);
-      Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
-      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
-    }
-  }
+  State->fixupHeaderPhis();
 }
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
@@ -1293,8 +1306,10 @@ VPlan *VPlan::duplicate() {
   // current to new VPlan.
   unsigned NumBlocksAfterCloning = CreatedBlocks.size();
   for (unsigned I :
-       seq<unsigned>(NumBlocksBeforeCloning, NumBlocksAfterCloning))
+       seq<unsigned>(NumBlocksBeforeCloning, NumBlocksAfterCloning)) {
+    this->CreatedBlocks[I]->setNumber(NewPlan->CreatedBlocks.size());
     NewPlan->CreatedBlocks.push_back(this->CreatedBlocks[I]);
+  }
   CreatedBlocks.truncate(NumBlocksBeforeCloning);
 
   // Update ExitBlocks of the new plan.
@@ -1309,6 +1324,7 @@ VPlan *VPlan::duplicate() {
 
 VPIRBasicBlock *VPlan::createEmptyVPIRBasicBlock(BasicBlock *IRBB) {
   auto *VPIRBB = new VPIRBasicBlock(IRBB);
+  VPIRBB->setNumber(CreatedBlocks.size());
   CreatedBlocks.push_back(VPIRBB);
   return VPIRBB;
 }
@@ -1877,6 +1893,16 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 
   return {};
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+VPSlotTracker *VPCostContext::getSlotTracker() {
+  if (!PlanForSlotTracker)
+    return nullptr;
+  if (!SlotTracker)
+    SlotTracker = std::make_unique<VPSlotTracker>(PlanForSlotTracker);
+  return SlotTracker.get();
+}
+#endif
 
 InstructionCost VPCostContext::getScalarizationOverhead(
     Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,

@@ -1048,7 +1048,7 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
     Location loc = op.getLoc();
     Type valType = op.getType();
 
-    xegpu::DistributeLayoutAttr inputLayout = op.getInputLayoutAttr();
+    xegpu::DistributeLayoutAttr inputLayout = op.getEffectiveInputLayout();
     xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
     if (!inputLayout || !targetLayout)
       return rewriter.notifyMatchFailure(op, "missing layout attributes.");

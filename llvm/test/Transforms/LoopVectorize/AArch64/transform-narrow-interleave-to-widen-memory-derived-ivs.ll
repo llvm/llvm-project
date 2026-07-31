@@ -131,8 +131,8 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2-LABEL: define void @derived_pointer_ivs(
 ; VF2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
+; VF2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF2-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; VF2-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
 ; VF2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
@@ -164,8 +164,8 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2IC2-LABEL: define void @derived_pointer_ivs(
 ; VF2IC2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF2IC2-NEXT:  [[ENTRY:.*:]]
-; VF2IC2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2IC2-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
+; VF2IC2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF2IC2-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; VF2IC2-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
 ; VF2IC2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
@@ -202,8 +202,8 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4-LABEL: define void @derived_pointer_ivs(
 ; VF4-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; VF4-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
+; VF4-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF4-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; VF4-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
 ; VF4-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4

@@ -217,6 +217,7 @@ public:
   bool SelectDupZeroOrUndef(SDValue N) {
     switch(N->getOpcode()) {
     case ISD::UNDEF:
+    case ISD::POISON:
       return true;
     case AArch64ISD::DUP:
     case ISD::SPLAT_VECTOR: {
@@ -2615,6 +2616,10 @@ void AArch64DAGToDAGISel::SelectPredicatedStore(SDNode *N, unsigned NumVecs,
                    Offset,                             // offset
                    N->getOperand(0)};                  // chain
   SDNode *St = CurDAG->getMachineNode(Opc, dl, N->getValueType(0), Ops);
+
+  // Transfer memoperands.
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
   ReplaceNode(N, St);
 }

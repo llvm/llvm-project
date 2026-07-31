@@ -1,9 +1,9 @@
+---
+tocdepth: 4
+---
+
 # LLVM Language Reference Manual
 
-```{contents}
-:local:
-:depth: 3
-```
 
 ## Abstract
 
@@ -4202,6 +4202,30 @@ Otherwise, an atomic operation that is not marked
 *synchronizes with* and is related in the `seq_cst` order and the
 monotonic modification order with other operations that are not marked
 `syncscope("singlethread")` or `syncscope("<target-scope>")`.
+
+(elementwise-atomics)=
+
+### Elementwise Atomic Operations
+
+Certain atomic instructions, such as {ref}`atomicrmw <i_atomicrmw>`,
+and {ref}`atomic load <i_load>`, may be marked `elementwise`. The access type
+must then be a fixed vector type whose total bit width is a power of two and
+whose element type is supported by the corresponding scalar atomic instruction.
+The {ref}`ordering <ordering>` of an `elementwise` instruction may not be
+`seq_cst`.
+
+An `elementwise` atomic instruction behaves as if it were expanded into one
+scalar version of that instruction for each vector element. Each resulting
+scalar operation has the same {ref}`ordering <ordering>` and `syncscope` as the
+original instruction. Each scalar operation occupies the original instruction's
+position in program order relative to other operations, but the scalar
+operations are not related in program order with respect to one another.
+Synchronizing with one scalar operation therefore does not, by itself,
+establish a happens-before relationship with any other scalar operation from
+the same `elementwise` instruction.
+
+Without `elementwise`, vector atomic instructions are performed atomically over
+the entire vector operation.
 
 (floatenv)=
 
@@ -9383,6 +9407,75 @@ enum is the smallest type which can represent all of its values:
 !1 = !{i32 1, !"short_enum", i32 0}
 ```
 
+### Float ABI Module Flags Metadata
+
+This module flag describes the floating-point ABI (the calling convention used
+to pass and return floating-point values) that the module was compiled for. The
+value is an `MDString` and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"soft"`
+  - The software floating-point calling convention is used: floating-point
+    values are passed in general-purpose (integer) registers. Note this is
+    independent of whether floating-point hardware is used to perform
+    operations; see the `use-soft-float` function attribute for that. For
+    instance, both ARM's soft and softfp modes would use this value, since
+    they share the same calling convention.
+
+* - `"hard"`
+  - The hardware floating-point calling convention is used: floating-point
+    values are passed in floating-point registers.
+```
+
+When the flag is absent, the target's default floating-point ABI is used. The
+flag must use the `error` merge behavior, so that linking modules with
+conflicting floating-point ABIs is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"float-abi", !"hard"}
+```
+
+### Long Double Type Module Flags Metadata
+
+Describe the floating-point format used by libm for `long double`. The
+value is an `MDString` naming the corresponding IR floating-point
+type, and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"float"`
+  - IEEE 754 single precision (32-bit).
+
+* - `"double"`
+  - IEEE 754 double precision (64-bit).
+
+* - `"fp128"`
+  - IEEE 754 quadruple precision (128-bit).
+
+* - `"x86_fp80"`
+  - x87 80-bit extended precision.
+
+* - `"ppc_fp128"`
+  - IBM `double-double` (a pair of IEEE doubles).
+
+```
+
+The flag must use the `error` merge behavior, so that linking modules with
+conflicting long double types is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"long-double-type", !"fp128"}
+```
+
 ### Stack Alignment Metadata
 
 Changes the default stack alignment from the target ABI's implicit default
@@ -11782,13 +11875,10 @@ multiple atomic stores. The type of the pointee must be an integer, pointer,
 floating-point, or vector type whose bit width is a power of two greater than or
 equal to eight.
 
-If the `elementwise` modifier is present, the loaded type must be a fixed
-vector type whose total bit width is a power of two greater than or equal to
-eight, and whose element type is supported by scalar atomic loads. The load has
-per-element atomic load semantics: it behaves as if it were expanded into
-one scalar atomic load per element, and the element loads are not ordered with
-respect to each other. Without `elementwise`, vector atomic loads keep
-whole-value atomic semantics. That is, the entire vector is loaded atomically.
+If the `load` is marked `elementwise`, the instruction has
+{ref}`elementwise atomic semantics <elementwise-atomics>`. The loaded type must
+be a fixed vector type whose total bit width is a power of two and whose
+element type is supported by scalar atomic loads.
 
 `align` must be explicitly specified on atomic loads, and is otherwise
 optional on non-atomic loads. Note: if the alignment is not greater than or equal
@@ -12185,9 +12275,8 @@ isn't specified.
 An `atomicrmw` instruction can also take an optional
 "{ref}`syncscope <syncscope>`" argument.
 
-If the `elementwise` modifier is present, the instruction has per-element vector
-atomic semantics. It behaves as if it were expanded into one scalar `atomicrmw` per element, that are not ordered with respect to each other.
-Without `elementwise`, vector `atomicrmw` keeps whole-value atomic semantics.
+If `atomicrmw` is marked `elementwise`, the instruction has
+{ref}`elementwise atomic semantics <elementwise-atomics>`.
 
 ##### Semantics:
 

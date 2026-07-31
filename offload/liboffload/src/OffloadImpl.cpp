@@ -208,6 +208,18 @@ struct ol_symbol_impl_t {
   llvm::StringRef Name;
 };
 
+struct ol_context_impl_t {
+  ol_context_impl_t(ol_platform_impl_t *Platform,
+                    llvm::SmallVector<ol_device_handle_t> Devices,
+                    std::unique_ptr<plugin::PluginContextTy> PluginCtx)
+      : Platform(Platform), Devices(std::move(Devices)),
+        PluginCtx(std::move(PluginCtx)) {}
+
+  ol_platform_impl_t *Platform;
+  llvm::SmallVector<ol_device_handle_t> Devices;
+  std::unique_ptr<plugin::PluginContextTy> PluginCtx;
+};
+
 namespace llvm {
 namespace offload {
 
@@ -585,6 +597,75 @@ Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   return Error::success();
 }
 
+Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
+                           ol_context_handle_t *Context) {
+  ol_platform_impl_t *Platform = &Devices[0]->Platform;
+  llvm::SmallVector<ol_device_handle_t> DeviceList;
+  llvm::SmallVector<plugin::GenericDeviceTy *> PluginDevices;
+  DeviceList.reserve(DevicesCount);
+  PluginDevices.reserve(DevicesCount);
+  for (size_t I = 0; I < DevicesCount; I++) {
+    if (&Devices[I]->Platform != Platform)
+      return createOffloadError(
+          ErrorCode::INVALID_DEVICE,
+          "all devices in a context must belong to the same platform");
+    DeviceList.push_back(Devices[I]);
+    PluginDevices.push_back(Devices[I]->Device);
+  }
+
+  // The host plugin has no GenericPluginTy instance; skip the plugin-side
+  // context in that case and just record the device set.
+  std::unique_ptr<plugin::PluginContextTy> PluginCtx;
+  if (Platform->Plugin) {
+    auto PluginCtxOrErr = Platform->Plugin->createPluginContext(PluginDevices);
+    if (!PluginCtxOrErr)
+      return PluginCtxOrErr.takeError();
+    PluginCtx = std::move(*PluginCtxOrErr);
+  }
+
+  *Context = new ol_context_impl_t(Platform, std::move(DeviceList),
+                                   std::move(PluginCtx));
+  return Error::success();
+}
+
+Error olDestroyContext_impl(ol_context_handle_t Context) {
+  return olDestroy(Context);
+}
+
+Error olGetContextInfoImplDetail(ol_context_handle_t Context,
+                                 ol_context_info_t PropName, size_t PropSize,
+                                 void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_CONTEXT_INFO_NUM_DEVICES:
+    return Info.write<size_t>(Context->Devices.size());
+  case OL_CONTEXT_INFO_DEVICES:
+    return Info.writeArray(Context->Devices.data(), Context->Devices.size());
+  case OL_CONTEXT_INFO_PLATFORM:
+    return Info.write<ol_platform_handle_t>(Context->Platform);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetContextInfo enum '%i' is invalid",
+                              PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetContextInfo_impl(ol_context_handle_t Context,
+                            ol_context_info_t PropName, size_t PropSize,
+                            void *PropValue) {
+  return olGetContextInfoImplDetail(Context, PropName, PropSize, PropValue,
+                                    nullptr);
+}
+
+Error olGetContextInfoSize_impl(ol_context_handle_t Context,
+                                ol_context_info_t PropName,
+                                size_t *PropSizeRet) {
+  return olGetContextInfoImplDetail(Context, PropName, 0, nullptr, PropSizeRet);
+}
+
 TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
   switch (Type) {
   case OL_ALLOC_TYPE_DEVICE:
@@ -657,14 +738,32 @@ Error olMemAllocImplHelper(ol_device_handle_t Device, ol_alloc_type_t Type,
 
 Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                       size_t Size, void **AllocationOut) {
+  if (Type == OL_ALLOC_TYPE_HOST)
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "use olMemAllocHost for host allocations");
   return olMemAllocImplHelper(Device, Type, Size, /*Alignment=*/0,
                               AllocationOut);
+}
+
+Error olMemAllocHost_impl(ol_device_handle_t Device, size_t Size,
+                          void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_HOST, Size,
+                              /*Alignment=*/0, AllocationOut);
 }
 
 Error olMemAllocAligned_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                              size_t Size, size_t Alignment,
                              void **AllocationOut) {
+  if (Type == OL_ALLOC_TYPE_HOST)
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "use olMemAllocAlignedHost for host allocations");
   return olMemAllocImplHelper(Device, Type, Size, Alignment, AllocationOut);
+}
+
+Error olMemAllocAlignedHost_impl(ol_device_handle_t Device, size_t Size,
+                                 size_t Alignment, void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_HOST, Size, Alignment,
+                              AllocationOut);
 }
 
 Error olMemFree_impl(void *Address) {

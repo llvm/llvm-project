@@ -2138,8 +2138,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
     }
   }
 
-  if (Addr->isDivergent() || Addr.getOpcode() == ISD::UNDEF ||
-      isa<ConstantSDNode>(Addr))
+  if (Addr->isDivergent() || Addr.isUndef() || isa<ConstantSDNode>(Addr))
     return false;
 
   // It's cheaper to materialize a single 32-bit zero for vaddr than the two
@@ -4640,7 +4639,10 @@ bool AMDGPUDAGToDAGISel::SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1,
 }
 
 SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
-  if (In.isUndef())
+  if (In.getOpcode() == ISD::POISON)
+    return CurDAG->getPOISON(MVT::i32);
+
+  if (In.getOpcode() == ISD::UNDEF)
     return CurDAG->getUNDEF(MVT::i32);
 
   if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(In)) {

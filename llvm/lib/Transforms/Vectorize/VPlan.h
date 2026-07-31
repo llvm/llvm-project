@@ -126,6 +126,9 @@ private:
   /// Subclass identifier (for isa/dyn_cast).
   const VPBlockTy SubclassID;
 
+  /// Unique number, used as node number in the dominator tree.
+  unsigned Number;
+
   /// Add \p Successor as the last successor to this block.
   void appendSuccessor(VPBlockBase *Successor) {
     assert(Successor && "Cannot add nullptr successor!");
@@ -349,6 +352,12 @@ public:
            "must have Succ exactly once in Successors");
     return std::distance(Successors.begin(), find(Successors, Succ));
   }
+
+  /// Return the unique number of the block.
+  unsigned getNumber() const { return Number; }
+
+  /// Set the unique number of the block, used for dominator tree.
+  void setNumber(unsigned N) { Number = N; }
 
   /// The method which generates the output IR that correspond to this
   /// VPBlockBase, thereby "executing" the VPlan.
@@ -1089,10 +1098,10 @@ private:
   }
 
 public:
-  /// Returns default flags for \p Opcode for opcodes that support it, asserts
-  /// otherwise. Opcodes not supporting default flags include compares and
-  /// ComputeReductionResult.
-  static VPIRFlags getDefaultFlags(unsigned Opcode);
+  /// Returns default flags for \p Opcode and scalar \p ResultTy for opcodes
+  /// that support it, asserts otherwise. Opcodes not supporting default flags
+  /// include compares and ComputeReductionResult.
+  static VPIRFlags getDefaultFlags(unsigned Opcode, Type *ResultTy = nullptr);
 
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
@@ -2660,6 +2669,10 @@ public:
   /// otherwise.
   TruncInst *getTruncInst() { return Trunc; }
   const TruncInst *getTruncInst() const { return Trunc; }
+
+  /// Return the cost of this VPWidenIntOrFpInductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   /// Returns true if the induction is canonical, i.e. starting at 0 and
   /// incremented by UF * VF (= the original IV is incremented by 1) and has the
@@ -4667,6 +4680,14 @@ public:
   /// instances of output IR corresponding to its VPBlockBases.
   bool isReplicator() const { return !CanIVInfo; }
 
+  /// Return the VPBranchOnMaskRecipe from the entry block of this replicating
+  /// region.
+  const VPBranchOnMaskRecipe *getEntryBranchOnMask() const;
+  VPBranchOnMaskRecipe *getEntryBranchOnMask() {
+    return const_cast<VPBranchOnMaskRecipe *>(
+        static_cast<const VPRegionBlock *>(this)->getEntryBranchOnMask());
+  }
+
   /// The method which generates the output IR instructions that correspond to
   /// this VPRegionBlock, thereby "executing" the VPlan.
   void execute(VPTransformState *State) override;
@@ -5129,6 +5150,7 @@ public:
   VPBasicBlock *createVPBasicBlock(const Twine &Name,
                                    VPRecipeBase *Recipe = nullptr) {
     auto *VPB = new VPBasicBlock(Name, Recipe);
+    VPB->setNumber(CreatedBlocks.size());
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
@@ -5142,6 +5164,7 @@ public:
                                   VPBlockBase *Entry = nullptr,
                                   VPBlockBase *Exiting = nullptr) {
     auto *VPB = new VPRegionBlock(CanIVTy, DL, Entry, Exiting, Name);
+    VPB->setNumber(CreatedBlocks.size());
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
@@ -5152,6 +5175,7 @@ public:
   VPRegionBlock *createReplicateRegion(VPBlockBase *Entry, VPBlockBase *Exiting,
                                        const std::string &Name = "") {
     auto *VPB = new VPRegionBlock(Entry, Exiting, Name);
+    VPB->setNumber(CreatedBlocks.size());
     CreatedBlocks.push_back(VPB);
     return VPB;
   }
@@ -5166,6 +5190,8 @@ public:
   /// successors of the block in VPlan. The returned block is owned by the VPlan
   /// and deleted once the VPlan is destroyed.
   LLVM_ABI_FOR_TEST VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
+
+  unsigned getMaxBlockNumber() const { return CreatedBlocks.size(); }
 
   /// Returns true if the VPlan is based on a loop with an early exit.
   bool hasEarlyExit() const {

@@ -206,11 +206,9 @@ define ptr @test_ptr_iv_live_out(ptr %start, ptr %end, ptr %dst) {
 ; CHECK-LABEL: define ptr @test_ptr_iv_live_out(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[END:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
-; CHECK-NEXT:    [[START5:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END4:%.*]] = ptrtoint ptr [[END]] to i64
 ; CHECK-NEXT:    [[DST3:%.*]] = ptrtoaddr ptr [[DST]] to i64
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    [[START5:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[END4:%.*]] = ptrtoaddr ptr [[END]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[END4]], -4
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[START5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 2
@@ -218,14 +216,14 @@ define ptr @test_ptr_iv_live_out(ptr %start, ptr %end, ptr %dst) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[END1]] to i2
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[START2]] to i2
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[END4]] to i2
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[START5]] to i2
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i2 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i2 [[TMP6]] to i64
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[DST3]], [[START2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[DST3]], [[START5]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = sub i64 [[TMP8]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP18]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
