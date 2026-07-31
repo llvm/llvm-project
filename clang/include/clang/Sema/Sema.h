@@ -142,6 +142,8 @@ class InitializationKind;
 class InitializationSequence;
 class InitializedEntity;
 enum class LangAS : unsigned int;
+struct LateParsedAttribute;
+struct LateParsedTypeAttribute;
 class LocalInstantiationScope;
 class LookupResult;
 class MangleNumberingContext;
@@ -1359,6 +1361,69 @@ public:
     LateTemplateParser = LTP;
     OpaqueParser = P;
   }
+
+  /// Parse the cached tokens of \p LTA into \p OutAttrs. Takes ownership of
+  /// \p LTA.
+  typedef void ParseLateParsedTypeAttributeCB(LateParsedTypeAttribute *LTA,
+                                              ParsedAttributes *OutAttrs);
+
+  /// Validate \p LA against \p type and, if it applies, wrap \p type in a
+  /// \c LateParsedAttrType placeholder. Returns false if the attribute is
+  /// invalid for \p type.
+  typedef bool ProcessLateParsedTypeAttrCB(LateParsedAttribute *LA,
+                                           QualType &type);
+  ProcessLateParsedTypeAttrCB *ProcessLateParsedTypeAttrCallback = nullptr;
+
+  /// Return the source location of the attribute name stored in \p LTA.
+  typedef SourceLocation
+  GetLateParsedAttributeLocationCB(const LateParsedTypeAttribute *LTA);
+  GetLateParsedAttributeLocationCB *GetLateParsedAttributeLocationCallback =
+      nullptr;
+
+  /// Wrap \p type in a LateParsedAttrType placeholder for \p LTA, after
+  /// checking that the attribute is applicable to \p type at all. Returns
+  /// false if the attribute should be dropped.
+  bool ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
+                               SourceLocation AttrNameLoc, QualType &type,
+                               LateParsedTypeAttribute *LTA);
+
+  /// RAII object that pushes a function prototype scope holding \p Params and
+  /// restores the previous scope on destruction.
+  ///
+  /// A count expression written inside a *nested* function prototype, as in
+  ///
+  /// \code
+  ///   void f(int *__counted_by(len) (*cb)(int len));
+  /// \endcode
+  ///
+  /// names a parameter of that inner prototype, whose scope has already been
+  /// popped by the time the attribute's tokens are parsed. Re-creating the
+  /// scope lets ordinary name lookup resolve the count at any nesting depth.
+  class FunctionPrototypeScopeRAII {
+    Sema &S;
+    Scope ProtoScope;
+
+  public:
+    FunctionPrototypeScopeRAII(Sema &S, ArrayRef<Decl *> Params);
+    ~FunctionPrototypeScopeRAII();
+
+    FunctionPrototypeScopeRAII(const FunctionPrototypeScopeRAII &) = delete;
+    FunctionPrototypeScopeRAII &
+    operator=(const FunctionPrototypeScopeRAII &) = delete;
+  };
+
+  /// Resolve late-parsed type attributes in the types of \p Params.
+  ///
+  /// Called once the whole parameter clause has been parsed, so that a count
+  /// expression may refer to any parameter of the function, including one
+  /// declared after the annotated parameter.
+  ///
+  /// This pushes its own prototype scope for \p Params, so it does not require
+  /// the caller's prototype scope to still be open. It does need *some* scope
+  /// to be current, since lookup has to be able to reach file scope to
+  /// diagnose a count that names a global.
+  void ProcessLateParsedTypeAttributesForParams(
+      ArrayRef<Decl *> Params, ParseLateParsedTypeAttributeCB *ParseCB);
 
   /// Callback to the parser to parse a type expressed as a string.
   std::function<TypeResult(StringRef, StringRef, SourceLocation)>

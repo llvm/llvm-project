@@ -2664,7 +2664,8 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
-      llvm::function_ref<void()> CodeCompletionHandler = {});
+      llvm::function_ref<void()> CodeCompletionHandler = {},
+      LateParsedAttrList *LateAttrs = nullptr);
 
   /// ParseDirectDeclarator
   /// \verbatim
@@ -8113,6 +8114,21 @@ private:
   void ParseLateTemplatedFuncDef(LateParsedTemplate &LPT);
 
   static void LateTemplateParserCallback(void *P, LateParsedTemplate &LPT);
+
+  /// Parse the cached tokens of \p LTA into \p OutAttrs. Takes ownership of
+  /// \p LTA.
+  static void ParseLateParsedTypeAttributeCallback(LateParsedTypeAttribute *LTA,
+                                                   ParsedAttributes *OutAttrs);
+
+  /// Validate \p LA against \p type and, if it applies, wrap \p type in a
+  /// \c LateParsedAttrType placeholder. Returns false if the attribute is
+  /// invalid for \p type.
+  static bool ProcessLateParsedTypeAttrCallback(LateParsedAttribute *LA,
+                                                QualType &type);
+
+  /// Return the source location of the attribute name stored in \p LTA.
+  static SourceLocation
+  GetLateParsedAttributeLocationCallback(const LateParsedTypeAttribute *LTA);
 
   /// We've parsed something that could plausibly be intended to be a template
   /// name (\p LHS) followed by a '<' token, and the following code can't
