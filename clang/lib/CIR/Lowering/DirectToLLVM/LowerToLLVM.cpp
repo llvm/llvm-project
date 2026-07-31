@@ -2012,12 +2012,32 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
   } else { // indirect call
     assert(!op->getOperands().empty() &&
            "operands list must no be empty for the indirect call");
-    auto calleeTy = op->getOperands().front().getType();
+    mlir::Value calleeVal = op->getOperands().front();
+    auto calleeTy = calleeVal.getType();
     auto calleePtrTy = cast<cir::PointerType>(calleeTy);
     auto calleeFuncTy = cast<cir::FuncType>(calleePtrTy.getPointee());
     llvm::append_range(adjustedCallOperands, callOperands);
     llvmFnTy = cast<mlir::LLVM::LLVMFunctionType>(
         converter->convertType(calleeFuncTy));
+
+    // Def-Use-Chain
+    while (auto castOp = calleeVal.getDefiningOp<cir::CastOp>())
+      calleeVal = castOp.getSrc();
+
+    // To match OGCG, a 'no_proto' call must be lowered to a variadic
+    // LLVM function type '(...)' to safely handle unspecified arguments.
+    // However, this fallback only applies to pure declarations and
+    // aliases originally having a no_proto flag.
+    if (auto getGlobal = calleeVal.getDefiningOp<cir::GetGlobalOp>()) {
+      mlir::Operation *globalOp =
+          symbolTables.lookupNearestSymbolFrom(op, getGlobal.getNameAttr());
+      if (auto funcOp = mlir::dyn_cast_or_null<cir::FuncOp>(globalOp)) {
+        if (funcOp.getNoProto() && !llvmFnTy.isVarArg())
+          llvmFnTy = mlir::LLVM::LLVMFunctionType::get(llvmFnTy.getReturnType(),
+                                                       llvmFnTy.getParams(),
+                                                       /**isVarArg=*/true);
+      }
+    }
   }
 
   assert(!cir::MissingFeatures::opCallCallConv());
@@ -2510,11 +2530,21 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   mlir::Type resultType =
       getTypeConverter()->convertType(fnType.getReturnType());
 
+  // To match OGCG, a 'no_proto' function must be lowered to a variadic LLVM
+  // function type '(...)' to safely handle unspecified arguments. However, this
+  // fallback only applies to pure declarations and aliases that lack explicit
+  // parameters. We skip this fallback and emit a strict non-variadic signature
+  // if the function has a body, or if an alias redefines the type with explicit
+  // arguments.
+  bool isAlias = op.getAliaseeAttr() && (fnType.getNumInputs() == 0);
+  bool isNoProto =
+      (op.getNoProto() && op.isDeclaration()) || (op.getNoProto() && isAlias);
+  bool isVarArg = fnType.isVarArg() || isNoProto;
+
   // Create the LLVM function operation.
   mlir::Type llvmFnTy = mlir::LLVM::LLVMFunctionType::get(
       resultType ? resultType : mlir::LLVM::LLVMVoidType::get(getContext()),
-      signatureConversion.getConvertedTypes(),
-      /*isVarArg=*/fnType.isVarArg());
+      signatureConversion.getConvertedTypes(), isVarArg);
 
   // If this is an alias, it needs to be lowered to llvm::AliasOp.
   if (std::optional<llvm::StringRef> aliasee = op.getAliasee())
