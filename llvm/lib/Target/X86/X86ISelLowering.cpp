@@ -22536,10 +22536,14 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   // result type of the fptoi instructions, INDVAL coincides with integer
   // minimum, so we don't need to explicitly check it.
   if (!IsSigned || SatWidth != TmpVT.getScalarSizeInBits()) {
-    // If Src ULT MinFloat, select MinInt. In particular, this also selects
-    // MinInt if Src is NaN.
-    Select = DAG.getSelectCC(
-      dl, Src, MinFloatNode, MinIntNode, Select, ISD::CondCode::SETULT);
+    // If Src is less than MinFloat, select MinInt. An unordered comparison
+    // also selects MinInt for NaN, which is correct except when signed and
+    // promoted to a wider TmpVT: there MinInt != 0, but the earlier
+    // truncation already mapped NaN to the correct 0, so use an ordered
+    // comparison to leave it alone.
+    ISD::CondCode MinCC = (IsSigned && DstVT != TmpVT) ? ISD::CondCode::SETOLT
+                                                       : ISD::CondCode::SETULT;
+    Select = DAG.getSelectCC(dl, Src, MinFloatNode, MinIntNode, Select, MinCC);
   }
 
   // If Src OGT MaxFloat, select MaxInt.
@@ -28582,7 +28586,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
 
       MVT MaskVT = MVT::getVectorVT(MVT::i1, MemVT.getVectorNumElements());
       SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
-      SDValue Offset = DAG.getUNDEF(VMask.getValueType());
+      SDValue Offset = DAG.getPOISON(VMask.getValueType());
 
       return DAG.getMaskedStore(Chain, dl, DataToTruncate, Addr, Offset, VMask,
                                 MemVT, MemIntr->getMemOperand(), ISD::UNINDEXED,

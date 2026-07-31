@@ -53,11 +53,11 @@ func.func @test_matmul_t_with_block_scaled_inputs_type_fp4e2m1_fp6e2m3(%arg0: te
 // -----
 
 // CHECK-LABEL: test_matmul_t_f16_with_block_scaled_inputs_type_fp6e3m2
-func.func @test_matmul_t_f16_with_block_scaled_inputs_type_fp6e3m2(%arg0: tensor<4x8x32xf16>, %arg1: tensor<4x16x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<4x8x16xf16> {
+func.func @test_matmul_t_f16_with_block_scaled_inputs_type_fp6e3m2(%arg0: tensor<4x8x32xf16>, %arg1: tensor<4x16x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<4x8x16xbf16> {
   %azp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf16>}> : () -> tensor<1xf16>
   %bzp0 = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  %0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<4x8x32xf16>, tensor<4x16x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, tensor<1xf16>, tensor<1xf32>) -> tensor<4x8x16xf16>
-  return %0 : tensor<4x8x16xf16>
+  %0 = tosa.matmul_t %arg0, %arg1, %azp0, %bzp0 : (tensor<4x8x32xf16>, tensor<4x16x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, tensor<1xf16>, tensor<1xf32>) -> tensor<4x8x16xbf16>
+  return %0 : tensor<4x8x16xbf16>
 }
 
 // -----

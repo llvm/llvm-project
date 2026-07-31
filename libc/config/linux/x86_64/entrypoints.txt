@@ -370,7 +370,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.stat
     libc.src.sys.stat.utimensat
 
-    # sys/statvfs.h
+    # sys/statfs.h entrypoints
+    libc.src.sys.statfs.fstatfs
+    libc.src.sys.statfs.statfs
+
+    # sys/statvfs.h entrypoints
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
