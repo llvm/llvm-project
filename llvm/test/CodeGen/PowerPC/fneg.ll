@@ -141,3 +141,90 @@ entry:
   %s = fneg double %f
   ret double %s
 }
+
+define i1 @fneg_msb(ppc_fp128 nofpclass(nan ninf nsub nnorm nzero) %x) {
+; LE-LABEL: fneg_msb:
+; LE:       # %bb.0: # %entry
+; LE-NEXT:    li 3, 1
+; LE-NEXT:    blr
+;
+; BE-LABEL: fneg_msb:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    li 3, 1
+; BE-NEXT:    blr
+;
+; BE32-LABEL: fneg_msb:
+; BE32:       # %bb.0: # %entry
+; BE32-NEXT:    li r3, 1
+; BE32-NEXT:    blr
+entry:
+  %neg = fneg ppc_fp128 %x
+  %v = bitcast ppc_fp128 %neg to i128
+  %cmp = icmp slt i128 %v, 0
+  ret i1 %cmp
+}
+
+define i1 @fneg_bit63(ppc_fp128 nofpclass(nan ninf nsub nnorm nzero) %x) {
+; LE-LABEL: fneg_bit63:
+; LE:       # %bb.0: # %entry
+; LE-NEXT:    mffprd 3, 1
+; LE-NEXT:    rldicl 3, 3, 1, 63
+; LE-NEXT:    blr
+;
+; BE-LABEL: fneg_bit63:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    stfd 2, -8(1)
+; BE-NEXT:    ld 3, -8(1)
+; BE-NEXT:    not 3, 3
+; BE-NEXT:    rldicl 3, 3, 1, 63
+; BE-NEXT:    blr
+;
+; BE32-LABEL: fneg_bit63:
+; BE32:       # %bb.0: # %entry
+; BE32-NEXT:    stwu r1, -32(r1)
+; BE32-NEXT:    .cfi_def_cfa_offset 32
+; BE32-NEXT:    stfd f2, 16(r1)
+; BE32-NEXT:    lwz r3, 16(r1)
+; BE32-NEXT:    not r3, r3
+; BE32-NEXT:    srwi r3, r3, 31
+; BE32-NEXT:    addi r1, r1, 32
+; BE32-NEXT:    blr
+entry:
+  %neg = fneg ppc_fp128 %x
+  %v = bitcast ppc_fp128 %neg to i128
+  %masked = and i128 %v, 9223372036854775808 ; 1 << 63
+  %cmp = icmp ne i128 %masked, 0
+  ret i1 %cmp
+}
+
+define i1 @fneg_fneg_msb(ppc_fp128 nofpclass(nan ninf nsub nnorm nzero) %x) {
+; LE-LABEL: fneg_fneg_msb:
+; LE:       # %bb.0: # %entry
+; LE-NEXT:    mffprd 3, 1
+; LE-NEXT:    rldicl 3, 3, 1, 63
+; LE-NEXT:    blr
+;
+; BE-LABEL: fneg_fneg_msb:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    stfd 2, -8(1)
+; BE-NEXT:    ld 3, -8(1)
+; BE-NEXT:    rldicl 3, 3, 1, 63
+; BE-NEXT:    blr
+;
+; BE32-LABEL: fneg_fneg_msb:
+; BE32:       # %bb.0: # %entry
+; BE32-NEXT:    stwu r1, -32(r1)
+; BE32-NEXT:    .cfi_def_cfa_offset 32
+; BE32-NEXT:    stfd f2, 16(r1)
+; BE32-NEXT:    lwz r3, 16(r1)
+; BE32-NEXT:    srwi r3, r3, 31
+; BE32-NEXT:    addi r1, r1, 32
+; BE32-NEXT:    blr
+entry:
+  %neg = fneg ppc_fp128 %x
+  %neg2 = fneg ppc_fp128 %neg
+  %v = bitcast ppc_fp128 %neg2 to i128
+  %masked = and i128 %v, 9223372036854775808 ; 1 << 63
+  %cmp = icmp ne i128 %masked, 0
+  ret i1 %cmp
+}
