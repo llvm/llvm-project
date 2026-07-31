@@ -1,4 +1,5 @@
-//===-- DWARFDIETest.cpp ----------------------------------------------=---===//
+//===-- DWARFDebugNamesIndexTest.cpp
+//----------------------------------------------=---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +11,9 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/DebugNamesDWARFIndex.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/STLExtras.h"
 #include "gmock/gmock.h"
@@ -20,6 +23,15 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
 using StringRef = llvm::StringRef;
+
+class DWARFDebugNamesIndexTest : public testing::Test {
+public:
+  void SetUp() override {
+    Debugger::Initialize(nullptr);
+  }
+
+  void TearDown() override { Debugger::Terminate(); }
+};
 
 static void
 check_num_matches(DebugNamesDWARFIndex &index, int expected_num_matches,
@@ -38,7 +50,7 @@ static DWARFDeclContext::Entry make_entry(const char *c) {
   return DWARFDeclContext::Entry(llvm::dwarf::DW_TAG_class_type, c);
 }
 
-TEST(DWARFDebugNamesIndexTest, FullyQualifiedQueryWithIDXParent) {
+TEST_F(DWARFDebugNamesIndexTest, FullyQualifiedQueryWithIDXParent) {
   const char *yamldata = R"(
 --- !ELF
 FileHeader:
@@ -130,7 +142,7 @@ DWARF:
   check_num_matches(*index, 1, {make_entry("3")});
 }
 
-TEST(DWARFDebugNamesIndexTest, FullyQualifiedQueryWithoutIDXParent) {
+TEST_F(DWARFDebugNamesIndexTest, FullyQualifiedQueryWithoutIDXParent) {
   const char *yamldata = R"(
 --- !ELF
 FileHeader:
@@ -206,4 +218,187 @@ DWARF:
   check_num_matches(*index, 1, {make_entry("1")});
   check_num_matches(*index, 1, {make_entry("2"), make_entry("1")});
   check_num_matches(*index, 1, {make_entry("2")});
+}
+
+TEST_F(DWARFDebugNamesIndexTest, CaseInsesitiveQuery) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_str:
+    - 'num_int'
+  debug_abbrev:
+    - Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_identifier_case
+              Form:            DW_FORM_data1
+        - Code:            0x2
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_const_value    
+              Form:            DW_FORM_udata        
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:       0x0008 # DW_LANG_Fortran90
+            - Value:       0x03   # DW_ID_case_insensitive (0x3)
+        - AbbrCode:        0x2
+          Values:
+            - Value:       0x0    
+            - Value:       0x2a                     
+        - AbbrCode:        0x0
+)";
+
+  YAMLModuleTester t(yamldata);
+  auto *symbol_file =
+      llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
+  auto *index = symbol_file->getIndex();
+  int num_matches = 0;
+  index->GetGlobalVariables(ConstString("NUM_INT"), [&](DWARFDIE die) {
+    num_matches++;
+    return IterationAction::Stop;
+  });
+  EXPECT_EQ(num_matches, 1);
+
+  num_matches = 0;
+  index->GetGlobalVariables(ConstString("num_int"), [&](DWARFDIE die) {
+    num_matches++;
+    return IterationAction::Stop;
+  });
+  EXPECT_EQ(num_matches, 1);
+
+  num_matches = 0;
+  index->GetGlobalVariables(ConstString("NuM_iNT"), [&](DWARFDIE die) {
+    num_matches++;
+    return IterationAction::Stop;
+  });
+  EXPECT_EQ(num_matches, 1);
+
+  num_matches = 0;
+  index->GetGlobalVariables(ConstString("num_in"), [&](DWARFDIE die) {
+    num_matches++;
+    return IterationAction::Stop;
+  });
+  EXPECT_EQ(num_matches, 0);
+}
+
+TEST_F(DWARFDebugNamesIndexTest, CasesSesitiveDefaultQuery) {
+  const char *yamldata = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x2
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_const_value    
+              Form:            DW_FORM_udata        
+
+    - Table:
+        - Code:            0x1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+            - Attribute:       DW_AT_identifier_case
+              Form:            DW_FORM_data1
+        - Code:            0x2
+          Tag:             DW_TAG_variable
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_string
+            - Attribute:       DW_AT_const_value    
+              Form:            DW_FORM_udata        
+
+  debug_info:
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:       0x0004 # DW_LANG_C_plus_plus
+        - AbbrCode:        0x2
+          Values:
+            - CStr:        'SensitiveVar'
+            - Value:       0x2a                     
+        - AbbrCode:        0x0
+
+    - Version:         4
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x1
+          Values:
+            - Value:       0x0008 # DW_LANG_Fortran90
+            - Value:       0x03   # DW_ID_case_insensitive
+        - AbbrCode:        0x2
+          Values:
+            - CStr:        'InsensitiveVar'
+            - Value:       0x2a                    
+        - AbbrCode:        0x0
+)";
+  // If one Compile unit is case-insensitive and the other is case-sensitive we
+  // should default to all compile units being case-sensitive.
+  YAMLModuleTester t(yamldata);
+  auto *symbol_file =
+      llvm::cast<SymbolFileDWARF>(t.GetModule()->GetSymbolFile());
+  auto *index = symbol_file->getIndex();
+
+  int sens_exact = 0;
+  index->GetGlobalVariables(ConstString("SensitiveVar"), [&](DWARFDIE die) {
+    sens_exact++;
+    return IterationAction::Stop;
+  });
+  EXPECT_EQ(sens_exact, 1);
+
+  int sens_mismatch = 0;
+  index->GetGlobalVariables(ConstString("sensitivevar"), [&](DWARFDIE die) {
+    sens_mismatch++;
+    return IterationAction::Stop;
+  });
+  EXPECT_EQ(sens_mismatch, 0);
+
+  int insens_exact = 0;
+  index->GetGlobalVariables(ConstString("InsensitiveVar"), [&](DWARFDIE die) {
+    insens_exact++;
+    return IterationAction::Stop;
+  });
+  EXPECT_EQ(insens_exact, 1);
+
+  int insens_mismatch = 0;
+  index->GetGlobalVariables(ConstString("insensitivevar"), [&](DWARFDIE die) {
+    insens_mismatch++;
+    return IterationAction::Stop;
+  });
+  EXPECT_EQ(insens_mismatch, 0);
 }
