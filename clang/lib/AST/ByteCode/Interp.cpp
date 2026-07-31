@@ -1889,8 +1889,8 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return false;
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
+  auto *Memory = new char[InterpFrame::allocSize(Func)];
+  auto *NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
@@ -1982,8 +1982,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
+  auto *Memory = new char[InterpFrame::allocSize(Func)];
+  auto *NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
@@ -3077,7 +3077,7 @@ static bool castBackMemberPointer(InterpState &S,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength - 1;
   bool IsDerivedMember = NewPathLength != 0;
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), NewPathLength, NewPath);
 
   S.Stk.push<MemberPointer>(MemberPtr.atInstanceBase(BaseOffset, NewPathLength,
@@ -3093,7 +3093,7 @@ static bool appendToMemberPointer(InterpState &S,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength + 1;
 
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
   NewPath[OldPathLength] = cast<CXXRecordDecl>(BaseDecl);
 
@@ -3177,7 +3177,7 @@ bool CopyMemberPtrPath(InterpState &S, const RecordDecl *Entry,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength + 1;
 
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
   NewPath[OldPathLength] = cast<CXXRecordDecl>(Entry);
 
