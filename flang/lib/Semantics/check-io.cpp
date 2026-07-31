@@ -1281,12 +1281,20 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
 // component that is itself processed by defined I/O is treated as a single
 // value and is not expanded, so its subtree is skipped (based off of
 // FindInaccessibleComponent).
+//
+// The 'visited' set must be *path-scoped*: a type symbol is inserted on entry
+// and erased on unwind, so it only prunes recursion when it names a true
+// ancestor on the current path (a real F2023 C749 recursive-type cycle).  This
+// matters for parameterized derived types, where two instantiations share one
+// type symbol but their defined-I/O shielding is decided per-instantiation
+// (HasDefinedIo).
 static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
     VisitedSymbolSet &visited) {
   if (!visited.insert(&derived.typeSymbol()).second) {
     return nullptr;
   }
+  const Symbol *result{nullptr};
   if (const Scope *dtScope{derived.scope()}) {
     for (const auto &pair : *dtScope) {
       const Symbol &symbol{*pair.second};
@@ -1305,7 +1313,8 @@ static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
         if (const auto *compDetails{
                 componentDerived->typeSymbol().detailsIf<DerivedTypeDetails>()};
             compDetails && compDetails->isEnumerationType()) {
-          return &symbol;
+          result = &symbol;
+          break;
         }
         // The component is processed by defined I/O. It is treated as a single
         // value and does not expand into its components.
@@ -1316,12 +1325,15 @@ static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
         // look for an enumeration effective item nested within it.
         if (const Symbol *bad{FindEnumerationTypeComponent(
                 which, *componentDerived, scope, visited)}) {
-          return bad;
+          result = bad;
+          break;
         }
       }
     }
   }
-  return nullptr;
+  // Erase on unwind so 'visited' tracks only the current recursion path.
+  visited.erase(&derived.typeSymbol());
+  return result;
 }
 
 static const Symbol *FindEnumerationTypeComponent(common::DefinedIo which,
