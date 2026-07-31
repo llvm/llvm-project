@@ -156,18 +156,6 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
-  gettimeofday_test
-  SUITE
-    libc_time_unittests
-  SRCS
-    gettimeofday_test.cpp
-  DEPENDS
-    libc.include.time
-    libc.src.time.gettimeofday
-    libc.hdr.types.struct_timeval
-)
-
-add_libc_unittest(
   gmtime_test
   SUITE
     libc_time_unittests
@@ -236,6 +224,17 @@ add_libc_test(
   DEPENDS
     libc.hdr.types.struct_tm
     libc.src.time.strftime
+)
+
+add_libc_test(
+  strptime_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    strptime_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.src.time.strptime
 )
 
 add_libc_unittest(

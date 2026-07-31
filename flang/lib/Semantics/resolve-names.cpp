@@ -1124,7 +1124,6 @@ public:
 protected:
   bool BeginDecl();
   void EndDecl();
-  void SetImplicitCUDADataAttr(Symbol &);
   Symbol &DeclareObjectEntity(const parser::Name &, Attrs = Attrs{});
   // Make sure that there's an entity in an enclosing scope called Name
   Symbol &FindOrDeclareEnclosingEntity(const parser::Name &);
@@ -6146,8 +6145,24 @@ bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
 
   if (auto &init{std::get<std::optional<parser::ScalarIntConstantExpr>>(
           enumerator.t)}) {
-    Walk(*init); // Resolve names in expression before evaluation.
-    if (auto value{EvaluateInt64(context(), *init)}) {
+    std::optional<std::int64_t> value;
+    const parser::Expr &expr{parser::UnwrapRef<parser::Expr>(*init)};
+    if (parser::IsBOZLiteral(*init)) {
+      // F2023 7.6.1 errata f23/013: a BOZ enumerator initializer
+      // has the value specified by INT(boz-literal-constant, C_INT).
+      const evaluate::DynamicType cIntType{
+          TypeCategory::Integer, evaluate::CInteger::kind};
+      if (MaybeExpr maybeExpr{EvaluateExpr(expr)}) {
+        if (auto converted{
+                evaluate::ConvertToType(cIntType, std::move(*maybeExpr))}) {
+          value = evaluate::ToInt64(FoldExpr(std::move(*converted)));
+        }
+      }
+    } else {
+      Walk(*init); // Resolve names in expression before evaluation.
+      value = EvaluateInt64(context(), *init);
+    }
+    if (value) {
       // Cast all init expressions to C_INT so that they can then be
       // safely incremented (see 7.6 Note 2).
       enumerationState_.value = static_cast<int>(*value);
@@ -6430,7 +6445,8 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
     // these can be set on a symbol that is host-assoc or use-assoc
     if (!symbol &&
         (currScope().kind() == Scope::Kind::Subprogram ||
-            currScope().kind() == Scope::Kind::BlockConstruct)) {
+            currScope().kind() == Scope::Kind::BlockConstruct ||
+            currScope().IsSubmodule())) {
       if (auto *hostSymbol{FindSymbol(name)}) {
         symbol = &MakeHostAssocSymbol(name, *hostSymbol);
       }
@@ -7126,11 +7142,6 @@ bool DeclarationVisitor::Pre(const parser::DerivedTypeDef &x) {
   const auto &componentDefs{
       std::get<std::list<parser::Statement<parser::ComponentDefStmt>>>(x.t)};
   Walk(componentDefs);
-  // Components live in the derived type's own scope, which is not visited when
-  // the enclosing specification part is finished, so attribute them here.
-  for (auto &pair : scope) {
-    SetImplicitCUDADataAttr(*pair.second);
-  }
   if (derivedTypeInfo_.sequence) {
     details.set_sequence(true);
     if (componentDefs.empty()) {
@@ -10590,50 +10601,6 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
 }
 
-// Applies the implicit CUDA data attribute (managed/unified/pinned) to an
-// allocatable or pointer object entity when the matching -gpu=mem: mode is
-// enabled. Used for locals and module variables as well as derived-type
-// components.
-void DeclarationVisitor::SetImplicitCUDADataAttr(Symbol &symbol) {
-  auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!object || object->cudaDataAttr() ||
-      !(IsAllocatable(symbol) || IsPointer(symbol))) {
-    return;
-  }
-  const bool cudaEnabled{
-      context().languageFeatures().IsEnabled(common::LanguageFeature::CUDA)};
-  const bool cudaManaged{context().languageFeatures().IsEnabled(
-      common::LanguageFeature::CudaManaged)};
-  const bool cudaUnified{context().languageFeatures().IsEnabled(
-      common::LanguageFeature::CudaUnified)};
-  // Implicitly treat allocatable/pointer arrays as managed when feature
-  // is enabled. This is done after all explicit CUDA attributes have
-  // been processed. Only applies when CUDA Fortran is enabled; otherwise
-  // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
-  // OpenACC) would incorrectly route every allocatable through the CUDA
-  // Fortran managed descriptor pipeline. Under -gpu=mem:unified prefer
-  // the Unified attribute where it is legal (host subprogram, main
-  // program, or component) so generic resolution still selects the
-  // unified specific; fall back to Managed elsewhere (module scope,
-  // device subprograms), which uses the same allocator.
-  // COMMON objects may not carry managed/unified attributes.
-  if (cudaEnabled && (cudaManaged || cudaUnified) && !object->commonBlock()) {
-    const Scope &owner{symbol.owner()};
-    const bool unifiedAllowed{!IsCUDADeviceContext(&owner) &&
-        (owner.IsDerivedType() || owner.kind() == Scope::Kind::MainProgram ||
-            owner.kind() == Scope::Kind::Subprogram)};
-    object->set_cudaDataAttr(cudaUnified && unifiedAllowed
-            ? common::CUDADataAttr::Unified
-            : common::CUDADataAttr::Managed);
-    // Implicitly treat allocatable arrays as pinned when feature is
-    // enabled.
-  } else if (IsAllocatable(symbol) &&
-      context().languageFeatures().IsEnabled(
-          common::LanguageFeature::CudaPinned)) {
-    object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
-  }
-}
-
 void ResolveNamesVisitor::FinishSpecificationPart(
     const std::list<parser::DeclarationConstruct> &decls) {
   misparsedStmtFuncFound_ = false;
@@ -10677,7 +10644,28 @@ void ResolveNamesVisitor::FinishSpecificationPart(
       }
     }
 
-    SetImplicitCUDADataAttr(symbol);
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
+          !object->cudaDataAttr()) {
+        // Implicitly treat allocatable/pointer arrays as managed when feature
+        // is enabled. This is done after all explicit CUDA attributes have
+        // been processed. Only applies when CUDA Fortran is enabled; otherwise
+        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
+        // OpenACC) would incorrectly route every allocatable through the CUDA
+        // Fortran managed descriptor pipeline.
+        if (context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaManaged) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CUDA))
+          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        // Implicitly treat allocatable arrays as pinned when feature is
+        // enabled.
+        else if (IsAllocatable(symbol) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaPinned))
+          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      }
+    }
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
@@ -10714,25 +10702,42 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
     return; // error recovery
   }
 
-  // F2023 19.4 p2: a statement-function dummy argument name may be the same
-  // as an accessible name only if that name is a scalar variable.  The lookup
-  // walks the host chain (but not into the global scope), so host-associated
-  // identifiers are also considered.
+  // F2023 19.4 p2: a statement function dummy argument name may be the same
+  // as an accessible name only if that name is a scalar variable.  Only
+  // names present in the current scope after specification-part resolution
+  // can conflict: per 19.5.1.4 p2 item (11), the name's appearance as a
+  // statement function dummy argument renders any host entity of that name
+  // inaccessible by host association, and a global entity to which this
+  // scoping unit makes no other reference is not accessible in it either.
+  // (A name that becomes an external procedure name only by way of a
+  // reference in the execution part is not yet visible here and is not
+  // diagnosed.)
+  const std::set<SourceName> importNames{currScope().importNames()};
+  const common::ImportKind importKind{currScope().GetImportKind()};
   for (const auto &dummyName : std::get<std::list<parser::Name>>(stmtFunc.t)) {
-    if (const Symbol *hostSymbol{currScope().FindSymbol(dummyName.source)}) {
-      const Symbol &ultimate{hostSymbol->GetUltimate()};
+    // F2023 C8106: an explicitly imported name, or any host name made
+    // accessible by IMPORT, ALL, may not appear in a context that would
+    // render the host entity inaccessible, and a statement function dummy
+    // argument name is such a context (19.5.1.4 p2 item (11)).  There is
+    // no exception for scalar variables.  A plain IMPORT statement does
+    // not protect names from being hidden (8.8 p4).
+    if (importNames.count(dummyName.source) > 0 ||
+        importKind == common::ImportKind::All) {
+      if (const Symbol *host{
+              currScope().parent().FindSymbol(dummyName.source)}) {
+        Say(dummyName.source,
+            "'%s' from host may not be hidden by a statement function dummy argument"_err_en_US,
+            dummyName.source)
+            .Attach(host->name(), "Declaration of '%s'"_en_US, host->name());
+        continue;
+      }
+    }
+    if (const Symbol *local{FindInScope(currScope(), dummyName.source)}) {
+      const Symbol &ultimate{local->GetUltimate()};
       const bool isScalarVariable{(ultimate.has<ObjectEntityDetails>() ||
                                       ultimate.has<EntityDetails>()) &&
           !IsNamedConstant(ultimate) && ultimate.Rank() == 0};
       if (!isScalarVariable) {
-        Say(dummyName.source,
-            "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
-      }
-    } else {
-      // Also check the global scope, which FindSymbol skips
-      const Scope &globals{context().globalScope()};
-      if (auto it{globals.find(dummyName.source)}; it != globals.end()) {
-        // global function/subroutine — definitely not a scalar variable
         Say(dummyName.source,
             "The name '%s' of a statement function dummy argument may not be the same as an accessible name unless that name is a scalar variable"_err_en_US);
       }
@@ -10768,7 +10773,7 @@ void ResolveNamesVisitor::CheckImports() {
   case common::ImportKind::None:
     break;
   case common::ImportKind::All:
-    // C8102: all entities in host must not be hidden
+    // F2023 C8106: all entities in host must not be hidden
     for (const auto &pair : scope.parent()) {
       auto &name{pair.first};
       std::optional<SourceName> scopeName{scope.GetName()};
@@ -10779,7 +10784,7 @@ void ResolveNamesVisitor::CheckImports() {
     break;
   case common::ImportKind::Default:
   case common::ImportKind::Only:
-    // C8102: entities named in IMPORT must not be hidden
+    // F2023 C8106: entities named in IMPORT must not be hidden
     for (auto &name : scope.importNames()) {
       CheckImport(name, name);
     }

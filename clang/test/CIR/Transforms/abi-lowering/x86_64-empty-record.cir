@@ -1,0 +1,64 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!rec_E0 = !cir.struct<"E0" {}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A zero-field record (a C empty struct) classifies as Ignore: the argument
+  // is dropped from the lowered signature.
+  cir.func @take_empty(%arg0: !rec_E0) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty()
+  // CHECK-NEXT: cir.return
+
+  // The empty argument is dropped even when a real argument remains; the real
+  // argument shifts down to the first slot.
+  cir.func @take_mixed(%arg0: !rec_E0, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_mixed(%arg0: !s32i) -> !s32i
+  // CHECK-NEXT: cir.return %arg0 : !s32i
+
+  // An empty-record return is dropped: the function returns void.  The
+  // local storage slot survives the rewrite; only the return is dropped.
+  cir.func @ret_empty() -> !rec_E0 {
+    %0 = cir.alloca "r" align(1) : !cir.ptr<!rec_E0>
+    %1 = cir.load %0 : !cir.ptr<!rec_E0>, !rec_E0
+    cir.return %1 : !rec_E0
+  }
+
+  // CHECK: cir.func{{.*}} @ret_empty()
+  // CHECK: cir.alloca {{.*}} !cir.ptr<!rec_E0>
+  // CHECK: cir.return{{$}}
+
+  // The empty argument is also dropped at call sites: the caller's own empty
+  // argument is dropped, and the call to take_mixed drops it too.
+  cir.func @caller(%arg0: !rec_E0, %arg1: !s32i) -> !s32i {
+    %0 = cir.call @take_mixed(%arg0, %arg1) : (!rec_E0, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @caller(%arg0: !s32i) -> !s32i
+  // CHECK: cir.call @take_mixed(%arg0) : (!s32i) -> !s32i
+
+  // A local empty struct lives in an alloca; the alloca survives the rewrite
+  // while the empty operand is dropped from the call.
+  cir.func @caller_local(%arg0: !s32i) -> !s32i {
+    %0 = cir.alloca "e" align(1) : !cir.ptr<!rec_E0>
+    %1 = cir.load %0 : !cir.ptr<!rec_E0>, !rec_E0
+    %2 = cir.call @take_mixed(%1, %arg0) : (!rec_E0, !s32i) -> !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @caller_local(%arg0: !s32i) -> !s32i
+  // CHECK: cir.alloca "e" align(1) : !cir.ptr<!rec_E0>
+  // CHECK: cir.call @take_mixed(%arg0) : (!s32i) -> !s32i
+}

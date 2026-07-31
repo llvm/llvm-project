@@ -29,6 +29,10 @@ void ScriptInterpreterPythonInterfaces::Initialize() {
   ScriptedFrameProviderPythonInterface::Initialize();
   ScriptedThreadPythonInterface::Initialize();
   ScriptedFramePythonInterface::Initialize();
+  ScriptedStackFrameRecognizerPythonInterface::Initialize();
+  ScriptedCommandPythonInterface::Initialize();
+  ScriptedStringSummaryPythonInterface::Initialize();
+  ScriptedSyntheticChildrenPythonInterface::Initialize();
 }
 
 void ScriptInterpreterPythonInterfaces::Terminate() {
@@ -41,4 +45,8 @@ void ScriptInterpreterPythonInterfaces::Terminate() {
   ScriptedFrameProviderPythonInterface::Terminate();
   ScriptedThreadPythonInterface::Terminate();
   ScriptedFramePythonInterface::Terminate();
+  ScriptedStackFrameRecognizerPythonInterface::Terminate();
+  ScriptedCommandPythonInterface::Terminate();
+  ScriptedStringSummaryPythonInterface::Terminate();
+  ScriptedSyntheticChildrenPythonInterface::Terminate();
 }

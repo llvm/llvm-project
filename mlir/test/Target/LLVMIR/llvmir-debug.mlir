@@ -421,6 +421,53 @@ llvm.func @imp_fn() {
 
 // -----
 
+// Retained local variables may be represented separately from debug intrinsic
+// variables in MLIR. Ensure export reuses a single LLVM DILocalVariable node.
+
+#file = #llvm.di_file<"test.c" in "">
+#cu = #llvm.di_compile_unit<
+  id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file
+>
+#void = #llvm.di_null_type
+#int = #llvm.di_basic_type<
+  tag = DW_TAG_base_type, name = "int",
+  sizeInBits = 32, encoding = DW_ATE_signed
+>
+#sp_self = #llvm.di_subprogram<recId = distinct[1]<>, isRecSelf = true>
+#retained_local = #llvm.di_local_variable<
+  scope = #sp_self, name = "retained_arg", file = #file,
+  line = 1, arg = 1, type = #int
+>
+#sp_type = #llvm.di_subroutine_type<types = #void, #int>
+#sp = #llvm.di_subprogram<
+  recId = distinct[1]<>, id = distinct[2]<>, compileUnit = #cu,
+  scope = #file, name = "fn_with_retained_local_export",
+  file = #file, line = 1, scopeLine = 1, subprogramFlags = Definition,
+  type = #sp_type, retainedNodes = [#retained_local]
+>
+#dbg_local = #llvm.di_local_variable<
+  scope = #sp, name = "retained_arg", file = #file,
+  line = 1, arg = 1, type = #int
+>
+
+// CHECK-LABEL: define void @fn_with_retained_local_export(
+// CHECK-SAME: i32 %[[ARG:.*]]) !dbg ![[SP:[0-9]+]]
+llvm.func @fn_with_retained_local_export(%arg0: i32) {
+  // RECORDS: #dbg_value(i32 %[[ARG]], ![[LOCAL:[0-9]+]],
+  // RECORDS-SAME: !DIExpression(), !{{.*}})
+  llvm.intr.dbg.value #dbg_local = %arg0 : i32 loc(fused<#sp>["test.c":1:1])
+  llvm.return
+} loc(fused<#sp>["test.c":1:1])
+
+// CHECK-DAG: ![[SP]] = distinct !DISubprogram(
+// CHECK-SAME: name: "fn_with_retained_local_export"
+// CHECK-SAME: retainedNodes: ![[NODES:[0-9]+]]
+// CHECK-DAG: ![[NODES]] = !{![[LOCAL]]}
+// CHECK-DAG: ![[LOCAL]] = !DILocalVariable(name: "retained_arg", arg: 1,
+// CHECK-SAME: scope: ![[SP]]
+
+// -----
+
 // Nameless and scopeless global constant.
 
 // CHECK-LABEL: @.str.1 = external constant [10 x i8]

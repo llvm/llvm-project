@@ -373,13 +373,6 @@ void ios_base::__set_failbit_and_consider_rethrow() {
 #endif // _LIBCPP_HAS_EXCEPTIONS
 }
 
-bool ios_base::sync_with_stdio(bool sync) {
-  static bool previous_state = true;
-  bool r                     = previous_state;
-  previous_state             = sync;
-  return r;
-}
-
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
