@@ -18,6 +18,7 @@
 
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
 
@@ -82,7 +83,9 @@ SANITIZER_INTERFACE_ATTRIBUTE void __rtsan_init() {
   SetInitializationState(InitializationState::Initializing);
 
   SanitizerToolName = "RealtimeSanitizer";
+  CacheBinaryName();
   InitializeFlags();
+  __sanitizer_set_report_path(common_flags()->log_path);
 
   InitializePlatformEarly();
 
@@ -149,6 +152,14 @@ __rtsan_notify_blocking_call(const char *func_name) {
   ExpectNotRealtime(GetContextForThisThread(),
                     {DiagnosticsInfoType::BlockingCall, func_name, pc, bp},
                     OnViolation);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_print_stack_trace() {
+  GET_CURRENT_PC_BP;
+  UNINITIALIZED BufferedStackTrace stack;
+  stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal);
+  stack.Print();
 }
 
 } // extern "C"
