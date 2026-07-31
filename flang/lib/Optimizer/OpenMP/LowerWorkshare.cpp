@@ -538,6 +538,9 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           if (isTransitivelyUsedOutside(alloca.getResult(), sr)) {
             // Create a box slot for copyprivate to broadcast the data.
             Type eleTy = cast<fir::ReferenceType>(alloca.getType()).getEleTy();
+            if (fir::isPolymorphicType(eleTy))
+              TODO(loc, "copyprivate broadcast of a polymorphic firstprivate "
+                        "variable in an OpenMP workshare region");
             auto boxTy = fir::BoxType::get(eleTy);
             Value boxAlloc = fir::AllocaOp::create(allocaBuilder, loc, boxTy);
 
@@ -567,10 +570,15 @@ static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
           // Non-dynamic box alloca (e.g. an allocatable): shallow-copying the
           // descriptor makes threads share storage, so deep-copy the data.
           Type eleTy = cast<fir::ReferenceType>(alloca.getType()).getEleTy();
+          if (fir::isPolymorphicType(eleTy) &&
+              isTransitivelyUsedOutside(alloca.getResult(), sr))
+            TODO(loc, "copyprivate broadcast of a polymorphic firstprivate "
+                      "variable in an OpenMP workshare region");
           if (fir::isAllocatableType(eleTy) &&
               isTransitivelyUsedOutside(alloca.getResult(), sr)) {
-            // Unallocated descriptor so the runtime assignment allocates fresh
-            // per-thread storage.
+            // Unallocated descriptor so the runtime assignment allocates
+            // fresh per-thread storage and sets any dynamic length, hence
+            // empty nonDeferredParams.
             fir::FirOpBuilder firAllocaBuilder(allocaBuilder, m);
             Value emptyBox = fir::factory::createUnallocatedBox(
                 firAllocaBuilder, loc, eleTy, /*nonDeferredParams=*/{});
