@@ -610,13 +610,13 @@
 # CHECK-NEXT:  2      5     2.00    *                   ld4r	{ v0.1d, v1.1d, v2.1d, v3.1d }, [sp], x7
 # CHECK-NEXT:  1      5     2.00    *                   ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
 # CHECK-NEXT:  2      5     2.00    *                   ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp], x30
-# CHECK-NEXT:  1      6     0.50                        mla	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     0.50                        mla	v15.8h, v22.8h, v4.h[3]
-# CHECK-NEXT:  1      6     0.50                        mla	v28.2s, v10.2s, v2.s[0]
-# CHECK-NEXT:  1      6     0.50                        mls	v0.4h, v0.4h, v0.4h
-# CHECK-NEXT:  1      6     0.50                        mls	v25.8h, v29.8h, v0.h[4]
-# CHECK-NEXT:  1      6     0.50                        mls	v22.2s, v29.2s, v0.s[3]
-# CHECK-NEXT:  1      6     1.00                        mls	v26.4s, v5.4s, v28.4s
+# CHECK-NEXT:  1      4     0.50                        mla	v0.8b, v0.8b, v0.8b
+# CHECK-NEXT:  1      4     1.00                        mla	v15.8h, v22.8h, v4.h[3]
+# CHECK-NEXT:  1      4     0.50                        mla	v28.2s, v10.2s, v2.s[0]
+# CHECK-NEXT:  1      4     0.50                        mls	v0.4h, v0.4h, v0.4h
+# CHECK-NEXT:  1      4     1.00                        mls	v25.8h, v29.8h, v0.h[4]
+# CHECK-NEXT:  1      4     0.50                        mls	v22.2s, v29.2s, v0.s[3]
+# CHECK-NEXT:  1      4     1.00                        mls	v26.4s, v5.4s, v28.4s
 # CHECK-NEXT:  1      6     0.50                        mov	b0, v0.b[15]
 # CHECK-NEXT:  1      6     0.50                        mov	d6, v0.d[1]
 # CHECK-NEXT:  1      6     0.50                        mov	h2, v0.h[5]
@@ -827,26 +827,26 @@
 # CHECK-NEXT:  1      6     0.50                        sminv	h0, v0.4h
 # CHECK-NEXT:  1      6     1.00                        sminv	h0, v0.8h
 # CHECK-NEXT:  1      6     1.00                        sminv	s0, v0.4s
-# CHECK-NEXT:  1      6     1.00                        smlal	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  1      6     0.50                        smlal	v0.2d, v25.2s, v1.s[1]
-# CHECK-NEXT:  1      6     1.00                        smlal	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  1      6     0.50                        smlal	v16.4s, v9.4h, v11.h[4]
-# CHECK-NEXT:  1      6     1.00                        smlal	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     1.00                        smlal2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  1      6     0.50                        smlal2	v30.2d, v22.4s, v7.s[2]
-# CHECK-NEXT:  1      6     1.00                        smlal2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      6     1.00                        smlal2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  1      6     1.00                        smlsl	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  1      6     0.50                        smlsl	v25.2d, v27.2s, v1.s[1]
-# CHECK-NEXT:  1      6     1.00                        smlsl	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  1      6     0.50                        smlsl	v14.4s, v23.4h, v12.h[7]
-# CHECK-NEXT:  1      6     1.00                        smlsl	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     0.50                        smlal2	v1.4s, v9.8h, v0.h[6]
-# CHECK-NEXT:  1      6     0.50                        smlsl2	v12.4s, v11.8h, v12.h[0]
-# CHECK-NEXT:  1      6     1.00                        smlsl2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  1      6     0.50                        smlsl2	v11.2d, v28.4s, v7.s[2]
-# CHECK-NEXT:  1      6     1.00                        smlsl2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      6     1.00                        smlsl2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  1      4     1.00                        smlal	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  1      4     1.00                        smlal	v0.2d, v25.2s, v1.s[1]
+# CHECK-NEXT:  1      4     1.00                        smlal	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  1      4     1.00                        smlal	v16.4s, v9.4h, v11.h[4]
+# CHECK-NEXT:  1      4     1.00                        smlal	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  1      4     1.00                        smlal2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  1      4     1.00                        smlal2	v30.2d, v22.4s, v7.s[2]
+# CHECK-NEXT:  1      4     1.00                        smlal2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  1      4     1.00                        smlal2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  1      4     1.00                        smlsl	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  1      4     1.00                        smlsl	v25.2d, v27.2s, v1.s[1]
+# CHECK-NEXT:  1      4     1.00                        smlsl	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  1      4     1.00                        smlsl	v14.4s, v23.4h, v12.h[7]
+# CHECK-NEXT:  1      4     1.00                        smlsl	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  1      4     1.00                        smlal2	v1.4s, v9.8h, v0.h[6]
+# CHECK-NEXT:  1      4     1.00                        smlsl2	v12.4s, v11.8h, v12.h[0]
+# CHECK-NEXT:  1      4     1.00                        smlsl2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  1      4     1.00                        smlsl2	v11.2d, v28.4s, v7.s[2]
+# CHECK-NEXT:  1      4     1.00                        smlsl2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  1      4     1.00                        smlsl2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  1      4     1.00                        smull	v0.2d, v0.2s, v0.2s
 # CHECK-NEXT:  1      4     1.00                        smull	v31.2d, v23.2s, v6.s[2]
 # CHECK-NEXT:  1      4     1.00                        smull	v0.4s, v0.4h, v0.4h
@@ -1351,26 +1351,26 @@
 # CHECK-NEXT:  1      6     0.50                        uminv	h0, v0.4h
 # CHECK-NEXT:  1      6     1.00                        uminv	h0, v0.8h
 # CHECK-NEXT:  1      6     1.00                        uminv	s0, v0.4s
-# CHECK-NEXT:  1      6     1.00                        umlal	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  1      6     0.50                        umlal	v28.2d, v31.2s, v0.s[1]
-# CHECK-NEXT:  1      6     1.00                        umlal	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  1      6     0.50                        umlal	v22.4s, v14.4h, v0.h[6]
-# CHECK-NEXT:  1      6     1.00                        umlal	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     0.50                        umlal2	v10.2d, v4.4s, v3.s[2]
-# CHECK-NEXT:  1      6     0.50                        umlal2	v31.4s, v7.8h, v15.h[5]
-# CHECK-NEXT:  1      6     1.00                        umlal2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  1      6     1.00                        umlal2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      6     1.00                        umlal2	v0.8h, v0.16b, v0.16b
-# CHECK-NEXT:  1      6     1.00                        umlsl	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  1      6     0.50                        umlsl	v20.2d, v20.2s, v2.s[0]
-# CHECK-NEXT:  1      6     1.00                        umlsl	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  1      6     0.50                        umlsl	v21.4s, v12.4h, v7.h[5]
-# CHECK-NEXT:  1      6     1.00                        umlsl	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  1      6     1.00                        umlsl2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  1      6     0.50                        umlsl2	v30.2d, v23.4s, v1.s[2]
-# CHECK-NEXT:  1      6     1.00                        umlsl2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  1      6     0.50                        umlsl2	v27.4s, v28.8h, v6.h[4]
-# CHECK-NEXT:  1      6     1.00                        umlsl2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  1      4     1.00                        umlal	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  1      4     1.00                        umlal	v28.2d, v31.2s, v0.s[1]
+# CHECK-NEXT:  1      4     1.00                        umlal	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  1      4     1.00                        umlal	v22.4s, v14.4h, v0.h[6]
+# CHECK-NEXT:  1      4     1.00                        umlal	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  1      4     1.00                        umlal2	v10.2d, v4.4s, v3.s[2]
+# CHECK-NEXT:  1      4     1.00                        umlal2	v31.4s, v7.8h, v15.h[5]
+# CHECK-NEXT:  1      4     1.00                        umlal2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  1      4     1.00                        umlal2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  1      4     1.00                        umlal2	v0.8h, v0.16b, v0.16b
+# CHECK-NEXT:  1      4     1.00                        umlsl	v0.2d, v0.2s, v0.2s
+# CHECK-NEXT:  1      4     1.00                        umlsl	v20.2d, v20.2s, v2.s[0]
+# CHECK-NEXT:  1      4     1.00                        umlsl	v0.4s, v0.4h, v0.4h
+# CHECK-NEXT:  1      4     1.00                        umlsl	v21.4s, v12.4h, v7.h[5]
+# CHECK-NEXT:  1      4     1.00                        umlsl	v0.8h, v0.8b, v0.8b
+# CHECK-NEXT:  1      4     1.00                        umlsl2	v0.2d, v0.4s, v0.4s
+# CHECK-NEXT:  1      4     1.00                        umlsl2	v30.2d, v23.4s, v1.s[2]
+# CHECK-NEXT:  1      4     1.00                        umlsl2	v0.4s, v0.8h, v0.8h
+# CHECK-NEXT:  1      4     1.00                        umlsl2	v27.4s, v28.8h, v6.h[4]
+# CHECK-NEXT:  1      4     1.00                        umlsl2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  1      6     0.50                        umov	w6, v22.b[0]
 # CHECK-NEXT:  1      6     0.50                        umov	w0, v0.b[1]
 # CHECK-NEXT:  1      6     0.50                        umov	w10, v25.h[0]
@@ -1586,7 +1586,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     998.00 998.00 124.50 124.50 466.00  -
+# CHECK-NEXT:  -      -      -      -     1007.00 1007.00 124.50 124.50 466.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -2191,10 +2191,10 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -     ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -     ld4r	{ v0.2s, v1.2s, v2.2s, v3.2s }, [sp], x30
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mla	v0.8b, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mla	v15.8h, v22.8h, v4.h[3]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     mla	v15.8h, v22.8h, v4.h[3]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mla	v28.2s, v10.2s, v2.s[0]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mls	v0.4h, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mls	v25.8h, v29.8h, v0.h[4]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     mls	v25.8h, v29.8h, v0.h[4]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mls	v22.2s, v29.2s, v0.s[3]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     mls	v26.4s, v5.4s, v28.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mov	b0, v0.b[15]
@@ -2408,23 +2408,23 @@
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     sminv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     sminv	s0, v0.4s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smlal	v0.2d, v25.2s, v1.s[1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal	v0.2d, v25.2s, v1.s[1]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smlal	v16.4s, v9.4h, v11.h[4]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal	v16.4s, v9.4h, v11.h[4]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal	v0.8h, v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smlal2	v30.2d, v22.4s, v7.s[2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal2	v30.2d, v22.4s, v7.s[2]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smlsl	v25.2d, v27.2s, v1.s[1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl	v25.2d, v27.2s, v1.s[1]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smlsl	v14.4s, v23.4h, v12.h[7]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl	v14.4s, v23.4h, v12.h[7]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smlal2	v1.4s, v9.8h, v0.h[6]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smlsl2	v12.4s, v11.8h, v12.h[0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlal2	v1.4s, v9.8h, v0.h[6]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl2	v12.4s, v11.8h, v12.h[0]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     smlsl2	v11.2d, v28.4s, v7.s[2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl2	v11.2d, v28.4s, v7.s[2]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smlsl2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smull	v0.2d, v0.2s, v0.2s
@@ -2932,24 +2932,24 @@
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     uminv	h0, v0.8h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     uminv	s0, v0.4s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umlal	v28.2d, v31.2s, v0.s[1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal	v28.2d, v31.2s, v0.s[1]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umlal	v22.4s, v14.4h, v0.h[6]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal	v22.4s, v14.4h, v0.h[6]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal	v0.8h, v0.8b, v0.8b
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umlal2	v10.2d, v4.4s, v3.s[2]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umlal2	v31.4s, v7.8h, v15.h[5]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal2	v10.2d, v4.4s, v3.s[2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal2	v31.4s, v7.8h, v15.h[5]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal2	v0.2d, v0.4s, v0.4s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal2	v0.4s, v0.8h, v0.8h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlal2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl	v0.2d, v0.2s, v0.2s
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umlsl	v20.2d, v20.2s, v2.s[0]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl	v20.2d, v20.2s, v2.s[0]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl	v0.4s, v0.4h, v0.4h
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umlsl	v21.4s, v12.4h, v7.h[5]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl	v21.4s, v12.4h, v7.h[5]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl	v0.8h, v0.8b, v0.8b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl2	v0.2d, v0.4s, v0.4s
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umlsl2	v30.2d, v23.4s, v1.s[2]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl2	v30.2d, v23.4s, v1.s[2]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl2	v0.4s, v0.8h, v0.8h
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umlsl2	v27.4s, v28.8h, v6.h[4]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl2	v27.4s, v28.8h, v6.h[4]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umlsl2	v0.8h, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umov	w6, v22.b[0]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     umov	w0, v0.b[1]
