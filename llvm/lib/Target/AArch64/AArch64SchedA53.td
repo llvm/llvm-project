@@ -455,6 +455,17 @@ def : InstRW<[A53WriteIVecD_3],
 def : InstRW<[A53WriteIVecQ_3],
       (instregex "^CMTSTv(2i64|4i32|8i16|16i8)$", "^CLSv(4i32|8i16|16i8)$")>;
 
+// ASIMD widening multiply and narrowing convert. The widening multiplies and
+// multiply-accumulates, and the saturating narrows, are four cycles; the plain
+// extract-narrow is two and the add/subtract-high-narrow three. All of these
+// read or write 128 bits and so take the Q-form occupancy.
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^([SU]MULL|SQDMULL)v.*$",
+                 "^SQDML[AS]Lv.*$",
+                 "^([SU]QXTN|SQXTUN)v.*$")>;
+def : InstRW<[A53WriteIVecQ_2], (instregex "^XTNv.*$")>;
+def : InstRW<[A53WriteIVecQ_3], (instregex "^(ADD|SUB)HNv.*$")>;
+
 // ASIMD shifts. Plain shifts -- by immediate or by register, including the
 // insert (SLI/SRI), narrowing (SHRN) and widening (SSHLL/USHLL) forms -- are
 // two cycles. The rounding variants and the shift-accumulates are three, and
