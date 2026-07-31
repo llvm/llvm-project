@@ -1193,8 +1193,9 @@ static bool simplifyLogicalRecipe(VPSingleDefRecipe *Def, VPBuilder &Builder,
 
   // x && (x && y) -> x && y
   if (match(Def, m_c_LogicalAnd(m_VPValue(X),
-                                m_c_LogicalAnd(m_Deferred(X), m_VPValue())))) {
-    Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(1) == X ? 0 : 1));
+                                m_VPValue(Z, m_c_LogicalAnd(m_Deferred(X),
+                                                            m_VPValue()))))) {
+    Def->replaceAllUsesWith(Z);
     return true;
   }
 
