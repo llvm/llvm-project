@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPSectionOrderer.h"
-#include "ICF.h"
 #include "InputSection.h"
 #include "OutputSegment.h"
 #include "Relocations.h"
 #include "Symbols.h"
 #include "lld/Common/BPSectionOrdererBase.inc"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
@@ -143,7 +141,7 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     unsigned idx = sections.size();
     sections.emplace_back(isec);
     sectionToIdx.try_emplace(isec, idx);
-    for (auto *sym : BPOrdererMachO::getSymbols(*isec))
+    for (auto *sym : isec->symbols)
       addSectionForName(sym->getName(), idx);
   };
   for (const auto *file : inputFiles) {
@@ -156,23 +154,41 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
     }
   }
   // ICF safe thunks are linker-created after the input-file section graph is
-  // built. Include them so profile names resolve to the emitted thunks and the
-  // shared bodies they immediately branch to.
+  // built, so they do not appear in file->sections. Include them through the
+  // same path as input-file sections so only live BP candidates are added.
   for (auto *isec : inputSections) {
-    if (!llvm::any_of(isec->symbols, [](Defined *sym) {
-          return sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk;
-        }))
-      continue;
-    addSection(isec);
     for (auto *sym : isec->symbols) {
-      if (sym->identicalCodeFoldingKind != Symbol::ICFFoldKind::Thunk)
-        continue;
-      InputSection *bodyIsec = getBodyForThunkFoldedSym(sym)->isec();
-      auto bodyIdx = sectionToIdx.find(bodyIsec);
-      assert(bodyIdx != sectionToIdx.end() &&
-             "ICF thunk body must be a BP candidate");
-      addSectionForName(sym->getName(), bodyIdx->second);
+      if (sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+        addSection(isec);
+        break;
+      }
     }
+  }
+
+  // A temporal profile naming an ICF thunk describes execution of both the
+  // thunk and the shared body it branches to. Add the body to each name that
+  // resolves to a thunk, following the thunk relocation to find it.
+  for (auto &entry : rootSymbolToSectionIdxs) {
+    auto &sectionIdxs = entry.second;
+    SmallVector<unsigned> bodySectionIdxs;
+    for (unsigned idx : sectionIdxs) {
+      InputSection *isec = sections[idx];
+      bool isThunk = false;
+      for (auto *sym : isec->symbols) {
+        if (sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
+          isThunk = true;
+          break;
+        }
+      }
+      if (!isThunk)
+        continue;
+      for (const Relocation &reloc : isec->relocs) {
+        auto bodyIdx = sectionToIdx.find(reloc.getReferentInputSection());
+        if (bodyIdx != sectionToIdx.end())
+          bodySectionIdxs.push_back(bodyIdx->second);
+      }
+    }
+    sectionIdxs.insert(bodySectionIdxs.begin(), bodySectionIdxs.end());
   }
 
   auto result = BPOrdererMachO().computeOrder(
