@@ -453,6 +453,7 @@ private:
     InfixCalculator IC;
     InlineAsmIdentifierInfo Info;
     short BracCount = 0;
+    short ParenCount = 0;
     bool MemExpr = false;
     bool BracketUsed = false;
     bool NegativeAdditiveTerm = false;
@@ -1039,6 +1040,7 @@ private:
       TmpScale.reset();
       MemExpr = true;
       BracketUsed = true;
+      ParenCount = 0;
       BracCount++;
       return false;
     }
@@ -1054,6 +1056,10 @@ private:
       case IES_RPAREN:
         if (BracCount-- != 1) {
           ErrMsg = "unexpected bracket encountered";
+          return true;
+        }
+        if (ParenCount != 0) {
+          ErrMsg = "unmatched parenthesis";
           return true;
         }
         State = IES_RBRAC;
@@ -1114,6 +1120,7 @@ private:
       case IES_LPAREN:
       case IES_INIT:
       case IES_LBRAC:
+        ParenCount++;
         State = IES_LPAREN;
         IC.pushOperator(IC_LPAREN);
         break;
@@ -1131,6 +1138,11 @@ private:
       case IES_REGISTER:
       case IES_RBRAC:
       case IES_RPAREN:
+        if (ParenCount == 0) {
+          ErrMsg = "unmatched parenthesis";
+          return true;
+        }
+        ParenCount--;
         State = IES_RPAREN;
         IC.pushOperator(IC_RPAREN);
         break;
