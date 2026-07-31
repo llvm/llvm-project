@@ -391,10 +391,10 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      2     0.50                        tbl	v0.8b, { v1.16b }, v2.8b
 # CHECK-NEXT:  1      2     1.00                        tbl	v0.16b, { v1.16b }, v2.16b
 # CHECK-NEXT:  1      2     0.50                        tbx	v0.8b, { v1.16b, v2.16b }, v3.8b
-# CHECK-NEXT:  1      6     0.50                        zip1	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        zip1	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        uzp2	v0.4h, v1.4h, v2.4h
-# CHECK-NEXT:  1      6     1.00                        trn1	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      2     0.50                        zip1	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      2     1.00                        zip1	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      2     0.50                        uzp2	v0.4h, v1.4h, v2.4h
+# CHECK-NEXT:  1      2     1.00                        trn1	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      4     0.50                        saba	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  1      4     1.00                        uaba	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  1      4     1.00                        sabal	v0.8h, v1.8b, v2.8b
