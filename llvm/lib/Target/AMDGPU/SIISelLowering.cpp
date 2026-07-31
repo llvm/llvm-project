@@ -13074,9 +13074,8 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
 
   if (Subtarget->has45BitNumRecordsBufferResource()) {
     NumRecords = DAG.getZExtOrTrunc(NumRecords, Loc, MVT::i64);
-    NumRecords =
-        DAG.getNode(ISD::AND, Loc, MVT::i64, NumRecords,
-                    DAG.getConstant((1ULL << 45) - 1, Loc, MVT::i64));
+    NumRecords = DAG.getNode(ISD::AND, Loc, MVT::i64, NumRecords,
+                             DAG.getConstant((1ULL << 45) - 1, Loc, MVT::i64));
     SDValue Zero = DAG.getConstant(0, Loc, MVT::i32);
     // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
     // num_records.

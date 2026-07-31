@@ -2533,9 +2533,8 @@ TEST(TargetParserTest, testAMDGPUArch) {
 TEST(TargetParserTest, testAMDGPUFillFeatureMapBufferResourceNumRecords) {
   auto Has45BitNumRecordsFeature = [](StringRef GPU) {
     StringMap<bool> Features;
-    auto [Error, CanonicalCPU] =
-        AMDGPU::fillAMDGPUFeatureMap(GPU, Triple("amdgcn-unknown-unknown"),
-                                     Features);
+    auto [Error, CanonicalCPU] = AMDGPU::fillAMDGPUFeatureMap(
+        GPU, Triple("amdgcn-unknown-unknown"), Features);
     EXPECT_EQ(Error, AMDGPU::FeatureError::NO_ERROR);
     (void)CanonicalCPU;
     return Features.lookup("45-bit-num-records-buffer-resource");

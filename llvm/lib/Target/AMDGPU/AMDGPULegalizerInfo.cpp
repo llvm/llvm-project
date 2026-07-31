@@ -6389,9 +6389,9 @@ bool AMDGPULegalizerInfo::legalizePointerAsRsrcIntrin(
 
   if (ST.has45BitNumRecordsBufferResource()) {
     NumRecords = B.buildZExtOrTrunc(I64, NumRecords).getReg(0);
-    NumRecords = B.buildAnd(I64, NumRecords,
-                            B.buildConstant(I64, (1ULL << 45) - 1))
-                     .getReg(0);
+    NumRecords =
+        B.buildAnd(I64, NumRecords, B.buildConstant(I64, (1ULL << 45) - 1))
+            .getReg(0);
     Register Zero = B.buildConstant(I32, 0).getReg(0);
     // Build the lower 64-bit value, which has a 57-bit base and the lower 7-bit
     // num_records.
