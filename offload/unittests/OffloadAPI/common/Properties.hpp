@@ -1,7 +1,16 @@
-#pragma once
-
 #include "Fixtures.hpp"
 #include "OffloadAPI.h"
+
+// Properties are grouped by the data type that stores the information. As
+// queries for selected properties might have different results for either the
+// device or the host, or might be even unsupported for the host, some of the
+// tests verify only whether the function that queried the host returned success
+// rather than checking the exact value. For tests analyzing the exact value -
+// for example, verifying whether the value is greater than the given lower
+// bound - only relevant host properties are added to the container with
+// properties passed to the fixture during instantiation. The selection of
+// relevant properties is achieved by merging or removing selected properties,
+// marked as "Relevant" or "Irrelevant" in their names.
 
 inline constexpr size_t MAX_DEVICE_INFO_BYTES = 8;
 
@@ -12,9 +21,12 @@ template <typename T> struct SizedProperty {
   T property;
 };
 
+// Firstly, we list all needed properties explicitly in PropertiesContainer
+template <typename T> using PropertiesContainer = std::set<T>;
+// Secondly, we process selected properties and save their data sizes for tests
+// that require them
 template <typename T>
 using PropertiesWithSizeContainer = std::vector<SizedProperty<T>>;
-template <typename T> using PropertiesContainer = std::set<T>;
 template <typename T>
 using PropertiesTypes = std::unordered_map<T, SizedProperty<T>>;
 
