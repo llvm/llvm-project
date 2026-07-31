@@ -479,7 +479,7 @@ void AMDGPURewriteAGPRCopyMFMAImpl::replaceSpillWithCopyToVReg(
     unsigned SubReg = getSubRegFromReload(SpillMI, VReg);
     NewCopy = BuildMI(MBB, SpillMI, DL, TII.get(TargetOpcode::COPY))
                   .add(SpillMI.getOperand(0))
-                  .addReg(VReg, 0, SubReg);
+                  .addReg(VReg, RegState::NoFlags, SubReg);
   }
 
   LIS.ReplaceMachineInstrInMaps(SpillMI, *NewCopy);
