@@ -802,6 +802,7 @@ void AggExprEmitter::VisitOpaqueValueExpr(OpaqueValueExpr *e) {
 
 void AggExprEmitter::VisitCoroutineSuspendParameterBypassExpr(
     CoroutineSuspendParameterBypassExpr *E) {
+  CodeGenFunction::CoroutineSuspendParameterBypassMapping Mapping(CGF, E);
   Visit(E->getMoveExpr());
 }
 

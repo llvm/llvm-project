@@ -247,9 +247,6 @@ public:
     return static_cast<bool>(getDependence() & ExprDependence::Error);
   }
 
-  /// Whether this expression contains a coroutine suspend point
-  /// (co_await or co_yield).
-  bool containsCoroutineSuspendPoints() const;
 
   /// getExprLoc - Return the preferred location for the arrow when diagnosing
   /// a problem with a generic expression.

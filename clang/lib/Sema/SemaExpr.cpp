@@ -6274,10 +6274,41 @@ static bool isWin32InAllocaRecord(ASTContext &Context, QualType Ty) {
   return true;
 }
 
+namespace {
+class CoroutineSuspendPointDetector
+    : public ConstEvaluatedExprVisitor<CoroutineSuspendPointDetector> {
+  using Base = ConstEvaluatedExprVisitor<CoroutineSuspendPointDetector>;
+
+public:
+  bool Suspends = false;
+
+  CoroutineSuspendPointDetector(const ASTContext &Ctx) : Base(Ctx) {}
+
+  void Visit(const Expr *E) {
+    if (!E || Suspends)
+      return;
+    Base::Visit(E);
+  }
+
+  void VisitCoawaitExpr(const CoawaitExpr *E) { Suspends = true; }
+  void VisitCoyieldExpr(const CoyieldExpr *E) { Suspends = true; }
+  void VisitDependentCoawaitExpr(const DependentCoawaitExpr *E) {
+    Suspends = true;
+  }
+};
+} // namespace
+
+static bool containsCoroutineSuspendPoints(const ASTContext &Ctx,
+                                           const Expr *E) {
+  CoroutineSuspendPointDetector Detector(Ctx);
+  Detector.Visit(E);
+  return Detector.Suspends;
+}
+
 static bool callHasSuspend(Sema &S, ArrayRef<Expr *> Args) {
   if (S.getCurFunction() && S.getCurFunction()->isCoroutine()) {
     for (const Expr *A : Args) {
-      if (A && A->containsCoroutineSuspendPoints())
+      if (A && containsCoroutineSuspendPoints(S.Context, A))
         return true;
     }
   }
@@ -6300,17 +6331,6 @@ static bool usesInAlloca(ASTContext &Context, const FunctionProtoType *Proto,
   return false;
 }
 
-static void disableCopyElision(Expr *E) {
-  if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
-    E = EWC->getSubExpr();
-  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
-    E = BTE->getSubExpr();
-  if (auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
-    if (CCE->isElidable())
-      CCE->setElidable(false);
-  }
-}
-
 static ExprResult InitializeAndBypassArg(Sema &S,
                                          const InitializedEntity &Entity,
                                          Expr *Arg, bool IsListInitialization,
@@ -6321,17 +6341,17 @@ static ExprResult InitializeAndBypassArg(Sema &S,
     return ExprError();
   Expr *PreBypassArg = Materialized.get();
 
-  ExprResult ArgE =
-      S.PerformCopyInitialization(Entity, SourceLocation(), PreBypassArg,
-                                  IsListInitialization, AllowExplicit);
+  auto *OVE = new (S.Context)
+      OpaqueValueExpr(PreBypassArg->getExprLoc(), PreBypassArg->getType(),
+                      PreBypassArg->getValueKind(),
+                      PreBypassArg->getObjectKind(), PreBypassArg);
+
+  ExprResult ArgE = S.PerformCopyInitialization(
+      Entity, SourceLocation(), OVE, IsListInitialization, AllowExplicit);
   if (ArgE.isInvalid())
     return ExprError();
 
   Expr *Result = ArgE.getAs<Expr>();
-  bool IsAggregate =
-      Arg->getType()->isRecordType() || Arg->getType()->isAnyComplexType();
-  if (IsAggregate)
-    disableCopyElision(Result);
   Result = CoroutineSuspendParameterBypassExpr::Create(S.Context, PreBypassArg,
                                                        Result);
   return Result;

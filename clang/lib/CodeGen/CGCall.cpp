@@ -5847,6 +5847,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
               Addr, I->Ty.getQualifiers(), AggValueSlot::IsDestructed,
               AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
               AggValueSlot::DoesNotOverlap);
+          OpaqueValueMapping OVM(
+              *this, OpaqueValueExpr::findInCopyConstruct(I->getMoveExpr()),
+              I->getKnownLValue());
           EmitAggExpr(I->getMoveExpr(), Slot);
           if (ArgInfo.getInAllocaIndirect()) {
             Address ArgSlot = Builder.CreateStructGEP(

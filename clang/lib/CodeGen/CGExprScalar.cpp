@@ -602,6 +602,7 @@ public:
 
   Value *VisitCoroutineSuspendParameterBypassExpr(
       CoroutineSuspendParameterBypassExpr *E) {
+    CodeGenFunction::CoroutineSuspendParameterBypassMapping Mapping(CGF, E);
     return Visit(E->getMoveExpr());
   }
 

@@ -3118,6 +3118,17 @@ public:
     return It->second;
   }
 
+  class CoroutineSuspendParameterBypassMapping {
+    OpaqueValueMapping OVM;
+
+  public:
+    CoroutineSuspendParameterBypassMapping(
+        CodeGenFunction &CGF, const CoroutineSuspendParameterBypassExpr *E)
+        : OVM(CGF, OpaqueValueExpr::findInCopyConstruct(E->getMoveExpr()),
+              CGF.getPreEvaluatedTemporary(
+                  cast<MaterializeTemporaryExpr>(E->getSubExpr()))) {}
+  };
+
   /// Get the index of the current ArrayInitLoopExpr, if any.
   llvm::Value *getArrayInitIndex() { return ArrayInitIndex; }
 

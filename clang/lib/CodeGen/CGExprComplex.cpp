@@ -171,6 +171,7 @@ public:
 
   ComplexPairTy VisitCoroutineSuspendParameterBypassExpr(
       CoroutineSuspendParameterBypassExpr *E) {
+    CodeGenFunction::CoroutineSuspendParameterBypassMapping Mapping(CGF, E);
     return Visit(E->getMoveExpr());
   }
   ComplexPairTy VisitPseudoObjectExpr(PseudoObjectExpr *E) {

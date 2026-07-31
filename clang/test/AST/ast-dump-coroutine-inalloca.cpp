@@ -60,5 +60,6 @@ task test() {
 // CHECK-NEXT: |   |-bypass_sub_expr: MaterializeTemporaryExpr {{.*}} 'Noisy' xvalue
 // CHECK:          `-bypass_move_expr: CXXBindTemporaryExpr {{.*}} 'Noisy'
 // CHECK-NEXT:       `-CXXConstructExpr {{.*}} 'Noisy' 'void (Noisy &&) __attribute__((thiscall)) noexcept'
-// CHECK-NEXT:         `-MaterializeTemporaryExpr {{.*}} 'Noisy' xvalue
-// CHECK-NEXT:           `-CoawaitExpr {{.*}} 'Noisy'
+// CHECK-NEXT:         `-OpaqueValueExpr {{.*}} 'Noisy' xvalue
+// CHECK-NEXT:           `-MaterializeTemporaryExpr {{.*}} 'Noisy' xvalue
+// CHECK-NEXT:             `-CoawaitExpr {{.*}} 'Noisy'

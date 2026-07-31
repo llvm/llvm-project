@@ -3999,30 +3999,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   return false;
 }
 
-static bool containsCoroutineSuspendPoints(const Stmt *S) {
-  if (!S)
-    return false;
-  if (isa<CoawaitExpr>(S) || isa<CoyieldExpr>(S) ||
-      isa<DependentCoawaitExpr>(S))
-    return true;
-
-  if (auto *LE = dyn_cast<LambdaExpr>(S)) {
-    for (const Expr *Init : LE->capture_inits()) {
-      if (Init && containsCoroutineSuspendPoints(Init))
-        return true;
-    }
-    return false;
-  }
-
-  for (const Stmt *Child : S->children())
-    if (Child && containsCoroutineSuspendPoints(Child))
-      return true;
-  return false;
-}
-
-bool Expr::containsCoroutineSuspendPoints() const {
-  return ::containsCoroutineSuspendPoints(this);
-}
 
 FPOptions Expr::getFPFeaturesInEffect(const LangOptions &LO) const {
   if (auto Call = dyn_cast<CallExpr>(this))
@@ -5204,6 +5180,8 @@ const OpaqueValueExpr *OpaqueValueExpr::findInCopyConstruct(const Expr *e) {
     e = ewc->getSubExpr();
   if (const MaterializeTemporaryExpr *m = dyn_cast<MaterializeTemporaryExpr>(e))
     e = m->getSubExpr();
+  if (const CXXBindTemporaryExpr *bte = dyn_cast<CXXBindTemporaryExpr>(e))
+    e = bte->getSubExpr();
   e = cast<CXXConstructExpr>(e)->getArg(0);
   while (const ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(e))
     e = ice->getSubExpr();
