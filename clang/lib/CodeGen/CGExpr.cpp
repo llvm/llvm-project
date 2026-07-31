@@ -5011,6 +5011,41 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
     BoundsVal = Builder.CreateAlignedLoad(BoundsType, BoundsVal, getIntAlign(),
                                           ".counted_by.load");
 
+    const auto *CAT = FD->getType()->getAs<CountAttributedType>();
+
+    // For the '_or_null' variants a null pointer describes no accessible
+    // memory, so treat the bound as 0 when the pointer is null; any access then
+    // traps.
+    if (CAT->isOrNull()) {
+      llvm::Value *Ptr = EmitScalarExpr(ME);
+      llvm::Value *IsNull = Builder.CreateIsNull(Ptr);
+      BoundsVal = Builder.CreateSelect(
+          IsNull, llvm::ConstantInt::get(BoundsType, 0), BoundsVal);
+    }
+
+    // For '__sized_by' the loaded bound is a byte count. Convert it to an
+    // element count by dividing by the element size so the check can compare
+    // the (element) index directly. '__counted_by' already counts elements, and
+    // a void (or otherwise zero-/unknown-sized) pointee uses the GNU convention
+    // of element size 1; both need no conversion. Use signed division for a
+    // signed count field so a negative byte count stays non-positive and is
+    // still rejected by the negative-bounds guard in EmitBoundsCheckImpl
+    // (unsigned division would turn it into a large positive count).
+    if (CAT->isCountInBytes()) {
+      QualType ElemTy = ArrayType->getPointeeType();
+      if (!ElemTy.isNull() && !ElemTy->isIncompleteType() &&
+          !ElemTy->isFunctionType()) {
+        CharUnits ElemSize = getContext().getTypeSizeInChars(ElemTy);
+        if (ElemSize > CharUnits::One()) {
+          llvm::Value *ElemSizeV = llvm::ConstantInt::get(
+              BoundsVal->getType(), ElemSize.getQuantity());
+          BoundsVal = CountFD->getType()->isSignedIntegerOrEnumerationType()
+                          ? Builder.CreateSDiv(BoundsVal, ElemSizeV)
+                          : Builder.CreateUDiv(BoundsVal, ElemSizeV);
+        }
+      }
+    }
+
     // Now emit the bounds checking.
     EmitBoundsCheckImpl(ArrayExpr, ArrayType, IndexVal, IndexType, BoundsVal,
                         CountFD->getType(), Accessed);
