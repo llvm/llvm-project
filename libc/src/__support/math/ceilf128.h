@@ -13,6 +13,8 @@
 #include "src/__support/FPUtil/float128.h"
 #include "src/__support/macros/config.h"
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
