@@ -692,6 +692,7 @@ define void @consecutive_asyncmarks(ptr addrspace(1) %bar, ptr addrspace(3) %lds
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    ds_read_b32 v0, v2
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    global_store_dword v[3:4], v0, off
@@ -708,6 +709,7 @@ define void @consecutive_asyncmarks(ptr addrspace(1) %bar, ptr addrspace(3) %lds
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    ds_read_b32 v0, v2
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    global_store_dword v[3:4], v0, off
@@ -725,7 +727,7 @@ entry:
 
 ; Similar to the previous test, except wait.asyncmark(1) should remove the
 ; the first two marks, allowing the second DMA to remain in flight (ie.
-; vmcnt 0x1) during the ds_read.
+; vmcnt(1)) during the ds_read.
 
 define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3) %lds, ptr addrspace(1) %out) {
 ; SDAG-LABEL: consecutive_asyncmarks_wait1:
@@ -743,6 +745,7 @@ define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    ; wait_asyncmark(1)
+; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    ds_read_b32 v0, v2
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    global_store_dword v[3:4], v0, off
@@ -764,6 +767,7 @@ define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    ; wait_asyncmark(1)
+; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    ds_read_b32 v0, v2
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    global_store_dword v[3:4], v0, off

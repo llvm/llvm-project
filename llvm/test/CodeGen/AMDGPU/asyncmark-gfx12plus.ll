@@ -589,6 +589,7 @@ define void @consecutive_asyncmarks(ptr addrspace(1) %bar, ptr addrspace(3) %lds
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    s_wait_asynccnt 0x0
 ; SDAG-NEXT:    ds_load_b32 v0, v2
 ; SDAG-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
 ; SDAG-NEXT:    s_wait_dscnt 0x0
@@ -603,6 +604,7 @@ define void @consecutive_asyncmarks(ptr addrspace(1) %bar, ptr addrspace(3) %lds
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    s_wait_asynccnt 0x0
 ; GISEL-NEXT:    ds_load_b32 v0, v2
 ; GISEL-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
 ; GISEL-NEXT:    s_wait_dscnt 0x0
@@ -636,6 +638,7 @@ define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3
 ; SDAG-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off offset:4
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    ; wait_asyncmark(1)
+; SDAG-NEXT:    s_wait_asynccnt 0x1
 ; SDAG-NEXT:    ds_load_b32 v0, v2
 ; SDAG-NEXT:    s_wait_dscnt 0x0
 ; SDAG-NEXT:    global_store_b32 v[4:5], v0, off
@@ -654,6 +657,7 @@ define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3
 ; GISEL-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off offset:4
 ; GISEL-NEXT:    ; asyncmark
 ; GISEL-NEXT:    ; wait_asyncmark(1)
+; GISEL-NEXT:    s_wait_asynccnt 0x1
 ; GISEL-NEXT:    ds_load_b32 v0, v2
 ; GISEL-NEXT:    s_wait_dscnt 0x0
 ; GISEL-NEXT:    global_store_b32 v[6:7], v0, off
