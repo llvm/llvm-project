@@ -3,7 +3,7 @@
 
 
 ; CHECK-NO-EXTENSION:     OpCapability Shader
-; CHECK-NO-EXTENSION-NOT: OpCabilitity BitInstructions
+; CHECK-NO-EXTENSION-NOT: OpCapability BitInstructions
 ; CHECK-NO-EXTENSION-NOT: OpExtension "SPV_KHR_bit_instructions"
 ; CHECK-NO-EXTENSION: %[[#int:]] = OpTypeInt 32
 ; CHECK-NO-EXTENSION: OpBitReverse %[[#int]]

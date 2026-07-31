@@ -122,13 +122,13 @@ void InclusionRewriter::WriteLineInfo(StringRef Filename, int Line,
     return;
   if (UseLineDirectives) {
     OS << "#line" << ' ' << Line << ' ' << '"';
-    OS.write_escaped(Filename);
+    OS << Filename;
     OS << '"';
   } else {
     // Use GNU linemarkers as described here:
     // http://gcc.gnu.org/onlinedocs/cpp/Preprocessor-Output.html
     OS << '#' << ' ' << Line << ' ' << '"';
-    OS.write_escaped(Filename);
+    OS << Filename;
     OS << '"';
     if (!Extra.empty())
       OS << Extra;

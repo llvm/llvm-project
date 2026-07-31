@@ -49,7 +49,7 @@ MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
 ModulePass *createNVPTXLowerArgsPass();
-FunctionPass *createNVPTXSetByValParamAlignPass();
+ModulePass *createNVPTXPromoteParamAlignPass();
 FunctionPass *createNVPTXLowerAllocaPass();
 FunctionPass *createNVPTXLowerUnreachablePass(bool TrapUnreachable,
                                               bool NoTrapAfterNoreturn);
@@ -59,6 +59,7 @@ FunctionPass *createNVPTXIRPeepholePass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 MachineFunctionPass *createNVPTXForwardParamsPass();
+MachineFunctionPass *createNVPTXAddressFolderPass();
 
 void initializeNVVMReflectLegacyPassPass(PassRegistry &);
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
@@ -71,9 +72,10 @@ void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
 void initializeNVPTXLowerUnreachablePass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
-void initializeNVPTXSetByValParamAlignLegacyPassPass(PassRegistry &);
+void initializeNVPTXPromoteParamAlignLegacyPassPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 void initializeNVPTXForwardParamsPassPass(PassRegistry &);
+void initializeNVPTXAddressFolderPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
 void initializeNVVMReflectPass(PassRegistry &);
 void initializeNVPTXAAWrapperPassPass(PassRegistry &);
@@ -109,9 +111,9 @@ struct NVPTXCopyByValArgsPass : OptionalPassInfoMixin<NVPTXCopyByValArgsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXSetByValParamAlignPass
-    : OptionalPassInfoMixin<NVPTXSetByValParamAlignPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+struct NVPTXPromoteParamAlignPass
+    : OptionalPassInfoMixin<NVPTXPromoteParamAlignPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 struct NVPTXLowerArgsPass : OptionalPassInfoMixin<NVPTXLowerArgsPass> {
@@ -294,6 +296,7 @@ void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 // Defines symbolic names for the NVPTX instructions.
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "NVPTXGenInstrInfo.inc"
 
 #endif

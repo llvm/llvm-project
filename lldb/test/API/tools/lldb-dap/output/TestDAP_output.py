@@ -2,21 +2,22 @@
 Test lldb-dap output events
 """
 
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-import lldbdap_testcase
+from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
-class TestDAP_output(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_output(DAPTestCaseBase):
     @skipIfWindows
     def test_output(self):
         """
         Test output handling for the running process.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(
+        session = self.build_and_create_session(disconnect_automatically=False)
+        launch_args = LaunchArgs(
             program,
-            disconnectAutomatically=False,
             exitCommands=[
                 # Ensure that output produced by lldb itself is not consumed by the OutputRedirector.
                 "?script print('out\\0\\0', end='\\r\\n', file=sys.stdout)",
@@ -24,28 +25,31 @@ class TestDAP_output(lldbdap_testcase.DAPTestCaseBase):
             ],
         )
         source = "main.c"
-        lines = [line_number(source, "// breakpoint 1")]
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
-        self.continue_to_breakpoints(breakpoint_ids)
+        breakpoint_line = line_number(source, "// breakpoint 1")
+        with session.configure(launch_args) as ctx:
+            bp_ids = session.resolve_source_breakpoints(source, [breakpoint_line])
+
+        process_event = ctx.process_event
+        session.verify_stopped_on_breakpoint(bp_ids, after=process_event)
 
         # Ensure partial messages are still sent.
-        output = self.collect_stdout(pattern="abcdef")
-        self.assertTrue(output and len(output) > 0, "expect program stdout")
+        partial_output = session.collect_stdout(after=process_event, until="abcdef")
+        self.assertGreater(len(partial_output.seen_texts), 0, "expect program stdout")
 
-        self.continue_to_exit()
+        session.continue_to_exit()
 
         # Disconnecting from the server to ensure any pending IO is flushed.
-        self.dap_server.request_disconnect()
+        session.disconnect()
 
-        output += self.get_stdout()
-        self.assertTrue(output and len(output) > 0, "expect program stdout")
+        stdout = session.get_stdout()
+        self.assertTrue(stdout, "expect program stdout")
         self.assertIn(
             "abcdefghi\r\nhello world\r\nfinally\0\0",
-            output,
-            "full stdout not found in: " + repr(output),
+            stdout,
+            "full stdout not found in: " + repr(stdout),
         )
-        console = self.get_console()
-        self.assertTrue(console and len(console) > 0, "expect dap messages")
+        console = session.get_console()
+        self.assertTrue(console, "expect dap messages")
         self.assertIn(
-            "out\0\0\r\nerr\0\0\r\n", console, f"full console message not found"
+            "out\0\0\r\nerr\0\0\r\n", console, "full console message not found"
         )

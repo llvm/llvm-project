@@ -191,7 +191,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
   }
 
   file_spec.SetDirectory(raw_path);
-  return (bool)file_spec.GetDirectory();
+  return !file_spec.GetDirectory().empty();
 }
 
 bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
@@ -1119,13 +1119,13 @@ bool HostInfoMacOSX::IsBundleCodeSignTrusted(const FileSpec &bundle_path) {
       path.size(), /*isDirectory=*/true);
   if (!url)
     return false;
-  auto url_cleanup = llvm::make_scope_exit([&]() { CFRelease(url); });
+  auto url_cleanup = llvm::scope_exit([&]() { CFRelease(url); });
 
   SecStaticCodeRef static_code = nullptr;
   if (SecStaticCodeCreateWithPath(url, kSecCSDefaultFlags, &static_code) !=
       errSecSuccess)
     return false;
-  auto code_cleanup = llvm::make_scope_exit([&]() { CFRelease(static_code); });
+  auto code_cleanup = llvm::scope_exit([&]() { CFRelease(static_code); });
 
   // Check that the signature chains to a trusted root CA.
   SecRequirementRef requirement = nullptr;
@@ -1133,7 +1133,7 @@ bool HostInfoMacOSX::IsBundleCodeSignTrusted(const FileSpec &bundle_path) {
                                      kSecCSDefaultFlags,
                                      &requirement) != errSecSuccess)
     return false;
-  auto req_cleanup = llvm::make_scope_exit([&]() { CFRelease(requirement); });
+  auto req_cleanup = llvm::scope_exit([&]() { CFRelease(requirement); });
 
   return SecStaticCodeCheckValidity(static_code, kSecCSDefaultFlags,
                                     requirement) == errSecSuccess;

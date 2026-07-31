@@ -108,7 +108,7 @@ int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,
 const char *SBFileSpec::GetFilename() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_up->GetFilename().AsCString(nullptr);
+  return ConstString(m_opaque_up->GetFilename()).AsCString(nullptr);
 }
 
 const char *SBFileSpec::GetDirectory() const {

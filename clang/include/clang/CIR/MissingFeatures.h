@@ -91,7 +91,7 @@ struct MissingFeatures {
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
-  static bool opCallMustTail() { return false; }
+  static bool opCallThunkTailHint() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
@@ -120,7 +120,7 @@ struct MissingFeatures {
 
   // RecordType
   static bool astRecordDeclAttr() { return false; }
-  static bool zeroSizeRecordMembers() { return false; }
+  static bool noUniqueAddressLayout() { return false; }
 
   // Coroutines
   static bool coroOutsideFrameMD() { return false; }
@@ -215,6 +215,7 @@ struct MissingFeatures {
   static bool ctorConstLvalueToRvalueConversion() { return false; }
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
+  static bool cudaTextureType() { return false; }
   static bool hipModuleCtor() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
