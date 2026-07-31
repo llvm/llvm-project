@@ -6,9 +6,8 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftFirstExprModuleLoad(lldbtest.TestBase):
 
     @skipEmbeddedSwift
-    @skipIf(oslist='windows')
     @swiftTest
-    @skipUnlessFoundation
+    @skipUnlessDarwin
     def test_unknown_self_objc_ref(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
