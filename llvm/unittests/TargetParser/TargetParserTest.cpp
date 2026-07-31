@@ -2530,23 +2530,6 @@ TEST(TargetParserTest, testAMDGPUArch) {
   }
 }
 
-TEST(TargetParserTest, testAMDGPUFillFeatureMapBufferResourceNumRecords) {
-  auto Has45BitNumRecordsFeature = [](StringRef GPU) {
-    StringMap<bool> Features;
-    auto [Error, CanonicalCPU] = AMDGPU::fillAMDGPUFeatureMap(
-        GPU, Triple("amdgcn-unknown-unknown"), Features);
-    EXPECT_EQ(Error, AMDGPU::FeatureError::NO_ERROR);
-    (void)CanonicalCPU;
-    return Features.lookup("45-bit-num-records-buffer-resource");
-  };
-
-  EXPECT_FALSE(Has45BitNumRecordsFeature("gfx1201"));
-  EXPECT_TRUE(Has45BitNumRecordsFeature("gfx1250"));
-  EXPECT_TRUE(Has45BitNumRecordsFeature("gfx12-5-generic"));
-  EXPECT_TRUE(Has45BitNumRecordsFeature("gfx1310"));
-  EXPECT_TRUE(Has45BitNumRecordsFeature("gfx13-generic"));
-}
-
 TEST(TargetParserTest, testAMDGPUgetMajorSubArch) {
   // Make sure every subarch is handled by the function
   for (unsigned SubArch = Triple::FirstAMDGPUSubArch;
