@@ -23,6 +23,18 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
+#include <cstddef>
+#include <functional>
+#include <list>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <variant>
+#include <vector>
+
 #define GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 #include "llvm/Frontend/OpenMP/OMP.inc"
 
@@ -226,7 +238,7 @@ public:
   void Enter(const parser::OmpClause::To &x);
   void Enter(const parser::OmpClause::UnifiedAddress &x);
   void Enter(const parser::OmpClause::UnifiedSharedMemory &x);
-  void Enter(const parser::OmpClause::Update &x);
+  void Enter(const parser::OmpClause::UpdateDependObjects &x);
   void Enter(const parser::OmpClause::UseDeviceAddr &x);
   void Enter(const parser::OmpClause::UseDevicePtr &x);
   void Enter(const parser::OmpClause::When &x);
@@ -397,6 +409,9 @@ private:
   void CheckCrayPointee(const parser::OmpObjectList &objectList,
       llvm::StringRef clause, bool suggestToUseCrayPointer = true);
   void GetSymbolsInObjectList(const parser::OmpObjectList &, SymbolSourceMap &);
+  void CheckDefaultNoneInAssociatedLoop(
+      const parser::OmpDirectiveSpecification &, const parser::DoConstruct &,
+      UnorderedSymbolSet &diagnosed);
   void CheckDefinableObjects(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCopyingPolymorphicAllocatable(
       SymbolSourceMap &, const llvm::omp::Clause);
@@ -519,6 +534,7 @@ private:
   struct MetadirectiveLoopVariant {
     const parser::traits::OmpContextSelectorSpecification *selector;
     const parser::OmpDirectiveSpecification *spec;
+    bool checkDefaultNoneInAssociatedLoop;
   };
   std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
   std::vector<std::size_t> metadirectiveVariantScopeStarts_;

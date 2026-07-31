@@ -305,12 +305,12 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTTZ) {
   auto CheckStr = R"(
   CHECK: [[UNMERGE_LO:%[0-9]+]]:_(s32), [[UNMERGE_HI:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES %0:_(s64)
   CHECK: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  CHECK: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[UNMERGE_LO]]:_(s32), [[ZERO]]:_
+  CHECK: [[CMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[UNMERGE_LO]]:_(s32), [[ZERO]]:_
   CHECK: [[CTTZ_HI:%[0-9]+]]:_(s32) = G_CTTZ [[UNMERGE_HI]]:_(s32)
   CHECK: [[THIRTYTWO:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
   CHECK: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[CTTZ_HI]]:_, [[THIRTYTWO]]:_
   CHECK: [[CTTZ_LO:%[0-9]+]]:_(s32) = G_CTTZ_ZERO_POISON [[UNMERGE_LO]]:_(s32)
-  CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(s1), [[ADD]]:_, [[CTTZ_LO]]:_
+  CHECK: %{{[0-9]+}}:_(s32) = G_SELECT [[CMP]]:_(i1), [[ADD]]:_, [[CTTZ_LO]]:_
   )";
 
   // Check

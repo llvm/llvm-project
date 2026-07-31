@@ -1524,12 +1524,9 @@ bool isGFX90A(const MCSubtargetInfo &STI);
 bool isGFX940(const MCSubtargetInfo &STI);
 bool hasArchitectedFlatScratch(const MCSubtargetInfo &STI);
 bool hasMAIInsts(const MCSubtargetInfo &STI);
+bool hasPopsExitingWaveID(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
-
-inline bool supportsWave32(const MCSubtargetInfo &STI) {
-  return AMDGPU::isGFX10Plus(STI) && !AMDGPU::isGFX1250(STI);
-}
 
 int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
@@ -1691,11 +1688,17 @@ bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
-LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+/// The opcode is a packed fp32 instruction which only reads low 32 bits of
+/// a scalar operand and propagates it to high channel.
+LLVM_READONLY bool isPackedSingleSGPRFP32Inst(unsigned Opc);
 
-LLVM_READONLY bool isPacked64BitInst(unsigned Opc);
+/// The opcode is a packed 64-bit instruction which only reads low 64 bits of
+/// a scalar operand and propagates it to high channel.
+LLVM_READONLY bool isPackedSingleSGPR64BitInst(unsigned Opc);
 
-LLVM_READONLY bool isPackedFP32or64BitInst(unsigned Opc);
+/// Packed instructions that read a single SGPR for SGPR operands, except for
+/// 64-bit elements which read two SGPRs.
+LLVM_READONLY bool isSingleSGPRReadInst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,

@@ -718,7 +718,7 @@ define void @deref_assumption_loop_access_start_variable(i8 %v, ptr noundef %P, 
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2:.*]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_START]], [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 [[IV_START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP6]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
@@ -828,7 +828,7 @@ define void @deref_assumption_loop_access_start_variable_unknown_range(i8 %v, pt
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE2:.*]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_START]], [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 [[IV_START]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <2 x i32> [[WIDE_LOAD]], zeroinitializer
