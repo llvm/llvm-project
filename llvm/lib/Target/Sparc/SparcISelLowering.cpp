@@ -3333,9 +3333,6 @@ SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
       unsigned Shift = VT.getSizeInBits() - MemVT.getSizeInBits();
       BSwapOp = DAG.getNode(ISD::SRL, DL, VT, BSwapOp,
                             DAG.getShiftAmountConstant(Shift, VT, DL));
-      // Need to truncate if this is a bswap of i64 stored as i32/i16.
-      if (VT == MVT::i64)
-        BSwapOp = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, BSwapOp);
     }
 
     SDValue Ops[] = {N->getOperand(0), BSwapOp, N->getOperand(2),
