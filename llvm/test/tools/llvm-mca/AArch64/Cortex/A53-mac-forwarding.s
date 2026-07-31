@@ -127,48 +127,48 @@ madd	x0, x0, x2, x3
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      601
+# CHECK-NEXT: Total Cycles:      104
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.17
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 0.5
 
 # CHECK:      [6] Code Region - mla-accumulator-q
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      601
+# CHECK-NEXT: Total Cycles:      104
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.17
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [7] Code Region - mla-multiplicand
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      1201
+# CHECK-NEXT: Total Cycles:      801
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.17
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    0.25
+# CHECK-NEXT: IPC:               0.25
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [8] Code Region - smlal-accumulator
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      601
+# CHECK-NEXT: Total Cycles:      104
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.17
-# CHECK-NEXT: IPC:               0.17
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [9] Code Region - sqdmlal-accumulator
