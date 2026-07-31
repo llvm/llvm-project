@@ -208,12 +208,12 @@ fmul s23, s1, s2
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      200
-# CHECK-NEXT: Total Cycles:      1002
+# CHECK-NEXT: Total Cycles:      406
 # CHECK-NEXT: Total uOps:        200
 
 # CHECK:      Dispatch Width:    2
-# CHECK-NEXT: uOps Per Cycle:    0.20
-# CHECK-NEXT: IPC:               0.20
+# CHECK-NEXT: uOps Per Cycle:    0.49
+# CHECK-NEXT: IPC:               0.49
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      [9] Code Region - faddq-fmul
