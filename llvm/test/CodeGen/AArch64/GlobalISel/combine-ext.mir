@@ -385,8 +385,8 @@ body:             |
     ; CHECK: liveins: $h0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK-NEXT: %2:_(s64) = nneg G_ZEXT [[COPY]](s16)
-    ; CHECK-NEXT: $x0 = COPY %2(s64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = nneg G_ZEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
     %0:_(s16) = COPY $h0
     %1:_(s32) = G_ANYEXT %0(s16)
     %2:_(s64) = nneg G_ZEXT %1(s32)
@@ -401,10 +401,27 @@ body:             |
     ; CHECK: liveins: $h0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $h0
-    ; CHECK-NEXT: %2:_(s64) = nneg G_ZEXT [[COPY]](s16)
-    ; CHECK-NEXT: $x0 = COPY %2(s64)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = nneg G_ZEXT [[COPY]](s16)
+    ; CHECK-NEXT: $x0 = COPY [[ZEXT]](s64)
     %0:_(s16) = COPY $h0
     %1:_(s32) = nneg G_ZEXT %0(s16)
     %2:_(s64) = G_ANYEXT %1(s32)
     $x0 = COPY %2(s64)
+...
+---
+name:            test_combine_anyext_freeze_trunc
+body:             |
+  bb.1:
+  liveins: $x0
+    ; CHECK-LABEL: name: test_combine_anyext_freeze_trunc
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:_(s64) = G_FREEZE [[COPY]]
+    ; CHECK-NEXT: $x1 = COPY [[FREEZE]](s64)
+    %0:_(s64) = COPY $x0
+    %1:_(s32) = G_TRUNC %0(s64)
+    %2:_(s32) = G_FREEZE %1(s32)
+    %3:_(s64) = G_ANYEXT %2(s32)
+    $x1 = COPY %3(s64)
 ...
