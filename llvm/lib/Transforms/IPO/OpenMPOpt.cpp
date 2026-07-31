@@ -2278,7 +2278,7 @@ bool OpenMPOpt::removeSPMDParallelWrappers() {
   if (!KernelParallelRFI || !KernelParallelRFI.Declaration)
     return false;
 
-  const unsigned WrapperFunctionArgNo = 6;
+  constexpr unsigned WrapperFunctionArgNo = 6;
   bool Changed = false;
   for (User *U : KernelParallelRFI.Declaration->users()) {
     auto *CI = dyn_cast<CallInst>(U);
