@@ -471,8 +471,11 @@ public:
   bool supportsLargeMem() const { return L0Context.supportsLargeMem(); }
 
   /// Returns the Queue from an async info object, or creates a new one if
-  /// the async info does not have a queue yet.
-  Expected<L0QueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
+  /// the async info does not have a queue yet. When \p UserCtx is null the
+  /// driver's default plugin-side context is used.
+  Expected<L0QueueTy *>
+  getOrCreateQueue(__tgt_async_info *AsyncInfo,
+                   LevelZeroPluginContextTy *UserCtx = nullptr);
   void releaseQueue(L0QueueTy *Queue);
 
   // Allocation related routines.

@@ -262,10 +262,12 @@ void L0DeviceTy::releaseQueue(L0QueueTy *Queue) {
 }
 
 Expected<L0QueueTy *>
-L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
+L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo,
+                             LevelZeroPluginContextTy *UserCtx) {
   L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo->Queue);
   if (!Queue) {
-    auto NewQueueOrErr = L0Context.getDefaultUserCtx().takeCachedQueue(this);
+    auto &Ctx = UserCtx ? *UserCtx : L0Context.getDefaultUserCtx();
+    auto NewQueueOrErr = Ctx.takeCachedQueue(this);
     if (!NewQueueOrErr)
       return NewQueueOrErr.takeError();
     Queue = *NewQueueOrErr;
@@ -406,16 +408,10 @@ Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
 }
 
 Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
-  auto *L0Ctx = AsyncInfoWrapper.getContext()
-                    ? static_cast<LevelZeroPluginContextTy *>(
-                          AsyncInfoWrapper.getContext())
-                    : &L0Context.getDefaultUserCtx();
-  auto NewQueueOrErr = L0Ctx->takeCachedQueue(this);
-  if (!NewQueueOrErr)
-    return NewQueueOrErr.takeError();
-  AsyncInfo->Queue = *NewQueueOrErr;
-  return Plugin::success();
+  auto *UserCtx =
+      static_cast<LevelZeroPluginContextTy *>(AsyncInfoWrapper.getContext());
+  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper, UserCtx);
+  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
 }
 
 const char *L0DeviceTy::getArchCStr() const {

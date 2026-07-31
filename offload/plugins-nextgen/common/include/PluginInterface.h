@@ -880,6 +880,11 @@ struct PluginContextTy {
 
   virtual ~PluginContextTy() = default;
 
+  /// Release resources owned by this context. Called from olDestroyContext
+  /// before the object is destroyed so that errors are propagated instead of
+  /// being swallowed in the destructor.
+  virtual llvm::Error deinit() { return llvm::Error::success(); }
+
   llvm::ArrayRef<GenericDeviceTy *> getDevices() const { return Devices; }
   GenericPluginTy &getPlugin() const { return Plugin; }
 

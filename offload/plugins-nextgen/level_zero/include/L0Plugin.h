@@ -32,16 +32,22 @@ public:
       : PluginContextTy(Plugin, Devices), Driver(Driver), ZeContext(ZeContext),
         OwnsZeContext(OwnsZeContext), QueueCache(*this) {}
 
-  ~LevelZeroPluginContextTy() override;
+  ~LevelZeroPluginContextTy() override = default;
+
+  Error deinit() override;
 
   ze_driver_handle_t getZeDriver() const { return Driver; }
   ze_context_handle_t getZeContext() const { return ZeContext; }
 
   /// Pop an idle queue for \p Device from the cache, or create a new one.
-  Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device);
+  Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device) {
+    return QueueCache.getQueue(*Device);
+  }
 
   /// Return an idle queue to the cache.
-  void returnCachedQueue(L0DeviceTy *Device, L0QueueTy *Queue);
+  void returnCachedQueue(L0DeviceTy *Device, L0QueueTy *Queue) {
+    QueueCache.releaseQueue(*Device, Queue);
+  }
 
 private:
   ze_driver_handle_t Driver;

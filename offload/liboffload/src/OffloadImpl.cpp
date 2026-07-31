@@ -643,6 +643,9 @@ Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
 Error olDestroyContext_impl(ol_context_handle_t Context) {
   if (auto Err = Context->drainOutstandingQueues())
     return Err;
+  if (Context->PluginCtx)
+    if (auto Err = Context->PluginCtx->deinit())
+      return Err;
   return olDestroy(Context);
 }
 

@@ -83,7 +83,11 @@ Error L0ContextTy::init() {
 
 Error L0ContextTy::deinit() {
   // Release the default context (drains its queue cache) before zeContext.
-  DefaultUserCtx.reset();
+  if (DefaultUserCtx) {
+    if (auto Err = DefaultUserCtx->deinit())
+      return Err;
+    DefaultUserCtx.reset();
+  }
   if (auto Err = EventPool.deinit())
     return Err;
   if (auto Err = HostMemAllocator.deinit())
