@@ -4,13 +4,24 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/input.s -o %t/input.o
 # RUN: llvm-profdata merge %t/profile.proftext -o %t/profile.profdata
 
-## The temporal profile names _hot_b, whose input section becomes a
-## linker-created ICF thunk. Balanced partitioning must order both that thunk
-## and the shared _hot_a body that it immediately branches to. _hot_c folds to
-## another thunk for the same body but is not profiled and must not be promoted.
+## Safe-thunk ICF retains the first member, _hot_a, as the shared body and
+## replaces later address-significant members, _hot_b and _hot_c, with thunks.
+## Since _hot_a already names offset zero, no extra internal target symbol is
+## needed. The temporal profile names _hot_b, so balanced partitioning must
+## order that thunk and its _hot_a body. The unprofiled _hot_c thunk must not be
+## promoted.
 # RUN: %lld -arch arm64 -e _main -o %t/out %t/input.o --icf=safe_thunks --irpgo-profile=%t/profile.profdata --bp-startup-sort=function --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=VERBOSE
 # VERBOSE: Ordered 2 sections (12 bytes) using balanced partitioning
 # VERBOSE: Functions for startup: 2 (12 bytes)
+
+# RUN: llvm-objdump --no-show-raw-insn -d %t/out | FileCheck %s --check-prefix=THUNKS
+# THUNKS-LABEL: <_hot_a>:
+# THUNKS-NEXT: {{.*}} mov w0, #0x2a
+# THUNKS-NEXT: {{.*}} ret
+# THUNKS-LABEL: <_hot_b>:
+# THUNKS-NEXT: {{.*}} b {{.*}} <_hot_a>
+# THUNKS-LABEL: <_hot_c>:
+# THUNKS-NEXT: {{.*}} b {{.*}} <_hot_a>
 
 # RUN: %lld -arch arm64 -e _main -o - %t/input.o --icf=safe_thunks --irpgo-profile=%t/profile.profdata --bp-startup-sort=function | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDER
 # ORDER: _hot_a

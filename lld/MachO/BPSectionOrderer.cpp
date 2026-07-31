@@ -11,8 +11,10 @@
 #include "OutputSegment.h"
 #include "Relocations.h"
 #include "Symbols.h"
+#include "Target.h"
 #include "lld/Common/BPSectionOrdererBase.inc"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
@@ -121,6 +123,11 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
   SmallVector<InputSection *> sections;
   DenseMap<const InputSection *, unsigned> sectionToIdx;
   DenseMap<CachedHashStringRef, std::set<unsigned>> rootSymbolToSectionIdxs;
+  auto isThunk = [](ArrayRef<Defined *> symbols) {
+    return llvm::any_of(symbols, [](Defined *sym) {
+      return sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk;
+    });
+  };
   auto addSectionForName = [&](StringRef name, unsigned idx) {
     auto rootName = lld::utils::getRootSymbol(name);
     rootSymbolToSectionIdxs[CachedHashStringRef(rootName)].insert(idx);
@@ -156,39 +163,23 @@ DenseMap<const InputSection *, int> lld::macho::runBalancedPartitioning(
   // ICF safe thunks are linker-created after the input-file section graph is
   // built, so they do not appear in file->sections. Include them through the
   // same path as input-file sections so only live BP candidates are added.
-  for (auto *isec : inputSections) {
-    for (auto *sym : isec->symbols) {
-      if (sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
-        addSection(isec);
-        break;
-      }
-    }
-  }
+  for (auto *isec : inputSections)
+    if (isThunk(isec->symbols))
+      addSection(isec);
 
   // A temporal profile naming an ICF thunk describes execution of both the
   // thunk and the shared body it branches to. Add the body to each name that
-  // resolves to a thunk, following the thunk relocation to find it.
-  for (auto &entry : rootSymbolToSectionIdxs) {
-    auto &sectionIdxs = entry.second;
-    SmallVector<unsigned> bodySectionIdxs;
+  // resolves to a thunk.
+  for (auto &[symbol, sectionIdxs] : rootSymbolToSectionIdxs) {
     for (unsigned idx : sectionIdxs) {
       InputSection *isec = sections[idx];
-      bool isThunk = false;
-      for (auto *sym : isec->symbols) {
-        if (sym->identicalCodeFoldingKind == Symbol::ICFFoldKind::Thunk) {
-          isThunk = true;
-          break;
-        }
-      }
-      if (!isThunk)
+      if (!isThunk(isec->symbols))
         continue;
-      for (const Relocation &reloc : isec->relocs) {
-        auto bodyIdx = sectionToIdx.find(reloc.getReferentInputSection());
-        if (bodyIdx != sectionToIdx.end())
-          bodySectionIdxs.push_back(bodyIdx->second);
-      }
+      auto *bodySym = cast<Defined>(target->getThunkBranchTarget(isec));
+      auto bodyIdx = sectionToIdx.find(bodySym->isec());
+      if (bodyIdx != sectionToIdx.end())
+        sectionIdxs.insert(bodyIdx->second);
     }
-    sectionIdxs.insert(bodySectionIdxs.begin(), bodySectionIdxs.end());
   }
 
   auto result = BPOrdererMachO().computeOrder(
