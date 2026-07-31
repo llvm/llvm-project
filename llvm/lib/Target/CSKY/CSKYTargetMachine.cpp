@@ -65,7 +65,7 @@ CSKYTargetMachine::getSubtargetImpl(const Function &F) const {
     FloatABI = Options.FloatABIType;
 
   std::string Key = CPU + TuneCPU + FS;
-  Key += FloatABI == FloatABI::Soft ? "+soft-float-abi" : "+hard-float-abi";
+  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
   auto &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<CSKYSubtarget>(TargetTriple, CPU, TuneCPU, FS,

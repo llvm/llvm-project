@@ -129,7 +129,7 @@ void CSKYAsmPrinter::emitFunctionBodyEnd() {
 
 void CSKYAsmPrinter::emitStartOfAsmFile(Module &M) {
   if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes(M);
+    emitAttributes();
 }
 
 void CSKYAsmPrinter::emitEndOfAsmFile(Module &M) {
@@ -245,7 +245,7 @@ void CSKYAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
-void CSKYAsmPrinter::emitAttributes(Module &M) {
+void CSKYAsmPrinter::emitAttributes() {
   CSKYTargetStreamer &CTS =
       static_cast<CSKYTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
