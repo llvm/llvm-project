@@ -881,6 +881,16 @@ defm FP8ConversionInsts : AMDGPUSubtargetFeature<"fp8-conversion-insts",
   "Has fp8 and bf8 conversion instructions"
 >;
 
+// OCP fp8 semantics (E4M3FN, E5M2). Distinct from the FNUZ formats used by
+// gfx942.
+defm OCPFP8ConversionInsts : AMDGPUSubtargetFeature<"ocp-fp8-conversion-insts",
+  "Has OCP fp8 (E4M3FN, E5M2) conversion instructions"
+>;
+
+defm FP8F16ConversionInsts : AMDGPUSubtargetFeature<"fp8-f16-conversion-insts",
+  "Has fp8 and bf8 conversion to f16 instructions"
+>;
+
 defm FP8E5M3Insts : AMDGPUSubtargetFeature<"fp8e5m3-insts",
   "Has fp8 e5m3 format support"
 >;
@@ -1953,6 +1963,7 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureFP8Insts,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8SDWASrcSel,
+   FeatureOCPFP8ConversionInsts,
    FeatureGFX950Insts,
    FeaturePrngInst,
    FeatureBF16ConversionInsts,
@@ -2165,6 +2176,7 @@ def FeatureISAVersion11_7_Common : FeatureSet<
      FeatureDPPSrc1SGPR,
      FeatureFP8ConversionInsts,
      FeatureCvtFP8ByteSel,
+     FeatureOCPFP8ConversionInsts,
      FeatureDot11Insts,
      FeatureWMMA128bInsts,
      FeatureSWMMACGfx1200Insts,
@@ -2207,6 +2219,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8ByteSel,
+   FeatureOCPFP8ConversionInsts,
    FeatureWMMA128bInsts,
    FeatureSWMMACGfx1200Insts,
    FeatureIEEEMinimumMaximumInsts,
@@ -2270,6 +2283,8 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8ByteSel,
+   FeatureOCPFP8ConversionInsts,
+   FeatureFP8F16ConversionInsts,
    FeatureFP8E5M3Insts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -2426,6 +2441,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8ByteSel,
+   FeatureOCPFP8ConversionInsts,
+   FeatureFP8F16ConversionInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
