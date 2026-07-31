@@ -8995,7 +8995,7 @@ for details.
   }];
 }
 
-def HLLSControlFlowHintDocs : Documentation {
+def HLSLControlFlowHintDocs : Documentation {
   let Category = DocCatStmt;
   let Heading = "branch, flatten";
   let Content = [{
