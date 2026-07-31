@@ -144,6 +144,23 @@ public:
     return true;
   }
 
+  virtual SmallVector<TTI::PointerInfo, 8> getPointerInfos() const {
+    return {};
+  }
+
+  virtual std::optional<TTI::PointerInfo> getPointerInfo(unsigned AS) const {
+    // Targets only need to override getPointerInfos(); this searches the list
+    // they report, which is sorted by address space number.
+    SmallVector<TTI::PointerInfo, 8> Infos = getPointerInfos();
+    const auto *I = lower_bound(Infos, AS, [](const TTI::PointerInfo &PI,
+                                              unsigned AS) {
+      return PI.AddrSpace < AS;
+    });
+    if (I == Infos.end() || I->AddrSpace != AS)
+      return std::nullopt;
+    return *I;
+  }
+
   virtual unsigned getFlatAddressSpace() const { return -1; }
 
   virtual bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,

@@ -312,6 +312,16 @@ bool llvm::TargetTransformInfo::addrspacesMayAlias(unsigned FromAS,
   return TTIImpl->addrspacesMayAlias(FromAS, ToAS);
 }
 
+SmallVector<TargetTransformInfo::PointerInfo, 8>
+TargetTransformInfo::getPointerInfos() const {
+  return TTIImpl->getPointerInfos();
+}
+
+std::optional<TargetTransformInfo::PointerInfo>
+TargetTransformInfo::getPointerInfo(unsigned AS) const {
+  return TTIImpl->getPointerInfo(AS);
+}
+
 unsigned TargetTransformInfo::getFlatAddressSpace() const {
   return TTIImpl->getFlatAddressSpace();
 }

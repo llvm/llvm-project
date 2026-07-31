@@ -547,6 +547,26 @@ public:
   /// Return false if a \p AS0 address cannot possibly alias a \p AS1 address.
   LLVM_ABI bool addrspacesMayAlias(unsigned AS0, unsigned AS1) const;
 
+  /// Describes a single address space exposed by the target.
+  struct PointerInfo {
+    /// The address space number, in the target's own numbering.
+    unsigned AddrSpace = 0;
+    /// The target's name for this address space, e.g. "global". Empty if the
+    /// target does not name it.
+    StringRef Name;
+  };
+
+  /// Returns every address space the target gives a meaning to, sorted by
+  /// address space number.
+  ///
+  /// \returns an empty list for targets that do not describe their address
+  /// spaces.
+  LLVM_ABI SmallVector<PointerInfo, 8> getPointerInfos() const;
+
+  /// Returns the description of address space \p AS, or std::nullopt if the
+  /// target does not describe it.
+  LLVM_ABI std::optional<PointerInfo> getPointerInfo(unsigned AS) const;
+
   /// Returns the address space ID for a target's 'flat' address space. Note
   /// this is not necessarily the same as addrspace(0), which LLVM sometimes
   /// refers to as the generic address space. The flat address space is a
