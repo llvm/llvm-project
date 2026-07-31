@@ -83,7 +83,7 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
     return CudaVersion::UNKNOWN;
 
   // AMD GPUs do not depend on CUDA versions.
-  if (IsAMDOffloadArch(A))
+  if (A.isAMDGPU() || A.isSPIRV())
     return CudaVersion::CUDA_70;
 
   switch (A.nvptxKind()) {
@@ -98,7 +98,7 @@ CudaVersion MinVersionForOffloadArch(OffloadArch A) {
 
 CudaVersion MaxVersionForOffloadArch(OffloadArch A) {
   // AMD GPUs do not depend on CUDA versions.
-  if (IsAMDOffloadArch(A))
+  if (A.isAMDGPU() || A.isSPIRV())
     return CudaVersion::NEW;
 
   if (!A.isNVPTX())

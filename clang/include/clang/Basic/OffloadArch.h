@@ -106,15 +106,6 @@ public:
   }
 };
 
-inline bool IsNVIDIAOffloadArch(OffloadArch A) { return A.isNVPTX(); }
-inline bool IsAMDOffloadArch(OffloadArch A) {
-  // amdgcnspirv is compiled through the AMDGPU toolchain.
-  return A.isAMDGPU() || A.isSPIRV();
-}
-inline bool IsIntelCPUOffloadArch(OffloadArch A) { return A.isIntelCPU(); }
-inline bool IsIntelGPUOffloadArch(OffloadArch A) { return A.isIntelGPU(); }
-inline bool IsIntelOffloadArch(OffloadArch A) { return A.isIntel(); }
-
 const char *OffloadArchToString(OffloadArch A);
 const char *OffloadArchToVirtualArchString(OffloadArch A);
 
