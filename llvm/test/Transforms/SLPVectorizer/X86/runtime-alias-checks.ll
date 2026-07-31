@@ -1134,69 +1134,69 @@ define void @versioned_block_with_loop_defined_base(ptr %arg, ptr %arg1, ptr %ar
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
 ; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[BBL9_RTSCALAR:.*]], label %[[BBL9_RTVEC:.*]]
 ; CHECK:       [[BBL9_RTVEC]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr poison, align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[PHI_LCSSA]], align 1
 ; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[ARG2]], align 1
 ; CHECK-NEXT:    br label %[[BBL9_RTCONT:.*]]
 ; CHECK:       [[BBL9_RTSCALAR]]:
-; CHECK-NEXT:    [[LOAD10_SCALAR:%.*]] = load i8, ptr poison, align 1
+; CHECK-NEXT:    [[LOAD10_SCALAR:%.*]] = load i8, ptr [[PHI_LCSSA]], align 1
 ; CHECK-NEXT:    store i8 [[LOAD10_SCALAR]], ptr [[ARG2]], align 1
-; CHECK-NEXT:    [[GEP1_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 1
+; CHECK-NEXT:    [[GEP1_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 1
 ; CHECK-NEXT:    [[LOAD11_SCALAR:%.*]] = load i8, ptr [[GEP1_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP12_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 1
 ; CHECK-NEXT:    store i8 [[LOAD11_SCALAR]], ptr [[GEP12_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP13_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 2
+; CHECK-NEXT:    [[GEP13_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 2
 ; CHECK-NEXT:    [[LOAD14_SCALAR:%.*]] = load i8, ptr [[GEP13_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP15_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 2
 ; CHECK-NEXT:    store i8 [[LOAD14_SCALAR]], ptr [[GEP15_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP16_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 3
+; CHECK-NEXT:    [[GEP16_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 3
 ; CHECK-NEXT:    [[LOAD17_SCALAR:%.*]] = load i8, ptr [[GEP16_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP18_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 3
 ; CHECK-NEXT:    store i8 [[LOAD17_SCALAR]], ptr [[GEP18_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP19_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 4
+; CHECK-NEXT:    [[GEP19_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 4
 ; CHECK-NEXT:    [[LOAD20_SCALAR:%.*]] = load i8, ptr [[GEP19_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP21_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 4
 ; CHECK-NEXT:    store i8 [[LOAD20_SCALAR]], ptr [[GEP21_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP22_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 5
+; CHECK-NEXT:    [[GEP22_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 5
 ; CHECK-NEXT:    [[LOAD23_SCALAR:%.*]] = load i8, ptr [[GEP22_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP24_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 5
 ; CHECK-NEXT:    store i8 [[LOAD23_SCALAR]], ptr [[GEP24_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP25_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 6
+; CHECK-NEXT:    [[GEP25_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 6
 ; CHECK-NEXT:    [[LOAD26_SCALAR:%.*]] = load i8, ptr [[GEP25_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP27_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 6
 ; CHECK-NEXT:    store i8 [[LOAD26_SCALAR]], ptr [[GEP27_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP28_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 7
+; CHECK-NEXT:    [[GEP28_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 7
 ; CHECK-NEXT:    [[LOAD29_SCALAR:%.*]] = load i8, ptr [[GEP28_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP30_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 7
 ; CHECK-NEXT:    store i8 [[LOAD29_SCALAR]], ptr [[GEP30_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP31_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 8
+; CHECK-NEXT:    [[GEP31_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 8
 ; CHECK-NEXT:    [[LOAD32_SCALAR:%.*]] = load i8, ptr [[GEP31_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP33_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 8
 ; CHECK-NEXT:    store i8 [[LOAD32_SCALAR]], ptr [[GEP33_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP34_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 9
+; CHECK-NEXT:    [[GEP34_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 9
 ; CHECK-NEXT:    [[LOAD35_SCALAR:%.*]] = load i8, ptr [[GEP34_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP36_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 9
 ; CHECK-NEXT:    store i8 [[LOAD35_SCALAR]], ptr [[GEP36_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP37_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 10
+; CHECK-NEXT:    [[GEP37_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 10
 ; CHECK-NEXT:    [[LOAD38_SCALAR:%.*]] = load i8, ptr [[GEP37_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP39_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 10
 ; CHECK-NEXT:    store i8 [[LOAD38_SCALAR]], ptr [[GEP39_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP40_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 11
+; CHECK-NEXT:    [[GEP40_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 11
 ; CHECK-NEXT:    [[LOAD41_SCALAR:%.*]] = load i8, ptr [[GEP40_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP42_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 11
 ; CHECK-NEXT:    store i8 [[LOAD41_SCALAR]], ptr [[GEP42_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP43_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 12
+; CHECK-NEXT:    [[GEP43_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 12
 ; CHECK-NEXT:    [[LOAD44_SCALAR:%.*]] = load i8, ptr [[GEP43_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP45_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 12
 ; CHECK-NEXT:    store i8 [[LOAD44_SCALAR]], ptr [[GEP45_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP46_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 13
+; CHECK-NEXT:    [[GEP46_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 13
 ; CHECK-NEXT:    [[LOAD47_SCALAR:%.*]] = load i8, ptr [[GEP46_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP48_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 13
 ; CHECK-NEXT:    store i8 [[LOAD47_SCALAR]], ptr [[GEP48_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP49_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 14
+; CHECK-NEXT:    [[GEP49_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 14
 ; CHECK-NEXT:    [[LOAD50_SCALAR:%.*]] = load i8, ptr [[GEP49_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP51_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 14
 ; CHECK-NEXT:    store i8 [[LOAD50_SCALAR]], ptr [[GEP51_SCALAR]], align 1
-; CHECK-NEXT:    [[GEP52_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr poison, i64 15
+; CHECK-NEXT:    [[GEP52_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 15
 ; CHECK-NEXT:    [[LOAD53_SCALAR:%.*]] = load i8, ptr [[GEP52_SCALAR]], align 1
 ; CHECK-NEXT:    [[GEP54_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 15
 ; CHECK-NEXT:    store i8 [[LOAD53_SCALAR]], ptr [[GEP54_SCALAR]], align 1
