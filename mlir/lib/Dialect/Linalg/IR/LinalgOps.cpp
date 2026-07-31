@@ -509,6 +509,24 @@ public:
       return math::CosOp::create(builder, arg.getLoc(), arg);
     case UnaryFn::tan:
       return math::TanOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::acos:
+      return math::AcosOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::acosh:
+      return math::AcoshOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::asin:
+      return math::AsinOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::asinh:
+      return math::AsinhOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::atan:
+      return math::AtanOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::atanh:
+      return math::AtanhOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::log10:
+      return math::Log10Op::create(builder, arg.getLoc(), arg);
+    case UnaryFn::log1p:
+      return math::Log1pOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::log2:
+      return math::Log2Op::create(builder, arg.getLoc(), arg);
     }
     if (emitError) {
       emitError() << "unsupported unary function";
@@ -2338,6 +2356,10 @@ LogicalResult BroadcastOp::verify() {
                            << initRank - 1 << "], got: " << dim;
   }
 
+  DenseSet<int64_t> uniquedDims(llvm::from_range, dimensionsRef);
+  if (uniquedDims.size() != dimensionsRef.size())
+    return emitOpError() << "dimensions should not contain duplicates";
+
   // Mapping from input dims to init dims.
   SmallVector<int64_t> dimMap;
   for (auto dim : llvm::seq<int64_t>(0, initRank)) {
@@ -2922,6 +2944,15 @@ SmallVector<utils::IteratorType> SoftmaxOp::getLoopIteratorTypes() {
   return iteratorTypes;
 }
 
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> SoftmaxOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 FailureOr<TilingResult>
 SoftmaxOp::getTiledImplementation(OpBuilder &builder,
                                   ArrayRef<OpFoldResult> offsets,
@@ -3275,6 +3306,15 @@ LogicalResult WinogradFilterTransformOp::getResultTilePosition(
   return success();
 }
 
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> WinogradFilterTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
+}
+
 /// Implement tiling for winograd_filter_transform
 /// The input of winograd_filter_transform is (F, KH, KW, C).
 /// The output of winograd_filter_transform is (alphaH, alphaW, C, F)
@@ -3426,6 +3466,15 @@ LogicalResult WinogradInputTransformOp::getResultTilePosition(
                       sizes[getOutputCDim()]});
 
   return success();
+}
+
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> WinogradInputTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
 }
 
 /// Implement tiling for winograd_input_transform
@@ -3621,6 +3670,15 @@ LogicalResult WinogradOutputTransformOp::getResultTilePosition(
   resultSizes.append(
       {sizes[getValueNDim()], sizeH, sizeW, sizes[getValueFDim()]});
   return success();
+}
+
+/// The inner tile alignment hint is only used by `linalg.pack` and
+/// `linalg.unpack` operations. Therefore, this is forwarded to the hint-less
+/// overload.
+FailureOr<TilingResult> WinogradOutputTransformOp::getTiledImplementation(
+    OpBuilder &builder, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, ArrayRef<InnerTileAlignment>) {
+  return getTiledImplementation(builder, offsets, sizes);
 }
 
 /// Implement tiling for winograd_output_transform
@@ -5885,11 +5943,14 @@ static bool haveSameTiles(PackOp packOp, UnPackOp unPackOp) {
 /// Returns true if the pack op does not need a padding value.
 static bool paddingIsNotNeeded(PackOp op) {
   auto srcType = op.getSourceType();
-  if (llvm::any_of(op.getInnerDimsPos(),
-                   [&](int64_t pos) { return srcType.isDynamicDim(pos); }))
+  auto innerDimsPos = op.getInnerDimsPos();
+  auto innerTiles = op.getStaticInnerTiles();
+  if (ShapedType::isDynamicShape(innerTiles))
     return false;
-  if (ShapedType::isDynamicShape(op.getStaticInnerTiles()))
-    return false;
+  for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
+    if (srcType.isDynamicDim(pos) && tileSize != 1)
+      return false;
+  }
   return !PackOp::requirePaddingValue(
       srcType.getShape(), op.getInnerDimsPos(), op.getDestType().getShape(),
       op.getOuterDimsPerm(), op.getMixedTiles());

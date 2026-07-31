@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "Clang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -407,9 +415,12 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
-set(HOST_LINK_VERSION)
-if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+set(HOST_LINK_VERSION "" CACHE STRING "Host linker version on Darwin")
+if (APPLE AND NOT HOST_LINK_VERSION AND NOT CMAKE_LINKER MATCHES ".*lld.*")
   get_darwin_linker_version(HOST_LINK_VERSION)
+  set(HOST_LINK_VERSION "${HOST_LINK_VERSION}" CACHE STRING "Host linker version on Darwin" FORCE)
+endif()
+if (HOST_LINK_VERSION)
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 
@@ -549,7 +560,12 @@ add_subdirectory(tools)
 add_subdirectory(runtime)
 
 option(CLANG_BUILD_EXAMPLES "Build CLANG example programs by default." OFF)
-add_subdirectory(examples)
+option(CLANG_INCLUDE_EXAMPLES
+       "Generate build targets for the Clang examples."
+       ${LLVM_INCLUDE_EXAMPLES})
+if (CLANG_INCLUDE_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 if(APPLE)
   # this line is needed as a cleanup to ensure that any CMakeCaches with the old
@@ -810,11 +826,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
   if(LLVM_BUILD_INSTRUMENTED)
     string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
     if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
-      add_dependencies(clang-bootstrap-deps generate-sprofdata)
-      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata)
+      set(PGO_OPT_SPROFDATA "${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata" CACHE STRING "")
+      set(PGO_OPT_SPROFDATA_PROVIDER generate-sprofdata CACHE STRING "")
+      add_dependencies(clang-bootstrap-deps ${PGO_OPT_SPROFDATA_PROVIDER})
+      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${PGO_OPT_SPROFDATA})
     else()
-      add_dependencies(clang-bootstrap-deps generate-profdata)
-      set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+      set(PGO_OPT_PROFDATA "${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata" CACHE STRING "")
+      set(PGO_OPT_PROFDATA_PROVIDER generate-profdata CACHE STRING "")
+      add_dependencies(clang-bootstrap-deps ${PGO_OPT_PROFDATA_PROVIDER})
+      set(PGO_OPT -DLLVM_PROFDATA_FILE=${PGO_OPT_PROFDATA})
     endif()
     # Use the current tools for LTO instead of the instrumented ones
     list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH

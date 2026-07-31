@@ -160,7 +160,8 @@ public:
       unsigned RemainingBytes, unsigned SrcAddrSpace, unsigned DestAddrSpace,
       Align SrcAlign, Align DestAlign,
       std::optional<uint32_t> AtomicCpySize) const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInst *Inst,
                           MemIntrinsicInfo &Info) const override;
@@ -296,7 +297,7 @@ public:
                          TTI::TargetCostKind CostKind) const override;
 
   /// Data cache line size for LoopDataPrefetch pass. Has no use before GFX12.
-  unsigned getCacheLineSize() const override { return 128; }
+  unsigned getCacheLineSize() const override;
 
   /// How much before a load we should place the prefetch instruction.
   /// This is currently measured in number of IR instructions.

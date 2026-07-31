@@ -135,12 +135,17 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::CudaManaged);
   disable_.set(LanguageFeature::CudaUnified);
   disable_.set(LanguageFeature::CudaPinned);
+  disable_.set(LanguageFeature::CUDAInit);
   disable_.set(LanguageFeature::ImplicitNoneTypeNever);
   disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
   disable_.set(LanguageFeature::ImplicitNoneExternal);
   disable_.set(LanguageFeature::DefaultSave);
   disable_.set(LanguageFeature::SaveMainProgram);
-  disable_.set(LanguageFeature::RelaxedCLoc);
+  disable_.set(LanguageFeature::RelaxedCLocChecks);
+  // F2023 ENUMERATION TYPE: experimental.  Semantics are implemented, but
+  // FIR lowering is not, so the feature is off by default and must be
+  // explicitly enabled (for testing) with -fenumeration-type.
+  disable_.set(LanguageFeature::EnumerationType);
   // These features, if enabled, conflict with valid standard usage,
   // so there are disabled here by default.
   disable_.set(LanguageFeature::BackslashEscapes);
@@ -150,6 +155,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   // Possibly an accidental "feature" of nvfortran.
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
   disable_.set(LanguageFeature::Coarray);
+  disable_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
@@ -215,8 +221,9 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::MisplacedIgnoreTKR);
   warnUsage_.set(UsageWarning::ImpureFinalInPure);
   warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
-  warnUsage_.set(UsageWarning::CLoc);
+  warnUsage_.set(UsageWarning::IoImpliedDoIndexConflict);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
+  warnLanguage_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
   warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);
 }
 

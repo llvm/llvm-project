@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -target-feature +lut -target-feature +bf16 -ffreestanding -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -target-feature +neon -target-feature +lut -ffreestanding -fsyntax-only -verify %s
 
 #include <arm_neon.h>
 // REQUIRES: aarch64-registered-target

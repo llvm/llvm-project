@@ -30,8 +30,6 @@
 //    the compute_region.
 //
 // 3. Finalization: acc.routine's func_name is updated to the device function.
-//    For nohost routines, all uses of the host symbol are replaced with the
-//    device symbol and the host function is erased.
 //
 //===----------------------------------------------------------------------===//
 
@@ -169,7 +167,7 @@ buildRoutineBody(func::FuncOp deviceFunc, func::FuncOp hostFunc,
   return success();
 }
 
-/// Update acc.routine refs and optionally erase host for nohost routines.
+/// Update acc.routine refs
 static LogicalResult finalizeRoutines(
     SmallVectorImpl<std::tuple<func::FuncOp, func::FuncOp, RoutineOp>>
         &accRoutineInfo,
@@ -177,16 +175,6 @@ static LogicalResult finalizeRoutines(
   for (auto &[hostFunc, deviceFunc, routineOp] : accRoutineInfo) {
     routineOp.setFuncNameAttr(SymbolRefAttr::get(ctx, deviceFunc.getName()));
     routineOp->moveBefore(deviceFunc);
-
-    if (routineOp.getNohost()) {
-      if (failed(SymbolTable::replaceAllSymbolUses(
-              StringAttr::get(ctx, hostFunc.getName()),
-              StringAttr::get(ctx, deviceFunc.getName()), mod))) {
-        routineOp.emitError("cannot replace symbol uses for acc routine");
-        return failure();
-      }
-      hostFunc->erase();
-    }
   }
   return success();
 }

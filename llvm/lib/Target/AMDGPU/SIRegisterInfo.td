@@ -1445,6 +1445,8 @@ def VSrc_f64    : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_FP64"> {
 }
 def VSrc_v2b32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2INT32">;
 def VSrc_v2f32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2FP32">;
+def VSrc_v2b64 : SrcRegOrImm9 <VS_128, "OPERAND_REG_IMM_V2INT64">;
+def VSrc_v2f64 : SrcRegOrImm9 <VS_128, "OPERAND_REG_IMM_V2FP64">;
 
 def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
 

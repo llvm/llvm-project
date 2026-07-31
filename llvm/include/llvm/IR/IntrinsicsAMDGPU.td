@@ -318,6 +318,7 @@ def int_amdgcn_s_barrier_join : ClangBuiltin<"__builtin_amdgcn_s_barrier_join">,
 
 // void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %barrier)
 // The %barrier argument must be uniform, otherwise behavior is undefined.
+let TargetFeatures = "s-wakeup-barrier-inst" in
 def int_amdgcn_s_wakeup_barrier : ClangBuiltin<"__builtin_amdgcn_s_wakeup_barrier">,
   Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
@@ -475,6 +476,7 @@ def int_amdgcn_fmul_legacy : ClangBuiltin<"__builtin_amdgcn_fmul_legacy">,
 // intended for use on subtargets that have the v_fma_legacy_f32 and/or
 // v_fmac_legacy_f32 instructions. (Note that v_fma_legacy_f16 is unrelated and
 // has a completely different kind of legacy behaviour.)
+let TargetFeatures = "fma-legacy32-insts" in
 def int_amdgcn_fma_legacy :
   PureIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty, llvm_float_ty],
   [Commutative]
@@ -586,6 +588,7 @@ def int_amdgcn_fmad_ftz :
             [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]
 >;
 
+let TargetFeatures = "tanh-insts" in
 def int_amdgcn_tanh : PureIntrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>]
 >;
@@ -915,8 +918,6 @@ class AMDGPUAVStore : Intrinsic <
   [SDNPMemOperand, SDNPMayStore]
 >;
 
-def int_amdgcn_av_store_b128 : AMDGPUAVStore;
-
 class AMDGPUAVLoad : Intrinsic <
   [llvm_v4i32_ty],
   [llvm_anyptr_ty,         // Pointer to load from (flat or global)
@@ -927,7 +928,10 @@ class AMDGPUAVLoad : Intrinsic <
   [SDNPMemOperand, SDNPMayLoad]
 >;
 
+let TargetFeatures = "flat-global-insts" in {
+def int_amdgcn_av_store_b128 : AMDGPUAVStore;
 def int_amdgcn_av_load_b128 : AMDGPUAVLoad;
+} // End TargetFeatures = "flat-global-insts"
 
 } // TargetPrefix = "amdgcn"
 
@@ -1469,8 +1473,10 @@ def int_amdgcn_make_buffer_rsrc : PureIntrinsic <
 
 defset list<AMDGPURsrcIntrinsic> AMDGPUBufferIntrinsics = {
 
-// Generate a buffer_load instruction that may be optimized to s_buffer_load if
-// the offset argument is uniform.
+// Legacy form of the ptr.s.buffer.load intrinsic (will be deprecated) that uses a
+// <4 x i32> vector to hold the intrinsic instead of a pointer. While it is marked
+// as not accessing memory (to enable something equivalent to invariant load
+// optimizations), it does do so.
 def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
   [llvm_any_ty],
   [llvm_v4i32_ty,    // rsrc(SGPR)
@@ -1483,6 +1489,32 @@ def int_amdgcn_s_buffer_load : DefaultAttrsIntrinsic <
                      //                bit 6 = swz
                      // Note: volatile bit is **not** permitted here.
   [IntrNoMem, ImmArg<ArgIndex<2>>]>,
+  AMDGPURsrcIntrinsic<0>;
+
+// Generate an s_buffer_load instruction, falling back to buffer_load if the offset
+// is not uniform. Note that some architectures require the offset to be aligned to
+// the width of the type being loaded (or, in some cases the shorter of that
+// alignment and 4 bytes). No attempt is made to ensure this alignment requirement
+// has been satisfied during lowering.
+//
+// Also note that this data is loaded via a distinct cache than typical load
+// instructions or other buffer_load operations. Therefore, the data pointed to by
+// this load *must* be invariant to avoid coherence risks. Frontends emitting
+// this intrinsic *should* mark it `!invariant.load`, and the backend may also
+// add such markings.
+def int_amdgcn_ptr_s_buffer_load : DefaultAttrsIntrinsic <
+  [llvm_any_ty],
+  [AMDGPUBufferRsrcTy, // rsrc(SGPR)
+   llvm_i32_ty,        // byte offset
+   llvm_i32_ty],       // auxiliary/cachepolicy(imm):
+                       //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                       //                bit 3 = swz, bit 4 = scc (gfx90a)
+                       //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                       //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                       //                bit 6 = swz
+                       // Note: volatile bit is **not** permitted here.
+  [IntrArgMemOnly, IntrReadMem, ReadOnly<ArgIndex<0>>,
+   NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>], "", [SDNPMemOperand]>,
   AMDGPURsrcIntrinsic<0>;
 
 // Buffer intrinsics with separate raw and struct variants.  The raw
@@ -2159,6 +2191,7 @@ def int_amdgcn_exp_row : DefaultAttrsIntrinsic <[], [
 >;
 
 // exp with compr bit set. Not supported on GFX11+.
+let TargetFeatures = "-gfx11-insts" in
 def int_amdgcn_exp_compr : DefaultAttrsIntrinsic <[], [
   llvm_i32_ty,       // tgt,
   llvm_i32_ty,       // en
@@ -2476,6 +2509,7 @@ def int_amdgcn_inverse_ballot :
 // Lowers to S_BITREPLICATE_B64_B32.
 // The argument must be uniform; otherwise, the result is undefined.
 def int_amdgcn_s_bitreplicate :
+  ClangBuiltin<"__builtin_amdgcn_s_bitreplicate">,
   DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
 
 // Lowers to S_QUADMASK_B{32,64}
@@ -2865,6 +2899,7 @@ def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_am
 def int_amdgcn_global_load_async_lds : AMDGPUGlobalLoadLDS, ClangBuiltin<"__builtin_amdgcn_global_load_async_lds">;
 
 // This is IntrHasSideEffects because it reads from a volatile hardware register.
+let TargetFeatures = "pops-exiting-wave-id" in
 def int_amdgcn_pops_exiting_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
@@ -2881,6 +2916,7 @@ def int_amdgcn_wait_asyncmark :
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
 
+let TargetFeatures = "permlane16-insts" in {
 // llvm.amdgcn.permlane16 <old> <src0> <src1> <src2> <fi> <bound_control>
 def int_amdgcn_permlane16 :
   Intrinsic<[llvm_any_ty],
@@ -2894,10 +2930,12 @@ def int_amdgcn_permlanex16 :
             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn,
              ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>, IntrNoCallback, IntrNoFree]>;
+} // End TargetFeatures = "permlane16-insts"
 
 // llvm.amdgcn.mov.dpp8 <src> <sel>
 // <sel> is a 32-bit constant whose high 8 bits must be zero which selects
 // the lanes to read from.
+let TargetFeatures = "dpp8" in
 def int_amdgcn_mov_dpp8 :
   Intrinsic<[llvm_any_ty],
             [LLVMMatchType<0>, llvm_i32_ty],
@@ -2920,6 +2958,7 @@ class AMDGPUAtomicRtn<LLVMType vt, LLVMType pt = llvm_anyptr_ty> : Intrinsic <
 //                                           <ray_dir>, <ray_inv_dir>, <texture_descr>
 // <node_ptr> is i32 or i64.
 // <ray_dir> and <ray_inv_dir> are both v3f16 or both v3f32.
+let TargetFeatures = "bvh-ray-tracing-insts" in
 def int_amdgcn_image_bvh_intersect_ray :
   DefaultAttrsIntrinsic<[llvm_v4i32_ty],
             [llvm_anyint_ty, llvm_float_ty, llvm_v3f32_ty, llvm_anyvector_ty,
@@ -3063,6 +3102,7 @@ def int_amdgcn_ds_bvh_stack_push8_pop1_rtn : IntDSBVHStackRtn<vdst  = llvm_i32_t
 def int_amdgcn_ds_bvh_stack_push8_pop2_rtn : IntDSBVHStackRtn<vdst  = llvm_i64_ty,
                                                               data1 = llvm_v8i32_ty>;
 
+let TargetFeatures = "bvh-dual-bvh-8-insts" in {
 // <vdata>, <ray_origin>, <ray_dir>
 //   llvm.amdgcn.image.bvh.dual.intersect.ray <node_ptr>, <ray_extent>,
 //                                            <instance_mask>, <ray_origin>,
@@ -3084,6 +3124,7 @@ def int_amdgcn_image_bvh8_intersect_ray :
             [llvm_i64_ty, llvm_float_ty, llvm_i8_ty, llvm_v3f32_ty,
              llvm_v3f32_ty, llvm_i32_ty, llvm_v4i32_ty],
             [IntrReadMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+} // End TargetFeatures = "bvh-dual-bvh-8-insts"
 
 // llvm.amdgcn.permlane16.var <old> <src0> <src1> <fi> <bound_control>
 def int_amdgcn_permlane16_var : ClangBuiltin<"__builtin_amdgcn_permlane16_var">,
@@ -3261,6 +3302,16 @@ def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch"
   >;
 
 //===----------------------------------------------------------------------===//
+// GFX13 Intrinsics
+//===----------------------------------------------------------------------===//
+
+// v6i32 @llvm.amdgcn.cvt.scalef32.pk32.bf6.f32 <src0> <scale>
+def int_amdgcn_cvt_scalef32_pk32_bf6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_bf6_f32">;
+
+// v6i32 @llvm.amdgcn.cvt.scalef32.pk32.fp6.f32 <src0> <scale>
+def int_amdgcn_cvt_scalef32_pk32_fp6_f32 : AMDGPUCvtScaleF32Intrinsic<llvm_v6i32_ty, llvm_v32f32_ty, "cvt_scalef32_pk32_fp6_f32">;
+
+//===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//
 
@@ -3403,6 +3454,7 @@ def int_amdgcn_udot4 :
 // a[i in 0. . . 3] = (%a_sign ? a.i8[i] : promoteToSigned(a.u8[i]));
 // b[i in 0. . . 3] = (%b_sign ? b.i8[i] : promoteToSigned(b.u8[i]));
 //   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] + %c
+let TargetFeatures = "dot8-insts" in
 def int_amdgcn_sudot4 :
   ClangBuiltin<"__builtin_amdgcn_sudot4">,
   PureIntrinsic<
@@ -3456,6 +3508,7 @@ def int_amdgcn_udot8 :
 // b[i in 0. . . 7] = (%b_sign ? b.i4[i] : promoteToSigned(b.u4[i]));
 //   %r = %a[0] * %b[0] + %a[1] * %b[1] + %a[2] * %b[2] + %a[3] * %b[3] +
 //        %a[4] * %b[4] + %a[5] * %b[5] + %a[6] * %b[6] + %a[7] * %b[7] + %c
+  let TargetFeatures = "dot8-insts" in
   def int_amdgcn_sudot8 :
   ClangBuiltin<"__builtin_amdgcn_sudot8">,
   PureIntrinsic<
@@ -3724,6 +3777,7 @@ def int_amdgcn_smfmac_f32_32x32x64_fp8_fp8 : AMDGPUMSmfmacIntrinsic<llvm_v16f32_
 }
 
 // { vdst_new, vsrc_new } llvm.amdgcn.permlane16.swap <vdst_old> <vsrc_old> <fi> <bound_control>
+let TargetFeatures = "permlane16-swap" in
 def int_amdgcn_permlane16_swap :
   Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty,
                                          llvm_i1_ty, llvm_i1_ty],
@@ -4054,8 +4108,11 @@ class AMDGPUWmmaIntrinsicModsAll<LLVMType AB, LLVMType CD> :
       LLVMMatchType<1>, // %B
       llvm_i16_ty,      // %C_mod: 0 -- none, 1 -- neg, 2 -- abs, 3 -- neg(abs)
       LLVMMatchType<0>,               // %C
+      llvm_i1_ty,        // matrix_a_reuse
+      llvm_i1_ty,        // matrix_b_reuse
     ],
-    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
+    [IntrNoMem, IntrConvergent, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>,
+     ImmArg<ArgIndex<7>>, ImmArg<ArgIndex<4>>, IntrWillReturn, IntrNoCallback, IntrNoFree]
 >;
 
 // D and C are of different types.
@@ -4135,6 +4192,7 @@ class AMDGPUWmmaScaleF4IntrinsicModsC<LLVMType scale_ty> :
 >;
 
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX1250 = {
+def int_amdgcn_wmma_f64_16x16x4_f64       : AMDGPUWmmaIntrinsicModsAll<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x4_f32       : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_bf16     : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;
 def int_amdgcn_wmma_f32_16x16x32_f16      : AMDGPUWmmaIntrinsicModsC<llvm_anyfloat_ty, llvm_anyfloat_ty>;

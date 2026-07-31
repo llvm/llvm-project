@@ -152,6 +152,10 @@ inline StringRef getInstrProfVNodesVarName() { return "__llvm_prf_vnodes"; }
 /// of all function's PGO names.
 inline StringRef getInstrProfNamesVarName() { return "__llvm_prf_nm"; }
 
+inline StringRef getInstrProfNamesVarPostfixVarName() {
+  return "__llvm_prf_nm_postfix";
+}
+
 inline StringRef getInstrProfVTableNamesVarName() { return "__llvm_prf_vnm"; }
 
 /// Return the name of a covarage mapping variable (internal linkage)
@@ -902,6 +906,14 @@ struct InstrProfValueSiteRecord {
 struct InstrProfRecord {
   std::vector<uint64_t> Counts;
   std::vector<uint8_t> BitmapBytes;
+  /// For AMDGPU offload profiling: raw or merged uniform counters. One uint64_t
+  /// per instrumented block, tracking entries where all lanes were active.
+  std::vector<uint64_t> UniformCounts;
+  /// For AMDGPU offload profiling: 1 bit per basic block indicating whether
+  /// the block is usually entered with all lanes active. Raw uniform counters
+  /// are reduced to these bits when profiles are written or merged.
+  std::vector<uint8_t> UniformityBits;
+  uint16_t OffloadDeviceWaveSize = 0;
 
   InstrProfRecord() = default;
   InstrProfRecord(std::vector<uint64_t> Counts) : Counts(std::move(Counts)) {}
@@ -911,6 +923,8 @@ struct InstrProfRecord {
   InstrProfRecord(InstrProfRecord &&) = default;
   InstrProfRecord(const InstrProfRecord &RHS)
       : Counts(RHS.Counts), BitmapBytes(RHS.BitmapBytes),
+        UniformCounts(RHS.UniformCounts), UniformityBits(RHS.UniformityBits),
+        OffloadDeviceWaveSize(RHS.OffloadDeviceWaveSize),
         ValueData(RHS.ValueData
                       ? std::make_unique<ValueProfData>(*RHS.ValueData)
                       : nullptr) {}
@@ -918,6 +932,9 @@ struct InstrProfRecord {
   InstrProfRecord &operator=(const InstrProfRecord &RHS) {
     Counts = RHS.Counts;
     BitmapBytes = RHS.BitmapBytes;
+    UniformCounts = RHS.UniformCounts;
+    UniformityBits = RHS.UniformityBits;
+    OffloadDeviceWaveSize = RHS.OffloadDeviceWaveSize;
     if (!RHS.ValueData) {
       ValueData = nullptr;
       return *this;
@@ -928,6 +945,20 @@ struct InstrProfRecord {
       *ValueData = *RHS.ValueData;
     return *this;
   }
+
+  /// Check if a basic block is entered via a wave-uniform branch.
+  /// Returns true if uniform (safe for PGO spill optimization) or if no
+  /// uniformity data is available (conservative default).
+  bool isBlockUniform(unsigned BlockIdx) const {
+    if (UniformityBits.empty())
+      return true; // No uniformity data, assume uniform (conservative)
+    if (BlockIdx / 8 >= UniformityBits.size())
+      return true; // Out of range, assume uniform
+    return (UniformityBits[BlockIdx / 8] >> (BlockIdx % 8)) & 1;
+  }
+
+  /// Recompute uniformity metadata from raw uniform counters, when present.
+  LLVM_ABI void computeBlockUniformity();
 
   /// Return the number of value profile kinds with non-zero number
   /// of profile sites.
@@ -968,9 +999,12 @@ struct InstrProfRecord {
         SR.sortByCount();
   }
 
-  /// Clear value data entries and edge counters.
+  /// Clear value data entries, edge counters, and uniformity data.
   void Clear() {
     Counts.clear();
+    UniformCounts.clear();
+    UniformityBits.clear();
+    OffloadDeviceWaveSize = 0;
     clearValueData();
   }
 
@@ -1079,6 +1113,14 @@ struct NamedInstrProfRecord : InstrProfRecord {
                        std::vector<uint8_t> BitmapBytes)
       : InstrProfRecord(std::move(Counts), std::move(BitmapBytes)), Name(Name),
         Hash(Hash) {}
+  NamedInstrProfRecord(StringRef Name, uint64_t Hash,
+                       std::vector<uint64_t> Counts,
+                       std::vector<uint8_t> BitmapBytes,
+                       std::vector<uint8_t> UniformityBits)
+      : InstrProfRecord(std::move(Counts), std::move(BitmapBytes)), Name(Name),
+        Hash(Hash) {
+    this->UniformityBits = std::move(UniformityBits);
+  }
 
   static bool hasCSFlagInHash(uint64_t FuncHash) {
     return ((FuncHash >> CS_FLAG_IN_FUNC_HASH) & 1);
@@ -1185,7 +1227,9 @@ enum ProfVersion {
   Version12 = 12,
   // In this version, the frontend PGO stable hash algorithm defaults to V4.
   Version13 = 13,
-  // The current version is 13.
+  // UniformityBits added for AMDGPU offload profiling divergence detection.
+  Version14 = 14,
+  // The current version is 14.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;

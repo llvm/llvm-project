@@ -1113,47 +1113,47 @@ define i64 @fold_addi_from_different_bb(i64 %k, i64 %n, ptr %a) nounwind {
 ; RV32IXQCILI-NEXT:    sw s5, 20(sp) # 4-byte Folded Spill
 ; RV32IXQCILI-NEXT:    sw s6, 16(sp) # 4-byte Folded Spill
 ; RV32IXQCILI-NEXT:    sw s7, 12(sp) # 4-byte Folded Spill
-; RV32IXQCILI-NEXT:    mv s2, a4
-; RV32IXQCILI-NEXT:    mv s4, a3
-; RV32IXQCILI-NEXT:    mv s3, a2
+; RV32IXQCILI-NEXT:    mv s0, a4
+; RV32IXQCILI-NEXT:    mv s1, a3
+; RV32IXQCILI-NEXT:    mv s2, a2
 ; RV32IXQCILI-NEXT:    beqz a3, .LBB20_3
 ; RV32IXQCILI-NEXT:  # %bb.1: # %entry
-; RV32IXQCILI-NEXT:    srli a1, s4, 31
+; RV32IXQCILI-NEXT:    srli a1, s1, 31
 ; RV32IXQCILI-NEXT:    beqz a1, .LBB20_4
 ; RV32IXQCILI-NEXT:  .LBB20_2:
-; RV32IXQCILI-NEXT:    li s6, 0
-; RV32IXQCILI-NEXT:    li s5, 0
+; RV32IXQCILI-NEXT:    li s3, 0
+; RV32IXQCILI-NEXT:    li s4, 0
 ; RV32IXQCILI-NEXT:    j .LBB20_6
 ; RV32IXQCILI-NEXT:  .LBB20_3:
-; RV32IXQCILI-NEXT:    seqz a1, s3
+; RV32IXQCILI-NEXT:    seqz a1, s2
 ; RV32IXQCILI-NEXT:    bnez a1, .LBB20_2
 ; RV32IXQCILI-NEXT:  .LBB20_4: # %for.body.lr.ph
-; RV32IXQCILI-NEXT:    li s1, 0
-; RV32IXQCILI-NEXT:    li s0, 0
-; RV32IXQCILI-NEXT:    li s6, 0
 ; RV32IXQCILI-NEXT:    li s5, 0
+; RV32IXQCILI-NEXT:    li s6, 0
+; RV32IXQCILI-NEXT:    li s3, 0
+; RV32IXQCILI-NEXT:    li s4, 0
 ; RV32IXQCILI-NEXT:    slli a0, a0, 4
-; RV32IXQCILI-NEXT:    add s7, s2, a0
+; RV32IXQCILI-NEXT:    add s7, s0, a0
 ; RV32IXQCILI-NEXT:  .LBB20_5: # %for.body
 ; RV32IXQCILI-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IXQCILI-NEXT:    mv a0, s2
+; RV32IXQCILI-NEXT:    mv a0, s0
 ; RV32IXQCILI-NEXT:    call f
 ; RV32IXQCILI-NEXT:    lw a0, 8(s7)
 ; RV32IXQCILI-NEXT:    lw a1, 12(s7)
-; RV32IXQCILI-NEXT:    addi s1, s1, 1
-; RV32IXQCILI-NEXT:    seqz a2, s1
-; RV32IXQCILI-NEXT:    add s0, s0, a2
-; RV32IXQCILI-NEXT:    add a1, a1, s5
-; RV32IXQCILI-NEXT:    add s6, s6, a0
-; RV32IXQCILI-NEXT:    xor a2, s1, s3
-; RV32IXQCILI-NEXT:    xor a3, s0, s4
+; RV32IXQCILI-NEXT:    addi s5, s5, 1
+; RV32IXQCILI-NEXT:    seqz a2, s5
+; RV32IXQCILI-NEXT:    add s6, s6, a2
+; RV32IXQCILI-NEXT:    add a1, a1, s4
+; RV32IXQCILI-NEXT:    add s3, s3, a0
+; RV32IXQCILI-NEXT:    xor a2, s5, s2
+; RV32IXQCILI-NEXT:    xor a3, s6, s1
 ; RV32IXQCILI-NEXT:    or a2, a2, a3
-; RV32IXQCILI-NEXT:    sltu s5, s6, a0
-; RV32IXQCILI-NEXT:    add s5, s5, a1
+; RV32IXQCILI-NEXT:    sltu s4, s3, a0
+; RV32IXQCILI-NEXT:    add s4, s4, a1
 ; RV32IXQCILI-NEXT:    bnez a2, .LBB20_5
 ; RV32IXQCILI-NEXT:  .LBB20_6: # %for.cond.cleanup
-; RV32IXQCILI-NEXT:    mv a0, s6
-; RV32IXQCILI-NEXT:    mv a1, s5
+; RV32IXQCILI-NEXT:    mv a0, s3
+; RV32IXQCILI-NEXT:    mv a1, s4
 ; RV32IXQCILI-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
 ; RV32IXQCILI-NEXT:    lw s0, 40(sp) # 4-byte Folded Reload
 ; RV32IXQCILI-NEXT:    lw s1, 36(sp) # 4-byte Folded Reload
