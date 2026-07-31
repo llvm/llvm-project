@@ -2,7 +2,7 @@
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-host.bc
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple amdgcn-amd-amdhsa \
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-is-target-device \
-// RUN:   -fopenmp-target-fast-reduction -fopenmp-host-ir-file-path %t-host.bc \
+// RUN:   -fopenmp-target-atomic-reduction -fopenmp-host-ir-file-path %t-host.bc \
 // RUN:   -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=ATOMIC %s < %t.ll
 // RUN: FileCheck --check-prefix=BUFFER %s < %t.ll
@@ -45,7 +45,7 @@ void atomicable_matrix(int n) {
 }
 
 // A fp multiply and a fp max reduction have no direct atomicrmw, so each falls
-// back to the buffer path even with -fopenmp-target-fast-reduction. Together with
+// back to the buffer path even with -fopenmp-target-atomic-reduction. Together with
 // the mixed construct below there are exactly three buffered writebacks.
 //
 // BUFFER-COUNT-3: call i32 @__kmpc_gpu_xteam_reduce_nowait(

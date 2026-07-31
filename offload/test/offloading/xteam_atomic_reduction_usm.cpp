@@ -2,10 +2,10 @@
 // memory.
 //
 // RUN: %libomptarget-compilexx-generic -fopenmp-force-usm \
-// RUN:   -fopenmp-target-fast-reduction && env HSA_XNACK=1 \
+// RUN:   -fopenmp-target-atomic-reduction && env HSA_XNACK=1 \
 // RUN:   %libomptarget-run-generic | %fcheck-generic
 // RUN: %libomptarget-compileoptxx-generic -fopenmp-force-usm \
-// RUN:   -fopenmp-target-fast-reduction && env HSA_XNACK=1 \
+// RUN:   -fopenmp-target-atomic-reduction && env HSA_XNACK=1 \
 // RUN:   %libomptarget-run-generic | %fcheck-generic
 //
 // REQUIRES: amdgpu, unified_shared_memory

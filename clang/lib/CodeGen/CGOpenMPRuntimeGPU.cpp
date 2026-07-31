@@ -1776,9 +1776,9 @@ void CGOpenMPRuntimeGPU::emitReduction(
   // scalar reduction an atomic combiner; createReductionsGPU uses the atomic
   // path only if every reduction in the set has one. Track whether that holds
   // so we can skip the (then unused) per-team buffer registration.
-  bool UseFastReduction =
-      TeamsReduction && CGM.getLangOpts().OpenMPTargetFastReduction;
-  bool AllAtomicable = UseFastReduction;
+  bool UseAtomicReduction =
+      TeamsReduction && CGM.getLangOpts().OpenMPTargetAtomicReduction;
+  bool AllAtomicable = UseAtomicReduction;
 
   // Source location for the ident struct
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
@@ -1845,14 +1845,16 @@ void CGOpenMPRuntimeGPU::emitReduction(
     // For the atomic fast path, hand this reduction an atomic combiner if it is
     // a scalar with a direct atomicrmw; otherwise the set is not fully
     // atomicable and falls back to the buffer path.
-    if (UseFastReduction) {
+    if (UseAtomicReduction) {
       std::optional<llvm::AtomicRMWInst::BinOp> AtomicOp;
       if (EvalKind == llvm::OpenMPIRBuilder::EvalKind::Scalar) {
         if (std::optional<BinaryOperatorKind> BOK =
                 getReductionBinOpKind(ReductionOps[Idx]))
           AtomicOp = getReductionAtomicRMWOp(*BOK, Private->getType());
       }
-      if (AtomicOp) {
+      if (!AtomicOp) {
+        AllAtomicable = false;
+      } else {
         llvm::AtomicRMWInst::BinOp Op = *AtomicOp;
         llvm::Align Alignment =
             CGM.getModule().getDataLayout().getPrefTypeAlign(ElementType);
@@ -1875,8 +1877,6 @@ void CGOpenMPRuntimeGPU::emitReduction(
           return InsertPointTy(Builder.GetInsertBlock(),
                                Builder.GetInsertPoint());
         };
-      } else {
-        AllAtomicable = false;
       }
     }
 
