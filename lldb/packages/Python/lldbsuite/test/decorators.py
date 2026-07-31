@@ -1244,7 +1244,6 @@ def requireDarwinHost(func):
     return requireHostPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
 
 
-
 def skipIfTargetDoesNotSupportThreads():
     """Skip tests that require thread support (e.g. pthreads)."""
     platform = lldbplatformutil.getPlatform()
