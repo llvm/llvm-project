@@ -2369,6 +2369,31 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   if (Sets.empty())
     return {}; // Nothing to promote...
 
+
+  // If the loop contains a non-nosync call that may write accessible memory,
+  // do not promote stores whose pointers are not provably non-escaping (i.e.,
+  // not allocas).  Such a call may contain atomic operations with release
+  // semantics; promoting a store to a captured location past it can make a
+  // write visible to another thread after the release has synchronised,
+  // violating the happens-before ordering required by the C/C++ memory model.
+  // See llvm/llvm-project#64188.
+  bool HasNonNoSyncCall = false;
+  foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
+    if (isa<CallInst>(I) && !cast<CallInst>(I)->onlyReadsMemory() &&
+        !cast<CallInst>(I)->doesNotAccessMemory() &&
+        !cast<CallInst>(I)->hasFnAttr(Attribute::NoSync))
+      HasNonNoSyncCall = true;
+  });
+  if (HasNonNoSyncCall) {
+    llvm::erase_if(Sets, [](PointerIntPair<const AliasSet *, 1, bool> &Pair) {
+      for (auto &MemLoc : *Pair.getPointer()) {
+        if (!isa<AllocaInst>(MemLoc.Ptr))
+          return true;
+      }
+      return false;
+    });
+  }
+
   // Discard any sets for which there is an aliasing non-promotable access.
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
     if (AttemptingPromotion.contains(I))
