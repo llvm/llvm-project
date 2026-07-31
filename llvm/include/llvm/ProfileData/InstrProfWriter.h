@@ -186,7 +186,9 @@ public:
     if (static_cast<bool>(
             (ProfileKind & InstrProfKind::FrontendInstrumentation) ^
             (Other & InstrProfKind::FrontendInstrumentation))) {
-      return make_error<InstrProfError>(instrprof_error::unsupported_version);
+      return make_error<InstrProfError>(
+          instrprof_error::unsupported_version,
+          "cannot merge IR generated profile with Clang generated profile");
     }
     if (testIncompatible(InstrProfKind::FunctionEntryOnly,
                          InstrProfKind::FunctionEntryInstrumentation) ||
