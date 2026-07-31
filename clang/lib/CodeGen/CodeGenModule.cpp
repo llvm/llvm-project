@@ -7255,8 +7255,8 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
                                StringLength);
 
   if (auto *C = Entry.second)
-    return ConstantAddress(
-        C, C->getValueType(), CharUnits::fromQuantity(C->getAlignment()));
+    return ConstantAddress(C, C->getValueType(),
+                           CharUnits::fromQuantity(C->getAlign().valueOrOne()));
 
   const ASTContext &Context = getContext();
   const llvm::Triple &Triple = getTriple();
@@ -7545,7 +7545,7 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
   if (!LangOpts.WritableStrings) {
     Entry = &ConstantStringMap[C];
     if (auto GV = *Entry) {
-      if (uint64_t(Alignment.getQuantity()) > GV->getAlignment())
+      if (Alignment.getAsAlign() > GV->getAlign().valueOrOne())
         GV->setAlignment(Alignment.getAsAlign());
       return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
                              GV->getValueType(), Alignment);
@@ -7612,7 +7612,7 @@ ConstantAddress CodeGenModule::GetAddrOfConstantCString(const std::string &Str,
   if (!LangOpts.WritableStrings) {
     Entry = &ConstantStringMap[C];
     if (auto GV = *Entry) {
-      if (uint64_t(Alignment.getQuantity()) > GV->getAlignment())
+      if (Alignment.getAsAlign() > GV->getAlign().valueOrOne())
         GV->setAlignment(Alignment.getAsAlign());
       return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
                              GV->getValueType(), Alignment);

@@ -587,9 +587,9 @@ static void replaceManagedVar(llvm::GlobalVariable *Var,
     }
     if (auto *I = dyn_cast<llvm::Instruction>(U)) {
       llvm::Value *OldV = Var;
-      llvm::Instruction *NewV = new llvm::LoadInst(
-          Var->getType(), ManagedVar, "ld.managed", false,
-          llvm::Align(Var->getAlignment()), I->getIterator());
+      llvm::Instruction *NewV =
+          new llvm::LoadInst(Var->getType(), ManagedVar, "ld.managed", false,
+                             Var->getAlign().valueOrOne(), I->getIterator());
       WorkItem.pop_back();
       // Replace constant expressions directly or indirectly using the managed
       // variable with instructions.
@@ -719,7 +719,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
             Var,
             VarName,
             llvm::ConstantInt::get(VarSizeTy, VarSize),
-            llvm::ConstantInt::get(IntTy, Var->getAlignment())};
+            llvm::ConstantInt::get(IntTy,
+                                   Var->getAlign().valueOrOne().value())};
         if (!Var->isDeclaration())
           Builder.CreateCall(RegisterManagedVar, Args);
       } else {
@@ -990,7 +991,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       GpuBinaryHandle->setVisibility(llvm::GlobalValue::HiddenVisibility);
     Address GpuBinaryAddr(
         GpuBinaryHandle, PtrTy,
-        CharUnits::fromQuantity(GpuBinaryHandle->getAlignment()));
+        CharUnits::fromQuantity(GpuBinaryHandle->getAlign().valueOrOne()));
     {
       auto *HandleValue = CtorBuilder.CreateLoad(GpuBinaryAddr);
       llvm::Constant *Zero =
@@ -1133,7 +1134,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
 
   Address GpuBinaryAddr(
       GpuBinaryHandle, GpuBinaryHandle->getValueType(),
-      CharUnits::fromQuantity(GpuBinaryHandle->getAlignment()));
+      CharUnits::fromQuantity(GpuBinaryHandle->getAlign().valueOrOne()));
   auto *HandleValue = DtorBuilder.CreateLoad(GpuBinaryAddr);
   // There is only one HIP fat binary per linked module, however there are
   // multiple destructor functions. Make sure the fat binary is unregistered
@@ -1316,7 +1317,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
             llvm::offloading::OffloadGlobalManagedEntry | Flags,
-            /*Data=*/I.Var->getAlignment(), ManagedVar);
+            /*Data=*/I.Var->getAlign().valueOrOne().value(), ManagedVar);
       } else {
         llvm::offloading::emitOffloadingEntry(
             M, Kind, I.Var, getDeviceSideName(I.D), VarSize,
