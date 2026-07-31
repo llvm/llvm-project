@@ -9,12 +9,13 @@
 // This test ensures that we can override the assertion semantic used by any checked hardening mode with `observe` on
 // a per-TU basis.
 
-// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: libcpp-has-no-experimental-hardening-observe-semantic
+// assertion semantics require libc++ and C++11
+// UNSUPPORTED: c++03
+// REQUIRES: stdlib=libc++
 // ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE
 
-#include <cassert>
-#include "check_assertion.h"
+#include <vector> // pulls in the valid element access assertion
 
 int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");

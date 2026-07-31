@@ -8,11 +8,10 @@
 
 // This test ensures that we can override any hardening mode with the unchecked mode on a per-TU basis.
 
-// REQUIRES: can-test-hardening-assertions
+// REQUIRES: stdlib=libc++
 // ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE
 
-#include <cassert>
-#include "check_assertion.h"
+#include <vector> // pulls in the valid element access assertion
 
 int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
