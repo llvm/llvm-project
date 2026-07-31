@@ -144,8 +144,11 @@ def : WriteRes<WriteHint, [A53UnitB]>;
 def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 4; }
 // A compare pairs with an independent FP/ASIMD or integer operation, but only
 // as the older instruction of the pair, so not with another compare.
+// A dependent NZCV consumer only pays a single cycle in practice, but the
+// forwarding path that makes that possible cannot be expressed here, so this
+// keeps the 3-cycle result latency the rest of the family uses.
 def : WriteRes<WriteFCmp, [A53UnitFPALU]> {
-  let Latency = 6;
+  let Latency = 3;
   let BeginGroup = 1;
 }
 def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 4; }
