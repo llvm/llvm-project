@@ -51,9 +51,9 @@ class TestExpeditedStackMemory(TestBase):
     def test_memory_reads_when_examining_frame0_locals(self):
         """Model an IDE stop: walk the whole stack (a backtrace / debug
         navigator) but examine the locals of only the selected frame 0.
-        Frame 0 (func_e in main.c) carries scalar, aggregate, and
-        pointer-to-heap locals.  Its stack is expedited, so examining it
-        reads heap memory but no stack memory."""
+        Frame 0 (func_e in main.c) carries scalar, aggregate,
+        pointer-to-heap, and stack-passed-parameter locals.  Its stack is
+        expedited, so examining it reads heap memory but no stack memory."""
         self.check_memory_reads_when_examining_locals(
             examine_all_frames=False, expect_stack_reads=False
         )

@@ -2733,10 +2733,17 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
   }
 }
 
-// The size of each per-side stack window we expedite.  512 is sized to cover
-// the common case (locals and params sit within a few hundred bytes) while
-// bounding the per-frame cost to 1K bytes regardless of frame size.
-static const nub_size_t k_expedite_stack_window = 512;
+// The total stack-memory budget we expedite for frame 0, in bytes.  Sized to
+// cover the common case (locals, spilled register arguments, and stack-passed
+// parameters) while bounding the per-frame cost.
+static const nub_size_t k_expedite_stack_window = 1024;
+
+// Bytes reserved for the above-fp "stack-passed parameters" window,
+// [fp + 2*ptr_size, fp + 2*ptr_size + k_expedite_stack_arg_size).
+static const nub_size_t k_expedite_stack_arg_size = 160;
+
+static_assert(k_expedite_stack_arg_size <= k_expedite_stack_window,
+              "above-fp arg window must fit within the total stack budget");
 
 // A single contiguous chunk of expedited memory.
 struct ExpeditedMemory {
@@ -2744,19 +2751,29 @@ struct ExpeditedMemory {
   std::vector<uint8_t> bytes;
 };
 
-// Read the innermost frame's stack memory so that examining its local variables
-// at a public stop is served from the expedited cache instead of generating one
-// memory-read packet.
-//
-// We produce either:
-//
-//   - one chunk [$sp, $fp) for a small frame ($fp - $sp <=
-//   2*k_expedite_stack_window), which covers the whole frame with no gap, or
-//
-//   - two chunks [$sp, $sp + k_expedite_stack_window) and [$fp -
-//   k_expedite_stack_window, $fp) for a large frame, covering the params near
-//   $sp and the locals near $fp while leaving the (rarely-interesting) middle
-//   spill area out so the cost stays bounded.
+// Heuristic to decide whether frame 0's $fp looks like a valid frame pointer.
+static bool FrameZeroFPLooksValid(nub_process_t pid, nub_thread_t tid,
+                                  uint64_t sp, uint64_t fp,
+                                  nub_size_t ptr_size) {
+  static const uint64_t k_expedite_max_frame_size = 8 * 1024 * 1024; // 8 MB
+
+  if (sp == 0 || fp == 0 || fp <= sp)
+    return false;
+  if (fp - sp > k_expedite_max_frame_size)
+    return false;
+
+  const nub_size_t rec = 2 * ptr_size;
+  uint8_t bytes[2 * sizeof(uint64_t)];
+  if (DNBProcessMemoryRead(pid, fp, rec, bytes) != rec)
+    return false;
+
+  uint64_t prev_fp =
+      (ptr_size == 4) ? ((uint32_t *)bytes)[0] : ((uint64_t *)bytes)[0];
+  // The saved previous fp must chain upward (stack grows down).
+  return prev_fp > fp;
+}
+
+// Read the innermost frame's stack memory.
 static std::vector<ExpeditedMemory> ReadFrameZeroStackMemory(nub_process_t pid,
                                                              nub_thread_t tid) {
   std::vector<ExpeditedMemory> chunks;
@@ -2772,31 +2789,33 @@ static std::vector<ExpeditedMemory> ReadFrameZeroStackMemory(nub_process_t pid,
   uint64_t sp = (ptr_size == 4) ? sp_value.value.uint32 : sp_value.value.uint64;
   uint64_t fp = (ptr_size == 4) ? fp_value.value.uint32 : fp_value.value.uint64;
 
-  // The stack grows down, so a normal frame has sp < fp.  Bail on a leaf/empty
-  // frame (sp == fp) or anything that doesn't look like a frame.
-  if (sp == 0 || fp <= sp)
-    return chunks;
-
   auto read_range = [&](uint64_t start, uint64_t length) {
+    if (length == 0)
+      return;
     std::vector<uint8_t> buf(length);
     if (DNBProcessMemoryRead(pid, start, length, buf.data()) != length)
       return;
     chunks.push_back({start, std::move(buf)});
   };
 
-  const uint64_t frame_size = fp - sp;
-  const nub_size_t window = k_expedite_stack_window;
+  const uint64_t rec = 2 * ptr_size; // frame record size (16 on arm64)
 
-  if (frame_size <= 2 * window) {
-    // Small frame: cover the whole frame as a single contiguous chunk [sp, fp).
-    read_range(sp, frame_size);
+  if (FrameZeroFPLooksValid(pid, tid, sp, fp, ptr_size)) {
+    // above-fp: stack-passed params, skipping the already-expedited frame
+    // record.
+    read_range(fp + rec, k_expedite_stack_arg_size);
+
+    // below-fp: locals + spilled register args, clamped at $sp so a small frame
+    // reads only [sp, fp).
+    uint64_t below = std::min<uint64_t>(fp - sp, k_expedite_stack_window -
+                                                     k_expedite_stack_arg_size);
+    read_range(fp - below, below);
     return chunks;
   }
 
-  // Large frame: cover the params near $sp and the locals near $fp with two
-  // bounded windows, leaving the middle spill area out to keep the cost capped.
-  read_range(sp, window);          // [sp, sp + WINDOW)
-  read_range(fp - window, window); // [fp - WINDOW, fp)
+  // Frameless / cannot validate $fp: expedite a single window anchored at $sp.
+  if (sp != 0)
+    read_range(sp, k_expedite_stack_window);
   return chunks;
 }
 
