@@ -146,7 +146,10 @@ def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 6;
 }
 def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 4; }
-def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 6; }
+// Register transfers between a GPR and an FP/SIMD register (FMOV). The
+// generic class only covers what the A53WriteF2R/A53WriteR2F overrides below
+// do not; see those for the measured behaviour.
+def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 2; }
 def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
 // A 128-bit (Q-form) operation fills the whole 128-bit datapath, so it takes
@@ -213,6 +216,30 @@ def A53WriteVecQ_4 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 4;
 }
 
+// GPR <-> FP/SIMD transfers (FMOV). Both read their source late: an FP
+// arithmetic result reaches an FP-to-GPR transfer one cycle early, and an
+// integer ALU result reaches a GPR-to-FP transfer with no delay. FP-to-GPR
+// reaches an integer ALU in 2 cycles (3 for a MAC or shifted operand), so it is
+// modelled like the ALU writes: a nominal latency of 4 that the integer
+// ReadAdvances reduce. GPR-to-FP reaches an FP consumer in 2 cycles. Both are
+// RetireOOO, so that the in-order write-back check does not undo this
+// forwarding.
+let RetireOOO = 1 in {
+def A53WriteF2R : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteR2F : SchedWriteRes<[A53UnitFPALU]> { let Latency = 2; }
+}
+def A53ReadF2R  : SchedReadAdvance<1, [WriteF, WriteFCvt, WriteFMul,
+                                       A53WriteFMAC, A53WriteFMACQ,
+                                       A53WriteFRecpStep, A53WriteFRecpStepQ,
+                                       A53WriteFRecpEst, A53WriteFRecpEstQ,
+                                       A53WriteVecD_4, A53WriteVecQ_4,
+                                       A53WriteR2F]>;
+def A53ReadR2F  : SchedReadAdvance<3, [WriteImm, WriteI,
+                                       WriteISReg, WriteIEReg, WriteIS,
+                                       WriteID32, WriteID64,
+                                       WriteIM32, WriteIM64,
+                                       WriteLD, A53WriteF2R]>;
+
 //===----------------------------------------------------------------------===//
 // Subtarget-specific SchedRead types.
 
@@ -230,15 +257,15 @@ def : ReadAdvance<ReadVLD, 0>;
 def : ReadAdvance<ReadI, 2, [WriteImm,WriteI,
                              WriteISReg, WriteIEReg,WriteIS,
                              WriteID32,WriteID64,
-                             WriteIM32,WriteIM64]>;
+                             WriteIM32,WriteIM64,A53WriteF2R]>;
 def A53ReadShifted : SchedReadAdvance<1, [WriteImm,WriteI,
                                           WriteISReg, WriteIEReg,WriteIS,
                                           WriteID32,WriteID64,
-                                          WriteIM32,WriteIM64]>;
+                                          WriteIM32,WriteIM64,A53WriteF2R]>;
 def A53ReadNotShifted : SchedReadAdvance<2, [WriteImm,WriteI,
                                              WriteISReg, WriteIEReg,WriteIS,
                                              WriteID32,WriteID64,
-                                             WriteIM32,WriteIM64]>;
+                                             WriteIM32,WriteIM64,A53WriteF2R]>;
 def A53ReadISReg : SchedReadVariant<[
 	SchedVar<RegShiftedPred, [A53ReadShifted]>,
 	SchedVar<NoSchedPred, [A53ReadNotShifted]>]>;
@@ -254,17 +281,17 @@ def : SchedAlias<ReadIEReg, A53ReadIEReg>;
 def : ReadAdvance<ReadIM, 1, [WriteImm,WriteI,
                               WriteISReg, WriteIEReg,WriteIS,
                               WriteID32,WriteID64,
-                              WriteIM32,WriteIM64]>;
+                              WriteIM32,WriteIM64,A53WriteF2R]>;
 def : ReadAdvance<ReadIMA, 2, [WriteImm,WriteI,
                                WriteISReg, WriteIEReg,WriteIS,
                                WriteID32,WriteID64,
-                               WriteIM32,WriteIM64]>;
+                               WriteIM32,WriteIM64,A53WriteF2R]>;
 
 // Div
 def : ReadAdvance<ReadID, 1, [WriteImm,WriteI,
                               WriteISReg, WriteIEReg,WriteIS,
                               WriteID32,WriteID64,
-                              WriteIM32,WriteIM64]>;
+                              WriteIM32,WriteIM64,A53WriteF2R]>;
 
 //===----------------------------------------------------------------------===//
 // Subtarget-specific InstRWs.
@@ -398,6 +425,12 @@ def : InstRW<[A53WriteFRecpEstQ],
 def : InstRW<[A53WriteFRecpEst],
       (instregex "^FRECPXv1i(32|64)$", "^UR(ECP|SQRT)Ev2i32$")>;
 def : InstRW<[A53WriteFRecpEstQ], (instregex "^UR(ECP|SQRT)Ev4i32$")>;
+
+// GPR <-> FP/SIMD register transfers.
+def : InstRW<[A53WriteF2R, A53ReadF2R],
+      (instrs FMOVSWr, FMOVDXr, FMOVDXHighr, FMOVHWr, FMOVHXr)>;
+def : InstRW<[A53WriteR2F, A53ReadR2F],
+      (instrs FMOVWSr, FMOVXDr, FMOVXDHighr, FMOVWHr, FMOVXHr)>;
 
 // Floating-point ASIMD arithmetic, and the integer vector multiply, run at the
 // same 4-cycle latency as the scalar forms.
