@@ -1752,6 +1752,14 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
     "memref::MemRefDialect", "arith::ArithDialect",
     "vector::VectorDialect", "xegpu::XeGPUDialect"
   ];
+  let options = [
+    Option<"maxPromotedBufferBytes", "max-promoted-buffer-bytes", "uint64_t",
+           /*default=*/"4096",
+           "Maximum size in bytes of a whole-buffer `memref.alloc` that the "
+           "pre-lowering promotion may turn into a vector SSA value. Larger "
+           "buffers are left as memory to avoid materializing oversized "
+           "vectors.">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//

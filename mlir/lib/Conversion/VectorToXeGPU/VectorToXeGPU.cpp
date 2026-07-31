@@ -1035,7 +1035,21 @@ static void promoteAllocasToSLM(Operation *root) {
 
 struct ConvertVectorToXeGPUPass
     : public impl::ConvertVectorToXeGPUBase<ConvertVectorToXeGPUPass> {
+  using ConvertVectorToXeGPUBase::ConvertVectorToXeGPUBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ConvertVectorToXeGPUBase::getDependentDialects(registry);
+    // Register the Mem2Reg interface models used by whole-buffer promotion
+    // only for this pass, so no other pipeline is affected.
+    xegpu::registerWholeBufferPromotionExternalModels(registry);
+  }
+
   void runOnOperation() override {
+    // Promote whole-buffer scratch allocations (e.g. bufferized reduction /
+    // accumulator buffers carried across scf.for) into vector SSA values before
+    // lowering, so they are not spilled to the stack.
+    xegpu::promoteWholeBufferAllocs(getOperation(), maxPromotedBufferBytes);
+
     // Promote local allocations to SLM (address space 3) so that
     // load_matrix/store_matrix lowerings have well-typed memref operands.
     promoteAllocasToSLM(getOperation());
