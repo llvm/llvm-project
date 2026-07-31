@@ -82,6 +82,7 @@ class SparcAsmParser : public MCTargetAsmParser {
   bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   ParseStatus parseDirective(AsmToken DirectiveID) override;
+  bool parseDataExpr(const MCExpr *&Res) override;
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
@@ -1756,8 +1757,10 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
   }
 
   Parser.Lex(); // Eat the identifier.
-  if (Parser.getTok().getKind() != AsmToken::LParen)
+  if (Parser.getTok().getKind() != AsmToken::LParen) {
+    Error(getLoc(), "expected '('");
     return false;
+  }
 
   Parser.Lex(); // Eat the LParen token.
   const MCExpr *subExpr;
@@ -1765,6 +1768,17 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
     return false;
 
   EVal = adjustPICRelocation(VK, subExpr);
+  return true;
+}
+
+bool SparcAsmParser::parseDataExpr(const MCExpr *&Res) {
+  SMLoc EndLoc;
+  if (!parseOptionalToken(AsmToken::Percent))
+    return Parser.parseExpression(Res);
+  if (matchSparcAsmModifiers(Res, EndLoc))
+    return false;
+  if (!Parser.hasPendingError())
+    return Error(getLoc(), "invalid relocation specifier");
   return true;
 }
 

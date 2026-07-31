@@ -20,3 +20,8 @@
         sll %g1, 32, %g2
         ! V9: immediate shift value out of range
         slx %g1, 64, %g2
+
+        ! CHECK: :[[#@LINE+1]]:25: error: expected '('
+        .word %r_disp32 foo
+        ! CHECK: :[[#@LINE+1]]:16: error: invalid relocation specifier
+        .word %tgd_add(foo)

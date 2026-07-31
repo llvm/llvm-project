@@ -3,9 +3,11 @@
 
 # RUN: llvm-mc %s -triple=sparc -filetype=obj -o %t
 # RUN: llvm-objdump -dr %t | FileCheck %s --check-prefix=OBJDUMP
+# RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELOC
 # RUN: llvm-readelf -s - < %t | FileCheck %s --check-prefix=READELF --implicit-check-not=TLS
 # RUN: llvm-mc %s --defsym V9=1 -triple=sparcv9 -filetype=obj -o %t
 # RUN: llvm-objdump -dr %t | FileCheck %s --check-prefixes=OBJDUMP,OBJDUMP-V9
+# RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELOC
 # RUN: llvm-readelf -s - < %t | FileCheck %s --check-prefixes=READELF,READELF-V9 --implicit-check-not=TLS
 
 # READELF: TLS     LOCAL  DEFAULT [[#]] s_tle_hix22
@@ -217,3 +219,10 @@ s_tle_hix22:
 s_tldo_hix22:
         .word  0
         .size  Local, 4
+
+# ASM:        .word %r_disp32(sym)
+# RELOC:      Section ({{.*}}) .rela.data {
+# RELOC-NEXT:   0x0 R_SPARC_DISP32 sym 0x0
+# RELOC-NEXT: }
+        .data
+        .word %r_disp32(sym)
