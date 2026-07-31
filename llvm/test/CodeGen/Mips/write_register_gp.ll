@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=mips64el-unknown-linux-gnu -mcpu=mips64r2 -target-abi=n32 < %s -filetype=asm -o - \
+; RUN: llc -mtriple=mips64el-unknown-linux-gnu -mcpu=mips64r2 -target-abi=n32 < %s -o - \
 ; RUN:   | FileCheck  -check-prefixes=N32 %s
-; RUN: llc -mtriple=mips64el-unknown-linux-gnu -mcpu=mips64r2 -target-abi=n64 < %s -filetype=asm -o - \
+; RUN: llc -mtriple=mips64el-unknown-linux-gnu -mcpu=mips64r2 < %s -o - \
 ; RUN:   | FileCheck -check-prefixes=N64 %s
 
 ; Test that when a user declares $28 as a global register, assignments to it are
