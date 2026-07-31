@@ -31,5 +31,6 @@ ANCHOR(UnsafeBufferUsageAnalysisAnchorSource)
 ANCHOR(UnsafeBufferUsageExtractorAnchorSource)
 ANCHOR(UnsafeBufferUsageJSONFormatAnchorSource)
 ANCHOR(VirtualMethodEntityExtractorAnchorSource)
+ANCHOR(VirtualMethodFamilyAnalysisAnchorSource)
 
 #undef ANCHOR
