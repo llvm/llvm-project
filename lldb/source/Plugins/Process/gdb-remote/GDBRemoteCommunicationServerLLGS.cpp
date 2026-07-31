@@ -3316,8 +3316,8 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   response.Indent();
   const llvm::StringRef arch_name =
       m_current_process->GetArchitecture().GetTriple().getArchName();
-  // Match gdbserver's expected architecture name we aready do the same
-  // when decoding the architecture when receiving the target.xml
+  // Match gdbserver's expected architecture. We do the reverse when
+  // decoding the architecture when receiving the target.xml
   // in ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess.
   const llvm::StringRef new_arch_name = StringSwitch<llvm::StringRef>(arch_name)
                                             .Case("x86_64", "i386:x86-64")
