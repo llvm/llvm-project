@@ -17,8 +17,8 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenSchedule.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -43,7 +43,7 @@ static cl::opt<unsigned>
 /// Returns the MVT that the specified TableGen
 /// record corresponds to.
 MVT llvm::getValueType(const Record *Rec) {
-  static const StringMap<MVT> ValueTypes = {
+  static const DenseMap<StringRef, MVT> ValueTypes = {
 #define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)      \
   {#Ty, MVT::Ty},
 #include "llvm/CodeGen/GenVT.inc"
