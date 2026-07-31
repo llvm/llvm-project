@@ -1,6 +1,6 @@
 // The u"" and U"" string literals below need C11 or later. Pin the standard
 // because targets such as PS4 default to gnu99.
-// RUN: %clang_analyze_cc1 -triple 86_64-unknown-linux-gnu -std=c17 -verify %s \
+// RUN: %clang_analyze_cc1 -triple x86_64-unknown-linux-gnu -std=c17 -verify %s \
 // RUN:   -analyzer-checker=core,unix \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
