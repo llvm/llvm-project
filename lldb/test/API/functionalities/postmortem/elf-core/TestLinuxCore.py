@@ -1245,6 +1245,11 @@ class LinuxCoreTestCase(TestBase):
         self.assertEqual(target.ReadMemory(addr, 7, error), b"_start\0")
         self.assertSuccess(error)
 
+        # Dereferencing reads the pointee via Value::GetValueAsData() instead.
+        deref = var.Dereference()
+        self.assertSuccess(deref.GetError())
+        self.assertEqual(deref.GetValue(), "'_'")
+
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
     def test_linux_no_exe(self):

@@ -16,13 +16,16 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/Value.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdint>
@@ -1116,4 +1119,77 @@ TEST_F(MemoryTest, TestReadImmutableSectionFromFileCacheMachO) {
   CheckImmutableSectionServedFromFile(ArchSpec("x86_64-apple-macosx-"),
                                       kMachOImmutableAndWritableYaml,
                                       "__cstring", "__data");
+}
+
+/// `reg_info` must outlive the returned Value, which only stores a pointer.
+static Value MakeLoadAddressValue(RegisterInfo &reg_info,
+                                  lldb::addr_t load_addr, uint32_t byte_size) {
+  reg_info = RegisterInfo();
+  reg_info.name = "test";
+  reg_info.byte_size = byte_size;
+  reg_info.encoding = lldb::eEncodingUint;
+  reg_info.format = lldb::eFormatHex;
+
+  Value v{Scalar(load_addr)};
+  v.SetContext(Value::ContextType::RegisterInfo, &reg_info);
+  v.SetValueType(Value::ValueType::LoadAddress);
+  return v;
+}
+
+// A writable section is served from the file when the live read comes up short,
+// as with a core file that didn't dump the page.
+TEST_F(MemoryTest, GetValueAsDataFallsBackToFileWhenLiveReadFails) {
+  SubsystemRAII<ObjectFileMachO> subsystems;
+  ImmutableAndWritableModule fixture = CreateImmutableAndWritableModule();
+  ASSERT_TRUE(fixture.writable_sp);
+  auto *process = static_cast<DummyProcess *>(fixture.process_sp.get());
+  process->SetMaxReadSize(0);
+
+  RegisterInfo reg_info;
+  Value v =
+      MakeLoadAddressValue(reg_info, fixture.writable_sp->GetFileAddress(), 5);
+  DataExtractor data;
+  ExecutionContext exe_ctx(fixture.target_sp, /*get_process=*/true);
+  Status status = v.GetValueAsData(&exe_ctx, data, nullptr);
+  ASSERT_TRUE(status.Success()) << status.AsCString();
+  ASSERT_EQ(data.GetByteSize(), 5u);
+  EXPECT_EQ(memcmp(data.GetDataStart(), "hello", 5), 0);
+}
+
+// An immutable section is served from the file even with a live process, a
+// writable one with identical on-disk bytes is not.
+TEST_F(MemoryTest, GetValueAsDataServesImmutableSectionFromFileCache) {
+  SubsystemRAII<ObjectFileMachO> subsystems;
+  ImmutableAndWritableModule fixture = CreateImmutableAndWritableModule();
+  ASSERT_TRUE(fixture.immutable_sp);
+  ASSERT_TRUE(fixture.writable_sp);
+  ASSERT_TRUE(fixture.immutable_sp->IsImmutableAfterLoad());
+  ASSERT_FALSE(fixture.writable_sp->IsImmutableAfterLoad());
+  auto *process = static_cast<DummyProcess *>(fixture.process_sp.get());
+  // Live reads succeed and return 'B', so the decision is observable.
+  process->SetMaxReadSize(4096);
+  process->SetFiller('B');
+  ExecutionContext exe_ctx(fixture.target_sp, /*get_process=*/true);
+
+  {
+    RegisterInfo reg_info;
+    Value v = MakeLoadAddressValue(reg_info,
+                                   fixture.immutable_sp->GetFileAddress(), 5);
+    DataExtractor data;
+    Status status = v.GetValueAsData(&exe_ctx, data, nullptr);
+    ASSERT_TRUE(status.Success()) << status.AsCString();
+    ASSERT_EQ(data.GetByteSize(), 5u);
+    EXPECT_EQ(memcmp(data.GetDataStart(), "hello", 5), 0);
+  }
+
+  {
+    RegisterInfo reg_info;
+    Value v = MakeLoadAddressValue(reg_info,
+                                   fixture.writable_sp->GetFileAddress(), 5);
+    DataExtractor data;
+    Status status = v.GetValueAsData(&exe_ctx, data, nullptr);
+    ASSERT_TRUE(status.Success()) << status.AsCString();
+    ASSERT_EQ(data.GetByteSize(), 5u);
+    EXPECT_EQ(*data.GetDataStart(), 'B');
+  }
 }
