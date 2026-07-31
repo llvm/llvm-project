@@ -155,9 +155,11 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
       TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
-  // Default to triple-appropriate float ABI
+  // Default to triple-appropriate float ABI. -target-abi=aapcs16 forces hard
+  // float regardless of the triple default.
   if (Options.FloatABIType == FloatABI::Default) {
-    if (isTargetHardFloat())
+    if (TargetABI == ARM::ARM_ABI_AAPCS16 ||
+        TT.getDefaultFloatABI() == FloatABI::Hard)
       this->Options.FloatABIType = FloatABI::Hard;
     else
       this->Options.FloatABIType = FloatABI::Soft;
@@ -235,10 +237,16 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
+  FloatABI::ABIType FloatABI = this->Options.FloatABIType;
+
+  // It is legal to have FloatABI::Hard with +soft-float for targets with SIMD
+  // registers, but no floating-point hardware (mve+nofp)
+  Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
+
   auto &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                       F.hasMinSize(), DM);
+                                       FloatABI, F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "

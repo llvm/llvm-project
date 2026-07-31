@@ -1,5 +1,5 @@
 # REQUIRES: aarch64
-## By default a thunk section's forward thunks are sorted by descending destination so promoting
+## A thunk section's forward thunks are sorted by descending destination so promoting
 ## one to its long form cannot push another out of range. In creation order the promotions cascade,
 ## one per pass, and exceed convergence limit (issue #61250).
 
@@ -7,9 +7,6 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 a.s -o a.o
 # RUN: ld.lld -T lds a.o -o out
 # RUN: llvm-objdump -d --no-show-raw-insn out | FileCheck %s
-## -z nosort-thunks keeps creation order and does not converge.
-# RUN: not ld.lld -T lds a.o -z nosort-thunks -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
-# ERR: error: address assignment did not converge
 
 ## One thunk section holds both directions: backward thunks first, in creation
 ## order lo0, lo1, lo2 (they need no sorting), then forward thunks by descending
@@ -30,7 +27,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %p/Inputs/shared.s -o b.o
 # RUN: ld.lld -shared b.o -o b.so
 # RUN: llvm-mc -filetype=obj -triple=aarch64 c.s -o c.o
-# RUN: ld.lld -T lds2 c.o b.so -z sort-thunks -o out2
+# RUN: ld.lld -T lds2 c.o b.so -o out2
 # RUN: llvm-objdump -d --no-show-raw-insn out2 | FileCheck %s --check-prefix=PLT
 # PLT:      <__AArch64AbsLongThunk_cbwd>:
 # PLT:      <__AArch64AbsLongThunk_bar>:

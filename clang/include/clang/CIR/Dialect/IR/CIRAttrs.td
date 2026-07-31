@@ -1189,6 +1189,52 @@ def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
 }
 
 //===----------------------------------------------------------------------===//
+// PtrSpecAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_PtrSpecAttr : CIR_Attr<"PtrSpec", "ptr_spec"> {
+  let summary = "!cir.ptr data layout spec";
+  let description = [{
+    Pointer data layout for `!cir.ptr`: `size`, `abi` and `preferred` are
+    required bitwidths; `index` is the optional bitwidth for index
+    computations, defaulting to `size`. All present values must be divisible
+    by 8, with `preferred` >= `abi`.
+
+    This is the CIR-native analogue of the ptr dialect's `#ptr.spec`; a
+    native attribute keeps CIR's data-layout queries free of any ptr-dialect
+    dependency.
+
+    Used as the value of the `!cir.ptr<!cir.void>`-keyed data-layout entry:
+
+    ```mlir
+    #dlti.dl_spec<!cir.ptr<!cir.void> =
+        #cir.ptr_spec<size = 64, abi = 64, preferred = 64>>
+    ```
+  }];
+  let parameters = (ins
+    "uint32_t":$size,
+    "uint32_t":$abi,
+    "uint32_t":$preferred,
+    DefaultValuedParameter<"uint32_t", "kOptionalSpecValue">:$index
+  );
+  let skipDefaultBuilders = 1;
+  let builders = [
+    AttrBuilder<(ins "uint32_t":$size, "uint32_t":$abi, "uint32_t":$preferred,
+                     CArg<"uint32_t", "kOptionalSpecValue">:$index), [{
+      return $_get($_ctxt, size, abi, preferred, index);
+    }]>
+  ];
+  let assemblyFormat = "`<` struct(params) `>`";
+  let extraClassDeclaration = [{
+    /// Sentinel value marking the optional `index` parameter as unset.
+    static constexpr uint32_t kOptionalSpecValue =
+        std::numeric_limits<uint32_t>::max();
+  }];
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstComplexAttr
 //===----------------------------------------------------------------------===//
 

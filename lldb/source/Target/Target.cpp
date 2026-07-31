@@ -4913,6 +4913,19 @@ static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
     },
 };
 
+static constexpr OptionEnumValueElement g_jit_engine_value_types[] = {
+    {
+        eJITEngineMCJIT,
+        "mcjit",
+        "Use LLVM's MCJIT execution engine.",
+    },
+    {
+        eJITEngineORC,
+        "orc",
+        "Use LLVM's ORC execution engine.",
+    },
+};
+
 static constexpr OptionEnumValueElement g_import_std_module_value_types[] = {
     {
         eImportStdModuleFalse,
@@ -5530,6 +5543,12 @@ bool TargetProperties::GetEnableNotifyAboutFixIts() const {
 FileSpec TargetProperties::GetSaveJITObjectsDir() const {
   const uint32_t idx = ePropertySaveObjectsDir;
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+JITEngine TargetProperties::GetJITEngine() const {
+  const uint32_t idx = ePropertyJITEngine;
+  return GetPropertyAtIndexAs<JITEngine>(
+      idx, static_cast<JITEngine>(g_target_properties[idx].default_uint_value));
 }
 
 void TargetProperties::CheckJITObjectsDir() {

@@ -441,7 +441,7 @@ lldb::Encoding Args::StringToEncoding(llvm::StringRef s,
 uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
   if (s.empty())
     return LLDB_INVALID_REGNUM;
-  uint32_t result = llvm::StringSwitch<uint32_t>(s)
+  uint32_t result = llvm::StringSwitch<uint32_t>(s.lower())
                         .Case("pc", LLDB_REGNUM_GENERIC_PC)
                         .Case("sp", LLDB_REGNUM_GENERIC_SP)
                         .Case("fp", LLDB_REGNUM_GENERIC_FP)

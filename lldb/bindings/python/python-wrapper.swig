@@ -181,15 +181,14 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
   return true;
 }
 
-PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateSyntheticProvider(
+PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateCommandObject(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::ValueObjectSP &valobj_sp) {
+    lldb::DebuggerSP debugger_sp) {
   if (python_class_name == NULL || python_class_name[0] == '\0' ||
       !session_dictionary_name)
     return PythonObject();
 
   PyErr_Cleaner py_err_cleaner(true);
-
   auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(
       session_dictionary_name);
   auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(
@@ -198,19 +197,7 @@ PythonObject lldb_private::python::SWIGBridge::LLDBSwigPythonCreateSyntheticProv
   if (!pfunc.IsAllocated())
     return PythonObject();
 
-  auto sb_value = std::unique_ptr<lldb::SBValue>(new lldb::SBValue(valobj_sp));
-  sb_value->SetPreferSyntheticValue(false);
-
-  PythonObject val_arg = SWIGBridge::ToSWIGWrapper(std::move(sb_value));
-  if (!val_arg.IsAllocated())
-    return PythonObject();
-
-  PythonObject result = pfunc(val_arg, dict);
-
-  if (result.IsAllocated())
-    return result;
-
-  return PythonObject();
+  return pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger_sp)), dict);
 }
 
 // wrapper that calls an optional instance member of an object taking no
@@ -237,150 +224,6 @@ static PyObject *LLDBSwigPython_CallOptionalMember(
   return result.release();
 }
 
-size_t lldb_private::python::SWIGBridge::LLDBSwigPython_CalculateNumChildren(PyObject * implementor,
-                                                         uint32_t max) {
-  PythonObject self(PyRefType::Borrowed, implementor);
-  auto pfunc = self.ResolveName<PythonCallable>("num_children");
-
-  if (!pfunc.IsAllocated())
-    return 0;
-
-  auto arg_info = pfunc.GetArgInfo();
-  if (!arg_info) {
-    llvm::consumeError(arg_info.takeError());
-    return 0;
-  }
-
-  size_t ret_val;
-  if (arg_info.get().max_positional_args < 1)
-    ret_val = unwrapOrSetPythonException(As<long long>(pfunc.Call()));
-  else
-    ret_val = unwrapOrSetPythonException(
-        As<long long>(pfunc.Call(PythonInteger(max))));
-
-  if (PyErr_Occurred()) {
-    PyErr_Print();
-    PyErr_Clear();
-    return 0;
-  }
-
-  if (arg_info.get().max_positional_args < 1)
-    ret_val = std::min(ret_val, static_cast<size_t>(max));
-
-  return ret_val;
-}
-
-PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetChildAtIndex(PyObject * implementor,
-                                                       uint32_t idx) {
-  PyErr_Cleaner py_err_cleaner(true);
-
-  PythonObject self(PyRefType::Borrowed, implementor);
-  auto pfunc = self.ResolveName<PythonCallable>("get_child_at_index");
-
-  if (!pfunc.IsAllocated())
-    return nullptr;
-
-  PythonObject result = pfunc(PythonInteger(idx));
-
-  if (!result.IsAllocated())
-    return nullptr;
-
-  lldb::SBValue *sbvalue_ptr = nullptr;
-  if (SWIG_ConvertPtr(result.get(), (void **)&sbvalue_ptr,
-                      SWIGTYPE_p_lldb__SBValue, 0) == -1)
-    return nullptr;
-
-  if (sbvalue_ptr == nullptr)
-    return nullptr;
-
-  return result.release();
-}
-
-uint32_t lldb_private::python::SWIGBridge::LLDBSwigPython_GetIndexOfChildWithName(
-    PyObject * implementor, const char *child_name) {
-  PyErr_Cleaner py_err_cleaner(true);
-
-  PythonObject self(PyRefType::Borrowed, implementor);
-  auto pfunc = self.ResolveName<PythonCallable>("get_child_index");
-
-  if (!pfunc.IsAllocated())
-    return UINT32_MAX;
-
-  llvm::Expected<PythonObject> result = pfunc.Call(PythonString(child_name));
-
-  long long retval =
-      unwrapOrSetPythonException(As<long long>(std::move(result)));
-
-  if (PyErr_Occurred()) {
-    PyErr_Clear(); // FIXME print this? do something else
-    return UINT32_MAX;
-  }
-
-  if (retval >= 0)
-    return (uint32_t)retval;
-
-  return UINT32_MAX;
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSwigPython_UpdateSynthProviderInstance(PyObject *
-                                                              implementor) {
-  bool ret_val = false;
-
-  static char callee_name[] = "update";
-
-  PyObject *py_return =
-      LLDBSwigPython_CallOptionalMember(implementor, callee_name);
-
-  if (py_return == Py_True)
-    ret_val = true;
-
-  Py_XDECREF(py_return);
-
-  return ret_val;
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSwigPython_MightHaveChildrenSynthProviderInstance(
-    PyObject * implementor) {
-  bool ret_val = false;
-
-  static char callee_name[] = "has_children";
-
-  PyObject *py_return =
-      LLDBSwigPython_CallOptionalMember(implementor, callee_name, Py_True);
-
-  if (py_return == Py_True)
-    ret_val = true;
-
-  Py_XDECREF(py_return);
-
-  return ret_val;
-}
-
-PyObject *lldb_private::python::SWIGBridge::LLDBSwigPython_GetValueSynthProviderInstance(
-    PyObject * implementor) {
-  PyObject *ret_val = nullptr;
-
-  static char callee_name[] = "get_value";
-
-  PyObject *py_return =
-      LLDBSwigPython_CallOptionalMember(implementor, callee_name, Py_None);
-
-  if (py_return == Py_None || py_return == nullptr)
-    ret_val = nullptr;
-
-  lldb::SBValue *sbvalue_ptr = NULL;
-
-  if (SWIG_ConvertPtr(py_return, (void **)&sbvalue_ptr,
-                      SWIGTYPE_p_lldb__SBValue, 0) == -1)
-    ret_val = nullptr;
-  else if (sbvalue_ptr == NULL)
-    ret_val = nullptr;
-  else
-    ret_val = py_return;
-
-  Py_XDECREF(py_return);
-  return ret_val;
-}
 
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBData(PyObject * data) {
   lldb::SBData *sb_ptr = nullptr;

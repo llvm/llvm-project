@@ -599,6 +599,22 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
 Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
   Type *Ty = S->getType();
 
+  const SCEVConstant *C1, *C2;
+  const SCEV *Val;
+  // mul(PowerOf2C, (udiv X, PowerOf2C)) == (X >> C) << C
+  //  -> X & (-1 << C)
+  if (match(S, m_scev_Mul(m_SCEVConstant(C1),
+                          m_scev_UDiv(m_SCEV(Val), m_SCEVConstant(C2)))) &&
+      C1 == C2 && C1->getAPInt().isPowerOf2()) {
+    Value *LHS = expand(Val);
+    unsigned ShAmtC = C1->getAPInt().logBase2();
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    APInt Mask(APInt::getBitsSetFrom(BitWidth, ShAmtC));
+    Value *Res = InsertBinop(Instruction::And, LHS, ConstantInt::get(Ty, Mask),
+                             SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+    return Res;
+  }
+
   // Collect all the mul operands in a loop, along with their associated loops.
   // Iterate in reverse so that constants are emitted last, all else equal.
   SmallVector<std::pair<const Loop *, const SCEV *>, 8> OpsAndLoops;

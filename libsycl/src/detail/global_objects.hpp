@@ -19,6 +19,7 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
 
+#include <array>
 #include <map>
 #include <memory>
 #include <mutex>

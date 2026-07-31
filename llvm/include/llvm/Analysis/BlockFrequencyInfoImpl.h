@@ -1173,16 +1173,17 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::initializeLoops() {
 }
 
 template <class BT> void BlockFrequencyInfoImpl<BT>::computeMassInLoops() {
-  // Visit loops with the deepest first, and the top-level loops last.
-  for (auto L = Loops.rbegin(), E = Loops.rend(); L != E; ++L) {
+  // Visit loops with the deepest first, and the top-level loops last. The first
+  // computeMassInLoop returns false if *L contains an irreducible sub-SCC.
+  // computeIrreducibleMass then packages each such SCC into a new loop,
+  // inserted immediately after *L.
+  for (auto L = Loops.end(), B = Loops.begin(); L != B;) {
+    --L;
     if (computeMassInLoop(*L))
       continue;
-    auto Next = std::next(L);
-    computeIrreducibleMass(&*L, L.base());
-    L = std::prev(Next);
-    if (computeMassInLoop(*L))
-      continue;
-    llvm_unreachable("unhandled irreducible control flow");
+    computeIrreducibleMass(&*L, std::next(L));
+    if (!computeMassInLoop(*L))
+      llvm_unreachable("unhandled irreducible control flow");
   }
 }
 

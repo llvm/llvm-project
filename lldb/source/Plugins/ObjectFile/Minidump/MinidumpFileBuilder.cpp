@@ -1032,8 +1032,16 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     return lldb_private::IterationAction::Continue;
   };
 
-  bytes_read = m_process_sp->ReadMemoryInChunks(
-      addr, data_buffer.GetBytes(), data_buffer.GetByteSize(), size, callback);
+  // ReadMemoryInChunks returns the number of bytes it read from the inferior,
+  // which can exceed the number we actually appended: when a chunk read fails
+  // the callback stops without writing the bytes it had partially read. Report
+  // the bytes we wrote (total_bytes_read) so the range's DataSize matches the
+  // data in the blob. Otherwise the Memory64List, which locates each range by
+  // the cumulative DataSize of the preceding ranges, desyncs and every later
+  // range reads back corrupted.
+  m_process_sp->ReadMemoryInChunks(addr, data_buffer.GetBytes(),
+                                   data_buffer.GetByteSize(), size, callback);
+  bytes_read = total_bytes_read;
   return addDataError;
 }
 

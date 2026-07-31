@@ -1725,8 +1725,13 @@ Value *LibCallSimplifier::optimizeMemSet(CallInst *CI, IRBuilderBase &B) {
 }
 
 Value *LibCallSimplifier::optimizeRealloc(CallInst *CI, IRBuilderBase &B) {
-  if (isa<ConstantPointerNull>(CI->getArgOperand(0)))
-    return copyFlags(*CI, emitMalloc(CI->getArgOperand(1), B, DL, TLI));
+  if (isa<ConstantPointerNull>(CI->getArgOperand(0))) {
+    Value *Malloc = emitMalloc(CI->getArgOperand(1), B, DL, TLI);
+    if (auto *MallocCI = dyn_cast_or_null<CallInst>(Malloc))
+      if (MDNode *MD = CI->getMetadata(LLVMContext::MD_alloc_token))
+        MallocCI->setMetadata(LLVMContext::MD_alloc_token, MD);
+    return copyFlags(*CI, Malloc);
+  }
 
   return nullptr;
 }

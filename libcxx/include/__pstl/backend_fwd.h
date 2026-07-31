@@ -346,6 +346,13 @@ struct __adjacent_find;
 // operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last,
 //                                _BinaryPredicate __predicate) const noexcept;
 
+template <class _Backend, class _ExecutionPolicy>
+struct __lexicographical_compare;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
+// optional<bool>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                                _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Comp __comp) const noexcept;
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 

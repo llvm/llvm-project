@@ -162,6 +162,43 @@ public:
   size_t param_size() const { return parameters().size(); }
   bool param_empty() const { return parameters().empty(); }
 
+  /// \returns actual arguments for expression-backed calls, or an empty range
+  /// for declaration-backed calls and call kinds with implicit or synthesized
+  /// argument lists, such as allocators and destructors.
+  ArrayRef<const Expr *> arguments() const {
+    if (!E)
+      return {};
+
+    switch (K) {
+    case Function:
+    case Block: {
+      const auto *CE = cast<CallExpr>(E);
+      return {CE->getArgs(), CE->getNumArgs()};
+    }
+    case ObjCMethod: {
+      const auto *ME = cast<ObjCMessageExpr>(E);
+      return {ME->getArgs(), ME->getNumArgs()};
+    }
+    case Constructor: {
+      const auto *CE = cast<CXXConstructExpr>(E);
+      return {CE->getArgs(), CE->getNumArgs()};
+    }
+    case Destructor:
+    case InheritedConstructor:
+    case Allocator:
+    case Deallocator:
+      return {};
+    }
+    llvm_unreachable("Unknown AnyCall::Kind");
+  }
+
+  using arg_const_iterator = ArrayRef<const Expr *>::const_iterator;
+  arg_const_iterator arg_begin() const { return arguments().begin(); }
+  arg_const_iterator arg_end() const { return arguments().end(); }
+  size_t arg_size() const { return arguments().size(); }
+  bool arg_empty() const { return arguments().empty(); }
+  const Expr *getArg(unsigned I) const { return arguments()[I]; }
+
   QualType getReturnType(ASTContext &Ctx) const {
     switch (K) {
     case Function:

@@ -22,8 +22,7 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP8]], -4
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP15]], [[P1_END1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP9]], 2
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP9]], -4
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[TMP11]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P1_END]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[P2_START:%.*]], i64 [[TMP12]]
@@ -104,8 +103,7 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP4]], -4
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP11]], [[P1_END1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP5]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = and i64 [[TMP5]], -4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P1_END]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[P2_START:%.*]], i64 [[TMP8]]

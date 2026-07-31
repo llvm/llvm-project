@@ -4,6 +4,31 @@
 // RUN:   -analyzer-config c++-container-inlining=false -analyzer-config cfg-lifetime=true -analyzer-output=text -verify %s
 struct A {};
 
+struct Pair {
+  int a;
+  int b;
+};
+
+struct Base {
+  int x;
+};
+
+struct Derived : Base {
+  int y;
+};
+
+struct Inner {
+  int val;
+};
+
+struct Outer {
+  Inner inner;
+};
+
+struct Buffer {
+  int arr[4];
+};
+
 void clang_analyzer_dumpLifetimeOriginsOf(int*);
 void clang_analyzer_dumpLifetimeOriginsOf(int&);
 void clang_analyzer_dumpLifetimeOriginsOf(A*);
@@ -103,7 +128,7 @@ void caller_seven() {
 
   clang_analyzer_dumpLifetimeOriginsOf(bind);
   // expected-warning-re@-1 {{Origin '&SymRegion{{.*}}' bound to 'y'}}
-  // expected-note-re@-2    {{Origin '&SymRegion{{.*}}' bound to 'y'}} 
+  // expected-note-re@-2    {{Origin '&SymRegion{{.*}}' bound to 'y'}}
 }
 
 // Function returns a reference and has an annotated parameter.
@@ -279,4 +304,77 @@ int *danglingParam(S param) {
   // expected-warning@-3 {{Address of stack memory associated with local variable 'param' returned}}
   // expected-note@-4    {{Address of stack memory associated with local variable 'param' returned to caller}}
   // expected-warning@-5 {{address of stack memory associated with parameter 'param' returned}}
+}
+
+int *getFieldPtr(Pair &p [[clang::lifetimebound]]) { return &p.a; }
+
+int *field_subobject_dangling() {
+  Pair pair{3, 5}; // expected-note {{'pair' initialized here}}
+  return getFieldPtr(pair);
+  // expected-warning@-1 {{Returning value bound to 'pair' that will go out of scope}}
+  // expected-note@-2    {{Returning value bound to 'pair' that will go out of scope}}
+  // expected-warning@-3 {{Address of stack memory associated with local variable 'pair' returned to caller}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 'pair' returned to caller}}
+  // expected-warning@-5 {{address of stack memory associated with local variable 'pair' returned}}
+}
+
+int *getBasePtr(Derived &d [[clang::lifetimebound]]) {
+  return &static_cast<Base &>(d).x;
+}
+
+int *base_subobject_dangling() {
+  Derived derived{}; // expected-note {{'derived' initialized here}}
+  return getBasePtr(derived);
+  // expected-warning@-1 {{Returning value bound to 'derived' that will go out of scope}}
+  // expected-note@-2    {{Returning value bound to 'derived' that will go out of scope}}
+  // expected-warning@-3 {{Address of stack memory associated with local variable 'derived' returned to caller}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 'derived' returned to caller}}
+  // expected-warning@-5 {{address of stack memory associated with local variable 'derived' returned}}
+}
+
+int *getNestedFieldPtr(Outer &o [[clang::lifetimebound]]) {
+  return &o.inner.val;
+}
+
+int *nested_subobject_dangling() {
+  Outer outer{}; // expected-note {{'outer' initialized here}}
+  return getNestedFieldPtr(outer);
+  // expected-warning@-1 {{Returning value bound to 'outer' that will go out of scope}}
+  // expected-note@-2    {{Returning value bound to 'outer' that will go out of scope}} 
+  // expected-warning@-3 {{Address of stack memory associated with local variable 'outer' returned to caller}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 'outer' returned to caller}}
+  // expected-warning@-5 {{address of stack memory associated with local variable 'outer' returned}}
+}
+
+int *getArrayElementPtr(Buffer &b [[clang::lifetimebound]]) {
+  return &b.arr[0];
+}
+
+int *array_member_subobject_dangling() {
+  Buffer buf{}; // expected-note {{'buf' initialized here}}
+  return getArrayElementPtr(buf);
+  // expected-warning@-1 {{Returning value bound to 'buf' that will go out of scope}}
+  // expected-note@-2    {{Returning value bound to 'buf' that will go out of scope}}
+  // expected-warning@-3 {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-note@-4    {{Address of stack memory associated with local variable 'buf' returned to caller}}
+  // expected-warning@-5 {{address of stack memory associated with local variable 'buf' returned}}
+}
+
+// FIXME: Heap allocated memory regions are not yet handled by the lifetime checkers.
+int *heap_dangling_source_lifetimebound() {
+  int *i = new int(5);
+  int *p = test_func(i);
+  delete i;
+  return p; // no-warning
+}
+
+struct CustomStringView {
+  CustomStringView(const char *s [[clang::lifetimebound]]);
+};
+
+// FIXME: The StringView return is a struct returned by value which is represented
+// as a LazyCompoundVal that the lifetime checkers do not support as of now.
+CustomStringView dangling_sv() {
+  char s[] = "dangling";
+  return CustomStringView(s); // expected-warning {{address of stack memory associated with local variable 's' returned}} 
 }

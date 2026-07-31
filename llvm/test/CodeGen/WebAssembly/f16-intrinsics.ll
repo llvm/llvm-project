@@ -81,6 +81,14 @@ define <8 x half> @replace_lane_v8f16(<8 x half> %v, float %f) {
   ret <8 x half> %r
 }
 
+; CHECK-LABEL: insert_lane_v8f16:
+; CHECK:       i16x8.replace_lane $push0=, $0, 3, $1
+; CHECK-NEXT:  return $pop0
+define <8 x half> @insert_lane_v8f16(<8 x half> %v, half %x) {
+  %r = insertelement <8 x half> %v, half %x, i32 3
+  ret <8 x half> %r
+}
+
 ; CHECK-LABEL: add_v8f16:
 ; CHECK:       f16x8.add $push0=, $0, $1
 ; CHECK-NEXT:  return $pop0

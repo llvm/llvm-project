@@ -8,6 +8,7 @@
 
 #include <detail/queue_impl.hpp>
 
+#include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
 #include <detail/global_objects.hpp>
@@ -66,6 +67,8 @@ QueueImpl::QueueImpl(DeviceImpl &deviceImpl, const async_handler &asyncHandler,
     : MIsInorder(false), MAsyncHandler(asyncHandler), MPropList(propList),
       MDevice(deviceImpl),
       MContext(MDevice.getPlatformImpl().getDefaultContext()) {
+  assert(MContext.getOLHandleRef() &&
+         "Queue must be associated with a valid offload context");
   callAndThrow(olCreateQueue, MDevice.getOLHandle(), &MOffloadQueue);
 }
 

@@ -573,6 +573,15 @@ protected:
   // all the function symbols defined or declared in current module.
   DenseMap<uint64_t, StringRef> GUIDToFuncNameMap;
 
+  // All the Names used in FunctionSamples including outline function
+  // names, inline instance names and call target names.
+  StringSet<> NamesInProfile;
+  // MD5 version of NamesInProfile. Either NamesInProfile or GUIDsInProfile is
+  // populated, depends on whether the profile uses MD5. Because the name table
+  // generally contains several magnitude more entries than the number of
+  // functions, we do not want to convert all names from one form to another.
+  llvm::DenseSet<uint64_t> GUIDsInProfile;
+
   // For symbol in profile symbol list, whether to regard their profiles
   // to be accurate. It is mainly decided by existance of profile symbol
   // list and -profile-accurate-for-symsinlist flag, but it can be
@@ -1977,8 +1986,19 @@ bool SampleProfileLoader::doInitialization(Module &M,
   // While profile-sample-accurate is on, ignore symbol list.
   ProfAccForSymsInList =
       ProfileAccurateForSymsInList && PSL && !ProfileSampleAccurate;
-  if (ProfAccForSymsInList)
+  if (ProfAccForSymsInList) {
+    NamesInProfile.clear();
+    GUIDsInProfile.clear();
+    auto NameTable = Reader->getNameTable();
+    if (FunctionSamples::UseMD5) {
+      for (FunctionId Name : NameTable)
+        GUIDsInProfile.insert(Name.getHashCode());
+    } else {
+      for (FunctionId Name : NameTable)
+        NamesInProfile.insert(Name.stringRef());
+    }
     CoverageTracker.setProfAccForSymsInList(true);
+  }
 
   if (FAM && !ProfileInlineReplayFile.empty()) {
     ExternalInlineAdvisor = getReplayInlineAdvisor(
@@ -2260,10 +2280,10 @@ bool SampleProfileLoader::runOnFunction(Function &F,
     // but not cold accumulatively...), so the outline function showing up as
     // cold in sampled binary will actually not be cold after current build.
     StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-    if (FunctionSamples::UseMD5
-            ? Reader->contains(
-                  Function::getGUIDAssumingExternalLinkage(CanonName))
-            : Reader->contains(CanonName))
+    if ((FunctionSamples::UseMD5 &&
+         GUIDsInProfile.count(
+             Function::getGUIDAssumingExternalLinkage(CanonName))) ||
+        (!FunctionSamples::UseMD5 && NamesInProfile.count(CanonName)))
       initialEntryCount = -1;
   }
 

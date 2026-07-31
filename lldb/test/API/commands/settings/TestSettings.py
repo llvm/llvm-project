@@ -383,6 +383,28 @@ class SettingsCommandTestCase(TestBase):
         self.runCmd("settings set target.hex-immediate-style asm")
         self.expect("disassemble -n numberfn", substrs=["5ah"])
 
+    def test_jit_engine_setting(self):
+        """Test that the target.jit-engine setting round-trips and validates."""
+        # Defaults to mcjit.
+        self.expect(
+            "settings show target.jit-engine",
+            substrs=["target.jit-engine (enum) = mcjit"],
+        )
+
+        self.runCmd("settings set target.jit-engine orc")
+        self.expect(
+            "settings show target.jit-engine",
+            substrs=["target.jit-engine (enum) = orc"],
+        )
+
+        self.runCmd("settings set target.jit-engine mcjit")
+        self.expect(
+            "settings show target.jit-engine",
+            substrs=["target.jit-engine (enum) = mcjit"],
+        )
+
+        self.expect("settings set target.jit-engine bogus", error=True)
+
     @skipIfDarwinEmbedded  # <rdar://problem/34446098> debugserver on ios etc can't write files
     def test_run_args_and_env_vars(self):
         self.do_test_run_args_and_env_vars(use_launchsimple=False)

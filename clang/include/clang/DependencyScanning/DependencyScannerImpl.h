@@ -69,20 +69,6 @@ struct DiagnosticsEngineWithDiagOpts {
                                 DiagnosticConsumer &DC);
 };
 
-struct TextDiagnosticsPrinterWithOutput {
-  // We need to bound the lifetime of the data that supports the DiagPrinter
-  // with it together so they have the same lifetime.
-  std::string DiagnosticOutput;
-  llvm::raw_string_ostream DiagnosticsOS;
-  std::unique_ptr<DiagnosticOptions> DiagOpts;
-  TextDiagnosticPrinter DiagPrinter;
-
-  TextDiagnosticsPrinterWithOutput(ArrayRef<std::string> CommandLine)
-      : DiagnosticsOS(DiagnosticOutput),
-        DiagOpts(createDiagOptions(CommandLine)),
-        DiagPrinter(DiagnosticsOS, *DiagOpts) {}
-};
-
 std::unique_ptr<CompilerInvocation>
 createCompilerInvocation(ArrayRef<std::string> CommandLine,
                          DiagnosticsEngine &Diags);

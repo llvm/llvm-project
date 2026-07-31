@@ -14,8 +14,6 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-MainCaller::~MainCaller() = default;
-
 const char *SimpleExecutorDylibManagerInstanceName =
     "__llvm_orc_SimpleExecutorDylibManager_Instance";
 const char *SimpleExecutorDylibManagerOpenWrapperName =

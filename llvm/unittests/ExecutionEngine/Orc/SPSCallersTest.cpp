@@ -23,7 +23,11 @@
 using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
+using llvm::orc::rt::sps::Int32Int32Caller;
+using llvm::orc::rt::sps::Int32VoidCaller;
 using llvm::orc::rt::sps::MainCaller;
+using llvm::orc::rt::sps::VoidVoidCaller;
+
 // Test "main" function. Returns argc plus the length of the first element of
 // argv (if argv is non-empty). Does not inspect argv entries beyond the first.
 static int testMain(int argc, char *argv[]) {
@@ -139,6 +143,116 @@ TEST(SPSCallersTest, CreateLooksUpCallMainInBootstrapJD) {
   Expected<int64_t> R = (*CallMain)(ExecutorAddr::fromPtr(testMain), Args);
   ASSERT_THAT_EXPECTED(R, Succeeded());
   EXPECT_EQ(*R, 3 + 1); // argc == 3, strlen("x") == 1.
+
+  cantFail(ES.endSession());
+}
+
+// Target for VoidVoidCaller: records that it ran via a counter (there is no
+// return value to observe).
+static int VoidVoidCallCount = 0;
+static void voidVoidTarget() { ++VoidVoidCallCount; }
+
+// Executor-side wrapper for VoidVoidCaller. Decodes the target address and
+// invokes it as a void() function.
+static CWrapperFunctionBuffer callVoidVoidWrapper(const char *ArgData,
+                                                  size_t ArgSize) {
+  return WrapperFunction<void(SPSExecutorAddr)>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddr FnAddr) { FnAddr.toPtr<void()>()(); })
+      .release();
+}
+
+// Target for Int32Int32Caller: doubles its argument, so the forwarded value is
+// observable in the result.
+static int32_t int32Int32Target(int32_t X) { return X * 2; }
+
+// Executor-side wrapper for Int32Int32Caller. Decodes the target address and
+// the int32_t argument, invokes the target, and returns the result.
+static CWrapperFunctionBuffer callInt32Int32Wrapper(const char *ArgData,
+                                                    size_t ArgSize) {
+  return WrapperFunction<int32_t(SPSExecutorAddr, int32_t)>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddr FnAddr, int32_t X) -> int32_t {
+               return FnAddr.toPtr<int32_t(int32_t)>()(X);
+             })
+      .release();
+}
+
+// Exercises the void-return path (ErrorRetT == Error) and the empty argument
+// pack, through both the synchronous and asynchronous call operators.
+TEST(SPSCallersTest, VoidVoidSyncAndAsync) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  VoidVoidCaller Call(ES, ExecutorAddr::fromPtr(callVoidVoidWrapper));
+  ExecutorAddr TargetAddr = ExecutorAddr::fromPtr(voidVoidTarget);
+
+  // Synchronous: the call operator returns Error, not Expected<T>.
+  VoidVoidCallCount = 0;
+  EXPECT_THAT_ERROR(Call(TargetAddr), Succeeded());
+  EXPECT_EQ(VoidVoidCallCount, 1);
+
+  // Asynchronous: the result is delivered as an Error.
+  VoidVoidCallCount = 0;
+  std::promise<MSVCPError> P;
+  auto F = P.get_future();
+  Call([&](Error Err) { P.set_value(std::move(Err)); }, TargetAddr);
+  EXPECT_THAT_ERROR(Error(F.get()), Succeeded());
+  EXPECT_EQ(VoidVoidCallCount, 1);
+
+  cantFail(ES.endSession());
+}
+
+// Exercises a non-void caller with an argument (so argument forwarding through
+// the pack is covered), and the Create / bootstrap lookup path for a caller
+// other than MainCaller.
+TEST(SPSCallersTest, Int32Int32SyncAndCreate) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  Int32Int32Caller Call(ES, ExecutorAddr::fromPtr(callInt32Int32Wrapper));
+  Expected<int32_t> RDirect = Call(ExecutorAddr::fromPtr(int32Int32Target), 21);
+  ASSERT_THAT_EXPECTED(RDirect, Succeeded());
+  EXPECT_EQ(*RDirect, 42); // 21 * 2.
+
+  auto &BootstrapJD = ES.getBootstrapJITDylib();
+  cantFail(BootstrapJD.define(
+      absoluteSymbols({{ES.intern(Int32Int32Caller::CIName),
+                        {ExecutorAddr::fromPtr(callInt32Int32Wrapper),
+                         JITSymbolFlags::Exported}}})));
+
+  Expected<Int32Int32Caller> CreatedCall = Int32Int32Caller::Create(ES);
+  ASSERT_THAT_EXPECTED(CreatedCall, Succeeded());
+  Expected<int32_t> RCreated =
+      (*CreatedCall)(ExecutorAddr::fromPtr(int32Int32Target), 21);
+  ASSERT_THAT_EXPECTED(RCreated, Succeeded());
+  EXPECT_EQ(*RCreated, 42); // 21 * 2.
+
+  cantFail(ES.endSession());
+}
+
+// Target for Int32VoidCaller.
+static int32_t int32VoidTarget() { return 42; }
+
+// Executor-side wrapper for Int32VoidCaller. Decodes the target address,
+// invokes it as an int32_t() function, and returns the result.
+static CWrapperFunctionBuffer callInt32VoidWrapper(const char *ArgData,
+                                                   size_t ArgSize) {
+  return WrapperFunction<int32_t(SPSExecutorAddr)>::handle(
+             ArgData, ArgSize,
+             [](ExecutorAddr FnAddr) -> int32_t {
+               return FnAddr.toPtr<int32_t()>()();
+             })
+      .release();
+}
+
+// Exercises a non-void, zero-argument caller. (Void return and argument
+// forwarding are covered by VoidVoidCaller and Int32Int32Caller respectively.)
+TEST(SPSCallersTest, Int32VoidSync) {
+  ExecutionSession ES(cantFail(SelfExecutorProcessControl::Create()));
+
+  Int32VoidCaller Call(ES, ExecutorAddr::fromPtr(callInt32VoidWrapper));
+  Expected<int32_t> R = Call(ExecutorAddr::fromPtr(int32VoidTarget));
+  ASSERT_THAT_EXPECTED(R, Succeeded());
+  EXPECT_EQ(*R, 42);
 
   cantFail(ES.endSession());
 }

@@ -9,12 +9,17 @@
 # RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -window-region-limit=1 -window-search-ratio=80 \
 # RUN: -filetype=null 2>&1 | FileCheck %s --check-prefix=CHECK-SCHED-NOT-NEEDED
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner \
+# RUN: -window-sched=force -filetype=null \
+# RUN: -pass-remarks-missed=pipeliner 2>&1 | FileCheck %s --check-prefix=REMARK
 
 # CHECK-INITIALIZE: There are too few MIs in the window region!
 # CHECK-INITIALIZE: The WindowScheduler failed to initialize!
 # CHECK-ANALYSE-II: Can't find a valid II. Keep searching...
 # CHECK-ANALYSE-II: Window scheduling is not needed!
 # CHECK-SCHED-NOT-NEEDED: Window scheduling is not needed!
+
+# REMARK: remark: {{.*}}Failed to find a valid window schedule
 
 ---
 name:            relu

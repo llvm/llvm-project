@@ -238,7 +238,12 @@ void associative_container_benchmarks(std::string container) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size));
     Container src(in.begin(), in.end());
+    Container half(std::next(in.begin(), in.size() / 2), in.end());
+
     Container c[BatchSize];
+    for (std::size_t i = 0; i != BatchSize; ++i) {
+      c[i] = half;
+    }
 
     while (st.KeepRunningBatch(BatchSize)) {
       for (std::size_t i = 0; i != BatchSize; ++i) {
@@ -249,7 +254,7 @@ void associative_container_benchmarks(std::string container) {
 
       st.PauseTiming();
       for (std::size_t i = 0; i != BatchSize; ++i) {
-        c[i].clear();
+        c[i] = half;
       }
       st.ResumeTiming();
     }
@@ -493,9 +498,9 @@ void associative_container_benchmarks(std::string container) {
       st.ResumeTiming();
     }
   };
-  bench("insert(iterator, iterator) (all new keys, end)", [&](auto& state) { insert_iter_iter_bench(true, state); });
+  bench("insert(iterator, iterator) (all new keys, end)", [=](auto& state) { insert_iter_iter_bench(true, state); });
   bench("insert(iterator, iterator) (all new keys, middle)",
-        [&](auto& state) { insert_iter_iter_bench(false, state); });
+        [=](auto& state) { insert_iter_iter_bench(false, state); });
 
   bench("insert(iterator, iterator) (half new keys)", [=](auto& st) {
     const std::size_t size = st.range(0);

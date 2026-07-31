@@ -111,7 +111,7 @@ public:
 
   llvm::Expected<std::map<llvm::StringLiteral, AbstractMethodCheckerPayload>>
   CheckAbstractMethodImplementation(
-      const python::PythonDictionary &class_dict) const {
+      const python::PythonObject &obj_class) const {
 
     using namespace python;
 
@@ -125,18 +125,17 @@ public:
     for (const AbstractMethodRequirement &requirement :
          GetAbstractMethodRequirements()) {
       llvm::StringLiteral method_name = requirement.name;
-      if (!class_dict.HasKey(method_name))
+      // Look up via attribute access so inherited methods are found; the
+      // class's own __dict__ omits anything defined on a base class.
+      if (!obj_class.HasAttribute(method_name))
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eNotImplemented)
-      llvm::Expected<PythonObject> callable_or_err =
-          class_dict.GetItem(method_name);
-      if (!callable_or_err) {
-        llvm::consumeError(callable_or_err.takeError());
+      PythonObject attr = obj_class.GetAttributeValue(method_name);
+      if (!attr.IsAllocated())
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eNotAllocated)
-      }
 
-      PythonCallable callable = callable_or_err->AsType<PythonCallable>();
+      PythonCallable callable = attr.AsType<PythonCallable>();
       if (!callable)
         SET_CASE_AND_CONTINUE(method_name,
                               AbstractMethodCheckerCases::eNotCallable)
@@ -296,26 +295,7 @@ public:
     PythonString obj_class_name =
         obj_class.GetAttributeValue("__name__").AsType<PythonString>();
 
-    PythonObject object_class_mapping_proxy =
-        obj_class.GetAttributeValue("__dict__");
-    if (!obj_class.HasAttribute("__dict__"))
-      return create_error(
-          "Resulting object class doesn't have '__dict__' member.");
-
-    PythonCallable dict_converter = PythonModule::BuiltinsModule()
-                                        .ResolveName("dict")
-                                        .AsType<PythonCallable>();
-    if (!dict_converter.IsAllocated())
-      return create_error(
-          "Python 'builtins' module doesn't have 'dict' class.");
-
-    PythonDictionary object_class_dict =
-        dict_converter(object_class_mapping_proxy).AsType<PythonDictionary>();
-    if (!object_class_dict.IsAllocated())
-      return create_error("Coudn't create dictionary from resulting object "
-                          "class mapping proxy object.");
-
-    auto checker_or_err = CheckAbstractMethodImplementation(object_class_dict);
+    auto checker_or_err = CheckAbstractMethodImplementation(obj_class);
     if (!checker_or_err)
       return checker_or_err.takeError();
 
@@ -532,15 +512,36 @@ protected:
     std::tuple<Args...> original_args = std::forward_as_tuple(args...);
     auto transformed_args = TransformArgs(original_args);
 
+    // Trim trailing args if the Python method accepts fewer positional
+    // parameters than we're passing (e.g. `num_children(self)` vs.
+    // `num_children(self, max_count)`).
+    size_t call_arity = sizeof...(Args);
+    if (PythonObject py_method = implementor.GetAttributeValue(method_name);
+        py_method.IsAllocated()) {
+      PythonCallable callable = py_method.AsType<PythonCallable>();
+      if (callable.IsAllocated()) {
+        if (llvm::Expected<PythonCallable::ArgInfo> arg_info =
+                callable.GetArgInfo()) {
+          if (arg_info->max_positional_args !=
+                  PythonCallable::ArgInfo::UNBOUNDED &&
+              arg_info->max_positional_args < call_arity)
+            call_arity = arg_info->max_positional_args;
+        } else {
+          llvm::consumeError(arg_info.takeError());
+        }
+      }
+    }
+
     llvm::Expected<PythonObject> expected_return_object =
         llvm::createStringError("not initialized");
-    std::apply(
-        [&implementor, &method_name, &expected_return_object](auto &&...args) {
-          llvm::consumeError(expected_return_object.takeError());
-          expected_return_object =
-              implementor.CallMethod(method_name.data(), args...);
-        },
-        transformed_args);
+    CallWithArity(call_arity, transformed_args,
+                  std::make_index_sequence<sizeof...(Args) + 1>{},
+                  [&implementor, &method_name,
+                   &expected_return_object](auto &&...call_args) {
+                    llvm::consumeError(expected_return_object.takeError());
+                    expected_return_object = implementor.CallMethod(
+                        method_name.data(), call_args...);
+                  });
 
     if (llvm::Error e = expected_return_object.takeError()) {
       error = Status::FromError(std::move(e));
@@ -730,6 +731,30 @@ protected:
   template <typename... Args>
   auto TransformArgs(const std::tuple<Args...> &args) {
     return TransformTuple(args, std::make_index_sequence<sizeof...(Args)>());
+  }
+
+  // Apply `fn` with the first `N` elements of `t`, for compile-time `N`.
+  template <std::size_t N, typename Tuple, typename Fn, std::size_t... I>
+  static void ApplyPrefixImpl(Tuple &&t, Fn &&fn, std::index_sequence<I...>) {
+    std::forward<Fn>(fn)(std::get<I>(std::forward<Tuple>(t))...);
+  }
+
+  template <std::size_t N, typename Tuple, typename Fn>
+  static void ApplyPrefix(Tuple &&t, Fn &&fn) {
+    ApplyPrefixImpl<N>(std::forward<Tuple>(t), std::forward<Fn>(fn),
+                       std::make_index_sequence<N>{});
+  }
+
+  // Call `fn` with a runtime-selected prefix of `t`: exactly `call_arity`
+  // leading elements. `Is...` enumerates every compile-time count in
+  // `[0, sizeof...(Args)]`; the runtime check picks the matching one.
+  template <typename Tuple, std::size_t... Is, typename Fn>
+  static void CallWithArity(size_t call_arity, Tuple &&t,
+                            std::index_sequence<Is...>, Fn &&fn) {
+    (void)std::initializer_list<int>{(
+        Is == call_arity
+            ? (ApplyPrefix<Is>(std::forward<Tuple>(t), std::forward<Fn>(fn)), 0)
+            : 0)...};
   }
 
   template <typename T, typename U>

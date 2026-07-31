@@ -12,7 +12,7 @@
 // Check that CompilerInstanceWithContext::initializeOrError properly errors
 // during target creation, instead of an assert or a segfault later down the
 // line:
-// CHECK: Error while scanning dependencies for M:
+// CHECK: Diagnostics while scanning dependencies for 'M':
 // CHECK-NEXT: error: unknown target triple 'unknown-unknown-unknown'
 
 //--- module.modulemap

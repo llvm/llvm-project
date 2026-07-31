@@ -513,6 +513,10 @@ defm CvtPkF16F32Inst : AMDGPUSubtargetFeature<"cvt-pk-f16-f32-inst",
   "Has cvt_pk_f16_f32 instruction"
 >;
 
+defm CvtSrPkBF16F32Inst : AMDGPUSubtargetFeature<"cvt-sr-pk-bf16-f32-inst",
+  "Has cvt_sr_pk_bf16_f32 instruction"
+>;
+
 defm McastLoadInsts : AMDGPUSubtargetFeature<"mcast-load-insts",
   "Has multicast load instructions"
 >;
@@ -745,12 +749,16 @@ defm PackedFP32Ops : AMDGPUSubtargetFeature<"packed-fp32-ops",
   "Support packed fp32 instructions"
 >;
 
-defm PackedFP64Ops : AMDGPUSubtargetFeature<"packed-fp64-ops",
-  "Support packed fp64 instructions"
+defm PackedFP32SingleSGPROps : AMDGPUSubtargetFeature<"packed-fp32-single-sgpr-ops",
+  "Support packed fp32 instructions with SGPR operands propagating low to high 32 bit"
 >;
 
-defm PackedU64Ops : AMDGPUSubtargetFeature<"packed-u64-ops",
-  "Support packed uint64 instructions"
+defm PackedFP64SingleSGPROps : AMDGPUSubtargetFeature<"packed-fp64-single-sgpr-ops",
+  "Support packed fp64 instructions with SGPR operands propagating low to high 64 bit"
+>;
+
+defm PackedU64SingleSGPROps : AMDGPUSubtargetFeature<"packed-u64-single-sgpr-ops",
+  "Support packed uint64 instructions with SGPR operands propagating low to high 64 bit"
 >;
 
 defm R128A16 : AMDGPUSubtargetFeature<"r128-a16",
@@ -873,6 +881,16 @@ defm FP8ConversionInsts : AMDGPUSubtargetFeature<"fp8-conversion-insts",
   "Has fp8 and bf8 conversion instructions"
 >;
 
+// OCP fp8 semantics (E4M3FN, E5M2). Distinct from the FNUZ formats used by
+// gfx942.
+defm OCPFP8ConversionInsts : AMDGPUSubtargetFeature<"ocp-fp8-conversion-insts",
+  "Has OCP fp8 (E4M3FN, E5M2) conversion instructions"
+>;
+
+defm FP8F16ConversionInsts : AMDGPUSubtargetFeature<"fp8-f16-conversion-insts",
+  "Has fp8 and bf8 conversion to f16 instructions"
+>;
+
 defm FP8E5M3Insts : AMDGPUSubtargetFeature<"fp8e5m3-insts",
   "Has fp8 e5m3 format support"
 >;
@@ -881,6 +899,22 @@ defm CvtFP8VOP1Bug : AMDGPUSubtargetFeature<"cvt-fp8-vop1-bug",
   "FP8/BF8 VOP1 form of conversion to F32 is unreliable",
   /*GenPredicate=*/1,
   /*GenAssemblerPredicate=*/0,
+  [FeatureFP8ConversionInsts]
+>;
+
+// The fp8/bf8 to f32 conversions select which byte of the source to convert in
+// one of two ways.
+defm CvtFP8SDWASrcSel : AMDGPUSubtargetFeature<"cvt-fp8-sdwa-src-sel",
+  "FP8/BF8 conversions to F32 take the source byte from the SDWA src0_sel field",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureFP8ConversionInsts]
+>;
+
+defm CvtFP8ByteSel : AMDGPUSubtargetFeature<"cvt-fp8-byte-sel",
+  "FP8/BF8 conversions to F32 take the source byte from a byte_sel operand",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
   [FeatureFP8ConversionInsts]
 >;
 
@@ -1655,7 +1689,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
-   FeatureBVHRayTracingInsts, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
+   FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureGFX12Insts, FeatureVOP3PInsts, FeatureVOPDInsts,
    FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
@@ -1928,6 +1962,8 @@ def FeatureISAVersion9_5_Common : FeatureSet<
   [FeatureAddressableLocalMemorySize163840,
    FeatureFP8Insts,
    FeatureFP8ConversionInsts,
+   FeatureCvtFP8SDWASrcSel,
+   FeatureOCPFP8ConversionInsts,
    FeatureGFX950Insts,
    FeaturePrngInst,
    FeatureBF16ConversionInsts,
@@ -1947,6 +1983,7 @@ def FeatureISAVersion9_4_2 : FeatureSet<
       FeatureAddressableLocalMemorySize65536,
       FeatureFP8Insts,
       FeatureFP8ConversionInsts,
+      FeatureCvtFP8SDWASrcSel,
       FeatureCvtFP8VOP1Bug,
       FeatureXF32Insts
     ])>;
@@ -2138,6 +2175,8 @@ def FeatureISAVersion11_7_Common : FeatureSet<
      FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureFP8ConversionInsts,
+     FeatureCvtFP8ByteSel,
+     FeatureOCPFP8ConversionInsts,
      FeatureDot11Insts,
      FeatureWMMA128bInsts,
      FeatureSWMMACGfx1200Insts,
@@ -2178,7 +2217,10 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeatureExtendedImageInsts,
+   FeatureBVHRayTracingInsts,
    FeatureFP8ConversionInsts,
+   FeatureCvtFP8ByteSel,
+   FeatureOCPFP8ConversionInsts,
    FeatureWMMA128bInsts,
    FeatureSWMMACGfx1200Insts,
    FeatureIEEEMinimumMaximumInsts,
@@ -2224,7 +2266,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureLDSBankCount32,
    FeatureDLInsts,
    FeatureFmacF64Inst,
-   FeaturePackedFP32Ops,
+   FeaturePackedFP32SingleSGPROps,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureWavefrontSize32,
@@ -2241,6 +2283,9 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
+   FeatureCvtFP8ByteSel,
+   FeatureOCPFP8ConversionInsts,
+   FeatureFP8F16ConversionInsts,
    FeatureFP8E5M3Insts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -2258,6 +2303,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureBF16PackedInsts,
    FeatureBF16InlineConstFromUpperFP32,
    FeatureCvtPkF16F32Inst,
+   FeatureCvtSrPkBF16F32Inst,
    FeatureFmaMixBF16Insts,
    FeatureMin3Max3PKF16,
    FeatureMinimum3Maximum3PKF16,
@@ -2330,8 +2376,8 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureFullRate64Ops,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
-   FeaturePackedFP64Ops,
-   FeaturePackedU64Ops,
+   FeaturePackedFP64SingleSGPROps,
+   FeaturePackedU64SingleSGPROps,
    FeatureGFX1251GEMMInsts,
    FeatureGFX125xLowestRateWMMA,
    FeatureCubeInsts,
@@ -2395,6 +2441,9 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureAtomicBufferPkAddBF16Inst,
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
+   FeatureCvtFP8ByteSel,
+   FeatureOCPFP8ConversionInsts,
+   FeatureFP8F16ConversionInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -2418,6 +2467,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureFmaMixBF16Insts,
    FeatureGloballyAddressableScratch,
    FeatureCvtPkF16F32Inst,
+   FeatureCvtSrPkBF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToFP6BF6ConversionScaleInsts,
    FeatureIEEEMinimumMaximumInsts,
@@ -2915,6 +2965,19 @@ def NotHasMAIInsts : Predicate<"!Subtarget->hasMAIInsts()">,
 def NotHasFP8E5M3Insts : Predicate<"!Subtarget->hasFP8E5M3Insts()">,
   AssemblerPredicate<(all_of (not FeatureFP8E5M3Insts))>;
 
+// Byte 0 of the SDWA src_sel form is reachable through the plain VOP1 encoding
+// unless that encoding is unreliable.
+def HasCvtFP8SDWASrcSelNotVOP1Bug : Predicate<"Subtarget->hasCvtFP8SDWASrcSel() && !Subtarget->hasCvtFP8VOP1Bug()">,
+  AssemblerPredicate<(all_of FeatureCvtFP8SDWASrcSel, (not FeatureCvtFP8VOP1Bug))>;
+
+// The byte_sel form of the fp8 to f32 conversion reads the source as e5m3 when
+// the clamp bit is set, replacing the plain op_sel form.
+def HasCvtFP8ByteSelE5M3 : Predicate<"Subtarget->hasCvtFP8ByteSel() && Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of FeatureCvtFP8ByteSel, FeatureFP8E5M3Insts)>;
+
+def HasCvtFP8ByteSelNotE5M3 : Predicate<"Subtarget->hasCvtFP8ByteSel() && !Subtarget->hasFP8E5M3Insts()">,
+  AssemblerPredicate<(all_of FeatureCvtFP8ByteSel, (not FeatureFP8E5M3Insts))>;
+
 def HasFmacLegacy32 : Predicate<"Subtarget->hasFmaLegacy32Insts() && Subtarget->getGeneration() < AMDGPUSubtarget::GFX12">,
   AssemblerPredicate<(all_of FeatureFmaLegacy32Insts, (not FeatureGFX12Insts))>;
 
@@ -2943,7 +3006,14 @@ def HasSignedDotInsts : Predicate<"Subtarget->hasDot1Insts() || Subtarget->hasDo
 
 def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximumInsts()">;
 
-def NotHasCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
+def HasAnyPackedFP32Ops : Predicate<"Subtarget->hasAnyPackedFP32Ops()">,
+  AssemblerPredicate<(any_of FeaturePackedFP32Ops, FeaturePackedFP32SingleSGPROps)>;
+
+def HasAnyPackedFP64Ops : Predicate<"Subtarget->hasAnyPackedFP64Ops()">,
+  AssemblerPredicate<(any_of FeaturePackedFP64SingleSGPROps)>;
+
+def HasAnyPackedU64Ops : Predicate<"Subtarget->hasAnyPackedU64Ops()">,
+  AssemblerPredicate<(any_of FeaturePackedU64SingleSGPROps)>;
 
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;

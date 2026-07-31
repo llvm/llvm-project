@@ -370,6 +370,8 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a crash when classifying a call to a builtin with dependent arguments,
   such as when the call is used as an `auto` non-type template argument.
+- Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
+  format warnings to errors. (#GH211943)
 
 #### Bug Fixes to Attribute Support
 
@@ -494,6 +496,9 @@ features cannot lower the translation-unit ABI level;
 ### AST Matchers
 
 ### clang-format
+
+- Add `SpacesInBlockComments` option to control spacing after `/*` and
+  before `*/` in ordinary block comments.
 
 ### libclang
 

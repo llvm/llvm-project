@@ -3354,6 +3354,10 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
       LegalPtrVTS(ComputeLegalPtrTypes()) {
+  IntrinsicIDs.reserve(Intrinsics.size());
+  for (auto [ID, Intrinsic] : enumerate(Intrinsics))
+    IntrinsicIDs.try_emplace(Intrinsic.TheDef, ID);
+
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();

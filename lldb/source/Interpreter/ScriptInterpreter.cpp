@@ -8,8 +8,6 @@
 
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "API/SBCommandReturnObjectImpl.h"
-#include "lldb/API/SBCommandReturnObject.h"
-#include "lldb/API/SBDebugger.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Pipe.h"
@@ -240,6 +238,8 @@ ScriptInterpreter::ExtensionToString(lldb::ScriptedExtension extension) {
     return "ParsedCommand";
   case eScriptedExtensionScriptedStringSummary:
     return "ScriptedStringSummary";
+  case eScriptedExtensionScriptedSyntheticChildren:
+    return "ScriptedSyntheticChildren";
   }
   llvm_unreachable("unhandled ScriptedExtension");
 }
@@ -264,6 +264,8 @@ ScriptInterpreter::StringToExtension(llvm::StringRef string) {
       .CaseLower("ParsedCommand", eScriptedExtensionParsedCommand)
       .CaseLower("ScriptedStringSummary",
                  eScriptedExtensionScriptedStringSummary)
+      .CaseLower("ScriptedSyntheticChildren",
+                 eScriptedExtensionScriptedSyntheticChildren)
       .Default(eScriptedExtensionInvalid);
 }
 

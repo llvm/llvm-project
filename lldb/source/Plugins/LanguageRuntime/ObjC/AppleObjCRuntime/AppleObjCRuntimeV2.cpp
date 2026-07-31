@@ -1648,6 +1648,8 @@ AppleObjCRuntimeV2::GetClassDescriptorImpl(ValueObject &valobj,
   if (!valobj.GetCompilerType().IsValid())
     return objc_class_sp;
   addr_t isa_pointer = valobj.GetPointerValue().address;
+  if (isa_pointer == LLDB_INVALID_ADDRESS)
+    return objc_class_sp;
 
   // tagged pointer
   if (IsTaggedPointer(isa_pointer))

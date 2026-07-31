@@ -586,6 +586,10 @@ public:
     }
   };
 
+  // The CallExpr within the current statement that the musttail attribute
+  // applies to.  nullptr if there is no 'musttail' on the current statement.
+  const CallExpr *mustTailCall = nullptr;
+
   struct VlaSizePair {
     mlir::Value numElts;
     QualType type;
@@ -1786,14 +1790,14 @@ public:
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
-                  mlir::Location loc);
+                  bool isMustTail, mlir::Location loc);
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
-                  const CallArgList &args,
+                  const CallArgList &args, bool isMustTail,
                   cir::CIRCallOpInterface *callOrTryCall = nullptr) {
     assert(currSrcLoc && "source location must have been set");
     return emitCall(funcInfo, callee, returnValue, args, callOrTryCall,
-                    *currSrcLoc);
+                    isMustTail, *currSrcLoc);
   }
 
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,

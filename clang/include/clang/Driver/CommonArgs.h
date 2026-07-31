@@ -50,6 +50,10 @@ void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
                                           const llvm::opt::ArgList &Args,
                                           llvm::opt::ArgStringList &CmdArgs);
 
+void renderDebugInfoCompressionArgs(const llvm::opt::ArgList &Args,
+                                    llvm::opt::ArgStringList &CmdArgs,
+                                    const Driver &D, const ToolChain &TC);
+
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,

@@ -1659,3 +1659,19 @@ void test_pk_add_min_max(global short2 *out, global ushort2 *uout, short2 a, sho
   *out = __builtin_amdgcn_pk_add_min_i16(a, b, c, false);
   *uout = __builtin_amdgcn_pk_add_min_u16(ua, ub, uc, true);
 }
+
+// CHECK-LABEL: @test_s_prefetch_data(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[GP_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[LEN_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[GP:%.*]], ptr addrspace(5) [[GP_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[LEN:%.*]], ptr addrspace(5) [[LEN_ADDR]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[GP_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[LEN_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.amdgcn.s.prefetch.data.p1(ptr addrspace(1) [[TMP0]], i32 [[TMP1]])
+// CHECK-NEXT:    ret void
+//
+void test_s_prefetch_data(global float *gp, unsigned int len)
+{
+  __builtin_amdgcn_s_prefetch_data(gp, len);
+}

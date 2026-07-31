@@ -33,7 +33,24 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 
+- The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
+  `fir.array_update`, `fir.array_modify`, `fir.array_access`,
+  `fir.array_amend`, `fir.array_merge_store`) have been removed from FIR,
+  together with the `array-value-copy` pass that legalized them and its
+  `-mmlir -disable-avc` option. Nothing in flang has produced these
+  operations since the legacy (non-HLFIR) expression lowering was deleted.
+  Downstream projects that still construct them must migrate to HLFIR (or
+  their own legalization) before rebasing. `fir.array_coor` is unrelated
+  and remains supported.
+
+- Added support for compressed DWARF debug sections. Flang now supports
+  compressing DWARF debug info in ELF object files using zlib or zstd,
+  reducing debug information size in compiled binaries.
+
 ## New Compiler Flags
+
+- Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
+  sections. Supported formats are `zlib`, `zstd`, and `none`.
 
 ## Windows Support
 

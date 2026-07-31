@@ -28,6 +28,7 @@
 #ifndef LLVM_ADT_GENERICCYCLEINFO_H
 #define LLVM_ADT_GENERICCYCLEINFO_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"

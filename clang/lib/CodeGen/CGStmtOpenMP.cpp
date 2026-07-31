@@ -3221,33 +3221,18 @@ void CodeGenFunction::EmitOMPTileDirective(const OMPTileDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII TileScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
-
-  // Emit loop variable finalization as required by OpenMP 6.0 spec to restore
-  // original loop variable values after the loop-transformation construct.
-  if (auto *Finals = S.getFinals())
-    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPStripeDirective(const OMPStripeDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII StripeScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
-
-  // Emit loop variable finalization as required by OpenMP 6.0 spec to restore
-  // original loop variable values after the loop-transformation construct.
-  if (auto *Finals = S.getFinals())
-    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPReverseDirective(const OMPReverseDirective &S) {
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII ReverseScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
-
-  // Emit loop variable finalization as required by OpenMP 6.0 spec to restore
-  // original loop variable values after the loop-transformation construct.
-  if (auto *Finals = S.getFinals())
-    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPSplitDirective(const OMPSplitDirective &S) {
@@ -3261,22 +3246,12 @@ void CodeGenFunction::EmitOMPInterchangeDirective(
   // Emit the de-sugared statement.
   OMPTransformDirectiveScopeRAII InterchangeScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
-
-  // Emit loop variable finalization as required by OpenMP 6.0 spec to restore
-  // original loop variable values after the loop-transformation construct.
-  if (auto *Finals = S.getFinals())
-    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPFuseDirective(const OMPFuseDirective &S) {
   // Emit the de-sugared statement
   OMPTransformDirectiveScopeRAII FuseScope(*this, &S);
   EmitStmt(S.getTransformedStmt());
-
-  // Emit loop variable finalization as required by OpenMP 6.0 spec to restore
-  // original loop variable values after the loop-transformation construct.
-  if (auto *Finals = S.getFinals())
-    EmitStmt(Finals);
 }
 
 void CodeGenFunction::EmitOMPUnrollDirective(const OMPUnrollDirective &S) {

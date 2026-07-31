@@ -1556,16 +1556,6 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
   genComponentByComponentAssignment(builder, loc, lhs, rhs, isTemporaryLHS);
 }
 
-mlir::TupleType
-fir::factory::getRaggedArrayHeaderType(fir::FirOpBuilder &builder) {
-  mlir::IntegerType i64Ty = builder.getIntegerType(64);
-  auto arrTy = fir::SequenceType::get(builder.getIntegerType(8), 1);
-  auto buffTy = fir::HeapType::get(arrTy);
-  auto extTy = fir::SequenceType::get(i64Ty, 1);
-  auto shTy = fir::HeapType::get(extTy);
-  return mlir::TupleType::get(builder.getContext(), {i64Ty, buffTy, shTy});
-}
-
 mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
                                           mlir::Location loc, mlir::Type type) {
   mlir::Type i1 = builder.getIntegerType(1);
