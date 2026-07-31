@@ -39,8 +39,8 @@ faddp	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      8     2.00                        fmla	v0.2d, v1.2d, v2.2d
 # CHECK-NEXT:  1      8     1.00                        fmla	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      8     1.00                        fmadd	s0, s1, s2, s3
-# CHECK-NEXT:  1      6     2.00                        fadd	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     1.00                        fadd	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      4     2.00                        fadd	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      4     1.00                        fadd	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      2     2.00                        add	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      2     1.00                        add	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      6     2.00                        zip1	v0.4s, v1.4s, v2.4s
@@ -53,8 +53,8 @@ faddp	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      6     1.00                        ext	v0.8b, v1.8b, v2.8b, #4
 # CHECK-NEXT:  1      6     2.00                        dup	v0.4s, v1.s[1]
 # CHECK-NEXT:  1      6     1.00                        dup	v0.2s, v1.s[1]
-# CHECK-NEXT:  1      6     2.00                        faddp	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     1.00                        faddp	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      4     2.00                        faddp	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      4     1.00                        faddp	v0.2s, v1.2s, v2.2s
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - A53UnitALU
