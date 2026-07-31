@@ -26,21 +26,34 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 namespace {
-/// Return true if the expression tree contains an AbstractConditionalOperator
-/// (ternary ?:), which is the only construct whose CIR codegen calls
-/// ConditionalEvaluation::beginEvaluation() and thus causes cleanups to be
-/// deferred via pushFullExprCleanup.  Logical &&/|| do NOT call
-/// beginEvaluation(); their branch-local cleanups are handled by LexicalScope.
+/// Return true if the expression tree contains a construct that causes cleanups
+/// to be deferred via pushFullExprCleanup.
 class ConditionalEvaluationFinder
     : public RecursiveASTVisitor<ConditionalEvaluationFinder> {
+  const ASTContext &astContext;      
   bool foundConditional = false;
 
 public:
+  ConditionalEvaluationFinder(const ASTContext &astContext)
+      : astContext(astContext) {}
+
   bool found() const { return foundConditional; }
 
   bool VisitAbstractConditionalOperator(AbstractConditionalOperator *) {
     foundConditional = true;
     return false;
+  }
+
+  bool VisitCXXNewExpr(CXXNewExpr *e) {
+    // If the new expression requires a null check, its initializer may be
+    // skipped. In that case, the cleanup for any temporaries created in the
+    // initializer must be conditional.
+    if (e->shouldNullCheckAllocation() &&
+        (!e->getAllocatedType().isPODType(astContext) || e->hasInitializer())) {
+      foundConditional = true;
+      return false;
+    }
+    return true;
   }
 
   // Don't cross evaluation-context boundaries.
@@ -105,7 +118,7 @@ CIRGenFunction::FullExprCleanupScope::FullExprCleanupScope(CIRGenFunction &cgf,
       deferredCleanupStackSize(cgf.deferredConditionalCleanupStack.size()) {
 
   assert(subExpr && "ExprWithCleanups always has a sub-expression");
-  ConditionalEvaluationFinder finder;
+  ConditionalEvaluationFinder finder(cgf.getContext());
   finder.TraverseStmt(const_cast<Expr *>(subExpr));
   if (finder.found()) {
     mlir::Location loc = cgf.builder.getUnknownLoc();
