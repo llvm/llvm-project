@@ -134,7 +134,9 @@ def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 4; }
 // they do not dual-issue: they take both lanes even though they are scalar.
 def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 4; }
-def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 6; }
+// Float-to-int register copy (FMOV between a GPR and an FP register) takes a
+// single cycle in each direction.
+def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 1; }
 def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
 // A 128-bit (Q-form) operation fills the whole 128-bit datapath, so it takes
