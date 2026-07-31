@@ -8,18 +8,17 @@ define void @test_mul_copyable(ptr %dst, ptr %srcB, float %p, float %q, float %r
 ; ENABLED-LABEL: define void @test_mul_copyable(
 ; ENABLED-SAME: ptr [[DST:%.*]], ptr [[SRCB:%.*]], float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[T:%.*]], float [[U:%.*]], float [[V:%.*]], float [[W:%.*]], float [[E:%.*]], float [[F:%.*]], float [[G:%.*]], float [[H:%.*]]) {
 ; ENABLED-NEXT:  [[ENTRY:.*:]]
-; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[P]], i64 0
-; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[R]], i64 1
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[Q]], i64 0
-; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[S]], i64 1
-; ENABLED-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[TMP3]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[T]], i64 0
-; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[V]], i64 1
-; ENABLED-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[U]], i64 0
-; ENABLED-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[W]], i64 1
-; ENABLED-NEXT:    [[TMP9:%.*]] = fmul <2 x float> [[TMP6]], [[TMP8]]
-; ENABLED-NEXT:    [[TMP10:%.*]] = fdiv <2 x float> [[TMP6]], [[TMP8]]
-; ENABLED-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
+; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[P]], i64 0
+; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[R]], i64 1
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[T]], i64 2
+; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[V]], i64 3
+; ENABLED-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[Q]], i64 0
+; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[S]], i64 1
+; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[U]], i64 2
+; ENABLED-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP6]], float [[W]], i64 3
+; ENABLED-NEXT:    [[TMP8:%.*]] = fmul <4 x float> [[TMP3]], [[TMP7]]
+; ENABLED-NEXT:    [[TMP9:%.*]] = fdiv <4 x float> [[TMP3]], [[TMP7]]
+; ENABLED-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
 ; ENABLED-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> poison, float [[E]], i64 0
 ; ENABLED-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP12]], float [[G]], i64 1
 ; ENABLED-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> poison, float [[F]], i64 0
@@ -28,10 +27,12 @@ define void @test_mul_copyable(ptr %dst, ptr %srcB, float %p, float %q, float %r
 ; ENABLED-NEXT:    [[TMP17:%.*]] = fsub <2 x float> [[TMP13]], [[TMP15]]
 ; ENABLED-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> [[TMP17]], <2 x i32> <i32 0, i32 3>
 ; ENABLED-NEXT:    [[TMP19:%.*]] = load <2 x float>, ptr [[SRCB]], align 4
-; ENABLED-NEXT:    [[TMP20:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP19]], <2 x float> [[TMP18]])
-; ENABLED-NEXT:    store <2 x float> [[TMP20]], ptr [[DST]], align 4
-; ENABLED-NEXT:    [[D2:%.*]] = getelementptr float, ptr [[DST]], i32 2
-; ENABLED-NEXT:    store <2 x float> [[TMP11]], ptr [[D2]], align 4
+; ENABLED-NEXT:    [[TMP24:%.*]] = shufflevector <2 x float> [[TMP19]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; ENABLED-NEXT:    [[TMP20:%.*]] = shufflevector <4 x float> <float poison, float poison, float 1.000000e+00, float 1.000000e+00>, <4 x float> [[TMP24]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP18]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; ENABLED-NEXT:    [[TMP22:%.*]] = shufflevector <4 x float> <float poison, float poison, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[TMP21]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; ENABLED-NEXT:    [[TMP23:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP10]], <4 x float> [[TMP20]], <4 x float> [[TMP22]])
+; ENABLED-NEXT:    store <4 x float> [[TMP23]], ptr [[DST]], align 4
 ; ENABLED-NEXT:    ret void
 ;
 ; DISABLED-LABEL: define void @test_mul_copyable(
@@ -89,11 +90,8 @@ define void @test_mul_copyable_args(ptr %dst, ptr %srcB, float %p, float %q, flo
 ; ENABLED-LABEL: define void @test_mul_copyable_args(
 ; ENABLED-SAME: ptr [[DST:%.*]], ptr [[SRCB:%.*]], float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[E:%.*]], float [[F:%.*]], float [[G:%.*]], float [[H:%.*]]) {
 ; ENABLED-NEXT:  [[ENTRY:.*:]]
-; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[P]], i64 0
-; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[R]], i64 1
-; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[Q]], i64 0
-; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[S]], i64 1
-; ENABLED-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[TMP3]]
+; ENABLED-NEXT:    [[A0:%.*]] = fmul float [[P]], [[Q]]
+; ENABLED-NEXT:    [[A1:%.*]] = fmul float [[R]], [[S]]
 ; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[E]], i64 0
 ; ENABLED-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[G]], i64 1
 ; ENABLED-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[F]], i64 0
@@ -102,12 +100,16 @@ define void @test_mul_copyable_args(ptr %dst, ptr %srcB, float %p, float %q, flo
 ; ENABLED-NEXT:    [[TMP10:%.*]] = fsub <2 x float> [[TMP6]], [[TMP8]]
 ; ENABLED-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
 ; ENABLED-NEXT:    [[TMP12:%.*]] = load <2 x float>, ptr [[SRCB]], align 4
-; ENABLED-NEXT:    [[TMP13:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP12]], <2 x float> [[TMP11]])
-; ENABLED-NEXT:    store <2 x float> [[TMP13]], ptr [[DST]], align 4
-; ENABLED-NEXT:    [[D2:%.*]] = getelementptr float, ptr [[DST]], i32 2
-; ENABLED-NEXT:    store float [[X]], ptr [[D2]], align 4
-; ENABLED-NEXT:    [[D3:%.*]] = getelementptr float, ptr [[DST]], i32 3
-; ENABLED-NEXT:    store float [[Y]], ptr [[D3]], align 4
+; ENABLED-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> poison, float [[X]], i64 2
+; ENABLED-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> [[TMP17]], float [[Y]], i64 3
+; ENABLED-NEXT:    [[TMP19:%.*]] = insertelement <4 x float> [[TMP18]], float [[A0]], i64 0
+; ENABLED-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> [[TMP19]], float [[A1]], i64 1
+; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; ENABLED-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> <float poison, float poison, float 1.000000e+00, float 1.000000e+00>, <4 x float> [[TMP21]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; ENABLED-NEXT:    [[TMP14:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; ENABLED-NEXT:    [[TMP15:%.*]] = shufflevector <4 x float> <float poison, float poison, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[TMP14]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; ENABLED-NEXT:    [[TMP16:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP20]], <4 x float> [[TMP13]], <4 x float> [[TMP15]])
+; ENABLED-NEXT:    store <4 x float> [[TMP16]], ptr [[DST]], align 4
 ; ENABLED-NEXT:    ret void
 ;
 ; DISABLED-LABEL: define void @test_mul_copyable_args(

@@ -28586,7 +28586,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
 
       MVT MaskVT = MVT::getVectorVT(MVT::i1, MemVT.getVectorNumElements());
       SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
-      SDValue Offset = DAG.getUNDEF(VMask.getValueType());
+      SDValue Offset = DAG.getPOISON(VMask.getValueType());
 
       return DAG.getMaskedStore(Chain, dl, DataToTruncate, Addr, Offset, VMask,
                                 MemVT, MemIntr->getMemOperand(), ISD::UNINDEXED,
@@ -48711,6 +48711,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
     Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
     return DAG.getNode(N->getOpcode(), DL, VT, Cond, LHS, RHS);
+  }
+
+  // Fold vselect(mask, vtrunc(x), 0) to vmtrunc for masked vpmovqb.
+  if (Subtarget.hasAVX512() && CondVT.isVector() &&
+      CondVT.getVectorElementType() == MVT::i1 &&
+      ISD::isBuildVectorAllZeros(RHS.getNode()) && LHS.hasOneUse()) {
+    if (LHS.getOpcode() == X86ISD::VTRUNC) {
+      SDValue TruncSrc = LHS.getOperand(0);
+      EVT TruncSrcVT = TruncSrc.getValueType();
+      if (VT == MVT::v16i8 && TruncSrcVT == MVT::v8i64) {
+        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, RHS, Cond);
+      }
+    }
   }
 
   // AVX512 - Extend select to merge with target shuffle.
