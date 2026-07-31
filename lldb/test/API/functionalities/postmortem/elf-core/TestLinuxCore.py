@@ -1238,6 +1238,13 @@ class LinuxCoreTestCase(TestBase):
         cstr = var.GetSummary()
         self.assertEqual(cstr, '"_start"')
 
+        # Reading through the target falls back to the application binary too,
+        # and must not report the failed process read.
+        error = lldb.SBError()
+        addr = target.ResolveLoadAddress(var.GetValueAsUnsigned())
+        self.assertEqual(target.ReadMemory(addr, 7, error), b"_start\0")
+        self.assertSuccess(error)
+
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
     def test_linux_no_exe(self):

@@ -7,10 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/Memory.h"
+#include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
+#include "TestingSupport/SubsystemRAII.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/ABI.h"
@@ -18,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <cstdint>
 
@@ -701,4 +707,102 @@ TEST_F(MemoryTest, TestReadMemoryRangesClearMetadata) {
   ASSERT_EQ(read_results.size(), 1ull);
   ASSERT_EQ(read_results[0].size(), 1ull);
   ASSERT_EQ(read_results[0][0], 0xf0); // The ABI masks with 0xf0.
+}
+
+// The live process read fails outright, so Target::ReadMemory must fall all the
+// way through to the file-cache fallback at the end of the function, which
+// serves the bytes out of the module's (__DATA,__data) section. A full read
+// there must report success, and a short read must not.
+TEST_F(MemoryTest, TestReadMemoryClearsStaleError) {
+  SubsystemRAII<ObjectFileMachO> subsystems;
+
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ProcessSP process_sp = CreateProcess(target_sp);
+  ASSERT_TRUE(process_sp);
+
+  // The process can't produce a single byte, so the read must fail.
+  static_cast<DummyProcess *>(process_sp.get())->SetMaxReadSize(0);
+
+  auto expected_file = TestFile::fromYaml(R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           1
+  sizeofcmds:      152
+  flags:           0x200085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          0x100001000
+    vmsize:          0xC
+    fileoff:         0x1000
+    filesize:        0xC
+    maxprot:         3
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x100001000
+        size:            12
+        offset:          0x1000
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         68656C6C6F20776F726C6400
+...
+)");
+  // "expected_file" owns the buffer the Module reads through, so it has to
+  // outlive every ReadMemory() call below.
+  ASSERT_THAT_EXPECTED(expected_file, llvm::Succeeded());
+
+  ModuleSP module_sp = std::make_shared<Module>(expected_file->moduleSpec());
+  target_sp->GetImages().Append(module_sp, /*notify=*/false);
+
+  SectionList *sections = module_sp->GetSectionList();
+  ASSERT_TRUE(sections);
+  SectionSP section_sp = sections->FindSectionByName(ConstString("__data"));
+  ASSERT_TRUE(section_sp);
+  target_sp->SetSectionLoadAddress(section_sp, section_sp->GetFileAddress());
+
+  // force_live_memory = true skips the read-only file-cache fast path near the
+  // top of ReadMemory, and the section is writable so that path would reject
+  // it anyway. The fallback at the end is the only thing that can serve this.
+  Address addr;
+  ASSERT_TRUE(
+      target_sp->ResolveLoadAddress(section_sp->GetFileAddress(), addr));
+  char buf[5] = {};
+  Status error;
+  size_t bytes_read = target_sp->ReadMemory(addr, buf, sizeof(buf), error,
+                                            /*force_live_memory=*/true);
+  ASSERT_EQ(bytes_read, sizeof(buf));
+  EXPECT_TRUE(error.Success()) << error.AsCString();
+  EXPECT_EQ(llvm::StringRef(buf, sizeof(buf)), "hello");
+
+  // A short read must not be reported as success: ReadSectionData() clamps to
+  // the 12-byte section, so the tail of "big" would be left uninitialized.
+  char big[20] = {};
+  Status short_error;
+  EXPECT_EQ(target_sp->ReadMemory(addr, big, sizeof(big), short_error,
+                                  /*force_live_memory=*/true),
+            12u);
+  EXPECT_TRUE(short_error.Fail());
 }

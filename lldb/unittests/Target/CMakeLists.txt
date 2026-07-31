@@ -23,6 +23,7 @@ add_lldb_unittest(TargetTests
       lldbHost
       lldbPluginObjectFileBreakpad
       lldbPluginObjectFileELF
+      lldbPluginObjectFileMachO
       lldbPluginPlatformLinux
       lldbPluginPlatformMacOSX
       lldbPluginPlatformAndroid
