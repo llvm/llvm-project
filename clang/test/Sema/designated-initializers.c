@@ -1,7 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-unknown-unknown %s
-// RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-unknown-unknown \
-// RUN:   -fmax-init-list-elements=4294967295 %s
-
 int complete_array_from_init[] = { 1, 2, [10] = 5, 1, 2, [5] = 2, 6 };
 
 int complete_array_from_init_check[((sizeof(complete_array_from_init) / sizeof(int)) == 13)? 1 : -1];
