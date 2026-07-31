@@ -1060,6 +1060,11 @@ public:
     return true;
   }
 
+  /// To enable subreg reload of register tuples during RA. This would
+  /// eventually improve the register allocation for the functions that involve
+  /// subreg uses instead of the entire tuple.
+  virtual bool shouldEnableSubRegReload(unsigned SubReg) const { return false; }
+
   /// When prioritizing live ranges in register allocation, if this hook returns
   /// true then the AllocationPriority of the register class will be treated as
   /// more important than whether the range is local to a basic block or global.
