@@ -578,11 +578,10 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
                    : LHS->getType()->getIntegerBitWidth()))
     return "Loop iterations exceed bitwidth of data";
 
-  auto *ComputedValue = cast<SelectInst>(ConditionalRecurrence.Step);
-
   // Ensure nothing other than the computed value makes its way out of the loop.
   // Since the loop is in LCSSA form, this is as simple as checking the PHI
   // nodes in the exit block.
+  auto *ComputedValue = cast<SelectInst>(ConditionalRecurrence.Step);
   if (any_of(Exit->phis(), [Latch, ComputedValue](PHINode &PN) {
         return PN.getIncomingValueForBlock(Latch) != ComputedValue;
       }))
