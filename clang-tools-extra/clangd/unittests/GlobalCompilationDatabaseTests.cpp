@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <chrono>
@@ -150,6 +151,42 @@ TEST_F(OverlayCDBTest, Watch) {
   EXPECT_TRUE(Outer.setCompileCommand("C.cpp", std::nullopt));
   EXPECT_THAT(Changes, ElementsAre(ElementsAre("A.cpp"), ElementsAre("B.cpp"),
                                    ElementsAre("A.cpp"), ElementsAre("C.cpp")));
+}
+
+TEST_F(OverlayCDBTest, FileRenameMigratesCompileCommands) {
+  OverlayCDB CDB(nullptr);
+  const std::string OldFile = testPath("old/source.cc");
+  const std::string NewFile = testPath("new/source.cc");
+  auto Command = cmd(OldFile, "-DRENAME");
+  Command.Directory = testPath("old");
+  Command.Filename = "source.cc";
+  Command.CommandLine.back() = "source.cc";
+  Command.CommandLine.push_back(OldFile);
+  ASSERT_TRUE(CDB.setCompileCommand(OldFile, Command));
+
+  ASSERT_THAT_ERROR(CDB.filesRenamed({{testPath("old"), testPath("new")}}),
+                    llvm::Succeeded());
+
+  EXPECT_FALSE(CDB.getCompileCommand(OldFile));
+  auto Migrated = CDB.getCompileCommand(NewFile);
+  ASSERT_TRUE(Migrated);
+  EXPECT_EQ(Migrated->Filename, NewFile);
+  EXPECT_EQ(Migrated->Directory, testPath("new"));
+  EXPECT_THAT(Migrated->CommandLine, Contains(NewFile));
+  EXPECT_THAT(Migrated->CommandLine, Not(Contains(OldFile)));
+}
+
+TEST_F(OverlayCDBTest, FileRenameRejectsCompileCommandCollision) {
+  OverlayCDB CDB(nullptr);
+  ASSERT_TRUE(
+      CDB.setCompileCommand(testPath("a.cc"), cmd(testPath("a.cc"), "-DA")));
+  ASSERT_TRUE(
+      CDB.setCompileCommand(testPath("b.cc"), cmd(testPath("b.cc"), "-DB")));
+
+  EXPECT_THAT_ERROR(CDB.filesRenamed({{testPath("a.cc"), testPath("b.cc")}}),
+                    llvm::Failed());
+  EXPECT_TRUE(CDB.getCompileCommand(testPath("a.cc")));
+  EXPECT_TRUE(CDB.getCompileCommand(testPath("b.cc")));
 }
 
 TEST_F(OverlayCDBTest, Adjustments) {

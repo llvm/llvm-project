@@ -21,6 +21,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -64,6 +65,16 @@ public:
   /// For use in tests.
   virtual bool blockUntilIdle(Deadline D) const { return true; }
 
+  /// Migrates in-memory state after files or directories have been renamed.
+  ///
+  /// Database implementations backed by files on disk do not need to retain
+  /// any state here. Wrappers that associate commands with paths should
+  /// override this.
+  virtual llvm::Error
+  filesRenamed(llvm::ArrayRef<std::pair<Path, Path>> Renames) const {
+    return llvm::Error::success();
+  }
+
   using CommandChanged = Event<std::vector<std::string>>;
   /// The callback is notified when files may have new compile commands.
   /// The argument is a list of full file paths.
@@ -97,6 +108,9 @@ public:
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   bool blockUntilIdle(Deadline D) const override;
+
+  llvm::Error
+  filesRenamed(llvm::ArrayRef<std::pair<Path, Path>> Renames) const override;
 
 private:
   const GlobalCompilationDatabase *Base;
@@ -225,12 +239,16 @@ public:
   setCompileCommand(PathRef File,
                     std::optional<tooling::CompileCommand> CompilationCommand);
 
+  llvm::Error
+  filesRenamed(llvm::ArrayRef<std::pair<Path, Path>> Renames) const override;
+
   std::unique_ptr<ProjectModules>
   getProjectModules(PathRef File) const override;
 
 private:
   mutable std::mutex Mutex;
-  llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
+  mutable llvm::StringMap<tooling::CompileCommand>
+      Commands; /* GUARDED_BY(Mutex) */
   CommandMangler Mangler;
   std::vector<std::string> FallbackFlags;
 };

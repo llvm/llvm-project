@@ -848,6 +848,50 @@ bool OverlayCDB::setCompileCommand(PathRef File,
   return true;
 }
 
+llvm::Error
+OverlayCDB::filesRenamed(llvm::ArrayRef<std::pair<Path, Path>> Renames) const {
+  llvm::StringMap<tooling::CompileCommand> NewCommands;
+  std::lock_guard<std::mutex> Lock(Mutex);
+  for (const auto &Entry : Commands) {
+    auto NewPath = mapPathAfterRenames(Entry.first(), Renames);
+    if (!NewPath)
+      return NewPath.takeError();
+    tooling::CompileCommand Command = Entry.getValue();
+    Path OriginalFilename = Command.Filename;
+    if (!OriginalFilename.empty()) {
+      llvm::SmallString<256> AbsoluteFilename(OriginalFilename);
+      if (!llvm::sys::path::is_absolute(AbsoluteFilename)) {
+        AbsoluteFilename = Command.Directory;
+        llvm::sys::path::append(AbsoluteFilename, OriginalFilename);
+        llvm::sys::path::remove_dots(AbsoluteFilename,
+                                     /*remove_dot_dot=*/true);
+      }
+      auto NewFilename = mapPathAfterRenames(AbsoluteFilename, Renames);
+      if (!NewFilename)
+        return NewFilename.takeError();
+      if (!pathEqual(AbsoluteFilename, *NewFilename)) {
+        Command.Filename = *NewFilename;
+        for (std::string &Arg : Command.CommandLine)
+          if (Arg == OriginalFilename || Arg == AbsoluteFilename)
+            Arg = *NewFilename;
+      }
+    }
+    auto NewDirectory = mapPathAfterRenames(Command.Directory, Renames);
+    if (!NewDirectory)
+      return NewDirectory.takeError();
+    Command.Directory = std::move(*NewDirectory);
+    if (!NewCommands.try_emplace(*NewPath, std::move(Command)).second)
+      return error("file rename collides at compilation command path {0}",
+                   *NewPath);
+  }
+
+  if (auto Err = DelegatingCDB::filesRenamed(Renames))
+    return Err;
+
+  Commands = std::move(NewCommands);
+  return llvm::Error::success();
+}
+
 std::unique_ptr<ProjectModules>
 OverlayCDB::getProjectModules(PathRef File) const {
   auto MDB = DelegatingCDB::getProjectModules(File);
@@ -909,6 +953,13 @@ bool DelegatingCDB::blockUntilIdle(Deadline D) const {
   if (!Base)
     return true;
   return Base->blockUntilIdle(D);
+}
+
+llvm::Error DelegatingCDB::filesRenamed(
+    llvm::ArrayRef<std::pair<Path, Path>> Renames) const {
+  if (!Base)
+    return llvm::Error::success();
+  return Base->filesRenamed(Renames);
 }
 
 } // namespace clangd

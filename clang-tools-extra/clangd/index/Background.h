@@ -21,7 +21,9 @@
 #include "support/Threading.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Threading.h"
 #include <atomic>
 #include <condition_variable>
@@ -31,6 +33,7 @@
 #include <queue>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -46,6 +49,9 @@ public:
   // identifier - in practice this is a source file name
   virtual llvm::Error storeShard(llvm::StringRef ShardIdentifier,
                                  IndexFileOut Shard) const = 0;
+
+  /// Removes a shard that no longer names a source file.
+  virtual llvm::Error removeShard(llvm::StringRef ShardIdentifier) const = 0;
 
   // Tries to load shard with given identifier, returns nullptr if shard
   // couldn't be loaded.
@@ -133,6 +139,13 @@ private:
 // FIXME: it should watch for changes to files on disk.
 class BackgroundIndex : public SwapIndex {
 public:
+  struct IndexedFile {
+    Path File;
+    FileDigest Digest{{0}};
+    IncludeGraphNode::SourceFlag Flags{};
+    std::vector<Path> DirectIncludes;
+  };
+
   struct Options {
     // Arbitrary value to ensure some concurrency in tests.
     // In production an explicit value is specified.
@@ -160,9 +173,7 @@ public:
   // Enqueue translation units for indexing.
   // The indexing happens in a background thread, so the symbols will be
   // available sometime later.
-  void enqueue(const std::vector<std::string> &ChangedFiles) {
-    Queue.push(changedFilesTask(ChangedFiles));
-  }
+  void enqueue(const std::vector<std::string> &ChangedFiles);
 
   /// Boosts priority of indexing related to Path.
   /// Typically used to index TUs when headers are opened.
@@ -175,11 +186,23 @@ public:
     Queue.stop();
   }
 
-  // Wait until the queue is empty, to allow deterministic testing.
-  [[nodiscard]] bool
-  blockUntilIdleForTest(std::optional<double> TimeoutSeconds = 10) {
+  // Wait until the queue is empty, for operations requiring a complete index.
+  [[nodiscard]] bool blockUntilIdle(std::optional<double> TimeoutSeconds = 10) {
     return Queue.blockUntilIdleForTest(TimeoutSeconds);
   }
+
+  [[nodiscard]] bool
+  blockUntilIdleForTest(std::optional<double> TimeoutSeconds = 10) {
+    return blockUntilIdle(TimeoutSeconds);
+  }
+
+  /// Returns a consistent snapshot of the persisted include graph.
+  ///
+  /// Paths are absolute and direct includes are resolved file identities.
+  llvm::Expected<std::vector<IndexedFile>> includeGraphSnapshot() const;
+
+  /// Migrates in-memory include-graph state and removes old persisted shards.
+  llvm::Error filesRenamed(llvm::ArrayRef<std::pair<Path, Path>> Renames);
 
   void profile(MemoryTree &MT) const;
 
@@ -208,7 +231,11 @@ private:
   FileSymbols IndexedSymbols;
   BackgroundIndexRebuilder Rebuilder;
   llvm::StringMap<ShardVersion> ShardVersions; // Key is absolute file path.
-  std::mutex ShardVersionsMu;
+  mutable std::mutex ShardVersionsMu;
+  llvm::StringMap<IndexedFile> IndexedFiles;
+  std::optional<std::string> IncludeGraphError;
+  llvm::StringSet<> KnownTUs;
+  llvm::StringMap<std::string> IndexFailures;
 
   BackgroundIndexStorage::Factory IndexStorageFactory;
   // Tries to load shards for the MainFiles and their dependencies.
@@ -216,7 +243,8 @@ private:
 
   BackgroundQueue::Task
   changedFilesTask(const std::vector<std::string> &ChangedFiles);
-  BackgroundQueue::Task indexFileTask(std::string Path);
+  BackgroundQueue::Task indexFileTask(std::string Path,
+                                      bool BypassDuplicateSuppression = false);
 
   // from lowest to highest priority
   enum QueuePriority {

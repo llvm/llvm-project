@@ -9,6 +9,7 @@
 #include "index/Background.h"
 #include "Compiler.h"
 #include "Config.h"
+#include "FS.h"
 #include "Headers.h"
 #include "SourceCode.h"
 #include "URI.h"
@@ -88,6 +89,22 @@ bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
   return digest(Buf->get()->getBuffer()) != LS.Digest;
 }
 
+llvm::Expected<BackgroundIndex::IndexedFile>
+indexedFile(PathRef File, const IncludeGraphNode &Source, PathRef HintPath) {
+  BackgroundIndex::IndexedFile Result;
+  Result.File = File.str();
+  Result.Digest = Source.Digest;
+  Result.Flags = Source.Flags;
+  for (llvm::StringRef IncludedURI : Source.DirectIncludes) {
+    auto Included = URI::resolve(IncludedURI, HintPath);
+    if (!Included)
+      return error("cannot resolve include URI {0}: {1}", IncludedURI,
+                   Included.takeError());
+    Result.DirectIncludes.push_back(std::move(*Included));
+  }
+  return Result;
+}
+
 } // namespace
 
 BackgroundIndex::BackgroundIndex(
@@ -119,6 +136,124 @@ BackgroundIndex::BackgroundIndex(
 BackgroundIndex::~BackgroundIndex() {
   stop();
   ThreadPool.wait();
+}
+
+void BackgroundIndex::enqueue(const std::vector<std::string> &ChangedFiles) {
+  {
+    std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+    for (PathRef File : ChangedFiles)
+      KnownTUs.insert(removeDots(File));
+  }
+  Queue.push(changedFilesTask(ChangedFiles));
+}
+
+llvm::Expected<std::vector<BackgroundIndex::IndexedFile>>
+BackgroundIndex::includeGraphSnapshot() const {
+  std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+  if (IncludeGraphError)
+    return error("background include graph is incomplete: {0}",
+                 *IncludeGraphError);
+  if (!IndexFailures.empty())
+    return error("background indexing failed for {0}: {1}",
+                 IndexFailures.begin()->first(),
+                 IndexFailures.begin()->getValue());
+  for (llvm::StringRef TU : KnownTUs.keys()) {
+    auto It = IndexedFiles.find(TU);
+    if (It == IndexedFiles.end() ||
+        !(It->getValue().Flags & IncludeGraphNode::SourceFlag::IsTU))
+      return error("background include graph has no translation unit {0}", TU);
+  }
+  std::vector<IndexedFile> Result;
+  Result.reserve(IndexedFiles.size());
+  for (const auto &Entry : IndexedFiles)
+    Result.push_back(Entry.getValue());
+  return Result;
+}
+
+llvm::Error
+BackgroundIndex::filesRenamed(llvm::ArrayRef<std::pair<Path, Path>> Renames) {
+  llvm::StringMap<IndexedFile> NewFiles;
+  llvm::StringMap<ShardVersion> NewVersions;
+  llvm::StringSet<> NewKnownTUs;
+  llvm::StringMap<std::string> NewFailures;
+  llvm::StringSet<> InvalidatedFiles;
+  std::vector<Path> RemovedPaths;
+  std::vector<std::string> TranslationUnits;
+  {
+    std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+    for (const auto &Entry : IndexedFiles) {
+      IndexedFile File = Entry.getValue();
+      bool Invalidated = false;
+      auto NewFile = mapPathAfterRenames(File.File, Renames);
+      if (!NewFile)
+        return NewFile.takeError();
+      Invalidated |= File.File != *NewFile;
+      Path Destination = std::move(*NewFile);
+      File.File = Destination;
+      for (Path &Included : File.DirectIncludes) {
+        auto NewInclude = mapPathAfterRenames(Included, Renames);
+        if (!NewInclude)
+          return NewInclude.takeError();
+        Invalidated |= Included != *NewInclude;
+        Included = std::move(*NewInclude);
+      }
+      if (Invalidated) {
+        RemovedPaths.push_back(Entry.first().str());
+        InvalidatedFiles.insert(Destination);
+      }
+      if (!NewFiles.try_emplace(File.File, std::move(File)).second)
+        return error("file rename collides at indexed path {0}", Destination);
+    }
+    for (const auto &Entry : ShardVersions) {
+      auto NewFile = mapPathAfterRenames(Entry.first(), Renames);
+      if (!NewFile)
+        return NewFile.takeError();
+      if (InvalidatedFiles.contains(*NewFile))
+        continue;
+      if (!NewVersions.try_emplace(*NewFile, Entry.getValue()).second)
+        return error("file rename collides at shard path {0}", *NewFile);
+    }
+    for (llvm::StringRef TU : KnownTUs.keys()) {
+      auto NewTU = mapPathAfterRenames(TU, Renames);
+      if (!NewTU)
+        return NewTU.takeError();
+      if (!NewKnownTUs.insert(*NewTU).second)
+        return error("file rename collides at translation unit {0}", *NewTU);
+    }
+    for (const auto &Entry : IndexFailures) {
+      auto NewTU = mapPathAfterRenames(Entry.first(), Renames);
+      if (!NewTU)
+        return NewTU.takeError();
+      if (!NewFailures.try_emplace(*NewTU, Entry.getValue()).second)
+        return error("file rename collides at failed translation unit {0}",
+                     *NewTU);
+    }
+    IndexedFiles = std::move(NewFiles);
+    ShardVersions = std::move(NewVersions);
+    KnownTUs = std::move(NewKnownTUs);
+    IndexFailures = std::move(NewFailures);
+    for (const auto &Entry : IndexedFiles)
+      if (Entry.getValue().Flags & IncludeGraphNode::SourceFlag::IsTU)
+        TranslationUnits.push_back(Entry.getValue().File);
+  }
+
+  llvm::Error RemoveErrors = llvm::Error::success();
+  for (PathRef OldPath : RemovedPaths) {
+    RemoveErrors =
+        llvm::joinErrors(std::move(RemoveErrors),
+                         IndexStorageFactory(OldPath)->removeShard(OldPath));
+    IndexedSymbols.update(URI::create(OldPath).toString(),
+                          /*Symbols=*/nullptr, /*Refs=*/nullptr,
+                          /*Relations=*/nullptr, /*CountReferences=*/false);
+    Rebuilder.indexedTU();
+  }
+  std::vector<BackgroundQueue::Task> Tasks;
+  Tasks.reserve(TranslationUnits.size());
+  for (std::string &TU : TranslationUnits)
+    Tasks.push_back(indexFileTask(std::move(TU),
+                                  /*BypassDuplicateSuppression=*/true));
+  Queue.append(std::move(Tasks));
+  return RemoveErrors;
 }
 
 BackgroundQueue::Task BackgroundIndex::changedFilesTask(
@@ -155,18 +290,32 @@ static llvm::StringRef filenameWithoutExtension(llvm::StringRef Path) {
   return Path.drop_back(llvm::sys::path::extension(Path).size());
 }
 
-BackgroundQueue::Task BackgroundIndex::indexFileTask(std::string Path) {
+BackgroundQueue::Task
+BackgroundIndex::indexFileTask(std::string Path,
+                               bool BypassDuplicateSuppression) {
   std::string Tag = filenameWithoutExtension(Path).str();
-  uint64_t Key = llvm::xxh3_64bits(Path);
+  uint64_t Key = BypassDuplicateSuppression ? 0 : llvm::xxh3_64bits(Path);
   BackgroundQueue::Task T([this, Path(std::move(Path))] {
     std::optional<WithContext> WithProvidedContext;
     if (ContextProvider)
       WithProvidedContext.emplace(ContextProvider(Path));
     auto Cmd = CDB.getCompileCommand(Path);
-    if (!Cmd)
+    if (!Cmd) {
+      std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+      IndexFailures[Path] = "no compilation command is available";
       return;
-    if (auto Error = index(std::move(*Cmd)))
-      elog("Indexing {0} failed: {1}", Path, std::move(Error));
+    }
+    if (auto Error = index(std::move(*Cmd))) {
+      std::string Message = llvm::toString(std::move(Error));
+      {
+        std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+        IndexFailures[Path] = Message;
+      }
+      elog("Indexing {0} failed: {1}", Path, Message);
+      return;
+    }
+    std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+    IndexFailures.erase(Path);
   });
   T.QueuePri = IndexFile;
   T.ThreadPri = IndexingPriority;
@@ -239,6 +388,19 @@ void BackgroundIndex::update(
         continue;
       SV.Digest = Hash;
       SV.HadErrors = HadErrors;
+
+      const auto &Sources = *IF->Sources;
+      auto Source = Sources.find(Uri);
+      if (Source == Sources.end()) {
+        IncludeGraphError =
+            llvm::formatv("missing source node for {0}", Path).str();
+      } else {
+        auto File = indexedFile(Path, Source->getValue(), MainFile);
+        if (!File)
+          IncludeGraphError = llvm::toString(File.takeError());
+        else
+          IndexedFiles[Path] = std::move(*File);
+      }
 
       // This can override a newer version that is added in another thread, if
       // this thread sees the older version but finishes later. This should be
@@ -387,6 +549,24 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
       SV.Digest = LS.Digest;
       SV.HadErrors = LS.HadErrors;
       ++LoadedShards;
+
+      if (LS.Shard->Sources) {
+        std::string FileURI = URI::create(LS.AbsolutePath).toString();
+        auto Source = LS.Shard->Sources->find(FileURI);
+        if (Source == LS.Shard->Sources->end()) {
+          IncludeGraphError =
+              llvm::formatv("missing loaded source node for {0}",
+                            LS.AbsolutePath)
+                  .str();
+        } else {
+          auto File =
+              indexedFile(LS.AbsolutePath, Source->getValue(), LS.AbsolutePath);
+          if (!File)
+            IncludeGraphError = llvm::toString(File.takeError());
+          else
+            IndexedFiles[LS.AbsolutePath] = std::move(*File);
+        }
+      }
 
       IndexedSymbols.update(URI::create(LS.AbsolutePath).toString(),
                             std::move(SS), std::move(RS), std::move(RelS),

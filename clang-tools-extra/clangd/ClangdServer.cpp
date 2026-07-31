@@ -11,6 +11,7 @@
 #include "Config.h"
 #include "Diagnostics.h"
 #include "DumpAST.h"
+#include "FileRename.h"
 #include "FindSymbols.h"
 #include "Format.h"
 #include "HeaderSourceSwitch.h"
@@ -22,6 +23,7 @@
 #include "SemanticSelection.h"
 #include "SourceCode.h"
 #include "TUScheduler.h"
+#include "URI.h"
 #include "XRefs.h"
 #include "clang-include-cleaner/Record.h"
 #include "index/FileIndex.h"
@@ -43,6 +45,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -647,6 +650,186 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
     return CB(*R);
   };
   WorkScheduler->runWithAST("Rename", File, std::move(Action));
+}
+
+void ClangdServer::prepareFileRename(
+    llvm::ArrayRef<std::pair<Path, Path>> Renames, Callback<WorkspaceEdit> CB) {
+  if (!BackgroundIdx)
+    return CB(error("file rename requires background indexing"));
+  if (!WorkspaceRoot)
+    return CB(error("file rename requires a workspace root"));
+
+  std::vector<std::pair<Path, Path>> OwnedRenames(Renames.begin(),
+                                                  Renames.end());
+  WorkScheduler->run(
+      "FileRename", /*Path=*/"",
+      [this, Renames = std::move(OwnedRenames), CB = std::move(CB)]() mutable {
+        auto FS = getHeaderFS().view(std::nullopt);
+        auto Mappings = expandFileRenames(Renames, *WorkspaceRoot, *FS);
+        if (!Mappings)
+          return CB(Mappings.takeError());
+        if (Mappings->empty()) {
+          WorkspaceEdit Result;
+          Result.changes.emplace();
+          return CB(std::move(Result));
+        }
+
+        // Looking up commands triggers project discovery and queues the
+        // complete compilation database for background indexing.
+        for (const auto &Mapping : *Mappings)
+          (void)CDB.getCompileCommand(Mapping.OldPath);
+        if (!BackgroundIdx->blockUntilIdle(/*TimeoutSeconds=*/30))
+          return CB(error("background index did not become ready"));
+
+        auto Graph = BackgroundIdx->includeGraphSnapshot();
+        if (!Graph)
+          return CB(Graph.takeError());
+        if (Graph->empty())
+          return CB(error("background include graph is empty"));
+
+        llvm::StringSet<> Candidates;
+        for (const auto &Node : *Graph) {
+          if (!pathEqual(Node.File, *WorkspaceRoot) &&
+              !pathStartsWith(*WorkspaceRoot, Node.File))
+            continue;
+          // Open files are parsed from their current drafts below. Their
+          // persisted graph nodes are intentionally allowed to be stale.
+          if (DraftMgr.getDraft(Node.File))
+            continue;
+          if (Node.Flags & IncludeGraphNode::SourceFlag::HadErrors)
+            return CB(
+                error("background index contains errors for {0}", Node.File));
+          auto Buffer = FS->getBufferForFile(Node.File);
+          if (!Buffer)
+            return CB(error("cannot validate indexed file {0}: {1}", Node.File,
+                            Buffer.getError().message()));
+          if (digest(Buffer->get()->getBuffer()) != Node.Digest)
+            return CB(
+                error("background include graph is stale for {0}", Node.File));
+
+          auto NodeStatus = FS->status(Node.File);
+          if (!NodeStatus)
+            return CB(error("cannot inspect indexed file {0}: {1}", Node.File,
+                            NodeStatus.getError().message()));
+          if (llvm::any_of(*Mappings, [&](const auto &Mapping) {
+                return Mapping.OldIdentity == NodeStatus->getUniqueID();
+              }))
+            Candidates.insert(Node.File);
+
+          for (PathRef Included : Node.DirectIncludes) {
+            auto IncludedStatus = FS->status(Included);
+            if (!IncludedStatus)
+              return CB(error("cannot validate indexed include {0}: {1}",
+                              Included, IncludedStatus.getError().message()));
+            if (llvm::any_of(*Mappings, [&](const auto &Mapping) {
+                  return Mapping.OldIdentity == IncludedStatus->getUniqueID();
+                })) {
+              Candidates.insert(Node.File);
+              break;
+            }
+          }
+        }
+        for (const Path &OpenFile : DraftMgr.getActiveFiles())
+          if (pathEqual(OpenFile, *WorkspaceRoot) ||
+              pathStartsWith(*WorkspaceRoot, OpenFile))
+            Candidates.insert(OpenFile);
+
+        WorkspaceEdit Result;
+        Result.changes.emplace();
+        for (llvm::StringRef File : Candidates.keys()) {
+          std::string Contents;
+          if (auto Draft = DraftMgr.getDraft(File))
+            Contents = *Draft->Contents;
+          else {
+            auto Buffer = FS->getBufferForFile(File);
+            if (!Buffer)
+              return CB(error("cannot read includer {0}: {1}", File,
+                              Buffer.getError().message()));
+            Contents = Buffer->get()->getBuffer().str();
+          }
+
+          auto Command = CDB.getCompileCommand(File);
+          if (!Command)
+            return CB(
+                error("no compilation command is available for {0}", File));
+          ParseInputs Inputs{std::move(*Command), &getHeaderFS(),
+                             std::move(Contents)};
+          Inputs.Index = Index;
+          Inputs.FeatureModules = FeatureModules;
+          Inputs.ModulesManager = ModulesManager;
+          Inputs.Opts.ImportInsertions = ImportInsertions;
+          adjustParseInputs(Inputs, File);
+          StoreDiags Diags;
+          auto CI = buildCompilerInvocation(Inputs, Diags);
+          if (!CI)
+            return CB(error("cannot build compiler invocation for {0}", File));
+          auto AST = ParsedAST::build(File, Inputs, std::move(CI), Diags.take(),
+                                      /*Preamble=*/nullptr);
+          if (!AST)
+            return CB(error("cannot parse includer {0}", File));
+          if (llvm::any_of(AST->getDiagnostics(), [](const Diag &D) {
+                return D.Severity >= DiagnosticsEngine::Error;
+              }))
+            return CB(error("cannot safely rename files while {0} has parse "
+                            "errors",
+                            File));
+
+          auto Style = getFormatStyleForFile(File, Inputs.Contents, TFS, false);
+          auto Edits = renameIncludeDirectives(
+              File, Inputs.Contents, AST->getIncludeStructure(),
+              AST->getPreprocessor().getHeaderSearchInfo(),
+              Inputs.CompileCommand.Directory, *Mappings, Style, *FS);
+          if (!Edits)
+            return CB(Edits.takeError());
+          if (!Edits->empty())
+            (*Result.changes)[URI::createFile(File).toString()] =
+                std::move(*Edits);
+        }
+        CB(std::move(Result));
+      });
+}
+
+void ClangdServer::didRenameFiles(
+    llvm::ArrayRef<std::pair<Path, Path>> Renames) {
+  struct MovedDraft {
+    Path OldPath;
+    Path NewPath;
+    DraftStore::Draft Draft;
+  };
+  std::vector<MovedDraft> MovedDrafts;
+  for (const Path &OpenFile : DraftMgr.getActiveFiles()) {
+    auto NewPath = mapPathAfterRenames(OpenFile, Renames);
+    if (!NewPath) {
+      elog("Failed to map open file after rename: {0}", NewPath.takeError());
+      return;
+    }
+    if (OpenFile == *NewPath)
+      continue;
+    if (DraftMgr.getDraft(*NewPath)) {
+      elog("Cannot migrate open file {0}: destination {1} is already open",
+           OpenFile, *NewPath);
+      return;
+    }
+    auto Draft = DraftMgr.getDraft(OpenFile);
+    assert(Draft && "active draft disappeared");
+    MovedDrafts.push_back({OpenFile, std::move(*NewPath), std::move(*Draft)});
+  }
+  if (auto Err = CDB.filesRenamed(Renames)) {
+    elog("Failed to migrate compilation commands after file rename: {0}",
+         std::move(Err));
+    return;
+  }
+  for (const MovedDraft &Moved : MovedDrafts)
+    removeDocument(Moved.OldPath);
+  for (const MovedDraft &Moved : MovedDrafts)
+    addDocument(Moved.NewPath, *Moved.Draft.Contents, Moved.Draft.Version,
+                WantDiagnostics::Auto);
+  reparseOpenFilesIfNeeded([](llvm::StringRef) { return true; });
+  if (!BackgroundIdx)
+    return;
+  if (auto Err = BackgroundIdx->filesRenamed(Renames))
+    elog("Failed to migrate background index after file rename: {0}",
+         std::move(Err));
 }
 
 namespace {

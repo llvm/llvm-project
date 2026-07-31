@@ -667,6 +667,30 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
           ? llvm::json::Object{{"prepareProvider", true}}
           : llvm::json::Value(true);
 
+  if (Params.capabilities.WillRenameFiles ||
+      Params.capabilities.DidRenameFiles) {
+    llvm::json::Object FileOperations;
+    auto Registration = [] {
+      return llvm::json::Object{
+          {"filters", llvm::json::Array{llvm::json::Object{
+                          {"scheme", "file"},
+                          {"pattern", llvm::json::Object{{"glob", "**/*"}}},
+                      }}},
+      };
+    };
+    if (Params.capabilities.WillRenameFiles)
+      FileOperations["willRename"] = Registration();
+    if (Params.capabilities.DidRenameFiles)
+      FileOperations["didRename"] = Registration();
+    auto *Workspace = ServerCaps.getObject("workspace");
+    if (!Workspace) {
+      ServerCaps["workspace"] = llvm::json::Object{};
+      Workspace = ServerCaps.getObject("workspace");
+    }
+    assert(Workspace);
+    (*Workspace)["fileOperations"] = std::move(FileOperations);
+  }
+
   // Per LSP, codeActionProvider can be either boolean or CodeActionOptions.
   // CodeActionOptions is only valid if the client supports action literal
   // via textDocument.codeAction.codeActionLiteralSupport.
@@ -779,6 +803,25 @@ void ClangdLSPServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
   //  - compile_commands.json and compile_flags.txt
   //  - .clang_format and .clang-tidy
   //  - .clangd and clangd/config.yaml
+}
+
+void ClangdLSPServer::onWillRenameFiles(const RenameFilesParams &Params,
+                                        Callback<WorkspaceEdit> Reply) {
+  std::vector<std::pair<Path, Path>> Renames;
+  Renames.reserve(Params.files.size());
+  for (const FileRename &Rename : Params.files)
+    Renames.emplace_back(Rename.oldUri.file().str(),
+                         Rename.newUri.file().str());
+  Server->prepareFileRename(Renames, std::move(Reply));
+}
+
+void ClangdLSPServer::onDidRenameFiles(const RenameFilesParams &Params) {
+  std::vector<std::pair<Path, Path>> Renames;
+  Renames.reserve(Params.files.size());
+  for (const FileRename &Rename : Params.files)
+    Renames.emplace_back(Rename.oldUri.file().str(),
+                         Rename.newUri.file().str());
+  Server->didRenameFiles(Renames);
 }
 
 void ClangdLSPServer::onCommand(const ExecuteCommandParams &Params,
@@ -1711,6 +1754,8 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.notification("textDocument/didChange", this, &ClangdLSPServer::onDocumentDidChange);
   Bind.notification("textDocument/didSave", this, &ClangdLSPServer::onDocumentDidSave);
   Bind.notification("workspace/didChangeWatchedFiles", this, &ClangdLSPServer::onFileEvent);
+  Bind.method("workspace/willRenameFiles", this, &ClangdLSPServer::onWillRenameFiles);
+  Bind.notification("workspace/didRenameFiles", this, &ClangdLSPServer::onDidRenameFiles);
   Bind.notification("workspace/didChangeConfiguration", this, &ClangdLSPServer::onChangeConfiguration);
   Bind.method("textDocument/symbolInfo", this, &ClangdLSPServer::onSymbolInfo);
   Bind.method("textDocument/typeHierarchy", this, &ClangdLSPServer::onTypeHierarchy);

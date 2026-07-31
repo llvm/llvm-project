@@ -82,6 +82,7 @@ add_clang_library(clangDaemon STATIC
   ExpectedTypes.cpp
   FeatureModule.cpp
   Feature.cpp
+  FileRename.cpp
   FindSymbols.cpp
   FindTarget.cpp
   FileDistance.cpp

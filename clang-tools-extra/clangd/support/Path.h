@@ -9,9 +9,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_PATH_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SUPPORT_PATH_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include <string>
+#include <utility>
 
 /// Whether current platform treats paths case insensitively.
 #if defined(_WIN32) || defined(__APPLE__)
@@ -40,6 +43,13 @@ bool pathEqual(PathRef, PathRef);
 bool pathStartsWith(
     PathRef Ancestor, PathRef Path,
     llvm::sys::path::Style Style = llvm::sys::path::Style::native);
+
+/// Applies file/directory rename prefixes to a path.
+///
+/// Overlapping mappings are accepted only when they produce the same path.
+llvm::Expected<Path>
+mapPathAfterRenames(PathRef Original,
+                    llvm::ArrayRef<std::pair<Path, Path>> Renames);
 
 /// Variant of parent_path that operates only on absolute paths.
 /// Unlike parent_path doesn't consider C: a parent of C:\.

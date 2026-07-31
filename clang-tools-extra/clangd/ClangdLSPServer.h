@@ -139,6 +139,8 @@ private:
   void onDocumentHighlight(const TextDocumentPositionParams &,
                            Callback<std::vector<DocumentHighlight>>);
   void onFileEvent(const DidChangeWatchedFilesParams &);
+  void onWillRenameFiles(const RenameFilesParams &, Callback<WorkspaceEdit>);
+  void onDidRenameFiles(const RenameFilesParams &);
   void onWorkspaceSymbol(const WorkspaceSymbolParams &,
                          Callback<std::vector<SymbolInformation>>);
   void onPrepareRename(const TextDocumentPositionParams &,

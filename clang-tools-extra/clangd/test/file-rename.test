@@ -1,0 +1,53 @@
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: sed -e "s|DIRECTORY|%/t|g" -e "s|CLANG|%clang|g" \
+# RUN:   %t/compile_commands.json.in > %t/compile_commands.json
+# RUN: sed -e "s|DIRECTORY|%/t|g" %t/requests.jsonrpc.in \
+# RUN:   > %t/requests.jsonrpc
+# RUN: clangd -background-index -lit-test < %t/requests.jsonrpc \
+# RUN:   | FileCheck %t/requests.jsonrpc
+
+#--- compile_commands.json.in
+[
+  {
+    "directory": "DIRECTORY",
+    "command": "CLANG -I DIRECTORY -c DIRECTORY/main.cpp",
+    "file": "DIRECTORY/main.cpp"
+  },
+  {
+    "directory": "DIRECTORY",
+    "command": "CLANG -I DIRECTORY -c DIRECTORY/open.cpp",
+    "file": "DIRECTORY/open.cpp"
+  }
+]
+
+#--- old.h
+inline int answer() { return 42; }
+
+#--- main.cpp
+#include "old.h"
+int main() { return answer(); }
+
+#--- open.cpp
+int open_file() { return 0; }
+
+#--- requests.jsonrpc.in
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootUri":"file://DIRECTORY","capabilities":{"workspace":{"fileOperations":{"willRename":true,"didRename":true}}},"trace":"off"}}
+# CHECK:      "fileOperations": {
+# CHECK:        "didRename": {
+# CHECK:        "willRename": {
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://DIRECTORY/open.cpp","languageId":"cpp","version":1,"text":"#include \"old.h\"\nint open_file() { return answer(); }\n"}}}
+---
+{"jsonrpc":"2.0","id":1,"method":"workspace/willRenameFiles","params":{"files":[{"oldUri":"file://DIRECTORY/old.h","newUri":"file://DIRECTORY/new.h"}]}}
+# CHECK:      "id": 1,
+# CHECK-NEXT: "jsonrpc": "2.0",
+# CHECK-NEXT: "result": {
+# CHECK-NEXT:   "changes": {
+# CHECK-DAG:      "file://DIRECTORY/main.cpp": [
+# CHECK-DAG:      "file://DIRECTORY/open.cpp": [
+# CHECK:            "newText": "\"new.h\"",
+---
+{"jsonrpc":"2.0","id":2,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
