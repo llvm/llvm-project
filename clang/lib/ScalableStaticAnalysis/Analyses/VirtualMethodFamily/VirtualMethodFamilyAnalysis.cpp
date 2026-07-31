@@ -10,6 +10,7 @@
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/AnalysisRegistry.h"
 #include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/SummaryAnalysis.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -168,7 +169,28 @@ static AnalysisRegistry::Add<VirtualMethodFamilyAnalysis>
 // Printing
 //===----------------------------------------------------------------------===//
 
+static void printEntityIds(llvm::raw_ostream &OS,
+                           llvm::ArrayRef<EntityId> Ids) {
+  OS << "[";
+  llvm::interleaveComma(Ids, OS, [&](EntityId Id) { OS << Id; });
+  OS << "]";
+}
+
 namespace clang::ssaf {
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const VirtualMethodSummary &S) {
+  OS << "VirtualMethodSummary { params=";
+  printEntityIds(OS, S.ParamEntities);
+  OS << ", return=";
+  if (S.ReturnEntity)
+    OS << *S.ReturnEntity;
+  else
+    OS << "<none>";
+  OS << ", overridden=";
+  printEntityIds(OS, S.OverriddenMethods);
+  return OS << " }";
+}
 
 llvm::raw_ostream &
 operator<<(llvm::raw_ostream &OS,
