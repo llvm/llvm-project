@@ -1472,12 +1472,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
 
   // For i1 vp.merges produced by AnyOf reductions:
   // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
-  if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_VPValue(Z, m_True()),
-                                                  m_VPValue(A), m_VPValue(X),
-                                                  m_VPValue())) &&
+  if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
+                                                  m_VPValue(X), m_VPValue())) &&
       match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
       Def->getScalarType()->isIntegerTy(1)) {
-    Def->setOperand(1, Z);
+    Def->setOperand(1, Plan->getTrue());
     Def->setOperand(0, Y);
     return;
   }
@@ -1598,17 +1597,18 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   //  Def = IVInc + Y
   // Fold the increment Y into the phi's start value, replace Def with IVInc,
   // and if Inc exists, replace it with X.
-  if (match(Def, m_Add(m_VPValue(Z, m_Add(m_VPValue(X), m_VPValue())),
+  VPValue *IVInc;
+  if (match(Def, m_Add(m_VPValue(IVInc, m_Add(m_VPValue(X), m_VPValue())),
                        m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) && match(X, m_VPPhi(m_ZeroInt(), m_Specific(Z)))) {
+      isa<VPIRValue>(Y) && match(X, m_VPPhi(m_ZeroInt(), m_Specific(IVInc)))) {
     auto *Phi = cast<VPPhi>(X);
-    if (Z->getNumUsers() == 2) {
+    if (IVInc->getNumUsers() == 2) {
       // If Phi has a second user (besides IVInc's defining recipe), it must
       // be Inc = Phi + Y for the fold to apply.
       auto *Inc = dyn_cast_or_null<VPSingleDefRecipe>(
           findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
       if (Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) {
-        Def->replaceAllUsesWith(Z);
+        Def->replaceAllUsesWith(IVInc);
         if (Inc)
           Inc->replaceAllUsesWith(Phi);
         Phi->setOperand(0, Y);
