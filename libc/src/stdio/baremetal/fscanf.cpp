@@ -37,7 +37,6 @@ LLVM_LIBC_FUNCTION(int, fscanf,
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#if ...
-// comments...
+#ifdef LIBC_STDIO_ADD_ISO99_FSCANF
 LLVM_LIBC_ADD_FUNCTION_C_ALIAS(fscanf, __isoc99_fscanf);
-#endif
+#endif // LIBC_STDIO_ADD_ISO99_FSCANF
