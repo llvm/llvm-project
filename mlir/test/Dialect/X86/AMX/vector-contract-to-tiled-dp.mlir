@@ -499,7 +499,7 @@ module attributes {transform.with_named_sequence} {
 #map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 #map2 = affine_map<(d0, d1, d2, d3) -> (d1, d2)>
 
-func.func @M_N_K_Can(%arg0: memref<16x32x32xbf16>, %arg1: memref<16x32x32xbf16>, %arg2: memref<32x32xf32>) {
+func.func @Cano_Opt_Removed_M_N_K_loops_pattern(%arg0: memref<16x32x32xbf16>, %arg1: memref<16x32x32xbf16>, %arg2: memref<32x32xf32>) {
   %0 = ub.poison : f32
   %1 = ub.poison : bf16
   %c0 = arith.constant 0 : index
@@ -529,7 +529,7 @@ func.func @M_N_K_Can(%arg0: memref<16x32x32xbf16>, %arg1: memref<16x32x32xbf16>,
   return
 }
 
-// CHECK-LABEL: @M_N_K_Can
+// CHECK-LABEL: @Cano_Opt_Removed_M_N_K_loops_pattern
 // CHECK-2: scf.for {{.*}} -> (!x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>, !x86.amx.tile<16x16xf32>) {
 // CHECK-4: x86.amx.tile_zero : !x86.amx.tile<16x16xf32>
 // CHECK-4: x86.amx.tile_load
