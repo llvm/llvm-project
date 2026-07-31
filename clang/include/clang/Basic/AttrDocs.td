@@ -8995,6 +8995,23 @@ for details.
   }];
 }
 
+def HLLSControlFlowHintDocs : Documentation {
+  let Category = DocCatStmt;
+  let Heading = "branch, flatten";
+  let Content = [{
+The ``branch`` and ``flatten`` attributes can be applied to *if statements* in
+the HLSL language mode to control whether only one side of the statement is
+executed, or if both are executed and the result is chosen based on the
+condition.
+
+These control flow hints are preserved through the compilation and emitted in a
+backend-specific way.
+
+For details, see the Direct3D documentation for `if Statement
+<https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-if>`_
+  }]
+}
+
 def AtomicDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
@@ -9087,6 +9104,81 @@ Examples:
 The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset
   }];
 }
+
+def HLSLResourceClassDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``hlsl::resource_class`` attribute specifies the resource class of the HLSL
+resource represented by a member variable of type ``__hlsl_resource_t``,
+declaring it to be an SRV, UAV, CBuffer, or Sampler resource. This attribute is
+only valid for resource handles.
+  }]
+}
+
+def HLSLResourceDimensionDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``hlsl::dimension`` attribute specifies the dimensions of the HLSL resource
+represented by a member veriable of type ``__hlsl_resource_t``, declaring the
+resource to have Unknown, 1D, 2D, 3D, or Cube dimension. This attribute is only
+valid for resource handles.
+  }]
+}
+
+def HLSLContainedTypeDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``hlsl::contained_type`` attribute specifies the type of the HLSL resource
+represented by a member veriable of type ``__hlsl_resource_t``. This attribute
+is only valid for resource handles.
+  }]
+}
+
+def HLSLRawBufferDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``hlsl::raw_buffer`` attribute specifies that the HLSL resource represented
+by a member veriable of type ``__hlsl_resource_t`` has raw buffer semantics.
+This attribute is only valid for resource handles.
+  }]
+}
+
+def HLSLIsArrayDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
+by a member veriable of type ``__hlsl_resource_t`` has array dimensions. This
+attribute is only valid for resource handles.
+  }]
+}
+
+def HLSLIsMultiSampledDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
+by a member veriable of type ``__hlsl_resource_t`` is multisampled. This
+attribute is only valid for resource handles.
+  }]
+}
+
+def HLSLIsROVDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``hlsl::is_rov`` attribute specifies that the HLSL resource represented by
+a member veriable of type ``__hlsl_resource_t`` is a rasterizer ordered view.
+This attribute is only valid for resource handles.
+  }]
+}
+
+def HLSLIsCounterDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``hlsl::is_counter`` attribute specifies that the HLSL resource represented
+by a member veriable of type ``__hlsl_resource_t`` is a counter buffer. This
+attribute is only valid for resource handles.
+  }]
+}
+
 
 def HLSLGroupSharedAddressSpaceDocs : Documentation {
   let Category = DocCatVariable;
