@@ -2211,6 +2211,10 @@ void SPIRVEmitIntrinsicsImpl::replacePointerOperandWithPtrCast(
     }
   }
 
+  // Never replace an already-deduced pointer element type with a non-pointer
+  // one. The conflicting use comes from a mis-deduced expected type. Leave the
+  // operand untouched rather than emitting a ptrcast that re-introduces the
+  // collapsed type at the use site.
   if (PointerElemTy && isPointerTyOrWrapper(PointerElemTy) &&
       !isPointerTyOrWrapper(ExpectedElementType) &&
       tracesToPointerAlloca(Pointer))

@@ -1316,13 +1316,14 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
       }
     }
     MachineBasicBlock &BB = *I.getParent();
-    // An untyped base needs OpUntypedInBoundsPtrAccessChainKHR, which spells
+    // An untyped result needs OpUntypedInBoundsPtrAccessChainKHR, which spells
     // out the Base Type. The offset of G_PTR_ADD is a byte count, so the Base
-    // Type is i8 and the offset is the Element index as is.
+    // Type is i8 and the offset is the Element index as is. The opcode is
+    // picked by the result type alone because an untyped access chain accepts
+    // a typed base while a typed access chain rejects an untyped result.
     SPIRVTypeInst GVType = GR.getSPIRVTypeForVReg(GV);
     const bool UseUntypedPointers =
-        ResType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR && GVType &&
-        GVType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+        ResType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
     if (UseUntypedPointers) {
       BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSpecConstantOp))
           .addDef(ResVReg)
@@ -2905,11 +2906,7 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
   SPIRVTypeInst SrcPtrTy = GR.getSPIRVTypeForVReg(SrcPtr);
 
   // don't generate a cast for a null that may be represented by OpTypeInt
-  auto IsPtrTy = [](SPIRVTypeInst T) {
-    return T && (T->getOpcode() == SPIRV::OpTypePointer ||
-                 T->getOpcode() == SPIRV::OpTypeUntypedPointerKHR);
-  };
-  if (!IsPtrTy(SrcPtrTy) || !IsPtrTy(ResType))
+  if (!SrcPtrTy || !SrcPtrTy.isPointer() || !ResType || !ResType.isPointer())
     return BuildCOPY(ResVReg, SrcPtr, I);
 
   SPIRV::StorageClass::StorageClass SrcSC = GR.getPointerStorageClass(SrcPtrTy);
@@ -4431,9 +4428,7 @@ bool SPIRVInstructionSelector::selectICmp(Register ResVReg,
 
   Register CmpOperand = I.getOperand(2).getReg();
   SPIRVTypeInst CmpOperandType = GR.getSPIRVTypeForVReg(CmpOperand);
-  bool IsPtrCmp = GR.isScalarOfType(CmpOperand, SPIRV::OpTypePointer) ||
-                  (CmpOperandType && CmpOperandType->getOpcode() ==
-                                         SPIRV::OpTypeUntypedPointerKHR);
+  bool IsPtrCmp = CmpOperandType && CmpOperandType.isPointer();
   if (IsPtrCmp) {
     CmpOpc = getPtrCmpOpcode(Pred);
     // OpPtrEqual/OpPtrNotEqual require both operands to share an identical
@@ -5002,6 +4997,7 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
     }
   }
 
+  Register BaseReg = I.getOperand(3).getReg();
   auto Res = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
                  .addUse(GR.getSPIRVTypeID(ResType));
@@ -5011,7 +5007,6 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
     // Get the element type from the base pointer register.
     // For untyped pointers, this was stored when processing
     // spv_assign_ptr_type.
-    Register BaseReg = I.getOperand(3).getReg();
     SPIRVTypeInst BaseType = GR.getUntypedPtrElementType(BaseReg);
     if (!BaseType) {
       // Otherwise try the pointee type for mixed typed-pointer usage.
@@ -5040,7 +5035,7 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
   }
 
   // Object to get a pointer to.
-  Res.addUse(I.getOperand(3).getReg());
+  Res.addUse(BaseReg);
 
   const bool IsAccessChainOpcode =
       (Opcode == SPIRV::OpAccessChain ||
@@ -7048,12 +7043,11 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
 
   auto MIB = BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
-                 .addUse(GR.getSPIRVTypeID(ResType));
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
 
-  // Add storage class (comes before DataType for OpUntypedVariableKHR).
-  MIB.addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
-
-  // OpUntypedVariableKHR requires a DataType operand after the storage class.
+  // OpUntypedVariableKHR takes an extra Data Type operand right after the
+  // storage class.
   if (UseUntypedPointers) {
     // Get the element type that was stored when processing spv_assign_ptr_type.
     SPIRVTypeInst DataType = GR.getUntypedPtrElementType(ResVReg);

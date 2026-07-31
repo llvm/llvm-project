@@ -383,9 +383,7 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
       if (SpvType) {
         // check if the address space needs correction
         LLT RegType = MRI.getType(Reg);
-        if ((SpvType->getOpcode() == SPIRV::OpTypePointer ||
-             SpvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR) &&
-            RegType.isPointer() &&
+        if (SpvType.isPointer() && RegType.isPointer() &&
             storageClassToAddressSpace(GR->getPointerStorageClass(SpvType)) !=
                 RegType.getAddressSpace()) {
           const SPIRVSubtarget &ST =
@@ -751,7 +749,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
             !ST->isShader()) {
           SPIRVTypeInst ElemSpvType = GR->getOrCreateSPIRVType(
-              ElementTy, MIB, SPIRV::AccessQualifier::ReadWrite, true);
+              ElementTy, MIB, SPIRV::AccessQualifier::ReadWrite,
+              /*EmitIR=*/true);
           GR->setUntypedPtrElementType(Reg, ElemSpvType);
         }
 
@@ -761,8 +760,8 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         LLT RegTy = MRI.getType(Reg);
         if (RegTy.isValid() && RegTy.isVector())
           AssignedPtrType = GR->getOrCreateSPIRVVectorType(
-              AssignedPtrType, RegTy.getNumElements(), MIB, true);
-
+              AssignedPtrType, RegTy.getNumElements(), MIB,
+              /*EmitIR=*/true);
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.

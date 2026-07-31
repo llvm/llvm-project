@@ -631,6 +631,11 @@ bool SPIRVTargetLowering::enforcePtrTypeCompatibility(
   if (PointeeType == OpType)
     return true;
 
+  // getPointeeType yields nullptr for anything that is not an OpTypePointer.
+  // The early return above does not cover an untyped pointer nested in another
+  // type, such as a vector of pointers built for a scalarized vector GEP.
+  // typesLogicallyMatch dereferences both of its arguments, so bail out before
+  // calling it.
   if (PointeeType && OpType && typesLogicallyMatch(PointeeType, OpType, GR)) {
     // Apply OpCopyLogical to OpIdx.
     if (I.getOperand(OpIdx).isDef() &&

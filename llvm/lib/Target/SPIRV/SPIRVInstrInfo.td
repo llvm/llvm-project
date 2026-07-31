@@ -315,7 +315,7 @@ def OpUntypedPrefetchKHR: Op<4426, (outs),
                   "OpUntypedPrefetchKHR $pointer $numBytes">;
 def OpUntypedGroupAsyncCopyKHR: Op<4434, (outs ID:$res),
                   (ins TYPE:$ty, ID:$scope, ID:$dst, ID:$src, ID:$elemNumBytes,
-                   ID:$nelts, ID:$stride, ID:$event),
+                   ID:$nelts, ID:$stride, ID:$event, variable_ops),
                   "$res = OpUntypedGroupAsyncCopyKHR $ty $scope $dst $src $elemNumBytes $nelts $stride $event">;
 
 // - SPV_INTEL_variable_length_array

@@ -1238,9 +1238,13 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
       MachineRegisterInfo *MRI = MIRBuilder.getMRI();
       Register NumElems = Call->Arguments[1];
       SPIRVTypeInst SizeTy = GR->getSPIRVTypeForVReg(NumElems);
+      assert(SizeTy && "Expected a type for the number of elements");
       unsigned ElemBytes = GR->getDeducedPointeeByteSize(CB.getArgOperand(0));
       Register NumBytes = NumElems;
-      if (ElemBytes > 1 && SizeTy) {
+      // A byte sized element already makes the element count a byte count. A
+      // size of 0 means the element type could not be deduced, which the typed
+      // lowering resolves to i8, so treat it as a single byte here as well.
+      if (ElemBytes > 1) {
         Register ElemBytesReg = GR->buildConstantInt(ElemBytes, MIRBuilder,
                                                      SizeTy, /*EmitIR=*/true);
         Register Mul =
@@ -1251,7 +1255,7 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
             .addDef(Mul)
             .addUse(NumElems)
             .addUse(ElemBytesReg);
-        updateRegType(Mul, nullptr, SizeTy, GR, MIRBuilder, *MRI);
+        updateRegType(Mul, /*Ty=*/nullptr, SizeTy, GR, MIRBuilder, *MRI);
         NumBytes = Mul;
       }
       MIRBuilder.buildInstr(SPIRV::OpUntypedPrefetchKHR)
@@ -3213,10 +3217,12 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
       MIB.addUse(GR->buildConstantInt(ElemBytes, MIRBuilder, SizeTy,
                                       /*EmitIR=*/true));
     }
-    MIB.addUse(NumElemReg).addUse(StrideReg).addUse(EventReg);
+    MIB.addUse(NumElemReg);
+    MIB.addUse(StrideReg);
+    MIB.addUse(EventReg);
     if (NewType)
-      updateRegType(Call->ReturnRegister, nullptr, NewType, GR, MIRBuilder,
-                    MIRBuilder.getMF().getRegInfo());
+      updateRegType(Call->ReturnRegister, /*Ty=*/nullptr, NewType, GR,
+                    MIRBuilder, MIRBuilder.getMF().getRegInfo());
     return true;
   }
   case SPIRV::OpGroupWaitEvents:

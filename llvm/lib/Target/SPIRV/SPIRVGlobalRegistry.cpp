@@ -850,25 +850,22 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
 
   auto MIB = GVBuilder.buildInstr(VariableOpcode)
                  .addDef(ResVReg)
-                 .addUse(getSPIRVTypeID(BaseType));
+                 .addUse(getSPIRVTypeID(BaseType))
+                 .addImm(static_cast<uint32_t>(Storage));
 
-  // Add storage class (comes before DataType for OpUntypedVariableKHR).
-  MIB.addImm(static_cast<uint32_t>(Storage));
-
-  // For OpUntypedVariableKHR, add the Data Type operand after the storage
-  // class.
+  // OpUntypedVariableKHR takes an extra Data Type operand right after the
+  // storage class, holding the global's value type.
   if (UseUntypedPointers) {
-    // Data Type = the global's value type.
     SPIRVTypeInst DataType = getPointeeType(BaseType);
-    if (!DataType && GVar)
+    if (!DataType)
       DataType = getOrCreateSPIRVType(GVar->getValueType(), GVBuilder,
                                       SPIRV::AccessQualifier::ReadWrite,
                                       /*EmitIR=*/false);
     if (!DataType) {
       // Use i8 as a last resort.
       const SPIRVInstrInfo &TII = *Subtarget.getInstrInfo();
-      DataType = getOrCreateSPIRVIntegerType(
-          8, MIRBuilder.getMF().front().front(), TII);
+      MachineInstr &EntryBBFirstInst = EntryBB.front();
+      DataType = getOrCreateSPIRVIntegerType(8, EntryBBFirstInst, TII);
     }
     MIB.addUse(getSPIRVTypeID(DataType));
   }
@@ -1107,8 +1104,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypePointer(
   // Check if we should use untyped pointers.
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
-  if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
-      !ST.isShader() && !isSpecialOpaqueElementType(ElemType))
+  if (shouldUseUntypedPointer(ElemType, ST))
     return getOrCreateSPIRVUntypedPointerType(SC, MIRBuilder);
 
   if (!Reg.isValid())
@@ -1513,6 +1509,12 @@ bool SPIRVGlobalRegistry::isSpecialOpaqueElementType(
          isSpecialOpaqueType(It->second);
 }
 
+bool SPIRVGlobalRegistry::shouldUseUntypedPointer(
+    SPIRVTypeInst ElemType, const SPIRVSubtarget &ST) const {
+  return ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
+         !ST.isShader() && !isSpecialOpaqueElementType(ElemType);
+}
+
 SPIRVTypeInst
 SPIRVGlobalRegistry::retrieveScalarOrVectorIntType(SPIRVTypeInst Type) const {
   SPIRVTypeInst ScalarType = getScalarOrVectorComponentType(Type);
@@ -1557,10 +1559,8 @@ bool SPIRVGlobalRegistry::isBitcastCompatible(SPIRVTypeInst Type1,
 SPIRV::StorageClass::StorageClass
 SPIRVGlobalRegistry::getPointerStorageClass(Register VReg) const {
   SPIRVTypeInst Type = getSPIRVTypeForVReg(VReg);
-  assert(Type &&
-         (Type->getOpcode() == SPIRV::OpTypePointer ||
-          Type->getOpcode() == SPIRV::OpTypeUntypedPointerKHR) &&
-         Type->getOperand(1).isImm() && "Pointer type is expected");
+  assert(Type && Type.isPointer() && Type->getOperand(1).isImm() &&
+         "Pointer type is expected");
   return getPointerStorageClass(Type);
 }
 
@@ -2093,9 +2093,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerTypeInternal(
   // Check if we should use untyped pointers.
   const SPIRVSubtarget &ST =
       cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
-  if (!ForceTyped &&
-      ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
-      !ST.isShader() && !isSpecialOpaqueElementType(BaseType))
+  if (!ForceTyped && shouldUseUntypedPointer(BaseType, ST))
     return getOrCreateSPIRVUntypedPointerType(SC, MIRBuilder);
 
   const Type *PointerElementType = getTypeForSPIRVType(BaseType);
@@ -2119,6 +2117,10 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerTypeInternal(
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVUntypedPointerType(
     SPIRV::StorageClass::StorageClass SC, MachineIRBuilder &MIRBuilder) {
+  [[maybe_unused]] const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
+         !ST.isShader() && "Untyped pointers are not available");
   unsigned AddressSpace = storageClassToAddressSpace(SC);
   // Use STK_UntypedPointer handle keyed by address space only
   auto Handle = SPIRV::irhandle_untyped_pointer(AddressSpace);

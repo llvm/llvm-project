@@ -421,12 +421,20 @@ public:
   unsigned getNumScalarOrVectorTotalBitWidth(SPIRVTypeInst Type) const;
 
   // True if a pointer to this element type must stay typed rather than become
-  // OpTypeUntypedPointerKHR (an opaque builtin type like an image or sampler).
+  // OpTypeUntypedPointerKHR. Such an element type is either a function type,
+  // which an untyped pointer cannot express, or an opaque builtin type such as
+  // an image or a sampler.
   bool isSpecialOpaqueElementType(SPIRVTypeInst ElemType) const;
 
+  // True if a pointer to this element type should be emitted as
+  // OpTypeUntypedPointerKHR rather than OpTypePointer.
+  bool shouldUseUntypedPointer(SPIRVTypeInst ElemType,
+                               const SPIRVSubtarget &ST) const;
+
   // Byte size of a pointer value's IR-deduced element type, or 0 if unknown.
-  // Alloc size is what array indexing and copy strides use, so a 3-component
-  // vector counts as 4 components as OpenCL requires.
+  // Array indexing and copy strides work in terms of the alloc size, so this
+  // reports the size a value of that type occupies in an array. For OpenCL
+  // that means a 3-component vector is as large as a 4-component one.
   unsigned getDeducedPointeeByteSize(const Value *PtrVal) {
     if (Type *ElemTy = findDeducedElementType(PtrVal))
       return DL.getTypeAllocSize(ElemTy).getFixedValue();
