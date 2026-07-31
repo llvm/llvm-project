@@ -222,7 +222,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-#    if _LIBCPP_STD_VER >= 23 && defined(_LIBCPP_WIN32API)
+#    if _LIBCPP_STD_VER >= 23 && defined(_WIN32)
 _LIBCPP_EXPORTED_FROM_ABI void* __filebuf_windows_native_handle(FILE* __file) noexcept;
 #    endif
 
@@ -236,7 +236,7 @@ public:
   typedef typename traits_type::off_type off_type;
   typedef typename traits_type::state_type state_type;
 #    if _LIBCPP_STD_VER >= 26
-#      if defined(_LIBCPP_WIN32API)
+#      if defined(_WIN32)
   using native_handle_type = void*; // HANDLE
 #      elif __has_include(<unistd.h>)
   using native_handle_type = int; // POSIX file descriptor
@@ -272,7 +272,7 @@ public:
 #    if _LIBCPP_STD_VER >= 26
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
     _LIBCPP_ASSERT_UNCATEGORIZED(this->is_open(), "File must be opened");
-#      if defined(_LIBCPP_WIN32API)
+#      if defined(_WIN32)
     return std::__filebuf_windows_native_handle(__file_);
 #      elif __has_include(<unistd.h>)
     return fileno(__file_);
@@ -311,6 +311,8 @@ protected:
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL streamsize xsgetn(char_type* __str, streamsize __len) override {
     if (__file_ && __always_noconv_) {
+      char_type __1buf;
+      __read_guard __guard(__1buf, *this);
       const streamsize __n = std::min(this->egptr() - this->gptr(), __len);
       if (__n != 0) {
         traits_type::copy(__str, this->gptr(), __n);
@@ -319,9 +321,16 @@ protected:
       const streamsize __remainder    = __len - __n;
       const streamsize __buffer_space = this->egptr() - this->eback();
 
-      if (__remainder >= __buffer_space)
-        return std::fread(__str + __n, sizeof(char_type), __remainder, __file_) + __n;
-      else if (__remainder > 0)
+      if (__remainder >= __buffer_space) {
+        auto __res = std::fread(__str + __n, sizeof(char_type), __remainder, __file_) + __n;
+
+        // Copy the buffer-sized tail into the buffer so that `unget`ting works correctly
+        auto __buf_size = std::min<size_t>(__res, this->egptr() - this->eback());
+        traits_type::copy(this->eback(), __str + __res - __buf_size, __buf_size);
+        this->setg(this->eback(), this->eback() + __buf_size, this->eback() + __buf_size);
+
+        return __res;
+      } else if (__remainder > 0)
         return basic_streambuf<_CharT, _Traits>::xsgetn(__str + __n, __remainder) + __n;
       return __n;
     }
@@ -384,6 +393,40 @@ private:
   bool __always_noconv_;
 
   bool __read_mode();
+
+  struct [[__nodiscard__]] __read_guard {
+    basic_filebuf& __self_;
+    size_t __unget_size_;
+    char_type& __1buf_;
+
+    _LIBCPP_HIDE_FROM_ABI __read_guard(char_type& __1buf, basic_filebuf& __self) : __self_(__self), __1buf_(__1buf) {
+      if (__self.__cm_ & ios_base::in) {
+        __unget_size_ = std::min<size_t>((__self.egptr() - __self.eback()) / 2, 4);
+      } else {
+        __self.setp(nullptr, nullptr);
+        if (__self.__always_noconv_) {
+          __self.setg(reinterpret_cast<char_type*>(__self.__extbuf_),
+                      reinterpret_cast<char_type*>(__self.__extbuf_) + __self.__ebs_,
+                      reinterpret_cast<char_type*>(__self.__extbuf_) + __self.__ebs_);
+        } else {
+          __self.setg(__self.__intbuf_, __self.__intbuf_ + __self.__ibs_, __self.__intbuf_ + __self.__ibs_);
+        }
+        __self.__cm_  = ios_base::in;
+        __unget_size_ = 0;
+      }
+
+      if (__self.gptr() == nullptr)
+        __self.setg(std::addressof(__1buf_), std::addressof(__1buf_) + 1, std::addressof(__1buf_) + 1);
+    }
+
+    _LIBCPP_HIDE_FROM_ABI size_t __unget_size() { return __unget_size_; }
+
+    _LIBCPP_HIDE_FROM_ABI ~__read_guard() {
+      if (__self_.eback() == std::addressof(__1buf_))
+        __self_.setg(nullptr, nullptr, nullptr);
+    }
+  };
+
   void __write_mode();
 
   _LIBCPP_HIDE_FROM_ABI static int __fseek(FILE* __file, pos_type __offset, int __whence);
@@ -803,11 +846,11 @@ template <class _CharT, class _Traits>
 typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>::underflow() {
   if (__file_ == nullptr)
     return traits_type::eof();
-  bool __initial = __read_mode();
+
   char_type __1buf;
-  if (this->gptr() == nullptr)
-    this->setg(std::addressof(__1buf), std::addressof(__1buf) + 1, std::addressof(__1buf) + 1);
-  const size_t __unget_sz = __initial ? 0 : std::min<size_t>((this->egptr() - this->eback()) / 2, 4);
+  __read_guard __guard(__1buf, *this);
+
+  const size_t __unget_sz = __guard.__unget_size();
   int_type __c            = traits_type::eof();
   if (this->gptr() == this->egptr()) {
     std::memmove(this->eback(), this->egptr() - __unget_sz, __unget_sz * sizeof(char_type));
@@ -850,8 +893,6 @@ typename basic_filebuf<_CharT, _Traits>::int_type basic_filebuf<_CharT, _Traits>
     }
   } else
     __c = traits_type::to_int_type(*this->gptr());
-  if (this->eback() == std::addressof(__1buf))
-    this->setg(nullptr, nullptr, nullptr);
   return __c;
 }
 
@@ -1021,7 +1062,7 @@ basic_filebuf<_CharT, _Traits>::seekoff(off_type __off, ios_base::seekdir __way,
 
 template <class _CharT, class _Traits>
 int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int __whence) {
-#    if defined(_LIBCPP_MSVCRT_LIKE)
+#    ifdef _WIN32
   return _fseeki64(__file, __offset, __whence);
 #    elif _LIBCPP_LIBC_NEWLIB
   return fseek(__file, __offset, __whence);
@@ -1032,7 +1073,7 @@ int basic_filebuf<_CharT, _Traits>::__fseek(FILE* __file, pos_type __offset, int
 
 template <class _CharT, class _Traits>
 typename basic_filebuf<_CharT, _Traits>::pos_type basic_filebuf<_CharT, _Traits>::__ftell(FILE* __file) {
-#    if defined(_LIBCPP_MSVCRT_LIKE)
+#    ifdef _WIN32
   return _ftelli64(__file);
 #    elif _LIBCPP_LIBC_NEWLIB
   return ftell(__file);
@@ -1140,20 +1181,6 @@ void basic_filebuf<_CharT, _Traits>::imbue(const locale& __loc) {
       }
     }
   }
-}
-
-template <class _CharT, class _Traits>
-bool basic_filebuf<_CharT, _Traits>::__read_mode() {
-  if (!(__cm_ & ios_base::in)) {
-    this->setp(nullptr, nullptr);
-    if (__always_noconv_)
-      this->setg((char_type*)__extbuf_, (char_type*)__extbuf_ + __ebs_, (char_type*)__extbuf_ + __ebs_);
-    else
-      this->setg(__intbuf_, __intbuf_ + __ibs_, __intbuf_ + __ibs_);
-    __cm_ = ios_base::in;
-    return true;
-  }
-  return false;
 }
 
 template <class _CharT, class _Traits>
@@ -1500,15 +1527,28 @@ public:
   using native_handle_type = typename basic_filebuf<_CharT, _Traits>::native_handle_type;
 #    endif
 
-  _LIBCPP_HIDE_FROM_ABI basic_fstream();
+  _LIBCPP_HIDE_FROM_ABI basic_fstream() : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {}
   _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(const char* __s,
-                                               ios_base::openmode __mode = ios_base::in | ios_base::out);
+                                               ios_base::openmode __mode = ios_base::in | ios_base::out)
+      : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {
+    if (__sb_.open(__s, __mode) == nullptr)
+      this->setstate(ios_base::failbit);
+  }
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
   _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(const wchar_t* __s,
-                                               ios_base::openmode __mode = ios_base::in | ios_base::out);
+                                               ios_base::openmode __mode = ios_base::in | ios_base::out)
+      : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {
+    if (__sb_.open(__s, __mode) == nullptr)
+      this->setstate(ios_base::failbit);
+  }
 #    endif
+
   _LIBCPP_HIDE_FROM_ABI explicit basic_fstream(const string& __s,
-                                               ios_base::openmode __mode = ios_base::in | ios_base::out);
+                                               ios_base::openmode __mode = ios_base::in | ios_base::out)
+      : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {
+    if (__sb_.open(__s, __mode) == nullptr)
+      this->setstate(ios_base::failbit);
+  }
 
 #    if _LIBCPP_STD_VER >= 17
   template <class _Tp, class = enable_if_t<is_same_v<_Tp, filesystem::path>>>
@@ -1516,24 +1556,55 @@ public:
       : basic_fstream(__p.c_str(), __mode) {}
 #    endif // _LIBCPP_STD_VER >= 17
 
-  _LIBCPP_HIDE_FROM_ABI basic_fstream(basic_fstream&& __rhs);
+  _LIBCPP_HIDE_FROM_ABI basic_fstream(basic_fstream&& __rhs)
+      : basic_iostream<char_type, traits_type>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
+    this->set_rdbuf(std::addressof(__sb_));
+  }
 
-  _LIBCPP_HIDE_FROM_ABI basic_fstream& operator=(basic_fstream&& __rhs);
+  _LIBCPP_HIDE_FROM_ABI basic_fstream& operator=(basic_fstream&& __rhs) {
+    basic_iostream<char_type, traits_type>::operator=(std::move(__rhs));
+    __sb_ = std::move(__rhs.__sb_);
+    return *this;
+  }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(basic_fstream& __rhs);
+  _LIBCPP_HIDE_FROM_ABI void swap(basic_fstream& __rhs) {
+    basic_iostream<char_type, traits_type>::swap(__rhs);
+    __sb_.swap(__rhs.__sb_);
+  }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI basic_filebuf<char_type, traits_type>* rdbuf() const {
+    return const_cast<basic_filebuf<char_type, traits_type>*>(std::addressof(__sb_));
+  }
+
 #    if _LIBCPP_STD_VER >= 26
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() const noexcept {
     return rdbuf()->native_handle();
   }
 #    endif
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const;
-  _LIBCPP_HIDE_FROM_ABI void open(const char* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is_open() const { return __sb_.is_open(); }
+
+  _LIBCPP_HIDE_FROM_ABI void open(const char* __s, ios_base::openmode __mode = ios_base::in | ios_base::out) {
+    if (__sb_.open(__s, __mode))
+      this->clear();
+    else
+      this->setstate(ios_base::failbit);
+  }
+
 #    if _LIBCPP_HAS_OPEN_WITH_WCHAR
-  void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
+  void open(const wchar_t* __s, ios_base::openmode __mode = ios_base::in | ios_base::out) {
+    if (__sb_.open(__s, __mode))
+      this->clear();
+    else
+      this->setstate(ios_base::failbit);
+  }
 #    endif
-  _LIBCPP_HIDE_FROM_ABI void open(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out);
+  _LIBCPP_HIDE_FROM_ABI void open(const string& __s, ios_base::openmode __mode = ios_base::in | ios_base::out) {
+    if (__sb_.open(__s, __mode))
+      this->clear();
+    else
+      this->setstate(ios_base::failbit);
+  }
 
 #    if _LIBCPP_STD_VER >= 17
   _LIBCPP_HIDE_FROM_ABI void
@@ -1542,104 +1613,18 @@ public:
   }
 #    endif // _LIBCPP_STD_VER >= 17
 
-  _LIBCPP_HIDE_FROM_ABI void close();
+  _LIBCPP_HIDE_FROM_ABI void close() {
+    if (__sb_.close() == nullptr)
+      this->setstate(ios_base::failbit);
+  }
 
 private:
   basic_filebuf<char_type, traits_type> __sb_;
 };
 
 template <class _CharT, class _Traits>
-inline basic_fstream<_CharT, _Traits>::basic_fstream()
-    : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {}
-
-template <class _CharT, class _Traits>
-inline basic_fstream<_CharT, _Traits>::basic_fstream(const char* __s, ios_base::openmode __mode)
-    : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {
-  if (__sb_.open(__s, __mode) == nullptr)
-    this->setstate(ios_base::failbit);
-}
-
-#    if _LIBCPP_HAS_OPEN_WITH_WCHAR
-template <class _CharT, class _Traits>
-inline basic_fstream<_CharT, _Traits>::basic_fstream(const wchar_t* __s, ios_base::openmode __mode)
-    : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {
-  if (__sb_.open(__s, __mode) == nullptr)
-    this->setstate(ios_base::failbit);
-}
-#    endif
-
-template <class _CharT, class _Traits>
-inline basic_fstream<_CharT, _Traits>::basic_fstream(const string& __s, ios_base::openmode __mode)
-    : basic_iostream<char_type, traits_type>(std::addressof(__sb_)) {
-  if (__sb_.open(__s, __mode) == nullptr)
-    this->setstate(ios_base::failbit);
-}
-
-// extension
-template <class _CharT, class _Traits>
-inline basic_fstream<_CharT, _Traits>::basic_fstream(basic_fstream&& __rhs)
-    : basic_iostream<char_type, traits_type>(std::move(__rhs)), __sb_(std::move(__rhs.__sb_)) {
-  this->set_rdbuf(std::addressof(__sb_));
-}
-
-template <class _CharT, class _Traits>
-inline basic_fstream<_CharT, _Traits>& basic_fstream<_CharT, _Traits>::operator=(basic_fstream&& __rhs) {
-  basic_iostream<char_type, traits_type>::operator=(std::move(__rhs));
-  __sb_ = std::move(__rhs.__sb_);
-  return *this;
-}
-
-template <class _CharT, class _Traits>
-inline void basic_fstream<_CharT, _Traits>::swap(basic_fstream& __rhs) {
-  basic_iostream<char_type, traits_type>::swap(__rhs);
-  __sb_.swap(__rhs.__sb_);
-}
-
-template <class _CharT, class _Traits>
 inline _LIBCPP_HIDE_FROM_ABI void swap(basic_fstream<_CharT, _Traits>& __x, basic_fstream<_CharT, _Traits>& __y) {
   __x.swap(__y);
-}
-
-template <class _CharT, class _Traits>
-inline basic_filebuf<_CharT, _Traits>* basic_fstream<_CharT, _Traits>::rdbuf() const {
-  return const_cast<basic_filebuf<char_type, traits_type>*>(std::addressof(__sb_));
-}
-
-template <class _CharT, class _Traits>
-inline bool basic_fstream<_CharT, _Traits>::is_open() const {
-  return __sb_.is_open();
-}
-
-template <class _CharT, class _Traits>
-void basic_fstream<_CharT, _Traits>::open(const char* __s, ios_base::openmode __mode) {
-  if (__sb_.open(__s, __mode))
-    this->clear();
-  else
-    this->setstate(ios_base::failbit);
-}
-
-#    if _LIBCPP_HAS_OPEN_WITH_WCHAR
-template <class _CharT, class _Traits>
-void basic_fstream<_CharT, _Traits>::open(const wchar_t* __s, ios_base::openmode __mode) {
-  if (__sb_.open(__s, __mode))
-    this->clear();
-  else
-    this->setstate(ios_base::failbit);
-}
-#    endif
-
-template <class _CharT, class _Traits>
-void basic_fstream<_CharT, _Traits>::open(const string& __s, ios_base::openmode __mode) {
-  if (__sb_.open(__s, __mode))
-    this->clear();
-  else
-    this->setstate(ios_base::failbit);
-}
-
-template <class _CharT, class _Traits>
-inline void basic_fstream<_CharT, _Traits>::close() {
-  if (__sb_.close() == nullptr)
-    this->setstate(ios_base::failbit);
 }
 
 #    if _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1

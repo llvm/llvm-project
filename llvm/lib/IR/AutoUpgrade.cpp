@@ -46,6 +46,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
@@ -1447,10 +1448,16 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
     }
 
-    if (F->arg_size() == 2 && Name == "coro.end") {
+    Intrinsic::ID CoroEndID = Intrinsic::not_intrinsic;
+    if (Name == "coro.end" &&
+        (F->arg_size() == 2 || F->getReturnType()->isIntegerTy(1)))
+      CoroEndID = Intrinsic::coro_end;
+    else if (Name == "coro.end.async" && F->getReturnType()->isIntegerTy(1))
+      CoroEndID = Intrinsic::coro_end_async;
+
+    if (CoroEndID != Intrinsic::not_intrinsic) {
       rename(F);
-      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
-                                                Intrinsic::coro_end);
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), CoroEndID);
       return true;
     }
 
@@ -5338,10 +5345,24 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     break;
   }
 
+  case Intrinsic::coro_end_async:
   case Intrinsic::coro_end: {
     SmallVector<Value *, 3> Args(CI->args());
-    Args.push_back(ConstantTokenNone::get(CI->getContext()));
+    if (NewFn->getIntrinsicID() == Intrinsic::coro_end && Args.size() == 2)
+      Args.push_back(ConstantTokenNone::get(CI->getContext()));
     NewCall = Builder.CreateCall(NewFn, Args);
+
+    if (!CI->getType()->isVoidTy()) {
+      if (!CI->use_empty()) {
+        Function *IsInRamp = Intrinsic::getOrInsertDeclaration(
+            CI->getModule(), Intrinsic::coro_is_in_ramp);
+        Value *InRamp = Builder.CreateCall(IsInRamp);
+        CI->replaceAllUsesWith(Builder.CreateNot(InRamp));
+      }
+      CI->eraseFromParent();
+      return;
+    }
+
     break;
   }
 
@@ -6605,6 +6626,32 @@ bool llvm::UpgradeModuleFlags(Module &M) {
           Op->getOperand(2)};
       ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
       Changed = true;
+    }
+
+    // clang/PowerPC used to use "float-abi" to describe the long double format;
+    // it has been renamed to "long-double-type", with its values changed to the
+    // corresponding IR floating-point type names.
+    if (M.getTargetTriple().isPPC() && ID->getString() == "float-abi") {
+      StringRef Format;
+      if (auto *S = dyn_cast_or_null<MDString>(Op->getOperand(2)))
+        Format = S->getString();
+
+      // The "float-abi" key is now reserved for the target-independent
+      // soft/hard ABI flag, so leave a valid value alone. Map any other value
+      // (including unrecognized ones, which were never valid) to the default.
+      if (!FloatABI::parseABIType(Format)) {
+        LongDoubleFormat NewFormat =
+            StringSwitch<LongDoubleFormat>(Format)
+                .Case("ieeequad", LongDoubleFormat::IEEEquad)
+                .Case("ieeedouble", LongDoubleFormat::IEEEdouble)
+                .Default(LongDoubleFormat::PPCDoubleDouble);
+        Metadata *Ops[3] = {
+            Op->getOperand(0),
+            MDString::get(M.getContext(), "long-double-type"),
+            MDString::get(M.getContext(), getLongDoubleFormatName(NewFormat))};
+        ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+        Changed = true;
+      }
     }
   }
 

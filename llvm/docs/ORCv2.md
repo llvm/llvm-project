@@ -1,8 +1,5 @@
 # ORC Design and Implementation
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

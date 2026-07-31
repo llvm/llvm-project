@@ -191,12 +191,6 @@ public:
   /// the pointers are supposed to be uniqued, should be fine. Revisit this if
   /// it ends up taking too much memory.
   llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
-  /// Map BlockAddrInfoAttr (function name, label name) to the corresponding CIR
-  /// LabelOp. This provides the main lookup table used to resolve block
-  /// addresses into their label operations.
-  llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
-  cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
-  void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
 
   /// Add a global value to the llvmUsed list.
   void addUsedGlobal(cir::CIRGlobalValueInterface gv);
