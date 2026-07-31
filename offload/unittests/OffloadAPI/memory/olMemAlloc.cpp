@@ -13,7 +13,16 @@
 using olMemAllocTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemAllocTest);
 
-using olMemAllocAllocTypesTest = olMemAllocHostOrDeviceTest;
+struct olMemAllocAllocTypesTest : OffloadDeviceTestWithParam<ol_alloc_type_t> {
+  ol_result_t allocateDeviceOrHost(size_t Size, void **Alloc) {
+    ol_alloc_type_t AllocType = getTestParam();
+    if (AllocType == OL_ALLOC_TYPE_HOST) {
+      return olMemAllocHost(this->Device, Size, Alloc);
+    }
+
+    return olMemAlloc(this->Device, AllocType, Size, Alloc);
+  }
+};
 
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
     olMemAllocAllocTypesTest, AllocTypes,
@@ -21,13 +30,7 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
 
 TEST_P(olMemAllocAllocTypesTest, Success) {
   void *Alloc = nullptr;
-  ol_alloc_type_t AllocType = getTestParam();
-
-  if (AllocType == OL_ALLOC_TYPE_HOST) {
-    ASSERT_SUCCESS(olMemAllocHost(Device, 1024, &Alloc));
-  } else {
-    ASSERT_SUCCESS(olMemAlloc(Device, AllocType, 1024, &Alloc));
-  }
+  ASSERT_SUCCESS(allocateDeviceOrHost(DefaultAllocSize, &Alloc));
   ASSERT_NE(Alloc, nullptr);
   olMemFree(Alloc);
 }
@@ -40,9 +43,10 @@ TEST_P(olMemAllocTest, SuccessAllocMany) {
     void *Alloc = nullptr;
     ol_alloc_type_t AllocType = AllocTypes[I % 3];
     if (AllocType == OL_ALLOC_TYPE_HOST) {
-      ASSERT_SUCCESS(olMemAllocHost(Device, 1024 * I, &Alloc));
+      ASSERT_SUCCESS(olMemAllocHost(Device, DefaultAllocSize * I, &Alloc));
     } else {
-      ASSERT_SUCCESS(olMemAlloc(Device, AllocType, 1024 * I, &Alloc));
+      ASSERT_SUCCESS(
+          olMemAlloc(Device, AllocType, DefaultAllocSize * I, &Alloc));
     }
     ASSERT_NE(Alloc, nullptr);
 

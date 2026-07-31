@@ -245,22 +245,10 @@ inline const ol_platform_info_t PlatformInfoNames[3] = {
     OL_PLATFORM_INFO_VERSION};
 
 // ol_alloc_type_t
-struct olMemAllocHostOrDeviceTest
-    : OffloadDeviceTestWithParam<ol_alloc_type_t> {
-  ol_result_t allocateDeviceOrHost(size_t Size, size_t Alignment,
-                                   void **Alloc) {
-    ol_alloc_type_t AllocType = getTestParam();
-    if (AllocType == OL_ALLOC_TYPE_HOST) {
-      return olMemAllocAlignedHost(this->Device, Size, Alignment, Alloc);
-    }
-
-    return olMemAllocAligned(this->Device, AllocType, Size, Alignment, Alloc);
-  }
-};
-
 inline const ol_alloc_type_t AllocTypes[3] = {
     OL_ALLOC_TYPE_DEVICE, OL_ALLOC_TYPE_MANAGED, OL_ALLOC_TYPE_HOST};
 inline const size_t TestAllocsNum = 1000;
+inline const size_t DefaultAllocSize = 1024;
 
 // ol_mem_info_t
 using MemInfoProp = PropertiesContainer<ol_mem_info_t>;
