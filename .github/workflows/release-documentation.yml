@@ -67,6 +67,8 @@ jobs:
     outputs:
       man-page-digest: ${{ steps.man-page-digest.outputs.man-page-digest }}
       man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
+      doxygen-digest: ${{ steps.man-page-digest.outputs.doxygen-digest }}
+      doxygen-artifact-id: ${{ steps.doxygen-artifact-upload.outputs.artifact-id }}
     steps:
       - name: Checkout LLVM
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -95,6 +97,12 @@ jobs:
               texlive-font-utils
           pip3 install --require-hashes --user -r ./llvm/docs/requirements.txt
 
+          # Install Doxygen
+          curl -L https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.linux.bin.tar.gz -o doxygen.tar.gz
+          echo "75419ef4f446fc1c24ef12514b574e66e898ee6f527c6ae2ad84f91a905823c2  doxygen.tar.gz" | shasum --check -
+          tar -xf doxygen.tar.gz
+          sudo install -m 755 doxygen-1.17.0/bin/doxygen /usr/local/bin/doxygen
+
       - name: Build Documentation
         id: build
         env:
@@ -102,17 +110,20 @@ jobs:
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
           ./llvm/utils/release/build-docs.sh \
-            $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm) -no-doxygen
+            $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm)
           echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
+          echo "doxygen-tarball-name=$(baename $(find . -iname '*doxygen*.tar.xz')) >> "$GITHUB_OUTPUT"
 
 
-      - name: Generate sha256 digest for man page tarball
+      - name: Generate sha256 digest for tarballs
         id: man-page-digest
         shell: bash
         env:
-          TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
+          MAN_PAGE_TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
+          DOXYGEN_TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
         run: |
-            echo "man-page-digest=$(cat "$TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+            echo "man-page-digest=$(cat "$MAN_PAGE_TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+            echo "doxygen-digest=$(cat "$DOXYGEN_TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
 
       - id: man-page-artifact-upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -120,6 +131,13 @@ jobs:
           name: man-pages
           path: |
             ${{ steps.build.outputs.man-page-tarball-name }}
+
+      - id: doxygen-artifact-upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: doxygen
+          path: |
+            ${{ steps.build.outputs.doxygen-tarball-name }}
 
       - name: Create Release Notes Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -174,8 +192,8 @@ jobs:
           git push --force  "https://$PUSH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/$INPUTS_RELEASE_VERSION
           gh pr create -f -B main -H llvmbot:$INPUTS_RELEASE_VERSION
 
-  upload-man-pages:
-    name: "Upload Man Pages"
+  upload-documentation:
+    name: "Upload Documentation"
     runs-on: ubuntu-24.04
     environment:
       deployment: false
@@ -188,7 +206,14 @@ jobs:
       contents: write     # For man page uploads
       id-token: write     # For artifact attestations
       attestations: write # For artifact attestations
-
+    matrix:
+      include:
+        - artifact-id: ${{ needs.release-documentation.outputs.man-page-artifact-id }}
+          attestation-name: release-man-page-attestation
+          digest: ${{ needs.release-documentation.outputs.man-page-digest }}
+        - artifact-id: ${{ needs.release-documentation.outputs.doxygen-artifact-id }}
+          attestation-name: release-doxygen-attestation
+          digest: ${{ needs.release-documentation.outputs.doxygen-digest }}
     steps:
      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
        with:
@@ -202,9 +227,9 @@ jobs:
        uses: ./.github/workflows/upload-release-artifact
        with:
          release-version: ${{ inputs.release-version }}
-         artifact-id: ${{ needs.release-documentation.outputs.man-page-artifact-id }}
-         attestation-name: ${{ runner.os }}-${{ runner.arch }}-release-man-page-attestation
-         digest: ${{ needs.release-documentation.outputs.man-page-digest }}
+         artifact-id: ${{ matrix.artifact-id }}
+         attestation-name: ${{ runner.os }}-${{ runner.arch }}-${{ matrix.attestation_name }}
+         digest: ${{ matrix.digest }}
          upload: ${{ inputs.upload }}
          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
