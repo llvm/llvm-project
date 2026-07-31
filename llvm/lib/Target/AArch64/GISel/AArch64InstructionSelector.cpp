@@ -488,11 +488,12 @@ private:
   ComplexRendererFns
   selectCVTFixedPointVecBase(const MachineOperand &Root,
                              bool isReciprocal = false) const;
+  void renderFixedPointScalarXForm(MachineInstrBuilder &MIB,
+                                   const MachineInstr &MI, int OpIdx) const;
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
   void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
                                   const MachineInstr &MI, int OpIdx = -1) const;
-
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -8037,6 +8038,13 @@ InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPosRecipOperandVec(
     MachineOperand &Root) const {
   return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ true);
+}
+
+void AArch64InstructionSelector::renderFixedPointScalarXForm(
+    MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
+  assert(OpIdx == 3 && MI.getOperand(OpIdx).isImm() &&
+         "Expected vecshift immediate operand");
+  MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,

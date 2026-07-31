@@ -1432,8 +1432,6 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     case Intrinsic::aarch64_neon_vcvtfxs2fp:
     case Intrinsic::aarch64_neon_vcvtfxu2fp:
-    case Intrinsic::aarch64_neon_vcvtfp2fxs:
-    case Intrinsic::aarch64_neon_vcvtfp2fxu:
       // Override these intrinsics, because they would have a partial
       // mapping. This is needed for 'half' types, which otherwise don't
       // get legalised correctly.
@@ -1442,6 +1440,32 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       // OpRegBankIdx[1] is the intrinsic ID.
       // OpRegBankIdx[3] is an integer immediate.
       break;
+    case Intrinsic::aarch64_neon_vcvtfp2fxs:
+    case Intrinsic::aarch64_neon_vcvtfp2fxu: {
+      OpRegBankIdx[2] = PMI_FirstFPR;
+      if (MRI.getType(MI.getOperand(0).getReg()).isVector()) {
+        OpRegBankIdx[0] = PMI_FirstFPR;
+        break;
+      }
+
+      TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
+      TypeSize SrcSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, TRI);
+
+      // Half-precision fixed-point FP-to-int scalar intrinsics are specified as
+      // producing an H-register result. The LLVM intrinsic may still return an
+      // i32/i64 type, so check the source size for 16 bits.
+      if (SrcSize == 16 ||
+          ((DstSize == SrcSize) &&
+           all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                  [&](const MachineInstr &UseMI) {
+                    return onlyUsesFP(UseMI, MRI, TRI) ||
+                           prefersFPUse(UseMI, MRI, TRI);
+                  })))
+        OpRegBankIdx[0] = PMI_FirstFPR;
+      else
+        OpRegBankIdx[0] = PMI_FirstGPR;
+      break;
+    }
     default: {
       // Check if we know that the intrinsic has any constraints on its register
       // banks. If it does, then update the mapping accordingly.
