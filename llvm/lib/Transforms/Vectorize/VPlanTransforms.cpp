@@ -57,6 +57,93 @@ static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
   return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
 }
 
+namespace {
+
+struct SelectedBaseLoadPattern {
+  VPInstruction *Addr;
+  SmallVector<VPValue *> GEPOperands;
+  VPValue *Cond;
+  VPValue *TrueBase;
+  VPValue *FalseBase;
+};
+
+/// Match a load through a GEP whose base pointer is selected per iteration
+/// between two loop-invariant candidates:
+///
+///   load (gep (select Cond, TrueBase, FalseBase), Indices...)
+///
+/// Legality, stride and profitability are checked separately by the caller.
+static std::optional<SelectedBaseLoadPattern>
+matchSelectedBaseLoad(VPInstruction *Load) {
+  if (Load->getOpcode() != Instruction::Load)
+    return std::nullopt;
+
+  // exclude volatile load, atomic load, other uneditable memory operations
+  auto *LI = dyn_cast_or_null<LoadInst>(Load->getUnderlyingInstr());
+  if (!LI || !LI->isSimple())
+    return std::nullopt;
+
+  VPValue *Addr = Load->getOperand(0);
+  auto *AddrI = dyn_cast<VPInstruction>(Addr);
+  if (!AddrI)
+    return std::nullopt;
+
+  Type *SourceElementTy = nullptr;
+  ArrayRef<VPValue *> GEPOperands;
+  // pattern with 3 params : cond + trueBase + falseBase
+  if (!match(Addr, m_GetElementPtr(SourceElementTy, GEPOperands)) ||
+      GEPOperands.size() < 2)
+    return std::nullopt;
+
+  VPValue *Cond = nullptr;
+  VPValue *TrueBase = nullptr;
+  VPValue *FalseBase = nullptr;
+  if (!match(GEPOperands.front(), m_Select(m_VPValue(Cond), m_VPValue(TrueBase),
+                                           m_VPValue(FalseBase))))
+    return std::nullopt;
+
+  if (!Cond->getScalarType()->isIntegerTy(1) || TrueBase == FalseBase)
+    return std::nullopt;
+
+  return SelectedBaseLoadPattern{AddrI, SmallVector<VPValue *>(GEPOperands),
+                                 Cond, TrueBase, FalseBase};
+}
+
+static InstructionCost getBlendedLoadCost(const TargetTransformInfo &TTI,
+                                          Type *VecTy, Align Alignment,
+                                          unsigned AddressSpace,
+                                          bool HasActiveMask,
+                                          TTI::TargetCostKind CostKind) {
+  Type *MaskTy = CmpInst::makeCmpResultType(VecTy);
+  InstructionCost Cost =
+      2 * TTI.getMemIntrinsicInstrCost(
+              MemIntrinsicCostAttributes(Intrinsic::masked_load, VecTy,
+                                         Alignment, AddressSpace),
+              CostKind) +
+      TTI.getArithmeticInstrCost(Instruction::Xor, MaskTy, CostKind) +
+      TTI.getCmpSelInstrCost(Instruction::Select, VecTy, MaskTy,
+                             CmpInst::BAD_ICMP_PREDICATE, CostKind);
+  if (HasActiveMask)
+    Cost += 2 * TTI.getArithmeticInstrCost(Instruction::And, MaskTy, CostKind);
+  return Cost;
+}
+
+static InstructionCost getGatherLoadCost(const LoadInst &LI, ElementCount VF,
+                                         bool HasActiveMask,
+                                         const VPCostContext &Ctx) {
+  Type *VecTy = VectorType::get(LI.getType(), VF);
+  Type *VecPtrTy = VectorType::get(LI.getPointerOperandType(), VF);
+  return Ctx.TTI.getAddressComputationCost(VecPtrTy, nullptr, nullptr,
+                                           Ctx.CostKind) +
+         Ctx.TTI.getMemIntrinsicInstrCost(
+             MemIntrinsicCostAttributes(Intrinsic::masked_gather, VecTy,
+                                        LI.getPointerOperand(), HasActiveMask,
+                                        LI.getAlign(), &LI),
+             Ctx.CostKind);
+}
+
+} // end anonymous namespace
+
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
     VPlan &Plan, const TargetLibraryInfo &TLI, PredicatedScalarEvolution &PSE,
     Loop *OuterLoop) {
@@ -5426,6 +5513,108 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           return Scalarize(VPI);
 
         return false;
+      });
+
+  // Recognize loads through a pointer selected per iteration between two
+  // loop-invariant bases. Although the combined address is not consecutive,
+  // each selected address chain is. When profitable, use two complementary
+  // masked consecutive loads and blend their results instead of gathering a
+  // vector of selected pointers.
+  VPlanTransforms::runPass(
+      "widenSelectedBaseLoads", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+        std::optional<SelectedBaseLoadPattern> Pattern =
+            matchSelectedBaseLoad(VPI);
+        if (!Pattern)
+          return false;
+
+        if (!vputils::isUniformAcrossVFsAndUFs(Pattern->TrueBase) ||
+            !vputils::isUniformAcrossVFsAndUFs(Pattern->FalseBase) ||
+            vputils::isUniformAcrossVFsAndUFs(Pattern->Cond))
+          return false;
+
+        auto *LI = cast<LoadInst>(VPI->getUnderlyingInstr());
+        Type *ScalarTy = LI->getType();
+        // The ingredient's alignment only applies to the address selected by
+        // each scalar iteration. It does not imply that either candidate base
+        // is aligned when that candidate is masked off. Use a conservative
+        // alignment for the newly-speculated base pointers.
+        const Align SplitAlignment(1);
+        if (!CostCtx.Config.isLegalMaskedLoadOrStore(
+                /*IsLoad=*/true, ScalarTy, SplitAlignment,
+                LI->getPointerAddressSpace()))
+          return false;
+
+        VPBuilder Builder(VPI);
+        SmallVector<VPValue *> TrueOps = Pattern->GEPOperands;
+        SmallVector<VPValue *> FalseOps = Pattern->GEPOperands;
+        // replace the baseOp
+        TrueOps[0] = Pattern->TrueBase;
+        FalseOps[0] = Pattern->FalseBase;
+        auto *TrueAddr =
+            Builder.insert(Pattern->Addr->cloneWithOperands(TrueOps));
+        auto *FalseAddr =
+            Builder.insert(Pattern->Addr->cloneWithOperands(FalseOps));
+
+        // Splitting the selected base must expose two unit-stride accesses.
+        // Remove the speculative address recipes again if either proof fails.
+        if (getConstantStride(TrueAddr, ScalarTy, CostCtx.PSE, CostCtx.L) !=
+                1 ||
+            getConstantStride(FalseAddr, ScalarTy, CostCtx.PSE, CostCtx.L) !=
+                1) {
+          TrueAddr->eraseFromParent();
+          FalseAddr->eraseFromParent();
+          return false;
+        }
+
+        bool HasActiveMask = RecipeBuilder.isPredicatedInst(LI);
+        auto IsProfitable = [&](ElementCount VF) {
+          // Do not replace a scalarization decision without comparing against
+          // its cost and updating the legacy scalarization bookkeeping.
+          if (VF.isScalable() || CostCtx.willBeScalarized(LI, VF) ||
+              !CostCtx.Config.isLegalGatherOrScatter(LI, VF))
+            return false;
+          Type *VecTy = VectorType::get(ScalarTy, VF);
+          InstructionCost BlendedCost = getBlendedLoadCost(
+              CostCtx.TTI, VecTy, SplitAlignment, LI->getPointerAddressSpace(),
+              HasActiveMask, CostCtx.CostKind);
+          return BlendedCost <
+                 getGatherLoadCost(*LI, VF, HasActiveMask, CostCtx);
+        };
+        // if fail, then erase the tmp recipes
+        if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                                Range)) {
+          TrueAddr->eraseFromParent();
+          FalseAddr->eraseFromParent();
+          return false;
+        }
+
+        VPSingleDefRecipe *TrueVectorPtr =
+            Builder.createConsecutiveVectorPointer(
+                TrueAddr, ScalarTy, /*Reverse=*/false, VPI->getDebugLoc());
+        VPSingleDefRecipe *FalseVectorPtr =
+            Builder.createConsecutiveVectorPointer(
+                FalseAddr, ScalarTy, /*Reverse=*/false, VPI->getDebugLoc());
+
+        VPValue *TrueMask = Pattern->Cond;
+        VPValue *FalseMask =
+            Builder.createNot(Pattern->Cond, VPI->getDebugLoc());
+        if (HasActiveMask) {
+          VPValue *ActiveMask = VPI->getMask();
+          TrueMask = Builder.createLogicalAnd(ActiveMask, TrueMask,
+                                              VPI->getDebugLoc());
+          FalseMask = Builder.createLogicalAnd(ActiveMask, FalseMask,
+                                               VPI->getDebugLoc());
+        }
+        // two load + merge
+        auto *TrueLoad = Builder.createWidenLoad(
+            *LI, TrueVectorPtr, TrueMask,
+            /*Consecutive=*/true, *VPI, VPI->getDebugLoc(), SplitAlignment);
+        auto *FalseLoad = Builder.createWidenLoad(
+            *LI, FalseVectorPtr, FalseMask, /*Consecutive=*/true, *VPI,
+            VPI->getDebugLoc(), SplitAlignment);
+        VPInstruction *Blend = Builder.createSelect(
+            Pattern->Cond, TrueLoad, FalseLoad, VPI->getDebugLoc());
+        return ReplaceWith(VPI, Blend);
       });
 
   if (!RecipeBuilder.prefersVectorizedAddressing()) {

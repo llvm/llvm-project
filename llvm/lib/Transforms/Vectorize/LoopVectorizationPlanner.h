@@ -520,13 +520,14 @@ public:
   }
 
   /// Create a recipe widening \p Load, loading from \p Addr with \p Mask (may
-  /// be null).
-  VPWidenLoadRecipe *createWidenLoad(LoadInst &Load, VPValue *Addr,
-                                     VPValue *Mask, bool Consecutive,
-                                     const VPIRMetadata &Metadata,
-                                     DebugLoc DL) {
-    return tryInsertInstruction(
-        new VPWidenLoadRecipe(Load, Addr, Mask, Consecutive, Metadata, DL));
+  /// be null). Use \p Alignment instead of the ingredient's alignment when it
+  /// is provided.
+  VPWidenLoadRecipe *
+  createWidenLoad(LoadInst &Load, VPValue *Addr, VPValue *Mask,
+                  bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL,
+                  std::optional<Align> Alignment = std::nullopt) {
+    return tryInsertInstruction(new VPWidenLoadRecipe(
+        Load, Addr, Mask, Consecutive, Metadata, DL, Alignment));
   }
 
   /// Create a recipe widening \p Store, storing \p StoredVal to \p Addr with

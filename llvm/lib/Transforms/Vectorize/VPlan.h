@@ -3798,16 +3798,20 @@ public:
 struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
                                                    public VPWidenMemoryRecipe {
   VPWidenLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Mask,
-                    bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL)
+                    bool Consecutive, const VPIRMetadata &Metadata, DebugLoc DL,
+                    std::optional<Align> Alignment = std::nullopt)
       : VPSingleDefRecipe(VPRecipeBase::VPWidenLoadSC, {Addr}, Load.getType(),
                           &Load, DL),
         VPWidenMemoryRecipe(Load, Consecutive, Metadata) {
+    if (Alignment)
+      this->Alignment = *Alignment;
     setMask(Mask);
   }
 
   VPWidenLoadRecipe *clone() override {
     return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
-                                 getMask(), Consecutive, *this, getDebugLoc());
+                                 getMask(), Consecutive, *this, getDebugLoc(),
+                                 getAlign());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
