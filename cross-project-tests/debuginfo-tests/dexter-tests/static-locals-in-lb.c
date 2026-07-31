@@ -24,18 +24,20 @@ int main(int argc, const char **argv) {
   return 0;
 }
 
-// CHECK-DAG: seen_values: 2
-// CHECK-DAG: correct_steps: 2
+// CHECK-DAG: seen_values: 4
+// CHECK-DAG: correct_steps: 4
 // CHECK-DAG: unexpected_value_steps: 0
 // CHECK-DAG: missing_var_steps: 2
-// CHECK-DAG: correct_step_coverage: 50.0%
+// CHECK-DAG: correct_step_coverage: 66.7%
 
 /*
 ---
 !where {lines: !label pos}:
   !value y: 1
+  !value "x + y": 6
 !where {lines: !label neg}:
   !value y: 2
+  !value "x - y": -5
 # The value of y's should not be available out of declaration scopes.
 !where {lines: !label ret}:
   !value y: null
