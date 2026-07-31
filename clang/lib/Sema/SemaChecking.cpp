@@ -2361,9 +2361,10 @@ checkMathBuiltinElementType(Sema &S, SourceLocation Loc, QualType ArgTy,
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::FloatTy:
     if (!EltTy->isRealFloatingType()) {
+      // FIXME: make diagnostic's wording correct for matrices
       return S.Diag(Loc, diag::err_builtin_invalid_arg_type)
-             << ArgOrdinal << /* scalar, vector, or matrix of */ 6
-             << /* no int */ 0 << /* floating-point */ 1 << ArgTy;
+             << ArgOrdinal << /* scalar or vector */ 5 << /* no int */ 0
+             << /* floating-point */ 1 << ArgTy;
     }
     break;
   case Sema::EltwiseBuiltinArgTyRestriction::IntegerTy:
