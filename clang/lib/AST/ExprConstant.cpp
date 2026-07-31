@@ -980,9 +980,11 @@ namespace {
       // of each element is likely to take some number of steps anyway.
       uint64_t Limit = getLangOpts().ConstexprStepLimit;
       if (Limit != 0 && ElemCount > Limit) {
-        if (Diag)
-          FFDiag(Loc, diag::note_constexpr_new_exceeds_limits)
+        if (Diag) {
+          FFDiag(Loc, diag::note_constexpr_new_exceeds_limits, 1)
               << ElemCount << Limit;
+          Note(Loc, diag::note_constexpr_steps);
+        }
         return false;
       }
       return true;
@@ -1009,7 +1011,9 @@ namespace {
         return true;
 
       if (!StepsLeft) {
-        FFDiag(S->getBeginLoc(), diag::note_constexpr_step_limit_exceeded);
+        FFDiag(S->getBeginLoc(), diag::note_constexpr_step_limit_exceeded, 1)
+            << getLangOpts().ConstexprStepLimit;
+        Note(S->getBeginLoc(), diag::note_constexpr_steps);
         return false;
       }
       --StepsLeft;

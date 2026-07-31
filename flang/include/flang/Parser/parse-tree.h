@@ -5113,8 +5113,8 @@ struct OmpUnifiedSharedMemoryClause {
 //    UPDATE(dependence-type)                       // since 5.0, until 5.1
 // update-clause ->
 //    UPDATE(task-dependence-type)                  // since 5.2
-struct OmpUpdateClause {
-  UNION_CLASS_BOILERPLATE(OmpUpdateClause);
+struct OmpUpdateDependObjectsClause {
+  UNION_CLASS_BOILERPLATE(OmpUpdateDependObjectsClause);
   // The dependence type is an argument here, not a modifier.
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
 };

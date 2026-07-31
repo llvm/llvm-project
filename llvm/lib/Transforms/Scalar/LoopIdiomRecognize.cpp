@@ -1289,43 +1289,47 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(StoreInst *SI,
 namespace {
 class MemmoveVerifier {
 public:
-  explicit MemmoveVerifier(const Value &LoadBasePtr, const Value &StoreBasePtr,
-                           const DataLayout &DL)
-      : DL(DL), BP1(llvm::GetPointerBaseWithConstantOffset(
-                    LoadBasePtr.stripPointerCasts(), LoadOff, DL)),
-        BP2(llvm::GetPointerBaseWithConstantOffset(
-            StoreBasePtr.stripPointerCasts(), StoreOff, DL)),
-        IsSameObject(BP1 == BP2) {}
+  explicit MemmoveVerifier(const SCEV &LoadStart, const SCEV &StoreStart,
+                           ScalarEvolution &SE)
+      : DL(SE.getDataLayout()),
+        Off(dyn_cast<SCEVConstant>(SE.getMinusSCEV(&StoreStart, &LoadStart))),
+        BasePtr(dyn_cast<SCEVUnknown>(SE.getPointerBase(&StoreStart))),
+        IsSameObject(Off != nullptr) {}
 
   bool loadAndStoreMayFormMemmove(unsigned StoreSize, bool IsNegStride,
                                   const Instruction &TheLoad,
                                   bool IsMemCpy) const {
+    // The store must be at a constant offset from the load, and there must be
+    // an underlying pointer.
+    if (!Off || !BasePtr)
+      return false;
+    const APInt &OffVal = Off->getAPInt();
+    // If null is defined then the base pointer can't be null
+    auto *NullBase = dyn_cast<ConstantPointerNull>(BasePtr->getValue());
+    if (NullBase && NullPointerIsDefined(
+                        TheLoad.getParent()->getParent(),
+                        NullBase->getPointerType()->getPointerAddressSpace()))
+      return false;
+    int64_t LoadSize;
     if (IsMemCpy) {
-      // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
-      // for negative stride.
-      if ((!IsNegStride && LoadOff <= StoreOff) ||
-          (IsNegStride && LoadOff >= StoreOff))
-        return false;
+      // memcpy is equivalent to a sequence of byte loads and stores
+      LoadSize = 1;
     } else {
-      // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
-      // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
-      int64_t LoadSize =
-          DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
-      if (BP1 != BP2 || LoadSize != int64_t(StoreSize))
-        return false;
-      if ((!IsNegStride && LoadOff < StoreOff + int64_t(StoreSize)) ||
-          (IsNegStride && LoadOff + LoadSize > StoreOff))
+      LoadSize = DL.getTypeSizeInBits(TheLoad.getType()).getFixedValue() / 8;
+      if (LoadSize != StoreSize)
         return false;
     }
+    // Ensure that LoadBasePtr is after StoreBasePtr or before StoreBasePtr
+    // for negative stride. LoadBasePtr shouldn't overlap with StoreBasePtr.
+    if (IsNegStride ? OffVal.slt(LoadSize) : OffVal.sgt(-LoadSize))
+      return false;
     return true;
   }
 
 private:
   const DataLayout &DL;
-  int64_t LoadOff = 0;
-  int64_t StoreOff = 0;
-  const Value *BP1;
-  const Value *BP2;
+  const SCEVConstant *Off;
+  const SCEVUnknown *BasePtr;
 
 public:
   const bool IsSameObject;
@@ -1436,7 +1440,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
 
   // If the store is a memcpy instruction, we must check if it will write to
   // the load memory locations. So remove it from the ignored stores.
-  MemmoveVerifier Verifier(*LoadBasePtr, *StoreBasePtr, *DL);
+  MemmoveVerifier Verifier(*LdStart, *StrStart, *SE);
   if (IsMemCpy && !Verifier.IsSameObject)
     IgnoredInsts.erase(TheStore);
   if (mayLoopAccessLocation(LoadBasePtr, ModRefInfo::Mod, CurLoop, BECount,
@@ -1866,7 +1870,15 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
     Value *CRCTableGEP =
         Builder.CreateInBoundsGEP(CRCTy, GV, Indexer, "tbl.ptradd");
-    Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+    Instruction *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+
+    // Update MemorySSA since we just created a new load instruction.
+    if (MSSAU) {
+      auto *NewMemAcc = MSSAU->createMemoryAccessInBB(
+          CRCTableLd, /*Definition=*/nullptr, CRCTableLd->getParent(),
+          MemorySSA::Beginning);
+      MSSAU->insertUse(cast<MemoryUse>(NewMemAcc), /*RenameUses=*/true);
+    }
 
     // CRCNext = (CRC (<<|>>) 8) ^ CRCTableLd, or simply CRCTableLd in case of
     // CRC-8.
@@ -1889,6 +1901,8 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     for (PHINode *PN : Cleanup)
       RecursivelyDeleteDeadPHINode(PN);
     SE->forgetLoop(CurLoop);
+    if (MSSAU && VerifyMemorySSA)
+      MSSAU->getMemorySSA()->verifyMemorySSA();
   }
 }
 

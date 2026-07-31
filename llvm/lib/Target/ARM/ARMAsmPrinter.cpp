@@ -699,7 +699,7 @@ void ARMAsmPrinter::emitAttributes() {
   const ARMBaseTargetMachine &ATM =
       static_cast<const ARMBaseTargetMachine &>(TM);
   const ARMSubtarget STI(TT, std::string(CPU), ArchFS, ATM,
-                         ATM.isLittleEndian());
+                         ATM.isLittleEndian(), ATM.Options.FloatABIType);
 
   // Emit build attributes for the available hardware.
   ATS.emitTargetAttributes(STI);
@@ -807,7 +807,7 @@ void ARMAsmPrinter::emitAttributes() {
   ATS.emitAttribute(ARMBuildAttrs::ABI_align_preserved, 1);
 
   // Hard float.  Use both S and D registers and conform to AAPCS-VFP.
-  if (getTM().isAAPCS_ABI() && TM.Options.FloatABIType == FloatABI::Hard)
+  if (getTM().isAAPCS_ABI() && STI.isTargetHardFloat())
     ATS.emitAttribute(ARMBuildAttrs::ABI_VFP_args, ARMBuildAttrs::HardFPAAPCS);
 
   // FIXME: To support emitting this build attribute as GCC does, the
@@ -1023,10 +1023,11 @@ void ARMAsmPrinter::emitMachineConstantPoolValue(
     // a weak definition with a non-weak definition from another section. Use a
     // .reloc directive rather than a fixup to force the generation of a
     // relocation (R_ARM_REL32) so the linker can perform the override. This is
-    // restricted to dso_local symbols: a preemptible/external weak symbol
-    // (e.g. an extern_weak reference) must use the GOT, as R_ARM_REL32 against
-    // an external symbol cannot be used when making a shared object.
-    if (GV->isWeakForLinker() && GV->isDSOLocal() &&
+    // restricted to dso_local, non-TLS symbols: a preemptible/external weak
+    // symbol (e.g. an extern_weak reference) must use the GOT, as R_ARM_REL32
+    // against an external symbol cannot be used when making a shared object;
+    // and TLS symbols require TLS-specific relocations, not R_ARM_REL32.
+    if (GV->isWeakForLinker() && GV->isDSOLocal() && !GV->isThreadLocal() &&
         TM.getTargetTriple().isOSBinFormatELF() && TM.isPositionIndependent() &&
         ACPV->getPCAdjustment() != 0) {
       MCSymbol *CPILabel = OutContext.createTempSymbol();

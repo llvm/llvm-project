@@ -479,8 +479,11 @@ void BlockFrequencyInfoImplBase::distributeMass(const BlockNode &Source,
   }
 }
 
-static void convertFloatingToInteger(BlockFrequencyInfoImplBase &BFI,
-                                     const Scaled64 &Min, const Scaled64 &Max) {
+static void convertFloatingToInteger(BlockFrequencyInfoImplBase &BFI) {
+  auto Max = Scaled64::getZero();
+  for (const FrequencyData &F : BFI.Freqs)
+    Max = std::max(Max, F.Scaled);
+
   // Scale the Factor to a size that creates integers.  If possible scale
   // integers so that Max == UINT64_MAX so that they can be best differentiated.
   // It is possible that the range between min and max cannot be accurately
@@ -496,9 +499,13 @@ static void convertFloatingToInteger(BlockFrequencyInfoImplBase &BFI,
   Scaled64 ScalingFactor = Scaled64(1, MaxBits - Slack) / Max;
 
   // Translate the floats to integers.
-  LLVM_DEBUG(dbgs() << "float-to-int: min = " << Min << ", max = " << Max
-                    << ", factor = " << ScalingFactor << "\n");
-  (void)Min;
+  LLVM_DEBUG({
+    auto Min = Scaled64::getLargest();
+    for (const FrequencyData &F : BFI.Freqs)
+      Min = std::min(Min, F.Scaled);
+    dbgs() << "float-to-int: min = " << Min << ", max = " << Max
+           << ", factor = " << ScalingFactor << "\n";
+  });
   for (size_t Index = 0; Index < BFI.Freqs.size(); ++Index) {
     Scaled64 Scaled = BFI.Freqs[Index].Scaled * ScalingFactor;
     BFI.Freqs[Index].Integer = std::max(UINT64_C(1), Scaled.toInt<uint64_t>());
@@ -544,18 +551,8 @@ void BlockFrequencyInfoImplBase::unwrapLoops() {
 }
 
 void BlockFrequencyInfoImplBase::finalizeMetrics() {
-  // Unwrap loop packages in reverse post-order, tracking min and max
-  // frequencies.
-  auto Min = Scaled64::getLargest();
-  auto Max = Scaled64::getZero();
-  for (size_t Index = 0; Index < Working.size(); ++Index) {
-    // Update min/max scale.
-    Min = std::min(Min, Freqs[Index].Scaled);
-    Max = std::max(Max, Freqs[Index].Scaled);
-  }
-
   // Convert to integers.
-  convertFloatingToInteger(*this, Min, Max);
+  convertFloatingToInteger(*this);
 
   // Clean up data structures.
   cleanup(*this);
@@ -824,7 +821,7 @@ void BlockFrequencyInfoImplBase::adjustLoopHeaderMass(LoopData &Loop) {
   LLVM_DEBUG(dbgs() << "adjust-loop-header-mass:\n");
   for (uint32_t H = 0; H < Loop.NumHeaders; ++H) {
     auto &HeaderNode = Loop.Nodes[H];
-    auto &BackedgeMass = Loop.BackedgeMass[Loop.getHeaderIndex(HeaderNode)];
+    auto &BackedgeMass = Loop.BackedgeMass[H];
     LLVM_DEBUG(dbgs() << " - Add back edge mass for node "
                       << getBlockName(HeaderNode) << ": " << BackedgeMass
                       << "\n");
