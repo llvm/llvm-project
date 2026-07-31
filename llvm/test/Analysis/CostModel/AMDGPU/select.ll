@@ -82,7 +82,7 @@ define void @select_f16(i1 %cond, half %a, half %b) {
 
 define void @select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; ALL-LABEL: 'select_v2i32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <2 x i32> %a, <2 x i32> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x i32> %a, <2 x i32> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v2i32'
@@ -108,7 +108,7 @@ define void @select_v4i32(i1 %cond, <4 x i32> %a, <4 x i32> %b) {
 
 define void @select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 ; ALL-LABEL: 'select_v2i16'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <2 x i16> %a, <2 x i16> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x i16> %a, <2 x i16> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v2i16'
@@ -121,7 +121,7 @@ define void @select_v2i16(i1 %cond, <2 x i16> %a, <2 x i16> %b) {
 
 define void @select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; ALL-LABEL: 'select_v4i16'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sel = select i1 %cond, <4 x i16> %a, <4 x i16> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <4 x i16> %a, <4 x i16> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v4i16'
@@ -134,7 +134,7 @@ define void @select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 
 define void @select_v2f32(i1 %cond, <2 x float> %a, <2 x float> %b) {
 ; ALL-LABEL: 'select_v2f32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <2 x float> %a, <2 x float> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x float> %a, <2 x float> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v2f32'
@@ -147,7 +147,7 @@ define void @select_v2f32(i1 %cond, <2 x float> %a, <2 x float> %b) {
 
 define void @select_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
 ; ALL-LABEL: 'select_v4f32'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sel = select i1 %cond, <4 x float> %a, <4 x float> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <4 x float> %a, <4 x float> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v4f32'
@@ -160,7 +160,7 @@ define void @select_v4f32(i1 %cond, <4 x float> %a, <4 x float> %b) {
 
 define void @select_v2f16(i1 %cond, <2 x half> %a, <2 x half> %b) {
 ; ALL-LABEL: 'select_v2f16'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <2 x half> %a, <2 x half> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %sel = select i1 %cond, <2 x half> %a, <2 x half> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v2f16'
@@ -173,7 +173,7 @@ define void @select_v2f16(i1 %cond, <2 x half> %a, <2 x half> %b) {
 
 define void @select_v4f16(i1 %cond, <4 x half> %a, <4 x half> %b) {
 ; ALL-LABEL: 'select_v4f16'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %sel = select i1 %cond, <4 x half> %a, <4 x half> %b
+; ALL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %sel = select i1 %cond, <4 x half> %a, <4 x half> %b
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'select_v4f16'
