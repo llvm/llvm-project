@@ -1,5 +1,5 @@
-// This test case verifies that function-local static variables with the same name
-// declared in different lexical blocks are read correctly in the debugger.
+// This test case verifies that function-local static variables with the same
+// name declared in different lexical blocks are read correctly in the debugger.
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 //
