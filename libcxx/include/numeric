@@ -190,23 +190,6 @@ constexpr T saturating_cast(U x) noexcept;                    // freestanding, S
 #    pragma GCC system_header
 #  endif
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 14
-#    include <initializer_list>
-#    include <limits>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <climits>
-#    include <cmath>
-#    include <concepts>
-#    include <cstdint>
-#    include <execution>
-#    include <functional>
-#    include <iterator>
-#    include <new>
-#    include <optional>
-#    include <type_traits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_NUMERIC
