@@ -12,17 +12,17 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
-#include <concepts>
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 
 using IntIter = std::ranges::iterator_t<std::ranges::iota_view<int>>;
 
-static_assert(!std::constructible_from<IntIter, int>);
-static_assert(!std::convertible_to<int, IntIter>);
+static_assert(!std::is_constructible_v<IntIter, int>);
+static_assert(!std::is_convertible_v<int, IntIter>);
 
 using SomeIntIter = std::ranges::iterator_t<std::ranges::iota_view<SomeInt>>;
 
-static_assert(!std::constructible_from<SomeIntIter, SomeInt>);
-static_assert(!std::convertible_to<SomeInt, SomeIntIter>);
+static_assert(!std::is_constructible_v<SomeIntIter, SomeInt>);
+static_assert(!std::is_convertible_v<SomeInt, SomeIntIter>);

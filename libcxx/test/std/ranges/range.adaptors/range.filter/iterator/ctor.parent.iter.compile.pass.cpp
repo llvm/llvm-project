@@ -12,8 +12,8 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
-#include <concepts>
 #include <ranges>
+#include <type_traits>
 
 #include "test_iterators.h"
 #include "../types.h"
@@ -23,4 +23,4 @@ using ViewIter       = std::ranges::iterator_t<View>;
 using FilterView     = std::ranges::filter_view<View, AlwaysTrue>;
 using FilterIterator = std::ranges::iterator_t<FilterView>;
 
-static_assert(!std::constructible_from<FilterIterator, FilterView&, ViewIter>);
+static_assert(!std::is_constructible_v<FilterIterator, FilterView&, ViewIter>);

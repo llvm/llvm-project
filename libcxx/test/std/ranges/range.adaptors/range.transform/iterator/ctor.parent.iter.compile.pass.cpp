@@ -12,8 +12,8 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
-#include <concepts>
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 
@@ -21,4 +21,4 @@ using TransformView         = std::ranges::transform_view<MoveOnlyView, PlusOne>
 using TransformViewBaseIter = std::ranges::iterator_t<MoveOnlyView>;
 using TransformIter         = std::ranges::iterator_t<TransformView>;
 
-static_assert(!std::constructible_from<TransformIter, TransformView&, TransformViewBaseIter>);
+static_assert(!std::is_constructible_v<TransformIter, TransformView&, TransformViewBaseIter>);

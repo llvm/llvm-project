@@ -12,12 +12,12 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
-#include <concepts>
 #include <ranges>
 #include <tuple>
+#include <type_traits>
 
 using BaseIter     = std::tuple<int>*;
 using ElementsIter = std::ranges::iterator_t<std::ranges::elements_view<std::ranges::subrange<BaseIter, BaseIter>, 0>>;
 
-static_assert(!std::constructible_from<ElementsIter, BaseIter>);
-static_assert(!std::convertible_to<BaseIter, ElementsIter>);
+static_assert(!std::is_constructible_v<ElementsIter, BaseIter>);
+static_assert(!std::is_convertible_v<BaseIter, ElementsIter>);

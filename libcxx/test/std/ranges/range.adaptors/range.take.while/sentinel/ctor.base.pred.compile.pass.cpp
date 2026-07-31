@@ -12,8 +12,8 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
-#include <concepts>
 #include <ranges>
+#include <type_traits>
 
 struct Sent {
   int i;
@@ -32,4 +32,4 @@ struct Pred {
 
 using Sentinel = std::ranges::sentinel_t<std::ranges::take_while_view<Range, Pred>>;
 
-static_assert(!std::constructible_from<Sentinel, std::ranges::sentinel_t<Range>, const Pred*>);
+static_assert(!std::is_constructible_v<Sentinel, std::ranges::sentinel_t<Range>, const Pred*>);

@@ -12,8 +12,8 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
-#include <concepts>
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 
@@ -21,5 +21,5 @@ using Range     = std::ranges::subrange<int*, sentinel_wrapper<int*>>;
 using SplitView = std::ranges::split_view<Range, std::ranges::single_view<int>>;
 using SplitSent = std::ranges::sentinel_t<SplitView>;
 
-static_assert(!std::constructible_from<SplitSent, SplitView&>);
-static_assert(!std::convertible_to<SplitView&, SplitSent>);
+static_assert(!std::is_constructible_v<SplitSent, SplitView&>);
+static_assert(!std::is_convertible_v<SplitView&, SplitSent>);

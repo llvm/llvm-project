@@ -12,8 +12,8 @@
 
 // The constructor is now `private` (exposition-only) per P3059R2.
 
-#include <concepts>
 #include <ranges>
+#include <type_traits>
 
 #include "../types.h"
 
@@ -35,4 +35,4 @@ struct TracedMoveView : std::ranges::view_base {
 using SplitView = std::ranges::split_view<TracedMoveView, TracedMoveView>;
 using SplitIter = std::ranges::iterator_t<SplitView>;
 
-static_assert(!std::constructible_from<SplitIter, SplitView, TracedMoveIter, std::ranges::subrange<TracedMoveIter>>);
+static_assert(!std::is_constructible_v<SplitIter, SplitView, TracedMoveIter, std::ranges::subrange<TracedMoveIter>>);
