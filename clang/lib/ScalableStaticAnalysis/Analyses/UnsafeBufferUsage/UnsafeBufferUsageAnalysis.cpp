@@ -17,12 +17,18 @@
 #include "clang/ScalableStaticAnalysis/Analyses/EntityPointerLevel/EntityPointerLevelFormat.h"
 #include "clang/ScalableStaticAnalysis/Analyses/PointerFlow/PointerFlowAnalysis.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "clang/ScalableStaticAnalysis/Analyses/VirtualMethodFamily/VirtualMethodFamily.h"
 #include "clang/ScalableStaticAnalysis/Core/Serialization/JSONFormat.h"
 #include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/AnalysisRegistry.h"
 #include "clang/ScalableStaticAnalysis/Core/WholeProgramAnalysis/SummaryAnalysis.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
+#include <utility>
 
 using namespace clang::ssaf;
 using namespace llvm;
@@ -127,10 +133,14 @@ JSONFormat::AnalysisResultRegistry::Add<UnsafeBufferReachableAnalysisResult>
 /// Computes all the reachable "nodes" (pointers) in a pointer flow graph from a
 /// provided starter node set.  Specifically, the starter set is the unsafe
 /// pointers found by `UnsafeBufferUsageAnalysis`.
+///
+/// After the forward DFS converges, the analysis runs a family-closure pass
+/// using the `VirtualMethodFamilyAnalysisResult` to propagate reachability
+/// across virtual-method override equivalence classes.
 class UnsafeBufferReachableAnalysis
-    : public DerivedAnalysis<UnsafeBufferReachableAnalysisResult,
-                             PointerFlowAnalysisResult,
-                             UnsafeBufferUsageAnalysisResult> {
+    : public DerivedAnalysis<
+          UnsafeBufferReachableAnalysisResult, PointerFlowAnalysisResult,
+          UnsafeBufferUsageAnalysisResult, VirtualMethodFamilyAnalysisResult> {
 
   /// BoundsPropagationGraph adds bounds propagation semantics to the
   /// pointer-flow graph, which represents the set of static pointer assignment
@@ -186,6 +196,7 @@ class UnsafeBufferReachableAnalysis
   };
 
   std::map<EntityId, BoundsPropagationGraph> BPG;
+  const VirtualMethodFamilyAnalysisResult *Family = nullptr;
 
   // Use pointers for efficiency. EPLs are in tree-based containers that only
   // grow. So pointers to them are stable.
@@ -207,12 +218,74 @@ class UnsafeBufferReachableAnalysis
     }
   }
 
+  // Run the family-closure pass: propagate reachability across virtual-method
+  // override equivalence classes recorded in `Family`.
+  //
+  // `Family` records equivalence at *slot-entity* granularity. So if slot
+  // entity `e` is equivalent to slot entity `e'`, then EPL(e, L) is equivalent
+  // to EPL(e', L) at *every* level L. This pass is therefore level-preserving:
+  // it reconstructs the per-level relationship by keeping the level L of the
+  // reachable EPL it already holds.
+  //
+  // A single pass suffices: mirroring EPL(e, L) onto every member of e's
+  // family already covers every (family, level) pair the input contains, and
+  // the EPLs it inserts map back to the same family at the same level.
+  //
+  // FIXME: This pass runs after the pointer-flow DFS has converged and
+  // `step()` returns false, so the EPLs discovered here are never fed back
+  // through the pointer-flow graph. If closure discovers EPL(e', L) and an
+  // edge EPL(e', L) -> EPL(x, L) exists, EPL(x, L) is missed. Fixing this
+  // requires iterating the DFS and this pass to a fixpoint; see
+  // UnsafeBufferReachableAnalysisTest.FamilyClosureDoesNotRerunDFS.
+  void runFamilyClosurePass() {
+    auto &Reachables = getResult().Reachables;
+    const auto &RetAndParamData = Family->RetAndParamData;
+
+    if (RetAndParamData.empty())
+      return;
+
+    struct Member {
+      EntityId RetOrParamId;
+      EntityId OwnerMethodId;
+    };
+    llvm::DenseMap<EntityId, llvm::SmallVector<Member, 2>> MembersOfFamily;
+    for (const auto &[ParamId, Data] : RetAndParamData) {
+      MembersOfFamily[Data.FamilyId].push_back({ParamId, Data.OwnerMethodId});
+    }
+
+    // Collect the (family, level) pairs to mirror. This has to be a snapshot
+    // because the loop below inserts into `Reachables`.
+    DenseSet<std::pair<EntityId, unsigned>> FamilyLevels;
+    for (const EntityPointerLevelSet &EPLs : make_second_range(Reachables)) {
+      for (const EntityPointerLevel &E : EPLs) {
+        if (auto It = RetAndParamData.find(E.getEntity());
+            It != RetAndParamData.end()) {
+          FamilyLevels.insert({It->second.FamilyId, E.getPointerLevel()});
+        }
+      }
+    }
+
+    // A reachable EPL(e, L) makes EPL(e', L) reachable for
+    // every entity e' in family(e).
+    for (auto [FamilyId, Level] : FamilyLevels) {
+      auto It = MembersOfFamily.find(FamilyId);
+      if (It == MembersOfFamily.end())
+        continue;
+      for (const Member &M : It->second) {
+        Reachables[M.OwnerMethodId].insert(
+            buildEntityPointerLevel(M.RetOrParamId, Level));
+      }
+    }
+  }
+
 public:
   llvm::Error
   initialize(const PointerFlowAnalysisResult &PtrFlowGraph,
-             const UnsafeBufferUsageAnalysisResult &Starter) override {
+             const UnsafeBufferUsageAnalysisResult &Starter,
+             const VirtualMethodFamilyAnalysisResult &Family) override {
     for (auto &[Id, SubGraph] : PtrFlowGraph.Edges)
       BPG.try_emplace(Id, BoundsPropagationGraph(SubGraph));
+    this->Family = &Family;
     assert(getResult().Reachables.empty());
     getResult().Reachables.insert(Starter.begin(), Starter.end());
     return llvm::Error::success();
@@ -233,14 +306,27 @@ public:
 
       updateReachablesWithOutgoings(Node, Worklist);
     }
-    // This is not an iterative algorithm so stop iteration by retruning false:
+
+    // After the forward DFS converges, run a family-closure pass that
+    // propagates reachability across virtual-method override equivalence
+    // classes.
+    runFamilyClosurePass();
+
+    // The DFS is not an iterative algorithm, so stop iterating by returning
+    // false.
+    // FIXME: `runFamilyClosurePass()` above may have made new EPLs reachable,
+    // and those are never pushed back through the pointer-flow graph. Reaching
+    // a true fixpoint requires alternating the DFS and the closure pass until
+    // neither makes progress; see
+    // UnsafeBufferReachableAnalysisTest.FamilyClosureDoesNotRerunDFS.
     return false;
   }
 };
 
 AnalysisRegistry::Add<UnsafeBufferReachableAnalysis>
     RegisterUnsafeBufferReachableAnalysis(
-        "Reachable pointers from unsafe buffer usage in pointer flow graph");
+        "Reachable pointers from unsafe buffer usage in pointer flow graph, "
+        "family-closed across virtual method overrides");
 
 } // namespace
 
