@@ -347,24 +347,24 @@
 # CHECK-NEXT:  1      6     0.50                        fminv	h3, v30.4h
 # CHECK-NEXT:  1      6     1.00                        fminv	h29, v12.8h
 # CHECK-NEXT:  1      6     1.00                        fminv	s16, v19.4s
-# CHECK-NEXT:  1      10    0.50                        fmla	d0, d1, v0.d[1]
-# CHECK-NEXT:  1      10    0.50                        fmla	h23, h24, v15.h[4]
-# CHECK-NEXT:  1      10    0.50                        fmla	s0, s1, v0.s[3]
-# CHECK-NEXT:  1      10    0.50                        fmla	v0.2s, v0.2s, v0.2s
-# CHECK-NEXT:  1      10    1.00                        fmla	v29.8h, v15.8h, v10.h[4]
-# CHECK-NEXT:  1      10    0.50                        fmla	v2.2s, v16.2s, v28.s[0]
-# CHECK-NEXT:  1      10    1.00                        fmla	v14.4s, v14.4s, v5.s[3]
-# CHECK-NEXT:  1      10    1.00                        fmla	v1.4s, v24.4s, v12.4s
-# CHECK-NEXT:  1      10    1.00                        fmla	v10.2d, v14.2d, v21.d[1]
-# CHECK-NEXT:  1      10    0.50                        fmls	d0, d4, v0.d[1]
-# CHECK-NEXT:  1      10    0.50                        fmls	h8, h14, v7.h[4]
-# CHECK-NEXT:  1      10    0.50                        fmls	s3, s5, v0.s[3]
-# CHECK-NEXT:  1      10    0.50                        fmls	v0.2s, v0.2s, v0.2s
-# CHECK-NEXT:  1      10    1.00                        fmls	v30.8h, v18.8h, v4.h[6]
-# CHECK-NEXT:  1      10    0.50                        fmls	v10.2s, v27.2s, v0.s[0]
-# CHECK-NEXT:  1      10    1.00                        fmls	v27.4s, v7.4s, v24.s[0]
-# CHECK-NEXT:  1      10    1.00                        fmls	v10.2d, v22.2d, v29.d[0]
-# CHECK-NEXT:  1      10    1.00                        fmls	v6.8h, v15.8h, v23.8h
+# CHECK-NEXT:  1      8     0.50                        fmla	d0, d1, v0.d[1]
+# CHECK-NEXT:  1      8     0.50                        fmla	h23, h24, v15.h[4]
+# CHECK-NEXT:  1      8     0.50                        fmla	s0, s1, v0.s[3]
+# CHECK-NEXT:  1      8     0.50                        fmla	v0.2s, v0.2s, v0.2s
+# CHECK-NEXT:  1      8     1.00                        fmla	v29.8h, v15.8h, v10.h[4]
+# CHECK-NEXT:  1      8     0.50                        fmla	v2.2s, v16.2s, v28.s[0]
+# CHECK-NEXT:  1      8     1.00                        fmla	v14.4s, v14.4s, v5.s[3]
+# CHECK-NEXT:  1      8     1.00                        fmla	v1.4s, v24.4s, v12.4s
+# CHECK-NEXT:  1      8     1.00                        fmla	v10.2d, v14.2d, v21.d[1]
+# CHECK-NEXT:  1      8     0.50                        fmls	d0, d4, v0.d[1]
+# CHECK-NEXT:  1      8     0.50                        fmls	h8, h14, v7.h[4]
+# CHECK-NEXT:  1      8     0.50                        fmls	s3, s5, v0.s[3]
+# CHECK-NEXT:  1      8     0.50                        fmls	v0.2s, v0.2s, v0.2s
+# CHECK-NEXT:  1      8     1.00                        fmls	v30.8h, v18.8h, v4.h[6]
+# CHECK-NEXT:  1      8     0.50                        fmls	v10.2s, v27.2s, v0.s[0]
+# CHECK-NEXT:  1      8     1.00                        fmls	v27.4s, v7.4s, v24.s[0]
+# CHECK-NEXT:  1      8     1.00                        fmls	v10.2d, v22.2d, v29.d[0]
+# CHECK-NEXT:  1      8     1.00                        fmls	v6.8h, v15.8h, v23.8h
 # CHECK-NEXT:  1      6     1.00                        fmov	v0.2d, #-1.25000000
 # CHECK-NEXT:  1      6     0.50                        fmov	v0.2s, #13.00000000
 # CHECK-NEXT:  1      6     1.00                        fmov	v0.4s, #1.00000000
