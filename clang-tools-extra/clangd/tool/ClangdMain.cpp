@@ -556,6 +556,19 @@ std::function<void()> getMemoryCleanupFunction() {
 std::function<void()> getMemoryCleanupFunction() { return nullptr; }
 #endif
 
+#ifdef __GLIBC__
+opt<unsigned> MallocArenaMax{
+    "malloc-arena-max",
+    cat(Misc),
+    desc("Maximum number of glibc malloc arenas (0 uses the glibc default of "
+         "8 per CPU core). Each arena retains freed memory independently, so "
+         "on many-core machines peak RSS can greatly exceed the memory clangd "
+         "actually holds. Lower values trade some allocator concurrency for a "
+         "substantially smaller footprint."),
+    init(0),
+};
+#endif
+
 #if CLANGD_ENABLE_REMOTE
 opt<std::string> RemoteIndexAddress{
     "remote-index-address",
@@ -822,6 +835,13 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   }
   if (CrashPragmas)
     allowCrashPragmasForTest();
+
+#ifdef __GLIBC__
+  // Must happen before the worker threads start allocating: glibc assigns
+  // arenas to threads on their first allocation.
+  if (MallocArenaMax > 0 && !mallopt(M_ARENA_MAX, MallocArenaMax))
+    elog("Failed to set malloc arena limit to {0}", MallocArenaMax);
+#endif
 
   if (!Sync && WorkerThreadsCount == 0) {
     llvm::errs() << "A number of worker threads cannot be 0. Did you mean to "
