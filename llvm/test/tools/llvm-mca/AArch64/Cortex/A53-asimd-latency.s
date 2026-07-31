@@ -428,36 +428,36 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     1.00                        subhn2	v0.16b, v1.8h, v2.8h
 # CHECK-NEXT:  1      4     1.00                        raddhn	v0.8b, v1.8h, v2.8h
 # CHECK-NEXT:  1      4     1.00                        rsubhn2	v0.16b, v1.8h, v2.8h
-# CHECK-NEXT:  1      6     0.50                        shl	d0, d1, #1
-# CHECK-NEXT:  1      6     0.50                        shl	v0.8b, v1.8b, #1
-# CHECK-NEXT:  1      6     1.00                        shl	v0.16b, v1.16b, #1
-# CHECK-NEXT:  1      6     0.50                        sshr	v0.2s, v1.2s, #1
-# CHECK-NEXT:  1      6     1.00                        ushr	v0.4s, v1.4s, #1
-# CHECK-NEXT:  1      6     0.50                        sshl	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        ushl	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        sli	v0.4h, v1.4h, #1
-# CHECK-NEXT:  1      6     1.00                        sri	v0.8h, v1.8h, #1
-# CHECK-NEXT:  1      6     0.50                        shrn	v0.8b, v1.8h, #1
-# CHECK-NEXT:  1      6     0.50                        sshll	v0.8h, v1.8b, #1
-# CHECK-NEXT:  1      6     1.00                        ushll2	v0.4s, v1.8h, #1
+# CHECK-NEXT:  1      2     0.50                        shl	d0, d1, #1
+# CHECK-NEXT:  1      2     0.50                        shl	v0.8b, v1.8b, #1
+# CHECK-NEXT:  1      2     1.00                        shl	v0.16b, v1.16b, #1
+# CHECK-NEXT:  1      2     0.50                        sshr	v0.2s, v1.2s, #1
+# CHECK-NEXT:  1      2     1.00                        ushr	v0.4s, v1.4s, #1
+# CHECK-NEXT:  1      2     0.50                        sshl	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      2     1.00                        ushl	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      2     0.50                        sli	v0.4h, v1.4h, #1
+# CHECK-NEXT:  1      2     1.00                        sri	v0.8h, v1.8h, #1
+# CHECK-NEXT:  1      2     1.00                        shrn	v0.8b, v1.8h, #1
+# CHECK-NEXT:  1      2     1.00                        sshll	v0.8h, v1.8b, #1
+# CHECK-NEXT:  1      2     1.00                        ushll2	v0.4s, v1.8h, #1
 # CHECK-NEXT:  1      6     1.00                        shll	v0.8h, v1.8b, #8
-# CHECK-NEXT:  1      6     0.50                        srshr	v0.8b, v1.8b, #1
-# CHECK-NEXT:  1      6     1.00                        urshr	v0.16b, v1.16b, #1
-# CHECK-NEXT:  1      6     0.50                        srshl	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        urshl	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     0.50                        ssra	v0.8b, v1.8b, #1
-# CHECK-NEXT:  1      6     1.00                        usra	v0.16b, v1.16b, #1
-# CHECK-NEXT:  1      6     0.50                        rshrn	v0.8b, v1.8h, #1
-# CHECK-NEXT:  1      6     0.50                        sqshl	v0.8b, v1.8b, #1
-# CHECK-NEXT:  1      6     1.00                        uqshl	v0.16b, v1.16b, #1
-# CHECK-NEXT:  1      6     0.50                        sqrshl	v0.4h, v1.4h, v2.4h
-# CHECK-NEXT:  1      6     1.00                        uqrshl	v0.8h, v1.8h, v2.8h
-# CHECK-NEXT:  1      6     0.50                        sqshlu	v0.2s, v1.2s, #1
-# CHECK-NEXT:  1      6     0.50                        srsra	v0.8b, v1.8b, #1
-# CHECK-NEXT:  1      6     1.00                        ursra	v0.16b, v1.16b, #1
-# CHECK-NEXT:  1      6     0.50                        sqshrn	v0.8b, v1.8h, #1
-# CHECK-NEXT:  1      6     0.50                        uqrshrn	v0.4h, v1.4s, #1
-# CHECK-NEXT:  1      6     0.50                        sqshrun	v0.2s, v1.2d, #1
+# CHECK-NEXT:  1      3     0.50                        srshr	v0.8b, v1.8b, #1
+# CHECK-NEXT:  1      3     1.00                        urshr	v0.16b, v1.16b, #1
+# CHECK-NEXT:  1      3     0.50                        srshl	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      3     1.00                        urshl	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      3     0.50                        ssra	v0.8b, v1.8b, #1
+# CHECK-NEXT:  1      3     1.00                        usra	v0.16b, v1.16b, #1
+# CHECK-NEXT:  1      3     1.00                        rshrn	v0.8b, v1.8h, #1
+# CHECK-NEXT:  1      4     0.50                        sqshl	v0.8b, v1.8b, #1
+# CHECK-NEXT:  1      4     1.00                        uqshl	v0.16b, v1.16b, #1
+# CHECK-NEXT:  1      4     0.50                        sqrshl	v0.4h, v1.4h, v2.4h
+# CHECK-NEXT:  1      4     1.00                        uqrshl	v0.8h, v1.8h, v2.8h
+# CHECK-NEXT:  1      4     0.50                        sqshlu	v0.2s, v1.2s, #1
+# CHECK-NEXT:  1      4     0.50                        srsra	v0.8b, v1.8b, #1
+# CHECK-NEXT:  1      4     1.00                        ursra	v0.16b, v1.16b, #1
+# CHECK-NEXT:  1      4     1.00                        sqshrn	v0.8b, v1.8h, #1
+# CHECK-NEXT:  1      4     1.00                        uqrshrn	v0.4h, v1.4s, #1
+# CHECK-NEXT:  1      4     1.00                        sqshrun	v0.2s, v1.2d, #1
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - A53UnitALU
@@ -473,7 +473,7 @@ sqshrun	v0.2s, v1.2d, #1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     144.50 144.50 92.50  92.50   -      -
+# CHECK-NEXT:  -      -      -      -     147.50 147.50 92.50  92.50   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -664,8 +664,8 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     ushl	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     sli	v0.4h, v1.4h, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     sri	v0.8h, v1.8h, #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     shrn	v0.8b, v1.8h, #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     sshll	v0.8h, v1.8b, #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     shrn	v0.8b, v1.8h, #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     sshll	v0.8h, v1.8b, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     ushll2	v0.4s, v1.8h, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     shll	v0.8h, v1.8b, #8
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     srshr	v0.8b, v1.8b, #1
@@ -674,7 +674,7 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     urshl	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     ssra	v0.8b, v1.8b, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     usra	v0.16b, v1.16b, #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     rshrn	v0.8b, v1.8h, #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     rshrn	v0.8b, v1.8h, #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     sqshl	v0.8b, v1.8b, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     uqshl	v0.16b, v1.16b, #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     sqrshl	v0.4h, v1.4h, v2.4h
@@ -682,6 +682,6 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     sqshlu	v0.2s, v1.2s, #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     srsra	v0.8b, v1.8b, #1
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     ursra	v0.16b, v1.16b, #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     sqshrn	v0.8b, v1.8h, #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     uqrshrn	v0.4h, v1.4s, #1
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     sqshrun	v0.2s, v1.2d, #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     sqshrn	v0.8b, v1.8h, #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     uqrshrn	v0.4h, v1.4s, #1
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     sqshrun	v0.2s, v1.2d, #1
