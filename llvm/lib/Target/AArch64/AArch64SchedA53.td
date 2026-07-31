@@ -131,7 +131,10 @@ def : WriteRes<WriteHint, [A53UnitB]>;
 def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 4; }
 // The compares write NZCV, and only one instruction per cycle can do that, so
 // they do not dual-issue: they take both lanes even though they are scalar.
-def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
+// A dependent NZCV consumer only pays a single cycle in practice, but the
+// forwarding path that makes that possible cannot be expressed here, so this
+// keeps the 3-cycle result latency the rest of the family uses.
+def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 3; }
 def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 4; }
 // Float-to-int register copy (FMOV between a GPR and an FP register) takes a
 // single cycle in each direction.
