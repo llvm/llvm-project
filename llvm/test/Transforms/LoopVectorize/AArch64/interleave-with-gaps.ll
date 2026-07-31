@@ -989,8 +989,6 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NOTF-NEXT:    [[TMP47:%.*]] = shl nuw i64 [[TMP1]], 2
 ; CHECK-NOTF-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP0]], [[TMP47]]
-; CHECK-NOTF-NEXT:    [[TMP48:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOTF-NEXT:    [[TMP51:%.*]] = shl nuw i64 [[TMP48]], 2
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_ITERS_CHECK1]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK-NOTF:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
@@ -1078,7 +1076,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NOTF-NEXT:    br i1 [[CMP_N]], label %[[EXIT_LOOPEXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK-NOTF:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NOTF-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP51]]
+; CHECK-NOTF-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP47]]
 ; CHECK-NOTF-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[SCALAR_PH]], !prof [[PROF10]]
 ; CHECK-NOTF:       [[SCALAR_PH]]:
 ; CHECK-NOTF-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]

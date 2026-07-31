@@ -80,8 +80,6 @@ define void @main_vf_vscale_x_16(ptr %A, i64 %n) #0 {
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP1]]
-; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP8]], 4
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
 ; CHECK-EPILOG-PREFER-SCALABLE:       vector.main.loop.iter.check:
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 5
@@ -106,7 +104,7 @@ define void @main_vf_vscale_x_16(ptr %A, i64 %n) #0 {
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK-EPILOG-PREFER-SCALABLE:       vec.epilog.iter.check:
-; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP11]]
+; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP1]]
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK-EPILOG-PREFER-SCALABLE:       vec.epilog.ph:
 ; CHECK-EPILOG-PREFER-SCALABLE-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
