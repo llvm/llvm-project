@@ -105,7 +105,7 @@ entry:
   ret void
 }
 
-; Test constrained fma vector arithmetic operations
+; Test constrained fma vector arithmetic operations.
 define void @test_constrained_fma_vector() local_unnamed_addr #0 {
 ; CHECK: OpFunction
 entry:
