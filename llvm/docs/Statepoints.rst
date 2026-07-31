@@ -782,11 +782,11 @@ detail.
 Bugs and Enhancements
 =====================
 
-Currently known bugs and enhancements under consideration can be
-tracked by performing a `bugzilla search
-<https://bugs.llvm.org/buglist.cgi?cmdtype=runnamed&namedcmd=Statepoint%20Bugs&list_id=64342>`_
-for [Statepoint] in the summary field. When filing new bugs, please
-use this tag so that interested parties see the newly filed bug.  As
-with most LLVM features, design discussions take place on the `Discourse forums <https://discourse.llvm.org>`_ and patches
-should be sent to `llvm-commits
-<http://lists.llvm.org/mailman/listinfo/llvm-commits>`_ for review.
+Currently known bugs and enhancements under consideration can be tracked by
+performing a `GitHub issue search
+<https://github.com/llvm/llvm-project/issues>`_ for [Statepoint] in the summary
+field. When filing new bugs, please use this tag so that interested parties see
+the newly filed bug.  As with most LLVM features, design discussions take place
+on the `Discourse forums <https://discourse.llvm.org>`_ and patches should be
+submitted as `GitHub PR <http://github.com/llvm/llvm-project/pulls>`_ for
+review.
