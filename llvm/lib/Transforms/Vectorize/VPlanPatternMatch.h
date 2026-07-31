@@ -861,7 +861,7 @@ template <typename Op0_t, typename Op1_t>
 inline auto m_c_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_CombineOr(
       m_c_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1),
-      m_c_Select(Op0, Op1, m_False()));
+      m_Select(Op0, Op1, m_False()), m_Select(Op1, Op0, m_False()));
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -873,7 +873,8 @@ inline auto m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
 
 template <typename Op0_t, typename Op1_t>
 inline auto m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_c_Select(Op0, m_True(), Op1);
+  return m_CombineOr(m_Select(Op0, m_True(), Op1),
+                     m_Select(Op1, m_True(), Op0));
 }
 
 /// Match the canonical induction variable (IV) of any loop region.
