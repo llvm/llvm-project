@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Instruction.h"
 
 #include <cstdint>
@@ -154,6 +155,9 @@ class InstructionsState {
   Instruction *AltOp = nullptr;
   /// Whether the instruction state represents copyable instructions.
   bool HasCopyables = false;
+  /// Index of the operand modeling the copyable values: the addend for
+  /// fmuladd (retried with a multiplicand), the first operand otherwise.
+  unsigned CopyableOpIdx = 0;
 
 public:
   Instruction *getMainOp() const {
@@ -218,7 +222,10 @@ public:
   InstructionsState() = delete;
   InstructionsState(Instruction *MainOp, Instruction *AltOp,
                     bool HasCopyables = false)
-      : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables) {}
+      : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables),
+        CopyableOpIdx(MainOp && RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)
+                          ? 2
+                          : 0) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 
   /// Checks if the value is a copyable element.
@@ -239,6 +246,18 @@ public:
   bool areInstructionsWithCopyableElements() const {
     assert(valid() && "InstructionsState is invalid.");
     return HasCopyables;
+  }
+
+  /// Returns the index of the operand the copyable value is modeled in.
+  unsigned getCopyableOpIdx() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return CopyableOpIdx;
+  }
+
+  /// Sets the index of the operand the copyable value is modeled in.
+  void setCopyableOpIdx(unsigned Idx) {
+    assert((Idx == 0 || Idx == 2) && "Unexpected copyable operand index.");
+    CopyableOpIdx = Idx;
   }
 };
 
