@@ -6547,7 +6547,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       // PhiR is the last operand and include the header mask if needed.
       DebugLoc DL = FindLastSelect->getDefiningRecipe()->getDebugLoc();
       VPBuilder LoopBuilder(FindLastSelect->getDefiningRecipe());
-      if (FindLastSelect->getDefiningRecipe()->getOperand(1) == PhiR)
+      if (match(FindLastSelect,
+                m_SelectLike(m_VPValue(Cond), m_Specific(PhiR), m_VPValue())))
         SelectCond = LoopBuilder.createNot(SelectCond);
 
       // When tail folding, mask the condition with the header mask to prevent
