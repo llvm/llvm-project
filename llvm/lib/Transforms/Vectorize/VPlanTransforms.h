@@ -13,7 +13,6 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
-#include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
