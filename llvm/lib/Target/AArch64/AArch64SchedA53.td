@@ -455,6 +455,42 @@ def : InstRW<[A53WriteIVecD_3],
 def : InstRW<[A53WriteIVecQ_3],
       (instregex "^CMTSTv(2i64|4i32|8i16|16i8)$", "^CLSv(4i32|8i16|16i8)$")>;
 
+// ASIMD shifts. Plain shifts -- by immediate or by register, including the
+// insert (SLI/SRI), narrowing (SHRN) and widening (SSHLL/USHLL) forms -- are
+// two cycles. The rounding variants and the shift-accumulates are three, and
+// the saturating shifts, the saturating narrows and the rounding
+// shift-accumulates are four. Narrowing and widening forms read or write 128
+// bits and so use the Q-form occupancy.
+def : InstRW<[A53WriteIVecD_2],
+      (instregex "^(SHL|SLI|SRI)(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
+                 "^[SU]SHR(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
+                 "^[SU]SHLv(1i64|8i8|4i16|2i32)$")>;
+def : InstRW<[A53WriteIVecQ_2],
+      (instregex "^(SHL|SLI|SRI)v(16i8|8i16|4i32|2i64)_shift$",
+                 "^[SU]SHRv(16i8|8i16|4i32|2i64)_shift$",
+                 "^[SU]SHLv(16i8|8i16|4i32|2i64)$",
+                 "^SHRNv.*_shift$", "^[SU]SHLLv.*_shift$")>;
+def : InstRW<[A53WriteIVecD_3],
+      (instregex "^[SU]RSHR(d|v8i8_shift|v4i16_shift|v2i32_shift)$",
+                 "^[SU]RSHLv(1i64|8i8|4i16|2i32)$",
+                 "^[SU]SRA(d|v8i8_shift|v4i16_shift|v2i32_shift)$")>;
+def : InstRW<[A53WriteIVecQ_3],
+      (instregex "^[SU]RSHRv(16i8|8i16|4i32|2i64)_shift$",
+                 "^[SU]RSHLv(16i8|8i16|4i32|2i64)$",
+                 "^[SU]SRAv(16i8|8i16|4i32|2i64)_shift$",
+                 "^RSHRNv.*_shift$")>;
+def : InstRW<[A53WriteVecD_4],
+      (instregex "^[SU]QSHLU?(b|h|s|d)$", "^SQSHLU(b|h|s|d)$",
+                 "^[SU]QR?SHL(b|h|s|d|v1i8|v1i16|v1i32|v1i64)$",
+                 "^[SU]QSHLU?(v8i8|v4i16|v2i32)_shift$",
+                 "^[SU]QR?SHLv(8i8|4i16|2i32)$",
+                 "^[SU]RSRA(d|v8i8_shift|v4i16_shift|v2i32_shift)$")>;
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^[SU]QSHLU?v(16i8|8i16|4i32|2i64)_shift$",
+                 "^[SU]QR?SHLv(16i8|8i16|4i32|2i64)$",
+                 "^[SU]RSRAv(16i8|8i16|4i32|2i64)_shift$",
+                 "^([SU]QR?SHRN|SQR?SHRUN)[bhsd]?v?.*_shift$")>;
+
 // Integer ASIMD arithmetic (see the write classes above). Accumulate, widening
 // and reduction-narrowing ops are intentionally left on the default here: their
 // A53 measurements were less clear-cut than the sibling A55 model, so they are
