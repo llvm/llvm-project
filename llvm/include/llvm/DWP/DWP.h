@@ -95,6 +95,12 @@ class LLVM_ABI DWPWriter {
       if (!Buffer.empty())
         OS.write(Buffer.data(), Buffer.size());
     }
+
+    void clear() {
+      Chunks = {};
+      Buffer = {};
+      OwnedBuffers = {};
+    }
   };
 
   SectionData Sections[DS_NumSections];
@@ -170,6 +176,8 @@ public:
 
     return Pair.first->second;
   }
+
+  void clear() { Pool = DenseMap<StringRef, uint64_t>(); }
 };
 
 struct UnitIndexEntry {
