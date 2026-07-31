@@ -20,6 +20,7 @@ add_clang_library(clangScalableStaticAnalysisAnalyses
   UnsafeBufferUsage/UnsafeBufferUsageAnalysis.cpp
   UnsafeBufferUsage/UnsafeBufferUsageExtractor.cpp
   UnsafeBufferUsage/UnsafeBufferUsageFormat.cpp
+  VirtualMethodFamily/VirtualMethodEntityExtractor.cpp
 
   LINK_LIBS
   clangAST
