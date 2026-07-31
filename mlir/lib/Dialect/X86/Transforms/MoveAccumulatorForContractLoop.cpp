@@ -68,6 +68,10 @@ struct MoveAccumulatorForContractLoop
 
     // Replace acc of a contraction operation with vector constant.
     Value accValue = accReadOp->getResult(0);
+    if (!accValue.hasOneUse())
+      return rewriter.notifyMatchFailure(
+          contractOp, "The input accumulator has multiple users.");
+
     Operation *firstUser = *accValue.getUsers().begin();
     rewriter.setInsertionPoint(firstUser);
 
