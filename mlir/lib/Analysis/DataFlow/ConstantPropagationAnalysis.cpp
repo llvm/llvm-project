@@ -81,12 +81,25 @@ LogicalResult SparseConstantPropagation::visitOperation(
     return success();
   }
 
-  // If the folding was in-place, mark the results as overdefined and reset
-  // the operation. We don't allow in-place folds as the desire here is for
-  // simulated execution, and not general folding.
-  if (foldResults.empty()) {
+  // If the fold mutated the operation, reset it and mark the results as
+  // overdefined. This analysis passes speculative lattice-inferred values to
+  // op->fold(), which may not reflect actual runtime constants. Some fold
+  // implementations (e.g. vector.extract) mutate the op in-place as an
+  // intermediate step before returning a constant result, leaving non-empty
+  // foldResults -- so checking foldResults.empty() alone is not sufficient to
+  // detect all mutations. Instead, compare the live op state against the
+  // snapshot taken before folding.
+  if (op->getOperands() != ArrayRef<Value>(originalOperands) ||
+      op->getAttrDictionary() != originalAttrs) {
     op->setOperands(originalOperands);
     op->setAttrs(originalAttrs);
+    setAllToEntryStates(results);
+    return success();
+  }
+
+  // If the folding was in-place (signalled by empty foldResults) but the op
+  // was not mutated, mark results as overdefined without needing a restore.
+  if (foldResults.empty()) {
     setAllToEntryStates(results);
     return success();
   }
