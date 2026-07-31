@@ -572,6 +572,15 @@ public:
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        SDNodeFlags UserFlags = {}, unsigned MaxDepth = 5) const;
+
+  /// Returns true if \p Op is provably canonical (no FCANONICALIZE needed).
+  /// \p QueryVT is the scalar FP type being checked, threaded unchanged
+  /// through recursion since canonicality is per vector element. FP operands
+  /// whose scalar type differs from \p QueryVT are treated as non-canonical,
+  /// since canonicality does not survive a change of FP format (e.g. bitcast
+  /// v2bf16 to v2f16); non-FP operands are not checked against \p QueryVT.
+  bool isCanonicalized(SelectionDAG &DAG, SDValue Op, EVT QueryVT,
+                       SDNodeFlags UserFlags, unsigned MaxDepth) const;
   bool isCanonicalized(Register Reg, const MachineFunction &MF,
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
