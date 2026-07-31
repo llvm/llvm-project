@@ -13,7 +13,6 @@
 // basic_string& assign(const value_type* s, size_type pos, size_type n);
 
 // REQUIRES: can-test-hardening-assertions-extensive
-// UNSUPPORTED: libcpp-assertion-semantic={{ignore|observe}}
 
 #include <string>
 
