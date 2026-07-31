@@ -2960,6 +2960,34 @@ static bool isExtractHiElt(MachineRegisterInfo &MRI, Register In,
   return false;
 }
 
+// Counterpart of isExtractHiElt for the lower 16 bits. Instructions that read a
+// 32-bit source and use op_sel to pick the half to operate on do not need the
+// extraction at all, so find the 32-bit register that `In` is the low half of.
+static bool isExtractLoElt(MachineRegisterInfo &MRI, Register In,
+                           Register &Out) {
+  // There could be a bitcast between the extraction and its use.
+  In = stripBitCast(In, MRI);
+
+  // The first def of a 2 x 16-bit unmerge is the low half of its source.
+  if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(In))) {
+    if (Unmerge->getNumDefs() == 2 && Unmerge->getOperand(0).getReg() == In &&
+        MRI.getType(In).getSizeInBits() == 16) {
+      Out = Unmerge->getSourceReg();
+      return true;
+    }
+  }
+
+  // A truncation from 32 to 16 bits keeps the low half in place
+  Register Trunc;
+  if (mi_match(In, MRI, m_GTrunc(m_Reg(Trunc))) &&
+      MRI.getType(Trunc).getSizeInBits() == 32) {
+    Out = stripBitCast(Trunc, MRI);
+    return true;
+  }
+
+  return false;
+}
+
 bool AMDGPUInstructionSelector::selectG_FPEXT(MachineInstr &I) const {
   if (!Subtarget->hasSALUFloatInsts())
     return false;
@@ -4579,6 +4607,13 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     if (selectImpl(I, *CoverageInfo))
       return true;
     return selectG_ADD_SUB(I);
+  case TargetOpcode::G_FMA:
+  case TargetOpcode::G_FADD:
+  case TargetOpcode::G_FMUL:
+  case TargetOpcode::G_FSUB:
+    if (selectVOP3PMadMixF32(I))
+      return true;
+    return selectImpl(I, *CoverageInfo);
   case TargetOpcode::G_UADDO:
   case TargetOpcode::G_USUBO:
   case TargetOpcode::G_UADDE:
@@ -7186,32 +7221,22 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
 
-// Place a 16-bit source into the low half of a new 32-bit VGPR
-static Register createVOP3PSrc32FromLo16(Register Src, MachineInstr *InsertPt,
-                                         MachineRegisterInfo &MRI) {
-  MachineIRBuilder B(*InsertPt);
+// In True16 instructions 16-bit VALU values live in VGPR_16 and must be
+// widened before a mix instruction can read them. 16-bit SALU values are
+// already in an SGPR_32.
+bool AMDGPUInstructionSelector::madMixSrcNeedsWiden(Register Src) const {
+  if (!Subtarget->useRealTrue16Insts() ||
+      MRI->getType(Src).getSizeInBits() != 16)
+    return false;
 
-  // Create an vgpr_16 for the hi16 part using IMPLICIT_DEF
-  Register ImpdefReg = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
-  B.buildInstr(TargetOpcode::IMPLICIT_DEF).addDef(ImpdefReg);
-
-  Register DstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-  B.buildInstr(AMDGPU::REG_SEQUENCE)
-      .addDef(DstReg)
-      .addReg(Src)
-      .addImm(AMDGPU::lo16)
-      .addReg(ImpdefReg)
-      .addImm(AMDGPU::hi16);
-
-  return DstReg;
+  const RegisterBank *SrcRB = RBI.getRegBank(Src, *MRI, TRI);
+  return SrcRB && SrcRB->getID() == AMDGPU::VGPRRegBankID;
 }
 
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
-                                                     bool &Matched,
-                                                     bool &NeedsWiden) const {
+                                                     bool &Matched) const {
   Matched = false;
-  NeedsWiden = false;
 
   Register Src;
   unsigned Mods;
@@ -7249,20 +7274,13 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
 
     Mods |= SISrcMods::OP_SEL_1;
 
-    // The instruction reads a 32-bit source and selects a half of it
-    // so we search for that 32-bit source
-    Register Src32;
+    // When a 32-bit register already holds the value, use it. Otherwise Src
+    // stays 16-bit, which madMixSrcNeedsWiden keys off in the manual matcher
     if (isExtractHiElt(*MRI, Src, Src)) {
-      // Src is now the 32-bit source and op_sel picks its high half.
       Mods |= SISrcMods::OP_SEL_0;
       CheckAbsNeg();
-    } else if (mi_match(Src, *MRI, m_GTrunc(m_Reg(Src32))) &&
-               MRI->getType(Src32) == LLT::scalar(32)) {
-      // Technically a 16-bit source, but the trunc is redundant
-      Src = Src32;
     } else {
-      // In True16, the source is genuinely 16 bits wide so we widen it
-      NeedsWiden = Subtarget->useRealTrue16Insts();
+      isExtractLoElt(*MRI, Src, Src);
     }
 
     Matched = true;
@@ -7277,19 +7295,13 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsExt(
   Register Src;
   unsigned Mods;
   bool Matched;
-  bool NeedsWiden;
-  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched, NeedsWiden);
-  if (!Matched)
+  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
+
+  if (!Matched || madMixSrcNeedsWiden(Src))
     return {};
 
-  MachineRegisterInfo *RegInfo = MRI;
   return {{
-      [=](MachineInstrBuilder &MIB) {
-        Register Reg = Src;
-        if (NeedsWiden)
-          Reg = createVOP3PSrc32FromLo16(Src, MIB.getInstr(), *RegInfo);
-        MIB.addReg(Reg);
-      },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
 }
@@ -7299,19 +7311,132 @@ AMDGPUInstructionSelector::selectVOP3PMadMixMods(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
   bool Matched;
-  bool NeedsWiden;
-  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched, NeedsWiden);
+  std::tie(Src, Mods) = selectVOP3PMadMixModsImpl(Root, Matched);
 
-  MachineRegisterInfo *RegInfo = MRI;
+  if (madMixSrcNeedsWiden(Src))
+    std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg());
+
   return {{
-      [=](MachineInstrBuilder &MIB) {
-        Register Reg = Src;
-        if (NeedsWiden)
-          Reg = createVOP3PSrc32FromLo16(Src, MIB.getInstr(), *RegInfo);
-        MIB.addReg(Reg);
-      },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
   }};
+}
+
+// With real true16 instructions a 16-bit value lives in a VGPR_16, which cannot
+// be used as a source of the 32-bit mix instructions. Widening it needs a
+// REG_SEQUENCE
+bool AMDGPUInstructionSelector::selectVOP3PMadMixF32(MachineInstr &I) const {
+  if (!Subtarget->useRealTrue16Insts() || !Subtarget->hasFmaMixInsts())
+    return false;
+
+  Register Dst = I.getOperand(0).getReg();
+  if (MRI->getType(Dst) != LLT::scalar(32) ||
+      RBI.getRegBank(Dst, *MRI, TRI)->getID() != AMDGPU::VGPRRegBankID)
+    return false;
+
+  struct MixSrc {
+    Register Reg;
+    int64_t Imm = 0;
+    unsigned Mods = SISrcMods::NONE;
+    bool IsImm = false;
+    bool NeedsWiden = false;
+  } Srcs[3];
+
+  const auto MatchReg = [&](MixSrc &S, MachineOperand &Op) {
+    bool Matched;
+    std::tie(S.Reg, S.Mods) = selectVOP3PMadMixModsImpl(Op, Matched);
+    S.NeedsWiden = madMixSrcNeedsWiden(S.Reg);
+  };
+  const auto SetImm = [](MixSrc &S, int64_t Imm, unsigned Mods) {
+    S.IsImm = true;
+    S.Imm = Imm;
+    S.Mods = Mods;
+  };
+
+  switch (I.getOpcode()) {
+  case TargetOpcode::G_FMA:
+    MatchReg(Srcs[0], I.getOperand(1));
+    MatchReg(Srcs[1], I.getOperand(2));
+    MatchReg(Srcs[2], I.getOperand(3));
+    break;
+  case TargetOpcode::G_FADD:
+    // (fadd x, y) -> (fma x, 1.0, y)
+    MatchReg(Srcs[0], I.getOperand(1));
+    SetImm(Srcs[1], 0x3C00 /*half 1.0*/, SISrcMods::OP_SEL_1);
+    MatchReg(Srcs[2], I.getOperand(2));
+    break;
+  case TargetOpcode::G_FMUL:
+    // (fmul x, y) -> (fma x, y, -0.0)
+    MatchReg(Srcs[0], I.getOperand(1));
+    MatchReg(Srcs[1], I.getOperand(2));
+    SetImm(Srcs[2], 0, SISrcMods::NEG);
+    break;
+  case TargetOpcode::G_FSUB:
+    // (fsub x, y) -> (fma y, -1.0, x)
+    MatchReg(Srcs[0], I.getOperand(2));
+    SetImm(Srcs[1], 0xBC00 /*half -1.0*/, SISrcMods::OP_SEL_1);
+    MatchReg(Srcs[2], I.getOperand(1));
+    break;
+  default:
+    return false;
+  }
+
+  if (none_of(Srcs, [](const MixSrc &S) { return S.NeedsWiden; }))
+    return false;
+
+  // Constrain the sources that are about to be widened before creating
+  // anything, so that a failure here leaves the function untouched.
+  for (const MixSrc &S : Srcs) {
+    if (S.NeedsWiden &&
+        !RBI.constrainGenericRegister(S.Reg, AMDGPU::VGPR_16RegClass, *MRI))
+      return false;
+  }
+
+  MachineBasicBlock *BB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+
+  for (MixSrc &S : Srcs) {
+    if (!S.NeedsWiden)
+      continue;
+
+    // Place the 16-bit value in the low half of a fresh 32-bit register
+    Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+    BuildMI(*BB, &I, DL, TII.get(TargetOpcode::IMPLICIT_DEF), Undef);
+
+    Register Wide = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*BB, &I, DL, TII.get(TargetOpcode::REG_SEQUENCE), Wide)
+        .addReg(S.Reg)
+        .addImm(AMDGPU::lo16)
+        .addReg(Undef)
+        .addImm(AMDGPU::hi16);
+    S.Reg = Wide;
+  }
+
+  // Mirror the flag handling of the TableGen selector: the generic instruction
+  // cannot raise an FP exception but the mix instruction can, so the result has
+  // to be marked as not raising one.
+  const MCInstrDesc &MixDesc = TII.get(AMDGPU::V_FMA_MIX_F32);
+  uint32_t Flags = I.getFlags();
+  if (!I.getDesc().mayRaiseFPException() && MixDesc.mayRaiseFPException())
+    Flags |= MachineInstr::NoFPExcept;
+
+  auto MIB = BuildMI(*BB, &I, DL, MixDesc, Dst).setMIFlags(Flags);
+  for (const MixSrc &S : Srcs) {
+    MIB.addImm(S.Mods);
+    if (S.IsImm)
+      MIB.addImm(S.Imm);
+    else
+      MIB.addReg(S.Reg);
+  }
+  // The per-source op_sel and op_sel_hi bits are carried by the modifiers, so
+  // the dedicated operands stay at their default of 0, as in the patterns.
+  MIB.addImm(0); // clamp
+  MIB.addImm(0); // op_sel
+  MIB.addImm(0); // op_sel_hi
+
+  I.eraseFromParent();
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  return true;
 }
 
 bool AMDGPUInstructionSelector::selectSBarrierSignalIsfirst(
