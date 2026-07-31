@@ -23664,13 +23664,38 @@ static SDValue tryShiftTruncateCombine(SDNode *N, SelectionDAG &DAG,
   EVT SrcVT = Shift.getValueType();
   if (!SrcVT.isScalableVector() || !SrcVT.getVectorElementType().isInteger() ||
       SrcVT.getVectorElementCount() != DstVT.getVectorElementCount() ||
-      SrcVT.getScalarSizeInBits() != 2 * DstVT.getScalarSizeInBits())
+      SrcVT.getScalarSizeInBits() != 2 * DstVT.getScalarSizeInBits() ||
+      SrcVT.getScalarSizeInBits() > 64)
     return SDValue();
 
   ConstantSDNode *ShiftAmount = isConstOrConstSplat(Shift.getOperand(1));
   if (!ShiftAmount ||
       ShiftAmount->getAsZExtVal() != DstVT.getScalarSizeInBits())
     return SDValue();
+
+  // Preserve widening multiply patterns so they can select to SMULH or UMULH.
+  SDValue ShiftedValue = Shift.getOperand(0);
+  if (ShiftedValue.getOpcode() == ISD::MUL) {
+    SDValue LHS = ShiftedValue.getOperand(0);
+    SDValue RHS = ShiftedValue.getOperand(1);
+    unsigned ExtOpc = LHS.getOpcode();
+
+    if ((ExtOpc == ISD::SIGN_EXTEND || ExtOpc == ISD::ZERO_EXTEND) &&
+        RHS.getOpcode() == ExtOpc &&
+        LHS.getOperand(0).getValueType() == DstVT &&
+        RHS.getOperand(0).getValueType() == DstVT)
+      return SDValue();
+  }
+
+  // Preserve SVE2 rounding-shift patterns so they can select to RSHRNB.
+  const auto &Subtarget = DAG.getSubtarget<AArch64Subtarget>();
+  if (Subtarget.hasSVE2()) {
+    unsigned RoundingShiftAmount;
+    SDValue RoundingOperand;
+    if (canLowerSRLToRoundingShiftForVT(Shift, DstVT, DAG, RoundingShiftAmount,
+                                        RoundingOperand))
+      return SDValue();
+  }
 
   SDLoc DL(N);
 
