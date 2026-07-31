@@ -169,6 +169,17 @@ def A53WriteFRecpStepQ : SchedWriteRes<[A53UnitFPALU]> { let Latency = 8;
 def A53WriteFRecpEst   : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
 def A53WriteFRecpEstQ  : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4;
                                                          let ReleaseAtCycles = [2]; }
+// Integer Advanced SIMD multiply-accumulate. The result latency is 4, but the
+// MAC unit forwards one accumulate result straight into the next MAC's
+// accumulator with no interlock, so a dependent accumulator chain recurs every
+// cycle. Only the accumulator forwards; the multiplicands do not. The
+// saturating doubling forms (SQDML[AS]L) do not use this path.
+def A53WriteIMACD : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteIMACQ : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4;
+                                                    let ReleaseAtCycles = [2]; }
+def A53ReadIMACM  : SchedReadAdvance<0>;
+def A53ReadIMACA3 : SchedReadAdvance<3, [A53WriteIMACD, A53WriteIMACQ]>;
+
 // Bitwise Advanced SIMD logic forwards in a single cycle.
 def A53WriteLogicD : SchedWriteRes<[A53UnitFPALU]> { let Latency = 1; }
 def A53WriteLogicQ : SchedWriteRes<[A53UnitFPALU]> { let Latency = 1;
@@ -464,6 +475,13 @@ def : InstRW<[A53WriteVecQ_4],
                  "^SQDML[AS]Lv.*$",
                  "^([SU]QXTN|SQXTUN)v.*$")>;
 def : InstRW<[A53WriteIVecQ_2], (instregex "^XTNv.*$")>;
+// Integer multiply-accumulate: the accumulator is the tied destination, so it
+// is the first read and the only one that forwards.
+def : InstRW<[A53WriteIMACD, A53ReadIMACA3],
+      (instregex "^ML[AS]v(2i32|4i16|8i8)$", "^ML[AS]v(2i32|4i16)_indexed$")>;
+def : InstRW<[A53WriteIMACQ, A53ReadIMACA3],
+      (instregex "^ML[AS]v(4i32|8i16|16i8)$", "^ML[AS]v(4i32|8i16)_indexed$",
+                 "^[SU]ML[AS]Lv.*$")>;
 def : InstRW<[A53WriteIVecQ_3], (instregex "^(ADD|SUB)HNv.*$")>;
 
 // ASIMD shifts. Plain shifts -- by immediate or by register, including the
