@@ -10735,7 +10735,8 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
          "Range metadata and load type must match!");
 
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed load with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed load with an offset!");
 
   SDVTList VTs = Indexed ?
     getVTList(VT, Ptr.getValueType(), MVT::Other) : getVTList(VT, MVT::Other);
@@ -10804,7 +10805,8 @@ SDValue SelectionDAG::getIndexedLoad(SDValue OrigLoad, const SDLoc &dl,
                                      SDValue Base, SDValue Offset,
                                      ISD::MemIndexedMode AM) {
   LoadSDNode *LD = cast<LoadSDNode>(OrigLoad);
-  assert(LD->getOffset().isUndef() && "Load is already a indexed load!");
+  assert(LD->getOffset().getOpcode() == ISD::POISON &&
+         "Load is already a indexed load!");
   // Don't propagate the invariant or dereferenceable flags.
   auto MMOFlags =
       LD->getMemOperand()->getFlags() &
@@ -10863,7 +10865,8 @@ SDValue SelectionDAG::getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
   }
 
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed store with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed store with an offset!");
   SDVTList VTs = Indexed ? getVTList(Ptr.getValueType(), MVT::Other)
                          : getVTList(MVT::Other);
   SDValue Ops[] = {Chain, Val, Ptr, Offset};
@@ -10937,7 +10940,8 @@ SDValue SelectionDAG::getIndexedStore(SDValue OrigStore, const SDLoc &dl,
                                       SDValue Base, SDValue Offset,
                                       ISD::MemIndexedMode AM) {
   StoreSDNode *ST = cast<StoreSDNode>(OrigStore);
-  assert(ST->getOffset().isUndef() && "Store is already a indexed store!");
+  assert(ST->getOffset().getOpcode() == ISD::POISON &&
+         "Store is already a indexed store!");
   return getStore(ST->getChain(), dl, ST->getValue(), Base, Offset,
                   ST->getMemoryVT(), ST->getMemOperand(), AM,
                   ST->isTruncatingStore());
@@ -10976,7 +10980,8 @@ SDValue SelectionDAG::getLoadVP(ISD::MemIndexedMode AM,
          "Vector width mismatch between mask and data");
 
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed load with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed load with an offset!");
 
   SDVTList VTs = Indexed ? getVTList(VT, Ptr.getValueType(), MVT::Other)
                          : getVTList(VT, MVT::Other);
@@ -11052,7 +11057,8 @@ SDValue SelectionDAG::getIndexedLoadVP(SDValue OrigLoad, const SDLoc &dl,
                                        SDValue Base, SDValue Offset,
                                        ISD::MemIndexedMode AM) {
   auto *LD = cast<VPLoadSDNode>(OrigLoad);
-  assert(LD->getOffset().isUndef() && "Load is already a indexed load!");
+  assert(LD->getOffset().getOpcode() == ISD::POISON &&
+         "Load is already a indexed load!");
   // Don't propagate the invariant or dereferenceable flags.
   auto MMOFlags =
       LD->getMemOperand()->getFlags() &
@@ -11075,7 +11081,8 @@ SDValue SelectionDAG::getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val,
          "Vector width mismatch between mask and data");
 
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed vp_store with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed vp_store with an offset!");
   SDVTList VTs = Indexed ? getVTList(Ptr.getValueType(), MVT::Other)
                          : getVTList(MVT::Other);
   SDValue Ops[] = {Chain, Val, Ptr, Offset, Mask, EVL};
@@ -11177,7 +11184,8 @@ SDValue SelectionDAG::getIndexedStoreVP(SDValue OrigStore, const SDLoc &dl,
                                         SDValue Base, SDValue Offset,
                                         ISD::MemIndexedMode AM) {
   auto *ST = cast<VPStoreSDNode>(OrigStore);
-  assert(ST->getOffset().isUndef() && "Store is already an indexed store!");
+  assert(ST->getOffset().getOpcode() == ISD::POISON &&
+         "Store is already an indexed store!");
   SDVTList VTs = getVTList(Base.getValueType(), MVT::Other);
   SDValue Ops[] = {ST->getChain(), ST->getValue(), Base,
                    Offset,         ST->getMask(),  ST->getVectorLength()};
@@ -11208,7 +11216,8 @@ SDValue SelectionDAG::getStridedLoadVP(
     SDValue Chain, SDValue Ptr, SDValue Offset, SDValue Stride, SDValue Mask,
     SDValue EVL, EVT MemVT, MachineMemOperand *MMO, bool IsExpanding) {
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed load with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed load with an offset!");
 
   SDValue Ops[] = {Chain, Ptr, Offset, Stride, Mask, EVL};
   SDVTList VTs = Indexed ? getVTList(VT, Ptr.getValueType(), MVT::Other)
@@ -11265,7 +11274,8 @@ SDValue SelectionDAG::getStridedStoreVP(SDValue Chain, const SDLoc &DL,
                                         bool IsTruncating, bool IsCompressing) {
   assert(Chain.getValueType() == MVT::Other && "Invalid chain type");
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) && "Unindexed vp_store with an offset!");
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
+         "Unindexed vp_store with an offset!");
   SDVTList VTs = Indexed ? getVTList(Ptr.getValueType(), MVT::Other)
                          : getVTList(MVT::Other);
   SDValue Ops[] = {Chain, Val, Ptr, Offset, Stride, Mask, EVL};
@@ -11435,7 +11445,7 @@ SDValue SelectionDAG::getMaskedLoad(EVT VT, const SDLoc &dl, SDValue Chain,
                                     ISD::MemIndexedMode AM,
                                     ISD::LoadExtType ExtTy, bool isExpanding) {
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) &&
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
          "Unindexed masked load with an offset!");
   SDVTList VTs = Indexed ? getVTList(VT, Base.getValueType(), MVT::Other)
                          : getVTList(VT, MVT::Other);
@@ -11467,7 +11477,8 @@ SDValue SelectionDAG::getIndexedMaskedLoad(SDValue OrigLoad, const SDLoc &dl,
                                            SDValue Base, SDValue Offset,
                                            ISD::MemIndexedMode AM) {
   MaskedLoadSDNode *LD = cast<MaskedLoadSDNode>(OrigLoad);
-  assert(LD->getOffset().isUndef() && "Masked load is already a indexed load!");
+  assert(LD->getOffset().getOpcode() == ISD::POISON &&
+         "Masked load is already a indexed load!");
   return getMaskedLoad(OrigLoad.getValueType(), dl, LD->getChain(), Base,
                        Offset, LD->getMask(), LD->getPassThru(),
                        LD->getMemoryVT(), LD->getMemOperand(), AM,
@@ -11483,7 +11494,7 @@ SDValue SelectionDAG::getMaskedStore(SDValue Chain, const SDLoc &dl,
   assert(Chain.getValueType() == MVT::Other &&
         "Invalid chain type");
   bool Indexed = AM != ISD::UNINDEXED;
-  assert((Indexed || Offset.isUndef()) &&
+  assert((Indexed || Offset.getOpcode() == ISD::POISON) &&
          "Unindexed masked store with an offset!");
   SDVTList VTs = Indexed ? getVTList(Base.getValueType(), MVT::Other)
                          : getVTList(MVT::Other);
@@ -11516,7 +11527,7 @@ SDValue SelectionDAG::getIndexedMaskedStore(SDValue OrigStore, const SDLoc &dl,
                                             SDValue Base, SDValue Offset,
                                             ISD::MemIndexedMode AM) {
   MaskedStoreSDNode *ST = cast<MaskedStoreSDNode>(OrigStore);
-  assert(ST->getOffset().isUndef() &&
+  assert(ST->getOffset().getOpcode() == ISD::POISON &&
          "Masked store is already a indexed store!");
   return getMaskedStore(ST->getChain(), dl, ST->getValue(), Base, Offset,
                         ST->getMask(), ST->getMemoryVT(), ST->getMemOperand(),
