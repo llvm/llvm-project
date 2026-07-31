@@ -937,7 +937,7 @@ bool SIPreEmitPeephole::insertICachePrefetch(MachineFunction &MF) {
   }
 
   // Mark that we've inserted ICache prefetch instructions.
-  // This tells AsmPrinter to set rsrc3 INST_PREF_SIZE to 0 and fix up
+  // This tells AsmPrinter to set rsrc3 INST_PREF_SIZE to 1 and fix up
   // the prefetch cacheline counts.
   MFI->setHasICachePrefetch(true);
 

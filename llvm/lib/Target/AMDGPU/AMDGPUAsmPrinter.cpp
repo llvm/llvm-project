@@ -264,16 +264,18 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
   // right after the function code, so (Lfunc_end - func_sym) gives the
   // exact function code size in bytes.
   //
-  // When ICache prefetch is enabled, we set INST_PREF_SIZE to 0 because
-  // the s_prefetch_inst instructions handle all prefetching.
+  // When ICache prefetch is enabled, we set INST_PREF_SIZE to 1 because
+  // the s_prefetch_inst instructions handle the actual prefetching.
   if (STM.hasInstPrefSize()) {
     uint32_t Mask, Shift, Width, CacheLineSize;
     STM.getInstPrefSizeArgs(Mask, Shift, Width, CacheLineSize);
 
     const MCExpr *InstPrefSize;
     if (MFI.hasICachePrefetch()) {
-      // Disable hardware prefetch - s_prefetch_inst handles it.
-      InstPrefSize = MCConstantExpr::create(0, Ctx);
+      // Set INST_PREF_SIZE to 1. This enables prefetch and the first wave on
+      // the WGP gets SCALAR_PREFETCH_EN set to 1, while the remaining waves
+      // receive 0. This enables the s_prefetch_inst for the first wave.
+      InstPrefSize = MCConstantExpr::create(1, Ctx);
     } else {
       const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
           MCSymbolRefExpr::create(getFunctionEnd(), OutContext),
