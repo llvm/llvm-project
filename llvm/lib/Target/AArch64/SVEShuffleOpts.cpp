@@ -157,7 +157,15 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
 
 /// Given a map of deinterleaves to zext or uitofp casts, remove the operations
 /// and replace them with tbl shuffles.
-static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
+static bool optimizeSVEDeinterleavedExtends(Loop &L,
+                                            const AArch64TargetLowering &TL,
+                                            const DataLayout DL) {
+  DeinterleaveMap Deinterleaves;
+  for (auto *BB : L.blocks())
+    for (auto &I : *BB)
+      if (match(&I, m_Intrinsic<Intrinsic::vector_deinterleave4>(m_Value())))
+        evaluateDeinterleave(cast<IntrinsicInst>(&I), Deinterleaves, L, TL, DL);
+
   for (auto &[Deinterleave, Extends] : Deinterleaves) {
     VectorType *DestTy = cast<VectorType>(Extends[0]->getDestTy());
     VectorType *SrcTy = cast<VectorType>(Extends[0]->getSrcTy());
@@ -211,6 +219,9 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
       cast<Instruction>(U)->eraseFromParent();
     Deinterleave->eraseFromParent();
   }
+
+  return !Deinterleaves.empty();
+}
 }
 
 static bool processLoop(Loop &L, const AArch64Subtarget &ST, DataLayout DL) {
@@ -226,17 +237,10 @@ static bool processLoop(Loop &L, const AArch64Subtarget &ST, DataLayout DL) {
   const AArch64TargetLowering &TL = *ST.getTargetLowering();
   assert(DL.isLittleEndian() &&
          "Shuffle optimizations unsupported for big endian targets.");
-  DeinterleaveMap Candidates;
-  for (auto *BB : L.blocks())
-    for (auto &I : *BB)
-      if (match(&I, m_Intrinsic<Intrinsic::vector_deinterleave4>(m_Value())))
-        evaluateDeinterleave(cast<IntrinsicInst>(&I), Candidates, L, TL, DL);
 
-  if (Candidates.empty())
-    return false;
-
-  optimizeSVEDeinterleavedExtends(Candidates);
-  return true;
+  bool Changed = false;
+  Changed |= optimizeSVEDeinterleavedExtends(L, TL, DL);
+  return Changed;
 }
 
 namespace {
