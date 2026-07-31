@@ -666,7 +666,9 @@ int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard,
 int GCNHazardRecognizer::getWaitStatesSinceVALU(IsHazardFn IsHazard,
                                                 int Limit) const {
   if (IsHazardRecognizerMode) {
-    auto GetVALUWaitStates = [](const MachineInstr &MI) -> unsigned {
+    auto GetVALUWaitStates = [this](const MachineInstr &MI) -> unsigned {
+      if (TII.isXDLWMMA(MI))
+        return TSchedModel.computeInstrLatency(&MI);
       return SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true) ? 1 : 0;
     };
     return getWaitStatesSince(IsHazard, Limit, GetVALUWaitStates);
@@ -684,7 +686,10 @@ int GCNHazardRecognizer::getWaitStatesSinceVALU(IsHazardFn IsHazard,
         return WaitStates;
     }
 
-    ++WaitStates;
+    if (MI && TII.isXDLWMMA(*MI))
+      WaitStates += TSchedModel.computeInstrLatency(MI);
+    else
+      ++WaitStates;
 
     if (WaitStates >= Limit)
       break;
