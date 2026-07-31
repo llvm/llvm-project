@@ -20,8 +20,8 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x ptr> [[TMP6]], ptr [[TMP5]], i64 1
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.v2p0.i32(<2 x ptr> [[TMP7]], i32 1, <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[IV_NEXT]], [[N_VEC]]
