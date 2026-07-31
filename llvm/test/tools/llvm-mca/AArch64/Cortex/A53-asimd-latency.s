@@ -267,8 +267,8 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     0.50                        fmov	w0, s1
 # CHECK-NEXT:  1      6     0.50                        fmov	d0, x1
 # CHECK-NEXT:  1      6     0.50                        fmov	x0, d1
-# CHECK-NEXT:  1      10    0.50                        fmadd	s0, s1, s2, s3
-# CHECK-NEXT:  1      10    0.50                        fmadd	d0, d1, d2, d3
+# CHECK-NEXT:  1      8     0.50                        fmadd	s0, s1, s2, s3
+# CHECK-NEXT:  1      8     0.50                        fmadd	d0, d1, d2, d3
 # CHECK-NEXT:  1      6     0.50                        fadd	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      6     1.00                        fadd	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     1.00                        fadd	v0.2d, v1.2d, v2.2d
@@ -291,11 +291,11 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     1.00                        fneg	v0.2d, v1.2d
 # CHECK-NEXT:  1      6     0.50                        frinta	v0.2s, v1.2s
 # CHECK-NEXT:  1      6     1.00                        frintx	v0.4s, v1.4s
-# CHECK-NEXT:  1      10    0.50                        fmla	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      10    1.00                        fmla	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      10    1.00                        fmla	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT:  1      10    0.50                        fmls	v0.2s, v1.2s, v2.s[1]
-# CHECK-NEXT:  1      10    1.00                        fmls	v0.4s, v1.4s, v2.s[1]
+# CHECK-NEXT:  1      8     0.50                        fmla	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      8     1.00                        fmla	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      8     1.00                        fmla	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT:  1      8     0.50                        fmls	v0.2s, v1.2s, v2.s[1]
+# CHECK-NEXT:  1      8     1.00                        fmls	v0.4s, v1.4s, v2.s[1]
 # CHECK-NEXT:  1      6     0.50                        scvtf	v0.2s, v1.2s
 # CHECK-NEXT:  1      6     1.00                        ucvtf	v0.4s, v1.4s
 # CHECK-NEXT:  1      6     0.50                        fcvtzs	v0.2s, v1.2s
