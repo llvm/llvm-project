@@ -796,6 +796,13 @@ defm BVHRayTracingInsts : AMDGPUSubtargetFeature<"bvh-ray-tracing-insts",
   "Has BVH ray tracing instructions"
 >;
 
+defm MSAALoadInsts : AMDGPUSubtargetFeature<"msaa-load-insts",
+  "Has image_msaa_load instructions",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
+  /*Deps=*/[FeatureImageInsts]
+>;
+
 defm GFX10_BEncoding : AMDGPUSubtargetFeature<"gfx10_b-encoding",
   "Encoding format GFX10_B",
   /*GenPredicate=*/0
@@ -879,6 +886,16 @@ defm FP8Insts : AMDGPUSubtargetFeature<"fp8-insts",
 
 defm FP8ConversionInsts : AMDGPUSubtargetFeature<"fp8-conversion-insts",
   "Has fp8 and bf8 conversion instructions"
+>;
+
+// OCP fp8 semantics (E4M3FN, E5M2). Distinct from the FNUZ formats used by
+// gfx942.
+defm OCPFP8ConversionInsts : AMDGPUSubtargetFeature<"ocp-fp8-conversion-insts",
+  "Has OCP fp8 (E4M3FN, E5M2) conversion instructions"
+>;
+
+defm FP8F16ConversionInsts : AMDGPUSubtargetFeature<"fp8-f16-conversion-insts",
+  "Has fp8 and bf8 conversion to f16 instructions"
 >;
 
 defm FP8E5M3Insts : AMDGPUSubtargetFeature<"fp8e5m3-insts",
@@ -1650,7 +1667,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
-   FeatureBVHRayTracingInsts, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
+   FeatureBVHRayTracingInsts, FeatureMSAALoadInsts,
+   FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureVOP3PInsts, FeatureVOPDInsts, FeatureTrue16BitInsts,
    FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
@@ -1679,7 +1697,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
-   FeatureBVHRayTracingInsts, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
+   FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureGFX12Insts, FeatureVOP3PInsts, FeatureVOPDInsts,
    FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
@@ -1707,7 +1725,7 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
-   FeatureBVHRayTracingInsts, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
+   FeatureMSAALoadInsts, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureGFX12Insts, FeatureGFX13Insts, FeatureVOP3PInsts,
    FeatureVOPDInsts, FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
@@ -1953,6 +1971,7 @@ def FeatureISAVersion9_5_Common : FeatureSet<
    FeatureFP8Insts,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8SDWASrcSel,
+   FeatureOCPFP8ConversionInsts,
    FeatureGFX950Insts,
    FeaturePrngInst,
    FeatureBF16ConversionInsts,
@@ -2046,11 +2065,13 @@ def FeatureISAVersion10_1_2 : FeatureSet<
 
 def FeatureISAVersion10_1_3 : FeatureSet<
   !listconcat(FeatureISAVersion10_1_Common.Features,
-    [FeatureBVHRayTracingInsts])>;
+    [FeatureBVHRayTracingInsts,
+     FeatureMSAALoadInsts])>;
 
 def FeatureISAVersion10_3_0 : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
     [FeatureBVHRayTracingInsts,
+     FeatureMSAALoadInsts,
      FeatureGFX10_BEncoding,
      FeatureGFX10_3Insts,
      FeatureDot1Insts,
@@ -2165,6 +2186,7 @@ def FeatureISAVersion11_7_Common : FeatureSet<
      FeatureDPPSrc1SGPR,
      FeatureFP8ConversionInsts,
      FeatureCvtFP8ByteSel,
+     FeatureOCPFP8ConversionInsts,
      FeatureDot11Insts,
      FeatureWMMA128bInsts,
      FeatureSWMMACGfx1200Insts,
@@ -2205,8 +2227,11 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeatureExtendedImageInsts,
+   FeatureBVHRayTracingInsts,
+   FeatureMSAALoadInsts,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8ByteSel,
+   FeatureOCPFP8ConversionInsts,
    FeatureWMMA128bInsts,
    FeatureSWMMACGfx1200Insts,
    FeatureIEEEMinimumMaximumInsts,
@@ -2270,6 +2295,8 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8ByteSel,
+   FeatureOCPFP8ConversionInsts,
+   FeatureFP8F16ConversionInsts,
    FeatureFP8E5M3Insts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -2426,6 +2453,8 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureFlatAtomicFaddF32Inst,
    FeatureFP8ConversionInsts,
    FeatureCvtFP8ByteSel,
+   FeatureOCPFP8ConversionInsts,
+   FeatureFP8F16ConversionInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,

@@ -18030,7 +18030,7 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
 
   ISD::LoadExtType NewExtType =
       N->getOpcode() == ISD::SIGN_EXTEND ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-  SDValue Offset = DAG.getUNDEF(BasePtr.getValueType());
+  SDValue Offset = DAG.getPOISON(BasePtr.getValueType());
   EVT NewFromVT = EVT::getVectorVT(
       C, EVT::getIntegerVT(C, FromEltVT.getScalarSizeInBits()), NumElements);
   EVT NewToVT = EVT::getVectorVT(
@@ -19002,7 +19002,7 @@ static SDValue PerformSplittingMVEEXTToWideningLoad(SDNode *N,
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
 
-  SDValue Offset = DAG.getUNDEF(BasePtr.getValueType());
+  SDValue Offset = DAG.getPOISON(BasePtr.getValueType());
   EVT NewFromVT = EVT::getVectorVT(
       C, EVT::getIntegerVT(C, FromEltVT.getScalarSizeInBits()), NumElements);
   EVT NewToVT = EVT::getVectorVT(
