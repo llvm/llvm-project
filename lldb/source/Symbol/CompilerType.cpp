@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CompilerType.h"
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -20,6 +19,8 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <iterator>
 #include <mutex>
@@ -176,6 +177,13 @@ bool CompilerType::IsMemberFunctionPointerType() const {
   return false;
 }
 
+bool CompilerType::IsMemberDataPointerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsMemberDataPointerType(m_type);
+  return false;
+}
+
 bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
@@ -240,13 +248,21 @@ bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   return false;
 }
 
-bool CompilerType::IsFloatingPointType(bool &is_complex) const {
-  if (IsValid()) {
+bool CompilerType::IsComplexType() const {
+  return GetTypeClass() & eTypeClassComplexFloat ||
+         GetTypeClass() & eTypeClassComplexInteger;
+}
+
+bool CompilerType::IsFloatingPointType() const {
+  if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsFloatingPointType(m_type, is_complex);
-  }
-  is_complex = false;
+      return type_system_sp->IsFloatingPointType(m_type);
+
   return false;
+}
+
+bool CompilerType::IsRealFloatingPointType() const {
+  return IsFloatingPointType() && !IsComplexType() && !IsVectorType();
 }
 
 bool CompilerType::IsDefined() const {
@@ -302,6 +318,13 @@ bool CompilerType::IsVoidType() const {
   return false;
 }
 
+bool CompilerType::HasPointerAuthQualifier() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->HasPointerAuthQualifier(m_type);
+  return false;
+}
+
 bool CompilerType::IsPointerToScalarType() const {
   if (!IsValid())
     return false;
@@ -326,11 +349,6 @@ bool CompilerType::IsBeingDefined() const {
 bool CompilerType::IsInteger() const {
   bool is_signed = false; // May be reset by the call below.
   return IsIntegerType(is_signed);
-}
-
-bool CompilerType::IsFloat() const {
-  bool is_complex = false;
-  return IsFloatingPointType(is_complex);
 }
 
 bool CompilerType::IsEnumerationType() const {
@@ -751,7 +769,7 @@ CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetBitSize(m_type, exe_scope);
-  return llvm::createStringError("Invalid type: Cannot determine size");
+  return llvm::createStringError("invalid type: cannot determine size");
 }
 
 llvm::Expected<uint64_t>
@@ -992,6 +1010,13 @@ CompilerType CompilerType::GetTypeForFormatters() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::GetPromotedIntegerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPromotedIntegerType(m_type);
+  return CompilerType();
+}
+
 LazyBool CompilerType::ShouldPrintAsOneLiner(ValueObject *valobj) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -1018,8 +1043,7 @@ CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
                                                      omit_empty_base_classes);
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 // Dumping types

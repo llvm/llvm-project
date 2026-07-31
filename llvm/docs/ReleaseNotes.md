@@ -4,11 +4,8 @@ MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 <!-- If you want to modify sections/contents permanently, you should modify both
 ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
 
-LLVM {{env.config.release}} Release Notes
-=========================================
+# LLVM {{env.config.release}} Release Notes
 
-```{contents}
-```
 
 ````{only} PreRelease
 ```{warning} These are in-progress notes for the upcoming LLVM {{env.config.release}}
@@ -17,8 +14,7 @@ LLVM {{env.config.release}} Release Notes
 ```
 ````
 
-Introduction
-============
+## Introduction
 
 This document contains the release notes for the LLVM Compiler Infrastructure,
 release {{env.config.release}}.  Here we describe the status of LLVM, including
@@ -36,8 +32,7 @@ LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the
 [releases page](https://llvm.org/releases/).
 
-Non-comprehensive list of changes in this release
-=================================================
+## Non-comprehensive list of changes in this release
 
 <!-- For small 1-3 sentence descriptions, just add an entry at the end of
 this list. If your description won't fit comfortably in one bullet
@@ -50,197 +45,92 @@ for adding a new subsection. -->
 <!-- If you would like to document a larger change, then you can add a
 subsection about it right here. You can copy the following boilerplate:
 
-Special New Feature
--------------------
+### Special New Feature
 
 Makes programs 10x faster by doing Special New Thing.
 -->
 
-Changes to the LLVM IR
-----------------------
+### Changes to the LLVM IR
 
-* The `ptrtoaddr` instruction was introduced. This instruction returns the
-  address component of a pointer type variable but unlike `ptrtoint` does not
-  capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
-* The alignment argument of the `@llvm.masked.load`, `@llvm.masked.store`,
-  `@llvm.masked.gather` and `@llvm.masked.scatter` intrinsics has been removed.
-  Instead, the `align` attribute should be placed on the pointer (or vector of
-  pointers) argument.
-* A `load atomic` may now be used with vector types on x86.
-* Added `@llvm.reloc.none` intrinsic to emit null relocations to symbols. This
-  emits an undefined symbol reference without adding any dedicated code or data to
-  to bear the relocation.
-* Added `modular-format` attribute to dynamically pull in aspects of libc
-  format string function implementations from statically-linked libc's based on
-  the requirements of each call. Currently only `float` is supported; this can
-  keep floating point support out of printf if it can be proven unused.
+### Changes to LLVM infrastructure
 
-Changes to LLVM infrastructure
-------------------------------
+### Changes to building LLVM
 
-Changes to building LLVM
-------------------------
+### Changes to TableGen
 
-Changes to TableGen
--------------------
+* `!cond` operator short-circuits at the first `true` condition.  Subsequent
+  `condition : value` pairs, along with their corresponding side effects,
+  are left unresolved.
 
-Changes to Interprocedural Optimizations
-----------------------------------------
+### Changes to Interprocedural Optimizations
 
-* Added `-enable-machine-outliner={optimistic-pgo,conservative-pgo}` to read
-  profile data to guide the machine outliner
-  ([#154437](https://github.com/llvm/llvm-project/pull/154437)).
+### Changes to Vectorizers
 
-Changes to Vectorizers
-----------------------------------------
+### Changes to the AArch64 Backend
 
-* Added initial support for copyable elements in SLP, which models copyable
-  elements as add <element>, 0, i.e. uses identity constants for missing lanes.
-* SLP vectorizer supports initial recognition of FMA/FMAD pattern
+### Changes to the AMDGPU Backend
 
-Changes to the AArch64 Backend
-------------------------------
+* Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
+  and `amdgpu.sramecc` module flags.
 
-* Assembler/disassembler support has been added for Armv9.7-A (2025)
-  architecture extensions.
+### Changes to the ARM Backend
 
-* Assembler/disassembler support has been added for 'Virtual Tagging
-  Extension (vMTE)' and 'Permission Overlay Extension version 2 (POE2)'
-  Future Architecture Technologies extensions.
+### Changes to the AVR Backend
 
-* `FEAT_TME` support has been removed, as it has been withdrawn from
-   all future versions of the A-profile architecture.
+### Changes to the DirectX Backend
 
-Changes to the AMDGPU Backend
------------------------------
+### Changes to the Hexagon Backend
 
-Changes to the ARM Backend
---------------------------
+### Changes to the LoongArch Backend
 
-Changes to the AVR Backend
---------------------------
+### Changes to the MIPS Backend
 
-Changes to the DirectX Backend
-------------------------------
+### Changes to the PowerPC Backend
 
-Changes to the Hexagon Backend
-------------------------------
+### Changes to the RISC-V Backend
 
-Changes to the LoongArch Backend
---------------------------------
+* Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
+  Load) extension.
 
-Changes to the MIPS Backend
----------------------------
+### Changes to the WebAssembly Backend
 
-Changes to the PowerPC Backend
-------------------------------
+### Changes to the Windows Target
 
-Changes to the RISC-V Backend
------------------------------
+### Changes to the X86 Backend
 
-* The loop vectorizer now performs tail folding by default on RISC-V, which
-  removes the need for a scalar epilogue loop. To restore the previous behaviour
-  use `-prefer-predicate-over-epilogue=scalar-epilogue`.
-* `llvm-objdump` now has basic support for switching between disassembling code
-  and data using mapping symbols such as `$x` and `$d`. Switching architectures
-  using `$x` with an architecture string suffix is not yet supported.
-* Ssctr and Smctr extensions are no longer experimental.
-* Add support for Zvfbfa (Additional BF16 vector compute support)
-* Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
-* Add support for Zvfofp8min (OFP8 conversion extension)
-* Adds assembler support for the Andes `XAndesvsinth` (Andes Vector Small Int Handling Extension).
+### Changes to the OCaml bindings
 
-Changes to the WebAssembly Backend
-----------------------------------
+### Changes to the Python bindings
 
-Changes to the Windows Target
------------------------------
+### Changes to the C API
 
-* `-fpseudo-probe-for-profiling` is now supported for COFF.
+### Changes to the CodeGen infrastructure
 
-Changes to the X86 Backend
---------------------------
+### Changes to the Metadata Info
 
-* `-mcpu=wildcatlake` is now supported.
-* `-mcpu=novalake` is now supported.
+### Changes to the Debug Info
 
-Changes to the OCaml bindings
------------------------------
+### Changes to the LLVM tools
 
-Changes to the Python bindings
-------------------------------
+* llvm-mca no longer defaults -mcpu to "native"
 
-Changes to the C API
---------------------
+### Changes to LLDB
 
-* Add `LLVMGetOrInsertFunction` to get or insert a function, replacing the combination of `LLVMGetNamedFunction` and `LLVMAddFunction`.
-* Allow `LLVMGetVolatile` to work with any kind of Instruction.
+#### Windows
 
-Changes to the CodeGen infrastructure
--------------------------------------
+* Python 3.11 or later is now required for building LLDB 24 on Windows.
+* For better performance, LLDB now turns off the Windows debug heap by default when debugging.
+  If you need the debug heap enabled, set `platform.plugin.windows.disable-debug-heap` to `false`.
 
-Changes to the Metadata Info
----------------------------------
+### Changes to BOLT
 
-Changes to the Debug Info
----------------------------------
+### Changes to Sanitizers
 
-Changes to the LLVM tools
----------------------------------
+### Other Changes
 
-* `llvm-profgen` now supports decoding pseudo probe for COFF binaries.
+## External Open Source Projects Using LLVM {{env.config.release}}
 
-* `llvm-readelf` now dumps all hex format values in lower-case mode.
-* Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
-* Support for `%T` in lit has been removed.
-* Add `--save-stats` option to `llc` to save LLVM statistics to a file. Compatible with the Clang option.
-* Add `--save-stats` option to `opt` to save LLVM statistics to a file. Compatible with the Clang option.
-
-* `llvm-config` gained a new flag `--quote-paths` which quotes and escapes paths
-  emitted on stdout, to account for spaces or other special characters in path.
-  (`#97305 <https://github.com/llvm/llvm-project/pull/97305>`_).
-
-Changes to LLDB
----------------------------------
-
-* LLDB can now set breakpoints, show backtraces, and display variables when
-  debugging Wasm with supported runtimes (WAMR and V8).
-* LLDB no longer stops processes by default when receiving SIGWINCH signals 
-  (window resize events) on Linux. This is the default on other Unix platforms.
-  You can re-enable it using `process handle --notify=true --stop=true SIGWINCH`.
-* The `show-progress` setting, which became a NOOP with the introduction of the
-  statusline, now defaults to off and controls using OSC escape codes to show a
-  native progress bar in supporting terminals like Ghostty and ConEmu.
-* The default PDB reader on Windows was changed from DIA to native, which uses 
-  LLVM's PDB and CodeView support. You can switch back to the DIA reader with
-  `settings set plugin.symbol-file.pdb.reader dia`. Note that support for the
-  DIA reader will be removed in a future version of LLDB.
-
-Changes to BOLT
----------------------------------
-
-Changes to Sanitizers
----------------------
-
-* Support running TypeSanitizer with UndefinedBehaviourSanitizer.
-* TypeSanitizer no longer inlines all instrumentation by default. Added the
-  `-f[no-]sanitize-type-outline-instrumentation` flags to give users control
-  over this behaviour.
-
-Other Changes
--------------
-
-* Introduces the `AllocToken` pass, an instrumentation pass providing tokens to
-  memory allocators enabling various heap organization strategies, such as heap
-  partitioning.
-
-External Open Source Projects Using LLVM {{env.config.release}}
-===============================================================
-
-* A project...
-
-Additional Information
-======================
+## Additional Information
 
 A wide variety of additional information is available on the
 [LLVM web page](https://llvm.org/), in particular in the

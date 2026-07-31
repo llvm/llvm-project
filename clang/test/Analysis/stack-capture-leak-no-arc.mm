@@ -49,7 +49,7 @@ void output_constant_block(dispatch_block_t * blk) {
 }
 
 // A block can leak if it captures at least one variable and is not
-// under ARC when its' stack frame expires.
+// under ARC when its stack frame expires.
 void test_block_leak() {
   __block dispatch_block_t blk;
   int x = 0;

@@ -106,7 +106,7 @@ bool ICF::equalsConstant(const ConcatInputSection *ia,
     return false;
   if (ia->relocs.size() != ib->relocs.size())
     return false;
-  auto f = [](const Reloc &ra, const Reloc &rb) {
+  auto f = [](const Relocation &ra, const Relocation &rb) {
     if (ra.type != rb.type)
       return false;
     if (ra.pcrel != rb.pcrel)
@@ -213,7 +213,7 @@ bool ICF::equalsVariable(const ConcatInputSection *ia,
   if (verboseDiagnostics)
     ++equalsVariableCount;
   assert(ia->relocs.size() == ib->relocs.size());
-  auto f = [this](const Reloc &ra, const Reloc &rb) {
+  auto f = [this](const Relocation &ra, const Relocation &rb) {
     // We already filtered out mismatching values/addends in equalsConstant.
     if (ra.referent == rb.referent)
       return true;
@@ -337,6 +337,8 @@ void ICF::applySafeThunksToRange(size_t begin, size_t end) {
 
     ConcatInputSection *thunk =
         makeSyntheticInputSection(isec->getSegName(), isec->getName());
+    // A thunk-folded cold function has a cold thunk.
+    thunk->isCold = isec->isCold;
     addInputSection(thunk);
 
     target->initICFSafeThunkBody(thunk, masterSym);
@@ -390,7 +392,7 @@ void ICF::run() {
   for (icfPass = 0; icfPass < 2; ++icfPass) {
     parallelForEach(icfInputs, [&](ConcatInputSection *isec) {
       uint32_t hash = isec->icfEqClass[icfPass % 2];
-      for (const Reloc &r : isec->relocs) {
+      for (const Relocation &r : isec->relocs) {
         if (auto *sym = r.referent.dyn_cast<Symbol *>()) {
           if (auto *defined = dyn_cast<Defined>(sym)) {
             if (defined->isec()) {
@@ -453,12 +455,12 @@ void ICF::run() {
   forEachClass([&](size_t begin, size_t end) {
     if (end - begin < 2)
       return;
-    bool useSafeThunks = config->icfLevel == ICFLevel::safe_thunks;
-
     // For ICF level safe_thunks, replace keepUnique function bodies with
-    // thunks. For all other ICF levles, directly merge the functions.
+    // thunks. For all other ICF levels, directly merge the functions.
 
     ConcatInputSection *beginIsec = icfInputs[begin];
+    bool useSafeThunks =
+        config->icfLevel == ICFLevel::safe_thunks && isCodeSection(beginIsec);
     for (size_t i = begin + 1; i < end; ++i) {
       // Skip keepUnique inputs when using safe_thunks (already handled above)
       if (useSafeThunks && icfInputs[i]->keepUnique) {
@@ -471,6 +473,9 @@ void ICF::run() {
         continue;
       }
       beginIsec->foldIdentical(icfInputs[i]);
+      // Make sure we don't fold hot code into cold regions.
+      if (!icfInputs[i]->isCold)
+        beginIsec->isCold = false;
     }
   });
 }
@@ -514,13 +519,16 @@ void macho::markAddrSigSymbols() {
       continue;
 
     Section *addrSigSection = obj->addrSigSection;
-    if (!addrSigSection)
+    if (!addrSigSection) {
+      for (Symbol *sym : obj->symbols)
+        markSymAsAddrSig(sym);
       continue;
+    }
     assert(addrSigSection->subsections.size() == 1);
 
     const InputSection *isec = addrSigSection->subsections[0].isec;
 
-    for (const Reloc &r : isec->relocs) {
+    for (const Relocation &r : isec->relocs) {
       if (auto *sym = r.referent.dyn_cast<Symbol *>())
         markSymAsAddrSig(sym);
       else
@@ -580,19 +588,30 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
 
     bool isCodeSec = isCodeSection(isec);
 
-    // When keepUnique is true, the section is not foldable. Unless we are at
-    // icf level safe_thunks, in which case we still want to fold code sections.
-    // When using safe_thunks we'll apply the safe_thunks logic at merge time
-    // based on the 'keepUnique' flag.
-    bool noUniqueRequirement =
-        !isec->keepUnique ||
-        ((config->icfLevel == ICFLevel::safe_thunks) && isCodeSec);
+    // Determine whether keepUnique forbids folding this section.
+    //   - __cfstring / __objc_classrefs / __objc_selrefs always fold
+    //     regardless of keepUnique. Compilers currently emit over-broad
+    //     __llvm_addrsig entries that can cover non-address-significant data
+    //     symbols in these sections; ld64 coalesces them unconditionally, and
+    //     we match that behavior.
+    //   - Under safe_thunks, keepUnique code sections still fold; the
+    //     safe_thunks logic is applied later at merge time based on the
+    //     keepUnique flag.
+    //   - Otherwise, keepUnique sections are not foldable.
+    // Happens to match isFoldableWithAddendsRemoved today, but expresses a
+    // different intent (ld64's coalescing semantics, not addend stripping),
+    // so the two may diverge as either list grows.
+    bool isUnconditionallyCoalescedData = isFoldableWithAddendsRemoved;
+    bool isSafeThunksCode =
+        config->icfLevel == ICFLevel::safe_thunks && isCodeSec;
+    bool keepUniqueAllowsFolding =
+        !isec->keepUnique || isUnconditionallyCoalescedData || isSafeThunksCode;
 
     // FIXME: consider non-code __text sections as foldable?
     bool isFoldable = (!onlyCfStrings || isCfStringSection(isec)) &&
                       (isCodeSec || isFoldableWithAddendsRemoved ||
                        isGccExceptTabSection(isec)) &&
-                      noUniqueRequirement && !isec->hasAltEntry &&
+                      keepUniqueAllowsFolding && !isec->hasAltEntry &&
                       !isec->shouldOmitFromOutput() && hasFoldableFlags;
     if (isFoldable) {
       foldable.push_back(isec);
@@ -609,7 +628,7 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
         // We have to do this copying serially as the BumpPtrAllocator is not
         // thread-safe. FIXME: Make a thread-safe allocator.
         MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
-        for (const Reloc &r : isec->relocs)
+        for (const Relocation &r : isec->relocs)
           target->relocateOne(copy.data() + r.offset, r, /*va=*/0,
                               /*relocVA=*/0);
         isec->data = copy;

@@ -29,20 +29,24 @@
 
 // Only use SANITIZER_*ATTRIBUTE* before the function return type!
 #if SANITIZER_WINDOWS
-#if SANITIZER_IMPORT_INTERFACE
-# define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllimport)
-#else
-# define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllexport)
-#endif
-# define SANITIZER_WEAK_ATTRIBUTE
-#  define SANITIZER_WEAK_IMPORT
-#elif SANITIZER_GO
-# define SANITIZER_INTERFACE_ATTRIBUTE
-# define SANITIZER_WEAK_ATTRIBUTE
+#  if SANITIZER_IMPORT_INTERFACE
+#    define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllimport)
+#  else
+#    define SANITIZER_INTERFACE_ATTRIBUTE __declspec(dllexport)
+#  endif
+#  define SANITIZER_WEAK_ATTRIBUTE
 #  define SANITIZER_WEAK_IMPORT
 #else
-# define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
-# define SANITIZER_WEAK_ATTRIBUTE  __attribute__((weak))
+#  if SANITIZER_GO
+#    define SANITIZER_INTERFACE_ATTRIBUTE
+#    define SANITIZER_WEAK_ATTRIBUTE
+#  elif SANITIZER_AMDGPU || SANITIZER_NVPTX
+#    define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("hidden")))
+#    define SANITIZER_WEAK_ATTRIBUTE __attribute__((weak))
+#  else
+#    define SANITIZER_INTERFACE_ATTRIBUTE __attribute__((visibility("default")))
+#    define SANITIZER_WEAK_ATTRIBUTE __attribute__((weak))
+#  endif  // SANITIZER_GO
 #  if SANITIZER_APPLE
 #    define SANITIZER_WEAK_IMPORT extern "C" __attribute((weak_import))
 #  else

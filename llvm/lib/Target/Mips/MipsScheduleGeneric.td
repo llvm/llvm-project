@@ -1600,9 +1600,7 @@ def : InstRW<[GenericWriteFPUMoveGPRFPU], (instregex "^COPY_U_[BHW]$")>;
 def : InstRW<[GenericWriteFPUMoveGPRFPU], (instregex "^COPY_S_[BHWD]$")>;
 
 def : InstRW<[GenericWriteFPUStore], (instregex "^ST_[BHWD]$")>;
-def : InstRW<[GenericWriteFPUStore], (instrs ST_F16)>;
 def : InstRW<[GenericWriteFPULoad], (instregex "^LD_[BHWD]$")>;
-def : InstRW<[GenericWriteFPULoad], (instrs LD_F16)>;
 
 // Atomic instructions
 

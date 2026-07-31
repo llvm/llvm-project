@@ -105,7 +105,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
     }
-    // Try getting dwarf register for virtual register anyway, eg. for NVPTX.
+    // Try getting dwarf register for targets that use virtual registers.
     int64_t Reg = TRI.getDwarfRegNumForVirtReg(MachineReg, false);
     if (Reg > 0) {
       DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
@@ -119,6 +119,13 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
   // If this is a valid register number, emit it.
   if (Reg >= 0) {
     DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
+    return true;
+  }
+
+  // The frame register is referenced through DW_OP_fbreg relative to
+  // DW_AT_frame_base, so it needs no DWARF register number of its own.
+  if (isFrameRegister(TRI, MachineReg)) {
+    DwarfRegs.push_back(Register::createRegister(-1, nullptr));
     return true;
   }
 
@@ -164,7 +171,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 
     // If this sub-register has a DWARF number and we haven't covered
     // its range, and its range covers the value, emit a DWARF piece for it.
-    if (Offset < MaxSize && CurSubReg.test(Coverage)) {
+    if (Offset < MaxSize && !CurSubReg.subsetOf(Coverage)) {
       // Emit a piece for any gap in the coverage.
       if (Offset > CurPos)
         DwarfRegs.push_back(Register::createSubRegister(
@@ -236,6 +243,28 @@ void DwarfExpression::addUnsignedConstant(const APInt &Value) {
   }
 }
 
+void DwarfExpression::addImplicitValue(const APInt &Value,
+                                       const AsmPrinter &AP) {
+  assert(isImplicitLocation() || isUnknownLocation());
+  assert(DwarfVersion >= 4);
+
+  APInt API = Value;
+  unsigned NumBytes = API.getBitWidth() / 8;
+  assert(API.getBitWidth() == NumBytes * 8 &&
+         "implicit value must be byte-sized");
+
+  emitOp(dwarf::DW_OP_implicit_value);
+  emitUnsigned(NumBytes);
+
+  // The loop below is emitting the value starting at the least significant
+  // byte, so byte-swap first for big-endian targets.
+  if (AP.getDataLayout().isBigEndian())
+    API = API.byteSwap();
+
+  for (unsigned I = 0; I < NumBytes; ++I)
+    emitData1(API.extractBits(8, I * 8).getZExtValue());
+}
+
 void DwarfExpression::addConstantFP(const APFloat &APF, const AsmPrinter &AP) {
   assert(isImplicitLocation() || isUnknownLocation());
   APInt API = APF.bitcastToAPInt();
@@ -303,17 +332,15 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // expression representing a value, rather than a location.
   if ((!isParameterValue() && !isMemoryLocation() && !HasComplexExpression) ||
       isEntryValue()) {
-    auto FragmentInfo = ExprCursor.getFragmentInfo();
     unsigned RegSize = 0;
     for (auto &Reg : DwarfRegs) {
       RegSize += Reg.SubRegSize;
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
-      if (FragmentInfo)
-        if (RegSize > FragmentInfo->SizeInBits)
-          // If the register is larger than the current fragment stop
-          // once the fragment is covered.
-          break;
+      if (Fragment && RegSize > Fragment->SizeInBits)
+        // If the register is larger than the current fragment stop
+        // once the fragment is covered.
+        break;
       addOpPiece(Reg.SubRegSize);
     }
 
@@ -356,7 +383,6 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   }
 
   auto Reg = DwarfRegs[0];
-  bool FBReg = isFrameRegister(TRI, MachineReg);
   int SignedOffset = 0;
   assert(!Reg.isSubRegister() && "full register expected");
 
@@ -388,7 +414,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     }
   }
 
-  if (FBReg)
+  if (isFrameRegister(TRI, MachineReg))
     addFBReg(SignedOffset);
   else
     addBReg(Reg.DwarfRegNo, SignedOffset);
@@ -569,7 +595,7 @@ bool DwarfExpression::addExpression(
       unsigned DerefSize = 0;
       //  Operations are done in the DWARF "generic type" whose size
       // is the size of a pointer.
-      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI->getCodePointerSize();
+      unsigned PtrSizeInBytes = CU.getAsmPrinter()->MAI.getCodePointerSize();
 
       // If we have a memory location then dereference to get the value, though
       // we have to make sure we don't dereference any bytes past the end of the
@@ -723,6 +749,12 @@ bool DwarfExpression::addExpression(
       emitUnsigned(Op->getArg(0));
       emitSigned(Op->getArg(1));
       break;
+    case dwarf::DW_OP_LLVM_implicit_pointer:
+      // Handled in DwarfCompileUnit::emitImplicitPointerLocation for
+      // Loc::Single variables. If we reach here, the variable has a
+      // location list or other unsupported path. Drop the
+      // location rather than crashing.
+      return false;
     default:
       llvm_unreachable("unhandled opcode found in expression");
     }

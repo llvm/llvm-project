@@ -10,26 +10,29 @@
 #include "AMDGPUMCAsmInfo.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
-const MCAsmInfo::AtSpecifier atSpecifiers[] = {
-    {AMDGPUMCExpr::S_GOTPCREL, "gotpcrel"},
-    {AMDGPUMCExpr::S_GOTPCREL32_LO, "gotpcrel32@lo"},
-    {AMDGPUMCExpr::S_GOTPCREL32_HI, "gotpcrel32@hi"},
-    {AMDGPUMCExpr::S_REL32_LO, "rel32@lo"},
-    {AMDGPUMCExpr::S_REL32_HI, "rel32@hi"},
-    {AMDGPUMCExpr::S_REL64, "rel64"},
-    {AMDGPUMCExpr::S_ABS32_LO, "abs32@lo"},
-    {AMDGPUMCExpr::S_ABS32_HI, "abs32@hi"},
-    {AMDGPUMCExpr::S_ABS64, "abs64"},
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"gotpcrel"}, AMDGPUMCExpr::S_GOTPCREL},
+    {{"gotpcrel32@lo"}, AMDGPUMCExpr::S_GOTPCREL32_LO},
+    {{"gotpcrel32@hi"}, AMDGPUMCExpr::S_GOTPCREL32_HI},
+    {{"rel32@lo"}, AMDGPUMCExpr::S_REL32_LO},
+    {{"rel32@hi"}, AMDGPUMCExpr::S_REL32_HI},
+    {{"rel64"}, AMDGPUMCExpr::S_REL64},
+    {{"abs32@lo"}, AMDGPUMCExpr::S_ABS32_LO},
+    {{"abs32@hi"}, AMDGPUMCExpr::S_ABS32_HI},
+    {{"abs64"}, AMDGPUMCExpr::S_ABS64},
 };
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
-                                 const MCTargetOptions &Options) {
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   CodePointerSize = (TT.isAMDGCN()) ? 8 : 4;
   StackGrowsUp = true;
   HasSingleParameterDotFile = false;

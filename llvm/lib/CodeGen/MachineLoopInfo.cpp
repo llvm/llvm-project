@@ -21,7 +21,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GenericLoopInfoImpl.h"
 
@@ -38,7 +37,12 @@ AnalysisKey MachineLoopAnalysis::Key;
 MachineLoopAnalysis::Result
 MachineLoopAnalysis::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
-  return MachineLoopInfo(MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
+  MachineLoopInfo LI;
+  // The dominator tree is needed only for an irreducible CFG.
+  LI.calculate(MF, [&]() -> const MachineDominatorTree & {
+    return MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  });
+  return LI;
 }
 
 PreservedAnalyses
@@ -51,9 +55,7 @@ MachineLoopPrinterPass::run(MachineFunction &MF,
 
 char MachineLoopInfoWrapperPass::ID = 0;
 MachineLoopInfoWrapperPass::MachineLoopInfoWrapperPass()
-    : MachineFunctionPass(ID) {
-  initializeMachineLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 INITIALIZE_PASS_BEGIN(MachineLoopInfoWrapperPass, "machine-loops",
                       "Machine Natural Loop Construction", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
@@ -81,6 +83,13 @@ bool MachineLoopInfo::invalidate(
 void MachineLoopInfo::calculate(MachineDominatorTree &MDT) {
   releaseMemory();
   analyze(MDT);
+}
+
+void MachineLoopInfo::calculate(
+    MachineFunction &MF,
+    function_ref<const DomTreeBase<MachineBasicBlock> &()> GetDomTree) {
+  releaseMemory();
+  analyze(&MF, GetDomTree);
 }
 
 void MachineLoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {

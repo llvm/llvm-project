@@ -97,10 +97,9 @@ static bool checkOverridingFunctionReturnType(const ASTContext *Context,
     const bool IsItself =
         DRD->getCanonicalDecl() == DerivedMD->getParent()->getCanonicalDecl();
     bool HasPublicAccess = false;
-    for (const auto &Path : Paths) {
+    for (const auto &Path : Paths)
       if (Path.Access == AS_public)
         HasPublicAccess = true;
-    }
     if (!HasPublicAccess && !IsItself)
       return false;
     // End checking conversion from D to B.
@@ -134,12 +133,11 @@ static bool checkParamTypes(const CXXMethodDecl *BaseMD,
   if (NumParamA != NumParamB)
     return false;
 
-  for (unsigned I = 0; I < NumParamA; I++) {
+  for (unsigned I = 0; I < NumParamA; I++)
     if (getDecayedType(BaseMD->getParamDecl(I)->getType().getCanonicalType()) !=
         getDecayedType(
             DerivedMD->getParamDecl(I)->getType().getCanonicalType()))
       return false;
-  }
   return true;
 }
 
@@ -194,7 +192,7 @@ bool VirtualNearMissCheck::isPossibleToBeOverridden(
 
 bool VirtualNearMissCheck::isOverriddenByDerivedClass(
     const CXXMethodDecl *BaseMD, const CXXRecordDecl *DerivedRD) {
-  auto Key = std::make_pair(BaseMD, DerivedRD);
+  const std::pair Key(BaseMD, DerivedRD);
   auto Iter = OverriddenMap.find(Key);
   if (Iter != OverriddenMap.end())
     return Iter->second;

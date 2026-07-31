@@ -8,7 +8,7 @@
 
 open Testsuite
 
-let context = Llvm.global_context ()
+let context = Llvm.create_context ()
 
 let filename = "di_test_file"
 
@@ -468,4 +468,5 @@ let () =
       prerr_endline ("Verification of module failed: " ^ err);
       exit_status := 1
   | None -> () );
+  Llvm.dispose_context context;
   exit !exit_status

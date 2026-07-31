@@ -1,4 +1,4 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -S | FileCheck %s
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -mattr=+exception-handling -S | FileCheck %s
 ; RUN: llc < %s -wasm-enable-eh -wasm-enable-sjlj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -109,7 +109,7 @@ catch:                                            ; preds = %catch.start
   catchret from %2 to label %catchret.dest
 ; CHECK: catch:                                            ; preds = %catch.start
 ; CHECK-NEXT:   %exn = load ptr, ptr %exn.slot, align 4
-; CHECK-NEXT:   %5 = call ptr @__cxa_begin_catch(ptr %exn) #3 [ "funclet"(token %2) ]
+; CHECK-NEXT:   %5 = call ptr @__cxa_begin_catch(ptr %exn) {{.*}} [ "funclet"(token %2) ]
 ; CHECK-NEXT:   invoke void @__cxa_end_catch() [ "funclet"(token %2) ]
 ; CHECK-NEXT:           to label %.noexc unwind label %catch.dispatch.longjmp
 
@@ -299,7 +299,7 @@ declare ptr @_ZN4TempD2Ev(ptr %this) #2
 declare i32 @setjmp(ptr) #0
 ; Function Attrs: noreturn
 declare void @longjmp(ptr, i32) #1
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: nounwind
 declare ptr @llvm.wasm.get.exception(token) #2
 ; Function Attrs: nounwind

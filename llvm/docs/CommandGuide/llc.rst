@@ -81,6 +81,17 @@ End-user Options
 
    llvm-as < /dev/null | llc -march=xyz -mcpu=help
 
+.. option:: -mtune=<cpuname>
+
+ Specify a specific chip microarchitecture in the current architecture
+ to tune code for. By default this is inferred from the target triple and
+ autodetected to the current architecture.  For a list of available tuning
+ CPUs, use:
+
+ .. code-block:: none
+
+   llvm-as < /dev/null | llc -march=xyz -mtune=help
+
 .. option:: -filetype=<output file type>
 
  Specify what kind of output ``llc`` should generated.  Options are: ``asm``

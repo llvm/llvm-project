@@ -52,6 +52,9 @@ public:
 
   const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
+  bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
+  bool hasQFPInstrs(const MachineFunction &MF) const;
+
   /// TargetInstrInfo overrides.
 
   /// If the specified machine instruction is a direct
@@ -136,8 +139,9 @@ public:
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.
-  std::unique_ptr<PipelinerLoopInfo>
-  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+  std::unique_ptr<PipelinerLoopInfo> analyzeLoopForPipelining(
+      MachineBasicBlock *LoopBB,
+      MachineOptimizationRemarkEmitter *ORE = nullptr) const override;
 
   /// Return true if it's profitable to predicate
   /// instructions with accumulated instruction latency of "NumCycles"
@@ -197,7 +201,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   /// This function is called for all pseudo instructions
@@ -471,7 +475,7 @@ public:
   int getMinValue(const MachineInstr &MI) const;
   short getNonExtOpcode(const MachineInstr &MI) const;
   bool getPredReg(ArrayRef<MachineOperand> Cond, Register &PredReg,
-                  unsigned &PredRegPos, unsigned &PredRegFlags) const;
+                  unsigned &PredRegPos, RegState &PredRegFlags) const;
   short getPseudoInstrPair(const MachineInstr &MI) const;
   short getRegForm(const MachineInstr &MI) const;
   unsigned getSize(const MachineInstr &MI) const;
@@ -505,6 +509,9 @@ public:
                              bool ToBigInstrs = true) const;
   void translateInstrsForDup(MachineBasicBlock::instr_iterator MII,
                              bool ToBigInstrs) const;
+  bool useMachineCombiner() const override { return true; }
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
 
   // Addressing mode relations.
   short changeAddrMode_abs_io(short Opc) const;
@@ -537,6 +544,17 @@ public:
 
   MCInst getNop() const override;
   bool isQFPMul(const MachineInstr *MF) const;
+
+  // Check if the instruction uses a qf32/qf16 operand.
+  // 'Index' specifies the input operand number (1..3). If 0, check any.
+  bool usesQF32Operand(MachineInstr *MI, unsigned Index = 0) const;
+  bool usesQF16Operand(MachineInstr *MI, unsigned Index = 0) const;
+  bool usesQFOperand(MachineInstr *MI, unsigned Index = 0) const;
+
+  // Check if the instruction has a qf32/qf16 output.
+  bool isQFP32Instr(MachineInstr *MI) const;
+  bool isQFP16Instr(MachineInstr *MI) const;
+  bool isQFPInstr(MachineInstr *MI) const;
 };
 
 /// \brief Create RegSubRegPair from a register MachineOperand

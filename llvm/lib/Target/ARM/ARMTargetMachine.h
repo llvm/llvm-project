@@ -57,6 +57,8 @@ public:
   // Pass Pipeline Configuration
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  void registerPassBuilderCallbacks(PassBuilder &PB) override;
+
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
@@ -74,16 +76,6 @@ public:
   bool isAAPCS16_ABI() const {
     assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
     return TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
-  bool isTargetHardFloat() const {
-    return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-           TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-           TargetTriple.getEnvironment() == Triple::EABIHF ||
-           (TargetTriple.isOSBinFormatMachO() &&
-            TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
-           TargetTriple.isOSWindows() || TargetABI == ARM::ARM_ABI_AAPCS16;
   }
 
   bool targetSchedulesPostRAScheduling() const override { return true; };

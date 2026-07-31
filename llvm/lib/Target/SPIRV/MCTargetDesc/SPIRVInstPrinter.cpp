@@ -50,6 +50,26 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   unsigned IsBitwidth16 = MI->getFlags() & SPIRV::INST_PRINTER_WIDTH16;
   const unsigned NumVarOps = MI->getNumOperands() - StartIndex;
 
+  if (MI->getOpcode() == SPIRV::OpConstantI && NumVarOps > 2) {
+    // Look up the bitwidth of this int type register from
+    // IntTypeBitwidths map.
+    MCRegister IntTypeReg = MI->getOperand(1).getReg();
+    unsigned Bitwidth = IntTypeBitwidths.at(IntTypeReg);
+
+    // SPV_ALTERA_arbitrary_precision_integers allows for integer widths greater
+    // than 64, which will be encoded via multiple operands.
+    const unsigned TotalBits = NumVarOps * 32;
+    APInt Val(TotalBits, 0);
+    for (unsigned i = 0; i < NumVarOps; ++i) {
+      uint64_t Word = MI->getOperand(StartIndex + i).getImm();
+      Val |= APInt(TotalBits, Word) << (i * 32);
+    }
+    APInt ActualVal = Val.trunc(Bitwidth);
+    O << ' ';
+    ActualVal.print(O, /*isSigned=*/false);
+    return;
+  }
+
   assert((NumVarOps == 1 || NumVarOps == 2) &&
          "Unsupported number of bits for literal variable");
 
@@ -67,17 +87,19 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
     APFloat FP = NumVarOps == 1 ? APFloat(APInt(32, Imm).bitsToFloat())
                                 : APFloat(APInt(64, Imm).bitsToDouble());
 
-    // Print infinity and NaN as hex floats.
+    // Print infinity and NaN as hex floats. The exponent depends on the
+    // actual width of FP (f32 vs f64), not a fixed constant.
     // TODO: Make sure subnormal numbers are handled correctly as they may also
     // require hex float notation.
-    if (FP.isInfinity()) {
-      if (FP.isNegative())
-        O << '-';
-      O << "0x1p+128";
-      return;
-    }
-    if (FP.isNaN()) {
-      O << "0x1.8p+128";
+    if (FP.isInfinity() || FP.isNaN()) {
+      unsigned MaxExp = APFloat::semanticsMaxExponent(FP.getSemantics()) + 1;
+      if (FP.isInfinity()) {
+        if (FP.isNegative())
+          O << '-';
+        O << "0x1p+" << MaxExp;
+      } else {
+        O << "0x1.8p+" << MaxExp;
+      }
       return;
     }
 
@@ -93,6 +115,12 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
   O << Imm;
 }
 
+void SPIRVInstPrinter::recordIntType(const MCInst *MI) {
+  MCRegister IntTypeReg = MI->getOperand(0).getReg();
+  unsigned Bitwidth = MI->getOperand(1).getImm();
+  IntTypeBitwidths[IntTypeReg] = Bitwidth;
+}
+
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
   MCRegister Reg = MI->getOperand(0).getReg();
   auto Name = getSPIRVStringOperand(*MI, 1);
@@ -105,8 +133,11 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                  raw_ostream &OS) {
   const unsigned OpCode = MI->getOpcode();
   printInstruction(MI, Address, OS);
+  if (OpCode == SPIRV::OpTypeInt) {
+    recordIntType(MI);
+  }
 
-  if (OpCode == SPIRV::OpDecorate) {
+  if (OpCode == SPIRV::OpDecorate || OpCode == SPIRV::OpDecorateId) {
     printOpDecorate(MI, OS);
   } else if (OpCode == SPIRV::OpExtInstImport) {
     recordOpExtInstImport(MI);
@@ -147,7 +178,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
           break;
         case SPIRV::OpExecutionMode:
         case SPIRV::OpExecutionModeId:
-        case SPIRV::OpLoopMerge: {
+        case SPIRV::OpLoopMerge:
+        case SPIRV::OpLoopControlINTEL: {
           // Print any literals after the OPERAND_UNKNOWN argument normally.
           printRemainingVariableOps(MI, NumFixedOps, OS);
           break;
@@ -368,7 +400,7 @@ void SPIRVInstPrinter::printOpDecorate(const MCInst *MI, raw_ostream &O) {
       printSymbolicOperand<OperandCategory::BuiltInOperand>(MI, NumFixedOps, O);
       break;
     case Decoration::UniformId:
-      printSymbolicOperand<OperandCategory::ScopeOperand>(MI, NumFixedOps, O);
+      printOperand(MI, NumFixedOps, O);
       break;
     case Decoration::FuncParamAttr:
       printSymbolicOperand<OperandCategory::FunctionParameterAttributeOperand>(

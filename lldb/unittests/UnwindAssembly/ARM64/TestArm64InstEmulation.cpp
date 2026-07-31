@@ -987,7 +987,7 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
       0xfd, 0x7b, 0x42, 0xa9, // <+20>: ldp    x29, x30, [sp, #0x20]
       0xff, 0xc3, 0x00, 0x91, // <+24>: add    sp, sp, #0x30
       0xc0, 0x03, 0x5f, 0xd6, // <+28>: ret
-      // AFTER_EPILOGUE:  LLDB computes the next 5 unwind states incorrectly.
+      // AFTER_EPILOGUE
       0x37, 0x00, 0x80, 0xd2, // <+32>: mov    x23, #0x1
       0xf6, 0x5f, 0x41, 0xa9, // <+36>: ldp    x22, x23, [sp, #0x10]
       0xfd, 0x7b, 0x42, 0xa9, // <+40>: ldp    x29, x30, [sp, #0x20]
@@ -1054,12 +1054,19 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
   EXPECT_TRUE(row->GetCFAValue().GetRegisterNumber() == gpr_sp_arm64);
   EXPECT_EQ(row->GetCFAValue().GetOffset(), 0);
 
-  // FIXME: Row for offset +32 incorrectly inherits the state of the `ret`
-  // instruction, but +32 _never_ executes after the `ret`.
+  // Row for offset +32 should not inherit the state of the `ret` instruction
+  // in +28. Instead, it should inherit the state of the branch in +64.
+  // Check for register x22, which is available in row +64.
   // <+28>: ret
   // <+32>: mov    x23, #0x1
   row = unwind_plan.GetRowForFunctionOffset(32);
-  // FIXME: EXPECT_NE(28, row->GetOffset());
+  EXPECT_EQ(32, row->GetOffset());
+  {
+    UnwindPlan::Row::AbstractRegisterLocation loc;
+    EXPECT_TRUE(row->GetRegisterInfo(gpr_x22_arm64, loc));
+    EXPECT_TRUE(loc.IsAtCFAPlusOffset());
+    EXPECT_EQ(loc.GetOffset(), -32);
+  }
 
   // Check that the state of this branch
   // <+16>: b.ne   ; <+52> DO_SOMETHING_AND_GOTO_AFTER_EPILOGUE
@@ -1070,4 +1077,12 @@ TEST_F(TestArm64InstEmulation, TestMidFunctionEpilogueAndBackwardsJump) {
   EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset());
   EXPECT_EQ(row->GetCFAValue().GetRegisterNumber(), gpr_fp_arm64);
   EXPECT_EQ(row->GetCFAValue().GetOffset(), 16);
+
+  row = unwind_plan.GetRowForFunctionOffset(64);
+  {
+    UnwindPlan::Row::AbstractRegisterLocation loc;
+    EXPECT_TRUE(row->GetRegisterInfo(gpr_x22_arm64, loc));
+    EXPECT_TRUE(loc.IsAtCFAPlusOffset());
+    EXPECT_EQ(loc.GetOffset(), -32);
+  }
 }

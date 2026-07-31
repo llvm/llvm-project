@@ -13,6 +13,15 @@ using namespace llvm;
 
 AnalysisKey RuntimeLibraryAnalysis::Key;
 
+RuntimeLibraryAnalysis::RuntimeLibraryAnalysis(const Triple &TT,
+                                               ExceptionHandling ExceptionModel,
+                                               FloatABI::ABIType FloatABI,
+                                               EABI EABIVersion,
+                                               StringRef ABIName,
+                                               VectorLibrary VecLib)
+    : LibcallsInfo(std::in_place, TT, ExceptionModel, FloatABI, EABIVersion,
+                   ABIName, VecLib) {}
+
 RTLIB::RuntimeLibcallsInfo
 RuntimeLibraryAnalysis::run(const Module &M, ModuleAnalysisManager &) {
   if (!LibcallsInfo)
@@ -25,6 +34,13 @@ INITIALIZE_PASS(RuntimeLibraryInfoWrapper, "runtime-library-info",
 
 RuntimeLibraryInfoWrapper::RuntimeLibraryInfoWrapper()
     : ImmutablePass(ID), RTLA(RTLIB::RuntimeLibcallsInfo(Triple())) {}
+
+RuntimeLibraryInfoWrapper::RuntimeLibraryInfoWrapper(
+    const Triple &TT, ExceptionHandling ExceptionModel,
+    FloatABI::ABIType FloatABI, EABI EABIVersion, StringRef ABIName,
+    VectorLibrary VecLib)
+    : ImmutablePass(ID), RTLCI(std::in_place, TT, ExceptionModel, FloatABI,
+                               EABIVersion, ABIName, VecLib) {}
 
 char RuntimeLibraryInfoWrapper::ID = 0;
 

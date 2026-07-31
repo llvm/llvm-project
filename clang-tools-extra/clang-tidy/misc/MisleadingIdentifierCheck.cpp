@@ -125,7 +125,8 @@ static bool hasRTLCharacters(StringRef Buffer) {
   while (CurPtr < EndPtr) {
     llvm::UTF32 CodePoint = 0;
     const llvm::ConversionResult Result = llvm::convertUTF8Sequence(
-        (const llvm::UTF8 **)&CurPtr, (const llvm::UTF8 *)EndPtr, &CodePoint,
+        reinterpret_cast<const llvm::UTF8 **>(&CurPtr),
+        reinterpret_cast<const llvm::UTF8 *>(EndPtr), &CodePoint,
         llvm::strictConversion);
     if (Result != llvm::conversionOK)
       break;

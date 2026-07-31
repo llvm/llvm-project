@@ -11,15 +11,16 @@ target triple = "thumbv8.1m.main-none-eabi"
 define void @multiple_exits_unique_exit_block(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-LABEL: @multiple_exits_unique_exit_block(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A:%.*]] to i32
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B:%.*]] to i32
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A:%.*]] to i32
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B:%.*]] to i32
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[N:%.*]], i32 999)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[B1]], [[A2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP1]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP4]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 4
@@ -82,15 +83,16 @@ exit:
 define i32 @multiple_exits_multiple_exit_blocks(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-LABEL: @multiple_exits_multiple_exit_blocks(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A:%.*]] to i32
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B:%.*]] to i32
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A:%.*]] to i32
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoaddr ptr [[B:%.*]] to i32
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[N:%.*]], i32 999)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i32 [[UMIN]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[B1]], [[A2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP1]], 16
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP1]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i32 [[TMP4]], 15
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 4

@@ -9,15 +9,22 @@
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/Analysis.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -51,7 +58,7 @@ public:
     if (succ_size(&BB) < 2)
       return nullptr;
     auto *Term = BB.getTerminator();
-    return (isa<BranchInst>(Term) || isa<SwitchInst>(Term) ||
+    return (isa<CondBrInst>(Term) || isa<SwitchInst>(Term) ||
             isa<IndirectBrInst>(Term) || isa<CallBrInst>(Term))
                ? Term
                : nullptr;
@@ -70,13 +77,19 @@ bool isAsmOnly(const Function &F) {
   if (!F.hasFnAttribute(Attribute::AttrKind::Naked))
     return false;
   for (const auto &BB : F)
-    for (const auto &I : drop_end(BB.instructionsWithoutDebug())) {
+    for (const auto &I : drop_end(BB)) {
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB || !CB->isInlineAsm())
         return false;
     }
   return true;
 }
+
+void emitProfileError(StringRef Msg, Function &F) {
+  F.getContext().emitError("Profile verification failed for function '" +
+                           F.getName() + "': " + Msg);
+}
+
 } // namespace
 
 // FIXME: currently this injects only for terminators. Select isn't yet
@@ -103,11 +116,11 @@ bool ProfileInjector::inject() {
   // as cold (we do want some explicit information in the spirit of what this
   // verifier wants to achieve - make dropping / corrupting MD_prof
   // unit-testable)
-  if (!F.getEntryCount(/*AllowSynthetic=*/true))
+  if (!F.getEntryCount())
     F.setEntryCount(DefaultFunctionEntryCount);
   // If there is an entry count that's 0, then don't bother injecting. We won't
   // verify these either.
-  if (F.getEntryCount(/*AllowSynthetic=*/true)->getCount() == 0)
+  if (*F.getEntryCount() == 0)
     return false;
   bool Changed = false;
   // Cycle through the weights list. If we didn't, tests with more than (say)
@@ -189,21 +202,53 @@ PreservedAnalyses ProfileInjectorPass::run(Function &F,
   return PreservedAnalyses::none();
 }
 
+PreservedAnalyses ProfileVerifierPass::run(Module &M,
+                                           ModuleAnalysisManager &MAM) {
+  auto PopulateIgnoreList = [&](StringRef GVName) {
+    if (const auto *CT = M.getGlobalVariable(GVName))
+      if (CT->hasInitializer())
+        if (const auto *CA =
+                dyn_cast_if_present<ConstantArray>(CT->getInitializer()))
+          for (const auto &Elt : CA->operands())
+            if (const auto *CS = dyn_cast<ConstantStruct>(Elt))
+              if (CS->getNumOperands() >= 2 && CS->getOperand(1))
+                if (const auto *F = dyn_cast<Function>(
+                        CS->getOperand(1)->stripPointerCasts()))
+                  IgnoreList.insert(F);
+  };
+  PopulateIgnoreList("llvm.global_ctors");
+  PopulateIgnoreList("llvm.global_dtors");
+
+  // expose the function-level run as public through a wrapper, so we can use
+  // pass manager mechanisms dealing with declarations and with composing the
+  // returned PreservedAnalyses values.
+  struct Wrapper : OptionalPassInfoMixin<Wrapper> {
+    ProfileVerifierPass &PVP;
+    PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
+      return PVP.run(F, FAM);
+    }
+    explicit Wrapper(ProfileVerifierPass &PVP) : PVP(PVP) {}
+  };
+
+  return createModuleToFunctionPassAdaptor(Wrapper(*this)).run(M, MAM);
+}
+
 PreservedAnalyses ProfileVerifierPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
   // skip purely asm functions
   if (isAsmOnly(F))
     return PreservedAnalyses::all();
+  if (IgnoreList.contains(&F))
+    return PreservedAnalyses::all();
 
-  const auto EntryCount = F.getEntryCount(/*AllowSynthetic=*/true);
+  const auto EntryCount = F.getEntryCount();
   if (!EntryCount) {
     auto *MD = F.getMetadata(LLVMContext::MD_prof);
     if (!MD || !isExplicitlyUnknownProfileMetadata(*MD)) {
-      F.getContext().emitError("Profile verification failed: function entry "
-                               "count missing (set to 0 if cold)");
+      emitProfileError("function entry count missing (set to 0 if cold)", F);
       return PreservedAnalyses::all();
     }
-  } else if (EntryCount->getCount() == 0) {
+  } else if (*EntryCount == 0) {
     return PreservedAnalyses::all();
   }
   for (const auto &BB : F) {
@@ -214,15 +259,13 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
             continue;
           if (I.getMetadata(LLVMContext::MD_prof))
             continue;
-          F.getContext().emitError(
-              "Profile verification failed: select annotation missing");
+          emitProfileError("select annotation missing", F);
         }
     }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))
       if (!Term->getMetadata(LLVMContext::MD_prof))
-        F.getContext().emitError(
-            "Profile verification failed: branch annotation missing");
+        emitProfileError("branch annotation missing", F);
   }
   return PreservedAnalyses::all();
 }

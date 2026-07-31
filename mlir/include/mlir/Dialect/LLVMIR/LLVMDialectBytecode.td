@@ -129,39 +129,42 @@ def DISubroutineTypeAttr : DialectAttribute<(attr
 //===----------------------------------------------------------------------===//
 
 def DICompileUnitAttr : DialectAttribute<(attr
-  Attr<"DistinctAttr">:$id,
+  OptionalAttribute<"DistinctAttr">:$recId,
+  Bool:$isRecSelf,
+  OptionalAttribute<"DistinctAttr">:$id,
   VarInt:$sourceLanguage,
-  Attr<"DIFileAttr">:$file,
+  OptionalAttribute<"DIFileAttr">:$file,
   OptionalAttribute<"StringAttr">:$producer,
   Bool:$isOptimized,
   EnumClassFlag<"DIEmissionKind", "getEmissionKind()">:$_rawEmissionKind,
   LocalVar<"DIEmissionKind", "(DIEmissionKind)_rawEmissionKind">:$emissionKind,
+  Bool:$isDebugInfoForProfiling,
   EnumClassFlag<"DINameTableKind", "getNameTableKind()">:$_rawNameTableKind,
   LocalVar<"DINameTableKind",
-           "(DINameTableKind)_rawNameTableKind">:$nameTableKind
+           "(DINameTableKind)_rawNameTableKind">:$nameTableKind,
+  OptionalAttribute<"StringAttr">:$splitDebugFilename,
+  OptionalArrayRef<"DINodeAttr">:$importedEntities
 )>;
 
 //===----------------------------------------------------------------------===//
 // DISubprogramAttr
 //===----------------------------------------------------------------------===//
 
-def DISubprogramAttr : DialectAttribute<(attr
-  OptionalAttribute<"DistinctAttr">:$recId,
-  Bool:$isRecSelf,
-  OptionalAttribute<"DistinctAttr">:$id,
-  OptionalAttribute<"DICompileUnitAttr">:$compileUnit,
-  OptionalAttribute<"DIScopeAttr">:$scope,
-  OptionalAttribute<"StringAttr">:$name,
-  OptionalAttribute<"StringAttr">:$linkageName,
-  OptionalAttribute<"DIFileAttr">:$file,
-  VarInt:$line,
-  VarInt:$scopeLine,
-  EnumClassFlag<"DISubprogramFlags", "getSubprogramFlags()">:$_rawflags,
-  LocalVar<"DISubprogramFlags", "(DISubprogramFlags)_rawflags">:$subprogramFlags,
-  OptionalAttribute<"DISubroutineTypeAttr">:$type,
-  OptionalArrayRef<"DINodeAttr">:$retainedNodes,
-  OptionalArrayRef<"DINodeAttr">:$annotations
-)>;
+def DISubprogramAttr
+    : DialectAttribute<(attr OptionalAttribute<"DistinctAttr">:$recId,
+          Bool:$isRecSelf, OptionalAttribute<"DistinctAttr">:$id,
+          OptionalAttribute<"DICompileUnitAttr">:$compileUnit,
+          OptionalAttribute<"DIScopeAttr">:$scope,
+          OptionalAttribute<"StringAttr">:$name,
+          OptionalAttribute<"StringAttr">:$linkageName,
+          OptionalAttribute<"DIFileAttr">:$file, VarInt:$line,
+          VarInt:$scopeLine,
+          EnumClassFlag<"DISubprogramFlags", "getSubprogramFlags()">:$_rawflags,
+          LocalVar<"DISubprogramFlags",
+                   "(DISubprogramFlags)_rawflags">:$subprogramFlags,
+          OptionalAttribute<"DISubroutineTypeAttr">:$type,
+          OptionalArrayRef<"Attribute">:$retainedNodes,
+          OptionalArrayRef<"DINodeAttr">:$annotations)>;
 
 //===----------------------------------------------------------------------===//
 // DICompositeTypeAttr
@@ -184,6 +187,8 @@ def DICompositeTypeAttr : DialectAttribute<(attr
   OptionalAttribute<"DIExpressionAttr">:$rank,
   OptionalAttribute<"DIExpressionAttr">:$allocated,
   OptionalAttribute<"DIExpressionAttr">:$associated,
+  OptionalAttribute<"StringAttr">:$identifier,
+  OptionalAttribute<"DIDerivedTypeAttr">:$discriminator,
   OptionalArrayRef<"DINodeAttr">:$elements
 )>;
 
@@ -194,12 +199,17 @@ def DICompositeTypeAttr : DialectAttribute<(attr
 def DIDerivedTypeAttr : DialectAttribute<(attr
   VarInt:$tag,
   OptionalAttribute<"StringAttr">:$name,
+  OptionalAttribute<"DIFileAttr">:$file,
+  VarInt:$line,
+  OptionalAttribute<"DIScopeAttr">:$scope,
   OptionalAttribute<"DITypeAttr">:$baseType,
   VarInt:$sizeInBits,
   VarInt:$alignInBits,
   VarInt:$offsetInBits,
   OptionalInt<"unsigned">:$dwarfAddressSpace,
-  OptionalAttribute<"DINodeAttr">:$extraData
+  EnumClassFlag<"DIFlags", "getFlags()">:$_rawflags,
+  LocalVar<"DIFlags", "(DIFlags)_rawflags">:$flags,
+  OptionalAttribute<"Attribute">:$extraData
 )>;
 
 //===----------------------------------------------------------------------===//

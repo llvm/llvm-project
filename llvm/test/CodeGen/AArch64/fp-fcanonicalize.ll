@@ -534,6 +534,54 @@ define double @fcanonicalize_f64_nnan(double %x) {
   ret double %z
 }
 
+define <1 x double> @fcanonicalize_v1f64(<1 x double> %x) {
+; CHECK-NOFP16-NONEON-LABEL: fcanonicalize_v1f64:
+; CHECK-NOFP16-NONEON:       // %bb.0:
+; CHECK-NOFP16-NONEON-NEXT:    fminnm d0, d0, d0
+; CHECK-NOFP16-NONEON-NEXT:    ret
+;
+; CHECK-FP16-NONEON-LABEL: fcanonicalize_v1f64:
+; CHECK-FP16-NONEON:       // %bb.0:
+; CHECK-FP16-NONEON-NEXT:    fminnm d0, d0, d0
+; CHECK-FP16-NONEON-NEXT:    ret
+;
+; CHECK-NOFP16-NEON-LABEL: fcanonicalize_v1f64:
+; CHECK-NOFP16-NEON:       // %bb.0:
+; CHECK-NOFP16-NEON-NEXT:    fminnm d0, d0, d0
+; CHECK-NOFP16-NEON-NEXT:    ret
+;
+; CHECK-FP16-NEON-LABEL: fcanonicalize_v1f64:
+; CHECK-FP16-NEON:       // %bb.0:
+; CHECK-FP16-NEON-NEXT:    fminnm d0, d0, d0
+; CHECK-FP16-NEON-NEXT:    ret
+  %z = call <1 x double> @llvm.canonicalize.v1f64(<1 x double> %x)
+  ret <1 x double> %z
+}
+
+define <1 x double> @fcanonicalize_v1f64_nnan(<1 x double> %x) {
+; CHECK-NOFP16-NONEON-LABEL: fcanonicalize_v1f64_nnan:
+; CHECK-NOFP16-NONEON:       // %bb.0:
+; CHECK-NOFP16-NONEON-NEXT:    fminnm d0, d0, d0
+; CHECK-NOFP16-NONEON-NEXT:    ret
+;
+; CHECK-FP16-NONEON-LABEL: fcanonicalize_v1f64_nnan:
+; CHECK-FP16-NONEON:       // %bb.0:
+; CHECK-FP16-NONEON-NEXT:    fminnm d0, d0, d0
+; CHECK-FP16-NONEON-NEXT:    ret
+;
+; CHECK-NOFP16-NEON-LABEL: fcanonicalize_v1f64_nnan:
+; CHECK-NOFP16-NEON:       // %bb.0:
+; CHECK-NOFP16-NEON-NEXT:    fminnm d0, d0, d0
+; CHECK-NOFP16-NEON-NEXT:    ret
+;
+; CHECK-FP16-NEON-LABEL: fcanonicalize_v1f64_nnan:
+; CHECK-FP16-NEON:       // %bb.0:
+; CHECK-FP16-NEON-NEXT:    fminnm d0, d0, d0
+; CHECK-FP16-NEON-NEXT:    ret
+  %z = call nnan <1 x double> @llvm.canonicalize.v1f64(<1 x double> %x)
+  ret <1 x double> %z
+}
+
 define <2 x double> @fcanonicalize_v2f64(<2 x double> %x) {
 ; CHECK-NOFP16-NONEON-LABEL: fcanonicalize_v2f64:
 ; CHECK-NOFP16-NONEON:       // %bb.0:

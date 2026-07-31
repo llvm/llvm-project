@@ -1073,6 +1073,34 @@ public:
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
 };
 
+struct OverflowBehaviorLocInfo {
+  SourceLocation AttrLoc;
+};
+
+class OverflowBehaviorTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, OverflowBehaviorTypeLoc,
+                             OverflowBehaviorType, OverflowBehaviorLocInfo> {
+public:
+  TypeLoc getWrappedLoc() const { return getInnerTypeLoc(); }
+
+  /// The no_sanitize type attribute.
+  OverflowBehaviorType::OverflowBehaviorKind getBehaviorKind() const {
+    return getTypePtr()->getBehaviorKind();
+  }
+
+  SourceRange getLocalSourceRange() const;
+
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setAttrLoc(loc);
+  }
+
+  SourceLocation getAttrLoc() const { return getLocalData()->AttrLoc; }
+
+  void setAttrLoc(SourceLocation loc) { getLocalData()->AttrLoc = loc; }
+
+  QualType getInnerType() const { return getTypePtr()->getUnderlyingType(); }
+};
+
 struct HLSLAttributedResourceLocInfo {
   SourceRange Range;
   TypeSourceInfo *ContainedTyInfo;
@@ -1096,7 +1124,8 @@ public:
   void setSourceRange(const SourceRange &R) { getLocalData()->Range = R; }
   SourceRange getLocalSourceRange() const { return getLocalData()->Range; }
   void initializeLocal(ASTContext &Context, SourceLocation loc) {
-    setSourceRange(SourceRange());
+    setSourceRange(SourceRange(loc));
+    setContainedTypeSourceInfo(nullptr);
   }
   QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
   unsigned getLocalDataSize() const {
@@ -1327,6 +1356,37 @@ public:
   bool isOrNull() const { return getTypePtr()->isOrNull(); }
 
   SourceRange getLocalSourceRange() const;
+};
+
+struct LateParsedAttrLocInfo {
+  SourceLocation AttrNameLoc;
+};
+
+class LateParsedAttrTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, LateParsedAttrTypeLoc,
+                             LateParsedAttrType, LateParsedAttrLocInfo> {
+public:
+  TypeLoc getInnerLoc() const { return getInnerTypeLoc(); }
+
+  SourceLocation getAttrNameLoc() const { return getLocalData()->AttrNameLoc; }
+
+  void setAttrNameLoc(SourceLocation Loc) { getLocalData()->AttrNameLoc = Loc; }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getAttrNameLoc(), getAttrNameLoc());
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setAttrNameLoc(Loc);
+  }
+
+  unsigned getLocalDataSize() const { return sizeof(LateParsedAttrLocInfo); }
+
+  QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
+
+  LateParsedTypeAttribute *getLateParsedAttribute() const {
+    return getTypePtr()->getLateParsedAttribute();
+  }
 };
 
 struct MacroQualifiedLocInfo {

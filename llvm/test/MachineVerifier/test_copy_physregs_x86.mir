@@ -1,12 +1,12 @@
-# RUN: not --crash llc -mtriple=x86_64 -run-pass=none -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s -implicit-check-not="Bad machine code"
+# RUN: not --crash llc -mtriple=x86_64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s -implicit-check-not="Bad machine code"
 # REQUIRES: x86-registered-target
 
 # These copies have mismatched type sizes that are allowed because the
 # register class is defined to directly include the narrower type.
 ---
-name:            test_valid_copies
+name: test_valid_copies
 tracksRegLiveness: true
-body:             |
+body: |
   bb.0:
     liveins: $xmm0, $xmm1, $xmm2, $xmm3, $xmm4
     %0:_(s32) = COPY $xmm0
@@ -20,35 +20,34 @@ body:             |
     $xmm3 = COPY %3
     $xmm4 = COPY %4
 ...
-
 ---
-name:            test_invalid_copies
+name: test_invalid_copies
 tracksRegLiveness: true
-body:             |
+body: |
   bb.0:
     liveins: $xmm0, $xmm1, $xmm2, $xmm3
 
-    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: Bad machine code: Copy Instruction is illegal with mismatching sizes
     ; CHECK: - instruction: %0:_(<4 x s16>) = COPY $xmm1
     %0:_(<4 x s16>) = COPY $xmm1
 
-    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: Bad machine code: Copy Instruction is illegal with mismatching sizes
     ; CHECK: - instruction: %1:_(s256) = COPY $xmm2
     %1:_(s256) = COPY $xmm2
 
-    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: Bad machine code: Copy Instruction is illegal with mismatching sizes
     ; CHECK: - instruction: %2:_(<8 x s32>) = COPY $xmm3
     %2:_(<8 x s32>) = COPY $xmm3
 
-    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: Bad machine code: Copy Instruction is illegal with mismatching sizes
     ; CHECK: - instruction: $xmm1 = COPY %0:_(<4 x s16>)
     $xmm1 = COPY %0
 
-    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: Bad machine code: Copy Instruction is illegal with mismatching sizes
     ; CHECK: - instruction: $xmm2 = COPY %1:_(s256)
     $xmm2 = COPY %1
 
-    ; CHECK: *** Bad machine code: Copy Instruction is illegal with mismatching sizes ***
+    ; CHECK: Bad machine code: Copy Instruction is illegal with mismatching sizes
     ; CHECK: - instruction: $xmm3 = COPY %2:_(<8 x s32>)
     $xmm3 = COPY %2
 ...

@@ -21,6 +21,7 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include <optional>
+#include <tuple>
 
 namespace Fortran::lower {
 
@@ -37,7 +38,7 @@ using LoweredResult =
 /// It is only used for HLFIR.
 /// The returned boolean indicates if finalization has been emitted in
 /// \p stmtCtx for the result.
-std::pair<LoweredResult, bool> genCallOpAndResult(
+std::tuple<LoweredResult, bool, mlir::Operation *> genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
     Fortran::lower::CallerInterface &caller, mlir::FunctionType callSiteType,

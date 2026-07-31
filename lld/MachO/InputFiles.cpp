@@ -482,18 +482,26 @@ static InputSection *findContainingSubsection(const Section &section,
   return it->isec;
 }
 
-// Find a symbol at offset `off` within `isec`.
-static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
-                                   uint64_t off) {
+// Try to find a symbol at offset `off` within `isec`.
+// Returns nullptr if no symbol exists at that offset.
+static Defined *tryFindSymbolAtOffset(const ConcatInputSection *isec,
+                                      uint64_t off) {
   auto it = llvm::lower_bound(isec->symbols, off, [](Defined *d, uint64_t off) {
     return d->value < off;
   });
-  // The offset should point at the exact address of a symbol (with no addend.)
-  if (it == isec->symbols.end() || (*it)->value != off) {
-    assert(isec->wasCoalesced);
+  if (it == isec->symbols.end() || (*it)->value != off)
     return nullptr;
-  }
   return *it;
+}
+
+// Find a symbol at offset `off` within `isec`.
+// If no symbol is found, assume the section must have been coalesced.
+static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
+                                   uint64_t off) {
+  Defined *d = tryFindSymbolAtOffset(isec, off);
+  // The offset should point at the exact address of a symbol (with no addend.)
+  assert(d || isec->wasCoalesced);
+  return d;
 }
 
 template <class SectionHeader>
@@ -575,7 +583,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     int64_t embeddedAddend = target->getEmbeddedAddend(mb, sec.offset, relInfo);
     assert(!(embeddedAddend && pairedAddend));
     int64_t totalAddend = pairedAddend + embeddedAddend;
-    Reloc r;
+    Relocation r;
     r.type = relInfo.r_type;
     r.pcrel = relInfo.r_pcrel;
     r.length = relInfo.r_length;
@@ -633,7 +641,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       // attached to the same address.
       assert(target->hasAttr(minuendInfo.r_type, RelocAttrBits::UNSIGNED) &&
              relInfo.r_address == minuendInfo.r_address);
-      Reloc p;
+      Relocation p;
       p.type = minuendInfo.r_type;
       if (minuendInfo.r_extern) {
         p.referent = symbols[minuendInfo.r_symbolnum];
@@ -648,6 +656,17 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       subsec->relocs.push_back(p);
     }
   }
+}
+
+// ld64 never turns these labels into named atoms or symbol table entries.
+static bool shouldIgnoreLabel(const InputSection *isec, StringRef name) {
+  if (isCfStringSection(isec) || isClassRefsSection(isec) ||
+      isSelRefsSection(isec))
+    return true;
+  if ((isa<WordLiteralInputSection>(isec) || isa<CStringInputSection>(isec)) &&
+      isPrivateLabel(name))
+    return true;
+  return false;
 }
 
 template <class NList>
@@ -673,7 +692,9 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 
   assert(!(sym.n_desc & N_ARM_THUMB_DEF) && "ARM32 arch is not supported");
 
-  if (sym.n_type & N_EXT) {
+  bool isCold = sym.n_desc & N_COLD_FUNC;
+
+  if ((sym.n_type & N_EXT) && !shouldIgnoreLabel(isec, name)) {
     // -load_hidden makes us treat global symbols as linkage unit scoped.
     // Duplicates are reported but the symbol does not go in the export trie.
     bool isPrivateExtern = sym.n_type & N_PEXT || forceHidden;
@@ -716,13 +737,15 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
     return symtab->addDefined(
         name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
         isPrivateExtern, sym.n_desc & REFERENCED_DYNAMICALLY,
-        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden);
+        sym.n_desc & N_NO_DEAD_STRIP, isWeakDefCanBeHidden, isCold);
   }
   bool includeInSymtab = !isPrivateLabel(name) && !isEhFrameSection(isec);
-  return make<Defined>(
+  auto *defined = make<Defined>(
       name, isec->getFile(), isec, value, size, sym.n_desc & N_WEAK_DEF,
       /*isExternal=*/false, /*isPrivateExtern=*/false, includeInSymtab,
       sym.n_desc & REFERENCED_DYNAMICALLY, sym.n_desc & N_NO_DEAD_STRIP);
+  defined->cold = isCold;
+  return defined;
 }
 
 // Absolute symbols are defined symbols that do not have an associated
@@ -730,6 +753,7 @@ static macho::Symbol *createDefined(const NList &sym, StringRef name,
 template <class NList>
 static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
                                      StringRef name, bool forceHidden) {
+  bool isCold = sym.n_desc & N_COLD_FUNC;
   assert(!(sym.n_desc & N_ARM_THUMB_DEF) && "ARM32 arch is not supported");
 
   if (sym.n_type & N_EXT) {
@@ -738,14 +762,16 @@ static macho::Symbol *createAbsolute(const NList &sym, InputFile *file,
                               /*isWeakDef=*/false, isPrivateExtern,
                               /*isReferencedDynamically=*/false,
                               sym.n_desc & N_NO_DEAD_STRIP,
-                              /*isWeakDefCanBeHidden=*/false);
+                              /*isWeakDefCanBeHidden=*/false, isCold);
   }
-  return make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
-                       /*isWeakDef=*/false,
-                       /*isExternal=*/false, /*isPrivateExtern=*/false,
-                       /*includeInSymtab=*/true,
-                       /*isReferencedDynamically=*/false,
-                       sym.n_desc & N_NO_DEAD_STRIP);
+  auto *defined = make<Defined>(name, file, nullptr, sym.n_value, /*size=*/0,
+                                /*isWeakDef=*/false,
+                                /*isExternal=*/false, /*isPrivateExtern=*/false,
+                                /*includeInSymtab=*/true,
+                                /*isReferencedDynamically=*/false,
+                                sym.n_desc & N_NO_DEAD_STRIP);
+  defined->cold = isCold;
+  return defined;
 }
 
 template <class NList>
@@ -1161,7 +1187,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
 
     ConcatInputSection *referentIsec;
     for (auto it = isec->relocs.begin(); it != isec->relocs.end();) {
-      Reloc &r = *it;
+      Relocation &r = *it;
       // CUE::functionAddress is at offset 0. Skip personality & LSDA relocs.
       if (r.offset != 0) {
         ++it;
@@ -1192,10 +1218,30 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
       // The functionAddress relocations are typically section relocations.
       // However, unwind info operates on a per-symbol basis, so we search for
       // the function symbol here.
-      Defined *d = findSymbolAtOffset(referentIsec, add);
+      Defined *d = tryFindSymbolAtOffset(referentIsec, add);
       if (!d) {
-        ++it;
-        continue;
+        // If there's no symbol at the function address (e.g. for temporary
+        // local labels that are not in the symtab), synthesize a local one so
+        // we still emit correct unwind info.
+
+        // Avoid creating symbols for coalesced sections; those functions were
+        // folded away.
+        if (referentIsec->wasCoalesced) {
+          ++it;
+          continue;
+        }
+
+        d = make<Defined>(saver().save(Twine("Lcu.") + referentIsec->getName() +
+                                       "." + Twine::utohexstr(add)),
+                          this, referentIsec, add,
+                          /*size=*/0, /*isWeakDef=*/false,
+                          /*isExternal=*/false, /*isPrivateExtern=*/false,
+                          /*includeInSymtab=*/false,
+                          /*isReferencedDynamically=*/false,
+                          /*noDeadStrip=*/false);
+        // Also add to the file-level symbol list so that scanSymbols() in
+        // Writer picks it up and registers it with UnwindInfoSection.
+        symbols.push_back(d);
       }
       d->originalUnwindEntry = isec;
       // Now that the symbol points to the unwind entry, we can remove the reloc
@@ -1337,9 +1383,9 @@ static CIE parseCIE(const InputSection *isec, const EhReader &reader,
 template <bool Invert = false>
 Defined *
 targetSymFromCanonicalSubtractor(const InputSection *isec,
-                                 std::vector<macho::Reloc>::iterator relocIt) {
-  macho::Reloc &subtrahend = *relocIt;
-  macho::Reloc &minuend = *std::next(relocIt);
+                                 std::vector<Relocation>::iterator relocIt) {
+  Relocation &subtrahend = *relocIt;
+  Relocation &minuend = *std::next(relocIt);
   assert(target->hasAttr(subtrahend.type, RelocAttrBits::SUBTRAHEND));
   assert(target->hasAttr(minuend.type, RelocAttrBits::UNSIGNED));
   // Note: pcSym may *not* be exactly at the PC; there's usually a non-zero
@@ -1364,7 +1410,7 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
     // `oldSym->value + oldOffset == newSym + newOffset`. However, we don't
     // have an easy way to access the offsets from this point in the code; some
     // refactoring is needed for that.
-    macho::Reloc &pcReloc = Invert ? minuend : subtrahend;
+    Relocation &pcReloc = Invert ? minuend : subtrahend;
     pcReloc.referent = isec->symbols[0];
     assert(isec->symbols[0]->value == 0);
     minuend.addend = pcReloc.offset * (Invert ? 1LL : -1LL);
@@ -1419,8 +1465,9 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
     const size_t cieOffOff = dataOff;
 
     EhRelocator ehRelocator(isec);
-    auto cieOffRelocIt = llvm::find_if(
-        isec->relocs, [=](const Reloc &r) { return r.offset == cieOffOff; });
+    auto cieOffRelocIt = llvm::find_if(isec->relocs, [=](const Relocation &r) {
+      return r.offset == cieOffOff;
+    });
     InputSection *cieIsec = nullptr;
     if (cieOffRelocIt != isec->relocs.end()) {
       // We already have an explicit relocation for the CIE offset.
@@ -1450,7 +1497,7 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       continue;
     }
 
-    assert(cieMap.count(cieIsec));
+    assert(cieMap.contains(cieIsec));
     const CIE &cie = cieMap[cieIsec];
     // Offset of the function address within the EH frame.
     const size_t funcAddrOff = dataOff;
@@ -1857,15 +1904,6 @@ constexpr std::array<StringRef, 3> skipPlatformChecks{
     "/usr/lib/system/libsystem_platform.dylib",
     "/usr/lib/system/libsystem_pthread.dylib"};
 
-static bool skipPlatformCheckForCatalyst(const InterfaceFile &interface,
-                                         bool explicitlyLinked) {
-  // Catalyst outputs can link against implicitly linked macOS-only libraries.
-  if (config->platform() != PLATFORM_MACCATALYST || explicitlyLinked)
-    return false;
-  return is_contained(interface.targets(),
-                      MachO::Target(config->arch(), PLATFORM_MACOS));
-}
-
 static bool isArchABICompatible(ArchitectureSet archSet,
                                 Architecture targetArch) {
   uint32_t cpuType;
@@ -1876,6 +1914,18 @@ static bool isArchABICompatible(ArchitectureSet archSet,
     std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(p);
     return cpuType == targetCpuType;
   });
+}
+
+static bool skipPlatformCheckForCatalyst(const InterfaceFile &interface,
+                                         bool explicitlyLinked) {
+  // Catalyst outputs can link against implicitly linked macOS-only libraries.
+  if (config->platform() != PLATFORM_MACCATALYST || explicitlyLinked)
+    return false;
+  ArchitectureSet macOSArchs;
+  for (const auto &target : interface.targets())
+    if (target.Platform == PLATFORM_MACOS)
+      macOSArchs.set(target.Arch);
+  return isArchABICompatible(macOSArchs, config->arch());
 }
 
 static bool isTargetPlatformArchCompatible(

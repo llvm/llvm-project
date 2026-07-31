@@ -15,6 +15,9 @@
 //   c. NDD (EVEX) -> non-NDD (legacy)
 //   d. NF_ND (EVEX) -> NF (EVEX)
 //   e. NonNF (EVEX) -> NF (EVEX)
+//   f. SETZUCCm (EVEX) -> SETCCm (legacy)
+//   g. VPMOV*2M (EVEX) + KMOV -> VMOVMSK/VPMOVMSKB (VEX)
+//   h. VPMOV*2M (EVEX) + masked VMOV* -> VBLENDV* (VEX)
 //
 // Compression a, b and c can always reduce code size, with some exceptions
 // such as promoted 16-bit CRC32 which is as long as the legacy version.
@@ -40,11 +43,15 @@
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include <atomic>
@@ -65,10 +72,10 @@ namespace {
 #define GET_X86_COMPRESS_EVEX_TABLE
 #include "X86GenInstrMapping.inc"
 
-class CompressEVEXPass : public MachineFunctionPass {
+class CompressEVEXLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  CompressEVEXPass() : MachineFunctionPass(ID) {}
+  CompressEVEXLegacy() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return COMP_EVEX_DESC; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -81,7 +88,7 @@ public:
 
 } // end anonymous namespace
 
-char CompressEVEXPass::ID = 0;
+char CompressEVEXLegacy::ID = 0;
 
 static bool usesExtendedRegister(const MachineInstr &MI) {
   auto isHiRegIdx = [](MCRegister Reg) {
@@ -174,8 +181,238 @@ static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   return true;
 }
 
+static bool isKMovNarrowing(unsigned VPMOVOpc, unsigned KMOVOpc) {
+  unsigned VPMOVBits = 0;
+  switch (VPMOVOpc) {
+  case X86::VPMOVQ2MZ128kr:
+    VPMOVBits = 2;
+    break;
+  case X86::VPMOVQ2MZ256kr:
+  case X86::VPMOVD2MZ128kr:
+    VPMOVBits = 4;
+    break;
+  case X86::VPMOVD2MZ256kr:
+    VPMOVBits = 8;
+    break;
+  case X86::VPMOVB2MZ128kr:
+    VPMOVBits = 16;
+    break;
+  case X86::VPMOVB2MZ256kr:
+    VPMOVBits = 32;
+    break;
+  default:
+    llvm_unreachable("Unknown VPMOV opcode");
+  }
+
+  unsigned KMOVSize = 0;
+  switch (KMOVOpc) {
+  case X86::KMOVBrk:
+    KMOVSize = 8;
+    break;
+  case X86::KMOVWrk:
+    KMOVSize = 16;
+    break;
+  case X86::KMOVDrk:
+    KMOVSize = 32;
+    break;
+  default:
+    llvm_unreachable("Unknown KMOV opcode");
+  }
+
+  return KMOVSize < VPMOVBits;
+}
+
+static bool isCompressibleBlendVUse(unsigned BlendOpc, unsigned UseOpc) {
+  switch (BlendOpc) {
+  case X86::VBLENDVPSrrr:
+    switch (UseOpc) {
+    case X86::VMOVAPSZ128rrk:
+    case X86::VMOVUPSZ128rrk:
+    case X86::VMOVDQA32Z128rrk:
+    case X86::VMOVDQU32Z128rrk:
+      return true;
+    default:
+      return false;
+    }
+  case X86::VBLENDVPSYrrr:
+    switch (UseOpc) {
+    case X86::VMOVAPSZ256rrk:
+    case X86::VMOVUPSZ256rrk:
+    case X86::VMOVDQA32Z256rrk:
+    case X86::VMOVDQU32Z256rrk:
+      return true;
+    default:
+      return false;
+    }
+  case X86::VBLENDVPDrrr:
+    switch (UseOpc) {
+    case X86::VMOVAPDZ128rrk:
+    case X86::VMOVUPDZ128rrk:
+    case X86::VMOVDQA64Z128rrk:
+    case X86::VMOVDQU64Z128rrk:
+      return true;
+    default:
+      return false;
+    }
+  case X86::VBLENDVPDYrrr:
+    switch (UseOpc) {
+    case X86::VMOVAPDZ256rrk:
+    case X86::VMOVUPDZ256rrk:
+    case X86::VMOVDQA64Z256rrk:
+    case X86::VMOVDQU64Z256rrk:
+      return true;
+    default:
+      return false;
+    }
+  case X86::VPBLENDVBrrr:
+    return UseOpc == X86::VMOVDQU8Z128rrk;
+  case X86::VPBLENDVBYrrr:
+    return UseOpc == X86::VMOVDQU8Z256rrk;
+  default:
+    return false;
+  }
+}
+
+// Try to compress VPMOV*2M chain patterns:
+//   vpmov*2m %xmm0, %k0             ->  (erase this)
+//   kmov* %k0, %eax                 ->  vmovmskp* %xmm0, %eax
+// and:
+//   vpmov*2m %xmm0, %k1             ->  (erase this)
+//   vmov* %xmm1, %xmm2 {%k1}        ->  vblendv* %xmm0, %xmm2, %xmm1, %xmm2
+static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
+                                    const X86Subtarget &ST,
+                                    SmallVectorImpl<MachineInstr *> &ToErase) {
+  const X86InstrInfo *TII = ST.getInstrInfo();
+  const TargetRegisterInfo *TRI = ST.getRegisterInfo();
+  MachineRegisterInfo *MRI = &MBB.getParent()->getRegInfo();
+
+  unsigned Opc = MI.getOpcode();
+  if (Opc != X86::VPMOVD2MZ128kr && Opc != X86::VPMOVD2MZ256kr &&
+      Opc != X86::VPMOVQ2MZ128kr && Opc != X86::VPMOVQ2MZ256kr &&
+      Opc != X86::VPMOVB2MZ128kr && Opc != X86::VPMOVB2MZ256kr)
+    return false;
+
+  if (usesExtendedRegister(MI))
+    return false;
+
+  Register MaskReg = MI.getOperand(0).getReg();
+  Register SrcVecReg = MI.getOperand(1).getReg();
+
+  unsigned MovMskOpc = 0;
+  unsigned BlendOpc = 0;
+  switch (Opc) {
+  case X86::VPMOVD2MZ128kr:
+    MovMskOpc = X86::VMOVMSKPSrr;
+    BlendOpc = X86::VBLENDVPSrrr;
+    break;
+  case X86::VPMOVD2MZ256kr:
+    MovMskOpc = X86::VMOVMSKPSYrr;
+    BlendOpc = X86::VBLENDVPSYrrr;
+    break;
+  case X86::VPMOVQ2MZ128kr:
+    MovMskOpc = X86::VMOVMSKPDrr;
+    BlendOpc = X86::VBLENDVPDrrr;
+    break;
+  case X86::VPMOVQ2MZ256kr:
+    MovMskOpc = X86::VMOVMSKPDYrr;
+    BlendOpc = X86::VBLENDVPDYrrr;
+    break;
+  case X86::VPMOVB2MZ128kr:
+    MovMskOpc = X86::VPMOVMSKBrr;
+    BlendOpc = X86::VPBLENDVBrrr;
+    break;
+  case X86::VPMOVB2MZ256kr:
+    MovMskOpc = X86::VPMOVMSKBYrr;
+    BlendOpc = X86::VPBLENDVBYrrr;
+    break;
+  default:
+    llvm_unreachable("Unknown VPMOV opcode");
+  }
+
+  MachineInstr *KMovMI = nullptr;
+  MachineInstr *BlendMI = nullptr;
+
+  for (MachineInstr &CurMI : llvm::make_range(
+           std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
+    if (CurMI.readsRegister(MaskReg, TRI)) {
+      if (KMovMI || BlendMI)
+        return false; // Fail: Mask has MULTIPLE uses
+
+      unsigned UseOpc = CurMI.getOpcode();
+      bool IsKMOV = UseOpc == X86::KMOVBrk || UseOpc == X86::KMOVWrk ||
+                    UseOpc == X86::KMOVDrk;
+      // Only allow non-narrowing KMOV uses of the mask.
+      if (IsKMOV && CurMI.getOperand(1).getReg() == MaskReg &&
+          !isKMovNarrowing(Opc, UseOpc)) {
+        KMovMI = &CurMI;
+        // continue scanning to ensure
+        // there are no *other* uses of the mask later in the block.
+      } else if (isCompressibleBlendVUse(BlendOpc, UseOpc) &&
+                 CurMI.getOperand(2).getReg() == MaskReg &&
+                 !usesExtendedRegister(CurMI) &&
+                 checkPredicate(BlendOpc, &ST)) {
+        BlendMI = &CurMI;
+      } else {
+        return false;
+      }
+    }
+
+    if (CurMI.modifiesRegister(MaskReg, TRI)) {
+      if (!KMovMI && !BlendMI)
+        return false; // Mask clobbered before use
+      break;
+    }
+
+    if (!KMovMI && !BlendMI && CurMI.modifiesRegister(SrcVecReg, TRI)) {
+      return false; // SrcVecReg modified before it could be reused
+    }
+  }
+
+  if (!KMovMI && !BlendMI)
+    return false;
+
+  // Check if MaskReg is used in any other basic blocks
+  for (const MachineOperand &MO : MRI->use_operands(MaskReg))
+    if (MO.getParent()->getParent() != &MBB)
+      return false;
+
+  // Apply the transformation
+  MachineInstr *NewMI = nullptr;
+  if (KMovMI) {
+    KMovMI->setDesc(TII->get(MovMskOpc));
+    MachineOperand &NewSrc = KMovMI->getOperand(1);
+    NewSrc.setReg(SrcVecReg);
+    // setReg() keeps the mask operand's kill flag; take the source's kill
+    // state from the VPMOV instead.
+    NewSrc.setIsKill(MI.getOperand(1).isKill());
+    NewMI = KMovMI;
+  } else if (BlendMI) {
+    const MachineOperand &MaskVec = MI.getOperand(1);
+    const MachineOperand &Dst = BlendMI->getOperand(0);
+    const MachineOperand &Passthru = BlendMI->getOperand(1);
+    const MachineOperand &Src = BlendMI->getOperand(3);
+
+    // Build a replacement instead of changing BlendMI in place because
+    // VMOV*rrk has a tied passthrough operand and a different operand order
+    // than VBLENDV.
+    auto MIB =
+        BuildMI(MBB, *BlendMI, BlendMI->getDebugLoc(), TII->get(BlendOpc))
+            .addReg(Dst.getReg(), getRegState(Dst))
+            .addReg(Passthru.getReg(), getRegState(Passthru))
+            .addReg(Src.getReg(), getRegState(Src))
+            .addReg(MaskVec.getReg(), getRegState(MaskVec));
+    NewMI = MIB;
+    ToErase.push_back(BlendMI);
+  }
+  assert(NewMI && "Expected a compressed instruction");
+  NewMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+  ToErase.push_back(&MI);
+  return true;
+}
+
 static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
-                             const X86Subtarget &ST) {
+                             const X86Subtarget &ST,
+                             SmallVectorImpl<MachineInstr *> &ToErase) {
   uint64_t TSFlags = MI.getDesc().TSFlags;
 
   // Check for EVEX instructions only.
@@ -185,6 +422,10 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   // Instructions with mask or 512-bit vector can't be converted to VEX.
   if (TSFlags & (X86II::EVEX_K | X86II::EVEX_L2))
     return false;
+
+  // Specialized VPMOVD2M + KMOV -> MOVMSK fold first.
+  if (tryCompressVPMOVPattern(MI, MBB, ST, ToErase))
+    return true;
 
   auto IsRedundantNewDataDest = [&](unsigned &Opc) {
     // $rbx = ADD64rr_ND $rbx, $rax / $rbx = ADD64rr_ND $rax, $rbx
@@ -216,14 +457,15 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   //  memory form: broadcast
   //
   // APX:
-  //  MAP4: NDD
+  //  MAP4: NDD, ZU
   //
   // For AVX512 cases, EVEX prefix is needed in order to carry this information
   // thus preventing the transformation to VEX encoding.
   bool IsND = X86II::hasNewDataDest(TSFlags);
-  if (TSFlags & X86II::EVEX_B && !IsND)
-    return false;
   unsigned Opc = MI.getOpcode();
+  bool IsSetZUCCm = Opc == X86::SETZUCCm;
+  if (TSFlags & X86II::EVEX_B && !IsND && !IsSetZUCCm)
+    return false;
   // MOVBE*rr is special because it has semantic of NDD but not set EVEX_B.
   bool IsNDLike = IsND || Opc == X86::MOVBE32rr || Opc == X86::MOVBE64rr;
   bool IsRedundantNDD = IsNDLike ? IsRedundantNewDataDest(Opc) : false;
@@ -301,6 +543,10 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
 
   if (!NewOpc)
     return false;
+  // NF (No Flags) instructions cannot compress to VEX/legacy encoding.
+  // NF_ND can still compress to NF (both remain EVEX).
+  assert((IsND || !(TSFlags & X86II::EVEX_NF)) &&
+         "Unexpected to compress NF instructions without ND.");
 
   const MCInstrDesc &NewDesc = ST.getInstrInfo()->get(NewOpc);
   MI.setDesc(NewDesc);
@@ -327,7 +573,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
   return true;
 }
 
-bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
+static bool runOnMF(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Start X86CompressEVEXPass\n";);
 #ifndef NDEBUG
   // Make sure the tables are sorted.
@@ -339,22 +585,44 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
   }
 #endif
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
-  if (!ST.hasAVX512() && !ST.hasEGPR() && !ST.hasNDD())
+  if (!ST.hasAVX512() && !ST.hasEGPR() && !ST.hasNDD() && !ST.hasZU())
     return false;
 
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-    // Traverse the basic block.
-    for (MachineInstr &MI : llvm::make_early_inc_range(MBB))
-      Changed |= CompressEVEXImpl(MI, MBB, ST);
+    SmallVector<MachineInstr *, 4> ToErase;
+
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      Changed |= CompressEVEXImpl(MI, MBB, ST, ToErase);
+    }
+
+    for (MachineInstr *MI : ToErase) {
+      MI->eraseFromParent();
+    }
   }
   LLVM_DEBUG(dbgs() << "End X86CompressEVEXPass\n";);
   return Changed;
 }
 
-INITIALIZE_PASS(CompressEVEXPass, COMP_EVEX_NAME, COMP_EVEX_DESC, false, false)
+INITIALIZE_PASS(CompressEVEXLegacy, COMP_EVEX_NAME, COMP_EVEX_DESC, false,
+                false)
 
-FunctionPass *llvm::createX86CompressEVEXPass() {
-  return new CompressEVEXPass();
+FunctionPass *llvm::createX86CompressEVEXLegacyPass() {
+  return new CompressEVEXLegacy();
+}
+
+bool CompressEVEXLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runOnMF(MF);
+}
+
+PreservedAnalyses
+X86CompressEVEXPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runOnMF(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx1250 <%s | FileCheck %s --check-prefixes=CHECK
+; RUN: llc -mtriple=amdgpu12.50--amdpal <%s | FileCheck %s --check-prefixes=CHECK
 
 ; CHECK-LABEL: {{^}}_amdgpu_cs_main:
 ; CHECK: ; TotalNumSgprs: 4
@@ -118,7 +118,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x2
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .hs:
@@ -130,7 +130,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x2
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .ps:
@@ -142,7 +142,7 @@
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
-; CHECK-NEXT:        .sgpr_count:     0x1
+; CHECK-NEXT:        .sgpr_count:     0x2
 ; CHECK-NEXT:        .vgpr_count:     0x1
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK:    .registers:      {}
@@ -200,7 +200,7 @@ declare i64 @llvm.amdgcn.s.getpc() #2
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
 declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg) #3
 
-attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="4" "denormal-fp-math-f32"="preserve-sign" }
+attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="4" denormal_fpenv(float: preservesign) }
 
 attributes #1 = { nounwind memory(readwrite) "InitialPSInputAddr"="36983" }
 

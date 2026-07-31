@@ -16,7 +16,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF4 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -25,7 +25,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF4 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s8>) = COPY $v8
@@ -48,7 +48,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_MF2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_MF2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -57,7 +57,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_MF2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_MF2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s8>) = COPY $v8
@@ -80,7 +80,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF8_M1 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF8_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -89,7 +89,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF8_M1 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF8_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s8>) = COPY $v8
@@ -112,7 +112,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF2 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -121,7 +121,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF2 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 2 x s8>) = COPY $v8
@@ -144,7 +144,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_M1 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -153,7 +153,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_M1 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 2 x s8>) = COPY $v8
@@ -176,7 +176,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF8_M2 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF8_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -185,7 +185,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF8_M2 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF8_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 2 x s8>) = COPY $v8
@@ -208,7 +208,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -217,7 +217,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 4 x s8>) = COPY $v8
@@ -240,7 +240,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF4_M2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF4_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -249,7 +249,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF4_M2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF4_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 4 x s8>) = COPY $v8
@@ -272,7 +272,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF8_M4 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF8_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -281,7 +281,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF8_M4 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF8_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 4 x s8>) = COPY $v8
@@ -304,7 +304,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -313,7 +313,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 8 x s8>) = COPY $v8
@@ -336,7 +336,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF4_M4 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF4_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -345,7 +345,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF4_M4 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF4_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 8 x s8>) = COPY $v8
@@ -368,7 +368,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF8_M8 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF8_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -377,7 +377,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF8_M8 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF8_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 8 x s8>) = COPY $v8
@@ -400,7 +400,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -409,7 +409,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 16 x s8>) = COPY $v8m2
@@ -432,7 +432,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -441,7 +441,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 16 x s8>) = COPY $v8m2
@@ -464,7 +464,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -473,7 +473,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1, 4 /* e16 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 4 /* e16 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 32 x s8>) = COPY $v8m4
@@ -496,7 +496,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -505,7 +505,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_MF2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s16>) = COPY $v8
@@ -528,7 +528,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_M1 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -537,7 +537,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_M1 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF4_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s16>) = COPY $v8
@@ -560,7 +560,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -569,7 +569,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 2 x s16>) = COPY $v8
@@ -592,7 +592,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF4_M2 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF4_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -601,7 +601,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF4_M2 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF4_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 2 x s16>) = COPY $v8
@@ -624,7 +624,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -633,7 +633,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -656,7 +656,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF4_M4 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF4_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -665,7 +665,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF4_M4 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF4_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 4 x s16>) = COPY $v8
@@ -688,7 +688,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -697,7 +697,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 8 x s16>) = COPY $v8m2
@@ -720,7 +720,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -729,7 +729,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF4_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 8 x s16>) = COPY $v8m2
@@ -752,7 +752,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -761,7 +761,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1, 5 /* e32 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 16 x s16>) = COPY $v8m4
@@ -784,7 +784,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8
     ;
@@ -793,7 +793,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vr = PseudoVZEXT_VF2_M1 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
     %0:vrb(<vscale x 1 x s32>) = COPY $v8
@@ -816,7 +816,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m2 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m2
     ;
@@ -825,7 +825,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm2 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm2 = PseudoVZEXT_VF2_M2 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m2 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m2
     %0:vrb(<vscale x 2 x s32>) = COPY $v8
@@ -848,7 +848,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m4 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m4
     ;
@@ -857,7 +857,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm2 = COPY $v8m2
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm4 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm4 = PseudoVZEXT_VF2_M4 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m4 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m4
     %0:vrb(<vscale x 4 x s32>) = COPY $v8m2
@@ -880,7 +880,7 @@ body:             |
     ; RV32I-NEXT: {{  $}}
     ; RV32I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV32I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV32I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV32I-NEXT: $v8m8 = COPY %1
     ; RV32I-NEXT: PseudoRET implicit $v8m8
     ;
@@ -889,7 +889,7 @@ body:             |
     ; RV64I-NEXT: {{  $}}
     ; RV64I-NEXT: [[COPY:%[0-9]+]]:vrm4 = COPY $v8m4
     ; RV64I-NEXT: [[DEF:%[0-9]+]]:vrm8 = IMPLICIT_DEF
-    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1, 6 /* e64 */, 3 /* ta, ma */
+    ; RV64I-NEXT: early-clobber %1:vrm8 = PseudoVZEXT_VF2_M8 [[DEF]], [[COPY]], -1 /* vl=VLMAX */, 6 /* e64 */, 3 /* ta, ma */
     ; RV64I-NEXT: $v8m8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8m8
     %0:vrb(<vscale x 8 x s32>) = COPY $v8m4

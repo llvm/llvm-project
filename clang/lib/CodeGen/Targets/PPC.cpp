@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -128,7 +129,37 @@ public:
 
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  using ABIInfo::appendAttributeMangling;
+  void appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                               raw_ostream &Out) const override;
+  void appendAttributeMangling(StringRef AttrStr,
+                               raw_ostream &Out) const override;
 };
+
+void AIXABIInfo::appendAttributeMangling(TargetClonesAttr *Attr, unsigned Index,
+                                         raw_ostream &Out) const {
+  appendAttributeMangling(Attr->getFeatureStr(Index), Out);
+}
+
+void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
+                                         raw_ostream &Out) const {
+  if (AttrStr == "default") {
+    Out << ".default";
+    return;
+  }
+
+  const TargetInfo &TI = CGT.getTarget();
+  ParsedTargetAttr Info = TI.parseTargetAttr(AttrStr);
+
+  if (!Info.CPU.empty()) {
+    assert(Info.Features.empty() && "cannot have both a CPU and a feature");
+    Out << ".cpu_" << Info.CPU;
+    return;
+  }
+
+  assert(0 && "specifying target features on an FMV is unsupported on AIX");
+}
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {
   const bool Is64Bit;
@@ -1016,15 +1047,19 @@ void PPC64_SVR4_TargetCodeGenInfo::emitTargetMetadata(
   if (CGM.getTypes().isLongDoubleReferenced()) {
     llvm::LLVMContext &Ctx = CGM.getLLVMContext();
     const auto *flt = &CGM.getTarget().getLongDoubleFormat();
+    std::optional<llvm::LongDoubleFormat> Format;
     if (flt == &llvm::APFloat::PPCDoubleDouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "doubledouble"));
+      Format = llvm::LongDoubleFormat::PPCDoubleDouble;
     else if (flt == &llvm::APFloat::IEEEquad())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeequad"));
+      Format = llvm::LongDoubleFormat::IEEEquad;
     else if (flt == &llvm::APFloat::IEEEdouble())
-      CGM.getModule().addModuleFlag(llvm::Module::Error, "float-abi",
-                                    llvm::MDString::get(Ctx, "ieeedouble"));
+      Format = llvm::LongDoubleFormat::IEEEdouble;
+
+    if (Format) {
+      CGM.getModule().addModuleFlag(
+          llvm::Module::Error, "long-double-type",
+          llvm::MDString::get(Ctx, llvm::getLongDoubleFormatName(*Format)));
+    }
   }
 }
 

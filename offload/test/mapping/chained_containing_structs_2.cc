@@ -1,5 +1,4 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
-// XFAIL: *
 
 #include <cstdlib>
 #include <cstdio>

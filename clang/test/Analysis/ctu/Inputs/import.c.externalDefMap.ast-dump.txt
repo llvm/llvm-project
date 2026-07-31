@@ -1,0 +1,1 @@
+23:c:@F@testStaticImplicit import.c.ast

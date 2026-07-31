@@ -37,6 +37,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -257,6 +258,9 @@ void HTMLDiagnostics::FlushDiagnosticsImpl(
 
 void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
                                  FilesMade *filesMade) {
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
   // Create the HTML directory if it is missing.
   if (!createdDir) {
     createdDir = true;
@@ -782,6 +786,10 @@ static void HandlePopUpPieceEndTag(Rewriter &R,
 
 void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
                                   FileID FID) {
+  // Add line numbers first, so that tags inserted later at end-of-line
+  // offsets (e.g. pop-up closing tags) end up inside the row.
+  html::EscapeText(R, FID);
+  html::AddLineNumbers(R, FID);
 
   // Process the path.
   // Maintain the counts of extra note pieces separately.
@@ -872,10 +880,6 @@ void HTMLDiagnostics::RewriteFile(Rewriter &R, const PathPieces &path,
 
   // Add the <table> start tag of pop-up pieces based on the stored ranges.
   HandlePopUpPieceStartTag(R, PopUpRanges);
-
-  // Add line numbers, header, footer, etc.
-  html::EscapeText(R, FID);
-  html::AddLineNumbers(R, FID);
 
   addArrowSVGs(R, FID, ArrowIndices);
 
@@ -1092,8 +1096,11 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
   os << "</div></td></tr>";
 
-  // Insert the new html.
+  // Insert the new html after the newline, so that the bubble's row lands
+  // between the current line's row and the next line's row.
   unsigned DisplayPos = LineEnd - FileStart;
+  if (LineEnd != FileEnd)
+    ++DisplayPos;
   SourceLocation Loc =
     SM.getLocForStartOfFile(LPosInfo.first).getLocWithOffset(DisplayPos);
 

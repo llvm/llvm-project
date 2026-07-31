@@ -4,7 +4,7 @@
 ; The current function's frame address is the address of
 ; the optional back chain slot.
 define ptr @fp0() nounwind {
-; CHECK-LABEL: fp0:
+; CHECK-LABEL: fp0 DS 0H
 ; CHECK:         la 3,2048(4)
 ; CHECK-NEXT:    b 2(7)
 entry:
@@ -15,9 +15,12 @@ entry:
 ; Check that the frame address is correct in a presence
 ; of a stack frame.
 define ptr @fp0f() nounwind {
-; CHECK-LABEL: fp0f:
+; CHECK-LABEL: fp0f DS 0H
 ; CHECK:         stmg 6,7,1904(4)
+; CHECK-NEXT:    L#stack_update0 DS 0H
 ; CHECK-NEXT:    aghi 4,-160
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:    L#end_of_prologue0 DS 0H
 ; CHECK-NEXT:    la 3,2048(4)
 ; CHECK-NEXT:    lg 7,2072(4)
 ; CHECK-NEXT:    aghi 4,160
@@ -30,7 +33,7 @@ entry:
 
 ; Check the caller's frame address.
 define ptr @fpcaller() nounwind "backchain" {
-; CHECK-LABEL: fpcaller:
+; CHECK-LABEL: fpcaller DS 0H
 ; CHECK:         stmg 4,7,2048(4)
 ; CHECK-NEXT:    lg 3,2048(4)
 ; CHECK-NEXT:    lmg 4,7,2048(4)
@@ -42,7 +45,7 @@ entry:
 
 ; Check the caller's frame address.
 define ptr @fpcallercaller() nounwind "backchain" {
-; CHECK-LABEL: fpcallercaller:
+; CHECK-LABEL: fpcallercaller DS 0H
 ; CHECK:         stmg 4,7,2048(4)
 ; CHECK-NEXT:    lg 1,2048(4)
 ; CHECK-NEXT:    lg 3,0(1)

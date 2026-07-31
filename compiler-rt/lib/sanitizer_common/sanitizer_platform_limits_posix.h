@@ -14,7 +14,7 @@
 #ifndef SANITIZER_PLATFORM_LIMITS_POSIX_H
 #define SANITIZER_PLATFORM_LIMITS_POSIX_H
 
-#if SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU
+#if SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU || SANITIZER_AIX
 
 #  include "sanitizer_internal_defs.h"
 #  include "sanitizer_mallinfo.h"
@@ -29,9 +29,11 @@
 #      define SANITIZER_HAS_STAT64 0
 #      define SANITIZER_HAS_STATFS64 0
 #    endif
-#  elif SANITIZER_GLIBC || SANITIZER_ANDROID
+#  elif SANITIZER_GLIBC || SANITIZER_ANDROID || SANITIZER_AIX
 #    define SANITIZER_HAS_STAT64 1
 #    define SANITIZER_HAS_STATFS64 1
+#  elif SANITIZER_HAIKU
+#    include <stdint.h>
 #  endif
 
 #  if defined(__sparc__)
@@ -101,9 +103,15 @@ const unsigned struct_kernel_stat64_sz = 104;
 const unsigned struct_kernel_stat_sz = SANITIZER_ANDROID
                                            ? FIRST_32_SECOND_64(104, 128)
 #      if defined(_ABIN32) && _MIPS_SIM == _ABIN32
+#        if defined(_TIME_BITS) && _TIME_BITS == 64
+                                           : FIRST_32_SECOND_64(112, 216);
+#        else
                                            : FIRST_32_SECOND_64(176, 216);
+#        endif
 #      elif SANITIZER_MUSL
                                            : FIRST_32_SECOND_64(160, 208);
+#      elif defined(_TIME_BITS) && _TIME_BITS == 64
+                                           : FIRST_32_SECOND_64(112, 216);
 #      else
                                            : FIRST_32_SECOND_64(160, 216);
 #      endif
@@ -131,6 +139,9 @@ const unsigned struct_kernel_stat64_sz = 0;
 #    elif defined(__loongarch__)
 const unsigned struct_kernel_stat_sz = 128;
 const unsigned struct_kernel_stat64_sz = 0;
+#    elif defined(__alpha__)
+const unsigned struct_kernel_stat_sz = 80;
+const unsigned struct_kernel_stat64_sz = 136;
 #    endif
 struct __sanitizer_perf_event_attr {
   unsigned type;
@@ -321,7 +332,7 @@ struct __sanitizer_iovec {
   usize iov_len;
 };
 
-#  if !SANITIZER_ANDROID
+#  if !SANITIZER_ANDROID && !SANITIZER_AIX
 struct __sanitizer_ifaddrs {
   struct __sanitizer_ifaddrs *ifa_next;
   char *ifa_name;
@@ -335,7 +346,7 @@ struct __sanitizer_ifaddrs {
   void *ifa_dstaddr;  // (struct sockaddr *)
   void *ifa_data;
 };
-#  endif  // !SANITIZER_ANDROID
+#  endif  // !SANITIZER_ANDROID && !SANITIZER_AIX
 
 #  if SANITIZER_APPLE
 typedef unsigned long __sanitizer_pthread_key_t;
@@ -343,7 +354,7 @@ typedef unsigned long __sanitizer_pthread_key_t;
 typedef unsigned __sanitizer_pthread_key_t;
 #  endif
 
-#  if SANITIZER_LINUX && !SANITIZER_ANDROID
+#  if (SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_AIX
 
 struct __sanitizer_XDR {
   int x_op;
@@ -438,12 +449,14 @@ struct __sanitizer_tm {
   int tm_wday;
   int tm_yday;
   int tm_isdst;
-#  if SANITIZER_HAIKU
+#  if !SANITIZER_AIX
+#    if SANITIZER_HAIKU
   int tm_gmtoff;
 #  else
   long int tm_gmtoff;
 #  endif
   const char *tm_zone;
+#  endif
 };
 
 #  if SANITIZER_LINUX
@@ -511,11 +524,19 @@ struct __sanitizer_msghdr {
   struct __sanitizer_iovec *msg_iov;
   uptr msg_iovlen;
   void *msg_control;
+#    if !SANITIZER_AIX
   uptr msg_controllen;
+#    else
+  unsigned msg_controllen;
+#    endif
   int msg_flags;
 };
 struct __sanitizer_cmsghdr {
+#    if !SANITIZER_AIX
   uptr cmsg_len;
+#    else
+  unsigned cmsg_len;
+#    endif
   int cmsg_level;
   int cmsg_type;
 };
@@ -552,10 +573,23 @@ struct __sanitizer_dirent {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
+#  elif defined(__alpha__)
+struct __sanitizer_dirent {
+  unsigned int d_ino;  // ino_t is 32-bit on Alpha
+  int __pad;           // explicit padding before d_off
+  unsigned long d_off;
+  unsigned short d_reclen;
+  // more fields that we don't care about
+};
 #  else
 struct __sanitizer_dirent {
+#    if SANITIZER_AIX
+  uptr d_offset;
+  uptr d_ino;
+#    else
   uptr d_ino;
   uptr d_off;
+#    endif
   unsigned short d_reclen;
   // more fields that we don't care about
 };
@@ -571,7 +605,7 @@ struct __sanitizer_dirent64 {
 extern unsigned struct_sock_fprog_sz;
 #  endif
 
-#  if SANITIZER_HAIKU
+#  if SANITIZER_HAIKU || SANITIZER_AIX
 typedef int __sanitizer_clock_t;
 #  elif defined(__x86_64__) && !defined(_LP64)
 typedef long long __sanitizer_clock_t;
@@ -579,8 +613,10 @@ typedef long long __sanitizer_clock_t;
 typedef long __sanitizer_clock_t;
 #  endif
 
-#  if SANITIZER_LINUX || SANITIZER_HAIKU
+#  if SANITIZER_LINUX || SANITIZER_HAIKU || SANITIZER_AIX
 typedef int __sanitizer_clockid_t;
+#  endif
+#  if SANITIZER_LINUX || SANITIZER_HAIKU
 typedef unsigned long long __sanitizer_eventfd_t;
 #  endif
 
@@ -629,11 +665,19 @@ typedef unsigned long __sanitizer_sigset_t;
 #  elif SANITIZER_APPLE
 typedef unsigned __sanitizer_sigset_t;
 #  elif SANITIZER_HAIKU
-typedef unsigned long __sanitizer_sigset_t;
+typedef uint64_t __sanitizer_sigset_t;
 #  elif SANITIZER_LINUX
 struct __sanitizer_sigset_t {
   // The size is determined by looking at sizeof of real sigset_t on linux.
   uptr val[128 / sizeof(uptr)];
+};
+#  elif SANITIZER_AIX
+struct __sanitizer_sigset_t {
+#    if SANITIZER_WORDSIZE == 64
+  uptr val[4];
+#    else
+  uptr val[2];
+#    endif
 };
 #  endif
 
@@ -739,7 +783,7 @@ struct __sanitizer_sigaction {
 #        endif
 #      endif
 #    endif
-#    if SANITIZER_LINUX || SANITIZER_HAIKU
+#    if (SANITIZER_LINUX || SANITIZER_HAIKU) && !defined(__alpha__)
   void (*sa_restorer)();
 #    endif
 #    if defined(__mips__) && (SANITIZER_WORDSIZE == 32) && !SANITIZER_MUSL
@@ -826,8 +870,12 @@ struct __sanitizer_addrinfo {
   int ai_family;
   int ai_socktype;
   int ai_protocol;
-#  if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_HAIKU
+#  if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_HAIKU || SANITIZER_AIX
+#    if SANITIZER_AIX  // AIX ai_addrlen type is size_t
+  uptr ai_addrlen;
+#    else
   unsigned ai_addrlen;
+#    endif
   char *ai_canonname;
   void *ai_addr;
 #  else  // LINUX
@@ -836,6 +884,9 @@ struct __sanitizer_addrinfo {
   char *ai_canonname;
 #  endif
   struct __sanitizer_addrinfo *ai_next;
+#  if SANITIZER_AIX
+  int ai_eflags;
+#  endif
 };
 
 struct __sanitizer_hostent {
@@ -852,7 +903,7 @@ struct __sanitizer_pollfd {
   short revents;
 };
 
-#  if SANITIZER_ANDROID || SANITIZER_APPLE
+#  if SANITIZER_ANDROID || SANITIZER_APPLE || SANITIZER_AIX
 typedef unsigned __sanitizer_nfds_t;
 #  else
 typedef unsigned long __sanitizer_nfds_t;
@@ -890,6 +941,10 @@ struct __sanitizer_wordexp_t {
   uptr we_wordc;
   char **we_wordv;
   uptr we_offs;
+#  if SANITIZER_AIX
+  int we_sflags;
+  uptr we_soffs;
+#  endif
 };
 
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID
@@ -1021,7 +1076,7 @@ struct __sanitizer_cookie_io_functions_t {
 #  define IOC_NRBITS 8
 #  define IOC_TYPEBITS 8
 #  if defined(__powerpc__) || defined(__powerpc64__) || defined(__mips__) || \
-      defined(__sparc__)
+      defined(__sparc__) || defined(__alpha__)
 #    define IOC_SIZEBITS 13
 #    define IOC_DIRBITS 3
 #    define IOC_NONE 1U
@@ -1191,7 +1246,9 @@ extern unsigned IOCTL_TIOCMGET;
 extern unsigned IOCTL_TIOCMSET;
 extern unsigned IOCTL_TIOCNXCL;
 extern unsigned IOCTL_TIOCOUTQ;
+#  if !SANITIZER_AIX
 extern unsigned IOCTL_TIOCSCTTY;
+#  endif
 extern unsigned IOCTL_TIOCSPGRP;
 extern unsigned IOCTL_TIOCSWINSZ;
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID
@@ -1591,6 +1648,7 @@ extern const int si_SEGV_ACCERR;
 typedef void *__sanitizer_timer_t;
 #  endif
 
-#endif  // SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU
+#endif  // SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU ||
+        // SANITIZER_AIX
 
 #endif

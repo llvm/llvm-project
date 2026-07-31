@@ -222,23 +222,24 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   bool shouldSink(const MachineInstr &MI) const override;
 
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   MachineInstr &
   duplicate(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
             const MachineInstr &Orig) const override;
 
   const MachineInstrBuilder &AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
-                                     unsigned SubIdx, unsigned State) const;
+                                     unsigned SubIdx, RegState State) const;
 
   bool produceSameValue(const MachineInstr &MI0, const MachineInstr &MI1,
                         const MachineRegisterInfo *MRI) const override;
@@ -303,10 +304,6 @@ public:
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
-
-  bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
@@ -385,8 +382,9 @@ public:
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.
-  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> analyzeLoopForPipelining(
+      MachineBasicBlock *LoopBB,
+      MachineOptimizationRemarkEmitter *ORE = nullptr) const override;
 
 private:
   /// Returns an unused general-purpose register which can be used for
@@ -418,8 +416,6 @@ private:
   /// and updates it if requested.
   bool checkAndUpdateStackOffset(MachineInstr *MI, int64_t Fixup,
                                  bool Updt) const;
-
-  unsigned getInstBundleLength(const MachineInstr &MI) const;
 
   std::optional<unsigned> getVLDMDefCycle(const InstrItineraryData *ItinData,
                                           const MCInstrDesc &DefMCID,

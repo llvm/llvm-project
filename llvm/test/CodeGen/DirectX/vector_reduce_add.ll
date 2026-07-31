@@ -22,7 +22,7 @@ define noundef half @test_length_half2_start1(<2 x half> noundef %p0) {
 ; CHECK-SAME: <2 x half> noundef [[P0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x half> [[P0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd half [[TMP0]], 0xH0001
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd half [[TMP0]], 5.960460e-08
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x half> [[P0]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd half [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret half [[TMP3]]

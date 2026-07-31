@@ -11,7 +11,7 @@ define i64 @pr97452_scalable_vf1_for(ptr %src, ptr noalias %dst) #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i32 [[TMP3]], 2
@@ -36,17 +36,7 @@ define i64 @pr97452_scalable_vf1_for(ptr %src, ptr noalias %dst) #0 {
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = sub i64 [[TMP12]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP15]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP18:%.*]] = mul nuw i64 [[TMP17]], 2
-; CHECK-NEXT:    [[TMP19:%.*]] = mul i64 [[TMP18]], 0
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 2 x i64> [[VP_OP_LOAD]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP22:%.*]] = mul nuw i32 [[TMP21]], 2
-; CHECK-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP22]], 1
-; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 2 x i64> [[VECTOR_RECUR]], i32 [[TMP23]]
-; CHECK-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[TMP15]], 0
-; CHECK-NEXT:    [[TMP26:%.*]] = select i1 [[TMP25]], i64 [[TMP24]], i64 [[TMP20]]
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <vscale x 2 x i64> [[TMP10]], i64 [[TMP15]]
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i64 [[TMP26]]

@@ -21,33 +21,33 @@ end program allocate_tree
 !CHECK:      DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | OmpBeginDirective
 !CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = allocate
-!CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'w'
+!CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'w'
 !CHECK-NEXT: | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '3_8'
 !CHECK-NEXT: | | | Designator -> DataRef -> Name = 'omp_const_mem_alloc'
-!CHECK-NEXT: | | Flags = None
+!CHECK-NEXT: | | Flags = {}
 !CHECK-NEXT: | Block
 
 !CHECK:      ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | OmpBeginDirective
 !CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = allocate
-!CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
+!CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
 !CHECK-NEXT: | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '2_8'
 !CHECK-NEXT: | | | Designator -> DataRef -> Name = 'omp_large_cap_mem_alloc'
-!CHECK-NEXT: | | Flags = None
+!CHECK-NEXT: | | Flags = {}
 !CHECK-NEXT: | Block
 !CHECK-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | | | OmpBeginDirective
 !CHECK-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = allocate
-!CHECK-NEXT: | | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'zarray'
+!CHECK-NEXT: | | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'zarray'
 !CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Allocator -> Scalar -> Integer -> Expr = '1_8'
 !CHECK-NEXT: | | | | | Designator -> DataRef -> Name = 'omp_default_mem_alloc'
-!CHECK-NEXT: | | | | Flags = None
+!CHECK-NEXT: | | | | Flags = {}
 !CHECK-NEXT: | | | Block
 !CHECK-NEXT: | | | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | | | | | OmpBeginDirective
 !CHECK-NEXT: | | | | | | OmpDirectiveName -> llvm::omp::Directive = allocate
 !CHECK-NEXT: | | | | | | OmpClauseList ->
-!CHECK-NEXT: | | | | | | Flags = None
+!CHECK-NEXT: | | | | | | Flags = {}
 !CHECK-NEXT: | | | | | Block
 !CHECK-NEXT: | | | | | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
 

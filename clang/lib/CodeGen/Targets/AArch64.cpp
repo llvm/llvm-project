@@ -412,6 +412,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
         case BuiltinType::SveBoolx4:
           NPRN = std::min(NPRN + 4, 4u);
           break;
+        case BuiltinType::MFloat8:
+          NSRN = std::min(NSRN + 1, 8u);
+          break;
         default:
           if (BT->isSVESizelessBuiltinType())
             NSRN = std::min(
@@ -971,7 +974,7 @@ RValue AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
         reg_offs, llvm::ConstantInt::get(CGF.Int32Ty, Align - 1),
         "align_regoffs");
     reg_offs = CGF.Builder.CreateAnd(
-        reg_offs, llvm::ConstantInt::get(CGF.Int32Ty, -Align),
+        reg_offs, llvm::ConstantInt::getSigned(CGF.Int32Ty, -Align),
         "aligned_regoffs");
   }
 
@@ -1164,6 +1167,7 @@ RValue AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
 
 RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
                                    QualType Ty, AggValueSlot Slot) const {
+  bool AllowHigherAlign = false;
   bool IsIndirect = false;
 
   if (getTarget().getTriple().isWindowsArm64EC()) {
@@ -1172,6 +1176,10 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
     uint64_t Width = getContext().getTypeSize(Ty);
     IsIndirect = Width > 64 || !llvm::isPowerOf2_64(Width);
   } else {
+    // E.g. __int128 when passed is aligned to 16 bytes, so it must be read
+    // with the same alignment.
+    AllowHigherAlign = true;
+
     // Composites larger than 16 bytes are passed by reference.
     if (isAggregateTypeForABI(Ty) && getContext().getTypeSize(Ty) > 128)
       IsIndirect = true;
@@ -1179,8 +1187,7 @@ RValue AArch64ABIInfo::EmitMSVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   return emitVoidPtrVAArg(CGF, VAListAddr, Ty, IsIndirect,
                           CGF.getContext().getTypeInfoInChars(Ty),
-                          CharUnits::fromQuantity(8),
-                          /*allowHigherAlign*/ false, Slot);
+                          CharUnits::fromQuantity(8), AllowHigherAlign, Slot);
 }
 
 static bool isStreamingCompatible(const FunctionDecl *F) {
@@ -1359,9 +1366,10 @@ void AArch64ABIInfo::appendAttributeMangling(StringRef AttrStr,
 
   llvm::SmallDenseSet<StringRef, 8> UniqueFeats;
   for (auto &Feat : Features)
-    if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
-      if (UniqueFeats.insert(Ext->Name).second)
-        Out << 'M' << Ext->Name;
+    if (getTarget().doesFeatureAffectCodeGen(Feat))
+      if (auto Ext = llvm::AArch64::parseFMVExtension(Feat))
+        if (UniqueFeats.insert(Ext->Name).second)
+          Out << 'M' << Ext->Name;
 }
 
 std::unique_ptr<TargetCodeGenInfo>

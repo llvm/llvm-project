@@ -43,6 +43,18 @@ enum ObjCXXARCStandardLibraryKind {
   ARCXX_libstdcxx
 };
 
+/// How to initialize the date/time macros.
+enum DateTimeInitKind {
+  /// Set to the current date and time.
+  Default = 0,
+
+  /// Set to literal string "1".
+  LiteralOne = 1,
+
+  /// Keep undefined.
+  Undefined = 2
+};
+
 /// Whether to disable the normal validation performed on precompiled
 /// headers and module files when they are loaded.
 enum class DisableValidationForModuleKind {
@@ -152,6 +164,13 @@ public:
   /// that the client can get the maximum amount of information from the parser.
   bool SingleFileParseMode = false;
 
+  /// When enabled, preprocessor is in a mode for parsing a single module only.
+  ///
+  /// Disables imports of other modules and if there are any unresolved
+  /// identifiers in preprocessor directive conditions it causes all blocks to
+  /// be skipped so that the client can get a strict subset of the contents.
+  bool SingleModuleParseMode = false;
+
   /// When enabled, the preprocessor will construct editor placeholder tokens.
   bool LexEditorPlaceholders = true;
 
@@ -201,6 +220,10 @@ public:
   /// The initial value for __COUNTER__; typically is zero but can be set via a
   /// -cc1 flag for testing purposes.
   uint32_t InitialCounterValue = 0;
+
+  /// Specify initialization kind for __DATE__, __TIME__ and __TIMESTAMP__
+  /// macros.
+  DateTimeInitKind InitDateTimeMacros = DateTimeInitKind::Default;
 
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}

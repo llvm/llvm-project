@@ -9,6 +9,9 @@ from lldbsuite.test import lldbutil
 
 
 class StdVectorDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
+
     def check_numbers(self, var_name, show_ptr=False):
         patterns = []
         substrs = [
@@ -107,18 +110,23 @@ class StdVectorDataFormatterTestCase(TestBase):
         )
 
         # check access to synthetic children
+        int_vect = (
+            "std::vector<int, std::allocator<int>>"
+            if self.getDebugInfo() == "pdb"
+            else "int_vect"
+        )
         self.runCmd(
-            'type summary add --summary-string "item 0 is ${var[0]}" std::int_vect int_vect'
+            f'type summary add --summary-string "item 0 is ${{var[0]}}" std::int_vect "{int_vect}"'
         )
         self.expect("frame variable numbers", substrs=["item 0 is 1"])
 
         self.runCmd(
-            'type summary add --summary-string "item 0 is ${svar[0]}" std::int_vect int_vect'
+            f'type summary add --summary-string "item 0 is ${{svar[0]}}" "std::int_vect" "{int_vect}"'
         )
         self.expect("frame variable numbers", substrs=["item 0 is 1"])
         # move on with synths
         self.runCmd("type summary delete std::int_vect")
-        self.runCmd("type summary delete int_vect")
+        self.runCmd(f'type summary delete "{int_vect}"')
 
         # add some more data
         lldbutil.continue_to_breakpoint(process, bkpt)
@@ -143,8 +151,13 @@ class StdVectorDataFormatterTestCase(TestBase):
         self.expect("expression strings", substrs=["goofy", "is", "smart"])
 
         # test summaries based on synthetic children
+        string_vect = (
+            "std::vector<std::basic_string<char, std::char_traits<char>, std::allocator<char>>, std::allocator<std::basic_string<char, std::char_traits<char>, std::allocator<char>>>>"
+            if self.getDebugInfo() == "pdb"
+            else "string_vect"
+        )
         self.runCmd(
-            'type summary add std::string_vect string_vect --summary-string "vector has ${svar%#} items" -e'
+            f'type summary add std::string_vect "{string_vect}" --summary-string "vector has ${{svar%#}} items" -e'
         )
         self.expect(
             "frame variable strings",

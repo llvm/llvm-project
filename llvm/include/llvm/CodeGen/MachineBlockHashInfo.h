@@ -13,6 +13,7 @@
 #ifndef LLVM_CODEGEN_MACHINEBLOCKHASHINFO_H
 #define LLVM_CODEGEN_MACHINEBLOCKHASHINFO_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
@@ -80,6 +81,8 @@ public:
     return Dist;
   }
 
+  uint16_t getOpcodeHash() const { return OpcodeHash; }
+
 private:
   /// The offset of the basic block from the function start.
   uint16_t Offset{0};
@@ -93,8 +96,41 @@ private:
   uint16_t NeighborHash{0};
 };
 
-class MachineBlockHashInfo : public MachineFunctionPass {
+/// Result object for MachineBlockHashInfo.
+class MachineBlockHashInfoResult {
   DenseMap<const MachineBasicBlock *, uint64_t> MBBHashInfo;
+
+public:
+  LLVM_ABI MachineBlockHashInfoResult();
+  LLVM_ABI explicit MachineBlockHashInfoResult(const MachineFunction &MBB);
+  LLVM_ABI uint64_t getMBBHash(const MachineBasicBlock &MBB) const;
+};
+
+class MachineBlockHashInfoAnalysis
+    : public AnalysisInfoMixin<MachineBlockHashInfoAnalysis> {
+  friend AnalysisInfoMixin<MachineBlockHashInfoAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineBlockHashInfoResult;
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Printer pass for the \c MachineBlockHashInfoAnalysis results.
+class MachineBlockHashInfoPrinterPass
+    : public RequiredPassInfoMixin<MachineBlockHashInfoPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineBlockHashInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
+
+/// Legacy MachineFunctionPass for MachineBlockHashInfo.
+class LLVM_ABI MachineBlockHashInfo : public MachineFunctionPass {
+  MachineBlockHashInfoResult Result;
 
 public:
   static char ID;
@@ -106,7 +142,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
-  uint64_t getMBBHash(const MachineBasicBlock &MBB);
+  uint64_t getMBBHash(const MachineBasicBlock &MBB) const;
 };
 
 } // end namespace llvm

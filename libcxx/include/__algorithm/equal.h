@@ -11,15 +11,16 @@
 #define _LIBCPP___ALGORITHM_EQUAL_H
 
 #include <__algorithm/comp.h>
+#include <__algorithm/find_segment_if.h>
 #include <__algorithm/min.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__fwd/bit_reference.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
-#include <__memory/pointer_traits.h>
+#include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
+#include <__type_traits/common_type.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
@@ -27,6 +28,7 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
+#include <__utility/unreachable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -160,42 +162,95 @@ template <class _Cp,
           bool _IsConst1,
           bool _IsConst2,
           class _BinaryPredicate,
-          __enable_if_t<__desugars_to_v<__equal_tag, _BinaryPredicate, bool, bool>, int> = 0>
+          class _Proj1,
+          class _Proj2,
+          __enable_if_t<__is_identity<_Proj1>::value && __is_identity<_Proj2>::value &&
+                            __desugars_to_v<__equal_tag, _BinaryPredicate, bool, bool>,
+                        int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_iter_impl(
     __bit_iterator<_Cp, _IsConst1> __first1,
     __bit_iterator<_Cp, _IsConst1> __last1,
     __bit_iterator<_Cp, _IsConst2> __first2,
-    _BinaryPredicate) {
+    _BinaryPredicate,
+    _Proj1&,
+    _Proj2&) {
   if (__first1.__ctz_ == __first2.__ctz_)
     return std::__equal_aligned(__first1, __last1, __first2);
   return std::__equal_unaligned(__first1, __last1, __first2);
 }
 
-template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_iter_impl(
-    _InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate& __pred) {
-  for (; __first1 != __last1; ++__first1, (void)++__first2)
-    if (!__pred(*__first1, *__first2))
-      return false;
-  return true;
-}
-
 template <class _Tp,
           class _Up,
           class _BinaryPredicate,
-          __enable_if_t<__desugars_to_v<__equal_tag, _BinaryPredicate, _Tp, _Up> && !is_volatile<_Tp>::value &&
-                            !is_volatile<_Up>::value && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
+          class _Proj1,
+          class _Proj2,
+          __enable_if_t<__is_identity<_Proj1>::value && __is_identity<_Proj2>::value &&
+                            __desugars_to_v<__equal_tag, _BinaryPredicate, _Tp, _Up> && !is_volatile<_Tp>::value &&
+                            !is_volatile<_Up>::value && __is_trivially_equality_comparable_v<_Tp, _Up>,
                         int> = 0>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-__equal_iter_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _BinaryPredicate&) {
+__equal_iter_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _BinaryPredicate&, _Proj1&, _Proj2&) {
   return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
+}
+
+template <class _InIter1, class _Sent1, class _InIter2, class _Pred, class _Proj1, class _Proj2>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_iter_impl(
+    _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
+#ifndef _LIBCPP_CXX03_LANG
+  if constexpr (__has_random_access_iterator_category<_InIter1>::value &&
+                __has_random_access_iterator_category<_InIter2>::value) {
+    if constexpr (is_same<_InIter1, _Sent1>::value && __is_segmented_iterator_v<_InIter1>) {
+      using __local_iterator_t = typename __segmented_iterator_traits<_InIter1>::__local_iterator;
+      bool __is_equal          = true;
+      std::__find_segment_if(__first1, __last1, [&](__local_iterator_t __lfirst, __local_iterator_t __llast) {
+        if (std::__equal_iter_impl(
+                std::__unwrap_iter(__lfirst), std::__unwrap_iter(__llast), __first2, __pred, __proj1, __proj2)) {
+          __first2 += __llast - __lfirst;
+          return __llast;
+        }
+        __is_equal = false;
+        return __lfirst;
+      });
+      return __is_equal;
+    } else if constexpr (__is_segmented_iterator_v<_InIter2>) {
+      using _Traits = __segmented_iterator_traits<_InIter2>;
+      using _DiffT =
+          typename common_type<__iterator_difference_type<_InIter1>, __iterator_difference_type<_InIter2> >::type;
+
+      if (__first1 == __last1)
+        return true;
+
+      auto __local_first      = _Traits::__local(__first2);
+      auto __segment_iterator = _Traits::__segment(__first2);
+
+      while (true) {
+        auto __local_last = _Traits::__end(__segment_iterator);
+        auto __size       = std::min<_DiffT>(__local_last - __local_first, __last1 - __first1);
+        if (!std::__equal_iter_impl(
+                __first1, __first1 + __size, std::__unwrap_iter(__local_first), __pred, __proj1, __proj2))
+          return false;
+
+        __first1 += __size;
+        if (__first1 == __last1)
+          return true;
+
+        __local_first = _Traits::__begin(++__segment_iterator);
+      }
+    }
+  }
+#endif
+  for (; __first1 != __last1; ++__first1, (void)++__first2)
+    if (!std::__invoke(__pred, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2)))
+      return false;
+  return true;
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first2, _BinaryPredicate __pred) {
+  __identity __proj;
   return std::__equal_iter_impl(
-      std::__unwrap_iter(__first1), std::__unwrap_iter(__last1), std::__unwrap_iter(__first2), __pred);
+      std::__unwrap_iter(__first1), std::__unwrap_iter(__last1), std::__unwrap_iter(__first2), __pred, __proj, __proj);
 }
 
 template <class _InputIterator1, class _InputIterator2>
@@ -206,52 +261,28 @@ equal(_InputIterator1 __first1, _InputIterator1 __last1, _InputIterator2 __first
 
 #if _LIBCPP_STD_VER >= 14
 
-template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Pred, class _Proj1, class _Proj2>
+template <bool __known_equal_length,
+          class _Iter1,
+          class _Sent1,
+          class _Iter2,
+          class _Sent2,
+          class _Pred,
+          class _Proj1,
+          class _Proj2>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_impl(
     _Iter1 __first1, _Sent1 __last1, _Iter2 __first2, _Sent2 __last2, _Pred& __comp, _Proj1& __proj1, _Proj2& __proj2) {
-  while (__first1 != __last1 && __first2 != __last2) {
-    if (!std::__invoke(__comp, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2)))
-      return false;
-    ++__first1;
-    ++__first2;
+  if constexpr (__known_equal_length) {
+    return std::__equal_iter_impl(
+        std::move(__first1), std::move(__last1), std::move(__first2), __comp, __proj1, __proj2);
+  } else {
+    while (__first1 != __last1 && __first2 != __last2) {
+      if (!std::__invoke(__comp, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2)))
+        return false;
+      ++__first1;
+      ++__first2;
+    }
+    return __first1 == __last1 && __first2 == __last2;
   }
-  return __first1 == __last1 && __first2 == __last2;
-}
-
-template <class _Tp,
-          class _Up,
-          class _Pred,
-          class _Proj1,
-          class _Proj2,
-          __enable_if_t<__desugars_to_v<__equal_tag, _Pred, _Tp, _Up> && __is_identity<_Proj1>::value &&
-                            __is_identity<_Proj2>::value && !is_volatile<_Tp>::value && !is_volatile<_Up>::value &&
-                            __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
-                        int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-__equal_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _Up*, _Pred&, _Proj1&, _Proj2&) {
-  return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
-}
-
-template <class _Cp,
-          bool _IsConst1,
-          bool _IsConst2,
-          class _Pred,
-          class _Proj1,
-          class _Proj2,
-          __enable_if_t<__desugars_to_v<__equal_tag, _Pred, bool, bool> && __is_identity<_Proj1>::value &&
-                            __is_identity<_Proj2>::value,
-                        int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_impl(
-    __bit_iterator<_Cp, _IsConst1> __first1,
-    __bit_iterator<_Cp, _IsConst1> __last1,
-    __bit_iterator<_Cp, _IsConst2> __first2,
-    __bit_iterator<_Cp, _IsConst2>,
-    _Pred&,
-    _Proj1&,
-    _Proj2&) {
-  if (__first1.__ctz_ == __first2.__ctz_)
-    return std::__equal_aligned(__first1, __last1, __first2);
-  return std::__equal_unaligned(__first1, __last1, __first2);
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
@@ -261,13 +292,15 @@ equal(_InputIterator1 __first1,
       _InputIterator2 __first2,
       _InputIterator2 __last2,
       _BinaryPredicate __pred) {
-  if constexpr (__has_random_access_iterator_category<_InputIterator1>::value &&
-                __has_random_access_iterator_category<_InputIterator2>::value) {
-    if (std::distance(__first1, __last1) != std::distance(__first2, __last2))
+  constexpr bool __both_random_access =
+      __has_random_access_iterator_category<_InputIterator1>::value &&
+      __has_random_access_iterator_category<_InputIterator2>::value;
+  if constexpr (__both_random_access) {
+    if (__last1 - __first1 != __last2 - __first2)
       return false;
   }
   __identity __proj;
-  return std::__equal_impl(
+  return std::__equal_impl<__both_random_access>(
       std::__unwrap_iter(__first1),
       std::__unwrap_iter(__last1),
       std::__unwrap_iter(__first2),

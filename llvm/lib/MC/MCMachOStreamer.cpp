@@ -95,6 +95,7 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
+  void emitTargetTriple(StringRef TargetTriple) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -254,6 +255,10 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
                                            Minor, Update, SDKVersion);
 }
 
+void MCMachOStreamer::emitTargetTriple(StringRef TargetTriple) {
+  getWriter().setTargetTriple(TargetTriple);
+}
+
 bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
   auto *Symbol = static_cast<MCSymbolMachO *>(Sym);
@@ -299,6 +304,8 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
   case MCSA_Exported:
   case MCSA_Memtag:
   case MCSA_WeakAntiDep:
+  case MCSA_OSLinkage:
+  case MCSA_XPLinkage:
     return false;
 
   case MCSA_Global:

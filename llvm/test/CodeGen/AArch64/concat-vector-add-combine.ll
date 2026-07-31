@@ -60,16 +60,16 @@ define i16 @combine_add_16xi16(i16 %a, i16 %b, i16 %c, i16 %d, i16 %e, i16 %f, i
 define i32 @combine_add_8xi32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) local_unnamed_addr #0 {
 ; CHECK-LABEL: combine_add_8xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w4
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    mov v0.s[1], w5
-; CHECK-NEXT:    mov v1.s[1], w1
-; CHECK-NEXT:    mov v0.s[2], w6
-; CHECK-NEXT:    mov v1.s[2], w2
-; CHECK-NEXT:    mov v0.s[3], w7
-; CHECK-NEXT:    mov v1.s[3], w3
-; CHECK-NEXT:    uzp2 v2.8h, v1.8h, v0.8h
-; CHECK-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s1, w4
+; CHECK-NEXT:    mov v1.s[1], w5
+; CHECK-NEXT:    mov v0.s[1], w1
+; CHECK-NEXT:    mov v1.s[2], w6
+; CHECK-NEXT:    mov v0.s[2], w2
+; CHECK-NEXT:    mov v1.s[3], w7
+; CHECK-NEXT:    mov v0.s[3], w3
+; CHECK-NEXT:    uzp2 v2.8h, v0.8h, v1.8h
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    uhadd v0.8h, v0.8h, v2.8h
 ; CHECK-NEXT:    uaddlv s0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0

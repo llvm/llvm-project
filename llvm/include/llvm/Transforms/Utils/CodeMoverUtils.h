@@ -26,22 +26,7 @@ class DependenceInfo;
 class DominatorTree;
 class Instruction;
 class PostDominatorTree;
-
-/// Return true if \p I0 and \p I1 are control flow equivalent.
-/// Two instructions are control flow equivalent if their basic blocks are
-/// control flow equivalent.
-LLVM_ABI bool isControlFlowEquivalent(const Instruction &I0,
-                                      const Instruction &I1,
-                                      const DominatorTree &DT,
-                                      const PostDominatorTree &PDT);
-
-/// Return true if \p BB0 and \p BB1 are control flow equivalent.
-/// Two basic blocks are control flow equivalent if when one executes, the other
-/// is guaranteed to execute.
-LLVM_ABI bool isControlFlowEquivalent(const BasicBlock &BB0,
-                                      const BasicBlock &BB1,
-                                      const DominatorTree &DT,
-                                      const PostDominatorTree &PDT);
+class ScalarEvolution;
 
 /// Return true if \p I can be safely moved before \p InsertPoint.
 LLVM_ABI bool isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
@@ -59,18 +44,16 @@ LLVM_ABI bool isSafeToMoveBefore(BasicBlock &BB, Instruction &InsertPoint,
 
 /// Move instructions, in an order-preserving manner, from \p FromBB to the
 /// beginning of \p ToBB when proven safe.
-LLVM_ABI void moveInstructionsToTheBeginning(BasicBlock &FromBB,
-                                             BasicBlock &ToBB,
-                                             DominatorTree &DT,
-                                             const PostDominatorTree &PDT,
-                                             DependenceInfo &DI);
-
+LLVM_ABI void
+moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
+                               DominatorTree &DT, const PostDominatorTree &PDT,
+                               DependenceInfo &DI, ScalarEvolution &SE);
 /// Move instructions, in an order-preserving manner, from \p FromBB to the end
 /// of \p ToBB when proven safe.
 LLVM_ABI void moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
                                        DominatorTree &DT,
                                        const PostDominatorTree &PDT,
-                                       DependenceInfo &DI);
+                                       DependenceInfo &DI, ScalarEvolution &SE);
 
 /// In case that two BBs \p ThisBlock and \p OtherBlock are control flow
 /// equivalent but they do not strictly dominate and post-dominate each

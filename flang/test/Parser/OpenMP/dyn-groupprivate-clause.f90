@@ -20,7 +20,7 @@ end
 !PARSE-TREE: | OmpClauseList -> OmpClause -> DynGroupprivate -> OmpDynGroupprivateClause
 !PARSE-TREE: | | Scalar -> Integer -> Expr = 'n'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'n'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 
 subroutine f01(n)
@@ -43,7 +43,7 @@ end
 !PARSE-TREE: | | Modifier -> OmpFallbackModifier -> Value = Abort
 !PARSE-TREE: | | Scalar -> Integer -> Expr = 'n'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'n'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
 
 
 subroutine f02(n)
@@ -67,4 +67,4 @@ end
 !PARSE-TREE: | | Modifier -> OmpAccessGroup -> Value = Cgroup
 !PARSE-TREE: | | Scalar -> Integer -> Expr = 'n'
 !PARSE-TREE: | | | Designator -> DataRef -> Name = 'n'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}

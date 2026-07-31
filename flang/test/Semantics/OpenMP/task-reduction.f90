@@ -22,7 +22,7 @@ subroutine f02(p)
 end
 
 subroutine f03
-  common /c/ a, b 
+  common /c/ a, b
 !ERROR: Common block names are not allowed in TASK_REDUCTION clause
 !$omp taskgroup task_reduction(+: /c/)
 !$omp end taskgroup
@@ -66,7 +66,7 @@ end
 
 subroutine f08
   integer :: x
-!ERROR: Type parameter inquiry is not permitted in TASK_REDUCTION clause
+!ERROR: Type parameter inquiry is not allowed as a list item on TASK_REDUCTION clause
 !$omp taskgroup task_reduction(+: x%kind)
 !$omp end taskgroup
 end

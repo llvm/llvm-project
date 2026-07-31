@@ -58,7 +58,7 @@ enum WindowSchedulingFlag {
 
 /// The main class in the implementation of the target independent window
 /// scheduler.
-class WindowScheduler {
+class LLVM_ABI WindowScheduler {
 protected:
   MachineSchedContext *Context = nullptr;
   MachineFunction *MF = nullptr;
@@ -108,6 +108,10 @@ public:
   virtual ~WindowScheduler() = default;
 
   bool run();
+
+  /// Returns the Initiation Interval of the best scheduling result found, or
+  /// UINT_MAX if run() has not been called or found no valid schedule.
+  unsigned getBestII() const { return BestII; }
 
 protected:
   /// Two types of ScheduleDAGs are needed, one for creating dependency graphs

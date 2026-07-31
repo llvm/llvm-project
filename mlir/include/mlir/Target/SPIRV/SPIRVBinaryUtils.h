@@ -17,6 +17,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include <cstdint>
+#include <optional>
 
 namespace mlir {
 namespace spirv {
@@ -56,6 +57,25 @@ inline StringRef decodeStringLiteral(ArrayRef<uint32_t> words,
   StringRef str(reinterpret_cast<const char *>(words.data() + wordIndex));
   wordIndex += str.size() / 4 + 1;
   return str;
+}
+
+/// Returns the SPV_INTEL_long_composites continuation opcode that may follow
+/// `parent`, or std::nullopt if `parent` is not a splittable composite/struct
+/// op.
+inline std::optional<spirv::Opcode>
+getContinuationOpcode(spirv::Opcode parent) {
+  switch (parent) {
+  case spirv::Opcode::OpTypeStruct:
+    return spirv::Opcode::OpTypeStructContinuedINTEL;
+  case spirv::Opcode::OpConstantComposite:
+    return spirv::Opcode::OpConstantCompositeContinuedINTEL;
+  case spirv::Opcode::OpSpecConstantComposite:
+    return spirv::Opcode::OpSpecConstantCompositeContinuedINTEL;
+  case spirv::Opcode::OpCompositeConstruct:
+    return spirv::Opcode::OpCompositeConstructContinuedINTEL;
+  default:
+    return std::nullopt;
+  }
 }
 
 } // namespace spirv

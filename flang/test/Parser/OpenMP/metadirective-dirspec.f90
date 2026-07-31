@@ -26,7 +26,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = allocate
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f01(x)
@@ -52,7 +52,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = critical
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f02
@@ -164,7 +164,7 @@ end
 !PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_out'
 !PARSE-TREE: | | | | | | | | | | Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 
 subroutine f04
   !$omp metadirective when(user={condition(.true.)}: &
@@ -187,7 +187,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare simd
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f04'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'f04'
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: ImplicitPart ->
 
@@ -212,7 +212,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f05'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'f05'
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: ImplicitPart ->
 
@@ -239,8 +239,8 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = flush
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'y'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | | OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f07
@@ -266,5 +266,5 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = threadprivate
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 't'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 't'
 !PARSE-TREE: | | | OmpClauseList ->

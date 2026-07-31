@@ -193,11 +193,11 @@ class InParallelOp(InParallelOp):
 class IfOp(IfOp):
     """Specialization for the SCF if op class."""
 
-    def __init__(self, cond, results_=None, *, hasElse=False, loc=None, ip=None):
+    def __init__(self, cond, results_=None, *, has_else=False, loc=None, ip=None):
         """Creates an SCF `if` operation.
 
         - `cond` is a MLIR value of 'i1' type to determine which regions of code will be executed.
-        - `hasElse` determines whether the if operation has the else branch.
+        - `has_else` determines whether the if operation has the else branch.
         """
         if results_ is None:
             results_ = []
@@ -207,17 +207,19 @@ class IfOp(IfOp):
         results.extend(results_)
         super().__init__(results, cond, loc=loc, ip=ip)
         self.regions[0].blocks.append(*[])
-        if hasElse:
+        if has_else:
             self.regions[1].blocks.append(*[])
 
     @property
-    def then_block(self):
+    def then_block(self) -> Block:
         """Returns the then block of the if operation."""
         return self.regions[0].blocks[0]
 
     @property
-    def else_block(self):
+    def else_block(self) -> Optional[Block]:
         """Returns the else block of the if operation."""
+        if len(self.regions[1].blocks) == 0:
+            return None
         return self.regions[1].blocks[0]
 
 

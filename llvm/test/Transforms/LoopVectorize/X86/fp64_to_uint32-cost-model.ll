@@ -17,10 +17,10 @@ entry:
   %cmp4 = icmp eq i32 %0, 0
   br i1 %cmp4, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds [10000 x double], ptr @double_array, i64 0, i64 %indvars.iv
   %1 = load double, ptr %arrayidx, align 8
@@ -32,9 +32,9 @@ for.body:                                         ; preds = %for.body.preheader,
   %cmp = icmp ult i32 %2, %0
   br i1 %cmp, label %for.body, label %for.end.loopexit
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }

@@ -8,7 +8,7 @@
 ; RUN: llvm-dwarfdump -statistics %t.o | FileCheck %s -check-prefix=STATS
 
 ; VERIFY: No errors.
-; STATS: "#call site DIEs": 1,
+; STATS: "#call site DIEs": 2,
 
 ; OBJ: DW_TAG_subprogram
 ; OBJ:   DW_AT_name ("call_reg")
@@ -18,7 +18,7 @@ entry:
     #dbg_value(ptr %f, !17, !DIExpression(), !18)
 
 ; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_target
+; OBJ:     DW_AT_call_target{{(_clobbered)?}} (DW_OP_reg[[#]] {{.*}})
 ; OBJ:     DW_AT_call_return_pc
   call void (...) %f() #1, !dbg !19
   ret void, !dbg !20
@@ -31,6 +31,10 @@ define dso_local void @call_mem(ptr noundef readonly captures(none) %f) local_un
 entry:
     #dbg_value(ptr %f, !26, !DIExpression(), !27)
   %0 = load ptr, ptr %f, align 8, !dbg !28, !tbaa !29
+
+; OBJ:   DW_TAG_call_site
+; OBJ:     DW_AT_call_target{{(_clobbered)?}} (DW_OP_breg[[#]] {{.*}})
+; OBJ:     DW_AT_call_return_pc
   call void (...) %0() #1, !dbg !28
   ret void, !dbg !33
 }

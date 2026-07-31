@@ -21,32 +21,8 @@
 namespace clang {
 namespace targets {
 
-static const unsigned WebAssemblyAddrSpaceMap[] = {
-    0,  // Default
-    0,  // opencl_global
-    0,  // opencl_local
-    0,  // opencl_constant
-    0,  // opencl_private
-    0,  // opencl_generic
-    0,  // opencl_global_device
-    0,  // opencl_global_host
-    0,  // cuda_device
-    0,  // cuda_constant
-    0,  // cuda_shared
-    0,  // sycl_global
-    0,  // sycl_global_device
-    0,  // sycl_global_host
-    0,  // sycl_local
-    0,  // sycl_private
-    0,  // ptr32_sptr
-    0,  // ptr32_uptr
-    0,  // ptr64
-    0,  // hlsl_groupshared
-    0,  // hlsl_constant
-    0,  // hlsl_private
-    0,  // hlsl_device
-    0,  // hlsl_input
-    20, // wasm_funcref
+static constexpr LangASMap WebAssemblyAddrSpaceMap = {
+    {LangAS::wasm_funcref, 20},
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
@@ -61,15 +37,19 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
+  bool HasCooperativeThreading = false;
+  bool HasCompactImports = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
   bool HasGC = false;
+  bool HasLibcallThreadContext = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
   bool HasNontrappingFPToInt = false;
   bool HasReferenceTypes = false;
+  bool HasRelaxedAtomics = false;
   bool HasSignExt = false;
   bool HasTailCall = false;
   bool HasWideArithmetic = false;
@@ -80,6 +60,7 @@ public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
       : TargetInfo(T) {
     AddrSpaceMap = &WebAssemblyAddrSpaceMap;
+    UseAddrSpaceMapMangling = true;
     NoAsmVariants = true;
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;
@@ -105,11 +86,14 @@ public:
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
     }
+    if (T.getOS() == llvm::Triple::WASIp3) {
+      HasLibcallThreadContext = true;
+      HasCooperativeThreading = true;
+    }
   }
 
   StringRef getABI() const override;
   bool setABI(const std::string &Name) override;
-  bool useFP16ConversionIntrinsics() const override { return !HasFP16; }
 
 protected:
   void getTargetDefines(const LangOptions &Opts,
@@ -134,7 +118,7 @@ private:
   bool isValidCPUName(StringRef Name) const final;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const final;
 
-  bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
+  bool setCPU(StringRef Name) final { return isValidCPUName(Name); }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const final;
 
@@ -178,7 +162,7 @@ private:
     case CC_Swift:
       return CCCR_OK;
     case CC_SwiftAsync:
-      return CCCR_Error;
+      return HasTailCall ? CCCR_OK : CCCR_Error;
     default:
       return CCCR_Warning;
     }
@@ -198,13 +182,7 @@ public:
   explicit WebAssembly32TargetInfo(const llvm::Triple &T,
                                    const TargetOptions &Opts)
       : WebAssemblyTargetInfo(T, Opts) {
-    if (T.isOSEmscripten())
-      resetDataLayout(
-          "e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-f128:64-n32:64-"
-          "S128-ni:1:10:20");
-    else
-      resetDataLayout("e-m:e-p:32:32-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-"
-                      "S128-ni:1:10:20");
+    resetDataLayout();
   }
 
 protected:
@@ -223,13 +201,7 @@ public:
     SizeType = UnsignedLong;
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
-    if (T.isOSEmscripten())
-      resetDataLayout(
-          "e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-f128:64-n32:64-"
-          "S128-ni:1:10:20");
-    else
-      resetDataLayout("e-m:e-p:64:64-p10:8:8-p20:8:8-i64:64-i128:128-n32:64-"
-                      "S128-ni:1:10:20");
+    resetDataLayout();
   }
 
 protected:

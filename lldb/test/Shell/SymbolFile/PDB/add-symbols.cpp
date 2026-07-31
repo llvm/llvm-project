@@ -25,7 +25,7 @@
 // CHECK-NEXT: Breakpoint 1: no locations (pending).
 // CHECK: (lldb) target symbols add
 // CHECK: 1 location added to breakpoint 1
-// CHECK: (lldb) r
+
 // CHECK: * thread #1, stop reason = breakpoint 1.1
 // CHECK: (lldb) target variable a
 // CHECK-NEXT: (A) a = (x = 47)

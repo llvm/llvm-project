@@ -81,7 +81,8 @@ public:
     kRegisterOffsetFromCFA,
     kRegisterInRegister,
     kRegisterAtExpression,
-    kRegisterIsExpression
+    kRegisterIsExpression,
+    kRegisterIsPseudo,
   };
   struct RegisterLocation {
     RegisterSavedWhere location;
@@ -160,14 +161,17 @@ public:
     }
   };
 
-  static bool findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
-                      size_t sectionLength, pint_t fdeHint, FDE_Info *fdeInfo,
-                      CIE_Info *cieInfo);
+  template <typename R>
+  static bool findFDE(A &addressSpace, typename R::link_hardened_reg_arg_t pc,
+                      pint_t ehSectionStart, size_t sectionLength,
+                      pint_t fdeHint, FDE_Info *fdeInfo, CIE_Info *cieInfo);
   static const char *decodeFDE(A &addressSpace, pint_t fdeStart,
                                FDE_Info *fdeInfo, CIE_Info *cieInfo,
                                bool useCIEInfo = false);
+  template <typename R>
   static bool parseFDEInstructions(A &addressSpace, const FDE_Info &fdeInfo,
-                                   const CIE_Info &cieInfo, pint_t upToPC,
+                                   const CIE_Info &cieInfo,
+                                   typename R::link_hardened_reg_arg_t upToPC,
                                    int arch, PrologInfo *results);
 
   static const char *parseCIE(A &addressSpace, pint_t cie, CIE_Info *cieInfo);
@@ -239,9 +243,12 @@ const char *CFI_Parser<A>::decodeFDE(A &addressSpace, pint_t fdeStart,
 
 /// Scan an eh_frame section to find an FDE for a pc
 template <typename A>
-bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
-                            size_t sectionLength, pint_t fdeHint,
-                            FDE_Info *fdeInfo, CIE_Info *cieInfo) {
+template <typename R>
+bool CFI_Parser<A>::findFDE(A &addressSpace,
+                            typename R::link_hardened_reg_arg_t pc,
+                            pint_t ehSectionStart, size_t sectionLength,
+                            pint_t fdeHint, FDE_Info *fdeInfo,
+                            CIE_Info *cieInfo) {
   //fprintf(stderr, "findFDE(0x%llX)\n", (long long)pc);
   pint_t p = (fdeHint != 0) ? fdeHint : ehSectionStart;
   const pint_t ehSectionEnd = (sectionLength == SIZE_MAX)
@@ -451,10 +458,10 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
 
 /// "run" the DWARF instructions and create the abstract PrologInfo for an FDE
 template <typename A>
-bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
-                                         const FDE_Info &fdeInfo,
-                                         const CIE_Info &cieInfo, pint_t upToPC,
-                                         int arch, PrologInfo *results) {
+template <typename R>
+bool CFI_Parser<A>::parseFDEInstructions(
+    A &addressSpace, const FDE_Info &fdeInfo, const CIE_Info &cieInfo,
+    typename R::link_hardened_reg_arg_t upToPC, int arch, PrologInfo *results) {
   // Alloca is used for the allocation of the rememberStack entries. It removes
   // the dependency on new/malloc but the below for loop can not be refactored
   // into functions. Entry could be saved during the processing of a CIE and
@@ -471,7 +478,7 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
       {cieInfo.cieInstructions, cieInfo.cieStart + cieInfo.cieLength,
        (pint_t)(-1)},
       {fdeInfo.fdeInstructions, fdeInfo.fdeStart + fdeInfo.fdeLength,
-       upToPC - fdeInfo.pcStart}};
+       static_cast<pint_t>(upToPC) - fdeInfo.pcStart}};
 
   for (const auto &info : parseInfoArray) {
     pint_t p = info.instructions;
@@ -788,8 +795,8 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
         case REGISTERS_ARM64: {
           int64_t value =
               results->savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value ^ 0x1;
-          results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
-                                    initialState);
+          results->setRegister(UNW_AARCH64_RA_SIGN_STATE, kRegisterIsPseudo,
+                               value, initialState);
           _LIBUNWIND_TRACE_DWARF("DW_CFA_AARCH64_negate_ra_state\n");
         } break;
 #endif
@@ -840,8 +847,8 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
       case DW_CFA_AARCH64_negate_ra_state_with_pc: {
         int64_t value =
             results->savedRegisters[UNW_AARCH64_RA_SIGN_STATE].value ^ 0x3;
-        results->setRegisterValue(UNW_AARCH64_RA_SIGN_STATE, value,
-                                  initialState);
+        results->setRegister(UNW_AARCH64_RA_SIGN_STATE, kRegisterIsPseudo,
+                             value, initialState);
         // When using Feat_PAuthLR, the PC value needs to be captured so that
         // during unwinding, the correct PC value is used for re-authentication.
         // It is assumed that the CFI is placed before the signing instruction.
@@ -849,6 +856,26 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
         _LIBUNWIND_TRACE_DWARF(
             "DW_CFA_AARCH64_negate_ra_state_with_pc(pc=0x%" PRIx64 ")\n",
             static_cast<uint64_t>(results->ptrAuthDiversifier));
+      } break;
+#endif
+
+#if defined(_LIBUNWIND_TARGET_AARCH64)
+      case DW_CFA_AARCH64_set_ra_state: {
+        int64_t value =
+            static_cast<int64_t>(addressSpace.getULEB128(p, instructionsEnd));
+        if (value < 0 || 2 < value) {
+          _LIBUNWIND_LOG0("malformed DW_CFA_AARCH64_set_ra_state DWARF "
+                          "unwind, RA_SIGN_STATE value not recognized");
+          return false;
+        }
+        offset = addressSpace.getSLEB128(p, instructionsEnd) *
+                 cieInfo.codeAlignFactor;
+        results->setRegister(UNW_AARCH64_RA_SIGN_STATE, kRegisterIsPseudo,
+                             value, initialState);
+        results->ptrAuthDiversifier = fdeInfo.pcStart + codeOffset + offset;
+        _LIBUNWIND_TRACE_DWARF(
+            "DW_CFA_AARCH64_set_ra_state(state=%" PRId64 ",pc=0x%" PRIx64 ")\n",
+            value, static_cast<uint64_t>(results->ptrAuthDiversifier));
       } break;
 #endif
 

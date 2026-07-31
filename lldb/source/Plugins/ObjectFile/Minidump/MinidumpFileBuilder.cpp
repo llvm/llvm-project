@@ -279,7 +279,7 @@ llvm::Expected<uint64_t> getModuleFileSize(Target &target,
   lldb::SectionSP next_sect_sp = sect_so_addr.GetSection();
   while (next_sect_sp &&
          next_sect_sp->GetLoadBaseAddress(&target) == next_sect_addr) {
-    sect_size = sect_sp->GetByteSize();
+    sect_size = next_sect_sp->GetByteSize();
     SizeOfImage += sect_size;
     next_sect_addr += sect_size;
     target.ResolveLoadAddress(next_sect_addr, sect_so_addr);
@@ -325,10 +325,8 @@ Status MinidumpFileBuilder::AddModuleList() {
       Log *log = GetLog(LLDBLog::Object);
       llvm::handleAllErrors(
           std::move(mod_size_err), [&](const llvm::ErrorInfoBase &E) {
-            if (log) {
-              LLDB_LOGF(log, "Unable to get the size of module %s: %s",
-                        module_name.c_str(), E.message().c_str());
-            }
+            LLDB_LOGF(log, "Unable to get the size of module %s: %s",
+                      module_name.c_str(), E.message().c_str());
           });
       continue;
     }
@@ -1034,8 +1032,16 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     return lldb_private::IterationAction::Continue;
   };
 
-  bytes_read = m_process_sp->ReadMemoryInChunks(
-      addr, data_buffer.GetBytes(), data_buffer.GetByteSize(), size, callback);
+  // ReadMemoryInChunks returns the number of bytes it read from the inferior,
+  // which can exceed the number we actually appended: when a chunk read fails
+  // the callback stops without writing the bytes it had partially read. Report
+  // the bytes we wrote (total_bytes_read) so the range's DataSize matches the
+  // data in the blob. Otherwise the Memory64List, which locates each range by
+  // the cumulative DataSize of the preceding ranges, desyncs and every later
+  // range reads back corrupted.
+  m_process_sp->ReadMemoryInChunks(addr, data_buffer.GetBytes(),
+                                   data_buffer.GetByteSize(), size, callback);
+  bytes_read = total_bytes_read;
   return addDataError;
 }
 

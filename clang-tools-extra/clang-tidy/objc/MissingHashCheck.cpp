@@ -25,11 +25,9 @@ AST_MATCHER_P(ObjCImplementationDecl, hasInterface,
 AST_MATCHER_P(ObjCContainerDecl, hasInstanceMethod,
               ast_matchers::internal::Matcher<ObjCMethodDecl>, Base) {
   // Check each instance method against the provided matcher.
-  for (const auto *I : Node.instance_methods()) {
-    if (Base.matches(*I, Finder, Builder))
-      return true;
-  }
-  return false;
+  return llvm::any_of(Node.instance_methods(), [&](const ObjCMethodDecl *I) {
+    return Base.matches(*I, Finder, Builder);
+  });
 }
 
 } // namespace

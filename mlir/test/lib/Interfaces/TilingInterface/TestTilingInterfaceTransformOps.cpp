@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
@@ -76,7 +77,7 @@ applyTileAndFuseToAll(RewriterBase &rewriter, Operation *transformOp,
     llvm::SmallDenseSet<Operation *> tiledAndFusedOps =
         collectTiledAndFusedOps(tilingInterfaceOp);
     llvm::DenseSet<Operation *> yieldReplacementsFor;
-    for (auto op : tiledAndFusedOps) {
+    for (auto *op : tiledAndFusedOps) {
       if (llvm::any_of(op->getUsers(), [&](Operation *user) {
             return dominanceInfo.properlyDominates(tilingInterfaceOp, user);
           })) {
@@ -176,12 +177,20 @@ static LogicalResult
 applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
                   Operation *consumer,
                   MutableArrayRef<LoopLikeOpInterface> loops,
+                  ArrayRef<InnerTileAlignment> innerTileAlignments,
                   TransformResults &transformResults) {
   SmallVector<Operation *> fusedConsumerOps;
   rewriter.setInsertionPoint(consumer);
 
+  // Drive the SCF helper with a constant control function returning the fixed
+  // `inner_tile_alignments` array for every op (consulted only by pack/unpack).
+  scf::InnerTileAlignmentFnTy alignmentFn =
+      [alignments = llvm::to_vector(innerTileAlignments)](
+          TilingInterface, ArrayRef<OpFoldResult>, ArrayRef<Operation *>) {
+        return alignments;
+      };
   FailureOr<scf::SCFFuseConsumerOfSliceResult> fuseConsumerResults =
-      scf::tileAndFuseConsumer(rewriter, consumer, loops);
+      scf::tileAndFuseConsumer(rewriter, consumer, loops, alignmentFn);
   if (failed(fuseConsumerResults))
     return consumer->emitOpError("failed to fuse consumer of slice");
 
@@ -195,6 +204,10 @@ applyFuseConsumer(RewriterBase &rewriter, Operation *transformOp,
     transformResults.set(transformOp->getOpResult(index + 1), {loop});
   }
   return success();
+}
+
+LogicalResult transform::TestFuseConsumerOp::verify() {
+  return verifyInnerTileAlignments(getOperation(), getInnerTileAlignments());
 }
 
 DiagnosedSilenceableFailure
@@ -214,8 +227,11 @@ transform::TestFuseConsumerOp::apply(TransformRewriter &rewriter,
     }
     loops.push_back(loopLikeOp);
   }
-  LogicalResult result = applyFuseConsumer(rewriter, getOperation(), consumer,
-                                           loops, transformResults);
+  SmallVector<InnerTileAlignment> innerTileAlignments =
+      convertInnerTileAlignments(getInnerTileAlignments());
+  LogicalResult result =
+      applyFuseConsumer(rewriter, getOperation(), consumer, loops,
+                        innerTileAlignments, transformResults);
   return failed(result) ? DiagnosedSilenceableFailure::definiteFailure()
                         : DiagnosedSilenceableFailure::success();
 }
@@ -271,7 +287,7 @@ DiagnosedSilenceableFailure transform::TestFuseConsumerUsingSliceOp::apply(
     TransformState &state) {
   SmallVector<Operation *> slices;
   for (auto op : getTargets()) {
-    auto sliceOp = *state.getPayloadOps(op).begin();
+    auto *sliceOp = *state.getPayloadOps(op).begin();
     slices.push_back(sliceOp);
   }
 
@@ -681,6 +697,110 @@ DiagnosedSilenceableFailure transform::TestTileUsingCustomLoopOp::apply(
   transformResults.set(getOperation()->getResult(1), tiledResults->loops);
 
   return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// TestQueryProducerFusability
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::TestQueryProducerFusability::apply(
+    TransformRewriter &rewriter, TransformResults &transformResults,
+    TransformState &state) {
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    auto tilingInterfaceOp = dyn_cast<TilingInterface>(target);
+    if (!tilingInterfaceOp) {
+      return emitSilenceableError()
+             << "target operation does not implement TilingInterface";
+    }
+
+    // Collect operand numbers and their corresponding producer insert_slice
+    // offsets and sizes.
+    SmallVector<unsigned> operandNumbers;
+    SmallVector<SmallVector<OpFoldResult>> allOffsets;
+    SmallVector<SmallVector<OpFoldResult>> allSizes;
+
+    for (OpOperand &operand : target->getOpOperands()) {
+      Value operandValue = operand.get();
+      Operation *definingOp = operandValue.getDefiningOp();
+
+      // Look for a producer tensor.insert_slice. This is only for testing
+      // purposes and otherwise is not a useful transformation.
+      if (auto insertSliceOp =
+              dyn_cast_or_null<tensor::InsertSliceOp>(definingOp)) {
+        operandNumbers.push_back(operand.getOperandNumber());
+        allOffsets.push_back(insertSliceOp.getMixedOffsets());
+        allSizes.push_back(insertSliceOp.getMixedSizes());
+      }
+    }
+
+    if (!operandNumbers.empty()) {
+      bool isFusable = tilingInterfaceOp.isOpFusableWithProducerSlices(
+          operandNumbers, allOffsets, allSizes);
+
+      if (isFusable) {
+        target->emitRemark()
+            << "can be fused with producer tensor.insert_slice ops";
+      } else {
+        target->emitRemark()
+            << "cannot be fused with producer tensor.insert_slice ops";
+      }
+    }
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::TestQueryProducerFusability::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTargetMutable(), effects);
+  onlyReadsPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// TestQueryConsumerFusability
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::TestQueryConsumerFusability::apply(
+    TransformRewriter &rewriter, TransformResults &transformResults,
+    TransformState &state) {
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    auto tilingInterfaceOp = dyn_cast<TilingInterface>(target);
+    if (!tilingInterfaceOp) {
+      return emitSilenceableError()
+             << "target operation does not implement TilingInterface";
+    }
+
+    // Look for tensor.extract_slice ops that consume results of the tilable op.
+    for (OpResult result : target->getResults()) {
+      for (OpOperand &use : result.getUses()) {
+        Operation *user = use.getOwner();
+
+        // Look for a consumer tensor.extract_slice. This is only for testing
+        // purposes and otherwise is not a useful transformation.
+        if (auto extractSliceOp = dyn_cast<tensor::ExtractSliceOp>(user)) {
+          bool isFusable = tilingInterfaceOp.isOpFusableWithConsumerSlice(
+              result.getResultNumber(), extractSliceOp.getMixedOffsets(),
+              extractSliceOp.getMixedSizes());
+
+          if (isFusable) {
+            target->emitRemark()
+                << "can be fused with consumer tensor.extract_slice op";
+          } else {
+            target->emitRemark()
+                << "cannot be fused with consumer tensor.extract_slice op";
+          }
+        }
+      }
+    }
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::TestQueryConsumerFusability::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTargetMutable(), effects);
+  onlyReadsPayload(effects);
 }
 
 #define GET_OP_CLASSES

@@ -39,6 +39,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <string>
 
 using namespace llvm;
 
@@ -141,8 +142,8 @@ class SparcAsmParser : public MCTargetAsmParser {
 
 public:
   SparcAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, MII), Parser(parser),
+                 const MCInstrInfo &MII)
+      : MCTargetAsmParser(sti, MII), Parser(parser),
         MRI(*Parser.getContext().getRegisterInfo()) {
     Parser.addAliasForDirective(".half", ".2byte");
     Parser.addAliasForDirective(".uahalf", ".2byte");
@@ -1044,6 +1045,27 @@ ParseStatus SparcAsmParser::parseDirective(AsmToken DirectiveID) {
     Parser.eatToEndOfStatement();
     return ParseStatus::Success;
   }
+  if (IDVal == ".seg") {
+    std::string Name;
+    if (Parser.parseEscapedString(Name) || Parser.parseEOL())
+      return ParseStatus::Failure;
+
+    MCSection *Section;
+    uint32_t Subsection = 0;
+    const MCObjectFileInfo *MCOFI = getContext().getObjectFileInfo();
+    if (Name == "text") {
+      Section = MCOFI->getTextSection();
+    } else if (Name == "data" || Name == "data1") {
+      Section = MCOFI->getDataSection();
+      Subsection = Name == "data1" ? 1 : 0;
+    } else if (Name == "bss") {
+      Section = MCOFI->getBSSSection();
+    } else {
+      return Error(DirectiveID.getLoc(), "unknown segment type");
+    }
+    getStreamer().switchSection(Section, Subsection);
+    return ParseStatus::Success;
+  }
 
   // Let the MC layer to handle other directives.
   return ParseStatus::NoMatch;
@@ -1457,6 +1479,10 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
     if (MCRegister Reg = matchRegisterName(Parser.getTok(), RegKind)) {
       StringRef Name = Parser.getTok().getString();
       Parser.Lex(); // Eat the identifier token.
+
+      if (Name == "ncc")
+        Name = is64Bit() ? "xcc" : "icc";
+
       E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
       if (Reg == Sparc::ICC && Name == "xcc")
         Op = SparcOperand::CreateToken("%xcc", S);
@@ -1592,7 +1618,7 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
     return IntRegs[RegNo];
   }
 
-  if (Name == "xcc") {
+  if (Name == "xcc" || Name == "ncc") {
     // FIXME:: check 64bit.
     RegKind = SparcOperand::rk_Special;
     return SP::ICC;

@@ -1,5 +1,5 @@
-; RUN: opt -passes=loop-vectorize,dce,instcombine -mtriple aarch64-linux-gnu -mattr=+sve \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue < %s -S | FileCheck %s
+; RUN: opt -passes=loop-vectorize -mtriple aarch64-linux-gnu -mattr=+sve \
+; RUN:   -tail-folding-policy=dont-fold-tail < %s -S | FileCheck %s
 
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -17,7 +17,7 @@ define void @cmpsel_i32(ptr noalias nocapture %a, ptr noalias nocapture readonly
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
   %0 = load i32, ptr %arrayidx, align 4
@@ -29,10 +29,10 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end.loopexit, label %for.body, !llvm.loop !0
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -48,7 +48,7 @@ define void @cmpsel_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -60,7 +60,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -75,7 +75,7 @@ define void @fneg_f32(ptr noalias nocapture %a, ptr noalias nocapture readonly %
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -86,7 +86,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 

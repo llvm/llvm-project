@@ -23,10 +23,10 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/ImmutableMap.h"
 #include "llvm/Support/Debug.h"
 
 namespace clang::lifetimes::internal {
@@ -73,7 +73,7 @@ struct LivenessInfo {
   }
 };
 
-using LivenessMap = llvm::ImmutableMap<OriginID, LivenessInfo>;
+using LivenessMap = utils::MapTy<OriginID, LivenessInfo>;
 
 class LiveOriginsAnalysis {
 public:
@@ -87,7 +87,7 @@ public:
 
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
-            llvm::StringMap<ProgramPoint> TestPoints) const;
+            const llvm::StringMap<ProgramPoint> &TestPoints) const;
 
 private:
   class Impl;

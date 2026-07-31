@@ -249,12 +249,15 @@ protected:
 class InitializeTicket : public ImmediateTicketRunner<InitializeTicket>,
                          private ElementsOverComponents {
 public:
-  RT_API_ATTRS InitializeTicket(
-      const Descriptor &instance, const typeInfo::DerivedType &derived)
+  RT_API_ATTRS InitializeTicket(const Descriptor &instance,
+      const typeInfo::DerivedType &derived, MemcpyFct memcpyFct)
       : ImmediateTicketRunner<InitializeTicket>{*this},
-        ElementsOverComponents{instance, derived} {}
+        ElementsOverComponents{instance, derived}, memcpyFct_{memcpyFct} {}
   RT_API_ATTRS int Begin(WorkQueue &);
   RT_API_ATTRS int Continue(WorkQueue &);
+
+private:
+  MemcpyFct memcpyFct_;
 };
 
 // Initializes one derived type instance from the value of another
@@ -426,11 +429,15 @@ struct Ticket {
   bool begun{false};
   std::variant<NullTicket, InitializeTicket, InitializeCloneTicket,
       FinalizeTicket, DestroyTicket, AssignTicket, DerivedAssignTicket<false>,
-      DerivedAssignTicket<true>,
+      DerivedAssignTicket<true>
+#if !defined(RT_CUDA_THIN_IO)
+      ,
       io::descr::DescriptorIoTicket<io::Direction::Output>,
       io::descr::DescriptorIoTicket<io::Direction::Input>,
       io::descr::DerivedIoTicket<io::Direction::Output>,
-      io::descr::DerivedIoTicket<io::Direction::Input>>
+      io::descr::DerivedIoTicket<io::Direction::Input>
+#endif
+      >
       u;
 };
 
@@ -448,12 +455,19 @@ public:
 
   // APIs for particular tasks.  These can return StatOk if the work is
   // completed immediately.
-  RT_API_ATTRS int BeginInitialize(
-      const Descriptor &descriptor, const typeInfo::DerivedType &derived) {
+#ifdef RT_DEVICE_COMPILATION
+  RT_API_ATTRS int BeginInitialize(const Descriptor &descriptor,
+      const typeInfo::DerivedType &derived,
+      MemcpyFct memcpyFct = &MemcpyWrapper) {
+#else
+  RT_API_ATTRS int BeginInitialize(const Descriptor &descriptor,
+      const typeInfo::DerivedType &derived,
+      MemcpyFct memcpyFct = &Fortran::runtime::memcpy) {
+#endif
     if (runTicketsImmediately_) {
-      return InitializeTicket{descriptor, derived}.Run(*this);
+      return InitializeTicket{descriptor, derived, memcpyFct}.Run(*this);
     } else {
-      StartTicket().u.emplace<InitializeTicket>(descriptor, derived);
+      StartTicket().u.emplace<InitializeTicket>(descriptor, derived, memcpyFct);
       return StatContinue;
     }
   }
@@ -516,6 +530,9 @@ public:
   RT_API_ATTRS int BeginDescriptorIo(io::IoStatementState &io,
       const Descriptor &descriptor, const io::NonTbpDefinedIoTable *table,
       bool &anyIoTookPlace) {
+#if defined(RT_CUDA_THIN_IO)
+    terminator_.Crash("descriptor I/O is unsupported in thin CUDA runtime");
+#else
     if (runTicketsImmediately_) {
       return io::descr::DescriptorIoTicket<DIR>{
           io, descriptor, table, anyIoTookPlace}
@@ -525,11 +542,15 @@ public:
           io, descriptor, table, anyIoTookPlace);
       return StatContinue;
     }
+#endif
   }
   template <io::Direction DIR>
   RT_API_ATTRS int BeginDerivedIo(io::IoStatementState &io,
       const Descriptor &descriptor, const typeInfo::DerivedType &derived,
       const io::NonTbpDefinedIoTable *table, bool &anyIoTookPlace) {
+#if defined(RT_CUDA_THIN_IO)
+    terminator_.Crash("derived type I/O is unsupported in thin CUDA runtime");
+#else
     if (runTicketsImmediately_) {
       return io::descr::DerivedIoTicket<DIR>{
           io, descriptor, derived, table, anyIoTookPlace}
@@ -539,6 +560,7 @@ public:
           io, descriptor, derived, table, anyIoTookPlace);
       return StatContinue;
     }
+#endif
   }
 
   RT_API_ATTRS int Run();

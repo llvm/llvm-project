@@ -281,8 +281,42 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_depend}},
-          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}},
           {52, {Clause::OMPC_doacross}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDepinfoModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"depinfo-modifier",
+      /*props=*/
+      {
+          {60, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_init}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDimsModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"dims-modifier",
+      /*props=*/
+      {
+          {61, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {61,
+              {Clause::OMPC_num_teams, Clause::OMPC_num_threads,
+                  Clause::OMPC_thread_limit}},
       },
   };
   return desc;
@@ -354,28 +388,13 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpFallbackModifier>() {
 }
 
 template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropPreference>() {
-  static const OmpModifierDescriptor desc{
-      /*name=*/"interop-preference",
-      /*props=*/
-      {
-          {52, {OmpProperty::Unique}},
-      },
-      /*clauses=*/
-      {
-          {52, {Clause::OMPC_init}},
-      },
-  };
-  return desc;
-}
-
-template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpInteropType>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"interop-type",
       /*props=*/
       {
           {52, {OmpProperty::Required}},
+          {60, {}},
       },
       /*clauses=*/
       {
@@ -432,6 +451,38 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_linear}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLoopModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"loop-modifier",
+      /*props=*/
+      {
+          {60, {}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_apply}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLowerBound>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"lower-bound",
+      /*props=*/
+      {
+          {51, {OmpProperty::Unique, OmpProperty::Ultimate}},
+      },
+      /*clauses=*/
+      {
+          {51, {Clause::OMPC_num_teams}},
       },
   };
   return desc;
@@ -514,6 +565,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpOrderingModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_schedule}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpPreferType>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"prefer-type",
+      /*props=*/
+      {
+          {52, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {52, {Clause::OMPC_init}},
       },
   };
   return desc;
@@ -642,7 +709,8 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpStepSimpleModifier>() {
       /*name=*/"step-simple-modifier",
       /*props=*/
       {
-          {45, {OmpProperty::Unique, OmpProperty::Exclusive}},
+          {45, {OmpProperty::Unique}},
+          {52, {OmpProperty::Unique, OmpProperty::Exclusive}},
       },
       /*clauses=*/
       {
@@ -663,7 +731,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_depend}},
-          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}},
       },
   };
   return desc;

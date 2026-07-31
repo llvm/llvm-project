@@ -24,7 +24,7 @@
 ! CHECK:            %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.array<?xf32>>
 ! CHECK:            fir.store %[[VAL_2]]#0 to %[[VAL_3]] : !fir.ref<!fir.box<!fir.array<?xf32>>>
 ! CHECK:            omp.taskgroup task_reduction(byref @add_reduction_byref_box_Uxf32 %[[VAL_3]] -> %[[VAL_4:.*]]: !fir.ref<!fir.box<!fir.array<?xf32>>>) {
-! CHECK:              %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] 
+! CHECK:              %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]]
 ! CHECK-SAME:         {uniq_name = "_QFtask_reductionEx"} : (!fir.ref<!fir.box<!fir.array<?xf32>>>) -> (!fir.ref<!fir.box<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.array<?xf32>>>)
 ! CHECK:              omp.task in_reduction(byref @add_reduction_byref_box_Uxf32 %[[VAL_5]]#0 -> %[[VAL_6:.*]] : !fir.ref<!fir.box<!fir.array<?xf32>>>) {
 !                       [...]

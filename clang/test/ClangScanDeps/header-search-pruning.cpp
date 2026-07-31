@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: cp -r %S/Inputs/header-search-pruning/* %t
+// RUN: cp -R %S/Inputs/header-search-pruning/* %t
 // RUN: cp %S/header-search-pruning.cpp %t/header-search-pruning.cpp
 // RUN: sed -e "s|DIR|%/t|g" -e "s|DEFINES|-DINCLUDE_A|g"             %S/Inputs/header-search-pruning/cdb.json > %t/cdb_a.json
 // RUN: sed -e "s|DIR|%/t|g" -e "s|DEFINES|-DINCLUDE_B|g"             %S/Inputs/header-search-pruning/cdb.json > %t/cdb_b.json

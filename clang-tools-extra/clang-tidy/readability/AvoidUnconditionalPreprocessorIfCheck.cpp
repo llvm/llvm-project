@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AvoidUnconditionalPreprocessorIfCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -45,7 +46,8 @@ struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
 
     Token Tok;
     if (Lexer::getRawToken(Loc, Tok, SM, LangOpts, true)) {
-      std::optional<Token> TokOpt = Lexer::findNextToken(Loc, SM, LangOpts);
+      std::optional<Token> TokOpt =
+          utils::lexer::findNextTokenSkippingComments(Loc, SM, LangOpts);
       if (!TokOpt || TokOpt->getLocation().isMacroID())
         return false;
       Tok = *TokOpt;
@@ -55,8 +57,8 @@ struct AvoidUnconditionalPreprocessorIfPPCallbacks : public PPCallbacks {
       if (!isImmutableToken(Tok))
         return false;
 
-      std::optional<Token> TokOpt =
-          Lexer::findNextToken(Tok.getLocation(), SM, LangOpts);
+      std::optional<Token> TokOpt = utils::lexer::findNextTokenSkippingComments(
+          Tok.getLocation(), SM, LangOpts);
       if (!TokOpt || TokOpt->getLocation().isMacroID())
         return false;
       Tok = *TokOpt;

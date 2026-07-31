@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A Bottom-Up Vectorizer pass.
+// A vectorizer pass that walks the def-use chain bottom-up or top-down,
+// depending on the auxiliary pass argument.
 //
 
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BOTTOMUPVEC_H
@@ -16,24 +17,33 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Pass.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Legality.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 
 namespace llvm::sandboxir {
 
-/// This is a simple bottom-up vectorizer Region pass.
+/// This is a simple bottom-up (top-down) vectorizer Region pass.
 /// It expects a "seed slice" as an input in the Region's Aux vector.
 /// The "seed slice" is a vector of instructions that can be used as a starting
-/// point for vectorization, like stores to consecutive memory addresses.
-/// Starting from the seed instructions, it walks up the def-use chain looking
-/// for more instructions that can be vectorized. This pass will generate vector
-/// code if it can legally vectorize the code, regardless of whether it is
-/// profitable or not. For now profitability is checked at the end of the region
-/// pass pipeline by a dedicated pass that accepts or rejects the IR
-/// transaction, depending on the cost.
-class BottomUpVec final : public RegionPass {
+/// point for vectorization, like stores (loads) to consecutive memory
+/// addresses. Starting from the seed instructions, it walks up (down) the
+/// use-def (def-use) chains looking for more instructions that can be
+/// vectorized. This pass will generate vector code if it can legally vectorize
+/// the code, regardless of whether it is profitable or not. For now
+/// profitability is checked at the end of the region pass pipeline by a
+/// dedicated pass that accepts or rejects the IR transaction, depending on the
+/// cost.
+class LLVM_ABI BottomUpVec final : public RegionPass {
+private:
+  /// Set to true whenever the pass modifies the IR.
   bool Change = false;
+  static constexpr StringRef TopDownArgStr = "top-down";
+  static constexpr StringRef BottomUpArgStr = "bottom-up";
+  /// Direction for vectorization, defaults to bottom-up.
+  SchedDirection Dir;
   /// The original instructions that are potentially dead after vectorization.
   DenseSet<Instruction *> DeadInstrCandidates;
   /// Maps scalars to vectors.
@@ -84,10 +94,13 @@ class BottomUpVec final : public RegionPass {
   /// vectorize in vectorizeRec().
   unsigned DebugBndlCnt = 0;
 
-  /// Recursively try to vectorize \p Bndl and its operands. This populates the
-  /// `Actions` vector.
+  /// Recursively try to vectorize \p Bndl. \p UserBndl identifies the
+  /// users that this recursive call originates from.
   Action *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
                        unsigned Depth, LegalityAnalysis &Legality);
+  /// If the values in \p Bndl have external users, then emit unpacks and
+  /// connect them to the users. \p Vec is the vectorized form of \p Bndl.
+  void emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl, Value *Vec);
   /// Generate vector instructions based on `Actions` and return the last vector
   /// created.
   Value *emitVectors();
@@ -95,7 +108,21 @@ class BottomUpVec final : public RegionPass {
   bool tryVectorize(ArrayRef<Value *> Seeds, LegalityAnalysis &Legality);
 
 public:
-  BottomUpVec() : RegionPass("bottom-up-vec") {}
+  BottomUpVec(StringRef AuxArg) : RegionPass("bottom-up-vec") {
+    /// TODO: Drop the AuxArg.empty() part
+    if (AuxArg.empty() || AuxArg == BottomUpArgStr) {
+      Dir = SchedDirection::BottomUp;
+    } else if (AuxArg == TopDownArgStr) {
+      Dir = SchedDirection::TopDown;
+    } else {
+      std::string ErrStr;
+      raw_string_ostream ErrSS(ErrStr);
+      ErrSS << "bottom-up-vec only supports '" << BottomUpArgStr << "' or '"
+            << TopDownArgStr << "' aux argument!\n";
+      reportFatalUsageError(ErrStr.c_str());
+    }
+  }
+
   bool runOnRegion(Region &Rgn, const Analyses &A) final;
 };
 

@@ -13,14 +13,14 @@ module functions
 contains
   function func1() result(i)
     !$omp declare target enter(func1) indirect(.true.)
-    !CHECK:      OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+    !CHECK:      OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
     !CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = declare target
     !CHECK-NEXT: | OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
     !CHECK-NEXT: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func1'
     !CHECK-NEXT: | OmpClause -> Indirect -> OmpIndirectClause -> Scalar -> Logical -> Expr = '.true._4'
     !CHECK-NEXT: | | LiteralConstant -> LogicalLiteralConstant
     !CHECK-NEXT: | | | bool = 'true'
-    !CHECK-NEXT: | Flags = None
+    !CHECK-NEXT: | Flags = {}
     character(1) :: i
     i = 'a'
     return
@@ -28,12 +28,12 @@ contains
 
   function func2() result(i)
     !$omp declare target enter(func2) indirect
-    !CHECK:      OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+    !CHECK:      OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
     !CHECK-NEXT: | OmpDirectiveName -> llvm::omp::Directive = declare target
     !CHECK-NEXT: | OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
     !CHECK-NEXT: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'func2'
     !CHECK-NEXT: | OmpClause -> Indirect -> OmpIndirectClause ->
-    !CHECK-NEXT: | Flags = None
+    !CHECK-NEXT: | Flags = {}
     character(1) :: i
     i = 'b'
     return

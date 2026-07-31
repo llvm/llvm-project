@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestConflictingSymbols(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -52,9 +53,10 @@ class TestConflictingSymbols(TestBase):
 
         # This should display correctly.
         self.expect(
-            "expr (unsigned long long)conflicting_symbol",
+            "expr conflicting_symbol",
             "Symbol from One should be found",
-            substrs=["11111"],
+            startstr="(void *)",
+            patterns=["0x0+1111$"],
         )
 
         self.runCmd("continue", RUN_SUCCEEDED)
@@ -69,9 +71,10 @@ class TestConflictingSymbols(TestBase):
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         self.expect(
-            "expr (unsigned long long)conflicting_symbol",
+            "expr conflicting_symbol",
             "Symbol from Two should be found",
-            substrs=["22222"],
+            startstr="(void *)",
+            patterns=["0x0+2222$"],
         )
 
         self.runCmd("continue", RUN_SUCCEEDED)
@@ -86,7 +89,7 @@ class TestConflictingSymbols(TestBase):
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)
 
         self.expect(
-            "expr (unsigned long long)conflicting_symbol",
+            "expr conflicting_symbol",
             "An error should be printed when symbols can't be ordered",
             error=True,
             substrs=["Multiple internal symbols"],

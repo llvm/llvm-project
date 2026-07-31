@@ -74,10 +74,9 @@ static LogicalResult verifyIntegerDotProduct(Operation *op) {
   Type factorTy = op->getOperand(0).getType();
   StringAttr packedVectorFormatAttrName =
       IntegerDotProductOpTy::getFormatAttrName(op->getName());
-  if (auto intTy = llvm::dyn_cast<IntegerType>(factorTy)) {
-    auto packedVectorFormat =
-        llvm::dyn_cast_or_null<spirv::PackedVectorFormatAttr>(
-            op->getAttr(packedVectorFormatAttrName));
+  if (auto intTy = dyn_cast<IntegerType>(factorTy)) {
+    auto packedVectorFormat = dyn_cast_or_null<spirv::PackedVectorFormatAttr>(
+        op->getAttr(packedVectorFormatAttrName));
     if (!packedVectorFormat)
       return op->emitOpError("requires Packed Vector Format attribute for "
                              "integer vector operands");
@@ -135,8 +134,8 @@ getIntegerDotProductCapabilities(Operation *op) {
   Type factorTy = op->getOperand(0).getType();
   StringAttr packedVectorFormatAttrName =
       IntegerDotProductOpTy::getFormatAttrName(op->getName());
-  if (auto intTy = llvm::dyn_cast<IntegerType>(factorTy)) {
-    auto formatAttr = llvm::cast<spirv::PackedVectorFormatAttr>(
+  if (auto intTy = dyn_cast<IntegerType>(factorTy)) {
+    auto formatAttr = cast<spirv::PackedVectorFormatAttr>(
         op->getAttr(packedVectorFormatAttrName));
     if (formatAttr.getValue() ==
         spirv::PackedVectorFormat::PackedVectorFormat4x8Bit)
@@ -145,7 +144,7 @@ getIntegerDotProductCapabilities(Operation *op) {
     return capabilities;
   }
 
-  auto vecTy = llvm::cast<VectorType>(factorTy);
+  auto vecTy = cast<VectorType>(factorTy);
   if (vecTy.getElementTypeBitWidth() == 8) {
     capabilities.push_back(dotProductInput4x8BitCap);
     return capabilities;

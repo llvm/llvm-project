@@ -13,7 +13,9 @@
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
@@ -40,9 +42,8 @@ static cl::opt<unsigned long>
 
 namespace sandboxir {
 
-static SmallVector<Value *, 4> getOperand(ArrayRef<Value *> Bndl,
-                                          unsigned OpIdx) {
-  SmallVector<Value *, 4> Operands;
+static BundleTy getOperand(ArrayRef<Value *> Bndl, unsigned OpIdx) {
+  BundleTy Operands;
   for (Value *BndlV : Bndl) {
     auto *BndlI = cast<Instruction>(BndlV);
     Operands.push_back(BndlI->getOperand(OpIdx));
@@ -153,7 +154,8 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
       Value *Ptr = Operands[1];
       return StoreInst::create(Val, Ptr, Align, WhereIt, Ctx);
     }
-    case Instruction::Opcode::Br:
+    case Instruction::Opcode::UncondBr:
+    case Instruction::Opcode::CondBr:
     case Instruction::Opcode::Ret:
     case Instruction::Opcode::PHI:
     case Instruction::Opcode::AddrSpaceCast:
@@ -287,6 +289,32 @@ Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
   const auto &LegalityRes = StopForDebug ? Legality.getForcedPackForDebugging()
                                          : Legality.canVectorize(Bndl);
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
+
+  if (Dir == SchedDirection::TopDown) {
+    // A non-Widen result means we can't extend the vectorized region into
+    // this bundle, so leave its instructions scalar and don't record an
+    // action for it.
+    if (LegalityRes.getSubclassID() != LegalityResultID::Widen)
+      return nullptr;
+
+    auto ActionPtr = std::make_unique<Action>(&LegalityRes, Bndl,
+                                              ArrayRef<Value *>(), Depth);
+    Action *Action = ActionPtr.get();
+    IMaps->registerVector(Bndl, Action);
+    Actions.push_back(std::move(ActionPtr));
+
+    // Walk down the def-use chain. Each lane in \p Bndl may feed several
+    // users, so we form every compatible user bundle and recurse into each
+    // one.
+    SmallPtrSet<Instruction *, 4> Claimed;
+    for (const auto &NextUserBndl :
+         VecUtils::getNextUserBundles(Bndl, *IMaps, Claimed))
+      vectorizeRec(NextUserBndl, Bndl, Depth + 1, Legality);
+
+    return Action;
+  }
+
+  // Bottom up direction
   auto ActionPtr =
       std::make_unique<Action>(&LegalityRes, Bndl, UserBndl, Depth);
   SmallVector<Action *> Operands;
@@ -339,6 +367,44 @@ void BottomUpVec::ActionsVector::print(raw_ostream &OS) const {
 void BottomUpVec::ActionsVector::dump() const { print(dbgs()); }
 #endif // NDEBUG
 
+void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
+                                             Value *Vec) {
+  // Find where we should emit the unpacks.
+  BasicBlock::iterator WhereIt;
+  if (auto *VecI = dyn_cast<Instruction>(Vec)) {
+    WhereIt = std::next(VecI->getIterator());
+  } else {
+    // If Vec is a constant then it should be safe to emit the unpacks at the
+    // top of the block.
+    // Note: Extracts from constants are usually folded to constants.
+    assert(isa<Constant>(Vec) && "Expected constant!");
+    assert(isa<Instruction>(Bndl[0]) &&
+           "A widened Bndl should contain instrs!");
+    BasicBlock *BB = cast<Instruction>(Bndl[0])->getParent();
+    WhereIt =
+        BB->empty()
+            ? BB->begin()
+            : std::next(
+                  VecUtils::getLastPHIOrSelf(&*BB->begin())->getIterator());
+  }
+
+  for (auto [Lane, Elm] : VecUtils::enumerateLanes(Bndl)) {
+    // Only redirect the external (non-vectorized) uses to an unpack and leave
+    // the vectorized users untouched. A blanket replaceAllUsesWith() would
+    // also rewrite the operands of users we are going to vectorize but have
+    // not emitted yet (in the top-down direction a user bundle is emitted
+    // after its operand bundle), which would corrupt those operands.
+    auto IsExternal = [this](const Use &U) {
+      return !IMaps->isVectorized(U.getUser());
+    };
+    // Don't emit a dead unpack if all uses are internal to the vector region.
+    if (none_of(Elm->uses(), IsExternal))
+      continue;
+    auto *UnpackV = VecUtils::unpack(Vec, Elm->getType(), Lane, WhereIt);
+    Elm->replaceUsesWithIf(UnpackV, IsExternal);
+  }
+}
+
 Value *BottomUpVec::emitVectors() {
   Value *NewVec = nullptr;
   for (const auto &ActionPtr : Actions) {
@@ -354,28 +420,53 @@ Value *BottomUpVec::emitVectors() {
     case LegalityResultID::Widen: {
       auto *I = cast<Instruction>(Bndl[0]);
       SmallVector<Value *, 2> VecOperands;
-      switch (I->getOpcode()) {
-      case Instruction::Opcode::Load:
-        VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
-        break;
-      case Instruction::Opcode::Store: {
-        VecOperands.push_back(ActionPtr->Operands[0]->Vec);
-        VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
-        break;
-      }
-      default:
-        // Visit all operands.
-        for (Action *OpA : ActionPtr->Operands) {
-          auto *VecOp = OpA->Vec;
-          VecOperands.push_back(VecOp);
+      if (Dir == SchedDirection::BottomUp) {
+        switch (I->getOpcode()) {
+        case Instruction::Opcode::Load:
+          VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
+          break;
+        case Instruction::Opcode::Store:
+          VecOperands.push_back(ActionPtr->Operands[0]->Vec);
+          VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
+          break;
+        default:
+          for (Action *OpA : ActionPtr->Operands)
+            VecOperands.push_back(OpA->Vec);
+          break;
         }
-        break;
+      } else {
+        switch (I->getOpcode()) {
+        case Instruction::Opcode::Load:
+          VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
+          break;
+        case Instruction::Opcode::Store: {
+          auto OpBndl = getOperand(Bndl, 0);
+          if (Action *OpA = IMaps->getVectorForOrig(OpBndl[0]))
+            VecOperands.push_back(OpA->Vec);
+          else
+            VecOperands.push_back(createPack(OpBndl, UserBB));
+          VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
+          break;
+        }
+        default:
+          for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) {
+            BundleTy OpBndl = getOperand(Bndl, OpIdx);
+            if (Action *OpA = IMaps->getVectorForOrig(OpBndl[0]))
+              VecOperands.push_back(OpA->Vec);
+            else
+              VecOperands.push_back(createPack(OpBndl, UserBB));
+          }
+          break;
+        }
       }
       NewVec = createVectorInstr(ActionPtr->Bndl, VecOperands);
       // Collect any potentially dead scalar instructions, including the
       // original scalars and pointer operands of loads/stores.
       if (NewVec != nullptr)
         collectPotentiallyDeadInstrs(Bndl);
+
+      // Emit unpacks for all external uses, if any.
+      emitUnpacksForExternalUses(ActionPtr->Bndl, NewVec);
       break;
     }
     case LegalityResultID::DiamondReuse: {
@@ -490,7 +581,8 @@ bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl,
   Actions.clear();
   DebugBndlCnt = 0;
   vectorizeRec(Bndl, {}, /*Depth=*/0, Legality);
-  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "BottomUpVec: Vectorization Actions:\n";
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << schedDirectionToStr(Dir)
+                    << "Vec: Vectorization Actions:\n";
              Actions.dump());
   emitVectors();
   tryEraseDeadInstrs();
@@ -504,7 +596,7 @@ bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
   IMaps = std::make_unique<InstrMaps>();
   LegalityAnalysis Legality(A.getAA(), A.getScalarEvolution(),
                             F.getParent()->getDataLayout(), F.getContext(),
-                            *IMaps);
+                            *IMaps, Dir);
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());

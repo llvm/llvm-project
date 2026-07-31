@@ -1,8 +1,5 @@
 # The Sandbox Vectorizer
 
-```{contents}
-:depth: 4
-```
 
 The Sandbox Vectorizer is a framework for building modular vectorization pipelines on top of [Sandbox IR](#SandboxIR) transactional IR, with a focus on ease of development and testing.
 The default pipeline currently implements a simple SLP-style bottom-up vectorization pipeline.
@@ -80,6 +77,8 @@ There are two types of passes: [Transformation Passes](#transformation-passes) t
 | `seed-collection`         | SeedCollection.h            | Function | Collects the instructions to start vectorizing from, creates a region and runs the region-pass pipeline |
 | `bottom-up-vec`           | BottomUpVec.h               | Region   | An SLP-style bottom-up vectorizer. It can vectorize both scalars and vectors |
 | `pack-reuse`              | PackReuse.h                 | Region   | A pass that de-duplicates packs                         |
+| `load-store-vec`          | LoadStoreVec.h              | Region   | Vectorize load-store chains                             |
+
 
 ### Helper Passes
 
