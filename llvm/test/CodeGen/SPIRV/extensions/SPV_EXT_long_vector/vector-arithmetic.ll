@@ -80,7 +80,7 @@ entry:
   ret void
 }
 
-; Test remaining float vector arithmetic operations
+; Test remaining float vector arithmetic operations.
 define void @test_float_vector_arithmetic_continued() local_unnamed_addr #0 {
 ; CHECK: OpFunction
 entry:
