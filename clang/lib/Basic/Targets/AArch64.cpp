@@ -1859,6 +1859,43 @@ MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 }
 
+UEFIAArch64TargetInfo::UEFIAArch64TargetInfo(const llvm::Triple &Triple,
+                                             const TargetOptions &Opts)
+    : UEFITargetInfo<AArch64leTargetInfo>(Triple, Opts) {
+  // UEFI images are PE/COFF and follow the Microsoft ARM64 ABI. The UEFI spec
+  // does not mandate a specific C++ ABI or integer model, so we match the
+  // Windows ARM64 target -- the only supported way to produce AArch64 EFI
+  // binaries with Clang/LLVM today.
+  TheCXXABI.set(TargetCXXABI::Microsoft);
+
+  // LLP64 data model: int:4, long:4, long long:8, long double:8.
+  IntWidth = IntAlign = 32;
+  LongWidth = LongAlign = 32;
+  DoubleAlign = LongLongAlign = 64;
+  LongDoubleWidth = LongDoubleAlign = 64;
+  LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+  IntMaxType = SignedLongLong;
+  Int64Type = SignedLongLong;
+  SizeType = UnsignedLongLong;
+  PtrDiffType = SignedLongLong;
+  IntPtrType = SignedLongLong;
+}
+
+void UEFIAArch64TargetInfo::setDataLayout() {
+  // PE/COFF image: use the same data layout the LLVM AArch64 TargetMachine
+  // computes for COFF. This must be an override (not just a ctor call) because
+  // handleTargetFeatures() re-invokes setDataLayout() after construction, and
+  // the AArch64le base only knows MachO/ELF -- it would otherwise revert to an
+  // ELF layout that mismatches the backend.
+  resetDataLayout("e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
+                  "i64:64-i128:128-n32:64-S128-Fn32");
+}
+
+AArch64TargetInfo::BuiltinVaListKind
+UEFIAArch64TargetInfo::getBuiltinVaListKind() const {
+  return TargetInfo::CharPtrBuiltinVaList;
+}
+
 AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(
     const llvm::Triple &Triple, const TargetOptions &Opts)
     : AppleMachOTargetInfo<AArch64leTargetInfo>(Triple, Opts) {}
