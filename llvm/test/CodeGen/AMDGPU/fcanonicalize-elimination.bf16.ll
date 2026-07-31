@@ -72,6 +72,8 @@ define <2 x half> @test_no_eliminate_canonicalize_bitcast_bf16_to_f16(<2 x bfloa
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_pk_max_num_f16 v0, v0, v0
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
   %c = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %x)
   %h = bitcast <2 x bfloat> %c to <2 x half>
