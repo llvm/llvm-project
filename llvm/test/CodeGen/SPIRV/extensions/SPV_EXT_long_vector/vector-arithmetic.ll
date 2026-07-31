@@ -43,7 +43,7 @@ entry:
   ret void
 }
 
-; Test integer vector arithmetic operations
+; Test integer vector arithmetic operations.
 define void @test_int_vector_arithmetic() local_unnamed_addr #0 {
 ; CHECK: OpFunction
 entry:
