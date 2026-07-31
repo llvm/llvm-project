@@ -860,7 +860,7 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
 
     // Lambda to check if a pointer was newly allocated
     auto WasNewlyAllocated = [&](void *Ptr, const char *PtrName) {
-      bool WasNewlyAllocated = StateInfo.wasNewlyAllocated(Ptr).has_value();
+      bool WasNewlyAllocated = StateInfo.wasNewlyMapped(Ptr).has_value();
       ODBG(ODT_Mapping) << "Attach " << PtrName << " " << Ptr
                         << " was newly allocated: "
                         << (WasNewlyAllocated ? "yes" : "no");
@@ -878,9 +878,15 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
     }
 
     // Lambda to perform target pointer lookup and validation
+    // \p AllowHostPointer permits the lookup to succeed for storage shared with
+    // the host. That is correct for the pointer being attached: the device
+    // dereferences the same storage, so attaching writes the device pointee
+    // address into it and the original value is restored at the end of the region
+    // through the shadow-pointer mechanism. It is not correct for the pointee,
+    // where a host address would mean there is nothing to attach to.
     auto LookupTargetPointer =
-        [&](void *Ptr, int64_t Size,
-            const char *PtrType) -> std::optional<TargetPointerResultTy> {
+        [&](void *Ptr, int64_t Size, const char *PtrType,
+            bool AllowHostPointer) -> std::optional<TargetPointerResultTy> {
       // ATTACH map-type does not change ref-count, or do any allocation
       // We just need to do a lookup for the pointer/pointee.
       TargetPointerResultTy TPR = Device.getMappingInfo().getTgtPtrBegin(
@@ -896,7 +902,7 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                           << PtrType << " not present on device";
         return std::nullopt;
       }
-      if (TPR.Flags.IsHostPointer) {
+      if (TPR.Flags.IsHostPointer && !AllowHostPointer) {
         ODBG(ODT_Mapping) << "Skipping ATTACH entry " << EntryIdx
                           << ": device version of the " << PtrType
                           << " is a host pointer.";
@@ -909,7 +915,8 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
     // Get device version of the pointee (e.g., &p[10]) first, as we can
     // release its TPR after extracting the pointer value.
     void *TgtPteeBegin = [&]() -> void * {
-      if (auto PteeTPROpt = LookupTargetPointer(HstPteeBegin, 0, "pointee"))
+      if (auto PteeTPROpt = LookupTargetPointer(HstPteeBegin, 0, "pointee",
+                                                /*AllowHostPointer=*/false))
         return PteeTPROpt->TargetPointer;
       return nullptr;
     }();
@@ -919,7 +926,8 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
 
     // Get device version of the pointer (e.g., &p) next. We need to keep its
     // TPR for use in shadow-pointer handling during pointer-attachment.
-    auto PtrTPROpt = LookupTargetPointer(HstPtr, PtrSize, "pointer");
+    auto PtrTPROpt = LookupTargetPointer(HstPtr, PtrSize, "pointer",
+                                         /*AllowHostPointer=*/true);
     if (!PtrTPROpt)
       continue;
     TargetPointerResultTy &PtrTPR = *PtrTPROpt;

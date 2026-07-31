@@ -301,13 +301,16 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
       // subsection of previously mapped allocation. The mapping would prevent
       // map(close, alloc:...) from creating a new allocation as it would reuse
       // the mapped allocation instead.
-      LR.TPR.setEntry(
-          HDTTMap
-              ->emplace(new HostDataToTargetTy(
-                  (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-                  (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
-                  (uintptr_t)HstPtrBegin, HasHoldModifier, HstPtrName))
-              .first->HDTT);
+      auto Emplaced = HDTTMap->emplace(new HostDataToTargetTy(
+          (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+          (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
+          (uintptr_t)HstPtrBegin, HasHoldModifier, HstPtrName));
+      LR.TPR.setEntry(Emplaced.first->HDTT);
+
+      // The mapping is new for this construct, which is what pointer attachment
+      // is governed by, so record it even though no device memory was allocated.
+      if (Emplaced.second && StateInfo)
+        StateInfo->NewMappings[HstPtrBegin] = Size;
       if (Device.notifyDataMapped(HstPtrBegin, Size))
         return TargetPointerResultTy{};
     }

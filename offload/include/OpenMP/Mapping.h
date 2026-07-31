@@ -502,9 +502,17 @@ struct StateInfoTy {
   /// ATTACH map entries for deferred processing until all other maps are done.
   llvm::SmallVector<AttachMapInfo> AttachEntries;
 
-  /// Host pointers for which new memory was allocated.
+  /// Host pointers for which new device memory was allocated.
   /// Key: host pointer, Value: allocation size.
+  /// Consulted by the 'present' map-type validation.
   llvm::DenseMap<void *, int64_t> NewAllocations;
+
+  /// Host pointers whose mapping was newly created in this construct
+  /// (reference count 0 -> 1) but for which no device memory was allocated,
+  /// i.e. the unified-shared-memory host path. Kept apart from NewAllocations,
+  /// which is about device allocation.
+  /// Key: host pointer, Value: mapped size.
+  llvm::DenseMap<void *, int64_t> NewMappings;
 
   /// Host pointers that had a FROM entry, but for which a data transfer was
   /// skipped due to the ref-count not being zero.
@@ -552,6 +560,14 @@ public:
   /// Returns the matching entry if found, otherwise std::nullopt.
   std::optional<std::pair<void *, int64_t>> wasNewlyAllocated(void *Ptr) const {
     return findEntryForPtr(Ptr, NewAllocations);
+  }
+
+  /// Check if a pointer's mapping was newly created in this construct, whether or
+  /// not device memory was allocated for it. Used by pointer attachment.
+  std::optional<std::pair<void *, int64_t>> wasNewlyMapped(void *Ptr) const {
+    if (auto Alloc = findEntryForPtr(Ptr, NewAllocations))
+      return Alloc;
+    return findEntryForPtr(Ptr, NewMappings);
   }
 
   /// Check if a pointer range [Ptr, Ptr+Size) is fully contained within any
