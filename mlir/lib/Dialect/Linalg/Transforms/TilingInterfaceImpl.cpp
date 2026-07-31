@@ -127,23 +127,48 @@ validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> offsets,
           return WalkResult::interrupt();
         }
         unsigned dimPos = dimExpr.getPosition();
-        int64_t step = stepExpr.getValue();
 
-        // Tile boundaries stay aligned to the step only when the tile size and
-        // step divide one another.
-        // Dynamic tile sizes are assumed to be valid.
+        // Tiles are spaced by the full tile size, so tile origins are its
+        // multiples (0, tileSize, 2*tileSize, ...).
+        // A tile's indices are `origin + d'`, with `origin` the tile's start
+        // and `0 <= d' < tileSize`. A trailing partial tile is a full tile
+        // truncated at the same origin, spanning a subset of the same `d'`, so
+        // full-tile validity implies partial-tile validity and validating the
+        // upper-bound tile size suffices.
         FailureOr<int64_t> tileSize =
             ValueBoundsConstraintSet::computeConstantBound(
                 presburger::BoundType::UB, sizes[dimPos],
                 /*stopCondition=*/nullptr,
                 ValueBoundsOptions{/*closedUB=*/true});
-        if (succeeded(tileSize) &&
-            !(*tileSize % step == 0 || step % *tileSize == 0)) {
+
+        // Dynamic tile sizes are assumed to be valid.
+        // Unit tile is always valid.
+        if (failed(tileSize) || *tileSize == 1)
+          return WalkResult::advance();
+
+        // Tiled op reuses the same map on a slice whose base offset is
+        // `m(origin) - m(0)`, so it is correct only when
+        // `m(origin + d') == (m(origin) - m(0)) + m(d')` for every `d'`.
+        // Slice origins are tile-size multiples, so this reduces to a relation
+        // between the tile size and the step `C`:
+        //  - `floordiv`/`mod` are locally affine within a step window (floordiv
+        //    is constant, mod is linear), so they compose when the origin is
+        //    step-aligned (`C | tileSize`) or the whole tile fits in one window
+        //    (`tileSize | C`);
+        //  - `ceildiv` jumps at `k * C + 1` instead of `k * C`, so a
+        //    non-step-aligned origin already straddles the jump. It composes
+        //    only from a step-aligned origin, i.e. `C | tileSize`.
+        int64_t step = stepExpr.getValue();
+        bool isCeil = kind == AffineExprKind::CeilDiv;
+        bool safe = *tileSize % step == 0 || (!isCeil && step % *tileSize == 0);
+        if (!safe) {
           linalgOp.emitOpError()
               << "tiling is not supported for the semi-affine indexing map: "
                  "tile size "
               << *tileSize << " for dimension d" << dimPos
-              << " must divide or be divisible by the step " << step;
+              << (isCeil ? " must be a multiple of the step "
+                         : " must divide or be divisible by the step ")
+              << step;
           return WalkResult::interrupt();
         }
         return WalkResult::advance();

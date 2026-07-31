@@ -119,6 +119,37 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// `ceildiv` composes only from a step-aligned origin, so it is safe only when
+// the step divides the tile size (unlike `floordiv`/`mod`).
+
+#map = affine_map<(d0) -> (d0)>
+#ceildiv3 = affine_map<(d0) -> (d0 ceildiv 3)>
+
+// CHECK-LABEL: func @tile_ceildiv_tile_multiple_of_step
+//       CHECK:   scf.for %[[IV:.*]] = %{{.*}} to %{{.*}} step %{{.*}}
+//       CHECK:     tensor.extract_slice %{{.*}}[%[[IV]]] [6] [1] : tensor<12xf32> to tensor<6xf32>
+//       CHECK:     tensor.extract_slice %{{.*}} [3] [1] : tensor<5xf32> to tensor<3xf32>
+//       CHECK:     linalg.generic
+func.func @tile_ceildiv_tile_multiple_of_step(%arg0: tensor<12xf32>, %arg1: tensor<5xf32>, %out: tensor<12xf32>) -> tensor<12xf32> {
+  %0 = linalg.generic {indexing_maps = [#map, #ceildiv3, #map], iterator_types = ["parallel"]}
+    ins(%arg0, %arg1 : tensor<12xf32>, tensor<5xf32>) outs(%out : tensor<12xf32>) {
+  ^bb0(%in: f32, %in_0: f32, %o: f32):
+    %1 = arith.addf %in, %in_0 : f32
+    linalg.yield %1 : f32
+  } -> tensor<12xf32>
+  return %0 : tensor<12xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.tile_using_for %0 tile_sizes [6] : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// -----
+
 // A high-dimensional op with several distinct maps: the whole op is validated,
 // so every semi-affine access must be aligned.
 // Here `d0 floordiv 4` (tile 4) and `d2 mod 3` (tile 6) are both aligned.
@@ -189,7 +220,7 @@ module attributes {transform.with_named_sequence} {
 #ceildiv3 = affine_map<(d0) -> (d0 ceildiv 3)>
 
 func.func @negative_tile_ceildiv_misaligned(%arg0: tensor<12xf32>, %arg1: tensor<5xf32>, %out: tensor<12xf32>) -> tensor<12xf32> {
-  // expected-error @+3 {{'linalg.generic' op tiling is not supported for the semi-affine indexing map: tile size 4 for dimension d0 must divide or be divisible by the step 3}}
+  // expected-error @+3 {{'linalg.generic' op tiling is not supported for the semi-affine indexing map: tile size 4 for dimension d0 must be a multiple of the step 3}}
   // expected-error @+2 {{'linalg.generic' op failed to tile operation}}
   // expected-error @+1 {{'linalg.generic' op failed to generate tiling loops}}
   %0 = linalg.generic {indexing_maps = [#map, #ceildiv3, #map], iterator_types = ["parallel"]}
@@ -205,6 +236,35 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1:2 = transform.structured.tile_using_for %0 tile_sizes [4] : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// -----
+
+// Unlike `floordiv`/`mod`, `ceildiv` is not safe when the step is a multiple of
+// the tile size: the tile origin is not step-aligned.
+
+#map = affine_map<(d0) -> (d0)>
+#ceildiv4 = affine_map<(d0) -> (d0 ceildiv 4)>
+
+func.func @negative_tile_ceildiv_step_multiple_of_tile(%arg0: tensor<12xf32>, %arg1: tensor<4xf32>, %out: tensor<12xf32>) -> tensor<12xf32> {
+  // expected-error @+3 {{'linalg.generic' op tiling is not supported for the semi-affine indexing map: tile size 2 for dimension d0 must be a multiple of the step 4}}
+  // expected-error @+2 {{'linalg.generic' op failed to tile operation}}
+  // expected-error @+1 {{'linalg.generic' op failed to generate tiling loops}}
+  %0 = linalg.generic {indexing_maps = [#map, #ceildiv4, #map], iterator_types = ["parallel"]}
+    ins(%arg0, %arg1 : tensor<12xf32>, tensor<4xf32>) outs(%out : tensor<12xf32>) {
+  ^bb0(%in: f32, %in_0: f32, %o: f32):
+    %1 = arith.addf %in, %in_0 : f32
+    linalg.yield %1 : f32
+  } -> tensor<12xf32>
+  return %0 : tensor<12xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1:2 = transform.structured.tile_using_for %0 tile_sizes [2] : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
     transform.yield
   }
 }
