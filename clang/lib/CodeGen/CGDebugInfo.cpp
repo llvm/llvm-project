@@ -2504,6 +2504,19 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   if (Method->getCanonicalDecl()->isDeleted())
     SPFlags |= llvm::DISubprogram::SPFlagDeleted;
 
+  const bool isExplicitlyDefaultable =
+      isa<CXXDestructorDecl>(Method) ||
+      (isa<CXXConstructorDecl>(Method) &&
+       cast<CXXConstructorDecl>(Method)->isDefaultConstructor()) ||
+      Method->isCopyOrMoveConstructorOrAssignment();
+  if (Method->isExplicitlyDefaulted())
+    SPFlags |= Method->isOutOfLine()
+                   ? llvm::DISubprogram::SPFlagDefaultedOutOfClass
+                   : llvm::DISubprogram::SPFlagDefaultedInClass;
+  else if (isExplicitlyDefaultable && !Method->isImplicit() &&
+           Method->isThisDeclarationADefinition())
+    SPFlags |= llvm::DISubprogram::SPFlagDefaultedNo;
+
   if (Method->isNoReturn())
     Flags |= llvm::DINode::FlagNoReturn;
 
@@ -5007,6 +5020,20 @@ void CGDebugInfo::emitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
   if (CGM.getCodeGenOpts().OptimizationLevel != 0)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
+
+  if (const auto *Method = dyn_cast_or_null<CXXMethodDecl>(D)) {
+    const bool isExplicitlyDefaultable =
+        isa<CXXDestructorDecl>(Method) ||
+        (isa<CXXConstructorDecl>(Method) &&
+         cast<CXXConstructorDecl>(Method)->isDefaultConstructor()) ||
+        Method->isCopyOrMoveConstructorOrAssignment();
+    if (Method->isExplicitlyDefaulted())
+      SPFlags |= Method->isOutOfLine()
+                     ? llvm::DISubprogram::SPFlagDefaultedOutOfClass
+                     : llvm::DISubprogram::SPFlagDefaultedInClass;
+    else if (isExplicitlyDefaultable && !Method->isImplicit())
+      SPFlags |= llvm::DISubprogram::SPFlagDefaultedNo;
+  }
 
   llvm::DINode::DIFlags FlagsForDef = Flags | getCallSiteRelatedAttrs();
   llvm::DISubprogram::DISPFlags SPFlagsForDef =
