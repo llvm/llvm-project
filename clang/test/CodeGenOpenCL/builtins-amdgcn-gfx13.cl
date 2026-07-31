@@ -125,3 +125,26 @@ void test_cvt_sr_pk_bf16_f32(global bfloat2* out, float a, float b, uint sr)
   *out = __builtin_amdgcn_cvt_sr_pk_bf16_f32(a, b, sr);
 }
 
+// CHECK-LABEL: @test_mqsad_pk_u16_u8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC0_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC1_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[SRC2_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i64 [[SRC0:%.*]], ptr addrspace(5) [[SRC0_ADDR]], align 8
+// CHECK-NEXT:    store i32 [[SRC1:%.*]], ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    store i64 [[SRC2:%.*]], ptr addrspace(5) [[SRC2_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr addrspace(5) [[SRC0_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(5) [[SRC1_ADDR]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr addrspace(5) [[SRC2_ADDR]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.amdgcn.mqsad.pk.u16.u8(i64 [[TMP0]], i32 [[TMP1]], i64 [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[OUT_ADDR]], align 8
+// CHECK-NEXT:    store i64 [[TMP3]], ptr addrspace(1) [[TMP4]], align 8
+// CHECK-NEXT:    ret void
+//
+void test_mqsad_pk_u16_u8(global unsigned long *out, unsigned long src0, unsigned int src1, unsigned long src2)
+{
+  *out = __builtin_amdgcn_mqsad_pk_u16_u8(src0, src1, src2);
+}
+
