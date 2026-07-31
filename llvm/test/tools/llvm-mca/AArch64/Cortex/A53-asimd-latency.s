@@ -263,10 +263,10 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     1.00                        fcmp	d0, #0.0
 # CHECK-NEXT:  1      2     0.50                        fcsel	s0, s1, s2, eq
 # CHECK-NEXT:  1      1     0.50                        fmov	s0, s1
-# CHECK-NEXT:  1      6     0.50                        fmov	s0, w1
-# CHECK-NEXT:  1      6     0.50                        fmov	w0, s1
-# CHECK-NEXT:  1      6     0.50                        fmov	d0, x1
-# CHECK-NEXT:  1      6     0.50                        fmov	x0, d1
+# CHECK-NEXT:  1      1     0.50                        fmov	s0, w1
+# CHECK-NEXT:  1      1     0.50                        fmov	w0, s1
+# CHECK-NEXT:  1      1     0.50                        fmov	d0, x1
+# CHECK-NEXT:  1      1     0.50                        fmov	x0, d1
 # CHECK-NEXT:  1      8     0.50                        fmadd	s0, s1, s2, s3
 # CHECK-NEXT:  1      8     0.50                        fmadd	d0, d1, d2, d3
 # CHECK-NEXT:  1      4     0.50                        fadd	v0.2s, v1.2s, v2.2s
