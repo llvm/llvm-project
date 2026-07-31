@@ -677,3 +677,107 @@ epilog:
 
   ret void
 }
+
+; The second asyncmark's snapshot of the counters should be the same as the first;
+; when wait.asyncmark(0) is called it should insert a vmcnt before the ds_read.
+
+define void @consecutive_asyncmarks(ptr addrspace(1) %bar, ptr addrspace(3) %lds, ptr addrspace(1) %out) {
+; SDAG-LABEL: consecutive_asyncmarks:
+; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_readfirstlane_b32 s4, v2
+; SDAG-NEXT:    s_mov_b32 m0, s4
+; SDAG-NEXT:    s_nop 0
+; SDAG-NEXT:    global_load_dword v[0:1], off lds
+; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; wait_asyncmark(0)
+; SDAG-NEXT:    ds_read_b32 v0, v2
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    global_store_dword v[3:4], v0, off
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: consecutive_asyncmarks:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GISEL-NEXT:    s_mov_b32 m0, s4
+; GISEL-NEXT:    s_nop 0
+; GISEL-NEXT:    global_load_dword v[0:1], off lds
+; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; wait_asyncmark(0)
+; GISEL-NEXT:    ds_read_b32 v0, v2
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    global_store_dword v[3:4], v0, off
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  %val = load i32, ptr addrspace(3) %lds
+  store i32 %val, ptr addrspace(1) %out
+  ret void
+}
+
+; Similar to the previous test, except wait.asyncmark(1) should remove the
+; the first two marks, allowing the second DMA to remain in flight (ie.
+; vmcnt 0x1) during the ds_read.
+
+define void @consecutive_asyncmarks_wait1(ptr addrspace(1) %bar, ptr addrspace(3) %lds, ptr addrspace(1) %out) {
+; SDAG-LABEL: consecutive_asyncmarks_wait1:
+; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    v_add_u32_e32 v5, 4, v2
+; SDAG-NEXT:    v_readfirstlane_b32 s4, v2
+; SDAG-NEXT:    s_mov_b32 m0, s4
+; SDAG-NEXT:    v_readfirstlane_b32 s4, v5
+; SDAG-NEXT:    global_load_dword v[0:1], off lds
+; SDAG-NEXT:    s_mov_b32 m0, s4
+; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    s_nop 0
+; SDAG-NEXT:    global_load_dword v[0:1], off lds
+; SDAG-NEXT:    ; asyncmark
+; SDAG-NEXT:    ; wait_asyncmark(1)
+; SDAG-NEXT:    ds_read_b32 v0, v2
+; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-NEXT:    global_store_dword v[3:4], v0, off
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
+; SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: consecutive_asyncmarks_wait1:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_add_u32_e32 v5, 4, v2
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v2
+; GISEL-NEXT:    s_mov_b32 m0, s4
+; GISEL-NEXT:    v_readfirstlane_b32 s4, v5
+; GISEL-NEXT:    global_load_dword v[0:1], off lds
+; GISEL-NEXT:    s_mov_b32 m0, s4
+; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    s_nop 0
+; GISEL-NEXT:    global_load_dword v[0:1], off lds
+; GISEL-NEXT:    ; asyncmark
+; GISEL-NEXT:    ; wait_asyncmark(1)
+; GISEL-NEXT:    ds_read_b32 v0, v2
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    global_store_dword v[3:4], v0, off
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %lds_gep1 = getelementptr i32, ptr addrspace(3) %lds, i32 1
+  call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.global.load.async.lds(ptr addrspace(1) %bar, ptr addrspace(3) %lds_gep1, i32 4, i32 0, i32 0)
+  call void @llvm.amdgcn.asyncmark()
+  call void @llvm.amdgcn.wait.asyncmark(i16 1)
+  %val = load i32, ptr addrspace(3) %lds
+  store i32 %val, ptr addrspace(1) %out
+  ret void
+}
