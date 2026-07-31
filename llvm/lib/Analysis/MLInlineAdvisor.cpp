@@ -19,7 +19,6 @@
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
-#include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MLModelRunner.h"
@@ -28,6 +27,7 @@
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TensorSpec.h"
+#include "llvm/Analysis/Utils/MLGOUtils.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
@@ -111,7 +111,7 @@ createEmitCModelRunner(LLVMContext &Ctx,
 constexpr bool HaveMLIRLoweringInliner = false;
 enum class EmitCModelChoice { Default };
 static const EmitCModelChoice SelectedMLGOModel = EmitCModelChoice::Default;
-inline std::unique_ptr<MLModelRunner>
+static inline std::unique_ptr<MLModelRunner>
 createEmitCModelRunner(LLVMContext &, const std::vector<TensorSpec> &) {
   return nullptr;
 }
@@ -120,29 +120,16 @@ createEmitCModelRunner(LLVMContext &, const std::vector<TensorSpec> &) {
 std::unique_ptr<InlineAdvisor>
 llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
                             std::function<bool(CallBase &)> GetDefaultAdvice) {
-  if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
-      InteractiveChannelBaseName.empty() &&
-      SelectedMLGOModel == EmitCModelChoice::Default)
+  if (!isReleaseModelValid<CompiledModelType>(InteractiveChannelBaseName,
+                                              SelectedMLGOModel))
     return nullptr;
   auto RunnerFactory = [&](const std::vector<TensorSpec> &InputFeatures)
       -> std::unique_ptr<MLModelRunner> {
-    std::unique_ptr<MLModelRunner> ModelRunner;
-    if (InteractiveChannelBaseName.empty()) {
-      if constexpr (HaveMLIRLoweringInliner) {
-        ModelRunner = createEmitCModelRunner(M.getContext(), InputFeatures);
-      } else {
-        ModelRunner =
-            std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-                M.getContext(), InputFeatures, DecisionName,
-                EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
-      }
-    } else {
-      ModelRunner = std::make_unique<InteractiveModelRunner>(
-          M.getContext(), InputFeatures, InlineDecisionSpec,
-          InteractiveChannelBaseName + ".out",
-          InteractiveChannelBaseName + ".in");
-    }
-    return ModelRunner;
+    return createReleaseModeModelRunner<CompiledModelType,
+                                        HaveMLIRLoweringInliner>(
+        M.getContext(), InputFeatures, DecisionName, InteractiveChannelBaseName,
+        InlineDecisionSpec, createEmitCModelRunner,
+        EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
   };
   return std::make_unique<MLInlineAdvisor>(M, MAM, RunnerFactory,
                                            GetDefaultAdvice);
