@@ -3128,7 +3128,7 @@ bool TargetLowering::SimplifyDemandedBits(
     EVT SVT = Op0.getValueType();
 
     // The logic below assumes the sign bit is in the MSB.
-    // ppc_fp128 has two sign bits (at bits 127 and 63). 
+    // ppc_fp128 has two sign bits (at bits 127 and 63).
     if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
       break;
 
