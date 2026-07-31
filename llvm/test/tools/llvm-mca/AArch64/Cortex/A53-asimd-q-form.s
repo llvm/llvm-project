@@ -43,12 +43,12 @@ faddp	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      4     1.00                        fadd	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      2     2.00                        add	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      2     1.00                        add	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     2.00                        zip1	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     1.00                        zip1	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     2.00                        trn1	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     1.00                        trn1	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     2.00                        uzp1	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     1.00                        uzp1	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      2     2.00                        zip1	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      2     1.00                        zip1	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      2     2.00                        trn1	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      2     1.00                        trn1	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      2     2.00                        uzp1	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      2     1.00                        uzp1	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      2     2.00                        ext	v0.16b, v1.16b, v2.16b, #4
 # CHECK-NEXT:  1      2     1.00                        ext	v0.8b, v1.8b, v2.8b, #4
 # CHECK-NEXT:  1      2     1.00                        dup	v0.4s, v1.s[1]
