@@ -816,7 +816,6 @@ add_header_library(
     libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
