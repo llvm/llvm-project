@@ -1690,7 +1690,9 @@ def : InstRW<[WriteAdr, N2Write_4c_3L01_3V],  (instregex "ST4i(64)_POST$")>;
 // -----------------------------------------------------------------------------
 
 // Crypto AES ops
-def : InstRW<[N2Write_2c_1V], (instregex "^AES[DE]rr$", "^AESI?MCrr")>;
+def N2Rd_AES : SchedReadAdvance<2, [N2Write_2c_1V]>;
+def : InstRW<[N2Write_2c_1V], (instregex "^AES[DE]rr$")>;
+def : InstRW<[N2Write_2c_1V, N2Rd_AES], (instregex "^AESI?MCrr")>;
 
 // Crypto polynomial (64x64) multiply long
 def : InstRW<[N2Write_2c_1V0], (instrs PMULLv1i64, PMULLv2i64)>;
