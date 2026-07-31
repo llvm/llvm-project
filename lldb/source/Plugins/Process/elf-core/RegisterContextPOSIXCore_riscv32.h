@@ -72,6 +72,8 @@ protected:
   /// CSR metadata selection depends on which ISA extensions are enabled in the
   /// debug target. This routine fetches the feature list from the module's
   /// ArchSpec to select CSR patch sets during postmortem debugging.
+  /// This routine fetches the feature list from the module's ArchSpec to select
+  /// CSR patch sets during postmortem debugging.
   ///
   /// \param[out] features List of enabled ISA extension feature names. Returns
   ///                      an empty list if the thread/process/target/module is

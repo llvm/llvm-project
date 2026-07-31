@@ -12,8 +12,6 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 
-#include <iomanip>
-#include <sstream>
 #include <stddef.h>
 
 #define GPR_OFFSET(idx) ((idx) * sizeof(uint32_t))
@@ -99,8 +97,8 @@ RegisterInfoPOSIXDynamic_riscv32::GetRegisterInfo(
   return m_dyn_reg_infos.GetRegisterInfo(reg_name);
 }
 
-void RegisterInfoPOSIXDynamic_riscv32::GetCSRegInfos(
-    llvm::ArrayRef<llvm::StringRef> features,
+void RegisterInfoPOSIXDynamic_riscv32::BuildCSRegInfos(
+    llvm::ArrayRef<std::string> features,
     llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos) {
   cs_reg_infos.clear();
 
@@ -115,7 +113,11 @@ void RegisterInfoPOSIXDynamic_riscv32::GetCSRegInfos(
   const uint32_t k_num_csr_registers = csr_last_riscv - csr_first_riscv + 1;
   cs_reg_infos.reserve(k_num_csr_registers);
 
-  // Construct default CS register information.
+  // Construct default CS register information. CS register information entries
+  // are stored in CSR-address order. For each entry at slot 'reg',
+  //   kinds[eRegisterKindLLDB] = csr_first_riscv + reg.
+  // So, patch entries can recover the slot as:
+  //   idx = lldb_reg - csr_first_riscv.
   for (uint32_t reg = 0; reg < k_num_csr_registers; ++reg) {
     lldb_private::RegisterInfo csr{};
     for (auto &kind : csr.kinds)

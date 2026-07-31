@@ -8,7 +8,6 @@
 
 #include "RegisterContextPOSIXCore_riscv32.h"
 
-#include "Plugins/Process/elf-core/ProcessElfCore.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -59,10 +58,8 @@ RegisterContextCorePOSIX_riscv32::RegisterContextCorePOSIX_riscv32(
       std::size(g_register_infos_riscv32_fpr);
   llvm::SmallVector<std::string> features;
   GetFeatures(features);
-  llvm::SmallVector<llvm::StringRef> feature_refs(features.begin(),
-                                                  features.end());
   llvm::SmallVector<lldb_private::RegisterInfo> reg_infos_riscv32_csr;
-  m_reg_infos_up->GetCSRegInfos(feature_refs, reg_infos_riscv32_csr);
+  m_reg_infos_up->BuildCSRegInfos(features, reg_infos_riscv32_csr);
   uint32_t k_num_csr_registers = reg_infos_riscv32_csr.size();
   const ArchSpec &target_arch = m_reg_infos_up->GetTargetArchitecture();
   const llvm::Triple triple = target_arch.GetTriple();
@@ -381,9 +378,11 @@ void RegisterContextCorePOSIX_riscv32::GetFeatures(
   }
 
   features.reserve(raw_features.size());
-  for (const auto &feature : raw_features)
-    features.emplace_back(llvm::SubtargetFeatures::StripFlag(feature));
-
-  features.erase(std::remove(features.begin(), features.end(), ""),
-                 features.end());
+  for (const auto &feature : raw_features) {
+    if (feature.empty() || !llvm::SubtargetFeatures::isEnabled(feature))
+      continue;
+    auto stripped = llvm::SubtargetFeatures::StripFlag(feature);
+    if (!stripped.empty())
+      features.emplace_back(stripped);
+  }
 }
