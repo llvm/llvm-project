@@ -6825,25 +6825,25 @@ def fixedpoint_vec_xform : SDNodeXForm<timm, [{
 def gi_fixedpoint_vec_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
   GISDNodeXFormEquiv<fixedpoint_vec_xform>;
 
-multiclass FPToIntegerFmulPats<SDPatternOperator OpN, string INST> { 
+multiclass FPToIntegerFmulPats<SDPatternOperator round, string INST> { 
   let Predicates = [HasFullFP16] in {
-  def : Pat<(i32 (OpN (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
+  def : Pat<(i32 (round (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
             (!cast<Instruction>(INST # SWHri) $Rn, $scale)>;
-  def : Pat<(i64 (OpN (fmul f16:$Rn, fixedpoint_f16_i64:$scale))),
+  def : Pat<(i64 (round (fmul f16:$Rn, fixedpoint_f16_i64:$scale))),
             (!cast<Instruction>(INST # SXHri) $Rn, $scale)>;
   }
-  def : Pat<(i32 (OpN (fmul f32:$Rn, fixedpoint_f32_i32:$scale))),
+  def : Pat<(i32 (round (fmul f32:$Rn, fixedpoint_f32_i32:$scale))),
             (!cast<Instruction>(INST # SWSri) $Rn, $scale)>;
-  def : Pat<(i64 (OpN (fmul f32:$Rn, fixedpoint_f32_i64:$scale))),
+  def : Pat<(i64 (round (fmul f32:$Rn, fixedpoint_f32_i64:$scale))),
             (!cast<Instruction>(INST # SXSri) $Rn, $scale)>;
-  def : Pat<(i32 (OpN (fmul f64:$Rn, fixedpoint_f64_i32:$scale))),
+  def : Pat<(i32 (round (fmul f64:$Rn, fixedpoint_f64_i32:$scale))),
             (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
-  def : Pat<(i64 (OpN (fmul f64:$Rn, fixedpoint_f64_i64:$scale))),
+  def : Pat<(i64 (round (fmul f64:$Rn, fixedpoint_f64_i64:$scale))),
             (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
 
-  def : Pat<(f32 (bitconvert (i32 (OpN (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale))))),
+  def : Pat<(f32 (bitconvert (i32 (round (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale))))),
       (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_vec_xform fixedpoint_f32_i32:$scale))>;
-  def : Pat<(f64 (bitconvert (i64 (OpN (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale))))),
+  def : Pat<(f64 (bitconvert (i64 (round (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale))))),
       (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_vec_xform fixedpoint_f64_i64:$scale))>;
 }
 
