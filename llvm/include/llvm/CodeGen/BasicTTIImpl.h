@@ -2822,7 +2822,10 @@ public:
 
     const TargetLoweringBase *TLI = getTLI();
 
-    if (TLI->isOperationLegalOrPromote(ISD, LT.second)) {
+    // pdep/pext are not lane-separable
+    bool BitManipSplit = (ISD == ISD::PDEP || ISD == ISD::PEXT) && LT.first > 1;
+
+    if (!BitManipSplit && TLI->isOperationLegalOrPromote(ISD, LT.second)) {
       if (IID == Intrinsic::fabs && LT.second.isFloatingPoint() &&
           TLI->isFAbsFree(LT.second)) {
         return 0;
@@ -2836,7 +2839,7 @@ public:
         return (LT.first * 2);
       else
         return (LT.first * 1);
-    } else if (TLI->isOperationCustom(ISD, LT.second)) {
+    } else if (!BitManipSplit && TLI->isOperationCustom(ISD, LT.second)) {
       // If the operation is custom lowered then assume
       // that the code is twice as expensive.
       return (LT.first * 2);
