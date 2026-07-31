@@ -1303,12 +1303,6 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
     Register CandidateReg = Candidate.Reg;
     NextUseDistance NextUseDist = Candidate.Dist;
     LaneBitmask Mask = Candidate.Mask;
-    // TODO: Check if this is needed.
-    unsigned NumOfCoveredRegs = SIRegisterInfo::getNumCoveredRegs(Mask);
-    unsigned NumOfSubregisters = TRI->getRegSizeInBits(CandidateReg, *MRI) / 32;
-    if (NumOfCoveredRegs != NumOfSubregisters)
-      continue;
-
     MachineBasicBlock *SpillBlock = nullptr;
     MachineBasicBlock::iterator WhereToSpill;
     MachineInstr *InstrOfCandidateReg =
@@ -1510,12 +1504,6 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
 
     Register CandidateReg = C->getCandidateRegister();
     unsigned NumOfCoveredRegs = SIRegisterInfo::getNumCoveredRegs(C->getMask());
-    unsigned NumOfSubregisters =
-        (TRI->getRegSizeInBits(CandidateReg, *MRI)) / 32;
-    assert(NumOfCoveredRegs == NumOfSubregisters &&
-           "The number of the sub-registers is different than number of "
-           "covered registers.");
-
     SpillCnt += NumOfCoveredRegs;
 
     SpilledRegs.insert(CandidateReg);
