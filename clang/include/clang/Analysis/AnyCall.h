@@ -162,7 +162,9 @@ public:
   size_t param_size() const { return parameters().size(); }
   bool param_empty() const { return parameters().empty(); }
 
-  /// \returns actual arguments for expression-backed calls.
+  /// \returns actual arguments for expression-backed calls, or an empty range
+  /// for declaration-backed calls and call kinds with implicit or synthesized
+  /// argument lists, such as allocators and destructors.
   ArrayRef<const Expr *> arguments() const {
     if (!E)
       return {};
