@@ -32,44 +32,44 @@ define <vscale x 16 x i8> @umin_with_operand_1_umin(<vscale x 16 x i1> %pg, <vsc
   ret <vscale x 16 x i8> %3
 }
 
-define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_1(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %other_pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_1(
-; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OTHER_PG:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 1))
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[B]], <vscale x 16 x i8> splat (i8 1))
-; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[OTHER_PG]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 ;
   %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 1))
   %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> splat (i8 1))
-  %3 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %1, <vscale x 16 x i8> %2)
+  %3 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %other_pg, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2)
   ret <vscale x 16 x i8> %3
 }
 
-define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_2(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_2(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %other_pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_2(
-; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 1))
+; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OTHER_PG:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[OTHER_PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 1))
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[B]], <vscale x 16 x i8> splat (i8 1))
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 ;
-  %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 1))
+  %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %other_pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 1))
   %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> splat (i8 1))
   %3 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2)
   ret <vscale x 16 x i8> %3
 }
 
-define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_3(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_3(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %other_pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_3(
-; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OTHER_PG:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 1))
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[B]], <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[OTHER_PG]], <vscale x 16 x i8> [[B]], <vscale x 16 x i8> splat (i8 1))
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP3]]
 ;
   %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 1))
-  %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %b, <vscale x 16 x i8> splat (i8 1))
+  %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %other_pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> splat (i8 1))
   %3 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %1, <vscale x 16 x i8> %2)
   ret <vscale x 16 x i8> %3
 }
@@ -105,14 +105,14 @@ define <vscale x 16 x i8> @logical_umin_with_logical_umin(<vscale x 16 x i1> %pg
   ret <vscale x 16 x i8> %2
 }
 
-define <vscale x 16 x i8> @logical_umin_with_logical_umin_predicate_mismatch(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) #0 {
+define <vscale x 16 x i8> @logical_umin_with_logical_umin_predicate_mismatch(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %other_pg, <vscale x 16 x i8> %a) #0 {
 ; CHECK-LABEL: define <vscale x 16 x i8> @logical_umin_with_logical_umin_predicate_mismatch(
-; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 1))
+; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OTHER_PG:%.*]], <vscale x 16 x i8> [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[OTHER_PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 1))
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[TMP1]], <vscale x 16 x i8> splat (i8 1))
 ; CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP2]]
 ;
-  %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 1))
+  %1 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %other_pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 1))
   %2 = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %1, <vscale x 16 x i8> splat (i8 1))
   ret <vscale x 16 x i8> %2
 }
