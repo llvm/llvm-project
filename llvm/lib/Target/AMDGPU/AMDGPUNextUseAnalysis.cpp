@@ -942,21 +942,6 @@ private:
   // Feature getters. Use cached results if available. If not calculate.
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 public:
-  bool isReachable(const MachineBasicBlock *From,
-                   const MachineBasicBlock *To) const {
-    return pathInfoFor(From, To).Reachable;
-  }
-
-private:
-  InstrIdTy getSize(const MachineBasicBlock *BB) const {
-    return pathInfoFor(BB, BB).Size;
-  }
-
-  bool isReachableOrSame(const MachineBasicBlock *From,
-                         const MachineBasicBlock *To) const {
-    return From == To || pathInfoFor(From, To).Reachable;
-  }
-
   bool isForwardReachable(const MachineBasicBlock *From,
                           const MachineBasicBlock *To) const {
     const PathInfo &PI = pathInfoFor(From, To);
@@ -966,6 +951,21 @@ private:
     return initializePathInfoForwardReachable(
         From, To,
         PI.Reachable && calcIsReachable(From, To, /*ForwardOnly*/ true));
+  }
+
+private:
+  InstrIdTy getSize(const MachineBasicBlock *BB) const {
+    return pathInfoFor(BB, BB).Size;
+  }
+
+  bool isReachable(const MachineBasicBlock *From,
+                   const MachineBasicBlock *To) const {
+    return pathInfoFor(From, To).Reachable;
+  }
+
+  bool isReachableOrSame(const MachineBasicBlock *From,
+                         const MachineBasicBlock *To) const {
+    return From == To || pathInfoFor(From, To).Reachable;
   }
 
   // Return true/false if we know that 'To' is reachable or not from
@@ -2637,5 +2637,5 @@ AMDGPUNextUseAnalysisPrinterPass::run(MachineFunction &MF,
 
 bool AMDGPUNextUseAnalysis::isReachable(const MachineBasicBlock *From,
                                         const MachineBasicBlock *To) const {
-  return Impl->isReachable(From, To);
+  return Impl->isForwardReachable(From, To);
 }
