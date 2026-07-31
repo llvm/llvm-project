@@ -2,12 +2,17 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX1250-GISEL %s
 
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.00 -filetype=null < %s 2>&1 | FileCheck -check-prefix=ERR %s
+
+; ERR: error: <unknown>:0:0: in function @kernel1 void (ptr addrspace(1), ptr addrspace(3)): llvm.amdgcn.s.wakeup.barrier requires target feature 's-wakeup-barrier-inst'
+
 @bar = internal addrspace(3) global target("amdgcn.named.barrier", 0) poison
 
 define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) #0 {
 ; GFX1250-SDAG-LABEL: kernel1:
 ; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    global_wb
+; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
@@ -20,7 +25,7 @@ define amdgpu_kernel void @kernel1(ptr addrspace(1) %out, ptr addrspace(3) %in) 
 ;
 ; GFX1250-GISEL-LABEL: kernel1:
 ; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    global_wb
+; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv

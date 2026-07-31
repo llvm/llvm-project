@@ -1701,7 +1701,7 @@ public:
   unsigned getTargetAddressSpace(LangAS AS) const {
     if (isTargetAddressSpace(AS))
       return toTargetAddressSpace(AS);
-    return getAddressSpaceMap()[(unsigned)AS];
+    return getAddressSpaceMap()[AS];
   }
 
   /// Determine whether the given pointer-authentication key is valid.

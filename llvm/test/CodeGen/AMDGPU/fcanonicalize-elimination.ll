@@ -913,10 +913,6 @@ define float @v_test_canonicalize_maximumnum(float %a, float %b) {
   ret float %canonicalized
 }
 
-; Avoid failing the test on FreeBSD11.0 which will match the GCN-NOT: 1.0
-; in the .amd_amdgpu_isa "amdgcn-unknown-freebsd11.0--gfx802" directive
-; GCN: .amd_amdgpu_isa
-
 declare float @llvm.canonicalize.f32(float) #0
 declare float @llvm.copysign.f32(float, float) #0
 declare float @llvm.amdgcn.fmul.legacy(float, float) #0

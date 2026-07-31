@@ -31,6 +31,8 @@
 #include "builtins/muldf3.h"
 #include "builtins/mulsf3.h"
 #include "builtins/multf3.h"
+#include "builtins/negdf2.h"
+#include "builtins/negsf2.h"
 #include "builtins/subdf3.h"
 #include "builtins/subsf3.h"
 #include "builtins/subtf3.h"

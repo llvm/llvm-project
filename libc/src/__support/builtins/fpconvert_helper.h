@@ -50,16 +50,20 @@ LIBC_INLINE constexpr To fpconvert(From x) {
 
   FromBits x_bits(x);
 
+  if constexpr (cpp::is_same_v<To, From>)
+    return x;
+
   if (x_bits.is_nan()) {
-    if (x_bits.is_signaling_nan()) {
-      fputil::raise_except_if_required(FE_INVALID);
-      return ToBits::quiet_nan().get_val();
+    typename FromBits::StorageType x_frac = x_bits.get_mantissa();
+    if constexpr (ToBits::FRACTION_LEN >= FromBits::FRACTION_LEN) {
+      ToStorageType to_frac =
+          static_cast<ToStorageType>(x_frac)
+          << (ToBits::FRACTION_LEN - FromBits::FRACTION_LEN);
+      return ToBits::signaling_nan(x_bits.sign(), to_frac).get_val();
     }
-    typename FromBits::StorageType x_mant = x_bits.get_mantissa();
-    if (FromBits::FRACTION_LEN > ToBits::FRACTION_LEN)
-      x_mant >>= FromBits::FRACTION_LEN - ToBits::FRACTION_LEN;
-    return ToBits::quiet_nan(x_bits.sign(), static_cast<ToStorageType>(x_mant))
-        .get_val();
+    ToStorageType to_frac = static_cast<ToStorageType>(
+        x_frac >> (FromBits::FRACTION_LEN - ToBits::FRACTION_LEN));
+    return ToBits::quiet_nan(x_bits.sign(), to_frac).get_val();
   }
 
   if (x_bits.is_inf())

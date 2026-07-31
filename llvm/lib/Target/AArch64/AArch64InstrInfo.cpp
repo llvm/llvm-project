@@ -3307,6 +3307,14 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STNT1W_2Z_STRIDED_IMM:
   case AArch64::STNT1D_2Z_IMM:
   case AArch64::STNT1D_2Z_STRIDED_IMM:
+  case AArch64::ST1B_2Z_IMM_PSEUDO:
+  case AArch64::ST1H_2Z_IMM_PSEUDO:
+  case AArch64::ST1W_2Z_IMM_PSEUDO:
+  case AArch64::ST1D_2Z_IMM_PSEUDO:
+  case AArch64::STNT1B_2Z_IMM_PSEUDO:
+  case AArch64::STNT1H_2Z_IMM_PSEUDO:
+  case AArch64::STNT1W_2Z_IMM_PSEUDO:
+  case AArch64::STNT1D_2Z_IMM_PSEUDO:
   case AArch64::ST1B_4Z_IMM:
   case AArch64::ST1B_4Z_STRIDED_IMM:
   case AArch64::ST1H_4Z_IMM:
@@ -3335,6 +3343,14 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STNT1W_4Z_STRIDED_IMM:
   case AArch64::STNT1D_4Z_IMM:
   case AArch64::STNT1D_4Z_STRIDED_IMM:
+  case AArch64::ST1B_4Z_IMM_PSEUDO:
+  case AArch64::ST1H_4Z_IMM_PSEUDO:
+  case AArch64::ST1W_4Z_IMM_PSEUDO:
+  case AArch64::ST1D_4Z_IMM_PSEUDO:
+  case AArch64::STNT1B_4Z_IMM_PSEUDO:
+  case AArch64::STNT1H_4Z_IMM_PSEUDO:
+  case AArch64::STNT1W_4Z_IMM_PSEUDO:
+  case AArch64::STNT1D_4Z_IMM_PSEUDO:
     return 3;
   case AArch64::LDPDpost:
   case AArch64::LDPDpre:
@@ -5053,6 +5069,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STNT1W_2Z_STRIDED_IMM:
   case AArch64::STNT1D_2Z_IMM:
   case AArch64::STNT1D_2Z_STRIDED_IMM:
+  case AArch64::ST1B_2Z_IMM_PSEUDO:
+  case AArch64::ST1H_2Z_IMM_PSEUDO:
+  case AArch64::ST1W_2Z_IMM_PSEUDO:
+  case AArch64::ST1D_2Z_IMM_PSEUDO:
+  case AArch64::STNT1B_2Z_IMM_PSEUDO:
+  case AArch64::STNT1H_2Z_IMM_PSEUDO:
+  case AArch64::STNT1W_2Z_IMM_PSEUDO:
+  case AArch64::STNT1D_2Z_IMM_PSEUDO:
     Scale = Width = TypeSize::getScalable(16 * 2);
     MinOffset = -8;
     MaxOffset = 7;
@@ -5117,6 +5141,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STNT1W_4Z_STRIDED_IMM:
   case AArch64::STNT1D_4Z_IMM:
   case AArch64::STNT1D_4Z_STRIDED_IMM:
+  case AArch64::ST1B_4Z_IMM_PSEUDO:
+  case AArch64::ST1H_4Z_IMM_PSEUDO:
+  case AArch64::ST1W_4Z_IMM_PSEUDO:
+  case AArch64::ST1D_4Z_IMM_PSEUDO:
+  case AArch64::STNT1B_4Z_IMM_PSEUDO:
+  case AArch64::STNT1H_4Z_IMM_PSEUDO:
+  case AArch64::STNT1W_4Z_IMM_PSEUDO:
+  case AArch64::STNT1D_4Z_IMM_PSEUDO:
     Scale = Width = TypeSize::getScalable(16 * 4);
     MinOffset = -8;
     MaxOffset = 7;
@@ -11356,18 +11388,20 @@ AArch64InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
 
   // AArch64::ORRWrs and AArch64::ORRXrs with WZR/XZR reg
   // and zero immediate operands used as an alias for mov instruction.
-  if (((MI.getOpcode() == AArch64::ORRWrs &&
-        MI.getOperand(1).getReg() == AArch64::WZR &&
-        MI.getOperand(3).getImm() == 0x0) ||
-       (MI.getOpcode() == AArch64::ORRWrr &&
-        MI.getOperand(1).getReg() == AArch64::WZR)) &&
-      // Check that the w->w move is not a zero-extending w->x mov.
-      (!MI.getOperand(0).getReg().isVirtual() ||
-       MI.getOperand(0).getSubReg() == 0) &&
-      (!MI.getOperand(0).getReg().isPhysical() ||
-       MI.findRegisterDefOperandIdx(getXRegFromWReg(MI.getOperand(0).getReg()),
-                                    /*TRI=*/nullptr) == -1))
-    return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+  if ((MI.getOpcode() == AArch64::ORRWrs &&
+       MI.getOperand(1).getReg() == AArch64::WZR &&
+       MI.getOperand(3).getImm() == 0x0) ||
+      (MI.getOpcode() == AArch64::ORRWrr &&
+       MI.getOperand(1).getReg() == AArch64::WZR)) {
+    // Check that the w->w move is not a zero-extending w->x mov.
+    if ((MI.getOperand(0).getReg().isPhysical() &&
+         MI.findRegisterDefOperandIdx(
+             getXRegFromWReg(MI.getOperand(0).getReg()),
+             /*TRI=*/nullptr) == -1) ||
+        (MI.getOperand(0).getReg().isVirtual() &&
+         !MI.getOperand(0).getSubReg()))
+      return DestSourcePair{MI.getOperand(0), MI.getOperand(2)};
+  }
 
   if (MI.getOpcode() == AArch64::ORRXrs &&
       MI.getOperand(1).getReg() == AArch64::XZR &&
@@ -12161,6 +12195,18 @@ bool AArch64InstrInfo::verifyInstruction(const MachineInstr &MI,
           (AArch64_AM::getShiftValue(MO.getImm()) != 8 &&
            AArch64_AM::getShiftValue(MO.getImm()) != 16)) {
         ErrInfo = "OPERAND_SHIFT_MSL should be msl shift of 8 or 16";
+        return false;
+      }
+      break;
+    case AArch64::OPERAND_IMM_UINT1:
+      if (!MO.isImm() || (MO.getImm() != 0 && MO.getImm() != 1)) {
+        ErrInfo = "OPERAND_IMM_UINT1 should be 0 or 1";
+        return false;
+      }
+      break;
+    case AArch64::OPERAND_IMM_UINT4plus1:
+      if (!MO.isImm() || MO.getImm() <= 0 || MO.getImm() > 16) {
+        ErrInfo = "OPERAND_IMM_UINT4plus1 should be in the range 1 to 16";
         return false;
       }
       break;

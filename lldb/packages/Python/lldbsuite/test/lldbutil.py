@@ -1932,6 +1932,7 @@ def get_latest_apple_simulator(platform_name, log=None):
 
 
 def launch_exe_in_apple_simulator(
+    test,
     device_uuid,
     exe_path,
     exe_args=[],
@@ -1939,17 +1940,20 @@ def launch_exe_in_apple_simulator(
     log=None,
 ):
     exe_path = os.path.realpath(exe_path)
-    cmd = [
-        "xcrun",
-        "simctl",
+    # Resolve the path to simctl so we can launch it directly via spawnSubprocess.
+    simctl_path = (
+        subprocess.check_output(["xcrun", "-f", "simctl"]).decode("utf-8").strip()
+    )
+    args = [
         "spawn",
         "-s",
         device_uuid,
         exe_path,
     ] + exe_args
     if log:
-        log(" ".join(cmd))
-    sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+        log(simctl_path + " " + " ".join(args))
+    # simctl itself gets terminated when the test finishes.
+    sim_launcher = test.spawnSubprocess(simctl_path, args, stderr=subprocess.PIPE)
 
     # Read stderr to try to find matches.
     # Each pattern will return the value of group[1] of the first match in the stderr.

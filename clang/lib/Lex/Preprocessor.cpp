@@ -159,6 +159,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
     Ident_AbnormalTermination = nullptr;
   }
 
+  Ident__GLIBCXX__ = getIdentifierInfo("__GLIBCXX__");
+
   // Default incremental processing to -fincremental-extensions, clients can
   // override with `enableIncrementalProcessing` if desired.
   IncrementalProcessing = LangOpts.IncrementalExtensions;
@@ -1352,6 +1354,8 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
       return false;
   } else if (!Result.isAtPhysicalStartOfLine())
     return false;
+
+  assert(CurPPLexer && "CurPPLexer must not be null");
 
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);

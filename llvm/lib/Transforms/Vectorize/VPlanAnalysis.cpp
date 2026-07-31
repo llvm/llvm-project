@@ -55,9 +55,6 @@ void llvm::collectEphemeralRecipesForVPlan(
   }
 }
 
-template void DomTreeBuilder::Calculate<DominatorTreeBase<VPBlockBase, false>>(
-    DominatorTreeBase<VPBlockBase, false> &DT);
-
 bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
                                         const VPRecipeBase *B) const {
   if (A == B)

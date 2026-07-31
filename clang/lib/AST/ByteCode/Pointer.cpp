@@ -815,9 +815,45 @@ bool Pointer::pointToSameBlock(const Pointer &A, const Pointer &B) {
   return A.block() == B.block();
 }
 
-bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
-  return hasSameBase(A, B) && A.BS.Base == B.BS.Base &&
-         A.getFieldDesc()->IsArray;
+bool Pointer::elemsOfSameArray(const Pointer &A, const Pointer &B) {
+  assert(hasSameBase(A, B));
+  assert(A.isBlockPointer());
+  assert(B.isBlockPointer());
+
+  if (A.BS.Base == B.BS.Base)
+    return true;
+
+  if (A.isBaseClass() || B.isBaseClass())
+    return false;
+
+  if (A.getField() || B.getField())
+    return false;
+
+  auto closestArray = [](const Pointer &P) -> PtrView {
+    if (P.isArrayRoot())
+      return P.view();
+
+    PtrView V = P.view();
+    if (V.isArrayElement() || V.isOnePastEnd())
+      V = V.expand().getArray();
+
+    if (P.isRoot())
+      return P.view();
+
+    while (!V.isRoot() && !V.getFieldDesc()->IsArray) {
+      if (V.isArrayElement()) {
+        V = V.expand().getArray();
+        break;
+      }
+      V = V.getBase();
+    }
+    return V;
+  };
+
+  if (closestArray(A) != closestArray(B))
+    return false;
+
+  return true;
 }
 
 bool Pointer::pointsToLiteral() const {
@@ -1113,13 +1149,7 @@ std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
   if (!R)
     return *this;
 
-  const Record::Field *F = nullptr;
-  for (auto &It : R->fields()) {
-    if (It.Offset == Offset) {
-      F = &It;
-      break;
-    }
-  }
+  const Record::Field *F = R->findField(Offset);
   if (!F)
     return *this;
 
@@ -1147,18 +1177,14 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
     return *this;
 
   const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());
-  const Descriptor *BaseDesc = nullptr;
 
   // This iterates over bases and checks for the proper offset. That's
   // potentially slow but this case really shouldn't happen a lot.
-  for (const Record::Base &B : R->bases()) {
-    if (B.Offset == BaseOffset) {
-      BaseDesc = B.Desc;
-      break;
-    }
-  }
-  assert(BaseDesc);
+  const Record::Base *B = R->findBase(BaseOffset);
+  if (!B)
+    return *this;
 
+  const Descriptor *BaseDesc = B->Desc;
   // Adjust the offset value based on the information from the record layout.
   const ASTContext &ASTCtx = Ctx.getASTContext();
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
