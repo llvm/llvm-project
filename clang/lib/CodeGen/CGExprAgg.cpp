@@ -516,7 +516,7 @@ VisitBoundsSafetyPointerPromotionExpr(BoundsSafetyPointerPromotionExpr *E) {
     Ptr = CGF.GetWidePointerElement(PtrRV.getAggregateAddress(), WPIndex::Pointer);
   }
 
-  llvm::BranchInst *NullCheckBranch = nullptr;
+  llvm::BasicBlock *NullBlock = nullptr;
   if (E->getNullCheck()) {
     // Test that the pointer is not NULL before testing that it's in bounds,
     // if AcceptNullPtr is specified.
@@ -525,7 +525,8 @@ VisitBoundsSafetyPointerPromotionExpr(BoundsSafetyPointerPromotionExpr *E) {
 
     llvm::Value *Null = llvm::Constant::getNullValue(Ptr->getType());
     llvm::Value *PtrIsNull = Builder.CreateICmpNE(Ptr, Null);
-    NullCheckBranch = Builder.CreateCondBr(PtrIsNull, NotNull, nullptr);
+    NullBlock = CGF.createBasicBlock("boundscheck.null");
+    Builder.CreateCondBr(PtrIsNull, NotNull, NullBlock);
     CGF.EmitBlock(NotNull);
   }
 
@@ -573,12 +574,10 @@ VisitBoundsSafetyPointerPromotionExpr(BoundsSafetyPointerPromotionExpr *E) {
   //  fill result with null
   //  br cont
   // cont:
-  if (NullCheckBranch) {
+  if (NullBlock) {
     llvm::BasicBlock *ContBlock = CGF.createBasicBlock("boundscheck.cont");
     Builder.CreateBr(ContBlock);
 
-    llvm::BasicBlock *NullBlock = CGF.createBasicBlock("boundscheck.null");
-    NullCheckBranch->setSuccessor(1, NullBlock);
     CGF.EmitBlock(NullBlock);
     llvm::Value *Zero = llvm::Constant::getNullValue(Ptr->getType());
     EmitWidePointerToDest(E->getType(), Zero, Zero, Zero, Callback);
