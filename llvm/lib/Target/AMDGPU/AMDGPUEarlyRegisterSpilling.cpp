@@ -111,7 +111,12 @@ protected:
                            SmallVector<MachineInstr *> &RestoreUses, int FI,
                            DenseMap<Register, DomGroup> &RestoreRegToDomGroup);
 
-  unsigned loopWeight(unsigned LoopDepth) { return 1000 * LoopDepth; }
+  unsigned loopWeight(unsigned LoopDepth) {
+    uint64_t Weight = 1;
+    for (unsigned i = 0; i < LoopDepth; ++i)
+      Weight *= 100;
+    return Weight;
+  }
 
   SpillOrRestoreCandidate(Register CandidateReg, LaneBitmask Mask,
                           CodeGenPlan Plan, const SIRegisterInfo *TRI,
@@ -1040,7 +1045,7 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
       MachineBasicBlock *UseMBB = U.getParent();
       if (DT->dominates(CurMI, &U)) {
         DominatedUses.insert(&U);
-      } else if (NUA->isReachable(SpillBlock, UseMBB)) {
+      } else if (NUA->isReachable(CurMI->getParent(), UseMBB)) {
         NonDominatedReachableUses.insert(&U);
       } else {
         // The uses which are before the high register pressure point are
