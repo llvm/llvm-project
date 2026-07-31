@@ -3686,6 +3686,22 @@ def TestOpWithVariadicSegmentProperties : TEST_Op<"variadic_segment_prop",
   }];
 }
 
+// Same as `TestOpWithVariadicSegmentProperties`, but the assembly format uses
+// the bulk `type(operands)` / `type(results)` directives instead of spelling
+// out the type of each individual variadic group. This prevents the printer
+// from eliding `operandSegmentSizes` / `resultSegmentSizes` from the
+// `<{...}>` properties dictionary (since there is no other way to recover the
+// segment sizes on re-parse), so this op exercises the parser's ability to
+// read those trait-injected properties back out of `prop-dict`.
+def TestOpWithBulkTypesAndSegmentProperties : TEST_Op<"variadic_segment_prop_bulk_type",
+    [AttrSizedOperandSegments, AttrSizedResultSegments]> {
+  let arguments = (ins Variadic<I64>:$a1, Variadic<I64>:$a2);
+  let results = (outs Variadic<I64>:$b1, Variadic<I64>:$b2);
+  let assemblyFormat = [{
+    `(` operands `)` `:` functional-type(operands, results) prop-dict attr-dict
+  }];
+}
+
 def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
   let assemblyFormat = "custom<IntProperty>($first) `+` custom<SumProperty>($second, ref($first)) attr-dict";
   let arguments = (ins IntProp<"int64_t">:$first, IntProp<"int64_t">:$second);
@@ -4239,7 +4255,7 @@ def TestTensorWithFutureLayoutOp
   }];
 
   let arguments = (ins TestMemRefLayoutAttr:$layout);
-  let results = (outs AnyRankedTensor:$output);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
   let extraClassDefinition = [{
     bool test::TestTensorWithFutureLayoutOp::bufferizesToMemoryRead(
         ::mlir::OpOperand&,
@@ -4285,10 +4301,10 @@ def TestForceNewLayoutOp
   }];
 
   let arguments = (ins
-    AnyRankedTensor:$input,
+    Bufferization_TensorLikeTypeInterface:$input,
     TestMemRefLayoutAttr:$layout
   );
-  let results = (outs AnyRankedTensor:$output);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$output);
   let extraClassDefinition = [{
     bool test::TestForceNewLayoutOp::bufferizesToMemoryRead(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
@@ -4320,6 +4336,16 @@ def TestForceNewLayoutOp
                /*isDefinite=*/true}};
     }
   }];
+}
+
+def TestDummyCastOp : TEST_Op<"dummy_cast_op", []> {
+  let arguments = (ins
+    Arg<Bufferization_BufferLikeTypeInterface>:$source
+  );
+  let results = (outs
+    Arg<Bufferization_BufferLikeTypeInterface>:$dest
+  );
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 }
 
 //===----------------------------------------------------------------------===//

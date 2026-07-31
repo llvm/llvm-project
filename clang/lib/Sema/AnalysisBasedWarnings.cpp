@@ -2508,27 +2508,29 @@ public:
         MsgParam = 5;
       } else if (const auto *ECE = dyn_cast<ExplicitCastExpr>(Operation)) {
         QualType destType = ECE->getType();
-        bool destTypeComplete = true;
 
         if (!isa<PointerType>(destType))
           return;
         destType = destType.getTypePtr()->getPointeeType();
-        if (const auto *D = destType->getAsTagDecl())
-          destTypeComplete = D->isCompleteDefinition();
 
-        // If destination type is incomplete, it is unsafe to cast to anyway, no
-        // need to check its type:
-        if (destTypeComplete) {
+        // If destination type is incomplete or dependent, it is unsafe to cast
+        // to anyway, no need to check its type:
+        if (!destType->isIncompleteType() && !destType->isDependentType()) {
           const uint64_t dSize = Ctx.getTypeSize(destType);
           QualType srcType = ECE->getSubExpr()->getType();
 
           assert(srcType->isPointerType());
 
-          const uint64_t sSize =
-              Ctx.getTypeSize(srcType.getTypePtr()->getPointeeType());
+          QualType srcPointeeType = srcType.getTypePtr()->getPointeeType();
 
-          if (sSize >= dSize)
-            return;
+          // Check if source type is incomplete or dependent as well:
+          if (!srcPointeeType->isIncompleteType() &&
+              !srcPointeeType->isDependentType()) {
+            const uint64_t sSize = Ctx.getTypeSize(srcPointeeType);
+
+            if (sSize >= dSize)
+              return;
+          }
         }
         if (const auto *CE = dyn_cast<CXXMemberCallExpr>(
                 ECE->getSubExpr()->IgnoreParens())) {
@@ -2759,21 +2761,55 @@ sema::AnalysisBasedWarnings::Policy
 sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   using namespace diag;
   DiagnosticsEngine &D = S.getDiagnostics();
+
+  // This runs at the end of every function definition, and the checks below
+  // resolve Loc against the pragma diagnostic state (and system header/macro
+  // classification) once per queried diagnostic. Those inputs fully determine
+  // the result, so cache the policy on them instead (PolicyOverrides are
+  // transient per-function state and are applied after the cache lookup).
+  const bool Cacheable = !D.hasDiagSuppressionMapping() && Loc.isValid();
+  const void *StateKey = nullptr;
+  unsigned SysIdx = 0;
+  if (Cacheable) {
+    StateKey = D.getDiagStateKeyForLoc(Loc);
+    const SourceManager &SM = D.getSourceManager();
+    SysIdx = (SM.isInSystemHeader(SM.getExpansionLoc(Loc)) ? 2u : 0u) |
+             (SM.isInSystemMacro(Loc) ? 1u : 0u);
+    auto It = PolicyCache[SysIdx].find(StateKey);
+    if (It != PolicyCache[SysIdx].end()) {
+      Policy P = It->second;
+      P.enableCheckUnreachable |= PolicyOverrides.enableCheckUnreachable;
+      P.enableThreadSafetyAnalysis |=
+          PolicyOverrides.enableThreadSafetyAnalysis;
+      P.enableConsumedAnalysis |= PolicyOverrides.enableConsumedAnalysis;
+      return P;
+    }
+  }
+
   Policy P;
 
   // Note: The enabled checks should be kept in sync with the switch in
   // SemaPPCallbacks::PragmaDiagnostic().
   P.enableCheckUnreachable =
-      PolicyOverrides.enableCheckUnreachable ||
       areAnyEnabled(D, Loc, warn_unreachable, warn_unreachable_break,
                     warn_unreachable_return, warn_unreachable_loop_increment);
 
-  P.enableThreadSafetyAnalysis = PolicyOverrides.enableThreadSafetyAnalysis ||
-                                 areAnyEnabled(D, Loc, warn_double_lock);
+  P.enableThreadSafetyAnalysis = areAnyEnabled(D, Loc, warn_double_lock);
 
-  P.enableConsumedAnalysis = PolicyOverrides.enableConsumedAnalysis ||
-                             areAnyEnabled(D, Loc, warn_use_in_invalid_state);
+  P.enableConsumedAnalysis = areAnyEnabled(D, Loc, warn_use_in_invalid_state);
+
+  if (Cacheable)
+    PolicyCache[SysIdx][StateKey] = P;
+
+  P.enableCheckUnreachable |= PolicyOverrides.enableCheckUnreachable;
+  P.enableThreadSafetyAnalysis |= PolicyOverrides.enableThreadSafetyAnalysis;
+  P.enableConsumedAnalysis |= PolicyOverrides.enableConsumedAnalysis;
   return P;
+}
+
+void sema::AnalysisBasedWarnings::clearPolicyCache() {
+  for (auto &M : PolicyCache)
+    M.clear();
 }
 
 void sema::AnalysisBasedWarnings::clearOverrides() {

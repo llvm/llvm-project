@@ -135,6 +135,11 @@ FunctionPass *llvm::createMSP430ISelDag(MSP430TargetMachine &TM,
   return new MSP430DAGToDAGISelLegacy(TM, OptLevel);
 }
 
+MSP430ISelDAGToDAGPass::MSP430ISelDAGToDAGPass(MSP430TargetMachine &TM,
+                                               CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<MSP430DAGToDAGISel>(TM, OptLevel)) {
+}
+
 /// MatchWrapper - Try to match MSP430ISD::Wrapper node into an addressing mode.
 /// These wrap things that will resolve down into a symbol reference.  If no
 /// match is possible, this returns true, otherwise it returns false.

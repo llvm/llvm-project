@@ -344,9 +344,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // truncate the .debug_* sections to eight characters. PE/COFF doesn't allow
     // section names longer than eight bytes in executables - LLD uses the same
     // name length extension as in object files (where long names are allowed).
+    // Also 'lld-link' for hybrid object files if -marm64x is requested.
     if (Args.hasArg(options::OPT_gdwarf, options::OPT_gdwarf_2,
                     options::OPT_gdwarf_3, options::OPT_gdwarf_4,
-                    options::OPT_gdwarf_5, options::OPT_gdwarf_6))
+                    options::OPT_gdwarf_5, options::OPT_gdwarf_6,
+                    options::OPT_marm64x))
       Linker = "lld-link";
     else
       Linker = "link";
@@ -498,6 +500,31 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::move(LinkCmd));
 }
 
+void tools::ARM64XObjcopy::ConstructJob(Compilation &C, const JobAction &JA,
+                                        const InputInfo &Output,
+                                        const InputInfoList &Inputs,
+                                        const ArgList &Args,
+                                        const char *LinkingOutput) const {
+  // Assume llvm-objcopy is only used for hybrid ARM64X object files.
+  if (Inputs.size() != 2)
+    return;
+
+  std::string ObjcopyPath = getToolChain().GetProgramPath("llvm-objcopy");
+  const char *Exec = Args.MakeArgString(ObjcopyPath);
+
+  // Embed the hybrid object in the .obj.arm64ec section.
+  ArgStringList CmdArgs;
+  CmdArgs.push_back(Args.MakeArgString("--add-section=.obj.arm64ec=" +
+                                       Twine(Inputs[1].getFilename())));
+  // Mark the .obj.arm64ec section as discardable.
+  CmdArgs.push_back("--set-section-flags=.obj.arm64ec=exclude");
+  CmdArgs.push_back(Inputs[0].getFilename());
+  CmdArgs.push_back(Output.getFilename());
+
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Output));
+}
+
 MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
@@ -529,6 +556,17 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
       llvm::findVCToolChainViaRegistry(VCToolChainPath, VSLayout);
 
   loadMultilibsFromYAML(Args, D);
+}
+
+Tool *MSVCToolChain::getTool(Action::ActionClass AC) const {
+  switch (AC) {
+  case Action::ObjcopyJobClass:
+    if (!Objcopy)
+      Objcopy.reset(new tools::ARM64XObjcopy(*this));
+    return Objcopy.get();
+  default:
+    return ToolChain::getTool(AC);
+  }
 }
 
 Tool *MSVCToolChain::buildLinker() const {
@@ -738,6 +776,37 @@ void MSVCToolChain::AddSystemIncludeWithSubfolder(
   addSystemInclude(DriverArgs, CC1Args, path);
 }
 
+void MSVCToolChain::AddMSVCStdlibMultilibIncludeArgs(
+    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    bool HonorNostdincxx) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc) ||
+      (HonorNostdincxx && DriverArgs.hasArg(options::OPT_nostdincxx)))
+    return;
+
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (getDriver().getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
+}
+
+void MSVCToolChain::AddMSVCStdlibIncludeArgs(const ArgList &DriverArgs,
+                                             ArgStringList &CC1Args) const {
+  AddMSVCStdlibMultilibIncludeArgs(DriverArgs, CC1Args,
+                                   /*HonorNostdincxx=*/true);
+
+  if (!DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc) &&
+      !DriverArgs.hasArg(options::OPT_nostdincxx) && !VCToolChainPath.empty())
+    addSystemInclude(DriverArgs, CC1Args,
+                     getSubDirectoryPath(llvm::SubDirectoryType::Include));
+}
+
 void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                               ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdinc))
@@ -786,17 +855,8 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  // Add multilib variant include paths in priority order.
-  for (const Multilib &M : getOrderedMultilibs()) {
-    if (M.isDefault())
-      continue;
-    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
-      SmallString<128> Dir(*StdlibIncDir);
-      llvm::sys::path::append(Dir, M.includeSuffix());
-      if (getDriver().getVFS().exists(Dir))
-        addSystemInclude(DriverArgs, CC1Args, Dir);
-    }
-  }
+  AddMSVCStdlibMultilibIncludeArgs(DriverArgs, CC1Args,
+                                   /*HonorNostdincxx=*/false);
 
   // Honor %INCLUDE% and %EXTERNAL_INCLUDE%. It should have essential search
   // paths set by vcvarsall.bat. Skip if the user expressly set any of the
@@ -891,7 +951,17 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void MSVCToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                  ArgStringList &CC1Args) const {
-  // FIXME: There should probably be logic here to find libc++ on Windows.
+  // MSVC STL paths are added from AddClangSystemIncludeArgs during normal
+  // compilation to preserve clang-cl header search order.
+  if (DriverArgs.hasArg(options::OPT_print_cxx_stdlib_include_dirs) &&
+      !DriverArgs.hasArg(options::OPT_stdlib_EQ))
+    AddMSVCStdlibIncludeArgs(DriverArgs, CC1Args);
+}
+
+StringRef MSVCToolChain::GetCXXStdlibName(const ArgList &DriverArgs) const {
+  if (!DriverArgs.hasArg(options::OPT_stdlib_EQ))
+    return "msvcstl";
+  return ToolChain::GetCXXStdlibName(DriverArgs);
 }
 
 VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
@@ -908,7 +978,7 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
                    IsWindowsMSVC)) {
     // -fms-compatibility-version=19.33 is default, aka 2022, 17.3
     // NOTE: when changing this value, also update
-    // clang/docs/CommandGuide/clang.rst and clang/docs/UsersManual.rst
+    // clang/docs/CommandGuide/clang.rst and clang/docs/UsersManual.md
     // accordingly.
     MSVT = VersionTuple(19, 33);
   }

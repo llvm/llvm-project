@@ -302,9 +302,11 @@ lookupBuiltin(StringRef DemangledCall,
   // argument and repeat the search.
   if (BuiltinArgumentTypes.size() >= 1) {
     char FirstArgumentType = BuiltinArgumentTypes[0][0];
-    // Prefix to be added to the builtin's name for lookup.
-    // For example, OpenCL "abs" taking an unsigned value has a prefix "u_".
-    std::string Prefix;
+    // Prefix and suffix to be added to the builtin's name for lookup.
+    // For example, OpenCL "abs" taking an unsigned value has a prefix "u_",
+    // and "group_reduce_max" taking an unsigned value has a suffix "u".
+    StringRef Prefix;
+    StringRef Suffix;
 
     switch (FirstArgumentType) {
     // Unsigned:
@@ -313,6 +315,7 @@ lookupBuiltin(StringRef DemangledCall,
         Prefix = "u_";
       else if (Set == SPIRV::InstructionSet::GLSL_std_450)
         Prefix = "u";
+      Suffix = "u";
       break;
     // Signed:
     case 'c':
@@ -323,6 +326,7 @@ lookupBuiltin(StringRef DemangledCall,
         Prefix = "s_";
       else if (Set == SPIRV::InstructionSet::GLSL_std_450)
         Prefix = "s";
+      Suffix = "s";
       break;
     // Floating-point:
     case 'f':
@@ -331,43 +335,18 @@ lookupBuiltin(StringRef DemangledCall,
       if (Set == SPIRV::InstructionSet::OpenCL_std ||
           Set == SPIRV::InstructionSet::GLSL_std_450)
         Prefix = "f";
+      Suffix = "f";
       break;
     }
 
     // If argument-type name prefix was added, look up the builtin again.
     if (!Prefix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin(Prefix + BuiltinName, Set)))
+        (Builtin = SPIRV::lookupBuiltin((Prefix + BuiltinName).str(), Set)))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
 
-    // If lookup with a prefix failed, find a suffix to be added to the
-    // builtin's name for lookup. For example, OpenCL "group_reduce_max" taking
-    // an unsigned value has a suffix "u".
-    std::string Suffix;
-
-    switch (FirstArgumentType) {
-    // Unsigned:
-    case 'u':
-      Suffix = "u";
-      break;
-    // Signed:
-    case 'c':
-    case 's':
-    case 'i':
-    case 'l':
-      Suffix = "s";
-      break;
-    // Floating-point:
-    case 'f':
-    case 'd':
-    case 'h':
-      Suffix = "f";
-      break;
-    }
-
-    // If argument-type name suffix was added, look up the builtin again.
     if (!Suffix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin(BuiltinName + Suffix, Set)))
+        (Builtin = SPIRV::lookupBuiltin((BuiltinName + Suffix).str(), Set)))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
   }
@@ -484,7 +463,7 @@ static bool buildSelectInst(MachineIRBuilder &MIRBuilder,
 /// \p DestinationReg.
 static Register buildLoadInst(SPIRVTypeInst BaseType, Register PtrRegister,
                               MachineIRBuilder &MIRBuilder,
-                              SPIRVGlobalRegistry *GR, LLT LowLevelType,
+                              SPIRVGlobalRegistry *GR,
                               Register DestinationReg = Register(0)) {
   if (!DestinationReg.isValid())
     DestinationReg = createVirtualRegister(BaseType, GR, MIRBuilder);
@@ -521,7 +500,7 @@ static Register buildBuiltinVariableLoad(
 
   // Load the value from the global variable.
   Register LoadedRegister =
-      buildLoadInst(VariableType, Variable, MIRBuilder, GR, LLType, Reg);
+      buildLoadInst(VariableType, Variable, MIRBuilder, GR, Reg);
   MIRBuilder.getMRI()->setType(LoadedRegister, LLType);
   return LoadedRegister;
 }
@@ -783,10 +762,9 @@ static bool buildAtomicCompareExchangeInst(
   if (!ScopeReg.isValid())
     ScopeReg = buildConstantIntReg32(Scope, MIRBuilder, GR);
 
-  Register Expected = IsCmpxchg
-                          ? ExpectedArg
-                          : buildLoadInst(SpvDesiredTy, ExpectedArg, MIRBuilder,
-                                          GR, LLT::scalar(64));
+  Register Expected =
+      IsCmpxchg ? ExpectedArg
+                : buildLoadInst(SpvDesiredTy, ExpectedArg, MIRBuilder, GR);
   MRI->setType(Expected, DesiredLLT);
   Register Tmp = !IsCmpxchg ? MRI->createGenericVirtualRegister(DesiredLLT)
                             : Call->ReturnRegister;
@@ -1899,7 +1877,7 @@ static bool generateCastToPtrInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
-static bool generateDotOrFMulInst(const StringRef DemangledCall,
+static bool generateDotOrFMulInst(StringRef DemangledCall,
                                   const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
@@ -2311,7 +2289,7 @@ getSamplerFilterModeFromBitmask(unsigned Bitmask) {
   return SPIRV::SamplerFilterMode::Nearest;
 }
 
-static bool generateReadImageInst(const StringRef DemangledCall,
+static bool generateReadImageInst(StringRef DemangledCall,
                                   const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
@@ -2406,7 +2384,7 @@ static bool generateWriteImageInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
-static bool generateSampleImageInst(const StringRef DemangledCall,
+static bool generateSampleImageInst(StringRef DemangledCall,
                                     const SPIRV::IncomingCall *Call,
                                     MachineIRBuilder &MIRBuilder,
                                     SPIRVGlobalRegistry *GR) {
@@ -3175,7 +3153,7 @@ static bool generateAsyncCopy(const SPIRV::IncomingCall *Call,
   }
 }
 
-static bool generateConvertInst(const StringRef DemangledCall,
+static bool generateConvertInst(StringRef DemangledCall,
                                 const SPIRV::IncomingCall *Call,
                                 MachineIRBuilder &MIRBuilder,
                                 SPIRVGlobalRegistry *GR) {
@@ -3412,7 +3390,7 @@ namespace SPIRV {
 // TODO: consider a major rework of mapping demangled calls into a builtin
 // functions to unify search and decrease number of individual cases.
 std::tuple<int, unsigned, unsigned>
-mapBuiltinToOpcode(const StringRef DemangledCall,
+mapBuiltinToOpcode(StringRef DemangledCall,
                    SPIRV::InstructionSet::InstructionSet Set) {
   Register Reg;
   SmallVector<Register> Args;
@@ -3485,7 +3463,80 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
   return std::make_tuple(-1, 0, 0);
 }
 
-std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
+/// Checks that scalar/vector numeric arguments of \p Call match the types
+/// implied by their mangling in \p DemangledCall. Pointers and opaque
+/// builtin types (images, samplers, pipes, etc.) are not validated here, as
+/// mangling does not enforce their exact spelling.
+///
+/// \returns false if a numeric argument's SPIR-V type disagrees with the
+/// type implied by the mangled name, true otherwise.
+static bool demangledArgTypesMatchIR(const SPIRV::IncomingCall *Call,
+                                     StringRef DemangledCall,
+                                     SPIRVGlobalRegistry *GR, LLVMContext &Ctx,
+                                     const CallBase &CB) {
+  if (Call->isSpirvOp())
+    return true;
+
+  SmallVector<StringRef, 10> ArgTypeStrs;
+  if (!SPIRV::parseBuiltinTypeStr(ArgTypeStrs, DemangledCall, Ctx))
+    return true;
+
+  unsigned ArgBase = CB.hasStructRetAttr() ? 1 : 0;
+  if (Call->Arguments.size() < ArgBase)
+    return true;
+  unsigned NumMangledArgs = Call->Arguments.size() - ArgBase;
+  unsigned NumArgsToCheck =
+      std::min<unsigned>(NumMangledArgs, ArgTypeStrs.size());
+  for (unsigned ArgIdx = 0; ArgIdx < NumArgsToCheck; ++ArgIdx) {
+    StringRef ArgTypeStr = ArgTypeStrs[ArgIdx].trim();
+    // Opaque/builtin OpenCL and SPIR-V types (images, samplers, pipes,
+    // reserve_id, etc.) are not validated here, as mangling does not enforce
+    // their exact spelling, and some builtin type names have no TableGen
+    // record and would otherwise abort compilation when parsed.
+    if (hasBuiltinTypePrefix(ArgTypeStr))
+      continue;
+
+    Type *ExpectedType = SPIRV::parseBuiltinCallArgumentType(ArgTypeStr, Ctx);
+    if (!ExpectedType || ExpectedType->isVoidTy() ||
+        ExpectedType->isPointerTy() || ExpectedType->isTargetExtTy())
+      continue;
+
+    SPIRVTypeInst ArgType =
+        GR->getSPIRVTypeForVReg(Call->Arguments[ArgIdx + ArgBase]);
+    if (!ArgType)
+      continue;
+    unsigned ArgTypeOpcode = ArgType->getOpcode();
+    if (ArgTypeOpcode != SPIRV::OpTypeInt &&
+        ArgTypeOpcode != SPIRV::OpTypeFloat &&
+        ArgTypeOpcode != SPIRV::OpTypeBool &&
+        ArgTypeOpcode != SPIRV::OpTypeVector)
+      continue;
+
+    auto *ExpectedVecType = dyn_cast<VectorType>(ExpectedType);
+    Type *ExpectedScalarType =
+        ExpectedVecType ? ExpectedVecType->getElementType() : ExpectedType;
+    SPIRVTypeInst ArgScalarType = GR->getScalarOrVectorComponentType(ArgType);
+    if (!ArgScalarType)
+      continue;
+
+    bool ExpectedIsInt = ExpectedScalarType->isIntegerTy();
+    unsigned ArgOpcode = ArgScalarType->getOpcode();
+    bool ArgIsInt =
+        ArgOpcode == SPIRV::OpTypeInt || ArgOpcode == SPIRV::OpTypeBool;
+
+    if (ExpectedIsInt != ArgIsInt)
+      return false;
+
+    unsigned ExpectedElts =
+        ExpectedVecType ? ExpectedVecType->getElementCount().getFixedValue()
+                        : 1;
+    if (ExpectedElts != GR->getScalarOrVectorComponentCount(ArgType))
+      return false;
+  }
+  return true;
+}
+
+std::optional<bool> lowerBuiltin(StringRef DemangledCall,
                                  SPIRV::InstructionSet::InstructionSet Set,
                                  MachineIRBuilder &MIRBuilder,
                                  const Register OrigRet, const Type *OrigRetTy,
@@ -3517,6 +3568,17 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     LLVM_DEBUG(dbgs() << "Too many arguments for builtin " << DemangledCall
                       << ": expected at most " << Call->Builtin->MaxNumArgs
                       << ", got " << Args.size()
+                      << "; treating as a normal function\n");
+    return std::nullopt;
+  }
+
+  // Check that argument types match what the mangling implies. If not
+  // (e.g. broken mangling), treat the call as a regular function call
+  // rather than crashing.
+  if (!demangledArgTypesMatchIR(Call.get(), DemangledCall, GR,
+                                MIRBuilder.getContext(), CB)) {
+    LLVM_DEBUG(dbgs() << "Argument types do not match mangled types for "
+                      << "builtin " << DemangledCall
                       << "; treating as a normal function\n");
     return std::nullopt;
   }
@@ -3655,7 +3717,7 @@ Type *parseBuiltinCallArgumentType(StringRef TypeStr, LLVMContext &Ctx) {
 }
 
 bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
-                         const StringRef DemangledCall, LLVMContext &Ctx) {
+                         StringRef DemangledCall, LLVMContext &Ctx) {
   auto Pos1 = DemangledCall.find('(');
   if (Pos1 == StringRef::npos)
     return false;
@@ -3667,8 +3729,8 @@ bool parseBuiltinTypeStr(SmallVector<StringRef, 10> &BuiltinArgsTypeStrs,
   return true;
 }
 
-Type *parseBuiltinCallArgumentBaseType(const StringRef DemangledCall,
-                                       unsigned ArgIdx, LLVMContext &Ctx) {
+Type *parseBuiltinCallArgumentBaseType(StringRef DemangledCall, unsigned ArgIdx,
+                                       LLVMContext &Ctx) {
   SmallVector<StringRef, 10> BuiltinArgsTypeStrs;
   parseBuiltinTypeStr(BuiltinArgsTypeStrs, DemangledCall, Ctx);
   if (ArgIdx >= BuiltinArgsTypeStrs.size())
@@ -3700,7 +3762,7 @@ struct OpenCLType {
 // Misc functions for parsing builtin types.
 //===----------------------------------------------------------------------===//
 
-static Type *parseTypeString(const StringRef Name, LLVMContext &Context) {
+static Type *parseTypeString(StringRef Name, LLVMContext &Context) {
   if (Name.starts_with("void"))
     return Type::getVoidTy(Context);
   else if (Name.starts_with("int") || Name.starts_with("uint"))
@@ -3925,7 +3987,7 @@ lowerBuiltinType(const Type *OpaqueType,
 
   unsigned NumStartingVRegs = MIRBuilder.getMRI()->getNumVirtRegs();
 
-  const StringRef Name = BuiltinType->getName();
+  StringRef Name = BuiltinType->getName();
   LLVM_DEBUG(dbgs() << "Lowering builtin type: " << Name << "\n");
 
   SPIRVTypeInst TargetType = nullptr;
@@ -3983,6 +4045,14 @@ lowerBuiltinType(const Type *OpaqueType,
     buildOpName(GR->getSPIRVTypeID(TargetType), Name, MIRBuilder);
 
   return TargetType;
+}
+
+bool isPipeOrAddressSpaceCastBuiltin(StringRef Name) {
+  const DemangledBuiltin *Builtin = lookupBuiltin(Name, OpenCL_std);
+  if (!Builtin)
+    return false;
+  return Builtin->Group == Pipe || Builtin->Group == CastToPtr ||
+         Builtin->Group == BlockingPipes;
 }
 } // namespace SPIRV
 } // namespace llvm

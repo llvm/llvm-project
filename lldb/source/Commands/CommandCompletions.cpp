@@ -89,6 +89,8 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
        CommandCompletions::TypeCategoryNames},
       {lldb::eThreadIDCompletion, CommandCompletions::ThreadIDs},
       {lldb::eManagedPluginCompletion, CommandCompletions::ManagedPlugins},
+      {lldb::eScriptedExtensionCompletion,
+       CommandCompletions::ScriptedExtensions},
       {lldb::eTerminatorCompletion,
        nullptr} // This one has to be last in the list.
   };
@@ -139,37 +141,36 @@ class SourceFileCompleter : public Completer {
 public:
   SourceFileCompleter(CommandInterpreter &interpreter,
                       CompletionRequest &request)
-      : Completer(interpreter, request) {
-    FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
-    m_file_name = partial_spec.GetFilename().GetCString();
-    m_dir_name = partial_spec.GetDirectory().GetCString();
-  }
+      : Completer(interpreter, request),
+        m_partial_spec(m_request.GetCursorArgumentPrefix()) {}
 
   lldb::SearchDepth GetDepth() override { return lldb::eSearchDepthCompUnit; }
 
   Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                           SymbolContext &context,
                                           Address *addr) override {
+    llvm::StringRef spec_file_name = m_partial_spec.GetFilename();
+    llvm::StringRef spec_dir_name = m_partial_spec.GetDirectory();
     if (context.comp_unit != nullptr) {
-      const char *cur_file_name =
-          context.comp_unit->GetPrimaryFile().GetFilename().GetCString();
-      const char *cur_dir_name =
-          context.comp_unit->GetPrimaryFile().GetDirectory().GetCString();
+      llvm::StringRef cur_file_name =
+          context.comp_unit->GetPrimaryFile().GetFilename();
+      llvm::StringRef cur_dir_name =
+          context.comp_unit->GetPrimaryFile().GetDirectory();
 
       bool match = false;
-      if (m_file_name && cur_file_name &&
-          strstr(cur_file_name, m_file_name) == cur_file_name)
+      if (!spec_file_name.empty() && cur_file_name.starts_with(spec_file_name))
         match = true;
 
-      if (match && m_dir_name && cur_dir_name &&
-          strstr(cur_dir_name, m_dir_name) != cur_dir_name)
+      if (match && !spec_dir_name.empty() &&
+          !cur_dir_name.starts_with(spec_dir_name))
         match = false;
 
       if (match) {
         m_matching_files.AppendIfUnique(context.comp_unit->GetPrimaryFile());
       }
     }
-    return m_matching_files.GetSize() >= m_request.GetMaxNumberOfCompletionsToAdd()
+    return m_matching_files.GetSize() >=
+                   m_request.GetMaxNumberOfCompletionsToAdd()
                ? Searcher::eCallbackReturnStop
                : Searcher::eCallbackReturnContinue;
   }
@@ -179,14 +180,13 @@ public:
     // Now convert the filelist to completions:
     for (size_t i = 0; i < m_matching_files.GetSize(); i++) {
       m_request.AddCompletion(
-          m_matching_files.GetFileSpecAtIndex(i).GetFilename().GetCString());
+          m_matching_files.GetFileSpecAtIndex(i).GetFilename());
     }
   }
 
 private:
+  FileSpec m_partial_spec;
   FileSpecList m_matching_files;
-  const char *m_file_name;
-  const char *m_dir_name;
 
   SourceFileCompleter(const SourceFileCompleter &) = delete;
   const SourceFileCompleter &operator=(const SourceFileCompleter &) = delete;
@@ -309,7 +309,7 @@ public:
       // And a file name match.
       if (m_file_name) {
         llvm::StringRef cur_file_name =
-            context.module_sp->GetFileSpec().GetFilename().GetStringRef();
+            context.module_sp->GetFileSpec().GetFilename();
         if (cur_file_name.starts_with(*m_file_name))
           m_request.AddCompletion(cur_file_name);
       }
@@ -869,6 +869,13 @@ void CommandCompletions::ManagedPlugins(CommandInterpreter &interpreter,
                                         SearchFilter *searcher) {
   PluginManager::AutoCompletePluginName(request.GetCursorArgumentPrefix(),
                                         request);
+}
+
+void CommandCompletions::ScriptedExtensions(CommandInterpreter &interpreter,
+                                            CompletionRequest &request,
+                                            SearchFilter *searcher) {
+  PluginManager::AutoCompleteScriptedExtension(
+      request.GetCursorArgumentPrefix(), request);
 }
 
 void CommandCompletions::CompleteModifiableCmdPathArgs(

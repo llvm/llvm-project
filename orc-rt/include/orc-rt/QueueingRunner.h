@@ -13,12 +13,8 @@
 #ifndef ORC_RT_QUEUEINGRUNNER_H
 #define ORC_RT_QUEUEINGRUNNER_H
 
-#include "orc-rt/WrapperFunction.h"
+#include "orc-rt/move_only_function.h"
 
-#include "orc-rt-c/CoreTypes.h"
-#include "orc-rt-c/WrapperFunction.h"
-
-#include <cstdint>
 #include <deque>
 #include <mutex>
 #include <optional>
@@ -59,9 +55,9 @@ private:
 
 } // namespace detail
 
-/// A wrapper-call runner that pushes incoming calls onto a caller-owned work
-/// queue, leaving the caller free to drain the queue however and whenever
-/// they choose.
+/// A task runner that pushes dispatched tasks onto a caller-owned work queue,
+/// leaving the caller free to drain the queue however and whenever they
+/// choose.
 ///
 /// QueueingRunner is intended for use on systems where threads are not
 /// available, and for unit tests. For most uses of the ORC runtime,
@@ -82,13 +78,9 @@ public:
 
   QueueingRunner(WorkQueueT &Pending) : Pending(Pending) {}
 
-  /// Enqueue a wrapper-function call to be run later.
-  void operator()(orc_rt_SessionRef S, uint64_t CallId,
-                  orc_rt_WrapperFunctionReturn Return,
-                  orc_rt_WrapperFunction Fn, WrapperFunctionBuffer ArgBytes) {
-    Pending.push_back([=, ArgBytes = std::move(ArgBytes)]() mutable {
-      Fn(S, CallId, Return, ArgBytes.release());
-    });
+  /// Enqueue a task to be run later.
+  void operator()(move_only_function<void()> Task) {
+    Pending.push_back(std::move(Task));
   }
 
   /// Run all currently-queued calls in last-in-first-out order, returning when
