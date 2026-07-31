@@ -691,17 +691,35 @@ void CallConvLoweringPass::runOnOperation() {
     return;
   }
 
-  // Rewrite each function together with every direct call to it.  By the
-  // time we move on to function F+1, F's signature and every direct call to
-  // F have already been brought into alignment, and F+1..FN are still in
-  // their original (mutually consistent) form, so the IR is verifier-clean
-  // at every outer-iteration boundary.
+  // A cir.get_global holding a function's address carries the signature the
+  // source wrote, which the verifier ties to the callee, so it goes stale when
+  // that callee is rewritten.  A function address in a global initializer is a
+  // GlobalViewAttr instead, whose recorded type the verifier does not tie to
+  // the callee and which is dropped at opaque-pointer lowering, so it needs no
+  // counterpart.
+  llvm::DenseMap<cir::FuncOp, SmallVector<cir::GetGlobalOp>> addressTakers;
+  moduleOp.walk([&](cir::GetGlobalOp getGlobal) {
+    auto ptrTy = cast<cir::PointerType>(getGlobal.getAddr().getType());
+    if (!isa<cir::FuncType>(ptrTy.getPointee()))
+      return;
+    // A get_global's pointee must equal the named symbol's type, and the
+    // GlobalOp verifier rejects a function type there, so this names a
+    // cir.func.
+    auto callee = cast<cir::FuncOp>(symbolTable.lookup(getGlobal.getName()));
+    addressTakers[callee].push_back(getGlobal);
+  });
+
+  // Rewrite each function together with every direct call to it and every op
+  // holding its address.  By the time we move on to function F+1, F's
+  // signature and every reference to F have already been brought into
+  // alignment, and F+1..FN are still in their original (mutually consistent)
+  // form, so the IR is verifier-clean at every outer-iteration boundary.
   //
   // There is still a brief inner window where F's signature has been
-  // rewritten but its callers have not yet caught up -- we have no way to
+  // rewritten but its references have not yet caught up -- we have no way to
   // mutate both sides of a call atomically.  No verifier runs inside the
   // pass, and at pass exit the module is verifier-clean.  Fusing the inner
-  // loop here keeps the invalid window per-function rather than module-wide.
+  // loops here keeps the invalid window per-function rather than module-wide.
   OpBuilder builder(ctx);
   for (auto &kv : classifications) {
     cir::FuncOp func = kv.first;
@@ -724,6 +742,8 @@ void CallConvLoweringPass::runOnOperation() {
         return;
       }
     }
+    for (cir::GetGlobalOp addrOp : addressTakers.lookup(func))
+      rewriteCtx.rewriteFunctionAddress(addrOp, func, builder);
   }
 
   // Rewrite indirect call sites.  The callee is opaque, so classify from the
