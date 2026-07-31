@@ -608,18 +608,18 @@
 # CHECK-NEXT:  1      6     0.50                        fminnm	d19, d20, d21
 # CHECK-NEXT:  1      6     0.50                        fminnm	h29, h23, h17
 # CHECK-NEXT:  1      6     0.50                        fnmul	d22, d23, d24
-# CHECK-NEXT:  1      10    0.50                        fmadd	h27, h0, h6, h28
-# CHECK-NEXT:  1      10    0.50                        fmadd	s3, s5, s6, s31
-# CHECK-NEXT:  1      10    0.50                        fmadd	d3, d13, d0, d23
-# CHECK-NEXT:  1      10    0.50                        fmsub	h25, h28, h12, h24
-# CHECK-NEXT:  1      10    0.50                        fmsub	s3, s5, s6, s31
-# CHECK-NEXT:  1      10    0.50                        fmsub	d3, d13, d0, d23
-# CHECK-NEXT:  1      10    0.50                        fnmadd	h3, h18, h31, h24
-# CHECK-NEXT:  1      10    0.50                        fnmadd	s3, s5, s6, s31
-# CHECK-NEXT:  1      10    0.50                        fnmadd	d3, d13, d0, d23
-# CHECK-NEXT:  1      10    0.50                        fnmsub	s3, s5, s6, s31
-# CHECK-NEXT:  1      10    0.50                        fnmsub	d3, d13, d0, d23
-# CHECK-NEXT:  1      10    0.50                        fnmsub	h3, h29, h24, h17
+# CHECK-NEXT:  1      8     0.50                        fmadd	h27, h0, h6, h28
+# CHECK-NEXT:  1      8     0.50                        fmadd	s3, s5, s6, s31
+# CHECK-NEXT:  1      8     0.50                        fmadd	d3, d13, d0, d23
+# CHECK-NEXT:  1      8     0.50                        fmsub	h25, h28, h12, h24
+# CHECK-NEXT:  1      8     0.50                        fmsub	s3, s5, s6, s31
+# CHECK-NEXT:  1      8     0.50                        fmsub	d3, d13, d0, d23
+# CHECK-NEXT:  1      8     0.50                        fnmadd	h3, h18, h31, h24
+# CHECK-NEXT:  1      8     0.50                        fnmadd	s3, s5, s6, s31
+# CHECK-NEXT:  1      8     0.50                        fnmadd	d3, d13, d0, d23
+# CHECK-NEXT:  1      8     0.50                        fnmsub	s3, s5, s6, s31
+# CHECK-NEXT:  1      8     0.50                        fnmsub	d3, d13, d0, d23
+# CHECK-NEXT:  1      8     0.50                        fnmsub	h3, h29, h24, h17
 # CHECK-NEXT:  1      6     0.50                        fcvtzs	w3, h5, #1
 # CHECK-NEXT:  1      6     0.50                        fcvtzs	wzr, h20, #13
 # CHECK-NEXT:  1      6     0.50                        fcvtzs	w19, h0, #32
