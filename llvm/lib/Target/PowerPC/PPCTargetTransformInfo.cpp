@@ -1160,3 +1160,41 @@ PPCTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
     Cost += 1; // need shift for length
   return Cost;
 }
+
+InstructionCost PPCTTIImpl::getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const {
+  InstructionCost Invalid = InstructionCost::getInvalid();
+
+  if (Opcode != Instruction::Add)
+    return Invalid;
+  if (BinOp && BinOp.value() != Instruction::Mul)
+    return Invalid;
+
+  EVT AccVT = TLI->getValueType(DL, AccumType,  true);
+  if (AccVT != MVT::i32)
+    return Invalid;
+  if (InputTypeA != InputTypeB)
+    return Invalid;
+
+  Type *ATy = VectorType::get(InputTypeA, VF);
+  EVT AVT = TLI->getValueType(DL, ATy,  true);
+  if (AVT != MVT::v16i8 && AVT != MVT::v8i16)
+    return Invalid;
+
+  // For v16i8 PPC has vmsumubm zext/zext and vmsummbm sext/zext
+  // For v8i16 PPC has vmsumuhm zext/zext and vmsumshm sext/sext
+  if (OpAExtend != TTI::PR_SignExtend && OpAExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+  if (OpAExtend != OpBExtend) {
+    if (AVT != MVT::v16i8 || OpBExtend != TTI::PR_ZeroExtend)
+      return Invalid;
+  } else if (AVT == MVT::v16i8 && OpAExtend == TTI::PR_SignExtend) {
+      return Invalid;
+  }
+
+  return vectorCostAdjustmentFactor(Instruction::Add, ATy, nullptr);
+}
