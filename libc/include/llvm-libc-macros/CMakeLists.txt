@@ -268,6 +268,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_statfs_macros
+  HDR
+    sys-statfs-macros.h
+)
+
+add_macro_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
