@@ -5,8 +5,8 @@ define amdgpu_kernel void @divergent_cycle_1(i32 %a, i32 %b, i32 %c) {
 ; CHECK: CYCLES ASSUMED DIVERGENT:
 ; CHECK:   depth=1: entries(R P) S Q
 ; CHECK: CYCLES WITH DIVERGENT EXIT:
-; CHECK:   depth=2: entries(S P) Q
 ; CHECK:   depth=1: entries(R P) S Q
+; CHECK:   depth=2: entries(S P) Q
 entry:
  %cond.uni = icmp slt i32 %a, 0
  %tid = call i32 @llvm.amdgcn.workitem.id.x()

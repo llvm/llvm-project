@@ -15,8 +15,7 @@
 
 #include "OffloadError.h"
 #include "Shared/Debug.h"
-#include "omptarget.h"
-#include <string>
+
 #include <level_zero/ze_api.h>
 
 using namespace llvm::offload::debug;

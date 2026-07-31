@@ -15964,25 +15964,24 @@ define void @memset_p0_sz2048(ptr addrspace(0) %dst) #1 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x41414141
+; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:    s_mov_b32 s6, s4
 ; CHECK-NEXT:    s_mov_b32 s7, s4
+; CHECK-NEXT:  .LBB10_1: ; %static-memset-expansion-main-body
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    v_add_co_u32 v6, vcc_lo, v0, s8
+; CHECK-NEXT:    s_add_u32 s8, s8, 0x100
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v7, null, s9, v1, vcc_lo
+; CHECK-NEXT:    s_addc_u32 s9, s9, 0
+; CHECK-NEXT:    v_add_co_u32 v8, vcc_lo, v6, 48
+; CHECK-NEXT:    v_cmp_gt_u64_e64 s10, 0x800, s[8:9]
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s7
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
-; CHECK-NEXT:    s_inst_prefetch 0x1
-; CHECK-NEXT:    .p2align 6
-; CHECK-NEXT:  .LBB10_1: ; %static-memset-expansion-main-body
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_add_co_u32 v6, vcc_lo, v0, s4
-; CHECK-NEXT:    s_add_u32 s4, s4, 0x100
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v7, null, s5, v1, vcc_lo
-; CHECK-NEXT:    s_addc_u32 s5, s5, 0
-; CHECK-NEXT:    v_add_co_u32 v8, vcc_lo, v6, 48
-; CHECK-NEXT:    v_cmp_gt_u64_e64 s6, 0x800, s[4:5]
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, v7, vcc_lo
+; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s10
 ; CHECK-NEXT:    flat_store_dwordx4 v[6:7], v[2:5] offset:128
 ; CHECK-NEXT:    flat_store_dwordx4 v[6:7], v[2:5] offset:64
 ; CHECK-NEXT:    flat_store_dwordx4 v[6:7], v[2:5] offset:32
@@ -15999,10 +15998,8 @@ define void @memset_p0_sz2048(ptr addrspace(0) %dst) #1 {
 ; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[2:5] offset:48
 ; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[2:5] offset:32
 ; CHECK-NEXT:    flat_store_dwordx4 v[8:9], v[2:5]
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB10_1
 ; CHECK-NEXT:  ; %bb.2: ; %static-memset-post-expansion
-; CHECK-NEXT:    s_inst_prefetch 0x2
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -16351,26 +16348,26 @@ define void @memset_p0_sz2048(ptr addrspace(0) %dst) #1 {
 ; UNROLL3:       ; %bb.0: ; %entry
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
+; UNROLL3-NEXT:    s_mov_b64 s[8:9], 0
 ; UNROLL3-NEXT:    s_mov_b32 s5, s4
 ; UNROLL3-NEXT:    s_mov_b32 s6, s4
 ; UNROLL3-NEXT:    s_mov_b32 s7, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v2, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v3, s5
-; UNROLL3-NEXT:    v_mov_b32_e32 v4, s6
-; UNROLL3-NEXT:    v_mov_b32_e32 v5, s7
-; UNROLL3-NEXT:    s_mov_b64 s[4:5], 0
 ; UNROLL3-NEXT:    .p2align 6
 ; UNROLL3-NEXT:  .LBB10_1: ; %static-memset-expansion-main-body
 ; UNROLL3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; UNROLL3-NEXT:    v_add_co_u32 v6, vcc_lo, v0, s4
-; UNROLL3-NEXT:    s_add_u32 s4, s4, 48
-; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v7, null, s5, v1, vcc_lo
-; UNROLL3-NEXT:    s_addc_u32 s5, s5, 0
+; UNROLL3-NEXT:    v_add_co_u32 v6, vcc_lo, v0, s8
+; UNROLL3-NEXT:    s_add_u32 s8, s8, 48
+; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v7, null, s9, v1, vcc_lo
+; UNROLL3-NEXT:    s_addc_u32 s9, s9, 0
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, s4
+; UNROLL3-NEXT:    v_cmp_gt_u64_e64 s10, 0x7e0, s[8:9]
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, s5
+; UNROLL3-NEXT:    v_mov_b32_e32 v4, s6
+; UNROLL3-NEXT:    v_mov_b32_e32 v5, s7
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[6:7], v[2:5] offset:16
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[6:7], v[2:5]
-; UNROLL3-NEXT:    v_cmp_gt_u64_e64 s6, 0x7e0, s[4:5]
+; UNROLL3-NEXT:    s_and_b32 vcc_lo, exec_lo, s10
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[6:7], v[2:5] offset:32
-; UNROLL3-NEXT:    s_and_b32 vcc_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB10_1
 ; UNROLL3-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
@@ -16395,22 +16392,23 @@ define void @memset_p1_sz2048(ptr addrspace(1) %dst) #1 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x41414141
+; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:    s_mov_b32 s6, s4
 ; CHECK-NEXT:    s_mov_b32 s7, s4
-; CHECK-NEXT:    v_mov_b32_e32 v2, s4
-; CHECK-NEXT:    v_mov_b32_e32 v3, s5
-; CHECK-NEXT:    v_mov_b32_e32 v4, s6
-; CHECK-NEXT:    v_mov_b32_e32 v5, s7
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_inst_prefetch 0x1
 ; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB11_1: ; %static-memset-expansion-main-body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    v_add_co_u32 v6, vcc_lo, v0, s4
-; CHECK-NEXT:    s_add_u32 s4, s4, 0x100
-; CHECK-NEXT:    v_add_co_ci_u32_e64 v7, null, s5, v1, vcc_lo
-; CHECK-NEXT:    s_addc_u32 s5, s5, 0
+; CHECK-NEXT:    v_add_co_u32 v6, vcc_lo, v0, s8
+; CHECK-NEXT:    s_add_u32 s8, s8, 0x100
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v7, null, s9, v1, vcc_lo
+; CHECK-NEXT:    s_addc_u32 s9, s9, 0
+; CHECK-NEXT:    v_mov_b32_e32 v2, s4
+; CHECK-NEXT:    v_cmp_gt_u64_e64 s10, 0x800, s[8:9]
+; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v4, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
 ; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off offset:240
 ; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off offset:224
 ; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off offset:208
@@ -16426,9 +16424,8 @@ define void @memset_p1_sz2048(ptr addrspace(1) %dst) #1 {
 ; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off offset:48
 ; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off offset:32
 ; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off offset:16
-; CHECK-NEXT:    v_cmp_gt_u64_e64 s6, 0x800, s[4:5]
+; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s10
 ; CHECK-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s6
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB11_1
 ; CHECK-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; CHECK-NEXT:    s_inst_prefetch 0x2
@@ -16776,26 +16773,26 @@ define void @memset_p1_sz2048(ptr addrspace(1) %dst) #1 {
 ; UNROLL3:       ; %bb.0: ; %entry
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
+; UNROLL3-NEXT:    s_mov_b64 s[8:9], 0
 ; UNROLL3-NEXT:    s_mov_b32 s5, s4
 ; UNROLL3-NEXT:    s_mov_b32 s6, s4
 ; UNROLL3-NEXT:    s_mov_b32 s7, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v2, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v3, s5
-; UNROLL3-NEXT:    v_mov_b32_e32 v4, s6
-; UNROLL3-NEXT:    v_mov_b32_e32 v5, s7
-; UNROLL3-NEXT:    s_mov_b64 s[4:5], 0
 ; UNROLL3-NEXT:    .p2align 6
 ; UNROLL3-NEXT:  .LBB11_1: ; %static-memset-expansion-main-body
 ; UNROLL3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; UNROLL3-NEXT:    v_add_co_u32 v6, vcc_lo, v0, s4
-; UNROLL3-NEXT:    s_add_u32 s4, s4, 48
-; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v7, null, s5, v1, vcc_lo
-; UNROLL3-NEXT:    s_addc_u32 s5, s5, 0
+; UNROLL3-NEXT:    v_add_co_u32 v6, vcc_lo, v0, s8
+; UNROLL3-NEXT:    s_add_u32 s8, s8, 48
+; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v7, null, s9, v1, vcc_lo
+; UNROLL3-NEXT:    s_addc_u32 s9, s9, 0
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, s4
+; UNROLL3-NEXT:    v_cmp_gt_u64_e64 s10, 0x7e0, s[8:9]
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, s5
+; UNROLL3-NEXT:    v_mov_b32_e32 v4, s6
+; UNROLL3-NEXT:    v_mov_b32_e32 v5, s7
 ; UNROLL3-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off offset:16
 ; UNROLL3-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off
-; UNROLL3-NEXT:    v_cmp_gt_u64_e64 s6, 0x7e0, s[4:5]
+; UNROLL3-NEXT:    s_and_b32 vcc_lo, exec_lo, s10
 ; UNROLL3-NEXT:    global_store_dwordx4 v[6:7], v[2:5], off offset:32
-; UNROLL3-NEXT:    s_and_b32 vcc_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB11_1
 ; UNROLL3-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
@@ -16819,20 +16816,20 @@ define void @memset_p3_sz2048(ptr addrspace(3) %dst) #1 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b32 s4, 0x41414141
+; CHECK-NEXT:    s_mov_b64 s[8:9], 0
 ; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:    s_mov_b32 s6, s4
 ; CHECK-NEXT:    s_mov_b32 s7, s4
-; CHECK-NEXT:    v_mov_b32_e32 v1, s4
-; CHECK-NEXT:    v_mov_b32_e32 v2, s5
-; CHECK-NEXT:    v_mov_b32_e32 v3, s6
-; CHECK-NEXT:    v_mov_b32_e32 v4, s7
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
 ; CHECK-NEXT:    s_inst_prefetch 0x1
 ; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB12_1: ; %static-memset-expansion-main-body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_add_u32 s4, s4, 0x100
-; CHECK-NEXT:    s_addc_u32 s5, s5, 0
+; CHECK-NEXT:    s_add_u32 s8, s8, 0x100
+; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_mov_b32_e32 v2, s5
+; CHECK-NEXT:    v_mov_b32_e32 v3, s6
+; CHECK-NEXT:    v_mov_b32_e32 v4, s7
+; CHECK-NEXT:    s_addc_u32 s9, s9, 0
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:240
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:224
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:208
@@ -16844,14 +16841,14 @@ define void @memset_p3_sz2048(ptr addrspace(3) %dst) #1 {
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:112
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:96
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:80
-; CHECK-NEXT:    v_cmp_gt_u64_e64 s6, 0x800, s[4:5]
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:64
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:48
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:32
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:16
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4]
+; CHECK-NEXT:    v_cmp_gt_u64_e64 s10, 0x800, s[8:9]
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 0x100, v0
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s6
+; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s10
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB12_1
 ; CHECK-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; CHECK-NEXT:    s_inst_prefetch 0x2
@@ -17134,26 +17131,27 @@ define void @memset_p3_sz2048(ptr addrspace(3) %dst) #1 {
 ; UNROLL3-LABEL: memset_p3_sz2048:
 ; UNROLL3:       ; %bb.0: ; %entry
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; UNROLL3-NEXT:    v_mov_b32_e32 v1, v0
 ; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141
-; UNROLL3-NEXT:    v_mov_b32_e32 v5, v0
+; UNROLL3-NEXT:    s_mov_b64 s[8:9], 0
 ; UNROLL3-NEXT:    s_mov_b32 s5, s4
 ; UNROLL3-NEXT:    s_mov_b32 s6, s4
 ; UNROLL3-NEXT:    s_mov_b32 s7, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v1, s4
-; UNROLL3-NEXT:    v_mov_b32_e32 v2, s5
-; UNROLL3-NEXT:    v_mov_b32_e32 v3, s6
-; UNROLL3-NEXT:    v_mov_b32_e32 v4, s7
-; UNROLL3-NEXT:    s_mov_b64 s[4:5], 0
+; UNROLL3-NEXT:    .p2align 6
 ; UNROLL3-NEXT:  .LBB12_1: ; %static-memset-expansion-main-body
 ; UNROLL3-NEXT:    ; =>This Inner Loop Header: Depth=1
-; UNROLL3-NEXT:    s_add_u32 s4, s4, 48
-; UNROLL3-NEXT:    s_addc_u32 s5, s5, 0
-; UNROLL3-NEXT:    ds_write_b128 v5, v[1:4] offset:16
-; UNROLL3-NEXT:    ds_write_b128 v5, v[1:4]
-; UNROLL3-NEXT:    ds_write_b128 v5, v[1:4] offset:32
-; UNROLL3-NEXT:    v_cmp_gt_u64_e64 s6, 0x7e0, s[4:5]
-; UNROLL3-NEXT:    v_add_nc_u32_e32 v5, 48, v5
-; UNROLL3-NEXT:    s_and_b32 vcc_lo, exec_lo, s6
+; UNROLL3-NEXT:    s_add_u32 s8, s8, 48
+; UNROLL3-NEXT:    s_addc_u32 s9, s9, 0
+; UNROLL3-NEXT:    v_mov_b32_e32 v2, s4
+; UNROLL3-NEXT:    v_mov_b32_e32 v3, s5
+; UNROLL3-NEXT:    v_mov_b32_e32 v4, s6
+; UNROLL3-NEXT:    v_mov_b32_e32 v5, s7
+; UNROLL3-NEXT:    v_cmp_gt_u64_e64 s10, 0x7e0, s[8:9]
+; UNROLL3-NEXT:    ds_write_b128 v1, v[2:5] offset:16
+; UNROLL3-NEXT:    ds_write_b128 v1, v[2:5]
+; UNROLL3-NEXT:    ds_write_b128 v1, v[2:5] offset:32
+; UNROLL3-NEXT:    v_add_nc_u32_e32 v1, 48, v1
+; UNROLL3-NEXT:    s_and_b32 vcc_lo, exec_lo, s10
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB12_1
 ; UNROLL3-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; UNROLL3-NEXT:    s_mov_b32 s4, 0x41414141

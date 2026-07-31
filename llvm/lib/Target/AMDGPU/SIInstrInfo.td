@@ -66,22 +66,22 @@ def SDTSBufferLoad : SDTypeProfile<1, 3,
      SDTCisVT<3, i32>]>; // cachepolicy
 
 def SIsbuffer_load : SDNode<"AMDGPUISD::SBUFFER_LOAD", SDTSBufferLoad,
-                            [SDNPMayLoad, SDNPMemOperand]>;
+                            [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_byte : SDNode<"AMDGPUISD::SBUFFER_LOAD_BYTE", SDTSBufferLoad,
-                                 [SDNPMayLoad, SDNPMemOperand]>;
+                                 [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_ubyte
     : SDNode<"AMDGPUISD::SBUFFER_LOAD_UBYTE", SDTSBufferLoad,
-             [SDNPMayLoad, SDNPMemOperand]>;
+             [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_short
     : SDNode<"AMDGPUISD::SBUFFER_LOAD_SHORT", SDTSBufferLoad,
-             [SDNPMayLoad, SDNPMemOperand]>;
+             [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIsbuffer_load_ushort
     : SDNode<"AMDGPUISD::SBUFFER_LOAD_USHORT", SDTSBufferLoad,
-             [SDNPMayLoad, SDNPMemOperand]>;
+             [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
 def SIds_ordered_count : SDNode<"AMDGPUISD::DS_ORDERED_COUNT",
   SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i16>]>,
@@ -325,6 +325,25 @@ class UnscaledMFMAOptimizationPat<SDPatternOperator intrin> : PatFrag<
 
 def mfma_f32_16x16x128_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_16x16x128_f8f6f4>;
 def mfma_f32_32x32x64_f8f6f4 : UnscaledMFMAOptimizationPat<int_amdgcn_mfma_scale_f32_32x32x64_f8f6f4>;
+
+def cvt_from_fp8 : PatFrag<(ops node:$src),
+                           (convert_from_arbitrary_fp node:$src, Float8E4M3FN)>;
+def cvt_from_bf8 : PatFrag<(ops node:$src),
+                           (convert_from_arbitrary_fp node:$src, Float8E5M2)>;
+
+def AMDGPUcvt_pk_f32_fp8 : SDNode<"AMDGPUISD::CVT_PK_F32_FP8",
+  SDTypeProfile<1, 1, [SDTCisVT<0, v2f32>, SDTCisVT<1, i32>]>>;
+def AMDGPUcvt_pk_f32_bf8 : SDNode<"AMDGPUISD::CVT_PK_F32_BF8",
+  SDTypeProfile<1, 1, [SDTCisVT<0, v2f32>, SDTCisVT<1, i32>]>>;
+def AMDGPUcvt_pk_f16_fp8 : SDNode<"AMDGPUISD::CVT_PK_F16_FP8",
+  SDTypeProfile<1, 1, [SDTCisVT<0, v2f16>, SDTCisVT<1, i16>]>>;
+def AMDGPUcvt_pk_f16_bf8 : SDNode<"AMDGPUISD::CVT_PK_F16_BF8",
+  SDTypeProfile<1, 1, [SDTCisVT<0, v2f16>, SDTCisVT<1, i16>]>>;
+
+def cvt_pk_f16_fp8 : PatFrags<(ops node:$src),
+  [(int_amdgcn_cvt_pk_f16_fp8 node:$src), (AMDGPUcvt_pk_f16_fp8 node:$src)]>;
+def cvt_pk_f16_bf8 : PatFrags<(ops node:$src),
+  [(int_amdgcn_cvt_pk_f16_bf8 node:$src), (AMDGPUcvt_pk_f16_bf8 node:$src)]>;
 
 //===----------------------------------------------------------------------===//
 // ValueType helpers

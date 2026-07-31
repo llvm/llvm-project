@@ -143,6 +143,8 @@ private:
   template <bool _Const>
   struct __outer_iterator : __outer_iterator_category<__maybe_const<_Const, _View>> {
   private:
+    friend class lazy_split_view<_View, _Pattern>;
+
     template <bool>
     friend struct __inner_iterator;
     friend __outer_iterator<true>;
@@ -154,6 +156,14 @@ private:
     using _MaybeCurrent _LIBCPP_NODEBUG                = _If<forward_range<_View>, iterator_t<_Base>, __empty_cache>;
     _LIBCPP_NO_UNIQUE_ADDRESS _MaybeCurrent __current_ = _MaybeCurrent();
     bool __trailing_empty_                             = false;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __outer_iterator(_Parent& __parent)
+      requires(!forward_range<_Base>)
+        : __parent_(std::addressof(__parent)) {}
+
+    _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(_Parent& __parent, iterator_t<_Base> __current)
+      requires forward_range<_Base>
+        : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
 
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto& __current() noexcept {
       if constexpr (forward_range<_View>) {
@@ -195,14 +205,6 @@ private:
     };
 
     _LIBCPP_HIDE_FROM_ABI __outer_iterator() = default;
-
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __outer_iterator(_Parent& __parent)
-      requires(!forward_range<_Base>)
-        : __parent_(std::addressof(__parent)) {}
-
-    _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(_Parent& __parent, iterator_t<_Base> __current)
-      requires forward_range<_Base>
-        : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
 
     _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(__outer_iterator<!_Const> __i)
       requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
@@ -286,11 +288,15 @@ private:
   template <bool _Const>
   struct __inner_iterator : __inner_iterator_category<__maybe_const<_Const, _View>> {
   private:
+    friend class lazy_split_view<_View, _Pattern>;
+
     using _Base _LIBCPP_NODEBUG = __maybe_const<_Const, _View>;
     // Workaround for a GCC issue.
     static constexpr bool _OuterConst = _Const;
     __outer_iterator<_Const> __i_     = __outer_iterator<_OuterConst>();
     bool __incremented_               = false;
+
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __inner_iterator(__outer_iterator<_Const> __i) : __i_(std::move(__i)) {}
 
     // Note: these private functions are necessary because GCC doesn't allow calls to private members of `__i_` from
     // free functions that are friends of `inner-iterator`.
@@ -341,8 +347,6 @@ private:
     using difference_type  = range_difference_t<_Base>;
 
     _LIBCPP_HIDE_FROM_ABI __inner_iterator() = default;
-
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __inner_iterator(__outer_iterator<_Const> __i) : __i_(std::move(__i)) {}
 
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept {
       return __i_.__current();
