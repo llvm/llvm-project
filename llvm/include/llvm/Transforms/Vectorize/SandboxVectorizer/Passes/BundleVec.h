@@ -1,4 +1,4 @@
-//===- BottomUpVec.h --------------------------------------------*- C++ -*-===//
+//===- BundleVec.h ----------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A vectorizer pass that walks the def-use chain bottom-up or top-down,
-// depending on the auxiliary pass argument.
+// A vectorizer pass that forms bundles by walking the def-use chain bottom-up
+// or top-down, depending on the auxiliary pass argument.
 //
 
-#ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BOTTOMUPVEC_H
-#define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BOTTOMUPVEC_H
+#ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BUNDLEVEC_H
+#define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BUNDLEVEC_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -29,20 +29,20 @@ namespace llvm::sandboxir {
 /// It expects a "seed slice" as an input in the Region's Aux vector.
 /// The "seed slice" is a vector of instructions that can be used as a starting
 /// point for vectorization, like stores (loads) to consecutive memory
-/// addresses. Starting from the seed instructions, it walks up (down) the
-/// use-def (def-use) chains looking for more instructions that can be
-/// vectorized. This pass will generate vector code if it can legally vectorize
-/// the code, regardless of whether it is profitable or not. For now
-/// profitability is checked at the end of the region pass pipeline by a
-/// dedicated pass that accepts or rejects the IR transaction, depending on the
-/// cost.
-class LLVM_ABI BottomUpVec final : public RegionPass {
+/// addresses. Starting from the seed instructions, it recursively walks up
+/// (down) the use-def (def-use) chains, forming a bundle of instructions per
+/// operand (user) position, for as long as these bundles can be vectorized.
+/// This pass will generate vector code if it can legally vectorize the code,
+/// regardless of whether it is profitable or not. For now profitability is
+/// checked at the end of the region pass pipeline by a dedicated pass that
+/// accepts or rejects the IR transaction, depending on the cost.
+class LLVM_ABI BundleVec final : public RegionPass {
 private:
   /// Set to true whenever the pass modifies the IR.
   bool Change = false;
   static constexpr StringRef TopDownArgStr = "top-down";
   static constexpr StringRef BottomUpArgStr = "bottom-up";
-  /// Direction for vectorization, defaults to bottom-up.
+  /// Direction for vectorization, set from the mandatory aux argument.
   SchedDirection Dir;
   /// The original instructions that are potentially dead after vectorization.
   DenseSet<Instruction *> DeadInstrCandidates;
@@ -50,7 +50,7 @@ private:
   std::unique_ptr<InstrMaps> IMaps;
   /// Counter used for force-stopping the vectorizer after this many
   /// invocations. Used for debugging miscompiles.
-  unsigned long BottomUpInvocationCnt = 0;
+  unsigned long InvocationCnt = 0;
 
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.
@@ -108,17 +108,16 @@ private:
   bool tryVectorize(ArrayRef<Value *> Seeds, LegalityAnalysis &Legality);
 
 public:
-  BottomUpVec(StringRef AuxArg) : RegionPass("bottom-up-vec") {
-    /// TODO: Drop the AuxArg.empty() part
-    if (AuxArg.empty() || AuxArg == BottomUpArgStr) {
+  BundleVec(StringRef AuxArg) : RegionPass("bundle-vec") {
+    if (AuxArg == BottomUpArgStr) {
       Dir = SchedDirection::BottomUp;
     } else if (AuxArg == TopDownArgStr) {
       Dir = SchedDirection::TopDown;
     } else {
       std::string ErrStr;
       raw_string_ostream ErrSS(ErrStr);
-      ErrSS << "bottom-up-vec only supports '" << BottomUpArgStr << "' or '"
-            << TopDownArgStr << "' aux argument!\n";
+      ErrSS << "bundle-vec requires either '" << BottomUpArgStr << "' or '"
+            << TopDownArgStr << "' as its aux argument!\n";
       reportFatalUsageError(ErrStr.c_str());
     }
   }
@@ -128,4 +127,4 @@ public:
 
 } // namespace llvm::sandboxir
 
-#endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BOTTOMUPVEC_H
+#endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BUNDLEVEC_H
