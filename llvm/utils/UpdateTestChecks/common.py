@@ -2956,19 +2956,8 @@ def dump_input_lines(output_lines, test_info, prefix_set, comment_string):
         output_lines.append(line.rstrip("\n"))
 
 
-def sort_check_blocks(lines, all_run_lines, comment_string):
-    """Reorder per-prefix check blocks at function starts to match RUN-line order.
-
-    For each IR function definition in ``lines``, inspect the immediately
-    following prologue of blank lines and comment lines. If that prologue
-    contains FileCheck directives, group those directives into per-prefix
-    blocks and reorder the blocks so their prefixes appear in the same
-    first-seen order as the ``FileCheck`` prefixes from ``all_run_lines``.
-    Non-check prologue lines are retained before the reordered check blocks,
-    and functions without such check blocks are left unchanged.
-    """
-    # Preserve the first-seen FileCheck prefix order implied by the full set of
-    # RUN lines, not just any selected subset being regenerated.
+def get_check_prefix_order(all_run_lines):
+    """Return FileCheck prefixes in first-seen RUN-line order."""
     prefix_order = []
     seen = set()
     for run_line in all_run_lines:
@@ -2979,94 +2968,85 @@ def sort_check_blocks(lines, all_run_lines, comment_string):
                 continue
             seen.add(prefix)
             prefix_order.append(prefix)
+    return prefix_order
 
+
+def sort_check_blocks(lines, all_run_lines, comment_string):
+    """Reorder per-prefix check blocks at function starts to match RUN-line order."""
+    # Preserve the first-seen FileCheck prefix order implied by the full set of
+    # RUN lines, not just any selected subset being regenerated.
+    prefix_order = get_check_prefix_order(all_run_lines)
     if not prefix_order:
         return lines
-
     ordered_prefixes = {prefix: index for index, prefix in enumerate(prefix_order)}
-    result = []
-    index = 0
-    while index < len(lines):
-        line = lines[index]
-        result.append(line)
-        index += 1
-        if not IR_FUNCTION_RE.match(line):
-            continue
 
-        # Collect the contiguous function-start prologue made up of blank lines
-        # and comments, because this is where generated check blocks live.
-        prologue = []
-        while index < len(lines):
-            next_line = lines[index]
-            if next_line == "" or next_line.lstrip().startswith(comment_string):
-                prologue.append(next_line)
-                index += 1
-                continue
-            break
+    FUNCTION_START = object()
+    PROLOGUE_NON_CHECK = object()
+    REST = object()
+    previous_line_group = REST
 
-        blocks = []
-        other_lines = []
-        current_prefix = None
-        current_block = []
-        saw_check_block = False
-
-        def flush_current_block():
-            nonlocal current_prefix, current_block
-            if current_prefix is not None:
-                # Keep internal spacing within a check block, but drop trailing
-                # separators so they can be reintroduced consistently after
-                # reordering.
-                while current_block and current_block[-1].strip() in (
+    def get_line_group(line):
+        nonlocal previous_line_group
+        if IR_FUNCTION_RE.match(line):
+            group = FUNCTION_START
+        elif previous_line_group is REST:
+            group = REST
+        else:
+            match = CHECK_RE.match(line)
+            if match and match.group(1) in ordered_prefixes:
+                group = match.group(1)
+            elif line == "" or line.lstrip().startswith(comment_string):
+                if previous_line_group in ordered_prefixes and line.strip() in (
                     "",
                     comment_string,
                     comment_string + SEPARATOR,
                 ):
-                    current_block.pop()
-                if current_block:
-                    blocks.append((current_prefix, current_block))
-            current_prefix = None
-            current_block = []
+                    group = previous_line_group
+                else:
+                    group = PROLOGUE_NON_CHECK
+            else:
+                group = REST
+        previous_line_group = group
+        return group
 
-        # Split the prologue into reorderable per-prefix check blocks and all
-        # other lines, which keep their relative order.
-        for prologue_line in prologue:
-            match = CHECK_RE.match(prologue_line)
-            if match and match.group(1) in ordered_prefixes:
-                prefix = match.group(1)
-                if current_prefix != prefix:
-                    flush_current_block()
-                    current_prefix = prefix
-                    saw_check_block = True
-                current_block.append(prologue_line)
-                continue
+    result = []
+    blocks = []
+    other_lines = []
 
-            if current_prefix is not None and prologue_line.strip() in (
-                "",
-                comment_string,
-                comment_string + SEPARATOR,
-            ):
-                current_block.append(prologue_line)
-                continue
-
-            flush_current_block()
-            other_lines.append(prologue_line)
-
-        flush_current_block()
-
-        if not saw_check_block:
-            result.extend(prologue)
+    for group, group_lines in itertools.chain(
+        itertools.groupby(lines, key=get_line_group),
+        # Fake entry to ensure last real one gets written.
+        ((REST, ()),),
+    ):
+        if group in (FUNCTION_START, REST):
+            if blocks:
+                blocks.sort(key=lambda block: ordered_prefixes[block[0]])
+                result.extend(other_lines)
+                for _, block_lines in blocks:
+                    result.extend(block_lines)
+                    result.append(comment_string)
+            else:
+                result.extend(other_lines)
+            blocks = []
+            other_lines = []
+            result.extend(group_lines)
             continue
 
-        result.extend(other_lines)
-        blocks.sort(
-            key=lambda block: (
-                ordered_prefixes.get(block[0], len(ordered_prefixes)),
-                block[0],
-            )
-        )
-        for _, block_lines in blocks:
-            result.extend(block_lines)
-            result.append(comment_string)
+        block_lines = list(group_lines)
+        if group is PROLOGUE_NON_CHECK:
+            other_lines.extend(block_lines)
+            continue
+
+        # Keep internal spacing within a check block, but drop trailing
+        # separators so they can be reintroduced consistently after reordering.
+        while block_lines and block_lines[-1].strip() in (
+            "",
+            comment_string,
+            comment_string + SEPARATOR,
+        ):
+            block_lines.pop()
+        if block_lines:
+            blocks.append((group, block_lines))
 
     return result
 
