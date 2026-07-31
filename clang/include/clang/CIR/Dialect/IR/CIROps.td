@@ -936,7 +936,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 
 defvar CIR_ReturnableScopes = [
   "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp", "CleanupScopeOp",
-  "DoWhileOp", "WhileOp", "ForOp", "TryOp"
+  "DoWhileOp", "WhileOp", "ForOp", "TryOp", "CoroRetPointOp"
 ];
 
 def CIR_ReturnOp : CIR_Op<"return", [
@@ -1087,7 +1087,7 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 defvar CIR_YieldableScopes = [
   "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "CoroBodyOp",
   "DoWhileOp", "ForOp", "GlobalOp", "IfOp", "LocalInitOp", "ScopeOp", "SwitchOp",
-  "TernaryOp", "TryOp", "WhileOp"
+  "TernaryOp", "TryOp", "WhileOp", "CoroRetPointOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -4988,11 +4988,36 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
 // CoroSuspendPoint
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend.point", [
-  Pure, Terminator, HasParent<"AwaitOp">
+def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend_point", [
+  Pure, Terminator, HasParent<"AwaitOp">, HasAncestor<"CoroRetPointOp">
 ]> {
-  let summary = "";
+  let summary = "Marks the point where a coroutine actually suspends";
   let description = [{
+    Terminates the `suspend` region of a `cir.await` op, marking the exact
+    point where control returns to the caller/resumer if the coroutine
+    decides to suspend.
+
+    This op must appear inside the `suspend` region of a `cir.await`, and
+    that `cir.await` must in turn be nested within a `cir.coro.ret_point`.
+    During lowering to FlattenCFG, `cir.coro.suspend_point` becomes the
+    branch target that routes control to one of three destinations
+    depending on how the coroutine resumes: the resume block (normal
+    continuation), the cleanup/destroy block, or the ret/exit block that
+    hands control back to the caller.
+
+    Example:
+    ```mlir
+    cir.await(user, ready : {
+      ...
+      cir.condition(%ready)
+    }, suspend : {
+      ...
+      cir.coro.suspend_point
+    }, resume : {
+      ...
+      cir.yield
+    },)
+    ```
   }];
 
   let assemblyFormat = [{
@@ -5003,21 +5028,54 @@ def CIR_CoroSuspendPoint : CIR_Op<"coro.suspend.point", [
 }
 
 //===----------------------------------------------------------------------===//
-// CoroSuspendPointDest
+// CoroRetPoint
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroSuspendPointDest : CIR_Op<"coro.suspend.point.dest", [
-  Pure
+def CIR_CoroRetPointOp : CIR_Op<"coro.ret_point", [
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  NoRegionArguments
 ]> {
-  let summary = "";
+
+  let summary = "Marks the coroutine's structured suspend/exit region";
   let description = [{
+    Pairs a coroutine's body its normal execution, including any
+    `cir.await`s and cleanups with a single, shared exit destination
+    (`retRegion`) that every suspend point in the body jumps to.
+
+    Every `cir.coro.suspend_point` inside `bodyRegion` is guaranteed to have
+    `cir.coro.ret_point` as an ancestor, so all suspend paths converge on
+    the same `retRegion` regardless of where in the body they occur. This
+    gives the coroutine a single, well-defined place to run final teardown
+    (e.g. `__builtin_coro_end`) and return control to the caller.
+
+    Example:
+    ```mlir
+    cir.coro.ret_point {
+      // body: awaits, cleanups, etc.
+    }, ret : {
+      // shared jump target for any suspend point in the body
+      cir.coro.intrinsic.end(...)
+      cir.return
+    }
+    ```
   }];
+
+  let regions = (region AnyRegion:$bodyRegion,
+                        AnyRegion:$retRegion);
+   let skipDefaultBuilders = 1;
+
+  let builders = [
+    OpBuilder<(ins "BuilderCallbackRef":$bodyBuilder,
+      "BuilderCallbackRef":$retBuilder)>
+  ];
 
   let assemblyFormat = [{
+    $bodyRegion `,`
+    `ret` `:` $retRegion
     attr-dict
   }];
-
   let hasLLVMLowering = false;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,17 +1,23 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 
-cir.func coroutine @must_have_one_coro_suspend_dest(%arg0 : !cir.bool) {  // expected-error {{coroutine function must have exactly one cir.coro.suspend.point.dest}}
-  cir.coro.body {
-    cir.await(user, ready : {
-      cir.condition(%arg0)
-    }, suspend : {
-      cir.coro.suspend.point
-    }, resume : {
-      cir.yield
-    },)
+cir.func coroutine @must_have_one_coro_ret_point(%arg0 : !cir.bool) {  // expected-error {{coroutine function must have exactly one cir.coro.ret_point op}}
+  cir.coro.ret_point {
+    cir.coro.body {
+      cir.await(user, ready : {
+        cir.condition(%arg0)
+      }, suspend : {
+        cir.coro.suspend_point
+      }, resume : {
+        cir.yield
+      },)
+    }
+  cir.yield
+  }, ret : {
+      cir.return
   }
-  cir.coro.suspend.point.dest
-  cir.coro.suspend.point.dest
+  cir.coro.ret_point {
+  }, ret : {
+  }
+  cir.trap
 }
-
