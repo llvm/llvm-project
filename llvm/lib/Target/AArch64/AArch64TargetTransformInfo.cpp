@@ -3384,12 +3384,10 @@ static std::optional<Instruction *> instCombineSVEUMin(InstCombiner &IC,
   }
 
   // umin(umin(A, 1), 1) -> umin(A, 1)
-  Value *InnerUMin;
-  if (match(&II,
-            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(InnerUMin), m_One())) &&
-      match(InnerUMin,
-            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(A), m_One())))
-    return IC.replaceInstUsesWith(II, InnerUMin);
+  if (match(II.getOperand(1),
+            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(), m_One())) &&
+      match(II.getOperand(2), m_One()))
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
 
   return std::nullopt;
 }
