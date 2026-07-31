@@ -532,7 +532,6 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["msad-insts"] = true;
     Features["mqsad-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
-    Features["cvt-pknorm-vop3-insts"] = true;
     Features["image-insts"] = true;
     Features["extended-image-insts"] = true;
     Features["async-load-to-lds-insts"] = true;
