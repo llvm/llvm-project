@@ -128,13 +128,13 @@ entry:
   ret float %r6
 }
 
-define float @reduce_ordered_fadd_reassoc_no_nsz(ptr %p) {
+define float @reduce_unordered_fadd_reassoc_no_nsz(ptr %p) {
 ; CHECK-LABEL: define float @reduce_ordered_fadd_reassoc_no_nsz(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds float, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[P0]], align 4
-; CHECK-NEXT:    [[R6:%.*]] = call float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
+; CHECK-NEXT:    [[R6:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
 ; CHECK-NEXT:    ret float [[R6]]
 ;
 entry:
