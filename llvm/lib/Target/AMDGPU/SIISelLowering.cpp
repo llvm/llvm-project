@@ -7421,7 +7421,7 @@ LLT SITargetLowering::getPreferredShiftAmountTy(LLT Ty) const {
 // a fast fma device and require denormals.
 //
 bool SITargetLowering::isFMAFasterThanFMulAndFAdd(
-    EVT VT, bool FlushF32Denormals, bool FlushF64F16Denormals) const {
+    EVT VT, const SIModeRegisterDefaults &Mode) const {
   VT = VT.getScalarType();
 
   switch (VT.getSimpleVT().SimpleTy) {
@@ -7433,7 +7433,7 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(
     // Otherwise f32 mad is always full rate and returns the same result as
     // the separate operations so should be preferred over fma.
     // However does not support denormals.
-    if (!FlushF32Denormals)
+    if (Mode.FP32Denormals != DenormalMode::getPreserveSign())
       return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
 
     // If the subtarget has v_fmac_f32, that's just as good as v_mac_f32.
@@ -7443,7 +7443,8 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(
     return true;
   case MVT::f16:
   case MVT::bf16:
-    return Subtarget->has16BitInsts() && !FlushF64F16Denormals;
+    return Subtarget->has16BitInsts() &&
+           Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
   default:
     break;
   }
@@ -7453,8 +7454,13 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(
 
 bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                                   EVT VT) const {
-  return isFMAFasterThanFMulAndFAdd(VT, denormalModeIsFlushAllF32(MF),
-                                    denormalModeIsFlushAllF64F16(MF));
+  return isFMAFasterThanFMulAndFAdd(
+      VT, MF.getInfo<SIMachineFunctionInfo>()->getMode());
+}
+
+bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
+                                                  EVT VT) const {
+  return isFMAFasterThanFMulAndFAdd(VT, SIModeRegisterDefaults(F, *Subtarget));
 }
 
 bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
@@ -7473,14 +7479,16 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   return false;
 }
 
-bool SITargetLowering::isFMADLegal(EVT VT, bool FlushF32Denormals,
-                                   bool FlushF64F16Denormals) const {
+bool SITargetLowering::isFMADLegal(EVT VT,
+                                   const SIModeRegisterDefaults &Mode) const {
   // TODO: Check future ftz flag
   // v_mad_f32/v_mac_f32 do not support denormals.
   if (VT == MVT::f32)
-    return Subtarget->hasMadMacF32Insts() && FlushF32Denormals;
+    return Subtarget->hasMadMacF32Insts() &&
+           Mode.FP32Denormals == DenormalMode::getPreserveSign();
   if (VT == MVT::f16)
-    return Subtarget->hasMadF16() && FlushF64F16Denormals;
+    return Subtarget->hasMadF16() &&
+           Mode.FP64FP16Denormals == DenormalMode::getPreserveSign();
 
   return false;
 }
@@ -7489,22 +7497,25 @@ bool SITargetLowering::isFMADLegal(const MachineInstr &MI, LLT Ty) const {
   if (!Ty.isScalar())
     return false;
 
-  const MachineFunction &MF = *MI.getMF();
+  SIModeRegisterDefaults Mode =
+      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getMode();
   if (Ty.getScalarSizeInBits() == 16)
-    return isFMADLegal(MVT::f16, denormalModeIsFlushAllF32(MF),
-                       denormalModeIsFlushAllF64F16(MF));
+    return isFMADLegal(MVT::f16, Mode);
   if (Ty.getScalarSizeInBits() == 32)
-    return isFMADLegal(MVT::f32, denormalModeIsFlushAllF32(MF),
-                       denormalModeIsFlushAllF64F16(MF));
+    return isFMADLegal(MVT::f32, Mode);
 
   return false;
 }
 
 bool SITargetLowering::isFMADLegal(const SelectionDAG &DAG,
                                    const SDNode *N) const {
-  const MachineFunction &MF = DAG.getMachineFunction();
-  return isFMADLegal(N->getValueType(0), denormalModeIsFlushAllF32(MF),
-                     denormalModeIsFlushAllF64F16(MF));
+  return isFMADLegal(
+      N->getValueType(0),
+      DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>()->getMode());
+}
+
+bool SITargetLowering::isFMADLegal(const Function &F, EVT VT) const {
+  return isFMADLegal(VT, SIModeRegisterDefaults(F, *Subtarget));
 }
 
 //===----------------------------------------------------------------------===//

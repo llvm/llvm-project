@@ -24,6 +24,7 @@ namespace llvm {
 class GCNSubtarget;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
+struct SIModeRegisterDefaults;
 
 namespace AMDGPU {
 struct ImageDimIntrinsicInfo;
@@ -323,6 +324,10 @@ private:
                                       SDLoc DL, SDValue Ops[],
                                       MemSDNode *M) const;
 
+  bool isFMAFasterThanFMulAndFAdd(EVT VT,
+                                  const SIModeRegisterDefaults &Mode) const;
+  bool isFMADLegal(EVT VT, const SIModeRegisterDefaults &Mode) const;
+
 public:
   SITargetLowering(const TargetMachine &tm, const GCNSubtarget &STI);
 
@@ -503,13 +508,10 @@ public:
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
 
-  /// Variants taking the denormal mode directly, for IR level callers which
-  /// have no MachineFunction to read it from. \p VT is the legalized type of
-  /// the operation.
-  bool isFMAFasterThanFMulAndFAdd(EVT VT, bool FlushF32Denormals,
-                                  bool FlushF64F16Denormals) const;
-  bool isFMADLegal(EVT VT, bool FlushF32Denormals,
-                   bool FlushF64F16Denormals) const;
+  /// Variants for IR level callers, which have no MachineFunction and read the
+  /// mode register defaults from \p F instead.
+  bool isFMAFasterThanFMulAndFAdd(const Function &F, EVT VT) const;
+  bool isFMADLegal(const Function &F, EVT VT) const;
 
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitBinaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
