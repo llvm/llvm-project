@@ -24846,10 +24846,12 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       if (Value *V = VMap.lookup(U.get()))
         U.set(V);
 
-  // Move the original body into the vector block, keeping the emitted check
-  // instructions in the header block.
-  for (Instruction *I : RTOrigBodyOrder)
-    I->moveBefore(*VecBB, VecBB->end());
+  // Move the original body into the vector block in the current (scheduled)
+  // order, keeping the emitted check instructions in the header block.
+  SmallPtrSet<Instruction *, 16> BodyInsts(llvm::from_range, RTOrigBodyOrder);
+  for (Instruction &I : make_early_inc_range(*BB))
+    if (BodyInsts.contains(&I))
+      I.moveBefore(*VecBB, VecBB->end());
 
   // Move the original terminator into the continuation block and replace it
   // with the guard branch.
