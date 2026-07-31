@@ -50,6 +50,11 @@ struct VirtualMethodSummary final : public EntitySummary {
   }
 };
 
+/// Prints \p S as
+/// "VirtualMethodSummary { params=[...], return=..., overridden=[...] }".
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const VirtualMethodSummary &S);
+
 struct VirtualMethodFamilyAnalysisResult final : AnalysisResult {
   static AnalysisName analysisName() {
     return AnalysisName("VirtualMethodFamilyAnalysisResult");
