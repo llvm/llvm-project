@@ -7155,19 +7155,96 @@ static SDValue combineSelectAsExtAnd(SDValue Cond, SDValue T, SDValue F,
   return DAG.getNode(ISD::AND, DL, OpVT, CondMask, T.getOperand(0));
 }
 
+/// Find a legal integer vector type vPiQ that \p VT (denote vXiY) can be
+/// bitcast to so that:
+/// 1. vXiY is not legal type
+/// 2. vPiQ is legal type
+/// 3. X * Y = P * Q
+static EVT findWiderLegalIntVectorVT(SelectionDAG &DAG,
+                                     const TargetLowering &TLI, EVT VT,
+                                     unsigned Opcode) {
+  LLVMContext &Ctx = *DAG.getContext();
+  TypeSize NewEltBitSize = VT.getVectorElementType().getSizeInBits() * 2;
+  EVT NewVT = VT.getIntegerVectorWithElementWidth(Ctx, NewEltBitSize);
+
+  if (NewVT != EVT() &&
+      TLI.getOperationAction(Opcode, NewVT) != TargetLoweringBase::Legal) {
+    EVT TransformVT = TLI.getLegalTypeToTransformTo(Ctx, NewVT);
+    if (TransformVT.getSizeInBits() == VT.getSizeInBits())
+      NewVT = TransformVT;
+  }
+
+  // Widening the elements eventually makes the element width exceed the total
+  // width of the vector, at which point no valid type is returned and the loop
+  // terminates.
+  while (NewVT != EVT() && !TLI.isTypeLegal(NewVT)) {
+    NewEltBitSize *= 2;
+    NewVT = VT.getIntegerVectorWithElementWidth(Ctx, NewEltBitSize);
+  }
+
+  return NewVT;
+}
+
+enum class SrcType { NORM_LOAD, CONST, NO_UNPACK, UNPACK };
+
+/// Is materializing the packed representation of \p Op free?
+static SrcType getSrcType(SDValue Op, SelectionDAG &DAG, EVT VT,
+                          const TargetLowering &TLI) {
+  if (TLI.getTypeAction(*DAG.getContext(), VT) !=
+      TargetLowering::TypePromoteInteger)
+    return SrcType::NO_UNPACK;
+
+  if (ISD::isNormalLoad(Op.getNode()) && Op.hasOneUse())
+    return SrcType::NORM_LOAD;
+
+  while (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef())
+    Op = Op.getOperand(1);
+
+  if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) || Op.isUndef())
+    return SrcType::CONST;
+
+  return SrcType::UNPACK;
+}
+
+SDValue widdenSrc(SDValue Op, SrcType SrcTy, EVT EltVT, EVT VT, EVT WidenVT,
+                  SelectionDAG &DAG, const TargetLowering &TLI) {
+  if (SrcTy == SrcType::NO_UNPACK || SrcTy == SrcType::CONST) {
+    // Widening is materialized with INSERT_SUBVECTOR / EXTRACT_SUBVECTOR.
+    // This avoid the assertion of `EltSize * 8 == EltVT.getFixedSizeInBits()`
+    // in SplitVecRes_INSERT_SUBVECTOR->TLI.getVectorSubVecPointer
+    if (!EltVT.getSizeInBits().isKnownMultipleOf(8) &&
+        TLI.getTypeAction(*DAG.getContext(), WidenVT) ==
+            TargetLowering::TypeSplitVector)
+      return SDValue();
+
+    return DAG.WidenVector(Op, SDLoc(Op));
+  } else if (SrcTy == SrcType::NORM_LOAD) {
+    auto *LD = cast<LoadSDNode>(Op);
+    if (LD->isSimple() && WidenVT.getStoreSize() == VT.getStoreSize()) {
+      SDValue NewLD =
+          DAG.getLoad(WidenVT, SDLoc(Op), LD->getChain(), LD->getBasePtr(),
+                      LD->getPointerInfo(), LD->getAlign(),
+                      LD->getMemOperand()->getFlags(), LD->getAAInfo());
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLD.getValue(1));
+      return NewLD;
+    }
+  }
+  return SDValue();
+}
+
 /// Try to convert
 /// `(vXiY SELECT \p Cond, (vXiY \p TrueVal), (vXiY \p FalseVal))` into
 /// `(vPiQ SELECT \p Cond,
 ///  (vPiQ (BITCAST \p TrueVal )), (vPiQ (BITCAST \p FalseVal )))` when:
-/// 1. vXiY is not legal type
-/// 2. vPiQ is legal type
-/// 3. X * Y = P * Q
+/// where vPiQ = findWiderLegalIntVectorVT(vXiY, OpCode)
 /// This prevents promotion of integer vectors like v32i4 to v32i16
 /// which can create more type casting operations.
 static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
                                    const TargetLowering &TLI, SDValue Cond,
                                    SDValue TrueVal, SDValue FalseVal) {
   EVT ResultVT = N->getValueType(0);
+  EVT WidenVT = ResultVT;
+
   if (ResultVT.isScalableVector() || TLI.isTypeLegal(ResultVT))
     return SDValue();
 
@@ -7175,35 +7252,29 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   if (!EltVT.isInteger())
     return SDValue();
 
+  bool needWiden = !ResultVT.isSimple() && !ResultVT.isPow2VectorType() &&
+                   TLI.getTypeAction(*DAG.getContext(), ResultVT) ==
+                       TargetLowering::TypeWidenVector;
+  if (needWiden)
+    WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResultVT);
+
+  SrcType TrueTy = getSrcType(TrueVal, DAG, WidenVT, TLI);
+  SrcType FalseTy = getSrcType(FalseVal, DAG, WidenVT, TLI);
+  if (TrueTy == SrcType::UNPACK || FalseTy == SrcType::UNPACK)
+    return SDValue();
+
   // Widen vector to power of 2
-  if (!ResultVT.isSimple() && !ResultVT.isPow2VectorType() &&
-      TLI.getTypeAction(*DAG.getContext(), ResultVT) ==
-          TargetLowering::TypeWidenVector) {
-    SDValue WidenTrue = DAG.WidenVector(TrueVal, SDLoc(TrueVal));
-    SDValue WidenFalse = DAG.WidenVector(FalseVal, SDLoc(FalseVal));
+  if (needWiden) {
+    TrueVal = widdenSrc(TrueVal, TrueTy, EltVT, ResultVT, WidenVT, DAG, TLI);
+    if (TrueVal == SDValue())
+      return SDValue();
 
-    EVT WidenVT = WidenTrue.getValueType();
-    SDValue WidenSelect = DAG.getNode(ISD::SELECT, SDLoc(N), WidenVT, Cond,
-                                      WidenTrue, WidenFalse);
-    return DAG.getExtractSubvector(SDLoc(N), ResultVT, WidenSelect, 0);
+    FalseVal = widdenSrc(FalseVal, FalseTy, EltVT, ResultVT, WidenVT, DAG, TLI);
+    if (FalseVal == SDValue())
+      return SDValue();
   }
 
-  TypeSize NewEltBitSize = EltVT.getSizeInBits() * 2;
-  EVT NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(),
-                                                        NewEltBitSize);
-  if (NewVT != EVT() && TLI.getOperationAction(N->getOpcode(), NewVT) !=
-                            TargetLoweringBase::Legal) {
-    EVT TransformVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), NewVT);
-    if (TransformVT.getSizeInBits() == ResultVT.getSizeInBits())
-      NewVT = TransformVT;
-  }
-
-  while (NewVT != EVT() && !TLI.isTypeLegal(NewVT)) {
-    NewEltBitSize *= 2;
-    NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(),
-                                                      NewEltBitSize);
-  }
-
+  EVT NewVT = findWiderLegalIntVectorVT(DAG, TLI, WidenVT, N->getOpcode());
   if (NewVT == EVT())
     return SDValue();
 
@@ -7211,7 +7282,12 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   SDValue NewFalse = DAG.getBitcast(NewVT, FalseVal);
   SDValue NewSelect =
       DAG.getNode(ISD::SELECT, SDLoc(N), NewVT, Cond, NewTrue, NewFalse);
-  return DAG.getBitcast(ResultVT, NewSelect);
+  SDValue Res = DAG.getBitcast(WidenVT, NewSelect);
+
+  if (needWiden)
+    Res = DAG.getExtractSubvector(SDLoc(N), ResultVT, Res, 0);
+
+  return Res;
 }
 
 /// This contains all DAGCombine rules which reduce two values combined by
