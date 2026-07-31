@@ -20,6 +20,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/is_convertible.h>
 #include <__type_traits/is_pointer.h>
 
 #include <cstdint>
@@ -88,7 +89,7 @@ private:
 
   constexpr explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
     _LIBCPP_ASSERT_INTERNAL(
-        (__p & __count_mask_) == 0, "static_packed_bounded_iter: Expected alignment bits of ptr to be 0");
+        (__p & __count_mask_) == 0, "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
   }
 
 public:
