@@ -163,6 +163,13 @@ class TestExpeditedStackMemory(TestBase):
             + breakdown,
         )
 
+        # `str` points into __TEXT,__cstring, served from the file.
+        self.assertEqual(
+            other_reads,
+            [],
+            "expected no memory reads outside the stack/heap regions\n" + breakdown,
+        )
+
     # ---- shared scaffolding -------------------------------------------------
 
     def walk_stack(self, per_frame_fn, disable_memory_cache):
