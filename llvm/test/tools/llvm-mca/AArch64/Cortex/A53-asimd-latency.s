@@ -259,8 +259,8 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      33    29.00                       fsqrt	s0, s1
 # CHECK-NEXT:  1      33    29.00                       fsqrt	d0, d1
 # CHECK-NEXT:  1      33    29.00                       fdiv	d0, d1, d2
-# CHECK-NEXT:  1      6     1.00                        fcmp	s0, s1
-# CHECK-NEXT:  1      6     1.00                        fcmp	d0, #0.0
+# CHECK-NEXT:  1      3     1.00                        fcmp	s0, s1
+# CHECK-NEXT:  1      3     1.00                        fcmp	d0, #0.0
 # CHECK-NEXT:  1      2     0.50                        fcsel	s0, s1, s2, eq
 # CHECK-NEXT:  1      1     0.50                        fmov	s0, s1
 # CHECK-NEXT:  1      1     0.50                        fmov	s0, w1
