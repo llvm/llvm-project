@@ -393,8 +393,6 @@ struct Allocator {
 
   void InitLinkerInitialized(const AllocatorOptions& options) {
     SetAllocatorMayReturnNull(options.may_return_null);
-    // Device tier init is driven by DeviceBackend::kEnableDeviceBackend inside
-    // CombinedAllocator::InitLinkerInitialized (no separate ASan field).
     allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
     SharedInitCode(options);
     max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
@@ -538,9 +536,6 @@ struct Allocator {
   }
 
   // -------------------- Allocation/Deallocation routines ---------------
-  // Shared allocation core. `block_alloc(cache, needed_size)` supplies the raw
-  // backing block and is the only step that differs between the host heap and
-  // the AMDGPU device heap, so no device knowledge leaks into this routine.
   // may_return_null tells AllocateImpl() whether OOM should produce a nullptr
   // (true) or a fatal Report*+Die() (false).
   template <typename BlockAllocFn>

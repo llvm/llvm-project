@@ -73,10 +73,7 @@ struct ErrorDoubleFree : ErrorBase {
       : ErrorBase(tid, 42, "double-free"),
         second_free_stack(stack) {
     CHECK_GT(second_free_stack->size, 0);
-    if (!GetHeapAddressInformation(addr, 1, &addr_description)) {
-      internal_memset(&addr_description, 0, sizeof(addr_description));
-      addr_description.addr = addr;
-    }
+    GetHeapAddressInformation(addr, 1, &addr_description);
   }
   void Print();
 };

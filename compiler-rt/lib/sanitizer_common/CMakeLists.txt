@@ -61,7 +61,7 @@ set(SANITIZER_NOLIBC_SOURCES
 
 set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_common_libcdep.cpp
-  sanitizer_allocator_amdgpu.cpp
+  sanitizer_allocator_amdhsa.cpp
   sanitizer_allocator_checks.cpp
   sanitizer_dl.cpp
   sanitizer_linux_libcdep.cpp
