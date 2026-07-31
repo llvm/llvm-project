@@ -19,7 +19,8 @@ namespace {
 // A target that describes some of its address spaces, but not all of them.
 class FakeTTIImpl : public TargetTransformInfoImplBase {
 public:
-  explicit FakeTTIImpl(const DataLayout &DL) : TargetTransformInfoImplBase(DL) {}
+  explicit FakeTTIImpl(const DataLayout &DL)
+      : TargetTransformInfoImplBase(DL) {}
 
   SmallVector<TTI::PointerInfo, 8> getPointerInfos() const override {
     return {TTI::PointerInfo{1, "global"}, TTI::PointerInfo{3, "local"},

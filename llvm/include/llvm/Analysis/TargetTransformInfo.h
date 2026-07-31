@@ -235,9 +235,7 @@ public:
   const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
   const SmallVectorImpl<Type *> &getArgTypes() const { return ParamTys; }
 
-  bool isTypeBasedOnly() const {
-    return Arguments.empty();
-  }
+  bool isTypeBasedOnly() const { return Arguments.empty(); }
 
   bool skipScalarizationCost() const { return ScalarizationCost.isValid(); }
 };
@@ -1286,9 +1284,9 @@ public:
     SK_PermuteSingleSrc, ///< Shuffle elements of single source vector with any
                          ///< shuffle mask.
     SK_Splice            ///< Concatenates elements from the first input vector
-                         ///< with elements of the second input vector. Returning
-                         ///< a vector of the same type as the input vectors.
-                         ///< Index indicates start offset in first input vector.
+              ///< with elements of the second input vector. Returning
+              ///< a vector of the same type as the input vectors.
+              ///< Index indicates start offset in first input vector.
   };
 
   /// Additional information about an operand's possible values.
@@ -1314,21 +1312,16 @@ public:
     OperandValueProperties Properties = OP_None;
 
     bool isConstant() const {
-      return Kind == OK_UniformConstantValue || Kind == OK_NonUniformConstantValue;
+      return Kind == OK_UniformConstantValue ||
+             Kind == OK_NonUniformConstantValue;
     }
     bool isUniform() const {
       return Kind == OK_UniformConstantValue || Kind == OK_UniformValue;
     }
-    bool isPowerOf2() const {
-      return Properties == OP_PowerOf2;
-    }
-    bool isNegatedPowerOf2() const {
-      return Properties == OP_NegatedPowerOf2;
-    }
+    bool isPowerOf2() const { return Properties == OP_PowerOf2; }
+    bool isNegatedPowerOf2() const { return Properties == OP_NegatedPowerOf2; }
 
-    OperandValueInfo getNoProps() const {
-      return {Kind, OP_None};
-    }
+    OperandValueInfo getNoProps() const { return {Kind, OP_None}; }
 
     OperandValueInfo mergeWith(const OperandValueInfo OpInfoY) {
       OperandValueKind MergeKind = OK_AnyValue;

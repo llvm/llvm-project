@@ -152,10 +152,10 @@ public:
     // Targets only need to override getPointerInfos(); this searches the list
     // they report, which is sorted by address space number.
     SmallVector<TTI::PointerInfo, 8> Infos = getPointerInfos();
-    const auto *I = lower_bound(Infos, AS, [](const TTI::PointerInfo &PI,
-                                              unsigned AS) {
-      return PI.AddrSpace < AS;
-    });
+    const auto *I =
+        lower_bound(Infos, AS, [](const TTI::PointerInfo &PI, unsigned AS) {
+          return PI.AddrSpace < AS;
+        });
     if (I == Infos.end() || I->AddrSpace != AS)
       return std::nullopt;
     return *I;
