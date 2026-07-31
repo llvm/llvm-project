@@ -16198,7 +16198,8 @@ bool SITargetLowering::isCanonicalized(Register Reg, const MachineFunction &MF,
   //   G_AMDGPU_CVT_F32_UBYTE{0-3}: always canonical (integer->float, no NaN).
   //   amdgcn_cvt_pkrtz, amdgcn_cubeid, amdgcn_fdot2: always quiet sNaN.
   //   amdgcn_div_scale: passes sNaN through on pre-GFX12.
-  //   All other ops: quiet sNaN only when MODE.IEEE=1 (or unconditionally on GFX12+).
+  //   All other ops: quiet sNaN only when MODE.IEEE=1 (or unconditionally on
+  //   GFX12+).
   const bool IsGFX12Plus = Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12;
   const bool QuietsSignalNaN =
       IsGFX12Plus || MF.getInfo<SIMachineFunctionInfo>()->getMode().IEEE;
