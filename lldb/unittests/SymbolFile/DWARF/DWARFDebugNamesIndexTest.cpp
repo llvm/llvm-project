@@ -26,9 +26,7 @@ using StringRef = llvm::StringRef;
 
 class DWARFDebugNamesIndexTest : public testing::Test {
 public:
-  void SetUp() override {
-    Debugger::Initialize(nullptr);
-  }
+  void SetUp() override { Debugger::Initialize(nullptr); }
 
   void TearDown() override { Debugger::Terminate(); }
 };

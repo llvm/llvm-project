@@ -291,20 +291,19 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
   lldb::VariableListSP variable_list;
   lldb::IdentifierCaseType identifier_case = lldb::eCaseSensitive;
 
-  if (symbol_context.comp_unit){
+  if (symbol_context.comp_unit) {
     variable_list = symbol_context.comp_unit->GetVariableList(true);
     identifier_case = symbol_context.comp_unit->GetCasing();
   }
-    
 
   name_ref.consume_front("::");
 
   std::string search_string;
-  if(identifier_case == lldb::eLowerCase)
+  if (identifier_case == lldb::eLowerCase)
     search_string = name_ref.lower();
-  else if(identifier_case == lldb::eUpperCase)
+  else if (identifier_case == lldb::eUpperCase)
     search_string = name_ref.upper();
-  else 
+  else
     search_string = name_ref.str();
 
   lldb::ValueObjectSP value_sp;
@@ -359,18 +358,19 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
     lldb::VariableListSP variable_list(
         stack_frame.GetInScopeVariableList(false));
 
-    SymbolContext sc = stack_frame.GetSymbolContext(lldb::eSymbolContextCompUnit);
+    SymbolContext sc =
+        stack_frame.GetSymbolContext(lldb::eSymbolContextCompUnit);
 
     lldb::IdentifierCaseType identifier_case = lldb::eCaseSensitive;
-    if(sc.comp_unit)
+    if (sc.comp_unit)
       identifier_case = sc.comp_unit->GetCasing();
 
     std::string search_string;
-    if(identifier_case == lldb::eLowerCase)
+    if (identifier_case == lldb::eLowerCase)
       search_string = name_ref.lower();
-    else if(identifier_case == lldb::eUpperCase)
+    else if (identifier_case == lldb::eUpperCase)
       search_string = name_ref.upper();
-    else 
+    else
       search_string = name_ref.str();
 
     lldb::ValueObjectSP value_sp;
@@ -386,8 +386,8 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
       return value_sp;
 
     // Try looking for an instance variable (class member).
-    sc = stack_frame.GetSymbolContext(
-        lldb::eSymbolContextFunction | lldb::eSymbolContextBlock);
+    sc = stack_frame.GetSymbolContext(lldb::eSymbolContextFunction |
+                                      lldb::eSymbolContextBlock);
     llvm::StringRef instance_name = sc.GetInstanceName();
     value_sp = stack_frame.FindVariable(ConstString(instance_name));
     if (value_sp)

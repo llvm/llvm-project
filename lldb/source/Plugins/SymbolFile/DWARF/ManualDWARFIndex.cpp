@@ -160,9 +160,9 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   lldb::IdentifierCaseType cu_identifier_case = unit.GetIdentifierCase();
 
-  // If at least one of the Compile Units is case sensitive, then all compile  
+  // If at least one of the Compile Units is case sensitive, then all compile
   // units will be case sensitive
-  if(cu_identifier_case != eCaseSensitive)
+  if (cu_identifier_case != eCaseSensitive)
     SetNameCaseInsensitive();
   else
     SetStrictlyCaseSensitive();

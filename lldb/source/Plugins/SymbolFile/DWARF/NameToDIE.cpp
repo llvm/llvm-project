@@ -42,8 +42,9 @@ bool NameToDIE::Find(
   if (!NameCaseInsensitive)
     return true;
 
-  for (const auto &entry : m_map){
-    if(ConstString::Equals(ConstString(entry.cstring.GetCString()), name, false))
+  for (const auto &entry : m_map) {
+    if (ConstString::Equals(ConstString(entry.cstring.GetCString()), name,
+                            false))
       if (callback(entry.value) == IterationAction::Stop)
         return false;
   }

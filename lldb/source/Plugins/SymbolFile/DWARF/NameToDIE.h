@@ -86,8 +86,11 @@ public:
 
   void Clear() { m_map.Clear(); }
 
-  void SetNameCaseInsensitive() { if(!StrictlyCaseSensitive) NameCaseInsensitive = true; }
-  
+  void SetNameCaseInsensitive() {
+    if (!StrictlyCaseSensitive)
+      NameCaseInsensitive = true;
+  }
+
   void SetStrictlyCaseSensitive() {
     NameCaseInsensitive = false;
     StrictlyCaseSensitive = true;

@@ -169,27 +169,27 @@ private:
   ///   True if this index is a partial index, false otherwise.
   bool IsPartial() const;
 
-	void SetNameCaseInsensitive() {
-		m_set.function_basenames.SetNameCaseInsensitive();
-		m_set.function_fullnames.SetNameCaseInsensitive();
-		m_set.function_methods.SetNameCaseInsensitive();
-		m_set.function_selectors.SetNameCaseInsensitive();
-		m_set.objc_class_selectors.SetNameCaseInsensitive();
-		m_set.globals.SetNameCaseInsensitive();
-		m_set.types.SetNameCaseInsensitive();
-		m_set.namespaces.SetNameCaseInsensitive();
-	}
+  void SetNameCaseInsensitive() {
+    m_set.function_basenames.SetNameCaseInsensitive();
+    m_set.function_fullnames.SetNameCaseInsensitive();
+    m_set.function_methods.SetNameCaseInsensitive();
+    m_set.function_selectors.SetNameCaseInsensitive();
+    m_set.objc_class_selectors.SetNameCaseInsensitive();
+    m_set.globals.SetNameCaseInsensitive();
+    m_set.types.SetNameCaseInsensitive();
+    m_set.namespaces.SetNameCaseInsensitive();
+  }
 
-	void SetStrictlyCaseSensitive() {
-		m_set.function_basenames.SetStrictlyCaseSensitive();
-		m_set.function_fullnames.SetStrictlyCaseSensitive();
-		m_set.function_methods.SetStrictlyCaseSensitive();
-		m_set.function_selectors.SetStrictlyCaseSensitive();
-		m_set.objc_class_selectors.SetStrictlyCaseSensitive();
-		m_set.globals.SetStrictlyCaseSensitive();
-		m_set.types.SetStrictlyCaseSensitive();
-		m_set.namespaces.SetStrictlyCaseSensitive();
-	}
+  void SetStrictlyCaseSensitive() {
+    m_set.function_basenames.SetStrictlyCaseSensitive();
+    m_set.function_fullnames.SetStrictlyCaseSensitive();
+    m_set.function_methods.SetStrictlyCaseSensitive();
+    m_set.function_selectors.SetStrictlyCaseSensitive();
+    m_set.objc_class_selectors.SetStrictlyCaseSensitive();
+    m_set.globals.SetStrictlyCaseSensitive();
+    m_set.types.SetStrictlyCaseSensitive();
+    m_set.namespaces.SetStrictlyCaseSensitive();
+  }
 
   /// The DWARF file which we are indexing.
   SymbolFileDWARF *m_dwarf;
