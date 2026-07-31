@@ -1008,8 +1008,6 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
     SetVectorType &DominatedUses, SetVectorType &NonDominatedReachableUses,
     SetVectorType &UnreachableUses) {
 
-  MachineBasicBlock *CurMBB = CurMI->getParent();
-
   std::set<MachineInstr *> Visited;
   for (MachineInstr &U : MRI->use_nodbg_instructions(CandidateReg)) {
     if (!Visited.insert(&U).second)
@@ -1026,17 +1024,13 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
       }
       int Inserts = 0;
       for (auto *PhiOpMBB : PhiBlocks) {
-        MachineBasicBlock *UseMBB = U.getParent();
-        // The uses which are before the high register pressure point are
-        // unreachable.
-        if (((CurMBB != UseMBB) && NUA->isReachable(UseMBB, CurMBB)) ||
-            ((CurMBB == UseMBB) && DT->dominates(&U, CurMI))) {
-          Inserts += UnreachableUses.insert(&U);
-        } else if (DT->dominates(SpillBlock, PhiOpMBB)) {
+        if (DT->dominates(SpillBlock, PhiOpMBB)) {
           Inserts += DominatedUses.insert(&U);
         } else if (NUA->isReachable(SpillBlock, PhiOpMBB)) {
           Inserts += NonDominatedReachableUses.insert(&U);
         } else {
+          // The uses which are before the high register pressure point are
+          // unreachable.
           Inserts += UnreachableUses.insert(&U);
         }
       }
@@ -1044,16 +1038,13 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
              "PHI has multiple uses with varying classifications");
     } else {
       MachineBasicBlock *UseMBB = U.getParent();
-      // The uses which are before the high register pressure point are
-      // unreachable.
-      if (((CurMBB != UseMBB) && NUA->isReachable(UseMBB, CurMBB)) ||
-          ((CurMBB == UseMBB) && DT->dominates(&U, CurMI))) {
-        UnreachableUses.insert(&U);
-      } else if (DT->dominates(CurMI, &U)) {
+      if (DT->dominates(CurMI, &U)) {
         DominatedUses.insert(&U);
       } else if (NUA->isReachable(SpillBlock, UseMBB)) {
         NonDominatedReachableUses.insert(&U);
       } else {
+        // The uses which are before the high register pressure point are
+        // unreachable.
         UnreachableUses.insert(&U);
       }
     }
