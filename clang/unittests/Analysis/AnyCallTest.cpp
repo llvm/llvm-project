@@ -39,6 +39,8 @@ void expectIntegerArguments(const AnyCall &Call,
                             std::initializer_list<int> Expected) {
   ASSERT_EQ(Call.arg_size(), Expected.size());
   EXPECT_FALSE(Call.arg_empty());
+  EXPECT_EQ(Call.arguments()[0], Call.getArg(0));
+  EXPECT_EQ(*Call.arg_begin(), Call.getArg(0));
 
   unsigned Index = 0;
   for (int ExpectedValue : Expected) {
@@ -55,27 +57,9 @@ void expectNoArguments(const AnyCall &Call) {
   EXPECT_EQ(Call.arg_begin(), Call.arg_end());
 }
 
-TEST(AnyCallTest, ExposesFunctionParameters) {
+TEST(AnyCallTest, ExposesFunctionParametersAndArguments) {
   auto AST = buildAST(R"cpp(
     void callee(int first, int second);
-  )cpp");
-  ASTContext &Ctx = AST->getASTContext();
-  ASSERT_EQ(Ctx.getDiagnostics().getClient()->getNumErrors(), 0U);
-
-  const auto *Callee = selectFirst<FunctionDecl>(
-      "callee", match(functionDecl(hasName("callee")).bind("callee"), Ctx));
-  ASSERT_NE(Callee, nullptr);
-
-  AnyCall Call(Callee);
-  EXPECT_FALSE(Call.param_empty());
-  ASSERT_EQ(Call.param_size(), 2u);
-  EXPECT_EQ(Call.parameters()[0], Callee->getParamDecl(0));
-  EXPECT_EQ(*Call.param_begin(), Callee->getParamDecl(0));
-}
-
-TEST(AnyCallTest, ExposesFunctionCallArguments) {
-  auto AST = buildAST(R"cpp(
-    void callee(int, int);
     void target() { callee(1, 2); }
   )cpp");
   ASTContext &Ctx = AST->getASTContext();
@@ -88,9 +72,13 @@ TEST(AnyCallTest, ExposesFunctionCallArguments) {
   ASSERT_NE(CE, nullptr);
 
   AnyCall Call(CE);
+  const auto *Callee = cast<FunctionDecl>(Call.getDecl());
+  EXPECT_FALSE(Call.param_empty());
+  ASSERT_EQ(Call.param_size(), 2u);
+  EXPECT_EQ(Call.parameters()[0], Callee->getParamDecl(0));
+  EXPECT_EQ(*Call.param_begin(), Callee->getParamDecl(0));
+
   expectIntegerArguments(Call, {1, 2});
-  EXPECT_EQ(Call.arguments()[0], CE->getArg(0));
-  EXPECT_EQ(*Call.arg_begin(), CE->getArg(0));
 }
 
 TEST(AnyCallTest, ExposesBlockCallArguments) {
@@ -114,8 +102,6 @@ TEST(AnyCallTest, ExposesBlockCallArguments) {
   AnyCall Call(CE);
   EXPECT_EQ(Call.getKind(), AnyCall::Block);
   expectIntegerArguments(Call, {3, 4});
-  EXPECT_EQ(Call.arguments()[0], CE->getArg(0));
-  EXPECT_EQ(*Call.arg_begin(), CE->getArg(0));
 }
 
 TEST(AnyCallTest, ExposesObjCMethodArguments) {
@@ -143,8 +129,6 @@ TEST(AnyCallTest, ExposesObjCMethodArguments) {
   AnyCall Call(ME);
   EXPECT_EQ(Call.getKind(), AnyCall::ObjCMethod);
   expectIntegerArguments(Call, {5, 6});
-  EXPECT_EQ(Call.arguments()[0], ME->getArg(0));
-  EXPECT_EQ(*Call.arg_begin(), ME->getArg(0));
 }
 
 TEST(AnyCallTest, ExposesConstructorArguments) {
@@ -167,8 +151,6 @@ TEST(AnyCallTest, ExposesConstructorArguments) {
 
   AnyCall Call(CtorExpr);
   expectIntegerArguments(Call, {3, 4});
-  EXPECT_EQ(Call.arguments()[0], CtorExpr->getArg(0));
-  EXPECT_EQ(*Call.arg_begin(), CtorExpr->getArg(0));
 }
 
 TEST(AnyCallTest, AllocatorCallsHaveNoArguments) {
