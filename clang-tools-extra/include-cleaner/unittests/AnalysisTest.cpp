@@ -489,6 +489,19 @@ R"cpp(#include "d.h"
 #include "a.h")cpp");
 }
 
+TEST(FixIncludes, MultipleInsertionsSameOffset) {
+  AnalysisResults Results;
+  Results.Missing.emplace_back("\"a.h\"", Header(""));
+  Results.Missing.emplace_back("\"b.h\"", Header(""));
+
+  // Empty code guarantees HeaderIncludes chooses offset 0 for both.
+  llvm::StringRef Code = "";
+
+  // Should concatenate them without conflict errors in Replacements::add
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
+            "#include \"a.h\"\n#include \"b.h\"\n");
+}
+
 MATCHER_P3(expandedAt, FileID, Offset, SM, "") {
   auto [ExpanedFileID, ExpandedOffset] = SM->getDecomposedExpansionLoc(arg);
   return ExpanedFileID == FileID && ExpandedOffset == Offset;

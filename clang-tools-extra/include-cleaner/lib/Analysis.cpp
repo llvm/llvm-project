@@ -163,6 +163,10 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
   return Results;
 }
 
+bool isAngled(const std::string &String) {
+  return !String.empty() && String[0] == '<';
+}
+
 std::string fixIncludes(const AnalysisResults &Results,
                         llvm::StringRef FileName, llvm::StringRef Code,
                         const format::FormatStyle &Style) {
@@ -177,20 +181,33 @@ std::string fixIncludes(const AnalysisResults &Results,
     }
   }
 
-  llvm::DenseMap<unsigned, std::string> InsertionsByOffset;
+  struct InsertionInfo {
+    std::string Text;
+    unsigned Length = 0;
+  };
+  llvm::DenseMap<unsigned, InsertionInfo> InsertionsByOffset;
+
   for (auto &[Spelled, _] : Results.Missing) {
     auto Insertion = HeaderIncludes.insert(
-        StringRef{Spelled}.trim("\"<>"), !Spelled.empty() && Spelled[0] == '<',
+        llvm::StringRef{Spelled}.trim("\"<>"), isAngled(Spelled),
         tooling::IncludeDirective::Include);
     if (Insertion) {
-      InsertionsByOffset[Insertion->getOffset()] +=
-          Insertion->getReplacementText();
+      auto &Info = InsertionsByOffset[Insertion->getOffset()];
+      Info.Text += Insertion->getReplacementText();
+      if (Insertion->getLength() > 0) {
+        // We can concatenate pure insertions (length 0), but at most one
+        // true replacement (length > 0) to avoid overwriting the length.
+        assert(Info.Length == 0 && "Multiple replacements at same offset?");
+        Info.Length = Insertion->getLength();
+      }
     }
   }
 
   for (const auto &Entry : InsertionsByOffset) {
+    const auto &Info = Entry.second;
+    const unsigned Offset = Entry.first;
     cantFail(
-        R.add(tooling::Replacement(FileName, Entry.first, 0, Entry.second)));
+        R.add(tooling::Replacement(FileName, Offset, Info.Length, Info.Text)));
   }
   auto Positioned = cantFail(format::cleanupAroundReplacements(Code, R, Style));
   return cantFail(tooling::applyAllReplacements(Code, Positioned));
