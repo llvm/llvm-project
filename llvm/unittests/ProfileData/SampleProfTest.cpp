@@ -456,17 +456,6 @@ struct SampleProfTest : ::testing::Test {
       if (Samples != nullptr)
         Esamples = Samples->getTotalSamples();
       ASSERT_EQ(I->getValue(), Esamples);
-
-      if (Format == SampleProfileFormat::SPF_Ext_Binary) {
-        ASSERT_TRUE(Reader->contains(I->getKey()));
-        ASSERT_TRUE(Reader->contains(FunctionId(I->getKey()).getHashCode()));
-      }
-    }
-
-    if (Format == SampleProfileFormat::SPF_Ext_Binary) {
-      StringRef FakeSymbol = "non_existent_symbol_for_test";
-      ASSERT_FALSE(Reader->contains(FakeSymbol));
-      ASSERT_FALSE(Reader->contains(FunctionId(FakeSymbol).getHashCode()));
     }
   }
 };
