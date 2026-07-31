@@ -409,15 +409,15 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     0.50                        sqdmulh	v0.4h, v1.4h, v2.4h
 # CHECK-NEXT:  1      6     1.00                        sqrdmulh	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     0.50                        sqdmulh	v0.4s, v1.4s, v2.s[1]
-# CHECK-NEXT:  1      6     0.50                        mla	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        mla	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        mls	v0.4h, v1.4h, v2.h[1]
-# CHECK-NEXT:  1      6     0.50                        mls	v0.8h, v1.8h, v2.h[1]
+# CHECK-NEXT:  1      4     0.50                        mla	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      4     1.00                        mla	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      4     0.50                        mls	v0.4h, v1.4h, v2.h[1]
+# CHECK-NEXT:  1      4     1.00                        mls	v0.8h, v1.8h, v2.h[1]
 # CHECK-NEXT:  1      4     1.00                        smull	v0.8h, v1.8b, v2.8b
 # CHECK-NEXT:  1      4     1.00                        umull2	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT:  1      4     1.00                        sqdmull	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT:  1      6     1.00                        smlal	v0.8h, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        umlal2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT:  1      4     1.00                        smlal	v0.8h, v1.8b, v2.8b
+# CHECK-NEXT:  1      4     1.00                        umlal2	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT:  1      4     1.00                        sqdmlal	v0.4s, v1.4h, v2.4h
 # CHECK-NEXT:  1      2     1.00                        xtn	v0.8b, v1.8h
 # CHECK-NEXT:  1      2     1.00                        xtn2	v0.16b, v1.8h
@@ -473,7 +473,7 @@ sqshrun	v0.2s, v1.2d, #1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     147.50 147.50 92.50  92.50   -      -
+# CHECK-NEXT:  -      -      -      -     148.00 148.00 92.50  92.50   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -639,7 +639,7 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mla	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     mla	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mls	v0.4h, v1.4h, v2.h[1]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mls	v0.8h, v1.8h, v2.h[1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     mls	v0.8h, v1.8h, v2.h[1]
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     smull	v0.8h, v1.8b, v2.8b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     umull2	v0.4s, v1.8h, v2.8h
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     sqdmull	v0.4s, v1.4h, v2.4h
