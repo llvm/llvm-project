@@ -5557,6 +5557,9 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     if (VPI->getMask()) {
       Instruction *I = VPI->getUnderlyingInstr();
       bool IsLoad = VPI->getOpcode() == Instruction::Load;
+      // No reason to speculate unitstrideness if that won't improve vector code
+      // as we'd pay the price of not taking vector loop if the runtime
+      // condition is false for no benefits.
       if (!LoopVectorizationPlanner::getDecisionAndClampRange(
               [&](ElementCount VF) -> bool {
                 return CostCtx.Config.isLegalMaskedLoadOrStore(
