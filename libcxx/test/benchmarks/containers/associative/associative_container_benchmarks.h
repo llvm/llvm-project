@@ -498,9 +498,9 @@ void associative_container_benchmarks(std::string container) {
       st.ResumeTiming();
     }
   };
-  bench("insert(iterator, iterator) (all new keys, end)", [&](auto& state) { insert_iter_iter_bench(true, state); });
+  bench("insert(iterator, iterator) (all new keys, end)", [=](auto& state) { insert_iter_iter_bench(true, state); });
   bench("insert(iterator, iterator) (all new keys, middle)",
-        [&](auto& state) { insert_iter_iter_bench(false, state); });
+        [=](auto& state) { insert_iter_iter_bench(false, state); });
 
   bench("insert(iterator, iterator) (half new keys)", [=](auto& st) {
     const std::size_t size = st.range(0);
