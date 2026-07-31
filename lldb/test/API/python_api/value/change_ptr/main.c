@@ -7,7 +7,10 @@ int test1() {
 }
 
 char test2() {
-  struct S {char a; char b; };
+  struct S {
+    char a;
+    char b;
+  };
   struct S arr[2] = {{'a', 'b'}, {'c', 'd'}};
   struct S *p = arr;
   ++p; // break here 2
