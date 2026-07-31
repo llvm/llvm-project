@@ -75,6 +75,12 @@ struct LIBCPP_REPARSE_DATA_BUFFER {
     } GenericReparseBuffer;
   };
 };
+
+// The reparse tag used for AF_UNIX (Unix domain) socket files isn't always
+// present in the Windows SDK headers, so define it ourselves if needed.
+#  ifndef IO_REPARSE_TAG_AF_UNIX
+#    define IO_REPARSE_TAG_AF_UNIX 0x80000023L
+#  endif
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
@@ -161,21 +167,35 @@ inline int stat_handle(HANDLE h, StatT* buf) {
   } else {
     buf->st_mode |= _S_IFREG;
   }
+  bool is_af_unix_socket = false;
   if (basic.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
     FILE_ATTRIBUTE_TAG_INFO tag;
     if (!GetFileInformationByHandleEx(h, FileAttributeTagInfo, &tag, sizeof(tag)))
       return -1;
-    if (tag.ReparseTag == IO_REPARSE_TAG_SYMLINK)
+    if (tag.ReparseTag == IO_REPARSE_TAG_SYMLINK) {
       buf->st_mode = (buf->st_mode & ~_S_IFMT) | _S_IFLNK;
+    } else if (tag.ReparseTag == IO_REPARSE_TAG_AF_UNIX) {
+      buf->st_mode      = (buf->st_mode & ~_S_IFMT) | _S_IFSOCK;
+      is_af_unix_socket = true;
+    }
   }
   FILE_STANDARD_INFO standard;
-  if (!GetFileInformationByHandleEx(h, FileStandardInfo, &standard, sizeof(standard)))
+  if (!GetFileInformationByHandleEx(h, FileStandardInfo, &standard, sizeof(standard))) {
+    // AF_UNIX (Unix domain) socket files don't support all of the information
+    // queries below; report what we already have (mode/timestamps) instead of
+    // failing outright, matching the behavior of the system stat()/os.stat().
+    if (is_af_unix_socket)
+      return 0;
     return -1;
+  }
   buf->st_nlink = standard.NumberOfLinks;
   buf->st_size  = standard.EndOfFile.QuadPart;
   BY_HANDLE_FILE_INFORMATION info;
-  if (!GetFileInformationByHandle(h, &info))
+  if (!GetFileInformationByHandle(h, &info)) {
+    if (is_af_unix_socket)
+      return 0;
     return -1;
+  }
   buf->st_dev = info.dwVolumeSerialNumber;
   memcpy(&buf->st_ino.id[0], &info.nFileIndexHigh, 4);
   memcpy(&buf->st_ino.id[4], &info.nFileIndexLow, 4);
@@ -183,11 +203,27 @@ inline int stat_handle(HANDLE h, StatT* buf) {
 }
 
 inline int stat_file(const wchar_t* path, StatT* buf, DWORD flags) {
-  WinHandle h(path, FILE_READ_ATTRIBUTES, flags);
-  if (!h)
-    return -1;
-  int ret = stat_handle(h, buf);
-  return ret;
+  {
+    WinHandle h(path, FILE_READ_ATTRIBUTES, flags);
+    if (h && stat_handle(h, buf) == 0)
+      return 0;
+  }
+  // Some reparse points, such as AF_UNIX (Unix domain) socket files, can't be
+  // opened/queried by following the reparse point (there is no target to
+  // follow). CreateFileW may fail with e.g. ERROR_CANT_ACCESS_FILE, or the
+  // subsequent GetFileInformationByHandle* calls may fail. In that case, fall
+  // back to opening the reparse point itself so that we can still report its
+  // attributes and type. This matches the behavior of the system
+  // stat()/os.stat() on such files.
+  if (!(flags & FILE_FLAG_OPEN_REPARSE_POINT)) {
+    DWORD attributes = GetFileAttributesW(path);
+    if (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+      WinHandle hr(path, FILE_READ_ATTRIBUTES, flags | FILE_FLAG_OPEN_REPARSE_POINT);
+      if (hr)
+        return stat_handle(hr, buf);
+    }
+  }
+  return -1;
 }
 
 inline int stat(const wchar_t* path, StatT* buf) { return stat_file(path, buf, 0); }
