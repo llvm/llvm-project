@@ -856,14 +856,14 @@ MLIR_CAPI_EXPORTED void mlirOperationMoveBefore(MlirOperation op,
 /// take O(N) where N is the number of operations within the parent block.
 MLIR_CAPI_EXPORTED bool mlirOperationIsBeforeInBlock(MlirOperation op,
                                                      MlirOperation other);
-/// Operation walk result.
+/// Walk result.
 typedef enum MlirWalkResult {
   MlirWalkResultAdvance,
   MlirWalkResultInterrupt,
   MlirWalkResultSkip
 } MlirWalkResult;
 
-/// Traversal order for operation walk.
+/// Traversal order for a walk.
 typedef enum MlirWalkOrder {
   MlirWalkPreOrder,
   MlirWalkPostOrder
@@ -880,6 +880,46 @@ typedef MlirWalkResult (*MlirOperationWalkCallback)(MlirOperation,
 MLIR_CAPI_EXPORTED
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder);
+
+/// Walker type for types. The handler is passed an (opaque) reference to a
+/// type and a pointer to a `userData`.
+typedef MlirWalkResult (*MlirTypeWalkCallback)(MlirType, void *userData);
+
+/// Walker type for attributes. The handler is passed an (opaque) reference to
+/// an attribute and a pointer to a `userData`.
+typedef MlirWalkResult (*MlirAttributeWalkCallback)(MlirAttribute,
+                                                    void *userData);
+
+/// Walks `type` in `walkOrder`, along with every type and attribute nested
+/// inside it, and calls `typeCallback` on each type and `attributeCallback` on
+/// each attribute. The walk crosses between types and attributes in both
+/// directions, so a type parameterized by an attribute reaches the types that
+/// attribute carries, and so on to any depth. Either callback may be null, in
+/// which case elements of that kind are not reported; the walk still descends
+/// through them. `*userData` is passed to the callbacks as well and can be used
+/// to tunnel some context or other data into them.
+///
+/// A type or an attribute that the walked structure mentions more than once is
+/// reported once per walk.
+///
+/// A callback returning `MlirWalkResultInterrupt` ends the walk, which this
+/// function reports by returning `MlirWalkResultInterrupt`. A callback
+/// returning `MlirWalkResultSkip` in `MlirWalkPreOrder` leaves the elements
+/// nested inside the reported element unvisited; in `MlirWalkPostOrder` those
+/// elements have already been visited, so it behaves like
+/// `MlirWalkResultAdvance`. This function returns `MlirWalkResultAdvance`
+/// unless the walk was interrupted.
+MLIR_CAPI_EXPORTED MlirWalkResult
+mlirTypeWalk(MlirType type, MlirTypeWalkCallback typeCallback,
+             MlirAttributeWalkCallback attributeCallback, void *userData,
+             MlirWalkOrder walkOrder);
+
+/// Walks `attribute` in `walkOrder`, along with every attribute and type nested
+/// inside it, with the same contract as `mlirTypeWalk`.
+MLIR_CAPI_EXPORTED MlirWalkResult
+mlirAttributeWalk(MlirAttribute attribute, MlirTypeWalkCallback typeCallback,
+                  MlirAttributeWalkCallback attributeCallback, void *userData,
+                  MlirWalkOrder walkOrder);
 
 /// Replace uses of 'of' value with the 'with' value inside the 'op' operation.
 MLIR_CAPI_EXPORTED void
