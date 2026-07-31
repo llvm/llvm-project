@@ -3611,6 +3611,10 @@ public:
 /// CompoundLiteralExpr - [C99 6.5.2.5, C23 6.5.3.6]
 ///
 class CompoundLiteralExpr : public Expr {
+public:
+  enum class ScopeKind { Block, File, ParameterList };
+
+private:
   /// LParenLoc - If non-null, this is the location of the left paren in a
   /// compound literal like "(int){4}".  This can be null if this is a
   /// synthesized compound expression.
@@ -3618,8 +3622,7 @@ class CompoundLiteralExpr : public Expr {
 
   /// The type as written.  This can be an incomplete array type, in
   /// which case the actual expression type will be different.
-  /// The int part of the pair stores whether this expr is file scope.
-  llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfoAndScope;
+  llvm::PointerIntPair<TypeSourceInfo *, 2, ScopeKind> TInfoAndScope;
   Stmt *Init;
 
   /// Value of constant literals with static storage duration.
@@ -3628,11 +3631,11 @@ class CompoundLiteralExpr : public Expr {
 public:
   CompoundLiteralExpr(
       SourceLocation LParenLoc, TypeSourceInfo *TInfo, QualType T,
-      ExprValueKind VK, Expr *Init, bool FileScope, StorageClass SC = SC_None,
+      ExprValueKind VK, Expr *Init, ScopeKind Scope, StorageClass SC = SC_None,
       ThreadStorageClassSpecifier TSC = TSCS_unspecified,
       ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified)
       : Expr(CompoundLiteralExprClass, T, VK, OK_Ordinary),
-        LParenLoc(LParenLoc), TInfoAndScope(TInfo, FileScope), Init(Init) {
+        LParenLoc(LParenLoc), TInfoAndScope(TInfo, Scope), Init(Init) {
     assert(Init && "Init is a nullptr");
     assert((ConstexprKind == ConstexprSpecKind::Unspecified ||
             ConstexprKind == ConstexprSpecKind::Constexpr) &&
@@ -3651,8 +3654,10 @@ public:
   Expr *getInitializer() { return cast<Expr>(Init); }
   void setInitializer(Expr *E) { Init = E; }
 
-  bool isFileScope() const { return TInfoAndScope.getInt(); }
-  void setFileScope(bool FS) { TInfoAndScope.setInt(FS); }
+  ScopeKind getScopeKind() const { return TInfoAndScope.getInt(); }
+  void setScopeKind(ScopeKind Scope) { TInfoAndScope.setInt(Scope); }
+
+  bool isFileScope() const { return getScopeKind() == ScopeKind::File; }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   void setLParenLoc(SourceLocation L) { LParenLoc = L; }

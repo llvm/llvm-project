@@ -1238,7 +1238,8 @@ void ASTStmtReader::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
   E->setLParenLoc(readSourceLocation());
   E->setTypeSourceInfo(readTypeSourceInfo());
   E->setInitializer(Record.readSubExpr());
-  E->setFileScope(Record.readInt());
+  E->setScopeKind(
+      static_cast<CompoundLiteralExpr::ScopeKind>(Record.readInt()));
   E->setStorageClass(static_cast<StorageClass>(Record.readInt()));
   E->setTSCSpec(static_cast<ThreadStorageClassSpecifier>(Record.readInt()));
   E->setConstexpr(Record.readInt());

@@ -7715,6 +7715,10 @@ ExprResult Sema::BuildCompoundLiteralExpr(
       (getLangOpts().CPlusPlus && !(IsFileScope && literalType->isArrayType()))
           ? VK_PRValue
           : VK_LValue;
+  CompoundLiteralExpr::ScopeKind Scope =
+      IsFileScope        ? CompoundLiteralExpr::ScopeKind::File
+      : IsPrototypeScope ? CompoundLiteralExpr::ScopeKind::ParameterList
+                         : CompoundLiteralExpr::ScopeKind::Block;
 
   bool HasGlobalStorage =
       IsFileScope || (getLangOpts().C23 && (HasStatic || HasThreadStorage));
@@ -7749,8 +7753,8 @@ ExprResult Sema::BuildCompoundLiteralExpr(
       }
 
   auto *E = new (Context)
-      CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK, LiteralExpr,
-                          IsFileScope, SC, TSC, ConstexprKind);
+      CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK, LiteralExpr, Scope,
+                          SC, TSC, ConstexprKind);
 
   if (HasGlobalStorage && !HasConstexpr) {
     if (!LiteralExpr->isTypeDependent() && !LiteralExpr->isValueDependent() &&
@@ -10332,8 +10336,9 @@ static void ConstructTransparentUnion(Sema &S, ASTContext &C,
   // Build a compound literal constructing a value of the transparent
   // union type from this initializer list.
   TypeSourceInfo *unionTInfo = C.getTrivialTypeSourceInfo(UnionType);
-  EResult = new (C) CompoundLiteralExpr(SourceLocation(), unionTInfo, UnionType,
-                                        VK_PRValue, Initializer, false);
+  EResult = new (C)
+      CompoundLiteralExpr(SourceLocation(), unionTInfo, UnionType, VK_PRValue,
+                          Initializer, CompoundLiteralExpr::ScopeKind::Block);
 }
 
 AssignConvertType
