@@ -184,3 +184,79 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Verify that tensor-backed vector.transfer_write operations are not treated
+// as stores to shared memory.
+func.func @tensor_transfer_write(
+    %global: memref<16xf32>,
+    %dest: tensor<16xf32>) -> tensor<16xf32> {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c16 = arith.constant 16 : index
+  %c0f = arith.constant 0.0 : f32
+
+  // expected-error @below {{no shared memory copy}}
+  %result = scf.for %i = %c0 to %c16 step %c4
+      iter_args(%tensor = %dest) -> tensor<16xf32> {
+    %value = vector.transfer_read %global[%i], %c0f
+      : memref<16xf32>, vector<4xf32>
+    %updated = vector.transfer_write %value, %tensor[%i]
+      : vector<4xf32>, tensor<16xf32>
+    scf.yield %updated : tensor<16xf32>
+  }
+
+  return %result : tensor<16xf32>
+}
+
+!t = !transform.any_op
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %arg0: !t {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.for"]} in %arg0
+      : (!t) -> !t
+    transform.nvgpu.pipeline_shared_memory_copies
+        failures(propagate) %loop {depth = 2, peel_epilogue}
+        : (!t) -> !t
+    transform.yield
+  }
+}
+
+// -----
+
+// Verify that vector.transfer_write operations targeting the default memory
+// space are not treated as stores to shared memory.
+func.func @default_memory_transfer_write(
+    %source: memref<16xf32>,
+    %dest: memref<16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c16 = arith.constant 16 : index
+  %c0f = arith.constant 0.0 : f32
+
+  // expected-error @below {{no shared memory copy}}
+  scf.for %i = %c0 to %c16 step %c4 {
+    %value = vector.transfer_read %source[%i], %c0f
+      : memref<16xf32>, vector<4xf32>
+    vector.transfer_write %value, %dest[%i]
+      : vector<4xf32>, memref<16xf32>
+  }
+
+  return
+}
+
+!t = !transform.any_op
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %arg0: !t {transform.readonly}) {
+    %loop = transform.structured.match ops{["scf.for"]} in %arg0
+      : (!t) -> !t
+    transform.nvgpu.pipeline_shared_memory_copies
+        failures(propagate) %loop {depth = 2, peel_epilogue}
+        : (!t) -> !t
+    transform.yield
+  }
+}
