@@ -609,7 +609,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_coshl:
   case Builtin::BI__builtin_coshf128:
   case Builtin::BI__builtin_elementwise_cosh:
-    return errorBuiltinNYI(cgf, e, builtinID);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::CoshOp>(cgf, *e);
   case Builtin::BIexp:
   case Builtin::BIexpf:
   case Builtin::BIexpl:
@@ -636,7 +636,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_exp10l:
   case Builtin::BI__builtin_exp10f128:
   case Builtin::BI__builtin_elementwise_exp10:
-    return errorBuiltinNYI(cgf, e, builtinID);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::Exp10Op>(cgf, *e);
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
   case Builtin::BIfabsl:
@@ -814,6 +814,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_sinhl:
   case Builtin::BI__builtin_sinhf128:
   case Builtin::BI__builtin_elementwise_sinh:
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::SinhOp>(cgf, *e);
   case Builtin::BI__builtin_sincospi:
   case Builtin::BI__builtin_sincospif:
   case Builtin::BI__builtin_sincospil:
@@ -855,7 +856,7 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_tanhl:
   case Builtin::BI__builtin_tanhf128:
   case Builtin::BI__builtin_elementwise_tanh:
-    return errorBuiltinNYI(cgf, e, builtinID);
+    return emitUnaryMaybeConstrainedFPBuiltin<cir::TanhOp>(cgf, *e);
   case Builtin::BItrunc:
   case Builtin::BItruncf:
   case Builtin::BItruncl:

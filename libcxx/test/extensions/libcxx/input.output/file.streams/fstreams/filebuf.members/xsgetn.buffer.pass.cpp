@@ -10,7 +10,7 @@
 
 // UNSUPPORTED: no-localization, no-filesystem
 
-// XFAIL: using-built-library-before-llvm-24
+// XFAIL: using-built-library-before-llvm-23
 
 // <fstream>
 

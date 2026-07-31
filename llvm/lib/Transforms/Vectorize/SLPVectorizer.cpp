@@ -5288,7 +5288,12 @@ private:
                       continue;
                     for (ScheduleCopyableData *CD :
                          getScheduleCopyableData(In, U.getOperandNo(), OpI)) {
-                      DecrUnsched(CD, /*IsControl=*/false);
+                      // Deps of reassoc scalars modeled as copyable tree
+                      // operands are released by the operand scan above;
+                      // release each remaining dep only once.
+                      if (Checked.insert(std::make_pair(CD, U.getOperandNo()))
+                              .second)
+                        DecrUnsched(CD, /*IsControl=*/false);
                       ReleasedAsCopyable = true;
                     }
                   }
@@ -10561,8 +10566,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::Call: {
     if (S.getMainOp()->getType()->isFloatingPointTy() &&
         TTI->isFPVectorizationPotentiallyUnsafe() && any_of(VL, [](Value *V) {
-          auto *I = dyn_cast<Instruction>(V);
-          return I && !I->isFast();
+          auto *FPOp = dyn_cast<FPMathOperator>(V);
+          return FPOp && !FPOp->isFast();
         }))
       return TreeEntry::NeedToGather;
     // Check if the calls are all to the same vectorizable intrinsic or
@@ -11333,9 +11338,12 @@ class InstructionsCompatibilityAnalysis {
       return {V, V};
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
-    // fmuladd(0.0, -0.0, V) == V.
     if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
       Type *Ty = MainOp->getType();
+      // fmuladd(V, 1.0, -0.0) == V.
+      if (S.getCopyableOpIdx() == 0)
+        return {V, ConstantFP::get(Ty, 1.0), ConstantFP::getNegativeZero(Ty)};
+      // fmuladd(0.0, -0.0, V) == V.
       return {ConstantFP::getZero(Ty), ConstantFP::getNegativeZero(Ty), V};
     }
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
@@ -11858,7 +11866,7 @@ public:
         return OrigS;
       return S;
     }
-    // fmuladd is the only 3-operand copyable; the value sits in the addend.
+    // fmuladd is the only 3-operand copyable.
     assert((Operands.size() == 2 ||
             (Operands.size() == 3 &&
              RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
@@ -11911,8 +11919,9 @@ public:
         }
       }
     }
-    // 2. Check, if operands can be vectorized. Skip for fmuladd; its addend
-    // is checked below and may legitimately hold many instructions.
+    // 2. Check, if operands can be vectorized. Skip for fmuladd; the
+    // copyable operand is checked below and may legitimately hold many
+    // instructions.
     if (Operands.size() == 2 &&
         count_if(Operands.back(), IsaPred<Instruction>) > 1)
       return OrigS;
@@ -11949,10 +11958,16 @@ public:
           count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
       return CopyableNum <= VL.size() / 2;
     };
-    // Check the addend for fmuladd, first operand otherwise.
-    if (!CheckOperand(Operands.size() == 2 ? Operands.front()
-                                           : Operands.back()))
-      return OrigS;
+    // Check the operand holding the copyable values.
+    if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
+      if (Operands.size() == 2)
+        return OrigS;
+      // Retry with the copyable modeled as the first multiplicand.
+      S.setCopyableOpIdx(0);
+      Operands = buildOperands(S, VL);
+      if (!CheckOperand(Operands[S.getCopyableOpIdx()]))
+        return OrigS;
+    }
 
     return S;
   }
@@ -19411,18 +19426,21 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     }
     if (DeletedNodes.contains(TE.get()))
       continue;
-    if (!NodesCosts.contains(TE.get())) {
+    // Gather costs depend on the set of vectorized nodes available for
+    // reuse, which changes during trimming, so recalculate them for all
+    // gather nodes, not just for the transformed ones.
+    if (TE->isGather() || !NodesCosts.contains(TE.get())) {
       InstructionCost C =
           getEntryCost(TE.get(), VectorizedVals, CheckedExtracts);
       if (!C.isValid() || C == 0) {
-        NodesCosts.try_emplace(TE.get(), C);
+        NodesCosts[TE.get()] = C;
         continue;
       }
       uint64_t Scale = EntryToScale.lookup(TE.get());
       if (!Scale)
         Scale = getEntryEffectiveScale(*TE);
       C *= Scale;
-      NodesCosts.try_emplace(TE.get(), C);
+      NodesCosts[TE.get()] = C;
     }
   }
 
@@ -24801,6 +24819,14 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       BasicBlock::Create(Ctx, BB->getName() + ".rtscalar", Fn);
   BasicBlock *Tail = BasicBlock::Create(Ctx, BB->getName() + ".rtcont", Fn);
 
+  // Emit the runtime alias check while the block is still fully connected:
+  // LCSSA-preserving SCEV expansion rewrites out-of-loop uses of
+  // loop-defined bases to poison in predecessor-less blocks.
+  IRBuilder<> ChkBuilder(Term);
+  ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
+  SCEVExpander Exp(*SE, "slp.rtcheck");
+  Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
+
   // Clone the body into the scalar fallback block, in the original program
   // order (RTOrigBodyOrder).
   SmallDenseMap<Value *, Value *, 16> VMap;
@@ -24820,21 +24846,12 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       if (Value *V = VMap.lookup(U.get()))
         U.set(V);
 
-  // Move the body (everything but PHIs and the terminator) into the vector
-  // block in the scheduled order.
-  for (Instruction &I : make_early_inc_range(*BB)) {
-    if (isa<PHINode>(&I) || I.isTerminator())
-      continue;
-    I.removeFromParent();
-    I.insertInto(VecBB, VecBB->end());
-  }
-
-  // Emit the runtime alias check before the still-present terminator, so the
-  // SCEV bounds are expanded at a valid insertion point.
-  IRBuilder<> ChkBuilder(Term);
-  ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
-  SCEVExpander Exp(*SE, "slp.rtcheck");
-  Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
+  // Move the original body into the vector block in the current (scheduled)
+  // order, keeping the emitted check instructions in the header block.
+  SmallPtrSet<Instruction *, 16> BodyInsts(llvm::from_range, RTOrigBodyOrder);
+  for (Instruction &I : make_early_inc_range(*BB))
+    if (BodyInsts.contains(&I))
+      I.moveBefore(*VecBB, VecBB->end());
 
   // Move the original terminator into the continuation block and replace it
   // with the guard branch.
