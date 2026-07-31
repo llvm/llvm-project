@@ -1,4 +1,6 @@
 RUN: export LSAN_OPTIONS=detect_leaks=0
+RUN: rm -rf %t && split-file %s %t
+
 RUN: not llvm-profdata merge %p/Inputs/fe-basic.proftext %p/Inputs/ir-basic.proftext -o /dev/null 2>&1 | FileCheck %s
 CHECK: ir-basic.proftext: Merge IR generated profile with Clang generated profile.
 
@@ -6,3 +8,19 @@ CHECK: ir-basic.proftext: Merge IR generated profile with Clang generated profil
 // we do not know which files have incompatible kinds.
 RUN: not llvm-profdata merge %p/Inputs/fe-basic.proftext %p/Inputs/ir-basic.proftext --num-threads=2 -o /dev/null 2>&1 | FileCheck %s --check-prefix=THREADS
 THREADS: unsupported instrumentation profile format version
+
+// Single-byte-coverage profiles cannot be merged with count profiles, in either
+// order, because the merged profile would be marked as coverage-only.
+RUN: not llvm-profdata merge %p/Inputs/ir-basic.proftext %t/coverage.proftext -o /dev/null 2>&1 | FileCheck %s --check-prefix=COVERAGE
+RUN: not llvm-profdata merge %t/coverage.proftext %p/Inputs/ir-basic.proftext -o /dev/null 2>&1 | FileCheck %s --check-prefix=COVERAGE
+RUN: not llvm-profdata merge %p/Inputs/ir-basic.proftext %t/coverage.proftext --num-threads=2 -o /dev/null 2>&1 | FileCheck %s --check-prefix=COVERAGE
+COVERAGE: cannot merge single-byte-coverage profiles with count (non-coverage) profiles
+
+//--- coverage.proftext
+:ir
+:single_byte_coverage
+foo2
+29667547796
+2
+1
+1

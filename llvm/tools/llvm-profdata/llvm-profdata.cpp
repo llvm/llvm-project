@@ -812,7 +812,12 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
   auto Reader = std::move(ReaderOrErr.get());
   if (Error E = WC->Writer.mergeProfileKind(Reader->getProfileKind())) {
-    consumeError(std::move(E));
+    auto [ErrorCode, Msg] = InstrProfError::take(std::move(E));
+    if (ErrorCode == instrprof_error::coverage_count_mismatch) {
+      WC->Errors.emplace_back(make_error<InstrProfError>(ErrorCode, Msg),
+                              Filename);
+      return;
+    }
     WC->Errors.emplace_back(
         make_error<StringError>(
             "Merge IR generated profile with Clang generated profile.",

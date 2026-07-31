@@ -196,6 +196,11 @@ public:
           instrprof_error::unsupported_version,
           "cannot merge FunctionEntryOnly profiles and BB profiles together");
     }
+    if (static_cast<bool>((ProfileKind & InstrProfKind::SingleByteCoverage) ^
+                          (Other & InstrProfKind::SingleByteCoverage))) {
+      return make_error<InstrProfError>(
+          instrprof_error::coverage_count_mismatch);
+    }
 
     // Now we update the profile type with the bits that are set.
     ProfileKind |= Other;
