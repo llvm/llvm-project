@@ -3999,7 +3999,6 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   return false;
 }
 
-
 FPOptions Expr::getFPFeaturesInEffect(const LangOptions &LO) const {
   if (auto Call = dyn_cast<CallExpr>(this))
     return Call->getFPFeaturesInEffect(LO);
