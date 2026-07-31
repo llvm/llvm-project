@@ -19,20 +19,21 @@
 ; CHECK-NOT:    .seh_unwindv2start
 ; CHECK:        .seh_endproc
 
-define dso_local void @v2_baseline() uwtable {
+define dso_local void @v2_baseline() #1 {
 entry:
   call void @ext()
   ret void
 }
 
-define dso_local void @v2_egpr() uwtable #0 {
+define dso_local void @v2_egpr() #0 {
 entry:
   call void @ext()
   ret void
 }
 
 declare void @ext()
-attributes #0 = { "target-features"="+egpr" }
+attributes #0 = { uwtable "target-features"="+egpr" }
+attributes #1 = { uwtable }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"winx64-eh-unwind", i32 2}

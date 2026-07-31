@@ -8,9 +8,9 @@
 ; CHECK-NOT:    .seh_unwindversion
 ; CHECK:        retq
 
-define dso_local void @leaf() uwtable #0 {
+define dso_local void @leaf() #0 {
 entry:
   ret void
 }
 
-attributes #0 = { "target-features"="+egpr" }
+attributes #0 = { uwtable "target-features"="+egpr" }

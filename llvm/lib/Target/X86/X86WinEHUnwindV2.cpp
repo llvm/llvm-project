@@ -383,10 +383,10 @@ bool runX86WinEHUnwindV2(MachineFunction &MF) {
       Mode != WinX64EHUnwindMode::V2Required)
     return false;
 
-  // A function that requires V3 (see requiresWinX64UnwindV3()) is emitted as V3
+  // A function that requires V3 (see requireWinX64UnwindV3()) is emitted as V3
   // instead; skip it here so this pass does not stamp V2 pseudos that conflict
   // with the V3 layout.
-  if (requiresWinX64UnwindV3(MF))
+  if (requireWinX64UnwindV3(MF))
     return false;
 
   // Requested changes.

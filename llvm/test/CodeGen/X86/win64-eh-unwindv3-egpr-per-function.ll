@@ -15,17 +15,18 @@
 ; CHECK:        .seh_unwindversion 3
 ; CHECK:        .seh_endproc
 
-define dso_local void @baseline() uwtable {
+define dso_local void @baseline() #1 {
 entry:
   call void @ext()
   ret void
 }
 
-define dso_local void @apx_clone() uwtable #0 {
+define dso_local void @apx_clone() #0 {
 entry:
   call void @ext()
   ret void
 }
 
 declare void @ext()
-attributes #0 = { "target-features"="+egpr" }
+attributes #0 = { uwtable "target-features"="+egpr" }
+attributes #1 = { uwtable }

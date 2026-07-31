@@ -413,7 +413,7 @@ FunctionPass *createX86WinEHUnwindV3Pass();
 /// mode, or the function needs an unwind table and may use EGPR (R16-R31),
 /// which V1/V2 cannot encode. Shared by frame lowering and the WinEH Unwind
 /// V2/V3 passes so their decisions cannot disagree.
-bool requiresWinX64UnwindV3(const MachineFunction &MF);
+bool requireWinX64UnwindV3(const MachineFunction &MF);
 
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,

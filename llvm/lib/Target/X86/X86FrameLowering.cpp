@@ -47,7 +47,7 @@ STATISTIC(NumFunctionUsingPush2Pop2, "Number of functions using push2/pop2");
 
 using namespace llvm;
 
-bool llvm::requiresWinX64UnwindV3(const MachineFunction &MF) {
+bool llvm::requireWinX64UnwindV3(const MachineFunction &MF) {
   const Function &Fn = MF.getFunction();
 
   // Whole module is in V3 mode.
@@ -1649,7 +1649,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
                      MF.getFunction().getParent()->getCodeViewFlag();
   bool NeedsWinCFI = NeedsWin64CFI || NeedsWinFPO;
   bool NeedsDwarfCFI = needsDwarfCFI(MF);
-  bool IsWin64UnwindV3 = NeedsWin64CFI && requiresWinX64UnwindV3(MF);
+  bool IsWin64UnwindV3 = NeedsWin64CFI && requireWinX64UnwindV3(MF);
   Register FramePtr = TRI->getFrameRegister(MF);
   const Register MachineFramePtr =
       STI.isTarget64BitILP32() ? Register(getX86SubSuperRegister(FramePtr, 64))
@@ -2531,7 +2531,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   // For V3 unwind, epilog SEH pseudos are emitted inline before each
   // unwind-effecting instruction.
   bool IsWin64UnwindV3 =
-      NeedsWin64CFI && MF.hasWinCFI() && requiresWinX64UnwindV3(MF);
+      NeedsWin64CFI && MF.hasWinCFI() && requireWinX64UnwindV3(MF);
   bool IsFunclet = MBBI == MBB.end() ? false : isFuncletReturnInstr(*MBBI);
 
   // Get the number of bytes to allocate from the FrameInfo.
@@ -3313,7 +3313,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(
 
   bool NeedsWin64CFI =
       isWin64Prologue(MF) && MF.getFunction().needsUnwindTableEntry();
-  bool IsWin64UnwindV3 = NeedsWin64CFI && requiresWinX64UnwindV3(MF);
+  bool IsWin64UnwindV3 = NeedsWin64CFI && requireWinX64UnwindV3(MF);
 
   // Reload XMMs from stack frame.
   for (const CalleeSavedInfo &I : CSI) {

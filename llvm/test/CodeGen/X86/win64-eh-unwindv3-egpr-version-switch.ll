@@ -15,32 +15,33 @@
 ; CHECK-LABEL:  d_base:
 ; CHECK:        .seh_unwindversion 2
 
-define dso_local void @a_egpr() uwtable #0 {
+define dso_local void @a_egpr() #0 {
 entry:
   call void @ext()
   ret void
 }
 
-define dso_local void @b_base() uwtable {
+define dso_local void @b_base() #1 {
 entry:
   call void @ext()
   ret void
 }
 
-define dso_local void @c_egpr() uwtable #0 {
+define dso_local void @c_egpr() #0 {
 entry:
   call void @ext()
   ret void
 }
 
-define dso_local void @d_base() uwtable {
+define dso_local void @d_base() #1 {
 entry:
   call void @ext()
   ret void
 }
 
 declare void @ext()
-attributes #0 = { "target-features"="+egpr" }
+attributes #0 = { uwtable "target-features"="+egpr" }
+attributes #1 = { uwtable }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"winx64-eh-unwind", i32 2}

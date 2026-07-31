@@ -24,29 +24,30 @@
 ; CHECK-NOT:    .seh_unwindversion
 ; CHECK:        .seh_endproc
 
-define dso_local void @a_egpr() uwtable #0 {
+define dso_local void @a_egpr() #0 {
 entry:
   call void @ext()
   ret void
 }
 
-define dso_local void @b_base() uwtable {
+define dso_local void @b_base() #1 {
 entry:
   call void @ext()
   ret void
 }
 
-define dso_local void @c_egpr() uwtable #0 {
+define dso_local void @c_egpr() #0 {
 entry:
   call void @ext()
   ret void
 }
 
-define dso_local void @d_base() uwtable {
+define dso_local void @d_base() #1 {
 entry:
   call void @ext()
   ret void
 }
 
 declare void @ext()
-attributes #0 = { "target-features"="+egpr" }
+attributes #0 = { uwtable "target-features"="+egpr" }
+attributes #1 = { uwtable }

@@ -14,7 +14,7 @@
 ///   3. Insert sub-fragment split points if limits are exceeded.
 ///
 /// The unwind version is normally module-wide. When only an individual function
-/// needs V3 (see requiresWinX64UnwindV3()), this pass stamps each of its frames
+/// needs V3 (see requireWinX64UnwindV3()), this pass stamps each of its frames
 /// -- the entry block and every funclet -- with a per-function
 /// .seh_unwindversion 3, leaving the rest of the module on its default version.
 ///
@@ -231,7 +231,7 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
   Function &F = MF.getFunction();
   LLVMContext &Ctx = F.getContext();
 
-  if (!requiresWinX64UnwindV3(MF))
+  if (!requireWinX64UnwindV3(MF))
     return false;
 
   // Emit a per-function .seh_unwindversion 3 only when V3 is enabled for this
@@ -253,8 +253,10 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
   // Process each funclet (and the main function body) independently.
   // Each funclet gets its own UNWIND_INFO, so V3 limits apply per funclet.
   while (Iter != MF.end()) {
-    // Iter points at the funclet's first block; stamp the version here before
-    // analyzeFunclet advances past it.
+    // Iter points at the first block of a frame -- the entry frame on the
+    // first iteration, an EH funclet on later ones. Each frame is its own
+    // .seh_proc, so stamp the version on each here before analyzeFunclet
+    // advances past it.
     if (PerFunctionV3) {
       const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
       MachineBasicBlock &FuncletEntry = *Iter;

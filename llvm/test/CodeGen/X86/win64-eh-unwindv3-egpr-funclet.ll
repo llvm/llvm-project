@@ -14,7 +14,7 @@
 ; CHECK:        .seh_unwindversion 3
 ; CHECK:        .seh_endproc
 
-define dso_local void @f_eh() uwtable #0 personality ptr @__C_specific_handler {
+define dso_local void @f_eh() #0 personality ptr @__C_specific_handler {
 entry:
   invoke void @c() to label %ok unwind label %cu
 ok:
@@ -28,4 +28,4 @@ cu:
 declare void @c()
 declare void @d()
 declare dso_local i32 @__C_specific_handler(...)
-attributes #0 = { "target-features"="+egpr" }
+attributes #0 = { uwtable "target-features"="+egpr" }
