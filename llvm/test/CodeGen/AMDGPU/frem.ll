@@ -3696,8 +3696,8 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; SI-NEXT:    s_sub_i32 s0, s7, s13
 ; SI-NEXT:    s_add_i32 s12, s0, 26
 ; SI-NEXT:    s_mov_b32 s7, 0x432fffff
-; SI-NEXT:    v_mov_b32_e32 v10, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v6, 0
+; SI-NEXT:    v_mov_b32_e32 v10, 0x43300000
 ; SI-NEXT:  .LBB6_6: ; %frem.loop_body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v9, v3
@@ -16516,8 +16516,8 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_sub_i32 s0, s13, s17
 ; SI-NEXT:    s_add_i32 s16, s0, 26
 ; SI-NEXT:    s_mov_b32 s13, 0x432fffff
-; SI-NEXT:    v_mov_b32_e32 v10, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v6, 0
+; SI-NEXT:    v_mov_b32_e32 v10, 0x43300000
 ; SI-NEXT:  .LBB13_6: ; %frem.loop_body23
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v9, v3
@@ -16643,8 +16643,8 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; SI-NEXT:    s_sub_i32 s0, s13, s17
 ; SI-NEXT:    s_add_i32 s16, s0, 26
 ; SI-NEXT:    s_mov_b32 s13, 0x432fffff
-; SI-NEXT:    v_mov_b32_e32 v12, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v8, 0
+; SI-NEXT:    v_mov_b32_e32 v12, 0x43300000
 ; SI-NEXT:  .LBB13_16: ; %frem.loop_body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v11, v5
@@ -18334,9 +18334,9 @@ define amdgpu_kernel void @frem_v2f64_const_one_denum(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    s_cbranch_scc1 .LBB15_8
 ; SI-NEXT:  ; %bb.5: ; %frem.loop_body23.preheader
 ; SI-NEXT:    s_add_i32 s9, s7, 25
-; SI-NEXT:    v_mov_b32_e32 v5, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_mov_b32 s7, 0x432fffff
+; SI-NEXT:    v_mov_b32_e32 v5, 0x43300000
 ; SI-NEXT:  .LBB15_6: ; %frem.loop_body23
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v4, v2
@@ -18424,9 +18424,9 @@ define amdgpu_kernel void @frem_v2f64_const_one_denum(ptr addrspace(1) %out, ptr
 ; SI-NEXT:    s_cbranch_scc1 .LBB15_18
 ; SI-NEXT:  ; %bb.15: ; %frem.loop_body.preheader
 ; SI-NEXT:    s_add_i32 s9, s7, 25
-; SI-NEXT:    v_mov_b32_e32 v7, 0x43300000
 ; SI-NEXT:    v_mov_b32_e32 v2, 0
 ; SI-NEXT:    s_mov_b32 s7, 0x432fffff
+; SI-NEXT:    v_mov_b32_e32 v7, 0x43300000
 ; SI-NEXT:  .LBB15_16: ; %frem.loop_body
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; SI-NEXT:    v_mov_b32_e32 v6, v4
