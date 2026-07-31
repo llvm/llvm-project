@@ -2798,12 +2798,10 @@ static std::vector<ExpeditedMemory> ReadFrameZeroStackMemory(nub_process_t pid,
     chunks.push_back({start, std::move(buf)});
   };
 
-  const uint64_t rec = 2 * ptr_size; // frame record size (16 on arm64)
-
   if (FrameZeroFPLooksValid(pid, tid, sp, fp, ptr_size)) {
     // above-fp: stack-passed params, skipping the already-expedited frame
     // record.
-    read_range(fp + rec, k_expedite_stack_arg_size);
+    read_range(fp + 2 * ptr_size, k_expedite_stack_arg_size);
 
     // below-fp: locals + spilled register args, clamped at $sp so a small frame
     // reads only [sp, fp).
