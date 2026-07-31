@@ -380,4 +380,112 @@ entry:
   ret ppc_fp128 %call
 }
 
+define ppc_fp128 @copysign_signmask(ppc_fp128 %x, i1 %s) {
+; LE-LABEL: copysign_signmask:
+; LE:       # %bb.0: # %entry
+; LE-NEXT:    mflr 0
+; LE-NEXT:    stdu 1, -32(1)
+; LE-NEXT:    std 0, 48(1)
+; LE-NEXT:    .cfi_def_cfa_offset 32
+; LE-NEXT:    .cfi_offset lr, 16
+; LE-NEXT:    sldi 3, 5, 63
+; LE-NEXT:    xxlxor 3, 3, 3
+; LE-NEXT:    mtfprd 4, 3
+; LE-NEXT:    bl copysignl
+; LE-NEXT:    nop
+; LE-NEXT:    addi 1, 1, 32
+; LE-NEXT:    ld 0, 16(1)
+; LE-NEXT:    mtlr 0
+; LE-NEXT:    blr
+;
+; BE-LABEL: copysign_signmask:
+; BE:       # %bb.0: # %entry
+; BE-NEXT:    mflr 0
+; BE-NEXT:    stdu 1, -128(1)
+; BE-NEXT:    std 0, 144(1)
+; BE-NEXT:    .cfi_def_cfa_offset 128
+; BE-NEXT:    .cfi_offset lr, 16
+; BE-NEXT:    sldi 3, 5, 63
+; BE-NEXT:    std 3, 120(1)
+; BE-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
+; BE-NEXT:    lfd 3, 120(1)
+; BE-NEXT:    lfs 4, .LCPI6_0@toc@l(3)
+; BE-NEXT:    bl copysignl
+; BE-NEXT:    nop
+; BE-NEXT:    addi 1, 1, 128
+; BE-NEXT:    ld 0, 16(1)
+; BE-NEXT:    mtlr 0
+; BE-NEXT:    blr
+;
+; BE-VSX-LABEL: copysign_signmask:
+; BE-VSX:       # %bb.0: # %entry
+; BE-VSX-NEXT:    mflr 0
+; BE-VSX-NEXT:    stdu 1, -128(1)
+; BE-VSX-NEXT:    std 0, 144(1)
+; BE-VSX-NEXT:    .cfi_def_cfa_offset 128
+; BE-VSX-NEXT:    .cfi_offset lr, 16
+; BE-VSX-NEXT:    sldi 3, 5, 63
+; BE-VSX-NEXT:    xxlxor 4, 4, 4
+; BE-VSX-NEXT:    std 3, 120(1)
+; BE-VSX-NEXT:    lfd 3, 120(1)
+; BE-VSX-NEXT:    bl copysignl
+; BE-VSX-NEXT:    nop
+; BE-VSX-NEXT:    addi 1, 1, 128
+; BE-VSX-NEXT:    ld 0, 16(1)
+; BE-VSX-NEXT:    mtlr 0
+; BE-VSX-NEXT:    blr
+;
+; BE32-LABEL: copysign_signmask:
+; BE32:       # %bb.0: # %entry
+; BE32-NEXT:    mflr 0
+; BE32-NEXT:    stwu 1, -96(1)
+; BE32-NEXT:    stw 0, 100(1)
+; BE32-NEXT:    .cfi_def_cfa_offset 96
+; BE32-NEXT:    .cfi_offset lr, 4
+; BE32-NEXT:    stfd 1, 40(1)
+; BE32-NEXT:    slwi 3, 3, 31
+; BE32-NEXT:    stw 3, 64(1)
+; BE32-NEXT:    li 4, 0
+; BE32-NEXT:    lwz 3, 44(1)
+; BE32-NEXT:    stfd 2, 32(1)
+; BE32-NEXT:    stw 3, 60(1)
+; BE32-NEXT:    lwz 3, 40(1)
+; BE32-NEXT:    stw 4, 76(1)
+; BE32-NEXT:    stw 3, 56(1)
+; BE32-NEXT:    lwz 3, 36(1)
+; BE32-NEXT:    stw 4, 72(1)
+; BE32-NEXT:    stw 3, 52(1)
+; BE32-NEXT:    lwz 3, 32(1)
+; BE32-NEXT:    stw 4, 68(1)
+; BE32-NEXT:    stw 3, 48(1)
+; BE32-NEXT:    lfd 4, 72(1)
+; BE32-NEXT:    lfd 3, 64(1)
+; BE32-NEXT:    lfd 1, 56(1)
+; BE32-NEXT:    lfd 2, 48(1)
+; BE32-NEXT:    bl copysignl
+; BE32-NEXT:    stfd 1, 8(1)
+; BE32-NEXT:    lwz 3, 12(1)
+; BE32-NEXT:    stfd 2, 16(1)
+; BE32-NEXT:    stw 3, 92(1)
+; BE32-NEXT:    lwz 3, 8(1)
+; BE32-NEXT:    stw 3, 88(1)
+; BE32-NEXT:    lwz 3, 20(1)
+; BE32-NEXT:    lfd 1, 88(1)
+; BE32-NEXT:    stw 3, 84(1)
+; BE32-NEXT:    lwz 3, 16(1)
+; BE32-NEXT:    stw 3, 80(1)
+; BE32-NEXT:    lfd 2, 80(1)
+; BE32-NEXT:    lwz 0, 100(1)
+; BE32-NEXT:    addi 1, 1, 96
+; BE32-NEXT:    mtlr 0
+; BE32-NEXT:    blr
+entry:
+  %a = call ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128 %x)
+  %z = zext i1 %s to i128
+  %sh = shl i128 %z, 127
+  %y = bitcast i128 %sh to ppc_fp128
+  %c = call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %a, ppc_fp128 %y)
+  ret ppc_fp128 %c
+}
+
 attributes #0 = { nounwind readnone }
