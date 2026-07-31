@@ -6,14 +6,14 @@ struct CrossPlatformError {
 
     static void used() {}
 
-    // CHECK-MESSAGES: [[#@LINE+1]]:18: warning: unspecified virtual member function instantiation
+    // CHECK-MESSAGES: [[#@LINE+1]]:18: warning: it is unspecified whether or not an implementation implicitly instantiates a virtual member function of a class template if the virtual member function would not otherwise be instantiated; consider using or removing the virtual member function for better portability
     virtual void unused() {
         T MSVCError = this;
     };
 };
 
 int main() {
-    // CHECK-MESSAGES: [[#@LINE+1]]:5: note: template instantiated here
+    // CHECK-MESSAGES: [[#@LINE+1]]:5: note: class template instantiated here
     CrossPlatformError<int>::used();
     return 0;
 }
@@ -26,14 +26,14 @@ struct CrossPlatformError {
 
     static void used() {}
 
-    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: unspecified virtual member function instantiation
-    // CHECK-MESSAGES: [[#@LINE+13]]:5: note: template instantiated here
+    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: it is unspecified whether or not an implementation implicitly instantiates a virtual member function of a class template if the virtual member function would not otherwise be instantiated; consider using or removing the virtual member function for better portability
+    // CHECK-MESSAGES: [[#@LINE+13]]:5: note: class template instantiated here
     virtual void unused() {
         T MSVCError = this;
     };
 
-    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: unspecified virtual member function instantiation
-    // CHECK-MESSAGES: [[#@LINE+7]]:5: note: template instantiated here
+    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: it is unspecified whether or not an implementation implicitly instantiates a virtual member function of a class template if the virtual member function would not otherwise be instantiated; consider using or removing the virtual member function for better portability
+    // CHECK-MESSAGES: [[#@LINE+7]]:5: note: class template instantiated here
     virtual void unused2() {
         T MSVCError = this;
     };
@@ -48,8 +48,8 @@ int main() {
 namespace UninstantiatedVirtualDestructor {
 template<typename T>
 struct CrossPlatformError {
-    // CHECK-MESSAGES: [[#@LINE+2]]:13: warning: unspecified virtual member function instantiation
-    // CHECK-MESSAGES: [[#@LINE+9]]:5: note: template instantiated here
+    // CHECK-MESSAGES: [[#@LINE+2]]:13: warning: it is unspecified whether or not an implementation implicitly instantiates a virtual member function of a class template if the virtual member function would not otherwise be instantiated; consider using or removing the virtual member function for better portability
+    // CHECK-MESSAGES: [[#@LINE+9]]:5: note: class template instantiated here
     virtual ~CrossPlatformError() {
         T MSVCError = this;
     };
@@ -70,8 +70,8 @@ struct CrossPlatformError {
 
     static void used() {}
 
-    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: unspecified virtual member function instantiation
-    // CHECK-MESSAGES: [[#@LINE+7]]:5: note: template instantiated here
+    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: it is unspecified whether or not an implementation implicitly instantiates a virtual member function of a class template if the virtual member function would not otherwise be instantiated; consider using or removing the virtual member function for better portability
+    // CHECK-MESSAGES: [[#@LINE+7]]:5: note: class template instantiated here
     virtual void unused() {
         T MSVCError = this;
     };
@@ -91,8 +91,8 @@ template <typename T> struct CrossPlatformError {
 
     static void used() {}
 
-    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: unspecified virtual member function instantiation
-    // CHECK-MESSAGES: [[#@LINE+5]]:5: note: template instantiated here
+    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: it is unspecified whether or not an implementation implicitly instantiates a virtual member function of a class template if the virtual member function would not otherwise be instantiated; consider using or removing the virtual member function for better portability
+    // CHECK-MESSAGES: [[#@LINE+5]]:5: note: class template instantiated here
     virtual void unused(){};
 };
 
@@ -143,8 +143,8 @@ struct CrossPlatformError<int, U>{
 
     static void used() {}
 
-    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: unspecified virtual member function instantiation
-    // CHECK-MESSAGES: [[#@LINE+7]]:5: note: template instantiated here
+    // CHECK-MESSAGES: [[#@LINE+2]]:18: warning: it is unspecified whether or not an implementation implicitly instantiates a virtual member function of a class template if the virtual member function would not otherwise be instantiated; consider using or removing the virtual member function for better portability
+    // CHECK-MESSAGES: [[#@LINE+7]]:5: note: class template instantiated here
     virtual void unused() {
         U MSVCError = this;
     };
