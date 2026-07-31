@@ -2061,6 +2061,7 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, PtrView TypePtr,
   return DynamicDecl != nullptr;
 }
 
+namespace {
 struct DynamicCastResult {
   UnsignedOrNone Offset = std::nullopt;
   bool Ambiguous = false;
@@ -2085,6 +2086,7 @@ struct DynamicCastResult {
     }
   }
 };
+} // namespace
 
 // Walk UP the type hierarchy, starting at the decl of R to find Needle.
 static DynamicCastResult findRecordBase(const ASTContext &Ctx, const Record *R,
@@ -3220,7 +3222,7 @@ bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
 }
 
 // FIXME: Would be nice to generate this instead of hardcoding it here.
-constexpr bool OpReturns(Opcode Op) {
+[[maybe_unused]] static constexpr bool OpReturns(Opcode Op) {
   return Op == OP_RetVoid || Op == OP_RetValue || Op == OP_NoRet ||
          Op == OP_RetSint8 || Op == OP_RetUint8 || Op == OP_RetSint16 ||
          Op == OP_RetUint16 || Op == OP_RetSint32 || Op == OP_RetUint32 ||
