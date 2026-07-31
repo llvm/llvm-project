@@ -34,6 +34,10 @@ static_assert(!HasOperatorLessThan<NonComparable, std::optional<NonComparable>>)
 static_assert(!HasOperatorLessThan<NonComparable, std::optional<ThreeWayComparable>>);
 static_assert(!HasOperatorLessThan<ThreeWayComparable, std::optional<NonComparable>>);
 
+// LWG4072: avoid ambiguity with optional's own comparison operators
+static_assert(!HasOperatorLessThan<std::optional<void*>, std::optional<int>>);
+static_assert(!HasOperatorLessThan<std::optional<int>, std::optional<void*>>);
+
 #endif
 
 using std::optional;

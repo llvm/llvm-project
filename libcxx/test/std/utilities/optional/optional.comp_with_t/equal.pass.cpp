@@ -35,6 +35,10 @@ static_assert(HasOperatorEqual<std::optional<EqualityComparable>, EqualityCompar
 static_assert(!HasOperatorEqual<std::optional<NonComparable>, NonComparable>);
 static_assert(!HasOperatorEqual<std::optional<EqualityComparable>, NonComparable>);
 
+// LWG4072: avoid ambiguity with optional's own comparison operators
+static_assert(!HasOperatorEqual<std::optional<void*>, std::optional<int>>);
+static_assert(!HasOperatorEqual<std::optional<int>, std::optional<void*>>);
+
 #endif
 
 using std::optional;
