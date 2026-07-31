@@ -3035,9 +3035,8 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 
   // If we couldn't match anything, don't return the condition. It may be
   // defined outside the loop.
-  if (Recipes.empty() || none_of(Recipes, [](VPInstruction *I) {
-        return match(I, m_VPInstruction<Instruction::GetElementPtr>());
-      }))
+  if (Recipes.empty() ||
+      none_of(Recipes, match_fn(m_VPInstruction<Instruction::GetElementPtr>())))
     return std::nullopt;
 
   return UncountableCondition;
