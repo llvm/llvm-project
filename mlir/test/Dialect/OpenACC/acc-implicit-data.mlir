@@ -333,3 +333,34 @@ func.func @test_present_host_not_folded() {
 // CHECK: acc.parallel dataOperands(%[[PRESENT]] : memref<10xf32>) {
 // CHECK: memref.load %[[PRESENT]][{{.*}}] : memref<10xf32>
 // CHECK: acc.delete accPtr(%[[PRESENT]] : memref<10xf32>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+
+// -----
+
+// Present of device data that is already covered by an enclosing acc.data
+// clause must NOT be folded
+func.func @test_present_device_inside_data_region_not_folded() {
+  %alloc = memref.alloca() : memref<10xf32, #gpu.address_space<global>>
+  %copy = acc.copyin varPtr(%alloc : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {name = "a"}
+  acc.data dataOperands(%copy : memref<10xf32, #gpu.address_space<global>>) {
+    %present = acc.present varPtr(%alloc : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {name = "a"}
+    acc.parallel dataOperands(%present : memref<10xf32, #gpu.address_space<global>>) {
+      %c0 = arith.constant 0 : index
+      %load = memref.load %present[%c0] : memref<10xf32, #gpu.address_space<global>>
+      acc.yield
+    }
+    acc.delete accPtr(%present : memref<10xf32, #gpu.address_space<global>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+    acc.terminator
+  }
+  acc.copyout accPtr(%copy : memref<10xf32, #gpu.address_space<global>>) to varPtr(%alloc : memref<10xf32, #gpu.address_space<global>>) {name = "a"}
+  return
+}
+
+// CHECK-LABEL: func.func @test_present_device_inside_data_region_not_folded
+// CHECK: %[[ALLOC:.*]] = memref.alloca() : memref<10xf32, #gpu.address_space<global>>
+// CHECK: %[[COPY:.*]] = acc.copyin varPtr(%[[ALLOC]] : memref<10xf32, #gpu.address_space<global>>)
+// CHECK: acc.data dataOperands(%[[COPY]] : memref<10xf32, #gpu.address_space<global>>)
+// CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[ALLOC]] : memref<10xf32, #gpu.address_space<global>>) -> memref<10xf32, #gpu.address_space<global>> {name = "a"}
+// CHECK: acc.parallel dataOperands(%[[PRESENT]] : memref<10xf32, #gpu.address_space<global>>)
+// CHECK: memref.load %[[PRESENT]][{{.*}}] : memref<10xf32, #gpu.address_space<global>>
+// CHECK: acc.delete accPtr(%[[PRESENT]] : memref<10xf32, #gpu.address_space<global>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+// CHECK-NOT: acc.deviceptr
