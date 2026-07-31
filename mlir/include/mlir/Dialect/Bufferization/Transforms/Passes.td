@@ -303,6 +303,18 @@ def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
   }];
 }
 
+def BufferLoopMergingPass : Pass<"buffer-loop-merging", "func::FuncOp"> {
+  let summary = "Merge scf.for memref iter_args that converge onto one buffer";
+  let description = [{
+    Rewrites `scf.for` memref iter_args whose initial and yielded values are
+    distinct `memref.alloca`s used interchangeably across iterations. Folding the
+    yielded buffer into the initial one makes the iter_arg loop-invariant,
+    allowing canonicalization to drop it and Mem2Reg to promote the underlying
+    slot.
+  }];
+  let dependentDialects = ["memref::MemRefDialect", "scf::SCFDialect"];
+}
+
 def BufferResultsToOutParamsPass
     : Pass<"buffer-results-to-out-params", "ModuleOp"> {
   let summary = "Converts memref-typed function results to out-params";
