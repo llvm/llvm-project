@@ -9,7 +9,13 @@
 @inline(__always)
 #endif
 func doomed(_ x: Int, _ message: StaticString) -> Int {
-#if PRECONDITION
+#if ASSERT
+  assert(x >= 0, message)
+#elseif ASSERTION_FAILURE
+  if x < 0 {
+    assertionFailure(message)
+  }
+#elseif PRECONDITION
   precondition(x >= 0, message)
 #elseif PRECONDITION_FAILURE
   if x < 0 {
