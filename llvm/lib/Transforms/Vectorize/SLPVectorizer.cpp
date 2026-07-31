@@ -31649,7 +31649,8 @@ private:
       //
       // Equality requires every lane to be zero, so it uses an AND reduction;
       // inequality requires any lane to be nonzero, so it uses OR. Add the
-      // vector comparison and boolean reduction costs.
+      // vector comparison and boolean reduction costs, then remove the scalar
+      // comparison cost eliminated by this replacement.
       assert(DoesRequireReductionOp && !isa<VectorType>(ScalarTy) &&
              (RdxKind == RecurKind::Or || RdxKind == RecurKind::UMax) &&
              "Unexpected zero comparison reduction");
@@ -31662,7 +31663,8 @@ private:
       CmpReductionCost = TTI->getCmpSelInstrCost(Instruction::ICmp, VectorTy,
                                                  CmpTy, Pred, CostKind) +
                          TTI->getArithmeticReductionCost(ReductionOpcode, CmpTy,
-                                                         {}, CostKind);
+                                                         {}, CostKind) -
+                         TTI->getInstructionCost(ScalarCmp, CostKind);
     }
     switch (RdxKind) {
     case RecurKind::Add:

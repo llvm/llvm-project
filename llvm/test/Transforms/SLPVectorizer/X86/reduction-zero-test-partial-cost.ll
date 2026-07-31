@@ -3,7 +3,7 @@
 ; RUN: cat %t | FileCheck -check-prefix=COST %s
 
 ; COST-LABEL: Function:  or_reduction_nonzero_scalar
-; COST: Cost:            '-20'
+; COST: Cost:            '-21'
 define i1 @or_reduction_nonzero_scalar(ptr %p) {
 ; CHECK-LABEL: define i1 @or_reduction_nonzero_scalar(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
