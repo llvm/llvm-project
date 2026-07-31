@@ -13,6 +13,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
@@ -49,6 +50,12 @@ public:
          bool contains_linker_annotations, uint32_t flags);
 
   Symbol(const Symbol &rhs);
+
+  ~Symbol() {
+    if (m_type != lldb::eSymbolTypeReExported &&
+        m_type != lldb::eSymbolTypeInvalid)
+      m_addr_range.Clear();
+  }
 
   const Symbol &operator=(const Symbol &rhs);
 
@@ -319,11 +326,21 @@ protected:
   // modules we've already seen to make sure we don't get caught in a cycle.
 
   Symbol *ResolveReExportedSymbolInModuleSpec(
-      Target &target, ConstString &reexport_name,
+      Target &target, ConstString reexport_name,
       lldb_private::ModuleSpec &module_spec,
       lldb_private::ModuleList &seen_modules) const;
 
   void SynthesizeNameIfNeeded() const;
+
+  // Initially, a ReExportInfo will only have a name: the symbol name
+  // that this Symbol will remap to, at runtime.
+  // We won't have the library that this symbol is defined in,
+  // until later, when we have other binaries loaded in the Target.
+  struct ReExportInfo {
+    ConstString name;
+    FileSpec library;
+    ReExportInfo() : name(), library() {}
+  };
 
   uint32_t m_uid = LLDB_INVALID_SYMBOL_ID; // User ID (usually the original
                                            // symbol table index)
@@ -351,9 +368,16 @@ protected:
       m_is_weak : 1,
       m_type : 6;            // Values from the lldb::SymbolType enum.
   mutable Mangled m_mangled; // uniqued symbol name/mangled name pair
-  AddressRange m_addr_range; // Contains the value, or the section offset
-                             // address when the value is an address in a
-                             // section, and the size (if any)
+  union {
+    // Contains the value, or the section offset address when the value is an
+    // address in a section, and the size (if known).  For non-re-export
+    // symbols.
+    AddressRange m_addr_range;
+
+    // Stores re-export information if this symbol is of type
+    // eSymbolTypeReExported; no address information for these symbols.
+    ReExportInfo m_reexport_info;
+  };
   uint32_t m_flags = 0; // A copy of the flags from the original symbol table,
                         // the ObjectFile plug-in can interpret these
 };

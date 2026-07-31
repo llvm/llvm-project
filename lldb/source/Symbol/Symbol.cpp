@@ -9,6 +9,7 @@
 #include "lldb/Symbol/Symbol.h"
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -45,8 +46,13 @@ Symbol::Symbol(uint32_t symID, llvm::StringRef name, SymbolType type,
       m_size_is_synthesized(false), m_size_is_valid(size_is_valid || size > 0),
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
-      m_is_weak(false), m_type(type), m_mangled(name),
-      m_addr_range(section_sp, offset, size), m_flags(flags) {}
+      m_is_weak(false), m_type(type), m_mangled(name), m_addr_range(),
+      m_flags(flags) {
+  if (m_type == eSymbolTypeReExported)
+    m_reexport_info = ReExportInfo();
+  else
+    m_addr_range = AddressRange(section_sp, offset, size);
+}
 
 Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
                bool external, bool is_debug, bool is_trampoline,
@@ -60,8 +66,13 @@ Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
       m_size_is_valid(size_is_valid || range.GetByteSize() > 0),
       m_demangled_is_synthesized(false),
       m_contains_linker_annotations(contains_linker_annotations),
-      m_is_weak(false), m_type(type), m_mangled(mangled), m_addr_range(range),
-      m_flags(flags) {}
+      m_is_weak(false), m_type(type), m_mangled(mangled), m_addr_range(),
+      m_flags(flags) {
+  if (m_type == eSymbolTypeReExported)
+    m_reexport_info = ReExportInfo();
+  else
+    m_addr_range = range;
+}
 
 Symbol::Symbol(const Symbol &rhs)
     : SymbolContextScope(rhs), m_uid(rhs.m_uid), m_type_data(rhs.m_type_data),
@@ -73,7 +84,12 @@ Symbol::Symbol(const Symbol &rhs)
       m_demangled_is_synthesized(rhs.m_demangled_is_synthesized),
       m_contains_linker_annotations(rhs.m_contains_linker_annotations),
       m_is_weak(rhs.m_is_weak), m_type(rhs.m_type), m_mangled(rhs.m_mangled),
-      m_addr_range(rhs.m_addr_range), m_flags(rhs.m_flags) {}
+      m_addr_range(), m_flags(rhs.m_flags) {
+  if (rhs.m_type == eSymbolTypeReExported)
+    m_reexport_info = rhs.m_reexport_info;
+  else
+    m_addr_range = rhs.m_addr_range;
+}
 
 const Symbol &Symbol::operator=(const Symbol &rhs) {
   if (this != &rhs) {
@@ -90,9 +106,14 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
     m_demangled_is_synthesized = rhs.m_demangled_is_synthesized;
     m_contains_linker_annotations = rhs.m_contains_linker_annotations;
     m_is_weak = rhs.m_is_weak;
-    m_type = rhs.m_type;
     m_mangled = rhs.m_mangled;
-    m_addr_range = rhs.m_addr_range;
+    if (m_type != eSymbolTypeReExported && m_type != eSymbolTypeInvalid)
+      m_addr_range.Clear();
+    m_type = rhs.m_type;
+    if (rhs.m_type == eSymbolTypeReExported)
+      m_reexport_info = rhs.m_reexport_info;
+    else
+      m_addr_range = rhs.m_addr_range;
     m_flags = rhs.m_flags;
   }
   return *this;
@@ -163,6 +184,8 @@ void Symbol::Clear() {
 }
 
 bool Symbol::ValueIsAddress() const {
+  if (m_type == eSymbolTypeReExported)
+    return false;
   return (bool)m_addr_range.GetBaseAddress().GetSection();
 }
 
@@ -171,47 +194,36 @@ ConstString Symbol::GetDisplayName() const {
 }
 
 ConstString Symbol::GetReExportedSymbolName() const {
-  if (m_type == eSymbolTypeReExported) {
-    // For eSymbolTypeReExported, the "const char *" from a ConstString is used
-    // as the offset in the address range base address. We can then make this
-    // back into a string that is the re-exported name.
-    intptr_t str_ptr = m_addr_range.GetBaseAddress().GetOffset();
-    if (str_ptr != 0)
-      return ConstString((const char *)str_ptr);
-    else
-      return GetName();
-  }
-  return ConstString();
+  if (m_type != eSymbolTypeReExported)
+    return ConstString();
+
+  return m_reexport_info.name;
 }
 
 FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
-  if (m_type == eSymbolTypeReExported) {
-    // For eSymbolTypeReExported, the "const char *" from a ConstString is used
-    // as the offset in the address range base address. We can then make this
-    // back into a string that is the re-exported name.
-    intptr_t str_ptr = m_addr_range.GetByteSize();
-    if (str_ptr != 0)
-      return FileSpec((const char *)str_ptr);
-  }
-  return FileSpec();
+  if (m_type != eSymbolTypeReExported)
+    return FileSpec();
+
+  return m_reexport_info.library;
 }
 
 void Symbol::SetReExportedSymbolName(ConstString name) {
-  SetType(eSymbolTypeReExported);
-  // For eSymbolTypeReExported, the "const char *" from a ConstString is used
-  // as the offset in the address range base address.
-  m_addr_range.GetBaseAddress().SetOffset((uintptr_t)name.GetCString());
+  if (m_type != eSymbolTypeReExported && m_type != eSymbolTypeInvalid)
+    m_addr_range.Clear();
+  if (m_type != eSymbolTypeReExported)
+    m_reexport_info = ReExportInfo();
+  m_type = eSymbolTypeReExported;
+  m_reexport_info.name = name;
 }
 
 bool Symbol::SetReExportedSymbolSharedLibrary(const FileSpec &fspec) {
-  if (m_type == eSymbolTypeReExported) {
-    // For eSymbolTypeReExported, the "const char *" from a ConstString is used
-    // as the offset in the address range base address.
-    m_addr_range.SetByteSize(
-        (uintptr_t)ConstString(fspec.GetPath()).GetCString());
-    return true;
-  }
-  return false;
+  if (m_type != eSymbolTypeReExported)
+    return false;
+  if (m_type != eSymbolTypeReExported && m_type != eSymbolTypeInvalid)
+    m_addr_range.Clear();
+  m_type = eSymbolTypeReExported;
+  m_reexport_info.library = fspec;
+  return true;
 }
 
 uint32_t Symbol::GetSiblingIndex() const {
@@ -292,12 +304,12 @@ void Symbol::Dump(Stream *s, Target *target, uint32_t index,
         "                                                         0x%8.8x %s",
         m_flags, name.AsCString(""));
 
-    ConstString reexport_name = GetReExportedSymbolName();
-    intptr_t shlib = m_addr_range.GetByteSize();
+    const FileSpec &shlib = GetReExportedSymbolSharedLibrary();
     if (shlib)
-      s->Printf(" -> %s`%s\n", (const char *)shlib, reexport_name.GetCString());
+      s->Printf(" -> %s`%s\n", shlib.GetPath().c_str(),
+                GetReExportedSymbolName().GetCString());
     else
-      s->Printf(" -> %s\n", reexport_name.GetCString());
+      s->Printf(" -> %s\n", GetReExportedSymbolName().GetCString());
   } else {
     const char *format =
         m_size_is_sibling
@@ -431,7 +443,7 @@ void Symbol::DumpSymbolContext(Stream *s) {
 lldb::addr_t Symbol::GetByteSize() const { return m_addr_range.GetByteSize(); }
 
 Symbol *Symbol::ResolveReExportedSymbolInModuleSpec(
-    Target &target, ConstString &reexport_name, ModuleSpec &module_spec,
+    Target &target, ConstString reexport_name, ModuleSpec &module_spec,
     ModuleList &seen_modules) const {
   ModuleSP module_sp;
   if (module_spec.GetFileSpec()) {
@@ -632,16 +644,25 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
     return false;
   if (!data.ValidOffsetForDataOfSize(*offset_ptr, 20))
     return false;
-  const bool is_addr = data.GetU8(offset_ptr) != 0;
-  const uint64_t value = data.GetU64(offset_ptr);
-  if (is_addr) {
-    m_addr_range.GetBaseAddress().ResolveAddressUsingFileSections(value,
-                                                                  section_list);
+  if (m_type != eSymbolTypeReExported) {
+    const bool is_addr = data.GetU8(offset_ptr) != 0;
+    const uint64_t value = data.GetU64(offset_ptr);
+    if (is_addr) {
+      m_addr_range.GetBaseAddress().ResolveAddressUsingFileSections(
+          value, section_list);
+    } else {
+      m_addr_range.GetBaseAddress().Clear();
+      m_addr_range.GetBaseAddress().SetOffset(value);
+    }
+    m_addr_range.SetByteSize(data.GetU64(offset_ptr));
   } else {
-    m_addr_range.GetBaseAddress().Clear();
-    m_addr_range.GetBaseAddress().SetOffset(value);
+    m_reexport_info.name = ConstString(strtab.Get(data.GetU32(offset_ptr)));
+    // m_reexport_info.library is calculated based on the
+    // binaries loaded in the target, lazily.  It is not
+    // saved in the serialized Symbol format as it could vary
+    // depending on the Target libraries.
+    m_reexport_info.library = FileSpec();
   }
-  m_addr_range.SetByteSize(data.GetU64(offset_ptr));
   m_flags = data.GetU32(offset_ptr);
   return true;
 }
@@ -698,14 +719,22 @@ void Symbol::Encode(DataEncoder &file, ConstStringTable &strtab) const {
     bitfields |= 1u << 6;
   file.AppendU16(bitfields);
   m_mangled.Encode(file, strtab);
-  // A symbol's value might be an address, or it might be a constant. If the
-  // symbol's base address doesn't have a section, then it is a constant value.
-  // If it does have a section, we will encode the file address and re-resolve
-  // the address when we decode it.
-  bool is_addr = m_addr_range.GetBaseAddress().GetSection().get() != nullptr;
-  file.AppendU8(is_addr);
-  file.AppendU64(m_addr_range.GetBaseAddress().GetFileAddress());
-  file.AppendU64(m_addr_range.GetByteSize());
+  if (m_type != eSymbolTypeReExported) {
+    // A symbol's value might be an address, or it might be a constant. If the
+    // symbol's base address doesn't have a section, then it is a constant
+    // value. If it does have a section, we will encode the file address and
+    // re-resolve the address when we decode it.
+    bool is_addr = m_addr_range.GetBaseAddress().GetSection().get() != nullptr;
+    file.AppendU8(is_addr);
+    file.AppendU64(m_addr_range.GetBaseAddress().GetFileAddress());
+    file.AppendU64(m_addr_range.GetByteSize());
+  } else {
+    file.AppendU32(strtab.Add(m_reexport_info.name));
+    // m_reexport_info.library is calculated based on the
+    // binaries loaded in the target, lazily.  It is not
+    // saved in the serialized Symbol format as it could vary
+    // depending on the Target libraries.
+  }
   file.AppendU32(m_flags);
 }
 
