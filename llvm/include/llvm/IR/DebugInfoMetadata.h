@@ -2303,6 +2303,9 @@ public:
 #include "llvm/IR/DebugInfoFlags.def"
     SPFlagNonvirtual = SPFlagZero,
     SPFlagVirtuality = SPFlagVirtual | SPFlagPureVirtual,
+    SPFlagDefaultedUnspecified = SPFlagZero,
+    SPFlagDefaulted =
+        SPFlagDefaultedNo | SPFlagDefaultedInClass | SPFlagDefaultedOutOfClass,
     LLVM_MARK_AS_BITMASK_ENUM(SPFlagLargest)
   };
 
@@ -2317,10 +2320,11 @@ public:
                                        SmallVectorImpl<DISPFlags> &SplitFlags);
 
   // Helper for converting old bitfields to new flags word.
-  LLVM_ABI static DISPFlags toSPFlags(bool IsLocalToUnit, bool IsDefinition,
-                                      bool IsOptimized,
-                                      unsigned Virtuality = SPFlagNonvirtual,
-                                      bool IsMainSubprogram = false);
+  LLVM_ABI static DISPFlags
+  toSPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
+            unsigned Virtuality = SPFlagNonvirtual,
+            unsigned Defaulted = SPFlagDefaultedUnspecified,
+            bool IsMainSubprogram = false);
 
 private:
   DIFlags Flags;
@@ -2417,6 +2421,7 @@ public:
 public:
   unsigned getLine() const { return Line; }
   unsigned getVirtuality() const { return getSPFlags() & SPFlagVirtuality; }
+  unsigned getDefaulted() const { return getSPFlags() & SPFlagDefaulted; }
   unsigned getVirtualIndex() const { return VirtualIndex; }
   int getThisAdjustment() const { return ThisAdjustment; }
   unsigned getScopeLine() const { return ScopeLine; }

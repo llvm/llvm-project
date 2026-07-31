@@ -3028,6 +3028,7 @@ TEST_F(DISubprogramTest, get) {
   DIType *ContainingType = getCompositeType();
   unsigned Virtuality = 2;
   unsigned VirtualIndex = 5;
+  unsigned Defaulted = DISubprogram::DISPFlags::SPFlagDefaulted;
   int ThisAdjustment = -3;
   DINode::DIFlags Flags = static_cast<DINode::DIFlags>(6);
   bool IsOptimized = false;
@@ -3039,7 +3040,7 @@ TEST_F(DISubprogramTest, get) {
   StringRef TargetFuncName = "target";
   DICompileUnit *Unit = getUnit();
   DISubprogram::DISPFlags SPFlags =
-      static_cast<DISubprogram::DISPFlags>(Virtuality);
+      static_cast<DISubprogram::DISPFlags>(Virtuality | Defaulted);
   assert(!IsLocalToUnit && IsDefinition && !IsOptimized &&
          "bools and SPFlags have to match");
   SPFlags |= DISubprogram::SPFlagDefinition;
@@ -3064,6 +3065,7 @@ TEST_F(DISubprogramTest, get) {
   EXPECT_EQ(ContainingType, N->getContainingType());
   EXPECT_EQ(Virtuality, N->getVirtuality());
   EXPECT_EQ(VirtualIndex, N->getVirtualIndex());
+  EXPECT_EQ(Defaulted, N->getDefaulted());
   EXPECT_EQ(ThisAdjustment, N->getThisAdjustment());
   EXPECT_EQ(Flags, N->getFlags());
   EXPECT_EQ(IsOptimized, N->isOptimized());

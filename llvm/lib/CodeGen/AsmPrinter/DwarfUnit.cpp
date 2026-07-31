@@ -1430,6 +1430,26 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
 
       if (SP->getLine() != SPDecl->getLine())
         addUInt(SPDie, dwarf::DW_AT_decl_line, std::nullopt, SP->getLine());
+
+      unsigned DefDefaulted = SP->getDefaulted();
+      if (DD->getDwarfVersion() >= 5 && DefDefaulted) {
+        unsigned DeclDefaulted = SPDecl->getDefaulted();
+        assert(DeclDefaulted ==
+                   DISubprogram::DISPFlags::SPFlagDefaultedUnspecified ||
+               DeclDefaulted == DefDefaulted &&
+                   "Declaration DISP and Definition DISP disagree on the "
+                   "defaulted state of this subprogram!");
+        if (DefDefaulted & DISubprogram::DISPFlags::SPFlagDefaultedNo)
+          addUInt(SPDie, dwarf::DW_AT_defaulted, dwarf::DW_FORM_data1,
+                  dwarf::DW_DEFAULTED_no);
+        else if (DefDefaulted & DISubprogram::DISPFlags::SPFlagDefaultedInClass)
+          addUInt(SPDie, dwarf::DW_AT_defaulted, dwarf::DW_FORM_data1,
+                  dwarf::DW_DEFAULTED_in_class);
+        else if (DefDefaulted &
+                 DISubprogram::DISPFlags::SPFlagDefaultedOutOfClass)
+          addUInt(SPDie, dwarf::DW_AT_defaulted, dwarf::DW_FORM_data1,
+                  dwarf::DW_DEFAULTED_out_of_class);
+      }
     }
   }
 
@@ -1511,6 +1531,19 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
       addBlock(SPDie, dwarf::DW_AT_vtable_elem_location, Block);
     }
     ContainingTypeMap.insert(std::make_pair(&SPDie, SP->getContainingType()));
+  }
+
+  unsigned Defaulted = SP->getDefaulted();
+  if (DD->getDwarfVersion() >= 5 && Defaulted) {
+    if (Defaulted & DISubprogram::DISPFlags::SPFlagDefaultedNo)
+      addUInt(SPDie, dwarf::DW_AT_defaulted, dwarf::DW_FORM_data1,
+              dwarf::DW_DEFAULTED_no);
+    else if (Defaulted & DISubprogram::DISPFlags::SPFlagDefaultedInClass)
+      addUInt(SPDie, dwarf::DW_AT_defaulted, dwarf::DW_FORM_data1,
+              dwarf::DW_DEFAULTED_in_class);
+    else if (Defaulted & DISubprogram::DISPFlags::SPFlagDefaultedOutOfClass)
+      addUInt(SPDie, dwarf::DW_AT_defaulted, dwarf::DW_FORM_data1,
+              dwarf::DW_DEFAULTED_out_of_class);
   }
 
   if (!SP->isDefinition()) {
