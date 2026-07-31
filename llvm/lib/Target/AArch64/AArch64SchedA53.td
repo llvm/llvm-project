@@ -563,4 +563,30 @@ def : InstRW<[A53WriteIVecQ_3],
                  "^[SU]ADDLPv(16i8_v8i16|4i32_v2i64|8i16_v4i32)$",
                  "^([SU]QADD|[SU]QSUB|SQNEG|SUQADD|USQADD)v(16i8|2i64|4i32|8i16)$")>;
 
+// The operations that were still inheriting the flat 6-cycle WriteVd/WriteVq.
+// Bit counting and reversal, the widening shift and the vector-to-GPR moves are
+// two cycles; the polynomial multiply is three; the saturating multiply-high,
+// the saturating absolute, the integer min/max reductions and the scalar
+// floating-point pairwise reductions are four.
+def : InstRW<[A53WriteIVecD_2],
+      (instregex "^(CNT|RBIT)v8i8$", "^CLZv(2i32|4i16|8i8)$",
+                 "^[SU]MOVvi.*$")>;
+def : InstRW<[A53WriteIVecQ_2],
+      (instregex "^(CNT|RBIT)v16i8$", "^CLZv(4i32|8i16|16i8)$",
+                 "^SHLLv.*$")>;
+def : InstRW<[A53WriteIVecD_3], (instrs PMULv8i8)>;
+def : InstRW<[A53WriteIVecQ_3], (instrs PMULv16i8)>;
+def : InstRW<[A53WriteVecD_4],
+      (instregex "^SQR?DMULH(v1i16|v1i32)$",
+                 "^SQR?DMULHv(2i32|4i16)(_indexed)?$",
+                 "^SQR?DMULH(v1i16|v1i32)_indexed$",
+                 "^SQABSv(1i8|1i16|1i32|1i64|2i32|4i16|8i8)$",
+                 "^[SU](MAX|MIN)Vv(4i16v|8i8v)$",
+                 "^F(ADD|MAX|MIN|MAXNM|MINNM)Pv2i32p$")>;
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^SQR?DMULHv(4i32|8i16)(_indexed)?$",
+                 "^SQABSv(16i8|2i64|4i32|8i16)$",
+                 "^[SU](MAX|MIN)Vv(16i8v|4i32v|8i16v)$",
+                 "^F(ADD|MAX|MIN|MAXNM|MINNM)Pv2i64p$")>;
+
 }
