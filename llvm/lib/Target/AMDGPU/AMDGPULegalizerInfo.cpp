@@ -1850,7 +1850,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           // G_AMDGPU_REG_LOAD_BITS. Always take the custom path so an
           // unsupported access is diagnosed cleanly rather than failing to
           // legalize.
-          .customIf([=](const LegalityQuery &Query) -> bool {
+          .customIf([](const LegalityQuery &Query) -> bool {
             return Query.Types[1].getAddressSpace() == AMDGPUAS::VGPR;
           });
 
@@ -3577,7 +3577,7 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
     Register BaseReg = PtrReg;
     int64_t Offset = 0;
     if (auto *PtrAdd = getOpcodeDef<GPtrAdd>(PtrReg, MRI)) {
-      if (auto MaybeOff =
+      if (std::optional<ValueAndVReg> MaybeOff =
               getIConstantVRegValWithLookThrough(PtrAdd->getOffsetReg(), MRI)) {
         BaseReg = PtrAdd->getBaseReg();
         Offset = MaybeOff->Value.getSExtValue();
@@ -3590,7 +3590,7 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
       HaveConstantBitOffset = true;
       ConstantBitOffsetVal = 0;
     } else {
-      auto &VT = *Helper.getValueTracking();
+      GISelValueTracking &VT = *Helper.getValueTracking();
       KnownBits BaseKB = VT.getKnownBits(BaseReg).trunc(2);
       if (BaseKB.isConstant()) {
         Offset += BaseKB.getConstant().getZExtValue();
@@ -3600,18 +3600,18 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
     }
 
     // Setup common registers.
-    const auto PtrAsInt = B.buildPtrToInt(I32, PtrReg);
-    auto Two = B.buildConstant(I32, 2);
-    const auto Index = B.buildLShr(I32, PtrAsInt, Two);
+    const MachineInstrBuilder PtrAsInt = B.buildPtrToInt(I32, PtrReg);
+    MachineInstrBuilder Two = B.buildConstant(I32, 2);
+    const MachineInstrBuilder Index = B.buildLShr(I32, PtrAsInt, Two);
 
-    const auto BitWidthReg = B.buildConstant(I32, MemSize);
+    const MachineInstrBuilder BitWidthReg = B.buildConstant(I32, MemSize);
     Register BitOffsetReg;
     if (HaveConstantBitOffset) {
       BitOffsetReg = B.buildConstant(I32, ConstantBitOffsetVal).getReg(0);
     } else {
       // V_{LOAD,STORE}_IDX_BITS only care about the low 5 bits of the bit
       // offset, so masking the high bits is unnecessary.
-      auto Three = B.buildConstant(I32, 3);
+      MachineInstrBuilder Three = B.buildConstant(I32, 3);
       BitOffsetReg = B.buildShl(I32, PtrAsInt, Three).getReg(0);
     }
 
@@ -3625,19 +3625,21 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
 
       Register ShiftAmt = BitOffsetReg;
       if (!HaveConstantBitOffset) {
-        auto Mask = B.buildConstant(I32, 31);
+        MachineInstrBuilder Mask = B.buildConstant(I32, 31);
         ShiftAmt = B.buildAnd(I32, BitOffsetReg, Mask).getReg(0);
       }
       Value = B.buildShl(I32, Value, ShiftAmt).getReg(0);
 
-      const auto MaskBase = B.buildConstant(I32, (1u << MemSize) - 1);
-      const auto Mask = B.buildShl(I32, MaskBase, ShiftAmt);
+      const MachineInstrBuilder MaskBase =
+          B.buildConstant(I32, (1u << MemSize) - 1);
+      const MachineInstrBuilder Mask = B.buildShl(I32, MaskBase, ShiftAmt);
 
       B.buildInstr(AMDGPU::G_AMDGPU_REG_STORE_BITS, {}, {Value, Index, Mask})
           .addMemOperand(&MMO);
     } else {
       const bool IsSExt = Opcode == AMDGPU::G_SEXTLOAD;
-      const auto IsSExtReg = B.buildConstant(I32, IsSExt ? 1 : 0);
+      const MachineInstrBuilder IsSExtReg =
+          B.buildConstant(I32, IsSExt ? 1 : 0);
       Register Result =
           B.buildInstr(AMDGPU::G_AMDGPU_REG_LOAD_BITS, {I32},
                        {Index, BitWidthReg, BitOffsetReg, IsSExtReg})
