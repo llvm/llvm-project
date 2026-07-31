@@ -221,6 +221,24 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
 }
 
 Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
+  ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
+  Value *Fill = MI->getValue();
+
+  // Keep volatile memset scalarization limited to the single-byte case
+  // where the replacement is exactly one volatile byte store.
+  if (MI->isVolatile()) {
+    if (!LenC || !LenC->isOne() || !Fill->getType()->isIntegerTy(8))
+      return nullptr;
+
+    StoreInst *S = Builder.CreateStore(Fill, MI->getDest(), true);
+    S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
+    S->setAlignment(MI->getDestAlign().valueOrOne());
+
+    // Set the size of the copy to 0 and will be deleted on the next iteration.
+    MI->setLength((uint64_t)0);
+    return MI;
+  }
+
   const Align KnownAlignment =
       getKnownAlignment(MI->getDest(), DL, MI, &AC, &DT);
   MaybeAlign MemSetAlign = MI->getDestAlign();
@@ -247,10 +265,8 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     return MI;
   }
 
-  // Extract the length and alignment and fill if they are constant.
-  ConstantInt *LenC = dyn_cast<ConstantInt>(MI->getLength());
-  ConstantInt *FillC = dyn_cast<ConstantInt>(MI->getValue());
-  if (!LenC || !FillC || !FillC->getType()->isIntegerTy(8))
+  // Extract the length and validate the fill type.
+  if (!LenC || !Fill->getType()->isIntegerTy(8))
     return nullptr;
   const uint64_t Len = LenC->getLimitedValue();
   assert(Len && "0-sized memory setting should be removed already.");
@@ -267,14 +283,22 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
   if (Len <= 8 && isPowerOf2_32((uint32_t)Len)) {
     Value *Dest = MI->getDest();
 
-    // Extract the fill value and store.
-    Constant *FillVal = ConstantInt::get(
-        MI->getContext(), APInt::getSplat(Len * 8, FillC->getValue()));
+    // Extract the fill value and store.  A one-byte memset does not need
+    // replication so a nonconstant i8 fill can be stored directly.
+    Value *FillVal;
+    if (auto *FillC = dyn_cast<ConstantInt>(Fill))
+      FillVal = ConstantInt::get(MI->getContext(),
+                                 APInt::getSplat(Len * 8, FillC->getValue()));
+    else if (Len == 1)
+      FillVal = Fill;
+    else
+      return nullptr;
+
     StoreInst *S = Builder.CreateStore(FillVal, Dest, MI->isVolatile());
     S->copyMetadata(*MI, LLVMContext::MD_DIAssignID);
     for (DbgVariableRecord *DbgAssign : at::getDVRAssignmentMarkers(S)) {
-      if (llvm::is_contained(DbgAssign->location_ops(), FillC))
-        DbgAssign->replaceVariableLocationOp(FillC, FillVal);
+      if (llvm::is_contained(DbgAssign->location_ops(), Fill))
+        DbgAssign->replaceVariableLocationOp(Fill, FillVal);
     }
 
     S->setAlignment(Alignment);
@@ -2029,8 +2053,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // No other transformations apply to volatile transfers.
-    if (MI->isVolatile())
+    // Apart from memset-to-store scalarization below no other transformations
+    // apply to volatile transfers.
+    if (MI->isVolatile() && !isa<AnyMemSetInst>(MI))
       return nullptr;
 
     if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
@@ -2055,6 +2080,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     } else if (auto *MSI = dyn_cast<AnyMemSetInst>(MI)) {
       if (Instruction *I = SimplifyAnyMemSet(MSI))
         return I;
+      if (MI->isVolatile())
+        return nullptr;
     }
 
     // If src/dest is null, this memory intrinsic must be a noop.
