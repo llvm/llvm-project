@@ -64,7 +64,7 @@ static void ENSURE_HSA_INITED() {
   // before ASan's global interceptor init runs, we still need the REAL() slots
   // to be populated so we can call through to ROCr.
   if (!REAL(hsa_init))
-    InitializeAmdgpuInterceptors();
+    InitializeHSAInterceptors();
 }
 
 INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_allocate,
@@ -207,7 +207,7 @@ INTERCEPTOR(hsa_status_t, hsa_init) {
   return asan_hsa_init();
 }
 
-void InitializeAmdgpuInterceptors() {
+void InitializeHSAInterceptors() {
   ASAN_INTERCEPT_FUNC(hsa_init);
   ASAN_INTERCEPT_FUNC(hsa_memory_copy);
   ASAN_INTERCEPT_FUNC(hsa_amd_memory_pool_allocate);

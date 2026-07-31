@@ -82,7 +82,7 @@ struct NoOpMapUnmapCallback {
 #include "sanitizer_allocator_secondary.h"
 #include "sanitizer_allocator_device.h"
 #if SANITIZER_AMDHSA
-#include "sanitizer_allocator_amdgpu.h"
+#include "sanitizer_allocator_amdhsa.h"
 #endif
 #include "sanitizer_allocator_combined.h"
 #include "sanitizer_allocator_combined_device.h"

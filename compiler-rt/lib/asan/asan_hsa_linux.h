@@ -19,7 +19,7 @@
 
 namespace __asan {
 
-void InitializeAmdgpuInterceptors();
+void InitializeHSAInterceptors();
 
 }  // namespace __asan
 

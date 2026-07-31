@@ -1018,7 +1018,7 @@ void InitializeAsanInterceptors() {
   // HSA/ROCr interceptors are split out of this TU to keep the host interceptor
   // surface clean. Initialize them here so the REAL() slots exist before first
   // HSA API call (the first such call is often hsa_init()).
-  InitializeAmdgpuInterceptors();
+  InitializeHSAInterceptors();
 #  endif
 
   VReport(1, "AddressSanitizer: libc interceptors initialized\n");

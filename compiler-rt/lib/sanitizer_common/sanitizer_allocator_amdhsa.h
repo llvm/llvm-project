@@ -1,4 +1,4 @@
-//===-- sanitizer_allocator_amdgpu.h ----------------------------*- C++ -*-===//
+//===-- sanitizer_allocator_amdhsa.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// AMDGPU / HSA device memory backend for DeviceAllocatorT.
+// HSA device memory backend for DeviceAllocatorT.
 //
 //===----------------------------------------------------------------------===//
 #ifndef SANITIZER_ALLOCATOR_H
