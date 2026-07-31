@@ -636,7 +636,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         }
 
         // Signals the parent that execution flows to next region.
-        cir::CoroSuspendPoint::create(builder,loc);
+        cir::CoroSuspendPoint::create(builder, loc);
       },
       /*resumeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
