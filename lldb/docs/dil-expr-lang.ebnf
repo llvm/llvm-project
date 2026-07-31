@@ -5,12 +5,18 @@
 
 expression = assignment_expression ;
 
-assignment_expression = shift_expression
-                      | shift_expression assignment_operator assignment_expression ;
+assignment_expression = inclusive_or_expression
+                      | inclusive_or_expression assignment_operator assignment_expression ;
 
 assignment_operator = "="
                     | "+="
                     | "-=" ;
+
+inclusive_or_expression = exclusive_or_expression {"|" exclusive_or_expression} ;
+
+exclusive_or_expression = and_expression {"^" and_expression} ;
+
+and_expression = shift_expression {"&" shift_expression} ;
 
 shift_expression = additive_expression {"<<" additive_expression}
                  | additive_expression {">>" additive_expression} ;
@@ -28,7 +34,7 @@ cast_expression = unary_expression
 unary_expression = postfix_expression
                  | unary_operator cast_expression ;
 
-unary_operator = "*" | "&" | "+" | "-";
+unary_operator = "*" | "&" | "+" | "-" | "~";
 
 postfix_expression = primary_expression
                    | postfix_expression "[" expression "]"
@@ -43,7 +49,8 @@ primary_expression = numeric_literal
 
 id_expression = unqualified_id
               | qualified_id
-              | register ;
+              | register
+              | null_pointer ;
 
 unqualified_id = identifier ;
 
@@ -56,6 +63,8 @@ numeric_literal = ? Integer constant: hexademical, decimal, octal, binary ?
                 | ? Floating constant ? ;
 
 boolean_literal = "true" | "false" ;
+
+null_pointer = "nullptr" ;
 
 register = "$" ? Register name ? ;
 

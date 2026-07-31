@@ -1,0 +1,49 @@
+# RUN: yaml2obj %s | llvm-objdump --macho --private-headers - | FileCheck %s
+# RUN: yaml2obj %s | llvm-otool -lv - | FileCheck %s
+# RUN: yaml2obj %s | llvm-otool -l - | FileCheck %s
+
+# CHECK: Load command 1
+# CHECK-NEXT:     cmd LC_TARGET_TRIPLE
+# CHECK-NEXT: cmdsize 40
+# CHECK-NEXT:  triple arm64-apple-macos27.0.0
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000004
+  ncmds:           2
+  sizeofcmds:      200
+  flags:           0x00000000
+  reserved:        0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          8192
+    fileoff:         0
+    filesize:        3099
+    maxprot:         7
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000100001160
+        size:            3099
+        offset:          0x00001160
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_TARGET_TRIPLE
+    cmdsize:         40
+    triple:          12
+    Content:         arm64-apple-macos27.0.0
+...

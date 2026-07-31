@@ -254,6 +254,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.malloc
+    libc.src.stdlib.malloc_usable_size
     libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
@@ -661,6 +662,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16

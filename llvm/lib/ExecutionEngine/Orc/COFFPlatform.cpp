@@ -14,6 +14,7 @@
 #include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 #include "llvm/Object/COFF.h"
 
@@ -165,8 +166,6 @@ COFFPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
                                        ES.getTargetTriple().str(),
                                    inconvertibleErrorCode());
 
-  auto &EPC = ES.getExecutorProcessControl();
-
   auto GeneratorArchive =
       object::Archive::create(OrcRuntimeArchiveBuffer->getMemBufferRef());
   if (!GeneratorArchive)
@@ -193,19 +192,17 @@ COFFPlatform::Create(ObjectLinkingLayer &ObjLinkingLayer, JITDylib &PlatformJD,
   if (auto Err = PlatformJD.define(symbolAliases(std::move(*RuntimeAliases))))
     return std::move(Err);
 
-  auto &HostFuncJD = ES.createBareJITDylib("$<PlatformRuntimeHostFuncJD>");
-
-  // Add JIT-dispatch function support symbols.
-  if (auto Err = HostFuncJD.define(
-          absoluteSymbols({{ES.intern("__orc_rt_jit_dispatch"),
-                            {EPC.getJITDispatchInfo().JITDispatchFunction,
-                             JITSymbolFlags::Exported}},
-                           {ES.intern("__orc_rt_jit_dispatch_ctx"),
-                            {EPC.getJITDispatchInfo().JITDispatchContext,
-                             JITSymbolFlags::Exported}}})))
-    return std::move(Err);
-
-  PlatformJD.addToLinkOrder(HostFuncJD);
+  {
+    // Add JIT dispatch reexports from bootstrap JITDylib.
+    auto Exports = buildSimpleReexportsAliasMap(
+        ES.getBootstrapJITDylib(),
+        {{ES.intern(rt::DispatchName), ES.intern(rt::DispatchCtxName)}});
+    if (!Exports)
+      return Exports.takeError();
+    if (auto Err =
+            PlatformJD.define(reexports(ES.getBootstrapJITDylib(), *Exports)))
+      return Err;
+  }
 
   // Create the instance.
   Error Err = Error::success();

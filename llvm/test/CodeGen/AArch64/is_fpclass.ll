@@ -249,7 +249,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @isfinite_d_strictfp(double %x) {
+define i1 @isfinite_d_strictfp(double %x) strictfp {
 ; CHECK-SD-LABEL: isfinite_d_strictfp:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov x8, d0
@@ -278,7 +278,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @not_isfinite_d_strictfp(double %x) {
+define i1 @not_isfinite_d_strictfp(double %x) strictfp {
 ; CHECK-SD-LABEL: not_isfinite_d_strictfp:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov x8, d0

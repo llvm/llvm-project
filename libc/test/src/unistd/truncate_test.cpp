@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_stat_macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
@@ -17,15 +18,13 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/stat.h>
-
 namespace cpp = LIBC_NAMESPACE::cpp;
 
 using LlvmLibcTruncateTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcTruncateTest, CreateAndTruncate) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-  constexpr const char *FILENAME = "truncate.test";
+  constexpr const char *FILENAME = APPEND_LIBC_TEST("truncate.test");
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
   constexpr const char WRITE_DATA[] = "hello, truncate";
   constexpr size_t WRITE_SIZE = sizeof(WRITE_DATA);

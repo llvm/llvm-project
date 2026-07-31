@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -emit-llvm %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -DOCL12 -x cl -std=cl1.2 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -DOCL12 -x cl -std=cl1.2 \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-CL12
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x cl -std=cl2.0 \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x cl -std=cl2.0 \
 // RUN:   -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-CL20
 
 #if defined(OCL12)

@@ -434,6 +434,26 @@ def Builtin_Float8E8M0FNU : Builtin_FloatType<"Float8E8M0FNU", "f8E8M0FNU"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Float8E5M3FNUType
+//===----------------------------------------------------------------------===//
+
+def Builtin_Float8E5M3FNU : Builtin_FloatType<"Float8E5M3FNU", "f8E5M3FNU"> {
+  let summary = "8-bit unsigned floating point with 5-bit exponent, 3-bit mantissa";
+  let description = [{
+    An 8-bit floating point type with 0 sign bit, 5 bits exponent and 3 bits
+    mantissa. This is not a standard type as defined by IEEE-754, but it
+    follows similar conventions with the following characteristics:
+
+      * bit encoding: S0E5M3
+      * exponent bias: 15
+      * infinities: Not supported
+      * NaNs: Supported with all bits set to 1
+      * Zero: Supported
+      * denormals when exponent is 0
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BFloat16Type
 //===----------------------------------------------------------------------===//
 

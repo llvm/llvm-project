@@ -286,7 +286,7 @@ public:
                                      Decl *Previous, Decl *Canon);
   static void attachPreviousDeclImpl(ASTReader &Reader, ...);
   static void attachPreviousDecl(ASTReader &Reader, Decl *D, Decl *Previous,
-                                 Decl *Canon);
+                                 Decl *PreviousNonLocal, Decl *Canon);
 
   static void checkMultipleDefinitionInNamedModules(ASTReader &Reader, Decl *D,
                                                     Decl *Previous);
@@ -406,6 +406,7 @@ public:
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
   void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
+  void VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
   void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
@@ -2821,6 +2822,14 @@ void ASTDeclReader::VisitExplicitInstantiationDecl(
     Reader.getContext().addExplicitInstantiationDecl(Spec, D);
 }
 
+void ASTDeclReader::VisitCXXExpansionStmtDecl(CXXExpansionStmtDecl *D) {
+  VisitDecl(D);
+  D->Pattern = cast<CXXExpansionStmtPattern>(Record.readStmt());
+  D->Instantiations =
+      cast_or_null<CXXExpansionStmtInstantiation>(Record.readStmt());
+  D->IndexNTTP = cast<NonTypeTemplateParmDecl>(Record.readDeclRef());
+}
+
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
   VisitDecl(D);
 }
@@ -3658,28 +3667,6 @@ Decl *ASTReader::getMostRecentExistingDecl(Decl *D) {
   return ASTDeclReader::getMostRecentDecl(D->getCanonicalDecl());
 }
 
-namespace {
-void mergeInheritableAttributes(ASTReader &Reader, Decl *D, Decl *Previous) {
-  InheritableAttr *NewAttr = nullptr;
-  ASTContext &Context = Reader.getContext();
-  const auto *IA = Previous->getAttr<MSInheritanceAttr>();
-
-  if (IA && !D->hasAttr<MSInheritanceAttr>()) {
-    NewAttr = cast<InheritableAttr>(IA->clone(Context));
-    NewAttr->setInherited(true);
-    D->addAttr(NewAttr);
-  }
-
-  if (!D->hasAttr<AvailabilityAttr>()) {
-    for (const auto *AA : Previous->specific_attrs<AvailabilityAttr>()) {
-      NewAttr = AA->clone(Context);
-      NewAttr->setInherited(true);
-      D->addAttr(NewAttr);
-    }
-  }
-}
-} // namespace
-
 template<typename DeclT>
 void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
                                            Redeclarable<DeclT> *D,
@@ -3891,7 +3878,8 @@ void ASTDeclReader::checkMultipleDefinitionInNamedModules(ASTReader &Reader,
 }
 
 void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
-                                       Decl *Previous, Decl *Canon) {
+                                       Decl *Previous, Decl *PreviousNonLocal,
+                                       Decl *Canon) {
   assert(D && Previous);
 
   switch (D->getKind()) {
@@ -3920,11 +3908,12 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
     inheritDefaultTemplateArguments(Reader.getContext(),
                                     cast<TemplateDecl>(Previous), TD);
 
-  // If any of the declaration in the chain contains an Inheritable attribute,
-  // it needs to be added to all the declarations in the redeclarable chain.
-  // FIXME: Only the logic of merging MSInheritableAttr is present, it should
-  // be extended for all inheritable attributes.
-  mergeInheritableAttributes(Reader, D, Previous);
+  if (PreviousNonLocal) {
+    if (Sema *S = Reader.getSema()) {
+      if (auto *ND = dyn_cast<NamedDecl>(D))
+        S->mergeDeclAttributes(ND, PreviousNonLocal);
+    }
+  }
 }
 
 template<typename DeclT>
@@ -4161,6 +4150,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
   case DECL_EXPLICIT_INSTANTIATION:
     D = ExplicitInstantiationDecl::CreateDeserialized(Context, ID,
                                                       Record.readInt());
+    break;
+  case DECL_EXPANSION_STMT:
+    D = CXXExpansionStmtDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_OBJC_METHOD:
     D = ObjCMethodDecl::CreateDeserialized(Context, ID);
@@ -4572,17 +4564,17 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
 void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
   // Attach FirstLocal to the end of the decl chain.
   Decl *CanonDecl = FirstLocal->getCanonicalDecl();
+  Decl *NonLocalMostRecent = nullptr;
   if (FirstLocal != CanonDecl) {
     Decl *PrevMostRecent = ASTDeclReader::getMostRecentDecl(CanonDecl);
-    ASTDeclReader::attachPreviousDecl(
-        *this, FirstLocal, PrevMostRecent ? PrevMostRecent : CanonDecl,
-        CanonDecl);
+    NonLocalMostRecent = PrevMostRecent ? PrevMostRecent : CanonDecl;
+    ASTDeclReader::attachPreviousDecl(*this, FirstLocal, NonLocalMostRecent,
+                                      NonLocalMostRecent, CanonDecl);
+    ASTDeclReader::attachLatestDecl(CanonDecl, FirstLocal);
   }
 
-  if (!LocalOffset) {
-    ASTDeclReader::attachLatestDecl(CanonDecl, FirstLocal);
+  if (!LocalOffset)
     return;
-  }
 
   // Load the list of other redeclarations from this module file.
   ModuleFile *M = getOwningModuleFile(FirstLocal);
@@ -4616,10 +4608,11 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
   for (unsigned I = 0, N = Record.size(); I != N; ++I) {
     unsigned Idx = N - I - 1;
     auto *D = ReadDecl(*M, Record, Idx);
-    ASTDeclReader::attachPreviousDecl(*this, D, MostRecent, CanonDecl);
+    ASTDeclReader::attachPreviousDecl(*this, D, MostRecent, NonLocalMostRecent,
+                                      CanonDecl);
     MostRecent = D;
+    ASTDeclReader::attachLatestDecl(CanonDecl, MostRecent);
   }
-  ASTDeclReader::attachLatestDecl(CanonDecl, MostRecent);
 }
 
 namespace {

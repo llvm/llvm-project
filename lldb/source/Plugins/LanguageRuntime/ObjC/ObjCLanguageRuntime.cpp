@@ -290,6 +290,23 @@ ObjCLanguageRuntime::GetClassDescriptor(ValueObject &valobj) {
   return objc_class_sp;
 }
 
+bool ObjCLanguageRuntime::IsTaggedPointerValue(ValueObject &in_value) {
+  TaggedPointerVendor *tagged_pointer_vendor = GetTaggedPointerVendor();
+  if (!tagged_pointer_vendor)
+    return false;
+
+  // Only Objective-C object values can be tagged pointers.
+  if (!(in_value.GetTypeInfo() & lldb::eTypeIsObjC))
+    return false;
+
+  addr_t ptr = in_value.IsPointerType() ? in_value.GetPointerValue().address
+                                        : in_value.GetAddressOf().address;
+  if (ptr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  return tagged_pointer_vendor->IsPossibleTaggedPointer(ptr);
+}
+
 ObjCLanguageRuntime::ClassDescriptorSP
 ObjCLanguageRuntime::GetNonKVOClassDescriptor(ValueObject &valobj) {
   ObjCLanguageRuntime::ClassDescriptorSP objc_class_sp(
