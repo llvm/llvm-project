@@ -130,12 +130,11 @@ public:
       auto index = tensor::ExtractOp::create(builder, loc, indices, ivs);
       auto castIndex = arith::IndexCastOp::create(
           builder, loc, builder.getIndexType(), index);
-      auto outOfBound = arith::CmpIOp::create(
-          builder, loc, builder.getI1Type(), arith::CmpIPredicate::uge,
-          castIndex, kSzVal);
-      auto clampedIndex =
-          arith::SelectOp::create(builder, loc, builder.getIndexType(),
-                                  outOfBound, kSzVal, castIndex);
+      auto outOfBound =
+          arith::CmpIOp::create(builder, loc, builder.getI1Type(),
+                                arith::CmpIPredicate::uge, castIndex, kSzVal);
+      auto clampedIndex = arith::SelectOp::create(
+          builder, loc, builder.getIndexType(), outOfBound, kSzVal, castIndex);
 
       // Offset, sizes, and strides for the input tensor
       auto inputOffset = llvm::to_vector(ivs);
