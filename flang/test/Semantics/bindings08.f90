@@ -15,7 +15,7 @@ module m
   end type
   type, extends(child) :: grandchild
    contains
-    !ERROR: Dummy arguments of type-bound procedure 'set' and its override must correspond by name and position
+    !ERROR: Dummy argument 'y' of type-bound procedure 'set' must correspond by name to 'x' in the overridden procedure
     procedure :: set
   end type
  contains
@@ -85,7 +85,7 @@ module m_rename
   end interface
   type, extends(t) :: e
    contains
-    !ERROR: Dummy arguments of type-bound procedure 'set' and its override must correspond by name and position
+    !ERROR: Dummy argument 'm2' of type-bound procedure 'set' must correspond by name to 'n' in the overridden procedure
     procedure :: set
   end type
  contains
@@ -108,7 +108,7 @@ module m_nopass
   end interface
   type, extends(t) :: e
    contains
-    !ERROR: Dummy arguments of type-bound procedure 'act' and its override must correspond by name and position
+    !ERROR: Dummy argument 'b' of type-bound procedure 'act' must correspond by name to 'a' in the overridden procedure
     procedure, nopass :: act => impl
   end type
  contains

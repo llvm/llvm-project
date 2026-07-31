@@ -2783,11 +2783,13 @@ void CheckHelper::CheckProcBinding(
         const auto *bindingChars{Characterize(symbol)};
         const auto *overriddenChars{Characterize(*overridden)};
         if (bindingChars && overriddenChars) {
-          if (FindOverrideDummyNameMismatch(*bindingChars, *overriddenChars)) {
+          if (auto mismatch{FindOverrideDummyNameMismatch(
+                  *bindingChars, *overriddenChars)}) {
             SayWithDeclaration(*overridden,
-                "Dummy arguments of type-bound procedure '%s' and its override "
-                "must correspond by name and position"_err_en_US,
-                symbol.name());
+                "Dummy argument '%s' of type-bound procedure '%s' must "
+                "correspond by name to '%s' in the overridden procedure"_err_en_US,
+                bindingChars->dummyArguments[*mismatch].name, symbol.name(),
+                overriddenChars->dummyArguments[*mismatch].name);
           } else if (isNopass) {
             if (!bindingChars->CanOverride(*overriddenChars, std::nullopt)) {
               SayWithDeclaration(*overridden,
