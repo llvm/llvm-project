@@ -25,7 +25,7 @@ bool slpvectorizer::isLiveInOperand(unsigned Opcode, unsigned J) {
 }
 
 bool slpvectorizer::isSupportedVPlanCodegenOpcode(unsigned Opcode) {
-  if (Instruction::isBinaryOp(Opcode))
+  if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
     return true;
   switch (Opcode) {
   case Instruction::FNeg:
@@ -72,6 +72,9 @@ VPValue *slpvectorizer::createRecipeForBundle(VPlan &Plan, VPBuilder &VPB,
     // Stores do not define a value.
     return nullptr;
   }
+  if (auto *CI = dyn_cast<CastInst>(MainOp))
+    return VPB.insert(new VPWidenCastRecipe(
+        CI->getOpcode(), Ops[0], CI->getType(), CI, Flags, Metadata, DL));
   return VPB.insert(new VPWidenRecipe(*MainOp, Ops, Flags, Metadata, DL));
 }
 
