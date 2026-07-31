@@ -273,7 +273,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // during the combine phase.
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalIf(typeOfLongVectors(0, IsLongVecs))
-      .legalIf(vectorElementCountIsLessThanOrEqualTo(0, MaxVectorSize));
+      .legalIf(vectorElementCountIsLessThanOrEqualTo(0, MaxVectorSize))
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)));
 
   // When entering the legalizer, there should be no G_BITCAST instructions.
   // They should all be calls to the `spv_bitcast` intrinsic. The call to
@@ -376,14 +379,20 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalIf(extendedScalarsAndVectorsProduct)
       .legalIf(typeOfLongVectors(0, IsLongVecs));
 
-  // Extensions.
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
       .legalForCartesianProduct(allScalarsAndVectors)
-      .legalIf(extendedScalarsAndVectorsProduct);
+      .legalIf(extendedScalarsAndVectorsProduct)
+      .moreElementsToNextPow2(0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)));
 
-  // Lower G_SEXT_INREG to the canonical shl/ashr pair, which map to
-  // OpShiftLeftLogical + OpShiftRightArithmetic.
-  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .moreElementsToNextPow2(0)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      .lower();
 
   getActionDefinitionsBuilder(G_PHI)
       .legalFor(allPtrsScalarsAndVectors)

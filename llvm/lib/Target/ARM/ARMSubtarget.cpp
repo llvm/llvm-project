@@ -88,15 +88,16 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle,
-                           bool MinSize, DenormalMode DM)
+                           FloatABI::ABIType FloatABI, bool MinSize,
+                           DenormalMode DM)
     : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       UseMulOps(UseFusedMulOps), CPUString(CPU), OptMinSize(MinSize),
       IsLittle(IsLittle), DM(DM), TargetTriple(TT), Options(TM.Options), TM(TM),
-      FrameLowering(initializeFrameLowering(CPU, FS)),
+      FloatABIType(FloatABI), FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only() ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
-                : !isThumb()   ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
+                : !isThumb() ? (ARMBaseInstrInfo *)new ARMInstrInfo(*this)
                              : (ARMBaseInstrInfo *)new Thumb2InstrInfo(*this)),
       TLInfo(TM, *this) {
 
