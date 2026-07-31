@@ -748,32 +748,28 @@ def parse_run_lines_argument(run_lines_filter, num_run_lines):
     selected = set()
     for item in run_lines_filter.split(","):
         item = item.strip()
+        error_str = "invalid --run-lines entry '{}'; expected N or N-M, 0 < N <= M <= {}".format(
+            item, num_run_lines
+        )
         if not item:
-            raise ValueError("empty item in --run-lines filter")
+            raise ValueError(error_str)
 
         if "-" in item:
             bounds = item.split("-", 1)
             if len(bounds) != 2 or not bounds[0] or not bounds[1]:
-                raise ValueError(
-                    "invalid --run-lines range '{}'; expected N or N-M".format(item)
-                )
-            start = int(bounds[0])
-            end = int(bounds[1])
-        else:
-            start = end = int(item)
+                raise ValueError(error_str)
 
-        if start <= 0 or end <= 0:
-            raise ValueError("--run-lines entries must be positive: '{}'".format(item))
-        if start > end:
-            raise ValueError(
-                "invalid --run-lines range '{}'; start must not exceed end".format(item)
-            )
-        if end > num_run_lines:
-            raise ValueError(
-                "--run-lines selects RUN line {} but only {} RUN lines exist".format(
-                    end, num_run_lines
-                )
-            )
+        try:
+            if "-" in item:
+                start = int(bounds[0])
+                end = int(bounds[1])
+            else:
+                start = end = int(item)
+        except ValueError:
+            raise ValueError(error_str) from None
+
+        if start <= 0 or end <= 0 or start > end or end > num_run_lines:
+            raise ValueError(error_str)
 
         selected.update(range(start, end + 1))
 

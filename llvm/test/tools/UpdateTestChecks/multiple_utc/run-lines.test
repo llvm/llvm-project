@@ -41,3 +41,18 @@
 # RUN: diff -u %t.ll %S/Inputs/run-lines.with-both-notes.expected
 # RUN: %update_any_test_checks --path %llvm_tools_dir %t.ll
 # RUN: diff -u %t.ll %S/Inputs/run-lines.with-both-notes.expected
+
+# RUN: cp -f %S/Inputs/run-lines.ll %t.ll
+# RUN: %update_test_checks --run-lines=1,2-2 %t.ll
+
+## Invalid --run-lines:
+# RUN: not %update_test_checks --run-lines=        %S/Inputs/run-lines.ll 2>&1 | FileCheck %s --check-prefix=INVALID -DENTRY=
+# RUN: not %update_test_checks --run-lines=1-      %S/Inputs/run-lines.ll 2>&1 | FileCheck %s --check-prefix=INVALID -DENTRY=1-
+# RUN: not %update_test_checks --run-lines=0       %S/Inputs/run-lines.ll 2>&1 | FileCheck %s --check-prefix=INVALID -DENTRY=0
+# RUN: not %update_test_checks --run-lines=2-1     %S/Inputs/run-lines.ll 2>&1 | FileCheck %s --check-prefix=INVALID -DENTRY=2-1
+# RUN: not %update_test_checks --run-lines=1-2-    %S/Inputs/run-lines.ll 2>&1 | FileCheck %s --check-prefix=INVALID -DENTRY=1-2-
+# RUN: not %update_test_checks --run-lines=3       %S/Inputs/run-lines.ll 2>&1 | FileCheck %s --check-prefix=INVALID -DENTRY=3
+# RUN: not %update_test_checks --run-lines=one     %S/Inputs/run-lines.ll 2>&1 | FileCheck %s --check-prefix=INVALID -DENTRY=one
+# RUN: not %update_test_checks --run-lines=one-two %S/Inputs/run-lines.ll 2>&1 | FileCheck %s --check-prefix=INVALID -DENTRY=one-two
+
+# INVALID: ValueError: invalid --run-lines entry '[[ENTRY]]'; expected N or N-M, 0 < N <= M <= 2
