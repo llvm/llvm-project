@@ -655,11 +655,11 @@ define <3 x i16> @abs_vgpr_v3i16(<3 x i16> %arg) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_sub_nc_u16 v2, 0, v1
+; GFX10-NEXT:    v_pk_sub_i16 v3, 0, v0
 ; GFX10-NEXT:    v_max_i16 v1, v1, v2
-; GFX10-NEXT:    v_pk_sub_i16 v2, 0, v0
-; GFX10-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX10-NEXT:    v_pk_max_i16 v0, v0, v2
-; GFX10-NEXT:    v_lshl_or_b32 v1, s4, 16, v1
+; GFX10-NEXT:    v_lshlrev_b32_e64 v2, 16, s4
+; GFX10-NEXT:    v_pk_max_i16 v0, v0, v3
+; GFX10-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1250-FAKE16-LABEL: abs_vgpr_v3i16:

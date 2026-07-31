@@ -47,6 +47,11 @@ add_header_macro(
     .llvm-libc-types.ino_t
     .llvm-libc-types.DIR
     .llvm-libc-types.struct_dirent
+    .llvm-libc-types.struct_posix_dent
+    .llvm-libc-types.reclen_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
+    .llvm-libc-macros.dirent_macros
 )
 
 add_header_macro(
@@ -522,6 +527,17 @@ add_header_macro(
     .llvm_libc_common_h
 )
 
+add_header_macro(
+  pwd
+  ../libc/include/pwd.yaml
+  pwd.h
+  DEPENDS
+    .llvm-libc-types.struct_passwd
+    .llvm-libc-types.uid_t
+    .llvm-libc-types.gid_t
+    .llvm_libc_common_h
+)
+
 if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
   add_header_macro(
     ucontext
@@ -842,6 +858,17 @@ add_header_macro(
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.struct_sockaddr_storage
+    .llvm-libc-types.struct_ucred
+)
+
+add_header_macro(
+  sys_statfs
+  ../libc/include/sys/statfs.yaml
+  sys/statfs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_statfs_macros
+    .llvm-libc-types.struct_statfs
 )
 
 add_header_macro(

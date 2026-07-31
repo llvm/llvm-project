@@ -31,6 +31,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.netinet_udp
     libc.include.poll
     libc.include.pthread
+    libc.include.pwd
     libc.include.sched
     libc.include.search
     libc.include.setjmp
@@ -61,6 +62,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_signal
     libc.include.sys_socket
     libc.include.sys_stat
+    libc.include.sys_statfs
     libc.include.sys_statvfs
     libc.include.sys_syscall
     libc.include.sys_time

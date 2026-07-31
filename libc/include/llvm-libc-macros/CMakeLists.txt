@@ -73,6 +73,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  dirent_macros
+  HDR
+    dirent-macros.h
+)
+
+add_macro_header(
   fcntl_macros
   HDR
     fcntl-macros.h
@@ -259,6 +265,12 @@ add_macro_header(
   sys_stat_macros
   HDR
     sys-stat-macros.h
+)
+
+add_macro_header(
+  sys_statfs_macros
+  HDR
+    sys-statfs-macros.h
 )
 
 add_macro_header(

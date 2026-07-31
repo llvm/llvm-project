@@ -1188,16 +1188,10 @@ static bool simplifyLogicalRecipe(VPSingleDefRecipe *Def, VPBuilder &Builder,
   }
 
   // x && (x && y) -> x && y
-  if (match(Def, m_LogicalAnd(m_VPValue(X),
-                              m_LogicalAnd(m_Deferred(X), m_VPValue())))) {
-    Def->replaceAllUsesWith(Def->getOperand(1));
-    return true;
-  }
-
-  // x && (y && x) -> x && y
-  if (match(Def, m_LogicalAnd(m_VPValue(X),
-                              m_LogicalAnd(m_VPValue(Y), m_Deferred(X))))) {
-    Def->replaceAllUsesWith(Builder.createLogicalAnd(X, Y));
+  if (match(Def, m_c_LogicalAnd(m_VPValue(X),
+                                m_VPValue(Z, m_c_LogicalAnd(m_Deferred(X),
+                                                            m_VPValue()))))) {
+    Def->replaceAllUsesWith(Z);
     return true;
   }
 
@@ -2781,10 +2775,8 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
   // wrapped in a Reverse, which is just a permutation of the header mask, so
   // peel it off before checking. The header mask is still the abstract region
   // value at this point (materialization happens later).
-  auto IsNotHeaderMask = [](VPValue *Mask) {
-    return Mask &&
-           !match(Mask, m_CombineOr(m_HeaderMask(), m_Reverse(m_HeaderMask())));
-  };
+  auto m_UnlessHdrMask = m_Unless( // NOLINT
+      m_CombineOr(m_HeaderMask(), m_Reverse(m_HeaderMask())));
 
   // Traverse all the recipes in the VPlan and collect the poison-generating
   // recipes in the backward slice starting at the address of a VPWidenRecipe or
@@ -2795,12 +2787,13 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
     for (VPRecipeBase &Recipe : *VPBB) {
       if (auto *WidenRec = dyn_cast<VPWidenMemoryRecipe>(&Recipe)) {
         VPRecipeBase *AddrDef = WidenRec->getAddr()->getDefiningRecipe();
-        if (AddrDef && WidenRec->isConsecutive() &&
-            IsNotHeaderMask(WidenRec->getMask()))
+        if (AddrDef && WidenRec->isConsecutive() && WidenRec->getMask() &&
+            match(WidenRec->getMask(), m_UnlessHdrMask))
           CollectPoisonGeneratingInstrsInBackwardSlice(AddrDef);
       } else if (auto *InterleaveRec = dyn_cast<VPInterleaveRecipe>(&Recipe)) {
         VPRecipeBase *AddrDef = InterleaveRec->getAddr()->getDefiningRecipe();
-        if (AddrDef && IsNotHeaderMask(InterleaveRec->getMask()))
+        if (AddrDef && InterleaveRec->getMask() &&
+            match(InterleaveRec->getMask(), m_UnlessHdrMask))
           CollectPoisonGeneratingInstrsInBackwardSlice(AddrDef);
       }
     }
@@ -3892,8 +3885,10 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
              "all members in group must agree on IsSingleScalar");
       VPValue *Mask = Group[I]->getMask();
       VPValue *Value = Group[I]->getOperand(0);
-      SelectedValue = Builder.createSelect(Mask, Value, SelectedValue,
-                                           Group[I]->getDebugLoc());
+      SelectedValue = Builder.createSelect(
+          Mask, Value, SelectedValue, Group[I]->getDebugLoc(), "",
+          VPIRFlags::getDefaultFlags(Instruction::Select,
+                                     Value->getScalarType()));
     }
 
     // Find the store with minimum alignment to use.
@@ -4570,7 +4565,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       // PhiR is the last operand and include the header mask if needed.
       DebugLoc DL = FindLastSelect->getDefiningRecipe()->getDebugLoc();
       VPBuilder LoopBuilder(FindLastSelect->getDefiningRecipe());
-      if (FindLastSelect->getDefiningRecipe()->getOperand(1) == PhiR)
+      if (match(FindLastSelect,
+                m_SelectLike(m_VPValue(Cond), m_Specific(PhiR), m_VPValue())))
         SelectCond = LoopBuilder.createNot(SelectCond);
 
       // When tail folding, mask the condition with the header mask to prevent

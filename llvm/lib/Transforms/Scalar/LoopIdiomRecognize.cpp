@@ -1816,15 +1816,13 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     };
     auto HiIdx = [LoByte, CRCBW](IRBuilderBase &Builder, Value *Op,
                                  const Twine &Name) {
-      Type *OpTy = Op->getType();
-
-      // When the bitwidth of the CRC mismatches the Op's bitwidth, we need to
-      // use the CRC's bitwidth as the reference for shifting right.
-      return LoByte(Builder,
-                    CRCBW > 8 ? Builder.CreateLShr(
-                                    Op, ConstantInt::get(OpTy, CRCBW - 8), Name)
-                              : Op,
-                    Name + ".lo.byte");
+      // Shift the top bits of Op to the bottom byte by using the CRC bitwidth
+      // as a reference.
+      if (CRCBW != 8) {
+        Op = CRCBW > 8 ? Builder.CreateLShr(Op, CRCBW - 8, Name)
+                       : Builder.CreateShl(Op, 8 - CRCBW, Name);
+      }
+      return LoByte(Builder, Op, Name + ".lo.byte");
     };
 
     IRBuilder<> Builder(CurLoop->getHeader(),
@@ -1870,7 +1868,15 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
     Value *CRCTableGEP =
         Builder.CreateInBoundsGEP(CRCTy, GV, Indexer, "tbl.ptradd");
-    Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+    Instruction *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+
+    // Update MemorySSA since we just created a new load instruction.
+    if (MSSAU) {
+      auto *NewMemAcc = MSSAU->createMemoryAccessInBB(
+          CRCTableLd, /*Definition=*/nullptr, CRCTableLd->getParent(),
+          MemorySSA::Beginning);
+      MSSAU->insertUse(cast<MemoryUse>(NewMemAcc), /*RenameUses=*/true);
+    }
 
     // CRCNext = (CRC (<<|>>) 8) ^ CRCTableLd, or simply CRCTableLd in case of
     // CRC-8.
@@ -1893,6 +1899,8 @@ void LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
     for (PHINode *PN : Cleanup)
       RecursivelyDeleteDeadPHINode(PN);
     SE->forgetLoop(CurLoop);
+    if (MSSAU && VerifyMemorySSA)
+      MSSAU->getMemorySSA()->verifyMemorySSA();
   }
 }
 

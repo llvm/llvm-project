@@ -312,15 +312,15 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
     if (Src->isPointer()) {
       if (Opc == Instruction::PtrToInt)
         exposeProvenance(Src->asPointer().provenance());
-      return MaterializedConstant(Src->asPointer().address().trunc(BitWidth),
-                                  Cacheable);
+      return MaterializedConstant(
+          Src->asPointer().address().zextOrTrunc(BitWidth), Cacheable);
     }
     std::vector<AnyValue> Vec = Src->asAggregate();
     for (auto &V : Vec) {
       if (V.isPointer()) {
         if (Opc == Instruction::PtrToInt)
           exposeProvenance(V.asPointer().provenance());
-        V = V.asPointer().address().trunc(BitWidth);
+        V = V.asPointer().address().zextOrTrunc(BitWidth);
       }
     }
     return MaterializedConstant(std::move(Vec), Cacheable);

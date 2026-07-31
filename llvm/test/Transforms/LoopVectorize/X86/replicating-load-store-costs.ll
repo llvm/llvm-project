@@ -1264,27 +1264,32 @@ exit:
 define void @invariant_pred_store_sunk_out_of_loop(ptr noalias %dst, ptr noalias readonly %src) #1 {
 ; I64-LABEL: define void @invariant_pred_store_sunk_out_of_loop(
 ; I64-SAME: ptr noalias [[DST:%.*]], ptr noalias readonly [[SRC:%.*]]) #[[ATTR1:[0-9]+]] {
-; I64-NEXT:  [[ENTRY:.*]]:
+; I64-NEXT:  [[ENTRY:.*:]]
 ; I64-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 42
 ; I64-NEXT:    br label %[[LOOP:.*]]
 ; I64:       [[LOOP]]:
-; I64-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; I64-NEXT:    [[SUM:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[SUM_2:%.*]], %[[LATCH]] ]
+; I64-NEXT:    br label %[[VECTOR_BODY:.*]]
+; I64:       [[VECTOR_BODY]]:
+; I64-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; I64-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, %[[LOOP]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
+; I64-NEXT:    [[VEC_PHI1:%.*]] = phi <2 x i64> [ zeroinitializer, %[[LOOP]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; I64-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[IV]]
-; I64-NEXT:    [[L:%.*]] = load i64, ptr [[GEP_SRC]], align 8
-; I64-NEXT:    [[SUM_1:%.*]] = add nsw i64 [[L]], [[SUM]]
-; I64-NEXT:    [[C:%.*]] = icmp sgt i64 [[L]], 0
-; I64-NEXT:    br i1 [[C]], label %[[IF_THEN:.*]], label %[[LATCH]]
+; I64-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[GEP_SRC]], i64 2
+; I64-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[GEP_SRC]], align 8
+; I64-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
+; I64-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
+; I64-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[WIDE_LOAD2]], [[VEC_PHI1]]
+; I64-NEXT:    [[TMP4]] = add <2 x i64> [[TMP2]], splat (i64 1)
+; I64-NEXT:    [[TMP5]] = add <2 x i64> [[TMP3]], splat (i64 1)
+; I64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; I64-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; I64-NEXT:    br i1 [[TMP6]], label %[[IF_THEN:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; I64:       [[IF_THEN]]:
+; I64-NEXT:    [[BIN_RDX:%.*]] = add <2 x i64> [[TMP5]], [[TMP4]]
+; I64-NEXT:    [[SUM_1:%.*]] = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> [[BIN_RDX]])
 ; I64-NEXT:    store i64 [[SUM_1]], ptr [[GEP_DST]], align 8
-; I64-NEXT:    br label %[[LATCH]]
+; I64-NEXT:    br label %[[LATCH:.*]]
 ; I64:       [[LATCH]]:
-; I64-NEXT:    [[SUM_2]] = add nsw i64 [[SUM_1]], 1
-; I64-NEXT:    store i64 [[SUM_2]], ptr [[GEP_DST]], align 8
-; I64-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; I64-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; I64-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
-; I64:       [[EXIT]]:
 ; I64-NEXT:    ret void
 ;
 ; I32-LABEL: define void @invariant_pred_store_sunk_out_of_loop(
