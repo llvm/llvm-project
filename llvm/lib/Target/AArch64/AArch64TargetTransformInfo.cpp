@@ -3372,11 +3372,10 @@ static std::optional<Instruction *> instCombineSVEUMin(InstCombiner &IC,
   constexpr Intrinsic::ID UMinID = Intrinsic::aarch64_sve_umin_u;
   Value *A, *B;
   Value *Pg = II.getOperand(0);
-  if (match(II.getOperand(1),
-            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(A), m_One())) &&
-      match(II.getOperand(2),
-            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(B), m_One())) &&
-      II.hasOneUse()) {
+  if (match(II.getOperand(1), m_OneUse(m_Intrinsic<UMinID>(
+                                  m_Specific(Pg), m_Value(A), m_One()))) &&
+      match(II.getOperand(2), m_OneUse(m_Intrinsic<UMinID>(
+                                  m_Specific(Pg), m_Value(B), m_One())))) {
     Value *NewUMin =
         IC.Builder.CreateIntrinsic(UMinID, II.getType(), {Pg, A, B});
     Value *NewLogicalUMin = IC.Builder.CreateIntrinsic(

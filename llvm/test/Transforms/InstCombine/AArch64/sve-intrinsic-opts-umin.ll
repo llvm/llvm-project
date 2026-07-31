@@ -74,6 +74,24 @@ define <vscale x 16 x i8> @umin_with_logical_umin_operands_predicate_mismatch_3(
   ret <vscale x 16 x i8> %3
 }
 
+define <vscale x 16 x i8> @umin_with_multiuse_logical_umin_operands(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) #0 {
+; CHECK-LABEL: define <vscale x 16 x i8> @umin_with_multiuse_logical_umin_operands(
+; CHECK-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[A:%.*]], <vscale x 16 x i8> [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[A_BOOL:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A]], <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    [[B_BOOL:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[B]], <vscale x 16 x i8> splat (i8 1))
+; CHECK-NEXT:    [[AB_BOOL:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> [[PG]], <vscale x 16 x i8> [[A_BOOL]], <vscale x 16 x i8> [[B_BOOL]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(<vscale x 16 x i8> [[A_BOOL]])
+; CHECK-NEXT:    call void (...) @llvm.fake.use(<vscale x 16 x i8> [[B_BOOL]])
+; CHECK-NEXT:    ret <vscale x 16 x i8> [[AB_BOOL]]
+;
+  %a.bool = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 1))
+  %b.bool = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, <vscale x 16 x i8> splat (i8 1))
+  %ab.bool = call <vscale x 16 x i8> @llvm.aarch64.sve.umin.u.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a.bool, <vscale x 16 x i8> %b.bool)
+  call void (...) @llvm.fake.use(<vscale x 16 x i8> %a.bool)
+  call void (...) @llvm.fake.use(<vscale x 16 x i8> %b.bool)
+  ret <vscale x 16 x i8> %ab.bool
+}
+
 ; umin(umin(A, 1), 1) -> umin(A, 1)
 
 define <vscale x 16 x i8> @logical_umin_with_logical_umin(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) #0 {
