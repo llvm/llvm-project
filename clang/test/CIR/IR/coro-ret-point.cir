@@ -1,6 +1,6 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
-cir.func coroutine @coro_body(%arg0 : !cir.bool) {
+cir.func coroutine @coro_ret_point(%arg0 : !cir.bool) {
   cir.coro.ret_point {
     cir.coro.body {
       cir.await(user, ready : {
@@ -10,7 +10,7 @@ cir.func coroutine @coro_body(%arg0 : !cir.bool) {
       }, resume : {
         cir.yield
       },)
-      cir.co_return
+      cir.yield
     }
     cir.yield
   }, ret : {
@@ -19,6 +19,5 @@ cir.func coroutine @coro_body(%arg0 : !cir.bool) {
   cir.trap
 }
 
-// CHECK: cir.func coroutine @coro_body
-// CHECK:   cir.coro.body {
-// CHECK:   }
+// CHECK: cir.coro.ret_point {
+// CHECK: }, ret : {

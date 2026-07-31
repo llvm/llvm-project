@@ -1,26 +1,29 @@
 // RUN: cir-opt %s --verify-roundtrip | FileCheck %s
 
 cir.func coroutine @checkPrintParse(%arg0 : !cir.bool) {
-  cir.coro.body {
-    cir.await(user, ready : {
-      cir.condition(%arg0)
-    }, suspend : {
-      cir.coro.suspend.point
-    }, resume : {
+  cir.coro.ret_point {
+    cir.coro.body {
+      cir.await(user, ready : {
+        cir.condition(%arg0)
+      }, suspend : {
+        cir.coro.suspend_point
+      }, resume : {
+        cir.yield
+      },)
       cir.yield
-    },)
+    }
     cir.yield
+  }, ret : {
+      cir.return
   }
-  cir.coro.suspend.point.dest
-  cir.return
+  cir.trap
 }
 
 // CHECK:  cir.func coroutine @checkPrintParse
 // CHECK:  cir.await(user, ready : {
 // CHECK:    cir.condition(%arg0)
 // CHECK:  }, suspend : {
-// CHECK:    cir.coro.suspend.point
+// CHECK:    cir.coro.suspend_point
 // CHECK:  }, resume : {
 // CHECK:    cir.yield
 // CHECK:  },)
-// CHECK:  cir.coro.suspend.point.dest
