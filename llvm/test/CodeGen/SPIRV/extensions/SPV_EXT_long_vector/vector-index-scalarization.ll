@@ -43,7 +43,7 @@ define void @test_full() {
   ; CHECK: %[[#inserted:]] = OpVectorInsertDynamic %[[#vec17]] %[[#loaded]] %[[#val_val]] %[[#idx64]]
   %inserted = insertelement <17 x i32> %loaded, i32 %val, i64 %idx64
 
-  ; Extractelement with dynamic index spills to stack
+  ; Extractelement with dynamic index spills to stack.
   ; CHECK: %[[#extracted:]] = OpVectorExtractDynamic %[[#int]] %[[#inserted]] %[[#idx2_64]]
   %extracted = extractelement <17 x i32> %inserted, i64 %idx2_64
 
