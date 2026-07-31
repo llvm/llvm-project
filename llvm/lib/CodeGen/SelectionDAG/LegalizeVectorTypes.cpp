@@ -452,32 +452,11 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MERGE_VALUES(SDNode *N,
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
   SDLoc DL(N);
-  SDValue SourceValue = N->getOperand(0);
-  SDValue SinkValue = N->getOperand(1);
-  SDValue EltSizeInBytes = N->getOperand(2);
-  SDValue LaneOffset = N->getOperand(3);
-
-  EVT PtrVT = SourceValue->getValueType(0);
-  bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
-
-  // Take the difference between the pointers and divided by the element size,
-  // to see how many lanes separate them.
-  SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
-  if (IsReadAfterWrite)
-    Diff = DAG.getNode(ISD::ABS, DL, PtrVT, Diff);
-  Diff = DAG.getNode(ISD::SDIV, DL, PtrVT, Diff, EltSizeInBytes);
-
-  // The pointers do not alias if:
-  //  * Diff <= 0 || LaneOffset < Diff (WAR_MASK)
-  //  * Diff == 0 || LaneOffset < abs(Diff) (RAW_MASK)
-  // Note: If LaneOffset is zero, both cases will fold to "true".
-  EVT CmpVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                     Diff.getValueType());
-  SDValue Zero = DAG.getConstant(0, DL, PtrVT);
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, Diff, Zero,
-                             IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
-  return DAG.getNode(ISD::OR, DL, CmpVT, Cmp,
-                     DAG.getSetCC(DL, CmpVT, LaneOffset, Diff, ISD::SETULT));
+  // Reuse the expansion (which should scalarize).
+  SDValue Mask = TLI.expandLoopDependenceMask(N, DAG);
+  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N),
+                     N->getValueType(0).getScalarType(), Mask,
+                     DAG.getVectorIdxConstant(0, DL));
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_BITCAST(SDNode *N) {
@@ -590,7 +569,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
   SDValue Result = DAG.getLoad(
       ISD::UNINDEXED, N->getExtensionType(),
       N->getValueType(0).getVectorElementType(), SDLoc(N), N->getChain(),
-      N->getBasePtr(), DAG.getUNDEF(N->getBasePtr().getValueType()),
+      N->getBasePtr(), DAG.getPOISON(N->getBasePtr().getValueType()),
       N->getPointerInfo(), N->getMemoryVT().getVectorElementType(),
       N->getBaseAlign(), N->getMemOperand()->getFlags(), N->getAAInfo());
 
@@ -752,9 +731,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
   if (BoolVT.bitsLT(CondVT))
     Cond = DAG.getNode(ISD::TRUNCATE, SDLoc(N), BoolVT, Cond);
 
-  return DAG.getSelect(SDLoc(N),
-                       LHS.getValueType(), Cond, LHS,
-                       GetScalarizedVector(N->getOperand(2)));
+  return DAG.getSelect(SDLoc(N), LHS.getValueType(), Cond, LHS,
+                       GetScalarizedVector(N->getOperand(2)), N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_SELECT(SDNode *N) {
@@ -2447,7 +2425,7 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
   ISD::LoadExtType ExtType = LD->getExtensionType();
   SDValue Ch = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
   EVT MemoryVT = LD->getMemoryVT();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();

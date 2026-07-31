@@ -3074,16 +3074,14 @@ define <8 x i8> @test_fptosi_sat_i8(<8 x bfloat> %a) {
 ;
 ; CHECK-BF16SVE-SD-LABEL: test_fptosi_sat_i8:
 ; CHECK-BF16SVE-SD:       // %bb.0:
-; CHECK-BF16SVE-SD-NEXT:    shll2 v2.4s, v0.8h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll2 v1.4s, v0.8h, #16
 ; CHECK-BF16SVE-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16SVE-SD-NEXT:    movi v1.4s, #127
-; CHECK-BF16SVE-SD-NEXT:    mvni v3.4s, #127
-; CHECK-BF16SVE-SD-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-BF16SVE-SD-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-BF16SVE-SD-NEXT:    smin v2.4s, v2.4s, v1.4s
-; CHECK-BF16SVE-SD-NEXT:    smin v0.4s, v0.4s, v1.4s
-; CHECK-BF16SVE-SD-NEXT:    smax v1.4s, v2.4s, v3.4s
-; CHECK-BF16SVE-SD-NEXT:    smax v0.4s, v0.4s, v3.4s
+; CHECK-BF16SVE-SD-NEXT:    smin z1.s, z1.s, #127
+; CHECK-BF16SVE-SD-NEXT:    smin z0.s, z0.s, #127
+; CHECK-BF16SVE-SD-NEXT:    smax z1.s, z1.s, #-128
+; CHECK-BF16SVE-SD-NEXT:    smax z0.s, z0.s, #-128
 ; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-BF16SVE-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BF16SVE-SD-NEXT:    ret
@@ -3387,14 +3385,13 @@ define <8 x i8> @test_fptoui_sat_i8(<8 x bfloat> %a) {
 ;
 ; CHECK-BF16SVE-SD-LABEL: test_fptoui_sat_i8:
 ; CHECK-BF16SVE-SD:       // %bb.0:
-; CHECK-BF16SVE-SD-NEXT:    shll2 v2.4s, v0.8h, #16
+; CHECK-BF16SVE-SD-NEXT:    shll2 v1.4s, v0.8h, #16
 ; CHECK-BF16SVE-SD-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16SVE-SD-NEXT:    movi v1.2d, #0x0000ff000000ff
-; CHECK-BF16SVE-SD-NEXT:    fcvtzu v2.4s, v2.4s
+; CHECK-BF16SVE-SD-NEXT:    fcvtzu v1.4s, v1.4s
 ; CHECK-BF16SVE-SD-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-BF16SVE-SD-NEXT:    umin v2.4s, v2.4s, v1.4s
-; CHECK-BF16SVE-SD-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
+; CHECK-BF16SVE-SD-NEXT:    umin z1.s, z1.s, #255
+; CHECK-BF16SVE-SD-NEXT:    umin z0.s, z0.s, #255
+; CHECK-BF16SVE-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-BF16SVE-SD-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BF16SVE-SD-NEXT:    ret
 ;

@@ -27,28 +27,30 @@
 using namespace llvm;
 
 namespace {
-// Pair of a RuntimeLibcallPredicate and LibcallCallingConv to use as a map key.
+// Pair of a RuntimeLibcallAvailability and LibcallCallingConv to use as a map
+// key.
 struct PredicateWithCC {
-  const Record *Predicate = nullptr;
+  const Record *Availability = nullptr;
   const Record *CallingConv = nullptr;
 
   PredicateWithCC() = default;
   PredicateWithCC(std::pair<const Record *, const Record *> P)
-      : Predicate(P.first), CallingConv(P.second) {}
+      : Availability(P.first), CallingConv(P.second) {}
 
   PredicateWithCC(const Record *P, const Record *C)
-      : Predicate(P), CallingConv(C) {}
+      : Availability(P), CallingConv(C) {}
 };
 
 inline bool operator==(PredicateWithCC LHS, PredicateWithCC RHS) {
-  return LHS.Predicate == RHS.Predicate && LHS.CallingConv == RHS.CallingConv;
+  return LHS.Availability == RHS.Availability &&
+         LHS.CallingConv == RHS.CallingConv;
 }
 } // namespace
 
 namespace llvm {
 template <> struct DenseMapInfo<PredicateWithCC, void> {
   static unsigned getHashValue(const PredicateWithCC Val) {
-    auto Pair = std::make_pair(Val.Predicate, Val.CallingConv);
+    auto Pair = std::make_pair(Val.Availability, Val.CallingConv);
     return DenseMapInfo<
         std::pair<const Record *, const Record *>>::getHashValue(Pair);
   }
@@ -444,13 +446,19 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         PredicateSorter.takeVector();
 
     llvm::sort(SortedPredicates, [](PredicateWithCC A, PredicateWithCC B) {
-      StringRef AName = A.Predicate ? A.Predicate->getName() : "";
-      StringRef BName = B.Predicate ? B.Predicate->getName() : "";
-      return AName < BName;
+      StringRef AName = A.Availability ? A.Availability->getName() : "";
+      StringRef BName = B.Availability ? B.Availability->getName() : "";
+      if (AName != BName)
+        return AName < BName;
+      // Break ties on the calling convention so predicates that share a name
+      // but differ in calling convention emit in a deterministic order.
+      StringRef ACC = A.CallingConv ? A.CallingConv->getName() : "";
+      StringRef BCC = B.CallingConv ? B.CallingConv->getName() : "";
+      return ACC < BCC;
     });
 
     for (PredicateWithCC Entry : SortedPredicates) {
-      AvailabilityPredicate SubsetPredicate(Entry.Predicate);
+      AvailabilityPredicate SubsetPredicate(Entry.Availability);
       unsigned IndentDepth = 2;
 
       auto It = Pred2Funcs.find(Entry);
@@ -468,35 +476,13 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
 
       std::vector<const RuntimeLibcallImpl *> &Funcs = FuncsWithCC.LibcallImpls;
 
-      // Ensure we only emit a unique implementation per libcall in the
-      // selection table.
-      //
-      // FIXME: We need to generate separate functions for
-      // is-libcall-available and should-libcall-be-used to avoid this.
-      //
-      // This also makes it annoying to make use of the default set, since the
-      // entries from the default set may win over the replacements unless
-      // they are explicitly removed.
+      // This table records which implementations are available, not which one
+      // is selected, so a libcall may legitimately have more than one available
+      // implementation
       stable_sort(Funcs, [](const RuntimeLibcallImpl *A,
                             const RuntimeLibcallImpl *B) {
         return A->getProvides()->getEnumVal() < B->getProvides()->getEnumVal();
       });
-
-      auto UniqueI = llvm::unique(
-          Funcs, [&](const RuntimeLibcallImpl *A, const RuntimeLibcallImpl *B) {
-            if (A->getProvides() == B->getProvides()) {
-              PrintWarning(R->getLoc(),
-                           Twine("conflicting implementations for libcall " +
-                                 A->getProvides()->getName() + ": " +
-                                 A->getLibcallFuncName() + ", " +
-                                 B->getLibcallFuncName()));
-              return true;
-            }
-
-            return false;
-          });
-
-      Funcs.erase(UniqueI, Funcs.end());
 
       OS << indent(IndentDepth + 2)
          << "static const RTLIB::LibcallImpl LibraryCalls";

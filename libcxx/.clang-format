@@ -3,6 +3,8 @@ BasedOnStyle: LLVM
 # detected as Cpp, but others are detected as ObjC and we want this formatting
 # to apply to all types of files.
 
+# libcxx/.clang-format and libcxxabi/.clang-format are identical. Both of them should by modified in sync.
+
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: Consecutive
 AlignConsecutiveBitFields: Consecutive
