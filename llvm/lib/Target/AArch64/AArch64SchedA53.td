@@ -127,12 +127,13 @@ def : WriteRes<WriteSys, [A53UnitB]>;
 def : WriteRes<WriteBarrier, [A53UnitB]>;
 def : WriteRes<WriteHint, [A53UnitB]>;
 
-// FP ALU
-def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 6; }
+// FP ALU. Scalar floating-point arithmetic and conversion have a 4-cycle
+// latency on Cortex-A53.
+def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 4; }
 // The compares write NZCV, and only one instruction per cycle can do that, so
 // they do not dual-issue: they take both lanes even though they are scalar.
 def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
-def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 6; }
+def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 4; }
 def : WriteRes<WriteFCopy, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteFImm, [A53UnitFPALU]> { let Latency = 6; }
 def : WriteRes<WriteVd, [A53UnitFPALU]> { let Latency = 6; }
@@ -142,7 +143,7 @@ def : WriteRes<WriteVq, [A53UnitFPALU, A53UnitFPALU]> { let Latency = 6; }
 
 // FP Mul, Div, Sqrt. Divide and square root are not pipelined and block the
 // whole unit, so they hold both lanes for their full occupancy.
-def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 6; }
+def : WriteRes<WriteFMul, [A53UnitFPMDS]> { let Latency = 4; }
 def : WriteRes<WriteFDiv, [A53UnitFPMDS, A53UnitFPMDS]> {
   let Latency = 33;
   let ReleaseAtCycles = [29, 29];
@@ -184,6 +185,13 @@ def A53WriteFRecpStepQ : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
 }
 def A53WriteFRecpEst   : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
 def A53WriteFRecpEstQ  : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
+  let Latency = 4;
+}
+// Advanced SIMD arithmetic that runs at the same 4-cycle latency as its scalar
+// counterpart: floating-point arithmetic and conversion, and the integer vector
+// multiply. Q-form takes both datapath lanes.
+def A53WriteVecD_4 : SchedWriteRes<[A53UnitFPALU]> { let Latency = 4; }
+def A53WriteVecQ_4 : SchedWriteRes<[A53UnitFPALU, A53UnitFPALU]> {
   let Latency = 4;
 }
 
@@ -366,5 +374,35 @@ def : InstRW<[A53WriteFRecpEst],
       (instregex "^FR(ECP|SQRT)E(v1i32|v1i64|v2f32)$")>;
 def : InstRW<[A53WriteFRecpEstQ],
       (instregex "^FR(ECP|SQRT)E(v2f64|v4f32)$")>;
+// The reciprocal-exponent and the integer reciprocal estimates share the
+// 4-cycle estimate latency.
+def : InstRW<[A53WriteFRecpEst],
+      (instregex "^FRECPXv1i(32|64)$", "^UR(ECP|SQRT)Ev2i32$")>;
+def : InstRW<[A53WriteFRecpEstQ], (instregex "^UR(ECP|SQRT)Ev4i32$")>;
+
+// Floating-point ASIMD arithmetic, and the integer vector multiply, run at the
+// same 4-cycle latency as the scalar forms (see the write classes above).
+def : InstRW<[A53WriteVecD_4],
+      (instregex "^F(ADD|SUB|ABD|MUL|MULX|MAX|MIN|MAXNM|MINNM)P?(v2f32|v4f16)$",
+                 "^F(ABS|NEG)(v2f32|v4f16)$",
+                 "^FRINT[AIMNPXZ](v2f32|v4f16)$",
+                 "^FMULX?(v2i32|v4i16)_indexed$",
+                 "^F(MAX|MIN|MAXNM|MINNM)Vv4i16v$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v1i16|v1i32|v1i64)$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v2f32|v4f16)$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v2i32|v4i16)_shift$",
+                 "^FCVTXNv1i64$",
+                 "^MULv(2i32|4i16|8i8)$", "^MULv(2i32|4i16)_indexed$")>;
+def : InstRW<[A53WriteVecQ_4],
+      (instregex "^F(ADD|SUB|ABD|MUL|MULX|MAX|MIN|MAXNM|MINNM)P?(v4f32|v2f64|v8f16)$",
+                 "^F(ABS|NEG)(v4f32|v2f64|v8f16)$",
+                 "^FRINT[AIMNPXZ](v4f32|v2f64|v8f16)$",
+                 "^FMULX?(v4i32|v2i64|v8i16)_indexed$",
+                 "^F(MAX|MIN|MAXNM|MINNM)Vv4i32v$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v2f64|v4f32|v8f16)$",
+                 "^([SU]CVTF|FCVT[AMNPZ][SU])(v2i64|v4i32|v8i16)_shift$",
+                 "^FCVT(L|N)2?v(2i32|4i16|4i32|8i16)$",
+                 "^FCVTXN2?v(2f32|4f32)$",
+                 "^MULv(4i32|8i16|16i8)$", "^MULv(4i32|8i16)_indexed$")>;
 
 }
