@@ -127,10 +127,16 @@ struct __filter_iterator_category<_View> {
 template <input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
   requires view<_View> && is_object_v<_Pred>
 class filter_view<_View, _Pred>::__iterator : public __filter_iterator_category<_View> {
-public:
+private:
   _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_View> __current_ = iterator_t<_View>();
   _LIBCPP_NO_UNIQUE_ADDRESS filter_view* __parent_       = nullptr;
 
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(filter_view& __parent, iterator_t<_View> __current)
+      : __current_(std::move(__current)), __parent_(std::addressof(__parent)) {}
+
+  friend class filter_view<_View, _Pred>;
+
+public:
   using iterator_concept =
       _If<bidirectional_range<_View>,
           bidirectional_iterator_tag,
@@ -144,9 +150,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI __iterator()
     requires default_initializable<iterator_t<_View>>
   = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(filter_view& __parent, iterator_t<_View> __current)
-      : __current_(std::move(__current)), __parent_(std::addressof(__parent)) {}
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> const& base() const& noexcept { return __current_; }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() && { return std::move(__current_); }
@@ -211,12 +214,15 @@ public:
 template <input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
   requires view<_View> && is_object_v<_Pred>
 class filter_view<_View, _Pred>::__sentinel {
-public:
+private:
   sentinel_t<_View> __end_ = sentinel_t<_View>();
 
-  _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(filter_view& __parent) : __end_(ranges::end(__parent.__base_)) {}
+
+  friend class filter_view<_View, _Pred>;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_View> base() const { return __end_; }
 

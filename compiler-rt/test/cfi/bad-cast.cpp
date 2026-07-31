@@ -100,9 +100,11 @@ int main(int argc, char **argv) {
 
   // CFI-DIAG-D: runtime error: control flow integrity check for type 'B' failed during base-to-derived cast
   // CFI-DIAG-D-NEXT: note: vtable is of type '{{(struct )?}}A'
+  // CFI-DIAG-D: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
 
   // CFI-DIAG-U: runtime error: control flow integrity check for type 'B' failed during cast to unrelated type
   // CFI-DIAG-U-NEXT: note: vtable is of type '{{(struct )?}}A'
+  // CFI-DIAG-U: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
 
   switch (argv[1][0]) {
     case 'a':
