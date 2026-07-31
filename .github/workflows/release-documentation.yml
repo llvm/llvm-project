@@ -55,7 +55,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.release-version || github.event.pull_request.number }}
-  cancel-in-progress: True
+  cancel-in-progress: true
 
 jobs:
   release-documentation:
@@ -102,7 +102,7 @@ jobs:
           INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
           ./llvm/utils/release/build-docs.sh \
-            $(test -n "$INPUTS_RELEASE_VERSION" && echo -release $INPUTS_RELEASE_VERSION || echo -srcdir llvm) -no-doxygen
+            $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm) -no-doxygen
           echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
 
 
