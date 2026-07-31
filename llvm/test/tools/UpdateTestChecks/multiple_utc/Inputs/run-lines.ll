@@ -1,6 +1,6 @@
 ; RUN: opt -passes=loop-vectorize -vplan-print-after="optimize$" \
-; RUN:   -force-vector-width=4 -disable-output %s 2>&1 | FileCheck %s
-; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S %s | FileCheck %s --check-prefix LLVM
+; RUN:   -force-vector-width=4 -disable-output %s 2>&1 | FileCheck %s --check-prefix VPLAN
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -S %s | FileCheck %s
 
 define void @simple(ptr %p, i64 %n) {
 entry:
