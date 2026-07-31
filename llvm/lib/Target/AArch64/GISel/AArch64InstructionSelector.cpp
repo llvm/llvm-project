@@ -2148,7 +2148,18 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
           RBI.getRegBank(DefReg, MRI, TRI)->getID() != AArch64::GPRRegBankID)
         return false;
       // Widen narrow GPR constants to s32 so imported patterns can match.
-      MRI.setType(DefReg, LLT::scalar(32));
+      APInt Val = I.getOperand(1).getCImm()->getValue().zext(32);
+      I.getOperand(1).setCImm(
+          ConstantInt::get(MF.getFunction().getContext(), Val));
+
+      Register WideReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      MRI.setRegBank(WideReg, RBI.getRegBank(AArch64::GPRRegBankID));
+      I.getOperand(0).setReg(WideReg);
+
+      MIB.setInsertPt(MBB, std::next(I.getIterator()));
+      auto Copy = MIB.buildCopy(DefReg, WideReg);
+      selectCopy(*Copy, TII, MRI, TRI, RBI);
+      MIB.setInstr(I);
       return true;
     }
     const unsigned PtrSize = DefTy.getSizeInBits();
