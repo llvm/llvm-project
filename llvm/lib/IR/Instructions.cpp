@@ -2646,7 +2646,7 @@ bool BitInsertInst::isValidOperands(const Value *Base, const Value *Val,
                                     const Value *Offset) {
   if (!Base->getType()->isByteTy())
     return false;
-  if (!Val->getType()->isSingleValueType() || Val->getType()->isTargetExtTy())
+  if (!Val->getType()->isSingleValueType() || Val->getType()->isVectorTy() || Val->getType()->isTargetExtTy() || Val->getType()->isX86_AMXTy())
     return false;
   if (!Offset->getType()->isIntegerTy(32))
     return false;
@@ -2668,7 +2668,7 @@ BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
 
 bool BitExtractInst::isValidOperands(const Type *Ty, const Value *Src,
                                      const Value *Offset) {
-  if (!Ty->isSingleValueType() || Src->getType()->isTargetExtTy())
+  if (!Ty->isSingleValueType() || Ty->isVectorTy() || Ty->isTargetExtTy() || Ty->isX86_AMXTy())
     return false;
   if (!Src->getType()->isByteTy())
     return false;
