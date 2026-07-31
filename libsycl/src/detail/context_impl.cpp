@@ -20,16 +20,11 @@ ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
   (void)PropList;
 
   assert(!MDevices.empty() && "Device list must not be empty");
-  const PlatformImpl &RefPlatform = MDevices[0]->getPlatformImpl();
 
   std::vector<ol_device_handle_t> DeviceIds;
   DeviceIds.reserve(MDevices.size());
   for (DeviceImpl *D : MDevices) {
     assert(D && "Device list must not contain null entries");
-    if (D->getPlatformImpl().getOLHandleRef() != RefPlatform.getOLHandleRef())
-      throw exception(
-          make_error_code(errc::invalid),
-          "Can't add devices across platforms to a single context.");
     DeviceIds.push_back(D->getOLHandle());
   }
 
