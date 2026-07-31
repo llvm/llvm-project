@@ -142,8 +142,12 @@ def : WriteRes<WriteF, [A53UnitFPALU]> { let Latency = 4; }
 // A compare does not dual-issue with another compare. Taking both lanes keeps
 // that limit, but also stops it from pairing with an unrestricted operation,
 // which the hardware allows.
+// A dependent FCSEL, FCCMP or CSEL reads the NZCV result in the same cycle, so
+// WriteFCmp has no latency. The compare reads its register operands one cycle
+// earlier than the other FP operations (A53ReadFCmpOp).
+def A53ReadFCmpOp : SchedReadAdvance<-1>;
 def : WriteRes<WriteFCmp, [A53UnitFPALU, A53UnitFPALU]> {
-  let Latency = 6;
+  let Latency = 0;
 }
 def : WriteRes<WriteFCvt, [A53UnitFPALU]> { let Latency = 4; }
 // Register transfers between a GPR and an FP/SIMD register (FMOV). The
@@ -454,5 +458,10 @@ def : InstRW<[A53WriteVecQ_4],
                  "^FCVT(L|N)2?v(2i32|4i16|4i32|8i16)$",
                  "^FCVTXN2?v(2f32|4f32)$",
                  "^MULv(4i32|8i16|16i8)$", "^MULv(4i32|8i16)_indexed$")>;
+
+// FP compares and conditional compares (see WriteFCmp).
+def : InstRW<[WriteFCmp, A53ReadFCmpOp, A53ReadFCmpOp],
+      (instregex "^FCMPE?[HSD]rr$", "^FCCMPE?[HSD]rr$")>;
+def : InstRW<[WriteFCmp, A53ReadFCmpOp], (instregex "^FCMPE?[HSD]ri$")>;
 
 }
