@@ -12,6 +12,7 @@
 #include "clang/ScalableStaticAnalysis/Analyses/PointerFlow/PointerFlowAnalysis.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "clang/ScalableStaticAnalysis/Analyses/UnsafeBufferUsage/UnsafeBufferUsageAnalysis.h"
+#include "clang/ScalableStaticAnalysis/Analyses/VirtualMethodFamily/VirtualMethodFamily.h"
 #include "clang/ScalableStaticAnalysis/Core/EntityLinker/LUSummary.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysis/Core/Model/EntityId.h"
@@ -24,6 +25,10 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <ostream>
+#include <set>
+#include <utility>
+#include <vector>
 
 using namespace clang;
 using namespace ssaf;
@@ -35,6 +40,76 @@ extern UnsafeBufferUsageEntitySummary
 } // namespace clang::ssaf
 
 namespace {
+
+/// An entity at a pointer level, with the entity spelled as the letter naming
+/// it in a test's layout.
+using Node = std::pair<char, unsigned>;
+using Edge = std::pair<Node, Node>;
+
+/// One VirtualMethodSummary, field for field, with entities spelled as letters.
+/// By convention tests use uppercase letters for method entities and lowercase
+/// ones for the slots they own, but the two are not distinguished: every letter
+/// is just an entity.
+struct MethodLayout {
+  char Method;                 ///< Scope the summary is stored under.
+  std::vector<char> Params;    ///< VirtualMethodSummary::ParamEntities.
+  std::optional<char> Ret;     ///< VirtualMethodSummary::ReturnEntity.
+  std::vector<char> Overrides; ///< VirtualMethodSummary::OverriddenMethods.
+};
+
+/// An edge, and the scope (method entity) whose pointer-flow graph owns it.
+using ScopedEdge = std::pair<char, Edge>;
+
+/// Nodes grouped by the scope (method entity) that owns them: the starter
+/// layout of a family-closure test, the entries its closure pass is expected to
+/// add, and the `Reachables` map it produces are all spelled this way.
+///
+/// Wrapped in a class rather than used as a plain map so that it can be added
+/// to with `operator+` and so that a failing comparison prints
+/// "{B: p@1, p@2; D: q@1}" instead of gtest's raw char dump.
+class ScopedNodes {
+  std::map<char, std::set<Node>> Scopes;
+
+public:
+  using value_type = std::map<char, std::set<Node>>::value_type;
+
+  ScopedNodes() = default;
+  ScopedNodes(std::initializer_list<value_type> Init) : Scopes(Init) {}
+
+  void insert(char Scope, Node N) { Scopes[Scope].insert(N); }
+
+  const std::map<char, std::set<Node>> &scopes() const { return Scopes; }
+
+  bool operator==(const ScopedNodes &Other) const {
+    return Scopes == Other.Scopes;
+  }
+  bool operator!=(const ScopedNodes &Other) const { return !(*this == Other); }
+};
+
+/// The union of \p L and \p R. Lets a test state its expectation as "the
+/// starters, plus what closure adds".
+ScopedNodes operator+(const ScopedNodes &L, const ScopedNodes &R) {
+  ScopedNodes Result = L;
+  for (const auto &[Scope, Nodes] : R.scopes())
+    for (const Node &N : Nodes)
+      Result.insert(Scope, N);
+  return Result;
+}
+
+void PrintTo(const ScopedNodes &SN, std::ostream *OS) {
+  *OS << "{";
+  const char *ScopeSep = "";
+  for (const auto &[Scope, Nodes] : SN.scopes()) {
+    *OS << ScopeSep << Scope << ": ";
+    ScopeSep = "; ";
+    const char *NodeSep = "";
+    for (const auto &[Slot, Level] : Nodes) {
+      *OS << NodeSep << Slot << "@" << Level;
+      NodeSep = ", ";
+    }
+  }
+  *OS << "}";
+}
 
 class UnsafeBufferReachableAnalysisTest : public TestFixture {
 protected:
@@ -57,6 +132,25 @@ protected:
     EntityId Id = getIdTable(LU).getId(Name);
     getLinkageTable(LU).insert({Id, ExternalLinkage});
     return Id;
+  }
+
+  /// Insert a VirtualMethodSummary keyed by the method's own EntityId.
+  void insertVirtualMethodSummary(LUSummary &LU, EntityId Id,
+                                  VirtualMethodSummary Sum) {
+    getData(LU)[VirtualMethodSummary::summaryName()][Id] =
+        std::make_unique<VirtualMethodSummary>(std::move(Sum));
+  }
+
+  /// Build a VirtualMethodSummary from its parameter entities, optional
+  /// return-slot entity, and direct override edges.
+  VirtualMethodSummary makeMethodSummary(std::vector<EntityId> ParamEntities,
+                                         std::optional<EntityId> RetEntity,
+                                         std::vector<EntityId> Overridden) {
+    VirtualMethodSummary S;
+    S.ParamEntities = std::move(ParamEntities);
+    S.ReturnEntity = RetEntity;
+    S.OverriddenMethods = std::move(Overridden);
+    return S;
   }
 
   /// Insert a PointerFlowEntitySummary for an entity.
@@ -115,9 +209,9 @@ protected:
     insertUnsafeBufferUsageSummary(LU, Id, std::move(Starters));
   }
 
-  /// Run the driver and return the flattened reachable EPL set.
-  std::optional<EntityPointerLevelSet>
-  computeReachables(std::unique_ptr<LUSummary> LU, unsigned Line) {
+  /// Run the driver and return the full per-scope `Reachables` map.
+  std::optional<std::map<EntityId, EntityPointerLevelSet>>
+  computeReachablesByScope(std::unique_ptr<LUSummary> LU, unsigned Line) {
     AnalysisDriver Driver(std::move(LU));
     auto WPAOrErr =
         Driver.run<PointerFlowAnalysisResult, UnsafeBufferUsageAnalysisResult,
@@ -131,14 +225,21 @@ protected:
       ADD_FAILURE_AT(__FILE__, Line) << llvm::toString(ROrErr.takeError());
       return std::nullopt;
     }
+    return ROrErr->Reachables;
+  }
+
+  /// Run the driver and return the reachable EPLs of every scope, flattened
+  /// into a single set.
+  std::optional<EntityPointerLevelSet>
+  computeReachables(std::unique_ptr<LUSummary> LU, unsigned Line) {
+    auto ByScope = computeReachablesByScope(std::move(LU), Line);
+    if (!ByScope)
+      return std::nullopt;
     EntityPointerLevelSet Result;
-    for (const auto &[Id, EPLs] : ROrErr->Reachables)
+    for (const EntityPointerLevelSet &EPLs : llvm::make_second_range(*ByScope))
       Result.insert(EPLs.begin(), EPLs.end());
     return Result;
   }
-
-  using Node = std::pair<char, unsigned>;
-  using Edge = std::pair<Node, Node>;
 
   // FIXME: When we use more advanced search algorithms, it may involve
   // a divide-and-conquer approach on sub-graphs organized by contributors.
@@ -182,6 +283,101 @@ protected:
       Result.insert(GetNode(EPL));
 
     return Result;
+  }
+
+  /// Compute reachables per scope for the virtual-method hierarchy described by
+  /// \p Methods, seeded with \p StarterLayout and, optionally, the pointer-flow
+  /// edges in \p EdgeLayout. Both starters and edges name the scope that owns
+  /// them, because family closure is about which scope an EPL ends up under.
+  ///
+  /// The entity domain is the set of letters the layouts mention. Only scopes
+  /// named by a starter or an edge get PointerFlow/UnsafeBufferUsage summaries:
+  /// UnsafeBufferUsageAnalysis records even an empty summary, which would then
+  /// show up as an empty entry in `Reachables`.
+  ScopedNodes familyClosure(llvm::ArrayRef<MethodLayout> Methods,
+                            const ScopedNodes &StarterLayout,
+                            llvm::ArrayRef<ScopedEdge> EdgeLayout,
+                            unsigned Line) {
+    auto LU = makeLUSummary();
+    auto Entities =
+        createEntities(*LU, entityDomainOf(Methods, StarterLayout, EdgeLayout));
+    auto GetEPL = [&Entities](const Node &N) -> EntityPointerLevel {
+      return buildEntityPointerLevel(Entities[N.first], N.second);
+    };
+
+    for (const MethodLayout &M : Methods) {
+      std::vector<EntityId> Params;
+      for (char P : M.Params)
+        Params.push_back(Entities[P]);
+      std::vector<EntityId> Overrides;
+      for (char O : M.Overrides)
+        Overrides.push_back(Entities[O]);
+      std::optional<EntityId> Ret;
+      if (M.Ret)
+        Ret = Entities[*M.Ret];
+      insertVirtualMethodSummary(
+          *LU, Entities[M.Method],
+          makeMethodSummary(std::move(Params), Ret, std::move(Overrides)));
+    }
+
+    std::map<char, std::vector<EPLEdge>> EdgesOfScope;
+    std::map<char, std::vector<EntityPointerLevel>> StartersOfScope;
+    for (const auto &[Scope, E] : EdgeLayout)
+      EdgesOfScope[Scope].push_back({GetEPL(E.first), GetEPL(E.second)});
+    for (const auto &[Scope, Nodes] : StarterLayout.scopes())
+      for (const Node &N : Nodes)
+        StartersOfScope[Scope].push_back(GetEPL(N));
+
+    std::set<char> Scopes;
+    for (char Scope : llvm::make_first_range(EdgesOfScope))
+      Scopes.insert(Scope);
+    for (char Scope : llvm::make_first_range(StartersOfScope))
+      Scopes.insert(Scope);
+    for (char Scope : Scopes)
+      insertSummaries(*LU, Entities[Scope], EdgesOfScope[Scope],
+                      StartersOfScope[Scope]);
+
+    auto Reachables = computeReachablesByScope(std::move(LU), Line);
+    if (!Reachables)
+      return {};
+
+    ScopedNodes Result;
+    for (const auto &[Scope, EPLs] : *Reachables)
+      for (const EntityPointerLevel &EPL : EPLs)
+        Result.insert(Entities[Scope],
+                      {Entities[EPL.getEntity()], EPL.getPointerLevel()});
+    return Result;
+  }
+
+  ScopedNodes familyClosure(llvm::ArrayRef<MethodLayout> Methods,
+                            const ScopedNodes &StarterLayout, unsigned Line) {
+    return familyClosure(Methods, StarterLayout, /*EdgeLayout=*/{}, Line);
+  }
+
+private:
+  /// Every letter the layouts mention, deduplicated.
+  static std::vector<char> entityDomainOf(llvm::ArrayRef<MethodLayout> Methods,
+                                          const ScopedNodes &Starters,
+                                          llvm::ArrayRef<ScopedEdge> Edges) {
+    std::set<char> Domain;
+    for (const MethodLayout &M : Methods) {
+      Domain.insert(M.Method);
+      Domain.insert(M.Params.begin(), M.Params.end());
+      Domain.insert(M.Overrides.begin(), M.Overrides.end());
+      if (M.Ret)
+        Domain.insert(*M.Ret);
+    }
+    for (const auto &[Scope, Nodes] : Starters.scopes()) {
+      Domain.insert(Scope);
+      for (const Node &N : Nodes)
+        Domain.insert(N.first);
+    }
+    for (const auto &[Scope, E] : Edges) {
+      Domain.insert(Scope);
+      Domain.insert(E.first.first);
+      Domain.insert(E.second.first);
+    }
+    return {Domain.begin(), Domain.end()};
   }
 };
 
@@ -577,6 +773,123 @@ TEST_F(UnsafeBufferReachableAnalysisTest, MultipleKeysSameEntity) {
       /* EdgeLayout */ {{{'a', 1}, {'b', 1}}, {{'a', 2}, {'c', 1}}},
       /* StarterLayout */ {{'a', 3}}, __LINE__);
   EXPECT_EQ(Reachables, (std::set<Node>{{'a', 3}, {'b', 3}, {'c', 2}}));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Family-closure tests
+////////////////////////////////////////////////////////////////////////////////
+
+// Method B owns param slot p; D overrides B and owns param slot q.
+// Seeding (q,1) in D's scope mirrors (p,1) into B's scope.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureParamSlot) {
+  const ScopedNodes Starters{{'D', {{'q', 1}}}};
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{'q'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      Starters, __LINE__);
+
+  const ScopedNodes AddedByClosure{
+      {'B', {{'p', 1}}}, // Up to the overridden method.
+  };
+  EXPECT_EQ(Reachables, Starters + AddedByClosure);
+}
+
+// As above, but p and q are the methods' return slots rather than parameters.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureReturnSlot) {
+  const ScopedNodes Starters{{'D', {{'q', 1}}}};
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{}, /*Ret=*/{'p'}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{}, /*Ret=*/{'q'}, /*Overrides=*/{'B'}}},
+      Starters, __LINE__);
+
+  const ScopedNodes AddedByClosure{
+      {'B', {{'p', 1}}}, // Up to the overridden method.
+  };
+  EXPECT_EQ(Reachables, Starters + AddedByClosure);
+}
+
+// No virtual methods at all, so no families: f is an ordinary function and b a
+// buffer it owns. Closure adds nothing, so the starters are all that is
+// reachable.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureEmptyFamilyIsNoop) {
+  const ScopedNodes Starters{{'f', {{'b', 1}}}};
+  auto Reachables = familyClosure(/* Methods */ {}, Starters, __LINE__);
+
+  EXPECT_EQ(Reachables, Starters + /*AddedByClosure=*/ScopedNodes{});
+}
+
+// X and Y both override B, so all three slots share one family.
+// Seeding X propagates up to B *and* sideways to the sibling override Y.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureThreeMemberFamily) {
+  const ScopedNodes Starters{{'X', {{'x', 1}}}};
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'X', /*Params=*/{'x'}, /*Ret=*/{}, /*Overrides=*/{'B'}},
+                     {'Y', /*Params=*/{'y'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      Starters, __LINE__);
+
+  const ScopedNodes AddedByClosure{
+      {'B', {{'p', 1}}}, // Up to the base.
+      {'Y', {{'y', 1}}}, // Sideways to the sibling override.
+  };
+  EXPECT_EQ(Reachables, Starters + AddedByClosure);
+}
+
+// Family closure is level-preserving: an EPL reachable at level 3 propagates to
+// the family member at level 3 only, not to the levels below it.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosurePreservesPointerLevel) {
+  const ScopedNodes Starters{{'D', {{'q', 3}}}};
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{'q'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      Starters, __LINE__);
+
+  const ScopedNodes AddedByClosure{
+      {'B', {{'p', 3}}}, // Level 3 only; neither p@1 nor p@2.
+  };
+  EXPECT_EQ(Reachables, Starters + AddedByClosure);
+}
+
+// A single slot reachable at several levels propagates every one of those
+// levels onto its family members.
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureMultipleLevelsSameSlot) {
+  const ScopedNodes Starters{{'D', {{'q', 1}, {'q', 2}}}};
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{'q'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      Starters, __LINE__);
+
+  const ScopedNodes AddedByClosure{
+      {'B', {{'p', 1}, {'p', 2}}}, // Both levels, not just one of them.
+  };
+  EXPECT_EQ(Reachables, Starters + AddedByClosure);
+}
+
+// Pins the known limitation documented by the FIXME on `runFamilyClosurePass`:
+// the closure pass runs *after* the pointer-flow DFS has converged, and
+// `step()` returns false unconditionally, so EPLs discovered by the closure are
+// never fed back through the pointer-flow graph.
+//
+// Here (p,1) becomes reachable only via family closure, and B owns the flow
+// edge (p,1) -> (z,1). Nothing is seeded in B's scope, so the DFS never visits
+// (p,1) on its own. A true fixpoint over DFS + closure would also reach (z,1).
+TEST_F(UnsafeBufferReachableAnalysisTest, FamilyClosureDoesNotRerunDFS) {
+  const ScopedNodes Starters{{'D', {{'q', 1}}}};
+  auto Reachables = familyClosure(
+      /* Methods */ {{'B', /*Params=*/{'p'}, /*Ret=*/{}, /*Overrides=*/{}},
+                     {'D', /*Params=*/{'q'}, /*Ret=*/{}, /*Overrides=*/{'B'}}},
+      Starters,
+      /* EdgeLayout */ {{'B', {{'p', 1}, {'z', 1}}}}, __LINE__);
+
+  // FIXME: z@1 belongs in B's set below -- it is a pointer-flow successor of
+  // (p,1), which closure just discovered. It is missed because the pass does
+  // not re-run the DFS over its own output.
+  const ScopedNodes AddedByClosure{
+      {'B', {{'p', 1}}}, // Up to the base, but no z@1.
+  };
+  EXPECT_EQ(Reachables, Starters + AddedByClosure)
+      << "If z@1 shows up in B's scope, the DFS/closure fixpoint gap was "
+         "fixed; add it to AddedByClosure above";
 }
 
 } // namespace
