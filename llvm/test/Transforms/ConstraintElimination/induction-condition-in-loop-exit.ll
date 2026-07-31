@@ -1226,12 +1226,11 @@ define i1 @postinc_negative_step_not_folded(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[CHK:%.*]] = icmp ugt i64 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_BODY:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_BODY]]:
-; CHECK-NEXT:    ret i1 [[CHK]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -1358,12 +1357,11 @@ define i1 @postinc_negative_start_signed_body_not_folded(i1 %c) {
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 10
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[CHK:%.*]] = icmp slt i64 [[IV]], 10
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT_BODY:.*]], label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER]]
 ; CHECK:       [[EXIT_BODY]]:
-; CHECK-NEXT:    ret i1 [[CHK]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i1 false
 ;
