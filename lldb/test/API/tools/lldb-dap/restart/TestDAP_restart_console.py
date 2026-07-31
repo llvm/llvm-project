@@ -44,7 +44,7 @@ class TestDAP_restart_console(DAPTestCaseBase):
 
         last_event = session.last_event()
         # Restart.
-        session.do_restart()
+        session.restart()
 
         # Finally, check we stop back at A and program state has been reset.
         stop_A = session.verify_stopped_on_breakpoint(bp_A, after=last_event)
@@ -84,7 +84,7 @@ class TestDAP_restart_console(DAPTestCaseBase):
 
         # Restart and check that we still get a stopped event before reaching
         # main.
-        session.do_restart()
+        session.restart()
         session.verify_stopped_on_entry(after=stop_event)
 
         # continue to main

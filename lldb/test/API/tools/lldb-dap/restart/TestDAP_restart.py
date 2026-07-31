@@ -38,7 +38,7 @@ class TestDAP_restart(DAPTestCaseBase):
 
         # Restart then check we stop back at A and program state has been reset.
         last_event = session.last_event()
-        session.do_restart()
+        session.restart()
 
         stop_event = session.verify_stopped_on_breakpoint(bp_A, after=last_event)
         top_frame = session.top_frame_from(stop_event)
@@ -64,7 +64,7 @@ class TestDAP_restart(DAPTestCaseBase):
 
         # Restart and check that we still get a stopped event before reaching
         # main.
-        session.do_restart()
+        session.restart()
         session.verify_stopped_on_entry(after=bp_stop_event)
 
     @skipIfWindows
@@ -92,7 +92,7 @@ class TestDAP_restart(DAPTestCaseBase):
         last_event = session.last_event()
         # Restart with some extra 'args' and check that the new argc reflects
         # the updated launch config.
-        session.do_restart(LaunchArgs(program, args=["a", "b", "c", "d"]))
+        session.restart(LaunchArgs(program, args=["a", "b", "c", "d"]))
 
         stop_event = session.verify_stopped_on_breakpoint(bp_A, after=last_event)
         top_frame = session.top_frame_from(stop_event)
