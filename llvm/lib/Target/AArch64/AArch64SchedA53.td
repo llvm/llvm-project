@@ -439,13 +439,15 @@ def : InstRW<[A53WriteIVecD_2],
                  "^(EXT|BIF|BIT|BSL)v8i8$",
                  "^REV(16|32|64)v(2i32|4i16|8i8)$",
                  "^(DUP|INS)v.*(8|16|32|64)(gpr|lane)$",
-                 "^TB[LX]v8i8.*$")>;
+                 "^TB[LX]v8i8.*$",
+                 "^(ZIP|TRN|UZP)[12]v(2i32|4i16|8i8)$")>;
 def : InstRW<[A53WriteIVecQ_2],
       (instregex "^CM(EQ|GE|GT|HI|HS|LE|LT)v(2i64|4i32|8i16|16i8)(rz)?$",
                  "^(FCM(EQ|GE|GT)|FACG[ET])(v4f32|v2f64|v8f16)(rz)?$",
                  "^(EXT|BIF|BIT|BSL)v16i8$",
                  "^REV(16|32|64)v(4i32|8i16|16i8)$",
-                 "^TB[LX]v16i8.*$")>;
+                 "^TB[LX]v16i8.*$",
+                 "^(ZIP|TRN|UZP)[12]v(2i64|4i32|8i16|16i8)$")>;
 // Absolute-difference accumulate, pairwise accumulate and the rounding
 // add/subtract-narrow take four cycles from their source operands. (A chain
 // through the tied accumulator alone recurs faster, but that is a forwarding
