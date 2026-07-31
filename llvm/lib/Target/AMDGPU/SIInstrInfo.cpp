@@ -1175,8 +1175,8 @@ int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
 // For a 64-bit value defined by a REG_SEQUENCE with half of the result being 0,
 // find the instruction that defines exactly the bits in the other half, and
 // return a pair containing that instruction and an unsigned indicating which 32
-// bits are nonzero.  The unsigned is 0 if the lower 32 bits are nonzero and 1
-// if the upper 32 bits are nonzero.
+// bits are zero.  The unsigned is 0 if the upper 32 bits are zero and 1 if the
+// lower 32 bits are zero.
 std::pair<MachineInstr *, unsigned>
 SIInstrInfo::analyzePartiallyZeroRegSequence(
     const MachineInstr &MI, const MachineRegisterInfo &MRI) const {
@@ -11464,29 +11464,15 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         OrigOpcode != AMDGPU::S_CMP_LG_U64)
       return false;
 
-    if (!RegSequence.second) // Lower 32 bits nonzero
-      if ((uint64_t)CmpValue > (uint64_t)UINT32_MAX + 1) {
-        // Hard-code EQ ? 0 : 1
-        CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
-        CmpInstr.getOperand(0).ChangeToImmediate(0);
-        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode ==
-                                                 AMDGPU::S_CMP_EQ_U64);
-      } else {
+    if (!RegSequence.second) { // Upper 32 bits zero
         CmpInstr.setDesc(get(OrigOpcode == AMDGPU::S_CMP_EQ_U64
                                  ? AMDGPU::S_CMP_EQ_U32
                                  : AMDGPU::S_CMP_LG_U32));
         replaceSourceReg(CmpInstr, SrcReg,
                          RegSequence.first->getOperand(0).getReg());
         SrcReg = RegSequence.first->getOperand(0).getReg();
-      }
-    else // Upper 32 bits nonzero
-      if ((uint64_t)CmpValue % ((uint64_t)UINT32_MAX + 1UL)) {
-        // Hard-code EQ ? 0 : 1
-        CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
-        CmpInstr.getOperand(0).ChangeToImmediate(0);
-        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode ==
-                                                 AMDGPU::S_CMP_EQ_U64);
-      } else {
+    }
+    else { // Lower 32 bits zero
         CmpInstr.setDesc(get(OrigOpcode == AMDGPU::S_CMP_EQ_U64
                                  ? AMDGPU::S_CMP_EQ_U32
                                  : AMDGPU::S_CMP_LG_U32));
@@ -11496,7 +11482,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           replaceSourceRegWithImm(CmpInstr, SrcReg2, (uint64_t)CmpValue >> 32);
         SrcReg = RegSequence.first->getOperand(0).getReg();
         CmpValue = (uint64_t)CmpValue >> 32;
-      }
+    }
     return true;
   };
 
