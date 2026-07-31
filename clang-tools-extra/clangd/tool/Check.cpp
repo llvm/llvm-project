@@ -245,6 +245,7 @@ public:
   // Build preamble and AST, and index them.
   bool buildAST() {
     log("Building preamble...");
+    PreambleBuildStats PreambleStats;
     Preamble = buildPreamble(
         File, *Invocation, Inputs, /*StoreInMemory=*/true,
         [&](CapturedASTCtx Ctx,
@@ -254,16 +255,29 @@ public:
           log("Indexing headers...");
           Index.updatePreamble(File, /*Version=*/"null", Ctx.getASTContext(),
                                Ctx.getPreprocessor(), *PI);
-        });
+        },
+        &PreambleStats);
     if (!Preamble) {
       elog("Failed to build preamble");
       return false;
     }
+    log("Preamble stats: {0:F2}s total, of which {1:F2}s ({2:P0}) in the "
+        "filesystem; {3} bytes memory at peak, {4} bytes serialized",
+        PreambleStats.TotalBuildTime, PreambleStats.FileSystemTime,
+        PreambleStats.TotalBuildTime > 0
+            ? PreambleStats.FileSystemTime / PreambleStats.TotalBuildTime
+            : 0.0,
+        PreambleStats.BuildSize, PreambleStats.SerializedSize);
     ErrCount += showErrors(Preamble->Diags);
 
     log("Building AST...");
+    auto ASTStart = std::chrono::steady_clock::now();
     AST = ParsedAST::build(File, Inputs, std::move(Invocation),
                            /*InvocationDiags=*/std::vector<Diag>{}, Preamble);
+    log("AST stats: {0:F2}s to build",
+        std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                      ASTStart)
+            .count());
     if (!AST) {
       elog("Failed to build AST");
       return false;
