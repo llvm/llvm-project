@@ -15993,7 +15993,6 @@ public:
         getAllOnesValue(*R.DL, ScalarTy->getScalarType()));
   }
   InstructionCost createFreeze(InstructionCost Cost) { return Cost; }
-
   /// Finalize emission of the shuffles.
   InstructionCost finalize(
       ArrayRef<int> ExtMask,
