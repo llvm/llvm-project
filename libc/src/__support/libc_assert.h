@@ -13,7 +13,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/hardening.h"
 #include "src/__support/macros/macro-utils.h"
-#include "src/__support/macros/optimization.h" // For LIBC_UNLIKEL
+#include "src/__support/macros/optimization.h" // For LIBC_UNLIKELY
 #include "src/__support/macros/properties/os.h"
 
 #ifdef LIBC_FULL_BUILD
@@ -23,20 +23,21 @@
 #endif
 
 //===----------------------------------------------------------------------===//
-// _LIBC_ASSERT(COND, MSG) (always-on assert regardless of NDEBUG)
+// LIBC_CHECK(COND, MSG) (always-on assert regardless of NDEBUG)
 //===----------------------------------------------------------------------===//
 #ifndef LIBC_FULL_BUILD
 #ifdef LIBC_TARGET_OS_IS_LINUX
-// __assert_fail is in LSB, hence we should always be able to use it here.
+// __assert_fail is in Linux Standard Base (LSB), hence we should always be able
+// to use it here.
 #include <assert.h>
-#define _LIBC_ASSERT(COND, MSG)                                                \
+#define LIBC_CHECK(COND, MSG)                                                  \
   do {                                                                         \
     if (LIBC_UNLIKELY(!(COND)))                                                \
       __assert_fail(MSG, __FILE__, __LINE__, __PRETTY_FUNCTION__);             \
   } while (false)
 #else
 // Fallback path will just trap: we cannot reliably do anything else.
-#define _LIBC_ASSERT(COND, MSG)                                                \
+#define LIBC_CHECK(COND, MSG)                                                  \
   do {                                                                         \
     if (LIBC_UNLIKELY(!(COND)))                                                \
       __builtin_trap();                                                        \
@@ -47,7 +48,7 @@
 // Calling exit also confuses the debugger as exiting will not trigger
 // debugger's stop-on-signal behavior by default. Currently, adding abort will
 // result in cyclic dependency.
-#define _LIBC_ASSERT(COND, MSG)                                                \
+#define LIBC_CHECK(COND, MSG)                                                  \
   do {                                                                         \
     if (LIBC_UNLIKELY(!(COND))) {                                              \
       LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" LLVM_LIBC_STRINGIFY(        \
@@ -101,8 +102,8 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
   do {                                                                         \
   } while (false)
 #else
-// Forward to _LIBC_ASSERT with the condition stringified.
-#define LIBC_ASSERT(COND) _LIBC_ASSERT(COND, #COND)
+// Forward to LIBC_CHECK with the condition stringified.
+#define LIBC_ASSERT(COND) LIBC_CHECK(COND, #COND)
 #endif // NDEBUG
 
 #endif // LIBC_COPT_USE_C_ASSERT
@@ -116,9 +117,9 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
 #elif LIBC_COPT_HARDENING_MODE == LIBC_HARDENING_MODE_FAST
 #define LIBC_HEAP_INTEGRITY_CHECK(COND, MSG) ((void)0)
 #elif LIBC_COPT_HARDENING_MODE == LIBC_HARDENING_MODE_EXTENSIVE
-#define LIBC_HEAP_INTEGRITY_CHECK(COND, MSG) _LIBC_ASSERT(COND, MSG)
+#define LIBC_HEAP_INTEGRITY_CHECK(COND, MSG) LIBC_CHECK(COND, MSG)
 #elif LIBC_COPT_HARDENING_MODE == LIBC_HARDENING_MODE_DEBUG
-#define LIBC_HEAP_INTEGRITY_CHECK(COND, MSG) _LIBC_ASSERT(COND, MSG)
+#define LIBC_HEAP_INTEGRITY_CHECK(COND, MSG) LIBC_CHECK(COND, MSG)
 #else
 #error "Unsupported hardening mode"
 #endif
