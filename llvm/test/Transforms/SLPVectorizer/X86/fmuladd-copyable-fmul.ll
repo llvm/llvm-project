@@ -23,15 +23,14 @@ define <4 x float> @buildvec_fmul_absorb(float %p, float %q, float %r, float %s,
 ; ENABLED-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[N]], i64 3
 ; ENABLED-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[A0]], i64 0
 ; ENABLED-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP10]], float [[A1]], i64 1
+; ENABLED-NEXT:    [[TMP12:%.*]] = insertelement <4 x float> poison, float [[U]], i64 2
+; ENABLED-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> [[TMP12]], float [[M]], i64 3
 ; ENABLED-NEXT:    [[TMP14:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; ENABLED-NEXT:    [[TMP15:%.*]] = shufflevector <4 x float> <float poison, float poison, float 1.000000e+00, float 1.000000e+00>, <4 x float> [[TMP14]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; ENABLED-NEXT:    [[TMP15:%.*]] = shufflevector <4 x float> [[TMP13]], <4 x float> [[TMP14]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; ENABLED-NEXT:    [[TMP16:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP17:%.*]] = shufflevector <4 x float> <float poison, float poison, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[TMP16]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; ENABLED-NEXT:    [[TMP18:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP11]], <4 x float> [[TMP15]], <4 x float> [[TMP17]])
-; ENABLED-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> <float 1.000000e+00, float 1.000000e+00, float poison, float poison>, float [[U]], i64 2
-; ENABLED-NEXT:    [[TMP21:%.*]] = insertelement <4 x float> [[TMP20]], float [[M]], i64 3
-; ENABLED-NEXT:    [[TMP19:%.*]] = fmul <4 x float> [[TMP18]], [[TMP21]]
-; ENABLED-NEXT:    ret <4 x float> [[TMP19]]
+; ENABLED-NEXT:    ret <4 x float> [[TMP18]]
 ;
 ; DISABLED-LABEL: define <4 x float> @buildvec_fmul_absorb(
 ; DISABLED-SAME: float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[T:%.*]], float [[U:%.*]], float [[N:%.*]], float [[M:%.*]], float [[E:%.*]], float [[F:%.*]], float [[G:%.*]], float [[H:%.*]], ptr [[SRCB:%.*]]) {
@@ -104,13 +103,7 @@ define void @storechain_1fmul(ptr %dst, ptr %srcB, float %p, float %q, float %r,
 ; ENABLED-LABEL: define void @storechain_1fmul(
 ; ENABLED-SAME: ptr [[DST:%.*]], ptr [[SRCB:%.*]], float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[T:%.*]], float [[U:%.*]], float [[N:%.*]], float [[M:%.*]], float [[E:%.*]], float [[F:%.*]], float [[G:%.*]], float [[H:%.*]], float [[I:%.*]], float [[J:%.*]], float [[K:%.*]], float [[L:%.*]]) {
 ; ENABLED-NEXT:  [[ENTRY:.*:]]
-; ENABLED-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> poison, float [[T]], i64 0
-; ENABLED-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> [[TMP7]], float [[E]], i64 1
-; ENABLED-NEXT:    [[TMP24:%.*]] = insertelement <2 x float> poison, float [[U]], i64 0
-; ENABLED-NEXT:    [[TMP25:%.*]] = insertelement <2 x float> [[TMP24]], float [[F]], i64 1
-; ENABLED-NEXT:    [[TMP26:%.*]] = fmul <2 x float> [[TMP16]], [[TMP25]]
-; ENABLED-NEXT:    [[TMP27:%.*]] = fadd <2 x float> [[TMP16]], [[TMP25]]
-; ENABLED-NEXT:    [[TMP28:%.*]] = shufflevector <2 x float> [[TMP26]], <2 x float> [[TMP27]], <2 x i32> <i32 0, i32 3>
+; ENABLED-NEXT:    [[C0:%.*]] = fadd float [[E]], [[F]]
 ; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[G]], i64 0
 ; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[K]], i64 1
 ; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[H]], i64 0
@@ -120,7 +113,8 @@ define void @storechain_1fmul(ptr %dst, ptr %srcB, float %p, float %q, float %r,
 ; ENABLED-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> [[TMP5]], <2 x i32> <i32 0, i32 3>
 ; ENABLED-NEXT:    [[B0:%.*]] = load float, ptr [[SRCB]], align 4
 ; ENABLED-NEXT:    [[GEPB1:%.*]] = getelementptr float, ptr [[SRCB]], i32 1
-; ENABLED-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float [[P]], i64 1
+; ENABLED-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[U]], i64 0
+; ENABLED-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[P]], i64 1
 ; ENABLED-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP8]], float [[R]], i64 2
 ; ENABLED-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[I]], i64 3
 ; ENABLED-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> <float 1.000000e+00, float poison, float poison, float poison>, float [[Q]], i64 1
@@ -128,13 +122,14 @@ define void @storechain_1fmul(ptr %dst, ptr %srcB, float %p, float %q, float %r,
 ; ENABLED-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> [[TMP12]], float [[J]], i64 3
 ; ENABLED-NEXT:    [[TMP14:%.*]] = fmul <4 x float> [[TMP10]], [[TMP13]]
 ; ENABLED-NEXT:    [[TMP15:%.*]] = load <2 x float>, ptr [[GEPB1]], align 4
-; ENABLED-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> <float -0.000000e+00, float poison, float poison, float poison>, float [[B0]], i64 1
+; ENABLED-NEXT:    [[TMP16:%.*]] = insertelement <4 x float> poison, float [[T]], i64 0
+; ENABLED-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> [[TMP16]], float [[B0]], i64 1
 ; ENABLED-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP15]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP19:%.*]] = shufflevector <4 x float> [[TMP17]], <4 x float> [[TMP18]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; ENABLED-NEXT:    [[TMP20:%.*]] = shufflevector <2 x float> [[TMP28]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; ENABLED-NEXT:    [[TMP20:%.*]] = insertelement <4 x float> <float -0.000000e+00, float poison, float poison, float poison>, float [[C0]], i64 1
 ; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP22:%.*]] = shufflevector <4 x float> [[TMP20]], <4 x float> [[TMP21]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; ENABLED-NEXT:    [[TMP23:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP14]], <4 x float> [[TMP19]], <4 x float> [[TMP22]])
+; ENABLED-NEXT:    [[TMP23:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP19]], <4 x float> [[TMP14]], <4 x float> [[TMP22]])
 ; ENABLED-NEXT:    store <4 x float> [[TMP23]], ptr [[DST]], align 4
 ; ENABLED-NEXT:    ret void
 ;
@@ -237,20 +232,18 @@ define <4 x float> @buildvec_fmul_absorb_rev(float %p, float %q, float %r, float
 ; ENABLED-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[TMP6]], [[TMP8]]
 ; ENABLED-NEXT:    [[TMP10:%.*]] = fsub <2 x float> [[TMP6]], [[TMP8]]
 ; ENABLED-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> poison, float [[T]], i64 0
-; ENABLED-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP17]], float [[N]], i64 1
-; ENABLED-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> poison, float [[U]], i64 0
-; ENABLED-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> [[TMP14]], float [[M]], i64 1
-; ENABLED-NEXT:    [[TMP16:%.*]] = fmul <2 x float> [[TMP13]], [[TMP18]]
 ; ENABLED-NEXT:    [[TMP12:%.*]] = load <2 x float>, ptr [[SRCB]], align 4
+; ENABLED-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[T]], i64 0
+; ENABLED-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[N]], i64 1
 ; ENABLED-NEXT:    [[TMP15:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; ENABLED-NEXT:    [[TMP19:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float 0.000000e+00, float poison, float poison>, <4 x float> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; ENABLED-NEXT:    [[TMP22:%.*]] = shufflevector <4 x float> <float -0.000000e+00, float -0.000000e+00, float poison, float poison>, <4 x float> [[TMP21]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; ENABLED-NEXT:    [[TMP25:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; ENABLED-NEXT:    [[TMP26:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; ENABLED-NEXT:    [[TMP16:%.*]] = shufflevector <4 x float> [[TMP14]], <4 x float> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; ENABLED-NEXT:    [[TMP17:%.*]] = insertelement <4 x float> poison, float [[U]], i64 0
+; ENABLED-NEXT:    [[TMP25:%.*]] = insertelement <4 x float> [[TMP17]], float [[M]], i64 1
+; ENABLED-NEXT:    [[TMP26:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP24:%.*]] = shufflevector <4 x float> [[TMP25]], <4 x float> [[TMP26]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; ENABLED-NEXT:    [[TMP23:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP19]], <4 x float> [[TMP22]], <4 x float> [[TMP24]])
+; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; ENABLED-NEXT:    [[TMP22:%.*]] = shufflevector <4 x float> <float -0.000000e+00, float -0.000000e+00, float poison, float poison>, <4 x float> [[TMP21]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; ENABLED-NEXT:    [[TMP23:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP16]], <4 x float> [[TMP24]], <4 x float> [[TMP22]])
 ; ENABLED-NEXT:    ret <4 x float> [[TMP23]]
 ;
 ; DISABLED-LABEL: define <4 x float> @buildvec_fmul_absorb_rev(
@@ -337,25 +330,24 @@ define <4 x float> @buildvec_fmul_no_absorb_multiuse_rev(float %p, float %q, flo
 ; ENABLED-NEXT:    [[TMP9:%.*]] = fadd <2 x float> [[TMP6]], [[TMP8]]
 ; ENABLED-NEXT:    [[TMP10:%.*]] = fsub <2 x float> [[TMP6]], [[TMP8]]
 ; ENABLED-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP10]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP17:%.*]] = insertelement <2 x float> poison, float [[T]], i64 0
-; ENABLED-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> [[TMP17]], float [[N]], i64 1
-; ENABLED-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> poison, float [[U]], i64 0
-; ENABLED-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> [[TMP14]], float [[M]], i64 1
-; ENABLED-NEXT:    [[TMP16:%.*]] = fmul <2 x float> [[TMP13]], [[TMP18]]
 ; ENABLED-NEXT:    [[TMP12:%.*]] = load <2 x float>, ptr [[SRCB]], align 4
+; ENABLED-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> poison, float [[T]], i64 0
+; ENABLED-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[N]], i64 1
 ; ENABLED-NEXT:    [[TMP15:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <4 x float> <float 0.000000e+00, float 0.000000e+00, float poison, float poison>, <4 x float> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <4 x float> [[TMP14]], <4 x float> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; ENABLED-NEXT:    [[TMP19:%.*]] = shufflevector <2 x float> [[TMP12]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; ENABLED-NEXT:    [[TMP20:%.*]] = shufflevector <4 x float> <float -0.000000e+00, float -0.000000e+00, float poison, float poison>, <4 x float> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; ENABLED-NEXT:    [[TMP22:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; ENABLED-NEXT:    [[TMP20:%.*]] = shufflevector <4 x float> <float 1.000000e+00, float 1.000000e+00, float poison, float poison>, <4 x float> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; ENABLED-NEXT:    [[TMP23:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; ENABLED-NEXT:    [[TMP27:%.*]] = shufflevector <4 x float> [[TMP22]], <4 x float> [[TMP23]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; ENABLED-NEXT:    [[TMP27:%.*]] = shufflevector <4 x float> <float -0.000000e+00, float -0.000000e+00, float poison, float poison>, <4 x float> [[TMP23]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; ENABLED-NEXT:    [[TMP24:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP21]], <4 x float> [[TMP20]], <4 x float> [[TMP27]])
-; ENABLED-NEXT:    [[TMP25:%.*]] = extractelement <2 x float> [[TMP16]], i64 0
+; ENABLED-NEXT:    [[TMP22:%.*]] = insertelement <4 x float> <float poison, float poison, float 1.000000e+00, float 1.000000e+00>, float [[U]], i64 0
+; ENABLED-NEXT:    [[TMP28:%.*]] = insertelement <4 x float> [[TMP22]], float [[M]], i64 1
+; ENABLED-NEXT:    [[TMP29:%.*]] = fmul <4 x float> [[TMP24]], [[TMP28]]
+; ENABLED-NEXT:    [[TMP25:%.*]] = extractelement <4 x float> [[TMP29]], i64 0
 ; ENABLED-NEXT:    store float [[TMP25]], ptr [[DST2]], align 4
-; ENABLED-NEXT:    [[TMP26:%.*]] = extractelement <2 x float> [[TMP16]], i64 1
+; ENABLED-NEXT:    [[TMP26:%.*]] = extractelement <4 x float> [[TMP29]], i64 1
 ; ENABLED-NEXT:    store float [[TMP26]], ptr [[DST2]], align 4
-; ENABLED-NEXT:    ret <4 x float> [[TMP24]]
+; ENABLED-NEXT:    ret <4 x float> [[TMP29]]
 ;
 ; DISABLED-LABEL: define <4 x float> @buildvec_fmul_no_absorb_multiuse_rev(
 ; DISABLED-SAME: float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[T:%.*]], float [[U:%.*]], float [[N:%.*]], float [[M:%.*]], float [[E:%.*]], float [[F:%.*]], float [[G:%.*]], float [[H:%.*]], ptr [[SRCB:%.*]], ptr [[DST2:%.*]]) {
@@ -454,12 +446,11 @@ define <4 x float> @buildvec_fmul_absorb_const(float %p, float %q, float %r, flo
 ; ENABLED-NEXT:    [[TMP13:%.*]] = insertelement <4 x float> [[TMP12]], float [[A1]], i64 1
 ; ENABLED-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP13]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
 ; ENABLED-NEXT:    [[TMP15:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; ENABLED-NEXT:    [[TMP16:%.*]] = shufflevector <4 x float> <float poison, float poison, float 1.000000e+00, float 1.000000e+00>, <4 x float> [[TMP15]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; ENABLED-NEXT:    [[TMP16:%.*]] = shufflevector <4 x float> <float poison, float poison, float 2.000000e+00, float 4.000000e+00>, <4 x float> [[TMP15]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; ENABLED-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP18:%.*]] = shufflevector <4 x float> <float poison, float poison, float -0.000000e+00, float -0.000000e+00>, <4 x float> [[TMP17]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; ENABLED-NEXT:    [[TMP19:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP14]], <4 x float> [[TMP16]], <4 x float> [[TMP18]])
-; ENABLED-NEXT:    [[TMP20:%.*]] = fmul <4 x float> [[TMP19]], <float 1.000000e+00, float 1.000000e+00, float 2.000000e+00, float 4.000000e+00>
-; ENABLED-NEXT:    ret <4 x float> [[TMP20]]
+; ENABLED-NEXT:    ret <4 x float> [[TMP19]]
 ;
 ; DISABLED-LABEL: define <4 x float> @buildvec_fmul_absorb_const(
 ; DISABLED-SAME: float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[T:%.*]], float [[U:%.*]], float [[E:%.*]], float [[F:%.*]], float [[G:%.*]], float [[H:%.*]], ptr [[SRCB:%.*]]) {
@@ -489,21 +480,23 @@ define <4 x float> @buildvec_fmul_absorb_const(float %p, float %q, float %r, flo
 ; COST-LABEL: define <4 x float> @buildvec_fmul_absorb_const(
 ; COST-SAME: float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[T:%.*]], float [[U:%.*]], float [[E:%.*]], float [[F:%.*]], float [[G:%.*]], float [[H:%.*]], ptr [[SRCB:%.*]]) {
 ; COST-NEXT:  [[ENTRY:.*:]]
-; COST-NEXT:    [[A0:%.*]] = fmul float [[P]], [[Q]]
-; COST-NEXT:    [[A1:%.*]] = fmul float [[R]], [[S]]
+; COST-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> poison, float [[P]], i64 0
+; COST-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP8]], float [[R]], i64 1
+; COST-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[Q]], i64 0
+; COST-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[S]], i64 1
+; COST-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[TMP3]]
+; COST-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[U]], i64 0
+; COST-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <2 x i32> zeroinitializer
+; COST-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP6]], <float 2.000000e+00, float 4.000000e+00>
 ; COST-NEXT:    [[C0:%.*]] = fadd float [[E]], [[F]]
 ; COST-NEXT:    [[C1:%.*]] = fsub float [[G]], [[H]]
 ; COST-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[SRCB]], align 4
-; COST-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[U]], i64 2
-; COST-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[A0]], i64 0
-; COST-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[A1]], i64 1
-; COST-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
-; COST-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; COST-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> <float poison, float poison, float 1.000000e+00, float 1.000000e+00>, <4 x float> [[TMP5]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; COST-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> <float poison, float poison, float -0.000000e+00, float -0.000000e+00>, float [[C0]], i64 0
-; COST-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[C1]], i64 1
-; COST-NEXT:    [[TMP9:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP4]], <4 x float> [[TMP6]], <4 x float> [[TMP8]])
-; COST-NEXT:    [[TMP10:%.*]] = fmul <4 x float> [[TMP9]], <float 1.000000e+00, float 1.000000e+00, float 2.000000e+00, float 4.000000e+00>
+; COST-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[C0]], i64 0
+; COST-NEXT:    [[TMP14:%.*]] = insertelement <2 x float> [[TMP9]], float [[C1]], i64 1
+; COST-NEXT:    [[TMP11:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP0]], <2 x float> [[TMP14]])
+; COST-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; COST-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; COST-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> [[TMP13]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; COST-NEXT:    ret <4 x float> [[TMP10]]
 ;
 entry:
