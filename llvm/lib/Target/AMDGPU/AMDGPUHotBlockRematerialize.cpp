@@ -719,12 +719,7 @@ static void applyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
                                                  SIRI, SIII, LIS);
 
   DefMI->removeFromParent();
-  if ( InsertPoint == MBB->end() )
-  {
-    MBB->push_back(DefMI);
-  } else {
-    InsertPoint->getParent()->insert(InsertPoint, DefMI);
-  }
+  MBB->insert(InsertPoint, DefMI);
 
   SlotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
   SlotIndexes->insertMachineInstrInMaps(*DefMI);
