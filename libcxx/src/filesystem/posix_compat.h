@@ -215,13 +215,18 @@ inline int stat_file(const wchar_t* path, StatT* buf, DWORD flags) {
   // back to opening the reparse point itself so that we can still report its
   // attributes and type. This matches the behavior of the system
   // stat()/os.stat() on such files.
+  //
+  // We only need this fallback when following was requested (otherwise the open
+  // above already used FILE_FLAG_OPEN_REPARSE_POINT). We can't tell a symlink
+  // (which must be followed) apart from a non-followable reparse point without
+  // the reparse tag, and GetFileAttributesW does not report it, so simply retry
+  // with the reparse-point flag; for a regular file/symlink whose target exists
+  // the first attempt already succeeded, so this second open only happens for
+  // paths the follow-open couldn't handle.
   if (!(flags & FILE_FLAG_OPEN_REPARSE_POINT)) {
-    DWORD attributes = GetFileAttributesW(path);
-    if (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
-      WinHandle hr(path, FILE_READ_ATTRIBUTES, flags | FILE_FLAG_OPEN_REPARSE_POINT);
-      if (hr)
-        return stat_handle(hr, buf);
-    }
+    WinHandle hr(path, FILE_READ_ATTRIBUTES, flags | FILE_FLAG_OPEN_REPARSE_POINT);
+    if (hr)
+      return stat_handle(hr, buf);
   }
   return -1;
 }
