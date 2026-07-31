@@ -1151,9 +1151,8 @@ define void @s_maximum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX900-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX900-NEXT:    v_cmp_o_f16_e32 vcc, s5, v3
-; GFX900-NEXT:    v_cndmask_b32_sdwa v1, v2, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX900-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX900-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX900-NEXT:    v_cndmask_b32_sdwa v1, v2, v1, vcc dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX900-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use v0
 ; GFX900-NEXT:    ;;#ASMEND
@@ -1177,12 +1176,11 @@ define void @s_maximum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX10-NEXT:    s_lshr_b32 s5, s16, 16
 ; GFX10-NEXT:    v_pk_max_f16 v0, s16, s17
 ; GFX10-NEXT:    v_cmp_o_f16_e64 vcc_lo, s5, s4
-; GFX10-NEXT:    v_cmp_o_f16_e64 s4, s16, s17
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0x7e00
+; GFX10-NEXT:    v_cmp_o_f16_e64 s4, s16, s17
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0x7e00, v0, s4
-; GFX10-NEXT:    v_cndmask_b32_sdwa v0, v1, v0, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_and_b32_e32 v1, 0xffff, v2
-; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX10-NEXT:    v_cndmask_b32_sdwa v0, v1, v0, vcc_lo dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_or_b32_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use v0
 ; GFX10-NEXT:    ;;#ASMEND

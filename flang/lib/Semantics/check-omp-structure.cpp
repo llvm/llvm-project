@@ -1847,6 +1847,18 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     context_.Say(name->source,
         "A variable in a %s directive cannot appear in an EQUIVALENCE statement"_err_en_US,
         ContextDirectiveAsFortran());
+  } else if (IsDummy(*name->symbol)) {
+    context_.Say(name->source,
+        "A dummy argument cannot appear in %s, because it cannot be given the SAVE attribute"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (IsAutomatic(*name->symbol)) {
+    context_.Say(name->source,
+        "An automatic data object cannot appear in %s, because it cannot be given the SAVE attribute"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (IsFunctionResult(*name->symbol)) {
+    context_.Say(name->source,
+        "A function result object cannot appear in %s, because it cannot be given the SAVE attribute"_err_en_US,
+        ContextDirectiveAsFortran());
   } else if (name->symbol->test(Symbol::Flag::OmpThreadprivate) &&
       directive == llvm::omp::Directive::OMPD_declare_target) {
     context_.Say(name->source,
@@ -5286,22 +5298,13 @@ void OmpStructureChecker::CheckStructureComponent(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpClause::Update &x) {
+void OmpStructureChecker::Enter(
+    const parser::OmpClause::UpdateDependObjects &x) {
   llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
 
-  const parser::OmpDependenceType *depType{nullptr};
-  const parser::OmpTaskDependenceType *taskType{nullptr};
-  if (auto &maybeUpdate{x.v}) {
-    depType = std::get_if<parser::OmpDependenceType>(&maybeUpdate->u);
-    taskType = std::get_if<parser::OmpTaskDependenceType>(&maybeUpdate->u);
-  }
-
-  if (!depType && !taskType) {
-    assert(dir == llvm::omp::Directive::OMPD_atomic &&
-        "Unexpected alternative in update clause");
-    return;
-  }
+  auto *depType = std::get_if<parser::OmpDependenceType>(&x.v.u);
+  auto *taskType = std::get_if<parser::OmpTaskDependenceType>(&x.v.u);
 
   if (depType) {
     CheckDependenceType(depType->v);
@@ -5314,19 +5317,18 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Update &x) {
   // as dependence-type.
   // [5.2:322:3]
   // task-dependence-type must not be depobj.
-  if (dir == llvm::omp::OMPD_depobj) {
-    if (version >= 51) {
-      bool invalidDep{false};
-      if (taskType) {
-        invalidDep =
-            taskType->v == parser::OmpTaskDependenceType::Value::Depobj;
-      } else {
-        invalidDep = true;
-      }
-      if (invalidDep) {
-        context_.Say(GetContext().clauseSource,
-            "An UPDATE clause on a DEPOBJ construct must not have SINK, SOURCE or DEPOBJ as dependence type"_err_en_US);
-      }
+  assert(dir == llvm::omp::OMPD_depobj && "Unexpected directive");
+
+  if (version >= 51) {
+    bool invalidDep{false};
+    if (taskType) {
+      invalidDep = taskType->v == parser::OmpTaskDependenceType::Value::Depobj;
+    } else {
+      invalidDep = true;
+    }
+    if (invalidDep) {
+      context_.Say(GetContext().clauseSource,
+          "An UPDATE clause on a DEPOBJ construct must not have SINK, SOURCE or DEPOBJ as dependence type"_err_en_US);
     }
   }
 }
