@@ -714,9 +714,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // Type promotion for v2i8 and v2i16 types have a heavy cost when
     // vectorising. Account for this cost to avoid vectorising unprofitable
     // examples when vectorising loops with low trip counts.
+    bool IsSigned =
+        ICA.getID() == Intrinsic::smin || ICA.getID() == Intrinsic::smax;
     MVT VT = MVT::getVT(RetTy);
-    if (VT == MVT::v2i8 || VT == MVT::v2i16)
-      return LT.first * 6;
+    if (VT == MVT::v2i8 || VT == MVT::v2i16 || VT == MVT::v4i8)
+      return LT.first * (IsSigned ? 5 : 3);
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)
       return LT.first * 2;
