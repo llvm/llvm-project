@@ -1729,6 +1729,12 @@ public:
     return LangAS::Default;
   }
 
+  /// Return the section name used for objects in the target's constant address
+  /// space, if the target uses a dedicated section.
+  virtual std::optional<StringRef> getConstantAddressSpaceSectionName() const {
+    return std::nullopt;
+  }
+
   // access target-specific GPU grid values that must be consistent between
   // host RTL (plugin), deviceRTL and clang.
   virtual const llvm::omp::GV &getGridValue() const {

@@ -15396,6 +15396,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
     }
   }
 
+  AMDGPU().checkConstantAddressSpaceSection(VD);
+
   CheckInvalidBuiltinCountedByRef(VD->getInit(),
                                   BuiltinCountedByRefKind::Initializer);
 

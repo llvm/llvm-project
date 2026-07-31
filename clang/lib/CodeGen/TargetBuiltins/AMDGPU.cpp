@@ -22,8 +22,11 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include <optional>
+#include <string>
 
 using namespace clang;
 using namespace CodeGen;
@@ -44,6 +47,109 @@ static Value *emitAMDGPUSBufferLoadBuiltin(CodeGenFunction &CGF,
   Call->setMetadata(llvm::LLVMContext::MD_invariant_load,
                     llvm::MDNode::get(CGF.Builder.getContext(), {}));
   return Call;
+}
+
+constexpr char SectionRangeMarkerPrefix[] = "__clang_section_marker_";
+
+static std::string getSectionRangeMarkerName(StringRef Section) {
+  return (SectionRangeMarkerPrefix + Section).str();
+}
+
+static std::string getSectionRangeStartSymbol(StringRef Section) {
+  // Use an ELF section name chosen to support GNU-style linker-provided
+  // __start_<section> and __stop_<section> range boundary symbols.
+  return ("__start_" + Section).str();
+}
+
+static std::string getSectionRangeStopSymbol(StringRef Section) {
+  return ("__stop_" + Section).str();
+}
+
+static llvm::GlobalVariable *getSectionRangeBoundary(CodeGenModule &CGM,
+                                                     StringRef Name,
+                                                     unsigned AddressSpace,
+                                                     SourceLocation Loc,
+                                                     StringRef DiagPrefix) {
+  llvm::Module &M = CGM.getModule();
+  auto *Int8Ty = llvm::Type::getInt8Ty(CGM.getLLVMContext());
+
+  if (auto *V = M.getNamedValue(Name)) {
+    auto *GV = dyn_cast<llvm::GlobalVariable>(V);
+    if (GV && GV->isDeclaration() && GV->hasExternalLinkage() &&
+        GV->getAddressSpace() == AddressSpace && GV->getValueType() == Int8Ty)
+      return GV;
+
+    std::string Message = DiagPrefix.str();
+    Message += " section boundary symbol '";
+    Message += Name;
+    Message += "' conflicts with existing symbol";
+    CGM.Error(Loc, Message);
+    return nullptr;
+  }
+
+  return new llvm::GlobalVariable(
+      M, Int8Ty, /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage,
+      /*Initializer=*/nullptr, Name, /*InsertBefore=*/nullptr,
+      llvm::GlobalVariable::NotThreadLocal, AddressSpace);
+}
+
+static void ensureSectionRangeExists(CodeGenModule &CGM, StringRef Section,
+                                     unsigned AddressSpace) {
+  std::string MarkerName = getSectionRangeMarkerName(Section);
+  if (auto *GV = CGM.getModule().getNamedGlobal(MarkerName))
+    if (GV->getSection() == Section && GV->getAddressSpace() == AddressSpace)
+      return;
+
+  auto *Int8Ty = llvm::Type::getInt8Ty(CGM.getLLVMContext());
+  auto *MarkerTy = llvm::ArrayType::get(Int8Ty, 0);
+  auto *Marker = new llvm::GlobalVariable(
+      CGM.getModule(), MarkerTy, /*isConstant=*/true,
+      llvm::GlobalValue::InternalLinkage,
+      llvm::ConstantAggregateZero::get(MarkerTy), MarkerName,
+      /*InsertBefore=*/nullptr, llvm::GlobalVariable::NotThreadLocal,
+      AddressSpace);
+  Marker->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  Marker->setSection(Section);
+  CGM.addCompilerUsedGlobal(Marker);
+}
+
+static Value *emitPointerInNamedSection(CodeGenFunction &CGF, Value *Ptr,
+                                        StringRef Section,
+                                        unsigned SectionAddressSpace,
+                                        SourceLocation Loc,
+                                        StringRef DiagPrefix) {
+  ensureSectionRangeExists(CGF.CGM, Section, SectionAddressSpace);
+
+  std::string StartName = getSectionRangeStartSymbol(Section);
+  std::string StopName = getSectionRangeStopSymbol(Section);
+  auto *Start = getSectionRangeBoundary(CGF.CGM, StartName, SectionAddressSpace,
+                                        Loc, DiagPrefix);
+  auto *Stop = getSectionRangeBoundary(CGF.CGM, StopName, SectionAddressSpace,
+                                       Loc, DiagPrefix);
+  if (!Start || !Stop)
+    return CGF.Builder.getFalse();
+
+  auto *PtrTy = cast<llvm::PointerType>(Ptr->getType());
+  Value *StartPtr = CGF.Builder.CreateAddrSpaceCast(Start, PtrTy);
+  Value *StopPtr = CGF.Builder.CreateAddrSpaceCast(Stop, PtrTy);
+  Value *Offset = CGF.Builder.CreatePtrDiff(Ptr, StartPtr);
+  Value *Size = CGF.Builder.CreatePtrDiff(StopPtr, StartPtr);
+  return CGF.Builder.CreateICmpULT(Offset, Size);
+}
+
+static Value *emitAMDGPUIsConstant(CodeGenFunction &CGF, const CallExpr *E) {
+  Value *Ptr = CGF.EmitScalarExpr(E->getArg(0));
+
+  if (!CGF.CGM.getTriple().isAMDGCN())
+    return CGF.Builder.getFalse();
+  std::optional<StringRef> ConstantSection =
+      CGF.CGM.getTarget().getConstantAddressSpaceSectionName();
+  if (!ConstantSection)
+    return CGF.Builder.getFalse();
+
+  return emitPointerInNamedSection(CGF, Ptr, *ConstantSection,
+                                   llvm::AMDGPUAS::CONSTANT_ADDRESS,
+                                   E->getExprLoc(), "AMDGPU constant");
 }
 
 // Has second type mangled argument.
@@ -536,6 +642,8 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
   llvm::SyncScope::ID SSID;
   switch (BuiltinID) {
+  case AMDGPU::BI__builtin_amdgcn_is_constant:
+    return emitAMDGPUIsConstant(*this, E);
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_fadd_f64:

@@ -25,6 +25,7 @@ class ParsedAttr;
 class SemaAMDGPU : public SemaBase {
   llvm::SmallPtrSet<Expr *, 32> ExpandedPredicates;
   llvm::SmallPtrSet<FunctionDecl *, 32> PotentiallyUnguardedBuiltinUsers;
+  llvm::SmallPtrSet<VarDecl *, 32> InvalidConstantSectionVars;
 
 public:
   SemaAMDGPU(Sema &S);
@@ -43,6 +44,7 @@ public:
 
   bool checkMovDPPFunctionCall(CallExpr *TheCall, unsigned NumArgs,
                                unsigned NumDataArgs);
+  void checkConstantAddressSpaceSection(VarDecl *VD);
 
   /// Create an AMDGPUWavesPerEUAttr attribute.
   AMDGPUFlatWorkGroupSizeAttr *

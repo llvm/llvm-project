@@ -6560,6 +6560,7 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
                                        OldVar->getPointOfInstantiation());
     // Emit any deferred warnings for the variable's initializer
     AnalysisWarnings.issueWarningsForRegisteredVarDecl(Var);
+    AMDGPU().checkConstantAddressSpaceSection(Var);
   }
 
   // This variable may have local implicit instantiations that need to be

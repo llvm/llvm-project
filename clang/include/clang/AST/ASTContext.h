@@ -139,6 +139,7 @@ class TemplateTypeParmDecl;
 class TypeConstraint;
 class UnresolvedSetIterator;
 class UsingShadowDecl;
+class VarDecl;
 class VarTemplateDecl;
 class VTableContextBase;
 class XRayFunctionFilter;
@@ -3294,6 +3295,15 @@ public:
   unsigned getTargetAddressSpace(LangAS AS) const;
 
   LangAS getLangASForBuiltinAddressSpace(unsigned AS) const;
+
+  /// Return whether the variable is in a distinct target constant address
+  /// space.
+  ///
+  /// This checks the address-space placement chosen by the frontend rather
+  /// than source spelling. LangAS::Default is not considered a target constant
+  /// address space, even if TargetInfo::getConstantAddressSpace() returns it
+  /// as a fallback placement address space.
+  bool isTargetConstantAddressSpaceObject(const VarDecl *D) const;
 
   /// Get target-dependent integer value for null pointer which is used for
   /// constant folding.

@@ -397,6 +397,10 @@ public:
     return getLangASFromTargetAS(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   }
 
+  std::optional<StringRef> getConstantAddressSpaceSectionName() const override {
+    return "__amdgpu_constant";
+  }
+
   const llvm::omp::GV &getGridValue() const override {
     switch (WavefrontSize) {
     case 32:
