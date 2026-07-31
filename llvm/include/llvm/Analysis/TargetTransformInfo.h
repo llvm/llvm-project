@@ -191,7 +191,7 @@ enum class VectorInstrContext : uint8_t {
   Load,  ///< The value being inserted comes from a load (InsertElement only).
   Store, ///< The extracted value is stored (ExtractElement only).
   BinaryOp,      ///< One of the operands is a binary op.
-  SplatOpFolded, ///< The value's user supports a scalar splat operand
+  SplatOpFolded, ///< All of the value's users support splatting the value.
 };
 
 class IntrinsicCostAttributes {
