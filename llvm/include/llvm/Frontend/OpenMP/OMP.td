@@ -618,9 +618,14 @@ def OMPC_Untied : Clause<[Spelling<"untied">]> {
   let clangClass = "OMPUntiedClause";
 }
 def OMPC_Update : Clause<[Spelling<"update">]> {
+  // This is the "update" clause for "atomic" construct.
+  // For "depobj" use OMPC_UpdateDependObjects.
   let clangClass = "OMPUpdateClause";
-  let flangClass = "OmpUpdateClause";
-  let isValueOptional = true;
+}
+def OMPC_UpdateDependObjects : Clause<[Spelling<"update">]> {
+  let name = "update_depend_objects";
+  let clangClass = "OMPUpdateDependObjectsClause";
+  let flangClass = "OmpUpdateDependObjectsClause";
 }
 def OMPC_Use : Clause<[Spelling<"use">]> {
   let clangClass = "OMPUseClause";
@@ -873,7 +878,7 @@ def OMP_Depobj : Directive<[Spelling<"depobj">]> {
     VersionedClause<OMPC_Init, 60>,
   ];
   let allowedOnceClauses = [
-    VersionedClause<OMPC_Update, 50>,
+    VersionedClause<OMPC_UpdateDependObjects, 50>,
   ];
   let association = AS_None;
   let category = CA_Executable;

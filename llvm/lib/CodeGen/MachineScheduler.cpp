@@ -424,7 +424,6 @@ void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<MachineRegisterClassInfoWrapperPass>();
-  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }

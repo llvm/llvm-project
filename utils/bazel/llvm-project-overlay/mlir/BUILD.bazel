@@ -12193,18 +12193,6 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "TosaAvailabilityIncGen",
-    tbl_outs = {
-        "include/mlir/Dialect/Tosa/IR/TosaAvailability.h.inc": ["-gen-avail-interface-decls"],
-        "include/mlir/Dialect/Tosa/IR/TosaAvailability.cpp.inc": ["-gen-avail-interface-defs"],
-        "include/mlir/Dialect/Tosa/IR/TosaOpAvailabilityImpl.inc": ["-gen-tosa-avail-impls"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Tosa/IR/TosaOps.td",
-    deps = [":TosaDialectTdFiles"],
-)
-
-gentbl_cc_library(
     name = "TosaDialectBytecodeGen",
     strip_include_prefix = "include",
     tbl_outs = {"include/mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc": [
@@ -12287,7 +12275,6 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TensorDialect",
-        ":TosaAvailabilityIncGen",
         ":TosaDialectBytecodeGen",
         ":TosaDialectIncGen",
         ":TosaEnumsIncGen",

@@ -62,6 +62,18 @@ honored, and calls use the caller's features, matching GCC. Per-function
 features cannot lower the translation-unit ABI level;
 `-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
 
+- On MIPS, a `_Complex` value with an integer element type is now returned packed
+  into a single integer register when it fits in one, matching GCC. A `_Complex char` or
+  `_Complex short`, and on N32/N64 also a `_Complex int`, is no longer returned
+  with one part per register. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH212109)
+
+- On MIPS N32/N64, a `_Complex float` or `_Complex double` argument is now packed
+  into integer registers, or onto the stack, once there is no longer room to give
+  each of its parts a floating-point register, matching GCC. Clang previously
+  always passed the parts separately. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH212109)
+
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
@@ -349,6 +361,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
+- Fixed an assertion on omp taskloop transparent (#GH197162)
 - Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
@@ -366,6 +379,7 @@ features cannot lower the translation-unit ABI level;
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
+- Propagate attributes on redeclarations across modules.
 
 #### Bug Fixes to C++ Support
 
@@ -397,6 +411,10 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when computing the implicit deletion of a defaulted comparison
   operator required an access check that ran while an enclosing declaration
   was still being parsed. (#GH210692)
+
+- A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
+  libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
+  compilation step would result in the fix not being applied. (#GH160314)
 
 #### Bug Fixes to AST Handling
 
@@ -476,6 +494,9 @@ features cannot lower the translation-unit ABI level;
 ### AST Matchers
 
 ### clang-format
+
+- Add `SpacesInBlockComments` option to control spacing after `/*` and
+  before `*/` in ordinary block comments.
 
 ### libclang
 

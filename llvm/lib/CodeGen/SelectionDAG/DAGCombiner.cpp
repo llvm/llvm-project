@@ -25991,6 +25991,12 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   if (!LegalOperations || !IndexC)
     return SDValue();
 
+  bool IsFrozen = false;
+  if (VecOp.getOpcode() == ISD::FREEZE && VecOp.hasOneUse()) {
+    VecOp = VecOp.getOperand(0);
+    IsFrozen = true;
+  }
+
   // (vextract (v4f32 load $addr), c) -> (f32 load $addr+c*size)
   // (vextract (v4f32 s2v (f32 load $addr)), c) -> (f32 load $addr+c*size)
   // (vextract (v4f32 shuffle (load $addr), <1,u,u,u>), 0) -> (f32 load $addr)
@@ -26074,6 +26080,8 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   if (SDValue Scalarized =
           TLI.scalarizeExtractedVectorLoad(LVT, DL, VecVT, Index, LN0, DAG)) {
     ++OpsNarrowed;
+    if (IsFrozen)
+      return DAG.getFreeze(Scalarized);
     return Scalarized;
   }
 

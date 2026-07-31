@@ -1970,7 +1970,7 @@ bool ThunkCreator::createThunks(uint32_t pass,
 
         for (auto &p : isd->thunkSections) {
           // Sort in pass 0, which creates most thunks.
-          if (pass == 0 && ctx.arg.zSortThunks)
+          if (pass == 0)
             p.first->sortByDestination();
           addressesChanged |= p.first->assignOffsets();
         }
