@@ -250,66 +250,66 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      6     0.50                        fadd	s0, s1, s2
-# CHECK-NEXT:  1      6     0.50                        fadd	d0, d1, d2
-# CHECK-NEXT:  1      6     0.50                        fmul	s0, s1, s2
-# CHECK-NEXT:  1      6     0.50                        fcvt	d0, s1
-# CHECK-NEXT:  1      6     0.50                        scvtf	s0, w1
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	w0, s1
+# CHECK-NEXT:  1      4     0.50                        fadd	s0, s1, s2
+# CHECK-NEXT:  1      4     0.50                        fadd	d0, d1, d2
+# CHECK-NEXT:  1      4     0.50                        fmul	s0, s1, s2
+# CHECK-NEXT:  1      4     0.50                        fcvt	d0, s1
+# CHECK-NEXT:  1      4     0.50                        scvtf	s0, w1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	w0, s1
 # CHECK-NEXT:  1      33    29.00                       fsqrt	s0, s1
 # CHECK-NEXT:  1      33    29.00                       fsqrt	d0, d1
 # CHECK-NEXT:  1      33    29.00                       fdiv	d0, d1, d2
 # CHECK-NEXT:  1      6     1.00                        fcmp	s0, s1
 # CHECK-NEXT:  1      6     1.00                        fcmp	d0, #0.0
-# CHECK-NEXT:  1      6     0.50                        fcsel	s0, s1, s2, eq
-# CHECK-NEXT:  1      6     0.50                        fmov	s0, s1
+# CHECK-NEXT:  1      4     0.50                        fcsel	s0, s1, s2, eq
+# CHECK-NEXT:  1      4     0.50                        fmov	s0, s1
 # CHECK-NEXT:  1      6     0.50                        fmov	s0, w1
 # CHECK-NEXT:  1      6     0.50                        fmov	w0, s1
 # CHECK-NEXT:  1      6     0.50                        fmov	d0, x1
 # CHECK-NEXT:  1      6     0.50                        fmov	x0, d1
 # CHECK-NEXT:  1      8     0.50                        fmadd	s0, s1, s2, s3
 # CHECK-NEXT:  1      8     0.50                        fmadd	d0, d1, d2, d3
-# CHECK-NEXT:  1      6     0.50                        fadd	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        fadd	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     1.00                        fadd	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT:  1      6     0.50                        fabd	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        fabd	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     0.50                        fmul	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        fmul	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     0.50                        fmul	v0.2s, v1.2s, v2.s[1]
-# CHECK-NEXT:  1      6     0.50                        fmul	v0.4s, v1.4s, v2.s[1]
-# CHECK-NEXT:  1      6     0.50                        fmulx	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        fmax	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     1.00                        fminnm	v0.2d, v1.2d, v2.2d
-# CHECK-NEXT:  1      6     0.50                        faddp	v0.2s, v1.2s, v2.2s
-# CHECK-NEXT:  1      6     1.00                        faddp	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      4     0.50                        fadd	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      4     1.00                        fadd	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      4     1.00                        fadd	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT:  1      4     0.50                        fabd	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      4     1.00                        fabd	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      4     0.50                        fmul	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      4     1.00                        fmul	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      4     0.50                        fmul	v0.2s, v1.2s, v2.s[1]
+# CHECK-NEXT:  1      4     1.00                        fmul	v0.4s, v1.4s, v2.s[1]
+# CHECK-NEXT:  1      4     0.50                        fmulx	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      4     1.00                        fmax	v0.4s, v1.4s, v2.4s
+# CHECK-NEXT:  1      4     1.00                        fminnm	v0.2d, v1.2d, v2.2d
+# CHECK-NEXT:  1      4     0.50                        faddp	v0.2s, v1.2s, v2.2s
+# CHECK-NEXT:  1      4     1.00                        faddp	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     0.50                        faddp	s0, v1.2s
 # CHECK-NEXT:  1      6     0.50                        faddp	d0, v1.2d
-# CHECK-NEXT:  1      6     1.00                        fmaxv	s0, v1.4s
-# CHECK-NEXT:  1      6     0.50                        fabs	v0.2s, v1.2s
-# CHECK-NEXT:  1      6     1.00                        fabs	v0.4s, v1.4s
-# CHECK-NEXT:  1      6     1.00                        fneg	v0.2d, v1.2d
-# CHECK-NEXT:  1      6     0.50                        frinta	v0.2s, v1.2s
-# CHECK-NEXT:  1      6     1.00                        frintx	v0.4s, v1.4s
+# CHECK-NEXT:  1      4     1.00                        fmaxv	s0, v1.4s
+# CHECK-NEXT:  1      4     0.50                        fabs	v0.2s, v1.2s
+# CHECK-NEXT:  1      4     1.00                        fabs	v0.4s, v1.4s
+# CHECK-NEXT:  1      4     1.00                        fneg	v0.2d, v1.2d
+# CHECK-NEXT:  1      4     0.50                        frinta	v0.2s, v1.2s
+# CHECK-NEXT:  1      4     1.00                        frintx	v0.4s, v1.4s
 # CHECK-NEXT:  1      8     0.50                        fmla	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      8     1.00                        fmla	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      8     1.00                        fmla	v0.2d, v1.2d, v2.2d
 # CHECK-NEXT:  1      8     0.50                        fmls	v0.2s, v1.2s, v2.s[1]
 # CHECK-NEXT:  1      8     1.00                        fmls	v0.4s, v1.4s, v2.s[1]
-# CHECK-NEXT:  1      6     0.50                        scvtf	v0.2s, v1.2s
-# CHECK-NEXT:  1      6     1.00                        ucvtf	v0.4s, v1.4s
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	v0.2s, v1.2s
-# CHECK-NEXT:  1      6     1.00                        fcvtzu	v0.4s, v1.4s
-# CHECK-NEXT:  1      6     0.50                        scvtf	v0.2s, v1.2s, #3
-# CHECK-NEXT:  1      6     1.00                        fcvtzu	v0.4s, v1.4s, #3
-# CHECK-NEXT:  1      6     0.50                        scvtf	s0, s1
-# CHECK-NEXT:  1      6     0.50                        fcvtzs	d0, d1
-# CHECK-NEXT:  1      6     1.00                        fcvtl	v0.2d, v1.2s
-# CHECK-NEXT:  1      6     1.00                        fcvtl2	v0.2d, v1.4s
-# CHECK-NEXT:  1      6     1.00                        fcvtn	v0.2s, v1.2d
-# CHECK-NEXT:  1      6     1.00                        fcvtn2	v0.4s, v1.2d
-# CHECK-NEXT:  1      6     1.00                        fcvtxn	v0.2s, v1.2d
-# CHECK-NEXT:  1      6     0.50                        fcvtxn	s0, d1
+# CHECK-NEXT:  1      4     0.50                        scvtf	v0.2s, v1.2s
+# CHECK-NEXT:  1      4     1.00                        ucvtf	v0.4s, v1.4s
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	v0.2s, v1.2s
+# CHECK-NEXT:  1      4     1.00                        fcvtzu	v0.4s, v1.4s
+# CHECK-NEXT:  1      4     0.50                        scvtf	v0.2s, v1.2s, #3
+# CHECK-NEXT:  1      4     1.00                        fcvtzu	v0.4s, v1.4s, #3
+# CHECK-NEXT:  1      4     0.50                        scvtf	s0, s1
+# CHECK-NEXT:  1      4     0.50                        fcvtzs	d0, d1
+# CHECK-NEXT:  1      4     1.00                        fcvtl	v0.2d, v1.2s
+# CHECK-NEXT:  1      4     1.00                        fcvtl2	v0.2d, v1.4s
+# CHECK-NEXT:  1      4     1.00                        fcvtn	v0.2s, v1.2d
+# CHECK-NEXT:  1      4     1.00                        fcvtn2	v0.4s, v1.2d
+# CHECK-NEXT:  1      4     1.00                        fcvtxn	v0.2s, v1.2d
+# CHECK-NEXT:  1      4     0.50                        fcvtxn	s0, d1
 # CHECK-NEXT:  1      4     0.50                        frecpe	s0, s1
 # CHECK-NEXT:  1      4     0.50                        frecpe	v0.2s, v1.2s
 # CHECK-NEXT:  1      4     1.00                        frecpe	v0.4s, v1.4s
@@ -318,9 +318,9 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      8     1.00                        frecps	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      4     0.50                        frsqrte	v0.2s, v1.2s
 # CHECK-NEXT:  1      8     1.00                        frsqrts	v0.4s, v1.4s, v2.4s
-# CHECK-NEXT:  1      6     0.50                        frecpx	s0, s1
-# CHECK-NEXT:  1      6     0.50                        urecpe	v0.2s, v1.2s
-# CHECK-NEXT:  1      6     1.00                        ursqrte	v0.4s, v1.4s
+# CHECK-NEXT:  1      4     0.50                        frecpx	s0, s1
+# CHECK-NEXT:  1      4     0.50                        urecpe	v0.2s, v1.2s
+# CHECK-NEXT:  1      4     1.00                        ursqrte	v0.4s, v1.4s
 # CHECK-NEXT:  1      6     0.50                        fcmeq	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  1      6     1.00                        fcmeq	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  1      6     0.50                        facge	v0.2s, v1.2s, v2.2s
@@ -400,10 +400,10 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     1.00                        sabal	v0.8h, v1.8b, v2.8b
 # CHECK-NEXT:  1      6     0.50                        sadalp	v0.4h, v1.8b
 # CHECK-NEXT:  1      6     1.00                        uadalp	v0.8h, v1.16b
-# CHECK-NEXT:  1      6     0.50                        mul	v0.8b, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        mul	v0.16b, v1.16b, v2.16b
-# CHECK-NEXT:  1      6     0.50                        mul	v0.4h, v1.4h, v2.h[1]
-# CHECK-NEXT:  1      6     0.50                        mul	v0.8h, v1.8h, v2.h[1]
+# CHECK-NEXT:  1      4     0.50                        mul	v0.8b, v1.8b, v2.8b
+# CHECK-NEXT:  1      4     1.00                        mul	v0.16b, v1.16b, v2.16b
+# CHECK-NEXT:  1      4     0.50                        mul	v0.4h, v1.4h, v2.h[1]
+# CHECK-NEXT:  1      4     1.00                        mul	v0.8h, v1.8h, v2.h[1]
 # CHECK-NEXT:  1      6     0.50                        pmul	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  1      6     1.00                        pmul	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  1      6     0.50                        sqdmulh	v0.4h, v1.4h, v2.4h
@@ -473,7 +473,7 @@ sqshrun	v0.2s, v1.2d, #1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]
-# CHECK-NEXT:  -      -      -      -     145.00 145.00 92.50  92.50   -      -
+# CHECK-NEXT:  -      -      -      -     146.00 146.00 92.50  92.50   -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [5]    [6]    Instructions:
@@ -504,7 +504,7 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmul	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	v0.2s, v1.2s, v2.s[1]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmul	v0.4s, v1.4s, v2.s[1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmul	v0.4s, v1.4s, v2.s[1]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     fmulx	v0.2s, v1.2s, v2.2s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fmax	v0.4s, v1.4s, v2.4s
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     fminnm	v0.2d, v1.2d, v2.2d
@@ -630,7 +630,7 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mul	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     mul	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mul	v0.4h, v1.4h, v2.h[1]
-# CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     mul	v0.8h, v1.8h, v2.h[1]
+# CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     mul	v0.8h, v1.8h, v2.h[1]
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     pmul	v0.8b, v1.8b, v2.8b
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -      -      -     pmul	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -     sqdmulh	v0.4h, v1.4h, v2.4h
