@@ -16,12 +16,10 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fstatfs, (int fd, struct statfs *buf)) {
-  LIBC_CRASH_ON_NULLPTR(buf);
   auto error_or_ret = linux_syscalls::fstatfs(fd, buf);
   if (!error_or_ret) {
     libc_errno = error_or_ret.error();

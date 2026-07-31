@@ -6,7 +6,6 @@ add_entrypoint_object(
     ../statfs.h
   DEPENDS
     libc.src.errno.errno
-    libc.src.__support.macros.null_check
     libc.src.__support.OSUtil.linux.syscall_wrappers.statfs
     libc.hdr.types.struct_statfs
 )
@@ -19,7 +18,6 @@ add_entrypoint_object(
     ../fstatfs.h
   DEPENDS
     libc.src.errno.errno
-    libc.src.__support.macros.null_check
     libc.src.__support.OSUtil.linux.syscall_wrappers.fstatfs
     libc.hdr.types.struct_statfs
 )
