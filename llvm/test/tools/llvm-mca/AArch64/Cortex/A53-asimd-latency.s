@@ -413,19 +413,19 @@ sqshrun	v0.2s, v1.2d, #1
 # CHECK-NEXT:  1      6     1.00                        mla	v0.16b, v1.16b, v2.16b
 # CHECK-NEXT:  1      6     0.50                        mls	v0.4h, v1.4h, v2.h[1]
 # CHECK-NEXT:  1      6     0.50                        mls	v0.8h, v1.8h, v2.h[1]
-# CHECK-NEXT:  1      6     1.00                        smull	v0.8h, v1.8b, v2.8b
-# CHECK-NEXT:  1      6     1.00                        umull2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT:  1      6     1.00                        sqdmull	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT:  1      4     1.00                        smull	v0.8h, v1.8b, v2.8b
+# CHECK-NEXT:  1      4     1.00                        umull2	v0.4s, v1.8h, v2.8h
+# CHECK-NEXT:  1      4     1.00                        sqdmull	v0.4s, v1.4h, v2.4h
 # CHECK-NEXT:  1      6     1.00                        smlal	v0.8h, v1.8b, v2.8b
 # CHECK-NEXT:  1      6     1.00                        umlal2	v0.4s, v1.8h, v2.8h
-# CHECK-NEXT:  1      6     1.00                        sqdmlal	v0.4s, v1.4h, v2.4h
-# CHECK-NEXT:  1      6     1.00                        xtn	v0.8b, v1.8h
-# CHECK-NEXT:  1      6     1.00                        xtn2	v0.16b, v1.8h
-# CHECK-NEXT:  1      6     1.00                        sqxtn	v0.8b, v1.8h
-# CHECK-NEXT:  1      6     1.00                        uqxtn	v0.4h, v1.4s
-# CHECK-NEXT:  1      6     1.00                        sqxtun	v0.2s, v1.2d
-# CHECK-NEXT:  1      6     1.00                        addhn	v0.8b, v1.8h, v2.8h
-# CHECK-NEXT:  1      6     1.00                        subhn2	v0.16b, v1.8h, v2.8h
+# CHECK-NEXT:  1      4     1.00                        sqdmlal	v0.4s, v1.4h, v2.4h
+# CHECK-NEXT:  1      2     1.00                        xtn	v0.8b, v1.8h
+# CHECK-NEXT:  1      2     1.00                        xtn2	v0.16b, v1.8h
+# CHECK-NEXT:  1      4     1.00                        sqxtn	v0.8b, v1.8h
+# CHECK-NEXT:  1      4     1.00                        uqxtn	v0.4h, v1.4s
+# CHECK-NEXT:  1      4     1.00                        sqxtun	v0.2s, v1.2d
+# CHECK-NEXT:  1      3     1.00                        addhn	v0.8b, v1.8h, v2.8h
+# CHECK-NEXT:  1      3     1.00                        subhn2	v0.16b, v1.8h, v2.8h
 # CHECK-NEXT:  1      4     1.00                        raddhn	v0.8b, v1.8h, v2.8h
 # CHECK-NEXT:  1      4     1.00                        rsubhn2	v0.16b, v1.8h, v2.8h
 # CHECK-NEXT:  1      2     0.50                        shl	d0, d1, #1
