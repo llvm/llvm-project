@@ -167,7 +167,6 @@ inline int stat_handle(HANDLE h, StatT* buf) {
   } else {
     buf->st_mode |= _S_IFREG;
   }
-  bool is_af_unix_socket = false;
   if (basic.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
     FILE_ATTRIBUTE_TAG_INFO tag;
     if (!GetFileInformationByHandleEx(h, FileAttributeTagInfo, &tag, sizeof(tag)))
@@ -175,65 +174,60 @@ inline int stat_handle(HANDLE h, StatT* buf) {
     if (tag.ReparseTag == IO_REPARSE_TAG_SYMLINK) {
       buf->st_mode = (buf->st_mode & ~_S_IFMT) | _S_IFLNK;
     } else if (tag.ReparseTag == IO_REPARSE_TAG_AF_UNIX) {
-      buf->st_mode      = (buf->st_mode & ~_S_IFMT) | _S_IFSOCK;
-      is_af_unix_socket = true;
+      buf->st_mode = (buf->st_mode & ~_S_IFMT) | _S_IFSOCK;
+      // AF_UNIX (Unix domain) socket files don't support the information
+      // queries below; report what we already have (mode/timestamps) instead
+      // of failing outright, matching the behavior of the system
+      // stat()/os.stat().
+      return 0;
     }
   }
   FILE_STANDARD_INFO standard;
-  if (!GetFileInformationByHandleEx(h, FileStandardInfo, &standard, sizeof(standard))) {
-    // AF_UNIX (Unix domain) socket files don't support all of the information
-    // queries below; report what we already have (mode/timestamps) instead of
-    // failing outright, matching the behavior of the system stat()/os.stat().
-    if (is_af_unix_socket)
-      return 0;
+  if (!GetFileInformationByHandleEx(h, FileStandardInfo, &standard, sizeof(standard)))
     return -1;
-  }
   buf->st_nlink = standard.NumberOfLinks;
   buf->st_size  = standard.EndOfFile.QuadPart;
   BY_HANDLE_FILE_INFORMATION info;
-  if (!GetFileInformationByHandle(h, &info)) {
-    if (is_af_unix_socket)
-      return 0;
+  if (!GetFileInformationByHandle(h, &info))
     return -1;
-  }
   buf->st_dev = info.dwVolumeSerialNumber;
   memcpy(&buf->st_ino.id[0], &info.nFileIndexHigh, 4);
   memcpy(&buf->st_ino.id[4], &info.nFileIndexLow, 4);
   return 0;
 }
 
-inline int stat_file(const wchar_t* path, StatT* buf, DWORD flags) {
-  {
-    WinHandle h(path, FILE_READ_ATTRIBUTES, flags);
-    if (h && stat_handle(h, buf) == 0)
-      return 0;
-  }
-  // Some reparse points, such as AF_UNIX (Unix domain) socket files, can't be
-  // opened/queried by following the reparse point (there is no target to
-  // follow). CreateFileW may fail with e.g. ERROR_CANT_ACCESS_FILE, or the
-  // subsequent GetFileInformationByHandle* calls may fail. In that case, fall
-  // back to opening the reparse point itself so that we can still report its
-  // attributes and type. This matches the behavior of the system
-  // stat()/os.stat() on such files.
+inline int stat_file(const wchar_t* path, StatT* buf, bool follow_symlinks) {
+  // Win32 has no open mode that means "follow symlinks, but open any other
+  // reparse point (e.g. an AF_UNIX socket) as itself": omitting
+  // FILE_FLAG_OPEN_REPARSE_POINT follows *every* reparse point, which fails for
+  // ones that have no target to follow, while passing it opens *every* reparse
+  // point as itself, including symlinks we do want to follow.
   //
-  // We only need this fallback when following was requested (otherwise the open
-  // above already used FILE_FLAG_OPEN_REPARSE_POINT). We can't tell a symlink
-  // (which must be followed) apart from a non-followable reparse point without
-  // the reparse tag, and GetFileAttributesW does not report it, so simply retry
-  // with the reparse-point flag; for a regular file/symlink whose target exists
-  // the first attempt already succeeded, so this second open only happens for
-  // paths the follow-open couldn't handle.
-  if (!(flags & FILE_FLAG_OPEN_REPARSE_POINT)) {
-    WinHandle hr(path, FILE_READ_ATTRIBUTES, flags | FILE_FLAG_OPEN_REPARSE_POINT);
-    if (hr)
-      return stat_handle(hr, buf);
+  // So we always open the reparse point itself first. This succeeds for any
+  // existing object regardless of its reparse tag, and lets stat_handle
+  // determine the type from that tag. We then emulate symlink following
+  // ourselves below, only for the objects that actually are symlinks.
+  WinHandle h(path, FILE_READ_ATTRIBUTES, FILE_FLAG_OPEN_REPARSE_POINT);
+  if (!h || stat_handle(h, buf) != 0)
+    return -1;
+  // For lstat, or for anything that isn't a symlink, we're already done. Only a
+  // genuine symlink needs to be resolved to its target for stat; do so by
+  // reopening the path without FILE_FLAG_OPEN_REPARSE_POINT so the OS follows
+  // it, and stat'ing the target handle. A failure here (dangling/cyclic/
+  // inaccessible target) is a real error, matching the behavior of the system
+  // stat()/os.stat().
+  if (follow_symlinks && S_ISLNK(buf->st_mode)) {
+    WinHandle ht(path, FILE_READ_ATTRIBUTES, 0);
+    if (!ht)
+      return -1;
+    return stat_handle(ht, buf);
   }
-  return -1;
+  return 0;
 }
 
-inline int stat(const wchar_t* path, StatT* buf) { return stat_file(path, buf, 0); }
+inline int stat(const wchar_t* path, StatT* buf) { return stat_file(path, buf, /*follow_symlinks=*/true); }
 
-inline int lstat(const wchar_t* path, StatT* buf) { return stat_file(path, buf, FILE_FLAG_OPEN_REPARSE_POINT); }
+inline int lstat(const wchar_t* path, StatT* buf) { return stat_file(path, buf, /*follow_symlinks=*/false); }
 
 inline int fstat(int fd, StatT* buf) {
   HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
