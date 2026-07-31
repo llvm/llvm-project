@@ -84,6 +84,29 @@ public:
 /// argument vector, and its int64_t result is returned.
 class MainCaller : public Caller<int64_t(ArrayRef<std::string>)> {};
 
+/// Runtime-agnostic interface for running a void() function in the executor.
+///
+/// The function to run is given by its ExecutorAddr.
+///
+/// WARNING: This Caller is experimental and may be removed.
+class VoidVoidCaller : public Caller<void()> {};
+
+/// Runtime-agnostic interface for running an int32_t() function in the
+/// executor.
+///
+/// The function to run is given by its ExecutorAddr.
+///
+/// WARNING: This Caller is experimental and may be removed.
+class Int32VoidCaller : public Caller<int32_t()> {};
+
+/// Runtime-agnostic interface for running an int32_t(int32_t) function in the
+/// executor.
+///
+/// The function to run is given by its ExecutorAddr.
+///
+/// WARNING: This Caller is experimental and may be removed.
+class Int32Int32Caller : public Caller<int32_t(int32_t)> {};
+
 } // namespace llvm::orc::rt
 
 #endif // LLVM_EXECUTIONENGINE_ORC_RTBRIDGE_CALLS_H
