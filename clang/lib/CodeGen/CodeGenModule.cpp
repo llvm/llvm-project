@@ -1565,6 +1565,11 @@ void CodeGenModule::Release() {
                                 "aarch64-jump-table-hardening", 1);
 
     if (getTriple().isOSBinFormatELF()) {
+      // The following ptrauth-* flags are emitted unconditionally: value 1 if
+      // the corresponding feature is set and value 0 otherwise. It is required
+      // for Error behavior to properly detect value mismatch between modules -
+      // modules with different values of these flags are incompatible and merge
+      // is not allowed.
       getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got",
                                 LangOpts.PointerAuthELFGOT);
 

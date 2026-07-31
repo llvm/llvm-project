@@ -1,4 +1,6 @@
-; RUN: mkdir -p %t && cd %t
+; Run in temporary directory so *.gcno file created stays there
+; RUN: rm -rf %t && mkdir -p %t && cd %t
+
 ; RUN: opt < %s -S -passes=insert-gcov-profiling | FileCheck %s
 ; REQUIRES: aarch64-registered-target
 
