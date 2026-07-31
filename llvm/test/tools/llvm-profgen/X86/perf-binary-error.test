@@ -2,6 +2,8 @@
 # RUN: yaml2obj %t/binary.yaml -o %t/perf-binary-error.exe
 # RUN: touch %t/perf.data
 
+## yaml2obj is consistently available in LLVM test environments and returns a
+## nonzero status when invoked with perf script arguments.
 # RUN: not llvm-profgen --binary=%t/perf-binary-error.exe \
 # RUN:   --perfdata=%t/perf.data --perf-binary yaml2obj --output=/dev/null \
 # RUN:   2>&1 | FileCheck %s --check-prefix=EXIT
