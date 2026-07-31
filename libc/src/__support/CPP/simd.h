@@ -223,7 +223,8 @@ LIBC_INLINE constexpr static simd<T, N> multiply_add(simd<T, N> x, simd<T, N> y,
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #endif // __has_builtin(__builtin_elementwise_fma)
 
-  return x * y + z;
+  simd<T, N> mul = x * y;
+  return mul + z;
 }
 template <typename T, size_t N>
 LIBC_INLINE constexpr static simd<T, N> ceil(simd<T, N> x) {
