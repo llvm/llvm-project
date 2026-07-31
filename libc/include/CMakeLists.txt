@@ -10,7 +10,6 @@ endif()
 
 add_subdirectory(llvm-libc-macros)
 add_subdirectory(llvm-libc-types)
-add_subdirectory(llvm-libc-proxy)
 
 add_header(
   llvm_libc_common_h
@@ -18,6 +17,8 @@ add_header(
     __llvm-libc-common.h
 )
 
+# Has to be after common since elf_proxy depends on common.
+add_subdirectory(llvm-libc-proxy)
 
 # TODO: Can we simplify this macro expansion?
 # https://github.com/llvm/llvm-project/issues/117254
