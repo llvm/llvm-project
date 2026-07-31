@@ -770,7 +770,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasVOP3PInsts() && ST.hasAddNoCarryInsts() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
-    if (ST.hasPackedU64Ops()) {
+    if (ST.hasAnyPackedU64Ops()) {
       getActionDefinitionsBuilder({G_ADD, G_SUB})
           .legalFor({S64, S32, S16, V2S16, V2S64})
           .clampMaxNumElementsStrict(0, S16, 2)
@@ -1004,17 +1004,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FDIVActions.customFor({S16});
   }
 
-  if (ST.hasPackedFP32Ops()) {
+  if (ST.hasAnyPackedFP32Ops()) {
     FPOpActions.legalFor({V2F32});
     FPOpActions.clampMaxNumElementsStrict(0, F32, 2);
   }
 
-  if (ST.hasPackedFP64Ops()) {
+  if (ST.hasAnyPackedFP64Ops()) {
     FPOpActions.legalFor({V2F64});
     FPOpActions.clampMaxNumElementsStrict(0, F64, 2);
   }
 
-  if (ST.hasPackedFP64Ops()) {
+  if (ST.hasAnyPackedFP64Ops()) {
     FPOpActions.legalFor({V2F64});
     FPOpActions.clampMaxNumElementsStrict(0, F64, 2);
   }
@@ -1039,7 +1039,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
-  if (ST.hasPackedFP64Ops()) {
+  if (ST.hasAnyPackedFP64Ops()) {
     MinNumMaxNum.customFor(FPTypesPK16_64)
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
         .clampMaxNumElements(0, S16, 2)
@@ -1079,9 +1079,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &FNegAbs = getActionDefinitionsBuilder({G_FNEG, G_FABS});
   FNegAbs.legalFor(FPTypesPK16)
-      .legalFor(ST.hasPackedFP32Ops(), {V2S32})
+      .legalFor(ST.hasAnyPackedFP32Ops(), {V2S32})
       .clampMaxNumElementsStrict(0, S16, 2);
-  if (ST.hasPackedFP32Ops())
+  if (ST.hasAnyPackedFP32Ops())
     FNegAbs.clampMaxNumElementsStrict(0, S32, 2);
   FNegAbs.scalarize(0).clampScalar(0, S16, S64);
 
@@ -1182,7 +1182,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .lowerFor({F64, F16, V2F16});
   }
 
-  if (ST.hasPackedFP32Ops())
+  if (ST.hasAnyPackedFP32Ops())
     FSubActions.lowerFor({V2F32}).clampMaxNumElements(0, F32, 2);
 
   FSubActions.clampMaxNumElements(0, F16, 2).scalarize(0).clampScalar(0, F32,
