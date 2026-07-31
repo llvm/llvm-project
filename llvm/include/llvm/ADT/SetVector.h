@@ -62,10 +62,6 @@ class SetVector {
   using const_arg_type =
       typename const_pointer_or_const_ref<typename Set::key_type>::type;
 
-  template <typename Container>
-  using check_has_member_reserve_t =
-      decltype(std::declval<Container>().reserve(std::declval<size_t>()));
-
 public:
   using value_type = typename Vector::value_type;
   using key_type = typename Set::key_type;
@@ -108,10 +104,8 @@ public:
 
   /// Reserve space in the SetVector if supported by the underlying containers.
   void reserve(size_type Size) {
-    if constexpr (is_detected<check_has_member_reserve_t, vector_type>::value)
-      vector_.reserve(Size);
-    if constexpr (is_detected<check_has_member_reserve_t, set_type>::value)
-      set_.reserve(Size);
+    vector_.reserve(Size);
+    set_.reserve(Size);
   }
 
   /// Get an iterator to the beginning of the SetVector.
