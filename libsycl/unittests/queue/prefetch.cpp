@@ -17,10 +17,8 @@ TEST(Queue, TwoPrefetches) {
 
   void *Ptr = reinterpret_cast<void *>(1);
 
-  bool IsCpu = Q.get_device().is_cpu();
-  ol_mem_migration_flags_t ExpectedFlag =
-      IsCpu ? OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST
-            : OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
+  constexpr ol_mem_migration_flags_t ExpectedFlag =
+      OL_MEM_MIGRATION_FLAG_HOST_TO_DEVICE;
 
   EXPECT_CALL(Mock.get(), olMemPrefetch(_, 1, _, _, ExpectedFlag))
       .Times(NPrefetches)
