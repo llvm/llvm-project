@@ -319,6 +319,7 @@ void test22(void) {
   (void)(typedef int){3};     // expected-error {{storage class specifier 'typedef' is not permitted in a compound literal}}
   (void)(__auto_type int){4}; // expected-error {{expected expression}}
   (void)(__thread int){5};    // expected-error {{expected expression}}
+  (void)(auto){1};            // expected-error {{expected expression}}
 }
 
 void test23(void) {
@@ -326,6 +327,7 @@ void test23(void) {
   (void)(static int thread_local){1};  // expected-error {{type name does not allow storage class to be specified}}
   (void)(static int _Thread_local){1}; // expected-error {{type name does not allow storage class to be specified}}
   (void)(static int __thread){1};      // expected-error {{type name does not allow storage class to be specified}}
+  (void)(int static){1};               // expected-error {{type name does not allow storage class to be specified}}
 }
 
 void test24(void) {
