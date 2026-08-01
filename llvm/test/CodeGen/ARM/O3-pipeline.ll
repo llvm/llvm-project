@@ -96,6 +96,7 @@
 ; CHECK-NEXT:      Machine Block Frequency Analysis
 ; CHECK-NEXT:      Early Machine Loop Invariant Code Motion
 ; CHECK-NEXT:      MachineDominator Tree Construction
+; CHECK-NEXT:      Machine Cycle Info Analysis
 ; CHECK-NEXT:      Machine Block Frequency Analysis
 ; CHECK-NEXT:      Machine Common Subexpression Elimination
 ; CHECK-NEXT:      MachinePostDominator Tree Construction
@@ -149,6 +150,7 @@
 ; CHECK-NEXT:      Remove Redundant DEBUG_VALUE analysis
 ; CHECK-NEXT:      Fixup Statepoint Caller Saved
 ; CHECK-NEXT:      PostRA Machine Sink
+; CHECK-NEXT:      Machine Cycle Info Analysis
 ; CHECK-NEXT:      Machine Block Frequency Analysis
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      MachinePostDominator Tree Construction
