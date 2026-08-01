@@ -206,8 +206,12 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy,
 
   if (copy->symbols.empty())
     return;
-  for (auto *it = copy->symbols.begin() + (symbols.empty() ? 1 : 0);
-       it != copy->symbols.end(); ++it) {
+  auto *ItBegin = copy->symbols.begin();
+  // symbol.front() needs to keep the entry.
+  // In the case of `symbols.empty()`, we skip the first element.
+  if (symbols.empty())
+    ++ItBegin;
+  for (auto *it = ItBegin; it != copy->symbols.end(); ++it) {
     assert((*it)->value == 0);
     (*it)->originalUnwindEntry = nullptr;
   }
