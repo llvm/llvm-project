@@ -2009,6 +2009,9 @@ bool VectorCombine::foldSingleElementStore(Instruction &I) {
         {ConstantInt::get(Idx->getType(), 0), Idx});
     StoreInst *NSI = Builder.CreateStore(NewElement, GEP);
     NSI->copyMetadata(*SI);
+    // The new GEP may change the pointer operand, so !invariant.group cannot
+    // be transferred to the scalar store.
+    NSI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     Align ScalarOpAlignment = computeAlignmentAfterScalarization(
         std::max(SI->getAlign(), Load->getAlign()), NewElement->getType(), Idx,
         *DL);

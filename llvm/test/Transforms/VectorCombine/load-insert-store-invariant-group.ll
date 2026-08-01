@@ -10,15 +10,15 @@
 ; constant GEP as the scalar load, across an intervening untagged store.
 define i16 @insert_store_invariant_group() {
 ; VC-LABEL: define i16 @insert_store_invariant_group() {
-; VC-NEXT:    store i16 1, ptr getelementptr inbounds nuw (i8, ptr @g, i64 2), align 2, !invariant.group [[META0:![0-9]+]]
+; VC-NEXT:    store i16 1, ptr getelementptr inbounds nuw (i8, ptr @g, i64 2), align 2
 ; VC-NEXT:    store i16 2, ptr getelementptr inbounds nuw (i8, ptr @g, i64 2), align 2
-; VC-NEXT:    [[R:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr @g, i64 2), align 2, !invariant.group [[META0]]
+; VC-NEXT:    [[R:%.*]] = load i16, ptr getelementptr inbounds nuw (i8, ptr @g, i64 2), align 2, !invariant.group [[META0:![0-9]+]]
 ; VC-NEXT:    ret i16 [[R]]
 ;
 ; GVN-LABEL: define i16 @insert_store_invariant_group() {
-; GVN-NEXT:    store i16 1, ptr getelementptr inbounds nuw (i8, ptr @g, i64 2), align 2, !invariant.group [[META0:![0-9]+]]
+; GVN-NEXT:    store i16 1, ptr getelementptr inbounds nuw (i8, ptr @g, i64 2), align 2
 ; GVN-NEXT:    store i16 2, ptr getelementptr inbounds nuw (i8, ptr @g, i64 2), align 2
-; GVN-NEXT:    ret i16 1
+; GVN-NEXT:    ret i16 2
 ;
   %v = load <8 x i16>, ptr @g, align 2
   %v1 = insertelement <8 x i16> %v, i16 1, i32 1
@@ -35,7 +35,7 @@ define i16 @insert_store_invariant_group_argument(ptr %p) {
 ; VC-SAME: ptr [[P:%.*]]) {
 ; VC-NEXT:    [[ELT:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 1
 ; VC-NEXT:    [[TMP0:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 1
-; VC-NEXT:    store i16 1, ptr [[TMP0]], align 2, !invariant.group [[META0]]
+; VC-NEXT:    store i16 1, ptr [[TMP0]], align 2
 ; VC-NEXT:    store i16 2, ptr [[ELT]], align 2
 ; VC-NEXT:    [[R:%.*]] = load i16, ptr [[ELT]], align 2, !invariant.group [[META0]]
 ; VC-NEXT:    ret i16 [[R]]
@@ -43,9 +43,9 @@ define i16 @insert_store_invariant_group_argument(ptr %p) {
 ; GVN-LABEL: define i16 @insert_store_invariant_group_argument(
 ; GVN-SAME: ptr [[P:%.*]]) {
 ; GVN-NEXT:    [[ELT:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P]], i32 0, i32 1
-; GVN-NEXT:    store i16 1, ptr [[ELT]], align 2, !invariant.group [[META0]]
+; GVN-NEXT:    store i16 1, ptr [[ELT]], align 2
 ; GVN-NEXT:    store i16 2, ptr [[ELT]], align 2
-; GVN-NEXT:    ret i16 1
+; GVN-NEXT:    ret i16 2
 ;
   %elt = getelementptr inbounds <8 x i16>, ptr %p, i32 0, i32 1
   %v = load <8 x i16>, ptr %p, align 2
@@ -59,6 +59,4 @@ define i16 @insert_store_invariant_group_argument(ptr %p) {
 !0 = !{}
 ;.
 ; VC: [[META0]] = !{}
-;.
-; GVN: [[META0]] = !{}
 ;.
