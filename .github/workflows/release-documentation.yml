@@ -112,7 +112,7 @@ jobs:
           ./llvm/utils/release/build-docs.sh \
             $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm)
           echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
-          echo "doxygen-tarball-name=$(baename $(find . -iname '*doxygen*.tar.xz'))" >> "$GITHUB_OUTPUT"
+          echo "doxygen-tarball-name=$(basename $(find . -iname '*doxygen*.tar.xz'))" >> "$GITHUB_OUTPUT"
 
 
       - name: Generate sha256 digest for tarballs
@@ -120,7 +120,7 @@ jobs:
         shell: bash
         env:
           MAN_PAGE_TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
-          DOXYGEN_TARBALL_NAME: ${{ steps.build.outputs.man-page-tarball-name }}
+          DOXYGEN_TARBALL_NAME: ${{ steps.build.outputs.doxygen-tarball-name }}
         run: |
             echo "man-page-digest=$(cat "$MAN_PAGE_TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
             echo "doxygen-digest=$(cat "$DOXYGEN_TARBALL_NAME" | sha256sum | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
@@ -224,7 +224,7 @@ jobs:
        with:
          release-version: ${{ inputs.release-version }}
          artifact-id: ${{ matrix.artifact-id }}
-         attestation-name: ${{ runner.os }}-${{ runner.arch }}-${{ matrix.attestation_name }}
+         attestation-name: ${{ runner.os }}-${{ runner.arch }}-${{ matrix.attestation-name }}
          digest: ${{ matrix.digest }}
          upload: ${{ inputs.upload }}
          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
