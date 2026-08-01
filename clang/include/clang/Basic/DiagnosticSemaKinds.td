@@ -7235,7 +7235,7 @@ def warn_counted_by_addrof_discards_count : Warning<
   "'%select{counted_by|sized_by|counted_by_or_null|sized_by_or_null}1' bound; "
   "'__builtin_dynamic_object_size' on the resulting pointer uses the static "
   "layout of the object, not the annotated count">,
-  InGroup<CountedByAddrof>;
+  InGroup<DiagGroup<"counted-by-addrof">>;
 
 // __builtin_counted_by_ref diagnostics:
 def err_builtin_counted_by_ref_invalid_arg

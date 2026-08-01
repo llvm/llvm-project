@@ -4,9 +4,10 @@
 
 // RUN: cp %s %t.c
 // RUN: %clang_cc1 -fixit %t.c
-// RUN: %clang_cc1 -fsyntax-only -Werror=counted-by-addrof %t.c
+// RUN: %clang_cc1 -fsyntax-only -verify=fixed %t.c
 
 // disabled-no-diagnostics
+// fixed-no-diagnostics
 
 #define __counted_by(f) __attribute__((counted_by(f)))
 
