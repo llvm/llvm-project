@@ -251,7 +251,8 @@ static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
   sym.versionId = old.versionId;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
-  sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
+  sym.flags.store(old.flags.load(std::memory_order_relaxed) &
+                      (NEEDS_GOT | NEEDS_GOT_AUTH),
                   std::memory_order_relaxed);
 }
 
@@ -959,7 +960,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!sym.isTls() || ctx.arg.emachine != EM_LOONGARCH) {
       // Many LoongArch TLS relocs reuse the RE_LOONGARCH_GOT type, in which
       // case the NEEDS_GOT flag shouldn't get set.
-      sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
+      sym.setFlags(NEEDS_GOT);
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
@@ -1244,7 +1245,7 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   if (!sym.isGnuIFunc() || sym.isPreemptible || ctx.arg.zIfuncNoplt)
     return false;
   // Skip unreferenced non-preemptible ifunc.
-  if (!(flags & (NEEDS_GOT | NEEDS_PLT | HAS_DIRECT_RELOC)))
+  if (!(flags & (NEEDS_GOT | NEEDS_GOT_AUTH | NEEDS_PLT | HAS_DIRECT_RELOC)))
     return true;
 
   sym.isInIplt = true;
@@ -1258,6 +1259,8 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
   sym.allocateAux(ctx);
   ctx.symAux.back().pltIdx = ctx.symAux[irelativeSym->auxIdx].pltIdx;
 
+  assert(!(flags & NEEDS_GOT_AUTH) &&
+         "R_AARCH64_AUTH_IRELATIVE is not supported yet");
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.
     auto &d = cast<Defined>(sym);
@@ -1268,11 +1271,8 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
     // don't try to call the PLT as if it were an ifunc resolver.
     d.type = STT_FUNC;
 
-    if (flags & NEEDS_GOT) {
-      assert(!(flags & NEEDS_GOT_AUTH) &&
-             "R_AARCH64_AUTH_IRELATIVE is not supported yet");
+    if (flags & NEEDS_GOT)
       addGotEntry(ctx, sym);
-    }
   } else if (flags & NEEDS_GOT) {
     // Redirect GOT accesses to point to the Igot.
     sym.gotInIgot = true;
@@ -1294,8 +1294,8 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     sym.allocateAux(ctx);
 
-    if (flags & NEEDS_GOT) {
-      if ((flags & NEEDS_GOT_AUTH) && (flags & NEEDS_GOT_NONAUTH)) {
+    if (flags & (NEEDS_GOT | NEEDS_GOT_AUTH)) {
+      if ((flags & NEEDS_GOT) && (flags & NEEDS_GOT_AUTH)) {
         auto diag = Err(ctx);
         diag << "both AUTH and non-AUTH GOT entries for '" << sym.getName()
              << "' requested, but only one type of GOT entry per symbol is "
@@ -1338,8 +1338,8 @@ void elf::postScanRelocations(Ctx &ctx) {
       return;
     GotSection *got = ctx.in.got.get();
 
-    if (flags & NEEDS_TLSDESC) {
-      if ((flags & NEEDS_TLSDESC_AUTH) && (flags & NEEDS_TLSDESC_NONAUTH)) {
+    if (flags & (NEEDS_TLSDESC | NEEDS_TLSDESC_AUTH)) {
+      if ((flags & NEEDS_TLSDESC) && (flags & NEEDS_TLSDESC_AUTH)) {
         Err(ctx)
             << "both AUTH and non-AUTH TLSDESC entries for '" << sym.getName()
             << "' requested, but only one type of TLSDESC entry per symbol is "
