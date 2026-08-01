@@ -42,6 +42,7 @@
 #include "test_format_context.h"
 #include "test_macros.h"
 #include "make_string.h"
+#include "count_new.h"
 
 #define STR(S) MAKE_STRING(CharT, S)
 
@@ -562,11 +563,20 @@ void test_all_float_types() {
   test_float_type<long double, CharT>();
 }
 
+void test_default_precision_double_does_not_allocate() {
+  globalMemCounter.reset();
+  DisableAllocationGuard g;
+  std::string result = std::format("{}", 1.23);
+  g.release();
+  assert(result == "1.23");
+}
+
 int main(int, char**) {
   test_all_float_types<char>();
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_all_float_types<wchar_t>();
 #endif
+  test_default_precision_double_does_not_allocate();
 
   return 0;
 }

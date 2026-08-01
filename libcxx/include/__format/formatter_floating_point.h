@@ -56,27 +56,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __formatter {
 
-template <floating_point _Tp>
-_LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value) {
-  to_chars_result __r = std::to_chars(__first, __last, __value);
-  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
-  return __r.ptr;
-}
-
-template <floating_point _Tp>
-_LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt) {
-  to_chars_result __r = std::to_chars(__first, __last, __value, __fmt);
-  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
-  return __r.ptr;
-}
-
-template <floating_point _Tp>
-_LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt, int __precision) {
-  to_chars_result __r = std::to_chars(__first, __last, __value, __fmt, __precision);
-  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
-  return __r.ptr;
-}
-
 // https://en.cppreference.com/w/cpp/language/types#cite_note-1
 // float             min subnormal: +/-0x1p-149   max: +/- 3.402,823,4 10^38
 // double            min subnormal: +/-0x1p-1074  max  +/- 1.797,693,134,862,315,7 10^308
@@ -139,7 +118,10 @@ struct __traits<double> {
 /// Helper class to store the conversion buffer.
 ///
 /// Depending on the maximum size required for a value, the buffer is allocated
-/// on the stack or the heap.
+/// on the stack or the heap. When precision is unspecified the formatting is
+/// equivalent to calling \c to_chars without a precision argument; in that case
+/// the stack buffer is used first and the buffer grows only if formatting
+/// fails due to insufficient space.
 template <floating_point _Fp>
 class __float_buffer {
   using _Traits _LIBCPP_NODEBUG = __traits<_Fp>;
@@ -153,8 +135,7 @@ public:
   // When supporting long doubles the __max_integral part becomes 4932 which
   // may be too much for some platforms. For these cases a better estimate is
   // required.
-  explicit _LIBCPP_HIDE_FROM_ABI __float_buffer(int __precision)
-      : __precision_(__precision != -1 ? __precision : _Traits::__max_fractional) {
+  explicit _LIBCPP_HIDE_FROM_ABI __float_buffer(int __precision) : __precision_(__precision) {
     // When the precision is larger than _Traits::__max_fractional the digits in
     // the range (_Traits::__max_fractional, precision] will contain the value
     // zero. There's no need to request to_chars to write these zeros:
@@ -167,6 +148,15 @@ public:
     if (__precision_ > _Traits::__max_fractional) {
       __num_trailing_zeros_ = __precision_ - _Traits::__max_fractional;
       __precision_          = _Traits::__max_fractional;
+    }
+
+    // Unspecified precision means to_chars without a precision argument. That
+    // output fits in the stack buffer for float/double; allocate only if
+    // formatting later reports the buffer is too small.
+    if (__precision < 0) {
+      __size_  = _Traits::__stack_buffer_size;
+      __begin_ = __buffer_;
+      return;
     }
 
     __size_ = __formatter::__float_buffer_size<_Fp>(__precision_);
@@ -192,6 +182,21 @@ public:
   _LIBCPP_HIDE_FROM_ABI void __remove_trailing_zeros() { __num_trailing_zeros_ = 0; }
   _LIBCPP_HIDE_FROM_ABI void __add_trailing_zeros(int __zeros) { __num_trailing_zeros_ += __zeros; }
 
+  /// Grows the buffer to \a __new_size, preserving characters in
+  /// [\c begin(), \a __first). Returns the corresponding pointer into the new
+  /// buffer.
+  _LIBCPP_HIDE_FROM_ABI char* __grow(size_t __new_size, char* __first) {
+    _LIBCPP_ASSERT_INTERNAL(__new_size > __size_, "the buffer should grow");
+    ptrdiff_t __offset    = __first - __begin_;
+    char* __new_begin     = allocator<char>{}.allocate(__new_size);
+    std::copy_n(__begin_, __offset, __new_begin);
+    if (__size_ > _Traits::__stack_buffer_size)
+      allocator<char>{}.deallocate(__begin_, __size_);
+    __begin_ = __new_begin;
+    __size_  = __new_size;
+    return __begin_ + __offset;
+  }
+
 private:
   int __precision_;
   int __num_trailing_zeros_{0};
@@ -199,6 +204,52 @@ private:
   char* __begin_;
   char __buffer_[_Traits::__stack_buffer_size];
 };
+
+template <floating_point _Fp, floating_point _Tp>
+_LIBCPP_HIDE_FROM_ABI char* __to_buffer(__float_buffer<_Fp>& __buffer, char*& __first, _Tp __value) {
+  to_chars_result __r = std::to_chars(__first, __buffer.end(), __value);
+  if (__r.ec == errc::value_too_large) [[unlikely]] {
+    size_t __target = __formatter::__float_buffer_size<_Fp>(__traits<_Fp>::__max_fractional);
+    _LIBCPP_ASSERT_INTERNAL(__target > static_cast<size_t>(__buffer.end() - __buffer.begin()),
+                            "Internal buffer size estimate too small");
+    __first = __buffer.__grow(__target, __first);
+    __r     = std::to_chars(__first, __buffer.end(), __value);
+  }
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
+  return __r.ptr;
+}
+
+template <floating_point _Fp, floating_point _Tp>
+_LIBCPP_HIDE_FROM_ABI char*
+__to_buffer(__float_buffer<_Fp>& __buffer, char*& __first, _Tp __value, chars_format __fmt) {
+  to_chars_result __r = std::to_chars(__first, __buffer.end(), __value, __fmt);
+  if (__r.ec == errc::value_too_large) [[unlikely]] {
+    size_t __target = __formatter::__float_buffer_size<_Fp>(__traits<_Fp>::__max_fractional);
+    _LIBCPP_ASSERT_INTERNAL(__target > static_cast<size_t>(__buffer.end() - __buffer.begin()),
+                            "Internal buffer size estimate too small");
+    __first = __buffer.__grow(__target, __first);
+    __r     = std::to_chars(__first, __buffer.end(), __value, __fmt);
+  }
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
+  return __r.ptr;
+}
+
+template <floating_point _Fp, floating_point _Tp>
+_LIBCPP_HIDE_FROM_ABI char*
+__to_buffer(__float_buffer<_Fp>& __buffer, char*& __first, _Tp __value, chars_format __fmt, int __precision) {
+  to_chars_result __r = std::to_chars(__first, __buffer.end(), __value, __fmt, __precision);
+  if (__r.ec == errc::value_too_large) [[unlikely]] {
+    int __size_precision = __precision > __traits<_Fp>::__max_fractional ? __traits<_Fp>::__max_fractional
+                                                                         : __precision;
+    size_t __target      = __formatter::__float_buffer_size<_Fp>(__size_precision);
+    _LIBCPP_ASSERT_INTERNAL(__target > static_cast<size_t>(__buffer.end() - __buffer.begin()),
+                            "Internal buffer size estimate too small");
+    __first = __buffer.__grow(__target, __first);
+    __r     = std::to_chars(__first, __buffer.end(), __value, __fmt, __precision);
+  }
+  _LIBCPP_ASSERT_INTERNAL(__r.ec == errc(0), "Internal buffer too small");
+  return __r.ptr;
+}
 
 struct __float_result {
   /// Points at the beginning of the integral part in the buffer.
@@ -236,10 +287,10 @@ constexpr inline _LIBCPP_HIDE_FROM_ABI char* __find_exponent(char* __first, char
 
 template <class _Fp, class _Tp>
 _LIBCPP_HIDE_FROM_ABI __float_result
-__format_buffer_default(const __float_buffer<_Fp>& __buffer, _Tp __value, char* __integral) {
+__format_buffer_default(__float_buffer<_Fp>& __buffer, _Tp __value, char* __integral) {
   __float_result __result;
   __result.__integral = __integral;
-  __result.__last     = __formatter::__to_buffer(__integral, __buffer.end(), __value);
+  __result.__last     = __formatter::__to_buffer(__buffer, __result.__integral, __value);
 
   __result.__exponent = __formatter::__find_exponent(__result.__integral, __result.__last);
 
@@ -265,13 +316,14 @@ __format_buffer_default(const __float_buffer<_Fp>& __buffer, _Tp __value, char* 
 
 template <class _Fp, class _Tp>
 _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_lower_case(
-    const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
+    __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result;
   __result.__integral = __integral;
   if (__precision == -1)
-    __result.__last = __formatter::__to_buffer(__integral, __buffer.end(), __value, chars_format::hex);
+    __result.__last = __formatter::__to_buffer(__buffer, __result.__integral, __value, chars_format::hex);
   else
-    __result.__last = __formatter::__to_buffer(__integral, __buffer.end(), __value, chars_format::hex, __precision);
+    __result.__last =
+        __formatter::__to_buffer(__buffer, __result.__integral, __value, chars_format::hex, __precision);
 
   // H = one or more hex-digits
   // S = sign
@@ -317,7 +369,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_lower_case(
 
 template <class _Fp, class _Tp>
 _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_upper_case(
-    const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
+    __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result =
       __formatter::__format_buffer_hexadecimal_lower_case(__buffer, __value, __precision, __integral);
   std::transform(__result.__integral, __result.__exponent, __result.__integral, __hex_to_upper);
@@ -327,11 +379,11 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_upper_case(
 
 template <class _Fp, class _Tp>
 _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_lower_case(
-    const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
+    __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result;
   __result.__integral = __integral;
   __result.__last =
-      __formatter::__to_buffer(__integral, __buffer.end(), __value, chars_format::scientific, __precision);
+      __formatter::__to_buffer(__buffer, __result.__integral, __value, chars_format::scientific, __precision);
 
   char* __first = __integral + 1;
   _LIBCPP_ASSERT_INTERNAL(__first != __result.__last, "No exponent present");
@@ -354,7 +406,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_lower_case(
 
 template <class _Fp, class _Tp>
 _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_upper_case(
-    const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
+    __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result =
       __formatter::__format_buffer_scientific_lower_case(__buffer, __value, __precision, __integral);
   *__result.__exponent = 'E';
@@ -363,10 +415,11 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_upper_case(
 
 template <class _Fp, class _Tp>
 _LIBCPP_HIDE_FROM_ABI __float_result
-__format_buffer_fixed(const __float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
+__format_buffer_fixed(__float_buffer<_Fp>& __buffer, _Tp __value, int __precision, char* __integral) {
   __float_result __result;
   __result.__integral = __integral;
-  __result.__last     = __formatter::__to_buffer(__integral, __buffer.end(), __value, chars_format::fixed, __precision);
+  __result.__last =
+      __formatter::__to_buffer(__buffer, __result.__integral, __value, chars_format::fixed, __precision);
 
   // When there's no precision there's no radix point.
   // Else the radix point is placed at __precision + 1 from the end.
@@ -391,7 +444,8 @@ __format_buffer_general_lower_case(__float_buffer<_Fp>& __buffer, _Tp __value, i
 
   __float_result __result;
   __result.__integral = __integral;
-  __result.__last = __formatter::__to_buffer(__integral, __buffer.end(), __value, chars_format::general, __precision);
+  __result.__last =
+      __formatter::__to_buffer(__buffer, __result.__integral, __value, chars_format::general, __precision);
 
   char* __first = __integral + 1;
   if (__first == __result.__last) {
