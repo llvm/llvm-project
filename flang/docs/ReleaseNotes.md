@@ -33,10 +33,24 @@ page](https://llvm.org/releases/).
 
 ## Non-comprehensive list of changes in this release
 
+- The legacy array-value operations (`fir.array_load`, `fir.array_fetch`,
+  `fir.array_update`, `fir.array_modify`, `fir.array_access`,
+  `fir.array_amend`, `fir.array_merge_store`) have been removed from FIR,
+  together with the `array-value-copy` pass that legalized them and its
+  `-mmlir -disable-avc` option. Nothing in flang has produced these
+  operations since the legacy (non-HLFIR) expression lowering was deleted.
+  Downstream projects that still construct them must migrate to HLFIR (or
+  their own legalization) before rebasing. `fir.array_coor` is unrelated
+  and remains supported.
+
+- Added support for compressed DWARF debug sections. Flang now supports
+  compressing DWARF debug info in ELF object files using zlib or zstd,
+  reducing debug information size in compiled binaries.
+
 ## New Compiler Flags
 
-- The warning flags with prefixes -Wopen-mp and -Wopen-acc have been deprecated in favor of corrected spellings with the respective prefixes -Wopenmp and -Wopenacc. Removal of the deprecated options is planned for LLVM 25 (July 2027).
-- The `-Werror` flag will cause all warnings to become errors. This includes warnings about support for OpenMP versions, which will now prevent the compilation from happening with the `-Werror` flag. These OpenMP warnings can be disabled with `-Wno-experimental-option`.
+- Added `-gz` and `-gz=<format>` flags to enable compression of DWARF debug
+  sections. Supported formats are `zlib`, `zstd`, and `none`.
 
 ## Windows Support
 

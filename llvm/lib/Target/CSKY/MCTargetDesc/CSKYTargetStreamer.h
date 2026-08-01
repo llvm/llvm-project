@@ -12,6 +12,7 @@
 #include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/MC/ConstantPools.h"
 #include "llvm/MC/MCStreamer.h"
+#include <map>
 
 namespace llvm {
 
@@ -63,7 +64,8 @@ public:
   virtual void emitAttribute(unsigned Attribute, unsigned Value);
   virtual void finishAttributeSection();
 
-  virtual void emitTargetAttributes(const MCSubtargetInfo &STI);
+  virtual void emitTargetAttributes(const MCSubtargetInfo &STI,
+                                    bool HardFloatABI = false);
   /// Add a new entry to the constant pool for the current section and return an
   /// MCExpr that can be used to refer to the constant pool location.
   const MCExpr *addConstantPoolEntry(const MCExpr *, SMLoc Loc,

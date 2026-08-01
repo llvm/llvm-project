@@ -11,6 +11,7 @@
 #define _LIBCPP___LOCALE
 
 #include <__config>
+#include <__configuration/availability.h>
 
 #if _LIBCPP_HAS_LOCALIZATION
 
@@ -26,6 +27,7 @@
 #  include <cstdint>
 #  include <cstdlib>
 #  include <string>
+#  include <text_encoding>
 
 // Some platforms require more includes than others. Keep the includes on all plaforms for now.
 #  include <cstddef>
@@ -109,6 +111,13 @@ public:
     return std::use_facet<std::collate<_CharT> >(*this).compare(
                __x.data(), __x.data() + __x.size(), __y.data(), __y.data() + __y.size()) < 0;
   }
+#  if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT
+      _LIBCPP_HIDE_FROM_ABI std::text_encoding encoding() const {
+    std::string __name = name();
+    return std::__get_locale_encoding(__name.c_str());
+  }
+#  endif
 
   // global locale objects:
   static locale global(const locale&);
@@ -152,8 +161,6 @@ private:
 class _LIBCPP_EXPORTED_FROM_ABI locale::id {
   once_flag __flag_;
   int32_t __id_;
-
-  static int32_t __next_id;
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR id() : __id_(0) {}
@@ -325,6 +332,8 @@ public:
 #    endif // defined(__BIONIC__)
 #  elif defined(__GLIBC__)
   typedef unsigned short mask;
+  _LIBCPP_DIAGNOSTIC_PUSH
+  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmodules-ambiguous-internal-linkage")
   static const mask space  = _ISspace;
   static const mask print  = _ISprint;
   static const mask cntrl  = _IScntrl;
@@ -335,12 +344,13 @@ public:
   static const mask punct  = _ISpunct;
   static const mask xdigit = _ISxdigit;
   static const mask blank  = _ISblank;
+  _LIBCPP_DIAGNOSTIC_POP
 #    if defined(__mips__) || (BYTE_ORDER == BIG_ENDIAN)
   static const mask __regex_word = static_cast<mask>(_ISbit(15));
 #    else
   static const mask __regex_word = 0x80;
 #    endif
-#  elif defined(_LIBCPP_MSVCRT_LIKE)
+#  elif defined(_WIN32)
   typedef unsigned short mask;
   static const mask space        = _SPACE;
   static const mask print        = _BLANK | _PUNCT | _ALPHA | _DIGIT;
@@ -1414,104 +1424,6 @@ struct _LIBCPP_EXPORTED_FROM_ABI __widen_from_utf8<32> : public codecvt<char32_t
     return __s;
   }
 };
-
-// template <class charT> class numpunct
-
-template <class _CharT>
-class numpunct;
-
-template <>
-class _LIBCPP_EXPORTED_FROM_ABI numpunct<char> : public locale::facet {
-public:
-  typedef char char_type;
-  typedef basic_string<char_type> string_type;
-
-  explicit numpunct(size_t __refs = 0);
-
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
-
-  static locale::id id;
-
-protected:
-  ~numpunct() override;
-  virtual char_type do_decimal_point() const;
-  virtual char_type do_thousands_sep() const;
-  virtual string do_grouping() const;
-  virtual string_type do_truename() const;
-  virtual string_type do_falsename() const;
-
-  char_type __decimal_point_;
-  char_type __thousands_sep_;
-  string __grouping_;
-};
-
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
-template <>
-class _LIBCPP_EXPORTED_FROM_ABI numpunct<wchar_t> : public locale::facet {
-public:
-  typedef wchar_t char_type;
-  typedef basic_string<char_type> string_type;
-
-  explicit numpunct(size_t __refs = 0);
-
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
-
-  static locale::id id;
-
-protected:
-  ~numpunct() override;
-  virtual char_type do_decimal_point() const;
-  virtual char_type do_thousands_sep() const;
-  virtual string do_grouping() const;
-  virtual string_type do_truename() const;
-  virtual string_type do_falsename() const;
-
-  char_type __decimal_point_;
-  char_type __thousands_sep_;
-  string __grouping_;
-};
-#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
-
-// template <class charT> class numpunct_byname
-
-template <class _CharT>
-class numpunct_byname;
-
-template <>
-class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<char> : public numpunct<char> {
-public:
-  typedef char char_type;
-  typedef basic_string<char_type> string_type;
-
-  explicit numpunct_byname(const char* __nm, size_t __refs = 0);
-  explicit numpunct_byname(const string& __nm, size_t __refs = 0);
-
-protected:
-  ~numpunct_byname() override;
-};
-
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
-template <>
-class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<wchar_t> : public numpunct<wchar_t> {
-public:
-  typedef wchar_t char_type;
-  typedef basic_string<char_type> string_type;
-
-  explicit numpunct_byname(const char* __nm, size_t __refs = 0);
-  explicit numpunct_byname(const string& __nm, size_t __refs = 0);
-
-protected:
-  ~numpunct_byname() override;
-};
-#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

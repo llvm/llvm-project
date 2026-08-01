@@ -18,9 +18,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 class stop_token {
 public:
@@ -56,8 +56,8 @@ private:
   _LIBCPP_HIDE_FROM_ABI explicit stop_token(const __intrusive_shared_ptr<__stop_state>& __state) : __state_(__state) {}
 };
 
-#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 #endif // _LIBCPP___STOP_TOKEN_STOP_TOKEN_H

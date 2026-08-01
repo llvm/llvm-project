@@ -141,13 +141,13 @@ def qux2 : Instruction {
 // CHECK:      {{\[\[}}maybe_unused]] static const MCRegisterClass *getRegClassFromMatchKind(MatchClassKind Kind) {
 // CHECK-NEXT:   switch (Kind) {
 // CHECK-NEXT:   case MCK_RegClass2:
-// CHECK-NEXT:     return &ArchMCRegisterClasses[Arch::RegClass2RegClassID];
+// CHECK-NEXT:     return &getArchMCRegisterClass(Arch::RegClass2RegClassID);
 // CHECK-NEXT:   case MCK_RegClass3:
-// CHECK-NEXT:     return &ArchMCRegisterClasses[Arch::RegClass3RegClassID];
+// CHECK-NEXT:     return &getArchMCRegisterClass(Arch::RegClass3RegClassID);
 // CHECK-NEXT:   case MCK_RegClass:
-// CHECK-NEXT:     return &ArchMCRegisterClasses[Arch::RegClassRegClassID];
+// CHECK-NEXT:     return &getArchMCRegisterClass(Arch::RegClassRegClassID);
 // UNIQUE-NEXT:  case MCK_SpecialRegOperand:
-// UNIQUE-NEXT:    return &ArchMCRegisterClasses[Arch::RegClassRegClassID];
+// UNIQUE-NEXT:    return &getArchMCRegisterClass(Arch::RegClassRegClassID);
 // CHECK-NEXT:   default:
 // CHECK-NEXT:     return nullptr;
 // CHECK-NEXT:   }
@@ -164,8 +164,7 @@ def qux2 : Instruction {
 // REGINFO-ENUM-EMPTY:
 // REGINFO-ENUM-NEXT: };
 
-// REGINFO-DESC:      extern const MCRegisterClass ArchMCRegisterClasses[] = {
-// REGINFO-DESC-NEXT:   { RegClass, RegClassBits,
-// REGINFO-DESC-NEXT:   { RegClass2, RegClass2Bits,
-// REGINFO-DESC-NEXT:   { RegClass3, RegClass3Bits,
-// REGINFO-DESC-NEXT: };
+// REGINFO-DESC: extern const MCRegisterClassStorage<3, 4, 3, 3, 1, 0> ArchMCRegisterClassStorage = {
+// REGINFO-DESC:   Arch::RegClassRegClassID,
+// REGINFO-DESC:   Arch::RegClass2RegClassID,
+// REGINFO-DESC:   Arch::RegClass3RegClassID,

@@ -906,31 +906,8 @@ public:
 
   /// updateDbgUsersToReg - Update a collection of debug instructions
   /// to refer to the designated register.
-  void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
-                           ArrayRef<MachineInstr *> Users) const {
-    // If this operand is a register, check whether it overlaps with OldReg.
-    // If it does, replace with NewReg.
-    auto UpdateOp = [this, &NewReg, &OldReg](MachineOperand &Op) {
-      if (Op.isReg() &&
-          getTargetRegisterInfo()->regsOverlap(Op.getReg(), OldReg))
-        Op.setReg(NewReg);
-    };
-
-    // Iterate through (possibly several) operands to DBG_VALUEs and update
-    // each. For DBG_PHIs, only one operand will be present.
-    for (MachineInstr *MI : Users) {
-      if (MI->isDebugValue()) {
-        for (auto &Op : MI->debug_operands())
-          UpdateOp(Op);
-        assert(MI->hasDebugOperandForReg(NewReg) &&
-               "Expected debug value to have some overlap with OldReg");
-      } else if (MI->isDebugPHI()) {
-        UpdateOp(MI->getOperand(0));
-      } else {
-        llvm_unreachable("Non-DBG_VALUE, Non-DBG_PHI debug instr updated");
-      }
-    }
-  }
+  LLVM_ABI void updateDbgUsersToReg(MCRegister OldReg, MCRegister NewReg,
+                                    ArrayRef<MachineInstr *> Users) const;
 
   /// Return true if the specified register is modified in this function.
   /// This checks that no defining machine operands exist for the register or

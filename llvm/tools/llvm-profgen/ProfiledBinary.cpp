@@ -367,12 +367,15 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
   // 4K page now. Note that we don't use EXEC_PAGESIZE from <linux/param.h>
   // because we may build the tools on non-linux.
   uint64_t PageSize = 0x1000;
+  bool SeenFirstLoadableSegment = false;
   for (const typename ELFT::Phdr &Phdr : PhdrRange) {
     if (Phdr.p_type == ELF::PT_INTERP)
       HasInterp = true;
     if (Phdr.p_type == ELF::PT_LOAD) {
-      if (!FirstLoadableAddress)
+      if (!SeenFirstLoadableSegment) {
         FirstLoadableAddress = Phdr.p_vaddr & ~(PageSize - 1U);
+        SeenFirstLoadableSegment = true;
+      }
       if (Phdr.p_flags & ELF::PF_X) {
         // Segments will always be loaded at a page boundary.
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
@@ -745,6 +748,16 @@ void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
   Expected<SubtargetFeatures> Features = Obj->getFeatures();
   if (!Features)
     exitWithError(Features.takeError(), FileName);
+  // AArch64 object files do not generally carry complete ISA feature metadata,
+  // so the subtarget would default to the baseline (Armv8.0-A) feature set.
+  // That disassembler cannot decode feature-gated instructions (LSE atomics,
+  // RCPC loads, SVE, ...) that are pervasive in modern AArch64 binaries; they
+  // would be miscounted as "invalid instructions" and, worse, their addresses
+  // would be absent from the code/branch maps used for sample attribution.
+  // Enable all instructions so the disassembler recognizes whatever the
+  // compiler emitted, matching llvm-objdump's default for AArch64.
+  if (TheTriple.isAArch64())
+    Features->AddFeature("+all");
   STI.reset(
       TheTarget->createMCSubtargetInfo(TheTriple, "", Features->getString()));
   if (!STI)

@@ -954,11 +954,11 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
     if (VDataIdx == -1)
       return -1;
     if (AMDGPU::getRegBitWidth(VDataRCID) > 64) {
-      // On gfx940-family the BUFFER_STORE source-vgpr WAR hazard exists for
-      // every SOFFSET shape; the wait-state count differs by SOFFSET, and is
-      // computed in checkVALUHazardsHelper. Pre-gfx940 the hazard only exists
-      // if soffset is not an SGPR.
-      if (ST.hasGFX940Insts())
+      // When SOFFSET-dependent wide-store windows apply, the BUFFER_STORE
+      // source-vgpr WAR hazard exists for every SOFFSET shape; the wait-state
+      // count differs by SOFFSET and is computed in checkVALUHazardsHelper.
+      // Otherwise the hazard only exists if soffset is not an SGPR.
+      if (ST.hasVDecCoExecHazard())
         return VDataIdx;
       const MachineOperand *SOffset =
           TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
@@ -990,63 +990,73 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
   return -1;
 }
 
-int GCNHazardRecognizer::checkVALUHazardsHelper(
-    const MachineOperand &Def, const MachineRegisterInfo &MRI) const {
-  // Helper to check for the hazard where VMEM instructions that store more
-  // than 8 bytes can have their store data overwritten by the next
-  // instruction. On gfx940-family the window depends on the producer's
-  // SOFFSET shape:
+int GCNHazardRecognizer::checkUniformWindowVALUHazardsHelper(
+    Register Reg) const {
+  // Wide stores need a single wait-state bubble before a VALU that overwrites
+  // store data. createsVALUHazard already excludes MUBUF/MTBUF stores with an
+  // SGPR SOFFSET.
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  auto IsHazard = [&](const MachineInstr &MI) {
+    int DataIdx = createsVALUHazard(MI);
+    return DataIdx >= 0 &&
+           TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
+  };
+
+  return std::max(0, 1 - getWaitStatesSince(IsHazard, /*Limit=*/1));
+}
+
+int GCNHazardRecognizer::checkSOFFSETWindowVALUHazardsHelper(
+    Register Reg) const {
+  // The required wait-state window depends on the producer's SOFFSET shape:
   //   - MUBUF/MTBUF wide store with sgpr SOFFSET: 1 wait state.
   //   - MUBUF/MTBUF wide store with literal/absent SOFFSET, and FLAT wide
   //     store: 2 wait states.
-  // Pre-gfx940 keeps a single 1-wait-state window. The 1-cycle sgpr-SOFFSET
-  // window was measured on gfx950 (MI350X); the same gate is applied to the
-  // rest of the gfx940 family to match the existing rule's granularity.
+  // The 1-cycle sgpr-SOFFSET window was measured on gfx950.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   int WaitStatesNeeded = 0;
-  if (!TRI->isVectorRegister(MRI, Def.getReg()))
-    return WaitStatesNeeded;
-  const Register Reg = Def.getReg();
 
-  const int MaxWaitStates = ST.hasGFX940Insts() ? 2 : 1;
+  // Scan each wait-state window separately and take the max padding needed.
+  // getWaitStatesSince supplies the minimum distance to a producer over paths.
+  for (int Window = 1; Window <= 2; ++Window) {
+    auto IsHazard = [&](const MachineInstr &MI) {
+      int DataIdx = createsVALUHazard(MI);
+      if (DataIdx < 0 ||
+          !TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg))
+        return false;
 
-  // Per-producer required wait-state window. On pre-gfx940 every producer
-  // uses 1; on gfx940-family MUBUF/MTBUF stores with an SGPR SOFFSET use 1
-  // and everything else (literal/absent SOFFSET, FLAT) uses 2.
-  auto WindowFor = [this, TII](const MachineInstr &MI) -> int {
-    if (!ST.hasGFX940Insts())
-      return 1;
-    if (TII->isBUF(MI)) {
+      // Window 1 matches every hazard producer. Window 2 excludes BUF stores
+      // with an SGPR SOFFSET, which only require a single wait state.
+      if (Window == 1 || !TII->isBUF(MI))
+        return true;
+
       const MachineOperand *SOffset =
           TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
-      if (SOffset && SOffset->isReg())
-        return 1;
-    }
-    return 2;
-  };
-
-  // For each hazard producer reached, accumulate the wait states still
-  // needed using that producer's own window. The predicate always returns
-  // false so the walk runs to MaxWaitStates.
-  int Distance = 0;
-  auto Counter = [&](const MachineInstr &MI) {
-    int DataIdx = createsVALUHazard(MI);
-    if (DataIdx >= 0 &&
-        TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg)) {
-      int Need = WindowFor(MI) - Distance;
-      WaitStatesNeeded = std::max(WaitStatesNeeded, Need);
-    }
-    // Mirror getWaitStatesSince's accounting, which does not count inline asm
-    // towards the wait-state distance.
-    if (!MI.isInlineAsm())
-      Distance += SIInstrInfo::getNumWaitStates(MI);
-    return false;
-  };
-  getWaitStatesSince(Counter, MaxWaitStates);
+      return !SOffset || !SOffset->isReg();
+    };
+    WaitStatesNeeded = std::max(WaitStatesNeeded,
+                                Window - getWaitStatesSince(IsHazard, Window));
+  }
 
   return WaitStatesNeeded;
+}
+
+int GCNHazardRecognizer::checkVALUHazardsHelper(
+    const MachineOperand &Def, const MachineRegisterInfo &MRI) const {
+  // Helper to check for the hazard where VMEM instructions that store more
+  // than 8 bytes can have their store data overwritten by the next
+  // instruction.
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  if (!TRI->isVectorRegister(MRI, Def.getReg()))
+    return 0;
+
+  if (ST.hasVDecCoExecHazard())
+    return checkSOFFSETWindowVALUHazardsHelper(Def.getReg());
+
+  return checkUniformWindowVALUHazardsHelper(Def.getReg());
 }
 
 /// Dest sel forwarding issue occurs if additional logic is needed to swizzle /
@@ -2026,7 +2036,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
-  if (!ST.hasGFX1250Insts() || // Coexecution disabled.
+  if (!ST.hasTransCoexecutionHazard() || // Coexecution disabled.
       !SIInstrInfo::isVALU(*MI, /*AllowLDSDMA=*/true) ||
       SIInstrInfo::isTRANS(*MI))
     return false;
@@ -2136,15 +2146,11 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 //
 // Category 0: WMMA with Latency 8
 //   WMMA_*F16, WMMA_*BF16
-//   WMMA_*FP8FP8
-//   WMMA_*FP8BF8
-//   WMMA_*BF8FP8
-//   WMMA_*BF8BF8
-//   WMMA_*F8F6F4 if SRCA & SRCB != F8
+//   WMMA_*_16X16X128_{FP8,BF8}
+//   WMMA_*F8F6F4 if SRCA & SRCB are not both F4
 //
 // Category 1: WMMA Latency 16
 //   WMMA_IU8
-//   WMMA_*F8F6F4 if SRCA OR SRCB == F8
 //
 // Category 2: SWMMAC with Latency 8
 //   SWMMAC_*F16, SWMMAC_*BF16,
@@ -2169,6 +2175,10 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 //   V_WMMA_F32_32X16X128_F4
 //   V_WMMA_I32_16X16X64_IU8
 //   V_WMMA_I32_16X16X64_IU8
+//
+// Category 6: gfx1250 WMMA with Latency 4 (one co-execution slot)
+//   WMMA_*_16X16X64_{FP8,BF8}
+//   WMMA_*F8F6F4 if SRCA & SRCB are both F4
 static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
                                             const SIInstrInfo *TII,
                                             const TargetSchedModel &SchedModel,
@@ -2180,6 +2190,12 @@ static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
 
   unsigned Latency = SchedModel.computeInstrLatency(&MI);
   switch (Latency) {
+  case 4:
+    // Dense 4-cycle WMMA (gfx1250 16x16x64 FP8/BF8 and f8f6f4 with both
+    // inputs F4). One co-execution slot; there is no 4-cycle SWMMAC.
+    assert(!IsSWMMAC && "no 4-cycle SWMMAC expected");
+    Category = 6;
+    break;
   case 8:
     Category = IsSWMMAC ? 2 : 0;
     break;
@@ -2198,7 +2214,7 @@ static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
 }
 
 int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
-  if (!ST.hasGFX1250Insts())
+  if (!ST.hasWMMACoexecutionHazards())
     return 0;
 
   const SIInstrInfo *TII = ST.getInstrInfo();
@@ -2210,8 +2226,8 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   // (WMMAWaitStates if the second is also a WMMA, VALUWaitStates if the second
   // is a VALU). Refer to SPG 4.6.12.1. "Requirements for WMMA data hazards" for
   // numbers, which depends on the category of the first WMMA.
-  const int WMMAWaitStates[] = {5, 9, 3, 5, 9, 17};
-  const int VALUWaitStates[] = {4, 8, 2, 4, 8, 16};
+  const int WMMAWaitStates[] = {5, 9, 3, 5, 9, 17, 2};
+  const int VALUWaitStates[] = {4, 8, 2, 4, 8, 16, 1};
   unsigned Category = 0;
 
   auto IsWMMAHazardFn = [MI, TII, &Category, this](const MachineInstr &I) {
@@ -3546,17 +3562,11 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   };
 
   SmallVector<const MachineInstr *> WaitInstrs;
-  bool HasSGPRRead = false;
   StateType InitialState;
 
   // Look for SGPR write.
   MachineOperand *HazardDef = nullptr;
-  for (MachineOperand &Op : MI->operands()) {
-    if (!Op.isReg())
-      continue;
-    if (Op.isDef() && HazardDef)
-      continue;
-
+  for (MachineOperand &Op : MI->all_defs()) {
     Register Reg = Op.getReg();
     if (IgnoreableSGPR(Reg))
       continue;
@@ -3566,14 +3576,9 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
       if (!TRI->isSGPRReg(MRI, Reg))
         continue;
     }
-    // Also check for SGPR reads.
-    if (Op.isUse()) {
-      HasSGPRRead = true;
-      continue;
-    }
 
-    assert(!HazardDef);
     HazardDef = &Op;
+    break;
   }
 
   if (!HazardDef)
@@ -3634,49 +3639,28 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     }
   };
 
-  const unsigned ConstantMaskBits = AMDGPU::DepCtr::encodeFieldSaSdst(
-      AMDGPU::DepCtr::encodeFieldVaSdst(AMDGPU::DepCtr::encodeFieldVaVcc(0, ST),
-                                        0),
-      0);
   auto UpdateStateFn = [&](StateType &State, const MachineInstr &I) {
-    switch (I.getOpcode()) {
-    case AMDGPU::S_WAITCNT_DEPCTR:
-      // Record mergable waits within region of instructions free of SGPR reads.
-      if (!HasSGPRRead && I.getParent() == MI->getParent() && !I.isBundled() &&
-          (I.getOperand(0).getImm() & ConstantMaskBits) == ConstantMaskBits)
-        WaitInstrs.push_back(&I);
-      break;
-    default:
-      // Update tracking of SGPR reads and writes.
-      for (auto &Op : I.operands()) {
-        if (!Op.isReg())
+    // Update tracking of SGPR writes.
+    for (auto &Op : I.all_defs()) {
+      Register Reg = Op.getReg();
+      if (IgnoreableSGPR(Reg))
+        continue;
+      if (!IsVCC(Reg)) {
+        if (Op.isImplicit())
           continue;
-
-        Register Reg = Op.getReg();
-        if (IgnoreableSGPR(Reg))
+        if (!TRI->isSGPRReg(MRI, Reg))
           continue;
-        if (!IsVCC(Reg)) {
-          if (Op.isImplicit())
-            continue;
-          if (!TRI->isSGPRReg(MRI, Reg))
-            continue;
-        }
-        if (Op.isUse()) {
-          HasSGPRRead = true;
-          continue;
-        }
-
-        // Stop tracking any SGPRs with writes on the basis that they will
-        // already have an appropriate wait inserted afterwards.
-        SmallVector<Register, 2> Found;
-        for (Register SGPR : State.HazardSGPRs) {
-          if (Reg == SGPR || TRI->regsOverlap(Reg, SGPR))
-            Found.push_back(SGPR);
-        }
-        for (Register SGPR : Found)
-          State.HazardSGPRs.erase(SGPR);
       }
-      break;
+
+      // Stop tracking any SGPRs with writes on the basis that they will
+      // already have an appropriate wait inserted afterwards.
+      SmallVector<Register, 2> Found;
+      for (Register SGPR : State.HazardSGPRs) {
+        if (Reg == SGPR || TRI->regsOverlap(Reg, SGPR))
+          Found.push_back(SGPR);
+      }
+      for (Register SGPR : Found)
+        State.HazardSGPRs.erase(SGPR);
     }
   };
 
@@ -3691,39 +3675,6 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
       IsVALU ? (IsVCC(HazardReg) ? AMDGPU::DepCtr::encodeFieldVaVcc(0, ST)
                                  : AMDGPU::DepCtr::encodeFieldVaSdst(0, ST))
              : AMDGPU::DepCtr::encodeFieldSaSdst(0, ST);
-
-  // Try to merge previous waits into this one for regions with no SGPR reads.
-  if (!WaitInstrs.empty()) {
-    // Note: WaitInstrs contains const pointers, so walk backward from MI to
-    // obtain a mutable pointer to each instruction to be merged.
-    // This is expected to be a very short walk within the same block.
-    SmallVector<MachineInstr *> ToErase;
-    unsigned Found = 0;
-    for (MachineBasicBlock::reverse_iterator It = MI->getReverseIterator(),
-                                             End = MI->getParent()->rend();
-         Found < WaitInstrs.size() && It != End; ++It) {
-      MachineInstr *WaitMI = &*It;
-      // Find next wait instruction.
-      if (std::as_const(WaitMI) != WaitInstrs[Found])
-        continue;
-      Found++;
-      unsigned WaitMask = WaitMI->getOperand(0).getImm();
-      assert((WaitMask & ConstantMaskBits) == ConstantMaskBits);
-      DepCtr = AMDGPU::DepCtr::encodeFieldSaSdst(
-          DepCtr, std::min(AMDGPU::DepCtr::decodeFieldSaSdst(WaitMask),
-                           AMDGPU::DepCtr::decodeFieldSaSdst(DepCtr)));
-      DepCtr = AMDGPU::DepCtr::encodeFieldVaSdst(
-          DepCtr, std::min(AMDGPU::DepCtr::decodeFieldVaSdst(WaitMask),
-                           AMDGPU::DepCtr::decodeFieldVaSdst(DepCtr)));
-      DepCtr = AMDGPU::DepCtr::encodeFieldVaVcc(
-          DepCtr, std::min(AMDGPU::DepCtr::decodeFieldVaVcc(WaitMask),
-                           AMDGPU::DepCtr::decodeFieldVaVcc(DepCtr)));
-      ToErase.push_back(WaitMI);
-    }
-    assert(Found == WaitInstrs.size());
-    for (MachineInstr *WaitMI : ToErase)
-      WaitMI->eraseFromParent();
-  }
 
   // Add s_waitcnt_depctr after SGPR write.
   auto NextMI = std::next(MI->getIterator());

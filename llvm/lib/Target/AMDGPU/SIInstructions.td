@@ -338,7 +338,7 @@ def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
 
 let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in
 def : GCNPat <(f16 (UniformBinFrag<fptrunc_round> f32:$src0, (i32 RtzRoundMode))),
-     (EXTRACT_SUBREG (S_CVT_PK_RTZ_F16_F32 $src0, $src0), lo16)>;
+     (f16 (COPY_TO_REGCLASS (S_CVT_PK_RTZ_F16_F32 $src0, $src0), SReg_32))>;
 
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
@@ -508,6 +508,24 @@ def S_AND_B32_term : WrapTerminatorInst<S_AND_B32>;
 def S_AND_SAVEEXEC_B32_term : WrapTerminatorInst<S_AND_SAVEEXEC_B32>;
 }
 
+class WrapTerminatorVOPC<VOPC_Pseudo base_inst> : VPseudoInstSI<
+      base_inst.OutOperandList,
+      base_inst.InOperandList> {
+  let Uses = base_inst.Uses;
+  let Defs = base_inst.Defs;
+  let SchedRW = base_inst.SchedRW;
+  let isTerminator = 1;
+  let isConvergent = 1;
+  let isCompare = 1;
+  let VOPC = 1;
+}
+
+let SubtargetPredicate = HasNoSdstCMPX in {
+def V_CMPX_EQ_U32_nosdst_e32_term
+  : WrapTerminatorVOPC<V_CMPX_EQ_U32_nosdst_e32>;
+def V_CMPX_EQ_U64_nosdst_e32_term
+  : WrapTerminatorVOPC<V_CMPX_EQ_U64_nosdst_e32>;
+}
 
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_wave_barrier)]> {
@@ -2379,7 +2397,7 @@ def : GCNPat <
       (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$src, sub1)),
                      (i32 (S_MOV_B32 (i32 0x80000000)))), sub1)
 > {
-  let SubtargetPredicate = HasPackedFP32Ops;
+  let SubtargetPredicate = HasAnyPackedFP32Ops;
 }
 
 def : GCNPat <
@@ -2387,7 +2405,7 @@ def : GCNPat <
   (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
                 !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
 > {
-  let SubtargetPredicate = HasPackedFP64Ops;
+  let SubtargetPredicate = HasPackedFP64SingleSGPROps;
 }
 
 foreach fp16vt = [f16, bf16] in {
@@ -2510,9 +2528,9 @@ def : GCNPat <
 
 def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
-  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
+  (EXTRACT_SUBREG (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
              (REG_SEQUENCE VGPR_32, $src0, lo16, (i16 (IMPLICIT_DEF)), hi16),
-             (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
+             (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1))), lo16)
 >;
 }
 } // End foreach fp16vt = [f16, bf16]
@@ -2562,12 +2580,12 @@ foreach vt = Reg32Types.types in {
 // unnecessary copy from SGPR to VGPR.
 def : GCNPat <
   (VGPRImm<(p5 frameindex)>:$fi),
-  (V_MOV_B32_e32 (p5 (frameindex_to_targetframeindex $fi)))
+  (V_MOV_B32_e32 (p5 (to_tframeindex $fi)))
 >;
 
 def : GCNPat <
   (p5 frameindex:$fi),
-  (S_MOV_B32 (p5 (frameindex_to_targetframeindex $fi)))
+  (S_MOV_B32 (p5 (to_tframeindex $fi)))
 >;
 
 def : GCNPat <
@@ -2617,6 +2635,36 @@ let True16Predicate = UseRealTrue16Insts in {
 /// conservative MachineCSE. If we end up with an s_mov_b64 + copy to
 /// vgpr pattern, MachineCSE will not perform the CSE which occurs
 /// after operand folding.
+let SubtargetPredicate = HasVMovB64Inst, AddedComplexity = 2 in {
+  def : GCNPat <
+    (VGPRImm<(i64 InlineImm64)>:$imm),
+    (V_MOV_B64_e32 InlineImm64:$imm)
+  >;
+
+  def : GCNPat <
+    (VGPRImm<(i64 i64imm_32bit)>:$imm),
+    (V_MOV_B64_e32 i64imm_32bit:$imm)
+  >;
+
+  def : GCNPat <
+    (VGPRImm<(f64 InlineImmFP64)>:$imm),
+    (V_MOV_B64_e32 (i64 (bitcast_fpimm_to_i64 $imm)))
+  >;
+}
+
+let SubtargetPredicate = HasVMovB64Inst, OtherPredicates = [Has64BitLiterals],
+    AddedComplexity = 2 in {
+  def : GCNPat <
+    (VGPRImm<(i64 imm)>:$imm),
+    (V_MOV_B64_e32 imm:$imm)
+  >;
+
+  def : GCNPat <
+    (VGPRImm<(f64 fpimm)>:$imm),
+    (V_MOV_B64_e32 (i64 (bitcast_fpimm_to_i64 $imm)))
+  >;
+}
+
 let AddedComplexity = 1 in {
  // V_MOV_B64_PSEUDO and S_MOV_B64_IMM_PSEUDO can be used with any 64-bit
   // immediate and wil be expanded as needed, but we will only use these patterns
@@ -2717,12 +2765,6 @@ def : GCNPat <(i1 imm:$imm),
   let WaveSizePredicate = isWave32;
 }
 
-let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <
-  (i32 (DivergentBinFrag<srl> VGPR_32:$src, (i32 16))),
-  (REG_SEQUENCE VGPR_32, (i16 (EXTRACT_SUBREG $src, hi16)), lo16, (V_MOV_B16_t16_e64 0, (i16 0x0000), 0), hi16)
->;
-
 /********** ================== **********/
 /********** Intrinsic Patterns **********/
 /********** ================== **********/
@@ -2746,6 +2788,23 @@ class Ext32Pat <SDNode ext> : GCNPat <
 
 def : Ext32Pat <zext>;
 def : Ext32Pat <anyext>;
+
+// Uniform extensions from i1
+
+foreach ext = [sext, zext, anyext] in {
+  defvar extone = !switch(ext, sext: -1, 1);
+
+  foreach vt = [i16, i32] in
+    def : GCNPat <
+      (vt (UniformUnaryFrag<ext> SCC)),
+      (S_CSELECT_B32 (vt extone), (vt 0))
+    >;
+
+  def : GCNPat <
+    (i64 (UniformUnaryFrag<ext> SCC)),
+    (S_CSELECT_B64 (i64 extone), (i64 0))
+  >;
+}
 
 // The multiplication scales from [0,1) to the unsigned integer range,
 // rounding down a bit to avoid unwanted overflow.
@@ -3479,17 +3538,19 @@ def : GCNPat <
 let True16Predicate = UseRealTrue16Insts in {
 def : GCNPat<
   (i32 (DivergentUnaryFrag<zext> i16:$src)),
-  (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+  (i32 (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, $src))
 >;
 
 def : GCNPat<
   (i64 (DivergentUnaryFrag<zext> i16:$src)),
-  (REG_SEQUENCE VReg_64, $src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16, (V_MOV_B32_e32 (i32 0)), sub1)
+  (REG_SEQUENCE VReg_64,
+    (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, $src), sub0,
+    (S_MOV_B32 (i32 0)), sub1)
 >;
 
 def : GCNPat<
   (i32 (zext (i16 (bitconvert fp16_zeros_high_16bits:$src)))),
-  (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (V_MOV_B16_t16_e64 0, (i16 0), 0), hi16)
+  (i32 (V_CVT_U32_U16_t16_e64 SRCMODS.NONE, $src))
 >;
 
 def : GCNPat <
@@ -3501,6 +3562,20 @@ def : GCNPat <
 def : GCNPat <
   (i32 (trunc i64:$a)),
   (EXTRACT_SUBREG $a, sub0)
+>;
+
+def : GCNPat <
+  (v2i32 (UniformUnaryFrag<trunc> v2i64:$a)),
+  (v2i32 (REG_SEQUENCE SReg_64,
+         (i32 (EXTRACT_SUBREG $a, sub0)), sub0,
+         (i32 (EXTRACT_SUBREG $a, sub2)), sub1))
+>;
+
+def : GCNPat <
+  (v2i32 (DivergentUnaryFrag<trunc> v2i64:$a)),
+  (v2i32 (REG_SEQUENCE VReg_64,
+         (i32 (EXTRACT_SUBREG $a, sub0)), sub0,
+         (i32 (EXTRACT_SUBREG $a, sub2)), sub1))
 >;
 
 def : GCNPat <
@@ -3744,16 +3819,28 @@ def : GCNPat<
 >;
 
 let SubtargetPredicate = HasPackedFP32Ops in {
-def : GCNPat<
-  (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
-  (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
->;
+  def : GCNPat<
+    (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
+    (V_PK_MUL_F32 0, (i64 CONST.FP32_ONE), $src_mods, $src)
+  >;
 
-def : GCNPat<
-  (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
-  (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
->;
+  def : GCNPat<
+    (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
+    (V_PK_MUL_F32 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+  >;
 } // End SubtargetPredicate = HasPackedFP32Ops
+
+let SubtargetPredicate = HasPackedFP32SingleSGPROps in {
+  def : GCNPat<
+    (fcanonicalize (v2f32 (VOP3PMods v2f32:$src, i32:$src_mods))),
+    (V_PK_MUL_F32_gfx1250 0, (i64 CONST.FP32_ONE), $src_mods, $src)
+  >;
+
+  def : GCNPat<
+    (fcanonicalize (v2f32 (fneg (VOP3PMods v2f32:$src, i32:$src_mods)))),
+    (V_PK_MUL_F32_gfx1250 0, (i64 CONST.FP32_NEG_ONE), $src_mods, $src)
+  >;
+} // End SubtargetPredicate = HasPackedFP32SingleSGPROps
 
 // TODO: Handle fneg like other types.
 let SubtargetPredicate = isNotGFX12Plus in {
@@ -3817,7 +3904,7 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
     (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
+    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64SingleSGPROps]);
   }
 }
 
@@ -4004,6 +4091,30 @@ let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat <
   (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
+>;
+
+// Fold the (hi << 16) | z high-half packing idiom. DAGCombine rewrites the
+// shift to bitcast(build_vector (i16 0), hi), so match that form directly.
+// Non-real-true16: high source is a VGPR_32, fold into v_lshl_or_b32.
+let True16Predicate = NotUseRealTrue16Insts in
+def : GCNPat <
+  (i32 (DivergentBinFrag<or>
+    (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_32:$src_hi))))),
+    i32:$src2)),
+  (V_LSHL_OR_B32_e64 VGPR_32:$src_hi, (i32 16), VSrc_b32:$src2)
+>;
+
+// Real-true16: high source is a VGPR_16, so OR it into the high half of src2
+// with v_or_b16 and assemble the 32-bit result with a REG_SEQUENCE.
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (i32 (DivergentBinFrag<or>
+    (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi))))),
+    i32:$src2)),
+  (REG_SEQUENCE VGPR_32,
+    (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), lo16)), lo16,
+    (V_OR_B16_t16_e64 (i32 0), VGPR_16:$src_hi,
+                      (i32 0), (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), hi16))), hi16)
 >;
 
 // With multiple uses of the shift, this will duplicate the shift and

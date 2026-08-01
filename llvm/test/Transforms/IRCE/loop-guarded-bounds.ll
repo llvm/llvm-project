@@ -130,7 +130,7 @@ exit:                                       ; preds = %guarded, %loop_, %prehead
 ; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
 ; CHECK: [[META2]] = !{!"llvm.loop.vectorize.enable", i1 false}
 ; CHECK: [[META3]] = !{!"llvm.loop.licm_versioning.disable"}
-; CHECK: [[META4]] = !{!"llvm.loop.distribute.enable", i1 false}
+; CHECK: [[META4]] = !{!"llvm.loop.distribute.disable"}
 ; CHECK: [[META5]] = !{}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]], [[META3]], [[META4]]}
 ;.

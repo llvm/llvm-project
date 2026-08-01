@@ -942,19 +942,13 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 ISD::CondCode TargetLoweringBase::getSoftFloatCmpLibcallPredicate(
     RTLIB::LibcallImpl Impl) const {
   switch (Impl) {
-  case RTLIB::impl___aeabi_dcmpeq__une:
-  case RTLIB::impl___aeabi_fcmpeq__une:
-    // Usage in the eq case, so we have to invert the comparison.
-    return ISD::SETEQ;
-  case RTLIB::impl___aeabi_dcmpeq__oeq:
-  case RTLIB::impl___aeabi_fcmpeq__oeq:
-    // Normal comparison to boolean value.
-    return ISD::SETNE;
+  case RTLIB::impl___aeabi_dcmpeq:
   case RTLIB::impl___aeabi_dcmplt:
   case RTLIB::impl___aeabi_dcmple:
   case RTLIB::impl___aeabi_dcmpge:
   case RTLIB::impl___aeabi_dcmpgt:
   case RTLIB::impl___aeabi_dcmpun:
+  case RTLIB::impl___aeabi_fcmpeq:
   case RTLIB::impl___aeabi_fcmplt:
   case RTLIB::impl___aeabi_fcmple:
   case RTLIB::impl___aeabi_fcmpge:
@@ -1128,6 +1122,7 @@ void TargetLoweringBase::initActions() {
     // Most backends expect to see the node which just returns the value loaded.
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Expand);
 
+    // clang-format off
     // These operations default to expand.
     setOperationAction({ISD::FGETSIGN,       ISD::CONCAT_VECTORS,
                         ISD::FMINNUM,        ISD::FMAXNUM,
@@ -1157,8 +1152,11 @@ void TargetLoweringBase::initActions() {
                         ISD::FASIN,          ISD::FATAN,
                         ISD::FCOSH,          ISD::FSINH,
                         ISD::FTANH,          ISD::FATAN2,
-                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP},
+                        ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP,
+                        ISD::CONVERT_TO_ARBITRARY_FP,
+                        ISD::PSEUDO_FMIN,    ISD::PSEUDO_FMAX},
                        VT, Expand);
+    // clang-format on
 
     // Overflow operations default to expand
     setOperationAction({ISD::SADDO, ISD::SSUBO, ISD::UADDO, ISD::USUBO,
@@ -1224,6 +1222,8 @@ void TargetLoweringBase::initActions() {
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
     setOperationAction(ISD::STRICT_##DAGN, VT, Expand);
 #include "llvm/IR/ConstrainedOps.def"
+    setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Expand);
+    setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Expand);
 
     // For most targets @llvm.get.dynamic.area.offset just returns 0.
     setOperationAction(ISD::GET_DYNAMIC_AREA_OFFSET, VT, Expand);

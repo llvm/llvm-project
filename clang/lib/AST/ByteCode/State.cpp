@@ -25,6 +25,7 @@ OptionalDiagnostic State::FFDiag(SourceLocation Loc, diag::kind DiagId,
 
 OptionalDiagnostic State::FFDiag(const Expr *E, diag::kind DiagId,
                                  unsigned ExtraNotes) {
+  EvalStatus.DiagEmitted = true;
   if (EvalStatus.Diag)
     return diag(E->getExprLoc(), DiagId, ExtraNotes, false);
   setActiveDiagnostic(false);
@@ -33,6 +34,7 @@ OptionalDiagnostic State::FFDiag(const Expr *E, diag::kind DiagId,
 
 OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
                                  unsigned ExtraNotes) {
+  EvalStatus.DiagEmitted = true;
   if (EvalStatus.Diag)
     return diag(SI.getLoc(), DiagId, ExtraNotes, false);
   setActiveDiagnostic(false);
@@ -41,6 +43,7 @@ OptionalDiagnostic State::FFDiag(SourceInfo SI, diag::kind DiagId,
 
 OptionalDiagnostic State::CCEDiag(SourceLocation Loc, diag::kind DiagId,
                                   unsigned ExtraNotes) {
+  EvalStatus.DiagEmitted = true;
   // Don't override a previous diagnostic. Don't bother collecting
   // diagnostics if we're evaluating for overflow.
   if (!EvalStatus.Diag || !EvalStatus.Diag->empty()) {
@@ -64,6 +67,12 @@ OptionalDiagnostic State::Note(SourceLocation Loc, diag::kind DiagId) {
   if (!hasActiveDiagnostic())
     return OptionalDiagnostic();
   return OptionalDiagnostic(&addDiag(Loc, DiagId));
+}
+
+OptionalDiagnostic State::Note(SourceInfo SI, diag::kind DiagId) {
+  if (!hasActiveDiagnostic())
+    return OptionalDiagnostic();
+  return OptionalDiagnostic(&addDiag(SI.getLoc(), DiagId));
 }
 
 void State::addNotes(ArrayRef<PartialDiagnosticAt> Diags) {

@@ -54,6 +54,7 @@ class LibcCallsTestCase(TestBase):
                     resolved_module_name, "dyld", f"Called dyld version of {symbol}"
                 )
 
+    @skipIfWasm  # no expression evaluation
     def test_libc_calls_succeed(self):
         """Calling memset/memcpy/memmove/memcmp from expressions must
         execute without trapping."""

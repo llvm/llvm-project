@@ -1301,9 +1301,9 @@ void acc_loop() {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1342,9 +1342,9 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1407,9 +1407,9 @@ void acc_loop() {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1448,9 +1448,9 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1513,9 +1513,9 @@ void acc_loop() {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1554,9 +1554,9 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" {{.*}} : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1661,9 +1661,9 @@ void acc_loop() {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1702,9 +1702,9 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" {{.*}} : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1809,9 +1809,9 @@ void acc_loop() {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1844,9 +1844,9 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1897,9 +1897,9 @@ void acc_loop() {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1932,9 +1932,9 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -1985,9 +1985,9 @@ void acc_loop() {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -2020,9 +2020,9 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -2073,9 +2073,9 @@ void acc_loop() {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -2114,9 +2114,9 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -2219,9 +2219,9 @@ void acc_loop() {
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
@@ -2260,9 +2260,9 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
+// CHECK-NEXT: %[[LB_CAST:.*]] = cir.builtin_int_cast %[[LB]] : index -> !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
-// CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
+// CHECK-NEXT: %[[UB_CAST:.*]] = cir.builtin_int_cast %[[UB]] : index -> !u64i
 // CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {

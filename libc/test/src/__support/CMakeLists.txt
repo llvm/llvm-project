@@ -240,14 +240,13 @@ add_libc_test(
     hash_test.cpp
   DEPENDS
     libc.src.__support.hash
+    libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
-  UNIT_TEST_ONLY
-    # Aligned Allocation is not supported in hermetic builds.
 )
 
 add_libc_test(
@@ -305,6 +304,7 @@ add_libc_test(
 
 add_subdirectory(CPP)
 add_subdirectory(File)
+add_subdirectory(printf_core)
 add_subdirectory(RPC)
 add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)
@@ -314,3 +314,6 @@ add_subdirectory(time)
 add_subdirectory(threads)
 add_subdirectory(wchar)
 add_subdirectory(wctype)
+if(LLVM_LIBC_FULL_BUILD)
+  add_subdirectory(regex)
+endif()
