@@ -13,7 +13,7 @@ define i32 @test(i32 %0, i32 %1) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[DOTNEG_NEG:%.*]] = shl i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i32>, ptr getelementptr inbounds nuw (i8, ptr @st, i64 8), align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @st, i64 12), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP6]], i64 1
 ; CHECK-NEXT:    [[SUB120_3:%.*]] = or i32 [[TMP5]], [[DOTNEG_NEG]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> <i32 poison, i32 poison, i32 poison, i32 0, i32 poison, i32 poison, i32 0, i32 0>, <8 x i32> <i32 0, i32 1, i32 poison, i32 11, i32 poison, i32 poison, i32 14, i32 15>

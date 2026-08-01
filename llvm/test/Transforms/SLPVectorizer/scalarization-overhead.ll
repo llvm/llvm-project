@@ -7,9 +7,8 @@
 define void @D134605() {
 ; CHECK-LABEL: @D134605(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX81:%.*]] = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 3
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX81]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr poison, align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[TMP1]], i64 3
 ; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i16 poison, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP2]], 2

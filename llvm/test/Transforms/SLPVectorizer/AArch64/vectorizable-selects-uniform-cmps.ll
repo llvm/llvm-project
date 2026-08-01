@@ -246,7 +246,7 @@ define void @select_uniform_ugt_16xi8(ptr %ptr, i8 %x) {
 ; CHECK-NEXT:    [[CMP_8:%.*]] = icmp ugt i8 [[L_8]], -1
 ; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i8 9
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[PTR]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i8> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[S_8:%.*]] = select i1 [[CMP_8]], i8 [[TMP1]], i8 [[X:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <7 x i8>, ptr [[GEP_9]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <7 x i8> [[TMP3]], <7 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>

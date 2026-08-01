@@ -442,7 +442,7 @@ define i32 @test15() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr null, i64 480
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr null, i64 160
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x float>, ptr [[TMP1]], align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr null, align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x float> [[TMP10]], <16 x float> <float undef, float undef, float undef, float undef, float undef, float undef, float undef, float undef, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>

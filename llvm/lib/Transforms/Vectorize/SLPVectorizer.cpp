@@ -25122,6 +25122,17 @@ Value *BoUpSLP::vectorizeTree(
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
   SmallDenseSet<ExtractElementInst *, 4> IgnoredExtracts;
+  // Drop a scalar load kept via ExternalUsesAsOriginalScalar when a contiguous
+  // vector load already covers its bytes, so it is extracted from that load
+  // rather than re-loaded (llvm#205978). Done post-profitability, so the
+  // vectorization decision is unchanged.
+  for (const ExternalUser &EU : ExternalUses) {
+    auto *LI = dyn_cast<LoadInst>(EU.Scalar);
+    if (LI && ExternalUsesAsOriginalScalar.contains(LI) && !EU.E.isGather() &&
+        EU.E.hasState() && EU.E.State == TreeEntry::Vectorize &&
+        EU.E.getOpcode() == Instruction::Load)
+      ExternalUsesAsOriginalScalar.erase(LI);
+  }
   // Extract all of the elements with the external uses.
   for (const auto &ExternalUse : ExternalUses) {
     Value *Scalar = ExternalUse.Scalar;

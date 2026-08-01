@@ -5,10 +5,8 @@ define void @rftbsub(ptr %a) {
 ; CHECK-LABEL: @rftbsub(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 2, 1
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr [[ARRAYIDX12]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAYIDX6]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[ADD16:%.*]] = fadd double [[TMP1]], undef
 ; CHECK-NEXT:    [[MUL18:%.*]] = fmul double undef, [[ADD16]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[MUL18]], i64 0

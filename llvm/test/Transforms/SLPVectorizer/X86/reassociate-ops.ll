@@ -1121,7 +1121,6 @@ define void @test_reassoc_sub_external_uses(ptr %Aarray, ptr %Barray, ptr %Carra
 ; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[CARRAY:%.*]], ptr [[DARRAY:%.*]], ptr [[SARRAY:%.*]], ptr [[TARRAY:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[AARRAY]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[AARRAY]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[BARRAY]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[CARRAY]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, ptr [[DARRAY]], align 4
@@ -1132,6 +1131,7 @@ define void @test_reassoc_sub_external_uses(ptr %Aarray, ptr %Barray, ptr %Carra
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[TMP5]], [[TMP9]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[SARRAY]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP6]], i64 0
+; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x i32> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = add i32 [[TMP7]], [[A0]]
 ; CHECK-NEXT:    store i32 [[EXT]], ptr [[TARRAY]], align 4
 ; CHECK-NEXT:    ret void

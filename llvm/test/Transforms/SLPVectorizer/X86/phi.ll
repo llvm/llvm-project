@@ -151,9 +151,6 @@ define float @foo3(ptr nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[ARRAYIDX14]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 3
 ; CHECK-NEXT:    [[ARRAYIDX19:%.*]] = getelementptr inbounds float, ptr [[ARRAYIDX1]], i64 [[INDVARS_IV_NEXT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds float, ptr [[ARRAYIDX1]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load float, ptr [[ARRAYIDX24]], align 4
 ; CHECK-NEXT:    [[TMP24]] = load <2 x float>, ptr [[ARRAYIDX19]], align 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[TMP9]], i64 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP24]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
@@ -162,6 +159,7 @@ define float @foo3(ptr nocapture readonly %A) #0 {
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP12]], <4 x float> [[TMP19]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul <4 x float> [[TMP14]], <float 7.000000e+00, float 8.000000e+00, float 9.000000e+00, float 1.000000e+01>
 ; CHECK-NEXT:    [[TMP17]] = fadd <4 x float> [[TMP3]], [[TMP15]]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP24]], i64 1
 ; CHECK-NEXT:    [[MUL25:%.*]] = fmul float [[TMP18]], 1.100000e+01
 ; CHECK-NEXT:    [[ADD6]] = fadd float [[R_052]], [[MUL25]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32

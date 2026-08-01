@@ -11,8 +11,8 @@ define void @test(ptr %0, i32 %add651) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[PREDPEL11]], i64 40
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[ARRAYIDX469_6]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i32>, ptr [[ARRAYIDX469_7]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX469_7]], align 16
 ; CHECK-NEXT:    [[CONV470_7:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    store i16 [[CONV470_7]], ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[TMP0]], align 8

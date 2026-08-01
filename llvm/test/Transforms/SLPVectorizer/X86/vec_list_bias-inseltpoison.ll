@@ -15,7 +15,6 @@ define void @test(ptr nocapture %t2) {
 ; CHECK-NEXT:    [[T8:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 1
 ; CHECK-NEXT:    [[T10:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 6
 ; CHECK-NEXT:    [[T11:%.*]] = load i32, ptr [[T10]], align 4
-; CHECK-NEXT:    [[T14:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 2
 ; CHECK-NEXT:    [[T16:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 5
 ; CHECK-NEXT:    [[T17:%.*]] = load i32, ptr [[T16]], align 4
 ; CHECK-NEXT:    [[T20:%.*]] = getelementptr inbounds i32, ptr [[T2]], i64 3
@@ -32,8 +31,8 @@ define void @test(ptr nocapture %t2) {
 ; CHECK-NEXT:    [[T42:%.*]] = mul nsw i32 [[T17]], 16819
 ; CHECK-NEXT:    [[T48:%.*]] = mul nsw i32 [[T38]], -3196
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[T8]], align 4
-; CHECK-NEXT:    [[T15:%.*]] = load i32, ptr [[T14]], align 4
-; CHECK-NEXT:    [[T9:%.*]] = load i32, ptr [[T8]], align 4
+; CHECK-NEXT:    [[T9:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[T15:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[T29:%.*]] = sub nsw i32 [[T9]], [[T15]]
 ; CHECK-NEXT:    [[T30:%.*]] = add nsw i32 [[T27]], [[T29]]
 ; CHECK-NEXT:    [[T31:%.*]] = mul nsw i32 [[T30]], 4433

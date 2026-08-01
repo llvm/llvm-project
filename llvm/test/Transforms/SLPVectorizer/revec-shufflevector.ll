@@ -187,7 +187,6 @@ define void @test6(ptr %in0, ptr %in1, ptr %in2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <12 x float>, ptr [[GEP1:%.*]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <12 x float> [[TMP0]], <12 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[LOAD2:%.*]] = load <4 x float>, ptr [[GEP1]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr [[IN1:%.*]], align 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <32 x i8> [[TMP1]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <32 x i8> [[TMP8]] to <32 x i16>
@@ -198,6 +197,7 @@ define void @test6(ptr %in0, ptr %in1, ptr %in2) {
 ; CHECK-NEXT:    [[GEP10:%.*]] = getelementptr inbounds i8, ptr [[IN1]], i64 32
 ; CHECK-NEXT:    [[LOAD5:%.*]] = load <16 x i8>, ptr [[GEP10]], align 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <32 x float> [[TMP3]], <32 x float> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[LOAD2:%.*]] = shufflevector <32 x float> [[TMP3]], <32 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <32 x float> [[TMP3]], <32 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[GEP11:%.*]] = getelementptr inbounds i8, ptr [[IN2]], i64 128
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i8> [[LOAD5]], <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -219,7 +219,6 @@ define void @test6(ptr %in0, ptr %in1, ptr %in2) {
 ; COMBINE-NEXT:  entry:
 ; COMBINE-NEXT:    [[TMP0:%.*]] = load <12 x float>, ptr [[GEP1:%.*]], align 16
 ; COMBINE-NEXT:    [[TMP6:%.*]] = shufflevector <12 x float> [[TMP0]], <12 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; COMBINE-NEXT:    [[LOAD2:%.*]] = load <4 x float>, ptr [[GEP1]], align 16
 ; COMBINE-NEXT:    [[TMP1:%.*]] = load <32 x i8>, ptr [[IN1:%.*]], align 1
 ; COMBINE-NEXT:    [[TMP11:%.*]] = shufflevector <32 x i8> [[TMP1]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; COMBINE-NEXT:    [[TMP4:%.*]] = zext <32 x i8> [[TMP11]] to <32 x i16>
@@ -230,6 +229,7 @@ define void @test6(ptr %in0, ptr %in1, ptr %in2) {
 ; COMBINE-NEXT:    [[GEP10:%.*]] = getelementptr inbounds i8, ptr [[IN1]], i64 32
 ; COMBINE-NEXT:    [[LOAD5:%.*]] = load <16 x i8>, ptr [[GEP10]], align 1
 ; COMBINE-NEXT:    [[TMP20:%.*]] = shufflevector <32 x float> [[TMP6]], <32 x float> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; COMBINE-NEXT:    [[LOAD2:%.*]] = shufflevector <32 x float> [[TMP6]], <32 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; COMBINE-NEXT:    [[TMP23:%.*]] = shufflevector <32 x float> [[TMP6]], <32 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; COMBINE-NEXT:    [[GEP11:%.*]] = getelementptr inbounds i8, ptr [[IN2]], i64 128
 ; COMBINE-NEXT:    [[TMP10:%.*]] = shufflevector <16 x i8> [[LOAD5]], <16 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
