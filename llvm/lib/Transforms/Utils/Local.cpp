@@ -2692,9 +2692,11 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
   do {
     BB = Worklist.pop_back_val();
 
-    // Do a quick scan of the basic block, turning any obviously unreachable
+    // Do a scan of the basic block, turning any obviously unreachable
     // instructions into LLVM unreachable insts.  The instruction combining pass
     // canonicalizes unreachable insts into stores to null or undef.
+    // Note that it traverses the whole instruction list, so it may incur
+    // significant performance overhead.
     if (SimplifyInsts) {
       for (Instruction &I : *BB) {
         if (auto *CI = dyn_cast<CallInst>(&I)) {
