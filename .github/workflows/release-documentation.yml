@@ -195,13 +195,8 @@ jobs:
   upload-documentation:
     name: "Upload Documentation"
     runs-on: ubuntu-24.04
-    environment:
-      deployment: false
-      name: release
     needs:
       - release-documentation
-    if: >-
-      github.event_name != 'pull_request'
     permissions:
       contents: write     # For man page uploads
       id-token: write     # For artifact attestations
