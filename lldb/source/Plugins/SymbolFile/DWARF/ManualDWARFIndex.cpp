@@ -663,3 +663,25 @@ void ManualDWARFIndex::SaveToCache() {
       m_dwarf->SetDebugInfoIndexWasSavedToCache();
   }
 }
+
+void ManualDWARFIndex::SetNameCaseInsensitive() {
+  m_set.function_basenames.SetNameCaseInsensitive();
+  m_set.function_fullnames.SetNameCaseInsensitive();
+  m_set.function_methods.SetNameCaseInsensitive();
+  m_set.function_selectors.SetNameCaseInsensitive();
+  m_set.objc_class_selectors.SetNameCaseInsensitive();
+  m_set.globals.SetNameCaseInsensitive();
+  m_set.types.SetNameCaseInsensitive();
+  m_set.namespaces.SetNameCaseInsensitive();
+}
+
+void ManualDWARFIndex::SetStrictlyCaseSensitive() {
+  m_set.function_basenames.SetStrictlyCaseSensitive();
+  m_set.function_fullnames.SetStrictlyCaseSensitive();
+  m_set.function_methods.SetStrictlyCaseSensitive();
+  m_set.function_selectors.SetStrictlyCaseSensitive();
+  m_set.objc_class_selectors.SetStrictlyCaseSensitive();
+  m_set.globals.SetStrictlyCaseSensitive();
+  m_set.types.SetStrictlyCaseSensitive();
+  m_set.namespaces.SetStrictlyCaseSensitive();
+}

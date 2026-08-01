@@ -255,14 +255,17 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0
+FFLAGS ?= $(DEBUG_INFO_FLAG) -O0
 
 # Some tests require no debug information. When lldb-dotest specifies a DWARF version,
 # it adds `-gdwarf-{version}` to the CFLAGS environment variable which causes those tests
 # to fail. Strip any existing debug flags from CFLAGS and force -g0 to prevent this.
 ifeq "$(MAKE_NO_DEBUG_INFO)" "YES"
-    CFLAGS := $(filter-out -g%,$(CFLAGS)) -g0
+  CFLAGS := $(filter-out -g%,$(CFLAGS)) -g0
+  FFLAGS := $(filter-out -g%,$(FFLAGS)) -g0
 endif
 CFLAGS += $(SYSROOT_FLAGS)
+FFLAGS += $(SYSROOT_FLAGS)
 
 ifeq "$(OS)" "Darwin"
 	CFLAGS += $(FRAMEWORK_INCLUDES)
@@ -270,22 +273,27 @@ endif
 
 CFLAGS += -I$(LLDB_BASE_DIR)/include -I$(LLDB_OBJ_ROOT)/include
 CFLAGS += -I$(SRCDIR) -I$(THIS_FILE_DIR)
+FFLAGS += -I$(LLDB_BASE_DIR)/include -I$(LLDB_OBJ_ROOT)/include
+FFLAGS += -I$(SRCDIR) -I$(THIS_FILE_DIR)
 
 ifndef NO_TEST_COMMON_H
   CFLAGS += -include $(THIS_FILE_DIR)/test_common.h
 endif
 
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS)
+FFLAGS += $(ARCH_CFLAGS)
 
 # Use this one if you want to build one part of the result without debug information:
 CFLAGS_NO_DEBUG = -O0 $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS) $(SYSROOT_FLAGS)
 
 ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
+	FFLAGS += -gsplit-dwarf
 endif
 
 ifeq "$(MAKE_DEBUG_NAMES)" "YES"
 	CFLAGS += -gpubnames
+	FFLAGS += -gpubnames
 endif
 
 # Enable GNU POSIX extensions (e.g. kill(), usleep(), getpgid(), ...)
@@ -324,10 +332,19 @@ ifeq ($(CC_TYPE), clang)
 endif
 
 CFLAGS += $(CFLAGS_EXTRAS)
+FFLAGS += $(FFLAGS_EXTRAS)
 CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
+
 # Copy common options to the linker flags (dwarf, arch. & etc).
 # Note: we get some 'garbage' options for linker here (such as -I, --isystem & etc).
-LDFLAGS += $(CFLAGS)
+ifneq "$(strip $(F_SOURCES))" ""
+    # We are building Fortran. Use FFLAGS flags.
+    LDFLAGS += $(FFLAGS)
+else
+    # We are building C/C++. Use CFLAGS.
+    LDFLAGS += $(CFLAGS)
+endif
+
 LDFLAGS += $(LD_EXTRAS) $(ARCH_LDFLAGS)
 ifeq (,$(filter $(OS), Windows_NT Android Darwin Wasm))
 	ifneq (,$(filter YES,$(ENABLE_THREADS)))
@@ -536,6 +553,20 @@ ifneq "$(strip $(OBJCXX_SOURCES))" ""
 	endif
 endif
 
+#----------------------------------------------------------------------
+# Check if we have any Fortran source files
+#----------------------------------------------------------------------
+ifneq "$(strip $(F_SOURCES))" ""
+  ifeq "$(FC)" ""
+    $(error "No Fortran compiler found for fortran tests")
+  endif
+  OBJECTS +=$(strip $(F_SOURCES:.f90=.o))
+	# Override the linker with the Fortran compiler, LDC is not needed 
+	# currently so it is set to any.
+	override LD := $(FC)
+	override LDC := any
+endif
+
 ifeq ($(CC_TYPE), clang)
 	CXXFLAGS += --driver-mode=g++
 endif
@@ -672,6 +703,9 @@ endif
 
 %.o: %.mm %.d
 	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+
+%.o: %.f90
+	$(FC) $(FFLAGS) -c -o $@ $<
 
 #----------------------------------------------------------------------
 # Automatic variables based on items already entered. Below we create

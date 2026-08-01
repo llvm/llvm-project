@@ -88,6 +88,17 @@ else()
   set(LLDB_DEFAULT_TEST_COMPILER "")
 endif()
 
+if(LLDB_ENABLE_FORTRAN)
+  # Prefer the in-tree built target if available.
+  if(TARGET flang)
+    set(LLDB_DEFAULT_TEST_FORTRAN_COMPILER "${LLVM_TOOLS_BINARY_DIR}/flang${CMAKE_EXECUTABLE_SUFFIX}")
+  else()
+    set(LLDB_DEFAULT_TEST_FORTRAN_COMPILER "")
+  endif()
+
+  set(LLDB_TEST_FORTRAN_COMPILER "${LLDB_DEFAULT_TEST_FORTRAN_COMPILER}" CACHE PATH "Fortran Compiler to use for building LLDB test inferiors")
+endif()
+
 set(LLDB_TEST_EXECUTABLE "${LLDB_DEFAULT_TEST_EXECUTABLE}" CACHE PATH "lldb executable used for testing")
 set(LLDB_TEST_COMPILER "${LLDB_DEFAULT_TEST_COMPILER}" CACHE PATH "C Compiler to use for building LLDB test inferiors")
 set(LLDB_TEST_DSYMUTIL "${LLDB_DEFAULT_TEST_DSYMUTIL}" CACHE PATH "dsymutil used for generating dSYM bundles")

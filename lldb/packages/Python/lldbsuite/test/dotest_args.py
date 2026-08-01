@@ -49,6 +49,15 @@ def create_parser():
         ),
     )
     group.add_argument(
+        '--fortran-compiler',
+        metavar="fortran_compiler",
+        dest='fortran_compiler',
+        default="",
+        help=textwrap.dedent(
+            """The Fortran compiler used to build the test programs."""
+        ),
+    )   
+    group.add_argument(
         "--sysroot",
         metavar="sysroot",
         dest="sysroot",
