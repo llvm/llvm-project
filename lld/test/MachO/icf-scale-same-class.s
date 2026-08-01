@@ -20,76 +20,18 @@
 .text
 .p2align 2
 
-## Unlike icf-scale.s, every generated body here is identical.
-.macro gen_4 c
-  .globl _f0\c, _f1\c, _f2\c, _f3\c
-  _f0\c:; movl $7, %eax; ret
-  _f1\c:; movl $7, %eax; ret
-  _f2\c:; movl $7, %eax; ret
-  _f3\c:; movl $7, %eax; ret
-.endm
-
-.macro gen_16 c
-  gen_4 0\c
-  gen_4 1\c
-  gen_4 2\c
-  gen_4 3\c
-.endm
-
-.macro gen_64 c
-  gen_16 0\c
-  gen_16 1\c
-  gen_16 2\c
-  gen_16 3\c
-.endm
-
-.macro gen_256 c
-  gen_64 0\c
-  gen_64 1\c
-  gen_64 2\c
-  gen_64 3\c
-.endm
-
-.macro gen_1024 c
-  gen_256 0\c
-  gen_256 1\c
-  gen_256 2\c
-  gen_256 3\c
-.endm
-
-.macro gen_4096 c
-  gen_1024 0\c
-  gen_1024 1\c
-  gen_1024 2\c
-  gen_1024 3\c
-.endm
-
-.macro gen_16384 c
-  gen_4096 0\c
-  gen_4096 1\c
-  gen_4096 2\c
-  gen_4096 3\c
-.endm
-
-.macro gen_65536 c
-  gen_16384 0\c
-  gen_16384 1\c
-  gen_16384 2\c
-  gen_16384 3\c
-.endm
-
-.macro gen_262144 c
-  gen_65536 0\c
-  gen_65536 1\c
-  gen_65536 2\c
-  gen_65536 3\c
-.endm
-
 .globl _f_first
 _f_first:; movl $7, %eax; ret
 
-gen_262144 a
-gen_262144 b
+## Unlike icf-scale.s, every body generated here is identical, so all 512 Ki
+## land in one equivalence class. \+ iterates from 0 to n-1. $$7 is an escape
+## for a literal $7: .rept expands its body as a macro with no parameters, and
+## in one of those the Darwin assembler reads $7 as positional argument 7 and
+## drops it.
+.rept 524288
+  .globl _f\+
+  _f\+:; movl $$7, %eax; ret
+.endr
 
 .globl _f_last
 _f_last:; movl $7, %eax; ret
