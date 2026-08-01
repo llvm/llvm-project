@@ -459,6 +459,323 @@ declare <8 x float> @llvm.vector.interleave2.v8f32(<4 x float>, <4 x float>)
 declare <4 x double> @llvm.vector.interleave2.v4f64(<2 x double>, <2 x double>)
 declare <4 x ptr> @llvm.vector.interleave2.v4p0(<2 x ptr>, <2 x ptr>)
 declare <16 x ptr> @llvm.vector.interleave2.v16p0(<8 x ptr>, <8 x ptr>)
+
+define void @interleave_double_factor2_intrinsic(ptr %ptr, <2 x double> %l, <2 x double> %r) {
+; NEON-IAENABLED-LABEL: interleave_double_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: interleave_double_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v2.2d, v0.2d, v1.2d
+; NEON-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; SVE-FIXED-LABEL: interleave_double_factor2_intrinsic:
+; SVE-FIXED:       // %bb.0:
+; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-FIXED-NEXT:    trn2 z2.d, z0.d, z1.d
+; SVE-FIXED-NEXT:    zip1 z0.d, z0.d, z1.d
+; SVE-FIXED-NEXT:    stp q0, q2, [x0]
+; SVE-FIXED-NEXT:    ret
+  %interleave = tail call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> %l, <2 x double> %r)
+  store <4 x double> %interleave, ptr %ptr, align 4
+  ret void
+}
+
+define void @interleave_float_factor2_intrinsic(ptr %ptr, <4 x float> %l, <4 x float> %r) {
+; NEON-IAENABLED-LABEL: interleave_float_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    st2 { v0.4s, v1.4s }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: interleave_float_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v2.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; SVE-FIXED-LABEL: interleave_float_factor2_intrinsic:
+; SVE-FIXED:       // %bb.0:
+; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-FIXED-NEXT:    mov z2.s, z1.s[3]
+; SVE-FIXED-NEXT:    mov z3.s, z0.s[3]
+; SVE-FIXED-NEXT:    mov z4.s, z1.s[2]
+; SVE-FIXED-NEXT:    mov z5.s, z0.s[2]
+; SVE-FIXED-NEXT:    zip1 z0.s, z0.s, z1.s
+; SVE-FIXED-NEXT:    zip1 z2.s, z3.s, z2.s
+; SVE-FIXED-NEXT:    zip1 z3.s, z5.s, z4.s
+; SVE-FIXED-NEXT:    zip1 z1.d, z3.d, z2.d
+; SVE-FIXED-NEXT:    stp q0, q1, [x0]
+; SVE-FIXED-NEXT:    ret
+  %interleave = tail call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> %l, <4 x float> %r)
+  store <8 x float> %interleave, ptr %ptr, align 4
+  ret void
+}
+
+define void @interleave_i16_factor2_intrinsic(ptr %ptr, <8 x i16> %l, <8 x i16> %r) {
+; NEON-IAENABLED-LABEL: interleave_i16_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    st2 { v0.8h, v1.8h }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: interleave_i16_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v2.8h, v0.8h, v1.8h
+; NEON-IADISABLED-NEXT:    zip1 v0.8h, v0.8h, v1.8h
+; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; SVE-FIXED-LABEL: interleave_i16_factor2_intrinsic:
+; SVE-FIXED:       // %bb.0:
+; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-FIXED-NEXT:    mov z2.h, z1.h[7]
+; SVE-FIXED-NEXT:    mov z3.h, z0.h[7]
+; SVE-FIXED-NEXT:    mov z4.h, z1.h[6]
+; SVE-FIXED-NEXT:    mov z5.h, z0.h[6]
+; SVE-FIXED-NEXT:    mov z6.h, z1.h[5]
+; SVE-FIXED-NEXT:    mov z7.h, z0.h[5]
+; SVE-FIXED-NEXT:    mov z16.h, z1.h[4]
+; SVE-FIXED-NEXT:    mov z17.h, z0.h[4]
+; SVE-FIXED-NEXT:    zip1 z0.h, z0.h, z1.h
+; SVE-FIXED-NEXT:    zip1 z2.h, z3.h, z2.h
+; SVE-FIXED-NEXT:    zip1 z3.h, z5.h, z4.h
+; SVE-FIXED-NEXT:    zip1 z4.h, z7.h, z6.h
+; SVE-FIXED-NEXT:    zip1 z5.h, z17.h, z16.h
+; SVE-FIXED-NEXT:    zip1 z2.s, z3.s, z2.s
+; SVE-FIXED-NEXT:    zip1 z3.s, z5.s, z4.s
+; SVE-FIXED-NEXT:    zip1 z1.d, z3.d, z2.d
+; SVE-FIXED-NEXT:    stp q0, q1, [x0]
+; SVE-FIXED-NEXT:    ret
+  %interleave = tail call <16 x i16> @llvm.vector.interleave2.v16i16(<8 x i16> %l, <8 x i16> %r)
+  store <16 x i16> %interleave, ptr %ptr, align 2
+  ret void
+}
+
+define void @interleave_i32_factor2_intrinsic(ptr %ptr, <4 x i32> %l, <4 x i32> %r) {
+; NEON-IAENABLED-LABEL: interleave_i32_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    st2 { v0.4s, v1.4s }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: interleave_i32_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v2.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; SVE-FIXED-LABEL: interleave_i32_factor2_intrinsic:
+; SVE-FIXED:       // %bb.0:
+; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-FIXED-NEXT:    mov z2.s, z1.s[3]
+; SVE-FIXED-NEXT:    mov z3.s, z0.s[3]
+; SVE-FIXED-NEXT:    mov z4.s, z1.s[2]
+; SVE-FIXED-NEXT:    mov z5.s, z0.s[2]
+; SVE-FIXED-NEXT:    zip1 z0.s, z0.s, z1.s
+; SVE-FIXED-NEXT:    zip1 z2.s, z3.s, z2.s
+; SVE-FIXED-NEXT:    zip1 z3.s, z5.s, z4.s
+; SVE-FIXED-NEXT:    zip1 z1.d, z3.d, z2.d
+; SVE-FIXED-NEXT:    stp q0, q1, [x0]
+; SVE-FIXED-NEXT:    ret
+  %interleave = tail call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %l, <4 x i32> %r)
+  store <8 x i32> %interleave, ptr %ptr, align 4
+  ret void
+}
+
+define void @interleave_i64_factor2_intrinsic(ptr %ptr, <2 x i64> %l, <2 x i64> %r) {
+; NEON-IAENABLED-LABEL: interleave_i64_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: interleave_i64_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v2.2d, v0.2d, v1.2d
+; NEON-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; SVE-FIXED-LABEL: interleave_i64_factor2_intrinsic:
+; SVE-FIXED:       // %bb.0:
+; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-FIXED-NEXT:    trn2 z2.d, z0.d, z1.d
+; SVE-FIXED-NEXT:    zip1 z0.d, z0.d, z1.d
+; SVE-FIXED-NEXT:    stp q0, q2, [x0]
+; SVE-FIXED-NEXT:    ret
+  %interleave = tail call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> %l, <2 x i64> %r)
+  store <4 x i64> %interleave, ptr %ptr, align 8
+  ret void
+}
+
+define void @interleave_i8_factor2_intrinsic(ptr %ptr, <16 x i8> %l, <16 x i8> %r) {
+; NEON-IAENABLED-LABEL: interleave_i8_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    st2 { v0.16b, v1.16b }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: interleave_i8_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v2.16b, v0.16b, v1.16b
+; NEON-IADISABLED-NEXT:    zip1 v0.16b, v0.16b, v1.16b
+; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; SVE-FIXED-LABEL: interleave_i8_factor2_intrinsic:
+; SVE-FIXED:       // %bb.0:
+; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-FIXED-NEXT:    mov z2.b, z1.b[15]
+; SVE-FIXED-NEXT:    mov z3.b, z0.b[15]
+; SVE-FIXED-NEXT:    mov z4.b, z1.b[14]
+; SVE-FIXED-NEXT:    mov z5.b, z0.b[14]
+; SVE-FIXED-NEXT:    mov z6.b, z1.b[13]
+; SVE-FIXED-NEXT:    mov z7.b, z0.b[13]
+; SVE-FIXED-NEXT:    mov z16.b, z1.b[12]
+; SVE-FIXED-NEXT:    mov z17.b, z0.b[12]
+; SVE-FIXED-NEXT:    mov z18.b, z1.b[11]
+; SVE-FIXED-NEXT:    mov z19.b, z0.b[11]
+; SVE-FIXED-NEXT:    mov z20.b, z1.b[10]
+; SVE-FIXED-NEXT:    mov z21.b, z0.b[10]
+; SVE-FIXED-NEXT:    mov z22.b, z1.b[9]
+; SVE-FIXED-NEXT:    mov z23.b, z0.b[9]
+; SVE-FIXED-NEXT:    mov z24.b, z1.b[8]
+; SVE-FIXED-NEXT:    mov z25.b, z0.b[8]
+; SVE-FIXED-NEXT:    zip1 z2.b, z3.b, z2.b
+; SVE-FIXED-NEXT:    zip1 z3.b, z5.b, z4.b
+; SVE-FIXED-NEXT:    zip1 z4.b, z7.b, z6.b
+; SVE-FIXED-NEXT:    zip1 z5.b, z17.b, z16.b
+; SVE-FIXED-NEXT:    zip1 z6.b, z19.b, z18.b
+; SVE-FIXED-NEXT:    zip1 z7.b, z21.b, z20.b
+; SVE-FIXED-NEXT:    zip1 z16.b, z23.b, z22.b
+; SVE-FIXED-NEXT:    zip1 z0.b, z0.b, z1.b
+; SVE-FIXED-NEXT:    zip1 z17.b, z25.b, z24.b
+; SVE-FIXED-NEXT:    zip1 z2.h, z3.h, z2.h
+; SVE-FIXED-NEXT:    zip1 z3.h, z5.h, z4.h
+; SVE-FIXED-NEXT:    zip1 z4.h, z7.h, z6.h
+; SVE-FIXED-NEXT:    zip1 z5.h, z17.h, z16.h
+; SVE-FIXED-NEXT:    zip1 z2.s, z3.s, z2.s
+; SVE-FIXED-NEXT:    zip1 z3.s, z5.s, z4.s
+; SVE-FIXED-NEXT:    zip1 z1.d, z3.d, z2.d
+; SVE-FIXED-NEXT:    stp q0, q1, [x0]
+; SVE-FIXED-NEXT:    ret
+  %interleave = tail call <32 x i8> @llvm.vector.interleave2.v32i8(<16 x i8> %l, <16 x i8> %r)
+  store <32 x i8> %interleave, ptr %ptr, align 1
+  ret void
+}
+
+define void @interleave_ptr_factor2_intrinsic(ptr %ptr, <2 x ptr> %l, <2 x ptr> %r) {
+; NEON-IAENABLED-LABEL: interleave_ptr_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: interleave_ptr_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v2.2d, v0.2d, v1.2d
+; NEON-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; SVE-FIXED-LABEL: interleave_ptr_factor2_intrinsic:
+; SVE-FIXED:       // %bb.0:
+; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-FIXED-NEXT:    trn2 z2.d, z0.d, z1.d
+; SVE-FIXED-NEXT:    zip1 z0.d, z0.d, z1.d
+; SVE-FIXED-NEXT:    stp q0, q2, [x0]
+; SVE-FIXED-NEXT:    ret
+  %interleave = tail call <4 x ptr> @llvm.vector.interleave2.v4p0(<2 x ptr> %l, <2 x ptr> %r)
+  store <4 x ptr> %interleave, ptr %ptr, align 4
+  ret void
+}
+
+define void @interleave_wide_ptr_factor2_intrinsic(ptr %ptr, <8 x ptr> %l, <8 x ptr> %r) {
+; NEON-IAENABLED-LABEL: interleave_wide_ptr_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q5 killed $q5 killed $q4_q5 def $q4_q5
+; NEON-IAENABLED-NEXT:    mov v19.16b, v4.16b
+; NEON-IAENABLED-NEXT:    // kill: def $q7 killed $q7 killed $q6_q7 def $q6_q7
+; NEON-IAENABLED-NEXT:    mov v17.16b, v6.16b
+; NEON-IAENABLED-NEXT:    mov x8, x0
+; NEON-IAENABLED-NEXT:    mov v18.16b, v0.16b
+; NEON-IAENABLED-NEXT:    mov v4.16b, v1.16b
+; NEON-IAENABLED-NEXT:    mov v16.16b, v2.16b
+; NEON-IAENABLED-NEXT:    mov v6.16b, v3.16b
+; NEON-IAENABLED-NEXT:    st2 { v18.2d, v19.2d }, [x8], #32
+; NEON-IAENABLED-NEXT:    st2 { v4.2d, v5.2d }, [x8]
+; NEON-IAENABLED-NEXT:    add x8, x0, #64
+; NEON-IAENABLED-NEXT:    st2 { v16.2d, v17.2d }, [x8]
+; NEON-IAENABLED-NEXT:    add x8, x0, #96
+; NEON-IAENABLED-NEXT:    st2 { v6.2d, v7.2d }, [x8]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: interleave_wide_ptr_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v16.2d, v3.2d, v7.2d
+; NEON-IADISABLED-NEXT:    zip1 v3.2d, v3.2d, v7.2d
+; NEON-IADISABLED-NEXT:    zip2 v7.2d, v2.2d, v6.2d
+; NEON-IADISABLED-NEXT:    zip1 v2.2d, v2.2d, v6.2d
+; NEON-IADISABLED-NEXT:    zip2 v6.2d, v1.2d, v5.2d
+; NEON-IADISABLED-NEXT:    zip1 v1.2d, v1.2d, v5.2d
+; NEON-IADISABLED-NEXT:    stp q3, q16, [x0, #96]
+; NEON-IADISABLED-NEXT:    zip2 v3.2d, v0.2d, v4.2d
+; NEON-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v4.2d
+; NEON-IADISABLED-NEXT:    stp q1, q6, [x0, #32]
+; NEON-IADISABLED-NEXT:    stp q2, q7, [x0, #64]
+; NEON-IADISABLED-NEXT:    stp q0, q3, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; SVE-FIXED-LABEL: interleave_wide_ptr_factor2_intrinsic:
+; SVE-FIXED:       // %bb.0:
+; SVE-FIXED-NEXT:    // kill: def $q3 killed $q3 def $z3
+; SVE-FIXED-NEXT:    // kill: def $q7 killed $q7 def $z7
+; SVE-FIXED-NEXT:    trn2 z16.d, z3.d, z7.d
+; SVE-FIXED-NEXT:    // kill: def $q6 killed $q6 def $z6
+; SVE-FIXED-NEXT:    // kill: def $q2 killed $q2 def $z2
+; SVE-FIXED-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-FIXED-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-FIXED-NEXT:    // kill: def $q5 killed $q5 def $z5
+; SVE-FIXED-NEXT:    // kill: def $q4 killed $q4 def $z4
+; SVE-FIXED-NEXT:    zip1 z3.d, z3.d, z7.d
+; SVE-FIXED-NEXT:    trn2 z7.d, z2.d, z6.d
+; SVE-FIXED-NEXT:    zip1 z2.d, z2.d, z6.d
+; SVE-FIXED-NEXT:    trn2 z6.d, z1.d, z5.d
+; SVE-FIXED-NEXT:    zip1 z1.d, z1.d, z5.d
+; SVE-FIXED-NEXT:    stp q2, q7, [x0, #64]
+; SVE-FIXED-NEXT:    stp q1, q6, [x0, #32]
+; SVE-FIXED-NEXT:    stp q3, q16, [x0, #96]
+; SVE-FIXED-NEXT:    trn2 z3.d, z0.d, z4.d
+; SVE-FIXED-NEXT:    zip1 z0.d, z0.d, z4.d
+; SVE-FIXED-NEXT:    stp q0, q3, [x0]
+; SVE-FIXED-NEXT:    ret
+  %interleave = tail call <16 x ptr> @llvm.vector.interleave2.v16p0(<8 x ptr> %l, <8 x ptr> %r)
+  store <16 x ptr> %interleave, ptr %ptr, align 4
+  ret void
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; SVE-FIXED-IADISABLED: {{.*}}
 ; SVE-FIXED-IAENABLED: {{.*}}

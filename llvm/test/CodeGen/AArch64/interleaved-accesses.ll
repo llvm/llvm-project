@@ -1429,6 +1429,927 @@ define <4 x i1> @load_large_vector(ptr %p) {
   %ret = icmp ne <4 x ptr> %s1, %s2
   ret <4 x i1> %ret
 }
+
+define <4 x i1> @load_large_vector_intrinsic(ptr %p) {
+; NEON-LABEL: load_large_vector_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x0], #48
+; NEON-NEXT:    ld3 { v3.2d, v4.2d, v5.2d }, [x0]
+; NEON-NEXT:    cmeq v0.2d, v0.2d, v1.2d
+; NEON-NEXT:    cmeq v1.2d, v3.2d, v4.2d
+; NEON-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; NEON-NEXT:    mvn v0.16b, v0.16b
+; NEON-NEXT:    xtn v0.4h, v0.4s
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: load_large_vector_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldp x9, x8, [x0]
+; NO_NEON-NEXT:    ldp x11, x10, [x0, #24]
+; NO_NEON-NEXT:    ldp x13, x12, [x0, #48]
+; NO_NEON-NEXT:    cmp x9, x8
+; NO_NEON-NEXT:    ldp x9, x8, [x0, #72]
+; NO_NEON-NEXT:    cset w0, ne
+; NO_NEON-NEXT:    cmp x11, x10
+; NO_NEON-NEXT:    cset w1, ne
+; NO_NEON-NEXT:    cmp x13, x12
+; NO_NEON-NEXT:    cset w2, ne
+; NO_NEON-NEXT:    cmp x9, x8
+; NO_NEON-NEXT:    cset w3, ne
+; NO_NEON-NEXT:    ret
+  %intrinsic.load.0 = load <6 x i64>, ptr %p, align 1
+  %ldN = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave3.v6i64(<6 x i64> %intrinsic.load.0)
+  %1 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } %ldN, 1
+  %2 = inttoptr <2 x i64> %1 to <2 x ptr>
+  %3 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } %ldN, 0
+  %4 = inttoptr <2 x i64> %3 to <2 x ptr>
+  %5 = getelementptr i64, ptr %p, i32 6
+  %intrinsic.load.1 = load <6 x i64>, ptr %5, align 1
+  %ldN1 = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave3.v6i64(<6 x i64> %intrinsic.load.1)
+  %6 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } %ldN1, 1
+  %7 = inttoptr <2 x i64> %6 to <2 x ptr>
+  %8 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } %ldN1, 0
+  %9 = inttoptr <2 x i64> %8 to <2 x ptr>
+  %10 = shufflevector <2 x ptr> %2, <2 x ptr> %7, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %11 = shufflevector <2 x ptr> %4, <2 x ptr> %9, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %ret = icmp ne <4 x ptr> %11, %10
+  ret <4 x i1> %ret
+}
+
+define void @store_factor2_intrinsic(ptr %ptr, <8 x i8> %v0, <8 x i8> %v1) {
+; NEON-IAENABLED-LABEL: store_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $d1 killed $d1 killed $d0_d1 def $d0_d1
+; NEON-IAENABLED-NEXT:    // kill: def $d0 killed $d0 killed $d0_d1 def $d0_d1
+; NEON-IAENABLED-NEXT:    st2 { v0.8b, v1.8b }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: store_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    // kill: def $d0 killed $d0 def $q0
+; NEON-IADISABLED-NEXT:    // kill: def $d1 killed $d1 def $q1
+; NEON-IADISABLED-NEXT:    adrp x8, .LCPI41_0
+; NEON-IADISABLED-NEXT:    mov v0.d[1], v1.d[0]
+; NEON-IADISABLED-NEXT:    ldr q1, [x8, :lo12:.LCPI41_0]
+; NEON-IADISABLED-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; NEON-IADISABLED-NEXT:    str q0, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; NO_NEON-LABEL: store_factor2_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldrb w8, [sp, #64]
+; NO_NEON-NEXT:    ldrb w9, [sp]
+; NO_NEON-NEXT:    ldrb w10, [sp, #56]
+; NO_NEON-NEXT:    strb w7, [x0, #12]
+; NO_NEON-NEXT:    strb w8, [x0, #15]
+; NO_NEON-NEXT:    ldrb w8, [sp, #48]
+; NO_NEON-NEXT:    strb w9, [x0, #14]
+; NO_NEON-NEXT:    ldrb w9, [sp, #40]
+; NO_NEON-NEXT:    strb w8, [x0, #11]
+; NO_NEON-NEXT:    ldrb w8, [sp, #32]
+; NO_NEON-NEXT:    strb w9, [x0, #9]
+; NO_NEON-NEXT:    ldrb w9, [sp, #24]
+; NO_NEON-NEXT:    strb w8, [x0, #7]
+; NO_NEON-NEXT:    ldrb w8, [sp, #16]
+; NO_NEON-NEXT:    strb w9, [x0, #5]
+; NO_NEON-NEXT:    ldrb w9, [sp, #8]
+; NO_NEON-NEXT:    strb w10, [x0, #13]
+; NO_NEON-NEXT:    strb w6, [x0, #10]
+; NO_NEON-NEXT:    strb w5, [x0, #8]
+; NO_NEON-NEXT:    strb w4, [x0, #6]
+; NO_NEON-NEXT:    strb w3, [x0, #4]
+; NO_NEON-NEXT:    strb w8, [x0, #3]
+; NO_NEON-NEXT:    strb w2, [x0, #2]
+; NO_NEON-NEXT:    strb w9, [x0, #1]
+; NO_NEON-NEXT:    strb w1, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <16 x i8> @llvm.vector.interleave2.v16i8(<8 x i8> %v0, <8 x i8> %v1)
+  store <16 x i8> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_factor2_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1) {
+; NEON-IAENABLED-LABEL: store_factor2_wide_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    mov v5.16b, v2.16b
+; NEON-IAENABLED-NEXT:    // kill: def $q3 killed $q3 def $q2_q3
+; NEON-IAENABLED-NEXT:    mov v4.16b, v0.16b
+; NEON-IAENABLED-NEXT:    mov v2.16b, v1.16b
+; NEON-IAENABLED-NEXT:    st2 { v4.4s, v5.4s }, [x0], #32
+; NEON-IAENABLED-NEXT:    st2 { v2.4s, v3.4s }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: store_factor2_wide_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v4.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    zip1 v1.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    zip2 v3.4s, v0.4s, v2.4s
+; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v2.4s
+; NEON-IADISABLED-NEXT:    stp q1, q4, [x0, #32]
+; NEON-IADISABLED-NEXT:    stp q0, q3, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; NO_NEON-LABEL: store_factor2_wide_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldr w8, [sp, #64]
+; NO_NEON-NEXT:    ldr w9, [sp]
+; NO_NEON-NEXT:    ldr w10, [sp, #56]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #56]
+; NO_NEON-NEXT:    ldr w8, [sp, #48]
+; NO_NEON-NEXT:    ldr w9, [sp, #40]
+; NO_NEON-NEXT:    stp w7, w10, [x0, #48]
+; NO_NEON-NEXT:    stp w6, w8, [x0, #40]
+; NO_NEON-NEXT:    ldr w8, [sp, #32]
+; NO_NEON-NEXT:    stp w5, w9, [x0, #32]
+; NO_NEON-NEXT:    ldr w9, [sp, #24]
+; NO_NEON-NEXT:    stp w4, w8, [x0, #24]
+; NO_NEON-NEXT:    ldr w8, [sp, #16]
+; NO_NEON-NEXT:    stp w3, w9, [x0, #16]
+; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    stp w2, w8, [x0, #8]
+; NO_NEON-NEXT:    stp w1, w9, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <16 x i32> @llvm.vector.interleave2.v16i32(<8 x i32> %v0, <8 x i32> %v1)
+  store <16 x i32> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_factor3_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
+; NEON-LABEL: store_factor3_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; NEON-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; NEON-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; NEON-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_factor3_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldr w8, [sp]
+; NO_NEON-NEXT:    ldr w9, [sp, #32]
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
+; NO_NEON-NEXT:    mov w12, w3
+; NO_NEON-NEXT:    ldr w10, [sp, #24]
+; NO_NEON-NEXT:    ldr w11, [sp, #16]
+; NO_NEON-NEXT:    mov w13, w6
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
+; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
+; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
+; NO_NEON-NEXT:    orr x12, x12, x7, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
+; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
+; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
+; NO_NEON-NEXT:    mov w10, w1
+; NO_NEON-NEXT:    orr x8, x13, x11, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x5, lsl #32
+; NO_NEON-NEXT:    stp x8, x12, [x0, #16]
+; NO_NEON-NEXT:    stp x10, x9, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <12 x i32> @llvm.vector.interleave3.v12i32(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2)
+  store <12 x i32> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_factor3_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2) {
+; NEON-IAENABLED-LABEL: store_factor3_wide_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    mov v18.16b, v4.16b
+; NEON-IAENABLED-NEXT:    // kill: def $q5 killed $q5 killed $q3_q4_q5 def $q3_q4_q5
+; NEON-IAENABLED-NEXT:    mov v17.16b, v2.16b
+; NEON-IAENABLED-NEXT:    mov v4.16b, v3.16b
+; NEON-IAENABLED-NEXT:    mov v16.16b, v0.16b
+; NEON-IAENABLED-NEXT:    mov v3.16b, v1.16b
+; NEON-IAENABLED-NEXT:    st3 { v16.4s, v17.4s, v18.4s }, [x0], #48
+; NEON-IAENABLED-NEXT:    st3 { v3.4s, v4.4s, v5.4s }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: store_factor3_wide_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    sub sp, sp, #96
+; NEON-IADISABLED-NEXT:    .cfi_def_cfa_offset 96
+; NEON-IADISABLED-NEXT:    // kill: def $q5 killed $q5 killed $q3_q4_q5 def $q3_q4_q5
+; NEON-IADISABLED-NEXT:    mov v18.16b, v4.16b
+; NEON-IADISABLED-NEXT:    mov x8, sp
+; NEON-IADISABLED-NEXT:    mov v17.16b, v2.16b
+; NEON-IADISABLED-NEXT:    mov v4.16b, v3.16b
+; NEON-IADISABLED-NEXT:    mov v16.16b, v0.16b
+; NEON-IADISABLED-NEXT:    mov v3.16b, v1.16b
+; NEON-IADISABLED-NEXT:    st3 { v16.4s, v17.4s, v18.4s }, [x8]
+; NEON-IADISABLED-NEXT:    add x8, sp, #48
+; NEON-IADISABLED-NEXT:    st3 { v3.4s, v4.4s, v5.4s }, [x8]
+; NEON-IADISABLED-NEXT:    ldp q2, q0, [sp, #64]
+; NEON-IADISABLED-NEXT:    ldp q5, q1, [sp, #32]
+; NEON-IADISABLED-NEXT:    ldp q3, q4, [sp]
+; NEON-IADISABLED-NEXT:    stp q2, q0, [x0, #64]
+; NEON-IADISABLED-NEXT:    stp q5, q1, [x0, #32]
+; NEON-IADISABLED-NEXT:    stp q3, q4, [x0]
+; NEON-IADISABLED-NEXT:    add sp, sp, #96
+; NEON-IADISABLED-NEXT:    ret
+;
+; NO_NEON-LABEL: store_factor3_wide_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldr w10, [sp, #48]
+; NO_NEON-NEXT:    ldr w11, [sp, #112]
+; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
+; NO_NEON-NEXT:    mov w18, w7
+; NO_NEON-NEXT:    ldr w9, [sp, #64]
+; NO_NEON-NEXT:    ldr w8, [sp, #120]
+; NO_NEON-NEXT:    mov w17, w5
+; NO_NEON-NEXT:    ldr w14, [sp, #128]
+; NO_NEON-NEXT:    orr x10, x10, x11, lsl #32
+; NO_NEON-NEXT:    ldr w11, [sp]
+; NO_NEON-NEXT:    ldr w12, [sp, #104]
+; NO_NEON-NEXT:    ldr w13, [sp, #32]
+; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
+; NO_NEON-NEXT:    ldr w15, [sp, #88]
+; NO_NEON-NEXT:    orr x9, x9, x14, lsl #32
+; NO_NEON-NEXT:    orr x8, x8, x11, lsl #32
+; NO_NEON-NEXT:    ldr w16, [sp, #16]
+; NO_NEON-NEXT:    ldr w11, [sp, #56]
+; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
+; NO_NEON-NEXT:    ldr w14, [sp, #40]
+; NO_NEON-NEXT:    str x9, [x0, #88]
+; NO_NEON-NEXT:    ldr w9, [sp, #96]
+; NO_NEON-NEXT:    str x8, [x0, #80]
+; NO_NEON-NEXT:    ldr w8, [sp, #80]
+; NO_NEON-NEXT:    orr x11, x18, x11, lsl #32
+; NO_NEON-NEXT:    orr x9, x13, x9, lsl #32
+; NO_NEON-NEXT:    orr x13, x15, x4, lsl #32
+; NO_NEON-NEXT:    stp x12, x10, [x0, #56]
+; NO_NEON-NEXT:    orr x8, x16, x8, lsl #32
+; NO_NEON-NEXT:    ldr w12, [sp, #24]
+; NO_NEON-NEXT:    str x11, [x0, #72]
+; NO_NEON-NEXT:    stp x13, x9, [x0, #32]
+; NO_NEON-NEXT:    ldr w13, [sp, #72]
+; NO_NEON-NEXT:    mov w9, w3
+; NO_NEON-NEXT:    str x8, [x0, #16]
+; NO_NEON-NEXT:    ldr w8, [sp, #8]
+; NO_NEON-NEXT:    mov w11, w1
+; NO_NEON-NEXT:    orr x10, x17, x14, lsl #32
+; NO_NEON-NEXT:    orr x9, x9, x12, lsl #32
+; NO_NEON-NEXT:    orr x12, x13, x2, lsl #32
+; NO_NEON-NEXT:    orr x8, x11, x8, lsl #32
+; NO_NEON-NEXT:    str x10, [x0, #48]
+; NO_NEON-NEXT:    str x9, [x0, #24]
+; NO_NEON-NEXT:    stp x8, x12, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <24 x i32> @llvm.vector.interleave3.v24i32(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2)
+  store <24 x i32> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_factor4_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
+; NEON-LABEL: store_factor4_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    st4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_factor4_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldr w8, [sp, #64]
+; NO_NEON-NEXT:    ldr w9, [sp, #32]
+; NO_NEON-NEXT:    ldr w10, [sp]
+; NO_NEON-NEXT:    str w7, [x0, #36]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #56]
+; NO_NEON-NEXT:    ldr w8, [sp, #56]
+; NO_NEON-NEXT:    ldr w9, [sp, #24]
+; NO_NEON-NEXT:    str w10, [x0, #52]
+; NO_NEON-NEXT:    stp w8, w4, [x0, #44]
+; NO_NEON-NEXT:    ldr w8, [sp, #48]
+; NO_NEON-NEXT:    str w9, [x0, #40]
+; NO_NEON-NEXT:    ldr w9, [sp, #16]
+; NO_NEON-NEXT:    stp w8, w3, [x0, #28]
+; NO_NEON-NEXT:    ldr w8, [sp, #40]
+; NO_NEON-NEXT:    str w9, [x0, #24]
+; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    str w6, [x0, #20]
+; NO_NEON-NEXT:    stp w8, w2, [x0, #12]
+; NO_NEON-NEXT:    stp w5, w9, [x0, #4]
+; NO_NEON-NEXT:    str w1, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <16 x i32> @llvm.vector.interleave4.v16i32(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3)
+  store <16 x i32> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_factor4_wide_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2, <8 x i32> %v3) {
+; NEON-IAENABLED-LABEL: store_factor4_wide_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q7 killed $q7 killed $q4_q5_q6_q7 def $q4_q5_q6_q7
+; NEON-IAENABLED-NEXT:    mov v19.16b, v6.16b
+; NEON-IAENABLED-NEXT:    mov v18.16b, v4.16b
+; NEON-IAENABLED-NEXT:    mov v6.16b, v5.16b
+; NEON-IAENABLED-NEXT:    mov v17.16b, v2.16b
+; NEON-IAENABLED-NEXT:    mov v5.16b, v3.16b
+; NEON-IAENABLED-NEXT:    mov v16.16b, v0.16b
+; NEON-IAENABLED-NEXT:    mov v4.16b, v1.16b
+; NEON-IAENABLED-NEXT:    st4 { v16.4s, v17.4s, v18.4s, v19.4s }, [x0], #64
+; NEON-IAENABLED-NEXT:    st4 { v4.4s, v5.4s, v6.4s, v7.4s }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: store_factor4_wide_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v16.4s, v3.4s, v7.4s
+; NEON-IADISABLED-NEXT:    zip2 v17.4s, v1.4s, v5.4s
+; NEON-IADISABLED-NEXT:    zip1 v3.4s, v3.4s, v7.4s
+; NEON-IADISABLED-NEXT:    zip1 v1.4s, v1.4s, v5.4s
+; NEON-IADISABLED-NEXT:    zip2 v5.4s, v2.4s, v6.4s
+; NEON-IADISABLED-NEXT:    zip2 v7.4s, v0.4s, v4.4s
+; NEON-IADISABLED-NEXT:    zip1 v2.4s, v2.4s, v6.4s
+; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v4.4s
+; NEON-IADISABLED-NEXT:    zip2 v18.4s, v17.4s, v16.4s
+; NEON-IADISABLED-NEXT:    zip1 v16.4s, v17.4s, v16.4s
+; NEON-IADISABLED-NEXT:    zip2 v4.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    zip1 v1.4s, v1.4s, v3.4s
+; NEON-IADISABLED-NEXT:    zip2 v3.4s, v7.4s, v5.4s
+; NEON-IADISABLED-NEXT:    zip1 v5.4s, v7.4s, v5.4s
+; NEON-IADISABLED-NEXT:    zip2 v6.4s, v0.4s, v2.4s
+; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v2.4s
+; NEON-IADISABLED-NEXT:    stp q16, q18, [x0, #96]
+; NEON-IADISABLED-NEXT:    stp q1, q4, [x0, #64]
+; NEON-IADISABLED-NEXT:    stp q0, q6, [x0]
+; NEON-IADISABLED-NEXT:    stp q5, q3, [x0, #32]
+; NEON-IADISABLED-NEXT:    ret
+;
+; NO_NEON-LABEL: store_factor4_wide_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldr w8, [sp, #192]
+; NO_NEON-NEXT:    ldr w9, [sp, #128]
+; NO_NEON-NEXT:    ldr w10, [sp, #64]
+; NO_NEON-NEXT:    str w7, [x0, #96]
+; NO_NEON-NEXT:    str w8, [x0, #124]
+; NO_NEON-NEXT:    ldr w8, [sp]
+; NO_NEON-NEXT:    str w9, [x0, #120]
+; NO_NEON-NEXT:    ldr w9, [sp, #184]
+; NO_NEON-NEXT:    str w10, [x0, #116]
+; NO_NEON-NEXT:    ldr w10, [sp, #120]
+; NO_NEON-NEXT:    str w8, [x0, #112]
+; NO_NEON-NEXT:    ldr w8, [sp, #56]
+; NO_NEON-NEXT:    stp w10, w9, [x0, #104]
+; NO_NEON-NEXT:    ldr w9, [sp, #176]
+; NO_NEON-NEXT:    ldr w10, [sp, #48]
+; NO_NEON-NEXT:    str w8, [x0, #100]
+; NO_NEON-NEXT:    ldr w8, [sp, #112]
+; NO_NEON-NEXT:    str w10, [x0, #84]
+; NO_NEON-NEXT:    ldr w10, [sp, #40]
+; NO_NEON-NEXT:    stp w8, w9, [x0, #88]
+; NO_NEON-NEXT:    ldr w8, [sp, #168]
+; NO_NEON-NEXT:    ldr w9, [sp, #104]
+; NO_NEON-NEXT:    str w10, [x0, #68]
+; NO_NEON-NEXT:    ldr w10, [sp, #32]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #72]
+; NO_NEON-NEXT:    ldr w8, [sp, #160]
+; NO_NEON-NEXT:    ldr w9, [sp, #96]
+; NO_NEON-NEXT:    str w10, [x0, #52]
+; NO_NEON-NEXT:    ldr w10, [sp, #24]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #56]
+; NO_NEON-NEXT:    ldr w8, [sp, #152]
+; NO_NEON-NEXT:    ldr w9, [sp, #88]
+; NO_NEON-NEXT:    str w10, [x0, #36]
+; NO_NEON-NEXT:    ldr w10, [sp, #16]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #40]
+; NO_NEON-NEXT:    ldr w8, [sp, #144]
+; NO_NEON-NEXT:    ldr w9, [sp, #80]
+; NO_NEON-NEXT:    str w10, [x0, #20]
+; NO_NEON-NEXT:    ldr w10, [sp, #8]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #24]
+; NO_NEON-NEXT:    ldr w8, [sp, #136]
+; NO_NEON-NEXT:    ldr w9, [sp, #72]
+; NO_NEON-NEXT:    str w6, [x0, #80]
+; NO_NEON-NEXT:    str w5, [x0, #64]
+; NO_NEON-NEXT:    str w4, [x0, #48]
+; NO_NEON-NEXT:    str w3, [x0, #32]
+; NO_NEON-NEXT:    str w2, [x0, #16]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #8]
+; NO_NEON-NEXT:    stp w1, w10, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <32 x i32> @llvm.vector.interleave4.v32i32(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2, <8 x i32> %v3)
+  store <32 x i32> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_mask_factor3_intrinsic(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+; NEON-LABEL: store_general_mask_factor3_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q4 killed $q4 def $q2_q3_q4
+; NEON-NEXT:    mov v2.16b, v1.16b
+; NEON-NEXT:    ldr q3, [sp]
+; NEON-NEXT:    st3 { v2.4s, v3.4s, v4.4s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_general_mask_factor3_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
+; NO_NEON-NEXT:    .cfi_offset w29, -16
+; NO_NEON-NEXT:    ldr w8, [sp, #240]
+; NO_NEON-NEXT:    ldr w10, [sp, #112]
+; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
+; NO_NEON-NEXT:    ldr w11, [sp, #224]
+; NO_NEON-NEXT:    ldr w12, [sp, #96]
+; NO_NEON-NEXT:    ldr w9, [sp, #104]
+; NO_NEON-NEXT:    ldr w13, [sp, #16]
+; NO_NEON-NEXT:    orr x8, x8, x10, lsl #32
+; NO_NEON-NEXT:    orr x10, x11, x12, lsl #32
+; NO_NEON-NEXT:    ldr w11, [sp, #232]
+; NO_NEON-NEXT:    orr x9, x9, x13, lsl #32
+; NO_NEON-NEXT:    mov w13, w7
+; NO_NEON-NEXT:    ldr w12, [sp, #88]
+; NO_NEON-NEXT:    str x8, [x0, #40]
+; NO_NEON-NEXT:    orr x11, x13, x11, lsl #32
+; NO_NEON-NEXT:    ldr w8, [sp, #216]
+; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
+; NO_NEON-NEXT:    stp x11, x9, [x0, #24]
+; NO_NEON-NEXT:    mov w9, w5
+; NO_NEON-NEXT:    orr x8, x9, x8, lsl #32
+; NO_NEON-NEXT:    stp x12, x10, [x0, #8]
+; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+  %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %2 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
+  %3 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+  %intrinsic.interleave.0 = call <12 x i32> @llvm.vector.interleave3.v12i32(<4 x i32> %1, <4 x i32> %2, <4 x i32> %3)
+  store <12 x i32> %intrinsic.interleave.0, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_mask_factor3_undeflane_intrinsic(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+; NEON-LABEL: store_general_mask_factor3_undeflane_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q4 killed $q4 def $q2_q3_q4
+; NEON-NEXT:    mov v2.16b, v0.16b
+; NEON-NEXT:    ldr q3, [sp]
+; NEON-NEXT:    st3 { v2.4s, v3.4s, v4.4s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_general_mask_factor3_undeflane_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
+; NO_NEON-NEXT:    .cfi_offset w29, -16
+; NO_NEON-NEXT:    ldr w8, [sp, #240]
+; NO_NEON-NEXT:    ldr w9, [sp, #112]
+; NO_NEON-NEXT:    mov w14, w3
+; NO_NEON-NEXT:    ldr w10, [sp, #104]
+; NO_NEON-NEXT:    ldr w11, [sp, #224]
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
+; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
+; NO_NEON-NEXT:    ldr w12, [sp, #96]
+; NO_NEON-NEXT:    ldr w13, [sp, #232]
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #88]
+; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
+; NO_NEON-NEXT:    orr x11, x11, x12, lsl #32
+; NO_NEON-NEXT:    orr x12, x14, x13, lsl #32
+; NO_NEON-NEXT:    str x8, [x0, #40]
+; NO_NEON-NEXT:    ldr w8, [sp, #216]
+; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
+; NO_NEON-NEXT:    stp x12, x10, [x0, #24]
+; NO_NEON-NEXT:    mov w10, w1
+; NO_NEON-NEXT:    orr x8, x10, x8, lsl #32
+; NO_NEON-NEXT:    stp x9, x11, [x0, #8]
+; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+  %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
+  %3 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+  %intrinsic.interleave.0 = call <12 x i32> @llvm.vector.interleave3.v12i32(<4 x i32> %1, <4 x i32> %2, <4 x i32> %3)
+  store <12 x i32> %intrinsic.interleave.0, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_mask_factor3_undefmultimid_intrinsic(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+; NEON-LABEL: store_general_mask_factor3_undefmultimid_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q4 killed $q4 def $q2_q3_q4
+; NEON-NEXT:    mov v2.16b, v1.16b
+; NEON-NEXT:    ldr q3, [sp]
+; NEON-NEXT:    st3 { v2.4s, v3.4s, v4.4s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_general_mask_factor3_undefmultimid_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
+; NO_NEON-NEXT:    .cfi_offset w29, -16
+; NO_NEON-NEXT:    ldr w8, [sp, #240]
+; NO_NEON-NEXT:    ldr w10, [sp, #112]
+; NO_NEON-NEXT:    // kill: def $w6 killed $w6 def $x6
+; NO_NEON-NEXT:    ldr w11, [sp, #224]
+; NO_NEON-NEXT:    ldr w12, [sp, #96]
+; NO_NEON-NEXT:    ldr w9, [sp, #104]
+; NO_NEON-NEXT:    ldr w13, [sp, #16]
+; NO_NEON-NEXT:    orr x8, x8, x10, lsl #32
+; NO_NEON-NEXT:    orr x10, x11, x12, lsl #32
+; NO_NEON-NEXT:    ldr w11, [sp, #232]
+; NO_NEON-NEXT:    orr x9, x9, x13, lsl #32
+; NO_NEON-NEXT:    mov w13, w7
+; NO_NEON-NEXT:    ldr w12, [sp, #88]
+; NO_NEON-NEXT:    str x8, [x0, #40]
+; NO_NEON-NEXT:    orr x11, x13, x11, lsl #32
+; NO_NEON-NEXT:    ldr w8, [sp, #216]
+; NO_NEON-NEXT:    orr x12, x12, x6, lsl #32
+; NO_NEON-NEXT:    stp x11, x9, [x0, #24]
+; NO_NEON-NEXT:    mov w9, w5
+; NO_NEON-NEXT:    orr x8, x9, x8, lsl #32
+; NO_NEON-NEXT:    stp x12, x10, [x0, #8]
+; NO_NEON-NEXT:    str x8, [x0]
+; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+  %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %2 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
+  %3 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+  %intrinsic.interleave.0 = call <12 x i32> @llvm.vector.interleave3.v12i32(<4 x i32> %1, <4 x i32> %2, <4 x i32> %3)
+  store <12 x i32> %intrinsic.interleave.0, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_mask_factor4_intrinsic(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+; NEON-LABEL: store_general_mask_factor4_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
+; NEON-NEXT:    mov v6.16b, v2.16b
+; NEON-NEXT:    mov v3.16b, v1.16b
+; NEON-NEXT:    ldr d5, [sp]
+; NEON-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_general_mask_factor4_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
+; NO_NEON-NEXT:    .cfi_offset w29, -16
+; NO_NEON-NEXT:    ldr w8, [sp, #32]
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
+; NO_NEON-NEXT:    ldr w10, [sp, #96]
+; NO_NEON-NEXT:    str w6, [x0, #16]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #24]
+; NO_NEON-NEXT:    ldr w8, [sp, #24]
+; NO_NEON-NEXT:    ldr w9, [sp, #216]
+; NO_NEON-NEXT:    str w10, [x0, #20]
+; NO_NEON-NEXT:    ldr w10, [sp, #88]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #8]
+; NO_NEON-NEXT:    stp w5, w10, [x0]
+; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+  %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
+  %2 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 16, i32 17>
+  %3 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 32, i32 33>
+  %4 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 8, i32 9>
+  %intrinsic.interleave.0 = call <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32> %1, <2 x i32> %2, <2 x i32> %3, <2 x i32> %4)
+  store <8 x i32> %intrinsic.interleave.0, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_mask_factor4_undefbeg_intrinsic(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+; NEON-LABEL: store_general_mask_factor4_undefbeg_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
+; NEON-NEXT:    mov v6.16b, v2.16b
+; NEON-NEXT:    mov v3.16b, v1.16b
+; NEON-NEXT:    ldr d5, [sp]
+; NEON-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_general_mask_factor4_undefbeg_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
+; NO_NEON-NEXT:    .cfi_offset w29, -16
+; NO_NEON-NEXT:    ldr w8, [sp, #32]
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
+; NO_NEON-NEXT:    ldr w10, [sp, #96]
+; NO_NEON-NEXT:    str w6, [x0, #16]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #24]
+; NO_NEON-NEXT:    ldr w8, [sp, #24]
+; NO_NEON-NEXT:    ldr w9, [sp, #216]
+; NO_NEON-NEXT:    str w10, [x0, #20]
+; NO_NEON-NEXT:    ldr w10, [sp, #88]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #8]
+; NO_NEON-NEXT:    stp w5, w10, [x0]
+; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+  %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
+  %2 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 16, i32 17>
+  %3 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 32, i32 33>
+  %4 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 8, i32 9>
+  %intrinsic.interleave.0 = call <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32> %1, <2 x i32> %2, <2 x i32> %3, <2 x i32> %4)
+  store <8 x i32> %intrinsic.interleave.0, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_mask_factor4_undefend_intrinsic(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+; NEON-LABEL: store_general_mask_factor4_undefend_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
+; NEON-NEXT:    mov v6.16b, v2.16b
+; NEON-NEXT:    mov v3.16b, v1.16b
+; NEON-NEXT:    ldr d5, [sp]
+; NEON-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_general_mask_factor4_undefend_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
+; NO_NEON-NEXT:    .cfi_offset w29, -16
+; NO_NEON-NEXT:    ldr w8, [sp, #32]
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
+; NO_NEON-NEXT:    ldr w10, [sp, #96]
+; NO_NEON-NEXT:    str w6, [x0, #16]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #24]
+; NO_NEON-NEXT:    ldr w8, [sp, #24]
+; NO_NEON-NEXT:    ldr w9, [sp, #216]
+; NO_NEON-NEXT:    str w10, [x0, #20]
+; NO_NEON-NEXT:    ldr w10, [sp, #88]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #8]
+; NO_NEON-NEXT:    stp w5, w10, [x0]
+; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+  %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
+  %2 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 16, i32 17>
+  %3 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 32, i32 33>
+  %4 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 8, i32 9>
+  %intrinsic.interleave.0 = call <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32> %1, <2 x i32> %2, <2 x i32> %3, <2 x i32> %4)
+  store <8 x i32> %intrinsic.interleave.0, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_mask_factor4_undefmid_intrinsic(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+; NEON-LABEL: store_general_mask_factor4_undefmid_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q4 killed $q4 def $q3_q4_q5_q6
+; NEON-NEXT:    mov v6.16b, v2.16b
+; NEON-NEXT:    mov v3.16b, v1.16b
+; NEON-NEXT:    ldr d5, [sp]
+; NEON-NEXT:    st4 { v3.2s, v4.2s, v5.2s, v6.2s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_general_mask_factor4_undefmid_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
+; NO_NEON-NEXT:    .cfi_offset w29, -16
+; NO_NEON-NEXT:    ldr w8, [sp, #32]
+; NO_NEON-NEXT:    ldr w9, [sp, #224]
+; NO_NEON-NEXT:    ldr w10, [sp, #96]
+; NO_NEON-NEXT:    str w6, [x0, #16]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #24]
+; NO_NEON-NEXT:    ldr w8, [sp, #24]
+; NO_NEON-NEXT:    ldr w9, [sp, #216]
+; NO_NEON-NEXT:    str w10, [x0, #20]
+; NO_NEON-NEXT:    ldr w10, [sp, #88]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #8]
+; NO_NEON-NEXT:    stp w5, w10, [x0]
+; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+  %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
+  %2 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 16, i32 17>
+  %3 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 32, i32 33>
+  %4 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 8, i32 9>
+  %intrinsic.interleave.0 = call <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32> %1, <2 x i32> %2, <2 x i32> %3, <2 x i32> %4)
+  store <8 x i32> %intrinsic.interleave.0, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_general_mask_factor4_undefmulti_intrinsic(ptr %ptr, <32 x i32> %v0, <32 x i32> %v1) {
+; NEON-LABEL: store_general_mask_factor4_undefmulti_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    mov v5.16b, v2.16b
+; NEON-NEXT:    mov v2.16b, v1.16b
+; NEON-NEXT:    mov v3.16b, v0.16b
+; NEON-NEXT:    fmov d4, d3
+; NEON-NEXT:    st4 { v2.2s, v3.2s, v4.2s, v5.2s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_general_mask_factor4_undefmulti_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; NO_NEON-NEXT:    .cfi_def_cfa_offset 16
+; NO_NEON-NEXT:    .cfi_offset w29, -16
+; NO_NEON-NEXT:    ldr w8, [sp, #32]
+; NO_NEON-NEXT:    stp w6, w2, [x0, #16]
+; NO_NEON-NEXT:    stp w5, w1, [x0]
+; NO_NEON-NEXT:    stp w2, w8, [x0, #24]
+; NO_NEON-NEXT:    ldr w8, [sp, #24]
+; NO_NEON-NEXT:    stp w1, w8, [x0, #8]
+; NO_NEON-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; NO_NEON-NEXT:    ret
+  %1 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 4, i32 5>
+  %2 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 0, i32 1>
+  %3 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 0, i32 1>
+  %4 = shufflevector <32 x i32> %v0, <32 x i32> %v1, <2 x i32> <i32 8, i32 9>
+  %intrinsic.interleave.0 = call <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32> %1, <2 x i32> %2, <2 x i32> %3, <2 x i32> %4)
+  store <8 x i32> %intrinsic.interleave.0, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_ptrvec_factor2_intrinsic(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1) {
+; NEON-IAENABLED-LABEL: store_ptrvec_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    st2 { v0.2d, v1.2d }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: store_ptrvec_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v2.2d, v0.2d, v1.2d
+; NEON-IADISABLED-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; NO_NEON-LABEL: store_ptrvec_factor2_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    stp x3, x5, [x0, #16]
+; NO_NEON-NEXT:    stp x2, x4, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <4 x ptr> @llvm.vector.interleave2.v4p0(<2 x ptr> %v0, <2 x ptr> %v1)
+  store <4 x ptr> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_ptrvec_factor3_intrinsic(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1, <2 x ptr> %v2) {
+; NEON-LABEL: store_ptrvec_factor3_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; NEON-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; NEON-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; NEON-NEXT:    st3 { v0.2d, v1.2d, v2.2d }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_ptrvec_factor3_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    stp x5, x7, [x0, #32]
+; NO_NEON-NEXT:    stp x6, x3, [x0, #16]
+; NO_NEON-NEXT:    stp x2, x4, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <6 x ptr> @llvm.vector.interleave3.v6p0(<2 x ptr> %v0, <2 x ptr> %v1, <2 x ptr> %v2)
+  store <6 x ptr> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_ptrvec_factor4_intrinsic(ptr %ptr, <2 x ptr> %v0, <2 x ptr> %v1, <2 x ptr> %v2, <2 x ptr> %v3) {
+; NEON-LABEL: store_ptrvec_factor4_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    st4 { v0.2d, v1.2d, v2.2d, v3.2d }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_ptrvec_factor4_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldr x8, [sp, #8]
+; NO_NEON-NEXT:    stp x3, x5, [x0, #32]
+; NO_NEON-NEXT:    stp x2, x4, [x0]
+; NO_NEON-NEXT:    stp x7, x8, [x0, #48]
+; NO_NEON-NEXT:    ldr x8, [sp]
+; NO_NEON-NEXT:    stp x6, x8, [x0, #16]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <8 x ptr> @llvm.vector.interleave4.v8p0(<2 x ptr> %v0, <2 x ptr> %v1, <2 x ptr> %v2, <2 x ptr> %v3)
+  store <8 x ptr> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_undef_mask_factor2_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
+; NEON-IAENABLED-LABEL: store_undef_mask_factor2_intrinsic:
+; NEON-IAENABLED:       // %bb.0:
+; NEON-IAENABLED-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; NEON-IAENABLED-NEXT:    st2 { v0.4s, v1.4s }, [x0]
+; NEON-IAENABLED-NEXT:    ret
+;
+; NEON-IADISABLED-LABEL: store_undef_mask_factor2_intrinsic:
+; NEON-IADISABLED:       // %bb.0:
+; NEON-IADISABLED-NEXT:    zip2 v2.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    zip1 v0.4s, v0.4s, v1.4s
+; NEON-IADISABLED-NEXT:    stp q0, q2, [x0]
+; NEON-IADISABLED-NEXT:    ret
+;
+; NO_NEON-LABEL: store_undef_mask_factor2_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldr w8, [sp]
+; NO_NEON-NEXT:    stp w3, w7, [x0, #16]
+; NO_NEON-NEXT:    stp w2, w6, [x0, #8]
+; NO_NEON-NEXT:    stp w4, w8, [x0, #24]
+; NO_NEON-NEXT:    stp w1, w5, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> %v0, <4 x i32> %v1)
+  store <8 x i32> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_undef_mask_factor3_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
+; NEON-LABEL: store_undef_mask_factor3_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
+; NEON-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
+; NEON-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
+; NEON-NEXT:    st3 { v0.4s, v1.4s, v2.4s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_undef_mask_factor3_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldr w8, [sp]
+; NO_NEON-NEXT:    ldr w9, [sp, #32]
+; NO_NEON-NEXT:    // kill: def $w4 killed $w4 def $x4
+; NO_NEON-NEXT:    mov w12, w3
+; NO_NEON-NEXT:    ldr w10, [sp, #24]
+; NO_NEON-NEXT:    ldr w11, [sp, #16]
+; NO_NEON-NEXT:    mov w13, w6
+; NO_NEON-NEXT:    orr x8, x8, x9, lsl #32
+; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    // kill: def $w7 killed $w7 def $x7
+; NO_NEON-NEXT:    // kill: def $w5 killed $w5 def $x5
+; NO_NEON-NEXT:    // kill: def $w2 killed $w2 def $x2
+; NO_NEON-NEXT:    orr x12, x12, x7, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x4, lsl #32
+; NO_NEON-NEXT:    orr x9, x9, x2, lsl #32
+; NO_NEON-NEXT:    stp x10, x8, [x0, #32]
+; NO_NEON-NEXT:    mov w10, w1
+; NO_NEON-NEXT:    orr x8, x13, x11, lsl #32
+; NO_NEON-NEXT:    orr x10, x10, x5, lsl #32
+; NO_NEON-NEXT:    stp x8, x12, [x0, #16]
+; NO_NEON-NEXT:    stp x10, x9, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <12 x i32> @llvm.vector.interleave3.v12i32(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2)
+  store <12 x i32> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_undef_mask_factor4_intrinsic(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
+; NEON-LABEL: store_undef_mask_factor4_intrinsic:
+; NEON:       // %bb.0:
+; NEON-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; NEON-NEXT:    st4 { v0.4s, v1.4s, v2.4s, v3.4s }, [x0]
+; NEON-NEXT:    ret
+;
+; NO_NEON-LABEL: store_undef_mask_factor4_intrinsic:
+; NO_NEON:       // %bb.0:
+; NO_NEON-NEXT:    ldr w8, [sp, #64]
+; NO_NEON-NEXT:    ldr w9, [sp, #32]
+; NO_NEON-NEXT:    ldr w10, [sp]
+; NO_NEON-NEXT:    str w7, [x0, #36]
+; NO_NEON-NEXT:    stp w9, w8, [x0, #56]
+; NO_NEON-NEXT:    ldr w8, [sp, #56]
+; NO_NEON-NEXT:    ldr w9, [sp, #24]
+; NO_NEON-NEXT:    str w10, [x0, #52]
+; NO_NEON-NEXT:    stp w8, w4, [x0, #44]
+; NO_NEON-NEXT:    ldr w8, [sp, #48]
+; NO_NEON-NEXT:    str w9, [x0, #40]
+; NO_NEON-NEXT:    ldr w9, [sp, #16]
+; NO_NEON-NEXT:    stp w8, w3, [x0, #28]
+; NO_NEON-NEXT:    ldr w8, [sp, #40]
+; NO_NEON-NEXT:    str w9, [x0, #24]
+; NO_NEON-NEXT:    ldr w9, [sp, #8]
+; NO_NEON-NEXT:    str w6, [x0, #20]
+; NO_NEON-NEXT:    stp w8, w2, [x0, #12]
+; NO_NEON-NEXT:    stp w5, w9, [x0, #4]
+; NO_NEON-NEXT:    str w1, [x0]
+; NO_NEON-NEXT:    ret
+  %interleaved.intrinsic = call <16 x i32> @llvm.vector.interleave4.v16i32(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3)
+  store <16 x i32> %interleaved.intrinsic, ptr %ptr, align 4
+  ret void
+}
+
+declare <12 x i32> @llvm.vector.interleave3.v12i32(<4 x i32>, <4 x i32>, <4 x i32>)
+
+declare <16 x i32> @llvm.vector.interleave2.v16i32(<8 x i32>, <8 x i32>)
+
+declare <16 x i32> @llvm.vector.interleave4.v16i32(<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>)
+
+declare <16 x i8> @llvm.vector.interleave2.v16i8(<8 x i8>, <8 x i8>)
+
+declare <24 x i32> @llvm.vector.interleave3.v24i32(<8 x i32>, <8 x i32>, <8 x i32>)
+
+declare <32 x i32> @llvm.vector.interleave4.v32i32(<8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>)
+
+declare <4 x ptr> @llvm.vector.interleave2.v4p0(<2 x ptr>, <2 x ptr>)
+
+declare <6 x ptr> @llvm.vector.interleave3.v6p0(<2 x ptr>, <2 x ptr>, <2 x ptr>)
+
+declare <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32>, <4 x i32>)
+
+declare <8 x i32> @llvm.vector.interleave4.v8i32(<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>)
+
+declare <8 x ptr> @llvm.vector.interleave4.v8p0(<2 x ptr>, <2 x ptr>, <2 x ptr>, <2 x ptr>)
+
+declare { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave3.v6i64(<6 x i64>)
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; NO_NEON-IADISABLED: {{.*}}
 ; NO_NEON-IAENABLED: {{.*}}

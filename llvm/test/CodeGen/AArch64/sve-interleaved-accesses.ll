@@ -856,6 +856,306 @@ define void @deinterleave_nxptr_factor2(ptr %ptr) #2 {
   ret void
 }
 
+define void @store_factor2_intrinsic(ptr %ptr, <16 x i16> %v0, <16 x i16> %v1) #0 {
+; CHECK-LABEL: store_factor2_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    adrp x8, .LCPI29_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI29_0
+; CHECK-NEXT:    ldr z4, [x8]
+; CHECK-NEXT:    splice z1.h, p0, z1.h, z3.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z2.h
+; CHECK-NEXT:    tbl z1.h, { z1.h }, z4.h
+; CHECK-NEXT:    tbl z0.h, { z0.h }, z4.h
+; CHECK-NEXT:    str z1, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <32 x i16> @llvm.vector.interleave2.v32i16(<16 x i16> %v0, <16 x i16> %v1)
+  store <32 x i16> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_factor3_intrinsic(ptr %ptr, <8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2) #0 {
+; CHECK-LABEL: store_factor3_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v18.16b, v4.16b
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov v17.16b, v2.16b
+; CHECK-NEXT:    mov v16.16b, v0.16b
+; CHECK-NEXT:    splice z18.s, p0, z18.s, z5.s
+; CHECK-NEXT:    splice z17.s, p0, z17.s, z3.s
+; CHECK-NEXT:    splice z16.s, p0, z16.s, z1.s
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st3w { z16.s - z18.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <24 x i32> @llvm.vector.interleave3.v24i32(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2)
+  store <24 x i32> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_factor4_intrinsic(ptr %ptr, <4 x i64> %v0, <4 x i64> %v1, <4 x i64> %v2, <4 x i64> %v3) #0 {
+; CHECK-LABEL: store_factor4_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v19.16b, v6.16b
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov v18.16b, v4.16b
+; CHECK-NEXT:    mov v17.16b, v2.16b
+; CHECK-NEXT:    mov v16.16b, v0.16b
+; CHECK-NEXT:    splice z19.d, p0, z19.d, z7.d
+; CHECK-NEXT:    splice z18.d, p0, z18.d, z5.d
+; CHECK-NEXT:    splice z17.d, p0, z17.d, z3.d
+; CHECK-NEXT:    splice z16.d, p0, z16.d, z1.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st4d { z16.d - z19.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <16 x i64> @llvm.vector.interleave4.v16i64(<4 x i64> %v0, <4 x i64> %v1, <4 x i64> %v2, <4 x i64> %v3)
+  store <16 x i64> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_ptrvec_factor2_intrinsic(ptr %ptr, <4 x ptr> %v0, <4 x ptr> %v1) #0 {
+; CHECK-LABEL: store_ptrvec_factor2_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    adrp x8, .LCPI32_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI32_0
+; CHECK-NEXT:    ldr z4, [x8]
+; CHECK-NEXT:    splice z1.d, p0, z1.d, z3.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z2.d
+; CHECK-NEXT:    tbl z1.d, { z1.d }, z4.d
+; CHECK-NEXT:    tbl z0.d, { z0.d }, z4.d
+; CHECK-NEXT:    str z1, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <8 x ptr> @llvm.vector.interleave2.v8p0(<4 x ptr> %v0, <4 x ptr> %v1)
+  store <8 x ptr> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_ptrvec_factor3_intrinsic(ptr %ptr, <4 x ptr> %v0, <4 x ptr> %v1, <4 x ptr> %v2) #0 {
+; CHECK-LABEL: store_ptrvec_factor3_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v18.16b, v4.16b
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov v17.16b, v2.16b
+; CHECK-NEXT:    mov v16.16b, v0.16b
+; CHECK-NEXT:    splice z18.d, p0, z18.d, z5.d
+; CHECK-NEXT:    splice z17.d, p0, z17.d, z3.d
+; CHECK-NEXT:    splice z16.d, p0, z16.d, z1.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st3d { z16.d - z18.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <12 x ptr> @llvm.vector.interleave3.v12p0(<4 x ptr> %v0, <4 x ptr> %v1, <4 x ptr> %v2)
+  store <12 x ptr> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_ptrvec_factor4_intrinsic(ptr %ptr, <4 x ptr> %v0, <4 x ptr> %v1, <4 x ptr> %v2, <4 x ptr> %v3) #0 {
+; CHECK-LABEL: store_ptrvec_factor4_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v19.16b, v6.16b
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov v18.16b, v4.16b
+; CHECK-NEXT:    mov v17.16b, v2.16b
+; CHECK-NEXT:    mov v16.16b, v0.16b
+; CHECK-NEXT:    splice z19.d, p0, z19.d, z7.d
+; CHECK-NEXT:    splice z18.d, p0, z18.d, z5.d
+; CHECK-NEXT:    splice z17.d, p0, z17.d, z3.d
+; CHECK-NEXT:    splice z16.d, p0, z16.d, z1.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st4d { z16.d - z19.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <16 x ptr> @llvm.vector.interleave4.v16p0(<4 x ptr> %v0, <4 x ptr> %v1, <4 x ptr> %v2, <4 x ptr> %v3)
+  store <16 x ptr> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_factor2_wide_intrinsic(ptr %ptr, <8 x i64> %v0, <8 x i64> %v1) #0 {
+; CHECK-LABEL: store_factor2_wide_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-NEXT:    // kill: def $q4 killed $q4 def $z4
+; CHECK-NEXT:    adrp x8, .LCPI35_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI35_0
+; CHECK-NEXT:    splice z3.d, p0, z3.d, z7.d
+; CHECK-NEXT:    splice z2.d, p0, z2.d, z6.d
+; CHECK-NEXT:    splice z1.d, p0, z1.d, z5.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z4.d
+; CHECK-NEXT:    ldr z7, [x8]
+; CHECK-NEXT:    tbl z3.d, { z3.d }, z7.d
+; CHECK-NEXT:    tbl z2.d, { z2.d }, z7.d
+; CHECK-NEXT:    tbl z1.d, { z1.d }, z7.d
+; CHECK-NEXT:    tbl z0.d, { z0.d }, z7.d
+; CHECK-NEXT:    str z3, [x0, #3, mul vl]
+; CHECK-NEXT:    str z2, [x0, #2, mul vl]
+; CHECK-NEXT:    str z1, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <16 x i64> @llvm.vector.interleave2.v16i64(<8 x i64> %v0, <8 x i64> %v1)
+  store <16 x i64> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_min_not_max_intrinsic(ptr %ptr, <4 x i64> %v0, <4 x i64> %v1) #1 {
+; CHECK-LABEL: store_min_not_max_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    adrp x8, .LCPI36_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI36_0
+; CHECK-NEXT:    ptrue p1.d, vl4
+; CHECK-NEXT:    splice z1.d, p0, z1.d, z3.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z2.d
+; CHECK-NEXT:    ld1d { z2.d }, p1/z, [x8]
+; CHECK-NEXT:    mov x8, #4 // =0x4
+; CHECK-NEXT:    tbl z1.d, { z1.d }, z2.d
+; CHECK-NEXT:    tbl z0.d, { z0.d }, z2.d
+; CHECK-NEXT:    st1d { z1.d }, p1, [x0, x8, lsl #3]
+; CHECK-NEXT:    st1d { z0.d }, p1, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> %v0, <4 x i64> %v1)
+  store <8 x i64> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_min_ge_type_intrinsic(ptr %ptr, <4 x i64> %v0, <4 x i64> %v1) #2 {
+; CHECK-LABEL: store_min_ge_type_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    adrp x8, .LCPI37_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI37_0
+; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    ldr z1, [x8]
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z2.d
+; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
+; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> %v0, <4 x i64> %v1)
+  store <8 x i64> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_double_factor4_intrinsic(ptr %ptr, <4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x double> %v3) #0 {
+; CHECK-LABEL: store_double_factor4_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v19.16b, v6.16b
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov v18.16b, v4.16b
+; CHECK-NEXT:    mov v17.16b, v2.16b
+; CHECK-NEXT:    mov v16.16b, v0.16b
+; CHECK-NEXT:    splice z19.d, p0, z19.d, z7.d
+; CHECK-NEXT:    splice z18.d, p0, z18.d, z5.d
+; CHECK-NEXT:    splice z17.d, p0, z17.d, z3.d
+; CHECK-NEXT:    splice z16.d, p0, z16.d, z1.d
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    st4d { z16.d - z19.d }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <16 x double> @llvm.vector.interleave4.v16f64(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x double> %v3)
+  store <16 x double> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_float_factor3_intrinsic(ptr %ptr, <8 x float> %v0, <8 x float> %v1, <8 x float> %v2) #0 {
+; CHECK-LABEL: store_float_factor3_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov v18.16b, v4.16b
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    mov v17.16b, v2.16b
+; CHECK-NEXT:    mov v16.16b, v0.16b
+; CHECK-NEXT:    splice z18.s, p0, z18.s, z5.s
+; CHECK-NEXT:    splice z17.s, p0, z17.s, z3.s
+; CHECK-NEXT:    splice z16.s, p0, z16.s, z1.s
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st3w { z16.s - z18.s }, p0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <24 x float> @llvm.vector.interleave3.v24f32(<8 x float> %v0, <8 x float> %v1, <8 x float> %v2)
+  store <24 x float> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_half_factor2_intrinsic(ptr %ptr, <16 x half> %v0, <16 x half> %v1) #0 {
+; CHECK-LABEL: store_half_factor2_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
+; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
+; CHECK-NEXT:    adrp x8, .LCPI40_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI40_0
+; CHECK-NEXT:    ldr z4, [x8]
+; CHECK-NEXT:    splice z1.h, p0, z1.h, z3.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z2.h
+; CHECK-NEXT:    tbl z1.h, { z1.h }, z4.h
+; CHECK-NEXT:    tbl z0.h, { z0.h }, z4.h
+; CHECK-NEXT:    str z1, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <32 x half> @llvm.vector.interleave2.v32f16(<16 x half> %v0, <16 x half> %v1)
+  store <32 x half> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
+define void @store_bfloat_factor2_intrinsic(ptr %ptr, <16 x bfloat> %v0, <16 x bfloat> %v1) #0 {
+; CHECK-LABEL: store_bfloat_factor2_intrinsic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 v4.8h, v1.8h, v3.8h
+; CHECK-NEXT:    zip1 v1.8h, v1.8h, v3.8h
+; CHECK-NEXT:    zip2 v3.8h, v0.8h, v2.8h
+; CHECK-NEXT:    zip1 v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    stp q1, q4, [x0, #32]
+; CHECK-NEXT:    stp q0, q3, [x0]
+; CHECK-NEXT:    ret
+  %interleaved.vec = call <32 x bfloat> @llvm.vector.interleave2.v32bf16(<16 x bfloat> %v0, <16 x bfloat> %v1)
+  store <32 x bfloat> %interleaved.vec, ptr %ptr, align 4
+  ret void
+}
+
 attributes #0 = { vscale_range(2,2) "target-features"="+sve" }
 attributes #1 = { vscale_range(2,4) "target-features"="+sve" }
 attributes #2 = { vscale_range(4,4) "target-features"="+sve" }

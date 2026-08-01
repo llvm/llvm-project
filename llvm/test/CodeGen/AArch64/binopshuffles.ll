@@ -252,3 +252,160 @@ entry:
   %dead_binop = fadd <8 x double> %v0, %v0
   ret void
 }
+
+define <4 x float> @twosrc_intrinsic(ptr %pSrc1, ptr %pSrc2) {
+; CHECK-IAENABLED-LABEL: twosrc_intrinsic:
+; CHECK-IAENABLED:       // %bb.0: // %entry
+; CHECK-IAENABLED-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
+; CHECK-IAENABLED-NEXT:    ld2 { v3.4s, v4.4s }, [x1]
+; CHECK-IAENABLED-NEXT:    fmul v0.4s, v3.4s, v1.4s
+; CHECK-IAENABLED-NEXT:    fmla v0.4s, v2.4s, v4.4s
+; CHECK-IAENABLED-NEXT:    ret
+;
+; CHECK-IADISABLED-LABEL: twosrc_intrinsic:
+; CHECK-IADISABLED:       // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0]
+; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x1]
+; CHECK-IADISABLED-NEXT:    uzp1 v4.4s, v1.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    uzp2 v1.4s, v1.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    uzp1 v5.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    fmul v0.4s, v5.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fmla v0.4s, v1.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    ret
+entry:
+  %intrinsic.load.0 = load <8 x float>, ptr %pSrc1, align 4
+  %ldN = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %intrinsic.load.0)
+  %0 = extractvalue { <4 x float>, <4 x float> } %ldN, 1
+  %1 = extractvalue { <4 x float>, <4 x float> } %ldN, 0
+  %intrinsic.load.1 = load <8 x float>, ptr %pSrc2, align 4
+  %ldN7 = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %intrinsic.load.1)
+  %2 = extractvalue { <4 x float>, <4 x float> } %ldN7, 0
+  %3 = extractvalue { <4 x float>, <4 x float> } %ldN7, 1
+  %l46 = fmul fast <4 x float> %2, %1
+  %l63 = fmul fast <4 x float> %3, %0
+  %l8 = fadd fast <4 x float> %l63, %l46
+  ret <4 x float> %l8
+}
+
+define <4 x float> @twosrc2_intrinsic(ptr %pSrc1, ptr %pSrc2) {
+; CHECK-IAENABLED-LABEL: twosrc2_intrinsic:
+; CHECK-IAENABLED:       // %bb.0: // %entry
+; CHECK-IAENABLED-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
+; CHECK-IAENABLED-NEXT:    ld2 { v3.4s, v4.4s }, [x1]
+; CHECK-IAENABLED-NEXT:    fmul v0.4s, v3.4s, v1.4s
+; CHECK-IAENABLED-NEXT:    fmla v0.4s, v2.4s, v4.4s
+; CHECK-IAENABLED-NEXT:    ret
+;
+; CHECK-IADISABLED-LABEL: twosrc2_intrinsic:
+; CHECK-IADISABLED:       // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0]
+; CHECK-IADISABLED-NEXT:    ldp q3, q2, [x1]
+; CHECK-IADISABLED-NEXT:    uzp1 v4.4s, v1.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    uzp2 v1.4s, v1.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    uzp1 v5.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    fmul v0.4s, v5.4s, v4.4s
+; CHECK-IADISABLED-NEXT:    fmla v0.4s, v1.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    ret
+entry:
+  %intrinsic.load.0 = load <8 x float>, ptr %pSrc1, align 4
+  %ldN = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %intrinsic.load.0)
+  %0 = extractvalue { <4 x float>, <4 x float> } %ldN, 1
+  %1 = extractvalue { <4 x float>, <4 x float> } %ldN, 0
+  %intrinsic.load.1 = load <8 x float>, ptr %pSrc2, align 4
+  %ldN4 = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %intrinsic.load.1)
+  %2 = extractvalue { <4 x float>, <4 x float> } %ldN4, 0
+  %3 = extractvalue { <4 x float>, <4 x float> } %ldN4, 1
+  %l43 = fmul fast <4 x float> %2, %1
+  %l6 = fmul fast <4 x float> %3, %0
+  %l8 = fadd fast <4 x float> %l6, %l43
+  ret <4 x float> %l8
+}
+
+define <4 x float> @vld2_intrinsic(ptr %pSrc) {
+; CHECK-IAENABLED-LABEL: vld2_intrinsic:
+; CHECK-IAENABLED:       // %bb.0: // %entry
+; CHECK-IAENABLED-NEXT:    ld2 { v1.4s, v2.4s }, [x0]
+; CHECK-IAENABLED-NEXT:    fmul v0.4s, v1.4s, v1.4s
+; CHECK-IAENABLED-NEXT:    fmla v0.4s, v2.4s, v2.4s
+; CHECK-IAENABLED-NEXT:    ret
+;
+; CHECK-IADISABLED-LABEL: vld2_intrinsic:
+; CHECK-IADISABLED:       // %bb.0: // %entry
+; CHECK-IADISABLED-NEXT:    ldp q1, q0, [x0]
+; CHECK-IADISABLED-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    uzp2 v1.4s, v1.4s, v0.4s
+; CHECK-IADISABLED-NEXT:    fmul v0.4s, v2.4s, v2.4s
+; CHECK-IADISABLED-NEXT:    fmla v0.4s, v1.4s, v1.4s
+; CHECK-IADISABLED-NEXT:    ret
+entry:
+  %intrinsic.load.0 = load <8 x float>, ptr %pSrc, align 4
+  %ldN = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> %intrinsic.load.0)
+  %0 = extractvalue { <4 x float>, <4 x float> } %ldN, 1
+  %1 = extractvalue { <4 x float>, <4 x float> } %ldN, 1
+  %2 = extractvalue { <4 x float>, <4 x float> } %ldN, 0
+  %3 = extractvalue { <4 x float>, <4 x float> } %ldN, 0
+  %l26 = fmul fast <4 x float> %2, %3
+  %l43 = fmul fast <4 x float> %0, %1
+  %l6 = fadd fast <4 x float> %l43, %l26
+  ret <4 x float> %l6
+}
+
+define <4 x float> @vld3_intrinsic(ptr %pSrc) {
+; CHECK-LABEL: vld3_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld3 { v1.4s, v2.4s, v3.4s }, [x0]
+; CHECK-NEXT:    fmul v0.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fmla v0.4s, v2.4s, v2.4s
+; CHECK-NEXT:    fmla v0.4s, v3.4s, v3.4s
+; CHECK-NEXT:    ret
+entry:
+  %intrinsic.load.0 = load <12 x float>, ptr %pSrc, align 4
+  %ldN = call { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float> %intrinsic.load.0)
+  %0 = extractvalue { <4 x float>, <4 x float>, <4 x float> } %ldN, 2
+  %1 = extractvalue { <4 x float>, <4 x float>, <4 x float> } %ldN, 2
+  %2 = extractvalue { <4 x float>, <4 x float>, <4 x float> } %ldN, 1
+  %3 = extractvalue { <4 x float>, <4 x float>, <4 x float> } %ldN, 1
+  %4 = extractvalue { <4 x float>, <4 x float>, <4 x float> } %ldN, 0
+  %5 = extractvalue { <4 x float>, <4 x float>, <4 x float> } %ldN, 0
+  %l29 = fmul fast <4 x float> %4, %5
+  %l46 = fmul fast <4 x float> %2, %3
+  %l6 = fadd fast <4 x float> %l46, %l29
+  %l73 = fmul fast <4 x float> %0, %1
+  %l9 = fadd fast <4 x float> %l6, %l73
+  ret <4 x float> %l9
+}
+
+define <4 x float> @vld4_intrinsic(ptr %pSrc) {
+; CHECK-LABEL: vld4_intrinsic:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld4 { v1.4s, v2.4s, v3.4s, v4.4s }, [x0]
+; CHECK-NEXT:    fmul v0.4s, v3.4s, v3.4s
+; CHECK-NEXT:    fmla v0.4s, v4.4s, v4.4s
+; CHECK-NEXT:    ret
+entry:
+  %intrinsic.load.0 = load <16 x float>, ptr %pSrc, align 4
+  %ldN = call { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave4.v16f32(<16 x float> %intrinsic.load.0)
+  %0 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %ldN, 3
+  %1 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %ldN, 3
+  %2 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %ldN, 2
+  %3 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %ldN, 2
+  %4 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %ldN, 1
+  %5 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %ldN, 1
+  %6 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %ldN, 0
+  %7 = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float> } %ldN, 0
+  %l312 = fmul fast <4 x float> %6, %7
+  %l59 = fmul fast <4 x float> %4, %5
+  %l7 = fadd fast <4 x float> %l59, %l312
+  %l86 = fmul fast <4 x float> %2, %3
+  %l103 = fmul fast <4 x float> %0, %1
+  %l12 = fadd fast <4 x float> %l103, %l86
+  ret <4 x float> %l12
+}
+
+declare { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float>)
+
+declare { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float>)
+
+declare { <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave4.v16f32(<16 x float>)
