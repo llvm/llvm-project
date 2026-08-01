@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
@@ -110,7 +111,7 @@ public:
 };
 
 class AArch64PostLegalizerCombinerPass
-    : public PassInfoMixin<AArch64PostLegalizerCombinerPass> {
+    : public RequiredPassInfoMixin<AArch64PostLegalizerCombinerPass> {
   std::unique_ptr<AArch64PostLegalizerCombinerImplRuleConfig> RuleConfig;
   const AArch64TargetMachine *TM;
 
@@ -205,11 +206,12 @@ void initializeAArch64SRLTDefineSuperRegsLegacyPass(PassRegistry &);
 void initializeSVEShuffleOptsPass(PassRegistry &);
 void initializeAArch64Arm64ECCallLoweringPass(PassRegistry &);
 
-class SVEShuffleOptsPass : public PassInfoMixin<SVEShuffleOptsPass> {
+class AArch64SVEShuffleOptsPass
+    : public OptionalPassInfoMixin<AArch64SVEShuffleOptsPass> {
   const AArch64TargetMachine &TM;
 
 public:
-  explicit SVEShuffleOptsPass(const AArch64TargetMachine &TM) : TM(TM) {}
+  explicit AArch64SVEShuffleOptsPass(const AArch64TargetMachine &TM) : TM(TM) {}
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &U);
@@ -336,7 +338,8 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-class AArch64SLSHardeningPass : public PassInfoMixin<AArch64SLSHardeningPass> {
+class AArch64SLSHardeningPass
+    : public RequiredPassInfoMixin<AArch64SLSHardeningPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
@@ -371,7 +374,7 @@ public:
 };
 
 class AArch64LowerHomogeneousPrologEpilogPass
-    : public PassInfoMixin<AArch64LowerHomogeneousPrologEpilogPass> {
+    : public RequiredPassInfoMixin<AArch64LowerHomogeneousPrologEpilogPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };

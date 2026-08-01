@@ -1,0 +1,21 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=machineverifier  -o /dev/null %s
+# Verify that the MachineVerifier does not trust a negative noPhis flag.
+# As per MachineFunction.h:
+# > The properties are stated in "positive" form; i.e. a pass could require
+# > that the property hold, but not that it does not hold.
+
+---
+name:            baz
+tracksRegLiveness: true
+noPhis: false
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $rdi, $xmm0
+
+  bb.1:
+    successors: %bb.1(0x80000000)
+    liveins: $rax
+
+    RET64
+...

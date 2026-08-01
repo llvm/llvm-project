@@ -150,6 +150,7 @@ private:
   llvm::BasicBlock *linearFinalizationBB;
   llvm::BasicBlock *linearExitBB;
   llvm::BasicBlock *linearLastIterExitBB;
+  Value linearLoopIV;
 
 public:
   // Register type for the linear variables
@@ -187,6 +188,35 @@ public:
           builder.CreateLoad(linearVarTypes[index], linearOrigVal[index]);
       builder.CreateStore(linearVarLoad, linearPreconditionVars[index]);
     }
+  }
+
+  // Find linear iteration variable and save it for later updates
+  LogicalResult initLinearIV(omp::SimdOp simdOp) {
+    auto loopOp = cast<omp::LoopNestOp>(simdOp.getWrappedLoop());
+    // NOTE iteration variables can only be linear in non-nested loops.
+    if (loopOp.getIVs().size() != 1)
+      return success();
+    // Currently, frontends using `omp.simd` always generate a store from the
+    // `omp.loop_nest`'s IV to the corresponding iteration variable.
+    // We leverage this to find the linear iteration variable.
+    //
+    // TODO Add an attribute to `omp.loop_nest` that explicitly lists the
+    //      variables that correspond to the loop induction variables.
+    BlockArgument arg = loopOp.getIVs().front();
+    for (const Operation *user : arg.getUsers()) {
+      if (auto storeOp = dyn_cast<LLVM::StoreOp>(user)) {
+        for (Value linearVar : simdOp.getLinearVars()) {
+          if (linearVar == storeOp.getAddr()) {
+            if (linearLoopIV && linearLoopIV != linearVar)
+              return simdOp.emitError(
+                  "Could not determine the linear variable associated with the "
+                  "loop nest induction variable");
+            linearLoopIV = linearVar;
+          }
+        }
+      }
+    }
+    return success();
   }
 
   // Emit IR for updating Linear variables
@@ -227,6 +257,34 @@ public:
             "Linear variable must be of integer or floating-point type");
       }
     }
+  }
+
+  // Emit IR for updating linear iteration variables on loop exit
+  void updateLinearIV(llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation) {
+    if (!linearLoopIV)
+      return;
+    llvm::Value *linearIV = moduleTranslation.lookupValue(linearLoopIV);
+
+    // Find linearIV's index
+    size_t index;
+    for (index = 0; index < linearOrigVal.size(); index++)
+      if (linearIV == linearOrigVal[index])
+        break;
+    if (index == linearOrigVal.size())
+      return;
+
+    // Add one more step to the linear iteration variable
+    llvm::Type *varType = linearVarTypes[index];
+    llvm::Value *var = linearLoopBodyTemps[index];
+    llvm::Value *step = linearSteps[index];
+    if (!varType->isIntegerTy())
+      llvm_unreachable("Linear iteration variable must be of integer type");
+
+    step = builder.CreateSExtOrTrunc(step, varType);
+    llvm::Value *val = builder.CreateLoad(varType, var);
+    llvm::Value *addInst = builder.CreateAdd(val, step);
+    builder.CreateStore(addInst, var);
   }
 
   // Linear variable finalization is conditional on the last logical iteration.
@@ -271,7 +329,7 @@ public:
     // Emit barrier
     builder.SetInsertPoint(linearExitBB->getTerminator());
     return moduleTranslation.getOpenMPBuilder()->createBarrier(
-        builder.saveIP(), llvm::omp::OMPD_barrier);
+        builder, llvm::omp::OMPD_barrier);
   }
 
   // Emit stores for linear variables. Useful in case of SIMD
@@ -1654,8 +1712,8 @@ static LogicalResult createReductionsAndCleanup(
   llvm::UnreachableInst *tempTerminator = builder.CreateUnreachable();
   builder.SetInsertPoint(tempTerminator);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy contInsertPoint =
-      ompBuilder->createReductions(builder.saveIP(), allocaIP, reductionInfos,
-                                   isByRef, isNowait, isTeamsReduction);
+      ompBuilder->createReductions(builder, allocaIP, reductionInfos, isByRef,
+                                   isNowait, isTeamsReduction);
 
   if (failed(handleError(contInsertPoint, *op)))
     return failure();
@@ -2003,7 +2061,7 @@ static LogicalResult copyFirstPrivateVars(
   if (insertBarrier && !opIsInSingleThread(op)) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy res =
-        ompBuilder->createBarrier(builder.saveIP(), llvm::omp::OMPD_barrier);
+        ompBuilder->createBarrier(builder, llvm::omp::OMPD_barrier);
     if (failed(handleError(res, *op)))
       return failure();
   }
@@ -4475,7 +4533,7 @@ convertOmpTaskwaitOp(omp::TaskwaitOp twOp, llvm::IRBuilderBase &builder,
     return failure();
   }
 
-  moduleTranslation.getOpenMPBuilder()->createTaskwait(builder.saveIP(), dds);
+  moduleTranslation.getOpenMPBuilder()->createTaskwait(builder, dds);
   if (dds.DepArray) {
     builder.CreateFree(dds.DepArray);
   }
@@ -4635,7 +4693,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                         loopInfo->getPreheader());
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
         moduleTranslation.getOpenMPBuilder()->createBarrier(
-            builder.saveIP(), llvm::omp::OMPD_barrier);
+            builder, llvm::omp::OMPD_barrier);
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
     builder.restoreIP(*afterBarrierIP);
@@ -4832,9 +4890,10 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       builder.SetInsertPoint(tempTerminator);
 
       llvm::OpenMPIRBuilder::InsertPointOrErrorTy contInsertPoint =
-          ompBuilder->createReductions(
-              builder.saveIP(), allocaIP, reductionInfos, isByRef,
-              /*IsNoWait=*/false, /*IsTeamsReduction=*/false);
+          ompBuilder->createReductions(builder, allocaIP, reductionInfos,
+                                       isByRef,
+                                       /*IsNoWait=*/false,
+                                       /*IsTeamsReduction=*/false);
       if (!contInsertPoint)
         return contInsertPoint.takeError();
 
@@ -4967,6 +5026,8 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   // Initialize linear variables and linear step
   LinearClauseProcessor linearClauseProcessor;
+  if (linearClauseProcessor.initLinearIV(simdOp).failed())
+    return failure();
 
   if (!simdOp.getLinearVars().empty()) {
     auto linearVarTypes = simdOp.getLinearVarTypes().value();
@@ -5080,6 +5141,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             : nullptr,
                         order, simdlen, safelen);
 
+  linearClauseProcessor.updateLinearIV(builder, moduleTranslation);
   linearClauseProcessor.emitStoresForLinearVar(builder);
 
   // We now need to reduce the per-simd-lane reduction variable into the
@@ -9796,8 +9858,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
               return failure();
 
             llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-                ompBuilder->createBarrier(builder.saveIP(),
-                                          llvm::omp::OMPD_barrier);
+                ompBuilder->createBarrier(builder, llvm::omp::OMPD_barrier);
             LogicalResult res = handleError(afterIP, *op);
             if (res.succeeded()) {
               // If the barrier generated a cancellation check, the insertion
@@ -9810,7 +9871,7 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             if (failed(checkImplementationStatus(*op)))
               return failure();
 
-            ompBuilder->createTaskyield(builder.saveIP());
+            ompBuilder->createTaskyield(builder);
             return success();
           })
           .Case([&](omp::FlushOp op) {
@@ -9825,7 +9886,22 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
             //
             // The argument list is discarded so that, flush with a list is
             // treated same as a flush without a list.
-            ompBuilder->createFlush(builder.saveIP());
+            ompBuilder->createFlush(builder);
+            return success();
+          })
+          .Case([&](omp::ErrorOp op) {
+            if (failed(checkImplementationStatus(*op)))
+              return failure();
+
+            llvm::Value *message = nullptr;
+            if (mlir::Value messageExpr = op.getMessageExpr())
+              message = moduleTranslation.lookupValue(messageExpr);
+            else if (std::optional<StringRef> msg = op.getMessage();
+                     msg && !msg->empty())
+              message = builder.CreateGlobalString(*msg);
+            ompBuilder->createError(
+                llvm::OpenMPIRBuilder::LocationDescription(builder),
+                op.getSeverity() == omp::ClauseSeverity::fatal, message);
             return success();
           })
           .Case([&](omp::ParallelOp op) {
