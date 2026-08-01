@@ -74,7 +74,7 @@ class AnonymousTestCase(TestBase):
             substrs=["(type_y) $", "dummy = 2"],
         )
 
-    @skipIfWasm  # no expression evaluation
+    @requireNotWasm  # no expression evaluation
     def test_expr_null(self):
         self.build()
         self.common_setup(self.line2)

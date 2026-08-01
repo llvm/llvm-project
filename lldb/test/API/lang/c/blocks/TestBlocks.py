@@ -6,9 +6,9 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireNotWasm  # no expression evaluation
 class BlocksTestCase(TestBase):
-    @skipUnlessDarwin
+    @requireDarwin
     def test(self):
         self.build()
         src = lldb.SBFileSpec("main.c")
@@ -52,7 +52,7 @@ class BlocksTestCase(TestBase):
         self.expect_expr("*captured_ptr", result_type="int", result_value="42")
         self.expect_expr("captured_struct.x", result_type="int", result_value="10")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_define(self):
         """Test defining and calling a block from the expression evaluator."""
         self.build()
