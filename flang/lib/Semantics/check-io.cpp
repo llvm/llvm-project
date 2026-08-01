@@ -1124,8 +1124,11 @@ using VisitedSymbolSet = std::unordered_set<const Symbol *>;
 
 // Seeks out an allocatable or pointer ultimate component that is not
 // nested in a nonallocatable/nonpointer component with a specific defined I/O
-// procedure. The 'visited' set tracks derived types to break cycles caused by
-// an illegal recursive type definition (F2023 C749).
+// procedure. The 'visited' set is path-scoped: a symbol is inserted on entry
+// and erased on exit so that only true ancestors on the current recursion path
+// are present. This breaks cycles caused by an illegal recursive type
+// definition (F2023 C749) while allowing shared (diamond) PDT instantiations
+// that use the same typeSymbol to be examined independently on each path.
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
     VisitedSymbolSet &visited) {
@@ -1133,13 +1136,15 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     return nullptr;
   }
   if (!visited.insert(&derived.typeSymbol()).second) {
-    return nullptr;
+    return nullptr; // true ancestor on this path -> genuine cycle
   }
+  const Symbol *result{nullptr};
   if (const Scope * dtScope{derived.scope()}) {
     for (const auto &pair : *dtScope) {
       const Symbol &symbol{*pair.second};
       if (IsAllocatableOrPointer(symbol)) {
-        return &symbol;
+        result = &symbol;
+        break;
       }
       if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
         if (const DeclTypeSpec * type{details->type()}) {
@@ -1147,14 +1152,16 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
             const DerivedTypeSpec &componentDerived{type->derivedTypeSpec()};
             if (const Symbol *bad{FindUnsafeIoDirectComponent(
                     which, componentDerived, scope, visited)}) {
-              return bad;
+              result = bad;
+              break;
             }
           }
         }
       }
     }
   }
-  return nullptr;
+  visited.erase(&derived.typeSymbol()); // path-scoped: erase on unwind
+  return result;
 }
 
 static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
@@ -1165,14 +1172,18 @@ static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
 
 // For a type that does not have a defined I/O subroutine, finds a direct
 // component that is a witness to an accessibility violation outside the module
-// in which the type was defined.  The 'visited' set tracks derived types to
-// break cycles caused by an illegal recursive type definition (F2023 C749).
+// in which the type was defined.  The 'visited' set is path-scoped: a symbol
+// is inserted on entry and erased on exit so that only true ancestors on the
+// current recursion path are present, breaking cycles caused by an illegal
+// recursive type definition (F2023 C749) while allowing shared PDT
+// instantiations with the same typeSymbol to be examined independently.
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope,
     VisitedSymbolSet &visited) {
   if (!visited.insert(&derived.typeSymbol()).second) {
-    return nullptr;
+    return nullptr; // true ancestor on this path -> genuine cycle
   }
+  const Symbol *result{nullptr};
   if (const Scope * dtScope{derived.scope()}) {
     if (const Scope * module{FindModuleContaining(*dtScope)}) {
       for (const auto &pair : *dtScope) {
@@ -1194,20 +1205,23 @@ static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
           if (symbol.attrs().test(Attr::PRIVATE) &&
               !symbol.test(Symbol::Flag::ParentComp)) {
             if (!DoesScopeContain(module, scope)) {
-              return &symbol;
+              result = &symbol;
+              break;
             }
           }
           if (componentDerived) {
             if (const Symbol *bad{FindInaccessibleComponent(
                     which, *componentDerived, scope, visited)}) {
-              return bad;
+              result = bad;
+              break;
             }
           }
         }
       }
     }
   }
-  return nullptr;
+  visited.erase(&derived.typeSymbol()); // path-scoped: erase on unwind
+  return result;
 }
 
 static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
