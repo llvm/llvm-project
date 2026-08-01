@@ -513,6 +513,9 @@ features cannot lower the translation-unit ABI level;
 - Improve the input size mismatch diagnostic when calling `__builtin_shufflevector` with valid
   vector element types but different sizes. (GH221791)
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling floating-point
+  exception behavior via the appropriate flags or pragmas on supported targets. (#GH128239)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
