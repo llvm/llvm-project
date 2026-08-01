@@ -518,6 +518,9 @@ features cannot lower the translation-unit ABI level;
 
 - Improve Clang diagnoses when unary `__imag` operator with non-complex type operand is used as lvalue. (GH222383)
 
+- Added warnings for floating-point exception function calls (fenv.h) without enabling floating-point
+  exception behavior via the appropriate flags or pragmas on supported targets. (#GH128239)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
