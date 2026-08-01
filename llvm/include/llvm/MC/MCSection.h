@@ -625,10 +625,6 @@ private:
   bool IsText : 1;
   bool IsBss : 1;
 
-  /// If bundle-locked, we ensure all instructions in the section are placed in
-  /// the same bundle.
-  bool IsBundleLocked : 1;
-
   MCFragment DummyFragment;
 
   // Mapping from subsection number to fragment list. At layout time, the
@@ -686,9 +682,6 @@ public:
   unsigned firstLinkerRelaxable() const { return FirstLinkerRelaxable; }
   bool isLinkerRelaxable() const { return FirstLinkerRelaxable != -1u; }
   void setFirstLinkerRelaxable(unsigned Order) { FirstLinkerRelaxable = Order; }
-
-  bool isBundleLocked() const { return IsBundleLocked; }
-  void setIsBundleLocked(bool Value) { IsBundleLocked = Value; }
 
   MCFragment &getDummyFragment() { return DummyFragment; }
 

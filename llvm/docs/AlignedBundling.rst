@@ -24,6 +24,8 @@ Isolation (LFI) <LFI>`.
 .. note::
 
    The current LLVM implementation supports bundling only for x86 ELF targets.
+   Other targets and object file formats reject the directives below rather
+   than emit unbundled code silently.
 
 ``.bundle_align_mode``
 ======================
@@ -33,9 +35,10 @@ Isolation (LFI) <LFI>`.
    .bundle_align_mode abs-expr
 
 Enables aligned bundle mode and sets the bundle size to ``2^abs-expr`` bytes,
-where ``abs-expr`` is a power-of-two exponent between 0 and 30 (as for the
+where ``abs-expr`` is a power-of-two exponent between 1 and 30 (as for the
 ``.p2align`` directive). For example, ``.bundle_align_mode 5`` selects 32-byte
-bundles.
+bundles. Unlike GNU as, ``.bundle_align_mode 0`` is rejected: bundling cannot be
+turned off once enabled.
 
 While bundling is enabled, the assembler ensures that no single instruction
 spans a boundary between two bundles. When an instruction would not fit in the
@@ -65,10 +68,11 @@ within one bundle rather than straddling a boundary.
 The enclosed sequence must fit within a single bundle -- it is an error if the
 total size of the locked instructions exceeds the bundle size.
 
-Both directives are only valid after bundle mode has been enabled with
-``.bundle_align_mode``. A ``.bundle_unlock`` must be matched by a preceding
-``.bundle_lock`` in the same section, and a section may not be switched while a
-``.bundle_lock`` is open.
+Both directives are only valid in an executable section after bundle mode has
+been enabled with ``.bundle_align_mode``. A ``.bundle_unlock`` must be matched
+by a preceding ``.bundle_lock``, and a section may not be switched while a
+``.bundle_lock`` is open. A group may not end in a bare instruction prefix,
+which the assembler could not keep attached to the instruction it modifies.
 
 ``align_to_end``
 ----------------
@@ -95,3 +99,8 @@ to them, avoiding standalone no-ops. This is controlled by:
    Maximum number of prefixes the assembler may add to an instruction for
    padding. ``0`` (the default) disables prefix padding, so only no-op
    instructions are used.
+
+Padding is only ever traded for instruction bytes within the bundle that holds
+it, so this cannot move an instruction or a locked group across a boundary. It
+does change where labels land, so it may break assumptions about labels
+corresponding to particular instructions.

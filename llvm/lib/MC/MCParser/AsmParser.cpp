@@ -6011,13 +6011,14 @@ bool AsmParser::parseDirectiveAddrsigSym() {
 /// ::= {.bundle_align_mode} expression
 bool AsmParser::parseDirectiveBundleAlignMode() {
   // Expect a single argument: an expression that evaluates to a constant
-  // in the inclusive range 0-30.
+  // in the inclusive range 1-30. Unlike GNU as, 0 (disabling bundling) is not
+  // supported.
   SMLoc ExprLoc = getLexer().getLoc();
   int64_t AlignSizePow2;
   if (checkForValidSection() || parseAbsoluteExpression(AlignSizePow2) ||
       parseEOL() ||
-      check(AlignSizePow2 < 0 || AlignSizePow2 > 30, ExprLoc,
-            "invalid bundle alignment size (expected between 0 and 30)"))
+      check(AlignSizePow2 < 1 || AlignSizePow2 > 30, ExprLoc,
+            "invalid bundle alignment size (expected between 1 and 30)"))
     return true;
 
   getStreamer().emitBundleAlignMode(Align(1ULL << AlignSizePow2));

@@ -80,13 +80,11 @@ void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
 
 void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   MCAssembler &Asm = getAssembler();
-  MCFragment *CF = getCurrentFragment();
-  if (Asm.isBundlingEnabled() && CF->getParent()->isBundleLocked()) {
-    getContext().reportError(getStartTokLoc(),
-                             "unterminated .bundle_lock when changing a "
-                             "section");
+  if (isBundleLocked()) {
+    getContext().reportError(
+        getStartTokLoc(), "unterminated .bundle_lock when changing a section");
     // Clean up bundle state to allow continuing.
-    CF->getParent()->setIsBundleLocked(false);
+    BundleLocked = false;
     BundleBA = nullptr;
   }
   auto *SectionELF = static_cast<const MCSectionELF *>(Section);
@@ -326,92 +324,85 @@ void MCELFStreamer::emitIdent(StringRef IdentString) {
 }
 
 void MCELFStreamer::emitBundleAlignMode(Align Alignment) {
-  if (Log2(Alignment) > 30)
+  MCAssembler &Asm = getAssembler();
+  SMLoc Loc = getStartTokLoc();
+
+  if (!Asm.getBackend().allowBundling())
     return getContext().reportError(
-        getStartTokLoc(), ".bundle_align_mode alignment must be <= 30");
-  if (Alignment == 1)
-    return getContext().reportError(
-        getStartTokLoc(), "disabling .bundle_align_mode is not supported");
-  MCAssembler &Assembler = getAssembler();
-  if (Assembler.isBundlingEnabled() &&
-      Assembler.getBundleAlign() != Alignment) {
-    getContext().reportError(getStartTokLoc(),
-                             ".bundle_align_mode cannot be changed once set");
+        Loc, "aligned bundling is not supported by this target");
+  if (Asm.isBundlingEnabled()) {
+    if (Asm.getBundleAlign() != Alignment)
+      getContext().reportError(Loc,
+                               ".bundle_align_mode cannot be changed once set");
     return;
   }
-  if (!Assembler.isBundlingEnabled() &&
-      Assembler.getBackend().allowAutoPadding())
+  // Enable bundling even after the error, to avoid cascading diagnostics from
+  // later .bundle_lock directives.
+  if (Asm.getBackend().allowAutoPadding())
     getContext().reportError(
-        getStartTokLoc(),
-        ".bundle_align_mode is incompatible with branch alignment");
+        Loc, ".bundle_align_mode is incompatible with branch alignment");
+
   setAllowAutoPadding(true);
-  Assembler.setBundleAlign(Alignment);
+  Asm.setBundleAlign(Alignment);
 }
 
 void MCELFStreamer::emitBundleLock(bool AlignToEnd,
                                    const MCSubtargetInfo &STI) {
-  MCSection &Sec = *getCurrentSectionOnly();
-  auto &Asm = getAssembler();
+  MCAssembler &Asm = getAssembler();
+  SMLoc Loc = getStartTokLoc();
 
-  if (!Asm.isBundlingEnabled()) {
-    getContext().reportError(
-        getStartTokLoc(), ".bundle_lock forbidden when bundling is disabled");
-    return;
-  }
+  if (!Asm.isBundlingEnabled())
+    return getContext().reportError(
+        Loc, ".bundle_lock forbidden when bundling is disabled");
+  if (isBundleLocked())
+    return getContext().reportError(Loc, "nested .bundle_lock is not allowed");
+  // Padding a group is only meaningful where nops are instructions.
+  if (!getCurrentSectionOnly()->isText())
+    return getContext().reportError(
+        Loc, ".bundle_lock is only allowed in an executable section");
 
-  if (Sec.isBundleLocked()) {
-    getContext().reportError(getStartTokLoc(),
-                             "nested .bundle_lock is not allowed");
-    return;
-  }
-  Sec.setIsBundleLocked(true);
-
+  BundleLocked = true;
   BundleBA =
       newSpecialFragment<MCBoundaryAlignFragment>(Asm.getBundleAlign(), STI);
   BundleBA->setAlignToEnd(AlignToEnd);
 }
 
 void MCELFStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {
-  MCSection &Sec = *getCurrentSectionOnly();
+  MCAssembler &Asm = getAssembler();
+  SMLoc Loc = getStartTokLoc();
 
-  if (!getAssembler().isBundlingEnabled()) {
-    getContext().reportError(
-        getStartTokLoc(), ".bundle_unlock forbidden when bundling is disabled");
-    return;
-  }
-  if (!Sec.isBundleLocked()) {
-    getContext().reportError(getStartTokLoc(),
-                             ".bundle_unlock without matching lock");
-    return;
-  }
+  if (!Asm.isBundlingEnabled())
+    return getContext().reportError(
+        Loc, ".bundle_unlock forbidden when bundling is disabled");
+  if (!isBundleLocked())
+    return getContext().reportError(Loc,
+                                    ".bundle_unlock without matching lock");
 
-  Sec.setIsBundleLocked(false);
-
+  BundleLocked = false;
   MCFragment *CF = getCurrentFragment();
   BundleBA->setLastFragment(CF);
-  // Bundle overflow check.
-  uint64_t AlignedSize = 0;
+
+  uint64_t GroupSize = 0;
   for (const MCFragment *F = BundleBA->getNext();; F = F->getNext()) {
     if (F->getKind() == MCFragment::FT_Align ||
         F->getKind() == MCFragment::FT_Org) {
-      getContext().reportError(getStartTokLoc(),
-                               "alignment and .org directives are not "
-                               "supported inside a .bundle_lock group");
+      getContext().reportError(Loc, "alignment and .org directives are not "
+                                    "supported inside a .bundle_lock group");
       break;
     }
-    AlignedSize += getAssembler().computeFragmentSize(*F);
+    GroupSize += Asm.computeFragmentSize(*F);
     if (F == BundleBA->getLastFragment())
       break;
   }
   BundleBA = nullptr;
 
-  if (AlignedSize > getAssembler().getBundleAlign().value())
-    getContext().reportError(getStartTokLoc(),
-                             "fragment can't be larger than a bundle size");
+  if (GroupSize > Asm.getBundleAlign().value())
+    getContext().reportError(
+        Loc, ".bundle_lock group is larger than the bundle size");
 
   newFragment();
 
-  CF->getParent()->ensureMinAlignment(getAssembler().getBundleAlign());
+  CF->getParent()->ensureMinAlignment(Asm.getBundleAlign());
 }
 
 void MCELFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *Sym,
@@ -456,6 +447,9 @@ void MCELFStreamer::finalizeCGProfile() {
 }
 
 void MCELFStreamer::finishImpl() {
+  if (isBundleLocked())
+    getContext().reportError(getStartTokLoc(), "unterminated .bundle_lock");
+
   // Emit .note.GNU-stack, similar to AsmPrinter::doFinalization.
   MCContext &Ctx = getContext();
   auto *StackSec = Ctx.getAsmInfo().getStackSection(Ctx,

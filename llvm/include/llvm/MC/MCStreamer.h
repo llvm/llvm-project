@@ -1133,7 +1133,9 @@ public:
 
   /// Enable aligned instruction bundling with the given bundle size, from
   /// this point onward. Once enabled, bundling cannot be disabled and the
-  /// bundle size cannot be changed.
+  /// bundle size cannot be changed. \p Alignment must be within [2, 2^30].
+  /// The default implementations report an error: silently emitting unbundled
+  /// code would defeat the sandboxing schemes bundling exists for.
   virtual void emitBundleAlignMode(Align Alignment);
 
   /// The following instructions are a bundle-locked group.

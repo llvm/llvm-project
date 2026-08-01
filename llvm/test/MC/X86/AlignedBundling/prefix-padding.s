@@ -3,6 +3,10 @@
 # RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %t/prefix-pad.s
 # RUN: llvm-mc -filetype=obj -triple x86_64 %t/no-prefix-pad.s --x86-pad-max-prefix-size=1 \
 # RUN:   | llvm-objdump -d - | FileCheck %t/no-prefix-pad.s
+# RUN: llvm-mc -filetype=obj -triple x86_64 %t/stay-in-bundle.s --x86-pad-max-prefix-size=5 \
+# RUN:   | llvm-objdump -d - | FileCheck %t/stay-in-bundle.s
+# RUN: llvm-mc -filetype=obj -triple x86_64 %t/group-stays-in-bundle.s --x86-pad-max-prefix-size=1 \
+# RUN:   | llvm-nm --numeric-sort - | FileCheck %t/group-stays-in-bundle.s
 
 #--- prefix-pad.s
   .section text1, "x"
@@ -95,8 +99,8 @@ ensure_bundle_boundary:
 # CHECK-NEXT:   34: call
 # CHECK-NEXT:   3b: call
 
-## This test contains instructions that must not be padded.
 #--- no-prefix-pad.s
+## This test contains instructions that must not be padded.
   .text
   .bundle_align_mode 5
 prefix_cmpxchg_in_a_bundle:
@@ -124,3 +128,38 @@ no_pad_before_after_prefix:
   cmpxchgl	%r12d, __thread_list_lock(%rip)
 # CHECK:        40: f0                           lock
 # CHECK-NEXT:   41: 44 0f b1 25 00 00 00 00      cmpxchgl %r12d, (%rip)
+
+#--- stay-in-bundle.s
+## `.nops` spans a bundle boundary without starting on one. Padding must not
+## reach the instructions in the earlier bundle.
+  .bundle_align_mode 3
+  .rept 7
+  int3
+  .endr
+  .nops 30
+  .bundle_lock
+  callq bar
+  .bundle_unlock
+## The int3 at 0x6 must keep its 1-byte encoding: growing it would run past 0x8.
+# CHECK:      6: cc {{ *}}int3
+# CHECK-NEXT: 7: 90 {{ *}}nop
+# CHECK:     28: e8
+
+#--- group-stays-in-bundle.s
+## Absorbing padding moves the group's start earlier; it must not grow past its
+## bundle.
+  .bundle_align_mode 3
+  .bundle_lock
+gs:
+  addl %ebp, %eax
+  int3
+  movq %rax, %rbx
+  int3
+ge:
+  .bundle_unlock
+  .space 18, 0x90
+  .bundle_lock align_to_end
+  .bundle_unlock
+## The 7-byte group has to stay within the bundle at [0, 8).
+# CHECK:      0000000000000000 {{.*}} gs
+# CHECK-NEXT: 0000000000000007 {{.*}} ge

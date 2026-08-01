@@ -92,6 +92,7 @@ void MCAssembler::reset() {
   HasLayout = false;
   HasFinalLayout = false;
   RelaxAll = false;
+  BundleAlign.reset();
   Sections.clear();
   Symbols.clear();
   ThumbFuncs.clear();
@@ -396,37 +397,24 @@ void MCAssembler::addRelocDirective(RelocDirective RD) {
   relocDirectives.push_back(RD);
 }
 
-/// Largest nop that fits in the remaining bytes without crossing a bundle
-/// boundary at Offset.
-static uint64_t maxNopBytesAt(const MCAssembler &Asm, uint64_t Remaining,
-                              uint64_t MaxNopSize, uint64_t Offset) {
-  uint64_t Bytes = std::min(Remaining, MaxNopSize);
-  if (Asm.isBundlingEnabled()) {
-    uint64_t BundleSize = Asm.getBundleAlign().value();
-    Bytes = std::min(Bytes, BundleSize - (Offset & (BundleSize - 1)));
-  }
-  return Bytes;
-}
-
-/// Write NumBytes of NOPs in chunks of at most MaxNopSize bytes. When bundling
-/// is enabled, no chunk crosses a bundle boundary.
+/// Write \p NumBytes of NOPs at \p Offset in chunks of at most \p MaxNopSize.
+/// When bundling is enabled, no chunk crosses a bundle boundary.
 static void writeControlledNops(raw_ostream &OS, const MCAssembler &Asm,
-                                uint64_t NumBytes, uint64_t FragmentOffset,
+                                uint64_t NumBytes, uint64_t Offset,
                                 uint64_t MaxNopSize,
                                 const MCSubtargetInfo *STI) {
-  uint64_t NumBytesToEmit = 0;
-  for (uint64_t NumBytesEmitted = 0; NumBytesEmitted < NumBytes;
-       NumBytesEmitted += NumBytesToEmit) {
-    NumBytesToEmit = maxNopBytesAt(Asm, NumBytes - NumBytesEmitted, MaxNopSize,
-                                   FragmentOffset + NumBytesEmitted);
-    assert(NumBytesToEmit && "try to emit zero-sized NOP");
-
-    if (!Asm.getBackend().writeNopData(OS, NumBytesToEmit, STI)) {
-      reportFatalInternalError(
-          "unable to write NOP sequence of the remaining " +
-          Twine(NumBytesToEmit) + " bytes");
-      return;
+  while (NumBytes) {
+    uint64_t Size = std::min(NumBytes, MaxNopSize);
+    if (Asm.isBundlingEnabled()) {
+      uint64_t BundleSize = Asm.getBundleAlign().value();
+      Size = std::min(Size, BundleSize - (Offset & (BundleSize - 1)));
     }
+    assert(Size && "try to emit zero-sized NOP");
+    if (!Asm.getBackend().writeNopData(OS, Size, STI))
+      reportFatalInternalError("unable to write nop sequence of " +
+                               Twine(Size) + " bytes");
+    NumBytes -= Size;
+    Offset += Size;
   }
 }
 

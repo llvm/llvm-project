@@ -8,8 +8,8 @@
 # RUN: llvm-mc -filetype=obj -triple x86_64 %t/data-section-alignment.s \
 # RUN:   | llvm-readobj --sections - | FileCheck %t/data-section-alignment.s
 
-## Test two different executable sections with bundling.
 #--- two-sections.s
+## Test two different executable sections with bundling.
   .bundle_align_mode 3
   .section text1, "x"
 # CHECK: section text1
@@ -29,8 +29,8 @@
 # CHECK:      6: nop
 # CHECK-NEXT: 8: imull
 
-## Test that bundle-aligned sections with instructions are aligned
 #--- section-alignment.s
+## Test that bundle-aligned sections with instructions are aligned
   .bundle_align_mode 5
 # CHECK: Sections
 ## Check that the empty .text section has the default alignment
@@ -50,8 +50,8 @@
 # CHECK-NOT: Name
 # CHECK: AddressAlignment: 32
 
-## Test that bundle alignment is only applied to executable sections.
 #--- data-section-alignment.s
+## Test that bundle alignment is only applied to executable sections.
   .bundle_align_mode 5
   .text
   imull $17, %ebx, %ebp

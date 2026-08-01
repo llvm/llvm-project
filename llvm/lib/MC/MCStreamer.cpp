@@ -1527,9 +1527,20 @@ void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}
-void MCStreamer::emitBundleAlignMode(Align Alignment) {}
-void MCStreamer::emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI) {}
-void MCStreamer::emitBundleUnlock(const MCSubtargetInfo &STI) {}
+static void reportBundlingUnsupported(MCStreamer &S) {
+  S.getContext().reportError(
+      S.getStartTokLoc(),
+      "aligned bundling is not supported by this object file format");
+}
+void MCStreamer::emitBundleAlignMode(Align) {
+  reportBundlingUnsupported(*this);
+}
+void MCStreamer::emitBundleLock(bool, const MCSubtargetInfo &) {
+  reportBundlingUnsupported(*this);
+}
+void MCStreamer::emitBundleUnlock(const MCSubtargetInfo &) {
+  reportBundlingUnsupported(*this);
+}
 void MCStreamer::finishImpl() {}
 
 bool MCStreamer::popSection() {

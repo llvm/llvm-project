@@ -175,6 +175,7 @@ void MCObjectStreamer::reset() {
   }
   EmitEHFrame = true;
   EmitDebugFrame = false;
+  BundleLocked = false;
   FragStorage.clear();
   FragSpace = 0;
   SpecialFragAllocator.Reset();
@@ -422,10 +423,10 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
     return I;
   };
 
-  // To enable better bundle-nop optimization, we emit every instruction
-  // as a relaxable fragment.
+  // Bundling emits one relaxable fragment per instruction so that finishLayout
+  // can fold padding into instruction encodings.
   if (Assembler.isBundlingEnabled()) {
-    if (Sec->isBundleLocked() || Assembler.getRelaxAll())
+    if (BundleLocked || Assembler.getRelaxAll())
       emitInstToFragment(relaxToFixpoint(Inst), STI);
     else
       emitInstToFragment(Inst, STI);

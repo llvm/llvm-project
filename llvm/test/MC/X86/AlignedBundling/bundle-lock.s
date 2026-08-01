@@ -55,3 +55,19 @@ lock_fit_exactly:
   .endr
   .bundle_unlock
 # CHECK:       56: incl
+
+## The instruction after .bundle_unlock needs its own boundary fragment; the
+## prefix before .bundle_lock must not leave a stale one.
+  .align 16, 0x90
+prefix_before_lock:
+  lock
+  .bundle_lock
+  callq   bar
+  callq   bar
+  .bundle_unlock
+  movl    $1, (%rsp)
+# CHECK:      60: lock
+# CHECK-NEXT: 61: callq
+# CHECK-NEXT: 66: callq
+# CHECK-NEXT: 6b: nop
+# CHECK-NEXT: 70: movl
