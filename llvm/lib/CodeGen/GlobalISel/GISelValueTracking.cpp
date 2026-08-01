@@ -38,6 +38,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Target/TargetMachine.h"
+#include <limits>
 
 #define DEBUG_TYPE "gisel-known-bits"
 
@@ -2582,6 +2583,64 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     if (NumSrcSignBits > (NumSrcBits - TyBits))
       return NumSrcSignBits - (NumSrcBits - TyBits);
     break;
+  }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    LLT VecVT = MRI.getType(InVec);
+    // computeNumSignBits not yet implemented for scalable vectors.
+    if (VecVT.isScalableVector())
+      break;
+
+    // If the result is wider than the element type the value is extended, and
+    // we know nothing about the extended bits.
+    const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
+    if (TyBits != EltBitWidth)
+      break;
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    const unsigned NumSrcElts = VecVT.getNumElements();
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    auto ConstEltNo = getIConstantVRegVal(Extract.getIndexReg(), MRI);
+    if (ConstEltNo && ConstEltNo->ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    return computeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
+  }
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    GInsertVectorElement &Insert = cast<GInsertVectorElement>(MI);
+    Register InVec = Insert.getVectorReg();
+    Register InVal = Insert.getElementReg();
+    LLT VecVT = MRI.getType(InVec);
+    if (VecVT.isScalableVector())
+      break;
+
+    // If we know the element index, split the demand between the inserted
+    // value and the source vector, otherwise assume we need both.
+    const unsigned NumElts = VecVT.getNumElements();
+    bool DemandedVal = true;
+    APInt DemandedVecElts = DemandedElts;
+    auto ConstEltNo = getIConstantVRegVal(Insert.getIndexReg(), MRI);
+    if (ConstEltNo && ConstEltNo->ult(NumElts)) {
+      unsigned EltIdx = ConstEltNo->getZExtValue();
+      DemandedVal = !!DemandedElts[EltIdx];
+      DemandedVecElts.clearBit(EltIdx);
+    }
+
+    unsigned Tmp = std::numeric_limits<unsigned>::max();
+    if (DemandedVal) {
+      // TODO: Handle implicit truncation of inserted elements.
+      if (MRI.getType(InVal).getSizeInBits() != TyBits)
+        break;
+      Tmp = std::min(Tmp, computeNumSignBits(InVal, APInt(1, 1), Depth + 1));
+    }
+    if (!!DemandedVecElts)
+      Tmp =
+          std::min(Tmp, computeNumSignBits(InVec, DemandedVecElts, Depth + 1));
+    assert(Tmp <= TyBits && "Failed to determine minimum sign bits");
+    return Tmp;
   }
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
