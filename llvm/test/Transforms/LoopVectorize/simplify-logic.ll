@@ -120,7 +120,7 @@ exit:
   ret void
 }
 
-; x && (y && x) -> y && x
+; x && (y && x) -> x && y
 define void @logical_and_inner_commute(ptr noalias %p, ptr noalias %q, ptr noalias %r, i32 %n) {
 ; CHECK-LABEL: define void @logical_and_inner_commute(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]], ptr noalias [[R:%.*]], i32 [[N:%.*]]) {
@@ -359,7 +359,7 @@ exit:
   ret void
 }
 
-; x || (y || x) -> y || x
+; x || (y || x) -> x || y
 define void @logical_or_inner_commute(ptr noalias %p, ptr noalias %q, ptr noalias %r, i32 %n) {
 ; CHECK-LABEL: define void @logical_or_inner_commute(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]], ptr noalias [[R:%.*]], i32 [[N:%.*]]) {
