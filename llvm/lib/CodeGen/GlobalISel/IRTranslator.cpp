@@ -4335,7 +4335,7 @@ bool IRTranslatorImpl::translateBitInsert(const User &U,
   LLT ValTy = MRI.getType(Val);
 
   assert(BaseTy.getSizeInBits() >= ValTy.getSizeInBits() &&
-        "bitinsert val wider than base should be rejected by verifier");
+         "bitinsert val wider than base should be rejected by verifier");
 
   // If Val is a floating-point type, bitcast it to an integer of the same
   // size so buildZExtOrTrunc can safely extend or truncate it.
@@ -4396,7 +4396,8 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
     else
       MIRBuilder.buildTrunc(IntRes, Shifted);
 
-    // Bitcast the raw integer bits back into the requested floating-point register
+    // Bitcast the raw integer bits back into the requested floating-point
+    // register
     MIRBuilder.buildBitcast(Res, IntRes);
   } else {
     // Normal integer path

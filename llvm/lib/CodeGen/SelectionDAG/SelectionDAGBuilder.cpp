@@ -4203,7 +4203,7 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
   SDLoc dl = getCurSDLoc();
 
   assert(BaseVT.getSizeInBits() >= ValVT.getSizeInBits() &&
-        "bitinsert val wider than base should be rejected by verifier");
+         "bitinsert val wider than base should be rejected by verifier");
 
   // If Val is a float, cast it to an integer of the same bitwidth
   // so DAG.getZExtOrTrunc can process it safely.
@@ -4260,7 +4260,8 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   SDValue Result;
   if (ResultVT.isFloatingPoint()) {
     // Drop into the integer domain to safely truncate the shifted bits
-    EVT IntResultVT = EVT::getIntegerVT(*DAG.getContext(), ResultVT.getSizeInBits());
+    EVT IntResultVT =
+        EVT::getIntegerVT(*DAG.getContext(), ResultVT.getSizeInBits());
     Result = DAG.getZExtOrTrunc(Shifted, dl, IntResultVT);
     Result = DAG.getBitcast(ResultVT, Result);
   } else {
