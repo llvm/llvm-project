@@ -5,7 +5,7 @@ Test lldb-dap module request
 import platform
 import re
 
-from lldbsuite.test.decorators import skipIfWindows, skipUnlessDarwin
+from lldbsuite.test.decorators import requireDarwin, skipIfWindows
 from lldbsuite.test.lldbtest import line_number
 from lldbsuite.test.tools.lldb_dap.types import (
     CompileUnitsArgs,
@@ -107,7 +107,7 @@ class TestDAP_module(DAPTestCaseBase):
             "a.out", expect_debug_info_size=platform.system() != "Darwin"
         )
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_modules_dsym(self):
         """
         Darwin only test with dSYM file.

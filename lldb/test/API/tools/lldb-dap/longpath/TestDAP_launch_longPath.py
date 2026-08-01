@@ -7,14 +7,14 @@ import os
 import shutil
 
 from lldbsuite.test import lldbutil
-from lldbsuite.test.decorators import skipUnlessWindows
+from lldbsuite.test.decorators import requireWindows
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import ExitedEvent, LaunchArgs, TerminatedEvent
 
 MAX_PATH = 260
 
 
-@skipUnlessWindows
+@requireWindows
 class TestDAP_launch_longPath(DAPTestCaseBase):
     def _long_path(self, path):
         return lldbutil.get_extended_windows_path(path)

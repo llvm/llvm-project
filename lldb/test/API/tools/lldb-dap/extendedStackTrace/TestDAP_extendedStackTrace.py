@@ -42,7 +42,7 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_stackTrace(self):
         """
         Tests the 'stackTrace' packet on a thread with an extended backtrace.
@@ -104,7 +104,7 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
                 totalFrames, i, "total frames should include a pagination offset"
             )
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_stackTraceWithFormat(self):
         """
         Tests the 'stackTrace' packet on a thread with an extended backtrace using stack trace formats.
