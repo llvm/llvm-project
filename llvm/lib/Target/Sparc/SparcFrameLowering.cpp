@@ -14,6 +14,7 @@
 #include "SparcInstrInfo.h"
 #include "SparcMachineFunctionInfo.h"
 #include "SparcSubtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -137,9 +138,13 @@ void SparcFrameLowering::emitPrologue(MachineFunction &MF,
 
   if (MF.needsFrameMoves()) {
     CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::NoFlags);
-    CFIBuilder.buildDefCFARegister(SP::I6);
-    CFIBuilder.buildWindowSave();
-    CFIBuilder.buildRegister(SP::O7, SP::I7);
+    if (FuncInfo->isLeafProc()) {
+      CFIBuilder.buildDefCFAOffset(NumBytes + Subtarget.getStackPointerBias());
+    } else {
+      CFIBuilder.buildDefCFARegister(SP::I6);
+      CFIBuilder.buildWindowSave();
+      CFIBuilder.buildRegister(SP::O7, SP::I7);
+    }
   }
 }
 
@@ -259,53 +264,52 @@ SparcFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return true;
 }
 
-bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const
-{
-
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  MachineFrameInfo    &MFI = MF.getFrameInfo();
-
-  return !(MFI.hasCalls()               // has calls
-           || MRI.isPhysRegUsed(SP::L0) // Too many registers needed
-           || MRI.isPhysRegUsed(SP::O6) // %sp is used
-           || hasFP(MF)                 // need %fp
-           || MF.hasInlineAsm());       // has inline assembly
+bool SparcFrameLowering::isLeafProc(MachineFunction &MF) const {
+  return !MF.getFrameInfo().hasCalls() &&
+         !MF.getRegInfo().isPhysRegUsed(SP::O6) && !hasFP(MF) &&
+         !MF.hasInlineAsm() &&
+         !MF.getSubtarget<SparcSubtarget>().hasReservedLocalRegister();
 }
 
 void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SparcRegisterInfo *TRI =
+      MF.getSubtarget<SparcSubtarget>().getRegisterInfo();
+  DenseMap<MCRegister, MCRegister> RegMap;
+  auto RemapReg = [&](MCRegister Reg, MCRegister MappedReg) {
+    auto [It, Inserted] = RegMap.try_emplace(Reg, MappedReg);
+    assert((Inserted || It->second == MappedReg) &&
+           "inconsistent leaf register mapping");
+    if (!Inserted)
+      return;
+    MRI.replaceRegWith(Reg, MappedReg);
+  };
+
   // Remap %i[0-7] to %o[0-7].
-  for (unsigned reg = SP::I0; reg <= SP::I7; ++reg) {
-    if (!MRI.isPhysRegUsed(reg))
-      continue;
-
-    unsigned mapped_reg = reg - SP::I0 + SP::O0;
-
-    // Replace I register with O register.
-    MRI.replaceRegWith(reg, mapped_reg);
-
-    // Also replace register pair super-registers.
-    if ((reg - SP::I0) % 2 == 0) {
-      unsigned preg = (reg - SP::I0) / 2 + SP::I0_I1;
-      unsigned mapped_preg = preg - SP::I0_I1 + SP::O0_O1;
-      MRI.replaceRegWith(preg, mapped_preg);
+  for (unsigned Reg = SP::I0; Reg <= SP::I7; ++Reg) {
+    MCRegister MappedReg = Reg - SP::I0 + SP::O0;
+    RemapReg(Reg, MappedReg);
+    for (MCRegAliasIterator AI(Reg, TRI, false); AI.isValid(); ++AI) {
+      unsigned SubRegIndex = TRI->getSubRegIndex(*AI, Reg);
+      if (!SubRegIndex)
+        continue;
+      MCRegister MappedAlias = TRI->getMatchingSuperReg(MappedReg, SubRegIndex,
+                                                        &SP::IntPairRegClass);
+      assert(MappedAlias);
+      RemapReg(*AI, MappedAlias);
     }
   }
 
   // Rewrite MBB's Live-ins.
   for (MachineBasicBlock &MBB : MF) {
-    for (unsigned reg = SP::I0_I1; reg <= SP::I6_I7; ++reg) {
-      if (!MBB.isLiveIn(reg))
-        continue;
-      MBB.removeLiveIn(reg);
-      MBB.addLiveIn(reg - SP::I0_I1 + SP::O0_O1);
+    std::vector<MachineBasicBlock::RegisterMaskPair> LiveIns;
+    MBB.clearLiveIns(LiveIns);
+    for (const auto &LiveIn : LiveIns) {
+      auto It = RegMap.find(LiveIn.PhysReg);
+      MBB.addLiveIn(It == RegMap.end() ? LiveIn.PhysReg : It->second,
+                    LiveIn.LaneMask);
     }
-    for (unsigned reg = SP::I0; reg <= SP::I7; ++reg) {
-      if (!MBB.isLiveIn(reg))
-        continue;
-      MBB.removeLiveIn(reg);
-      MBB.addLiveIn(reg - SP::I0 + SP::O0);
-    }
+    MBB.sortUniqueLiveIns();
   }
 
   assert(verifyLeafProcRegUse(&MRI));
@@ -314,15 +318,9 @@ void SparcFrameLowering::remapRegsForLeafProc(MachineFunction &MF) const {
 #endif
 }
 
-void SparcFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                              BitVector &SavedRegs,
-                                              RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
-  if (!DisableLeafProc && isLeafProc(MF)) {
-    SparcMachineFunctionInfo *MFI = MF.getInfo<SparcMachineFunctionInfo>();
-    MFI->setLeafProc(true);
-
+void SparcFrameLowering::finalizeLeafProc(MachineFunction &MF) const {
+  bool IsLeafProc = !DisableLeafProc && isLeafProc(MF);
+  MF.getInfo<SparcMachineFunctionInfo>()->setLeafProc(IsLeafProc);
+  if (IsLeafProc)
     remapRegsForLeafProc(MF);
-  }
-
 }
