@@ -5466,9 +5466,10 @@ private:
             // Track the operands from the extractelement copy
             // as well to make sure the dependency on the vector
             // is tracked
-            if (auto *EI = R.getCouldBeExtract().lookup(In))
+            if (auto *EI = R.getCouldBeExtract().lookup(In)) {
               for (const Use &U : EI->operands())
                 HandleOneOp(U);
+            }
           }
           // Decrement the unscheduled counter and insert to ready list if
           // ready.
