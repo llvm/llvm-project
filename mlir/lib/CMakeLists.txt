@@ -2,8 +2,14 @@
 add_flag_if_supported("-Werror=global-constructors" WERROR_GLOBAL_CONSTRUCTOR)
 
 # MLIRIR defines the PCH that most other MLIR libraries reuse. CMake can only
-# reuse a PCH from an already-defined target, so IR must come first.
+# reuse a PCH from an already-defined target, and reuse is only extended to
+# libraries that actually reach MLIRIR through their link graph, so both MLIRIR
+# and the low-level libraries that carry the dependency edge to it have to be
+# defined before their dependants.
 add_subdirectory(IR)
+add_subdirectory(Interfaces)
+add_subdirectory(Pass)
+add_subdirectory(Rewrite)
 
 add_subdirectory(ABI)
 add_subdirectory(Analysis)
@@ -12,13 +18,10 @@ add_subdirectory(Bytecode)
 add_subdirectory(Conversion)
 add_subdirectory(Debug)
 add_subdirectory(Dialect)
-add_subdirectory(Interfaces)
 add_subdirectory(Parser)
-add_subdirectory(Pass)
 add_subdirectory(Query)
 add_subdirectory(Reducer)
 add_subdirectory(Remark)
-add_subdirectory(Rewrite)
 add_subdirectory(Support)
 add_subdirectory(TableGen)
 add_subdirectory(Target)
