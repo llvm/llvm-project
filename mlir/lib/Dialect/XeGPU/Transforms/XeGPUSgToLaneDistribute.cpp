@@ -1672,9 +1672,10 @@ shuffleDataAsLaneLayoutChange(ConversionPatternRewriter &rewriter, Location loc,
 /// `inputData`/`targetData` are the `repackDim` `lane_data` of the input and
 /// target layouts; exactly one must be 1 (round-robin) and the other `k`
 /// (contiguous). Returns failure if that does not hold.
-static FailureOr<Value>
-repackLaneData(ConversionPatternRewriter &rewriter, Location loc, Value src,
-               int64_t repackDim, int64_t inputData, int64_t targetData) {
+static FailureOr<Value> repackLaneData(ConversionPatternRewriter &rewriter,
+                                       Location loc, Value src,
+                                       int64_t repackDim, int64_t inputData,
+                                       int64_t targetData) {
   auto srcTy = dyn_cast<VectorType>(src.getType());
   if (!srcTy)
     return failure();
@@ -1698,8 +1699,8 @@ repackLaneData(ConversionPatternRewriter &rewriter, Location loc, Value src,
   // `repackDim` is unit), so collapse it to 1D, shuffle once, and restore it.
   if (srcTy.getNumElements() == k) {
     if (rank == 1)
-      return Value(xegpu::LaneShuffleOp::create(rewriter, loc, runTy, src,
-                                                mode));
+      return Value(
+          xegpu::LaneShuffleOp::create(rewriter, loc, runTy, src, mode));
     Value flat = vector::ShapeCastOp::create(rewriter, loc, runTy, src);
     Value shuffled =
         xegpu::LaneShuffleOp::create(rewriter, loc, runTy, flat, mode);
@@ -1844,18 +1845,16 @@ struct SgToLaneConvertLayout
       // `repackDim` must be the distributed dim (lane_layout != 1) and the
       // other innermost dim non-distributed (lane_layout == 1).
       int64_t otherDim = repackDim == rank - 1 ? rank - 2 : rank - 1;
-      bool laneLayoutOk =
-          repackDim != -1 && laneLayout[repackDim] != 1 &&
-          (rank < 2 || laneLayout[otherDim] == 1);
+      bool laneLayoutOk = repackDim != -1 && laneLayout[repackDim] != 1 &&
+                          (rank < 2 || laneLayout[otherDim] == 1);
 
       // Exactly one dimension must change, and it must be one of the two
       // innermost (>= rank - 2).
       if (repackDim != -1 && repackDim >= rank - 2 && !multipleChanged &&
           laneLayoutOk) {
-        FailureOr<Value> res =
-            repackLaneData(rewriter, op.getLoc(), adaptor.getSource(),
-                           repackDim, laneData[repackDim],
-                           targetLaneData[repackDim]);
+        FailureOr<Value> res = repackLaneData(
+            rewriter, op.getLoc(), adaptor.getSource(), repackDim,
+            laneData[repackDim], targetLaneData[repackDim]);
         if (succeeded(res)) {
           rewriter.replaceOp(op, *res);
           return success();
