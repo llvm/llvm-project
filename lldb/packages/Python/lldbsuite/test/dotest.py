@@ -1255,6 +1255,12 @@ def run_suite():
 
     configuration.failed = not result.wasSuccessful()
 
+    if getattr(result, "skipped", None):
+        sys.stderr.write(
+            "Skip breakdown (unsupported=%d, skipped=%d)\n"
+            % (result.countUnsupported(), result.countSkipped())
+        )
+
     if configuration.sdir_has_content and configuration.verbose:
         sys.stderr.write(
             "Session logs for test failures/errors/unexpected successes"

@@ -63,3 +63,24 @@ define half @test_canonicalize_amdgcn_tanh_f16(half %a) {
   %canonicalized = call half @llvm.canonicalize.f16(half %tanh)
   ret half %canonicalized
 }
+
+; A v2bf16 value bitcast to v2f16 may not be canonical as v2f16 (different
+; exponent width), so the v2f16 canonicalize must not be eliminated.
+define <2 x half> @test_no_eliminate_canonicalize_bitcast_bf16_to_f16(<2 x bfloat> %x) {
+; GCN-LABEL: test_no_eliminate_canonicalize_bitcast_bf16_to_f16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GCN-NEXT:    s_wait_kmcnt 0x0
+; GCN-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_pk_max_num_f16 v0, v0, v0
+; GCN-NEXT:    s_set_pc_i64 s[30:31]
+  %c = call <2 x bfloat> @llvm.canonicalize.v2bf16(<2 x bfloat> %x)
+  %h = bitcast <2 x bfloat> %c to <2 x half>
+  %lo = extractelement <2 x half> %h, i32 0
+  %hi = extractelement <2 x half> %h, i32 1
+  %v0 = insertelement <2 x half> poison, half %lo, i32 0
+  %v1 = insertelement <2 x half> %v0, half %hi, i32 1
+  %canon = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %v1)
+  ret <2 x half> %canon
+}

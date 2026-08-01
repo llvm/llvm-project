@@ -46,7 +46,6 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeExternalAAWrapperPassPass(Registry);
   initializeImmutableModuleSummaryIndexWrapperPassPass(Registry);
   initializeIVUsersWrapperPassPass(Registry);
-  initializeIRSimilarityIdentifierWrapperPassPass(Registry);
   initializeLazyBranchProbabilityInfoPassPass(Registry);
   initializeLazyBFIPassPass(Registry);
   initializeLazyBlockFrequencyInfoPassPass(Registry);

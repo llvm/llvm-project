@@ -132,6 +132,27 @@ def XeGPU_FenceScopeAttr:
     let assemblyFormat = "$value";
 }
 
+//===----------------------------------------------------------------------===//
+// XeGPU Lane Shuffle Enums.
+//===----------------------------------------------------------------------===//
+def XeGPU_LaneShufflePack: I32EnumAttrCase<"Pack", 0, "pack">;
+def XeGPU_LaneShuffleUnpack: I32EnumAttrCase<"Unpack", 1, "unpack">;
+def XeGPU_LaneShuffleMode: I32EnumAttr<"LaneShuffleMode",
+      "The direction of the lane shuffle performed by xegpu.lane_shuffle.",
+      [XeGPU_LaneShufflePack, XeGPU_LaneShuffleUnpack]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::xegpu";
+}
+
+def XeGPU_LaneShuffleModeAttr:
+  EnumAttr<XeGPU_Dialect, XeGPU_LaneShuffleMode, "lane_shuffle_mode"> {
+    let summary = [{Describes the direction of a lane shuffle.
+                    "pack" gathers a lane's elements into consecutive logical
+                    positions. "unpack" scatters them back out, strided by the
+                    subgroup size.}];
+    let assemblyFormat = "$value";
+}
+
 def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
   let cppNamespace = "::mlir::xegpu";
   let description = [{

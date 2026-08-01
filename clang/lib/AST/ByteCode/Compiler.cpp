@@ -4038,7 +4038,7 @@ bool Compiler<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
       if (IndexT == PT_IntAP || IndexT == PT_IntAPS) {
         if (!this->visit(ArrayIndexExpr))
           return false;
-        if (!this->emitCastNoOverflow(IndexT, E))
+        if (!this->emitCastAPToOffsetIndex(IndexT, E))
           return false;
         continue;
       }

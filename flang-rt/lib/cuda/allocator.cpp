@@ -59,6 +59,13 @@ static bool deviceContextTornDown() {
       int active{0};
       if (getState(device, &flags, &active) == CUDA_SUCCESS) {
         tornDown = active == 0;
+        // A sticky error (e.g. an illegal kernel memory access) leaves the
+        // primary context active but unusable: later calls all fail, so
+        // scope-exit frees would abort an otherwise successful program. A
+        // null free is a no-op that surfaces this without creating a context.
+        if (!tornDown && cudaFree(nullptr) != cudaSuccess) {
+          tornDown = true;
+        }
       }
     }
   } else {

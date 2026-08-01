@@ -24819,6 +24819,14 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       BasicBlock::Create(Ctx, BB->getName() + ".rtscalar", Fn);
   BasicBlock *Tail = BasicBlock::Create(Ctx, BB->getName() + ".rtcont", Fn);
 
+  // Emit the runtime alias check while the block is still fully connected:
+  // LCSSA-preserving SCEV expansion rewrites out-of-loop uses of
+  // loop-defined bases to poison in predecessor-less blocks.
+  IRBuilder<> ChkBuilder(Term);
+  ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
+  SCEVExpander Exp(*SE, "slp.rtcheck");
+  Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
+
   // Clone the body into the scalar fallback block, in the original program
   // order (RTOrigBodyOrder).
   SmallDenseMap<Value *, Value *, 16> VMap;
@@ -24838,21 +24846,12 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       if (Value *V = VMap.lookup(U.get()))
         U.set(V);
 
-  // Move the body (everything but PHIs and the terminator) into the vector
-  // block in the scheduled order.
-  for (Instruction &I : make_early_inc_range(*BB)) {
-    if (isa<PHINode>(&I) || I.isTerminator())
-      continue;
-    I.removeFromParent();
-    I.insertInto(VecBB, VecBB->end());
-  }
-
-  // Emit the runtime alias check before the still-present terminator, so the
-  // SCEV bounds are expanded at a valid insertion point.
-  IRBuilder<> ChkBuilder(Term);
-  ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
-  SCEVExpander Exp(*SE, "slp.rtcheck");
-  Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
+  // Move the original body into the vector block in the current (scheduled)
+  // order, keeping the emitted check instructions in the header block.
+  SmallPtrSet<Instruction *, 16> BodyInsts(llvm::from_range, RTOrigBodyOrder);
+  for (Instruction &I : make_early_inc_range(*BB))
+    if (BodyInsts.contains(&I))
+      I.moveBefore(*VecBB, VecBB->end());
 
   // Move the original terminator into the continuation block and replace it
   // with the guard branch.

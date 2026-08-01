@@ -143,6 +143,7 @@ jobs:
       - name: Upload Artifacts
         uses: ./.github/workflows/upload-release-artifact
         with:
+          release-version: ${{ inputs.release-version }}
           artifact-id: ${{ needs.release-sources.outputs.artifact-id }}
           attestation-name: ${{ needs.inputs.outputs.ref }}-sources-attestation
           digest: ${{ needs.release-sources.outputs.digest }}

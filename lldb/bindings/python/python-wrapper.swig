@@ -486,7 +486,11 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommand(
     pfunc(debugger_arg, PythonString(args),
           SWIGBridge::ToSWIGWrapper(std::move(exe_ctx_ref_sp)), cmd_retobj_arg.obj(), dict);
 
-  return true;
+  // `pfunc`'s bare call syntax doesn't drain the interpreter's exception
+  // state, so check it directly: a Python runtime error raised from inside
+  // the command body must be reported as a failure (surfaced through
+  // `cmd_retobj`'s error status), not silently treated as success.
+  return !PyErr_Occurred();
 }
 
 PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
@@ -664,7 +668,11 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
 
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(target_sp)), dict);
 
-  return true;
+  // `pfunc`'s bare call syntax doesn't drain the interpreter's exception
+  // state, so check it directly: an exception raised by
+  // `__lldb_module_added_to_target` must be reported as a failure, not
+  // silently treated as success.
+  return !PyErr_Occurred();
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
@@ -688,7 +696,10 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
 
   pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), dict);
 
-  return true;
+  // Same as above: an exception raised by __lldb_init_module must be
+  // reported as a failure so callers (e.g. `command script import`, or
+  // module auto-loading) don't treat it as a successful import.
+  return !PyErr_Occurred();
 }
 
 lldb::ValueObjectSP lldb_private::python::SWIGBridge::LLDBSWIGPython_GetValueObjectSPFromSBValue(

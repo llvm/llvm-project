@@ -123,3 +123,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(asan<>,asan<kernel;use-after-scope>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-37
 ; CHECK-37: asan<>,asan<kernel;use-after-scope>
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='drop-unnecessary-assumes,drop-unnecessary-assumes<drop-deref>' < %s | FileCheck %s --check-prefixes=CHECK-38
+; CHECK-38: drop-unnecessary-assumes,drop-unnecessary-assumes<drop-deref>

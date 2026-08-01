@@ -203,6 +203,11 @@ def main():
         help="print extra information",
     )
     p.add_argument(
+        "--whole-file",
+        action="store_true",
+        help="format whole file instead of only modified lines",
+    )
+    p.add_argument(
         "--diff_from_common_commit",
         action="store_true",
         help=(
@@ -231,8 +236,8 @@ def main():
     # When no commits are given explicitly and the pre-commit CI framework's
     # environment variables are set, use them to define the diff range.
     if not opts.args and not dash_dash:
-        from_ref = os.environ.get('PRE_COMMIT_FROM_REF')
-        to_ref = os.environ.get('PRE_COMMIT_TO_REF')
+        from_ref = os.environ.get("PRE_COMMIT_FROM_REF")
+        to_ref = os.environ.get("PRE_COMMIT_TO_REF")
         if from_ref and to_ref:
             opts.args = [from_ref, to_ref]
             if not opts.diff and not opts.diffstat:
@@ -256,7 +261,7 @@ def main():
         opts.binary = os.path.abspath(opts.binary)
 
     changed_lines = compute_diff_and_extract_lines(
-        commits, files, opts.staged, opts.diff_from_common_commit
+        commits, files, opts.staged, opts.whole_file, opts.diff_from_common_commit
     )
     if opts.verbose >= 1:
         ignored_files = set(changed_lines)
@@ -410,10 +415,12 @@ def get_object_type(value):
     return convert_string(stdout.strip())
 
 
-def compute_diff_and_extract_lines(commits, files, staged, diff_common_commit):
+def compute_diff_and_extract_lines(
+    commits, files, staged, whole_file, diff_common_commit
+):
     """Calls compute_diff() followed by extract_lines()."""
     diff_process = compute_diff(commits, files, staged, diff_common_commit)
-    changed_lines = extract_lines(diff_process.stdout)
+    changed_lines = extract_lines(diff_process.stdout, whole_file)
     diff_process.stdout.close()
     diff_process.wait()
     if diff_process.returncode != 0:
@@ -446,7 +453,7 @@ def compute_diff(commits, files, staged, diff_common_commit):
     return p
 
 
-def extract_lines(patch_file):
+def extract_lines(patch_file, whole_file):
     """Extract the changed lines in `patch_file`.
 
     The return value is a dictionary mapping filename to a list of (start_line,
@@ -461,17 +468,23 @@ def extract_lines(patch_file):
         match = re.search(r"^\+\+\+\ [^/]+/(.*)", line)
         if match:
             filename = match.group(1).rstrip("\r\n\t")
-        match = re.search(r"^@@ -[0-9,]+ \+(\d+)(,(\d+))?", line)
-        if match:
-            start_line = int(match.group(1))
-            line_count = 1
-            if match.group(3):
-                line_count = int(match.group(3))
-            if line_count == 0:
-                line_count = 1
-            if start_line == 0:
+            if whole_file:
+                # Initialize the key for filename but ensure ranges is an empty
+                # list. This will prevent any filtering in clang_format_to_blob().
+                matches[filename] = []
                 continue
-            matches.setdefault(filename, []).append(Range(start_line, line_count))
+        if not whole_file:
+            match = re.search(r"^@@ -[0-9,]+ \+(\d+)(,(\d+))?", line)
+            if match:
+                start_line = int(match.group(1))
+                line_count = 1
+                if match.group(3):
+                    line_count = int(match.group(3))
+                if line_count == 0:
+                    line_count = 1
+                if start_line == 0:
+                    continue
+                matches.setdefault(filename, []).append(Range(start_line, line_count))
     return matches
 
 

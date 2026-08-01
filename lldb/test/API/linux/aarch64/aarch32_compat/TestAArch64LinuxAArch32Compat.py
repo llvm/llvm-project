@@ -16,7 +16,7 @@ class AArch64LinuxAArch32Compat(TestBase):
     @skipIfRemote
     @skipUnlessArch("aarch64")
     @skipIfLLVMTargetMissing("ARM")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_aarch32_compat(self):
         self.build()
         test_program = self.getBuildArtifact("a.out")

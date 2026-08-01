@@ -17,11 +17,15 @@ namespace llvm {
 namespace NVPTX {
 
 /// GPU kinds supported by the NVPTX target.
-enum GPUKind : uint32_t {
+enum GPUKind : uint8_t {
   GK_NONE = 0,
 #define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
   GK_##KIND,
 #include "llvm/TargetParser/NVPTXTargetParser.def"
+
+  // Alias for the last GPUKind. Keep in sync with the final .def row.
+  // FIXME: Should be generated once the GPU list moves to TableGen.
+  GK_LAST = GK_SM_121f,
 };
 
 /// Suffix class of an NVPTX architecture name. Enumerator spellings match the
