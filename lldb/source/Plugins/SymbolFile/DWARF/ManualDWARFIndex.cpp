@@ -162,7 +162,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   // If at least one of the Compile Units is case sensitive, then all compile
   // units will be case sensitive
-  if(cu_identifier_case != eCaseSensitive)
+  if (cu_identifier_case != eCaseSensitive)
     SetNameCaseInsensitive();
   else
     SetStrictlyCaseSensitive();
@@ -665,14 +665,14 @@ void ManualDWARFIndex::SaveToCache() {
 }
 
 void ManualDWARFIndex::SetNameCaseInsensitive() {
-		m_set.function_basenames.SetNameCaseInsensitive();
-		m_set.function_fullnames.SetNameCaseInsensitive();
-		m_set.function_methods.SetNameCaseInsensitive();
-		m_set.function_selectors.SetNameCaseInsensitive();
-		m_set.objc_class_selectors.SetNameCaseInsensitive();
-		m_set.globals.SetNameCaseInsensitive();
-		m_set.types.SetNameCaseInsensitive();
-		m_set.namespaces.SetNameCaseInsensitive();
+  m_set.function_basenames.SetNameCaseInsensitive();
+  m_set.function_fullnames.SetNameCaseInsensitive();
+  m_set.function_methods.SetNameCaseInsensitive();
+  m_set.function_selectors.SetNameCaseInsensitive();
+  m_set.objc_class_selectors.SetNameCaseInsensitive();
+  m_set.globals.SetNameCaseInsensitive();
+  m_set.types.SetNameCaseInsensitive();
+  m_set.namespaces.SetNameCaseInsensitive();
 }
 
 void ManualDWARFIndex::SetStrictlyCaseSensitive() {

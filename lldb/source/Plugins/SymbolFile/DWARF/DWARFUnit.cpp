@@ -889,31 +889,32 @@ llvm::VersionTuple DWARFUnit::GetProducerVersion() {
 }
 
 lldb::IdentifierCaseType DWARFUnit::GetIdentifierCase() {
-  if(m_identifier_case != eCaseUnknown)
+  if (m_identifier_case != eCaseUnknown)
     return m_identifier_case;
 
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
 
-  if(!die) 
+  if (!die)
     m_identifier_case = eCaseSensitive;
-    
+
   else {
-    uint64_t identifier_case = die->GetAttributeValueAsUnsigned(this, DW_AT_identifier_case, llvm::dwarf::DW_ID_case_sensitive);
+    uint64_t identifier_case = die->GetAttributeValueAsUnsigned(
+        this, DW_AT_identifier_case, llvm::dwarf::DW_ID_case_sensitive);
 
     switch (identifier_case) {
-      case llvm::dwarf::DW_ID_up_case:
-        m_identifier_case = eUpperCase;
-        break;
-      case llvm::dwarf::DW_ID_down_case:
-        m_identifier_case = eLowerCase;
-        break;
-      case llvm::dwarf::DW_ID_case_insensitive:
-        m_identifier_case = eCaseInsensitive;
-        break;
-      case llvm::dwarf::DW_ID_case_sensitive:
-      default:
-        m_identifier_case = eCaseSensitive;
-        break;
+    case llvm::dwarf::DW_ID_up_case:
+      m_identifier_case = eUpperCase;
+      break;
+    case llvm::dwarf::DW_ID_down_case:
+      m_identifier_case = eLowerCase;
+      break;
+    case llvm::dwarf::DW_ID_case_insensitive:
+      m_identifier_case = eCaseInsensitive;
+      break;
+    case llvm::dwarf::DW_ID_case_sensitive:
+    default:
+      m_identifier_case = eCaseSensitive;
+      break;
     }
   }
 

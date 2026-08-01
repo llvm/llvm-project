@@ -152,11 +152,9 @@ public:
     m_language = language;
   }
 
-  lldb::IdentifierCaseType GetCasing() {
-    return m_identifier_case;
-  }
+  lldb::IdentifierCaseType GetCasing() { return m_identifier_case; }
 
-  void SetCasing(lldb::IdentifierCaseType identifier_case){
+  void SetCasing(lldb::IdentifierCaseType identifier_case) {
     m_identifier_case = identifier_case;
   }
 

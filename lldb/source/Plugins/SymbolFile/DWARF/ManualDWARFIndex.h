@@ -169,7 +169,7 @@ private:
   ///   True if this index is a partial index, false otherwise.
   bool IsPartial() const;
 
-	void SetNameCaseInsensitive();
+  void SetNameCaseInsensitive();
 
   void SetStrictlyCaseSensitive();
   /// The DWARF file which we are indexing.

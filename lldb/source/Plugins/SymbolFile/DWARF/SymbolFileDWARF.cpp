@@ -803,7 +803,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
           cu_sp->SetCasing(cu_casing);
 
           dwarf_cu.SetLLDBCompUnit(cu_sp.get());
-          
+
           SetCompileUnitAtIndex(dwarf_cu.GetID(), cu_sp);
         };
 
@@ -832,7 +832,8 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
           if (support_files.GetSize() == 0)
             return false;
           initialize_cu(support_files.GetSupportFileAtIndex(0),
-                        eLanguageTypeUnknown, dwarf_cu.GetIdentifierCase(), std::move(support_files));
+                        eLanguageTypeUnknown, dwarf_cu.GetIdentifierCase(),
+                        std::move(support_files));
           return true;
         };
 
