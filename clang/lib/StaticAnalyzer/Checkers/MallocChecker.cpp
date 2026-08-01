@@ -1074,8 +1074,8 @@ public:
                                    BugReporterContext &BRC,
                                    PathSensitiveBugReport &BR) override;
 
-  PathDiagnosticPieceRef getEndPath(BugReporterContext &BRC,
-                                    const ExplodedNode *EndPathNode,
+  PathDiagnosticPieceRef getEndPath(const ExplodedNode *EndPathNode,
+                                    BugReporterContext &BRC,
                                     PathSensitiveBugReport &BR) override {
     if (!IsLeak)
       return nullptr;
@@ -3554,7 +3554,6 @@ void MallocChecker::checkEscapeOnReturn(const ReturnStmt *S,
     return;
 
   // Check if we are returning a symbol.
-  ProgramStateRef State = C.getState();
   SVal RetVal = C.getSVal(E);
   SymbolRef Sym = RetVal.getAsSymbol();
   if (!Sym)

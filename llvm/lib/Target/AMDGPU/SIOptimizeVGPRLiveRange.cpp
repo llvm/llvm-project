@@ -159,13 +159,10 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addPreserved<LiveVariablesWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -494,15 +491,12 @@ void SIOptimizeVGPRLiveRange::updateLiveRangeInElseRegion(
   }
 
   // Transfer the possible Kills in ElseBlocks from Reg to NewReg
-  auto I = OldVarInfo.Kills.begin();
-  while (I != OldVarInfo.Kills.end()) {
-    if (ElseBlocks.contains((*I)->getParent())) {
-      NewVarInfo.Kills.push_back(*I);
-      I = OldVarInfo.Kills.erase(I);
-    } else {
-      ++I;
-    }
-  }
+  llvm::erase_if(OldVarInfo.Kills, [&](MachineInstr *MI) {
+    if (!ElseBlocks.contains(MI->getParent()))
+      return false;
+    NewVarInfo.Kills.push_back(MI);
+    return true;
+  });
 }
 
 void SIOptimizeVGPRLiveRange::optimizeLiveRange(
@@ -664,8 +658,6 @@ SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<LiveVariablesAnalysis>();
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }

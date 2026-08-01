@@ -35,6 +35,11 @@ bool isConstant(Value *V) {
   return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
 }
 
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
+  const auto *CI = dyn_cast<ConstantInt>(V);
+  return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
+}
+
 bool isVectorLikeInstWithConstOps(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   // Non-instructions are vector-like only if they are undef.
@@ -123,6 +128,15 @@ bool isSplat(ArrayRef<Value *> VL) {
       return false;
   }
   return FirstNonUndef != nullptr;
+}
+
+Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS) {
+  if (LHS == RHS)
+    return RHS;
+  if ((LHS == Intrinsic::fma || LHS == Intrinsic::fmuladd) &&
+      (RHS == Intrinsic::fma || RHS == Intrinsic::fmuladd))
+    return Intrinsic::fma;
+  return Intrinsic::not_intrinsic;
 }
 
 bool isCommutative(const Instruction *I, const Value *ValWithUses,
@@ -650,6 +664,21 @@ SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF) {
   for (auto [I, V] : enumerate(Val))
     std::fill_n(NewVal.begin() + I * VF, VF, V);
   return NewVal;
+}
+
+Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::UDiv:
+    return Intrinsic::masked_udiv;
+  case Instruction::SDiv:
+    return Intrinsic::masked_sdiv;
+  case Instruction::URem:
+    return Intrinsic::masked_urem;
+  case Instruction::SRem:
+    return Intrinsic::masked_srem;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
 }
 
 } // namespace llvm::slpvectorizer
