@@ -320,17 +320,8 @@ public:
   // assignment. Under MSan, attaching the check to more loads is safe:
   // if a path actually initializes the variable, MSan's own shadow
   // tracking (genuinely path-sensitive at runtime, via phi-node shadow
-  // merging) reflects that and the check silently passes. Erasing on
-  // any assignment, anywhere in the function, made sense for the prior
-  // UBSan-based design (an unconditional trap with no runtime awareness
-  // of which path was taken) but is unnecessarily conservative here --
-  // it would produce false negatives on variables that are correctly
-  // initialized on some paths and read uninitialized on others.
-  // Verified empirically: no regressions on check-msan/check-ubsan, and
-  // confirmed correct runtime behavior on both branches of a genuinely
-  // conditional assignment (warns on the uninitialized path, silent on
-  // the initialized one).
-
+  // merging) reflects that and the check silently passes. 
+  
   bool VisitUnaryOperator(UnaryOperator *UO) {
     if (UO->getOpcode() == UO_AddrOf)
       if (auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParens()))
@@ -658,16 +649,16 @@ public:
     Value *V = EmitLoadOfLValue(E);
 
     if (CGF.SanOpts.has(SanitizerKind::Memory) &&
-        CGF.CGM.getCodeGenOpts().SanitizeMemoryLocalAddressNeverTaken &&
-        !CGF.getLangOpts().CPlusPlus) {
+    CGF.CGM.getCodeGenOpts().SanitizeMemoryLocalAddressNeverTaken &&
+    !CGF.getLangOpts().CPlusPlus) {
+      if (!CGF.UninitReadAnalysisDone) {
+        if (auto *FD = dyn_cast<FunctionDecl>(CGF.CurFuncDecl))
+          if (const Stmt *Body = FD->getBody())
+            UninitLocalVarVisitor(CGF.UninitReadCandidates)
+                .TraverseStmt(const_cast<Stmt *>(Body));
+        CGF.UninitReadAnalysisDone = true;
+      }
       if (auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
-        if (!CGF.UninitReadAnalysisDone) {
-          if (auto *FD = dyn_cast<FunctionDecl>(CGF.CurFuncDecl))
-            if (const Stmt *Body = FD->getBody())
-              UninitLocalVarVisitor(CGF.UninitReadCandidates)
-                  .TraverseStmt(const_cast<Stmt *>(Body));
-          CGF.UninitReadAnalysisDone = true;
-        }
         if (CGF.UninitReadCandidates.count(VD)) {
           if (auto *LI = dyn_cast<llvm::LoadInst>(V))
             LI->setUninitReadCheckMetadata();
