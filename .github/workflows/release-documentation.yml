@@ -201,14 +201,15 @@ jobs:
       contents: write     # For man page uploads
       id-token: write     # For artifact attestations
       attestations: write # For artifact attestations
-    matrix:
-      include:
-        - artifact-id: ${{ needs.release-documentation.outputs.man-page-artifact-id }}
-          attestation-name: release-man-page-attestation
-          digest: ${{ needs.release-documentation.outputs.man-page-digest }}
-        - artifact-id: ${{ needs.release-documentation.outputs.doxygen-artifact-id }}
-          attestation-name: release-doxygen-attestation
-          digest: ${{ needs.release-documentation.outputs.doxygen-digest }}
+    strategy:
+      matrix:
+        include:
+          - artifact-id: ${{ needs.release-documentation.outputs.man-page-artifact-id }}
+            attestation-name: release-man-page-attestation
+            digest: ${{ needs.release-documentation.outputs.man-page-digest }}
+          - artifact-id: ${{ needs.release-documentation.outputs.doxygen-artifact-id }}
+            attestation-name: release-doxygen-attestation
+            digest: ${{ needs.release-documentation.outputs.doxygen-digest }}
     steps:
      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
        with:
