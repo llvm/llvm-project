@@ -166,7 +166,7 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
     }
 
     assert(ExpectedMatches[AV.Assume] == 0 ||
-           Found && "already unregistered or incorrect cache state");
+           (Found && "already unregistered or incorrect cache state"));
 
     if (!HasNonnull)
       AffectedValues.erase(AVI);
