@@ -1425,6 +1425,12 @@ static bool isSupportedAddrspace(const Triple &TargetTriple, Value *Addr) {
 }
 
 Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
+  if (TargetTriple.isOSDarwin() &&
+      TargetTriple.getArch() == llvm::Triple::aarch64) {
+    // Strip MTE-tag bits before translating to shadow address
+    Shadow = IRB.CreateAnd(Shadow,
+                           ConstantInt::get(IntptrTy, ~(uint64_t(0x0f) << 56)));
+  }
   // Shadow >> scale
   Shadow = IRB.CreateLShr(Shadow, Mapping.Scale);
   if (Mapping.Offset == 0) return Shadow;
@@ -2091,12 +2097,22 @@ void ModuleAddressSanitizer::poisonOneInitializer(Function &GlobalInit) {
   // Add a call to poison all external globals before the given function starts.
   Value *ModuleNameAddr =
       ConstantExpr::getPointerCast(getOrCreateModuleName(), IntptrTy);
-  IRB.CreateCall(AsanPoisonGlobals, ModuleNameAddr);
+  CallInst *CallBefore = IRB.CreateCall(AsanPoisonGlobals, ModuleNameAddr);
+  if (DISubprogram *SP = GlobalInit.getSubprogram())
+    CallBefore->setDebugLoc(
+        DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
 
   // Add calls to unpoison all globals before each return instruction.
   for (auto &BB : GlobalInit)
-    if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
-      CallInst::Create(AsanUnpoisonGlobals, "", RI->getIterator());
+    if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator())) {
+      CallInst *CallAfter =
+          CallInst::Create(AsanUnpoisonGlobals, "", RI->getIterator());
+      if (RI->getDebugLoc())
+        CallAfter->setDebugLoc(RI->getDebugLoc());
+      else if (DISubprogram *SP = GlobalInit.getSubprogram())
+        CallAfter->setDebugLoc(
+            DILocation::get(SP->getContext(), SP->getScopeLine(), 0, SP));
+    }
 }
 
 void ModuleAddressSanitizer::createInitializerPoisonCalls() {

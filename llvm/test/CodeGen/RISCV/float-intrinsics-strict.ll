@@ -1955,7 +1955,7 @@ define i64 @llround_f32(float %a) nounwind strictfp {
   ret i64 %1
 }
 
-define float @ldexp_f32(float %x, i32 signext %y) nounwind strictfp {
+define float @ldexp_f32(float %x, i32 signext %y) nounwind {
 ; RV32IF-LABEL: ldexp_f32:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    addi sp, sp, -16

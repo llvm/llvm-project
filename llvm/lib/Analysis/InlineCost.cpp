@@ -3210,6 +3210,9 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
     if (Call.getAttributes().hasFnAttr(Attribute::NoInline))
       return InlineResult::failure("noinline call site attribute");
 
+    if (!AttributeFuncs::isStrictFPInlineCompatible(*Caller, *Callee))
+      return InlineResult::failure("incompatible strictfp attributes");
+
     auto IsViable = isInlineViable(*Callee);
     if (IsViable.isSuccess())
       return InlineResult::success();

@@ -1703,15 +1703,17 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
 
   // If the operand is an affine AddRec with the no-unsigned-wrap flag, the
   // zero-extension distributes over the recurrence.
-  if (Depth <= MaxCastDepth)
-    if (const auto *AR = dyn_cast<SCEVAddRecExpr>(Op))
-      if (AR->isAffine() && AR->hasNoUnsignedWrap()) {
-        const SCEV *Start =
-            getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
-        const SCEV *Step =
-            getZeroExtendExpr(AR->getStepRecurrence(*this), Ty, Depth + 1);
-        return getAddRecExpr(Start, Step, AR->getLoop(), AR->getNoWrapFlags());
-      }
+  const SCEV *Start, *Step;
+  const Loop *L;
+  if (Depth <= MaxCastDepth &&
+      match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
+    const auto *AR = cast<SCEVAddRecExpr>(Op);
+    if (AR->hasNoUnsignedWrap()) {
+      Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
+      Step = getZeroExtendExpr(Step, Ty, Depth + 1);
+      return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+    }
+  }
 
   // Before doing any expensive analysis, check to see if we've already
   // computed a SCEV for this Op and Ty.
@@ -1747,148 +1749,143 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
   // did not overflow the old, smaller, value, we can zero extend all of the
   // operands (often constants).  This allows analysis of something like
   // this:  for (unsigned char X = 0; X < 100; ++X) { int Y = X; }
-  if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Op))
-    if (AR->isAffine()) {
-      const SCEV *Start = AR->getStart();
-      const SCEV *Step = AR->getStepRecurrence(*this);
-      unsigned BitWidth = getTypeSizeInBits(AR->getType());
-      const Loop *L = AR->getLoop();
+  if (match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
+    const auto *AR = cast<SCEVAddRecExpr>(Op);
+    unsigned BitWidth = getTypeSizeInBits(AR->getType());
 
-      // The no-unsigned-wrap case is handled before the uniquing lookup above.
+    // The no-unsigned-wrap case is handled before the uniquing lookup above.
 
-      // Check whether the backedge-taken count is SCEVCouldNotCompute.
-      // Note that this serves two purposes: It filters out loops that are
-      // simply not analyzable, and it covers the case where this code is
-      // being called from within backedge-taken count analysis, such that
-      // attempting to ask for the backedge-taken count would likely result
-      // in infinite recursion. In the later case, the analysis code will
-      // cope with a conservative value, and it will take care to purge
-      // that value once it has finished.
-      const SCEV *MaxBECount = getConstantMaxBackedgeTakenCount(L);
-      if (!isa<SCEVCouldNotCompute>(MaxBECount)) {
-        // Manually compute the final value for AR, checking for overflow.
+    // Check whether the backedge-taken count is SCEVCouldNotCompute.
+    // Note that this serves two purposes: It filters out loops that are
+    // simply not analyzable, and it covers the case where this code is
+    // being called from within backedge-taken count analysis, such that
+    // attempting to ask for the backedge-taken count would likely result
+    // in infinite recursion. In the later case, the analysis code will
+    // cope with a conservative value, and it will take care to purge
+    // that value once it has finished.
+    const SCEV *MaxBECount = getConstantMaxBackedgeTakenCount(L);
+    if (!isa<SCEVCouldNotCompute>(MaxBECount)) {
+      // Manually compute the final value for AR, checking for overflow.
 
-        // Check whether the backedge-taken count can be losslessly casted to
-        // the addrec's type. The count is always unsigned.
-        const SCEV *CastedMaxBECount =
-            getTruncateOrZeroExtend(MaxBECount, Start->getType(), Depth);
-        const SCEV *RecastedMaxBECount = getTruncateOrZeroExtend(
-            CastedMaxBECount, MaxBECount->getType(), Depth);
-        if (MaxBECount == RecastedMaxBECount) {
-          Type *WideTy = IntegerType::get(getContext(), BitWidth * 2);
-          // Check whether Start+Step*MaxBECount has no unsigned overflow.
-          const SCEV *ZMul = getMulExpr(CastedMaxBECount, Step,
-                                        SCEV::FlagAnyWrap, Depth + 1);
-          const SCEV *ZAdd = getZeroExtendExpr(getAddExpr(Start, ZMul,
-                                                          SCEV::FlagAnyWrap,
-                                                          Depth + 1),
-                                               WideTy, Depth + 1);
-          const SCEV *WideStart = getZeroExtendExpr(Start, WideTy, Depth + 1);
-          const SCEV *WideMaxBECount =
+      // Check whether the backedge-taken count can be losslessly casted to
+      // the addrec's type. The count is always unsigned.
+      const SCEV *CastedMaxBECount =
+          getTruncateOrZeroExtend(MaxBECount, Start->getType(), Depth);
+      const SCEV *RecastedMaxBECount = getTruncateOrZeroExtend(
+          CastedMaxBECount, MaxBECount->getType(), Depth);
+      if (MaxBECount == RecastedMaxBECount) {
+        Type *WideTy = IntegerType::get(getContext(), BitWidth * 2);
+        // Check whether Start+Step*MaxBECount has no unsigned overflow.
+        const SCEV *ZMul =
+            getMulExpr(CastedMaxBECount, Step, SCEV::FlagAnyWrap, Depth + 1);
+        const SCEV *ZAdd = getZeroExtendExpr(
+            getAddExpr(Start, ZMul, SCEV::FlagAnyWrap, Depth + 1), WideTy,
+            Depth + 1);
+        const SCEV *WideStart = getZeroExtendExpr(Start, WideTy, Depth + 1);
+        const SCEV *WideMaxBECount =
             getZeroExtendExpr(CastedMaxBECount, WideTy, Depth + 1);
-          const SCEV *OperandExtendedAdd =
+        const SCEV *OperandExtendedAdd =
             getAddExpr(WideStart,
                        getMulExpr(WideMaxBECount,
                                   getZeroExtendExpr(Step, WideTy, Depth + 1),
                                   SCEV::FlagAnyWrap, Depth + 1),
                        SCEV::FlagAnyWrap, Depth + 1);
-          if (ZAdd == OperandExtendedAdd) {
-            // Cache knowledge of AR NUW, which is propagated to this AddRec.
-            setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNUW);
-            // Return the expression with the addrec on the outside.
-            Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this,
-                                                             Depth + 1);
-            Step = getZeroExtendExpr(Step, Ty, Depth + 1);
-            return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
-          }
-          // Similar to above, only this time treat the step value as signed.
-          // This covers loops that count down.
-          OperandExtendedAdd =
-            getAddExpr(WideStart,
-                       getMulExpr(WideMaxBECount,
-                                  getSignExtendExpr(Step, WideTy, Depth + 1),
-                                  SCEV::FlagAnyWrap, Depth + 1),
-                       SCEV::FlagAnyWrap, Depth + 1);
-          if (ZAdd == OperandExtendedAdd) {
-            // Cache knowledge of AR NW, which is propagated to this AddRec.
-            // Negative step causes unsigned wrap, but it still can't self-wrap.
-            setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
-            // Return the expression with the addrec on the outside.
-            Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this,
-                                                             Depth + 1);
-            Step = getSignExtendExpr(Step, Ty, Depth + 1);
-            return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
-          }
-        }
-      }
-
-      // Normally, in the cases we can prove no-overflow via a
-      // backedge guarding condition, we can also compute a backedge
-      // taken count for the loop.  The exceptions are assumptions and
-      // guards present in the loop -- SCEV is not great at exploiting
-      // these to compute max backedge taken counts, but can still use
-      // these to prove lack of overflow.  Use this fact to avoid
-      // doing extra work that may not pay off.
-      if (!isa<SCEVCouldNotCompute>(MaxBECount) || HasGuards ||
-          !AC.assumptions().empty()) {
-
-        auto NewFlags = proveNoUnsignedWrapViaInduction(AR);
-        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), NewFlags);
-        if (AR->hasNoUnsignedWrap()) {
-          // Same as nuw case above - duplicated here to avoid a compile time
-          // issue.  It's not clear that the order of checks does matter, but
-          // it's one of two issue possible causes for a change which was
-          // reverted.  Be conservative for the moment.
+        if (ZAdd == OperandExtendedAdd) {
+          // Cache knowledge of AR NUW, which is propagated to this AddRec.
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNUW);
+          // Return the expression with the addrec on the outside.
           Start =
               getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
           Step = getZeroExtendExpr(Step, Ty, Depth + 1);
           return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
         }
-
-        // For a negative step, we can extend the operands iff doing so only
-        // traverses values in the range zext([0,UINT_MAX]).
-        if (isKnownNegative(Step)) {
-          const SCEV *N = getConstant(APInt::getMaxValue(BitWidth) -
-                                      getSignedRangeMin(Step));
-          if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT, AR, N) ||
-              isKnownOnEveryIteration(ICmpInst::ICMP_UGT, AR, N)) {
-            // Cache knowledge of AR NW, which is propagated to this
-            // AddRec.  Negative step causes unsigned wrap, but it
-            // still can't self-wrap.
-            setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
-            // Return the expression with the addrec on the outside.
-            Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this,
-                                                             Depth + 1);
-            Step = getSignExtendExpr(Step, Ty, Depth + 1);
-            return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
-          }
+        // Similar to above, only this time treat the step value as signed.
+        // This covers loops that count down.
+        OperandExtendedAdd =
+            getAddExpr(WideStart,
+                       getMulExpr(WideMaxBECount,
+                                  getSignExtendExpr(Step, WideTy, Depth + 1),
+                                  SCEV::FlagAnyWrap, Depth + 1),
+                       SCEV::FlagAnyWrap, Depth + 1);
+        if (ZAdd == OperandExtendedAdd) {
+          // Cache knowledge of AR NW, which is propagated to this AddRec.
+          // Negative step causes unsigned wrap, but it still can't self-wrap.
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
+          // Return the expression with the addrec on the outside.
+          Start =
+              getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
+          Step = getSignExtendExpr(Step, Ty, Depth + 1);
+          return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
         }
       }
+    }
 
-      // zext({C,+,Step}) --> (zext(D) + zext({C-D,+,Step}))<nuw><nsw>
-      // if D + (C - D + Step * n) could be proven to not unsigned wrap
-      // where D maximizes the number of trailing zeros of (C - D + Step * n)
-      if (const auto *SC = dyn_cast<SCEVConstant>(Start)) {
-        const APInt &C = SC->getAPInt();
-        const APInt &D = extractConstantWithoutWrapping(*this, C, Step);
-        if (D != 0) {
-          const SCEV *SZExtD = getZeroExtendExpr(getConstant(D), Ty, Depth);
-          const SCEV *SResidual =
-              getAddRecExpr(getConstant(C - D), Step, L, AR->getNoWrapFlags());
-          const SCEV *SZExtR = getZeroExtendExpr(SResidual, Ty, Depth + 1);
-          return getAddExpr(SZExtD, SZExtR, SCEV::FlagNSW | SCEV::FlagNUW,
-                            Depth + 1);
-        }
-      }
+    // Normally, in the cases we can prove no-overflow via a
+    // backedge guarding condition, we can also compute a backedge
+    // taken count for the loop.  The exceptions are assumptions and
+    // guards present in the loop -- SCEV is not great at exploiting
+    // these to compute max backedge taken counts, but can still use
+    // these to prove lack of overflow.  Use this fact to avoid
+    // doing extra work that may not pay off.
+    if (!isa<SCEVCouldNotCompute>(MaxBECount) || HasGuards ||
+        !AC.assumptions().empty()) {
 
-      if (proveNoWrapByVaryingStart<SCEVZeroExtendExpr>(Start, Step, L)) {
-        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNUW);
+      auto NewFlags = proveNoUnsignedWrapViaInduction(AR);
+      setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), NewFlags);
+      if (AR->hasNoUnsignedWrap()) {
+        // Same as nuw case above - duplicated here to avoid a compile time
+        // issue.  It's not clear that the order of checks does matter, but
+        // it's one of two issue possible causes for a change which was
+        // reverted.  Be conservative for the moment.
         Start =
             getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
         Step = getZeroExtendExpr(Step, Ty, Depth + 1);
         return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
       }
+
+      // For a negative step, we can extend the operands iff doing so only
+      // traverses values in the range zext([0,UINT_MAX]).
+      if (isKnownNegative(Step)) {
+        const SCEV *N =
+            getConstant(APInt::getMaxValue(BitWidth) - getSignedRangeMin(Step));
+        if (isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT, AR, N) ||
+            isKnownOnEveryIteration(ICmpInst::ICMP_UGT, AR, N)) {
+          // Cache knowledge of AR NW, which is propagated to this
+          // AddRec.  Negative step causes unsigned wrap, but it
+          // still can't self-wrap.
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
+          // Return the expression with the addrec on the outside.
+          Start =
+              getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
+          Step = getSignExtendExpr(Step, Ty, Depth + 1);
+          return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+        }
+      }
     }
+
+    // zext({C,+,Step}) --> (zext(D) + zext({C-D,+,Step}))<nuw><nsw>
+    // if D + (C - D + Step * n) could be proven to not unsigned wrap
+    // where D maximizes the number of trailing zeros of (C - D + Step * n)
+    if (const auto *SC = dyn_cast<SCEVConstant>(Start)) {
+      const APInt &C = SC->getAPInt();
+      const APInt &D = extractConstantWithoutWrapping(*this, C, Step);
+      if (D != 0) {
+        const SCEV *SZExtD = getZeroExtendExpr(getConstant(D), Ty, Depth);
+        const SCEV *SResidual =
+            getAddRecExpr(getConstant(C - D), Step, L, AR->getNoWrapFlags());
+        const SCEV *SZExtR = getZeroExtendExpr(SResidual, Ty, Depth + 1);
+        return getAddExpr(SZExtD, SZExtR, SCEV::FlagNSW | SCEV::FlagNUW,
+                          Depth + 1);
+      }
+    }
+
+    if (proveNoWrapByVaryingStart<SCEVZeroExtendExpr>(Start, Step, L)) {
+      setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNUW);
+      Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
+      Step = getZeroExtendExpr(Step, Ty, Depth + 1);
+      return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+    }
+  }
 
   // zext(A % B) --> zext(A) % zext(B)
   {
@@ -2061,15 +2058,17 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
 
   // If the operand is an affine AddRec with the no-signed-wrap flag, the
   // sign-extension distributes over the recurrence.
-  if (Depth <= MaxCastDepth)
-    if (const auto *AR = dyn_cast<SCEVAddRecExpr>(Op))
-      if (AR->isAffine() && AR->hasNoSignedWrap()) {
-        const SCEV *Start =
-            getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
-        const SCEV *Step =
-            getSignExtendExpr(AR->getStepRecurrence(*this), Ty, Depth + 1);
-        return getAddRecExpr(Start, Step, AR->getLoop(), SCEV::FlagNSW);
-      }
+  const SCEV *Start, *Step;
+  const Loop *L;
+  if (Depth <= MaxCastDepth &&
+      match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
+    const auto *AR = cast<SCEVAddRecExpr>(Op);
+    if (AR->hasNoSignedWrap()) {
+      Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
+      Step = getSignExtendExpr(Step, Ty, Depth + 1);
+      return getAddRecExpr(Start, Step, L, SCEV::FlagNSW);
+    }
+  }
 
   // Before doing any expensive analysis, check to see if we've already
   // computed a SCEV for this Op and Ty.
@@ -2138,126 +2137,120 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
   // did not overflow the old, smaller, value, we can sign extend all of the
   // operands (often constants).  This allows analysis of something like
   // this:  for (signed char X = 0; X < 100; ++X) { int Y = X; }
-  if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Op))
-    if (AR->isAffine()) {
-      const SCEV *Start = AR->getStart();
-      const SCEV *Step = AR->getStepRecurrence(*this);
-      unsigned BitWidth = getTypeSizeInBits(AR->getType());
-      const Loop *L = AR->getLoop();
+  if (match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
+    const auto *AR = cast<SCEVAddRecExpr>(Op);
+    unsigned BitWidth = getTypeSizeInBits(AR->getType());
 
-      // The no-signed-wrap case is handled before the uniquing lookup above.
+    // The no-signed-wrap case is handled before the uniquing lookup above.
 
-      // Check whether the backedge-taken count is SCEVCouldNotCompute.
-      // Note that this serves two purposes: It filters out loops that are
-      // simply not analyzable, and it covers the case where this code is
-      // being called from within backedge-taken count analysis, such that
-      // attempting to ask for the backedge-taken count would likely result
-      // in infinite recursion. In the later case, the analysis code will
-      // cope with a conservative value, and it will take care to purge
-      // that value once it has finished.
-      const SCEV *MaxBECount = getConstantMaxBackedgeTakenCount(L);
-      if (!isa<SCEVCouldNotCompute>(MaxBECount)) {
-        // Manually compute the final value for AR, checking for
-        // overflow.
+    // Check whether the backedge-taken count is SCEVCouldNotCompute.
+    // Note that this serves two purposes: It filters out loops that are
+    // simply not analyzable, and it covers the case where this code is
+    // being called from within backedge-taken count analysis, such that
+    // attempting to ask for the backedge-taken count would likely result
+    // in infinite recursion. In the later case, the analysis code will
+    // cope with a conservative value, and it will take care to purge
+    // that value once it has finished.
+    const SCEV *MaxBECount = getConstantMaxBackedgeTakenCount(L);
+    if (!isa<SCEVCouldNotCompute>(MaxBECount)) {
+      // Manually compute the final value for AR, checking for
+      // overflow.
 
-        // Check whether the backedge-taken count can be losslessly casted to
-        // the addrec's type. The count is always unsigned.
-        const SCEV *CastedMaxBECount =
-            getTruncateOrZeroExtend(MaxBECount, Start->getType(), Depth);
-        const SCEV *RecastedMaxBECount = getTruncateOrZeroExtend(
-            CastedMaxBECount, MaxBECount->getType(), Depth);
-        if (MaxBECount == RecastedMaxBECount) {
-          Type *WideTy = IntegerType::get(getContext(), BitWidth * 2);
-          // Check whether Start+Step*MaxBECount has no signed overflow.
-          const SCEV *SMul = getMulExpr(CastedMaxBECount, Step,
-                                        SCEV::FlagAnyWrap, Depth + 1);
-          const SCEV *SAdd = getSignExtendExpr(getAddExpr(Start, SMul,
-                                                          SCEV::FlagAnyWrap,
-                                                          Depth + 1),
-                                               WideTy, Depth + 1);
-          const SCEV *WideStart = getSignExtendExpr(Start, WideTy, Depth + 1);
-          const SCEV *WideMaxBECount =
+      // Check whether the backedge-taken count can be losslessly casted to
+      // the addrec's type. The count is always unsigned.
+      const SCEV *CastedMaxBECount =
+          getTruncateOrZeroExtend(MaxBECount, Start->getType(), Depth);
+      const SCEV *RecastedMaxBECount = getTruncateOrZeroExtend(
+          CastedMaxBECount, MaxBECount->getType(), Depth);
+      if (MaxBECount == RecastedMaxBECount) {
+        Type *WideTy = IntegerType::get(getContext(), BitWidth * 2);
+        // Check whether Start+Step*MaxBECount has no signed overflow.
+        const SCEV *SMul =
+            getMulExpr(CastedMaxBECount, Step, SCEV::FlagAnyWrap, Depth + 1);
+        const SCEV *SAdd = getSignExtendExpr(
+            getAddExpr(Start, SMul, SCEV::FlagAnyWrap, Depth + 1), WideTy,
+            Depth + 1);
+        const SCEV *WideStart = getSignExtendExpr(Start, WideTy, Depth + 1);
+        const SCEV *WideMaxBECount =
             getZeroExtendExpr(CastedMaxBECount, WideTy, Depth + 1);
-          const SCEV *OperandExtendedAdd =
+        const SCEV *OperandExtendedAdd =
             getAddExpr(WideStart,
                        getMulExpr(WideMaxBECount,
                                   getSignExtendExpr(Step, WideTy, Depth + 1),
                                   SCEV::FlagAnyWrap, Depth + 1),
                        SCEV::FlagAnyWrap, Depth + 1);
-          if (SAdd == OperandExtendedAdd) {
-            // Cache knowledge of AR NSW, which is propagated to this AddRec.
-            setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNSW);
-            // Return the expression with the addrec on the outside.
-            Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this,
-                                                             Depth + 1);
-            Step = getSignExtendExpr(Step, Ty, Depth + 1);
-            return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
-          }
-          // Similar to above, only this time treat the step value as unsigned.
-          // This covers loops that count up with an unsigned step.
-          OperandExtendedAdd =
+        if (SAdd == OperandExtendedAdd) {
+          // Cache knowledge of AR NSW, which is propagated to this AddRec.
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNSW);
+          // Return the expression with the addrec on the outside.
+          Start =
+              getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
+          Step = getSignExtendExpr(Step, Ty, Depth + 1);
+          return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+        }
+        // Similar to above, only this time treat the step value as unsigned.
+        // This covers loops that count up with an unsigned step.
+        OperandExtendedAdd =
             getAddExpr(WideStart,
                        getMulExpr(WideMaxBECount,
                                   getZeroExtendExpr(Step, WideTy, Depth + 1),
                                   SCEV::FlagAnyWrap, Depth + 1),
                        SCEV::FlagAnyWrap, Depth + 1);
-          if (SAdd == OperandExtendedAdd) {
-            // If AR wraps around then
-            //
-            //    abs(Step) * MaxBECount > unsigned-max(AR->getType())
-            // => SAdd != OperandExtendedAdd
-            //
-            // Thus (AR is not NW => SAdd != OperandExtendedAdd) <=>
-            // (SAdd == OperandExtendedAdd => AR is NW)
+        if (SAdd == OperandExtendedAdd) {
+          // If AR wraps around then
+          //
+          //    abs(Step) * MaxBECount > unsigned-max(AR->getType())
+          // => SAdd != OperandExtendedAdd
+          //
+          // Thus (AR is not NW => SAdd != OperandExtendedAdd) <=>
+          // (SAdd == OperandExtendedAdd => AR is NW)
 
-            setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
+          setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNW);
 
-            // Return the expression with the addrec on the outside.
-            Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this,
-                                                             Depth + 1);
-            Step = getZeroExtendExpr(Step, Ty, Depth + 1);
-            return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
-          }
+          // Return the expression with the addrec on the outside.
+          Start =
+              getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
+          Step = getZeroExtendExpr(Step, Ty, Depth + 1);
+          return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
         }
-      }
-
-      auto NewFlags = proveNoSignedWrapViaInduction(AR);
-      setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), NewFlags);
-      if (AR->hasNoSignedWrap()) {
-        // Same as nsw case above - duplicated here to avoid a compile time
-        // issue.  It's not clear that the order of checks does matter, but
-        // it's one of two issue possible causes for a change which was
-        // reverted.  Be conservative for the moment.
-        Start =
-            getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
-        Step = getSignExtendExpr(Step, Ty, Depth + 1);
-        return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
-      }
-
-      // sext({C,+,Step}) --> (sext(D) + sext({C-D,+,Step}))<nuw><nsw>
-      // if D + (C - D + Step * n) could be proven to not signed wrap
-      // where D maximizes the number of trailing zeros of (C - D + Step * n)
-      if (const auto *SC = dyn_cast<SCEVConstant>(Start)) {
-        const APInt &C = SC->getAPInt();
-        const APInt &D = extractConstantWithoutWrapping(*this, C, Step);
-        if (D != 0) {
-          const SCEV *SSExtD = getSignExtendExpr(getConstant(D), Ty, Depth);
-          const SCEV *SResidual =
-              getAddRecExpr(getConstant(C - D), Step, L, AR->getNoWrapFlags());
-          const SCEV *SSExtR = getSignExtendExpr(SResidual, Ty, Depth + 1);
-          return getAddExpr(SSExtD, SSExtR, (SCEV::FlagNSW | SCEV::FlagNUW),
-                            Depth + 1);
-        }
-      }
-
-      if (proveNoWrapByVaryingStart<SCEVSignExtendExpr>(Start, Step, L)) {
-        setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNSW);
-        Start =
-            getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
-        Step = getSignExtendExpr(Step, Ty, Depth + 1);
-        return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
       }
     }
+
+    auto NewFlags = proveNoSignedWrapViaInduction(AR);
+    setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), NewFlags);
+    if (AR->hasNoSignedWrap()) {
+      // Same as nsw case above - duplicated here to avoid a compile time
+      // issue.  It's not clear that the order of checks does matter, but
+      // it's one of two issue possible causes for a change which was
+      // reverted.  Be conservative for the moment.
+      Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
+      Step = getSignExtendExpr(Step, Ty, Depth + 1);
+      return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+    }
+
+    // sext({C,+,Step}) --> (sext(D) + sext({C-D,+,Step}))<nuw><nsw>
+    // if D + (C - D + Step * n) could be proven to not signed wrap
+    // where D maximizes the number of trailing zeros of (C - D + Step * n)
+    if (const auto *SC = dyn_cast<SCEVConstant>(Start)) {
+      const APInt &C = SC->getAPInt();
+      const APInt &D = extractConstantWithoutWrapping(*this, C, Step);
+      if (D != 0) {
+        const SCEV *SSExtD = getSignExtendExpr(getConstant(D), Ty, Depth);
+        const SCEV *SResidual =
+            getAddRecExpr(getConstant(C - D), Step, L, AR->getNoWrapFlags());
+        const SCEV *SSExtR = getSignExtendExpr(SResidual, Ty, Depth + 1);
+        return getAddExpr(SSExtD, SSExtR, (SCEV::FlagNSW | SCEV::FlagNUW),
+                          Depth + 1);
+      }
+    }
+
+    if (proveNoWrapByVaryingStart<SCEVSignExtendExpr>(Start, Step, L)) {
+      setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR), SCEV::FlagNSW);
+      Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
+      Step = getSignExtendExpr(Step, Ty, Depth + 1);
+      return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
+    }
+  }
 
   // If the input value is provably positive and we could not simplify
   // away the sext build a zext instead.
@@ -14107,14 +14100,18 @@ bool ScalarEvolution::containsErasedValue(const SCEV *S) const {
 /// Return the size of an element read or written by Inst.
 const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
   Type *Ty;
-  if (StoreInst *Store = dyn_cast<StoreInst>(Inst))
+  Type *PtrTy;
+  if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
     Ty = Store->getValueOperand()->getType();
-  else if (LoadInst *Load = dyn_cast<LoadInst>(Inst))
+    PtrTy = Store->getPointerOperandType();
+  } else if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
     Ty = Load->getType();
-  else
+    PtrTy = Load->getPointerOperandType();
+  } else {
     return nullptr;
+  }
 
-  Type *ETy = getEffectiveSCEVType(PointerType::getUnqual(Inst->getContext()));
+  Type *ETy = getEffectiveSCEVType(PtrTy);
   return getSizeOfExpr(ETy, Ty);
 }
 
@@ -16071,10 +16068,19 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
           ConstantRange::makeExactICmpRegion(Pred, C2->getAPInt())
               .sub(C1->getAPInt());
 
-      // Bail out, unless we have a non-wrapping, monotonic range.
-      if (ExactRegion.isWrappedSet() || ExactRegion.isFullSet())
-        return false;
+      // Tighten the raw range with what we already know about LHSUnknown
+      // from prior guards recorded in RewriteMap, or from SCEV's own range
+      // analysis.
       const SCEV *RewrittenLHS = GetMaybeRewritten(LHSUnknown);
+      ExactRegion = ExactRegion.intersectWith(SE.getUnsignedRange(RewrittenLHS),
+                                              ConstantRange::Unsigned);
+
+      // Bail if the guard is inconsistent with prior facts, or if the range
+      // is still not a monotonic non-wrapping interval after tightening.
+      if (ExactRegion.isEmptySet() || ExactRegion.isWrappedSet() ||
+          ExactRegion.isFullSet())
+        return false;
+
       const SCEV *RegionMin = SE.getConstant(ExactRegion.getUnsignedMin());
       const SCEV *RegionMax = SE.getConstant(ExactRegion.getUnsignedMax());
       const SCEV *ClampedLHS =

@@ -2579,7 +2579,7 @@ void CombinerHelper::applyCombineShiftToUnmerge(
   unsigned HalfSize = Size / 2;
   assert(ShiftVal >= HalfSize);
 
-  LLT HalfTy = LLT::scalar(HalfSize);
+  LLT HalfTy = Ty.changeElementSize(HalfSize);
 
   auto Unmerge = Builder.buildUnmerge(HalfTy, SrcReg);
   unsigned NarrowShiftAmt = ShiftVal - HalfSize;
@@ -8832,4 +8832,36 @@ bool CombinerHelper::matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   LLT XTy = MRI.getType(X);
   return XTy == MRI.getType(Y) && isLegal({TargetOpc, {XTy}});
+}
+
+static unsigned getCountZeroPoisonOpcode(const MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_CTLZ ||
+          MI.getOpcode() == TargetOpcode::G_CTTZ) &&
+         "Expected count-zero opcode");
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_CTLZ:
+    return TargetOpcode::G_CTLZ_ZERO_POISON;
+  case TargetOpcode::G_CTTZ:
+    return TargetOpcode::G_CTTZ_ZERO_POISON;
+  default:
+    llvm_unreachable("Unexpected count-zero opcode");
+  }
+}
+
+bool CombinerHelper::matchCountZeroToZeroPoison(MachineInstr &MI) const {
+  if (!VT)
+    return false;
+
+  unsigned ZPOpc = getCountZeroPoisonOpcode(MI);
+  Register Src = MI.getOperand(1).getReg();
+  if (!VT->isKnownNeverZero(Src))
+    return false;
+
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT SrcTy = MRI.getType(Src);
+  return isLegalOrBeforeLegalizer({ZPOpc, {DstTy, SrcTy}});
+}
+
+void CombinerHelper::applyCountZeroToZeroPoison(MachineInstr &MI) const {
+  replaceOpcodeWith(MI, getCountZeroPoisonOpcode(MI));
 }

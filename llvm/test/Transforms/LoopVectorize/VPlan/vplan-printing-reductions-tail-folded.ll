@@ -210,7 +210,7 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) ir<-9223372036854775808>, vp<[[VP10:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (find-iv) ir<-9223372036854775808>, vp<[[VP11:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
@@ -218,8 +218,8 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%gep.a>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l.a> = load vp<[[VP9]]>, vp<[[VP7]]>
 ; CHECK-NEXT:      WIDEN ir<%cmp2> = icmp eq ir<%l.a>, ir<%start>
-; CHECK-NEXT:      WIDEN ir<%cond> = select ir<%cmp2>, ir<%iv>, ir<%rdx>
-; CHECK-NEXT:      EMIT vp<[[VP10]]> = select vp<[[VP7]]>, ir<%cond>, ir<%rdx>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = logical-and vp<[[VP7]]>, ir<%cmp2>
+; CHECK-NEXT:      EMIT vp<[[VP11]]> = select vp<[[VP10]]>, ir<%iv>, ir<%rdx>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -227,13 +227,13 @@ define i64 @find_last_iv(ptr %a, i64 %n, i64 %start) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (smax) vp<[[VP10]]>
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = icmp ne vp<[[VP12]]>, ir<-9223372036854775808>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = select vp<[[VP13]]>, vp<[[VP12]]>, ir<%start>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (smax) vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = icmp ne vp<[[VP13]]>, ir<-9223372036854775808>
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = select vp<[[VP14]]>, vp<[[VP13]]>, ir<%start>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %cond.lcssa = phi i64 [ %cond, %loop ] (extra operand: vp<[[VP14]]> from middle.block)
+; CHECK-NEXT:    IR   %cond.lcssa = phi i64 [ %cond, %loop ] (extra operand: vp<[[VP15]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:

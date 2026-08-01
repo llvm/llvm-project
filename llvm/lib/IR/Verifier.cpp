@@ -1008,6 +1008,14 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             CurrentMD);
     }
 
+    // Enforce the single-operand form of llvm.loop.distribute metadata.
+    if (CurrentMD->getNumOperands() > 0 &&
+        (CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.enable") ||
+         CurrentMD->getOperand(0).equalsStr("llvm.loop.distribute.disable")))
+      Check(CurrentMD->getNumOperands() == 1,
+            "Expected one operand for llvm.loop.distribute metadata",
+            CurrentMD);
+
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
           CurrentMD);
@@ -3889,11 +3897,6 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
         "denormal_fpenv attribute may not apply to call sites", Call);
 
-  Check(!Attrs.hasFnAttr(Attribute::StrictFP) ||
-            Call.getFunction()->isStrictFP(),
-        "call site marked strictfp without caller function marked strictfp",
-        Call);
-
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
@@ -4723,30 +4726,29 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
         "atomicrmw instructions cannot be unordered.", &RMWI);
   auto Op = RMWI.getOperation();
   Type *ElTy = RMWI.getOperand(1)->getType();
-  Type *ScalarTy = ElTy;
+  Check(!ElTy->isScalableTy(), "atomicrmw operand may not be scalable", &RMWI);
   if (RMWI.isElementwise()) {
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);
-    if (VecTy)
-      ScalarTy = VecTy->getElementType();
   }
 
   if (Op == AtomicRMWInst::Xchg) {
-    Check(ScalarTy->isIntegerTy() || ScalarTy->isFloatingPointTy() ||
-              ScalarTy->isPointerTy(),
+    Check((ElTy->isIntOrIntVectorTy() || ElTy->isFPOrFPVectorTy() ||
+           ElTy->isPtrOrPtrVectorTy()),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
-              " operand must have integer or floating point type!",
+              " operand must be an integer type, a floating-point type, a "
+              "pointer type, or a fixed vector of any of these types!",
           &RMWI, ElTy);
   } else if (AtomicRMWInst::isFPOperation(Op)) {
-    Check(ElTy->isFPOrFPVectorTy() && !isa<ScalableVectorType>(ElTy),
+    Check(ElTy->isFPOrFPVectorTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have floating-point or fixed vector of "
               "floating-point "
               "type!",
           &RMWI, ElTy);
   } else {
-    Check(ElTy->isIntOrIntVectorTy() && !isa<ScalableVectorType>(ElTy),
+    Check(ElTy->isIntOrIntVectorTy(),
           "atomicrmw " + AtomicRMWInst::getOperationName(Op) +
               " operand must have integer or fixed vector of integer type!",
           &RMWI, ElTy);

@@ -8,20 +8,47 @@
 
 include "llvm/TableGen/SetTheory.td"
 
+// Dag operators for composing predicates.
+def all_of;
+def any_of;
+def not;
+
+// Composable predicate leaf expressed as a C++ boolean over an
+// `Triple TT`. Generally should check a single triple property.
+class LibcallPredicate<code cond> {
+  code Cond = cond;
+}
+
 // Predicate for whether a libcall exists for the target ABI. This is
 // a module level property that should only be computed based on the
 // triple.
-class RuntimeLibcallPredicate<code cond> {
-  // Expression of an llvm::Triple named TT for whether a libcall
+//
+// Two forms are accepted:
+//   - a raw C++ `code` condition over `Triple TT`
+//   - a `dag` of LibcallPredicate leaves combined with all_of/any_of/not,
+//     which the emitter lowers to the equivalent C++ boolean.
+// The dag form takes precedence when present.
+//
+// TODO: Remove the C++ form
+class RuntimeLibcallAvailability<code cond = [{}]> {
+  // Expression of an Triple named TT for whether a libcall
   // should exist.
   code Cond = cond;
+
+  // Composable form: (all_of/any_of/not <LibcallPredicate>...). Unset (?)
+  // means the `Cond` code form is used instead.
+  dag CondDag = ?;
+}
+
+class RuntimeLibcallAvailabilityDag<dag cond> : RuntimeLibcallAvailability<[{}]> {
+  let CondDag = cond;
 }
 
 // Predicate for whether a libcall should be used for the current
 // function/subtarget.
 class LibcallLoweringPredicate<code cond> { code Cond = cond; }
 
-def AlwaysAvailable : RuntimeLibcallPredicate<[{}]>;
+def AlwaysAvailable : RuntimeLibcallAvailability<[{}]>;
 
 class LibcallCallingConv<code CC = [{}]> {
   // Enum value for the calling convention. Empty string defaults to
@@ -65,9 +92,9 @@ class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
 }
 
 class LibcallImpls<dag funcList,
-                   RuntimeLibcallPredicate Pred = AlwaysAvailable> {
+                   RuntimeLibcallAvailability Pred = AlwaysAvailable> {
   // Function of the triple where this applies
-  RuntimeLibcallPredicate AvailabilityPredicate = Pred;
+  RuntimeLibcallAvailability AvailabilityPredicate = Pred;
   dag MemberList = funcList;
 
   // If set, applies calling convention to every entry instead of
@@ -77,19 +104,19 @@ class LibcallImpls<dag funcList,
 
 /// Convenience wrapper around LibcallImplSet to make a single libcall
 /// implementation conditionally conditionally available.
-class AvailableIf<RuntimeLibcallImpl Impl, RuntimeLibcallPredicate Pred>
+class AvailableIf<RuntimeLibcallImpl Impl, RuntimeLibcallAvailability Pred>
     : LibcallImpls<(add Impl), Pred>;
 
 class LibcallsWithCC<dag funcList, LibcallCallingConv CC,
-                     RuntimeLibcallPredicate Pred = AlwaysAvailable>
+                     RuntimeLibcallAvailability Pred = AlwaysAvailable>
     : LibcallImpls<funcList, Pred> {
   LibcallCallingConv CallingConv = CC;
 }
 
 /// Define a complete top level set of runtime libcalls for a target.
-class SystemRuntimeLibrary<RuntimeLibcallPredicate Pred, dag funcList> {
+class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
   /// Set the default calling convention assumed for RuntimeLibcallImpl members.
   LibcallCallingConv DefaultLibcallCallingConv = DefaultCC;
-  RuntimeLibcallPredicate TriplePred = Pred;
+  RuntimeLibcallAvailability TriplePred = Pred;
   LibcallImpls MemberList = LibcallImpls<funcList>;
 }

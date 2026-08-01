@@ -133,7 +133,7 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // condition. Any metadata defined on it can be control dependent on this
   // condition. Conservatively strip it here so that we don't give any wrong
   // information to the optimizer.
-  I->dropUnknownNonDebugMetadata(ProfileMetadataToPreserve);
+  I->dropUBImplyingAttrsAndUnknownMetadata(ProfileMetadataToPreserve);
 
   if (ProfileMetadataToPreserve.empty() && isa<SelectInst>(I))
     setExplicitlyUnknownBranchWeightsIfProfiled(*I, "LoopInfo");
@@ -449,32 +449,42 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
   return true;
 }
 
+// Check whether the use \p U of a value defined in block \p BB (which is part
+// of loop \p L) does not require a live-out phi, i.e. whether it is contained
+// in the loop for LCSSA purposes.
+static bool loopContainsUser(const Loop &L, const BasicBlock &BB, const Use &U,
+                             const DominatorTree &DT) {
+  const Instruction *UI = cast<Instruction>(U.getUser());
+  const BasicBlock *UserBB = UI->getParent();
+
+  // For practical purposes, we consider that the use in a PHI
+  // occurs in the respective predecessor block. For more info,
+  // see the `phi` doc in LangRef and the LCSSA doc.
+  if (const PHINode *P = dyn_cast<PHINode>(UI))
+    UserBB = P->getIncomingBlock(U);
+
+  // Check the current block, as a fast-path, before checking whether
+  // the use is anywhere in the loop.  Most values are used in the same
+  // block they are defined in.  Also, blocks not reachable from the
+  // entry are special; uses in them don't need to go through PHIs.
+  if (UserBB != &BB && !L.contains(UserBB) && DT.isReachableFromEntry(UserBB))
+    return false;
+
+  return true;
+}
+
 // Check that 'BB' doesn't have any uses outside of the 'L'
 static bool isBlockInLCSSAForm(const Loop &L, const BasicBlock &BB,
                                const DominatorTree &DT, bool IgnoreTokens) {
   for (const Instruction &I : BB) {
-    // Tokens can't be used in PHI nodes and live-out tokens prevent loop
-    // optimizations, so for the purposes of considered LCSSA form, we
-    // can ignore them.
-    if (IgnoreTokens && I.getType()->isTokenTy())
+    // Token-like values can't be used in PHI nodes and live-out token-like
+    // values prevent loop optimizations, so for the purposes of considered
+    // LCSSA form, we can ignore them.
+    if (IgnoreTokens && I.getType()->isTokenLikeTy())
       continue;
 
     for (const Use &U : I.uses()) {
-      const Instruction *UI = cast<Instruction>(U.getUser());
-      const BasicBlock *UserBB = UI->getParent();
-
-      // For practical purposes, we consider that the use in a PHI
-      // occurs in the respective predecessor block. For more info,
-      // see the `phi` doc in LangRef and the LCSSA doc.
-      if (const PHINode *P = dyn_cast<PHINode>(UI))
-        UserBB = P->getIncomingBlock(U);
-
-      // Check the current block, as a fast-path, before checking whether
-      // the use is anywhere in the loop.  Most values are used in the same
-      // block they are defined in.  Also, blocks not reachable from the
-      // entry are special; uses in them don't need to go through PHIs.
-      if (UserBB != &BB && !L.contains(UserBB) &&
-          DT.isReachableFromEntry(UserBB))
+      if (!loopContainsUser(L, BB, U, DT))
         return false;
     }
   }
@@ -969,9 +979,9 @@ void LoopInfo::erase(Loop *Unloop) {
 
 bool LoopInfo::wouldBeOutOfLoopUseRequiringLCSSA(
     const Value *V, const BasicBlock *ExitBB) const {
-  if (V->getType()->isTokenTy())
-    // We can't form PHIs of token type, so the definition of LCSSA excludes
-    // values of that type.
+  if (V->getType()->isTokenLikeTy())
+    // We can't form PHIs of token-like type, so the definition of LCSSA
+    // excludes values of that type.
     return false;
 
   const Instruction *I = dyn_cast<Instruction>(V);

@@ -299,9 +299,6 @@ T *getOpcodeDef(Register Reg, const MachineRegisterInfo &MRI) {
   return dyn_cast_or_null<T>(DefMI);
 }
 
-/// Returns an APFloat from Val converted to the appropriate size.
-LLVM_ABI APFloat getAPFloatFromSize(double Val, unsigned Size);
-
 /// Modify analysis usage so it preserves passes required for the SelectionDAG
 /// fallback.
 LLVM_ABI void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);

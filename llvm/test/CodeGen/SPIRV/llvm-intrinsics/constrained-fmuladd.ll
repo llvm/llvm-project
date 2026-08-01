@@ -10,7 +10,7 @@
 
 ; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_f32(float %a) strictfp {
+define spir_kernel void @test_f32(float %a) {
 entry:
   %r = tail call float @llvm.experimental.constrained.fmuladd.f32(
               float %a, float %a, float %a,
@@ -18,9 +18,9 @@ entry:
   ret void
 }
 
-; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
+; CHECK: OpFMul %[[#]] %[[#]] %[[#]] 
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_f64(double %a) strictfp {
+define spir_kernel void @test_f64(double %a) {
 entry:
   %r = tail call double @llvm.experimental.constrained.fmuladd.f64(
               double %a, double %a, double %a,
@@ -30,7 +30,7 @@ entry:
 
 ; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_v2f32(<2 x float> %a) strictfp {
+define spir_kernel void @test_v2f32(<2 x float> %a) {
 entry:
   %r = tail call <2 x float> @llvm.experimental.constrained.fmuladd.v2f32(
               <2 x float> %a, <2 x float> %a, <2 x float> %a,
@@ -40,7 +40,7 @@ entry:
 
 ; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_v4f32(<4 x float> %a) strictfp {
+define spir_kernel void @test_v4f32(<4 x float> %a) {
 entry:
   %r = tail call <4 x float> @llvm.experimental.constrained.fmuladd.v4f32(
               <4 x float> %a, <4 x float> %a, <4 x float> %a,
@@ -50,7 +50,7 @@ entry:
 
 ; CHECK: OpFMul %[[#]] %[[#]] %[[#]]
 ; CHECK: OpFAdd %[[#]] %[[#]] %[[#]]
-define spir_kernel void @test_v2f64(<2 x double> %a) strictfp {
+define spir_kernel void @test_v2f64(<2 x double> %a) {
 entry:
   %r = tail call <2 x double> @llvm.experimental.constrained.fmuladd.v2f64(
               <2 x double> %a, <2 x double> %a, <2 x double> %a,

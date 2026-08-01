@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GFX9
+// RUN: llvm-mc -triple=amdgpu9.00 -show-encoding %s | FileCheck %s --check-prefix=GFX9
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -filetype=obj %s | llvm-objdump -d --mcpu=gfx900 - | FileCheck %s --check-prefix=BIN
 
 loop_start:

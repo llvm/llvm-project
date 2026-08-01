@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -34,6 +35,9 @@ using namespace mlir::acc;
 class OpenACCUtilsCGTest : public ::testing::Test {
 protected:
   OpenACCUtilsCGTest() : b(&context), loc(UnknownLoc::get(&context)) {
+    DialectRegistry registry;
+    arith::registerValueBoundsOpInterfaceExternalModels(registry);
+    context.appendDialectRegistry(registry);
     context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                         func::FuncDialect, scf::SCFDialect, gpu::GPUDialect,
                         memref::MemRefDialect, DLTIDialect>();
@@ -42,11 +46,13 @@ protected:
   static ComputeRegionOp buildComputeRegionWithPrivateLocal(
       MLIRContext &context, OpBuilder &b, Location loc, ModuleOp module,
       GPUParallelDimsAttr privatizeParDims, ValueRange launchArgs,
-      PrivateLocalOp &privateLocalOut, PrivatizeOp &privatizeOut) {
+      PrivateLocalOp &privateLocalOut, PrivatizeOp &privatizeOut,
+      MemRefType memTy = {}, bool addReductionAccumulator = false) {
     IRRewriter rewriter(&context);
     rewriter.setInsertionPointToStart(module.getBody());
 
-    MemRefType memTy = MemRefType::get({4}, b.getI32Type());
+    if (!memTy)
+      memTy = MemRefType::get({4}, b.getI32Type());
     Type privateTy = PrivateType::get(&context, memTy);
     privatizeOut = PrivatizeOp::create(rewriter, loc, privateTy, ValueRange{},
                                        privatizeParDims);
@@ -71,7 +77,20 @@ protected:
       setParDimsAttr(par, GPUParallelDimsAttr::get(&context, {parDim}));
       srcBuilder.setInsertionPoint(par.getBody()->getTerminator());
     }
-    PrivateLocalOp::create(srcBuilder, loc, memTy, privArg);
+    PrivateLocalOp privateLocal =
+        PrivateLocalOp::create(srcBuilder, loc, memTy, privArg);
+    if (addReductionAccumulator) {
+      Value partial =
+          arith::ConstantIntOp::create(srcBuilder, loc, b.getI32Type(), 1);
+      SmallVector<GPUParallelDimAttr> reductionDims;
+      for (GPUParallelDimAttr parDim : privatizeParDims.getArray())
+        if (!parDim.isAnyBlock())
+          reductionDims.push_back(parDim);
+      ReductionAccumulateOp::create(
+          srcBuilder, loc, partial, privateLocal.getResult(),
+          ReductionOperator::AccAdd,
+          GPUParallelDimsAttr::get(&context, reductionDims));
+    }
 
     IRMapping mapping;
     auto cr = buildComputeRegion(
@@ -748,8 +767,37 @@ TEST_F(OpenACCUtilsCGTest,
   EXPECT_TRUE(*isCandidate);
 }
 
+TEST_F(OpenACCUtilsCGTest, getSharedMemoryBytesGangWorkerReductionAccumulator) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  b.setInsertionPointToStart(module->getBody());
+  GPUParallelDimsAttr gangWorkerDims = GPUParallelDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context),
+                 GPUParallelDimAttr::threadYDim(&context)});
+  auto c2 = arith::ConstantIndexOp::create(b, loc, 2);
+  auto c4 = arith::ConstantIndexOp::create(b, loc, 4);
+  auto bx =
+      ParWidthOp::create(b, loc, c2, GPUParallelDimAttr::blockXDim(&context));
+  auto ty =
+      ParWidthOp::create(b, loc, c4, GPUParallelDimAttr::threadYDim(&context));
+
+  PrivateLocalOp privateLocal;
+  PrivatizeOp privatize;
+  MemRefType scalarTy = MemRefType::get({}, b.getI32Type());
+  auto cr = buildComputeRegionWithPrivateLocal(
+      context, b, loc, *module, gangWorkerDims,
+      ValueRange{bx.getResult(), ty.getResult()}, privateLocal, privatize,
+      scalarTy, /*addReductionAccumulator=*/true);
+
+  DefaultACCToGPUMappingPolicy policy;
+  std::optional<int64_t> upperBound =
+      getPrivateLocalSharedMemoryUpperBoundBytes(privateLocal, cr, *module,
+                                                 policy);
+  ASSERT_TRUE(upperBound.has_value());
+  EXPECT_EQ(*upperBound, 16);
+}
+
 TEST_F(OpenACCUtilsCGTest,
-       isPrivateLocalSharedMemoryCandidateWorkerPrivateDynamicFails) {
+       isPrivateLocalSharedMemoryCandidateWorkerPrivateFoldableExpression) {
   OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
   b.setInsertionPointToStart(module->getBody());
   GPUParallelDimsAttr workerDims = GPUParallelDimsAttr::get(
@@ -757,8 +805,7 @@ TEST_F(OpenACCUtilsCGTest,
   auto c1 = arith::ConstantIndexOp::create(b, loc, 1);
   auto bx =
       ParWidthOp::create(b, loc, c1, GPUParallelDimAttr::blockXDim(&context));
-  // A non-constant num_workers: the launch operand exists but is not an
-  // arith.constant, which is what triggers the diagnostic / failure path.
+  // num_workers is not a constant op but has an exact constant bound.
   auto dynNumWorkers = arith::AddIOp::create(b, loc, c1, c1);
   auto ty = ParWidthOp::create(b, loc, dynNumWorkers,
                                GPUParallelDimAttr::threadYDim(&context));
@@ -774,11 +821,18 @@ TEST_F(OpenACCUtilsCGTest,
   FailureOr<bool> silent =
       isPrivateLocalSharedMemoryCandidate(privateLocal, cr, *module, policy);
   ASSERT_TRUE(succeeded(silent));
-  EXPECT_FALSE(*silent);
+  EXPECT_TRUE(*silent);
 
   FailureOr<bool> diagnosed = isPrivateLocalSharedMemoryCandidate(
       privateLocal, cr, *module, policy, &support);
-  EXPECT_TRUE(failed(diagnosed));
+  ASSERT_TRUE(succeeded(diagnosed));
+  EXPECT_TRUE(*diagnosed);
+
+  std::optional<int64_t> upperBound =
+      getPrivateLocalSharedMemoryUpperBoundBytes(privateLocal, cr, *module,
+                                                 policy);
+  ASSERT_TRUE(upperBound.has_value());
+  EXPECT_EQ(*upperBound, 32);
 }
 
 TEST_F(OpenACCUtilsCGTest, getPrivateLocalSharedMemoryUpperBoundBytes) {

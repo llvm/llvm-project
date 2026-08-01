@@ -411,7 +411,7 @@ define void @t7_nomerge0() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN1]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:            to label %[[INVOKE_CONT2:.*]] unwind label %[[LPAD]]
 ; CHECK:       [[INVOKE_CONT2]]:
 ; CHECK-NEXT:    unreachable
@@ -454,7 +454,7 @@ define void @t8_nomerge1() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN0:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN0]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2]]
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR1]]
 ; CHECK-NEXT:            to label %[[INVOKE_CONT0:.*]] unwind label %[[LPAD:.*]]
 ; CHECK:       [[INVOKE_CONT0]]:
 ; CHECK-NEXT:    unreachable
@@ -510,7 +510,7 @@ define void @t9_nomerge2() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN0:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN0]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2]]
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR1]]
 ; CHECK-NEXT:            to label %[[INVOKE_CONT0:.*]] unwind label %[[LPAD:.*]]
 ; CHECK:       [[INVOKE_CONT0]]:
 ; CHECK-NEXT:    unreachable
@@ -523,7 +523,7 @@ define void @t9_nomerge2() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1:.*]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN1]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2]]
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR1]]
 ; CHECK-NEXT:            to label %[[INVOKE_CONT2:.*]] unwind label %[[LPAD]]
 ; CHECK:       [[INVOKE_CONT2]]:
 ; CHECK-NEXT:    unreachable
@@ -1075,7 +1075,7 @@ define void @t17_mismatched_attrs_okay_merge_intersect() personality ptr @__gxx_
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1_INVOKE]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN1_INVOKE]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:            to label %[[IF_THEN1_CONT:.*]] unwind label %[[LPAD]]
 ; CHECK:       [[IF_THEN1_CONT]]:
 ; CHECK-NEXT:    unreachable
@@ -1127,7 +1127,7 @@ define void @t17_mismatched_attrs_okay_merge_intersect2() personality ptr @__gxx
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1_INVOKE]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN1_INVOKE]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR3]]
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2]]
 ; CHECK-NEXT:            to label %[[IF_THEN1_CONT:.*]] unwind label %[[LPAD]]
 ; CHECK:       [[IF_THEN1_CONT]]:
 ; CHECK-NEXT:    unreachable
@@ -1166,15 +1166,13 @@ if.end:
 }
 
 
-define void @t17_mismatched_attrs_prevent_merge() strictfp personality ptr @__gxx_personality_v0 {
-; CHECK: Function Attrs: strictfp
-; CHECK-LABEL: define void @t17_mismatched_attrs_prevent_merge(
-; CHECK-SAME: ) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
+define void @t17_mismatched_attrs_prevent_merge() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define void @t17_mismatched_attrs_prevent_merge() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C0:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C0]], label %[[IF_THEN0:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN0]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR0]]
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:            to label %[[INVOKE_CONT0:.*]] unwind label %[[LPAD:.*]]
 ; CHECK:       [[INVOKE_CONT0]]:
 ; CHECK-NEXT:    unreachable
@@ -1241,7 +1239,7 @@ define void @t18_attributes_are_preserved() personality ptr @__gxx_personality_v
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label %[[IF_THEN1_INVOKE]], label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN1_INVOKE]]:
-; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR3]]
+; CHECK-NEXT:    invoke void @simple_throw() #[[ATTR2]]
 ; CHECK-NEXT:            to label %[[IF_THEN1_CONT:.*]] unwind label %[[LPAD]]
 ; CHECK:       [[IF_THEN1_CONT]]:
 ; CHECK-NEXT:    unreachable
@@ -2677,8 +2675,8 @@ declare void @consume(i32)
 
 declare dso_local i32 @__gxx_personality_v0(...)
 ;.
-; CHECK: attributes #[[ATTR0]] = { strictfp }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { noreturn }
-; CHECK: attributes #[[ATTR2]] = { nomerge }
-; CHECK: attributes #[[ATTR3]] = { memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { noreturn }
+; CHECK: attributes #[[ATTR1]] = { nomerge }
+; CHECK: attributes #[[ATTR2]] = { memory(none) }
+; CHECK: attributes #[[ATTR3]] = { strictfp }
 ;.

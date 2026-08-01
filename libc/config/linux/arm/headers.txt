@@ -3,10 +3,12 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.complex
     libc.include.cpio
     libc.include.ctype
+    libc.include.err
     libc.include.errno
     libc.include.fenv
     libc.include.float
     libc.include.inttypes
+    libc.include.langinfo
     libc.include.libgen
     libc.include.malloc
     libc.include.math

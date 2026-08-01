@@ -3397,7 +3397,7 @@ void populateIRCore(nb::module_ &m) {
           "Alias for `dialects`.")
       .def(
           "get_dialect_descriptor",
-          [=](PyMlirContext &self, std::string &name) {
+          [](PyMlirContext &self, std::string &name) {
             MlirDialect dialect = mlirContextGetOrLoadDialect(
                 self.get(), {name.data(), name.size()});
             if (mlirDialectIsNull(dialect)) {
@@ -3408,6 +3408,14 @@ void populateIRCore(nb::module_ &m) {
           },
           "dialect_name"_a,
           "Gets or loads a dialect by name, returning its descriptor object.")
+      .def(
+          "is_dialect_loaded",
+          [](PyMlirContext &self, std::string &name) {
+            MlirDialect dialect = mlirContextGetLoadedDialect(
+                self.get(), {name.data(), name.size()});
+            return !mlirDialectIsNull(dialect);
+          },
+          "dialect_name"_a, "Checks if a dialect is loaded in the context.")
       .def_prop_rw(
           "allow_unregistered_dialects",
           [](PyMlirContext &self) -> bool {
@@ -3537,7 +3545,7 @@ void populateIRCore(nb::module_ &m) {
   nb::class_<PyDialects>(m, "Dialects")
       .def(
           "__getitem__",
-          [=](PyDialects &self, std::string keyName) {
+          [](PyDialects &self, std::string keyName) {
             MlirDialect dialect =
                 self.getDialectForKey(keyName, /*attrError=*/false);
             nb::object descriptor =
@@ -3547,7 +3555,7 @@ void populateIRCore(nb::module_ &m) {
           "Gets a dialect by name using subscript notation.")
       .def(
           "__getattr__",
-          [=](PyDialects &self, std::string attrName) {
+          [](PyDialects &self, std::string attrName) {
             MlirDialect dialect =
                 self.getDialectForKey(attrName, /*attrError=*/true);
             nb::object descriptor =

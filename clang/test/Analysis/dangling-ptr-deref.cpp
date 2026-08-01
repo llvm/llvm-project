@@ -84,3 +84,31 @@ void test_case_seven() {
   // expected-warning@-1 {{Use of 'i' after its lifetime ended}}
   // expected-note@-2    {{Use of 'i' after its lifetime ended}}
 }
+
+void passing_dangling_ptr_to_opaque_func() {
+  int *ptr = nullptr;
+  {
+    int num = 5;
+    ptr = &num;
+  }
+  // expected-note@-1 {{'num' is destroyed here}}
+  escape(ptr);
+  // expected-warning@-1 {{Use of 'num' after its lifetime ended}}
+  // expected-note@-2    {{Use of 'num' after its lifetime ended}}
+}
+
+int deref_param(int *p) { return *p; }
+// expected-warning@-1 {{Use of 'num' after its lifetime ended}}
+// expected-note@-2    {{Use of 'num' after its lifetime ended}}
+
+void inlined_callee_single_report() {
+  int *ptr = nullptr;
+  {
+    int num = 5;
+    ptr = &num;
+  }
+  // expected-note@-1 {{'num' is destroyed here}}
+  int r = deref_param(ptr);
+  // expected-note@-1 {{Calling 'deref_param'}}
+  (void)r;
+}

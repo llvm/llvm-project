@@ -188,7 +188,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    ret void
 //
 //
-// STRICTFP: Function Attrs: convergent nounwind strictfp
+// STRICTFP: Function Attrs: convergent nounwind
 // STRICTFP-LABEL: define spir_kernel void @__device_side_enqueue_block_invoke_kernel(
 // STRICTFP-SAME: ptr addrspace(4) [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] {
 // STRICTFP-NEXT:  [[ENTRY:.*:]]
@@ -207,7 +207,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 // STRICTFP: attributes #[[ATTR2]] = { convergent noinline nounwind optnone strictfp "stack-protector-buffer-size"="8" }
 // STRICTFP: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
-// STRICTFP: attributes #[[ATTR4]] = { convergent nounwind strictfp "stack-protector-buffer-size"="8" }
+// STRICTFP: attributes #[[ATTR4]] = { convergent nounwind "stack-protector-buffer-size"="8" }
 // STRICTFP: attributes #[[ATTR5]] = { convergent nounwind strictfp }
 // STRICTFP: attributes #[[ATTR6]] = { strictfp }
 //.
