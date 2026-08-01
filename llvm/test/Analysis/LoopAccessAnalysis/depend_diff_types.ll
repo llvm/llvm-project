@@ -187,6 +187,45 @@ exit:
   ret void
 }
 
+; In the following test, dependence distance is possibly zero,
+; but this is not equivalent to the condition known-non-positive
+; and known-non-negative.
+
+define void @possibly_zero_dist_diff_typesz(ptr %p) {
+; CHECK-LABEL: 'possibly_zero_dist_diff_typesz'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %ld.p = load i32, ptr %gep.p.iv.i32, align 1 ->
+; CHECK-NEXT:            store i16 %trunc, ptr %gep.p.iv.i16, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.p.iv.i32 = getelementptr inbounds nuw i32, ptr %p, i16 %iv
+  %ld.p = load i32, ptr %gep.p.iv.i32, align 1
+  %trunc = trunc i32 %ld.p to i16
+  %gep.p.iv.i16 = getelementptr inbounds nuw i16, ptr %p, i16 %iv
+  store i16 %trunc, ptr %gep.p.iv.i16, align 1
+  %iv.next = add nuw nsw i16 %iv, 1
+  %exit.cond = icmp eq i16 %iv.next, 32
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ; In the following test, the sink is loop-invariant.
 
 define void @type_size_equivalence_sink_loopinv(ptr nocapture %vec, i64 %n) {
@@ -281,9 +320,9 @@ define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_strided_accesses_independent'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Backward:
 ; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
 ; CHECK-NEXT:            store i32 1, ptr %gep.4.iv, align 4
 ; CHECK-EMPTY:
@@ -330,9 +369,9 @@ define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_strided_accesses_dependent'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Backward loop carried data dependence.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Backward:
 ; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
 ; CHECK-NEXT:            store i64 1, ptr %gep.3.iv, align 4
 ; CHECK-EMPTY:
@@ -405,15 +444,12 @@ exit:
 ; Source type-size differs from that of the sink, but when
 ; determining backward dependence, only the source size
 ; is relevant.
-; TODO: Relax the HasSameSize check; this test should report
-; BackwardVectorizable.
 define void @different_type_sizes_source_size_backwardvectorizible(ptr %dst) {
 ; CHECK-LABEL: 'different_type_sizes_source_size_backwardvectorizible'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 16 bits
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
 ; CHECK-NEXT:            store i32 1, ptr %gep.10.iv, align 4
 ; CHECK-EMPTY:
