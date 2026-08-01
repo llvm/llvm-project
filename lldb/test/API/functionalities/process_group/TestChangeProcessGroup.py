@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no fork()/setpgid() on WebAssembly
+@requireNotWasm  # no fork()/setpgid() on WebAssembly
 class ChangeProcessGroupTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -19,7 +19,7 @@ class ChangeProcessGroupTestCase(TestBase):
         self.line = line_number("main.c", "// Set breakpoint here")
 
     @skipIfFreeBSD  # Times out on FreeBSD llvm.org/pr23731
-    @skipIfWindows  # setpgid call does not exist on Windows
+    @requirePOSIX  # setpgid call does not exist on Windows
     @expectedFailureAndroid("http://llvm.org/pr23762", api_levels=[16])
     @expectedFailureNetBSD
     @skipIftvOS  # fork not available on tvOS.
