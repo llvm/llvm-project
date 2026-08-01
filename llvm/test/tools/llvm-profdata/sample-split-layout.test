@@ -1,6 +1,18 @@
+# Verify the legacy split layout round trip.
 RUN: llvm-profdata merge --sample --extbinary --split-layout %p/Inputs/sample-profile.proftext -o %t-output
-
 RUN: llvm-profdata merge --sample --text --split-layout %t-output | FileCheck %s
+
+# Verify that typified split layout writes and reads both contextual and flat
+# profile/offset section pairs.
+RUN: llvm-profdata merge --sample --extbinary --split-layout --extbinary-force-typified-prof %p/Inputs/sample-profile.proftext -o %t-typified
+RUN: llvm-profdata show --sample --show-sec-info-only %t-typified | FileCheck %s --check-prefix=TYPIFIED
+RUN: llvm-profdata merge --sample --text --split-layout %t-typified | FileCheck %s
+
+TYPIFIED: TypifiedFuncOffsetTableSection {{.*}} Flags: {}
+TYPIFIED-NEXT: TypifiedProfileSection {{.*}} Flags: {}
+TYPIFIED-NEXT: TypifiedFuncOffsetTableSection {{.*}} Flags: {flat}
+TYPIFIED-NEXT: TypifiedProfileSection {{.*}} Flags: {flat}
+
 CHECK: main:184019:0
 CHECK-NEXT:  4: 534
 CHECK-NEXT:  4.2: 534

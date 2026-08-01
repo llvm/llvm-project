@@ -1,0 +1,14 @@
+; Verify that inspection reports multiple blocks and that the reader skips an
+; unknown block before an LBR block without losing the known payload.
+; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/typified-multiple-blocks.proftext -o %t.single
+; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.single %t.multiple prepended-unknown
+; RUN: llvm-profdata show --sample --show-typified-info-only %t.multiple | FileCheck %s
+; RUN: llvm-profdata merge --sample --text %t.multiple -o - | FileCheck %s --check-prefix=PROFILE --match-full-lines --strict-whitespace
+
+; CHECK: Function: foo
+; CHECK-NEXT:   Profile blocks: 2
+; CHECK-NEXT:   Type: 127 (unknown), Payload size: 1
+; CHECK-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}
+
+; PROFILE:foo:10:1
+; PROFILE-NEXT: 0: 10

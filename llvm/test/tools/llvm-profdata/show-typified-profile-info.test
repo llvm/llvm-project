@@ -1,0 +1,31 @@
+; Verify typified inspection for known, nested, unknown, and empty blocks, and
+; verify that requesting it for a legacy profile produces a warning.
+; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/sample-flatten-profile.proftext -o %t.typified
+; RUN: llvm-profdata show --sample --show-typified-info-only %t.typified | FileCheck %s --check-prefix=KNOWN
+
+; KNOWN: Function: baz
+; KNOWN-NEXT:   Profile blocks: 1
+; KNOWN-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}
+; KNOWN: Nested function: foo
+; KNOWN-NEXT:   Profile blocks: 1
+; KNOWN-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}
+
+; Verify that the two structure-only display modes cannot be requested together.
+; RUN: not llvm-profdata show --sample --show-sec-info-only --show-typified-info-only %t.typified 2>&1 | FileCheck %s --check-prefix=BOTH
+
+; BOTH: error: -show-sec-info-only and -show-typified-info-only cannot be used together
+
+; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.typified %t.empty empty-section
+; RUN: llvm-profdata show --sample --show-typified-info-only %t.empty 2>&1 | count 0
+
+; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.typified %t.unknown unknown
+; RUN: llvm-profdata show --sample --show-typified-info-only %t.unknown | FileCheck %s --check-prefix=UNKNOWN
+
+; UNKNOWN: Function: baz
+; UNKNOWN-NEXT:   Profile blocks: 1
+; UNKNOWN-NEXT:   Type: 127 (unknown), Payload size: {{[1-9][0-9]*}}
+
+; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-flatten-profile.proftext -o %t.legacy
+; RUN: llvm-profdata show --sample --show-typified-info-only %t.legacy 2>&1 | FileCheck %s --check-prefix=LEGACY
+
+; LEGACY: warning: -show-typified-info-only is only supported for typified sample profiles and is ignored for other formats.

@@ -1,0 +1,8 @@
+; Verify that typified LBR blocks preserve nonzero head and total samples when
+; their body sample maps are empty.
+; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/sample-typified-empty-lbr.proftext -o %t.prof
+; RUN: llvm-profdata merge --sample --text %t.prof -o - | FileCheck %s --match-full-lines --strict-whitespace
+
+; CHECK:top:42:7
+; CHECK-NEXT:caller:21:3
+; CHECK-NEXT: 1: callee:11

@@ -183,8 +183,17 @@ static inline std::string getSecName(SecType Type) {
   }
 }
 
-// Types of sample profile which can be placed in SecTypifiedProfile
+// Types of sample profiles that can be placed in SecTypifiedProfile.
 enum ProfTypes { ProfTypeLBR = 0, ProfTypeNum };
+
+static inline StringRef getProfTypeName(uint64_t Type) {
+  switch (Type) {
+  case ProfTypeLBR:
+    return "LBR";
+  default:
+    return "unknown";
+  }
+}
 
 // Entry type of section header table used by SampleProfileExtBinaryBaseReader
 // and SampleProfileExtBinaryBaseWriter.
@@ -287,6 +296,7 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
     break;
   default:
   case SecFuncOffsetTable:
+  case SecTypifiedFuncOffsetTable:
     IsFlagLegal = std::is_same<SecFuncOffsetFlags, SecFlagType>();
     break;
   }

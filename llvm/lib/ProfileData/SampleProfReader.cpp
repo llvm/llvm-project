@@ -35,6 +35,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -785,28 +786,45 @@ SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile,
   auto ProfNum = readNumber<uint64_t>();
   if (std::error_code EC = ProfNum.getError())
     return EC;
+  if (ProfileTypeInfoOS)
+    *ProfileTypeInfoOS << (IsNested ? "Nested function: " : "Function: ")
+                       << FProfile.getContext().toString()
+                       << "\n  Profile blocks: " << *ProfNum << "\n";
 
-  // read specified number of typified profiles
+  // Read the specified number of typified profiles.
   for (uint64_t i = 0; i < *ProfNum; i++) {
     auto Type = readNumber<uint64_t>();
     if (std::error_code EC = Type.getError())
       return EC;
-    auto Size = readUnencodedNumber<uint64_t>();
+    auto Size = readNumber<uint64_t>();
     if (std::error_code EC = Size.getError())
       return EC;
+    if (ProfileTypeInfoOS)
+      *ProfileTypeInfoOS << "  Type: " << *Type << " ("
+                         << getProfTypeName(*Type)
+                         << "), Payload size: " << *Size << "\n";
+    if (*Size > static_cast<uint64_t>(End - Data))
+      return sampleprof_error::truncated;
 
+    const uint8_t *PayloadEnd = Data + *Size;
+    std::error_code EC = sampleprof_error::success;
+    // Restrict field readers to the current payload so they reject fields that
+    // extend into the following payload.
+    SaveAndRestore<const uint8_t *> RestoreEnd(End, PayloadEnd);
     switch (*Type) {
     case ProfTypeLBR:
-      if (std::error_code EC = readLBRProfile(FProfile, IsNested))
-        return EC;
+      EC = readLBRProfile(FProfile, IsNested);
       break;
     default:
-      // skip unknown profile type for forward compatibility
-      Data += *Size;
-      if (Data > End)
-        return sampleprof_error::truncated;
+      // Skip unknown profile types for forward compatibility.
+      Data = PayloadEnd;
       break;
     }
+
+    if (EC)
+      return EC;
+    if (Data != PayloadEnd)
+      return sampleprof_error::malformed;
   }
 
   return sampleprof_error::success;
@@ -945,7 +963,6 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
   case SecLBRProfile:
   case SecTypifiedProfile:
     ProfileSecRange = std::make_pair(Data, End);
-    IsProfileTypified = Entry.Type == SecTypifiedProfile;
     if (std::error_code EC = readFuncProfiles())
       return EC;
     break;
@@ -1266,6 +1283,9 @@ std::error_code SampleProfileReaderExtBinaryBase::readImpl() {
       reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
 
   for (auto &Entry : SecHdrTable) {
+    if (Entry.Type == SecTypifiedProfile)
+      IsProfileTypified = true;
+
     // Skip empty section.
     if (!Entry.Size)
       continue;
@@ -1728,6 +1748,7 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("fs-discriminator,");
     break;
   case SecFuncOffsetTable:
+  case SecTypifiedFuncOffsetTable:
     if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered))
       Flags.append("ordered,");
     break;

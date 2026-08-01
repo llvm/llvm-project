@@ -1,0 +1,6 @@
+; Verify that a typified LBR block preserves a nonzero head count when its total
+; count and body sample map are empty.
+; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/typified-head-only.proftext -o %t.prof
+; RUN: llvm-profdata merge --sample --text %t.prof -o - | FileCheck %s --match-full-lines --strict-whitespace
+
+; CHECK:head-only:0:7

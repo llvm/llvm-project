@@ -28,10 +28,14 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
+#include <limits>
 #include <memory>
 #include <system_error>
 #include <utility>
@@ -46,6 +50,12 @@ using namespace sampleprof;
 static cl::opt<bool> ExtBinaryWriteVTableTypeProf(
     "extbinary-write-vtable-type-prof", cl::init(false), cl::Hidden,
     cl::desc("Write vtable type profile in ext-binary sample profile writer"));
+
+static cl::opt<uint64_t> ExtBinaryProfileTypeBufferLimit(
+    "extbinary-profile-type-buffer-limit", cl::init(64ULL * 1024 * 1024),
+    cl::Hidden,
+    cl::desc("Maximum number of typified payload bytes to retain in the "
+             "dynamic buffer"));
 
 static cl::opt<uint64_t> RequestedVersion(
     "sample-profile-format-version", cl::init(DefaultVersion), cl::Hidden,
@@ -190,7 +200,7 @@ SampleProfileWriterExtBinaryBase::markSectionStart(SecType Type,
   assert(LayoutIdx < SectionHdrLayout.size() && "LayoutIdx out of range");
   const auto &Entry = SectionHdrLayout[LayoutIdx];
   assert(Entry.Type == Type && "Unexpected section type");
-  // Use LocalBuf as a temporary output for writting data.
+  // Use LocalBuf as a temporary output for writing data.
   if (hasSecFlag(Entry, SecCommonFlags::SecFlagCompress))
     LocalBufStream.swap(OutputStream);
   return SectionStart;
@@ -201,7 +211,7 @@ std::error_code SampleProfileWriterExtBinaryBase::compressAndOutput() {
     return sampleprof_error::zlib_unavailable;
   std::string &UncompressedStrings =
       static_cast<raw_string_ostream *>(LocalBufStream.get())->str();
-  if (UncompressedStrings.size() == 0)
+  if (UncompressedStrings.empty())
     return sampleprof_error::success;
   auto &OS = *OutputStream;
   SmallVector<uint8_t, 128> CompressedStrings;
@@ -282,7 +292,8 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   return writeBody(S, false);
 }
 
-std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
+std::error_code
+SampleProfileWriterExtBinaryBase::writeFuncOffsetTable(SecType Type) {
   auto &OS = *OutputStream;
 
   // Write out the table size.
@@ -306,7 +317,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeFuncOffsetTable() {
       if (std::error_code EC = WriteItem(Entry.first, Entry.second))
         return EC;
     }
-    addSectionFlag(SecFuncOffsetTable, SecFuncOffsetFlags::SecFlagOrdered);
+    addSectionFlag(Type, SecFuncOffsetFlags::SecFlagOrdered);
   } else {
     for (const auto &Entry : FuncOffsetTable) {
       if (std::error_code EC = WriteItem(Entry.first, Entry.second))
@@ -614,7 +625,7 @@ std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     break;
   case SecFuncOffsetTable:
   case SecTypifiedFuncOffsetTable:
-    if (auto EC = writeFuncOffsetTable())
+    if (auto EC = writeFuncOffsetTable(Type))
       return EC;
     break;
   case SecFuncMetadata:
@@ -707,22 +718,21 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
 
 void SampleProfileWriterExtBinary::configureTypifiedProfile(
     const SampleProfileMap &ProfileMap) {
-  if (!ExtBinaryForceTypifiedProf && !ProfileMap.hasNonLBRProfile()) {
-    WriteTypifiedProf = false;
-    ProfSection = SecLBRProfile;
-    FuncOffsetSection = SecFuncOffsetTable;
-    return;
-  }
-  // Use typified profile sections: directly change the section types
-  // to avoid duplicating the whole layout and its handling.
-  WriteTypifiedProf = true;
-  FuncOffsetSection = SecTypifiedFuncOffsetTable;
-  ProfSection = SecTypifiedProfile;
+  WriteTypifiedProf =
+      ExtBinaryForceTypifiedProf || ProfileMap.hasNonLBRProfile();
+  ProfSection = WriteTypifiedProf ? SecTypifiedProfile : SecLBRProfile;
+  FuncOffsetSection =
+      WriteTypifiedProf ? SecTypifiedFuncOffsetTable : SecFuncOffsetTable;
+
+  // Change the section types in place to avoid duplicating the whole layout and
+  // its handling. Rewrite both legacy and typified entries so repeated writes
+  // can switch formats without losing configured flags.
   for (auto &Entry : SectionHdrLayout) {
-    if (Entry.Type == SecFuncOffsetTable)
-      Entry.Type = SecTypifiedFuncOffsetTable;
-    else if (Entry.Type == SecLBRProfile)
-      Entry.Type = SecTypifiedProfile;
+    if (Entry.Type == SecFuncOffsetTable ||
+        Entry.Type == SecTypifiedFuncOffsetTable)
+      Entry.Type = FuncOffsetSection;
+    else if (Entry.Type == SecLBRProfile || Entry.Type == SecTypifiedProfile)
+      Entry.Type = ProfSection;
   }
 }
 
@@ -1044,8 +1054,9 @@ std::error_code SampleProfileWriterBinary::writeSummary() {
   return sampleprof_error::success;
 }
 
-void SampleProfileWriterBinary::writeLBRProfile(const FunctionSamples &S,
-                                                bool IsNested) {
+std::error_code
+SampleProfileWriterBinary::writeLBRProfile(const FunctionSamples &S,
+                                           bool IsNested) {
   auto &OS = *OutputStream;
   if (WriteTypifiedProf && !IsNested)
     encodeULEB128(S.getHeadSamples(), OS);
@@ -1055,43 +1066,189 @@ void SampleProfileWriterBinary::writeLBRProfile(const FunctionSamples &S,
     LineLocation Loc = I.first;
     const SampleRecord &Sample = I.second;
     Loc.serialize(OS);
-    Sample.serialize(OS, getNameTable());
+    if (std::error_code EC = Sample.serialize(OS, getNameTable()))
+      return EC;
   }
+  return sampleprof_error::success;
 }
 
-std::pair<uint64_t, uint64_t>
-SampleProfileWriterBinary::startProfileType(ProfTypes Type) {
+namespace {
+
+/// A reusable stream that always counts payload bytes and retains them in one
+/// dynamic buffer while their total size does not exceed a configured limit.
+/// The limit bounds the retained dynamic capacity, not the process RSS or the
+/// transient allocation peak: growth temporarily keeps the old and replacement
+/// buffers alive together, and the fixed front buffer is separate. On overflow,
+/// the stream discards retained bytes and stops storing subsequent writes, but
+/// continues counting the complete payload size.
+class BoundedBufferingStream final : public raw_ostream {
+  static constexpr size_t InitialBufferSize = 4096;
+
+public:
+  /// Create a stream whose retained dynamic capacity cannot exceed
+  /// \p BufferLimit.
+  explicit BoundedBufferingStream(uint64_t BufferLimit)
+      : BufferLimit(static_cast<size_t>(std::min<uint64_t>(
+            BufferLimit, std::numeric_limits<size_t>::max()))) {
+    SetBuffer(FrontBuffer, sizeof(FrontBuffer));
+  }
+
+  /// Prepare the stream to count and, if possible, retain another payload.
+  void resetPayload() {
+    assert(GetNumBytesInBuffer() == 0 && "front buffer is not empty");
+    BufferSize = 0;
+    PayloadSize = 0;
+    Overflowed = false;
+  }
+
+  /// Flush the front buffer so the final size and buffered payload are visible.
+  void finishPayload() {
+    // payload() cannot see bytes still held in raw_ostream's front buffer.
+    flush();
+  }
+
+  /// Return whether the payload exceeded the dynamic buffer limit.
+  bool overflowed() const { return Overflowed; }
+
+  /// Return the complete payload size, including bytes discarded after
+  /// overflow.
+  uint64_t payloadSize() const { return PayloadSize; }
+
+  /// Return the retained payload; valid only when overflowed() is false.
+  StringRef payload() const { return StringRef(Buffer.get(), BufferSize); }
+
+private:
+  /// Count incoming bytes and retain them while they fit within BufferLimit.
+  void write_impl(const char *Ptr, size_t Size) override {
+    // Always account for incoming bytes, including those received after the
+    // payload has exceeded the dynamic buffer limit.
+    PayloadSize += Size;
+
+    // After overflow, only size tracking remains active.
+    if (Overflowed)
+      return;
+
+    // If this write crosses the limit, release the retained prefix immediately
+    // and switch permanently to size-only mode for the current payload.
+    if (Size > BufferLimit - BufferSize) {
+      Overflowed = true;
+      Buffer.reset();
+      BufferSize = 0;
+      BufferCapacity = 0;
+      return;
+    }
+
+    size_t RequiredCapacity = BufferSize + Size;
+    if (RequiredCapacity > BufferCapacity) {
+      // Start with the front-buffer size, then grow geometrically without
+      // retaining a capacity beyond BufferLimit.
+      size_t NewCapacity = BufferCapacity
+                               ? BufferCapacity
+                               : std::min(BufferLimit, InitialBufferSize);
+      while (NewCapacity < RequiredCapacity) {
+        if (NewCapacity > BufferLimit / 2) {
+          NewCapacity = BufferLimit;
+          break;
+        }
+        NewCapacity *= 2;
+      }
+      auto NewBuffer = std::make_unique<char[]>(NewCapacity);
+      if (BufferSize)
+        std::memcpy(NewBuffer.get(), Buffer.get(), BufferSize);
+      Buffer = std::move(NewBuffer);
+      BufferCapacity = NewCapacity;
+    }
+
+    // Retain this write because the complete payload still fits.
+    std::memcpy(Buffer.get() + BufferSize, Ptr, Size);
+    BufferSize += Size;
+  }
+
+  /// Report the number of bytes accepted from the current payload.
+  uint64_t current_pos() const override { return PayloadSize; }
+
+  size_t BufferLimit;
+  std::unique_ptr<char[]> Buffer;
+  size_t BufferSize = 0;
+  size_t BufferCapacity = 0;
+  uint64_t PayloadSize = 0;
+  bool Overflowed = false;
+  /// Coalesce small raw_ostream writes before forwarding them to write_impl(),
+  /// avoiding a virtual call and buffer-growth check for every encoded byte.
+  /// This fixed staging storage is not counted against BufferLimit.
+  char FrontBuffer[InitialBufferSize];
+};
+
+} // namespace
+
+std::error_code SampleProfileWriterBinary::writeProfileType(
+    ProfTypes Type, function_ref<std::error_code()> WritePayload) {
+  // PayloadBufferStream temporarily owns the real output while the callback
+  // writes through OutputStream. A nested call would therefore mistake the
+  // real output for BoundedBufferingStream.
+  if (WritingProfileType)
+    return sampleprof_error::malformed;
+  SaveAndRestore RestoreWritingProfileType(WritingProfileType, true);
+
+  // A profile block stores its payload size before the payload, but that size
+  // is not known until the payload has been serialized. First serialize the
+  // payload into a reusable bounded buffer while counting its complete size.
+  // If it fits, emit the buffered bytes; after overflow, retain only the size
+  // and serialize the payload again directly.
+  //
+  // For common small payloads, this is faster than both a separate
+  // size-precomputation traversal and fixed-width backpatching. It avoids the
+  // extra traversal of the former and the pwrite() flush/seek/write/seek
+  // operations of the latter, while reusing allocated buffer storage. For
+  // oversized payloads, the counting fallback bounds retained dynamic payload
+  // capacity; it does not bound process RSS or transient replacement-buffer
+  // allocations during growth.
+  //
+  // Unlike fixed-width backpatching, knowing the complete size before emitting
+  // the payload also allows it to be encoded compactly as ULEB128.
+
+  if (!PayloadBufferStream)
+    PayloadBufferStream = std::make_unique<BoundedBufferingStream>(
+        ExtBinaryProfileTypeBufferLimit);
+  auto *BufferStream =
+      static_cast<BoundedBufferingStream *>(PayloadBufferStream.get());
+  BufferStream->resetPayload();
+  OutputStream.swap(PayloadBufferStream);
+  std::error_code EC = WritePayload();
+  BufferStream->finishPayload();
+  OutputStream.swap(PayloadBufferStream);
+  if (EC)
+    return EC;
+
+  // Emit the profile type and the complete payload size, then emit the payload.
   auto &OS = *OutputStream;
   encodeULEB128(Type, OS);
-  // Create placeholder for profile size.
-  uint64_t SizeOffset = OS.tell();
-  support::endian::Writer PlaceWriter(OS, llvm::endianness::little);
-  PlaceWriter.write(static_cast<uint64_t>(-1));
-  uint64_t BodyOffset = OS.tell();
-  return {SizeOffset, BodyOffset};
+  encodeULEB128(BufferStream->payloadSize(), OS);
+  if (BufferStream->overflowed()) {
+    // An oversized payload was discarded during the counting pass, so serialize
+    // it directly now that its size has been emitted.
+    uint64_t PayloadStart = OS.tell();
+    if (std::error_code EC = WritePayload())
+      return EC;
+    // Reject output if the callback did not reproduce the counted size.
+    if (OS.tell() - PayloadStart != BufferStream->payloadSize())
+      return sampleprof_error::malformed;
+  } else {
+    OS << BufferStream->payload();
+  }
+  return sampleprof_error::success;
 }
 
-void SampleProfileWriterBinary::finishProfileType(uint64_t SizeOffset,
-                                                  uint64_t BodyOffset) {
+static bool hasNonEmptyLBRProfile(const FunctionSamples &S, bool IsNested) {
+  return S.getTotalSamples() != 0 || (!IsNested && S.getHeadSamples() != 0) ||
+         !S.getBodySamples().empty();
+}
+
+std::error_code
+SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S,
+                                                bool IsNested) {
   auto &OS = *OutputStream;
-  uint64_t BodySize = OS.tell() - BodyOffset;
-  // Write profile size.
-  support::endian::SeekableWriter PWriter(static_cast<raw_pwrite_stream &>(OS),
-                                          llvm::endianness::little);
-  PWriter.pwrite(BodySize, SizeOffset);
-}
-
-void SampleProfileWriterBinary::writeTypifiedLBRProfile(
-    const FunctionSamples &S, bool IsNested) {
-  auto [SizeOffset, BodyOffset] = startProfileType(ProfTypeLBR);
-  writeLBRProfile(S, IsNested);
-  finishProfileType(SizeOffset, BodyOffset);
-}
-
-void SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S,
-                                                     bool IsNested) {
-  auto &OS = *OutputStream;
-  bool WriteLBRProf = !S.getBodySamples().empty();
+  bool WriteLBRProf = hasNonEmptyLBRProfile(S, IsNested);
   // Other profile types should be added here.
   uint32_t TypesNum = WriteLBRProf;
 
@@ -1099,7 +1256,9 @@ void SampleProfileWriterBinary::writeTypifiedProfile(const FunctionSamples &S,
   encodeULEB128(TypesNum, OS);
 
   if (WriteLBRProf)
-    writeTypifiedLBRProfile(S, IsNested);
+    return writeProfileType(ProfTypeLBR,
+                            [&] { return writeLBRProfile(S, IsNested); });
+  return sampleprof_error::success;
 }
 
 std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S,
@@ -1109,10 +1268,13 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S,
     return EC;
 
   // Emit all the body samples.
-  if (WriteTypifiedProf)
-    writeTypifiedProfile(S, IsNested);
-  else
-    writeLBRProfile(S, IsNested);
+  if (WriteTypifiedProf) {
+    if (std::error_code EC = writeTypifiedProfile(S, IsNested))
+      return EC;
+  } else {
+    if (std::error_code EC = writeLBRProfile(S, IsNested))
+      return EC;
+  }
 
   // Recursively emit all the callsite samples.
   uint64_t NumCallsites = 0;

@@ -1,0 +1,17 @@
+; Verify that typified payload readers cannot cross declared block boundaries
+; and that inspection still reports an invalid unknown block size.
+; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary %S/Inputs/sample-typified-empty-lbr.proftext -o %t.valid
+
+; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.valid %t.undersized undersized
+; RUN: not llvm-profdata merge --sample %t.undersized -o /dev/null 2>&1 | FileCheck %s --check-prefix=TRUNCATED
+
+; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.valid %t.oversized oversized
+; RUN: not llvm-profdata merge --sample %t.oversized -o /dev/null 2>&1 | FileCheck %s --check-prefix=MALFORMED
+
+; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.valid %t.unknown-out-of-bounds unknown-out-of-bounds
+; RUN: not llvm-profdata merge --sample %t.unknown-out-of-bounds -o /dev/null 2>&1 | FileCheck %s --check-prefix=TRUNCATED
+; RUN: not llvm-profdata show --sample --show-typified-info-only %t.unknown-out-of-bounds 2>&1 | FileCheck %s --check-prefix=INSPECT
+
+; TRUNCATED: error: {{.*}}Truncated profile data
+; MALFORMED: error: {{.*}}Malformed sample profile data
+; INSPECT: Type: 127 (unknown), Payload size: 18446744073709551615

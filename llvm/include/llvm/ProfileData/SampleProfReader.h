@@ -631,6 +631,17 @@ public:
   }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
+  /// Read the profile and print the structure of typified profile blocks.
+  std::error_code dumpProfileTypeInfo(raw_ostream &OS) {
+    ProfileTypeInfoOS = &OS;
+    std::error_code EC = read();
+    ProfileTypeInfoOS = nullptr;
+    return EC;
+  }
+
+  /// Return whether the profile uses typified profile blocks.
+  bool profileIsTypified() const { return IsProfileTypified; }
+
   /// Return whether names in the profile are all MD5 numbers.
   bool useMD5() const { return ProfileIsMD5; }
 
@@ -701,7 +712,10 @@ protected:
       FuncMetadataIndex;
 
   std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
+  /// Whether the input uses SecTypifiedProfile for function profiles.
   bool IsProfileTypified = false;
+  /// Optional stream for typified block structure; null disables the output.
+  raw_ostream *ProfileTypeInfoOS = nullptr;
 
   /// Whether the profile has attribute metadata.
   bool ProfileHasAttribute = false;
