@@ -432,7 +432,7 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   if (result != eExpressionCompleted) {
     error = Status::FromError(diagnostics.GetAsError(
         eExpressionSetupError,
-        llvm::formatv("LoadLibrary error: failed to execute LoadLibrary helper "
+        llvm::formatv("failed to execute LoadLibrary helper "
                       "({0}):",
                       toString(result))
             .str()));
