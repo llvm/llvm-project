@@ -47,12 +47,12 @@ llvm::Type *SparcV8ABIInfo::getComplexIntCoerceType(QualType Ty) const {
     return nullptr;
 
   // The default path already does the right thing for `long long _Complex`.
-  uint64_t Size = getContext().getTypeSize(Ty);
-  if (Size > 64)
+  uint64_t ElementTypeSize = getContext().getTypeSize(CT->getElementType());
+  if (ElementTypeSize > 32)
     return nullptr;
 
   // Coerce to an integer to get the correct scalar-like behavior.
-  return llvm::IntegerType::get(getVMContext(), Size);
+  return llvm::IntegerType::get(getVMContext(), 2 * ElementTypeSize);
 }
 
 ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
@@ -317,12 +317,17 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
 
   // When being GCC-compatible, cast a complex integer to an integer type
   // of the right size to get the correct scalar-like behavior.
-  if (IsComplexGnuABI)
-    if (const auto *CT = Ty->getAs<ComplexType>();
-        CT && Size < 64 && CT->getElementType()->isIntegerType()) {
-      RegOffset += 1;
-      return ABIArgInfo::getDirect(llvm::IntegerType::get(VMContext, Size));
+  if (IsComplexGnuABI) {
+    const auto *CT = Ty->getAs<ComplexType>();
+    if (CT && CT->getElementType()->isIntegerType()) {
+      uint64_t ElementTypeSize = Context.getTypeSize(CT->getElementType());
+      if (ElementTypeSize < 32) {
+        RegOffset += 1;
+        return ABIArgInfo::getDirect(
+            llvm::IntegerType::get(VMContext, 2 * ElementTypeSize));
+      }
     }
+  }
 
   // Other non-aggregates go in registers.
   if (!isAggregateTypeForABI(Ty)) {
