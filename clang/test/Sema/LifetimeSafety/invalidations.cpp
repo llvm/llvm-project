@@ -676,7 +676,7 @@ void InvalidatedGlobalRefParamString(std::string &s) { // expected-warning {{par
 }
 
 void InvalidatedGlobalDelete() {
-  int *p = new int; // expected-warning {{allocated object escapes to the global variable 'GlobalFromNew' and is later invalidated}}
+  int *p = new int;  // expected-warning {{allocated object escapes to the global variable 'GlobalFromNew' and is later invalidated}}
   GlobalFromNew = p; // expected-note {{local variable 'p' aliases the storage of allocated object}}
   delete p; // expected-note {{allocated object is freed here}}
 }
