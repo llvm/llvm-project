@@ -5,10 +5,8 @@ declare void @use32(i32)
 
 define i32 @fold_zext_sext(i8 %x) {
 ; CHECK-LABEL: @fold_zext_sext(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[X]] to i32
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    ret i32 [[SEXT]]
 ;
   %zext = zext i8 %x to i32
   %sext = sext i8 %x to i32
@@ -19,9 +17,7 @@ define i32 @fold_zext_sext(i8 %x) {
 define i32 @fold_zext_sext_commuted(i8 %x) {
 ; CHECK-LABEL: @fold_zext_sext_commuted(
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X]] to i32
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SEXT]], [[ZEXT]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[SEXT]]
 ;
   %sext = sext i8 %x to i32
   %zext = zext i8 %x to i32
@@ -31,10 +27,8 @@ define i32 @fold_zext_sext_commuted(i8 %x) {
 
 define <4 x i32> @fold_zext_sext_vec(<4 x i16> %x) {
 ; CHECK-LABEL: @fold_zext_sext_vec(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i16> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i16> [[X]] to <4 x i32>
-; CHECK-NEXT:    [[R:%.*]] = or <4 x i32> [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i16> [[X:%.*]] to <4 x i32>
+; CHECK-NEXT:    ret <4 x i32> [[SEXT]]
 ;
   %zext = zext <4 x i16> %x to <4 x i32>
   %sext = sext <4 x i16> %x to <4 x i32>
@@ -47,8 +41,7 @@ define i32 @multi_use_fold_zext_sext_1(i8 %x) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[X]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[ZEXT]])
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[SEXT]]
 ;
   %zext = zext i8 %x to i32
   %sext = sext i8 %x to i32
@@ -59,11 +52,9 @@ define i32 @multi_use_fold_zext_sext_1(i8 %x) {
 
 define i32 @multi_use_fold_zext_sext_2(i8 %x) {
 ; CHECK-LABEL: @multi_use_fold_zext_sext_2(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[X]] to i32
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[SEXT]])
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[SEXT]]
 ;
   %zext = zext i8 %x to i32
   %sext = sext i8 %x to i32
