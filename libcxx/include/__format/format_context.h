@@ -26,7 +26,8 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <__locale>
-#  include <optional>
+#  include <__optional/nullopt_t.h>
+#  include <__optional/optional.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
