@@ -307,6 +307,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   std::unique_ptr<RISCVOperand> defaultFRMArgOp() const;
   std::unique_ptr<RISCVOperand> defaultFRMArgLegacyOp() const;
   std::unique_ptr<RISCVOperand> defaultSMTVType();
+  std::unique_ptr<RISCVOperand> defaultZeroOffset();
 
 public:
   enum RISCVMatchResultTy : unsigned {
@@ -330,27 +331,21 @@ public:
     Parser.addAliasForDirective(".dword", ".8byte");
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
-    auto ABIName = StringRef(getTargetOptions().ABIName);
-    if (ABIName.ends_with("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
-      errs() << "Hard-float 'f' ABI can't be used for a target that "
-                "doesn't support the F instruction set extension (ignoring "
-                "target-abi)\n";
-    } else if (ABIName.ends_with("d") &&
-               !getSTI().hasFeature(RISCV::FeatureStdExtD)) {
-      errs() << "Hard-float 'd' ABI can't be used for a target that "
-                "doesn't support the D instruction set extension (ignoring "
-                "target-abi)\n";
-    }
-
-    // Use computeTargetABI to check if ABIName is valid. If invalid, output
-    // error message.
-    RISCVABI::computeTargetABI(STI, ABIName);
-
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
 
     if (AddBuildAttributes)
       getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
+  }
+
+  // Validate the requested -target-abi now that the lexer has been primed
+  // with the first token, so diagnostics can be reported with a real source
+  // location instead of being printed with no location information.
+  void onBeginOfFile() override {
+    Expected<RISCVABI::ABI> ABIOrErr =
+        RISCVABI::computeTargetABI(getSTI(), getTargetOptions().ABIName);
+    if (!ABIOrErr)
+      getParser().printError(getLoc(), toString(ABIOrErr.takeError()));
   }
 };
 
@@ -522,6 +517,12 @@ public:
   bool isYGPR() const {
     return Kind == KindTy::Register &&
            getRISCVMCRegisterClass(RISCV::YGPRRegClassID).contains(Reg.Reg);
+  }
+
+  bool isStackPtr() const {
+    return isReg() &&
+           (getRISCVMCRegisterClass(RISCV::SP_XRegClassID).contains(Reg.Reg) ||
+            getRISCVMCRegisterClass(RISCV::SP_YRegClassID).contains(Reg.Reg));
   }
 
   bool isGPRPair() const {
@@ -926,6 +927,10 @@ public:
 
   bool isUImm9Lsb000() const { return isUImmShifted<6, 3>(); }
 
+  bool isUImm9Lsb0000() const { return isUImmShifted<5, 4>(); }
+
+  bool isUImm10Lsb0000() const { return isUImmShifted<6, 4>(); }
+
   bool isUImm14Lsb00() const { return isUImmShifted<12, 2>(); }
 
   bool isUImm10Lsb00NonZero() const {
@@ -954,6 +959,19 @@ public:
            (VK == RISCV::S_LO || VK == RISCV::S_PCREL_LO ||
             VK == RISCV::S_TPREL_LO || VK == ELF::R_RISCV_TLSDESC_LOAD_LO12 ||
             VK == ELF::R_RISCV_TLSDESC_ADD_LO12);
+  }
+
+  /// Returns NoMatch rather than the NearMatch of the underlying predicate
+  /// for anything that is not an immediate at all (such as the '(' token of an
+  /// offset-less memory operand). This lets the matcher skip this optional
+  /// operand and insert the default 0 offset. An immediate that fails Pred
+  /// (e.g. out of range) still reports the wrapped class diagnostic.
+  template <bool (RISCVOperand::*Pred)() const>
+  DiagnosticPredicate isOptionalMemOffset() const {
+    if (!isImm())
+      return DiagnosticPredicate::NoMatch;
+    return (this->*Pred)() ? DiagnosticPredicate::Match
+                           : DiagnosticPredicate::NearMatch;
   }
 
   bool isSImm12Lsb00000() const {
@@ -1440,8 +1458,29 @@ static MCRegister convertFPR64ToFPR256(MCRegister Reg) {
   return Reg - RISCV::F0_D + RISCV::F0_Q2;
 }
 
+static bool regClassIsYGPR(const MCRegisterClass &RC) {
+  assert(RC.getNumRegs() > 0);
+  return getRISCVMCRegisterClass(RISCV::YGPRRegClassID).contains(*RC.begin());
+}
+
+static MatchClassKind remapRegClassByHwMode(MatchClassKind Kind, bool Purecap) {
+  // TODO: Generate this mapping automatically from TableGen.
+  switch (Kind) {
+  case MCK_RegByHwMode_BasePtrRegClass:
+    return Purecap ? MCK_YGPRNoX0 : MCK_GPR;
+  case MCK_RegByHwMode_BasePtrCRegClass:
+    return Purecap ? MCK_YGPRC : MCK_GPRC;
+  case MCK_RegByHwMode_SP:
+    return Purecap ? MCK_SP_Y : MCK_SP_X;
+  default:
+    llvm_unreachable("Unhandled RegClassByHwMode");
+  }
+}
+
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                    unsigned Kind) {
+                                                    unsigned MatchKind) {
+  // Convert to enum for improved debugger output.
+  MatchClassKind Kind = static_cast<MatchClassKind>(MatchKind);
   RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
   if (!Op.isReg())
     return Match_InvalidOperand;
@@ -1453,10 +1492,30 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       getRISCVMCRegisterClass(RISCV::FPR64CRegClassID).contains(Reg);
   bool IsRegVR = getRISCVMCRegisterClass(RISCV::VRRegClassID).contains(Reg);
 
-  if (Op.isGPR() && Kind == MCK_YGPR) {
-    // GPR and capability GPR use the same register names, convert if required.
+  // In RVY mode, classes such as BasePtrRC register class should select
+  // capability registers for the base pointer operands, otherwise we use GPRs.
+  // This is not currently handled automatically by tablegen so we have to
+  // manually remap the MCK_ values and also manually handle the register
+  // restrictions (such as NoX0) for ByHwMode classes.
+  // TODO: Is there any way we could do this in tablegen automatically?
+  bool NeedManualRegClassCheck = false;
+  if (Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
+    bool Purecap = STI->hasFeature(RISCV::FeatureStdExtY) &&
+                   !STI->hasFeature(RISCV::FeatureVendorXLLVMRVYIPM);
+    Kind = remapRegClassByHwMode(Kind, Purecap);
+  }
+  const MCRegisterClass *CheckRC = getRegClassFromMatchKind(Kind);
+  // YGPR and GPR use the same names, remap and check them if necessary.
+  if (!Op.isYGPR() && CheckRC && regClassIsYGPR(*CheckRC)) {
+    assert(Op.isGPR() && "Can only convert GPR to YGPR");
     Op.Reg.Reg = convertGPRToYGPR(Reg);
-    return Match_Success;
+    NeedManualRegClassCheck = true;
+  }
+  if (NeedManualRegClassCheck) {
+    assert(CheckRC && "Must have a valid register class for validation");
+    if (CheckRC->contains(Op.getReg()))
+      return Match_Success;
+    return getDiagKindFromRegisterClass(Kind);
   }
   if (IsRegFPR64 && Kind == MCK_FPR256) {
     Op.Reg.Reg = convertFPR64ToFPR256(Reg);
@@ -1620,6 +1679,9 @@ std::string RISCVAsmParser::getCustomOperandDiag(unsigned MatchError) {
   case Match_InvalidUImm9Lsb000:
     return Range(0, (1 << 9) - 8,
                  "immediate must be a multiple of 8 bytes in the range");
+  case Match_InvalidUImm9Lsb0000:
+    return Range(0, (1 << 9) - 16,
+                 "immediate must be a multiple of 16 bytes in the range");
   case Match_InvalidSImm8PLI_B:
     return Range(-(1 << 7), (1 << 8) - 1);
   case Match_InvalidSImm10:
@@ -1631,6 +1693,9 @@ std::string RISCVAsmParser::getCustomOperandDiag(unsigned MatchError) {
   case Match_InvalidUImm10Lsb00NonZero:
     return Range(4, (1 << 10) - 4,
                  "immediate must be a multiple of 4 bytes in the range");
+  case Match_InvalidUImm10Lsb0000:
+    return Range(0, (1 << 10) - 16,
+                 "immediate must be a multiple of 16 bytes in the range");
   case Match_InvalidSImm10Lsb0000NonZero:
     return Range(
         -(1 << 9), (1 << 9) - 16,
@@ -4099,6 +4164,11 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgOp() const {
 std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgLegacyOp() const {
   return RISCVOperand::createFRMArg(RISCVFPRndMode::RoundingMode::RNE,
                                     llvm::SMLoc());
+}
+
+std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultZeroOffset() {
+  return RISCVOperand::createExpr(MCConstantExpr::create(0, getContext()),
+                                  llvm::SMLoc(), llvm::SMLoc(), isRV64());
 }
 
 static unsigned getNFforLXSEG(unsigned Opcode) {

@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -55,10 +56,12 @@ enum OperandType : unsigned {
   OPERAND_UIMM8,
   OPERAND_UIMM8_LSB000,
   OPERAND_UIMM8_GE32,
+  OPERAND_UIMM9_LSB0000,
   OPERAND_UIMM9,
   OPERAND_UIMM9_LSB000,
   OPERAND_UIMM9_YBNDSWI,
   OPERAND_UIMM10,
+  OPERAND_UIMM10_LSB0000,
   OPERAND_UIMM10_LSB00_NONZERO,
   OPERAND_UIMM11,
   OPERAND_UIMM12,
@@ -733,8 +736,8 @@ enum ABI {
 };
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
-// not supported for the subtargets triple and FeatureBits combination.
-ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
+// not supported for the subtarget's triple and FeatureBits combination.
+Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);
 

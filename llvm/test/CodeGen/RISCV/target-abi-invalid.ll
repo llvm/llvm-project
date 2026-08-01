@@ -36,8 +36,8 @@
 ; RUN: llc -mtriple=riscv64 -target-abi lp64f < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=RV64I-LP64F %s
 
-; RV32I-ILP32F: Hard-float 'f' ABI can't be used for a target that doesn't support the F instruction set extension (ignoring target-abi)
-; RV64I-LP64F: Hard-float 'f' ABI can't be used for a target that doesn't support the F instruction set extension (ignoring target-abi)
+; RV32I-ILP32F: hard-float 'f' ABI can't be used for a target that doesn't support the F instruction set extension (ignoring target-abi)
+; RV64I-LP64F: hard-float 'f' ABI can't be used for a target that doesn't support the F instruction set extension (ignoring target-abi)
 
 ; RUN: llc -mtriple=riscv32 -target-abi ilp32d < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=RV32I-ILP32D %s
@@ -48,10 +48,10 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+f -target-abi lp64d < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=RV64IF-LP64D %s
 
-; RV32I-ILP32D: Hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
-; RV32IF-ILP32D: Hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
-; RV64I-LP64D: Hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
-; RV64IF-LP64D: Hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
+; RV32I-ILP32D: hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
+; RV32IF-ILP32D: hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
+; RV64I-LP64D: hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
+; RV64IF-LP64D: hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
 
 define void @nothing() nounwind {
   ret void

@@ -8,5 +8,5 @@ c.flwsp  fs1, 256(sp) # CHECK: :[[@LINE]]:15: error: immediate must be a multipl
 c.fswsp  fs2, -4(sp) # CHECK: :[[@LINE]]:15: error: immediate must be a multiple of 4 bytes in the range [0, 252]
 
 ## uimm7_lsb00
-c.flw  fs0, -4(sp) # CHECK: :[[@LINE]]:1: error: invalid instruction
-c.fsw  fs1, 128(sp) # CHECK: :[[@LINE]]:1: error: invalid instruction
+c.flw  fs0, -4(sp) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 124]
+c.fsw  fs1, 128(sp) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 124]
