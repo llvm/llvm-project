@@ -112,7 +112,7 @@ jobs:
           ./llvm/utils/release/build-docs.sh \
             $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm)
           echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
-          echo "doxygen-tarball-name=$(baename $(find . -iname '*doxygen*.tar.xz')) >> "$GITHUB_OUTPUT"
+          echo "doxygen-tarball-name=$(baename $(find . -iname '*doxygen*.tar.xz'))" >> "$GITHUB_OUTPUT"
 
 
       - name: Generate sha256 digest for tarballs
