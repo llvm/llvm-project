@@ -25122,15 +25122,25 @@ Value *BoUpSLP::vectorizeTree(
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
   SmallDenseSet<ExtractElementInst *, 4> IgnoredExtracts;
-  // Drop a scalar load kept via ExternalUsesAsOriginalScalar when a contiguous
-  // vector load already covers its bytes, so it is extracted from that load
-  // rather than re-loaded (llvm#205978). Done post-profitability, so the
-  // vectorization decision is unchanged.
+  // A scalar load kept via ExternalUsesAsOriginalScalar re-reads memory a
+  // contiguous vector load already covers (llvm#205978). Extract from that load
+  // instead, but only when the extract is no more expensive than the reload, so
+  // targets where keeping the load is genuinely cheaper are left alone. Done
+  // post-profitability, so the vectorization decision is unchanged.
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   for (const ExternalUser &EU : ExternalUses) {
     auto *LI = dyn_cast<LoadInst>(EU.Scalar);
-    if (LI && ExternalUsesAsOriginalScalar.contains(LI) && !EU.E.isGather() &&
-        EU.E.hasState() && EU.E.State == TreeEntry::Vectorize &&
-        EU.E.getOpcode() == Instruction::Load)
+    if (!LI || !ExternalUsesAsOriginalScalar.contains(LI) || EU.E.isGather() ||
+        !EU.E.hasState() || EU.E.State != TreeEntry::Vectorize ||
+        EU.E.getOpcode() != Instruction::Load || !EU.E.VectorizedValue)
+      continue;
+    auto *VecTy = dyn_cast<VectorType>(EU.E.VectorizedValue->getType());
+    if (!VecTy)
+      continue;
+    InstructionCost ExtractCost = TTI->getVectorInstrCost(
+        Instruction::ExtractElement, VecTy, CostKind, EU.Lane);
+    InstructionCost ScalarCost = TTI->getInstructionCost(LI, CostKind);
+    if (ExtractCost <= ScalarCost)
       ExternalUsesAsOriginalScalar.erase(LI);
   }
   // Extract all of the elements with the external uses.

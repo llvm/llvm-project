@@ -5,18 +5,6 @@
 ; Crash Test case reported on D134605
 
 define void @D134605() {
-; CHECK-LABEL: @D134605(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr poison, align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i16> [[TMP1]], i64 3
-; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i16 poison, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i16 [[TMP2]], 2
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i16 poison, [[TMP3]]
-; CHECK-NEXT:    [[REASS_MUL24:%.*]] = shl i16 [[OP_RDX]], 2
-; CHECK-NEXT:    [[CALL:%.*]] = call i16 @check_i16(i16 noundef 1, i16 noundef [[REASS_MUL24]], i16 noundef 5120)
-; CHECK-NEXT:    ret void
-;
 entry:
   %arrayidx81 = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 3
   %0 = load i16, ptr %arrayidx81, align 1

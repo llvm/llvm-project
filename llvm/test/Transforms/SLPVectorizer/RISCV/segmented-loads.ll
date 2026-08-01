@@ -37,11 +37,11 @@ define void @test() {
 define double @test_with_extract() {
 ; CHECK-LABEL: @test_with_extract(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x double>, ptr @src, align 8
+; CHECK-NEXT:    [[A7:%.*]] = load double, ptr getelementptr inbounds ([8 x double], ptr @src, i32 0, i64 7), align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x double> [[TMP1]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast <4 x double> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    store <4 x double> [[TMP4]], ptr @dst, align 8
-; CHECK-NEXT:    [[A7:%.*]] = extractelement <8 x double> [[TMP1]], i64 7
 ; CHECK-NEXT:    ret double [[A7]]
 ;
   %a0 = load double, ptr @src, align 8
