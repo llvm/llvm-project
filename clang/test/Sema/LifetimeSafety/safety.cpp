@@ -651,8 +651,8 @@ const int* return_pointer_to_parameter_via_reference(int a, int b, bool cond) {
 
 const int& return_pointer_to_parameter_via_reference_1(int a) {
     const int* d = &a; // expected-warning {{stack memory associated with parameter 'a' is returned}}
-    return *d;    // expected-note {{returned here}} \
-                  // expected-note {{local variable 'd' aliases the storage of parameter 'a'}}
+    return *d;         // expected-note {{returned here}} \
+                       // expected-note {{local variable 'd' aliases the storage of parameter 'a'}}
 }
 
 const int& get_ref_to_local() {
@@ -3942,7 +3942,7 @@ void deref_use_after_scope() {
 namespace GH191954 {
   int* return_moved_pointer() {
     int x;
-    int* f = &x; // expected-warning {{stack memory associated with local variable 'x' is returned}}
+    int* f = &x;      // expected-warning {{stack memory associated with local variable 'x' is returned}}
     int* a;
     a = std::move(f); // expected-note {{result of call to 'move<int *&>' aliases the storage of local variable 'x'}}
     return a; // expected-note {{returned here}}
