@@ -251,9 +251,11 @@ public:
       }
 
       // If we found the IssueFact, we're done
-      if (Complete)
-        return llvm::SmallVector<OriginID>(CurrNode.OriginFlowChain.begin(),
-                                           CurrNode.OriginFlowChain.end());
+      if (Complete) {
+        auto ReversedChain = llvm::reverse(CurrNode.OriginFlowChain);
+        return llvm::SmallVector<OriginID>(ReversedChain.begin(),
+                                           ReversedChain.end());
+      }
 
       // Only explore predecessor blocks where the target loan is present in the
       // current origin.
