@@ -1029,3 +1029,104 @@ module attributes {transform.with_named_sequence} {
 //       CHECK:   }
 //       CHECK:   linalg.reduce ins(%[[L]] : tensor<?x3x?x4xf32>) outs(%arg1 : tensor<?x3x?xf32>) dimensions = [3]
 //       CHECK:   return %{{.*}}
+
+// -----
+
+// A subtracting accumulation (`acc - x`) reduces the negated inputs. It is
+// tiled starting from the additive neutral element, and its partial results are
+// merged with an addition rather than with the subtraction itself.
+
+func.func @reduction_tile_negated_sum(%arg0: tensor<?x?xf32>, %out: tensor<?xf32>) -> tensor<?xf32> {
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+   iterator_types = ["parallel", "reduction"]}
+   ins(%arg0 : tensor<?x?xf32>)
+   outs(%out : tensor<?xf32>) {
+    ^bb0(%arg7: f32, %arg9: f32):
+      %1 = arith.subf %arg9, %arg7 : f32
+      linalg.yield %1 : f32
+    } -> tensor<?xf32>
+  return %red : tensor<?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %2, %3, %loop = transform.structured.tile_reduction_using_for %0
+      by tile_sizes = [0, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// CHECK-LABEL: func @reduction_tile_negated_sum
+//   CHECK-DAG:   %[[I:.*]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   %[[F:.*]] = linalg.fill ins(%[[I]] : f32) outs(%{{.*}} : tensor<?x5xf32>) -> tensor<?x5xf32>
+//       CHECK:   %[[L:.*]] = scf.for {{.*}} iter_args(%{{.*}} = %[[F]]) -> (tensor<?x5xf32>) {
+//       CHECK:     linalg.generic
+//       CHECK:       arith.subf
+//       CHECK:   linalg.reduce ins(%[[L]] : tensor<?x5xf32>) outs(%{{.*}} : tensor<?xf32>) dimensions = [1]
+//       CHECK:     arith.addf
+//       CHECK:   return
+
+// -----
+
+// Same for integers, and for the `scf.forall` tiling strategy.
+
+func.func @reduction_tile_negated_sum_int(%arg0: tensor<?x?xi32>, %out: tensor<?xi32>) -> tensor<?xi32> {
+  %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                          affine_map<(d0, d1) -> (d0)>],
+   iterator_types = ["parallel", "reduction"]}
+   ins(%arg0 : tensor<?x?xi32>)
+   outs(%out : tensor<?xi32>) {
+    ^bb0(%arg7: i32, %arg9: i32):
+      %1 = arith.subi %arg9, %arg7 : i32
+      linalg.yield %1 : i32
+    } -> tensor<?xi32>
+  return %red : tensor<?xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %2, %3, %loop = transform.structured.tile_reduction_using_forall %0
+      by num_threads = [0, 5] tile_sizes = [] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+  }
+}
+
+// CHECK-LABEL: func @reduction_tile_negated_sum_int
+//   CHECK-DAG:   %[[I:.*]] = arith.constant 0 : i32
+//       CHECK:   %[[F:.*]] = linalg.fill ins(%[[I]] : i32) outs(%{{.*}} : tensor<?x5xi32>) -> tensor<?x5xi32>
+//       CHECK:   %[[L:.*]] = scf.forall
+//       CHECK:       arith.subi
+//       CHECK:   linalg.reduce ins(%[[L]] : tensor<?x5xi32>) outs(%{{.*}} : tensor<?xi32>) dimensions = [1]
+//       CHECK:     arith.addi
+//       CHECK:   return
+
+// -----
+
+// `x - acc` is not a splittable reduction: the accumulator has to be the
+// left-hand side of the subtraction, so no neutral element applies.
+
+#map = affine_map<(d0, d1) -> (d0, d1)>
+#map1 = affine_map<(d0, d1) -> (d0)>
+
+module {
+  func.func @fail_for_rhs_accumulator(%arg0: tensor<?x?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
+    // expected-error @below {{'linalg.generic' op Failed to get an identity value for the reduction operation.}}
+    %0 = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%arg1 : tensor<?xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %1 = arith.subf %in, %out : f32
+      linalg.yield %1 : f32
+    } -> tensor<?xf32>
+    return %0 : tensor<?xf32>
+  }
+  module attributes {transform.with_named_sequence} {
+    transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+      // expected-error @below {{failed to tile using partial reduction}}
+      %fill_op, %split_linalg_op, %combining_linalg_op, %for_op = transform.structured.tile_reduction_using_for %0 by tile_sizes = [0, 5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
+      transform.yield
+    }
+  }
+}

@@ -534,6 +534,36 @@ static InitSliceInfo getInitSliceInfo(MLIRContext *context,
       partialReductionMap, initOperandShape);
 }
 
+/// Returns true if `combinerOp` accumulates into `accumulator` by subtracting
+/// the reduced value from it, i.e. it reduces the negated inputs.
+///
+/// Subtraction is not commutative, so this is a reduction only when the
+/// accumulator is the left-hand side. Such a reduction starts from the additive
+/// neutral element, but its partial results have to be combined with an
+/// addition instead of with the combiner itself: each of the `N` partial
+/// results `p_i` holds the negated sum of its own tile, so the reduced value
+/// `init - sum(x)` is `init + p_0 + ... + p_N-1` and not
+/// `init - p_0 - ... - p_N-1`.
+static bool isSubtractingAccumulation(Operation *combinerOp,
+                                      Value accumulator) {
+  if (!isa<arith::SubFOp, arith::SubIOp>(combinerOp))
+    return false;
+  return combinerOp->getOperand(0) == accumulator;
+}
+
+/// Creates the operation combining two partial results of the subtracting
+/// accumulation performed by `combinerOp`, preserving its fast-math flags and
+/// rounding mode. Integer overflow flags are dropped, since the flags of the
+/// subtraction do not carry over to the addition.
+static Value createSubtractingAccumulationMerge(OpBuilder &b, Location loc,
+                                                Operation *combinerOp,
+                                                Value lhs, Value rhs) {
+  if (auto subFOp = dyn_cast<arith::SubFOp>(combinerOp))
+    return arith::AddFOp::create(b, loc, lhs, rhs, subFOp.getFastmathAttr(),
+                                 subFOp.getRoundingmodeAttr());
+  return arith::AddIOp::create(b, loc, lhs, rhs);
+}
+
 /// External model implementation of PartialReductionInterface for
 /// LinalgOps.
 template <typename LinalgOpTy>
@@ -562,7 +592,12 @@ struct LinalgOpPartialReductionInterface
         return op->emitOpError("Failed to anaysis the reduction operation.");
 
       Operation *reductionOp = combinerOps[0];
-      std::optional<TypedAttr> identity = arith::getNeutralElement(reductionOp);
+      std::optional<TypedAttr> identity;
+      if (isSubtractingAccumulation(reductionOp,
+                                    linalgOp.getRegionOutputArgs()[initIdx]))
+        identity = b.getZeroAttr(reductionOp->getResult(0).getType());
+      else
+        identity = arith::getNeutralElement(reductionOp);
       if (!identity.has_value())
         return op->emitOpError(
             "Failed to get an identity value for the reduction operation.");
@@ -730,11 +765,20 @@ struct LinalgOpPartialReductionInterface
             SmallVector<Operation *, 4> combinerOps;
             matchReduction(linalgOp.getRegionOutputArgs(), initIdx,
                            combinerOps);
-            Operation *clonedReductionOp = b.clone(*combinerOps[0]);
-            // Combine the input at idx and output at numInits + idx.
-            clonedReductionOp->setOperand(0, inputs[0]);
-            clonedReductionOp->setOperand(1, inputs[1]);
-            linalg::YieldOp::create(b, loc, clonedReductionOp->getResult(0));
+            Operation *reductionOp = combinerOps[0];
+            Value merged;
+            if (isSubtractingAccumulation(
+                    reductionOp, linalgOp.getRegionOutputArgs()[initIdx])) {
+              merged = createSubtractingAccumulationMerge(b, loc, reductionOp,
+                                                          inputs[0], inputs[1]);
+            } else {
+              Operation *clonedReductionOp = b.clone(*reductionOp);
+              // Combine the input at idx and output at numInits + idx.
+              clonedReductionOp->setOperand(0, inputs[0]);
+              clonedReductionOp->setOperand(1, inputs[1]);
+              merged = clonedReductionOp->getResult(0);
+            }
+            linalg::YieldOp::create(b, loc, merged);
           });
 
       mergeOperations.push_back(reduction);
