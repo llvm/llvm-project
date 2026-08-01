@@ -64,7 +64,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   // Define available target features
   // These must be defined in sorted order!
   NoAsmVariants = true;
-  GPU = OffloadArch::Unused;
+  GPU = OffloadArch::getUnused();
 
   // PTX supports f16 as a fundamental type.
   HasFastHalfType = true;

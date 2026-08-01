@@ -2659,6 +2659,27 @@ TEST(TargetParserTest, testAMDGPUisCPUValidForSubArch) {
   EXPECT_FALSE(
       AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_NONE));
   EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, ""));
+
+  // The pseudo targets "generic"/"generic-hsa" represent no hardware and have
+  // no subarch of their own. They are not valid for an explicit subarch (their
+  // NoSubArch must not act as a wildcard). A legacy NoSubArch triple still
+  // accepts them, matching the wildcard behavior for any known GPU (the backend
+  // resolves "generic-hsa" as the default device for a bare amdhsa triple).
+  EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900,
+                                            AMDGPU::GK_GENERIC));
+  EXPECT_FALSE(
+      AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900, "generic"));
+  EXPECT_TRUE(
+      AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_GENERIC));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, "generic"));
+
+  EXPECT_FALSE(AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900,
+                                            AMDGPU::GK_GENERIC_HSA));
+  EXPECT_FALSE(
+      AMDGPU::isCPUValidForSubArch(Triple::AMDGPUSubArch900, "generic-hsa"));
+  EXPECT_TRUE(
+      AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, AMDGPU::GK_GENERIC_HSA));
+  EXPECT_TRUE(AMDGPU::isCPUValidForSubArch(Triple::NoSubArch, "generic-hsa"));
 }
 
 TEST(TargetParserTest, testAMDGPUparseArchR600) {
@@ -2667,25 +2688,25 @@ TEST(TargetParserTest, testAMDGPUparseArchR600) {
   struct CanonicalGPU {
     StringRef Name;
     AMDGPU::GPUKind Kind;
-    unsigned Features;
+    AMDGPU::R600FeatureKind Features;
   };
   static const CanonicalGPU Canonicals[] = {
-      {"r600", AMDGPU::GK_R600, AMDGPU::FEATURE_NONE},
-      {"r630", AMDGPU::GK_R630, AMDGPU::FEATURE_NONE},
-      {"rs880", AMDGPU::GK_RS880, AMDGPU::FEATURE_NONE},
-      {"rv670", AMDGPU::GK_RV670, AMDGPU::FEATURE_NONE},
-      {"rv710", AMDGPU::GK_RV710, AMDGPU::FEATURE_NONE},
-      {"rv730", AMDGPU::GK_RV730, AMDGPU::FEATURE_NONE},
-      {"rv770", AMDGPU::GK_RV770, AMDGPU::FEATURE_NONE},
-      {"cedar", AMDGPU::GK_CEDAR, AMDGPU::FEATURE_NONE},
-      {"cypress", AMDGPU::GK_CYPRESS, AMDGPU::FEATURE_FMA},
-      {"juniper", AMDGPU::GK_JUNIPER, AMDGPU::FEATURE_NONE},
-      {"redwood", AMDGPU::GK_REDWOOD, AMDGPU::FEATURE_NONE},
-      {"sumo", AMDGPU::GK_SUMO, AMDGPU::FEATURE_NONE},
-      {"barts", AMDGPU::GK_BARTS, AMDGPU::FEATURE_NONE},
-      {"caicos", AMDGPU::GK_CAICOS, AMDGPU::FEATURE_NONE},
-      {"cayman", AMDGPU::GK_CAYMAN, AMDGPU::FEATURE_FMA},
-      {"turks", AMDGPU::GK_TURKS, AMDGPU::FEATURE_NONE},
+      {"r600", AMDGPU::GK_R600, AMDGPU::R600_FEATURE_NONE},
+      {"r630", AMDGPU::GK_R630, AMDGPU::R600_FEATURE_NONE},
+      {"rs880", AMDGPU::GK_RS880, AMDGPU::R600_FEATURE_NONE},
+      {"rv670", AMDGPU::GK_RV670, AMDGPU::R600_FEATURE_NONE},
+      {"rv710", AMDGPU::GK_RV710, AMDGPU::R600_FEATURE_NONE},
+      {"rv730", AMDGPU::GK_RV730, AMDGPU::R600_FEATURE_NONE},
+      {"rv770", AMDGPU::GK_RV770, AMDGPU::R600_FEATURE_NONE},
+      {"cedar", AMDGPU::GK_CEDAR, AMDGPU::R600_FEATURE_NONE},
+      {"cypress", AMDGPU::GK_CYPRESS, AMDGPU::R600_FEATURE_FMA},
+      {"juniper", AMDGPU::GK_JUNIPER, AMDGPU::R600_FEATURE_NONE},
+      {"redwood", AMDGPU::GK_REDWOOD, AMDGPU::R600_FEATURE_NONE},
+      {"sumo", AMDGPU::GK_SUMO, AMDGPU::R600_FEATURE_NONE},
+      {"barts", AMDGPU::GK_BARTS, AMDGPU::R600_FEATURE_NONE},
+      {"caicos", AMDGPU::GK_CAICOS, AMDGPU::R600_FEATURE_NONE},
+      {"cayman", AMDGPU::GK_CAYMAN, AMDGPU::R600_FEATURE_FMA},
+      {"turks", AMDGPU::GK_TURKS, AMDGPU::R600_FEATURE_NONE},
   };
   for (const CanonicalGPU &G : Canonicals) {
     EXPECT_EQ(AMDGPU::parseArchR600(G.Name), G.Kind) << G.Name;

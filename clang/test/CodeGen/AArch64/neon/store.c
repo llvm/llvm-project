@@ -1484,3 +1484,14 @@ void test_vst1q_u8_x4(uint8_t *a, uint8x16x4_t b) {
 // LLVM: ret void
   vst1q_u8_x4(a, b);
 }
+
+// ALL-LABEL: @test_vstrq_p128(
+void test_vstrq_p128(poly128_t *ptr, poly128_t val) {
+// CIR: cir.cast bitcast {{.*}} : !cir.ptr<!void> -> !cir.ptr<!u128i>
+// CIR: cir.store align(16) {{.*}}, {{.*}} : !u128i, !cir.ptr<!u128i>
+
+// LLVM-SAME: ptr {{.*}} [[PTR:%.*]], i128 {{.*}} [[VAL:%.*]])
+// LLVM: store i128 [[VAL]], ptr [[PTR]], align 16
+// LLVM: ret void
+  vstrq_p128(ptr, val);
+}
