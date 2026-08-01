@@ -293,13 +293,17 @@ add_custom_command(
   COMMENT "LLDB headers: create staging directory for LLDB headers")
 
 add_custom_target(liblldb-header-staging-dir DEPENDS ${lldb_header_staging_dir})
+set_target_properties(liblldb-header-staging-dir PROPERTIES FOLDER "LLDB/Resources/liblldb-header-staging")
 
 find_program(unifdef_EXECUTABLE unifdef)
 
 add_custom_target(liblldb-header-staging)
+set_target_properties(liblldb-header-staging PROPERTIES FOLDER "LLDB/Resources")
 
 if (LLDB_BUILD_FRAMEWORK)
   add_custom_target(lldb-framework-fixup-all-headers)
+  set_target_properties(lldb-framework-fixup-all-headers PROPERTIES FOLDER "LLDB/Resources")
+  
   add_dependencies(lldb-framework-fixup-all-headers liblldb-header-staging)
   add_dependencies(liblldb lldb-framework-fixup-all-headers)
 endif()
@@ -321,6 +325,8 @@ foreach(header
   endif()
 
   add_custom_target(liblldb-stage-header-${basename} DEPENDS ${staged_header})
+  set_target_properties(liblldb-stage-header-${basename} PROPERTIES FOLDER "LLDB/Resources/liblldb-header-staging")
+
   add_dependencies(liblldb-stage-header-${basename} lldb-sbapi-dwarf-enums liblldb-header-staging-dir)
   add_dependencies(liblldb-header-staging liblldb-stage-header-${basename})
   add_custom_command(
@@ -335,6 +341,8 @@ foreach(header
     set(output_header $<TARGET_FILE_DIR:liblldb>/Headers/${basename})
 
     add_custom_target(lldb-framework-fixup-header-${basename} DEPENDS ${staged_header})
+    set_target_properties(lldb-framework-fixup-header-${basename} PROPERTIES FOLDER "LLDB/Resources/lldb-framework-fixup-all-headers")
+
     add_dependencies(lldb-framework-fixup-header-${basename} liblldb-stage-header-${basename})
     add_dependencies(lldb-framework-fixup-all-headers lldb-framework-fixup-header-${basename})
 
