@@ -5679,6 +5679,17 @@ private:
               DecrUnschedForInst(BundleMember->getInst(), U.getOperandNo(), I);
             }
           }
+          if (auto *EI =
+                  R.getCouldBeExtract().lookup(BundleMember->getInst())) {
+            for (Use &U : EI->operands()) {
+              if (auto *I = dyn_cast<Instruction>(U.get())) {
+                LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): " << *I
+                                  << "\n");
+                DecrUnschedForInst(BundleMember->getInst(), U.getOperandNo(),
+                                   I);
+              }
+            }
+          }
         }
         // Handle the memory dependencies.
         auto *SD = dyn_cast<ScheduleData>(BundleMember);
@@ -27180,25 +27191,16 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
       continue;
     ScheduleData *SD = ScheduleDataMap.lookup(I);
     if (!SD) {
-      // Both an extract and its rematerialization ought to be scheduled
-      // together
-      if (auto *EI = R.getCouldBeExtract().lookup(I)) {
-        SD = ScheduleDataMap.lookup(EI);
-        if (!SD) {
-          SD = allocateScheduleDataChunks();
-          ScheduleDataMap[EI] = SD;
-        }
-      } else if (auto *RI = R.getCouldBeRemat().lookup(I)) {
-        SD = ScheduleDataMap.lookup(RI);
-        if (!SD) {
-          SD = allocateScheduleDataChunks();
-          ScheduleDataMap[RI] = SD;
-        }
-      } else {
-        SD = allocateScheduleDataChunks();
-      }
+      SD = allocateScheduleDataChunks();
       ScheduleDataMap[I] = SD;
     }
+    // Both an extract and its rematerialization ought to be scheduled together
+    if (auto *EI = R.getCouldBeExtract().lookup(I))
+      if (!ScheduleDataMap.lookup(EI))
+        ScheduleDataMap[EI] = SD;
+      else if (auto *RI = R.getCouldBeRemat().lookup(I))
+        if (!ScheduleDataMap.lookup(RI))
+          ScheduleDataMap[RI] = SD;
     bool IsSharedNode =
         R.getCouldBeExtract().contains(I) || R.getCouldBeRemat().contains(I);
     assert((!isInSchedulingRegion(*SD) || IsSharedNode) &&
