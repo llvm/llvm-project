@@ -11,6 +11,8 @@
 #include "src/__support/FPUtil/float128.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
+#include "src/__support/macros/properties/types.h"
+
 
 using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float128;
@@ -142,3 +144,14 @@ TEST(LlvmLibcFloat128Test, FromIntegralTypes) {
   ASSERT_EQ(static_cast<unsigned>(Float128(2147483648.0)), 2147483648U);
   EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
 }
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+TEST(LlvmLibcFloat128Test, NativeFloat128Conversion) {
+  // native to emulated float128
+  ASSERT_TRUE(Float128(static_cast<float128>(1.5)) == Float128(1.5));
+
+  // emulated to native float128
+  ASSERT_TRUE(static_cast<float128>(Float128(3.14)) == static_cast<float128>(3.14));
+}
+#endif // LIBC_TYPES_HAS_FLOAT128
+
