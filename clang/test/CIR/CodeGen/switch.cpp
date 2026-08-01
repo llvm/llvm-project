@@ -1281,7 +1281,7 @@ void testSwitchCoverAllCase(M m) {
     break;
   }
 }
-// CIR: cir.switch(%[[ARG:.*]] : !s32i) all_enum_cases_covered {
+// CIR: cir.switch(%[[ARG:.*]] : !s32i) all_enum_cases_covered is_enum {
 
 void testSwitchNotCoverAllCase(M m) {
   switch (m) {
@@ -1290,4 +1290,4 @@ void testSwitchNotCoverAllCase(M m) {
     break;
   }
 }
-// CIR: cir.switch(%[[ARG:.*]] : !s32i) {
+// CIR: cir.switch(%[[ARG:.*]] : !s32i) is_enum {
