@@ -10,6 +10,7 @@
 #include "flang-rt/runtime/assign-impl.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
@@ -849,6 +850,219 @@ void RTDEF(AssignExplicitLengthCharacter)(Descriptor &to,
   Assign(to, from, terminator,
       MaybeReallocate | NeedFinalization | ComponentCanBeDefinedAssignment |
           ExplicitLengthCharacterLHS);
+}
+
+void RTDEF(AssignSimple)(Descriptor &to, const Descriptor &from,
+    const char *sourceFile, int sourceLine) {
+  Terminator terminator{sourceFile, sourceLine};
+  // AssignSimple: fast path for intrinsic type assignments (integer, real,
+  // complex, logical). The compiler routes here only when:
+  //   - LHS element type is trivial (isa_trivial), not derived/polymorphic
+  //   - LHS and RHS ranks match (no scalar-to-array broadcasting)
+  //   - LHS is not volatile (volatile needs memory ordering semantics)
+
+  if (to.rank() != from.rank()) {
+    terminator.Crash("AssignSimple: rank mismatch (to.rank=%d, from.rank=%d)",
+        to.rank(), from.rank());
+  }
+  if (to.ElementBytes() != from.ElementBytes()) {
+    terminator.Crash(
+        "AssignSimple: ElementBytes mismatch (to.ElementBytes=%d, "
+        "from.ElementBytes=%d)",
+        to.ElementBytes(), from.ElementBytes());
+  }
+  if (to.type().IsDerived()) {
+    terminator.Crash("AssignSimple: Cannot assign to derived type");
+  }
+
+  std::size_t elementBytes{to.ElementBytes()};
+  std::size_t elements{from.Elements()};
+
+  // Conformability check for non-allocatable arrays.
+  // 1. For allocatable LHS, shape mismatch triggers reallocation (handled in
+  //    Step 2 below).
+  // 2. For non-allocatable LHS, shape mismatch is an error per Fortran
+  //    2018 10.2.1.2 -- the shapes must conform. This matches the
+  //    conformability check in AssignTicket::Begin().
+  //
+  // Example: x(8:1:-3) = x(5:2:-2) where x is not allocatable and LHS has 3
+  // elements, RHS has 2.
+  if (!to.IsAllocatable() && from.rank() > 0) {
+    std::size_t toElements{to.Elements()};
+    if (toElements != elements) {
+      terminator.Crash("AssignSimple: mismatching element counts in "
+                       "non-allocatable array assignment (to %zd, from %zd)",
+          toElements, elements);
+    }
+  }
+
+  // Step 1: Aliasing detection.
+  //
+  // When LHS and RHS reference overlapping memory (e.g., a(9:5:-1) = a(1:5:1)),
+  // an element-wise copy can overwrite source elements before they are read.
+  //
+  // Example of data corruption without temporary:
+  //   integer, dimension(3, 2) :: a
+  //   a = reshape((/1, 2, 3, 4, 5, 6/), (/3, 2/))
+  //   a = a(3:1:-1, 2:1:-1)  ! reverse both dimensions
+  //
+  //   The element-wise loop iterates in column-major order for both LHS and
+  //   RHS:
+  //     Iter 1: a(1,1) = a(3,2) = 6  -> overwrites a(1,1), was 1
+  //     Iter 2: a(2,1) = a(2,2) = 5  -> overwrites a(2,1), was 2
+  //     Iter 3: a(3,1) = a(1,2) = 4  -> overwrites a(3,1), was 3
+  //     Iter 4: a(1,2) = a(3,1)      -> reads 4, but expected 3 (WRONG!)
+  //     Iter 5: a(2,2) = a(2,1)      -> reads 5, but expected 2 (WRONG!)
+  //     Iter 6: a(3,2) = a(1,1)      -> reads 6, but expected 1 (WRONG!)
+  //   Result: (/6,5,4,4,5,6/) instead of (/6,5,4,3,2,1/)
+  //
+  // To fix this, we copy the RHS data into a contiguous temporary buffer
+  // before modifying the LHS. The temp preserves the original source values.
+  //
+  // MayAlias() checks whether the memory ranges described by the two
+  // descriptors overlap. It uses MaximalByteOffsetRange() to compute the
+  // byte extent of each descriptor (accounting for negative strides), then
+  // checks if those ranges overlap via RangesOverlap(). All three are static
+  // functions in this file -- calling them from AssignSimple adds zero
+  // additional LTO pull-in.
+  //
+  // When aliasing is detected, we always create a temporary, even if both
+  // sides are contiguous (where memmove would handle overlap correctly).
+  // This keeps the code simple and covers the case where an allocatable LHS
+  // needs reallocation: deallocating the LHS would free the RHS's backing
+  // memory if they alias.
+  //   Example: integer, allocatable :: a(:)
+  //            allocate(a(5)); a = [1,2,3,4,5]
+  //            a = a(1:3)  ! shapes differ -> deallocate a -> frees a(1:3)'s
+  //            data
+  //
+  // TODO: Refining the condition for creating a temporary buffer.
+  // For better performance on contiguous aliased assignments that do not
+  // require reallocation, we could refine the condition to only create a temp
+  // when:
+  // (needsReallocation || !to.IsContiguous() || !from.IsContiguous())
+  // where
+  // needsReallocation = (to.isAllocatable() && (!to.isAllocated ||
+  //                                             shape_mismatch))
+  // For needsReallocation, see Step 2 below.
+  // Right now though, the simpler approach of always creating a temporary
+  // when aliasing is detected is fine.
+  //
+  // The temporary buffer is allocated via AllocateMemoryOrCrash(), which is
+  // a thin wrapper around std::malloc. This is GPU-safe: both
+  // AllocateMemoryOrCrash and std::malloc are available in GPU device code
+  // (via the device-side heap allocator), and Assign already calls
+  // Descriptor::Allocate() which goes through the same std::malloc path.
+  char *tempBuffer{nullptr};
+  if (MayAlias(to, from)) {
+    std::size_t totalBytes{elements * elementBytes};
+    tempBuffer =
+        static_cast<char *>(AllocateMemoryOrCrash(terminator, totalBytes));
+    // Copy from's data into the contiguous temp buffer, element by element.
+    // This handles non-contiguous RHS (e.g., strided slices) by walking
+    // the descriptor's subscripts.
+    if (from.IsContiguous()) {
+      runtime::memcpy(tempBuffer, from.OffsetElement(), totalBytes);
+    } else {
+      SubscriptValue fromAt[maxRank];
+      from.GetLowerBounds(fromAt);
+      char *tempAt{tempBuffer};
+      for (std::size_t n{elements}; n-- > 0;
+           from.IncrementSubscripts(fromAt), tempAt += elementBytes) {
+        runtime::memcpy(tempAt, from.Element<const char>(fromAt), elementBytes);
+      }
+    }
+  }
+
+  // Step 2: Handle allocation/reallocation for allocatable LHS.
+  //
+  // This must come AFTER the aliasing check above. That is because if we
+  // must call deallocate the LHS (If LHS and RHS alias and shapes differ), the
+  // Deallocate() call below would free the memory that the RHS points to. The
+  // temporary created in Step 1 preserves the RHS data, making the deallocation
+  // safe.
+  //
+  // Per Fortran 2018 10.2.1.3(3): for allocatable LHS, if the LHS is
+  // already allocated and shapes differ, it must be deallocated and
+  // reallocated to match the RHS shape.
+  if (to.IsAllocatable()) {
+    bool needsReallocation{false};
+
+    if (!to.IsAllocated()) {
+      needsReallocation = true;
+    } else if (from.rank() > 0) {
+      int rank{to.rank()};
+      for (int j{0}; j < rank; ++j) {
+        if (to.GetDimension(j).Extent() != from.GetDimension(j).Extent()) {
+          needsReallocation = true;
+          break;
+        }
+      }
+    }
+
+    if (needsReallocation) {
+      if (to.IsAllocated()) {
+        to.Deallocate();
+      }
+      to.raw().elem_len = elementBytes;
+      int rank{to.rank()};
+      auto stride{static_cast<SubscriptValue>(elementBytes)};
+      for (int j{0}; j < rank; ++j) {
+        const auto &fromDim{from.GetDimension(j)};
+        auto &toDim{to.GetDimension(j)};
+        toDim.SetBounds(fromDim.LowerBound(), fromDim.UpperBound());
+        toDim.SetByteStride(stride);
+        stride *= toDim.Extent();
+      }
+      int stat{to.Allocate(kNoAsyncObject)};
+      if (stat != StatOk) {
+        terminator.Crash("AssignSimple: allocation failed (stat=%d)", stat);
+      }
+    }
+  }
+
+  // Step 3: Copy data into LHS.
+  //
+  // If we created a temporary in Step 1 (aliasing detected), copy from
+  // the contiguous temp buffer. Otherwise, copy directly from the RHS.
+  if (tempBuffer) {
+    // Source is the contiguous temp buffer. Destination (LHS) may or may
+    // not be contiguous.
+    if (to.IsContiguous()) {
+      // Both temp (always contiguous) and LHS are contiguous: bulk copy.
+      runtime::memcpy(to.OffsetElement(), tempBuffer, elements * elementBytes);
+    } else {
+      // LHS is non-contiguous (e.g., strided section): element-wise copy
+      // from the contiguous temp buffer into LHS's strided layout.
+      SubscriptValue toAt[maxRank];
+      to.GetLowerBounds(toAt);
+      const char *tempAt{tempBuffer};
+      for (std::size_t n{elements}; n-- > 0;
+           to.IncrementSubscripts(toAt), tempAt += elementBytes) {
+        runtime::memcpy(to.Element<char>(toAt), tempAt, elementBytes);
+      }
+    }
+    FreeMemory(tempBuffer);
+  } else {
+    // No aliasing: copy directly from RHS to LHS.
+    if (to.IsContiguous() && from.IsContiguous()) {
+      // Both contiguous: memmove handles any incidental overlap safely.
+      runtime::memmove(
+          to.OffsetElement(), from.OffsetElement(), elements * elementBytes);
+    } else {
+      // At least one non-contiguous: element-wise copy.
+      // This handles strided slices, transformational intrinsic results, etc.
+      SubscriptValue toAt[maxRank];
+      to.GetLowerBounds(toAt);
+      SubscriptValue fromAt[maxRank];
+      from.GetLowerBounds(fromAt);
+      for (std::size_t n{elements}; n-- > 0;
+           to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+        runtime::memmove(to.Element<char>(toAt),
+            from.Element<const char>(fromAt), elementBytes);
+      }
+    }
+  }
 }
 
 void RTDEF(AssignPolymorphic)(Descriptor &to, const Descriptor &from,
