@@ -9,7 +9,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-@skipIfWasm  # no expression evaluation
+@requireNotWasm  # no expression evaluation
 class TestStopHooks(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
