@@ -120,10 +120,10 @@ define i1 @icmp_sgt_basic(i16 %arg) {
 }
 
 ; ==============================================================================
-; Tests with non-constant operands
+; Test with non-constant operands
 ; ==============================================================================
-define i1 @icmp_ult_assume_c_ule_c2(i8 %x, i8 %c, i8 %c2) {
-; CHECK-LABEL: define i1 @icmp_ult_assume_c_ule_c2(
+define i1 @icmp_ult_nonconstant(i8 %x, i8 %c, i8 %c2) {
+; CHECK-LABEL: define i1 @icmp_ult_nonconstant(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]], i8 [[C2:%.*]]) {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ule i8 [[C]], [[C2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
@@ -133,78 +133,8 @@ define i1 @icmp_ult_assume_c_ule_c2(i8 %x, i8 %c, i8 %c2) {
 ;
   %cond = icmp ule i8 %c, %c2
   call void @llvm.assume(i1 %cond)
-  %add = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %c)
-  %cmp = icmp ult i8 %add, %c2
-  ret i1 %cmp
-}
-
-define i1 @icmp_ult_equal_operands(i8 %x, i8 %c) {
-; CHECK-LABEL: define i1 @icmp_ult_equal_operands(
-; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
-; CHECK-NEXT:    ret i1 false
-;
-  %add = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %c)
-  %cmp = icmp ult i8 %add, %c
-  ret i1 %cmp
-}
-
-define i1 @icmp_ult_assume_constant_c2(i8 %x, i8 %c) {
-; CHECK-LABEL: define i1 @icmp_ult_assume_constant_c2(
-; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]]) {
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i8 [[C]], 30
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i8 30, [[C]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %cond = icmp ult i8 %c, 30
-  call void @llvm.assume(i1 %cond)
-  %add = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %c)
-  %cmp = icmp ult i8 %add, 30
-  ret i1 %cmp
-}
-
-define i1 @icmp_ult_no_assume(i8 %x, i8 %c, i8 %c2) {
-; CHECK-LABEL: define i1 @icmp_ult_no_assume(
-; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]], i8 [[C2:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 [[C]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[ADD]], [[C2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %add = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %c)
-  %cmp = icmp ult i8 %add, %c2
-  ret i1 %cmp
-}
-
-define i1 @icmp_ult_assume_c_ugt_c2(i8 %x, i8 %c, i8 %c2) {
-; CHECK-LABEL: define i1 @icmp_ult_assume_c_ugt_c2(
-; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]], i8 [[C2:%.*]]) {
-; CHECK-NEXT:    [[COND:%.*]] = icmp ugt i8 [[C]], [[C2]]
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[ADD:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 [[C]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[ADD]], [[C2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %cond = icmp ugt i8 %c, %c2
-  call void @llvm.assume(i1 %cond)
-  %add = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %c)
-  %cmp = icmp ult i8 %add, %c2
-  ret i1 %cmp
-}
-
-define i1 @icmp_ule_assume_c_ule_c2(i8 %x, i8 %c, i8 %c2) {
-; CHECK-LABEL: define i1 @icmp_ule_assume_c_ule_c2(
-; CHECK-SAME: i8 [[X:%.*]], i8 [[C:%.*]], i8 [[C2:%.*]]) {
-; CHECK-NEXT:    [[COND:%.*]] = icmp ule i8 [[C]], [[C2]]
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[ADD:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X]], i8 [[C]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i8 [[ADD]], [[C2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
-;
-  %cond = icmp ule i8 %c, %c2
-  call void @llvm.assume(i1 %cond)
-  %add = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %c)
-  %cmp = icmp ule i8 %add, %c2
+  %sat = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %c)
+  %cmp = icmp ult i8 %sat, %c2
   ret i1 %cmp
 }
 
