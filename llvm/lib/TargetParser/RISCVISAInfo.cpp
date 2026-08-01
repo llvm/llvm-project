@@ -1082,24 +1082,27 @@ RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
 }
 
 StringRef RISCVISAInfo::computeDefaultABI() const {
+  bool HasY = Exts.count("y") != 0;
   if (XLen == 32) {
     if (Exts.count("xcheriot"))
       return "cheriot";
     if (Exts.count("e"))
-      return "ilp32e";
+      return HasY ? "il32pc64e" : "ilp32e";
     if (Exts.count("d"))
-      return "ilp32d";
+      return HasY ? "il32pc64d" : "ilp32d";
     if (Exts.count("f"))
-      return "ilp32f";
-    return "ilp32";
+      return HasY ? "il32pc64f" : "ilp32f";
+    return HasY ? "il32pc64" : "ilp32";
   } else if (XLen == 64) {
+    // There is no l64pc128e ABI, so RV64E still uses the integer ABI even
+    // when the Y extension is enabled.
     if (Exts.count("e"))
       return "lp64e";
     if (Exts.count("d"))
-      return "lp64d";
+      return HasY ? "l64pc128d" : "lp64d";
     if (Exts.count("f"))
-      return "lp64f";
-    return "lp64";
+      return HasY ? "l64pc128f" : "lp64f";
+    return HasY ? "l64pc128" : "lp64";
   }
   llvm_unreachable("Invalid XLEN");
 }

@@ -21,6 +21,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -30,8 +31,15 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
   MCAssembler &MCA = getStreamer().getAssembler();
   auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  setTargetABI(
-      RISCVABI::computeTargetABI(STI, MAB.getTargetOptions().getABIName()));
+  // See RISCVSubtarget::initializeSubtargetDependencies: can't be fatal.
+  auto ABIOrErr =
+      RISCVABI::computeTargetABI(STI, MAB.getTargetOptions().getABIName());
+  if (ABIOrErr) {
+    setTargetABI(*ABIOrErr);
+  } else {
+    errs() << toString(ABIOrErr.takeError()) << " (ignoring target-abi)\n";
+    setTargetABI(cantFail(RISCVABI::computeTargetABI(STI, "")));
+  }
   setFlagsFromFeatures(STI);
 
   // Compute the initial ISA string.  This serves two purposes:
