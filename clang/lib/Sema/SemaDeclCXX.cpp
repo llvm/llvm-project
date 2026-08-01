@@ -16656,6 +16656,9 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
 }
 
 TypeAwareAllocationMode Sema::ShouldUseTypeAwareOperatorNewOrDelete() const {
+  if (!LangOpts.CPlusPlus23)
+    return TypeAwareAllocationMode::No;
+
   bool SeenTypedOperators = Context.hasSeenTypeAwareOperatorNewOrDelete();
   return typeAwareAllocationModeFromBool(SeenTypedOperators);
 }
