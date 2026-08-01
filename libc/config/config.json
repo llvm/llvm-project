@@ -74,7 +74,7 @@
       "value": false,
       "doc": "Disable index mode in the scanf format string."
     },
-    "LIBC_CONF_SCANF_PROVIDE_ISO99_ALIASES": {
+    "LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES": {
       "value": false,
       "doc": "Add __iso99_* aliases for scanf's functions."
     }

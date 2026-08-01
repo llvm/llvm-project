@@ -193,8 +193,8 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_COPT_USE_C_ASSERT")
   endif()
 
-  if(LIBC_CONF_SCANF_PROVIDE_ISO99_ALIASES)
-    list(APPEND config_options "-DLIBC_CONF_SCANF_PROVIDE_ISO99_ALIASES")
+  if(LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES)
+    list(APPEND config_options "-DLIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES")
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)
