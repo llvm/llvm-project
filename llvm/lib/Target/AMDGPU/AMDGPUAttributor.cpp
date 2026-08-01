@@ -1433,6 +1433,153 @@ struct AAAMDGPUMinAGPRAlloc
 };
 
 const char AAAMDGPUMinAGPRAlloc::ID = 0;
+/// The register-file split a function has been committed to by its callers.
+/// \p Min is the absolute ceiling on architected VGPRs, \p Max is the AGPR
+/// ceiling encoded relative to the total vector register budget.
+struct VGPRBudgetState {
+  unsigned Min = 0;
+  unsigned Max = 0;
+  bool Unknown = true;
+
+  bool operator==(const VGPRBudgetState &Other) const {
+    return Unknown == Other.Unknown && Min == Other.Min && Max == Other.Max;
+  }
+  bool operator!=(const VGPRBudgetState &Other) const {
+    return !(*this == Other);
+  }
+
+  /// Combine with the budget of one caller. A function reachable from several
+  /// callers has to fit inside all of their splits, so take the tightest
+  /// ceiling on each side: the smallest VGPR count and, since AGPRs are
+  /// encoded relative to the budget, the largest \p Max.
+  void merge(const VGPRBudgetState &Other) {
+    assert(!Other.Unknown && "cannot merge an unknown budget");
+    if (Unknown) {
+      *this = Other;
+      return;
+    }
+    Min = std::min(Min, Other.Min);
+    Max = std::max(Max, Other.Max);
+  }
+};
+
+/// An abstract attribute to propagate the register file split a kernel was
+/// compiled with down the call graph to its device functions, emitted as
+/// "amdgpu-vgpr-budget". Entry functions seed the split from their own vector
+/// register budget; every other function inherits the tightest split over its
+/// callers.
+struct AAAMDGPUVGPRBudget
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUVGPRBudget(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  static AAAMDGPUVGPRBudget &createForPosition(const IRPosition &IRP,
+                                               Attributor &A) {
+    if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+      return *new (A.Allocator) AAAMDGPUVGPRBudget(IRP, A);
+    llvm_unreachable("AAAMDGPUVGPRBudget is only valid for function position");
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    Function *F = getAssociatedFunction();
+    VGPRBudgetState OldState = Budget;
+
+    // The budget is recomputed from scratch on every update rather than
+    // accumulated, because the seed itself moves: a kernel's split shrinks as
+    // AAAMDGPUMinAGPRAlloc climbs, and callees have to follow it down.
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+      const auto *AGPRAlloc = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
+          *this, IRPosition::function(*F), DepClassTy::REQUIRED);
+      if (!AGPRAlloc || !AGPRAlloc->isValidState())
+        return indicatePessimisticFixpoint();
+
+      auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+      const GCNSubtarget &ST = InfoCache.TM.getSubtarget<GCNSubtarget>(*F);
+      unsigned MaxRegs = ST.getMaxNumVGPRs(*F);
+      unsigned VGPRBudget =
+          MaxRegs - std::min(MaxRegs, AGPRAlloc->getAssumed());
+      Budget = {VGPRBudget, VGPRBudget, /*Unknown=*/false};
+    } else {
+      VGPRBudgetState Merged;
+
+      auto CheckCallSite = [&](AbstractCallSite CS) {
+        Function *Caller = CS.getInstruction()->getFunction();
+        const auto *CallerAA = A.getAAFor<AAAMDGPUVGPRBudget>(
+            *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+        if (!CallerAA || !CallerAA->isValidState())
+          return false;
+
+        // A caller without a budget yet imposes no constraint, so skip it
+        // rather than giving up. This is what lets a call graph cycle be
+        // seeded from outside the cycle instead of deadlocking on itself; the
+        // dependency brings us back once the caller does have a value.
+        const VGPRBudgetState &CallerBudget = CallerAA->getBudget();
+        if (!CallerBudget.Unknown)
+          Merged.merge(CallerBudget);
+        return true;
+      };
+
+      bool UsedAssumedInformation = false;
+      if (!A.checkForAllCallSites(CheckCallSite, *this,
+                                  /*RequireAllCallSites=*/true,
+                                  UsedAssumedInformation))
+        return indicatePessimisticFixpoint();
+
+      // Stays unknown when no caller contributed a budget, so that functions
+      // outside any kernel's reach are left unconstrained.
+      Budget = Merged;
+    }
+
+    return OldState == Budget ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (Budget.Unknown)
+      return ChangeStatus::UNCHANGED;
+    SmallString<16> Buffer;
+    raw_svector_ostream OS(Buffer);
+    if (Budget.Min == Budget.Max)
+      OS << Budget.Min;
+    else
+      OS << Budget.Min << ',' << Budget.Max;
+    return A.manifestAttrs(
+        getIRPosition(),
+        {Attribute::get(getAssociatedFunction()->getContext(), AttrName,
+                        OS.str())},
+        /*ForceReplace=*/true);
+  }
+
+  const VGPRBudgetState &getBudget() const { return Budget; }
+
+  const std::string getAsStr(Attributor *A) const override {
+    if (!getAssumed() || Budget.Unknown)
+      return "unknown";
+    std::string Str;
+    raw_string_ostream OS(Str);
+    OS << AttrName << '=' << Budget.Min << ',' << Budget.Max;
+    return Str;
+  }
+
+  void trackStatistics() const override {}
+
+  StringRef getName() const override { return "AAAMDGPUVGPRBudget"; }
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDGPUVGPRBudget.
+  static bool classof(const AbstractAttribute *AA) {
+    return AA->getIdAddr() == &ID;
+  }
+
+  static const char ID;
+
+private:
+  VGPRBudgetState Budget;
+
+  static constexpr char AttrName[] = "amdgpu-vgpr-budget";
+};
+
+const char AAAMDGPUVGPRBudget::ID = 0;
 
 /// An abstract attribute to propagate the function attribute
 /// "amdgpu-cluster-dims" from kernel entry functions to device functions.
@@ -1597,10 +1744,10 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
       {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
        &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID,
-       &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
-       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
-       &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID, &AAAlign::ID});
+       &AAAMDGPUMinAGPRAlloc::ID, &AAAMDGPUVGPRBudget::ID, &AACallEdges::ID,
+       &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
+       &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
+       &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1642,8 +1789,10 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
     if (!F->isDeclaration() && ST.hasClusters())
       A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
 
-    if (ST.hasGFX90AInsts())
+    if (ST.hasGFX90AInsts()) {
       A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
+      A.getOrCreateAAFor<AAAMDGPUVGPRBudget>(IRPosition::function(*F));
+    }
 
     for (auto &I : instructions(F)) {
       Value *Ptr = nullptr;
