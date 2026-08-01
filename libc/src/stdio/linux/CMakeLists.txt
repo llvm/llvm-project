@@ -66,3 +66,13 @@ add_entrypoint_object(
     libc.hdr.types.FILE
     libc.src.__support.File.platform_file
 )
+
+add_entrypoint_object( tmpfile
+  SRCS
+    tmpfile.cpp
+  HDRS
+    ../tmpfile.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.src.__support.File.platform_file
+)
