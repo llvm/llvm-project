@@ -13,13 +13,6 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
-/// Whether `_Complex` values with an integer element type are passed and
-/// returned the way GCC passes and returns them.
-static bool isComplexGnuABI(const ABIInfo &Info) {
-  return !Info.getContext().getLangOpts().isCompatibleWith(
-      LangOptions::ClangABI::Ver23);
-}
-
 //===----------------------------------------------------------------------===//
 // SPARC v8 ABI Implementation.
 // Based on the SPARC Compliance Definition version 2.4.1.
@@ -29,9 +22,15 @@ static bool isComplexGnuABI(const ABIInfo &Info) {
 namespace {
 class SparcV8ABIInfo : public DefaultABIInfo {
 public:
-  SparcV8ABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
+  SparcV8ABIInfo(CodeGenTypes &CGT)
+      : DefaultABIInfo(CGT),
+        IsComplexGnuABI(!CGT.getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver23)) {}
 
 private:
+  /// Whether how `_Complex` values are passed and returned is GCC-compatible.
+  bool IsComplexGnuABI;
+
   llvm::Type *getComplexIntCoerceType(QualType Ty) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
@@ -40,7 +39,7 @@ private:
 } // end anonymous namespace
 
 llvm::Type *SparcV8ABIInfo::getComplexIntCoerceType(QualType Ty) const {
-  if (!isComplexGnuABI(*this))
+  if (!IsComplexGnuABI)
     return nullptr;
 
   const auto *CT = Ty->getAs<ComplexType>();
@@ -156,9 +155,15 @@ public:
 namespace {
 class SparcV9ABIInfo : public ABIInfo {
 public:
-  SparcV9ABIInfo(CodeGenTypes &CGT) : ABIInfo(CGT) {}
+  SparcV9ABIInfo(CodeGenTypes &CGT)
+      : ABIInfo(CGT),
+        IsComplexGnuABI(!CGT.getContext().getLangOpts().isCompatibleWith(
+            LangOptions::ClangABI::Ver23)) {}
 
 private:
+  /// Whether how `_Complex` values are passed and returned is GCC-compatible.
+  bool IsComplexGnuABI;
+
   ABIArgInfo classifyType(QualType RetTy, unsigned SizeLimit,
                           unsigned &RegOffset) const;
   void computeInfo(CGFunctionInfo &FI) const override;
@@ -312,7 +317,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
 
   // When being GCC-compatible, cast a complex integer to an integer type
   // of the right size to get the correct scalar-like behavior.
-  if (isComplexGnuABI(*this))
+  if (IsComplexGnuABI)
     if (const auto *CT = Ty->getAs<ComplexType>();
         CT && Size < 64 && CT->getElementType()->isIntegerType()) {
       RegOffset += 1;
