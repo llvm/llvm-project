@@ -117,6 +117,16 @@ private:
                           ArrayRef<const Expr *> Args,
                           bool IsGslConstruction = false);
 
+  // Handles calls that allocate memory (e.g. functions annotated with
+  // `ownership_returns`): the call result is a fresh allocation, so a new
+  // loan is issued for it.
+  void handleAllocatingCall(const Expr *Call, const FunctionDecl *FD);
+
+  // Handles calls that free memory (e.g. functions annotated with
+  // `ownership_takes`): the freed arguments' origins are invalidated.
+  void handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
+                         ArrayRef<const Expr *> Args);
+
   // Detect methods that invalidate iterators/references/pointees.
   // For instance methods, Args[0] is the implicit 'this' pointer.
   void handleInvalidatingCall(const Expr *Call, const FunctionDecl *FD,

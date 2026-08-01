@@ -115,6 +115,15 @@ static const Loan *createLoan(FactManager &FactMgr, const CXXNewExpr *NE) {
   return FactMgr.getLoanMgr().createLoan(Path, NE);
 }
 
+/// Creates a loan for a heap allocation made by a call (e.g. a function
+/// annotated with `ownership_returns`, like `malloc`).
+/// \param CE The CallExpr that represents the allocation
+/// \return The new Loan on success, nullptr otherwise
+static const Loan *createLoan(FactManager &FactMgr, const CallExpr *CE) {
+  AccessPath Path(CE);
+  return FactMgr.getLoanMgr().createLoan(Path, CE);
+}
+
 void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
@@ -1070,6 +1079,46 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   }
 }
 
+void FactsGenerator::handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
+                                       ArrayRef<const Expr *> Args) {
+  // FIXME: `ParamIdx` accounts for the implicit 'this' parameter of
+  // constructors, but VisitCXXConstructExpr passes only the explicit
+  // arguments, so the index mapping would be off by one.
+  if (isa<CXXConstructorDecl>(FD))
+    return;
+  for (const OwnershipAttr *Attr : FD->specific_attrs<OwnershipAttr>()) {
+    if (Attr->getOwnKind() != OwnershipAttr::Takes)
+      continue;
+    for (const ParamIdx &Idx : Attr->args()) {
+      // `getLLVMIndex` encodes zero-origin indices including any implicit
+      // 'this' parameter, matching the layout of the Args array.
+      unsigned ArgIndex = Idx.getLLVMIndex();
+      if (ArgIndex >= Args.size())
+        continue;
+      OriginList *ArgList = getOriginsList(*Args[ArgIndex]);
+      if (!ArgList)
+        continue;
+      CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+          ArgList->getOuterOriginID(), Call));
+    }
+  }
+}
+
+void FactsGenerator::handleAllocatingCall(const Expr *Call,
+                                          const FunctionDecl *FD) {
+  if (!isAllocatingFunction(*FD))
+    return;
+  const auto *CE = dyn_cast<CallExpr>(Call);
+  if (!CE)
+    return;
+  OriginList *CallList = getOriginsList(*Call);
+  if (!CallList)
+    return;
+  const Loan *L = createLoan(FactMgr, CE);
+  CurrentBlockFacts.push_back(
+      FactMgr.createFact<IssueFact>(L->getID(), CallList->getOuterOriginID()));
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -1087,6 +1136,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   handleMovedArgsInCall(FD, Args);
   handleImplicitObjectFieldUses(Call, FD);
   handleLifetimeCaptureBy(FD, Args);
+  handleAllocatingCall(Call, FD);
+  handleFreeingCall(Call, FD, Args);
   if (!CallList)
     return;
   if (isStdReferenceCast(FD)) {

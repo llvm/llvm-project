@@ -453,6 +453,20 @@ bool destructsFirstArg(const FunctionDecl &FD) {
   return isInStlNamespace(&FD) && getName(FD) == "destroy_at";
 }
 
+bool isAllocatingFunction(const FunctionDecl &FD) {
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Returns;
+                      });
+}
+
+bool isFreeingFunction(const FunctionDecl &FD) {
+  return llvm::any_of(FD.specific_attrs<OwnershipAttr>(),
+                      [](const OwnershipAttr *Attr) {
+                        return Attr->getOwnKind() == OwnershipAttr::Takes;
+                      });
+}
+
 bool isStdCallableWrapperType(const CXXRecordDecl *RD) {
   if (!RD || !isInStlNamespace(RD))
     return false;

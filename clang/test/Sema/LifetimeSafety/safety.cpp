@@ -3379,6 +3379,140 @@ void allocate_void_ptr() {
 
 } // namespace new_allocation
 
+namespace ownership_functions {
+
+// Allocating/freeing functions are annotated with the ownership attributes:
+//   * ownership_returns: the result is a fresh allocation with a new loan.
+//   * ownership_takes:   the annotated arguments are freed, invalidating their
+//                        origins.
+
+__attribute__((ownership_returns(malloc))) int *myalloc(void);
+__attribute__((ownership_takes(malloc, 1))) void myfree(int *p);
+__attribute__((ownership_takes(malloc, 1, 2))) void myfree2(int *a, int *b);
+__attribute__((ownership_returns(malloc), ownership_takes(malloc, 1))) int *
+myrealloc(int *p);
+
+int *g_owned_ptr;   // expected-note {{this global dangles}}
+
+void ownership_returns_basic_uaf() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  *p = 1;             // expected-note {{later used here}}
+}
+
+void ownership_returns_free_no_use() {
+  int *p = myalloc();
+  myfree(p);
+}
+
+void ownership_returns_free_stack() {
+  int local = 42;
+  int *p = &local; // expected-warning {{local variable 'local' does not live long enough}}
+  myfree(&local);  // expected-note {{local variable 'local' is freed here}}
+  (void)*p;        // expected-note {{later used here}}
+}
+
+void ownership_returns_escape_global() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the global variable 'g_owned_ptr' and is later invalidated}}
+  g_owned_ptr = p;
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+}
+
+void ownership_returns_global_alias_uaf() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  g_owned_ptr = p;    // expected-note {{local variable 'p' aliases the storage of object allocated by 'myalloc'}}
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  *g_owned_ptr = 1;   // expected-note {{later used here}}
+  g_owned_ptr = nullptr;
+}
+
+struct OwnershipFieldHolder {
+  int *f;                 // expected-note {{this field dangles}}
+  void go() {
+    int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' escapes to the field 'f' and is later invalidated}}
+    this->f = p;
+    myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  }
+};
+
+void ownership_returns_heap_escape_ok() {
+  int *p = myalloc();
+  g_owned_ptr = p;
+  myfree(p);
+  g_owned_ptr = nullptr;
+}
+
+void ownership_returns_free_param(int *p) { // expected-warning {{parameter 'p' does not live long enough}}
+  myfree(p);                                // expected-note {{parameter 'p' is freed here}}
+  *p = 1;                                   // expected-note {{later used here}}
+}
+
+void ownership_returns_multi_arg_free() {
+  int *a = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  int *b = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  myfree2(a, b);      // expected-note 2 {{object allocated by 'myalloc' is freed here}}
+  *a = 1;             // expected-note {{later used here}}
+  *b = 1;             // expected-note {{later used here}}
+}
+
+void ownership_returns_realloc() {
+  int *p = myalloc();
+  p = myrealloc(p); // expected-warning {{object allocated by 'myrealloc' does not live long enough}}
+  *p = 1;
+  myfree(p);        // expected-note {{object allocated by 'myrealloc' is freed here}}
+  *p = 1;           // expected-note {{later used here}}
+}
+
+void ownership_returns_free_then_reassign() {
+  int *p = myalloc();
+  myfree(p);
+  p = myalloc();
+  *p = 1;
+  myfree(p);
+}
+
+void ownership_returns_conditional_free(int k) {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  if (k)
+    myfree(p);        // expected-note {{object allocated by 'myalloc' is freed here}}
+  else
+    myfree(p);
+  *p = 1;             // expected-note {{later used here}}
+}
+
+void ownership_returns_double_free() {
+  int *p = myalloc(); // expected-warning {{object allocated by 'myalloc' does not live long enough}}
+  myfree(p);          // expected-note {{object allocated by 'myalloc' is freed here}}
+  myfree(p);          // expected-note {{later used here}}
+}
+
+struct OwnershipAllocator {
+  __attribute__((ownership_returns(malloc))) int *alloc(void);
+  // The index accounts for the implicit 'this' parameter, so 2 is the first
+  // explicit parameter.
+  __attribute__((ownership_takes(malloc, 2))) void dealloc(int *p);
+  __attribute__((ownership_returns(malloc), ownership_takes(malloc, 2))) int *
+  realloc2(int *p);
+};
+
+void ownership_returns_member_allocator() {
+  OwnershipAllocator a;
+  int *p = a.alloc(); // expected-warning {{object allocated by 'alloc' does not live long enough}}
+  a.dealloc(p);       // expected-note {{object allocated by 'alloc' is freed here}}
+  *p = 1;             // expected-note {{later used here}}
+}
+
+void ownership_returns_member_realloc() {
+  OwnershipAllocator a;
+  int *p = a.alloc();
+  p = a.realloc2(p); // expected-warning {{object allocated by 'realloc2' does not live long enough}}
+  *p = 1;
+  a.dealloc(p); // expected-note {{object allocated by 'realloc2' is freed here}}
+  *p = 1;       // expected-note {{later used here}}
+}
+
+} // namespace ownership_functions
+
 namespace placement_new {
 
 void placement_new_int_basic() {
