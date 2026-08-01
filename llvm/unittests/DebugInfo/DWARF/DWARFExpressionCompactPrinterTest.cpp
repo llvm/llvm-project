@@ -137,8 +137,7 @@ TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_bregx) {
 // DW_OP_bregx uses the same two lookups, so check that it reports register 100
 // as unknown and returns false when neither finds a name.
 TEST_F(DWARFExpressionCompactPrinterTest, Test_OP_bregx_unknown) {
-  TestExprPrinterFailure({DW_OP_bregx, 0x64, 0x00},
-                         "<unknown register 100>");
+  TestExprPrinterFailure({DW_OP_bregx, 0x64, 0x00}, "<unknown register 100>");
 }
 
 // With no register callback, the short base-register form must also report
