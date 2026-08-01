@@ -1618,6 +1618,7 @@ Experimental extensions
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
+    zilx                 0.1
     zvabd                0.7
     zvbc32e              0.7
     zvdot4a8i            0.1
@@ -1638,7 +1639,9 @@ Experimental extensions
     zvvmtls              0.1
     zvvmttls             0.1
     zvzip                0.1
+    smcsps               0.19
     smpmpmt              0.6
+    sscsps               0.19
     svukte               0.3
     xqccmt               0.1
     xsfmclic             0.1

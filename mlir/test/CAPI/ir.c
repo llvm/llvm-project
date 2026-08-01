@@ -2943,6 +2943,97 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+// Replace-uses filter that accepts only uses whose owner is an `arith.addi`.
+static bool useOwnerIsAddi(MlirOpOperand opOperand, void *userData) {
+  (void)userData;
+  MlirStringRef name =
+      mlirIdentifierStr(mlirOperationGetName(mlirOpOperandGetOwner(opOperand)));
+  return mlirStringRefEqual(name, mlirStringRefCreateFromCString("arith.addi"));
+}
+
+// User data threaded through mlirValueReplaceUsesWithIf below.
+struct ReplaceUsesFilterData {
+  // Only uses at this operand number are replaced.
+  intptr_t operandNumber;
+  // Every visited use is expected to be a use of this value.
+  MlirValue expectedValue;
+  // Number of times the filter has been invoked.
+  int numCalls;
+};
+
+// Replace-uses filter that accepts a single operand number, and checks along
+// the way that the use it is handed carries the value being replaced.
+static bool useIsAtOperandNumber(MlirOpOperand opOperand, void *userData) {
+  struct ReplaceUsesFilterData *data = (struct ReplaceUsesFilterData *)userData;
+  assert(mlirValueEqual(mlirOpOperandGetValue(opOperand), data->expectedValue));
+  data->numCalls++;
+  return mlirOpOperandGetOperandNumber(opOperand) == data->operandNumber;
+}
+
+int testReplaceUsesWithIf(MlirContext ctx) {
+  fprintf(stderr, "@testReplaceUsesWithIf\n");
+  // CHECK-LABEL: @testReplaceUsesWithIf
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f(%arg0: i32, %arg1: i32) -> i32 {\n"
+                          "  %0 = arith.addi %arg0, %arg0 : i32\n"
+                          "  %1 = arith.muli %arg0, %arg0 : i32\n"
+                          "  %2 = arith.addi %0, %1 : i32\n"
+                          "  %3 = arith.muli %arg1, %arg1 : i32\n"
+                          "  return %2 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirValue arg0 = mlirBlockGetArgument(funcBody, 0);
+  MlirValue arg1 = mlirBlockGetArgument(funcBody, 1);
+  MlirOperation addOp = mlirBlockGetFirstOperation(funcBody);
+  MlirOperation mulOp = mlirOperationGetNextInBlock(addOp);
+
+  // Replace arg0 with arg1, but only in arith.addi ops.
+  mlirValueReplaceUsesWithIf(arg0, arg1, useOwnerIsAddi, NULL);
+
+  // The first addi now uses arg1 for both operands.
+  assert(mlirValueEqual(mlirOperationGetOperand(addOp, 0), arg1));
+  assert(mlirValueEqual(mlirOperationGetOperand(addOp, 1), arg1));
+
+  // The muli is not an addi, so its operands are untouched (still arg0).
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 0), arg0));
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 1), arg0));
+
+  // The filter can also discriminate between the individual uses inside a
+  // single operation: arg0 is now only used by the muli, twice, and only the
+  // use at operand number 1 is replaced. `userData` is threaded through to the
+  // callback, which records how many uses it saw.
+  struct ReplaceUsesFilterData data = {/*operandNumber=*/1,
+                                       /*expectedValue=*/arg0,
+                                       /*numCalls=*/0};
+  mlirValueReplaceUsesWithIf(arg0, arg1, useIsAtOperandNumber, &data);
+  assert(data.numCalls == 2);
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 0), arg0));
+  assert(mlirValueEqual(mlirOperationGetOperand(mulOp, 1), arg1));
+
+  // Replacing the uses of a value that has none never invokes the filter.
+  MlirOperation unusedOp = mlirOperationGetNextInBlock(
+      mlirOperationGetNextInBlock(mulOp)); // %3 = muli %arg1, %arg1
+  MlirValue unused = mlirOperationGetResult(unusedOp, 0);
+  data.expectedValue = unused;
+  data.numCalls = 0;
+  mlirValueReplaceUsesWithIf(unused, arg1, useIsAtOperandNumber, &data);
+  assert(data.numCalls == 0);
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testReplaceUsesWithIf: PASSED
+  fprintf(stderr, "testReplaceUsesWithIf: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2998,6 +3089,8 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testReplaceUsesWithIf(ctx))
+    return 21;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

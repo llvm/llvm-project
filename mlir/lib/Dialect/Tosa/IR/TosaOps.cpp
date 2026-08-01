@@ -44,10 +44,8 @@ using namespace mlir::tosa;
 // Tosa dialect interface includes.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tosa/IR/TosaAvailability.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaEnums.cpp.inc"
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.cpp.inc"
-#include "mlir/Dialect/Tosa/IR/TosaOpAvailabilityImpl.inc"
 
 namespace {
 #include "mlir/Dialect/Tosa/IR/TosaDialectBytecode.cpp.inc"
@@ -3985,6 +3983,12 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
 LogicalResult tosa::ResizeOp::verify() {
   const Value input = getInput();
   const Value output = getOutput();
+  const Type inputElementType = getElementTypeOrSelf(input.getType());
+
+  if (isa<BlockScaledType>(inputElementType) &&
+      getMode() != ResizeMode::NEAREST_NEIGHBOR)
+    return emitOpError("requires NEAREST_NEIGHBOR mode for block scaled input");
+
   const RankedTensorType inputType =
       llvm::dyn_cast<RankedTensorType>(input.getType());
   const RankedTensorType outputType =

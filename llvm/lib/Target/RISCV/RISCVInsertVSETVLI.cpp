@@ -109,7 +109,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
 
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addUsedIfAvailable<LiveIntervalsWrapperPass>();
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();

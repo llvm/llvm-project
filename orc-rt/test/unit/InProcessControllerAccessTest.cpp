@@ -32,8 +32,9 @@ class MockIPEPC {
 public:
   using Connection = InProcessControllerAccess::Connection;
 
-  using OnCallJITDispatchFn = move_only_function<void(
-      uint64_t CallId, void *HandlerTag, WrapperFunctionBuffer ArgBytes)>;
+  using OnCallJITDispatchFn =
+      move_only_function<void(uint64_t CallId, orc_rt_ControllerHandlerTag T,
+                              WrapperFunctionBuffer ArgBytes)>;
   using OnReturnWrapperResultFn = move_only_function<void(
       uint64_t CallId, WrapperFunctionBuffer ResultBytes)>;
 
@@ -83,12 +84,12 @@ public:
 
 private:
   static void callJITDispatchEntry(void *IPEPC, uint64_t CallId,
-                                   void *HandlerTag,
+                                   orc_rt_ControllerHandlerTag T,
                                    orc_rt_WrapperFunctionBuffer ArgBytes) {
     auto *Self = static_cast<MockIPEPC *>(IPEPC);
     WrapperFunctionBuffer Buf(ArgBytes);
     if (Self->OnCallJITDispatch)
-      Self->OnCallJITDispatch(CallId, HandlerTag, std::move(Buf));
+      Self->OnCallJITDispatch(CallId, T, std::move(Buf));
   }
 
   static void
@@ -181,7 +182,7 @@ TEST(InProcessControllerAccessTest, OnConnectFailureIsReportedAndDetaches) {
         if (const char *Msg = R.getOutOfBandError())
           CallErr = Msg;
       },
-      reinterpret_cast<Session::HandlerTag>(0xdeadbeef),
+      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
       WrapperFunctionBuffer::copyFrom("x", 1));
 
   ASSERT_TRUE(CallErr);
@@ -209,7 +210,7 @@ TEST(InProcessControllerAccessTest, CallControllerSuccess) {
             << "Unexpected out-of-band error: " << R.getOutOfBandError();
         Result = std::string(R.data(), R.size());
       },
-      reinterpret_cast<Session::HandlerTag>(0xdeadbeef),
+      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
       WrapperFunctionBuffer::copyFrom("hello", 5));
 
   ASSERT_TRUE(Result);
@@ -237,7 +238,7 @@ TEST(InProcessControllerAccessTest, CallControllerOutOfBandError) {
         if (const char *Msg = R.getOutOfBandError())
           ErrMsg = Msg;
       },
-      reinterpret_cast<Session::HandlerTag>(0xdeadbeef),
+      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
       WrapperFunctionBuffer::copyFrom("payload", 7));
 
   ASSERT_TRUE(ErrMsg);
@@ -263,7 +264,7 @@ TEST(InProcessControllerAccessTest, DisconnectDrainsPendingCalls) {
         if (const char *Msg = R.getOutOfBandError())
           ErrMsg = Msg;
       },
-      reinterpret_cast<Session::HandlerTag>(0xdeadbeef),
+      reinterpret_cast<orc_rt_ControllerHandlerTag>(0xdeadbeef),
       WrapperFunctionBuffer::copyFrom("payload", 7));
 
   ASSERT_FALSE(ErrMsg) << "OnComplete fired prematurely";
@@ -279,10 +280,10 @@ TEST(InProcessControllerAccessTest, DisconnectDrainsPendingCalls) {
 
 // Wrapper function that echoes ArgBytes back as the result. Used to exercise
 // the controller-initiated wrapper-call path without pulling in SPS.
-static void echoWrapper(orc_rt_SessionRef S, uint64_t CallId,
-                        orc_rt_WrapperFunctionReturn Return,
-                        orc_rt_WrapperFunctionBuffer ArgBytes) {
-  Return(S, CallId, ArgBytes);
+static void echoWrapper(orc_rt_SessionRef S,
+                        orc_rt_WrapperFunctionBuffer ArgBytes,
+                        orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
+  Return(S, ArgBytes, CallId);
 }
 
 TEST(InProcessControllerAccessTest, CallFromControllerSuccess) {

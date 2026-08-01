@@ -44,7 +44,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[CAST]]>
 ; IF-EVL-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
-; IF-EVL-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
+; IF-EVL-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP1]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN ir<[[ADD:%.+]]> = add ir<[[LD1]]>, ir<[[RDX_PHI]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN-INTRINSIC vp<[[RDX_SELECT]]> = call llvm.vp.merge(ir<true>, ir<[[ADD]]>, ir<[[RDX_PHI]]>, vp<[[EVL]]>)
@@ -86,7 +86,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[CAST:%[0-9]+]]> = zext vp<[[EVL]]> to i64
 ; IF-EVL-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<[[CAST]]>
 ; IF-EVL-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
-; IF-EVL-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
+; IF-EVL-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP1]]>
 ; IF-EVL-INLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
 ; IF-EVL-INLOOP-NEXT:    REDUCE ir<[[ADD:%.+]]> = ir<[[RDX_PHI]]> + vp.reduce.add (ir<[[LD1]]>, vp<[[EVL]]>)
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[CAST2:%[0-9]+]]> = zext vp<[[EVL]]> to i64
@@ -124,7 +124,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi (add) vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-OUTLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; NO-VP-OUTLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
-; NO-VP-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
+; NO-VP-OUTLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP1]]>
 ; NO-VP-OUTLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>
 ; NO-VP-OUTLOOP-NEXT:    WIDEN ir<[[ADD:%.+]]> = add ir<[[LD1]]>, ir<[[RDX_PHI]]>
 ; NO-VP-OUTLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
@@ -173,7 +173,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; NO-VP-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi (add) vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
 ; NO-VP-INLOOP-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[IV]]>, ir<1>, vp<[[VF]]>
 ; NO-VP-INLOOP-NEXT:    CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
-; NO-VP-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP1]]>
+; NO-VP-INLOOP-NEXT:    vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds i32, ir<[[GEP1]]>
 ; NO-VP-INLOOP-NEXT:    WIDEN ir<[[LD1:%.+]]> = load vp<[[PTR1]]>
 ; NO-VP-INLOOP-NEXT:    REDUCE ir<[[ADD:%.+]]> = ir<[[RDX_PHI]]> + reduce.add (ir<[[LD1]]>)
 ; NO-VP-INLOOP-NEXT:    EMIT vp<[[IV_NEXT_EXIT:%.+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
