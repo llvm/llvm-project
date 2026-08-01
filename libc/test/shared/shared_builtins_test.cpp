@@ -77,7 +77,7 @@ TEST(LlvmLibcSharedBuiltinsTest, SingleCompare) {
   EXPECT_EQ(1, shared::unordsf2(aNaN, 1.0f));
 }
 
-TEST_F(LlvmLibcSharedBuiltinsTest, DoubleCompare) {
+TEST(LlvmLibcSharedBuiltinsTest, DoubleCompare) {
   const double aNaN =
       LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
   EXPECT_EQ(-1, shared::gedf2(1.0, 2.0));
@@ -94,10 +94,7 @@ TEST_F(LlvmLibcSharedBuiltinsTest, DoubleCompare) {
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
-using LlvmLibcSharedBuiltinsQuadTest =
-    LIBC_NAMESPACE::testing::FPTest<float128>;
-
-TEST_F(LlvmLibcSharedBuiltinsQuadTest, Comparison) {
+TEST(LlvmLibcSharedBuiltinsTest, Comparison) {
   const float128 aNaN =
       LIBC_NAMESPACE::fputil::FPBits<float128>::quiet_nan().get_val();
   EXPECT_EQ(-1, shared::getf2(float128(1.0), float128(2.0)));
