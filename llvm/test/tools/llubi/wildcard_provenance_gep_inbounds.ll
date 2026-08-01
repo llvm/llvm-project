@@ -10,6 +10,8 @@ define void @main() {
   %addr2 = ptrtoint ptr %p2 to i64
   %diff = sub i64 %addr2, %addr1
   %p = inttoptr i64 %addr1 to ptr
+  ; %p_off points to %p2. But inbounds requires both %p and %p_off should points to the same memory object.
+  ; So %p_off is poison here.
   %p_off = getelementptr inbounds i8, ptr %p, i64 %diff
   store i32 0, ptr %p_off
 
@@ -24,6 +26,6 @@ define void @main() {
 ; CHECK-NEXT:   %p = inttoptr i64 %addr1 to ptr => ptr 0x8 [wildcard]
 ; CHECK-NEXT:   %p_off = getelementptr inbounds i8, ptr %p, i64 %diff => poison
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   store i32 0, ptr %p_off, align 4 at @main <stdin>:14
+; CHECK-NEXT: #0   store i32 0, ptr %p_off, align 4 at @main <stdin>:16
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access with a poison pointer.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

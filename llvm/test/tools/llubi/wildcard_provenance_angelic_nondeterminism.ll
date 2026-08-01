@@ -11,7 +11,9 @@ define void @main() {
   %diff = sub i64 %addr2, %addr1
   %p = inttoptr i64 %addr1 to ptr
   %p_off = getelementptr i8, ptr %p, i64 %diff
+  ; %p_off points to %p2. So all accesses through a pointer derived from %p can only point to %p2 after this instruction.
   store i32 0, ptr %p_off
+  ; We are trying to store to %p1. It is UB because we cannot pick a provenance to make both stores valid.
   store i32 0, ptr %p
 
   ret void
@@ -26,6 +28,6 @@ define void @main() {
 ; CHECK-NEXT:   %p_off = getelementptr i8, ptr %p, i64 %diff => ptr 0x10 [wildcard]
 ; CHECK-NEXT:   store i32 0, ptr %p_off, align 4
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   store i32 0, ptr %p, align 4 at @main <stdin>:15
+; CHECK-NEXT: #0   store i32 0, ptr %p, align 4 at @main <stdin>:17
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

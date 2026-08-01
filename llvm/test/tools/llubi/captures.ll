@@ -2,6 +2,7 @@
 ; RUN: llubi --verbose < %s 2>&1 | FileCheck %s
 
 define void @write(ptr %p) {
+  ; captures doesn't affect the provenance inside the function.
   store i8 1, ptr %p
   ret void
 }
@@ -43,9 +44,11 @@ define void @main() {
   %p_read_provenance_2 = call ptr @read_provenance_only(ptr %p_provenance)
   %p_none = call ptr @provenance_only(ptr %p_address_only)
 
+  ; read_provenance is only captured via the return value.
   %p_read_provenance2 = call ptr @ret_capture_read_provenance_other_capture_address(ptr %p)
   %p_address_only2 = load ptr, ptr @g
 
+  ; dereferenceable only requires read_provenance.
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %p_read_provenance, i32 1)]
   %val = load i8, ptr %p_read_provenance
   store i8 0, ptr %p_provenance

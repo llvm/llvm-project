@@ -9,6 +9,7 @@ define ptr @address_only(ptr captures(address) %p) {
 
 define void @main() {
   %g_address_only = call ptr @address_only(ptr @g)
+  ; load requires read_provenance.
   %res = load i8, ptr %g_address_only
   ret void
 }
@@ -19,6 +20,6 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: address_only
 ; CHECK-NEXT:   %g_address_only = call ptr @address_only(ptr @g) => ptr 0x8 [@g none]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %res = load i8, ptr %g_address_only, align 1 at @main <stdin>:12
+; CHECK-NEXT: #0   %res = load i8, ptr %g_address_only, align 1 at @main <stdin>:13
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

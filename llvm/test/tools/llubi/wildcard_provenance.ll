@@ -14,6 +14,7 @@ define void @main() {
   %addr1 = ptrtoint ptr %p_read_provenance_only to i64
   %addr2 = ptrtoint ptr %p_provenance_only to i64
   %p_wildcard = inttoptr i64 %addr1 to ptr
+  ; There are two exposed provenances (read_provenance and provenance). We choose a valid one.
   store i32 0, ptr %p_wildcard
 
   ret void

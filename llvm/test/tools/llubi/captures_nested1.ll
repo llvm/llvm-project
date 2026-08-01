@@ -2,6 +2,7 @@
 ; RUN: llubi --verbose < %s 2>&1 | FileCheck %s
 
 define ptr @g(ptr captures(read_provenance) %a) {
+  ; %a has full provenance here.
   store i32 0, ptr %a
   ret ptr %a
 }
