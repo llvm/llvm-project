@@ -64,6 +64,68 @@ except ImportError:
 // Parameter types will be used in the autodoc string.
 %feature("autodoc", "1");
 
+#if SWIG_VERSION >= 0x040500
+// Swig 4.5.0 added typing annotations. Use them.
+%feature("python:annotations", "typing");
+
+// The default pytyping entry maps to `typing.Any`. Use the proxy names here.
+// They might generate incorrect annotations (`SWIGTYPE_*`) in more complex scenarios.
+%typemap(pytyping) SWIGTYPE      "$&pytypename";
+%typemap(pytyping) SWIGTYPE []   "typing.Optional[$pytypename]";
+%typemap(pytyping) SWIGTYPE *    "typing.Optional[$pytypename]";
+%typemap(pytyping) SWIGTYPE &    "$pytypename";
+%typemap(pytyping) SWIGTYPE &&   "$pytypename";
+%typemap(pytyping) enum SWIGTYPE "int";
+
+// But disable the annotations for the following functions.
+// When the support matures, we can annotate these.
+
+// Exclude operator==/!=. They generate `__eq__(self, rhs: T) -> bool`.
+// However, `rhs` should be `object`.
+%feature("python:annotations", "0") operator==;
+%feature("python:annotations", "0") operator!=;
+
+// Uses (char *dst, size_t dst_len) argout typemap.
+// Should return `str`, but annotated as `int`.
+%feature("python:annotations", "0") lldb::SBProcess::GetSTDOUT;
+%feature("python:annotations", "0") lldb::SBProcess::GetSTDERR;
+%feature("python:annotations", "0") lldb::SBProcess::GetAsyncProfileData;
+%feature("python:annotations", "0") lldb::SBStructuredData::GetStringValue;
+
+// Uses (char *dst_or_null, size_t dst_len) argout typemap.
+// Should return `str`, but annotated as `int`.
+%feature("python:annotations", "0") lldb::SBThread::GetStopDescription;
+
+// Uses (char *dst_path, size_t dst_len) argout typemap.
+// Should return `str`, but annotated as `int`.
+%feature("python:annotations", "0") lldb::SBFileSpec::GetPath;
+%feature("python:annotations", "0") lldb::SBFileSpec::ResolvePath;
+
+// Uses (void *buf, size_t size) argout typemap.
+// Should return `typing.Optional[bytes]`, but annotated as `int`.
+%feature("python:annotations", "0") lldb::SBProcess::ReadMemory;
+%feature("python:annotations", "0") lldb::SBTarget::ReadMemory;
+
+// Uses (void *char_buf, size_t size) argout typemap.
+// Should return `str`, but annotated as `int`.
+%feature("python:annotations", "0") lldb::SBProcess::ReadCStringFromMemory;
+
+// Uses (uint32_t *versions, uint32_t num_versions) argout typemap.
+// Should return `typing.List[int]`, but annotated as `int`.
+%feature("python:annotations", "0") lldb::SBModule::GetVersion;
+
+// Uses INPUT/OUTPUT/INOUT. Not supported by the typing annotations right now.
+%feature("python:annotations", "0") lldb::SBDebugger::RunCommandInterpreter;
+%feature("python:annotations", "0") lldb::SBDebugger::GetProgressFromEvent;
+%feature("python:annotations", "0") lldb::SBFile::Read;
+%feature("python:annotations", "0") lldb::SBFile::Write;
+#else
+// Make sure `typing` is imported in all cases (Swig < 4.5.0).
+%pythoncode %{
+import typing
+%}
+#endif // SWIG_VERSION >= 0x040500
+
 // Include lldb-python first as it sets Py_LIMITED_API.
 %begin %{
 #include "../source/Plugins/ScriptInterpreter/Python/lldb-python.h"
