@@ -514,15 +514,18 @@ static void cleanModuleFlags(Module &M) {
     M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
 }
 
-using GlobalMDList = std::array<StringLiteral, 7>;
+using GlobalMDList = std::array<StringLiteral, 11>;
 
 // The following are compatible with DXIL but not emit with clang, they can
 // be added when applicable:
 // dx.typeAnnotations, dx.viewIDState, dx.dxrPayloadAnnotations
 static GlobalMDList CompatibleNamedModuleMDs = {
-    "llvm.ident",     "llvm.module.flags", "dx.resources",   "dx.valver",
-    "dx.shaderModel", "dx.version",        "dx.entryPoints",
-};
+    "llvm.ident",        "llvm.module.flags",
+    "dx.resources",      "dx.valver",
+    "dx.shaderModel",    "dx.version",
+    "dx.entryPoints",    "dx.source.contents",
+    "dx.source.defines", "dx.source.mainFileName",
+    "dx.source.args"};
 
 static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
                                     DXILResourceTypeMap &DRTM,

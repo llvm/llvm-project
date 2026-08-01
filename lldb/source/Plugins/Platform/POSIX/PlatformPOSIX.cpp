@@ -255,10 +255,12 @@ lldb_private::Status PlatformPOSIX::GetFile(
         offset += n_read;
       }
     }
-    // Ignore the close error of src.
-    if (fd_src != UINT64_MAX)
-      CloseFile(fd_src, error);
-    // And close the dst file descriptot.
+    if (fd_src != UINT64_MAX) {
+      // Ignore the close error of src.
+      Status close_error;
+      CloseFile(fd_src, close_error);
+    }
+    // And close the dst file descriptor.
     if (fd_dst != UINT64_MAX &&
         !FileCache::GetInstance().CloseFile(fd_dst, error)) {
       if (!error.Fail())

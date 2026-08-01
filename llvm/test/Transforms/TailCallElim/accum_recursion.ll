@@ -366,3 +366,80 @@ rec:
   %acc = mul nsw i32 %r, %g
   ret i32 %acc
 }
+
+%struct.VecListNode = type { <4 x i32>, ptr }
+
+; The identity for a vector add accumulator is the zero vector.
+define <4 x i32> @test_vector_add_accumulator(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: define <4 x i32> @test_vector_add_accumulator(
+; CHECK-SAME: ptr [[A:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
+; CHECK:       tailrecurse:
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = phi <4 x i32> [ zeroinitializer, [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[A_TR:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[TMP1:%.*]], [[IF_END]] ]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[A_TR]], null
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[COMMON_RET:%.*]], label [[IF_END]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = add <4 x i32> zeroinitializer, [[ACCUMULATOR_TR]]
+; CHECK-NEXT:    ret <4 x i32> [[ACCUMULATOR_RET_TR]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A_TR]], align 16
+; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr inbounds [[STRUCT_VECLISTNODE:%.*]], ptr [[A_TR]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP1]] = load ptr, ptr [[NEXT]], align 8
+; CHECK-NEXT:    [[ADD]] = add <4 x i32> [[TMP0]], [[ACCUMULATOR_TR]]
+; CHECK-NEXT:    br label [[TAILRECURSE]]
+;
+entry:
+  %tobool.not = icmp eq ptr %a, null
+  br i1 %tobool.not, label %common.ret, label %if.end
+
+common.ret:                                       ; preds = %entry, %if.end
+  %common.ret.op = phi <4 x i32> [ %add, %if.end ], [ zeroinitializer, %entry ]
+  ret <4 x i32> %common.ret.op
+
+if.end:                                           ; preds = %entry
+  %0 = load <4 x i32>, ptr %a
+  %next = getelementptr inbounds %struct.VecListNode, ptr %a, i64 0, i32 1
+  %1 = load ptr, ptr %next
+  %call = tail call <4 x i32> @test_vector_add_accumulator(ptr %1)
+  %add = add <4 x i32> %0, %call
+  br label %common.ret
+}
+
+; Like the scalar case above, vector sadd.sat is not associative and must not
+; be turned into an accumulator.
+define <4 x i32> @test_non_associative_sadd_sat_vector(ptr %a) local_unnamed_addr {
+; CHECK-LABEL: define <4 x i32> @test_non_associative_sadd_sat_vector(
+; CHECK-SAME: ptr [[A:%.*]]) local_unnamed_addr {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[A]], null
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[COMMON_RET:%.*]], label [[IF_END:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret <4 x i32> zeroinitializer
+; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 16
+; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr inbounds [[STRUCT_VECLISTNODE:%.*]], ptr [[A]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEXT]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = tail call <4 x i32> @test_non_associative_sadd_sat_vector(ptr [[TMP1]])
+; CHECK-NEXT:    [[SAT:%.*]] = tail call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> [[TMP0]], <4 x i32> [[CALL]])
+; CHECK-NEXT:    ret <4 x i32> [[SAT]]
+;
+entry:
+  %tobool.not = icmp eq ptr %a, null
+  br i1 %tobool.not, label %common.ret, label %if.end
+
+common.ret:                                       ; preds = %entry, %if.end
+  %common.ret.op = phi <4 x i32> [ %sat, %if.end ], [ zeroinitializer, %entry ]
+  ret <4 x i32> %common.ret.op
+
+if.end:                                           ; preds = %entry
+  %0 = load <4 x i32>, ptr %a
+  %next = getelementptr inbounds %struct.VecListNode, ptr %a, i64 0, i32 1
+  %1 = load ptr, ptr %next
+  %call = tail call <4 x i32> @test_non_associative_sadd_sat_vector(ptr %1)
+  %sat = tail call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %0, <4 x i32> %call)
+  br label %common.ret
+}
+
+declare <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32>, <4 x i32>)

@@ -245,3 +245,37 @@ func.func @test_f64_scalar() {
   }
   return
 }
+
+// -----
+
+// Test call to a function marked as an acc routine - should pass
+acc.routine @acc_routine_0 func(@routine_callee) gang
+func.func @routine_callee() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>} {
+  return
+}
+
+func.func @test_acc_routine() {
+  // expected-remark @below {{passed validity check}}
+  acc.parallel {
+    func.call @routine_callee() : () -> ()
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// Test call to a function marked as a specialized acc routine - should pass
+acc.routine @acc_routine_1 func(@specialized_callee) gang
+func.func @specialized_callee() attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_1, <gang_dim1>, "specialized_callee">} {
+  return
+}
+
+func.func @test_acc_specialized_routine() {
+  // expected-remark @below {{passed validity check}}
+  acc.parallel {
+    func.call @specialized_callee() : () -> ()
+    acc.yield
+  }
+  return
+}

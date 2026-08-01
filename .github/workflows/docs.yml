@@ -55,7 +55,7 @@ jobs:
     if: github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch LLVM sources
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           fetch-depth: 2
@@ -69,6 +69,8 @@ jobs:
           files_yaml: |
             llvm:
               - 'llvm/docs/**'
+            bolt:
+              - 'bolt/docs/**'
             clang:
               - 'clang/docs/**'
               - 'clang/include/clang/Basic/AttrDocs.td'
@@ -96,7 +98,7 @@ jobs:
             workflow:
               - '.github/workflows/docs.yml'
       - name: Setup Python env
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.14'
           cache: 'pip'
@@ -119,6 +121,15 @@ jobs:
           TZ=UTC ninja -C llvm-build docs-llvm-html docs-llvm-man
           mkdir built-docs/llvm
           cp -r llvm-build/docs/* built-docs/llvm/
+      - name: Build BOLT docs
+        if: |
+          steps.docs-changed-subprojects.outputs.bolt_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+        run: |
+          cmake -B bolt-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="bolt" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C bolt-build docs-bolt-html
+          mkdir built-docs/bolt
+          cp -r bolt-build/docs/* built-docs/bolt/
       - name: Build Clang docs
         if: |
           steps.docs-changed-subprojects.outputs.clang_any_changed == 'true' ||

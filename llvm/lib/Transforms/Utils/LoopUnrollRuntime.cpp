@@ -1077,7 +1077,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
 #if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
   if (DT) {
     assert(DT->verify(DominatorTree::VerificationLevel::Full));
-    LI->verify(*DT);
+    LI->verify();
   }
 #endif
 

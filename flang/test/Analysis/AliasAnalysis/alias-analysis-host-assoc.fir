@@ -184,9 +184,12 @@ func.func @_QFtest5Pinner(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = 
 //   end subroutine inner
 // end subroutine test6
 
-// F18 15.5.2.13 (4):
-// FIXME: 'x' is classified as Indirect access leading to a conservative reply:
-// CHECK: test6_y(1)#0 <-> test6_x(1)#0: MayAlias
+// F18 15.5.2.13 (4): 'x' is a host-associated POINTER and 'y' is a non-TARGET
+// dummy, so 'x' cannot be associated with 'y' and they do not alias. The
+// host-associated pointer descriptor load is now classified as HostAssoc
+// rather than Indirect, so this no longer falls back to a conservative
+// MayAlias.
+// CHECK: test6_y(1)#0 <-> test6_x(1)#0: NoAlias
 func.func @_QFtest6Pinner(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "y"}, %arg1: !fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.coordinate_of %arg1, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>

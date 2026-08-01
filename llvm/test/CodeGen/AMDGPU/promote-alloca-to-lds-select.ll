@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -passes=amdgpu-promote-alloca < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu7.00-unknown-amdhsa -passes=amdgpu-promote-alloca < %s | FileCheck %s
 
 ; CHECK-LABEL: @lds_promoted_alloca_select_invalid_pointer_operand(
 ; CHECK: %alloca = alloca i32

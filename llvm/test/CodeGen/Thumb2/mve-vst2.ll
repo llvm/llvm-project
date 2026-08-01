@@ -6,11 +6,12 @@
 define void @vst2_v2i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst2_v2i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldm.w r0, {r2, r3, r12}
-; CHECK-NEXT:    ldr r0, [r0, #12]
-; CHECK-NEXT:    vmov q0[2], q0[0], r2, r3
-; CHECK-NEXT:    vmov q0[3], q0[1], r12, r0
-; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vmov.f32 s4, s0
+; CHECK-NEXT:    vmov.f32 s5, s2
+; CHECK-NEXT:    vmov.f32 s6, s1
+; CHECK-NEXT:    vmov.f32 s7, s3
+; CHECK-NEXT:    vstrw.32 q1, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <2 x i32>, ptr %src, align 4
@@ -363,11 +364,12 @@ entry:
 define void @vst2_v2f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vst2_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldr s0, [r0]
-; CHECK-NEXT:    vldr s2, [r0, #4]
-; CHECK-NEXT:    vldr s1, [r0, #8]
-; CHECK-NEXT:    vldr s3, [r0, #12]
-; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vmov.f32 s4, s0
+; CHECK-NEXT:    vmov.f32 s5, s2
+; CHECK-NEXT:    vmov.f32 s6, s1
+; CHECK-NEXT:    vmov.f32 s7, s3
+; CHECK-NEXT:    vstrw.32 q1, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <2 x float>, ptr %src, align 4

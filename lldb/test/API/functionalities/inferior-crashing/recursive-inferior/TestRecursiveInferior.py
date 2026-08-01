@@ -8,6 +8,7 @@ from lldbsuite.test import lldbplatformutil
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # wasm has no memory-protection faults/signals
 class CrashingRecursiveInferiorTestCase(TestBase):
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureNetBSD

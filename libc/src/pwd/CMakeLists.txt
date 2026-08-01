@@ -1,0 +1,15 @@
+add_object_library(
+  pwd_utils
+  HDRS
+    pwd_utils.h
+  SRCS
+    pwd_utils.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.struct_passwd
+    libc.src.string.string_utils
+    libc.src.__support.ctype_utils
+    libc.src.__support.error_or
+    libc.src.__support.str_to_integer
+    libc.src.__support.macros.config
+)

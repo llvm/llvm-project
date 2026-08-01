@@ -81,11 +81,11 @@ public:
   }
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
-                                          llvm::StringRef BoundArch,
+                                          BoundArch BA,
                                           types::ID InputType) const override;
 
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
   SanitizerMask getDefaultSanitizers() const override;
 
@@ -100,8 +100,7 @@ public:
 
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
-                        llvm::StringRef BoundArch,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,

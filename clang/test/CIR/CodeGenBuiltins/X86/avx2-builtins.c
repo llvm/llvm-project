@@ -187,3 +187,31 @@ __m256i test_mm256_alignr_epi8(__m256i a, __m256i b) {
   // OGCG: shufflevector <32 x i8> {{.*}}, <32 x i8> {{.*}}, <32 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 33, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 48, i32 49>
   return _mm256_alignr_epi8(a, b, 2);
 }
+
+__m256i test_mm256_slli_si256(__m256i a) {
+  // CIR-LABEL: test_mm256_slli_si256
+  // CIR: [[B:%.*]] = cir.cast bitcast {{.*}} : !cir.vector<4 x !{{.*}}64i> -> !cir.vector<32 x !{{.*}}8i>
+  // CIR: [[ZERO:%.*]] = cir.const #cir.zero : !cir.vector<32 x !{{.*}}8i>
+  // CIR: {{.*}} = cir.vec.shuffle([[ZERO]], [[B]] : !cir.vector<32 x !{{.*}}8i>) [#cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i, #cir.int<32> : !s32i, #cir.int<33> : !s32i, #cir.int<34> : !s32i, #cir.int<35> : !s32i, #cir.int<36> : !s32i, #cir.int<37> : !s32i, #cir.int<38> : !s32i, #cir.int<39> : !s32i, #cir.int<40> : !s32i, #cir.int<41> : !s32i, #cir.int<42> : !s32i, #cir.int<43> : !s32i, #cir.int<44> : !s32i, #cir.int<29> : !s32i, #cir.int<30> : !s32i, #cir.int<31> : !s32i, #cir.int<48> : !s32i, #cir.int<49> : !s32i, #cir.int<50> : !s32i, #cir.int<51> : !s32i, #cir.int<52> : !s32i, #cir.int<53> : !s32i, #cir.int<54> : !s32i, #cir.int<55> : !s32i, #cir.int<56> : !s32i, #cir.int<57> : !s32i, #cir.int<58> : !s32i, #cir.int<59> : !s32i, #cir.int<60> : !s32i] : !cir.vector<32 x !{{.*}}8i>
+
+  // LLVM-LABEL: test_mm256_slli_si256
+  // LLVM: shufflevector <32 x i8> zeroinitializer, <32 x i8> %{{.*}}, <32 x i32> <i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 29, i32 30, i32 31, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60>
+
+  // OGCG-LABEL: test_mm256_slli_si256
+  // OGCG: shufflevector <32 x i8> zeroinitializer, <32 x i8> %{{.*}}, <32 x i32> <i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 29, i32 30, i32 31, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60>
+  return _mm256_slli_si256(a, 3);
+}
+
+__m256i test_mm256_srli_si256(__m256i a) {
+  // CIR-LABEL: test_mm256_srli_si256
+  // CIR: [[A:%.*]] = cir.cast bitcast {{.*}} : !cir.vector<4 x !{{.*}}64i> -> !cir.vector<32 x !{{.*}}8i>
+  // CIR: [[ZERO:%.*]] = cir.const #cir.zero : !cir.vector<32 x !{{.*}}8i>
+  // CIR: {{.*}} = cir.vec.shuffle([[A]], [[ZERO]] : !cir.vector<32 x !{{.*}}8i>) [#cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i, #cir.int<32> : !s32i, #cir.int<33> : !s32i, #cir.int<34> : !s32i, #cir.int<19> : !s32i, #cir.int<20> : !s32i, #cir.int<21> : !s32i, #cir.int<22> : !s32i, #cir.int<23> : !s32i, #cir.int<24> : !s32i, #cir.int<25> : !s32i, #cir.int<26> : !s32i, #cir.int<27> : !s32i, #cir.int<28> : !s32i, #cir.int<29> : !s32i, #cir.int<30> : !s32i, #cir.int<31> : !s32i, #cir.int<48> : !s32i, #cir.int<49> : !s32i, #cir.int<50> : !s32i] : !cir.vector<32 x !{{.*}}8i>
+
+  // LLVM-LABEL: test_mm256_srli_si256
+  // LLVM: shufflevector <32 x i8> %{{.*}}, <32 x i8> zeroinitializer, <32 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 48, i32 49, i32 50>
+  
+  // OGCG-LABEL: test_mm256_srli_si256
+  // OGCG: shufflevector <32 x i8> %{{.*}}, <32 x i8> zeroinitializer, <32 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 48, i32 49, i32 50>
+  return _mm256_srli_si256(a, 3);
+}

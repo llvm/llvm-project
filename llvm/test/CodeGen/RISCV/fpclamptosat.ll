@@ -6555,7 +6555,7 @@ define i32 @ustest_f16i32_nsat(half %x) {
 ; RV32-NEXT:    call __extendhfsf2
 ; RV32-NEXT:    fcvt.w.s a0, fa0, rtz
 ; RV32-NEXT:    srai a1, a0, 31
-; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    and a0, a0, a1
 ; RV32-NEXT:    sgtz a1, a0
 ; RV32-NEXT:    neg a1, a1
 ; RV32-NEXT:    and a0, a1, a0
@@ -6574,7 +6574,7 @@ define i32 @ustest_f16i32_nsat(half %x) {
 ; RV64-NEXT:    call __extendhfsf2
 ; RV64-NEXT:    fcvt.l.s a0, fa0, rtz
 ; RV64-NEXT:    srai a1, a0, 63
-; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    sgtz a1, a0
 ; RV64-NEXT:    neg a1, a1
 ; RV64-NEXT:    and a0, a1, a0

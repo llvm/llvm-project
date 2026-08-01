@@ -40,16 +40,15 @@ define <vscale x 8 x i16> @srshl_abs_positive_merge(<vscale x 8 x i16> %a, <vsca
   ret <vscale x 8 x i16> %shr
 }
 
-define <vscale x 8 x i16> @srshl_abs_all_active_pred(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i1> %pg2) #0 {
+define <vscale x 8 x i16> @srshl_abs_all_active_pred(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b, <vscale x 8 x i1> %pg) #0 {
 ; CHECK-LABEL: @srshl_abs_all_active_pred(
 ; CHECK-NEXT:    [[ABS:%.*]] = tail call <vscale x 8 x i16> @llvm.aarch64.sve.abs.nxv8i16(<vscale x 8 x i16> [[B:%.*]], <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.nxv8i16(<vscale x 8 x i1> [[PG2:%.*]], <vscale x 8 x i16> [[ABS]], <vscale x 8 x i16> splat (i16 2))
 ; CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP1]]
 ;
-  %pg = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %abs = tail call <vscale x 8 x i16> @llvm.aarch64.sve.abs.nxv8i16(<vscale x 8 x i16> %b, <vscale x 8 x i1> %pg, <vscale x 8 x i16> %a)
+  %abs = tail call <vscale x 8 x i16> @llvm.aarch64.sve.abs.nxv8i16(<vscale x 8 x i16> %b, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %a)
   %splat = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 2)
-  %shr = tail call <vscale x 8 x i16> @llvm.aarch64.sve.srshl.nxv8i16(<vscale x 8 x i1> %pg2, <vscale x 8 x i16> %abs, <vscale x 8 x i16> %splat)
+  %shr = tail call <vscale x 8 x i16> @llvm.aarch64.sve.srshl.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %abs, <vscale x 8 x i16> %splat)
   ret <vscale x 8 x i16> %shr
 }
 

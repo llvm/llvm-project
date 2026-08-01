@@ -131,19 +131,19 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // BOTH:     }) : (!cir.bool) -> !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH:     cir.yield %[[TERN_LT_RES]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH:   }) : (!cir.bool) -> !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
-  // BOTH:   cir.copy %[[TOP_TERN_RES]] to %[[CMP_RES]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
-  // BOTH:   cir.copy %[[CMP_RES]] to %[[CMP_TEMP]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH:   cir.copy %[[TOP_TERN_RES]] align(1) to %[[CMP_RES]] align(1) : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH:   cir.copy %[[CMP_RES]] align(1) to %[[CMP_TEMP]] align(1) : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH:   %[[UNSPEC_TEMP:.*]] = cir.const #cir.const_record<{#cir.int<0> : !s64i, #cir.int<0> : !s64i}>
   // BOTH:   %[[CMP_TEMP_LOAD:.*]] = cir.load {{.*}}%[[CMP_TEMP]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering
   // BOTH:   %[[SO_NE_RES:.*]] = cir.call @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(%14, %[[UNSPEC_TEMP]])
   // BOTH:   cir.if %[[SO_NE_RES]] {
-  // BOTH:     cir.copy %[[CMP_RES]] to %[[RET_ALLOCA]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH:     cir.copy %[[CMP_RES]] align(1) to %[[RET_ALLOCA]] align(1) : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH:     %[[RET_LOAD:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering
   // BOTH:     cir.return %[[RET_LOAD]] : !rec_std3A3A__13A3Astrong_ordering
   // BOTH:   }
   // BOTH: }
   // BOTH: %[[EQ_GLOB:.*]] = cir.get_global @_ZNSt3__115strong_ordering5equalE : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
-  // BOTH: cir.copy %[[EQ_GLOB]] to %[[RET_ALLOCA]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH: cir.copy %[[EQ_GLOB]] align(1) to %[[RET_ALLOCA]] align(1) : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH: %[[RET_LOAD:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>, !rec_std3A3A__13A3Astrong_ordering
   // BOTH: cir.return %[[RET_LOAD]] : !rec_std3A3A__13A3Astrong_ordering
 
@@ -191,14 +191,14 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM:   br label %[[AFTER_CMPS_CTD:.*]]
   //
   // LLVM: [[AFTER_CMPS_CTD]]:
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP_SO]], ptr %[[CMP_RES]], i64 1, i1 false)
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[RET_ALLOCA]], ptr %[[TMP_SO]], i64 1, i1 false)
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[TMP_SO]], ptr align 1 %[[CMP_RES]], i64 1, i1 false)
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[RET_ALLOCA]], ptr align 1 %[[TMP_SO]], i64 1, i1 false)
   // LLVM:   %[[RET_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[RET_ALLOCA]]
   // LLVM:   %[[SO_NE_RES:.*]] = call noundef i1 @_ZNSt3__1neENS_15strong_orderingEMNS_19_CmpUnspecifiedTypeEFvvE(%"class.std::__1::strong_ordering" %[[RET_LOAD]],
   // LLVM:   br i1 %[[SO_NE_RES]], label %[[SO_NE_RES_TRUE:.*]], label %[[SO_NE_RES_FALSE:.*]]
   //
   // LLVM: [[SO_NE_RES_TRUE]]:
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP_SO2]], ptr %[[TMP_SO]], i64 1, i1 false)
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[TMP_SO2]], ptr align 1 %[[TMP_SO]], i64 1, i1 false)
   // LLVM:   %[[TMP_SO2_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[TMP_SO2]]
   // LLVM:   ret %"class.std::__1::strong_ordering" %[[TMP_SO2_LOAD]]
   //
@@ -206,7 +206,7 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM:   br label %[[SO_NE_RES_FALSE_CTD:.*]]
   //
   // LLVM: [[SO_NE_RES_FALSE_CTD]]:
-  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[TMP_SO2]], ptr @_ZNSt3__115strong_ordering5equalE, i64 1, i1 false)
+  // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[TMP_SO2]], ptr align 1 @_ZNSt3__115strong_ordering5equalE, i64 1, i1 false)
   // LLVM:   %[[TMP_SO2_LOAD:.*]] = load %"class.std::__1::strong_ordering", ptr %[[TMP_SO2]]
   // LLVM:   ret %"class.std::__1::strong_ordering" %[[TMP_SO2_LOAD]]
   // LLVM: }

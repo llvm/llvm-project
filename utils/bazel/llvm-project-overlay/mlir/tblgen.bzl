@@ -229,13 +229,30 @@ def _gentbl_test_impl(ctx):
         ctx.attr.deps,
     )
 
+    # The test runs from the runfiles tree, where files live under
+    # `<repo>/<package>/...` (with external repos at `../<repo>/...`) — not
+    # under `external/<repo>/...` or `bazel-out/<cfg>/bin/<repo>/...` as at
+    # execroot. Convert execroot-relative paths to the runfiles form so tblgen
+    # can open them from the test's CWD.
+    bin_prefix = ctx.bin_dir.path + "/"
+    genfiles_prefix = ctx.genfiles_dir.path + "/"
+
+    def _runfiles_path(p):
+        if p.startswith(bin_prefix):
+            p = p[len(bin_prefix):]
+        elif p.startswith(genfiles_prefix):
+            p = p[len(genfiles_prefix):]
+        if p.startswith("external/"):
+            return "../" + p[len("external/"):]
+        return p
+
     test_args = [ctx.executable.tblgen.short_path]
     test_args.extend(ctx.attr.opts)
-    test_args.append(td_file.path)
+    test_args.append(_runfiles_path(td_file.path))
     test_args.extend([
         arg
         for include in trans_includes.to_list()
-        for arg in ["-I", include, "-I", paths.join(ctx.bin_dir.path, include)]
+        for arg in ["-I", _runfiles_path(include), "-I", _runfiles_path(paths.join(ctx.bin_dir.path, include))]
     ])
 
     test_args.extend(["-o", "/dev/null"])

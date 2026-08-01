@@ -21,7 +21,7 @@ TEST_P(olMemFreeTest, SuccessFreeManaged) {
 
 TEST_P(olMemFreeTest, SuccessFreeHost) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_HOST, 1024, &Alloc));
+  ASSERT_SUCCESS(olMemAllocHost(Device, 1024, &Alloc));
   ASSERT_SUCCESS(olMemFree(Alloc));
 }
 

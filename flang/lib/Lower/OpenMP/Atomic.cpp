@@ -34,7 +34,6 @@
 #include <string>
 #include <type_traits>
 #include <variant>
-#include <vector>
 
 static llvm::cl::opt<bool> DumpAtomicAnalysis("fdebug-dump-atomic-analysis");
 

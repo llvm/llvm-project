@@ -10,9 +10,9 @@ define i32 @f() #0 {
 ; CHECK-NO-PAUTH-NEXT:    dsb sy
 ; CHECK-NO-PAUTH-NEXT:    isb
 ; CHECK-NO-PAUTH-NEXT:    hint #39
-; CHECK-NO-PAUTH-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-NO-PAUTH-NEXT:  .Ltmp0:
 ; CHECK-NO-PAUTH-NEXT:    hint #25
+; CHECK-NO-PAUTH-NEXT:    .cfi_set_ra_state 2, .Ltmp0
 ; CHECK-NO-PAUTH-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NO-PAUTH-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NO-PAUTH-NEXT:    .cfi_offset w30, -16
@@ -32,9 +32,9 @@ define i32 @f() #0 {
 ; CHECK-PAUTH-NEXT:    dsb sy
 ; CHECK-PAUTH-NEXT:    isb
 ; CHECK-PAUTH-NEXT:    hint #39
-; CHECK-PAUTH-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-PAUTH-NEXT:  .Ltmp0:
 ; CHECK-PAUTH-NEXT:    paciasp
+; CHECK-PAUTH-NEXT:    .cfi_set_ra_state 2, .Ltmp0
 ; CHECK-PAUTH-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-PAUTH-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-PAUTH-NEXT:    .cfi_offset w30, -16
@@ -52,9 +52,9 @@ define i32 @f() #0 {
 ; CHECK-PAUTHLR:       // %bb.0: // %entry
 ; CHECK-PAUTHLR-NEXT:    cmp sp, #0
 ; CHECK-PAUTHLR-NEXT:    csetm x16, ne
-; CHECK-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-PAUTHLR-NEXT:  .Ltmp0:
 ; CHECK-PAUTHLR-NEXT:    paciasppc
+; CHECK-PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0
 ; CHECK-PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-PAUTHLR-NEXT:    .cfi_offset w30, -16
@@ -75,9 +75,9 @@ define i32 @f() #0 {
 ; CHECK-PAUTH-PAUTHLR:       // %bb.0: // %entry
 ; CHECK-PAUTH-PAUTHLR-NEXT:    cmp sp, #0
 ; CHECK-PAUTH-PAUTHLR-NEXT:    csetm x16, ne
-; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_negate_ra_state_with_pc
 ; CHECK-PAUTH-PAUTHLR-NEXT:  .Ltmp0:
 ; CHECK-PAUTH-PAUTHLR-NEXT:    paciasppc
+; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0
 ; CHECK-PAUTH-PAUTHLR-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_offset w30, -16

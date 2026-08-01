@@ -149,7 +149,12 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
       Value = 0;
       break;
     }
-    Value += Slice << Shift;
+    // Once Shift reaches 64 the remaining bytes have already been validated
+    // above to be pure zero-extension, so they contribute nothing. Performing
+    // "Slice << Shift" with Shift >= 64 would be undefined behavior, so skip
+    // it.
+    if (LLVM_LIKELY(Shift < 64))
+      Value += Slice << Shift;
     Shift += 7;
   } while (*p++ >= 128);
   if (n)
@@ -187,7 +192,12 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
         *n = (unsigned)(p - orig_p);
       return 0;
     }
-    Value |= Slice << Shift;
+    // Once Shift reaches 64 the remaining bytes have already been validated
+    // above to be pure sign-extension, so they contribute nothing. Performing
+    // "Slice << Shift" with Shift >= 64 would be undefined behavior, so skip
+    // it.
+    if (LLVM_LIKELY(Shift < 64))
+      Value |= Slice << Shift;
     Shift += 7;
     ++p;
   } while (Byte >= 128);

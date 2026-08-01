@@ -1801,3 +1801,51 @@ TEST_F(MemorySSATest, TestNoDbgInsts) {
   ASSERT_EQ(MSSA.getMemoryAccess(DbgDeclare), nullptr);
   ASSERT_EQ(MSSA.getMemoryAccess(DbgValue), nullptr);
 }
+
+// getPreviousDefIterative walks the predecessors with an explicit worklist so
+// its stack usage does not scale with the length of the walk. This builds a
+// long single-predecessor chain with a store in the entry block and a load in
+// the last block, forcing the walk over the whole chain, and checks it
+// completes without exhausting the native stack.
+TEST_F(MemorySSATest, DeepChainDoesNotRecurse) {
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {B.getPtrTy()}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
+  Argument *PointerArg = &*F->arg_begin();
+
+  // Build entry -> bb0 -> bb1 -> ... -> exit, with a chain long enough that a
+  // per-block stack frame would exhaust the native stack.
+  const unsigned Depth = 16 * 1024;
+  SmallVector<BasicBlock *, 16> Blocks;
+  Blocks.push_back(BasicBlock::Create(C, "entry", F));
+  for (unsigned I = 0; I < Depth; ++I)
+    Blocks.push_back(BasicBlock::Create(C, "bb" + std::to_string(I), F));
+  Blocks.push_back(BasicBlock::Create(C, "exit", F));
+
+  // Entry block: a single store, then branch into the chain.
+  B.SetInsertPoint(Blocks.front());
+  StoreInst *SI = B.CreateStore(B.getInt8(0), PointerArg);
+  B.CreateBr(Blocks[1]);
+  // Remaining blocks: unconditional branch to the next, exit returns.
+  for (unsigned I = 1; I + 1 < Blocks.size(); ++I) {
+    B.SetInsertPoint(Blocks[I]);
+    B.CreateBr(Blocks[I + 1]);
+  }
+  B.SetInsertPoint(Blocks.back());
+  B.CreateRetVoid();
+
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+
+  // Insert a load in the exit block, forcing the walk back over the whole
+  // chain.
+  B.SetInsertPoint(&Blocks.back()->front());
+  LoadInst *LI = B.CreateLoad(B.getInt8Ty(), PointerArg);
+  MemoryUse *LoadAccess = cast<MemoryUse>(Updater.createMemoryAccessInBB(
+      LI, nullptr, Blocks.back(), MemorySSA::Beginning));
+  Updater.insertUse(LoadAccess, /*RenameUses=*/false);
+
+  // The load must be defined by the single store in the entry block.
+  EXPECT_EQ(LoadAccess->getDefiningAccess(), MSSA.getMemoryAccess(SI));
+  MSSA.verifyMemorySSA();
+}

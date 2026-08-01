@@ -29,10 +29,12 @@ using namespace clang;
 namespace {
 class LiveVariablesImpl {
 public:
+  template <typename T> using SetTy = LiveVariables::SetTy<T>;
+
   AnalysisDeclContext &analysisContext;
-  llvm::ImmutableSet<const Expr *>::Factory ESetFact;
-  llvm::ImmutableSet<const VarDecl *>::Factory DSetFact;
-  llvm::ImmutableSet<const BindingDecl *>::Factory BSetFact;
+  SetTy<const Expr *>::Factory ESetFact;
+  SetTy<const VarDecl *>::Factory DSetFact;
+  SetTy<const BindingDecl *>::Factory BSetFact;
   llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksEndToLiveness;
   llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues> blocksBeginToLiveness;
   llvm::DenseMap<const Stmt *, LiveVariables::LivenessValues> stmtsToLiveness;
@@ -51,10 +53,7 @@ public:
   void dumpExprLiveness(const SourceManager& M);
 
   LiveVariablesImpl(AnalysisDeclContext &ac, bool KillAtAssign)
-      : analysisContext(ac),
-        ESetFact(false), // Do not canonicalize ImmutableSets by default.
-        DSetFact(false), // This is a *major* performance win.
-        BSetFact(false), killAtAssign(KillAtAssign) {}
+      : analysisContext(ac), killAtAssign(KillAtAssign) {}
 };
 } // namespace
 
@@ -87,47 +86,18 @@ bool LiveVariables::LivenessValues::isLive(const VarDecl *D) const {
   return liveDecls.contains(D);
 }
 
-namespace {
-  template <typename SET>
-  SET mergeSets(SET A, SET B) {
-    if (A.isEmpty())
-      return B;
-
-    for (const auto *Elem : B) {
-      A = A.add(Elem);
-    }
-    return A;
-  }
-} // namespace
-
 void LiveVariables::Observer::anchor() { }
 
 LiveVariables::LivenessValues
 LiveVariablesImpl::merge(LiveVariables::LivenessValues valsA,
                          LiveVariables::LivenessValues valsB) {
-
-  llvm::ImmutableSetRef<const Expr *> SSetRefA(
-      valsA.liveExprs.getRootWithoutRetain(), ESetFact.getTreeFactory()),
-      SSetRefB(valsB.liveExprs.getRootWithoutRetain(),
-               ESetFact.getTreeFactory());
-
-  llvm::ImmutableSetRef<const VarDecl *>
-    DSetRefA(valsA.liveDecls.getRootWithoutRetain(), DSetFact.getTreeFactory()),
-    DSetRefB(valsB.liveDecls.getRootWithoutRetain(), DSetFact.getTreeFactory());
-
-  llvm::ImmutableSetRef<const BindingDecl *>
-    BSetRefA(valsA.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory()),
-    BSetRefB(valsB.liveBindings.getRootWithoutRetain(), BSetFact.getTreeFactory());
-
-  SSetRefA = mergeSets(SSetRefA, SSetRefB);
-  DSetRefA = mergeSets(DSetRefA, DSetRefB);
-  BSetRefA = mergeSets(BSetRefA, BSetRefB);
-
-  // asImmutableSet() canonicalizes the tree, allowing us to do an easy
-  // comparison afterwards.
-  return LiveVariables::LivenessValues(SSetRefA.asImmutableSet(),
-                                       DSetRefA.asImmutableSet(),
-                                       BSetRefA.asImmutableSet());
+  // Liveness at a merge point is the union of the successors' live sets. These
+  // sets are not canonicalized; LivenessValues::operator== compares them
+  // structurally.
+  return LiveVariables::LivenessValues(
+      ESetFact.unionSets(valsA.liveExprs, valsB.liveExprs),
+      DSetFact.unionSets(valsA.liveDecls, valsB.liveDecls),
+      BSetFact.unionSets(valsA.liveBindings, valsB.liveBindings));
 }
 
 bool LiveVariables::LivenessValues::operator==(const LivenessValues &V) const {
@@ -211,8 +181,8 @@ static const Expr *LookThroughExpr(const Expr *E) {
   return E;
 }
 
-static void AddLiveExpr(llvm::ImmutableSet<const Expr *> &Set,
-                        llvm::ImmutableSet<const Expr *>::Factory &F,
+static void AddLiveExpr(LiveVariables::SetTy<const Expr *> &Set,
+                        LiveVariables::SetTy<const Expr *>::Factory &F,
                         const Expr *E) {
   Set = F.add(Set, LookThroughExpr(E));
 }
@@ -222,9 +192,10 @@ static void AddLiveExpr(llvm::ImmutableSet<const Expr *> &Set,
 /// "(a < b) || (c && d && ((e || f) != (g && h)))"
 /// the following expressions will be added as live:
 /// "a < b", "c", "d", "((e || f) != (g && h))"
-static void AddAllConditionalTerms(llvm::ImmutableSet<const Expr *> &Set,
-                                   llvm::ImmutableSet<const Expr *>::Factory &F,
-                                   const Expr *Cond) {
+static void
+AddAllConditionalTerms(LiveVariables::SetTy<const Expr *> &Set,
+                       LiveVariables::SetTy<const Expr *>::Factory &F,
+                       const Expr *Cond) {
   AddLiveExpr(Set, F, Cond);
   if (auto const *BO = dyn_cast<BinaryOperator>(Cond->IgnoreParens());
       BO && BO->isLogicalOp()) {

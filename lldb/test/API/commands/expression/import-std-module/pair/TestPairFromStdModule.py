@@ -14,6 +14,7 @@ class TestCase(TestBase):
     # but needs further investigation for what underlying Clang/LLDB bug can't
     # handle that code change.
     @skip
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()
 

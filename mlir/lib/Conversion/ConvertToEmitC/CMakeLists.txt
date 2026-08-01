@@ -10,6 +10,7 @@ add_mlir_conversion_library(MLIRConvertToEmitC
 
   LINK_LIBS PUBLIC
   MLIRArithToEmitC
+  MLIREmitCCommonConversion
   MLIRFuncToEmitC
   MLIRMemRefToEmitC
   MLIRPass

@@ -24,6 +24,10 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
+namespace llvm {
+struct fltSemantics;
+} // namespace llvm
+
 namespace cir {
 
 namespace detail {
@@ -41,6 +45,12 @@ bool isValidFundamentalIntWidth(unsigned width);
 /// Unsized types are those that do not have a size, such as
 /// void, or abstract types.
 bool isSized(mlir::Type ty);
+
+/// Returns the CIR floating-point type for the given semantics, or a null
+/// type if CIR has no type for it (e.g. PPCDoubleDouble or a Float8 format).
+/// Mirrors llvm::Type::getFloatingPointTy.
+cir::FPTypeInterface getFloatingPointType(const llvm::fltSemantics &sem,
+                                          mlir::MLIRContext *ctx);
 
 //===----------------------------------------------------------------------===//
 // AddressSpace helpers

@@ -1393,6 +1393,54 @@ private:
     return infer(T);
   }
 
+  /// Infer the range of an additive or multiplicative binary operator from the
+  /// ranges of its operands.
+  RangeSet inferFromCorners(BinaryOperator::Opcode Op, Range LHS, Range RHS,
+                            QualType T) {
+    const bool IsUnsigned = T->isUnsignedIntegerOrEnumerationType();
+
+    auto Eval = [&](const llvm::APSInt &L,
+                    const llvm::APSInt &R) -> std::optional<llvm::APSInt> {
+      bool Overflow = false;
+      llvm::APInt Result;
+      switch (Op) {
+      case BO_Add:
+        Result = IsUnsigned ? L.uadd_ov(R, Overflow) : L.sadd_ov(R, Overflow);
+        break;
+      case BO_Sub:
+        Result = IsUnsigned ? L.usub_ov(R, Overflow) : L.ssub_ov(R, Overflow);
+        break;
+      case BO_Mul:
+        Result = IsUnsigned ? L.umul_ov(R, Overflow) : L.smul_ov(R, Overflow);
+        break;
+      default:
+        llvm_unreachable("only +, - and * are handled here");
+      }
+      if (Overflow)
+        return std::nullopt;
+      return llvm::APSInt(Result, IsUnsigned);
+    };
+
+    // Fold over the four corners of the [LHS] x [RHS] rectangle, computing each
+    // one lazily and merging it into the running [Min, Max].
+    std::optional<llvm::APSInt> Min, Max;
+    for (const llvm::APSInt &L : {LHS.From(), LHS.To()}) {
+      for (const llvm::APSInt &R : {RHS.From(), RHS.To()}) {
+        std::optional<llvm::APSInt> Corner = Eval(L, R);
+        // A disengaged corner means the operation overflowed the result type,
+        // so the true result may wrap around and we cannot bound it.
+        if (!Corner.has_value())
+          return infer(T);
+        if (!Min || Corner.value() < *Min)
+          Min = Corner;
+        if (!Max || Corner.value() > *Max)
+          Max = Corner;
+      }
+    }
+    return RangeSet{RangeFactory, ValueFactory.getValue(Min.value()),
+                    ValueFactory.getValue(Max.value())};
+  }
+
   /// Return a symmetrical range for the given range and type.
   ///
   /// If T is signed, return the smallest range [-x..x] that covers the original
@@ -1841,6 +1889,27 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
   return {RangeFactory, ValueFactory.getValue(Min), ValueFactory.getValue(Max)};
 }
 
+template <>
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Add>(Range LHS,
+                                                            Range RHS,
+                                                            QualType T) {
+  return inferFromCorners(BO_Add, LHS, RHS, T);
+}
+
+template <>
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Sub>(Range LHS,
+                                                            Range RHS,
+                                                            QualType T) {
+  return inferFromCorners(BO_Sub, LHS, RHS, T);
+}
+
+template <>
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Mul>(Range LHS,
+                                                            Range RHS,
+                                                            QualType T) {
+  return inferFromCorners(BO_Mul, LHS, RHS, T);
+}
+
 RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
                                                     BinaryOperator::Opcode Op,
                                                     RangeSet RHS, QualType T) {
@@ -1859,6 +1928,12 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
     return VisitBinaryOperator<BO_And>(LHS, RHS, T);
   case BO_Rem:
     return VisitBinaryOperator<BO_Rem>(LHS, RHS, T);
+  case BO_Add:
+    return VisitBinaryOperator<BO_Add>(LHS, RHS, T);
+  case BO_Sub:
+    return VisitBinaryOperator<BO_Sub>(LHS, RHS, T);
+  case BO_Mul:
+    return VisitBinaryOperator<BO_Mul>(LHS, RHS, T);
   default:
     return infer(T);
   }

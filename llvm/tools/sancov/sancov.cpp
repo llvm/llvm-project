@@ -987,7 +987,6 @@ computeNotCoveredFunctions(const SymbolizedCoverage &Coverage) {
 
 static std::set<FileFn>
 computeCoveredFunctions(const SymbolizedCoverage &Coverage) {
-  auto AllFns = computeFunctions(Coverage.Points);
   std::set<FileFn> Result;
 
   for (const auto &Point : Coverage.Points) {

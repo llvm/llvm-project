@@ -117,7 +117,7 @@ static void replaceIterArgsAndYieldResults(AffineForOp forOp) {
 /// Promotes the loop body of a forOp to its containing block if the forOp
 /// was known to have a single iteration.
 LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
-  std::optional<uint64_t> tripCount = getConstantTripCount(forOp);
+  std::optional<APInt> tripCount = forOp.getStaticTripCount();
   if (!tripCount || *tripCount != 1)
     return failure();
 
@@ -239,12 +239,12 @@ LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
   // conditional guards (or context information to prevent such versioning). The
   // better way to pipeline for such loops is to first tile them and extract
   // constant trip count "full tiles" before applying this.
-  auto mayBeConstTripCount = getConstantTripCount(forOp);
+  auto mayBeConstTripCount = forOp.getStaticTripCount();
   if (!mayBeConstTripCount) {
     LLVM_DEBUG(forOp.emitRemark("non-constant trip count loop not handled"));
     return success();
   }
-  uint64_t tripCount = *mayBeConstTripCount;
+  uint64_t tripCount = mayBeConstTripCount->getZExtValue();
 
   assert(isOpwiseShiftValid(forOp, shifts) &&
          "shifts will lead to an invalid transformation\n");
@@ -707,8 +707,10 @@ constructTiledIndexSetHyperRect(MutableArrayRef<AffineForOp> origLoops,
   // Bounds for intra-tile loops.
   for (unsigned i = 0; i < width; i++) {
     int64_t largestDiv = getLargestDivisorOfTripCount(origLoops[i]);
-    std::optional<uint64_t> mayBeConstantCount =
-        getConstantTripCount(origLoops[i]);
+    AffineForOp forOp = origLoops[i];
+    std::optional<uint64_t> mayBeConstantCount = std::nullopt;
+    if (auto staticTripCount = forOp.getStaticTripCount())
+      mayBeConstantCount = staticTripCount->getZExtValue();
     // The lower bound is just the tile-space loop.
     AffineMap lbMap = b.getDimIdentityMap();
     newLoops[width + i].setLowerBound(
@@ -869,9 +871,9 @@ void mlir::affine::getPerfectlyNestedLoops(
 
 /// Unrolls this loop completely.
 LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (mayBeConstantTripCount.has_value()) {
-    uint64_t tripCount = *mayBeConstantTripCount;
+    uint64_t tripCount = mayBeConstantTripCount->getZExtValue();
     if (tripCount == 0)
       return success();
     if (tripCount == 1)
@@ -885,10 +887,10 @@ LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
 /// whichever is lower.
 LogicalResult mlir::affine::loopUnrollUpToFactor(AffineForOp forOp,
                                                  uint64_t unrollFactor) {
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (mayBeConstantTripCount.has_value() &&
-      *mayBeConstantTripCount < unrollFactor)
-    return loopUnrollByFactor(forOp, *mayBeConstantTripCount);
+      mayBeConstantTripCount->ult(unrollFactor))
+    return loopUnrollByFactor(forOp, mayBeConstantTripCount->getZExtValue());
   return loopUnrollByFactor(forOp, unrollFactor);
 }
 
@@ -998,7 +1000,9 @@ LogicalResult mlir::affine::loopUnrollByFactor(
     bool cleanUpUnroll) {
   assert(unrollFactor > 0 && "unroll factor should be positive");
 
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> mayBeConstantTripCount = std::nullopt;
+  if (auto staticTripCount = forOp.getStaticTripCount())
+    mayBeConstantTripCount = staticTripCount->getZExtValue();
   if (unrollFactor == 1) {
     if (mayBeConstantTripCount == 1 && failed(promoteIfSingleIteration(forOp)))
       return failure();
@@ -1060,10 +1064,10 @@ LogicalResult mlir::affine::loopUnrollByFactor(
 
 LogicalResult mlir::affine::loopUnrollJamUpToFactor(AffineForOp forOp,
                                                     uint64_t unrollJamFactor) {
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<APInt> mayBeConstantTripCount = forOp.getStaticTripCount();
   if (mayBeConstantTripCount.has_value() &&
-      *mayBeConstantTripCount < unrollJamFactor)
-    return loopUnrollJamByFactor(forOp, *mayBeConstantTripCount);
+      mayBeConstantTripCount->getZExtValue() < unrollJamFactor)
+    return loopUnrollJamByFactor(forOp, mayBeConstantTripCount->getZExtValue());
   return loopUnrollJamByFactor(forOp, unrollJamFactor);
 }
 
@@ -1085,7 +1089,9 @@ LogicalResult mlir::affine::loopUnrollJamByFactor(AffineForOp forOp,
                                                   uint64_t unrollJamFactor) {
   assert(unrollJamFactor > 0 && "unroll jam factor should be positive");
 
-  std::optional<uint64_t> mayBeConstantTripCount = getConstantTripCount(forOp);
+  std::optional<uint64_t> mayBeConstantTripCount = std::nullopt;
+  if (auto staticTripCount = forOp.getStaticTripCount())
+    mayBeConstantTripCount = staticTripCount->getZExtValue();
   if (unrollJamFactor == 1) {
     if (mayBeConstantTripCount == 1 && failed(promoteIfSingleIteration(forOp)))
       return failure();

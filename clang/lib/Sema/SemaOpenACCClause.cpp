@@ -1846,6 +1846,20 @@ bool areVarsEqual(Expr *VarExpr1, Expr *VarExpr2) {
            Expr2DRE->getDecl()->getMostRecentDecl();
   }
 
+  // References to a member.
+  if (auto *Expr1ME = dyn_cast<MemberExpr>(VarExpr1)) {
+    auto *Expr2ME = dyn_cast<MemberExpr>(VarExpr2);
+    if (!Expr2ME)
+      return false;
+
+    return Expr1ME->getMemberDecl()->getMostRecentDecl() ==
+               Expr2ME->getMemberDecl()->getMostRecentDecl() &&
+           areVarsEqual(Expr1ME->getBase(), Expr2ME->getBase());
+  }
+
+  if (isa<CXXThisExpr>(VarExpr1))
+    return isa<CXXThisExpr>(VarExpr2);
+
   llvm_unreachable("Unknown variable type encountered");
 }
 } // namespace

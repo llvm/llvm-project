@@ -1,0 +1,140 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=x86-compress-evex \
+# RUN:   -verify-machineinstrs -mcpu=skx -o - %s | FileCheck %s
+
+---
+name:            blendv_positive
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: blendv_positive
+    ; CHECK: $xmm1 = VBLENDVPSrrr $xmm1, $xmm2, $xmm0
+    $k1 = VPMOVD2MZ128kr $xmm0
+    $xmm1 = VMOVAPSZ128rrk $xmm1, $k1, $xmm2
+
+    ; CHECK: $xmm3 = VBLENDVPSrrr $xmm3, $xmm4, $xmm5
+    $k1 = VPMOVD2MZ128kr $xmm5
+    $xmm3 = VMOVUPSZ128rrk $xmm3, $k1, $xmm4
+
+    ; CHECK: $xmm6 = VBLENDVPSrrr $xmm6, $xmm7, $xmm8
+    $k1 = VPMOVD2MZ128kr $xmm8
+    $xmm6 = VMOVDQA32Z128rrk $xmm6, $k1, $xmm7
+
+    ; CHECK: $xmm9 = VBLENDVPSrrr $xmm9, $xmm10, $xmm11
+    $k1 = VPMOVD2MZ128kr $xmm11
+    $xmm9 = VMOVDQU32Z128rrk $xmm9, $k1, $xmm10
+
+    ; CHECK: $ymm1 = VBLENDVPSYrrr $ymm1, $ymm2, $ymm0
+    $k1 = VPMOVD2MZ256kr $ymm0
+    $ymm1 = VMOVAPSZ256rrk $ymm1, $k1, $ymm2
+
+    ; CHECK: $ymm3 = VBLENDVPSYrrr $ymm3, $ymm4, $ymm5
+    $k1 = VPMOVD2MZ256kr $ymm5
+    $ymm3 = VMOVUPSZ256rrk $ymm3, $k1, $ymm4
+
+    ; CHECK: $ymm6 = VBLENDVPSYrrr $ymm6, $ymm7, $ymm8
+    $k1 = VPMOVD2MZ256kr $ymm8
+    $ymm6 = VMOVDQA32Z256rrk $ymm6, $k1, $ymm7
+
+    ; CHECK: $ymm9 = VBLENDVPSYrrr $ymm9, $ymm10, $ymm11
+    $k1 = VPMOVD2MZ256kr $ymm11
+    $ymm9 = VMOVDQU32Z256rrk $ymm9, $k1, $ymm10
+
+    ; CHECK: $xmm1 = VBLENDVPDrrr $xmm1, $xmm2, $xmm0
+    $k1 = VPMOVQ2MZ128kr $xmm0
+    $xmm1 = VMOVAPDZ128rrk $xmm1, $k1, $xmm2
+
+    ; CHECK: $xmm3 = VBLENDVPDrrr $xmm3, $xmm4, $xmm5
+    $k1 = VPMOVQ2MZ128kr $xmm5
+    $xmm3 = VMOVUPDZ128rrk $xmm3, $k1, $xmm4
+
+    ; CHECK: $xmm6 = VBLENDVPDrrr $xmm6, $xmm7, $xmm8
+    $k1 = VPMOVQ2MZ128kr $xmm8
+    $xmm6 = VMOVDQA64Z128rrk $xmm6, $k1, $xmm7
+
+    ; CHECK: $xmm9 = VBLENDVPDrrr $xmm9, $xmm10, $xmm11
+    $k1 = VPMOVQ2MZ128kr $xmm11
+    $xmm9 = VMOVDQU64Z128rrk $xmm9, $k1, $xmm10
+
+    ; CHECK: $ymm1 = VBLENDVPDYrrr $ymm1, $ymm2, $ymm0
+    $k1 = VPMOVQ2MZ256kr $ymm0
+    $ymm1 = VMOVAPDZ256rrk $ymm1, $k1, $ymm2
+
+    ; CHECK: $ymm3 = VBLENDVPDYrrr $ymm3, $ymm4, $ymm5
+    $k1 = VPMOVQ2MZ256kr $ymm5
+    $ymm3 = VMOVUPDZ256rrk $ymm3, $k1, $ymm4
+
+    ; CHECK: $ymm6 = VBLENDVPDYrrr $ymm6, $ymm7, $ymm8
+    $k1 = VPMOVQ2MZ256kr $ymm8
+    $ymm6 = VMOVDQA64Z256rrk $ymm6, $k1, $ymm7
+
+    ; CHECK: $ymm9 = VBLENDVPDYrrr $ymm9, $ymm10, $ymm11
+    $k1 = VPMOVQ2MZ256kr $ymm11
+    $ymm9 = VMOVDQU64Z256rrk $ymm9, $k1, $ymm10
+
+    ; CHECK: $xmm1 = VPBLENDVBrrr $xmm1, $xmm2, $xmm0
+    $k1 = VPMOVB2MZ128kr $xmm0
+    $xmm1 = VMOVDQU8Z128rrk $xmm1, $k1, $xmm2
+
+    ; CHECK: $ymm1 = VPBLENDVBYrrr $ymm1, $ymm2, $ymm0
+    $k1 = VPMOVB2MZ256kr $ymm0
+    $ymm1 = VMOVDQU8Z256rrk $ymm1, $k1, $ymm2
+
+    RET64
+...
+
+---
+name:            blendv_mask_has_multiple_uses
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: blendv_mask_has_multiple_uses
+    ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
+    ; CHECK: $xmm1 = VMOVAPSZ128rrk $xmm1{{.*}}, $k1, $xmm2
+    ; CHECK: $xmm3 = VMOVUPSZ128rrk $xmm3{{.*}}, $k1, $xmm4
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = VPMOVD2MZ128kr $xmm0
+    $xmm1 = VMOVAPSZ128rrk $xmm1, $k1, $xmm2
+    $xmm3 = VMOVUPSZ128rrk $xmm3, $k1, $xmm4
+    RET64
+...
+
+---
+name:            blendv_mask_has_later_tied_use
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: blendv_mask_has_later_tied_use
+    ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
+    ; CHECK: $xmm1 = VMOVAPSZ128rrk $xmm1{{.*}}, $k1, $xmm2
+    ; CHECK: $k1 = KSHIFTRBki $k1, 2
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = VPMOVD2MZ128kr $xmm0
+    $xmm1 = VMOVAPSZ128rrk $xmm1, $k1, $xmm2
+    $k1 = KSHIFTRBki $k1, 2
+    RET64
+...
+
+---
+name:            blendv_source_vector_clobbered
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: blendv_source_vector_clobbered
+    ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
+    ; CHECK: $xmm0 = VMOVAPSrr $xmm2
+    ; CHECK: $xmm1 = VMOVAPSZ128rrk $xmm1{{.*}}, $k1, $xmm3
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = VPMOVD2MZ128kr $xmm0
+    $xmm0 = VMOVAPSrr $xmm2
+    $xmm1 = VMOVAPSZ128rrk $xmm1, $k1, $xmm3
+    RET64
+...
+
+---
+name:            blendv_uses_extended_register
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: blendv_uses_extended_register
+    ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
+    ; CHECK: $xmm16 = VMOVAPSZ128rrk $xmm16{{.*}}, $k1, $xmm2
+    ; CHECK-NOT: VBLENDVPSrrr
+    $k1 = VPMOVD2MZ128kr $xmm0
+    $xmm16 = VMOVAPSZ128rrk $xmm16, $k1, $xmm2
+    RET64
+...

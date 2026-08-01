@@ -17,8 +17,6 @@
 // !$omp end do simd
 
 module {
-  omp.private {type = private} @i_private_i32 : i32
-
   // CHECK-LABEL: define void @wsloop_simd_ordered_linear
   llvm.func @wsloop_simd_ordered_linear() {
     %c0_i64 = llvm.mlir.constant(0 : i64) : i64
@@ -39,14 +37,14 @@ module {
     // CHECK: %.linear_result = alloca i32
 
     omp.wsloop ordered(0) {
-      omp.simd linear(%i : !llvm.ptr = %c1_i32 : i32) private(@i_private_i32 %i -> %arg0 : !llvm.ptr) {
+      omp.simd linear(%i : !llvm.ptr = %c1_i32 : i32) {
         omp.loop_nest (%iv) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32) {
           // CHECK: omp.loop_nest.region:
           // CHECK: load i32, ptr %.linear_result
-          llvm.store %iv, %arg0 : i32, !llvm.ptr
+          llvm.store %iv, %i : i32, !llvm.ptr
 
           // Compute a[i] = b[i] * 10
-          %i_val = llvm.load %arg0 : !llvm.ptr -> i32
+          %i_val = llvm.load %i : !llvm.ptr -> i32
           %i_idx = llvm.sext %i_val : i32 to i64
           %i_off = llvm.sub %i_idx, %c1_i64 : i64
           %b_ptr = llvm.getelementptr %b[%i_off] : (!llvm.ptr, i64) -> !llvm.ptr, i32
@@ -59,7 +57,7 @@ module {
           omp.ordered.region par_level_simd {
             // CHECK: omp.ordered.region:
             // CHECK: load i32, ptr %.linear_result
-            %i_ord = llvm.load %arg0 : !llvm.ptr -> i32
+            %i_ord = llvm.load %i : !llvm.ptr -> i32
             %i_ord_idx = llvm.sext %i_ord : i32 to i64
             %i_ord_off = llvm.sub %i_ord_idx, %c1_i64 : i64
             %a_ord_ptr = llvm.getelementptr %a[%i_ord_off] : (!llvm.ptr, i64) -> !llvm.ptr, i32
@@ -71,7 +69,7 @@ module {
           // Compute c[i] = a[i] * 2 (code after ordered region)
           // CHECK: omp_region.finalize:
           // CHECK: load i32, ptr %.linear_result
-          %i_post = llvm.load %arg0 : !llvm.ptr -> i32
+          %i_post = llvm.load %i : !llvm.ptr -> i32
           %i_post_idx = llvm.sext %i_post : i32 to i64
           %i_post_off = llvm.sub %i_post_idx, %c1_i64 : i64
           %a_post_ptr = llvm.getelementptr %a[%i_post_off] : (!llvm.ptr, i64) -> !llvm.ptr, i32

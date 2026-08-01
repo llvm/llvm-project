@@ -1517,6 +1517,13 @@ public:
   /// Create a MERGE_VALUES node from the given operands.
   LLVM_ABI SDValue getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl);
 
+  /// Return poison values for each of \p ResultTypes, substituting \p Chain
+  /// for any result of type MVT::Other, merged into a single MERGE_VALUES
+  /// node. Used to salvage a chain when an operation cannot be lowered due
+  /// to an error, and the program will be discarded.
+  LLVM_ABI SDValue getErrorMergeValues(ArrayRef<EVT> ResultTypes, SDValue Chain,
+                                       const SDLoc &dl);
+
   /// Loads are not normal binary operators: their result type is not
   /// determined by their operands, and they produce a value AND a token chain.
   ///
@@ -1583,11 +1590,23 @@ public:
   }
   LLVM_ABI SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                             SDValue Ptr, MachineMemOperand *MMO);
+  LLVM_ABI SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
+                            SDValue Ptr, SDValue Offset,
+                            MachineMemOperand *MMO);
+  LLVM_ABI SDValue getTruncStore(
+      SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr, SDValue Offset,
+      MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
+      MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
+      const AAMDNodes &AAInfo = AAMDNodes());
   LLVM_ABI SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
                 MachineMemOperand::Flags MMOFlags = MachineMemOperand::MONone,
                 const AAMDNodes &AAInfo = AAMDNodes());
+  LLVM_ABI SDValue getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
+                                 SDValue Ptr, SDValue Offset, EVT SVT,
+                                 MachineMemOperand *MMO);
+
   inline SDValue
   getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr,
                 MachinePointerInfo PtrInfo, EVT SVT,

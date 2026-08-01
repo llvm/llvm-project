@@ -65,16 +65,16 @@ void usages() {
   (void)i;
   (void)v;
 
-  __attribute__((opencl_global_host)) int *GLOB_HOST;
+  __attribute__((opencl_global_host)) int *GLOB_HOST; // expected-warning {{''opencl_global_host'' attribute is deprecated}}
   bar(*GLOB_HOST);
   bar2(*GLOB_HOST);
   GLOB = GLOB_HOST;
   GLOB_HOST = GLOB; // expected-error {{assigning '__global int *' to '__global_host int *' changes address space of pointer}}
-  GLOB_HOST = static_cast<__attribute__((opencl_global_host)) int *>(GLOB); // expected-error {{static_cast from '__global int *' to '__global_host int *' is not allowed}}
-  __attribute__((opencl_global_device)) int *GLOB_DEVICE;
+  GLOB_HOST = static_cast<__attribute__((opencl_global_host)) int *>(GLOB); // expected-warning {{''opencl_global_host'' attribute is deprecated}} expected-error {{static_cast from '__global int *' to '__global_host int *' is not allowed}}
+  __attribute__((opencl_global_device)) int *GLOB_DEVICE; // expected-warning {{''opencl_global_device'' attribute is deprecated}}
   bar(*GLOB_DEVICE);
   bar2(*GLOB_DEVICE);
   GLOB = GLOB_DEVICE;
   GLOB_DEVICE = GLOB; // expected-error {{assigning '__global int *' to '__global_device int *' changes address space of pointer}}
-  GLOB_DEVICE = static_cast<__attribute__((opencl_global_device)) int *>(GLOB); // expected-error {{static_cast from '__global int *' to '__global_device int *' is not allowed}}
+  GLOB_DEVICE = static_cast<__attribute__((opencl_global_device)) int *>(GLOB); // expected-warning {{''opencl_global_device'' attribute is deprecated}} expected-error {{static_cast from '__global int *' to '__global_device int *' is not allowed}}
 }

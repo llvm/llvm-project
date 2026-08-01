@@ -38,6 +38,7 @@ public:
 
 private:
   bool visitBarrier(IntrinsicInst &I);
+  bool visitPtrSBufferLoad(IntrinsicInst &I);
 };
 
 class AMDGPULowerIntrinsicsLegacy : public ModulePass {
@@ -76,6 +77,10 @@ bool AMDGPULowerIntrinsicsImpl::run() {
     case Intrinsic::amdgcn_s_cluster_barrier:
       forEachCall(F, [&](IntrinsicInst *II) { Changed |= visitBarrier(*II); });
       break;
+    case Intrinsic::amdgcn_ptr_s_buffer_load:
+      forEachCall(
+          F, [&](IntrinsicInst *II) { Changed |= visitPtrSBufferLoad(*II); });
+      break;
     }
   }
 
@@ -94,8 +99,10 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
   bool IsSingleWaveWG = false;
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    IsSingleWaveWG = ST.isSingleWavefrontWorkgroup(*I.getFunction());
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    unsigned WGMaxSize = ST.getFlatWorkGroupSizes(*I.getFunction()).second;
+    IsSingleWaveWG = WGMaxSize <= ST.getWavefrontSize();
+  }
 
   IRBuilder<> B(&I);
 
@@ -105,17 +112,18 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
     // The default cluster barrier expects one signal per workgroup. So we need
     // a workgroup barrier first.
     if (IsSingleWaveWG) {
-      B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_wave_barrier, {})
+      B.CreateIntrinsicWithoutFolding(B.getVoidTy(),
+                                      Intrinsic::amdgcn_wave_barrier, {})
           ->copyMetadata(I);
     } else {
       Value *BarrierID_32 = B.getInt32(AMDGPU::Barrier::WORKGROUP);
       Value *BarrierID_16 = B.getInt16(AMDGPU::Barrier::WORKGROUP);
-      CallInst *IsFirst = B.CreateIntrinsic(
+      CallInst *IsFirst = B.CreateIntrinsicWithoutFolding(
           B.getInt1Ty(), Intrinsic::amdgcn_s_barrier_signal_isfirst,
           {BarrierID_32});
       IsFirst->copyMetadata(I);
-      B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_s_barrier_wait,
-                        {BarrierID_16})
+      B.CreateIntrinsicWithoutFolding(
+           B.getVoidTy(), Intrinsic::amdgcn_s_barrier_wait, {BarrierID_16})
           ->copyMetadata(I);
 
       Instruction *ThenTerm =
@@ -127,13 +135,13 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
     // barrier in all waves.
     Value *BarrierID_32 = B.getInt32(AMDGPU::Barrier::CLUSTER);
     Value *BarrierID_16 = B.getInt16(AMDGPU::Barrier::CLUSTER);
-    B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_s_barrier_signal,
-                      {BarrierID_32})
+    B.CreateIntrinsicWithoutFolding(
+         B.getVoidTy(), Intrinsic::amdgcn_s_barrier_signal, {BarrierID_32})
         ->copyMetadata(I);
 
     B.SetInsertPoint(&I);
-    B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_s_barrier_wait,
-                      {BarrierID_16})
+    B.CreateIntrinsicWithoutFolding(
+         B.getVoidTy(), Intrinsic::amdgcn_s_barrier_wait, {BarrierID_16})
         ->copyMetadata(I);
 
     I.eraseFromParent();
@@ -160,7 +168,8 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
     // Down-grade waits, remove split signals.
     if (I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier ||
         I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_wait) {
-      B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_wave_barrier, {})
+      B.CreateIntrinsicWithoutFolding(B.getVoidTy(),
+                                      Intrinsic::amdgcn_wave_barrier, {})
           ->copyMetadata(I);
     } else if (I.getIntrinsicID() ==
                Intrinsic::amdgcn_s_barrier_signal_isfirst) {
@@ -176,17 +185,28 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
     // Lower to split barriers.
     Value *BarrierID_32 = B.getInt32(AMDGPU::Barrier::WORKGROUP);
     Value *BarrierID_16 = B.getInt16(AMDGPU::Barrier::WORKGROUP);
-    B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_s_barrier_signal,
-                      {BarrierID_32})
+    B.CreateIntrinsicWithoutFolding(
+         B.getVoidTy(), Intrinsic::amdgcn_s_barrier_signal, {BarrierID_32})
         ->copyMetadata(I);
-    B.CreateIntrinsic(B.getVoidTy(), Intrinsic::amdgcn_s_barrier_wait,
-                      {BarrierID_16})
+    B.CreateIntrinsicWithoutFolding(
+         B.getVoidTy(), Intrinsic::amdgcn_s_barrier_wait, {BarrierID_16})
         ->copyMetadata(I);
     I.eraseFromParent();
     return true;
   }
 
   return false;
+}
+
+bool AMDGPULowerIntrinsicsImpl::visitPtrSBufferLoad(IntrinsicInst &I) {
+  assert(I.getIntrinsicID() == Intrinsic::amdgcn_ptr_s_buffer_load);
+
+  if (I.hasMetadata(LLVMContext::MD_invariant_load))
+    return false;
+
+  I.setMetadata(LLVMContext::MD_invariant_load,
+                MDNode::get(I.getContext(), {}));
+  return true;
 }
 
 PreservedAnalyses AMDGPULowerIntrinsicsPass::run(Module &M,

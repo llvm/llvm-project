@@ -22,7 +22,7 @@ add_entrypoint_object(
   HDRS
     ../kill.h
   DEPENDS
-    libc.include.signal
+    libc.hdr.types.pid_t
     libc.src.errno.errno
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil

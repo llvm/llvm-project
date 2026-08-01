@@ -123,6 +123,27 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
             // a variable.
             DILocalVariable *V = DV->getVariable();
             DIExpression *E = DV->getExpression();
+            // If this is already an llvm.dbg.value instruction that we can
+            // keep, just do that, otherwise convert it.
+            auto *Val = cast<MetadataAsValue>(DV->getArgOperand(0));
+            auto *Var = cast<MetadataAsValue>(DV->getArgOperand(1));
+            auto *Expr = cast<MetadataAsValue>(DV->getArgOperand(2));
+            bool Replace = DV->getIntrinsicID() != Intrinsic::dbg_value;
+            if (!isa<ValueAsMetadata>(Val->getMetadata())) {
+              // This may be a DIArgList which is not supported in LLVM 3.7. If
+              // it is, we cannot record the new value, but we still need to
+              // kill any old value. Do this by poison. We do not know the
+              // correct type to use here and arbitrarily use i1.
+              // This should never be anything other than ValueAsMetadata or
+              // DIArgList, but in manually constructed LLVM IR, it can be.
+              // Handle this gracefully by also replacing it with poison.
+              Val = MetadataAsValue::get(
+                  M.getContext(), ConstantAsMetadata::get(PoisonValue::get(
+                                      Type::getInt1Ty(M.getContext()))));
+              E = DIExpression::get(M.getContext(), {});
+              Expr = MetadataAsValue::get(M.getContext(), E);
+              Replace = true;
+            }
             std::pair<Instruction *, DbgValueInst *> &DbgValue = DbgValues[V];
             std::pair<Instruction *, DbgValueInst *> &DbgValueFragment =
                 DbgValueFragments[{V, E}];
@@ -143,12 +164,8 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
                 DbgValue.second->eraseFromParent();
               }
             }
-            // If this is already an llvm.dbg.value instruction, just keep it,
-            // otherwise convert it.
             DbgValueInst *NewDV;
-            if (DV->getIntrinsicID() == Intrinsic::dbg_value) {
-              NewDV = DV;
-            } else {
+            if (Replace) {
               if (!DVDecl) {
                 DVDecl =
                     Intrinsic::getOrInsertDeclaration(&M, Intrinsic::dbg_value);
@@ -161,13 +178,13 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
                 DVDecl->removeFnAttrs(AM);
               }
               NewDV = cast<DbgValueInst>(
-                  CallInst::Create(DVDecl,
-                                   {DV->getArgOperand(0), DV->getArgOperand(1),
-                                    DV->getArgOperand(2)},
-                                   {}, "", std::next(DV->getIterator())));
+                  CallInst::Create(DVDecl, {Val, Var, Expr}, {}, "",
+                                   std::next(DV->getIterator())));
               NewDV->setTailCall();
               NewDV->setDebugLoc(DV->getDebugLoc());
               DV->eraseFromParent();
+            } else {
+              NewDV = DV;
             }
             DbgValue = DbgValueFragment = {NextNonDebugInst, NewDV};
             continue;

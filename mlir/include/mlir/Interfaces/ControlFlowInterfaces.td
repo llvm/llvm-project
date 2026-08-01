@@ -140,7 +140,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
 
     A "region successor" indicates the target of a branch. It can indicate:
     1. A region of this op.
-    2. `RegionSuccessor::parent()`, i.e., the control flow leaves this op.
+    2. A parent operation, i.e., the control flow leaves/resumes after that op.
 
     The SSA values to which successor operands are forwarded are called
     "successor inputs".
@@ -171,8 +171,8 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
 
     `scf.for` has one region. There are two region branch points with two
     identical region successors:
-    * parent => parent(%r), region0(%a)
-    * `scf.yield` => parent(%r), region0(%a)
+    * parent => op(%r), region0(%a)
+    * `scf.yield` => op(%r), region0(%a)
 
     `%a` and %r are successor inputs. `%b` is an entry successor operand. `%c`
     is a successor operand.
@@ -265,7 +265,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     InterfaceMethod<[{
         Return all successor inputs for the given region successor. If the
         given region successor is a region, then the returned values are block
-        arguments. Otherwise, if the given region successor is the "parent",
+        arguments. Otherwise, if the given region successor is an operation,
         the returned values are op results.
       }],
       "::mlir::ValueRange", "getSuccessorInputs",
@@ -289,9 +289,8 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
           ::llvm::SmallVector<::mlir::RegionSuccessor> successors;
           op.getSuccessorRegions(point, successors);
           bool isPred = llvm::any_of(successors, [&] (const auto &succ) {
-            return succ.getSuccessor() == successor.getSuccessor() ||
-                   (succ.isParent() && successor.isParent());
-            });
+            return succ == successor;
+          });
           if (isPred)
             predecessors.push_back(point);
         }

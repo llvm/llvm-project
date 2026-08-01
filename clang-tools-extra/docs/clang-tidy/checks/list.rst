@@ -353,6 +353,7 @@ Clang-Tidy Checks
    :doc:`openmp-use-default-none <openmp/use-default-none>`,
    :doc:`performance-avoid-endl <performance/avoid-endl>`, "Yes"
    :doc:`performance-enum-size <performance/enum-size>`,
+   :doc:`performance-expensive-value-or <performance/expensive-value-or>`, "Yes"
    :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"
    :doc:`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>`,
    :doc:`performance-inefficient-algorithm <performance/inefficient-algorithm>`, "Yes"
@@ -434,6 +435,7 @@ Clang-Tidy Checks
    :doc:`readability-string-compare <readability/string-compare>`, "Yes"
    :doc:`readability-suspicious-call-argument <readability/suspicious-call-argument>`,
    :doc:`readability-trailing-comma <readability/trailing-comma>`, "Yes"
+   :doc:`readability-trivial-switch <readability/trivial-switch>`,
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,

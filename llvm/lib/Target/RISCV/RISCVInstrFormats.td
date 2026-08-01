@@ -108,6 +108,14 @@ def Vrgather       : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 def Vcompress      : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 def Sha2Constraint : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 
+// smt.vmadot with sp and hp: the vmask operand (only use V0 or V1) must not
+// overlap with any of vd, vs1, or vs2.
+class RISCVSMTConstraint<bit DiffClassReg = 0> {
+  bits<1> Value = DiffClassReg;
+}
+def NoSMTConstraint        : RISCVSMTConstraint<>;
+def DiffWithMaskConstraint : RISCVSMTConstraint<DiffClassReg = 1>;
+
 // The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
 class RISCVOpcode<string name, bits<7> val> {
@@ -289,6 +297,10 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
 
   bit HasTkOp = 0;
   let TSFlags{31} = HasTkOp;
+
+  // SMT VDOTII register class constraint.
+  RISCVSMTConstraint SMTConstraint = NoSMTConstraint;
+  let TSFlags{32} = SMTConstraint.Value;
 }
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,

@@ -68,6 +68,12 @@ public:
     return SymbolLocatorSymStore::GetSystemDefaultCachePath();
   }
 
+  uint64_t GetTimeout() const {
+    const uint32_t idx = ePropertyTimeout;
+    return GetPropertyAtIndexAs<uint64_t>(
+        idx, g_symbollocatorsymstore_properties[idx].default_uint_value);
+  }
+
   std::optional<std::string> GetTLSCertFingerprint() const {
     OptionValueString *s =
         m_collection_sp->GetPropertyAtIndexAsOptionValueString(
@@ -272,9 +278,8 @@ RequestFileFromSymStoreServerHTTP(llvm::StringRef base_url, llvm::StringRef key,
   }
 
   llvm::HTTPClient client;
-  // TODO: Since PDBs can be huge, we should distinguish between resolve,
-  // connect, send and receive.
-  client.setTimeout(std::chrono::seconds(60));
+  client.setTimeout(
+      std::chrono::seconds(GetGlobalPluginProperties().GetTimeout()));
 
   llvm::StreamedHTTPResponseHandler Handler(
       [dest = tmp_file.str().str()]()
@@ -444,8 +449,7 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
     return {};
 
   Log *log = GetLog(LLDBLog::Symbols);
-  std::string pdb_name =
-      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef().str();
+  std::string pdb_name = module_spec.GetSymbolFileSpec().GetFilename().str();
   if (pdb_name.empty()) {
     LLDB_LOG(log, "Failed to resolve symbol PDB module: PDB name empty");
     return {};

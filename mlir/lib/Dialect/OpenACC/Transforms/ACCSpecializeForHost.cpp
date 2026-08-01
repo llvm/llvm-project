@@ -142,9 +142,13 @@ public:
       }
       IRMapping mapping;
       mapping.map(atomicUpdateOp.getRegion().front().getArgument(0), loadOp);
-      Operation *expr = rewriter.clone(*atomicUpdateOp.getFirstOp(), mapping);
-      if (!ptrLikeType.genStore(rewriter, atomicUpdateOp.getLoc(),
-                                expr->getResult(0), xTyped)) {
+      Block &block = atomicUpdateOp.getRegion().front();
+      for (Operation &op : block.without_terminator())
+        rewriter.clone(op, mapping);
+      auto yieldOp = cast<acc::YieldOp>(block.getTerminator());
+      Value result = mapping.lookup(yieldOp.getOperand(0));
+      if (!ptrLikeType.genStore(rewriter, atomicUpdateOp.getLoc(), result,
+                                xTyped)) {
         accSupport.emitNYI(atomicUpdateOp.getLoc(),
                            "failed to generate store for atomic update");
         return failure();
@@ -344,6 +348,9 @@ public:
         populateACCOrphanToHostPatterns(patterns, accSupport);
       GreedyRewriteConfig config;
       config.setUseTopDownTraversal(true);
+      // Deeply nested orphan acc.loops can need more than the default
+      // iteration cap to converge; lift it to avoid spurious pass failure.
+      config.setMaxIterations(GreedyRewriteConfig::kNoLimit);
       if (failed(applyPatternsGreedily(funcOp, std::move(patterns), config)))
         signalPassFailure();
     }
@@ -461,8 +468,8 @@ void mlir::acc::populateACCHostFallbackPatterns(RewritePatternSet &patterns,
   // Runtime operations - erase them
   patterns.insert<
       ACCOpEraseConversion<acc::InitOp>, ACCOpEraseConversion<acc::ShutdownOp>,
-      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>,
-      ACCOpEraseConversion<acc::TerminatorOp>>(context);
+      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>>(
+      context);
 
   // Compute constructs - unwrap their regions
   patterns.insert<ACCRegionUnwrapConversion<acc::ParallelOp>,

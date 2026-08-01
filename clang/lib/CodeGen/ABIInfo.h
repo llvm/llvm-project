@@ -26,6 +26,7 @@ class FixedVectorType;
 namespace clang {
 class ASTContext;
 class CodeGenOptions;
+class FunctionDecl;
 class TargetInfo;
 
 namespace CodeGen {
@@ -69,6 +70,14 @@ public:
   /// functions.
   llvm::CallingConv::ID getRuntimeCC() const { return RuntimeCC; }
 
+  // Get X86ABIAVXLevel for the given FunctionDecl and ExtInfo.
+  // This can be different than the global / module level X86ABIAVXLevel
+  // due to function attributes.
+  virtual unsigned getX86ABIAVXLevel(const FunctionDecl *,
+                                     const FunctionType::ExtInfo &) const {
+    return 0;
+  }
+
   virtual void computeInfo(CodeGen::CGFunctionInfo &FI) const = 0;
 
   /// EmitVAArg - Emit the target dependent code to load a value of
@@ -90,6 +99,12 @@ public:
   virtual RValue EmitMSVAArg(CodeGen::CodeGenFunction &CGF,
                              CodeGen::Address VAListAddr, QualType Ty,
                              AggValueSlot Slot) const;
+
+  /// Emit the target dependent code to load a value of
+  /// \arg Ty from the \c __builtin_zos_va_list pointed to by \arg VAListAddr.
+  virtual RValue EmitZOSVAArg(CodeGen::CodeGenFunction &CGF,
+                              CodeGen::Address VAListAddr, QualType Ty,
+                              AggValueSlot Slot) const;
 
   virtual bool isHomogeneousAggregateBaseType(QualType Ty) const;
 

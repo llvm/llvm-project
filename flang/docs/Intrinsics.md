@@ -1545,3 +1545,58 @@ subroutine test
   call show_descriptor(a)
 end subroutine test
 ```
+
+### Non-Standard Intrinsics: IARGC
+
+#### Description
+`IARGC()` returns the number of arguments passed on the command line when the containing program was invoked.
+
+#### Usage and Info
+- **Standard:** GNU extension
+- **Class:** Function
+- **Syntax:** `RESULT = IARGC()`
+- **Arguments:**
+- **Return value:** The number of command line arguments, type `INTEGER(4)`
+
+#### Example
+```Fortran
+program example_iargc
+  integer :: n
+  n = iargc()
+  print *, "Argument count:", n
+end program
+```
+
+### Non-Standard Intrinsics: GETARG
+
+#### Description
+`GETARG(POS, VALUE)` retrieves the `POS`-th argument that was passed on the command line when the containing program was invoked.
+After `GETARG` returns, the `VALUE` argument holds the `POS`-th command line argument.
+If `VALUE` cannot hold the argument, the argument is truncated to fit in `VALUE`.
+If there are less than `POS` arguments specified at the command line, `VALUE` is filled with blanks.
+If `POS` = 0, `VALUE` is set to the name of the program (on systems that support this feature). 
+
+#### Usage and Info
+- **Standard:** GNU extension
+- **Class:** Subroutine
+- **Syntax:** `CALL GETARG(POS, VALUE)`
+
+#### Arguments
+
+|         |                                                                                |
+|---------|--------------------------------------------------------------------------------|
+| `POS`   | Shall be of type `INTEGER` of any kind; `POS` >= 0 |
+| `VALUE` | Shall be of type `CHARACTER` and of default kind. |
+
+#### Example
+```Fortran
+PROGRAM test_getarg
+  INTEGER :: i
+  CHARACTER(len=32) :: arg
+
+  DO i = 1, iargc()
+    CALL getarg(i, arg)
+    WRITE (*,*) arg
+  END DO
+END PROGRAM
+```

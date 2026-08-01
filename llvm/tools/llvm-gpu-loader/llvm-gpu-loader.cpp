@@ -96,8 +96,7 @@ static void *copyArgumentVector(int Argc, const char **Argv,
 
   // We allocate enough space for a null terminated array and all the strings.
   void *DevArgv;
-  OFFLOAD_ERR(
-      olMemAlloc(Device, OL_ALLOC_TYPE_HOST, ArgSize + StringLen, &DevArgv));
+  OFFLOAD_ERR(olMemAllocHost(Device, ArgSize + StringLen, &DevArgv));
   if (!DevArgv)
     handleError(
         createStringError("Failed to allocate memory for environment."));
@@ -207,7 +206,7 @@ int main(int argc, const char **argv, const char **envp) {
     handleError(errorCodeToError(EC));
   MemoryBufferRef Image = **ImageOrErr;
 
-  ol_platform_backend_t Backend;
+  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
   ol_init_args_t InitArgs = OL_INIT_ARGS_INIT;
 
   file_magic Magic = identify_magic(Image.getBuffer());
@@ -230,6 +229,9 @@ int main(int argc, const char **argv, const char **envp) {
           ELF::convertEMachineToArchName(ElfOrErr->getHeader().e_machine)
               .data()));
     }
+  }
+
+  if (Backend != OL_PLATFORM_BACKEND_UNKNOWN) {
     InitArgs.NumPlatforms = 1;
     InitArgs.Platforms = &Backend;
   }

@@ -80,7 +80,7 @@ public:
     auto IsInvalidated = [&](const AccessPath &Path) {
       for (LoanID LID : ImmediatelyMovedLoans) {
         const Loan *MovedLoan = LoanMgr.getLoan(LID);
-        if (MovedLoan->getAccessPath() == Path)
+        if (MovedLoan->getAccessPath().isPrefixOf(Path))
           return true;
       }
       return false;

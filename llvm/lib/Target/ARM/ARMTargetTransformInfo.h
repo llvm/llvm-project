@@ -63,137 +63,6 @@ class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
   const ARMSubtarget *ST;
   const ARMTargetLowering *TLI;
 
-  // Currently the following features are excluded from InlineFeaturesAllowed.
-  // ModeThumb, FeatureNoARM, ModeSoftFloat.
-  // Depending on whether they are set or unset, different
-  // instructions/registers are available. For example, inlining a callee with
-  // -thumb-mode in a caller with +thumb-mode, may cause the assembler to
-  // fail if the callee uses ARM only instructions, e.g. in inline asm.
-  const FeatureBitset InlineFeaturesAllowed = {ARM::Feature8MSecExt,
-                                               ARM::FeatureAClass,
-                                               ARM::FeatureAES,
-                                               ARM::FeatureAcquireRelease,
-                                               ARM::FeatureAvoidMOVsShOp,
-                                               ARM::FeatureAvoidMULS,
-                                               ARM::FeatureAvoidPartialCPSR,
-                                               ARM::FeatureBF16,
-                                               ARM::FeatureCRC,
-                                               ARM::FeatureCheapPredicableCPSR,
-                                               ARM::FeatureCheckVLDnAlign,
-                                               ARM::FeatureCrypto,
-                                               ARM::FeatureD32,
-                                               ARM::FeatureDB,
-                                               ARM::FeatureDFB,
-                                               ARM::FeatureDSP,
-                                               ARM::FeatureDontWidenVMOVS,
-                                               ARM::FeatureDotProd,
-                                               ARM::FeatureExecuteOnly,
-                                               ARM::FeatureExpandMLx,
-                                               ARM::FeatureFP16,
-                                               ARM::FeatureFP16FML,
-                                               ARM::FeatureFP64,
-                                               ARM::FeatureFPAO,
-                                               ARM::FeatureFPARMv8,
-                                               ARM::FeatureFPARMv8_D16,
-                                               ARM::FeatureFPARMv8_D16_SP,
-                                               ARM::FeatureFPARMv8_SP,
-                                               ARM::FeatureFPRegs,
-                                               ARM::FeatureFPRegs16,
-                                               ARM::FeatureFPRegs64,
-                                               ARM::FeatureFullFP16,
-                                               ARM::FeatureFuseAES,
-                                               ARM::FeatureFuseLiterals,
-                                               ARM::FeatureHWDivARM,
-                                               ARM::FeatureHWDivThumb,
-                                               ARM::FeatureHasNoBranchPredictor,
-                                               ARM::FeatureHasRetAddrStack,
-                                               ARM::FeatureHasSlowFPVFMx,
-                                               ARM::FeatureHasSlowFPVMLx,
-                                               ARM::FeatureHasVMLxHazards,
-                                               ARM::FeatureLOB,
-                                               ARM::FeatureLongCalls,
-                                               ARM::FeatureMClass,
-                                               ARM::FeatureMP,
-                                               ARM::FeatureMVEVectorCostFactor1,
-                                               ARM::FeatureMVEVectorCostFactor2,
-                                               ARM::FeatureMVEVectorCostFactor4,
-                                               ARM::FeatureMatMulInt8,
-                                               ARM::FeatureMuxedUnits,
-                                               ARM::FeatureNEON,
-                                               ARM::FeatureNEONForFP,
-                                               ARM::FeatureNEONForFPMovs,
-                                               ARM::FeatureNoMovt,
-                                               ARM::FeatureNoNegativeImmediates,
-                                               ARM::FeatureNoPostRASched,
-                                               ARM::FeaturePerfMon,
-                                               ARM::FeaturePref32BitThumb,
-                                               ARM::FeaturePrefISHSTBarrier,
-                                               ARM::FeaturePreferBranchAlign32,
-                                               ARM::FeaturePreferBranchAlign64,
-                                               ARM::FeaturePreferVMOVSR,
-                                               ARM::FeatureProfUnpredicate,
-                                               ARM::FeatureRAS,
-                                               ARM::FeatureRClass,
-                                               ARM::FeatureReserveR9,
-                                               ARM::FeatureSB,
-                                               ARM::FeatureSHA2,
-                                               ARM::FeatureSlowFPBrcc,
-                                               ARM::FeatureSlowLoadDSubreg,
-                                               ARM::FeatureSlowOddRegister,
-                                               ARM::FeatureSlowVDUP32,
-                                               ARM::FeatureSlowVGETLNi32,
-                                               ARM::FeatureSplatVFPToNeon,
-                                               ARM::FeatureStrictAlign,
-                                               ARM::FeatureThumb2,
-                                               ARM::FeatureTrustZone,
-                                               ARM::FeatureUseMIPipeliner,
-                                               ARM::FeatureUseMISched,
-                                               ARM::FeatureUseWideStrideVFP,
-                                               ARM::FeatureV7Clrex,
-                                               ARM::FeatureVFP2,
-                                               ARM::FeatureVFP2_SP,
-                                               ARM::FeatureVFP3,
-                                               ARM::FeatureVFP3_D16,
-                                               ARM::FeatureVFP3_D16_SP,
-                                               ARM::FeatureVFP3_SP,
-                                               ARM::FeatureVFP4,
-                                               ARM::FeatureVFP4_D16,
-                                               ARM::FeatureVFP4_D16_SP,
-                                               ARM::FeatureVFP4_SP,
-                                               ARM::FeatureVMLxForwarding,
-                                               ARM::FeatureVirtualization,
-                                               ARM::FeatureZCZeroing,
-                                               ARM::HasMVEFloatOps,
-                                               ARM::HasMVEIntegerOps,
-                                               ARM::HasV5TEOps,
-                                               ARM::HasV5TOps,
-                                               ARM::HasV6KOps,
-                                               ARM::HasV6MOps,
-                                               ARM::HasV6Ops,
-                                               ARM::HasV6T2Ops,
-                                               ARM::HasV7Ops,
-                                               ARM::HasV8MBaselineOps,
-                                               ARM::HasV8MMainlineOps,
-                                               ARM::HasV8Ops,
-                                               ARM::HasV8_1MMainlineOps,
-                                               ARM::HasV8_1aOps,
-                                               ARM::HasV8_2aOps,
-                                               ARM::HasV8_3aOps,
-                                               ARM::HasV8_4aOps,
-                                               ARM::HasV8_5aOps,
-                                               ARM::HasV8_6aOps,
-                                               ARM::HasV8_7aOps,
-                                               ARM::HasV8_8aOps,
-                                               ARM::HasV8_9aOps,
-                                               ARM::HasV9_0aOps,
-                                               ARM::HasV9_1aOps,
-                                               ARM::HasV9_2aOps,
-                                               ARM::HasV9_3aOps,
-                                               ARM::HasV9_4aOps,
-                                               ARM::HasV9_5aOps,
-                                               ARM::HasV9_6aOps,
-                                               ARM::HasV9_7aOps};
-
   const ARMSubtarget *getST() const { return ST; }
   const ARMTargetLowering *getTLI() const { return TLI; }
 
@@ -201,9 +70,6 @@ public:
   explicit ARMTTIImpl(const ARMBaseTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
-
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const override;
 
   bool enableInterleavedAccessVectorization() const override { return true; }
 
@@ -278,7 +144,8 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override {
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
     return ST->getMaxInterleaveFactor();
   }
 

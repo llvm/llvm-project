@@ -96,7 +96,8 @@ define void @test_iv_nuw_nsw_2_uge_start(i8 %len.n, i8 %a) {
 ; CHECK-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    call void @use.i1(i1 true)
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge i8 [[IV]], -1
+; CHECK-NEXT:    call void @use.i1(i1 [[T_1]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:

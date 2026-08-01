@@ -91,7 +91,7 @@ static bool isReplaceableRange(SourceLocation StartLoc, SourceLocation EndLoc,
 /// Replaces the provided range with the text "nullptr", but only if
 /// the start and end location are both in main file.
 /// Returns true if and only if a replacement was made.
-static void replaceWithNullptr(ClangTidyCheck &Check, SourceManager &SM,
+static void replaceWithNullptr(ClangTidyCheck &Check, const SourceManager &SM,
                                SourceLocation StartLoc, SourceLocation EndLoc) {
   const CharSourceRange Range(SourceRange(StartLoc, EndLoc), true);
   // Add a space if nullptr follows an alphanumeric character. This happens

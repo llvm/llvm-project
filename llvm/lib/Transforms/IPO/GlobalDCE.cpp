@@ -96,13 +96,17 @@ void GlobalDCEPass::ComputeDependencies(Value *V,
     Deps.insert(GV);
   } else if (auto *CE = dyn_cast<Constant>(V)) {
     // Avoid walking the whole tree of a big ConstantExprs multiple times.
-    auto [Where, Inserted] = ConstantDependenciesCache.try_emplace(CE);
-    SmallPtrSetImpl<GlobalValue *> &LocalDeps = Where->second;
-    if (Inserted) {
+    auto Where = ConstantDependenciesCache.find(CE);
+    if (Where == ConstantDependenciesCache.end()) {
+      // Compute into a local set first: the recursion can insert into the
+      // cache, which would invalidate references into it.
+      SmallPtrSet<GlobalValue *, 8> LocalDeps;
       for (User *CEUser : CE->users())
         ComputeDependencies(CEUser, LocalDeps);
+      Where =
+          ConstantDependenciesCache.try_emplace(CE, std::move(LocalDeps)).first;
     }
-    Deps.insert_range(LocalDeps);
+    Deps.insert_range(Where->second);
   }
 }
 

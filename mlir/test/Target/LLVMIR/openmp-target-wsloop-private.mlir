@@ -13,7 +13,7 @@ omp.private {type = private} @impure_alloca_privatizer : !llvm.ptr init {
 }
 
 llvm.func @test_alloca_ip_workaround() {
-  omp.target {
+  omp.target kernel_type(generic) {
     %65 = llvm.mlir.constant(1 : i32) : i32
     %66 = llvm.alloca %65 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
     %67 = llvm.mlir.constant(0 : index) : i64

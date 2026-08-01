@@ -508,11 +508,6 @@ public:
   }
 };
 
-namespace AMDGPU {
-/// Get the size in bits of a register from the register class \p RC.
-unsigned getRegBitWidth(const TargetRegisterClass &RC);
-} // namespace AMDGPU
-
 } // End namespace llvm
 
 #endif

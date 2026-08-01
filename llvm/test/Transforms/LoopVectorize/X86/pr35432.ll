@@ -35,9 +35,9 @@ define i32 @main(ptr %ptr) {
 ; CHECK-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr @a, align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[CONV3]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], 1
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP0]], i32 [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[TMP3]], [[UMIN1]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP2]], [[UMIN1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP4]], 24
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:

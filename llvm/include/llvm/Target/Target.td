@@ -522,11 +522,28 @@ class DwarfRegAlias<Register reg> {
       Register DwarfAlias = reg;
 }
 
+// Determine whether inlining is allowed if caller and callee differ in whether
+// a feature is enabled.
+class InlineBehavior;
+
+// Arbitrary differences are allowed.
+def InlineIgnore : InlineBehavior;
+// A callee with this feature enabled cannot be inlined into a caller without
+// it enabled.
+def InlineDefault : InlineBehavior;
+// A callee without this feature enabled cannot be inlined into a caller with
+// it enabled.
+def InlineInverse : InlineBehavior;
+// The feature must be either enabled in both caller and callee, or disabled in
+// both.
+def InlineMustMatch : InlineBehavior;
+
 //===----------------------------------------------------------------------===//
 // SubtargetFeature - A characteristic of the chip set.
 //
 class SubtargetFeature<string n, string f, string v, string d,
-                       list<SubtargetFeature> i = []> {
+                       list<SubtargetFeature> i = [],
+                       InlineBehavior ib = InlineDefault> {
   // Name - Feature name. Used by command line (-mattr=) to determine the
   // appropriate target chip.
   //
@@ -555,6 +572,8 @@ class SubtargetFeature<string n, string f, string v, string d,
   // features isn't set, then this one shouldn't be set either.
   //
   list<SubtargetFeature> Implies = !sort(f, i, f.Name);
+
+  InlineBehavior InlineBehavior = ib;
 }
 
 /// Specifies a Subtarget feature that this instruction is deprecated on.
@@ -2115,6 +2134,13 @@ class ProcessorModel<string n, SchedMachineModel m, list<SubtargetFeature> f,
                      list<SubtargetFeature> tunef = []>
   : Processor<n, NoItineraries, f, tunef> {
   let SchedModel = m;
+}
+
+// Defines an alternate name 'n' for the processor 'alias', resolving
+// to the same subtarget features and scheduling model.
+class ProcessorAlias<string n, string alias> {
+  string Name = n;
+  string Alias = alias;
 }
 
 //===----------------------------------------------------------------------===//

@@ -567,6 +567,34 @@ struct IntrusiveBackListBase {
       Last = &N;
     }
   }
+
+  /// Delete node \p N by walking through the list until \p N's predecessor is
+  /// found. Remove \p N from the list by updating the predecessor's next
+  /// pointer and reset \p N's next pointer to itself.
+  bool deleteNode(Node &N) {
+    if (!Last)
+      return false;
+
+    Node *Cur = Last;
+    while (Cur->Next.getPointer() != &N) {
+      Cur = Cur->Next.getPointer();
+      if (Cur->Next.getInt())
+        return false;
+    }
+
+    Node *Target = Cur->Next.getPointer();
+    if (Target == Cur) {
+      Last = nullptr;
+    } else if (Target == Last) {
+      Cur->Next.setPointerAndInt(Target->Next.getPointer(), true);
+      Last = Cur;
+    } else {
+      Cur->Next.setPointer(Target->Next.getPointer());
+    }
+
+    Target->Next.setPointerAndInt(Target, true);
+    return true;
+  }
 };
 
 template <class T> class IntrusiveBackList : IntrusiveBackListBase {
@@ -604,24 +632,8 @@ public:
     Other.Last = nullptr;
   }
 
-  bool deleteNode(T &N) {
-    if (Last == &N) {
-      Last = Last->Next.getPointer();
-      Last->Next.setInt(true);
-      return true;
-    }
-
-    Node *cur = Last;
-    while (cur && cur->Next.getPointer()) {
-      if (cur->Next.getPointer() == &N) {
-        cur->Next.setPointer(cur->Next.getPointer()->Next.getPointer());
-        return true;
-      }
-      cur = cur->Next.getPointer();
-    }
-
-    return false;
-  }
+  /// Deletes node \p N from the list. Note this runs in O(N).
+  bool deleteNode(Node &N) { return IntrusiveBackListBase::deleteNode(N); }
 
   class const_iterator;
   class iterator

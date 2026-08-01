@@ -82,7 +82,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
           Opcode, Ty, CostKind, Op1Info, Op2Info);
 
-  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+  if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
     switch (Opcode) {
     case Instruction::LShr:
     case Instruction::AShr:
@@ -92,7 +92,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
       // approximation.
       if (!Op2Info.isUniform())
         Cost =
-            cast<FixedVectorType>(VTy)->getNumElements() *
+            VTy->getNumElements() *
             (TargetTransformInfo::TCC_Basic +
              getArithmeticInstrCost(Opcode, VTy->getElementType(), CostKind) +
              TargetTransformInfo::TCC_Basic);
@@ -204,7 +204,7 @@ InstructionCost WebAssemblyTTIImpl::getCastInstrCost(
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
-      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
+      {ISD::UINT_TO_FP, MVT::v8f32, MVT::v8i16, 10},
       /// trunc_sat, const, and, 3x narrow
       {ISD::FP_TO_SINT, MVT::v2i8, MVT::v2f32, 6},
       {ISD::FP_TO_UINT, MVT::v2i8, MVT::v2f32, 6},

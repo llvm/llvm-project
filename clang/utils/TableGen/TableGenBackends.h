@@ -217,6 +217,8 @@ void EmitClangDataCollectors(const llvm::RecordKeeper &Records,
 void EmitTestPragmaAttributeSupportedAttributes(
     const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 
+void EmitClangTraits(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
+
 } // end namespace clang
 
 #endif

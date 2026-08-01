@@ -129,7 +129,6 @@ LLVM_ABI extern const bool PrintDAGs;
 
 class AAResults;
 class LiveIntervals;
-class MachineDominatorTree;
 class MachineFunction;
 class MachineInstr;
 class MachineLoopInfo;
@@ -145,13 +144,12 @@ class TargetRegisterInfo;
 struct LLVM_ABI MachineSchedContext {
   MachineFunction *MF = nullptr;
   const MachineLoopInfo *MLI = nullptr;
-  const MachineDominatorTree *MDT = nullptr;
   const TargetMachine *TM = nullptr;
   AAResults *AA = nullptr;
   LiveIntervals *LIS = nullptr;
   MachineBlockFrequencyInfo *MBFI = nullptr;
 
-  RegisterClassInfo *RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
   MachineSchedContext();
   MachineSchedContext &operator=(const MachineSchedContext &other) = delete;

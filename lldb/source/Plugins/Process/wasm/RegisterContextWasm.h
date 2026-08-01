@@ -34,9 +34,9 @@ struct WasmVirtualRegisterInfo : public RegisterInfo {
 class RegisterContextWasm
     : public process_gdb_remote::GDBRemoteRegisterContext {
 public:
-  RegisterContextWasm(
-      process_gdb_remote::ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
-      process_gdb_remote::GDBRemoteDynamicRegisterInfoSP reg_info_sp);
+  RegisterContextWasm(process_gdb_remote::ThreadGDBRemote &thread,
+                      uint32_t concrete_frame_idx,
+                      lldb::DynamicRegisterInfoSP reg_info_sp);
 
   ~RegisterContextWasm() override;
 

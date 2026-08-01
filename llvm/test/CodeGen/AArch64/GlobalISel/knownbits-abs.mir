@@ -8,8 +8,8 @@ body: |
   ; CHECK-LABEL: name: @Cst
   ; CHECK-NEXT: %0:_ KnownBits:00010011 SignBits:3
   ; CHECK-NEXT: %1:_ KnownBits:00010011 SignBits:3
-    %0:_(s8) = G_CONSTANT i8 19
-    %1:_(s8) = G_ABS %0
+    %0:_(i8) = G_CONSTANT i8 19
+    %1:_(i8) = G_ABS %0
 ...
 ---
 name: CstNeg
@@ -18,8 +18,8 @@ body: |
   ; CHECK-LABEL: name: @CstNeg
   ; CHECK-NEXT: %0:_ KnownBits:11101110 SignBits:3
   ; CHECK-NEXT: %1:_ KnownBits:00010010 SignBits:3
-    %0:_(s8) = G_CONSTANT i8 238
-    %1:_(s8) = G_ABS %0
+    %0:_(i8) = G_CONSTANT i8 238
+    %1:_(i8) = G_ABS %0
 ...
 ---
 name: SplatVecCst
@@ -29,9 +29,9 @@ body: |
   ; CHECK-NEXT: %0:_ KnownBits:11111010 SignBits:5
   ; CHECK-NEXT: %1:_ KnownBits:11111010 SignBits:5
   ; CHECK-NEXT: %2:_ KnownBits:00000110 SignBits:5
-    %0:_(s8) = G_CONSTANT i8 250
-    %1:_(<vscale x 16 x s8>) = G_SPLAT_VECTOR %0(s8)
-    %2:_(<vscale x 16 x s8>) = G_ABS %1
+    %0:_(i8) = G_CONSTANT i8 250
+    %1:_(<vscale x 16 x i8>) = G_SPLAT_VECTOR %0(i8)
+    %2:_(<vscale x 16 x i8>) = G_ABS %1
 ...
 ---
 name: VecCst
@@ -42,10 +42,10 @@ body: |
   ; CHECK-NEXT: %1:_ KnownBits:11100001 SignBits:3
   ; CHECK-NEXT: %2:_ KnownBits:?????001 SignBits:3
   ; CHECK-NEXT: %3:_ KnownBits:00?????1 SignBits:2
-    %0:_(s8) = G_CONSTANT i8 25
-    %1:_(s8) = G_CONSTANT i8 225
-    %2:_(<2 x s8>) = G_BUILD_VECTOR %0:_(s8), %1:_(s8)
-    %3:_(<2 x s8>) = G_ABS %2
+    %0:_(i8) = G_CONSTANT i8 25
+    %1:_(i8) = G_CONSTANT i8 225
+    %2:_(<2 x i8>) = G_BUILD_VECTOR %0:_(i8), %1:_(i8)
+    %3:_(<2 x i8>) = G_ABS %2
 ...
 ---
 name: ImplicitDef
@@ -54,8 +54,8 @@ body: |
   ; CHECK-LABEL: name: @ImplicitDef
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1
-    %0:_(s8) = G_IMPLICIT_DEF
-    %1:_(s8) = G_ABS %0
+    %0:_(i8) = G_IMPLICIT_DEF
+    %1:_(i8) = G_ABS %0
 ...
 ---
 name: CstSext
@@ -65,9 +65,9 @@ body: |
   ; CHECK-NEXT: %0:_ KnownBits:11000111 SignBits:2
   ; CHECK-NEXT: %1:_ KnownBits:1111111111000111 SignBits:10
   ; CHECK-NEXT: %2:_ KnownBits:0000000000111001 SignBits:10
-    %0:_(s8) = G_CONSTANT i8 199
-    %1:_(s16) = G_SEXT %0
-    %2:_(s16) = G_ABS %1
+    %0:_(i8) = G_CONSTANT i8 199
+    %1:_(i16) = G_SEXT %0
+    %2:_(i16) = G_ABS %1
 ...
 ---
 name: ImplicitDefSext
@@ -77,7 +77,7 @@ body: |
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:9
   ; CHECK-NEXT: %2:_ KnownBits:00000000???????? SignBits:8
-    %0:_(s8) = G_IMPLICIT_DEF
-    %1:_(s16) = G_SEXT %0
-    %2:_(s16) = G_ABS %1
+    %0:_(i8) = G_IMPLICIT_DEF
+    %1:_(i16) = G_SEXT %0
+    %2:_(i16) = G_ABS %1
 ...

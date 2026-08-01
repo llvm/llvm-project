@@ -24,7 +24,6 @@ add_flang_library(FIRSupport
   MLIR_LIBS
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
-  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
   MLIRRegisterAllDialects
   MLIRRegisterAllExtensions

@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/MIFCommon.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
-#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 std::string mif::getFullUniqName(mlir::Value addr) {
@@ -60,4 +60,45 @@ std::string mif::getFullUniqName(mlir::Value addr) {
     return getFullUniqName(c.getRef());
   }
   return "";
+}
+
+mlir::Value mif::genImageIndex(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value coarray, mlir::Value sub,
+                               mlir::Value team) {
+  mlir::Type newSubType =
+      fir::changeElementType(sub.getType(), builder.getI64Type(), false);
+  if (newSubType == sub.getType())
+    return mif::ImageIndexOp::create(builder, loc, coarray, sub, team);
+  auto subCastAndCleanup = hlfir::genTypeAndKindConvert(
+      loc, builder, hlfir::Entity{sub}, newSubType, true);
+  auto [exv, cleanup] =
+      hlfir::convertToBox(loc, builder, subCastAndCleanup.first, newSubType);
+  auto imageIndex =
+      mif::ImageIndexOp::create(builder, loc, coarray, fir::getBase(exv), team);
+  if (cleanup)
+    (*cleanup)();
+  if (subCastAndCleanup.second)
+    (*subCastAndCleanup.second)();
+  return imageIndex;
+}
+
+mlir::func::FuncOp mif::getOrCreateInitFunc(fir::FirOpBuilder &builder,
+                                            mlir::ModuleOp mod,
+                                            llvm::StringRef name) {
+  mlir::Location loc = mod.getLoc();
+  auto funcType = builder.getFunctionType({}, {});
+  auto func = builder.createFunction(loc, name, funcType);
+  if (!func.empty())
+    return func;
+
+  func.setPublic();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(mod.getBody());
+
+  func.addEntryBlock();
+  builder.setInsertionPointToEnd(&func.getBody().front());
+  mif::InitOp::create(builder, loc);
+  mlir::func::ReturnOp::create(builder, loc);
+
+  return func;
 }

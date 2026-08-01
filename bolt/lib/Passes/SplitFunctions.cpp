@@ -582,6 +582,29 @@ private:
   }
 };
 
+// std::uniform_int_distribution and std::shuffle are implementation-defined:
+// libstdc++ and libc++ produce different sequences from the same engine and
+// seed. The helpers below provide reproducible alternatives so that random
+// splitting is deterministic across C++ standard library implementations (and
+// therefore across host platforms) for a given --bolt-seed.
+
+// Draw a value uniformly from the inclusive range [Lo, Hi].
+template <typename DiffT, typename GenT>
+static DiffT portableUniform(GenT &Gen, DiffT Lo, DiffT Hi) {
+  assert(Hi >= Lo && "Empty range");
+  const uint64_t Range = static_cast<uint64_t>(Hi - Lo) + 1;
+  const uint64_t Draw = static_cast<uint64_t>(Gen()) - GenT::min();
+  return Lo + static_cast<DiffT>(Draw % Range);
+}
+
+// Fisher-Yates shuffle using portableUniform for index selection.
+template <typename It, typename GenT>
+static void portableShuffle(It First, It Last, GenT &Gen) {
+  using DiffT = typename std::iterator_traits<It>::difference_type;
+  for (DiffT I = (Last - First) - 1; I > 0; --I)
+    std::swap(First[I], First[portableUniform<DiffT>(Gen, 0, I)]);
+}
+
 struct SplitRandom2 final : public SplitStrategy {
   std::minstd_rand0 Gen;
 
@@ -598,8 +621,7 @@ struct SplitRandom2 final : public SplitStrategy {
 
     // We want to split at least one block
     const auto LastSplitPoint = std::max<DiffT>(NumBlocks - 1, 1);
-    std::uniform_int_distribution<DiffT> Dist(1, LastSplitPoint);
-    const DiffT SplitPoint = Dist(Gen);
+    const DiffT SplitPoint = portableUniform<DiffT>(Gen, 1, LastSplitPoint);
     for (BinaryBasicBlock *BB : llvm::make_range(Start + SplitPoint, End))
       BB->setFragmentNum(FragmentNum::cold());
 
@@ -628,16 +650,16 @@ struct SplitRandomN final : public SplitStrategy {
     // We want to generate at least two fragment if possible, but if there is
     // only one block, no splits are possible.
     const auto MinimumSplits = std::min<DiffT>(MaximumSplits, 1);
-    std::uniform_int_distribution<DiffT> Dist(MinimumSplits, MaximumSplits);
     // Choose how many splits to perform
-    const DiffT NumSplits = Dist(Gen);
+    const DiffT NumSplits =
+        portableUniform<DiffT>(Gen, MinimumSplits, MaximumSplits);
 
     // Draw split points from a lottery
     SmallVector<unsigned, 0> Lottery(MaximumSplits);
     // Start lottery at 1, because there is no meaningful splitpoint before the
     // first block.
     std::iota(Lottery.begin(), Lottery.end(), 1u);
-    std::shuffle(Lottery.begin(), Lottery.end(), Gen);
+    portableShuffle(Lottery.begin(), Lottery.end(), Gen);
     Lottery.resize(NumSplits);
     llvm::sort(Lottery);
 

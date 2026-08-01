@@ -2,7 +2,7 @@
 // REQUIRES: amdgpu-registered-target
 // REQUIRES: spirv-registered-target
 // RUN: %clang_cc1 %s -emit-llvm -O0 -o - \
-// RUN:   -triple=amdgcn-amd-amdhsa | FileCheck --check-prefix=GCN %s
+// RUN:   -triple=amdgpu-amd-amdhsa | FileCheck --check-prefix=GCN %s
 // RUN: %clang_cc1 %s -emit-llvm -O0 -o - \
 // RUN:   -triple=spirv64-amd-amdhsa | FileCheck --check-prefix=AMDGCNSPIRV %s
 

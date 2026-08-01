@@ -37,15 +37,11 @@ define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x double>, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x double>, ptr [[TMP15]], align 8
-; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 8 x double> @llvm.vector.reverse.nxv8f64(<vscale x 8 x double> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[REVERSE2:%.*]] = call <vscale x 8 x double> @llvm.vector.reverse.nxv8f64(<vscale x 8 x double> [[WIDE_LOAD1]])
-; CHECK-NEXT:    [[TMP18:%.*]] = fadd <vscale x 8 x double> [[REVERSE]], splat (double 1.000000e+00)
-; CHECK-NEXT:    [[TMP19:%.*]] = fadd <vscale x 8 x double> [[REVERSE2]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds double, ptr [[TMP21]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds double, ptr [[TMP21]], i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP16:%.*]] = call <vscale x 8 x double> @llvm.vector.reverse.nxv8f64(<vscale x 8 x double> [[TMP18]])
-; CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x double> @llvm.vector.reverse.nxv8f64(<vscale x 8 x double> [[TMP19]])
 ; CHECK-NEXT:    store <vscale x 8 x double> [[TMP16]], ptr [[TMP20]], align 8
 ; CHECK-NEXT:    store <vscale x 8 x double> [[TMP17]], ptr [[TMP24]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
@@ -92,8 +88,10 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP2]], 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP16:%.*]] = sub i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[B1]], [[A2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP4]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP16]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP0]], 3
@@ -114,15 +112,11 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x i64>, ptr [[TMP18]], align 8
-; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 8 x i64> @llvm.vector.reverse.nxv8i64(<vscale x 8 x i64> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[REVERSE4:%.*]] = call <vscale x 8 x i64> @llvm.vector.reverse.nxv8i64(<vscale x 8 x i64> [[WIDE_LOAD3]])
-; CHECK-NEXT:    [[TMP21:%.*]] = add <vscale x 8 x i64> [[REVERSE]], splat (i64 1)
-; CHECK-NEXT:    [[TMP22:%.*]] = add <vscale x 8 x i64> [[REVERSE4]], splat (i64 1)
+; CHECK-NEXT:    [[TMP19:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], splat (i64 1)
+; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD3]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[TMP24]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i64, ptr [[TMP24]], i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 8 x i64> @llvm.vector.reverse.nxv8i64(<vscale x 8 x i64> [[TMP21]])
-; CHECK-NEXT:    [[TMP20:%.*]] = call <vscale x 8 x i64> @llvm.vector.reverse.nxv8i64(<vscale x 8 x i64> [[TMP22]])
 ; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP19]], ptr [[TMP23]], align 8
 ; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP20]], ptr [[TMP27]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP9]]

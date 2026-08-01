@@ -11,10 +11,9 @@
 
 from datetime import date
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-# sys.path.insert(0, os.path.abspath('.'))
+from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
+
+globals().update(common_conf(tags))
 
 # -- General configuration -----------------------------------------------------
 
@@ -22,46 +21,18 @@ from datetime import date
 # needs_sphinx = '1.0'
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = [
+extensions += [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
     "sphinx.ext.autodoc",
 ]
 
-try:
-    import myst_parser
-
-    extensions.append("myst_parser")
-except ImportError:
-    raise ImportError(
-        "myst_parser is required to build documentation, including man pages."
-    )
-
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-source_suffix = {
-    ".rst": "restructuredtext",
-    ".md": "markdown",
-}
-myst_heading_anchors = 6
-
-# Enable myst's substitution extension since markdown files cannot use the
-# |version| and |release| substitutions available to .rst files.
-myst_enable_extensions = ["substitution"]
-
 # The substitutions to use in markdown files. This contains unconditional
 # substitutions, but more may be added once the configuration is obtained.
 myst_substitutions = {"in_progress": "(In-Progress) " if tags.has("PreRelease") else ""}
 
 import sphinx
-
-# The encoding of source files.
-# source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = "index"
 
 # General information about the project.
 project = "Flang"

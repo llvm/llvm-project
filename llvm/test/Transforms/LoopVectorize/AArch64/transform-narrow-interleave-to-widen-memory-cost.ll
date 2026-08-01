@@ -443,7 +443,7 @@ define void @test_interleave_after_narrowing(i32 %n, ptr %x, ptr noalias %y) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[TMP5]]
@@ -505,7 +505,7 @@ define void @test_interleave_group_epilogue_with_preheader_phi(ptr %src, ptr %ds
 ; CHECK-LABEL: define void @test_interleave_group_epilogue_with_preheader_phi(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SRC1:%.*]] = ptrtoint ptr [[SRC]] to i64
+; CHECK-NEXT:    [[SRC1:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    br label %[[ITER_CHECK:.*]]
 ; CHECK:       [[ITER_CHECK]]:
 ; CHECK-NEXT:    [[DST_PRE:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ]

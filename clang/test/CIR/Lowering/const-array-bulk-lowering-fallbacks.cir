@@ -2,6 +2,8 @@
 
 !s32i = !cir.int<s, 32>
 !s8i = !cir.int<s, 8>
+!rec_data = !cir.struct<{!cir.array<!s8i x 4>, !cir.array<!s8i x 2>}>
+!rec_mixed = !cir.struct<{!s32i, !cir.ptr<!s32i>}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global external @tz_arr =
@@ -34,6 +36,11 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
           #cir.global_view<@s1> : !cir.ptr<!s8i>
       ]> : !cir.array<!cir.ptr<!s8i> x 2>
   ]> : !cir.array<!cir.array<!cir.ptr<!s8i> x 2> x 2>
+
+  cir.global constant external dso_local @blob = #cir.const_record<{
+      #cir.const_array<[#cir.int<66> : !s8i, #cir.int<76> : !s8i, #cir.int<69> : !s8i, #cir.int<78> : !s8i]> : !cir.array<!s8i x 4>,
+      #cir.zero : !cir.array<!s8i x 2>
+  }> : !rec_data
 }
 
 // CHECK-LABEL: llvm.mlir.global external @tz_arr(
@@ -53,3 +60,9 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 
 // CHECK-LABEL: llvm.mlir.global external @ptr2d
 // CHECK:       llvm.insertvalue
+
+// CHECK-LABEL: llvm.mlir.global external constant @blob(
+// CHECK-SAME:    [dense<[66, 76, 69, 78]> : tensor<4xi8>, #llvm.zero]
+// CHECK-SAME:    : !llvm.struct<(array<4 x i8>, array<2 x i8>)>
+// CHECK-NOT:   llvm.insertvalue
+// CHECK-NOT:   llvm.return

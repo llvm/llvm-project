@@ -409,9 +409,11 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
                                                      double Val) {
   LLT DstTy = Res.getLLTTy(*getMRI());
   auto &Ctx = getMF().getFunction().getContext();
-  auto *CFP =
-      ConstantFP::get(Ctx, getAPFloatFromSize(Val, DstTy.getScalarSizeInBits()));
-  return buildFConstant(Res, *CFP);
+  APFloat APF(Val);
+  bool Ignored;
+  APF.convert(getFltSemanticForLLT(DstTy.getScalarType()),
+              APFloat::rmNearestTiesToEven, &Ignored);
+  return buildFConstant(Res, *ConstantFP::get(Ctx, APF));
 }
 
 MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,

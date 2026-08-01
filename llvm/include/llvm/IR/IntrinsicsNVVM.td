@@ -1145,7 +1145,8 @@ class SHFL_INFO<bit sync, string mode, string type, bit return_pred> {
     [OpType, llvm_i32_ty, llvm_i32_ty]);
 }
 
-class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num, string ElemType = "i32"> {
+class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num,
+                                    string ElemType = "i32"> {
   int shift = !cond(!eq(Shape, "16x128b"): 1,
                     !eq(Shape, "16x256b"): 2,
                     true : 0);
@@ -1153,15 +1154,7 @@ class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num, string ElemType = "i3
   int veclen = !shl(1, !add(Num, shift));
 
   int valid = !le(veclen, 128);
-  LLVMType type = !cond(!eq(veclen,   1): LLVMType<!cast<ValueType>(ElemType)>,
-                        !eq(veclen,   2): LLVMType<!cast<ValueType>("v"#2#ElemType)>,
-                        !eq(veclen,   4): LLVMType<!cast<ValueType>("v"#4#ElemType)>,
-                        !eq(veclen,   8): LLVMType<!cast<ValueType>("v"#8#ElemType)>,
-                        !eq(veclen,  16): LLVMType<!cast<ValueType>("v"#16#ElemType)>,
-                        !eq(veclen,  32): LLVMType<!cast<ValueType>("v"#32#ElemType)>,
-                        !eq(veclen,  64): LLVMType<!cast<ValueType>("v"#64#ElemType)>,
-                        !eq(veclen, 128): LLVMType<!cast<ValueType>("v"#128#ElemType)>,
-                        true : llvm_void_ty);
+  LLVMType type = LLVMType<!cast<ValueType>("v"#veclen#ElemType)>;
 }
 
 class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
@@ -2136,21 +2129,6 @@ let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillRetur
   def int_nvvm_ldu_global_f : Intrinsic<[llvm_anyfloat_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
   def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
 }
-
-// Represents an explicit hole in the LLVM IR type system. It may be inserted by
-// the compiler in cases where a pointer is of the wrong type. In the backend
-// this intrinsic will be folded away and not equate to any instruction. It
-// should not be used by any frontend and should only be considered well defined
-// when added in the following cases:
-//
-//  - NVPTXLowerArgs: When wrapping a byval pointer argument to a kernel
-//    function to convert the address space from generic (0) to param (101).
-//    This accounts for the fact that the parameter symbols will occupy this
-//    space when lowered during ISel.
-//
-def int_nvvm_internal_addrspace_wrap :
-  NVVMPureIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
-                [NoUndef<ArgIndex<0>>, NoUndef<RetIndex>]>;
 
 // Move intrinsics, used in nvvm internally
 
@@ -3238,6 +3216,27 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, WriteOnly<ArgIndex<0>>,
 }
 
 //
+// Asynchronous store intrinsics
+//
+
+def int_nvvm_st_async :
+  DefaultAttrsIntrinsic<[],
+    [llvm_shared_cluster_ptr_ty, llvm_anyint_ty, llvm_shared_cluster_ptr_ty],
+    [WriteOnly<ArgIndex<0>>, IntrArgMemOnly]>;
+
+foreach scope = ["_sys", "_gpu"] in {
+  def int_nvvm_st_async # scope :
+    DefaultAttrsIntrinsic<[],
+      [llvm_global_ptr_ty, llvm_anyint_ty, llvm_i1_ty],
+      [WriteOnly<ArgIndex<0>>, ImmArg<ArgIndex<2>>,
+       ArgInfo<ArgIndex<2>, [ArgName<"isMultimem">]>]>;
+}
+
+def int_nvvm_st_async_mmio_sys :
+  DefaultAttrsIntrinsic<[],
+    [llvm_global_ptr_ty, llvm_anyint_ty], [WriteOnly<ArgIndex<0>>]>;
+
+//
 // clusterlaunchcontorl Intrinsics
 //
 
@@ -3422,7 +3421,7 @@ let IntrProperties = [IntrArgMemOnly, IntrWriteMem, NoCapture<ArgIndex<0>>] in {
 }
 
 let IntrProperties = [IntrArgMemOnly, ImmArg<ArgIndex<1>>, IntrWriteMem,
-                      NoCapture<ArgIndex<0>>] in {
+                      NoCapture<ArgIndex<0>>, Range<ArgIndex<1>, 0, 5>] in {
   def int_nvvm_tensormap_replace_global_stride :
     DefaultAttrsIntrinsic<[], [llvm_anyptr_ty, llvm_i32_ty, llvm_i64_ty], []>;
   foreach tmap_field = ["box_dim", "global_dim", "element_stride"] in {

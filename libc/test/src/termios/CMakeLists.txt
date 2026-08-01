@@ -8,6 +8,8 @@ add_libc_unittest(
     termios_test.cpp
   DEPENDS
     libc.include.termios
+    libc.hdr.termios_macros
+    libc.hdr.types.struct_termios
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.termios.cfgetispeed

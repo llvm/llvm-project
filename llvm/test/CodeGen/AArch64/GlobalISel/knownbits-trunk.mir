@@ -8,8 +8,8 @@ body:             |
   ; CHECK-LABEL: name: @ScalarConst
   ; CHECK-NEXT: %0:_ KnownBits:10101001100001110110010101000011 SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:0110010101000011 SignBits:1
-    %0:_(s32) = G_CONSTANT i32 2844222787
-    %1:_(s16) = G_TRUNC %0(s32)
+    %0:_(i32) = G_CONSTANT i32 2844222787
+    %1:_(i16) = G_TRUNC %0(i32)
 ...
 ---
 name:            ScalarVar
@@ -18,8 +18,8 @@ body:             |
   ; CHECK-LABEL: name: @ScalarVar
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1
-    %0:_(s32) = COPY $w0
-    %1:_(s16) = G_TRUNC %0(s32)
+    %0:_(i32) = COPY $w0
+    %1:_(i16) = G_TRUNC %0(i32)
 ...
 ---
 name:            VectorCst
@@ -29,9 +29,9 @@ body:             |
   ; CHECK-NEXT: %0:_ KnownBits:10101001100001110110010101000011 SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:10101001100001110110010101000011 SignBits:1
   ; CHECK-NEXT: %2:_ KnownBits:0110010101000011 SignBits:1
-    %0:_(s32) = G_CONSTANT i32 2844222787
-    %1:_(<4 x s32>) = G_BUILD_VECTOR %0, %0, %0, %0
-    %2:_(<4 x s16>) = G_TRUNC %1(<4 x s32>)
+    %0:_(i32) = G_CONSTANT i32 2844222787
+    %1:_(<4 x i32>) = G_BUILD_VECTOR %0, %0, %0, %0
+    %2:_(<4 x i16>) = G_TRUNC %1(<4 x i32>)
 ...
 ---
 name:            VectorVar
@@ -40,8 +40,8 @@ body:             |
   ; CHECK-LABEL: name: @VectorVar
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1
-    %0:_(<4 x s32>) = COPY $q0
-    %1:_(<4 x s16>) = G_TRUNC %0(<4 x s32>)
+    %0:_(<4 x i32>) = COPY $q0
+    %1:_(<4 x i16>) = G_TRUNC %0(<4 x i32>)
 ...
 ---
 name:            ScalableCst
@@ -51,9 +51,9 @@ body:             |
   ; CHECK-NEXT: %0:_ KnownBits:10101001100001110110010101000011 SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:10101001100001110110010101000011 SignBits:1
   ; CHECK-NEXT: %2:_ KnownBits:0110010101000011 SignBits:1
-    %0:_(s32) = G_CONSTANT i32 2844222787
-    %1:_(<vscale x 4 x s32>) = G_SPLAT_VECTOR %0
-    %2:_(<vscale x 4 x s16>) = G_TRUNC %1(<vscale x 4 x s32>)
+    %0:_(i32) = G_CONSTANT i32 2844222787
+    %1:_(<vscale x 4 x i32>) = G_SPLAT_VECTOR %0
+    %2:_(<vscale x 4 x i16>) = G_TRUNC %1(<vscale x 4 x i32>)
 ...
 ---
 name:            ScalableVar
@@ -62,6 +62,6 @@ body:             |
   ; CHECK-LABEL: name: @ScalableVar
   ; CHECK-NEXT: %0:_ KnownBits:???????????????????????????????? SignBits:1
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1
-    %0:_(<vscale x 4 x s32>) = COPY $z0
-    %1:_(<vscale x 4 x s16>) = G_TRUNC %0(<vscale x 4 x s32>)
+    %0:_(<vscale x 4 x i32>) = COPY $z0
+    %1:_(<vscale x 4 x i16>) = G_TRUNC %0(<vscale x 4 x i32>)
 ...

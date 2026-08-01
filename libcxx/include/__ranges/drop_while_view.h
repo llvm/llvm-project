@@ -48,13 +48,13 @@ namespace ranges {
 
 template <view _View, class _Pred>
   requires input_range<_View> && is_object_v<_Pred> && indirect_unary_predicate<const _Pred, iterator_t<_View>>
-class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS drop_while_view : public view_interface<drop_while_view<_View, _Pred>> {
+class _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG drop_while_view : public view_interface<drop_while_view<_View, _Pred>> {
 public:
   _LIBCPP_HIDE_FROM_ABI drop_while_view()
     requires default_initializable<_View> && default_initializable<_Pred>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 drop_while_view(_View __base, _Pred __pred)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit drop_while_view(_View __base, _Pred __pred)
       : __base_(std::move(__base)), __pred_(std::in_place, std::move(__pred)) {}
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&

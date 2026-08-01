@@ -54,6 +54,50 @@ static bool isInvariantArg(BlockArgument arg, Block *block) {
   return arg.getOwner() != block;
 }
 
+/// Returns true when `mem`'s most minor dimension has a statically known
+/// non-unit stride.
+///
+/// `genVectorLoad/genVectorStore` assume a contiguous
+/// `vector.maskedload/vector.maskedstore` is safe for consecutive loop
+/// indices, which breaks for a strided view extracting one component out
+/// of an interleaved (AoS) COO coordinate buffer.
+///
+/// Example:
+/// A `compressed(nonunique) + singleton` region stores coordinates as
+/// `[row0, col0, row1, col1, ...]`, so a 2-lane masked load of `col[0:2]`
+/// (offset=1) would read physical offsets {1, 2} = `[col0, row1]` instead
+/// of the intended {1, 3} = `[col0, col1]`: a silent miscompile.
+///
+/// NOTE: A stride that can't be proven non-unit by either means is assumed
+/// safe.
+static bool hasKnownNonUnitStride(Value mem) {
+  // sparse_tensor.coordinates isn't lowered to a concrete strided memref
+  // until sparse-tensor-codegen runs, so at this point its type
+  // still has a dynamic stride even when the true stride is already known
+  // from the tensor's encoding -- hence the special case below instead of
+  // trusting the memref type.
+  if (auto toCoords = mem.getDefiningOp<ToCoordinatesOp>()) {
+    SparseTensorType stt = getSparseTensorType(toCoords.getTensor());
+    Level cooStart = stt.getAoSCOOStart();
+    // A single trailing level (lvlRank - cooStart == 1) is not actually
+    // interleaved with anything else, so it degenerates to a contiguous
+    // buffer.
+    if (toCoords.getLevel() >= cooStart)
+      return stt.getLvlRank() - cooStart != 1;
+    return false;
+  }
+
+  auto memTp = dyn_cast<MemRefType>(mem.getType());
+  if (!memTp)
+    return false;
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  if (failed(memTp.getStridesAndOffset(strides, offset)))
+    return false;
+  return !strides.empty() && !ShapedType::isDynamic(strides.back()) &&
+         strides.back() != 1;
+}
+
 /// Constructs vector type for element type.
 static VectorType vectorType(VL vl, Type etp) {
   return VectorType::get(vl.vectorLength, etp, vl.enableVLAVectorization);
@@ -292,6 +336,8 @@ static bool vectorizeSubscripts(PatternRewriter &rewriter, scf::ForOp forOp,
     if (auto load = cast.getDefiningOp<memref::LoadOp>()) {
       if (!innermost)
         return false;
+      if (hasKnownNonUnitStride(load.getMemRef()))
+        return false;
       if (codegen) {
         SmallVector<Value> idxs2(load.getIndices()); // no need to analyze
         Location loc = forOp.getLoc();
@@ -408,6 +454,8 @@ static bool vectorizeExpr(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
   // a[lo:hi] = ind[lo:hi], where 'lo' denotes the current index
   // and 'hi = lo + vl - 1'.
   if (auto load = dyn_cast<memref::LoadOp>(def)) {
+    if (hasKnownNonUnitStride(load.getMemRef()))
+      return false;
     auto subs = load.getIndices();
     SmallVector<Value> idxs;
     if (vectorizeSubscripts(rewriter, forOp, vl, subs, codegen, vmask, idxs)) {
@@ -582,6 +630,8 @@ static bool vectorizeStmt(PatternRewriter &rewriter, scf::ForOp forOp, VL vl,
     }
   } else if (auto store = dyn_cast<memref::StoreOp>(last)) {
     // Analyze/vectorize store operation.
+    if (hasKnownNonUnitStride(store.getMemRef()))
+      return false;
     auto subs = store.getIndices();
     SmallVector<Value> idxs;
     Value rhs = store.getValue();

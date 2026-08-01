@@ -77,7 +77,7 @@ void HashElfTextSection(ModuleSP module_sp, std::vector<uint8_t> &breakpad_uuid,
   SectionList *sect_list = module_sp->GetSectionList();
   if (sect_list == nullptr)
     return;
-  SectionSP sect_sp = sect_list->FindSectionByName(ConstString(".text"));
+  SectionSP sect_sp = sect_list->FindSectionByName(".text");
   if (!sect_sp)
     return;
   constexpr size_t kMDGUIDSize = 16;

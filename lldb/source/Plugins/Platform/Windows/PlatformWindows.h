@@ -31,6 +31,8 @@ public:
 
   static llvm::StringRef GetPluginDescriptionStatic(bool is_host);
 
+  static void DebuggerInitialize(Debugger &debugger);
+
   llvm::StringRef GetPluginName() override {
     return GetPluginNameStatic(IsHost());
   }

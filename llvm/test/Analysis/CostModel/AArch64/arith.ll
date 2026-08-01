@@ -130,15 +130,15 @@ define void @i64() {
 
 define void @i128() {
 ; CHECK-LABEL: 'i128'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %c = add i128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %d = sub i128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e = mul i128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %f = ashr i128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %g = lshr i128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %h = shl i128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %i = and i128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %j = or i128 undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %k = xor i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %c = add i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %d = sub i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %e = mul i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %f = ashr i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %g = lshr i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %h = shl i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %i = and i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %j = or i128 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %k = xor i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %c = add i128 undef, undef
@@ -150,6 +150,31 @@ define void @i128() {
   %i = and i128 undef, undef
   %j = or i128 undef, undef
   %k = xor i128 undef, undef
+  ret void
+}
+
+define void @i256() {
+; CHECK-LABEL: 'i256'
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %c = add i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %d = sub i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: %e = mul i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %f = ashr i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %g = lshr i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %h = shl i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %i = and i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %j = or i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %k = xor i256 undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %c = add i256 undef, undef
+  %d = sub i256 undef, undef
+  %e = mul i256 undef, undef
+  %f = ashr i256 undef, undef
+  %g = lshr i256 undef, undef
+  %h = shl i256 undef, undef
+  %i = and i256 undef, undef
+  %j = or i256 undef, undef
+  %k = xor i256 undef, undef
   ret void
 }
 
@@ -262,15 +287,15 @@ define void @vi16() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %i8 = and <8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %j8 = or <8 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %k8 = xor <8 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %c16 = add <16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %d16 = sub <16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %f16 = ashr <16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %g16 = lshr <16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %h16 = shl <16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %i16 = and <16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %j16 = or <16 x i16> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %k16 = xor <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %c16 = add <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %d16 = sub <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e16 = mul <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %f16 = ashr <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %g16 = lshr <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %h16 = shl <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %i16 = and <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %j16 = or <16 x i16> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %k16 = xor <16 x i16> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %c2 = add <2 x i16> undef, undef
@@ -332,24 +357,24 @@ define void @vi32() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %i4 = and <4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %j4 = or <4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %k4 = xor <4 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %c8 = add <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %d8 = sub <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %f8 = ashr <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %g8 = lshr <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %h8 = shl <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %i8 = and <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %j8 = or <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %k8 = xor <8 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %c16 = add <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %d16 = sub <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %f16 = ashr <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %g16 = lshr <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %h16 = shl <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %i16 = and <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %j16 = or <16 x i32> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %k16 = xor <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %c8 = add <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %d8 = sub <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e8 = mul <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %f8 = ashr <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %g8 = lshr <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %h8 = shl <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %i8 = and <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %j8 = or <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %k8 = xor <8 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %c16 = add <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %d16 = sub <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %e16 = mul <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %f16 = ashr <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %g16 = lshr <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %h16 = shl <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %i16 = and <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %j16 = or <16 x i32> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %k16 = xor <16 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %c2 = add <2 x i32> undef, undef
@@ -395,40 +420,40 @@ define void @vi64() {
 ; CHECK-LABEL: 'vi64'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %c2 = add <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %d2 = sub <2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:8 Lat:14 SizeLat:14 for: %e2 = mul <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %f2 = ashr <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %g2 = lshr <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %h2 = shl <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %i2 = and <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %j2 = or <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %k2 = xor <2 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %c4 = add <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %d4 = sub <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:1 SizeLat:1 for: %e4 = mul <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %f4 = ashr <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %g4 = lshr <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %h4 = shl <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %i4 = and <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %j4 = or <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %k4 = xor <4 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %c8 = add <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %d8 = sub <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:1 Lat:1 SizeLat:1 for: %e8 = mul <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %f8 = ashr <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %g8 = lshr <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %h8 = shl <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %i8 = and <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %j8 = or <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %k8 = xor <8 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %c16 = add <16 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %d16 = sub <16 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:1 Lat:1 SizeLat:1 for: %e16 = mul <16 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %f16 = ashr <16 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %g16 = lshr <16 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %h16 = shl <16 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %i16 = and <16 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %j16 = or <16 x i64> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %k16 = xor <16 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %c4 = add <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %d4 = sub <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:16 Lat:28 SizeLat:28 for: %e4 = mul <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %f4 = ashr <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %g4 = lshr <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %h4 = shl <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %i4 = and <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %j4 = or <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %k4 = xor <4 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %c8 = add <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %d8 = sub <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:32 Lat:56 SizeLat:56 for: %e8 = mul <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %f8 = ashr <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %g8 = lshr <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %h8 = shl <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %i8 = and <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %j8 = or <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %k8 = xor <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %c16 = add <16 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %d16 = sub <16 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:64 Lat:112 SizeLat:112 for: %e16 = mul <16 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %f16 = ashr <16 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %g16 = lshr <16 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %h16 = shl <16 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %i16 = and <16 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %j16 = or <16 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %k16 = xor <16 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %c2 = add <2 x i64> undef, undef
@@ -472,15 +497,15 @@ define void @vi64() {
 
 define void @vi128() {
 ; CHECK-LABEL: 'vi128'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %c2 = add <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %d2 = sub <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %e2 = mul <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %f2 = ashr <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %g2 = lshr <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %h2 = shl <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %i2 = and <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %j2 = or <2 x i128> undef, undef
-; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: %k2 = xor <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %c2 = add <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %d2 = sub <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 8 for: %e2 = mul <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %f2 = ashr <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %g2 = lshr <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %h2 = shl <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %i2 = and <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %j2 = or <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found costs of 4 for: %k2 = xor <2 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %c2 = add <2 x i128> undef, undef

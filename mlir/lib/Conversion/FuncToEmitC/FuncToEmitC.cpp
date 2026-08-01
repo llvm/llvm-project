@@ -188,9 +188,9 @@ public:
     }
 
     if (callOp.getNumResults() <= 1) {
-      rewriter.replaceOpWithNewOp<emitc::CallOp>(
-          callOp, callOp.getResultTypes(), adaptor.getOperands(),
-          callOp->getAttrs());
+      rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, convertedResultTypes,
+                                                 adaptor.getOperands(),
+                                                 callOp->getAttrs());
       return success();
     }
 
@@ -210,13 +210,6 @@ public:
             .getResult(0);
 
     // Unpack struct fields to replace the original multiple results.
-    MLIRContext *ctx = rewriter.getContext();
-    auto noInit = emitc::OpaqueAttr::get(ctx, "");
-    Value structLv =
-        emitc::VariableOp::create(rewriter, loc,
-                                  emitc::LValueType::get(*structType), noInit)
-            .getResult();
-    emitc::AssignOp::create(rewriter, loc, structLv, structVal);
     SmallVector<Value> results;
     for (auto [i, result] : llvm::enumerate(callOp.getResults())) {
       if (result.use_empty()) {
@@ -226,12 +219,10 @@ public:
       Type fieldType = convertedResultTypes[i];
       StringAttr fieldName =
           rewriter.getStringAttr("field" + std::to_string(i));
-      Value fieldLv = emitc::MemberOp::create(rewriter, loc,
-                                              emitc::LValueType::get(fieldType),
-                                              fieldName, structLv)
-                          .getResult();
-      results.push_back(
-          emitc::LoadOp::create(rewriter, loc, fieldType, fieldLv).getResult());
+      Value fieldValue = emitc::MemberOp::create(rewriter, loc, fieldType,
+                                                 fieldName, structVal)
+                             .getResult();
+      results.push_back(fieldValue);
     }
 
     rewriter.replaceOp(callOp, results);

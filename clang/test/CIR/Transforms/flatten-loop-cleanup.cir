@@ -1,0 +1,457 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+
+module {
+  cir.func private @ctor(!cir.ptr<!rec_S>)
+  cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool
+  cir.func private @dtor(!cir.ptr<!rec_S>) func_info<#cir.cxx_dtor<!rec_S>>
+      attributes {nothrow}
+  cir.func private @doBodyStuff()
+  cir.func private @doStepStuff()
+  cir.func private @doBreakStuff()
+  cir.func private @doContinueStuff()
+  cir.func private @doReturnStuff()
+  cir.func private @maythrow()
+
+  // In actual generated CIR, a cleanup-active flag will be used to guard
+  // against calling the destructor if a constructor in the condition region
+  // throws an exception. For the sake of simplicity, that behavior is omitted
+  // throughout this test. This test is focused only on flattening the CFG.
+
+  cir.func @while_cleanup() {
+    %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+    cir.while {
+      cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+      %c = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+      cir.condition(%c)
+    } do {
+      cir.call @doBodyStuff() : () -> ()
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @while_cleanup()
+  // CHECK:         %[[SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+  // CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_S>
+  // CHECK:         cir.br ^[[HEADER:bb[0-9]+]]
+  // CHECK:       ^[[HEADER]]:
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[LOOP_BODY]]:
+  // CHECK:         cir.call @ctor(%[[S]])
+  // CHECK:         %[[C:.*]] = cir.call @operatorBool(%[[S]])
+  // CHECK:         cir.brcond %[[C]] ^[[NORMAL:bb[0-9]+]], ^[[CONDFALSE:bb[0-9]+]]
+  // CHECK:       ^[[NORMAL]]:
+  // CHECK:         cir.call @doBodyStuff()
+  // CHECK:         %[[ID0:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK:         cir.store %[[ID0]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+  // CHECK:       ^[[CONDFALSE]]:
+  // CHECK:         %[[ID1:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK:         cir.store %[[ID1]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[CLEANUP]]:
+  // CHECK:         cir.call @dtor(%[[S]])
+  // CHECK:         %[[D:.*]] = cir.load %[[SLOT]]
+  // CHECK:         cir.switch.flat %[[D]] : !s32i, ^[[UNREACHABLE:bb[0-9]+]] [
+  // CHECK:           0: ^[[NORMAL_CONT:bb[0-9]+]],
+  // CHECK:           1: ^[[FALSE_CONT:bb[0-9]+]]
+  // CHECK:         ]
+  // CHECK:       ^[[NORMAL_CONT]]:
+  // CHECK:         cir.br ^[[LATCH:bb[0-9]+]]
+  // CHECK:       ^[[FALSE_CONT]]:
+  // CHECK:         cir.br ^[[EXIT]]
+  // CHECK:       ^[[UNREACHABLE]]:
+  // CHECK:         cir.unreachable
+  // CHECK:       ^[[LATCH]]:
+  // CHECK:         cir.br ^[[HEADER]]
+  // CHECK:       ^[[EXIT]]:
+  // CHECK:         cir.return
+
+  cir.func @for_cleanup() {
+    %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+    cir.for : cond {
+      cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+      %c = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+      cir.condition(%c)
+    } body {
+      cir.call @doBodyStuff() : () -> ()
+      cir.yield
+    } step {
+      cir.call @doStepStuff() : () -> ()
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @for_cleanup()
+  // CHECK:         %[[SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+  // CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_S>
+  // CHECK:         cir.br ^[[HEADER:bb[0-9]+]]
+  // CHECK:       ^[[HEADER]]:
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[LOOP_BODY]]:
+  // CHECK:         cir.call @ctor(%[[S]])
+  // CHECK:         %[[C:.*]] = cir.call @operatorBool(%[[S]])
+  // CHECK:         cir.brcond %[[C]] ^[[BODY:bb[0-9]+]], ^[[CONDFALSE:bb[0-9]+]]
+  // CHECK:       ^[[BODY]]:
+  // CHECK:         cir.call @doBodyStuff()
+  // CHECK:         cir.br ^[[STEP:bb[0-9]+]]
+  // CHECK:       ^[[STEP]]:
+  // CHECK:         cir.call @doStepStuff()
+  // CHECK:         %[[ID0:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK:         cir.store %[[ID0]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+  // CHECK:       ^[[CONDFALSE]]:
+  // CHECK:         %[[ID1:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK:         cir.store %[[ID1]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[CLEANUP]]:
+  // CHECK:         cir.call @dtor(%[[S]])
+  // CHECK:         %[[D:.*]] = cir.load %[[SLOT]]
+  // CHECK:         cir.switch.flat %[[D]] : !s32i, ^[[UNREACHABLE:bb[0-9]+]] [
+  // CHECK:           0: ^[[STEP_CONT:bb[0-9]+]],
+  // CHECK:           1: ^[[FALSE_CONT:bb[0-9]+]]
+  // CHECK:         ]
+  // CHECK:       ^[[STEP_CONT]]:
+  // CHECK:         cir.br ^[[FORWARD:bb[0-9]+]]
+  // CHECK:       ^[[FALSE_CONT]]:
+  // CHECK:         cir.br ^[[EXIT]]
+  // CHECK:       ^[[UNREACHABLE]]:
+  // CHECK:         cir.unreachable
+  // CHECK:       ^[[FORWARD]]:
+  // CHECK:         cir.br ^[[LATCH:bb[0-9]+]]
+  // CHECK:       ^[[LATCH]]:
+  // CHECK:         cir.br ^[[HEADER]]
+  // CHECK:       ^[[EXIT]]:
+  // CHECK:         cir.return
+
+  cir.func @while_break_continue_return(%flag : !cir.bool) -> !s32i {
+    %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+    cir.while {
+      cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+      %c = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+      cir.condition(%c)
+    } do {
+      cir.call @doBodyStuff() : () -> ()
+      cir.if %flag {
+        cir.call @doBreakStuff() : () -> ()
+        cir.break
+      }
+      cir.if %flag {
+        cir.call @doContinueStuff() : () -> ()
+        cir.continue
+      }
+      cir.call @doReturnStuff() : () -> ()
+      %r = cir.const #cir.int<42> : !s32i
+      cir.return %r : !s32i
+    } cleanup normal {
+      cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    %z = cir.const #cir.int<0> : !s32i
+    cir.return %z : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @while_break_continue_return
+  // CHECK:         %[[SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+  // CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_S>
+  // CHECK:         cir.br ^[[HEADER:bb[0-9]+]]
+  // CHECK:       ^[[HEADER]]:
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[LOOP_BODY]]:
+  // CHECK:         cir.call @ctor(%[[S]])
+  // CHECK:         %[[C:.*]] = cir.call @operatorBool(%[[S]])
+  // CHECK:         cir.brcond %[[C]] ^[[BODY:bb[0-9]+]], ^[[CONDFALSE:bb[0-9]+]]
+  // CHECK:       ^[[BODY]]:
+  // CHECK:         cir.call @doBodyStuff()
+  // CHECK:         cir.brcond %arg0 ^[[BREAK:bb[0-9]+]], ^[[CHECK_CONTINUE:bb[0-9]+]]
+  // CHECK:       ^[[BREAK]]:
+  // CHECK:         cir.call @doBreakStuff()
+  // CHECK:         %[[IDB:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK:         cir.store %[[IDB]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+  // CHECK:       ^[[CHECK_CONTINUE]]:
+  // CHECK:         cir.brcond %arg0 ^[[CONTINUE:bb[0-9]+]], ^[[RETURN:bb[0-9]+]]
+  // CHECK:       ^[[CONTINUE]]:
+  // CHECK:         cir.call @doContinueStuff()
+  // CHECK:         %[[IDC:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK:         cir.store %[[IDC]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[RETURN]]:
+  // CHECK:         cir.call @doReturnStuff()
+  // CHECK:         %[[IDR:.*]] = cir.const #cir.int<2> : !s32i
+  // CHECK:         cir.store %[[IDR]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[CONDFALSE]]:
+  // CHECK:         %[[IDF:.*]] = cir.const #cir.int<3> : !s32i
+  // CHECK:         cir.store %[[IDF]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[CLEANUP]]:
+  // CHECK:         cir.call @dtor(%[[S]])
+  // CHECK:         %[[D:.*]] = cir.load %[[SLOT]]
+  // CHECK:         cir.switch.flat %[[D]] : !s32i, ^[[UNREACHABLE:bb[0-9]+]] [
+  // CHECK:           0: ^[[BREAK_CONT:bb[0-9]+]],
+  // CHECK:           1: ^[[CONTINUE_CONT:bb[0-9]+]],
+  // CHECK:           2: ^[[RETURN_CONT:bb[0-9]+]],
+  // CHECK:           3: ^[[FALSE_CONT:bb[0-9]+]]
+  // CHECK:         ]
+  // CHECK:       ^[[BREAK_CONT]]:
+  // CHECK:         cir.br ^[[EXIT]]
+  // CHECK:       ^[[CONTINUE_CONT]]:
+  // CHECK:         cir.br ^[[HEADER]]
+  // CHECK:       ^[[RETURN_CONT]]:
+  // CHECK:         %[[R:.*]] = cir.const #cir.int<42> : !s32i
+  // CHECK:         cir.return %[[R]] : !s32i
+  // CHECK:       ^[[FALSE_CONT]]:
+  // CHECK:         cir.br ^[[EXIT]]
+  // CHECK:       ^[[UNREACHABLE]]:
+  // CHECK:         cir.unreachable
+  // CHECK:       ^[[EXIT]]:
+  // CHECK:         %[[Z:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK:         cir.return %[[Z]] : !s32i
+
+  cir.func @for_break_continue_return(%flag : !cir.bool) -> !s32i {
+    %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+    cir.for : cond {
+      cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+      %c = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+      cir.condition(%c)
+    } body {
+      cir.call @doBodyStuff() : () -> ()
+      cir.if %flag {
+        cir.call @doBreakStuff() : () -> ()
+        cir.break
+      }
+      cir.if %flag {
+        cir.call @doContinueStuff() : () -> ()
+        cir.continue
+      }
+      cir.call @doReturnStuff() : () -> ()
+      %r = cir.const #cir.int<42> : !s32i
+      cir.return %r : !s32i
+    } step {
+      cir.call @doStepStuff() : () -> ()
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    %z = cir.const #cir.int<0> : !s32i
+    cir.return %z : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @for_break_continue_return
+  // CHECK:         %[[SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+  // CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_S>
+  // CHECK:         cir.br ^[[HEADER:bb[0-9]+]]
+  // CHECK:       ^[[HEADER]]:
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[LOOP_BODY]]:
+  // CHECK:         cir.call @ctor(%[[S]])
+  // CHECK:         %[[C:.*]] = cir.call @operatorBool(%[[S]])
+  // CHECK:         cir.brcond %[[C]] ^[[BODY:bb[0-9]+]], ^[[CONDFALSE:bb[0-9]+]]
+  // CHECK:       ^[[BODY]]:
+  // CHECK:         cir.call @doBodyStuff()
+  // CHECK:         cir.brcond %arg0 ^[[BREAK:bb[0-9]+]], ^[[CHECK_CONTINUE:bb[0-9]+]]
+  // CHECK:       ^[[BREAK]]:
+  // CHECK:         cir.call @doBreakStuff()
+  // CHECK:         %[[IDB:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK:         cir.store %[[IDB]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+  // CHECK:       ^[[CHECK_CONTINUE]]:
+  // CHECK:         cir.brcond %arg0 ^[[CONTINUE:bb[0-9]+]], ^[[RETURN:bb[0-9]+]]
+  // CHECK:       ^[[CONTINUE]]:
+  // CHECK:         cir.call @doContinueStuff()
+  // CHECK:         cir.br ^[[STEP:bb[0-9]+]]
+  // CHECK:       ^[[RETURN]]:
+  // CHECK:         cir.call @doReturnStuff()
+  // CHECK:         %[[IDR:.*]] = cir.const #cir.int<2> : !s32i
+  // CHECK:         cir.store %[[IDR]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[STEP]]:
+  // CHECK:         cir.call @doStepStuff()
+  // CHECK:         %[[IDS:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK:         cir.store %[[IDS]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[CONDFALSE]]:
+  // CHECK:         %[[IDF:.*]] = cir.const #cir.int<3> : !s32i
+  // CHECK:         cir.store %[[IDF]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[CLEANUP]]:
+  // CHECK:         cir.call @dtor(%[[S]])
+  // CHECK:         %[[D:.*]] = cir.load %[[SLOT]]
+  // CHECK:         cir.switch.flat %[[D]] : !s32i, ^[[UNREACHABLE:bb[0-9]+]] [
+  // CHECK:           0: ^[[STEP_CONT:bb[0-9]+]],
+  // CHECK:           1: ^[[BREAK_CONT:bb[0-9]+]],
+  // CHECK:           2: ^[[RETURN_CONT:bb[0-9]+]],
+  // CHECK:           3: ^[[FALSE_CONT:bb[0-9]+]]
+  // CHECK:         ]
+  // CHECK:       ^[[STEP_CONT]]:
+  // CHECK:         cir.br ^[[FORWARD:bb[0-9]+]]
+  // CHECK:       ^[[BREAK_CONT]]:
+  // CHECK:         cir.br ^[[EXIT]]
+  // CHECK:       ^[[RETURN_CONT]]:
+  // CHECK:         %[[R:.*]] = cir.const #cir.int<42> : !s32i
+  // CHECK:         cir.return %[[R]] : !s32i
+  // CHECK:       ^[[FALSE_CONT]]:
+  // CHECK:         cir.br ^[[EXIT]]
+  // CHECK:       ^[[UNREACHABLE]]:
+  // CHECK:         cir.unreachable
+  // CHECK:       ^[[FORWARD]]:
+  // CHECK:         cir.br ^[[LATCH:bb[0-9]+]]
+  // CHECK:       ^[[LATCH]]:
+  // CHECK:         cir.br ^[[HEADER]]
+  // CHECK:       ^[[EXIT]]:
+  // CHECK:         %[[Z:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK:         cir.return %[[Z]] : !s32i
+
+  cir.func @while_cleanup_eh() {
+    %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+    cir.while {
+      cir.call @ctor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      %c = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+      cir.condition(%c)
+    } do {
+      cir.call @maythrow() : () -> ()
+      cir.yield
+    } cleanup all {
+      cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @while_cleanup_eh()
+  // CHECK:         %[[SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+  // CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_S>
+  // CHECK:         cir.br ^[[HEADER:bb[0-9]+]]
+  // CHECK:       ^[[HEADER]]:
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[LOOP_BODY]]:
+  // CHECK:         cir.call @ctor(%[[S]])
+  // CHECK:         %[[C:.*]] = cir.try_call @operatorBool(%[[S]]) ^[[COND_TEST:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+  // CHECK:       ^[[COND_TEST]]:
+  // CHECK:         cir.brcond %[[C]] ^[[BODY:bb[0-9]+]], ^[[CONDFALSE:bb[0-9]+]]
+  // CHECK:       ^[[BODY]]:
+  // CHECK:         cir.try_call @maythrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND]]
+  // CHECK:       ^[[NORMAL]]:
+  // CHECK:         %[[ID0:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK:         cir.store %[[ID0]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+  // CHECK:       ^[[CONDFALSE]]:
+  // CHECK:         %[[ID1:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK:         cir.store %[[ID1]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[CLEANUP]]:
+  // CHECK:         cir.call @dtor(%[[S]])
+  // CHECK:         %[[D:.*]] = cir.load %[[SLOT]]
+  // CHECK:         cir.switch.flat %[[D]] : !s32i, ^[[UNREACHABLE:bb[0-9]+]] [
+  // CHECK:           0: ^[[BODY_CONT:bb[0-9]+]],
+  // CHECK:           1: ^[[FALSE_CONT:bb[0-9]+]]
+  // CHECK:         ]
+  // CHECK:       ^[[BODY_CONT]]:
+  // CHECK:         cir.br ^[[LATCH:bb[0-9]+]]
+  // CHECK:       ^[[FALSE_CONT]]:
+  // CHECK:         cir.br ^[[EXIT]]
+  // CHECK:       ^[[UNREACHABLE]]:
+  // CHECK:         cir.unreachable
+  // CHECK:       ^[[UNWIND]]:
+  // CHECK:         %[[TOK:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+  // CHECK:         cir.br ^[[EHCLEANUP:bb[0-9]+]](%[[TOK]] : !cir.eh_token)
+  // CHECK:       ^[[EHCLEANUP]](%[[TOK2:.*]]: !cir.eh_token):
+  // CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[TOK2]] : !cir.eh_token -> !cir.cleanup_token
+  // CHECK:         cir.call @dtor(%[[S]])
+  // CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
+  // CHECK:         cir.resume %[[TOK2]] : !cir.eh_token
+  // CHECK:       ^[[LATCH]]:
+  // CHECK:         cir.br ^[[HEADER]]
+  // CHECK:       ^[[EXIT]]:
+  // CHECK:         cir.return
+
+  cir.func @for_cleanup_eh() {
+    %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+    cir.for : cond {
+      cir.call @ctor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      %c = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+      cir.condition(%c)
+    } body {
+      cir.call @maythrow() : () -> ()
+      cir.yield
+    } step {
+      cir.call @doStepStuff() : () -> ()
+      cir.yield
+    } cleanup all {
+      cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @for_cleanup_eh()
+  // CHECK:         %[[SLOT:.*]] = cir.alloca "__cleanup_dest_slot" {{.*}} cleanup_dest_slot : !cir.ptr<!s32i>
+  // CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_S>
+  // CHECK:         cir.br ^[[HEADER:bb[0-9]+]]
+  // CHECK:       ^[[HEADER]]:
+  // CHECK:         %[[TRUE:.*]] = cir.const #true
+  // CHECK:         cir.brcond %[[TRUE]] ^[[LOOP_BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[LOOP_BODY]]:
+  // CHECK:         cir.call @ctor(%[[S]])
+  // CHECK:         %[[C:.*]] = cir.try_call @operatorBool(%[[S]]) ^[[COND_TEST:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+  // CHECK:       ^[[COND_TEST]]:
+  // CHECK:         cir.brcond %[[C]] ^[[BODY:bb[0-9]+]], ^[[CONDFALSE:bb[0-9]+]]
+  // CHECK:       ^[[BODY]]:
+  // CHECK:         cir.try_call @maythrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND]]
+  // CHECK:       ^[[NORMAL]]:
+  // CHECK:         cir.try_call @doStepStuff() ^[[STEP_NORMAL:bb[0-9]+]], ^[[UNWIND]]
+  // CHECK:       ^[[STEP_NORMAL]]:
+  // CHECK:         %[[ID0:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK:         cir.store %[[ID0]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+  // CHECK:       ^[[CONDFALSE]]:
+  // CHECK:         %[[ID1:.*]] = cir.const #cir.int<1> : !s32i
+  // CHECK:         cir.store %[[ID1]], %[[SLOT]]
+  // CHECK:         cir.br ^[[CLEANUP]]
+  // CHECK:       ^[[CLEANUP]]:
+  // CHECK:         cir.call @dtor(%[[S]])
+  // CHECK:         %[[D:.*]] = cir.load %[[SLOT]]
+  // CHECK:         cir.switch.flat %[[D]] : !s32i, ^[[UNREACHABLE:bb[0-9]+]] [
+  // CHECK:           0: ^[[STEP_CONT:bb[0-9]+]],
+  // CHECK:           1: ^[[FALSE_CONT:bb[0-9]+]]
+  // CHECK:         ]
+  // CHECK:       ^[[STEP_CONT]]:
+  // CHECK:         cir.br ^[[FORWARD:bb[0-9]+]]
+  // CHECK:       ^[[FALSE_CONT]]:
+  // CHECK:         cir.br ^[[EXIT]]
+  // CHECK:       ^[[UNREACHABLE]]:
+  // CHECK:         cir.unreachable
+  // CHECK:       ^[[UNWIND]]:
+  // CHECK:         %[[TOK:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+  // CHECK:         cir.br ^[[EHCLEANUP:bb[0-9]+]](%[[TOK]] : !cir.eh_token)
+  // CHECK:       ^[[EHCLEANUP]](%[[TOK2:.*]]: !cir.eh_token):
+  // CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[TOK2]] : !cir.eh_token -> !cir.cleanup_token
+  // CHECK:         cir.call @dtor(%[[S]])
+  // CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
+  // CHECK:         cir.resume %[[TOK2]] : !cir.eh_token
+  // CHECK:       ^[[FORWARD]]:
+  // CHECK:         cir.br ^[[LATCH:bb[0-9]+]]
+  // CHECK:       ^[[LATCH]]:
+  // CHECK:         cir.br ^[[HEADER]]
+  // CHECK:       ^[[EXIT]]:
+  // CHECK:         cir.return
+}

@@ -70,3 +70,16 @@ func.func @test_incompatible_input_shape(%arg0: tensor<1x?xf32>, %arg1: tensor<1
     // expected-error@-1 {{arg0 has incompatible shape with requested input shape (2, 16), got 'tensor<1x?xf32>'}}
     return %arg0 : tensor<1x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: test_func_decl
+func.func private @test_func_decl(
+    // CHECK: tensor<2x16xi32>
+    %arg0: tensor<2x?xi32>,
+    // CHECK: f32
+    %arg1: f32,
+    // CHECK: tensor<64x9xi32>
+    %arg2: tensor<?x9xi32>) ->
+    // CHECK: tensor<?x256xf32>
+    tensor<?x256xf32>

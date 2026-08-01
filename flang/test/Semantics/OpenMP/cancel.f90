@@ -9,7 +9,7 @@ end
 
 subroutine f01
 !$omp parallel
-!ERROR: Multiple cancel-directive-name clauses are not allowed on the CANCEL construct
+!ERROR: Multiple cancel-directive-name clauses are not allowed on CANCEL construct
 !$omp cancel parallel parallel
 !$omp end parallel
 end
@@ -23,7 +23,7 @@ end
 
 subroutine f03
 !$omp parallel
-!ERROR: Multiple cancel-directive-name clauses are not allowed on the CANCELLATION POINT construct
+!ERROR: Multiple cancel-directive-name clauses are not allowed on CANCELLATION POINT construct
 !$omp cancellation point parallel parallel
 !$omp end parallel
 end

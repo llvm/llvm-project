@@ -13,10 +13,9 @@
 //
 // Overview:
 // ---------
-// For each function, walk operations that implement OffloadRegionOpInterface.
-// For each call inside the offload region, if the callee is a function with
-// an acc routine that has bind(name), replace the call to use the bound
-// symbol.
+// For the current function, walk call operations inside offload regions, or
+// gpu.func). If the callee is a function with an acc routine that has
+// bind(name), replace the call to use the bound symbol.
 //
 // Requirements:
 // -------------
@@ -81,67 +80,77 @@ public:
   using acc::impl::ACCBindRoutineBase<ACCBindRoutine>::ACCBindRoutineBase;
 
   void runOnOperation() override {
-    func::FuncOp func = getOperation();
+    FunctionOpInterface func = getOperation();
     ModuleOp module = func->getParentOfType<ModuleOp>();
     if (!module)
       return;
 
-    SymbolTable symTab(module);
     auto cachedAnalysis =
         getCachedParentAnalysis<OpenACCSupport>(func->getParentOp());
     OpenACCSupport &accSupport =
         cachedAnalysis ? cachedAnalysis->get() : getAnalysis<OpenACCSupport>();
+    SymbolTable symTab(module);
 
     bool failed = false;
 
-    func.walk([&](acc::OffloadRegionOpInterface offload) {
-      Region &region = offload.getOffloadRegion();
-      region.walk([&](CallOpInterface callOp) {
-        if (!callOp.getCallableForCallee())
-          return;
-        SymbolRefAttr calleeSymbolRef =
-            dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee());
-        if (!calleeSymbolRef)
-          return;
+    func.walk([&](CallOpInterface callOp) {
+      if (!callOp.getCallableForCallee())
+        return;
+      if (!callOp->getParentOfType<OffloadRegionOpInterface>() &&
+          !callOp->getParentOfType<gpu::GPUFuncOp>())
+        return;
+      SymbolRefAttr calleeSymbolRef =
+          dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee());
+      if (!calleeSymbolRef)
+        return;
+      FunctionOpInterface callee = symTab.lookup<FunctionOpInterface>(
+          calleeSymbolRef.getLeafReference());
+      if (!callee)
+        return;
 
-        FunctionOpInterface callee = symTab.lookup<FunctionOpInterface>(
-            calleeSymbolRef.getLeafReference());
-        if (!callee)
-          return;
+      if (!(isAccRoutine(callee) || isSpecializedAccRoutine(callee)))
+        return;
 
-        if (!(isAccRoutine(callee) || isSpecializedAccRoutine(callee)))
+      if (auto routineInfo = callee->getAttrOfType<RoutineInfoAttr>(
+              getRoutineInfoAttrName())) {
+        if (routineInfo.getAccRoutines().size() > 1) {
+          (void)accSupport.emitNYI(callOp.getLoc(), "multiple `acc routine`s");
+          failed = true;
           return;
-
-        if (auto routineInfo = callee->getAttrOfType<RoutineInfoAttr>(
-                getRoutineInfoAttrName())) {
-          if (routineInfo.getAccRoutines().size() > 1) {
-            (void)accSupport.emitNYI(callOp.getLoc(),
-                                     "multiple `acc routine`s");
-            failed = true;
-            return;
-          }
         }
+      }
 
-        RoutineOp routine = getFirstAccRoutineOp(callee, symTab);
-        if (!isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
-          return;
+      RoutineOp routine = getFirstAccRoutineOp(callee, symTab);
+      if (!isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
+        return;
 
-        auto bindNameOpt = routine.getBindNameValue(this->deviceType);
-        if (!bindNameOpt)
-          bindNameOpt = routine.getBindNameValue();
-        if (!bindNameOpt)
-          return;
-
-        SymbolRefAttr calleeRef;
-        if (auto *symRef = std::get_if<SymbolRefAttr>(&*bindNameOpt)) {
-          calleeRef = *symRef;
-        } else {
-          calleeRef = FlatSymbolRefAttr::get(
-              callOp.getContext(),
-              std::get<StringAttr>(*bindNameOpt).getValue());
+      auto bindNameOpt = routine.getBindNameValue(this->deviceType);
+      if (!bindNameOpt)
+        bindNameOpt = routine.getBindNameValue();
+      if (!bindNameOpt)
+        return;
+      SymbolRefAttr calleeRef;
+      if (auto *symRef = std::get_if<SymbolRefAttr>(&*bindNameOpt)) {
+        calleeRef = *symRef;
+      } else {
+        StringRef bindName = std::get<StringAttr>(*bindNameOpt).getValue();
+        auto gpuMod = func->getParentOfType<gpu::GPUModuleOp>();
+        Operation *symbolTableOp =
+            gpuMod ? gpuMod.getOperation() : module.getOperation();
+        SymbolTable insertSymTab(symbolTableOp);
+        if (!insertSymTab.lookup(bindName)) {
+          OpBuilder builder(module.getContext());
+          Block *insertBlock = gpuMod ? gpuMod.getBody() : module.getBody();
+          builder.setInsertionPointToEnd(insertBlock);
+          auto funcType = cast<FunctionType>(callee.getFunctionType());
+          func::FuncOp bindFunc = func::FuncOp::create(builder, callee.getLoc(),
+                                                       bindName, funcType);
+          bindFunc.setPrivate();
+          insertSymTab.insert(bindFunc);
         }
-        callOp.setCalleeFromCallable(calleeRef);
-      });
+        calleeRef = FlatSymbolRefAttr::get(callOp.getContext(), bindName);
+      }
+      callOp.setCalleeFromCallable(calleeRef);
     });
 
     if (failed)

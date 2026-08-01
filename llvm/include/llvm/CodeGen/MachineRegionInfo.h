@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include <cassert>
 
 namespace llvm {
@@ -73,14 +74,53 @@ public:
 class LLVM_ABI MachineRegionInfo
     : public RegionInfoBase<RegionTraits<MachineFunction>> {
 public:
+  using Base = RegionInfoBase<RegionTraits<MachineFunction>>;
+
   explicit MachineRegionInfo();
   ~MachineRegionInfo() override;
+
+  MachineRegionInfo(MachineRegionInfo &&Arg)
+      : Base(std::move(static_cast<Base &>(Arg))) {
+    updateRegionTree(*this, TopLevelRegion);
+  }
+
+  MachineRegionInfo &operator=(MachineRegionInfo &&RHS) {
+    Base::operator=(std::move(static_cast<Base &>(RHS)));
+    updateRegionTree(*this, TopLevelRegion);
+    return *this;
+  }
+
+  /// Handle invalidation explicitly.
+  bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                  MachineFunctionAnalysisManager::Invalidator &);
 
   // updateStatistics - Update statistic about created regions.
   void updateStatistics(MachineRegion *R) final;
 
   void recalculate(MachineFunction &F, MachineDominatorTree *DT,
                    MachinePostDominatorTree *PDT, MachineDominanceFrontier *DF);
+};
+
+class LLVM_ABI MachineRegionInfoAnalysis
+    : public AnalysisInfoMixin<MachineRegionInfoAnalysis> {
+  friend AnalysisInfoMixin<MachineRegionInfoAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineRegionInfo;
+
+  Result run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
+};
+
+class LLVM_ABI MachineRegionInfoPrinterPass
+    : public RequiredPassInfoMixin<MachineRegionInfoPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineRegionInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 class LLVM_ABI MachineRegionInfoPass : public MachineFunctionPass {

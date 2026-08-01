@@ -40,7 +40,7 @@ end
 ! COMMON: %[[UB_K:.*]] = fir.convert %[[C60]] : (i32) -> index
 ! COMMON: %[[STEP_K:.*]] = arith.constant 1 : index
 
-! DEVICE: omp.target host_eval(
+! DEVICE: omp.target kernel_type(spmd) host_eval(
 ! DEVICE-SAME: %[[LB_I]] -> %[[LB_I:[[:alnum:]]+]],
 ! DEVICE-SAME: %[[UB_I]] -> %[[UB_I:[[:alnum:]]+]],
 ! DEVICE-SAME: %[[STEP_I]] -> %[[STEP_I:[[:alnum:]]+]],

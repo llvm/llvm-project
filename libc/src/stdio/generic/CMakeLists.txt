@@ -412,9 +412,9 @@ list(APPEND fprintf_deps
       libc.src.__support.arg_list
       libc.src.__support.CPP.limits
       libc.src.__support.libc_errno
-      libc.src.stdio.printf_core.vfprintf_internal
-      libc.src.stdio.printf_core.core_structs
-      libc.src.stdio.printf_core.error_mapper
+      libc.src.__support.printf_core.vfprintf_internal
+      libc.src.__support.printf_core.core_structs
+      libc.src.__support.printf_core.error_mapper
 )
 
 if(LLVM_LIBC_FULL_BUILD)

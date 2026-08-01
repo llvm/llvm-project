@@ -113,7 +113,7 @@ add_object_library(
     libc.hdr.elf_proxy
     libc.hdr.link_macros
     libc.hdr.stdint_proxy
-    libc.include.sys_mman
+    libc.hdr.sys_mman_macros
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.osutil

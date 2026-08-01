@@ -38,10 +38,9 @@ public:
   using ThisT = GenericUniformityInfo<ContextT>;
 
   using CycleInfoT = GenericCycleInfo<ContextT>;
-  using CycleT = typename CycleInfoT::CycleT;
 
   using TemporalDivergenceTuple =
-      std::tuple<ConstValueRefT, InstructionT *, const CycleT *>;
+      std::tuple<ConstValueRefT, InstructionT *, CycleRef>;
 
   GenericUniformityInfo(const DominatorTreeT &DT, const CycleInfoT &CI,
                         const TargetTransformInfo *TTI = nullptr);
@@ -57,20 +56,27 @@ public:
   /// The GPU kernel this analysis result is for
   const FunctionT &getFunction() const;
 
+  /// The cycle info this analysis was computed with.
+  const CycleInfoT &getCycleInfo() const;
+
   /// Whether \p V is divergent at its definition.
   bool isDivergentAtDef(ConstValueRefT V) const;
 
   /// Whether \p V is uniform/non-divergent at its definition.
   bool isUniformAtDef(ConstValueRefT V) const { return !isDivergentAtDef(V); }
 
-  // Similar queries for InstructionT. These accept a pointer argument so that
+  // Whether the terminator instruction \p I is uniform/divergent, i.e. whether
+  // the controlling condition of a conditional branch or switch is
+  // uniform/divergent.
+  // TODO: The comment below is now out of date:
+  // These accept a pointer argument so that
   // in LLVM IR, they overload the equivalent queries for Value*. For example,
   // if querying whether a CondBrInst is divergent, it should not be treated as
   // a Value in LLVM IR.
-  bool isUniformAtDef(const InstructionT *I) const {
-    return !isDivergentAtDef(I);
+  bool isUniformTerminator(const InstructionT *I) const {
+    return !isDivergentTerminator(I);
   };
-  bool isDivergentAtDef(const InstructionT *I) const;
+  bool isDivergentTerminator(const InstructionT *I) const;
 
   /// \brief Whether \p U is divergent at its use. Uses of a uniform value can
   /// be divergent.

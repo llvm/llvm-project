@@ -139,8 +139,8 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(LIBOMP_LIBFLAGS "-lperfstat" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
   if("${LIBOMP_ARCH}" STREQUAL "ppc")
-    # PPC (32-bit) on AIX needs libatomic for __atomic_load_8, etc.
-    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
+    # PPC (32-bit) on AIX needs libcompiler_rt for __atomic_load_8, etc.
+    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -lcompiler_rt")
   endif()
 else()
   set(LIBOMP_LIBFLAGS "" CACHE STRING
@@ -326,6 +326,11 @@ endif()
 if(LIBOMP_STATS)
   set(LIBOMP_USE_STDCPPLIB TRUE)
 endif()
+
+# Thread cancellation via pthread_cancel.  Defaults to whether the symbol is
+# available, but can be overridden via -DLIBOMP_USE_CANCEL_THREADS=OFF.
+set(LIBOMP_USE_CANCEL_THREADS "${LIBOMP_HAVE_PTHREAD_CANCEL}" CACHE BOOL
+  "Enable thread cancellation via pthread_cancel?")
 
 # Shared library can be switched to a static library
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL

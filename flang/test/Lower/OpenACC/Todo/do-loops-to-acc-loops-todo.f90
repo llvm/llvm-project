@@ -1,28 +1,10 @@
 ! RUN: split-file %s %t
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/do_loop_with_stop.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK1
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/do_loop_with_cycle_goto.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK2
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_goto_loop.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK3
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/nested_loop_with_inner_goto.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK4
-! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK5
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_lt.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK7
+! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_gt.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK8
 ! RUN: %not_todo_cmd bbc -fopenacc -emit-hlfir %t/collapse_nested.f90 -o - 2>&1 | FileCheck %s --check-prefix=CHECK6
-
-//--- do_loop_with_stop.f90
-
-subroutine do_loop_with_stop()
-  integer :: i
-  integer, parameter :: n = 10
-  real, dimension(n) :: a, b
-
-  !$acc kernels
-  do i = 1, n
-    a(i) = b(i) + 1.0
-    if (i == 5) stop
-  end do
-  !$acc end kernels
-
-! CHECK1: not yet implemented: unstructured do loop in acc kernels
-
-end subroutine
 
 //--- do_loop_with_cycle_goto.f90
 
@@ -92,19 +74,34 @@ subroutine nested_loop_with_inner_goto()
 
 end subroutine
 
-//--- collapse.f90
+//--- collapse_lt.f90
 
-! !$acc parallel loop collapse(N) over a do concurrent.
+! collapse(2) over a 3-control do concurrent: collapse < control count (N < C).
+subroutine combined(i, j, k)
+  integer :: i, j, k
+  integer :: a(i,j,k)
+  !$acc parallel loop collapse(2)
+  do concurrent (i=1:10, j=1:100, k=1:200)
+    a(i,j,k) = a(i,j,k) + 1
+  end do
+  ! CHECK7: not yet implemented: OpenACC LOOP COLLAPSE less than DO CONCURRENT control count
+end subroutine
+
+//--- collapse_gt.f90
+
+! collapse(3) over a 2-control do concurrent + inner regular do (N > C, mixed).
+! Semantics accepts it: the inner do supplies the extra level.
 subroutine combined(i, j, k)
   integer :: i, j, k
   integer :: a(i,j,k)
   !$acc parallel loop collapse(3)
-  do concurrent (i=1:10, j=1:100, k=1:200)
-    a(i,j,k) = a(i,j,k) + 1
+  do concurrent (i=1:10, j=1:100)
+    do k = 1, 200
+      a(i,j,k) = a(i,j,k) + 1
+    end do
   end do
-  ! CHECK5: not yet implemented: OpenACC LOOP COLLAPSE with DO CONCURRENT
+  ! CHECK8: not yet implemented: OpenACC LOOP COLLAPSE greater than DO CONCURRENT control count
 end subroutine
-
 
 //--- collapse_nested.f90
 

@@ -912,10 +912,14 @@ bool Sema::CheckParameterPacksForExpansion(
     unsigned NewPackSize, PendingPackExpansionSize = 0;
     if (IsVarDeclPack) {
       // Figure out whether we're instantiating to an argument pack or not.
+      //
+      // The instantiation may not exist; this can happen when instantiating an
+      // expansion statement that contains a pack (e.g.
+      // `template for (auto x : {{ts...}})`).
       llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
-          CurrentInstantiationScope->findInstantiationOf(
+          CurrentInstantiationScope->getInstantiationOfIfExists(
               cast<NamedDecl *>(ParmPack.first));
-      if (isa<DeclArgumentPack *>(*Instantiation)) {
+      if (Instantiation && isa<DeclArgumentPack *>(*Instantiation)) {
         // We could expand this function parameter pack.
         NewPackSize = cast<DeclArgumentPack *>(*Instantiation)->size();
       } else {
@@ -1141,7 +1145,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
   case TST_typeof_unqualType:
   case TST_typeofType:
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   case TST_atomic: {
     QualType T = DS.getRepAsType().get();
     if (!T.isNull() && T->containsUnexpandedParameterPack())
@@ -1355,20 +1359,20 @@ ExprResult Sema::BuildPackIndexingExpr(Expr *PackExpression,
                                        ArrayRef<Expr *> ExpandedExprs,
                                        bool FullySubstituted) {
 
-  std::optional<int64_t> Index;
+  std::optional<uint64_t> Index;
   if (!IndexExpr->isInstantiationDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
 
     ExprResult Res = CheckConvertedConstantExpression(
-        IndexExpr, Context.getSizeType(), Value, CCEKind::ArrayBound);
-    if (!Res.isUsable())
+        IndexExpr, Context.getSizeType(), Value, CCEKind::PackIndex);
+    if (!Res.isUsable() || !Value.isRepresentableByInt64())
       return ExprError();
-    Index = Value.getExtValue();
+    Index = Value.getZExtValue();
     IndexExpr = Res.get();
   }
 
   if (Index && FullySubstituted) {
-    if (*Index < 0 || *Index >= int64_t(ExpandedExprs.size())) {
+    if (*Index >= ExpandedExprs.size()) {
       Diag(PackExpression->getBeginLoc(), diag::err_pack_index_out_of_bound)
           << *Index << PackExpression << ExpandedExprs.size();
       return ExprError();

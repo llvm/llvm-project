@@ -773,7 +773,8 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
+      OptionalAttr<DistributeLayoutAttr>:$layout,
+      OptionalAttr<I64Attr>:$contiguity);
   let results = (outs XeGPU_ValueOrScalarType:$value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -903,7 +904,8 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
       OptionalAttr<XeGPU_CacheHintAttr>:$l1_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
-      OptionalAttr<DistributeLayoutAttr>:$layout);
+      OptionalAttr<DistributeLayoutAttr>:$layout,
+      OptionalAttr<I64Attr>:$contiguity);
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {
@@ -1225,8 +1227,9 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
       Arguments:
       - `source`: The input vector whose data is to be redistributed. The source and
       result types must match.
-      - `input_layout`: The layout attribute describing the current distribution of `source`
-      across subgroups and/or lanes.
+      - `input_layout`: [optional] The layout attribute describing the current distribution
+      of `source` across subgroups and/or lanes. When omitted, it defaults to `target_layout`,
+      i.e. the source is assumed to already be in the target distribution.
       - `target_layout`: The layout attribute describing the desired distribution of the result
       across subgroups and/or lanes.
 
@@ -1239,7 +1242,7 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
         ```
     }];
     let arguments = (ins XeGPU_VectorOrScalarType: $source,
-                         DistributeLayoutAttr: $input_layout,
+                         OptionalAttr<DistributeLayoutAttr>: $input_layout,
                          DistributeLayoutAttr: $target_layout);
     let results = (outs XeGPU_VectorOrScalarType: $result);
     let assemblyFormat = [{
@@ -1252,6 +1255,13 @@ def XeGPU_ConvertLayoutOp: XeGPU_Op<"convert_layout", [AllTypesMatch<["source", 
 
       void setAnchorLayout(xegpu::DistributeLayoutAttr anchorLayout) {
         setTargetLayoutAttr(anchorLayout);
+      }
+
+      /// Returns `input_layout` if set, otherwise `target_layout`.
+      xegpu::DistributeLayoutAttr getEffectiveInputLayout() {
+        if (auto layout = getInputLayoutAttr())
+          return layout;
+        return getTargetLayoutAttr();
       }
 
     }];
@@ -1275,7 +1285,7 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     as the underlying shared local memory.
 
     Arguments:
-     - `source` : 1D or 2D statically shaped memref, representing the raw SLM buffer. The provided memref must be contiguous.
+     - `source` : a statically shaped memref of any rank, representing the raw SLM buffer. The provided memref must be contiguous.
 
     Results:
      - `mem_desc` : the memory descriptor (1D or higher).
@@ -1294,9 +1304,10 @@ def XeGPU_CreateMemDescOp: XeGPU_Op<"create_mem_desc", [Pure,
     ```
 
   }];
-  let arguments = (ins AnyTypeOf<[StaticShared1DMemRefOf<[XeGPU_ScalarType]>, StaticShared2DMemRefOf<[XeGPU_ScalarType]>]>:$source);
+  let arguments = (ins StaticSharedMemRefOf<[XeGPU_ScalarType]>:$source);
   let results = (outs XeGPU_MemDesc:$mem_desc);
   let assemblyFormat = "$source prop-dict attr-dict `` `:` type($source) `->` qualified(type($mem_desc))";
+  let hasVerifier = 1;
 }
 
 def XeGPU_LoadMatrixOp: XeGPU_Op<"load_matrix", [MemoryEffects<[MemRead]>,

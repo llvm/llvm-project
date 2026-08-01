@@ -2,7 +2,7 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm \
 // RUN:   -disable-llvm-passes -o - | FileCheck %s
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm \
 // RUN:   -disable-llvm-passes -o - | FileCheck %s
 
 // CHECK-LABEL: define {{.*}} double @{{.*}}fma_double{{.*}}(

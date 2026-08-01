@@ -6821,6 +6821,16 @@ the configuration (without a prefix: ``Auto``).
        # include "A.inc"              # include "A.h"
        # include "A-util.h"           # include "A.inc"
 
+  * ``bool Natural`` Whether or not includes are sorted by natural ordering i.e., whether
+    embedded runs of digits are compared as numbers rather than sequences of
+    characters.
+
+    .. code-block:: c++
+
+       true:                      false:
+       #include "A2.h"     vs.    #include "A10.h"
+       #include "A10.h"           #include "A2.h"
+
 
 .. _SortJavaStaticImport:
 
@@ -7390,6 +7400,35 @@ the configuration (without a prefix: ``Auto``).
   * ``SIAS_Leave`` (in configuration: ``Leave``)
     Keep a single space after ``<`` and before ``>`` if any spaces were
     present. Option ``Standard: Cpp03`` takes precedence.
+
+
+
+.. _SpacesInBlockComments:
+
+**SpacesInBlockComments** (``SpacesInBlockCommentsStyle``) :versionbadge:`clang-format 24` :ref:`¶ <SpacesInBlockComments>`
+  The SpacesInBlockCommentsStyle to use for ordinary block comments.
+  Documentation comments such as ``/** ... */`` and ``/*! ... */``
+  and parameter comments ending with ``=`` before the closing ``*/`` are
+  left unchanged.
+
+  Possible values:
+
+  * ``SIBCS_Never`` (in configuration: ``Never``)
+    Remove spaces after ``/*`` and before ``*/``.
+
+    .. code-block:: c++
+
+       /*comment*/
+
+  * ``SIBCS_Always`` (in configuration: ``Always``)
+    Add spaces after ``/*`` and before ``*/``.
+
+    .. code-block:: c++
+
+       /* comment */
+
+  * ``SIBCS_Leave`` (in configuration: ``Leave``)
+    Leave existing spaces unchanged.
 
 
 

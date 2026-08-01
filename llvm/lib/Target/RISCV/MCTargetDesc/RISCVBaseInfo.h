@@ -18,12 +18,15 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
+
+class MCSubtargetInfo;
 
 namespace RISCVOp {
 enum OperandType : unsigned {
@@ -141,13 +144,15 @@ enum OperandType : unsigned {
   OPERAND_BCC_OPCODE,
 
   OPERAND_VMASK,
+  OPERAND_SMTVType,
+  OPERAND_SMTI8,
 };
 } // namespace RISCVOp
 
 // RISCVII - This namespace holds all of the target specific flags that
 // instruction info tracks. All definitions must match RISCVInstrFormats.td.
 namespace RISCVII {
-enum {
+enum : uint64_t {
   InstFormatPseudo = 0,
   InstFormatR = 1,
   InstFormatR4 = 2,
@@ -277,6 +282,9 @@ enum {
 
   HasTKOpShift = HasTMOpShift + 1,
   HasTKOpMask = 1ULL << HasTKOpShift,
+
+  SMTConstraintShift = HasTKOpShift + 1,
+  SMTConstraintMask = 1ULL << SMTConstraintShift,
 };
 
 // Helper functions to read TSFlags.
@@ -474,6 +482,7 @@ enum {
   MO_TLSDESC_LOAD_LO = 14,
   MO_TLSDESC_ADD_LO = 15,
   MO_TLSDESC_CALL = 16,
+  MO_QC_ACCESS = 17,
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"
   // flags. A machine operand can only have one "direct" flag, but can have
@@ -549,6 +558,44 @@ inline static bool isValidRoundingMode(unsigned Mode) {
 }
 } // namespace RISCVFPRndMode
 
+namespace XSMTVTypeMode {
+enum SMTVTypeMode {
+  // Define the different SMT VType modes here
+  SMT_I4 = 2,
+  SMT_I8 = 3,
+  Invalid
+};
+
+inline static StringRef SMTVTypeModeToString(SMTVTypeMode TypeMode) {
+  switch (TypeMode) {
+  default:
+    llvm_unreachable("Unknown VType mode of SpacemiT Integer Matrix");
+  case XSMTVTypeMode::SMT_I4:
+    return "i4";
+  case XSMTVTypeMode::SMT_I8:
+    return "i8";
+  }
+}
+
+inline static SMTVTypeMode stringToSMTVTypeMode(StringRef Str) {
+  return StringSwitch<SMTVTypeMode>(Str)
+      .Case("i4", XSMTVTypeMode::SMT_I4)
+      .Case("i8", XSMTVTypeMode::SMT_I8)
+      .Default(XSMTVTypeMode::Invalid);
+}
+
+inline static bool isValidSMTVTypeMode(unsigned Mode) {
+  switch (Mode) {
+  default:
+    return false;
+  case XSMTVTypeMode::SMT_I4:
+  case XSMTVTypeMode::SMT_I8:
+    return true;
+  }
+}
+
+} // namespace XSMTVTypeMode
+
 namespace RISCVVXRndMode {
 enum RoundingMode {
   RNU = 0,
@@ -621,7 +668,7 @@ int getLoadFPImm(APFloat FPImm);
 
 namespace RISCVSysReg {
 struct SysReg {
-  const char Name[32];
+  StringTable::Offset Name;
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.
@@ -655,7 +702,7 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  char Name[10];
+  StringTable::Offset Name;
   uint8_t Value;
 };
 
@@ -686,9 +733,8 @@ enum ABI {
 };
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
-// not supported for the given TT and FeatureBits combination.
-ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
-                     StringRef ABIName);
+// not supported for the subtargets triple and FeatureBits combination.
+ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);
 
@@ -707,7 +753,7 @@ namespace RISCVFeatures {
 void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
-parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
+parseFeatureBits(const MCSubtargetInfo &STI);
 
 } // namespace RISCVFeatures
 

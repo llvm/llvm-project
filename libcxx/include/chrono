@@ -46,6 +46,7 @@ public:
 template <class Rep, class Period = ratio<1>>
 class duration
 {
+    static_assert(__is_unqualified_v<Rep>, "A duration representation cannot be qualified");
     static_assert(!__is_duration<Rep>::value, "A duration representation can not be a duration");
     static_assert(__is_ratio<Period>::value, "Second template parameter of duration must be a std::ratio");
     static_assert(Period::num > 0, "duration period must be positive");

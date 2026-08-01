@@ -16,9 +16,11 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -156,11 +158,44 @@ private:
     return InstrName;
   }
 
+  StringRef findNearestOpcodeName(StringRef InstrName) const {
+    unsigned BestDistance = 2;
+    StringRef Nearest;
+
+    for (const auto &Entry : OpcodeNameToOpcodeIdx) {
+      StringRef Candidate = Entry.getFirst();
+
+      size_t CandidateSize = Candidate.size();
+      size_t InstrSize = InstrName.size();
+      size_t AbsDiff = llvm::AbsoluteDifference(CandidateSize, InstrSize);
+
+      if (AbsDiff >= BestDistance)
+        continue;
+
+      unsigned Distance =
+          InstrName.edit_distance(Candidate, /*AllowReplacements=*/true,
+                                  /*MaxEditDistance=*/BestDistance - 1);
+
+      if (Distance < BestDistance) {
+        BestDistance = Distance;
+        Nearest = Candidate;
+        if (BestDistance == 1)
+          break;
+      }
+    }
+
+    return Nearest;
+  }
+
   unsigned getInstrOpcode(StringRef InstrName) {
     auto Iter = OpcodeNameToOpcodeIdx.find(InstrName);
     if (Iter != OpcodeNameToOpcodeIdx.end())
       return Iter->second;
-    ErrorStream << "No opcode with name '" << InstrName << "'\n";
+
+    ErrorStream << "No opcode with name '" << InstrName << "'";
+    if (StringRef Nearest = findNearestOpcodeName(InstrName); !Nearest.empty())
+      ErrorStream << " - did you mean '" << Nearest << "' ?";
+    ErrorStream << "\n";
     return 0;
   }
 

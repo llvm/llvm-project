@@ -194,18 +194,14 @@ struct Slab {
   // Initialize the slab with its chunk size and index in the global table for
   // use when freeing.
   Slab(uint32_t chunk_size, uint32_t global_index) {
-    Header *header = reinterpret_cast<Header *>(memory);
-    header->cached_chunk_size = cpp::numeric_limits<uint32_t>::max();
-    header->chunk_size = chunk_size;
-    header->global_index = global_index;
+    new (memory)
+        Header{chunk_size, global_index, cpp::numeric_limits<uint32_t>::max()};
   }
 
   // Reset the memory with a new index and chunk size, not thread safe.
   Slab *reset(uint32_t chunk_size, uint32_t global_index) {
-    Header *header = reinterpret_cast<Header *>(memory);
-    header->cached_chunk_size = header->chunk_size;
-    header->chunk_size = chunk_size;
-    header->global_index = global_index;
+    uint32_t cached_chunk_size = header()->chunk_size;
+    new (memory) Header{chunk_size, global_index, cached_chunk_size};
     return this;
   }
 
@@ -248,20 +244,20 @@ struct Slab {
     return available_bytes(chunk_size) / chunk_size;
   }
 
-  // Get the location in the memory where we will store the chunk size.
-  uint32_t get_chunk_size() const {
-    return reinterpret_cast<const Header *>(memory)->chunk_size;
+  // Get a pointer to the header object living in the front of the slab memory.
+  Header *header() { return cpp::launder(reinterpret_cast<Header *>(memory)); }
+  const Header *header() const {
+    return cpp::launder(reinterpret_cast<const Header *>(memory));
   }
+
+  // Get the location in the memory where we will store the chunk size.
+  uint32_t get_chunk_size() const { return header()->chunk_size; }
 
   // Get the chunk size that was previously used.
-  uint32_t get_cached_chunk_size() const {
-    return reinterpret_cast<const Header *>(memory)->cached_chunk_size;
-  }
+  uint32_t get_cached_chunk_size() const { return header()->cached_chunk_size; }
 
   // Get the location in the memory where we will store the global index.
-  uint32_t get_global_index() const {
-    return reinterpret_cast<const Header *>(memory)->global_index;
-  }
+  uint32_t get_global_index() const { return header()->global_index; }
 
   // Get a pointer to where the bitfield is located in the memory.
   uint32_t *get_bitfield() {
@@ -643,7 +639,16 @@ void *reallocate(void *ptr, uint64_t size) {
   // The original slab pointer is the 2MiB boundary using the given pointer.
   Slab *slab = cpp::launder(reinterpret_cast<Slab *>(
       (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT)));
-  if (slab->get_chunk_size() >= size)
+
+  // A pointer from an aligned allocation sits at an offset inside its chunk, so
+  // the usable capacity is measured from the pointer to the end of the chunk.
+  uint32_t chunk_size = slab->get_chunk_size();
+  uint32_t index = slab->index_from_ptr(ptr, chunk_size);
+  uint32_t offset = static_cast<uint32_t>(
+      reinterpret_cast<uint8_t *>(ptr) -
+      reinterpret_cast<uint8_t *>(slab->ptr_from_index(index, chunk_size)));
+  uint32_t usable = chunk_size - offset;
+  if (usable >= size)
     return ptr;
 
   // If we need a new chunk we reallocate and copy it over.
@@ -651,7 +656,7 @@ void *reallocate(void *ptr, uint64_t size) {
   if (!new_ptr)
     return nullptr;
 
-  inline_memcpy(new_ptr, ptr, slab->get_chunk_size());
+  inline_memcpy(new_ptr, ptr, usable);
   gpu::deallocate(ptr);
   return new_ptr;
 }
@@ -670,10 +675,14 @@ void *aligned_allocate(uint32_t alignment, uint64_t size) {
   if (alignment > SLAB_ALIGNMENT + 1)
     return nullptr;
 
+  // Reject sizes that would overflow once padded for the requested alignment.
+  if (size > cpp::numeric_limits<uint64_t>::max() - alignment)
+    return nullptr;
+
   // Trying to handle allocation internally would break the assumption that each
   // chunk is identical to eachother. Allocate enough memory with worst-case
   // alignment and then round up. The index logic will round down properly.
-  uint64_t rounded = size + alignment - MIN_ALIGNMENT;
+  uint64_t rounded = size + alignment - MIN_SIZE;
   void *ptr = gpu::allocate(rounded);
   return ptr ? __builtin_align_up(ptr, alignment) : ptr;
 }

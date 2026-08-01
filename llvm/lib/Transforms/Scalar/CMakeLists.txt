@@ -29,6 +29,7 @@ add_llvm_component_library(LLVMScalarOpts
   JumpThreading.cpp
   JumpTableToSwitch.cpp
   LICM.cpp
+  LogicalSROA.cpp
   LoopAccessAnalysisPrinter.cpp
   LoopBoundSplit.cpp
   LoopSink.cpp

@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/MemRefToEmitC/MemRefToEmitCPass.h"
 
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -42,17 +43,9 @@ struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   using Base::Base;
   void runOnOperation() override {
-    TypeConverter converter;
+    EmitCTypeConverter converter(&getContext());
     ConvertMemRefToEmitCOptions options;
     options.lowerToCpp = this->lowerToCpp;
-    // Fallback for other types.
-    converter.addConversion([](Type type) -> std::optional<Type> {
-      if (!emitc::isSupportedEmitCType(type))
-        return {};
-      return type;
-    });
-
-    populateMemRefToEmitCTypeConversion(converter);
 
     RewritePatternSet patterns(&getContext());
     populateMemRefToEmitCConversionPatterns(patterns, converter);

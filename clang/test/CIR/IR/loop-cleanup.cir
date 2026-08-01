@@ -1,0 +1,99 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u8i = !cir.int<u, 8>
+#true = #cir.bool<true> : !cir.bool
+!rec_S = !cir.struct<"S" padded {!u8i}>
+
+module {
+  cir.func private @ctor(!cir.ptr<!rec_S>)
+  cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool
+  cir.func private @dtor(!cir.ptr<!rec_S>) func_info<#cir.cxx_dtor<!rec_S>>
+      attributes {nothrow}
+
+  cir.func @while_cleanup_all() {
+    %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+    cir.while {
+      cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+      %cond = cir.call @operatorBool(%s)
+          : (!cir.ptr<!rec_S>) -> !cir.bool
+      cir.condition(%cond)
+    } do {
+      cir.yield
+    } cleanup all {
+      cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @while_cleanup_all
+  // CHECK:         %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
+  // CHECK:         cir.while {
+  // CHECK:           cir.call @ctor(%[[S]])
+  // CHECK:           %[[COND:.*]] = cir.call @operatorBool(%[[S]])
+  // CHECK:           cir.condition(%[[COND]])
+  // CHECK:         } do {
+  // CHECK:           cir.yield
+  // CHECK:         } cleanup all {
+  // CHECK:           cir.call @dtor(%[[S]]) nothrow
+  // CHECK:           cir.yield
+  // CHECK:         }
+
+  cir.func @while_cleanup_normal() {
+    %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+    cir.while {
+      cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+      %cond = cir.call @operatorBool(%s)
+          : (!cir.ptr<!rec_S>) -> !cir.bool
+      cir.condition(%cond)
+    } do {
+      cir.yield
+    } cleanup normal {
+      cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @while_cleanup_normal
+  // CHECK:         cir.while {
+  // CHECK:           cir.call @ctor(%[[S:[0-9]+]])
+  // CHECK:           cir.call @operatorBool(%[[S]])
+  // CHECK:           cir.condition
+  // CHECK:         } cleanup normal {
+  // CHECK:           cir.call @dtor
+  // CHECK:         }
+
+  cir.func @for_cleanup_all() {
+    %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+    cir.for : cond {
+      cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+      %cond = cir.call @operatorBool(%s)
+          : (!cir.ptr<!rec_S>) -> !cir.bool
+      cir.condition(%cond)
+    } body {
+      cir.yield
+    } step {
+      cir.yield
+    } cleanup all {
+      cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @for_cleanup_all
+  // CHECK:         %[[S:.*]] = cir.alloca {{.*}}"s"{{.*}} : !cir.ptr<!rec_S>
+  // CHECK:         cir.for : cond {
+  // CHECK:           cir.call @ctor(%[[S]])
+  // CHECK:           cir.call @operatorBool(%[[S]])
+  // CHECK:           cir.condition
+  // CHECK:         } body {
+  // CHECK:           cir.yield
+  // CHECK:         } step {
+  // CHECK:           cir.yield
+  // CHECK:         } cleanup all {
+  // CHECK:           cir.call @dtor(%[[S]]) nothrow
+  // CHECK:           cir.yield
+  // CHECK:         }
+}

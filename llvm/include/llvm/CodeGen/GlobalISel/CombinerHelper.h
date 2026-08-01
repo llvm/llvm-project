@@ -358,6 +358,12 @@ public:
   ///     $whatever = COPY $addr
   LLVM_ABI bool tryCombineMemCpyFamily(MachineInstr &MI,
                                        unsigned MaxLen = 0) const;
+  LLVM_ABI bool matchCombineMemCpyFamily(MachineInstr &MI,
+                                         MemCpyFamilyLoweringInfo &MatchInfo,
+                                         unsigned MaxLen = 0) const;
+  LLVM_ABI void
+  applyCombineMemCpyFamily(MachineInstr &MI,
+                           MemCpyFamilyLoweringInfo &MatchInfo) const;
 
   LLVM_ABI bool matchPtrAddImmedChain(MachineInstr &MI,
                                       PtrAddChain &MatchInfo) const;
@@ -860,12 +866,6 @@ public:
   /// combine functions. Returns true if changed.
   LLVM_ABI bool tryCombine(MachineInstr &MI) const;
 
-  /// Emit loads and stores that perform the given memcpy.
-  /// Assumes \p MI is a G_MEMCPY_INLINE
-  /// TODO: implement dynamically sized inline memcpy,
-  ///       and rename: s/bool tryEmit/void emit/
-  LLVM_ABI bool tryEmitMemcpyInline(MachineInstr &MI) const;
-
   /// Match:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)
   ///   (G_SMULO x, 2) -> (G_SADDO x, x)
@@ -1176,6 +1176,9 @@ public:
 
   LLVM_ABI bool matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI, Register X,
                          Register Y, unsigned TargetOpc) const;
+
+  LLVM_ABI bool matchCountZeroToZeroPoison(MachineInstr &MI) const;
+  LLVM_ABI void applyCountZeroToZeroPoison(MachineInstr &MI) const;
 
 private:
   /// Checks for legality of an indexed variant of \p LdSt.

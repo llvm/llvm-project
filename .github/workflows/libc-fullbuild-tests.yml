@@ -16,8 +16,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     container:
       image: ${{ (startsWith(matrix.os, 'ubuntu-24.04-arm') && 
-        'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:138636a45bb70f7b51a858b282e66291cb3c5c85371afee09032a5e09b263395') ||
-        'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'}}
+        'ghcr.io/llvm/arm64v8/libc-ubuntu-24.04:latest@sha256:9ca390ed3546754c1d7cb669033c532c28d95a0327551c5754cbf72375178e37') ||
+        'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:8fee4c9ce5a1fd095686593cd36e032c48a31b6ae575378c82accd1d86a08d59'}}
       # We need to enable privileged containers so that certain libc tests
       # have the necessary permissions (like SYS_TIME). There are no security
       # implications as we are already running in an isolated VM.
@@ -120,7 +120,7 @@ jobs:
           # - c_compiler: gcc
           #   cpp_compiler: g++
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       with:
         persist-credentials: false
 
@@ -131,7 +131,7 @@ jobs:
     # Do not use direct GHAC access even though it is supported by sccache. GHAC rejects
     # frequent small object writes.
     - name: Setup ccache
-      uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+      uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         max-size: 1G
         key: libc_fullbuild_v3_${{ matrix.target }}_${{ matrix.build_type }}_${{ matrix.c_compiler }}

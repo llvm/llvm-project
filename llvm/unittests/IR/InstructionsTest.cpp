@@ -138,12 +138,6 @@ TEST(InstructionsTest, UncondBrInst) {
 
   const UncondBrInst *b0 = UncondBrInst::Create(bb0);
 
-  // Test legacy BranchInst API.
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-  EXPECT_TRUE(cast<BranchInst>(b0)->isUnconditional());
-  EXPECT_FALSE(cast<BranchInst>(b0)->isConditional());
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
-
   EXPECT_EQ(1U, b0->getNumSuccessors());
 
   // check num operands
@@ -170,12 +164,6 @@ TEST(InstructionsTest, CondBrInst) {
   Constant* One = ConstantInt::getTrue(Int1);
 
   CondBrInst *b1 = CondBrInst::Create(One, bb0, bb1);
-
-  // Test legacy BranchInst API.
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
-  EXPECT_FALSE(cast<BranchInst>(b1)->isUnconditional());
-  EXPECT_TRUE(cast<BranchInst>(b1)->isConditional());
-  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   EXPECT_EQ(2U, b1->getNumSuccessors());
 

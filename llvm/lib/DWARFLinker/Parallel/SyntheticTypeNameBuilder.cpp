@@ -405,10 +405,13 @@ Error SyntheticTypeNameBuilder::addDIETypeName(
   // Check if DIE already has a name.
   if (!TypeEntryPtr) {
     size_t NameStart = SyntheticName.size();
-    if (AssignNameToTypeDescriptor) {
-      if (Error Err = addParentName(*UnitEntryPair))
-        return Err;
-    }
+    // Prepend the parent scope so this name matches the key the type is
+    // stored under in the pool (the getKey() branch below). Otherwise the
+    // same type gets different names depending on whether it already has a
+    // pool entry, which races under parallel assignment and breaks
+    // deterministic deduplication.
+    if (Error Err = addParentName(*UnitEntryPair))
+      return Err;
     addTypePrefix(UnitEntryPair->DieEntry);
 
     if (ChildIndex) {

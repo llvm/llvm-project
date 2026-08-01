@@ -15,6 +15,7 @@
 #define _LIBSYCL___IMPL_DETAIL_KERNEL_ARG_HELPERS
 
 #include <sycl/__impl/index_space_classes.hpp>
+#include <sycl/__impl/nd_item.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
 
@@ -124,6 +125,12 @@ public:
   template <int Dims> static const id<Dims> getElement(id<Dims> *) {
     static_assert(isValidDimensions<Dims>, "invalid dimensions");
     return __spirv::initBuiltInGlobalInvocationId<Dims, id<Dims>>();
+  }
+
+  /// \return the nd_item currently being operated on by the device.
+  template <int Dims> static const nd_item<Dims> getElement(nd_item<Dims> *) {
+    static_assert(isValidDimensions<Dims>, "invalid dimensions");
+    return nd_item<Dims>();
   }
 
   /// Constructs item with the given data.

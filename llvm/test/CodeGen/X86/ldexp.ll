@@ -3,6 +3,89 @@
 ; RUN: llc -mtriple=x86_64-pc-win32 -verify-machineinstrs < %s | FileCheck -check-prefixes=WIN64 %s
 ; RUN: llc -mtriple=i386-pc-win32 -verify-machineinstrs < %s | FileCheck -check-prefix=WIN32 %s
 
+define half @ldexp_f16(i8 zeroext %x) nounwind {
+; X64-LABEL: ldexp_f16:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    callq ldexpf@PLT
+; X64-NEXT:    callq __truncsfhf2@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+;
+; WIN64-LABEL: ldexp_f16:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $40, %rsp
+; WIN64-NEXT:    movzbl %cl, %edx
+; WIN64-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
+; WIN64-NEXT:    callq ldexp
+; WIN64-NEXT:    callq __truncdfhf2
+; WIN64-NEXT:    addq $40, %rsp
+; WIN64-NEXT:    retq
+;
+; WIN32-LABEL: ldexp_f16:
+; WIN32:       # %bb.0:
+; WIN32-NEXT:    subl $16, %esp
+; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fld1
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _ldexp
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstps (%esp)
+; WIN32-NEXT:    calll ___truncsfhf2
+; WIN32-NEXT:    addl $16, %esp
+; WIN32-NEXT:    retl
+  %zext = zext i8 %x to i32
+  %ldexp = call half @llvm.ldexp.f16.i32(half 1.000000e+00, i32 %zext)
+  ret half %ldexp
+}
+
+define bfloat @ldexp_bf16(i8 zeroext %x) nounwind {
+; X64-LABEL: ldexp_bf16:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movss {{.*#+}} xmm0 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    callq ldexpf@PLT
+; X64-NEXT:    callq __truncsfbf2@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+;
+; WIN64-LABEL: ldexp_bf16:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    subq $40, %rsp
+; WIN64-NEXT:    movzbl %cl, %edx
+; WIN64-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
+; WIN64-NEXT:    callq ldexp
+; WIN64-NEXT:    cvtsd2ss %xmm0, %xmm0
+; WIN64-NEXT:    callq __truncsfbf2
+; WIN64-NEXT:    addq $40, %rsp
+; WIN64-NEXT:    retq
+;
+; WIN32-LABEL: ldexp_bf16:
+; WIN32:       # %bb.0:
+; WIN32-NEXT:    subl $20, %esp
+; WIN32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fld1
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _ldexp
+; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstps (%esp)
+; WIN32-NEXT:    calll ___truncsfbf2
+; WIN32-NEXT:    # kill: def $ax killed $ax def $eax
+; WIN32-NEXT:    shll $16, %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    addl $20, %esp
+; WIN32-NEXT:    retl
+  %zext = zext i8 %x to i32
+  %ldexp = call bfloat @llvm.ldexp.bf16.i32(bfloat 1.000000e+00, i32 %zext)
+  ret bfloat %ldexp
+}
+
 define float @ldexp_f32(i8 zeroext %x) nounwind {
 ; X64-LABEL: ldexp_f32:
 ; X64:       # %bb.0:
@@ -508,62 +591,6 @@ define <4 x double> @ldexp_v4f64(<4 x double> %val, <4 x i32> %exp) nounwind {
   %1 = call <4 x double> @llvm.ldexp.v4f64.v4i32(<4 x double> %val, <4 x i32> %exp)
   ret <4 x double> %1
 }
-
-define half @ldexp_f16(half %arg0, i32 %arg1) nounwind {
-; X64-LABEL: ldexp_f16:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movl %edi, %ebx
-; X64-NEXT:    callq __extendhfsf2@PLT
-; X64-NEXT:    movl %ebx, %edi
-; X64-NEXT:    callq ldexpf@PLT
-; X64-NEXT:    callq __truncsfhf2@PLT
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
-;
-; WIN64-LABEL: ldexp_f16:
-; WIN64:       # %bb.0:
-; WIN64-NEXT:    pushq %rsi
-; WIN64-NEXT:    subq $32, %rsp
-; WIN64-NEXT:    movl %edx, %esi
-; WIN64-NEXT:    callq __extendhfsf2
-; WIN64-NEXT:    cvtss2sd %xmm0, %xmm0
-; WIN64-NEXT:    movl %esi, %edx
-; WIN64-NEXT:    callq ldexp
-; WIN64-NEXT:    callq __truncdfhf2
-; WIN64-NEXT:    addq $32, %rsp
-; WIN64-NEXT:    popq %rsi
-; WIN64-NEXT:    retq
-;
-; WIN32-LABEL: ldexp_f16:
-; WIN32:       # %bb.0:
-; WIN32-NEXT:    pushl %esi
-; WIN32-NEXT:    subl $16, %esp
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    movl %eax, (%esp)
-; WIN32-NEXT:    calll ___extendhfsf2
-; WIN32-NEXT:    movl %esi, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstpl (%esp)
-; WIN32-NEXT:    calll _ldexp
-; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstps (%esp)
-; WIN32-NEXT:    calll ___truncsfhf2
-; WIN32-NEXT:    addl $16, %esp
-; WIN32-NEXT:    popl %esi
-; WIN32-NEXT:    retl
-  %ldexp = call half @llvm.ldexp.f16.i32(half %arg0, i32 %arg1)
-  ret half %ldexp
-}
-
-declare double @llvm.ldexp.f64.i32(double, i32) #0
-declare float @llvm.ldexp.f32.i32(float, i32) #0
-declare <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float>, <2 x i32>) #0
-declare <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float>, <4 x i32>) #0
-declare <2 x double> @llvm.ldexp.v2f64.v2i32(<2 x double>, <2 x i32>) #0
-declare <4 x double> @llvm.ldexp.v4f64.v4i32(<4 x double>, <4 x i32>) #0
-declare half @llvm.ldexp.f16.i32(half, i32) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }

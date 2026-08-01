@@ -248,7 +248,7 @@ void for_test_interleave_vectorize_disable_unroll(int *List, int Length) {
 // CHECK-DAG: ![[UNROLL_32:[0-9]+]] = !{!"llvm.loop.unroll.count", i32 32}
 // CHECK-DAG: ![[UNROLL_FULL:[0-9]+]] = !{!"llvm.loop.unroll.full"}
 
-// CHECK-DAG: ![[DISTRIBUTE_DISABLE:[0-9]+]] = !{!"llvm.loop.distribute.enable", i1 false}
+// CHECK-DAG: ![[DISTRIBUTE_DISABLE:[0-9]+]] = !{!"llvm.loop.distribute.disable"}
 
 // CHECK-DAG: ![[INTERLEAVE_2:[0-9]+]] = !{!"llvm.loop.interleave.count", i32 2}
 // CHECK-DAG: ![[INTERLEAVE_4:[0-9]+]] = !{!"llvm.loop.interleave.count", i32 4}

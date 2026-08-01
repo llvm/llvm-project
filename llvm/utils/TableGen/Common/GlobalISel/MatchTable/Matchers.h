@@ -373,10 +373,7 @@ protected:
   friend class InstructionOperandMatcher;
 
   InstructionMatcher &allocateInstructionMatcher(StringRef SymbolicName,
-                                                 bool AllowNumOpsCheck = true) {
-    return *InsnMatchers.emplace_back(std::make_unique<InstructionMatcher>(
-        *this, InsnMatchers.size(), SymbolicName, AllowNumOpsCheck));
-  }
+                                                 bool AllowNumOpsCheck = true);
 
 public:
   RuleMatcher(ArrayRef<SMLoc> SrcLoc, bool UsesRecordOperand = true);

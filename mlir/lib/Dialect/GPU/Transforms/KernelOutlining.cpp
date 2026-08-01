@@ -295,7 +295,7 @@ static void convertToLaunchFuncOp(gpu::LaunchOp launchOp,
       launchOp.getGridSizeOperandValues(), launchOp.getBlockSizeOperandValues(),
       launchOp.getDynamicSharedMemorySize(), operands,
       asyncToken ? asyncToken.getType() : nullptr,
-      launchOp.getAsyncDependencies(), clusterSize);
+      launchOp.getAsyncDependencies(), launchOp.getAsyncObject(), clusterSize);
   if (launchOp.getCooperative())
     launchFunc.setCooperative(true);
   launchOp.replaceAllUsesWith(launchFunc);

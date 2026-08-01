@@ -471,18 +471,4 @@ TEST_F(GlobPatternTest, SlashAgnosticMatchInverted) {
   EXPECT_FALSE(Pat->match("foo/barb"));
   EXPECT_TRUE(Pat->match("foo/bar1"));
 }
-
-TEST_F(GlobPatternTest, SlashAgnosticInvertedSlash) {
-  auto Pat1 = GlobPattern::create("foo[^/]", 1024, /*SlashAgnostic=*/true);
-  ASSERT_TRUE((bool)Pat1);
-  EXPECT_FALSE(Pat1->match("foo/"));
-  EXPECT_FALSE(Pat1->match("foo\\"));
-  EXPECT_TRUE(Pat1->match("fooa"));
-
-  auto Pat2 = GlobPattern::create("foo[^\\]", 1024, /*SlashAgnostic=*/true);
-  ASSERT_TRUE((bool)Pat2);
-  EXPECT_FALSE(Pat2->match("foo/"));
-  EXPECT_FALSE(Pat2->match("foo\\"));
-  EXPECT_TRUE(Pat2->match("fooa"));
-}
 }

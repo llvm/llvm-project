@@ -689,6 +689,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           operandsRef.drop_front(), opBundles);
     }
     result->setCallingConv(convertCConvToLLVM(invOp.getCConv()));
+    moduleTranslation.convertFunctionAttrCollection(
+        invOp.getDefaultFuncAttrsAttr(), result,
+        ModuleTranslation::convertDefaultFuncAttr);
     if (failed(moduleTranslation.convertArgAndResultAttrs(invOp, result)))
       return failure();
     moduleTranslation.mapBranch(invOp, result);

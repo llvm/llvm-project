@@ -23,9 +23,9 @@ CString libc_make_test_file_path_func(const char *file_name) {
   // Do something sensible if not run under bazel, otherwise this may segfault
   // when constructing the string.
   if (UNDECLARED_OUTPUTS_PATH == nullptr)
-    UNDECLARED_OUTPUTS_PATH = "";
+    return cpp::string(file_name);
 
-  return cpp::string(UNDECLARED_OUTPUTS_PATH) + file_name;
+  return cpp::string(UNDECLARED_OUTPUTS_PATH) + "/" + file_name;
 }
 
 } // namespace testing

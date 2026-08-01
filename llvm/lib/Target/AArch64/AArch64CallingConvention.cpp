@@ -223,4 +223,5 @@ static bool CC_AArch64_Custom_Block(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 
 // TableGen provides definitions of the calling convention analysis entry
 // points.
+#define GET_CALLING_CONV_IMPL
 #include "AArch64GenCallingConv.inc"

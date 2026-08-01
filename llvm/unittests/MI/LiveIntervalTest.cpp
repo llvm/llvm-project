@@ -42,7 +42,7 @@ void initLLVM() {
 /// unittests, we go for "AMDGPU" to be able to test normal and subregister
 /// liveranges.
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  Triple TargetTriple("amdgcn--");
+  Triple TargetTriple("amdgpu9.00--");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
   if (!T)
@@ -50,7 +50,7 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
 
   TargetOptions Options;
   return std::unique_ptr<TargetMachine>(
-      T->createTargetMachine(TargetTriple, "gfx900", "", Options, std::nullopt,
+      T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt,
                              std::nullopt, CodeGenOptLevel::Aggressive));
 }
 

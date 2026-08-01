@@ -174,7 +174,8 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO ||
       Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 ||
       Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO) {
+      Opcode == AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO ||
+      Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_SALU_PSEUDO) {
     switch (Opcode) {
     case AMDGPU::V_INTERP_P1LL_F16:
     case AMDGPU::V_INTERP_P1LV_F16:
@@ -204,6 +205,12 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       unsigned Mode = MI.getOperand(2).getImm();
       MI.removeOperand(2);
       MI.setDesc(TII->get(AMDGPU::V_CVT_F32_F64_e32));
+      return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
+    }
+    case AMDGPU::FPTRUNC_ROUND_F16_F32_SALU_PSEUDO: {
+      unsigned Mode = MI.getOperand(2).getImm();
+      MI.removeOperand(2);
+      MI.setDesc(TII->get(AMDGPU::S_CVT_F16_F32));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
     }
     default:

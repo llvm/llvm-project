@@ -3005,6 +3005,65 @@ func.func @test_addf_rounding_mode(%arg0 : f32) -> (f32, f32, f32) {
 
 // -----
 
+// CHECK-LABEL: @test_addf_negf(
+//  CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32
+func.func @test_addf_negf(%arg0 : f32, %arg1 : f32) -> (f32, f32) {
+  // CHECK-DAG:  %[[X:.+]] = arith.subf %[[ARG1]], %[[ARG0]] : f32
+  // CHECK-DAG:  %[[Y:.+]] = arith.subf %[[ARG0]], %[[ARG1]] : f32
+  // CHECK:      return %[[X]], %[[Y]]
+  %0 = arith.negf %arg0 : f32
+  %1 = arith.addf %0, %arg1 : f32
+  %2 = arith.negf %arg1 : f32
+  %3 = arith.addf %arg0, %2 : f32
+  return %1, %3 : f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_addf_negf_vec(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<2xf64>, %[[ARG1:.+]]: vector<2xf64>
+func.func @test_addf_negf_vec(%arg0 : vector<2xf64>, %arg1 : vector<2xf64>)
+    -> (vector<2xf64>, vector<2xf64>) {
+  // CHECK-DAG:  %[[X:.+]] = arith.subf %[[ARG1]], %[[ARG0]] : vector<2xf64>
+  // CHECK-DAG:  %[[Y:.+]] = arith.subf %[[ARG0]], %[[ARG1]] : vector<2xf64>
+  // CHECK:      return %[[X]], %[[Y]]
+  %0 = arith.negf %arg0 : vector<2xf64>
+  %1 = arith.addf %0, %arg1 : vector<2xf64>
+  %2 = arith.negf %arg1 : vector<2xf64>
+  %3 = arith.addf %arg0, %2 : vector<2xf64>
+  return %1, %3 : vector<2xf64>, vector<2xf64>
+}
+
+// -----
+
+// CHECK-LABEL: @test_addf_negf_fastmath(
+//  CHECK-SAME: %[[X:.+]]: f32, %[[Y:.+]]: f32
+func.func @test_addf_negf_fastmath(%x : f32, %y : f32) -> (f32, f32) {
+  // CHECK-DAG:  %[[A:.+]] = arith.subf %[[Y]], %[[X]] fastmath<nnan,nsz> : f32
+  // CHECK-DAG:  %[[B:.+]] = arith.subf %[[Y]], %[[X]] fastmath<reassoc> : f32
+  // CHECK:      return %[[A]], %[[B]]
+  %n = arith.negf %x : f32
+  %0 = arith.addf %n, %y fastmath<nnan,nsz> : f32
+  %1 = arith.addf %y, %n fastmath<reassoc> : f32
+  return %0, %1 : f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: @test_addf_negf_rounding_mode(
+//  CHECK-SAME: %[[X:.+]]: f32, %[[Y:.+]]: f32
+func.func @test_addf_negf_rounding_mode(%x : f32, %y : f32) -> (f32, f32) {
+  // CHECK-DAG:  %[[A:.+]] = arith.subf %[[Y]], %[[X]] downward : f32
+  // CHECK-DAG:  %[[B:.+]] = arith.subf %[[Y]], %[[X]] upward : f32
+  // CHECK:      return %[[A]], %[[B]]
+  %n = arith.negf %x : f32
+  %0 = arith.addf %n, %y downward : f32
+  %1 = arith.addf %y, %n upward : f32
+  return %0, %1 : f32, f32
+}
+
+// -----
+
 // CHECK-LABEL: @test_subf_rounding_mode(
 // CHECK-SAME: %[[ARG0:.+]]: f32
 func.func @test_subf_rounding_mode(%arg0 : f32) -> (f32, f32, f32, f32) {
@@ -3125,6 +3184,125 @@ func.func @no_fold_divsi_of_muli(%arg0 : index, %arg1 : index) -> index {
 //       CHECK:   %[[T0:.+]] = arith.muli
 //       CHECK:   %[[T1:.+]] = arith.divsi %[[T0]],
 //       CHECK:   return %[[T1]]
+
+// -----
+
+// CHECK-LABEL: func @divui_zero_dividend
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]]
+func.func @divui_zero_dividend(%arg0 : i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.divui %c0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @divsi_zero_dividend
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]]
+func.func @divsi_zero_dividend(%arg0 : i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.divsi %c0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @divui_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @divui_self(%arg0 : i32) -> i32 {
+  %0 = arith.divui %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @divsi_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @divsi_self(%arg0 : i32) -> i32 {
+  %0 = arith.divsi %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @ceildivui_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @ceildivui_self(%arg0 : i32) -> i32 {
+  %0 = arith.ceildivui %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @ceildivsi_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @ceildivsi_self(%arg0 : i32) -> i32 {
+  %0 = arith.ceildivsi %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @floordivsi_self
+//       CHECK:   %[[C1:.+]] = arith.constant 1 : i32
+//       CHECK:   return %[[C1]]
+func.func @floordivsi_self(%arg0 : i32) -> i32 {
+  %0 = arith.floordivsi %arg0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: func @remui_self_and_zero
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]]
+func.func @remui_self_and_zero(%arg0 : i32) -> (i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.remui %arg0, %arg0 : i32
+  %1 = arith.remui %c0, %arg0 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: func @remsi_self_and_zero
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]]
+func.func @remsi_self_and_zero(%arg0 : i32) -> (i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.remsi %arg0, %arg0 : i32
+  %1 = arith.remsi %c0, %arg0 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: func @divui_self_vector
+//       CHECK:   %[[C1:.+]] = arith.constant dense<1> : vector<4xi32>
+//       CHECK:   return %[[C1]]
+func.func @divui_self_vector(%arg0 : vector<4xi32>) -> vector<4xi32> {
+  %0 = arith.divui %arg0, %arg0 : vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: func @ceildivui_ceildivsi_floordivsi_zero_dividend
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]], %[[C0]]
+func.func @ceildivui_ceildivsi_floordivsi_zero_dividend(%arg0 : i32)
+    -> (i32, i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.ceildivui %c0, %arg0 : i32
+  %1 = arith.ceildivsi %c0, %arg0 : i32
+  %2 = arith.floordivsi %c0, %arg0 : i32
+  return %0, %1, %2 : i32, i32, i32
+}
+
+// Distinct operands must not fold to the self identity.
+// CHECK-LABEL: func @divsi_distinct_no_fold
+//       CHECK:   arith.divsi
+func.func @divsi_distinct_no_fold(%arg0 : i32, %arg1 : i32) -> i32 {
+  %0 = arith.divsi %arg0, %arg1 : i32
+  return %0 : i32
+}
+
+// A dynamic shape must bail out of the self/zero-dividend constant folds.
+// CHECK-LABEL: func @div_rem_self_dynamic_no_fold
+//       CHECK:   arith.divui
+//       CHECK:   arith.remui
+func.func @div_rem_self_dynamic_no_fold(%arg0 : tensor<?xi32>)
+    -> (tensor<?xi32>, tensor<?xi32>) {
+  %0 = arith.divui %arg0, %arg0 : tensor<?xi32>
+  %1 = arith.remui %arg0, %arg0 : tensor<?xi32>
+  return %0, %1 : tensor<?xi32>, tensor<?xi32>
+}
 
 // -----
 
@@ -3505,6 +3683,68 @@ func.func @nofoldShrs3() -> i64 {
   // Note that this should return Poison in the future.
   %r = arith.shrsi %c1, %c64 : i64
   return %r : i64
+}
+
+// CHECK-LABEL: @shli_zero_lhs
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]]
+func.func @shli_zero_lhs(%arg0 : i32) -> i32 {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.shli %c0, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @shrui_zero_lhs_and_self
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]]
+func.func @shrui_zero_lhs_and_self(%arg0 : i32) -> (i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.shrui %c0, %arg0 : i32
+  %1 = arith.shrui %arg0, %arg0 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: @shrsi_zero_lhs_and_self
+//       CHECK:   %[[C0:.+]] = arith.constant 0 : i32
+//       CHECK:   return %[[C0]], %[[C0]]
+func.func @shrsi_zero_lhs_and_self(%arg0 : i32) -> (i32, i32) {
+  %c0 = arith.constant 0 : i32
+  %0 = arith.shrsi %c0, %arg0 : i32
+  %1 = arith.shrsi %arg0, %arg0 : i32
+  return %0, %1 : i32, i32
+}
+
+// CHECK-LABEL: @shrsi_all_ones_lhs
+//       CHECK:   %[[CM1:.+]] = arith.constant -1 : i32
+//       CHECK:   return %[[CM1]]
+func.func @shrsi_all_ones_lhs(%arg0 : i32) -> i32 {
+  %cm1 = arith.constant -1 : i32
+  %0 = arith.shrsi %cm1, %arg0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @shift_self_vector
+//   CHECK-DAG:   %[[C0:.+]] = arith.constant dense<0> : vector<4xi32>
+//   CHECK-DAG:   %[[CM1:.+]] = arith.constant dense<-1> : vector<4xi32>
+//       CHECK:   return %[[C0]], %[[C0]], %[[CM1]]
+func.func @shift_self_vector(%arg0 : vector<4xi32>)
+    -> (vector<4xi32>, vector<4xi32>, vector<4xi32>) {
+  %cm1 = arith.constant dense<-1> : vector<4xi32>
+  %0 = arith.shrui %arg0, %arg0 : vector<4xi32>
+  %1 = arith.shrsi %arg0, %arg0 : vector<4xi32>
+  %2 = arith.shrsi %cm1, %arg0 : vector<4xi32>
+  return %0, %1, %2 : vector<4xi32>, vector<4xi32>, vector<4xi32>
+}
+
+// A dynamic shape must bail out of the x>>x constant fold.
+// CHECK-LABEL: @shr_self_dynamic_no_fold
+//       CHECK:   arith.shrui
+//       CHECK:   arith.shrsi
+func.func @shr_self_dynamic_no_fold(%arg0 : tensor<?xi32>)
+    -> (tensor<?xi32>, tensor<?xi32>) {
+  %0 = arith.shrui %arg0, %arg0 : tensor<?xi32>
+  %1 = arith.shrsi %arg0, %arg0 : tensor<?xi32>
+  return %0, %1 : tensor<?xi32>, tensor<?xi32>
 }
 
 // -----
@@ -4204,3 +4444,37 @@ func.func @convertf_fold_f8() -> f8E5M2 {
   return %result : f8E5M2
 }
 
+
+// -----
+
+// Self-identity folds and patterns must not build a constant of a dynamic
+// shape (which would assert); they must leave the op unfolded.
+// CHECK-LABEL: func @xori_self_dynamic
+//       CHECK:   arith.xori
+func.func @xori_self_dynamic(%arg0 : tensor<?xi32>) -> tensor<?xi32> {
+  %0 = arith.xori %arg0, %arg0 : tensor<?xi32>
+  return %0 : tensor<?xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @subui_extended_self_dynamic
+//       CHECK:   arith.subui_extended
+func.func @subui_extended_self_dynamic(%arg0 : tensor<?xi32>)
+    -> (tensor<?xi32>, tensor<?xi1>) {
+  %low, %bo = arith.subui_extended %arg0, %arg0
+      : tensor<?xi32>, tensor<?xi1>
+  return %low, %bo : tensor<?xi32>, tensor<?xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func @subi_subi_lhs_rhs_lhs_dynamic
+//       CHECK:   arith.subi
+//       CHECK:   arith.subi
+func.func @subi_subi_lhs_rhs_lhs_dynamic(%a : tensor<?xi32>, %b : tensor<?xi32>)
+    -> tensor<?xi32> {
+  %0 = arith.subi %a, %b : tensor<?xi32>
+  %1 = arith.subi %0, %a : tensor<?xi32>
+  return %1 : tensor<?xi32>
+}

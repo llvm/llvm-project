@@ -32,15 +32,16 @@ namespace llvm {
 inline constexpr llvm::StringRef ClangTrapPrefix = "__clang_trap_msg";
 
 namespace clang {
-  class CodeGenOptions;
-  class CoverageSourceInfo;
-  class Decl;
-  class DiagnosticsEngine;
-  class GlobalDecl;
-  class HeaderSearchOptions;
-  class LangOptions;
-  class PreprocessorOptions;
-  class CompilerInstance;
+class BaseSubobject;
+class CodeGenOptions;
+class CoverageSourceInfo;
+class Decl;
+class DiagnosticsEngine;
+class GlobalDecl;
+class HeaderSearchOptions;
+class LangOptions;
+class PreprocessorOptions;
+class CompilerInstance;
 
 namespace CodeGen {
   class CodeGenModule;
@@ -104,6 +105,13 @@ public:
   ///   code generator will schedule the entity for emission if a
   ///   definition has been registered with this code generator.
   llvm::Constant *GetAddrOfGlobal(GlobalDecl decl, bool isForDefinition);
+
+  /// Return the LLVM address of the vtable for the given base subobject.
+  ///
+  /// \param base The base subobject that owns the vptr to be initialized.
+  /// \param decl The derived type being initialized, that contains `base`.
+  llvm::Constant *GetAddrOfVTable(BaseSubobject base,
+                                  const CXXRecordDecl *decl);
 
   /// Create a new \c llvm::Module after calling HandleTranslationUnit. This
   /// enable codegen in interactive processing environments.

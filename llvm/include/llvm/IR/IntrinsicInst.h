@@ -836,6 +836,29 @@ public:
   /// Whether the intrinsic is a smax or a umax.
   bool isMax() const { return !isMin(getIntrinsicID()); }
 
+  /// Returns the identity value for this min/max intrinsic, such
+  /// that minmax(X, Identity) == X.
+  static APInt getIdentity(Intrinsic::ID ID, unsigned NumBits) {
+    switch (ID) {
+    case Intrinsic::umin:
+      return APInt::getMaxValue(NumBits);
+    case Intrinsic::umax:
+      return APInt::getMinValue(NumBits);
+    case Intrinsic::smin:
+      return APInt::getSignedMaxValue(NumBits);
+    case Intrinsic::smax:
+      return APInt::getSignedMinValue(NumBits);
+    default:
+      llvm_unreachable("Invalid intrinsic");
+    }
+  }
+
+  /// Returns the identity value for this min/max intrinsic, such
+  /// that minmax(X, Identity) == X.
+  APInt getIdentity() const {
+    return getIdentity(getIntrinsicID(), getType()->getScalarSizeInBits());
+  }
+
   /// Min/max intrinsics are monotonic, they operate on a fixed-bitwidth values,
   /// so there is a certain threshold value, upon reaching which,
   /// their value can no longer change. Return said threshold.
@@ -1844,6 +1867,10 @@ public:
   Value *getIndexOperand(size_t Index) const {
     assert(Index < getNumIndices());
     return getOperand(Index + 1);
+  }
+
+  inline iterator_range<op_iterator> indices() {
+    return make_range(op_begin() + 1, op_begin() + 1 + getNumIndices());
   }
 
   Type *getResultElementType() const {

@@ -1102,7 +1102,7 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
                       adaptor.getBlockSizeZ()},
       adaptor.getDynamicSharedMemorySize(),
       llvmArgumentsWithSizes.empty() ? llvmArguments : llvmArgumentsWithSizes,
-      stream, clusterSize);
+      nullptr, {}, stream, clusterSize);
   if (launchOp.getCooperative())
     newLaunchOp.setCooperative(true);
   if (launchOp.getAsyncToken())

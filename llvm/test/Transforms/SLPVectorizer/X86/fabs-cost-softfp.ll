@@ -11,12 +11,12 @@ target triple = "i686-unknown-linux-gnu"
 define void @vectorize_fp128(fp128 %c, fp128 %d) #0 {
 ; CHECK-LABEL: @vectorize_fp128(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> poison, fp128 [[C:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x fp128> [[TMP0]], fp128 [[D:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x fp128> poison, fp128 [[C:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x fp128> [[TMP0]], fp128 [[D:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x fp128> @llvm.fabs.v2f128(<2 x fp128> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oeq <2 x fp128> [[TMP2]], splat (fp128 +inf)
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[OR_COND39:%.*]] = or i1 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[OR_COND39]], label [[IF_THEN13:%.*]], label [[IF_END24:%.*]]
 ; CHECK:       if.then13:

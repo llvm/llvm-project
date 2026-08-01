@@ -4,14 +4,14 @@
 define double @test(ptr %0, double %1) {
 ; CHECK-LABEL: define double @test(
 ; CHECK-SAME: ptr [[TMP0:%.*]], double [[TMP1:%.*]]) {
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call double @llvm.exp.f64(double +qnan)
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> poison, double [[TMP6]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x double> poison, double [[TMP6]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x double> [[TMP12]], <4 x double> [[TMP11]], <4 x i32> <i32 poison, i32 poison, i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
@@ -22,11 +22,11 @@ define double @test(ptr %0, double %1) {
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd <4 x double> [[TMP16]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x double> [[TMP15]], <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double 1.000000e+00>, <4 x i32> <i32 4, i32 3, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <4 x double> [[TMP20]], [[TMP19]]
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x double> [[TMP21]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x double> [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x double> [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x double> [[TMP16]], i64 0
 ; CHECK-NEXT:    [[TMP24:%.*]] = fadd double [[TMP23]], [[TMP22]]
-; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x double> [[TMP21]], i32 1
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x double> [[TMP21]], i32 2
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <4 x double> [[TMP21]], i64 1
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x double> [[TMP21]], i64 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = fadd double [[TMP25]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = fadd double [[TMP27]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd double [[TMP24]], [[TMP28]]

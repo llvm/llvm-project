@@ -31,10 +31,10 @@ recursively.
 
 This check implements the CERT C Coding Standard rule
 `SIG30-C. Call only asynchronous-safe functions within signal handlers
-<https://www.securecoding.cert.org/confluence/display/c/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/signals-sig/sig30-c/>`_
 and the rule
 `MSC54-CPP. A signal handler must be a plain old function
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/MSC54-CPP.+A+signal+handler+must+be+a+plain+old+function>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/miscellaneous-msc/msc54-cpp/>`_.
 It has the alias names ``cert-sig30-c`` and ``cert-msc54-cpp``.
 
 Options

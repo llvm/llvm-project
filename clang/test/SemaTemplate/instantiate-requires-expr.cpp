@@ -84,7 +84,7 @@ namespace type_requirement {
   template<typename T>
   struct a {
       template<typename U> requires (requires { typename T::a::a; }, false)
-      // expected-note@-1{{because 'requires { <<error-type>>; } , false' evaluated to false}}
+      // expected-note@-1{{because 'requires { <<error-type>>; }, false' evaluated to false}}
       struct r {};
   };
 
@@ -126,7 +126,7 @@ namespace expr_requirement {
 
   template<typename T>
   struct a {
-      template<typename U> requires (requires { sizeof(T::a); }, false) // expected-note{{because 'requires { <<error-expression>>; } , false' evaluated to false}}
+      template<typename U> requires (requires { sizeof(T::a); }, false) // expected-note{{because 'requires { <<error-expression>>; }, false' evaluated to false}}
       struct r {};
   };
 
@@ -151,7 +151,7 @@ namespace expr_requirement {
 
   template<typename T>
   struct b {
-      template<typename U> requires (requires { { 0 } -> C1<typename T::a>; }, false) // expected-note{{because 'requires { { 0 } -> <<error-type>>; } , false' evaluated to false}}
+      template<typename U> requires (requires { { 0 } -> C1<typename T::a>; }, false) // expected-note{{because 'requires { { 0 } -> <<error-type>>; }, false' evaluated to false}}
       struct r {};
   };
 
@@ -190,7 +190,7 @@ namespace nested_requirement {
   template<typename T>
   struct a {
       template<typename U> requires
-      (requires { requires sizeof(T::a) == 0; }, false) // expected-note{{because 'requires { requires <<error-expression>>; } , false' evaluated to false}}
+      (requires { requires sizeof(T::a) == 0; }, false) // expected-note{{because 'requires { requires <<error-expression>>; }, false' evaluated to false}}
       struct r {};
   };
 

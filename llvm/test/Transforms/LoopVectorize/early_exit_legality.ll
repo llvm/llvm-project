@@ -2,7 +2,7 @@
 ; REQUIRES: asserts
 ; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize,vplan -force-vector-width=4 -disable-output 2>&1 | FileCheck %s
 
-declare void @init_mem(ptr, i64);
+declare void @init_mem(ptr, i64) nofree
 
 ; == SOME LEGAL EXAMPLES ==
 

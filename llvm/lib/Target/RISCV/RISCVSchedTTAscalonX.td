@@ -875,9 +875,12 @@ foreach mx = SchedMxList in {
   let Latency = 4, AcquireAtCycles = [0, 1], ReleaseAtCycles = [1, !add(1, Cycles)] in {
     defm "" : LMULWriteResMX<"WriteVSlideUpX",   [AscalonFX, AscalonV], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVSlideDownX", [AscalonFX, AscalonV], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSlideI",     [AscalonFX, AscalonV], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVISlide1X",   [AscalonFX, AscalonV], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVFSlide1F",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideUpI",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSlideDownI", [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1Up",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVISlide1Down", [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1Up",   [AscalonFX, AscalonV], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVFSlide1Down", [AscalonFX, AscalonV], mx, IsWorstCase>;
   }
 }
 

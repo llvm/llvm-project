@@ -2,8 +2,6 @@
 Dependence Graphs in LLVM
 =========================
 
-.. contents::
-   :local:
 
 Introduction
 ============

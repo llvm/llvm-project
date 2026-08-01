@@ -10,11 +10,11 @@
 //   offload_constant -> 4  (CONSTANT_ADDRESS)
 //   offload_private  -> 5  (PRIVATE_ADDRESS)
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -emit-cir \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fclangir -emit-cir \
 // RUN:   -mmlir -mlir-print-ir-before=cir-target-lowering %s -o %t.cir 2> %t.pre.cir
 // RUN: FileCheck --check-prefix=PRE --input-file=%t.pre.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=POST --input-file=%t.cir %s
 
 // ---- GlobalOp: lang AS emitted before target lowering, target AS after ----

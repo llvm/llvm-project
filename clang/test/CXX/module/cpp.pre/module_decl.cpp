@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/gnu_line_marker.cpp -verify -o %t/gnu_line_marker.pcm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/include.cpp -verify -o %t/include.pcm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/ident.cpp -verify -o %t/ident.pcm
-// RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/pragma_comment.cpp -verify -o %t/pragma_comment.pcm
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-pc-win32 -emit-module-interface %t/pragma_comment.cpp -verify -o %t/pragma_comment.pcm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/pragma_mark.cpp -verify -o %t/pragma_mark.pcm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/pragma_detect_mismatch.cpp -verify -o %t/pragma_detect_mismatch.pcm
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/pragma_clang_debug.cpp -verify -o %t/pragma_clang_debug.pcm

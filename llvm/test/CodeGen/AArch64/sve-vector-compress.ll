@@ -275,22 +275,21 @@ define <4 x double> @test_compress_v4f64_with_sve(<4 x double> %vec, <4 x i1> %m
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-NEXT:    movi v4.2s, #1
+; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ushll v3.2d, v2.2s, #0
-; CHECK-NEXT:    ushll2 v5.2d, v2.4s, #0
-; CHECK-NEXT:    and v2.8b, v2.8b, v4.8b
+; CHECK-NEXT:    ushll2 v4.2d, v2.4s, #0
+; CHECK-NEXT:    and z2.s, z2.s, #0x1
 ; CHECK-NEXT:    shl v3.2d, v3.2d, #63
-; CHECK-NEXT:    shl v4.2d, v5.2d, #63
+; CHECK-NEXT:    shl v4.2d, v4.2d, #63
 ; CHECK-NEXT:    addp v2.2s, v2.2s, v2.2s
 ; CHECK-NEXT:    cmpne p1.d, p0/z, z3.d, #0
 ; CHECK-NEXT:    cmpne p2.d, p0/z, z4.d, #0
 ; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    compact z0.d, p1, z0.d
 ; CHECK-NEXT:    and x8, x8, #0x3
+; CHECK-NEXT:    compact z0.d, p1, z0.d
 ; CHECK-NEXT:    compact z1.d, p2, z1.d
 ; CHECK-NEXT:    lsl x8, x8, #3
 ; CHECK-NEXT:    str q0, [sp]

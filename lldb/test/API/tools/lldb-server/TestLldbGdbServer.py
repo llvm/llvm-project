@@ -631,7 +631,7 @@ class LldbGdbServerTestCase(
         target_arch = self.getArchitecture()
 
         # Set the breakpoint.
-        if target_arch in ["arm", "arm64", "aarch64"]:
+        if target_arch in ["arm", "arm64", "aarch64", "arm64e"]:
             # TODO: Handle case when setting breakpoint in thumb code
             BREAKPOINT_KIND = 4
         else:

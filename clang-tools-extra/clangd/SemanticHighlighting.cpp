@@ -582,6 +582,18 @@ public:
     return true;
   }
 
+  bool VisitImportDecl(const ImportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Modifier);
+    for (const auto ModuleLoc : D->getIdentifierLocs()) {
+      H.addToken(ModuleLoc, HighlightingKind::Namespace);
+    }
+    return true;
+  }
+  bool VisitExportDecl(const ExportDecl *D) {
+    H.addToken(D->getLocation(), HighlightingKind::Modifier);
+    return true;
+  }
+
   bool VisitTagDecl(TagDecl *D) {
     for (TemplateParameterList *TPL : D->getTemplateParameterLists())
       H.addAngleBracketTokens(TPL->getLAngleLoc(), TPL->getRAngleLoc());
@@ -833,8 +845,10 @@ public:
     auto *TSI = D->getTypeSourceInfo();
     if (!TSI)
       return true;
-    SourceLocation StartLoc =
-        TSI->getTypeLoc().getContainedAutoTypeLoc().getNameLoc();
+    auto ATL = TSI->getTypeLoc().getContainedAutoTypeLoc();
+    if (!ATL)
+      return true;
+    SourceLocation StartLoc = ATL.getNameLoc();
     // The AutoType may not have a corresponding token, e.g. in the case of
     // init-captures. In this case, StartLoc overlaps with the location
     // of the decl itself, and producing a token for the type here would result

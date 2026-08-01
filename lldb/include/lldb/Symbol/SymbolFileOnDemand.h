@@ -256,7 +256,7 @@ public:
 private:
   Log *GetLog() const { return ::lldb_private::GetLog(LLDBLog::OnDemand); }
 
-  ConstString GetSymbolFileName() {
+  llvm::StringRef GetSymbolFileName() {
     return GetObjectFile()->GetFileSpec().GetFilename();
   }
 

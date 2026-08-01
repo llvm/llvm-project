@@ -14,7 +14,7 @@ void bar(RefCountable *) {}
 
 void baz() {
   RefCountable *bar;
-  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   someFunction();
 }
 } // namespace raw_ptr
@@ -23,7 +23,7 @@ namespace reference {
 void foo_ref() {
   RefCountable automatic;
   RefCountable &bar = automatic;
-  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw reference to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   someFunction();
   bar.method();
 }
@@ -31,7 +31,7 @@ void foo_ref() {
 void foo_ref_trivial() {
   RefCountable automatic;
   RefCountable &bar = automatic;
-  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw reference to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
 }
 
 void bar_ref(RefCountable &) {}
@@ -47,7 +47,7 @@ void foo2() {
   RefPtr<RefCountable> foo;
   // missing embedded scope here
   RefCountable *bar = foo.get();
-  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   someFunction();
   bar->method();
 }
@@ -69,7 +69,7 @@ void foo4() {
 void foo5() {
   RefPtr<RefCountable> foo;
   auto* bar = foo.get();
-  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   bar->trivial();
   {
     auto* baz = foo.get();
@@ -80,7 +80,7 @@ void foo5() {
 void foo6() {
   RefPtr<RefCountable> foo;
   auto* bar = foo.get();
-  // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   bar->method();
 }
 
@@ -98,14 +98,14 @@ void foo8(RefCountable* obj) {
   RefPtr<RefCountable> foo;
   {
     RefCountable *bar = foo.get();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     foo = nullptr;
     bar->method();
   }
   RefPtr<RefCountable> baz;
   {
     RefCountable *bar = baz.get();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     baz = obj;
     bar->method();
   }
@@ -118,19 +118,19 @@ void foo8(RefCountable* obj) {
   foo = obj;
   {
     RefCountable *bar = foo.get();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     foo.releaseNonNull();
     bar->method();
   }
   {
     RefCountable *bar = foo.get();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     foo = obj ? obj : nullptr;
     bar->method();
   }
   {
     RefCountable *bar = foo->trivial() ? foo.get() : nullptr;
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     foo = nullptr;
     foo = (RefCountable *)0;
     bar->method();
@@ -149,38 +149,38 @@ void foo9(RefCountable& o) {
   Ref<RefCountable> guardian(o);
   {
     RefCountable &bar = guardian.get();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw reference to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     guardian = o; // We don't detect that we're setting it to the same value.
     bar.method();
   }
   {
     RefCountable *bar = guardian.ptr();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     Ref<RefCountable> other(*bar); // We don't detect other has the same value as guardian.
     guardian.swap(other);
     bar->method();
   }
   {
     RefCountable *bar = guardian.ptr();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     Ref<RefCountable> other(static_cast<Ref<RefCountable>&&>(guardian));
     bar->method();
   }
   {
     RefCountable *bar = guardian.ptr();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     guardian.leakRef();
     bar->method();
   }
   {
     RefCountable *bar = guardian.ptr();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     guardian = o.trivial() ? o : *bar;
     bar->method();
   }
   {
     RefCountable *bar = guardian.ptr();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     {
       Ref<RefCountable> oldGuardian = std::exchange(guardian, nullptr);
     }
@@ -188,26 +188,26 @@ void foo9(RefCountable& o) {
   }
   {
     RefCountable *bar = guardian.ptr();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     consumeRef(guardian);
     bar->method();
   }
   {
     RefCountable *bar = guardian.ptr();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     Consumer consumer(guardian);
     bar->method();
   }
   {
     RefCountable *bar = guardian.ptr();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     Consumer consumer;
     consumer.mutate(guardian);
     bar->method();
   }
   {
     RefCountable *bar = guardian.ptr();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     Consumer consumer;
     consumer << guardian;
     bar->method();
@@ -222,17 +222,17 @@ class Foo {
 
   void evil_func() {
     RefCountable *bar = provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     auto *baz = provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'baz' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'baz' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     auto *baz2 = this->provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'baz2' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'baz2' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     [[clang::suppress]] auto *baz_suppressed = provide_ref_ctnbl(); // no-warning
   }
 
   void func() {
     RefCountable *bar = provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     if (bar)
       bar->method();
   }
@@ -307,26 +307,26 @@ void foo() {
 
 void bar() {
   if (RefCountable *a = provide_ref_ctnbl()) {
-    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
-    a->method();    
+    // expected-warning@-1{{Local variable 'a' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    a->method();
   }
   for (RefCountable *b = provide_ref_ctnbl(); b != nullptr;) {
-    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'b' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     b->method();
   }
   RefCountable *array[1];
   for (RefCountable *c : array) {
-    // expected-warning@-1{{Local variable 'c' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'c' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     c->method();
   }
 
   while (RefCountable *d = provide_ref_ctnbl()) {
-    // expected-warning@-1{{Local variable 'd' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'd' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     d->method();
   }
   do {
     RefCountable *e = provide_ref_ctnbl();
-    // expected-warning@-1{{Local variable 'e' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'e' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     e->method();
   } while (1);
   someFunction();
@@ -350,7 +350,7 @@ bool bar();
 
 void foo() {
   RefCountable *a = bar() ? nullptr : provide_ref_ctnbl();
-  // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'a' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   RefPtr<RefCountable> b = provide_ref_ctnbl();
   {
     RefCountable* c = bar() ? nullptr : b.get();
@@ -368,14 +368,14 @@ RefCountable *provide_ref_cntbl();
 
 void foo(RefCountable* a) {
   RefCountable* b = a;
-  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'b' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   if (b->trivial())
     b = provide_ref_cntbl();
 }
 
 void bar(RefCountable* a) {
   RefCountable* b;
-  // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'b' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   b = provide_ref_cntbl();
 }
 
@@ -383,7 +383,7 @@ void baz() {
   RefPtr a = provide_ref_cntbl();
   {
     RefCountable* b = a.get();
-    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'b' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     b = provide_ref_cntbl();
   }
 }
@@ -396,7 +396,7 @@ RefCountable *provide_ref_cntbl();
 
 void foo(RefPtr<RefCountable>& arg) {
   RefCountable* ptr = arg.get();
-  // expected-warning@-1{{Local variable 'ptr' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   arg = nullptr;
   ptr->method();
 }
@@ -410,7 +410,7 @@ void someFunction();
 
 void foo(RefCountable* a) {
   a = provide_ref_cntbl();
-  // expected-warning@-1{{Assignment to an uncounted parameter 'a' is unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Parameter 'a' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   someFunction();
   a->method();
 }
@@ -424,7 +424,7 @@ void someFunction();
 
 void foo() {
   static RefCountable* a = nullptr;
-  // expected-warning@-1{{Static local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Static local variable 'a' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   a = provide_ref_cntbl();
   someFunction();
   a->method();
@@ -438,7 +438,7 @@ RefCountable *provide_ref_cntbl();
 void someFunction();
 
 RefCountable* g_a = nullptr;
-// expected-warning@-1{{Global variable 'local_assignment_to_global::g_a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+// expected-warning@-1{{Global variable 'local_assignment_to_global::g_a' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
 
 void foo() {
   g_a = provide_ref_cntbl();
@@ -454,7 +454,7 @@ RefCountableAndCheckable* provide_obj();
 
 void local_raw_ptr() {
   RefCountableAndCheckable* a = nullptr;
-  // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'a' is a raw pointer to RefPtr-capable type 'RefCountableAndCheckable' [alpha.webkit.UncountedLocalVarsChecker]}}
   a = provide_obj();
   a->method();
 }
@@ -477,7 +477,7 @@ void local_var_with_guardian_checked_ptr_with_assignment() {
   CheckedPtr<RefCountableAndCheckable> a = provide_obj();
   {
     RefCountableAndCheckable* b = a.get();
-    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'b' is a raw pointer to RefPtr-capable type 'RefCountableAndCheckable' [alpha.webkit.UncountedLocalVarsChecker]}}
     b = provide_obj();
     b->method();
   }
@@ -493,7 +493,7 @@ void local_var_with_guardian_checked_ref() {
 
 void static_var() {
   static RefCountableAndCheckable* a = nullptr;
-  // expected-warning@-1{{Static local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+  // expected-warning@-1{{Static local variable 'a' is a raw pointer to RefPtr-capable type 'RefCountableAndCheckable' [alpha.webkit.UncountedLocalVarsChecker]}}
   a = provide_obj();
 }
 
@@ -531,7 +531,7 @@ int TreeNode::recursiveCost() {
 int TreeNode::recursiveWeight() {
   unsigned totalCost = weight();
   for (TreeNode* node = firstChild; node; node = node->nextSibling)
-    // expected-warning@-1{{Local variable 'node' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'node' is a raw pointer to RefPtr-capable type 'local_var_in_recursive_function::TreeNode' [alpha.webkit.UncountedLocalVarsChecker]}}
     totalCost += recursiveWeight();
   return totalCost;
 }
@@ -554,9 +554,9 @@ namespace virtual_function {
   };
   void foo(SomeObject* obj) {
     auto* bar = obj->provide();
-    // expected-warning@-1{{Local variable 'bar' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     auto* baz = &*obj;
-    // expected-warning@-1{{Local variable 'baz' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'baz' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
   }
 }
 
@@ -570,7 +570,7 @@ namespace vardecl_in_if_condition {
   }
 
   RefCountable* get_non_trivial_then() {
-    if (auto* obj = provide()) // expected-warning{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    if (auto* obj = provide()) // expected-warning{{Local variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
       return obj->next();
     return nullptr;
   }
@@ -592,12 +592,12 @@ namespace vardecl_in_if_condition {
 
   RefCountable* get_non_trivial_condition() {
     if (auto* obj = provide(); obj && obj->next())
-      return obj; // expected-warning@-1{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+      return obj; // expected-warning@-1{{Local variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
     return nullptr;
   }
 
   RefCountable* get_non_trivial_else2() {
-    if (auto* obj = provide(); !obj) // expected-warning{{Local variable 'obj' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    if (auto* obj = provide(); !obj) // expected-warning{{Local variable 'obj' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
       return nullptr;
     else
       return obj->next();
@@ -651,8 +651,8 @@ namespace binding_raw_ptr {
 
   void bind_return_value() {
     auto [a, b] = providePair();
-    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
-    // expected-warning@-2{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-2{{Local variable 'b' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
     a->method();
   }
 
@@ -663,8 +663,8 @@ namespace binding_raw_ptr {
 
   void bind_temp() {
     auto [a, b] = pair<RefCountable*, RefCountable*> { provide(), provide() };
-    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
-    // expected-warning@-2{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-2{{Local variable 'b' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefCountable *>' [alpha.webkit.UncountedLocalVarsChecker]}}
     a->method();
   }
 
@@ -681,15 +681,15 @@ namespace binding_raw_ptr {
   void bind_local_vars() {
     RefCountable* s[] = { provide(), provide(), provide() };
     auto [a, b, c] = s;
-    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
-    // expected-warning@-2{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
-    // expected-warning@-3{{Local variable 'c' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type}}
+    // expected-warning@-2{{Local variable 'b' is a raw reference to RefPtr-capable type}}
+    // expected-warning@-3{{Local variable 'c' is a raw reference to RefPtr-capable type}}
     a->method();
   }
 
   void bind_temp_with_safe_ptr() {
     auto [a, b] = pair<RefCountable*, RefPtr<RefCountable>> { provide(), provide() };
-    // expected-warning@-1{{Local variable 'a' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'a' is a raw reference to RefPtr-capable type 'binding_raw_ptr::pair<RefCountable *, RefPtr<RefCountable>>' [alpha.webkit.UncountedLocalVarsChecker]}}
     a->method();
   }
 
@@ -701,7 +701,7 @@ namespace binding_raw_ptr {
 
   void bind_temp_struct() {
     auto [a, b] = provide_ptr_container();
-    // expected-warning@-1{{Local variable 'b' is uncounted and unsafe [alpha.webkit.UncountedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'b' is a raw reference to RefPtr-capable type 'binding_raw_ptr::ptr_container' [alpha.webkit.UncountedLocalVarsChecker]}}
     a->method();
   }
 

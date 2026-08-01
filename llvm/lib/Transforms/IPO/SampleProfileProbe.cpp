@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -30,7 +31,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <unordered_set>
 #include <vector>
 
 using namespace llvm;
@@ -77,9 +77,9 @@ bool PseudoProbeVerifier::shouldVerifyFunction(const Function *F) {
   if (F->hasAvailableExternallyLinkage())
     return false;
   // Do a name matching.
-  static std::unordered_set<std::string> VerifyFuncNames(
-      VerifyPseudoProbeFuncList.begin(), VerifyPseudoProbeFuncList.end());
-  return VerifyFuncNames.empty() || VerifyFuncNames.count(F->getName().str());
+  static const StringSet<> VerifyFuncNames(llvm::from_range,
+                                           VerifyPseudoProbeFuncList);
+  return VerifyFuncNames.empty() || VerifyFuncNames.contains(F->getName());
 }
 
 void PseudoProbeVerifier::registerCallbacks(PassInstrumentationCallbacks &PIC) {
@@ -392,6 +392,18 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
     while (J != BB->getTerminator() && !HasValidDbgLine(J)) {
       J = J->getNextNode();
     }
+
+    // A pseudo probe must not be inserted between a `musttail` or
+    // `llvm.experimental.deoptimize` call and its following `ret`, as this
+    // produces invalid IR. Such a call is required to immediately precede the
+    // block's `ret`, so only that position needs to be checked. Insert the
+    // probe before the call instead.
+    if (auto *Ret = dyn_cast<ReturnInst>(BB->getTerminator()))
+      if (auto *CI = dyn_cast_or_null<CallInst>(Ret->getPrevNode()))
+        if ((CI->isMustTailCall() ||
+             CI->getIntrinsicID() == Intrinsic::experimental_deoptimize) &&
+            !J->comesBefore(CI))
+          J = CI;
 
     IRBuilder<> Builder(J);
     assert(Builder.GetInsertPoint() != BB->end() &&

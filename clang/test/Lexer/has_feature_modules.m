@@ -6,6 +6,13 @@
 // RUN: %clang_cc1 -E %s -o - | FileCheck --check-prefix=CHECK-NO-MODULES %s
 // RUN: %clang_cc1 -E -x c -fmodules %s -o - | FileCheck --check-prefix=CHECK-HAS-MODULES %s
 
+// -std=c++20 enables C++ modules but not Clang modules, so __has_feature(modules)
+// must only be set when -fmodules is also passed.
+// RUN: %clang_cc1 -E -x c++ -std=c++20 %s -o - | FileCheck --check-prefix=CHECK-NO-MODULES %s
+// RUN: %clang_cc1 -E -x c++ -std=c++20 -fmodules %s -o - | FileCheck --check-prefix=CHECK-HAS-MODULES %s
+// RUN: %clang_cc1 -E -x objective-c++ -std=c++20 %s -o - | FileCheck --check-prefix=CHECK-NO-MODULES %s
+
+
 #if __has_feature(modules)
 int has_modules();
 #else

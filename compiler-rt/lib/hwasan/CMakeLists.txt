@@ -259,7 +259,7 @@ add_compiler_rt_runtime(clang_rt.hwasan-preinit
   CFLAGS ${HWASAN_RTL_CFLAGS}
   PARENT_TARGET hwasan)
 
-add_compiler_rt_resource_file(hwasan_ignorelist hwasan_ignorelist.txt hwasan)
+add_sanitizer_ignorelists_dependency(hwasan)
 
 add_subdirectory("scripts")
 

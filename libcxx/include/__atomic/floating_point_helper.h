@@ -17,9 +17,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_fp80_long_double() {
@@ -48,8 +48,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __has_rmw_builtin() {
 #  endif
 }
 
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ATOMIC_FLOATING_POINT_HELPER_H

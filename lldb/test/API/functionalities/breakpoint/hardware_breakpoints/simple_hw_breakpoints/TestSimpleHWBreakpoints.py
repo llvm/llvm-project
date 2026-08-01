@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 from functionalities.breakpoint.hardware_breakpoints.base import *
 
 
+@skipIfWasm  # no hardware breakpoints
 class SimpleHWBreakpointTest(HardwareBreakpointTestBase):
     @skipTestIfFn(HardwareBreakpointTestBase.hw_breakpoints_unsupported)
     def test(self):

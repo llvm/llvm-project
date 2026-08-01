@@ -96,7 +96,7 @@ private:
 };
 } // namespace
 
-char NVPTXLowerUnreachable::ID = 1;
+char NVPTXLowerUnreachable::ID = 0;
 
 INITIALIZE_PASS(NVPTXLowerUnreachable, "nvptx-lower-unreachable",
                 "Lower Unreachable", false, false)

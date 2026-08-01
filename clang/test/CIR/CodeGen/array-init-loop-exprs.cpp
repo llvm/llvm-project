@@ -17,7 +17,7 @@ struct HasNonTrivialArray {
     NonTrivial arr[3];
 };
 
-// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN18HasNonTrivialArrayC2ERKS_({{.*}}) special_member<#cir.cxx_ctor<!rec_HasNonTrivialArray, copy>> 
+// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN18HasNonTrivialArrayC2ERKS_({{.*}}) func_info<#cir.cxx_ctor<!rec_HasNonTrivialArray, copy>> 
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_HasNonTrivialArray>>
 // CIR: %[[RHS_ALLOCA:.*]] = cir.alloca "" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_HasNonTrivialArray>>
 // CIR: %[[ITR_ALLOCA:.*]] = cir.alloca "arrayinit.temp" {{.*}} : !cir.ptr<!cir.ptr<!rec_NonTrivial>>
@@ -137,7 +137,7 @@ struct HasMultiDimArray {
     NonTrivial arr[2][3][4];
 };
 
-// CIR-LABEL: cir.func {{.*}}@_ZN16HasMultiDimArrayC2ERKS_({{.*}}) special_member<#cir.cxx_ctor<!rec_HasMultiDimArray, copy>> 
+// CIR-LABEL: cir.func {{.*}}@_ZN16HasMultiDimArrayC2ERKS_({{.*}}) func_info<#cir.cxx_ctor<!rec_HasMultiDimArray, copy>> 
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_HasMultiDimArray>>
 // CIR: %[[RHS_ALLOCA:.*]] = cir.alloca "" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_HasMultiDimArray>>
 // CIR: %[[ITR1_ALLOCA:.*]] = cir.alloca "arrayinit.temp" {{.*}} : !cir.ptr<!cir.ptr<!cir.array<!cir.array<!rec_NonTrivial x 4> x 3>>>

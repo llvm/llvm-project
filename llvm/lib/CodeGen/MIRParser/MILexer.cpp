@@ -242,6 +242,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_cfi_aarch64_negate_ra_sign_state)
       .Case("negate_ra_sign_state_with_pc",
             MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc)
+      .Case("llvm_set_ra_state", MIToken::kw_cfi_set_ra_state)
       .Case("llvm_register_pair", MIToken::kw_cfi_llvm_register_pair)
       .Case("llvm_vector_registers", MIToken::kw_cfi_llvm_vector_registers)
       .Case("llvm_vector_offset", MIToken::kw_cfi_llvm_vector_offset)
@@ -300,6 +301,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("call-frame-size", MIToken::kw_call_frame_size)
       .Case("noconvergent", MIToken::kw_noconvergent)
       .Case("mmra", MIToken::kw_mmra)
+      .Case("lr-split", MIToken::kw_lr_split)
       .Default(MIToken::Identifier);
 }
 

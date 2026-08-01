@@ -18,8 +18,8 @@ define void @test_spillcost_backedge(ptr noalias %res, ptr noalias %in, double %
 ; CHECK-LABEL: define void @test_spillcost_backedge(
 ; CHECK-SAME: ptr noalias [[RES:%.*]], ptr noalias [[IN:%.*]], double [[X:%.*]], double [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fdiv <2 x double> splat (double 1.000000e+00), [[TMP1]]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:

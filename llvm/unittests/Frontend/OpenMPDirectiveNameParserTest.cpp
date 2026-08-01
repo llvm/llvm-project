@@ -82,8 +82,7 @@ getParamName1(const testing::TestParamInfo<Tokenize::ParamType> &Info) {
 }
 
 INSTANTIATE_TEST_SUITE_P(DirectiveNameParserTest, Tokenize,
-                         testing::ValuesIn(llvm::enum_seq_inclusive(
-                             omp::Directive::First_, omp::Directive::Last_)),
+                         testing::ValuesIn(llvm::omp::directives()),
                          getParamName1);
 
 // Test parsing of valid names.
@@ -123,8 +122,7 @@ getParamName2(const testing::TestParamInfo<ParseValid::ParamType> &Info) {
 
 INSTANTIATE_TEST_SUITE_P(
     DirectiveNameParserTest, ParseValid,
-    testing::Combine(testing::ValuesIn(llvm::enum_seq_inclusive(
-                         omp::Directive::First_, omp::Directive::Last_)),
+    testing::Combine(testing::ValuesIn(llvm::omp::directives()),
                      testing::ValuesIn(omp::getOpenMPVersions())),
     getParamName2);
 

@@ -209,12 +209,11 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
 
   llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
   const FileSpec original_module_spec = module_spec;
-  while (module_spec.GetFilename()) {
+  while (!module_spec.GetFilename().empty()) {
     ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
         target.GetDebugger()
             .GetScriptInterpreter()
-            ->GetSanitizedScriptingModuleName(
-                module_spec.GetFilename().GetStringRef());
+            ->GetSanitizedScriptingModuleName(module_spec.GetFilename());
 
     StreamString path_string;
     StreamString original_path_string;
@@ -222,11 +221,10 @@ PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     // .dSYM/Contents/Resources/DWARF/<basename> let us go to
     // .dSYM/Contents/Resources/Python/<basename>.py and see if the
     // file exists
-    path_string.Format("{0}/../Python/{1}.py",
-                       symfile_spec.GetDirectory().GetStringRef(),
+    path_string.Format("{0}/../Python/{1}.py", symfile_spec.GetDirectory(),
                        sanitized_name.GetSanitizedName());
     original_path_string.Format("{0}/../Python/{1}.py",
-                                symfile_spec.GetDirectory().GetStringRef(),
+                                symfile_spec.GetDirectory(),
                                 sanitized_name.GetOriginalName());
 
     FileSpec script_fspec(path_string.GetString());
@@ -446,13 +444,13 @@ Status PlatformDarwin::GetModuleFromSharedCaches(
                                                        sc_uuid, sc_mode);
       else
         image_info = HostInfo::GetSharedCacheImageInfo(
-            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+            ConstString(module_spec.GetFileSpec().GetPath()), sc_uuid, sc_mode);
     }
   }
   // Fall back to looking for the file in lldb's own shared cache.
   if (!image_info.GetUUID())
     image_info = HostInfo::GetSharedCacheImageInfo(
-        module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+        ConstString(module_spec.GetFileSpec().GetPath()), sc_mode);
 
   // If we found it and it has the correct UUID, let's proceed with
   // creating a module from the memory contents.
@@ -973,7 +971,7 @@ StructuredData::ArraySP
 PlatformDarwin::ExtractCrashInfoAnnotations(Process &process) {
   Log *log = GetLog(LLDBLog::Process);
 
-  ConstString section_name("__crash_info");
+  llvm::StringRef section_name("__crash_info");
   Target &target = process.GetTarget();
   StructuredData::ArraySP array_sp = std::make_shared<StructuredData::Array>();
 
@@ -1310,7 +1308,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
       xcode_lldb_resources.AppendPathComponent("Resources");
       if (FileSystem::Instance().Exists(xcode_lldb_resources)) {
         FileSpec dir;
-        dir.SetDirectory(xcode_lldb_resources.GetPathAsConstString());
+        dir.SetDirectory(xcode_lldb_resources.GetPath());
         g_executable_dirs.push_back(dir);
       }
     }
@@ -1323,7 +1321,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
       cmd_line_lldb_resources.AppendPathComponent("Resources");
       if (FileSystem::Instance().Exists(cmd_line_lldb_resources)) {
         FileSpec dir;
-        dir.SetDirectory(cmd_line_lldb_resources.GetPathAsConstString());
+        dir.SetDirectory(cmd_line_lldb_resources.GetPath());
         g_executable_dirs.push_back(dir);
       }
     }
@@ -1465,7 +1463,7 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
     return llvm::createStringError(
         llvm::inconvertibleErrorCode(),
         llvm::formatv("No symbol file available for module '{0}'",
-                      module.GetFileSpec().GetFilename().AsCString("")));
+                      module.GetFileSpec().GetFilename()));
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(

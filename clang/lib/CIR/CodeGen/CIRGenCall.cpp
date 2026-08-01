@@ -1016,6 +1016,18 @@ CIRGenTypes::arrangeFreeFunctionCall(const CallArgList &args,
   return arrangeFreeFunctionLikeCall(*this, cgm, args, fnType);
 }
 
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeBuiltinFunctionCall(QualType resultType,
+                                        const CallArgList &args) {
+  llvm::SmallVector<CanQualType, 16> argTypes;
+  for (const CallArg &arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg.ty));
+
+  CanQualType retType = resultType->getCanonicalTypeUnqualified();
+  return arrangeCIRFunctionInfo(retType, /*isInstanceMethod=*/false, argTypes,
+                                FunctionType::ExtInfo(), RequiredArgs::All);
+}
+
 /// Arrange the argument and result information for a declaration or definition
 /// of the given C++ non-static member function. The member function must be an
 /// ordinary function, i.e. not a constructor or destructor.
@@ -1161,7 +1173,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 ReturnValueSlot returnValue,
                                 const CallArgList &args,
                                 cir::CIRCallOpInterface *callOp,
-                                mlir::Location loc) {
+                                bool isMustTail, mlir::Location loc) {
   QualType retTy = funcInfo.getReturnType();
   cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
 
@@ -1338,7 +1350,41 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   if (callOp)
     *callOp = theCall;
 
-  assert(!cir::MissingFeatures::opCallMustTail());
+  if (isMustTail) {
+    // PPC/MIPS have some diagnostics for classic-codegen, but we don't support
+    // them yet.
+    const llvm::Triple &triple = getTarget().getTriple();
+    if (triple.isPPC() || triple.isMIPS()) {
+      cgm.errorNYI(mustTailCall->getBeginLoc(),
+                   "musttail call target legality checks");
+      return getUndefRValue(retTy);
+    }
+
+    // Musttail is required to return immediately. Classic codegen does some
+    // work here to go through the exception handling scopes to put them before
+    // the call (it seems?) since musttail must be the last op before the
+    // return.  For now, skip this so we an do it later.
+    if (ehStack.stable_begin() != prologueCleanupDepth) {
+      cgm.errorNYI(mustTailCall->getBeginLoc(),
+                   "musttail call that skips cleanups");
+      return getUndefRValue(retTy);
+    }
+
+    theCall->setAttr(cir::CIRDialect::getMustTailAttrName(),
+                     builder.getUnitAttr());
+
+    if (isa<cir::VoidType>(convertType(retTy)))
+      cir::ReturnOp::create(builder, loc);
+    else
+      cir::ReturnOp::create(builder, loc, theCall->getResult(0));
+
+    // Musttail must return immediately, so we just do that.  All of the below
+    // stuff is effectively UB if this is a musttail, so just do a return
+    // immediately.
+    builder.createBlock(builder.getBlock()->getParent());
+    return getUndefRValue(retTy);
+  }
+
   assert(!cir::MissingFeatures::opCallReturn());
 
   mlir::Type retCIRTy = convertType(retTy);

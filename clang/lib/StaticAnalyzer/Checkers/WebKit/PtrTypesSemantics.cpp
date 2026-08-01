@@ -284,7 +284,7 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
   for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
     if (Redecl->getAttr<ObjCBridgeAttr>() ||
         Redecl->getAttr<ObjCBridgeMutableAttr>()) {
-      CFPointees.insert(RT);
+      CFPointees.insert({RT, TD});
       return;
     }
   }
@@ -297,6 +297,22 @@ bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
           QT.getCanonicalType()->getPointeeType().getTypePtrOrNull()))
     return CFPointees.contains(RT);
   return RecordlessTypes.contains(QT.getTypePtr());
+}
+
+const TypedefDecl *RetainTypeChecker::getCanonicalDecl(QualType QT) {
+  if (auto *TT = dyn_cast_or_null<TypedefType>(QT.getTypePtrOrNull())) {
+    if (auto *TD = dyn_cast<TypedefDecl>(TT->getDecl()))
+      return TD;
+  }
+  QT = QT.getCanonicalType();
+  auto PointeeQT = QT->getPointeeType();
+  auto *PointeeType = PointeeQT.getTypePtrOrNull();
+  if (!PointeeType)
+    return nullptr;
+  auto *RD = dyn_cast<RecordType>(PointeeType);
+  if (!RD)
+    return nullptr;
+  return CFPointees.lookup(RD);
 }
 
 std::optional<bool> isUncounted(const CXXRecordDecl* Class)

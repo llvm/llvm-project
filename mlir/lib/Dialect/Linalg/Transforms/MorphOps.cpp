@@ -50,6 +50,8 @@ void LinalgMorphOpsPass::runOnOperation() {
     populateLinalgNamedOpsGeneralizationPatterns(patterns);
 
   // Lifting paths (named <- category <- generic)
+  if (categoryToNamed)
+    populateLinalgCategoryToNamedPatterns(patterns);
   if (genericToNamed || genericToCategory) {
     GenericOpSpecializationOptions opts;
     opts.emitCategoryOps = genericToCategory;

@@ -603,8 +603,8 @@ define float @reduce_float_case2(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = fadd float [[LOADA3]], [[LOADB2]]
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[LOADA2]], [[LOADB3]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[RED1:%.*]] = fadd float [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[RED2:%.*]] = fadd float [[ADD2]], [[RED1]]
 ; CHECK-NEXT:    [[RED3:%.*]] = fadd float [[ADD3]], [[RED2]]
@@ -802,8 +802,8 @@ define half @reduce_unordered_half4(<4 x half> %vec4) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x half> [[VEC4]], <4 x half> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x half> [[VEC4]], <4 x half> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x half> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x half> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x half> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x half> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x half> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd half [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret half [[ADD3]]
 ;

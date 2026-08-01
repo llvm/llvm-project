@@ -72,7 +72,7 @@ TEST(LoopInfoTest, LoopWithSingleLatch) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -122,7 +122,7 @@ TEST(LoopInfoTest, LoopWithMultipleLatches) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -1397,7 +1397,7 @@ TEST(LoopInfoTest, LoopUniqueExitBlocks) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;
@@ -1440,7 +1440,7 @@ TEST(LoopInfoTest, LoopNonLatchUniqueExitBlocks) {
       "  ret void\n"
       "}\n"
       "!0 = distinct !{!0, !1}\n"
-      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+      "!1 = !{!\"llvm.loop.distribute.enable\"}\n";
 
   // Parse the module.
   LLVMContext Context;

@@ -64,12 +64,6 @@ struct clang::CodeGen::CGCoroData {
   // statements jumps to this point after calling return_xxx promise member.
   CodeGenFunction::JumpDest FinalJD;
 
-  // A cleanup flag for the coroutine return value object when it is initialized
-  // directly by the get-return-object invocation. It models the standard's
-  // initial-await-resume-called guard for exceptions thrown during coroutine
-  // startup, before the initial await_resume starts.
-  Address InitialReturnObjectActiveFlag = Address::invalid();
-
   // Stores the llvm.coro.id emitted in the function so that we can supply it
   // as the first argument to coro.begin, coro.alloc and coro.free intrinsics.
   // Note: llvm.coro.id returns a token that cannot be directly expressed in a
@@ -344,10 +338,6 @@ static LValueOrRValue emitSuspendExpression(CodeGenFunction &CGF, CGCoroData &Co
 
   // Emit await_resume expression.
   CGF.EmitBlock(ReadyBlock);
-  if (Kind == AwaitKind::Init && Coro.InitialReturnObjectActiveFlag.isValid()) {
-    Builder.CreateStore(Builder.getFalse(), Coro.InitialReturnObjectActiveFlag);
-    Coro.InitialReturnObjectActiveFlag = Address::invalid();
-  }
 
   // Exception handling requires additional IR. If the 'await_resume' function
   // is marked as 'noexcept', we avoid generating this additional IR.
@@ -447,6 +437,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
 
   llvm::Function *Fn = llvm::Function::Create(
       LTy, llvm::GlobalValue::InternalLinkage, FuncName, &CGM.getModule());
+  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NonNull);
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NoUndef);
@@ -454,6 +445,7 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
   Fn->addParamAttr(1, llvm::Attribute::AttrKind::NoUndef);
 
   Fn->setMustProgress();
+  Fn->removeFnAttr(llvm::Attribute::AttrKind::NoInline);
   Fn->addFnAttr(llvm::Attribute::AttrKind::AlwaysInline);
   Fn->addFnAttr("sample-profile-suffix-elision-policy", "selected");
 
@@ -763,21 +755,18 @@ struct GetReturnObjectManager {
     }
   }
 
-  void EmitDirectReturnObjectCleanup() {
+  Address EmitDirectReturnObjectCleanup() {
     if (!DirectEmit || !CGF.ReturnValue.isValid())
-      return;
+      return Address::invalid();
 
     QualType RetTy = CGF.FnRetTy;
     QualType::DestructionKind DtorKind = RetTy.isDestructedType();
-    if (DtorKind == QualType::DK_none)
-      return;
-    if (!CGF.needsEHCleanup(DtorKind))
-      return;
+    if (DtorKind == QualType::DK_none || !CGF.needsEHCleanup(DtorKind))
+      return Address::invalid();
 
     Address ActiveFlag = CGF.CreateTempAlloca(
         Builder.getInt1Ty(), CharUnits::One(), "coro.result.active");
     Builder.CreateStore(Builder.getFalse(), ActiveFlag);
-    CGF.CurCoro.Data->InitialReturnObjectActiveFlag = ActiveFlag;
 
     auto OldTop = CGF.EHStack.stable_begin();
     CGF.pushDestroy(EHCleanup, CGF.ReturnValue, RetTy,
@@ -793,6 +782,7 @@ struct GetReturnObjectManager {
         Cleanup->setTestFlagInEHCleanup();
       }
     }
+    return ActiveFlag;
   }
 
   void EmitGroInit() {
@@ -810,13 +800,12 @@ struct GetReturnObjectManager {
       // otherwise the call to get_return_object wouldn't be in front
       // of initial_suspend.
       if (CGF.ReturnValue.isValid()) {
-        EmitDirectReturnObjectCleanup();
+        auto ActiveFlag = EmitDirectReturnObjectCleanup();
         CGF.EmitAnyExprToMem(S.getReturnValue(), CGF.ReturnValue,
                              S.getReturnValue()->getType().getQualifiers(),
                              /*IsInit*/ true);
-        if (CGF.CurCoro.Data->InitialReturnObjectActiveFlag.isValid())
-          Builder.CreateStore(Builder.getTrue(),
-                              CGF.CurCoro.Data->InitialReturnObjectActiveFlag);
+        if (ActiveFlag.isValid())
+          Builder.CreateStore(Builder.getTrue(), ActiveFlag);
       }
       return;
     }

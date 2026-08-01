@@ -343,6 +343,39 @@ define void @test_cross_function_inner_pool_callee() {
   ret void
 }
 
+; Mismatched pop clears the pool stack and prevents outer pools from being optimized
+define void @test_mismatched_pools_outer(ptr %p) {
+; CHECK-LABEL: define void @test_mismatched_pools_outer(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[OUTER_POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
+; CHECK-NEXT:    [[INNER_POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[P]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[OUTER_POOL]]) #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+  %outer_pool = call ptr @llvm.objc.autoreleasePoolPush()
+  %inner_pool = call ptr @llvm.objc.autoreleasePoolPush()
+  call void @llvm.objc.autoreleasePoolPop(ptr %p)
+  call void @llvm.objc.autoreleasePoolPop(ptr %outer_pool)
+  ret void
+}
+
+; Mismatched pop via exotic casts clears the pool stack and bails out safely
+define void @test_exotic_cast_bailout() {
+; CHECK-LABEL: define void @test_exotic_cast_bailout() {
+; CHECK-NEXT:    [[POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
+; CHECK-NEXT:    [[INT_VAL:%.*]] = ptrtoint ptr [[POOL]] to i64
+; CHECK-NEXT:    [[PTR_VAL:%.*]] = inttoptr i64 [[INT_VAL]] to ptr
+; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[PTR_VAL]]) #[[ATTR0]]
+; CHECK-NEXT:    ret void
+;
+  %pool = call ptr @llvm.objc.autoreleasePoolPush()
+  %int_val = ptrtoint ptr %pool to i64
+  %ptr_val = inttoptr i64 %int_val to ptr
+  call void @llvm.objc.autoreleasePoolPop(ptr %ptr_val)
+  ret void
+}
+
 ;.
 ; CHECK: [[META0]] = !{}
 ;.

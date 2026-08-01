@@ -58,7 +58,8 @@ template <typename T> class SmallVectorImpl;
 class SmallBitVector;
 class StringRef;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 //===----------------------------------------------------------------------===//
@@ -1367,6 +1368,7 @@ public:
   }
 
   // True if the instruction represents a position in the function.
+  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
   bool isPosition() const { return isLabel() || isCFIInstruction(); }
 
   bool isNonListDebugValue() const {

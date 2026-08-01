@@ -1931,3 +1931,38 @@ void compare_two_complex_bin_ops() {
 // OGCG: %[[RESULT:.*]] = or i1 %[[CMP_NE_REAL]], %[[CMP_NE_IMAG]]
 // OGCG: %[[RESULT_I8:.*]] = zext i1 %[[RESULT]] to i8
 // OGCG: store i8 %[[RESULT_I8]], ptr %[[C_ADDR]], align 1
+
+// A captureless lambda with a _Complex return type, converted to a function
+// pointer, generates a static invoker that forwards the call and returns the
+// complex result through emitReturnOfRValue.
+_Complex float complex_invoker() {
+  auto *fn = +[](_Complex float z) -> _Complex float { return z; };
+  return fn(__builtin_complex(1.0f, 2.0f));
+}
+
+// CIR-LABEL: cir.func {{.*}}@_ZZ15complex_invokervEN3$_08__invokeECf
+// CIR: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[CALL:.*]] = cir.call @_ZZ15complex_invokervENK3$_0clECf({{.*}}) {{.*}} -> (!cir.complex<!cir.float> {{.*}})
+// CIR: cir.store{{.*}} %[[CALL]], %[[RETVAL]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
+// CIR: cir.return %[[RET]] : !cir.complex<!cir.float>
+
+// LLVM-LABEL: define internal {{.*}}{ float, float } @"_ZZ15complex_invokervEN3$_08__invokeECf"
+// LLVM: %[[CALL:.*]] = call {{.*}}{ float, float } @"_ZZ15complex_invokervENK3$_0clECf"
+// LLVM: store { float, float } %[[CALL]], ptr %[[RETVAL:.*]]
+// LLVM: %[[RET:.*]] = load { float, float }, ptr %[[RETVAL]]
+// LLVM: ret { float, float } %[[RET]]
+
+// OGCG-LABEL: define internal {{.*}} <2 x float> @"_ZZ15complex_invokervEN3$_08__invokeECf"
+// OGCG: %[[CALL:.*]] = call {{.*}}<2 x float> @"_ZZ15complex_invokervENK3$_0clECf"
+// OGCG: store <2 x float> %[[CALL]], ptr %[[COERCE:.*]],
+// OGCG: %[[COERCE_REALP:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[COERCE]], i32 0, i32 0
+// OGCG: %[[COERCE_REAL:.*]] = load float, ptr %[[COERCE_REALP]]
+// OGCG: %[[COERCE_IMAGP:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[COERCE]], i32 0, i32 1
+// OGCG: %[[COERCE_IMAG:.*]] = load float, ptr %[[COERCE_IMAGP]]
+// OGCG: %[[RETVAL_REALP:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RETVAL:.*]], i32 0, i32 0
+// OGCG: %[[RETVAL_IMAGP:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[RETVAL]], i32 0, i32 1
+// OGCG: store float %[[COERCE_REAL]], ptr %[[RETVAL_REALP]]
+// OGCG: store float %[[COERCE_IMAG]], ptr %[[RETVAL_IMAGP]]
+// OGCG: %[[RET:.*]] = load <2 x float>, ptr %[[RETVAL]]
+// OGCG: ret <2 x float> %[[RET]]

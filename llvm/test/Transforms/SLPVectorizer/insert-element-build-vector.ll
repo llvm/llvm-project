@@ -418,10 +418,10 @@ define <4 x float> @take_credit(<4 x float> %a, <4 x float> %b) {
 ; Make sure we handle multiple trees that feed one build vector correctly.
 define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 ; CHECK-LABEL: @multi_tree(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[Z:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[X:%.*]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[W:%.*]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[Z:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[Y:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[X:%.*]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[W:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x double> [[TMP4]], <double 3.000000e+00, double 2.000000e+00, double 1.000000e+00, double 0.000000e+00>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP5]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    ret <4 x double> [[TMP6]]

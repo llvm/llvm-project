@@ -41,12 +41,12 @@ define void @gather_i32(ptr noalias %src, ptr noalias %offsets.addr, ptr noalias
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[OFFSETS_ADDR]], i64 [[INDEX]]
 ; GATHER-SCATTER-DISABLED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 0
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 1
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 2
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 3
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP1]]
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 1
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP2]]
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 2
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP3]]
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 3
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP4]]
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP9:%.*]] = load float, ptr [[TMP5]], align 4
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP6]], align 4
@@ -119,23 +119,23 @@ define void @scatter_i32(ptr noalias %src, ptr noalias %offsets.addr, ptr noalia
 ; GATHER-SCATTER-DISABLED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[OFFSETS_ADDR]], i64 [[INDEX]]
 ; GATHER-SCATTER-DISABLED-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 0
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 1
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 2
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 3
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[INDEX]]
 ; GATHER-SCATTER-DISABLED-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[WIDE_LOAD1]], i64 0
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[WIDE_LOAD1]], i64 1
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[WIDE_LOAD1]], i64 2
-; GATHER-SCATTER-DISABLED-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[WIDE_LOAD1]], i64 3
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 0
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP1]]
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 1
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP2]]
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 2
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP3]]
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[WIDE_LOAD]], i64 3
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP4]]
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[WIDE_LOAD1]], i64 0
 ; GATHER-SCATTER-DISABLED-NEXT:    store float [[TMP6]], ptr [[TMP10]], align 4
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[WIDE_LOAD1]], i64 1
 ; GATHER-SCATTER-DISABLED-NEXT:    store float [[TMP7]], ptr [[TMP11]], align 4
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[WIDE_LOAD1]], i64 2
 ; GATHER-SCATTER-DISABLED-NEXT:    store float [[TMP8]], ptr [[TMP12]], align 4
+; GATHER-SCATTER-DISABLED-NEXT:    [[TMP9:%.*]] = extractelement <4 x float> [[WIDE_LOAD1]], i64 3
 ; GATHER-SCATTER-DISABLED-NEXT:    store float [[TMP9]], ptr [[TMP13]], align 4
 ; GATHER-SCATTER-DISABLED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; GATHER-SCATTER-DISABLED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024

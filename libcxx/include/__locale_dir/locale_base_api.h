@@ -102,6 +102,8 @@
 //
 //  int     __snprintf(char*, size_t, __locale_t, const char*, ...); // required by the headers
 //  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
+//
+//  const char* __get_locale_encoding(__locale_t);
 // }
 
 #if _LIBCPP_HAS_LOCALIZATION
@@ -114,7 +116,7 @@
 #    include <__locale_dir/support/netbsd.h>
 #  elif defined(__OpenBSD__)
 #    include <__locale_dir/support/openbsd.h>
-#  elif defined(_LIBCPP_MSVCRT_LIKE)
+#  elif defined(_WIN32)
 #    include <__locale_dir/support/windows.h>
 #  elif defined(__Fuchsia__)
 #    include <__locale_dir/support/fuchsia.h>
@@ -139,6 +141,7 @@
 #    include <__cstddef/size_t.h>
 #    include <__utility/forward.h>
 #    include <ctype.h>
+#    include <langinfo.h>
 #    include <string.h>
 #    include <time.h>
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -268,7 +271,12 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
   return __libcpp_mbsrtowcs_l(__dest, __src, __len, __ps, __loc);
 }
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
-#    endif   // _LIBCPP_BUILDING_LIBRARY
+
+inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
+  return ::nl_langinfo_l(CODESET, __loc);
+}
+
+#    endif // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wgcc-compat")

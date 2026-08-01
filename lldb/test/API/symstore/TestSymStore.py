@@ -7,6 +7,7 @@ import socketserver
 import ssl
 import sys
 import threading
+import time
 from functools import partial
 
 import lldb
@@ -233,6 +234,23 @@ class RequestCounter(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
 
+class SlowHTTPHandler(http.server.BaseHTTPRequestHandler):
+    """HTTP request handler that delays responses to simulate a slow server."""
+
+    delay = 2  # seconds to sleep before responding; set per test
+
+    def do_GET(self):
+        try:
+            time.sleep(self.delay)
+            self.send_response(200)
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # client disconnected after timeout, as expected
+
+    def log_message(self, *args):
+        pass  # suppress server-side output
+
+
 class SymStoreTests(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
 
@@ -425,6 +443,26 @@ class SymStoreTests(TestBase):
                 with NtSymbolPath(dir):
                     self.try_breakpoint(exe, should_have_loc=True)
             self.assertEqual(RequestCounter.requests, 0)
+
+    def test_http_timeout(self):
+        """
+        Check that a warning is emitted and no symbol is found when the server
+        takes longer to respond than the configured timeout.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as dir:
+            SlowHTTPHandler.delay = 5  # seconds; exceeds the 1s timeout below
+            self.runCmd("settings set plugin.symbol-locator.symstore.timeout 1")
+            with HTTPServer(dir, SlowHTTPHandler) as url:
+                self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {url}")
+                warnings = ""
+                with open(self.getBuildArtifact("stderr.txt"), "w+b") as err_file:
+                    self.dbg.SetErrorFileHandle(err_file, False)
+                    self.try_breakpoint(exe, should_have_loc=False)
+                    self.dbg.SetErrorFileHandle(sys.stderr, False)
+                    err_file.seek(0)
+                    warnings = err_file.read().decode()
+                self.assertIn("failed to download", warnings)
 
     @skipUnlessPackageAvailable("cryptography")
     def test_https(self):

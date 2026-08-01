@@ -50,11 +50,11 @@ body:             |
     ; CHECK: BL &memset, csr_aarch64_aapcs_thisreturn, implicit-def $lr, implicit $sp, implicit $x0, implicit $w1, implicit $x2, debug-location !11
     ; CHECK: RET_ReallyLR debug-location !12
     %0:_(p0) = COPY $x0
-    %1:_(s32) = COPY $w1
-    %2:_(s32) = COPY $w2
-    %3:_(s64) = G_ZEXT %2(s32), debug-location !11
-    %4:_(s8) = G_TRUNC %1(s32), debug-location !11
-    G_MEMSET %0(p0), %4(s8), %3(s64), 0, debug-location !11 :: (store (s8) into %ir.ptr)
+    %1:_(i32) = COPY $w1
+    %2:_(i32) = COPY $w2
+    %3:_(i64) = G_ZEXT %2(i32), debug-location !11
+    %4:_(i8) = G_TRUNC %1(i32), debug-location !11
+    G_MEMSET %0(p0), %4(i8), %3(i64), 0, debug-location !11 :: (store (i8) into %ir.ptr)
     RET_ReallyLR debug-location !12
 
 ...

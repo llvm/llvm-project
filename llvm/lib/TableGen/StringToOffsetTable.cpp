@@ -118,6 +118,12 @@ void StringToOffsetTable::EmitString(raw_ostream &O) const {
       O << EscapedStr[++i];
       O << EscapedStr[++i];
       CharsPrinted += 3;
+      if (i + 1 < EscapedStr.size() && isDigit(EscapedStr[i + 1])) {
+        // If a digit follows after an octal literal, separate the string
+        // literals to silence MSVC warning C4125.
+        O << "\" \"";
+        CharsPrinted += 3;
+      }
     } else {
       O << EscapedStr[++i];
       ++CharsPrinted;

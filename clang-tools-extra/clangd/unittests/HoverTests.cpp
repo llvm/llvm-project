@@ -4431,6 +4431,56 @@ brief doc
 ### Details
 
 longer doc)"},
+      {[](HoverInfo &HI) {
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "@brief brief doc\n"
+                            "@unknown command is treated as an inline command";
+         HI.Definition = "int foo(int a)";
+         HI.ReturnType = "int";
+         HI.Name = "foo";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "int";
+         HI.Parameters->back().Name = "a";
+       },
+       R"(### function `foo`
+
+---
+→ `int`
+
+Parameters:
+
+- `int a`
+
+@brief brief doc  
+@unknown command is treated as an inline command
+
+---
+```cpp
+int foo(int a)
+```)",
+       R"(### function
+
+---
+```cpp
+int foo(int a)
+```
+
+---
+### Brief
+
+brief doc
+**@unknown** command is treated as an inline command
+
+---
+### Parameters
+
+- `int a`
+
+---
+### Returns
+
+`int`)"},
   };
 
   for (const auto &C : Cases) {
@@ -4461,13 +4511,13 @@ TEST(Hover, ParseDocumentation) {
     llvm::StringRef ExpectedRenderPlainText;
   } Cases[] = {{
                    " \n foo\nbar",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
                {
                    "foo\nbar \n  ",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
@@ -4479,7 +4529,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo    \nbar",
-                   "foo    \nbar",
+                   "foo  \nbar",
                    "foo    \nbar",
                    "foo\nbar",
                },
@@ -4491,25 +4541,25 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\n\n\n\tbar",
-                   "foo\n\n\tbar",
+                   "foo\n\nbar",
                    "foo\n\n\tbar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n    bar",
-                   "foo\n\n    bar",
+                   "foo\n\nbar",
                    "foo\n\n    bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n   bar",
-                   "foo\n\n   bar",
+                   "foo\n\nbar",
                    "foo\n\n   bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n bar",
-                   "foo\n\n bar",
+                   "foo\n\nbar",
                    "foo\n\n bar",
                    "foo\n\nbar",
                },
@@ -4521,25 +4571,25 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\n\n\n\n\tbar",
-                   "foo\n\n\tbar",
+                   "foo\n\nbar",
                    "foo\n\n\tbar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n    bar",
-                   "foo\n\n    bar",
+                   "foo\n\nbar",
                    "foo\n\n    bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n   bar",
-                   "foo\n\n   bar",
+                   "foo\n\nbar",
                    "foo\n\n   bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n\n bar",
-                   "foo\n\n bar",
+                   "foo\n\nbar",
                    "foo\n\n bar",
                    "foo\n\nbar",
                },
@@ -4551,7 +4601,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo. \nbar",
-                   "foo.   \nbar",
+                   "foo.  \nbar",
                    "foo.   \nbar",
                    "foo.\nbar",
                },
@@ -4563,7 +4613,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo\nbar",
-                   "foo\nbar",
+                   "foo bar",
                    "foo\nbar",
                    "foo bar",
                },
@@ -4581,7 +4631,7 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "`not\nparsed`",
-                   "\\`not\nparsed\\`",
+                   "\\`not parsed\\`",
                    "`not\nparsed`",
                    "`not parsed`",
                },
@@ -5203,6 +5253,22 @@ TEST(Hover, FunctionParameters) {
        "### param\n\n---\n```cpp\n// In foo\nint b\n```\n\n---\nthis is "
        "\\<b>doc\\</b> \\<html-tag attribute/> \\<another-html-tag "
        "attribute=\"value\">for\\</another-html-tag> `b`\n\n---\nType: `int`"},
+      {R"cpp(/// Function doc
+      /// @param a the next command is an
+      /// @unknown command.
+      void foo(int [[^a]]);
+    )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "a";
+         HI.Kind = index::SymbolKind::Parameter;
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Type = "int";
+         HI.Definition = "int a";
+         HI.Documentation = "the next command is an\n @unknown command.";
+       },
+       "### param\n\n---\n```cpp\n// In foo\nint a\n```\n\n---\nthe next "
+       "command is an\n**@unknown** command.\n\n---\nType: `int`"},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.

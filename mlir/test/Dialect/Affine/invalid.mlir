@@ -632,3 +632,13 @@ func.func @affine_for_zero_step_verifier() {
   }) : () -> ()
   return
 }
+
+// -----
+
+func.func @affine_for_missing_induction_var() {
+  // expected-error@+1 {{'affine.for' op expected body to have an index argument for the induction variable}}
+  "affine.for"() <{lowerBoundMap = affine_map<() -> (0)>, operandSegmentSizes = array<i32: 0, 0, 0>, step = 1 : index, upperBoundMap = affine_map<() -> (2)>}> ({
+    "affine.yield"() : () -> ()
+  }) : () -> ()
+  return
+}

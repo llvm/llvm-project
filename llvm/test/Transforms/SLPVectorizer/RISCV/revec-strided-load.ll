@@ -126,8 +126,8 @@ define void @too_wide(ptr %in0, ptr %out0) {
 ; CHECK-LABEL: @too_wide(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN1:%.*]] = getelementptr i16, ptr [[IN0:%.*]], i64 16
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP4]], ptr [[IN1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP4]], ptr [[IN1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, <16 x ptr> [[TMP2]], <16 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i16> @llvm.masked.gather.v16i16.v16p0(<16 x ptr> align 2 [[TMP3]], <16 x i1> splat (i1 true), <16 x i16> poison)
@@ -171,8 +171,8 @@ define void @non_aligned_stride(ptr %in0, ptr %out0) {
 ; CHECK-LABEL: @non_aligned_stride(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IN1:%.*]] = getelementptr i8, ptr [[IN0:%.*]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP0]], ptr [[IN1]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[IN0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x ptr> [[TMP0]], ptr [[IN1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <4 x ptr> [[TMP2]], <4 x i64> <i64 0, i64 1, i64 0, i64 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 2 [[TMP3]], <4 x i1> splat (i1 true), <4 x i8> poison)

@@ -342,7 +342,7 @@ void ReturnStmt() {
 // CHECK-NEXT:    [[LOADEDV_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-NEXT:    br i1 [[LOADEDV_EXPVAL]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 // CHECK:       [[IF_THEN]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA18:![0-9]+]]
 // CHECK-NEXT:    switch i32 [[TMP1]], label %[[SW_EPILOG:.*]] [
 // CHECK-NEXT:    ]
 // CHECK:       [[SW_EPILOG]]:
@@ -355,7 +355,7 @@ void ReturnStmt() {
 // CHECK-NEXT:    [[LOADEDV1:%.*]] = trunc i8 [[TMP2]] to i1
 // CHECK-NEXT:    br i1 [[LOADEDV1]], label %[[IF_THEN2:.*]], label %[[IF_ELSE4:.*]]
 // CHECK:       [[IF_THEN2]]:
-// CHECK-NEXT:    [[TMP3:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA2]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[INT_TBAA18]]
 // CHECK-NEXT:    switch i32 [[TMP3]], label %[[SW_EPILOG3:.*]] [
 // CHECK-NEXT:    ]
 // CHECK:       [[SW_EPILOG3]]:
@@ -383,8 +383,7 @@ void SwitchStmt() {
 }
 
 //.
-// CHECK: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"Simple C++ TBAA"}
 // CHECK: [[BOOL_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
@@ -399,4 +398,5 @@ void SwitchStmt() {
 // CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META11]], [[META12]]}
 // CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META11]], [[META12]]}
 // CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META11]], [[META12]]}
+// CHECK: [[INT_TBAA18]] = !{[[META3]], [[META3]], i64 0}
 //.

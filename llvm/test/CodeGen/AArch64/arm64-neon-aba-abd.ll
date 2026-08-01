@@ -488,11 +488,11 @@ define <4 x i32> @test_sabd_knownbits_vec4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI43_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI43_0]
-; CHECK-GI-NEXT:    movi v3.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %and1 = and <4 x i32> %lhs, <i32 255, i32 -1, i32 -1, i32 255>
   %and2 = and <4 x i32> %rhs, <i32 255, i32 255, i32 -1, i32 -1>
@@ -520,9 +520,9 @@ define <4 x i32> @knownbits_sabd_and_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI44_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI44_0]
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI44_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = and <4 x i32> %a1, <i32 -1, i32 -1, i32 255, i32 4085>
@@ -545,11 +545,11 @@ define <4 x i32> @knownbits_sabd_and_or_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI45_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI45_0]
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    uabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI45_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = or <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -582,11 +582,11 @@ define <4 x i32> @knownbits_sabd_and_xor_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI46_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI46_0]
 ; CHECK-GI-NEXT:    eor v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    eor v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI46_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = xor <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -610,11 +610,11 @@ define <4 x i32> @knownbits_sabd_and_shl_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI47_0]
 ; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #17
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #17
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI47_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
   %2 = shl <4 x i32> %1, <i32 17, i32 17, i32 17, i32 17>
@@ -648,9 +648,9 @@ define <4 x i32> @knownbits_sabd_and_mul_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-NEXT:    and v2.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    mul v0.4s, v0.4s, v3.4s
 ; CHECK-GI-NEXT:    mul v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI48_0]
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI48_0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
   %2 = mul <4 x i32> %a0, %1

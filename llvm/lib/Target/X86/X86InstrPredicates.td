@@ -50,8 +50,6 @@ def PreferLegacySetCC  : Predicate<"!Subtarget->hasZU() || "
                                    "Subtarget->preferLegacySetCC()">;
 def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
                                     "!Subtarget->preferLegacySetCC()">;
-def HasNDDI      : Predicate<"Subtarget->hasNDD() && Subtarget->hasNDDI()">;
-def NoNDDI       : Predicate<"!Subtarget->hasNDD() || !Subtarget->hasNDDI()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasJMPABS    : Predicate<"Subtarget->hasJMPABS()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
@@ -88,6 +86,7 @@ def HasVPOPCNTDQ : Predicate<"Subtarget->hasVPOPCNTDQ()">;
 def HasDQI       : Predicate<"Subtarget->hasDQI()">;
 def NoDQI        : Predicate<"!Subtarget->hasDQI()">;
 def HasBWI       : Predicate<"Subtarget->hasBWI()">;
+def HasBMM       : Predicate<"Subtarget->hasBMM()">;
 def NoBWI        : Predicate<"!Subtarget->hasBWI()">;
 def HasVLX       : Predicate<"Subtarget->hasVLX()">;
 def NoVLX        : Predicate<"!Subtarget->hasVLX()">;
@@ -191,7 +190,6 @@ def HasAMXCOMPLEX : Predicate<"Subtarget->hasAMXCOMPLEX()">;
 def HasAMXFP8    : Predicate<"Subtarget->hasAMXFP8()">;
 def HasAMXMOVRS  : Predicate<"Subtarget->hasAMXMOVRS()">;
 def HasAMXAVX512 : Predicate<"Subtarget->hasAMXAVX512()">;
-def HasAMXTF32   : Predicate<"Subtarget->hasAMXTF32()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasUSERMSR   : Predicate<"Subtarget->hasUSERMSR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;

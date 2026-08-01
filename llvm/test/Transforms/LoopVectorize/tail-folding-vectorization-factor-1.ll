@@ -82,6 +82,13 @@ define void @VF1-VPWidenCanonicalIVRecipeExe(ptr %ptr1) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE12:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[INDEX]], 14
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[TMP7]], 14
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[TMP9]], 14
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i64 [[TMP10]], 14
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], 16
@@ -90,13 +97,6 @@ define void @VF1-VPWidenCanonicalIVRecipeExe(ptr %ptr1) {
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PTR1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PTR1]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PTR1]], i64 [[TMP6]]
-; CHECK-NEXT:    [[VEC_IV4:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[VEC_IV5:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IV6:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i64 [[INDEX]], 14
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV4]], 14
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV5]], 14
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i64 [[VEC_IV6]], 14
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[NEXT_GEP]], align 8
@@ -160,15 +160,15 @@ define i64 @live_out_scalar_vf(i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[STEP_ADD_3]] = add nuw <4 x i64> [[STEP_ADD_2]], splat (i64 4)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i64> [[STEP_ADD_2]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt <4 x i64> [[STEP_ADD_3]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i64> [[STEP_ADD_2]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt <4 x i64> [[STEP_ADD_3]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <4 x i64> [[VEC_IND]], <4 x i64> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <4 x i64> [[STEP_ADD]], <4 x i64> [[STEP_ADD_2]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>

@@ -51,20 +51,13 @@ public:
     // On Linux systems pthread_t is an unsigned long long.
     // On Apple systems pthread_t is a pointer type.
     //
-    // Note the output should match what the stream operator does. Since
-    // the ostream operator has been shipped years before this formatter
-    // was added to the Standard, this formatter does what the stream
-    // operator does. This may require platform specific changes.
+    // Note the output should match what the stream operator does.
 
     using _Tp = decltype(__get_underlying_id(__id));
     using _Cp = conditional_t<integral<_Tp>, _Tp, conditional_t<is_pointer_v<_Tp>, uintptr_t, void>>;
     static_assert(!is_same_v<_Cp, void>, "unsupported thread::id type, please file a bug report");
 
     __format_spec::__parsed_specifications<_CharT> __specs = __parser_.__get_parsed_std_specifications(__ctx);
-    if constexpr (is_pointer_v<_Tp>) {
-      __specs.__std_.__alternate_form_ = true;
-      __specs.__std_.__type_           = __format_spec::__type::__hexadecimal_lower_case;
-    }
     return __formatter::__format_integer(reinterpret_cast<_Cp>(__get_underlying_id(__id)), __ctx, __specs);
   }
 

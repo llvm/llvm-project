@@ -78,6 +78,7 @@ void verifyfeaturestrings(void) {
   (void)__builtin_cpu_supports("vpclmulqdq");
   (void)__builtin_cpu_supports("avx512vnni");
   (void)__builtin_cpu_supports("avx512bitalg");
+  (void)__builtin_cpu_supports("avx512bmm");
   (void)__builtin_cpu_supports("avx512bf16");
   (void)__builtin_cpu_supports("avx512vp2intersect");
   (void)__builtin_cpu_supports("f16c");
@@ -214,4 +215,5 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("c86-4g-m4");
   (void)__builtin_cpu_is("c86-4g-m6");
   (void)__builtin_cpu_is("c86-4g-m7");
+  (void)__builtin_cpu_is("c86-4g-m8");
 }

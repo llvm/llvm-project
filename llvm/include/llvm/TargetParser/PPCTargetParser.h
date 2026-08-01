@@ -43,6 +43,7 @@ LLVM_ABI StringRef normalizeCPUName(StringRef CPUName);
 LLVM_ABI std::optional<llvm::StringMap<bool>>
 getPPCDefaultTargetFeatures(const Triple &T, StringRef CPUName);
 
+LLVM_ABI bool isValidFeatureName(StringRef Name);
 } // namespace PPC
 } // namespace llvm
 

@@ -26,8 +26,8 @@
 ; RUN: llvm-dis %t1b.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ;; Regular LTO WPD
-; RUN: opt -o %t1c.o %s
-; RUN: opt -o %t2c.o %S/Inputs/devirt_vcall_vis_shared_def.ll
+; RUN: opt -passes=assign-guid -o %t1c.o %s
+; RUN: opt -passes=assign-guid -o %t2c.o %S/Inputs/devirt_vcall_vis_shared_def.ll
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \

@@ -23,6 +23,16 @@
 __attribute__((const)) size_t __spirv_BuiltInGlobalInvocationId(int);
 __attribute__((const)) size_t __spirv_BuiltInGlobalSize(int);
 __attribute__((const)) size_t __spirv_BuiltInGlobalOffset(int);
+__attribute__((const)) size_t __spirv_BuiltInWorkgroupId(int);
+__attribute__((const)) size_t __spirv_BuiltInLocalInvocationId(int);
+__attribute__((const)) size_t __spirv_BuiltInWorkgroupSize(int);
+__attribute__((const)) size_t __spirv_BuiltInNumWorkgroups(int);
+
+__attribute__((const)) uint32_t __spirv_BuiltInSubgroupSize();
+__attribute__((const)) uint32_t __spirv_BuiltInSubgroupMaxSize();
+__attribute__((const)) uint32_t __spirv_BuiltInNumSubgroups();
+__attribute__((const)) uint32_t __spirv_BuiltInSubgroupId();
+__attribute__((const)) uint32_t __spirv_BuiltInSubgroupLocalInvocationId();
 
 namespace __spirv {
 
@@ -57,6 +67,10 @@ namespace __spirv {
 __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalSize);
 __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalInvocationId)
 __SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInGlobalOffset)
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInWorkgroupId)
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInLocalInvocationId)
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInWorkgroupSize)
+__SPIRV_DEFINE_INIT_AND_GET_HELPERS(BuiltInNumWorkgroups)
 
 #undef __SPIRV_DEFINE_INIT_AND_GET_HELPERS
 

@@ -2726,8 +2726,16 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, Init);
   }
 
-  if (isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init))
+  // We may get non-CompoundVal accidentally due to imprecise cast logic or
+  // that we are binding a genuinely symbolic/unknown/undefined array value.
+  // Preserve Init as a default binding rather than lossily converting to
+  // UnknownVal(), and handle every non-CompoundVal case exhaustively (like
+  // bindStruct()/bindVector() do) rather than enumerating specific SVal
+  // kinds one at a time.
+  if (!isa<nonloc::CompoundVal>(Init)) {
+    assert((isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init)));
     return bindAggregate(B, R, Init);
+  }
 
   // Remaining case: explicit compound values.
   const nonloc::CompoundVal& CV = Init.castAs<nonloc::CompoundVal>();

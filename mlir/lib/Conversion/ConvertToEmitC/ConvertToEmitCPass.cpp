@@ -9,6 +9,7 @@
 #include "mlir/Conversion/ConvertToEmitC/ConvertToEmitCPass.h"
 
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -112,14 +113,7 @@ struct StaticConvertToEmitC : public ConvertToEmitCPassInterface {
   /// Configure the conversion to EmitC at pass initialization.
   LogicalResult initialize() final {
     auto target = std::make_shared<ConversionTarget>(*context);
-    auto typeConverter = std::make_shared<TypeConverter>();
-
-    // Add fallback identity converison.
-    typeConverter->addConversion([](Type type) -> std::optional<Type> {
-      if (emitc::isSupportedEmitCType(type))
-        return type;
-      return std::nullopt;
-    });
+    auto typeConverter = std::make_shared<EmitCTypeConverter>(context);
 
     RewritePatternSet tempPatterns(context);
     target->addLegalDialect<emitc::EmitCDialect>();

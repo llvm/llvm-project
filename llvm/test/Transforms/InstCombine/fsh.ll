@@ -1072,6 +1072,15 @@ define <2 x i32> @fshr_vec_zero_elem(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %fsh
 }
 
+define <2 x i32> @fshl_vec_zero_elem(<2 x i32> %x) {
+; CHECK-LABEL: @fshl_vec_zero_elem(
+; CHECK-NEXT:    [[FSH:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> zeroinitializer, <2 x i32> [[X:%.*]], <2 x i32> <i32 2, i32 0>)
+; CHECK-NEXT:    ret <2 x i32> [[FSH]]
+;
+  %fsh = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> zeroinitializer, <2 x i32> %x, <2 x i32> <i32 2, i32 0>)
+  ret <2 x i32> %fsh
+}
+
 define i16 @fshl_i16_shl(i16 %x, i16 %y) {
 ; CHECK-LABEL: @fshl_i16_shl(
 ; CHECK-NEXT:  entry:

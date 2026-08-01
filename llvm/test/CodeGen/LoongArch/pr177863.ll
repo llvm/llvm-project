@@ -7,29 +7,17 @@ define <4 x i1> @test(<4 x i64> %shuffle2, <4 x i64> %shuffle4) {
 ; LA32-LABEL: test:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    xvseq.d $xr0, $xr1, $xr0
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 2
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 2
-; LA32-NEXT:    xvpickve2gr.w $a0, $xr0, 6
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; LA32-NEXT:    vxori.b $vr0, $vr1, 255
+; LA32-NEXT:    xvpickev.w $xr0, $xr0, $xr0
+; LA32-NEXT:    xvpermi.d $xr0, $xr0, 216
+; LA32-NEXT:    vxori.b $vr0, $vr0, 255
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    xvseq.d $xr0, $xr1, $xr0
-; LA64-NEXT:    xvpickve2gr.d $a0, $xr0, 0
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 0
-; LA64-NEXT:    xvpickve2gr.d $a0, $xr0, 1
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 1
-; LA64-NEXT:    xvpickve2gr.d $a0, $xr0, 2
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 2
-; LA64-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; LA64-NEXT:    vinsgr2vr.w $vr1, $a0, 3
-; LA64-NEXT:    vxori.b $vr0, $vr1, 255
+; LA64-NEXT:    xvpickev.w $xr0, $xr0, $xr0
+; LA64-NEXT:    xvpermi.d $xr0, $xr0, 216
+; LA64-NEXT:    vxori.b $vr0, $vr0, 255
 ; LA64-NEXT:    ret
 entry:
   %conv5 = trunc nuw <4 x i64> %shuffle4 to <4 x i32>

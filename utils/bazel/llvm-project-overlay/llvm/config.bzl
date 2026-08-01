@@ -28,8 +28,6 @@ def native_arch_defines(arch, triple):
 
 posix_defines = [
     "LLVM_ON_UNIX=1",
-    "HAVE_BACKTRACE=1",
-    "BACKTRACE_HEADER=<execinfo.h>",
     r'LTDL_SHLIB_EXT=\".so\"',
     r'LLVM_PLUGIN_EXT=\".so\"',
     "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=1",
@@ -48,10 +46,23 @@ posix_defines = [
     "HAVE_UNISTD_H=1",
 ]
 
+backtrace_defines = select({
+    "@platforms//os:windows": [],
+    "@llvm//platforms/config:musl": [],
+    "//conditions:default": [
+        "HAVE_BACKTRACE=1",
+        "BACKTRACE_HEADER=<execinfo.h>",
+    ],
+})
+
+mallinfo_defines = select({
+    "@llvm//platforms/config:gnu": ["HAVE_MALLINFO=1"],
+    "//conditions:default": [],
+})
+
 linux_defines = posix_defines + [
     "_GNU_SOURCE",
     "HAVE_GETAUXVAL=1",
-    "HAVE_MALLINFO=1",
     "HAVE_SBRK=1",
     "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
 ]
@@ -87,7 +98,7 @@ os_defines = select({
     "@platforms//os:macos": macos_defines,
     "@platforms//os:windows": win32_defines,
     "//conditions:default": linux_defines,
-})
+}) + backtrace_defines + mallinfo_defines
 
 # HAVE_BUILTIN_THREAD_POINTER is true for on Linux (outside of ppc64) for
 # all recent toolchains. Add it here by default on Linux as we can't perform a

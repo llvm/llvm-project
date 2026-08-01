@@ -388,15 +388,15 @@ subroutine sub1(i, j, k)
 end subroutine
 
 ! CHECK: func.func @_QPsub1
-! CHECK-SAME: %[[ARG_I:.*]]: !fir.ref<i32> {fir.bindc_name = "i"}
-! CHECK-SAME: %[[ARG_J:.*]]: !fir.ref<i32> {fir.bindc_name = "j"}
-! CHECK-SAME: %[[ARG_K:.*]]: !fir.ref<i32> {fir.bindc_name = "k"}
-! CHECK: %[[DC_I:.*]]:2 = hlfir.declare %[[ARG_I]] dummy_scope %0
-! CHECK: %[[DC_J:.*]]:2 = hlfir.declare %[[ARG_J]] dummy_scope %0
-! CHECK: %[[DC_K:.*]]:2 = hlfir.declare %[[ARG_K]] dummy_scope %0
 ! CHECK: acc.parallel combined(loop)
-! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[DC_I]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
-! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[DC_J]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
-! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[DC_K]]#0 : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "k"}
+! A DO CONCURRENT index-name is a construct entity distinct from a like-named
+! dummy argument, so the induction variables are fresh construct-local
+! allocations that get privatized (not the dummy arguments).
+! CHECK-DAG: %[[ALLOCA_I:.*]] = fir.alloca i32 {bindc_name = "i"}
+! CHECK-DAG: %[[ALLOCA_J:.*]] = fir.alloca i32 {bindc_name = "j"}
+! CHECK-DAG: %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k"}
+! CHECK: %[[P_I:.*]] = acc.private varPtr(%[[ALLOCA_I]] : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[ALLOCA_J]] : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "j"}
+! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[ALLOCA_K]] : !fir.ref<i32>) recipe(@privatization_ref_i32) -> !fir.ref<i32> {implicit = true, name = "k"}
 ! CHECK: acc.loop combined(parallel) private(%[[P_I]], %[[P_J]], %[[P_K]] : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32) = (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32) to (%c10{{.*}}, %c100{{.*}}, %c200{{.*}} : i32, i32, i32)  step (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32)
 ! CHECK: } attributes {inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}

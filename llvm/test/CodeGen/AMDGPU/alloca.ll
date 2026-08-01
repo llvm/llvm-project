@@ -1,8 +1,8 @@
-; RUN: llvm-as -data-layout=A5 < %s | llvm-dis | FileCheck %s
-; RUN: llc -mtriple amdgcn-amd-amdhsa < %s
-; RUN: llvm-as -data-layout=A5 < %s | llc -mtriple amdgcn-amd-amdhsa
-; RUN: opt -data-layout=A5 -S < %s
-; RUN: llvm-as -data-layout=A5 < %s | opt -S
+; RUN: llvm-as < %s | llvm-dis | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.00-amd-amdhsa < %s
+; RUN: llvm-as < %s | llc -mtriple=amdgpu6.00-amd-amdhsa
+; RUN: opt -S < %s
+; RUN: llvm-as < %s | opt -S
 
 ; CHECK: %tmp = alloca i32, align 4, addrspace(5)
 define amdgpu_kernel void @test() {

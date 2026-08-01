@@ -38,21 +38,25 @@ module {
 // CHECK-NEXT:      fir.shape
 // CHECK-NEXT:      %[[ARR_BOXED:.*]] = fir.embox %[[ALLOC_MEM]]
 // CHECK-NEXT:      fir.store %[[ARR_BOXED]]
-// CHECK-NEXT:      %[[ARR_BOXED_LOADED:.*]] = fir.load %[[AUTOMAP_DECL]]#0
-// CHECK-NEXT:      %[[ARR_HEAP_PTR:.*]] = fir.box_addr %[[ARR_BOXED_LOADED]]
-// CHECK-NEXT:      %[[DIM0:.*]] = arith.constant 0 : index
-// CHECK-NEXT:      %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[ARR_BOXED_LOADED]], %[[DIM0]]
-// CHECK-NEXT:      %[[ONE:.*]] = arith.constant 1 : index
-// CHECK-NEXT:      %[[ZERO:.*]] = arith.constant 0 : index
-// CHECK-NEXT:      %[[BOX_DIMS2:.*]]:3 = fir.box_dims %[[ARR_BOXED_LOADED]], %[[ZERO]]
-// CHECK-NEXT:      %[[LOWER_BOUND:.*]] = arith.constant 0 : index
-// CHECK-NEXT:      %[[UPPER_BOUND:.*]] = arith.subi %[[BOX_DIMS2]]#1, %[[ONE]] : index
-// CHECK-NEXT:      omp.map.bounds lower_bound(%[[LOWER_BOUND]] : index) upper_bound(%[[UPPER_BOUND]] : index) extent(%[[BOX_DIMS2]]#1 : index) stride(%[[BOX_DIMS2]]#2 : index) start_idx(%[[BOX_DIMS]]#0 : index) {stride_in_bytes = true}
-// CHECK-NEXT:      arith.muli %[[BOX_DIMS2]]#2, %[[BOX_DIMS2]]#1 : index
-// CHECK-NEXT:      %[[MAP_INFO:.*]] = omp.map.info var_ptr(%[[AUTOMAP_DECL]]#0 {{.*}} map_clauses(to) capture(ByCopy)
-// CHECK-NEXT:      omp.target_enter_data map_entries(%[[MAP_INFO]]
+// CHECK:           %[[ARR_BOXED_LOADED:.*]] = fir.load %[[AUTOMAP_DECL]]#0
+// CHECK:           %[[DIM0:.*]] = arith.constant 0 : index
+// CHECK:           %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[ARR_BOXED_LOADED]], %[[DIM0]]
+// CHECK:           %[[ONE:.*]] = arith.constant 1 : index
+// CHECK:           %[[ZERO:.*]] = arith.constant 0 : index
+// CHECK:           %[[BOX_DIMS2:.*]]:3 = fir.box_dims %[[ARR_BOXED_LOADED]], %[[ZERO]]
+// CHECK:           %[[LOWER_BOUND:.*]] = arith.constant 0 : index
+// CHECK:           %[[UPPER_BOUND:.*]] = arith.subi %[[BOX_DIMS2]]#1, %[[ONE]] : index
+// CHECK:           %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LOWER_BOUND]] : index) upper_bound(%[[UPPER_BOUND]] : index) extent(%[[BOX_DIMS2]]#1 : index) stride(%[[BOX_DIMS2]]#2 : index) start_idx(%[[BOX_DIMS]]#0 : index) {stride_in_bytes = true}
+// CHECK:           %[[DATA_ADDR:.*]] = fir.box_addr %[[ARR_BOXED]]
+// CHECK-NEXT:      %[[DATA_REF:.*]] = fir.convert %[[DATA_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// CHECK-NEXT:      %[[DESC_MAP:.*]] = omp.map.info var_ptr(%[[AUTOMAP_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, to, ref_ptr) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "_QMtestEarr"}
+// CHECK-NEXT:      %[[STORAGE_MAP:.*]] = omp.map.info var_ptr(%[[DATA_REF]] : !fir.ref<!fir.array<?xi32>>, i32) map_clauses(storage) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<?xi32>> {name = "_QMtestEarr"}
+// CHECK-NEXT:      omp.target_enter_data map_entries(%[[DESC_MAP]], %[[STORAGE_MAP]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.array<?xi32>>)
 // CHECK:           %[[LOAD:.*]] = fir.load %[[AUTOMAP_DECL]]#0
-// CHECK:           %[[EXIT_MAP:.*]] = omp.map.info var_ptr(%[[AUTOMAP_DECL]]#0 {{.*}} map_clauses(delete) capture(ByCopy)
-// CHECK-NEXT:      omp.target_exit_data map_entries(%[[EXIT_MAP]]
+// CHECK:           %[[EXIT_ADDR:.*]] = fir.box_addr %[[LOAD]]
+// CHECK-NEXT:      %[[EXIT_REF:.*]] = fir.convert %[[EXIT_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// CHECK-NEXT:      %[[EXIT_MAP:.*]] = omp.map.info var_ptr(%[[EXIT_REF]] : !fir.ref<!fir.array<?xi32>>, i32) map_clauses(delete) capture(ByRef)
+// CHECK-NEXT:      %[[DESC_DELETE:.*]] = omp.map.info var_ptr(%[[AUTOMAP_DECL]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(delete, attach_never, ref_ptr) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "_QMtestEarr"}
+// CHECK-NEXT:      omp.target_exit_data map_entries(%[[EXIT_MAP]], %[[DESC_DELETE]] : !fir.ref<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 // CHECK-NEXT:      %[[BOXADDR:.*]] = fir.box_addr %[[LOAD]]
 // CHECK-NEXT:      fir.freemem %[[BOXADDR]]

@@ -509,7 +509,7 @@ static MoveType determineMoveType(const FunctionDecl *FuncDecl) {
 
 static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
                            const UseAfterMove &Use, ClangTidyCheck *Check,
-                           ASTContext *Context, MoveType Type,
+                           const ASTContext *Context, MoveType Type,
                            const FunctionDecl *MoveDecl) {
   const SourceLocation UseLoc = Use.DeclRef->getExprLoc();
   const SourceLocation MoveLoc = MovingCall->getExprLoc();

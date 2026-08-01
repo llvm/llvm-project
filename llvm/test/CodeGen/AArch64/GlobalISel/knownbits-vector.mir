@@ -24,17 +24,17 @@ body:             |
   ; CHECK-NEXT: %vector:_ KnownBits:??1????0 SignBits:1
   ; CHECK-NEXT: %copy_vector:_ KnownBits:??1????0 SignBits:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(s8) = G_LOAD %ptr(p0) :: (load (s8))
-    %mask0:_(s8) = G_CONSTANT i8 24
-    %mask1:_(s8) = G_CONSTANT i8 224
-    %tmp0:_(s8) = G_AND %unknown, %mask0
-    %val0:_(s8) = G_OR %tmp0, %mask1
-    %mask2:_(s8) = G_CONSTANT i8 146
-    %mask3:_(s8) = G_CONSTANT i8 36
-    %tmp1:_(s8) = G_AND %unknown, %mask2
-    %val1:_(s8) = G_OR %tmp1, %mask3
-    %vector:_(<2 x s8>) = G_BUILD_VECTOR %val0, %val1
-    %copy_vector:_(<2 x s8>) = COPY %vector
+    %unknown:_(i8) = G_LOAD %ptr(p0) :: (load (i8))
+    %mask0:_(i8) = G_CONSTANT i8 24
+    %mask1:_(i8) = G_CONSTANT i8 224
+    %tmp0:_(i8) = G_AND %unknown, %mask0
+    %val0:_(i8) = G_OR %tmp0, %mask1
+    %mask2:_(i8) = G_CONSTANT i8 146
+    %mask3:_(i8) = G_CONSTANT i8 36
+    %tmp1:_(i8) = G_AND %unknown, %mask2
+    %val1:_(i8) = G_OR %tmp1, %mask3
+    %vector:_(<2 x i8>) = G_BUILD_VECTOR %val0, %val1
+    %copy_vector:_(<2 x i8>) = COPY %vector
 ...
 ---
 name:            TestKnownBitsVectorCstPHI
@@ -49,20 +49,20 @@ body:             |
   ; CHECK-NEXT:   %5:_ KnownBits:0000001? SignBits:6
   ; CHECK-NEXT:   %6:_ KnownBits:0000001? SignBits:6
   bb.0:
-    %0:_(s8) = G_CONSTANT i8 3
-    %1:_(<2 x s8>) = G_BUILD_VECTOR %0:_(s8), %0:_(s8)
-    %2:_(s1) = G_IMPLICIT_DEF
-    G_BRCOND %2(s1), %bb.1
+    %0:_(i8) = G_CONSTANT i8 3
+    %1:_(<2 x i8>) = G_BUILD_VECTOR %0:_(i8), %0:_(i8)
+    %2:_(i1) = G_IMPLICIT_DEF
+    G_BRCOND %2(i1), %bb.1
     G_BR %bb.2
 
   bb.1:
-    %3:_(s8) = G_CONSTANT i8 2
-    %4:_(<2 x s8>) = G_BUILD_VECTOR %3:_(s8), %3:_(s8)
+    %3:_(i8) = G_CONSTANT i8 2
+    %4:_(<2 x i8>) = G_BUILD_VECTOR %3:_(i8), %3:_(i8)
     G_BR %bb.2
 
   bb.2:
-    %5:_(<2 x s8>) = PHI %1(<2 x s8>), %bb.0, %4(<2 x s8>), %bb.1
-    %6:_(<2 x s8>) = COPY %5
+    %5:_(<2 x i8>) = PHI %1(<2 x i8>), %bb.0, %4(<2 x i8>), %bb.1
+    %6:_(<2 x i8>) = COPY %5
 ...
 ---
 name:            TestKnownBitsVectorCstPHIToNonGenericReg
@@ -76,18 +76,18 @@ body:             |
   ; CHECK-NEXT:   %5:_ KnownBits:???????????????? SignBits:1
   bb.0:
     %0:gpr32 = MOVi32imm 771
-    %1:_(s1) = G_IMPLICIT_DEF
-    G_BRCOND %1(s1), %bb.1
+    %1:_(i1) = G_IMPLICIT_DEF
+    G_BRCOND %1(i1), %bb.1
     G_BR %bb.2
 
   bb.1:
-    %2:_(s16) = G_CONSTANT i16 2
-    %3:_(<2 x s16>) = G_BUILD_VECTOR %2:_(s16), %2:_(s16)
+    %2:_(i16) = G_CONSTANT i16 2
+    %3:_(<2 x i16>) = G_BUILD_VECTOR %2:_(i16), %2:_(i16)
     G_BR %bb.2
 
   bb.2:
-    %4:_(<2 x s16>) = PHI %0, %bb.0, %3(<2 x s16>), %bb.1
-    %5:_(<2 x s16>) = COPY %4
+    %4:_(<2 x i16>) = PHI %0, %bb.0, %3(<2 x i16>), %bb.1
+    %5:_(<2 x i16>) = COPY %4
 ...
 ---
 name:            TestKnownBitsVectorUnknownPHI
@@ -102,19 +102,19 @@ body:             |
   ; CHECK-NEXT:   %5:_ KnownBits:???????????????????????????????? SignBits:1
   bb.0:
     liveins: $d0
-    %0:_(<2 x s32>) = COPY $d0
-    %1:_(s1) = G_IMPLICIT_DEF
-    G_BRCOND %1(s1), %bb.1
+    %0:_(<2 x i32>) = COPY $d0
+    %1:_(i1) = G_IMPLICIT_DEF
+    G_BRCOND %1(i1), %bb.1
     G_BR %bb.2
 
   bb.1:
-    %2:_(s32) = G_CONSTANT i32 2
-    %3:_(<2 x s32>) = G_BUILD_VECTOR %2:_(s32), %2:_(s32)
+    %2:_(i32) = G_CONSTANT i32 2
+    %3:_(<2 x i32>) = G_BUILD_VECTOR %2:_(i32), %2:_(i32)
     G_BR %bb.2
 
   bb.2:
-    %4:_(<2 x s32>) = PHI %0(<2 x s32>), %bb.0, %3(<2 x s32>), %bb.1
-    %5:_(<2 x s32>) = COPY %4
+    %4:_(<2 x i32>) = PHI %0(<2 x i32>), %bb.0, %3(<2 x i32>), %bb.1
+    %5:_(<2 x i32>) = COPY %4
 ...
 ---
 name:            TestKnownBitsVectorCstPHIWithLoop
@@ -129,20 +129,20 @@ body:             |
   ; CHECK-NEXT:   %5:_ KnownBits:???????? SignBits:1
   ; CHECK-NEXT:   %6:_ KnownBits:???????? SignBits:1
   bb.0:
-    %0:_(s8) = G_CONSTANT i8 3
-    %1:_(<2 x s8>) = G_BUILD_VECTOR %0:_(s8), %0:_(s8)
-    %2:_(s1) = G_IMPLICIT_DEF
-    G_BRCOND %2(s1), %bb.1
+    %0:_(i8) = G_CONSTANT i8 3
+    %1:_(<2 x i8>) = G_BUILD_VECTOR %0:_(i8), %0:_(i8)
+    %2:_(i1) = G_IMPLICIT_DEF
+    G_BRCOND %2(i1), %bb.1
     G_BR %bb.2
 
   bb.1:
-    %3:_(s8) = G_CONSTANT i8 2
-    %4:_(<2 x s8>) = G_BUILD_VECTOR %3:_(s8), %3:_(s8)
+    %3:_(i8) = G_CONSTANT i8 2
+    %4:_(<2 x i8>) = G_BUILD_VECTOR %3:_(i8), %3:_(i8)
     G_BR %bb.2
 
   bb.2:
-    %5:_(<2 x s8>) = PHI %1(<2 x s8>), %bb.0, %4(<2 x s8>), %bb.1, %6(<2 x s8>), %bb.2
-    %6:_(<2 x s8>) = COPY %5
+    %5:_(<2 x i8>) = PHI %1(<2 x i8>), %bb.0, %4(<2 x i8>), %bb.1, %6(<2 x i8>), %bb.2
+    %6:_(<2 x i8>) = COPY %5
     G_BR %bb.2
 ...
 ---
@@ -158,15 +158,15 @@ body:             |
   ; CHECK-NEXT:   %5:_ KnownBits:00?????? SignBits:2
   ; CHECK-NEXT:   %6:_ KnownBits:00?????? SignBits:2
   bb.0:
-    %0:_(s8) = G_CONSTANT i8 5
-    %1:_(<2 x s8>) = G_BUILD_VECTOR %0:_(s8), %0:_(s8)
-    %2:_(s8) = G_CONSTANT i8 1
-    %3:_(<2 x s8>) = G_BUILD_VECTOR %2:_(s8), %2:_(s8)
+    %0:_(i8) = G_CONSTANT i8 5
+    %1:_(<2 x i8>) = G_BUILD_VECTOR %0:_(i8), %0:_(i8)
+    %2:_(i8) = G_CONSTANT i8 1
+    %3:_(<2 x i8>) = G_BUILD_VECTOR %2:_(i8), %2:_(i8)
 
   bb.1:
-    %4:_(<2 x s8>) = PHI %1(<2 x s8>), %bb.0, %5(<2 x s8>), %bb.1
-    %5:_(<2 x s8>) = G_LSHR %4, %3
-    %6:_(<2 x s8>) = COPY %5
+    %4:_(<2 x i8>) = PHI %1(<2 x i8>), %bb.0, %5(<2 x i8>), %bb.1
+    %5:_(<2 x i8>) = G_LSHR %4, %3
+    %6:_(<2 x i8>) = COPY %5
     G_BR %bb.1
 ...
 ---
@@ -192,21 +192,21 @@ body:             |
   ; CHECK-NEXT: %and:_ KnownBits:00??1000 SignBits:2
   ; CHECK-NEXT: %copy_and:_ KnownBits:00??1000 SignBits:2
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 52
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 10
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s8) = G_CONSTANT i8 32
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 24
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %and:_(<2 x s8>) = G_AND %val0, %val1
-    %copy_and:_(<2 x s8>) = COPY %and
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 52
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 10
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i8) = G_CONSTANT i8 32
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 24
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %and:_(<2 x i8>) = G_AND %val0, %val1
+    %copy_and:_(<2 x i8>) = COPY %and
 ...
 ---
 name:            TestKnownBitsVectorOR
@@ -231,21 +231,21 @@ body:             |
   ; CHECK-NEXT: %or:_ KnownBits:00?11?10 SignBits:2
   ; CHECK-NEXT: %copy_or:_ KnownBits:00?11?10 SignBits:2
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 52
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 10
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s8) = G_CONSTANT i8 32
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 24
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %or:_(<2 x s8>) = G_OR %val0, %val1
-    %copy_or:_(<2 x s8>) = COPY %or
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 52
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 10
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i8) = G_CONSTANT i8 32
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 24
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %or:_(<2 x i8>) = G_OR %val0, %val1
+    %copy_or:_(<2 x i8>) = COPY %or
 ...
 ---
 name:            TestKnownBitsVectorXOR
@@ -270,21 +270,21 @@ body:             |
   ; CHECK-NEXT: %xor:_ KnownBits:00??0?10 SignBits:2
   ; CHECK-NEXT: %copy_xor:_ KnownBits:00??0?10 SignBits:2
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 52
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 10
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s8) = G_CONSTANT i8 32
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 24
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %xor:_(<2 x s8>) = G_XOR %val0, %val1
-    %copy_xor:_(<2 x s8>) = COPY %xor
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 52
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 10
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i8) = G_CONSTANT i8 32
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 24
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %xor:_(<2 x i8>) = G_XOR %val0, %val1
+    %copy_xor:_(<2 x i8>) = COPY %xor
 ...
 ---
 name:            TestKnownBitsVectorXORConstant
@@ -302,17 +302,17 @@ body:             |
   ; CHECK-NEXT: %7:_ KnownBits:0000?100 SignBits:4
   ; CHECK-NEXT: %8:_ KnownBits:0000?011 SignBits:4
   ; CHECK-NEXT: %9:_ KnownBits:0000?011 SignBits:4
-    %0:_(s8) = G_CONSTANT i8 4
-    %1:_(<2 x s8>) = G_BUILD_VECTOR %0:_(s8), %0:_(s8)
-    %2:_(s8) = G_CONSTANT i8 7
-    %3:_(<2 x s8>) = G_BUILD_VECTOR %2:_(s8), %2:_(s8)
-    %4:_(<2 x s8>) = G_XOR %1, %3
-    %5:_(<2 x s8>) = COPY %4
+    %0:_(i8) = G_CONSTANT i8 4
+    %1:_(<2 x i8>) = G_BUILD_VECTOR %0:_(i8), %0:_(i8)
+    %2:_(i8) = G_CONSTANT i8 7
+    %3:_(<2 x i8>) = G_BUILD_VECTOR %2:_(i8), %2:_(i8)
+    %4:_(<2 x i8>) = G_XOR %1, %3
+    %5:_(<2 x i8>) = COPY %4
 
-    %6:_(s8) = G_CONSTANT i8 12
-    %7:_(<2 x s8>) = G_BUILD_VECTOR %0:_(s8), %6:_(s8)
-    %8:_(<2 x s8>) = G_XOR %7, %3
-    %9:_(<2 x s8>) = COPY %8
+    %6:_(i8) = G_CONSTANT i8 12
+    %7:_(<2 x i8>) = G_BUILD_VECTOR %0:_(i8), %6:_(i8)
+    %8:_(<2 x i8>) = G_XOR %7, %3
+    %9:_(<2 x i8>) = COPY %8
 ...
 ---
 name:            TestKnownBitsVectorASHR
@@ -341,26 +341,26 @@ body:             |
   ; CHECK-NEXT: %ashr1:_ KnownBits:????01?? SignBits:3
   ; CHECK-NEXT: %copy_ashr1:_ KnownBits:????01?? SignBits:3
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 38
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 202
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %cst0:_(s8) = G_CONSTANT i8 2
-    %cst0_splat:_(<2 x s8>) = G_BUILD_VECTOR %cst0, %cst0
-    %ashr0:_(<2 x s8>) = G_ASHR %val0, %cst0_splat
-    %copy_ashr0:_(<2 x s8>) = COPY %ashr0
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 38
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 202
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %cst0:_(i8) = G_CONSTANT i8 2
+    %cst0_splat:_(<2 x i8>) = G_BUILD_VECTOR %cst0, %cst0
+    %ashr0:_(<2 x i8>) = G_ASHR %val0, %cst0_splat
+    %copy_ashr0:_(<2 x i8>) = COPY %ashr0
 
-    %mask2:_(s8) = G_CONSTANT i8 204
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 18
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %ashr1:_(<2 x s8>) = G_ASHR %val1, %cst0_splat
-    %copy_ashr1:_(<2 x s8>) = COPY %ashr1
+    %mask2:_(i8) = G_CONSTANT i8 204
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 18
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %ashr1:_(<2 x i8>) = G_ASHR %val1, %cst0_splat
+    %copy_ashr1:_(<2 x i8>) = COPY %ashr1
 ...
 ---
 name:            TestKnownBitsVectorLSHR
@@ -389,26 +389,26 @@ body:             |
   ; CHECK-NEXT: %lshr1:_ KnownBits:00??01?? SignBits:2
   ; CHECK-NEXT: %copy_lshr1:_ KnownBits:00??01?? SignBits:2
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 38
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 202
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %cst0:_(s8) = G_CONSTANT i8 2
-    %cst0_splat:_(<2 x s8>) = G_BUILD_VECTOR %cst0, %cst0
-    %lshr0:_(<2 x s8>) = G_LSHR %val0, %cst0_splat
-    %copy_lshr0:_(<2 x s8>) = COPY %lshr0
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 38
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 202
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %cst0:_(i8) = G_CONSTANT i8 2
+    %cst0_splat:_(<2 x i8>) = G_BUILD_VECTOR %cst0, %cst0
+    %lshr0:_(<2 x i8>) = G_LSHR %val0, %cst0_splat
+    %copy_lshr0:_(<2 x i8>) = COPY %lshr0
 
-    %mask2:_(s8) = G_CONSTANT i8 204
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 18
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %lshr1:_(<2 x s8>) = G_LSHR %val1, %cst0_splat
-    %copy_lshr1:_(<2 x s8>) = COPY %lshr1
+    %mask2:_(i8) = G_CONSTANT i8 204
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 18
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %lshr1:_(<2 x i8>) = G_LSHR %val1, %cst0_splat
+    %copy_lshr1:_(<2 x i8>) = COPY %lshr1
 ...
 ---
 name:            TestKnownBitsVectorSHL
@@ -429,17 +429,17 @@ body:             |
   ; CHECK-NEXT: %shl:_ KnownBits:?10??000 SignBits:1
   ; CHECK-NEXT: %copy_shl:_ KnownBits:?10??000 SignBits:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 51
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 72
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val:_(<2 x s8>) = G_OR %tmp, %mask1_splat
-    %cst:_(s8) = G_CONSTANT i8 3
-    %cst_splat:_(<2 x s8>) = G_BUILD_VECTOR %cst, %cst
-    %shl:_(<2 x s8>) = G_SHL %val, %cst_splat
-    %copy_shl:_(<2 x s8>) = COPY %shl
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 51
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 72
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val:_(<2 x i8>) = G_OR %tmp, %mask1_splat
+    %cst:_(i8) = G_CONSTANT i8 3
+    %cst_splat:_(<2 x i8>) = G_BUILD_VECTOR %cst, %cst
+    %shl:_(<2 x i8>) = G_SHL %val, %cst_splat
+    %copy_shl:_(<2 x i8>) = COPY %shl
 ...
 ---
 name:            TestKnownBitsVectorADD
@@ -464,21 +464,21 @@ body:             |
   ; CHECK-NEXT: %add:_ KnownBits:0??????01??10??1 SignBits:1
   ; CHECK-NEXT: %copy_add:_ KnownBits:0??????01??10??1 SignBits:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s16>) = G_LOAD %ptr(p0) :: (load (<2 x s16>))
-    %mask0:_(s16) = G_CONSTANT i16 4642
-    %mask0_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s16) = G_CONSTANT i16 9536
-    %mask1_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s16>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s16>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s16) = G_CONSTANT i16 4096
-    %mask2_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s16) = G_CONSTANT i16 371
-    %mask3_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s16>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s16>) = G_OR %tmp1, %mask3_splat
-    %add:_(<2 x s16>) = G_ADD %val0, %val1
-    %copy_add:_(<2 x s16>) = COPY %add
+    %unknown:_(<2 x i16>) = G_LOAD %ptr(p0) :: (load (<2 x i16>))
+    %mask0:_(i16) = G_CONSTANT i16 4642
+    %mask0_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i16) = G_CONSTANT i16 9536
+    %mask1_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i16>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i16>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i16) = G_CONSTANT i16 4096
+    %mask2_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i16) = G_CONSTANT i16 371
+    %mask3_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i16>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i16>) = G_OR %tmp1, %mask3_splat
+    %add:_(<2 x i16>) = G_ADD %val0, %val1
+    %copy_add:_(<2 x i16>) = COPY %add
 ...
 ---
 name:            TestKnownBitsVectorSUB
@@ -503,21 +503,21 @@ body:             |
   ; CHECK-NEXT: %sub:_ KnownBits:00??0??111?011?1 SignBits:2
   ; CHECK-NEXT: %copy_sub:_ KnownBits:00??0??111?011?1 SignBits:2
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s16>) = G_LOAD %ptr(p0) :: (load (<2 x s16>))
-    %mask0:_(s16) = G_CONSTANT i16 4642
-    %mask0_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s16) = G_CONSTANT i16 9536
-    %mask1_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s16>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s16>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s16) = G_CONSTANT i16 4096
-    %mask2_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s16) = G_CONSTANT i16 371
-    %mask3_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s16>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s16>) = G_OR %tmp1, %mask3_splat
-    %sub:_(<2 x s16>) = G_SUB %val0, %val1
-    %copy_sub:_(<2 x s16>) = COPY %sub
+    %unknown:_(<2 x i16>) = G_LOAD %ptr(p0) :: (load (<2 x i16>))
+    %mask0:_(i16) = G_CONSTANT i16 4642
+    %mask0_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i16) = G_CONSTANT i16 9536
+    %mask1_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i16>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i16>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i16) = G_CONSTANT i16 4096
+    %mask2_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i16) = G_CONSTANT i16 371
+    %mask3_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i16>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i16>) = G_OR %tmp1, %mask3_splat
+    %sub:_(<2 x i16>) = G_SUB %val0, %val1
+    %copy_sub:_(<2 x i16>) = COPY %sub
 ...
 ---
 name:            TestKnownBitsVectorMUL
@@ -538,17 +538,17 @@ body:             |
   ; CHECK-NEXT: %mul:_ KnownBits:0000000?????1000 SignBits:7
   ; CHECK-NEXT: %copy_mul:_ KnownBits:0000000?????1000 SignBits:7
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s16>) = G_LOAD %ptr(p0) :: (load (<2 x s16>))
-    %mask0:_(s16) = G_CONSTANT i16 4
-    %mask0_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s16) = G_CONSTANT i16 18
-    %mask1_splat:_(<2 x s16>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp:_(<2 x s16>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s16>) = G_OR %tmp, %mask1_splat
-    %cst:_(s16) = G_CONSTANT i16 12
-    %cst_splat:_(<2 x s16>) = G_BUILD_VECTOR %cst, %cst
-    %mul:_(<2 x s16>) = G_MUL %val0, %cst_splat
-    %copy_mul:_(<2 x s16>) = COPY %mul
+    %unknown:_(<2 x i16>) = G_LOAD %ptr(p0) :: (load (<2 x i16>))
+    %mask0:_(i16) = G_CONSTANT i16 4
+    %mask0_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i16) = G_CONSTANT i16 18
+    %mask1_splat:_(<2 x i16>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp:_(<2 x i16>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i16>) = G_OR %tmp, %mask1_splat
+    %cst:_(i16) = G_CONSTANT i16 12
+    %cst_splat:_(<2 x i16>) = G_BUILD_VECTOR %cst, %cst
+    %mul:_(<2 x i16>) = G_MUL %val0, %cst_splat
+    %copy_mul:_(<2 x i16>) = COPY %mul
 ...
 ---
 name:            TestKnownBitsVectorSelect
@@ -575,23 +575,23 @@ body:             |
   ; CHECK-NEXT: %select:_ KnownBits:??1????0 SignBits:1
   ; CHECK-NEXT: %copy_select:_ KnownBits:??1????0 SignBits:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 24
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 224
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s8) = G_CONSTANT i8 146
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 36
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %cond:_(s1) = G_CONSTANT i1 false
-    %cond_splat:_(<2 x s1>) = G_BUILD_VECTOR %cond, %cond
-    %select:_(<2 x s8>) = G_SELECT %cond_splat, %val0, %val1
-    %copy_select:_(<2 x s8>) = COPY %select
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 24
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 224
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i8) = G_CONSTANT i8 146
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 36
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %cond:_(i1) = G_CONSTANT i1 false
+    %cond_splat:_(<2 x i1>) = G_BUILD_VECTOR %cond, %cond
+    %select:_(<2 x i8>) = G_SELECT %cond_splat, %val0, %val1
+    %copy_select:_(<2 x i8>) = COPY %select
 ...
 ---
 name:            TestVectorNumSignBitsConstant
@@ -622,31 +622,31 @@ body:             |
   ; CHECK-NEXT: %16:_ KnownBits:111????? SignBits:3
   ; CHECK-NEXT: %17:_ KnownBits:??100000 SignBits:2
   ; CHECK-NEXT: %18:_ KnownBits:??100000 SignBits:2
-    %0:_(s8) = G_CONSTANT i8 1
-    %1:_(<2 x s8>) = G_BUILD_VECTOR %0:_(s8), %0:_(s8)
-    %2:_(<2 x s8>) = COPY %1
+    %0:_(i8) = G_CONSTANT i8 1
+    %1:_(<2 x i8>) = G_BUILD_VECTOR %0:_(i8), %0:_(i8)
+    %2:_(<2 x i8>) = COPY %1
 
-    %3:_(s8) = G_CONSTANT i8 -1
-    %4:_(<2 x s8>) = G_BUILD_VECTOR %3:_(s8), %3:_(s8)
-    %5:_(<2 x s8>) = COPY %4
+    %3:_(i8) = G_CONSTANT i8 -1
+    %4:_(<2 x i8>) = G_BUILD_VECTOR %3:_(i8), %3:_(i8)
+    %5:_(<2 x i8>) = COPY %4
 
-    %6:_(s8) = G_CONSTANT i8 127
-    %7:_(<2 x s8>) = G_BUILD_VECTOR %6:_(s8), %6:_(s8)
-    %8:_(<2 x s8>) = COPY %7
+    %6:_(i8) = G_CONSTANT i8 127
+    %7:_(<2 x i8>) = G_BUILD_VECTOR %6:_(i8), %6:_(i8)
+    %8:_(<2 x i8>) = COPY %7
 
-    %9:_(s8) = G_CONSTANT i8 32
-    %10:_(<2 x s8>) = G_BUILD_VECTOR %9:_(s8), %9:_(s8)
-    %11:_(<2 x s8>) = COPY %10
+    %9:_(i8) = G_CONSTANT i8 32
+    %10:_(<2 x i8>) = G_BUILD_VECTOR %9:_(i8), %9:_(i8)
+    %11:_(<2 x i8>) = COPY %10
 
-    %12:_(s8) = G_CONSTANT i8 -32
-    %13:_(<2 x s8>) = G_BUILD_VECTOR %12:_(s8), %12:_(s8)
-    %14:_(<2 x s8>) = COPY %13
+    %12:_(i8) = G_CONSTANT i8 -32
+    %13:_(<2 x i8>) = G_BUILD_VECTOR %12:_(i8), %12:_(i8)
+    %14:_(<2 x i8>) = COPY %13
 
-    %15:_(<2 x s8>) = G_BUILD_VECTOR %3:_(s8), %12:_(s8)
-    %16:_(<2 x s8>) = COPY %15
+    %15:_(<2 x i8>) = G_BUILD_VECTOR %3:_(i8), %12:_(i8)
+    %16:_(<2 x i8>) = COPY %15
 
-    %17:_(<2 x s8>) = G_BUILD_VECTOR %9:_(s8), %12:_(s8)
-    %18:_(<2 x s8>) = COPY %17
+    %17:_(<2 x i8>) = G_BUILD_VECTOR %9:_(i8), %12:_(i8)
+    %18:_(<2 x i8>) = COPY %17
 ...
 ---
 name:            TestVectorNumSignBitsSext
@@ -667,19 +667,19 @@ body:             |
   ; CHECK-NEXT: %10:_ KnownBits:1111111111111111111111111111?11? SignBits:28
   ; CHECK-NEXT: %11:_ KnownBits:1111111111111111111111111111?11? SignBits:28
     %0:_(p0) = G_IMPLICIT_DEF
-    %1:_(<2 x s8>) = G_LOAD %0 :: (load (<2 x s8>))
-    %2:_(<2 x s32>) = G_SEXT %1
-    %3:_(<2 x s32>) = COPY %2
+    %1:_(<2 x i8>) = G_LOAD %0 :: (load (<2 x i8>))
+    %2:_(<2 x i32>) = G_SEXT %1
+    %3:_(<2 x i32>) = COPY %2
 
-    %4:_(s8) = G_CONSTANT i8 -1
-    %5:_(<2 x s8>) = G_BUILD_VECTOR %4:_(s8), %4:_(s8)
-    %6:_(<2 x s32>) = G_SEXT %5
-    %7:_(<2 x s32>) = COPY %6
+    %4:_(i8) = G_CONSTANT i8 -1
+    %5:_(<2 x i8>) = G_BUILD_VECTOR %4:_(i8), %4:_(i8)
+    %6:_(<2 x i32>) = G_SEXT %5
+    %7:_(<2 x i32>) = COPY %6
 
-    %8:_(s8) = G_CONSTANT i8 -10
-    %9:_(<2 x s8>) = G_BUILD_VECTOR %4:_(s8), %8:_(s8)
-    %10:_(<2 x s32>) = G_SEXT %9
-    %11:_(<2 x s32>) = COPY %10
+    %8:_(i8) = G_CONSTANT i8 -10
+    %9:_(<2 x i8>) = G_BUILD_VECTOR %4:_(i8), %8:_(i8)
+    %10:_(<2 x i32>) = G_SEXT %9
+    %11:_(<2 x i32>) = COPY %10
 ...
 ---
 name:            TestVectorNumSignBitsSextInReg
@@ -710,37 +710,37 @@ body:             |
   ; CHECK-NEXT: %inreg31_sext:_ KnownBits:???????????????????????????????? SignBits:25
   ; CHECK-NEXT: %copy_inreg31_sext:_ KnownBits:???????????????????????????????? SignBits:25
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %load2x4:_(<2 x s32>) = G_LOAD %ptr :: (load (<2 x s32>))
+    %load2x4:_(<2 x i32>) = G_LOAD %ptr :: (load (<2 x i32>))
 
-    %inreg7:_(<2 x s32>) = G_SEXT_INREG %load2x4, 7
-    %copy_inreg7:_(<2 x s32>) = COPY %inreg7
+    %inreg7:_(<2 x i32>) = G_SEXT_INREG %load2x4, 7
+    %copy_inreg7:_(<2 x i32>) = COPY %inreg7
 
-    %inreg8:_(<2 x s32>) = G_SEXT_INREG %load2x4, 8
-    %copy_inreg8:_(<2 x s32>) = COPY %inreg8
+    %inreg8:_(<2 x i32>) = G_SEXT_INREG %load2x4, 8
+    %copy_inreg8:_(<2 x i32>) = COPY %inreg8
 
-    %inreg9:_(<2 x s32>) = G_SEXT_INREG %load2x4, 9
-    %copy_inreg9:_(<2 x s32>) = COPY %inreg9
+    %inreg9:_(<2 x i32>) = G_SEXT_INREG %load2x4, 9
+    %copy_inreg9:_(<2 x i32>) = COPY %inreg9
 
-    %inreg31:_(<2 x s32>) = G_SEXT_INREG %load2x4, 31
-    %copy_inreg31:_(<2 x s32>) = COPY %inreg31
+    %inreg31:_(<2 x i32>) = G_SEXT_INREG %load2x4, 31
+    %copy_inreg31:_(<2 x i32>) = COPY %inreg31
 
-    %load2x1:_(<2 x s8>) = G_LOAD %ptr :: (load (<2 x s8>))
-    %sext_load2x1:_(<2 x s32>) = G_SEXT %load2x1
+    %load2x1:_(<2 x i8>) = G_LOAD %ptr :: (load (<2 x i8>))
+    %sext_load2x1:_(<2 x i32>) = G_SEXT %load2x1
 
-    %inreg6_sext:_(<2 x s32>) = G_SEXT_INREG %sext_load2x1, 6
-    %copy_inreg6_sext:_(<2 x s32>) = COPY %inreg6_sext
+    %inreg6_sext:_(<2 x i32>) = G_SEXT_INREG %sext_load2x1, 6
+    %copy_inreg6_sext:_(<2 x i32>) = COPY %inreg6_sext
 
-    %inreg7_sext:_(<2 x s32>) = G_SEXT_INREG %sext_load2x1, 7
-    %copy_inreg7_sext:_(<2 x s32>) = COPY %inreg7_sext
+    %inreg7_sext:_(<2 x i32>) = G_SEXT_INREG %sext_load2x1, 7
+    %copy_inreg7_sext:_(<2 x i32>) = COPY %inreg7_sext
 
-    %inreg8_sext:_(<2 x s32>) = G_SEXT_INREG %sext_load2x1, 8
-    %copy_inreg8_sext:_(<2 x s32>) = COPY %inreg8_sext
+    %inreg8_sext:_(<2 x i32>) = G_SEXT_INREG %sext_load2x1, 8
+    %copy_inreg8_sext:_(<2 x i32>) = COPY %inreg8_sext
 
-    %inreg9_sext:_(<2 x s32>) = G_SEXT_INREG %sext_load2x1, 9
-    %copy_inreg9_sext:_(<2 x s32>) = COPY %inreg9_sext
+    %inreg9_sext:_(<2 x i32>) = G_SEXT_INREG %sext_load2x1, 9
+    %copy_inreg9_sext:_(<2 x i32>) = COPY %inreg9_sext
 
-    %inreg31_sext:_(<2 x s32>) = G_SEXT_INREG %sext_load2x1, 31
-    %copy_inreg31_sext:_(<2 x s32>) = COPY %inreg31_sext
+    %inreg31_sext:_(<2 x i32>) = G_SEXT_INREG %sext_load2x1, 31
+    %copy_inreg31_sext:_(<2 x i32>) = COPY %inreg31_sext
 ...
 ---
 name:            TestNumSignBitsVectorAssertSext
@@ -773,40 +773,40 @@ body:             |
   ; CHECK-NEXT: %assert_sext31_sext:_ KnownBits:???????????????????????????????? SignBits:25
   ; CHECK-NEXT: %copy_assert_sext31_sext:_ KnownBits:???????????????????????????????? SignBits:25
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %load2x4:_(<2 x s32>) = G_LOAD %ptr :: (load (<2 x s32>))
+    %load2x4:_(<2 x i32>) = G_LOAD %ptr :: (load (<2 x i32>))
 
-    %assert_sext1:_(<2 x s32>) = G_ASSERT_SEXT %load2x4, 1
-    %copy_assert_sext1:_(<2 x s32>) = COPY %assert_sext1
+    %assert_sext1:_(<2 x i32>) = G_ASSERT_SEXT %load2x4, 1
+    %copy_assert_sext1:_(<2 x i32>) = COPY %assert_sext1
 
-    %assert_sext7:_(<2 x s32>) = G_ASSERT_SEXT %load2x4, 7
-    %copy_assert_sext7:_(<2 x s32>) = COPY %assert_sext7
+    %assert_sext7:_(<2 x i32>) = G_ASSERT_SEXT %load2x4, 7
+    %copy_assert_sext7:_(<2 x i32>) = COPY %assert_sext7
 
-    %assert_sext8:_(<2 x s32>) = G_ASSERT_SEXT %load2x4, 8
-    %copy_assert_sext8:_(<2 x s32>) = COPY %assert_sext8
+    %assert_sext8:_(<2 x i32>) = G_ASSERT_SEXT %load2x4, 8
+    %copy_assert_sext8:_(<2 x i32>) = COPY %assert_sext8
 
-    %assert_sext9:_(<2 x s32>) = G_ASSERT_SEXT %load2x4, 9
-    %copy_assert_sext9:_(<2 x s32>) = COPY %assert_sext9
+    %assert_sext9:_(<2 x i32>) = G_ASSERT_SEXT %load2x4, 9
+    %copy_assert_sext9:_(<2 x i32>) = COPY %assert_sext9
 
-    %assert_sext31:_(<2 x s32>) = G_ASSERT_SEXT %load2x4, 31
-    %copy_assert_sext31:_(<2 x s32>) = COPY %assert_sext31
+    %assert_sext31:_(<2 x i32>) = G_ASSERT_SEXT %load2x4, 31
+    %copy_assert_sext31:_(<2 x i32>) = COPY %assert_sext31
 
-    %load2x1:_(<2 x s8>) = G_LOAD %ptr :: (load (<2 x s8>))
-    %sext_load2x1:_(<2 x s32>) = G_SEXT %load2x1
+    %load2x1:_(<2 x i8>) = G_LOAD %ptr :: (load (<2 x i8>))
+    %sext_load2x1:_(<2 x i32>) = G_SEXT %load2x1
 
-    %assert_sext6_sext:_(<2 x s32>) = G_ASSERT_SEXT %sext_load2x1, 6
-    %copy_assert_sext6_sext:_(<2 x s32>) = COPY %assert_sext6_sext
+    %assert_sext6_sext:_(<2 x i32>) = G_ASSERT_SEXT %sext_load2x1, 6
+    %copy_assert_sext6_sext:_(<2 x i32>) = COPY %assert_sext6_sext
 
-    %assert_sext7_sext:_(<2 x s32>) = G_ASSERT_SEXT %sext_load2x1, 7
-    %copy_assert_sext7_sext:_(<2 x s32>) = COPY %assert_sext7_sext
+    %assert_sext7_sext:_(<2 x i32>) = G_ASSERT_SEXT %sext_load2x1, 7
+    %copy_assert_sext7_sext:_(<2 x i32>) = COPY %assert_sext7_sext
 
-    %assert_sext8_sext:_(<2 x s32>) = G_ASSERT_SEXT %sext_load2x1, 8
-    %copy_assert_sext8_sext:_(<2 x s32>) = COPY %assert_sext8_sext
+    %assert_sext8_sext:_(<2 x i32>) = G_ASSERT_SEXT %sext_load2x1, 8
+    %copy_assert_sext8_sext:_(<2 x i32>) = COPY %assert_sext8_sext
 
-    %assert_sext9_sext:_(<2 x s32>) = G_ASSERT_SEXT %sext_load2x1, 9
-    %copy_assert_sext9_sext:_(<2 x s32>) = COPY %assert_sext9_sext
+    %assert_sext9_sext:_(<2 x i32>) = G_ASSERT_SEXT %sext_load2x1, 9
+    %copy_assert_sext9_sext:_(<2 x i32>) = COPY %assert_sext9_sext
 
-    %assert_sext31_sext:_(<2 x s32>) = G_ASSERT_SEXT %sext_load2x1, 31
-    %copy_assert_sext31_sext:_(<2 x s32>) = COPY %assert_sext31_sext
+    %assert_sext31_sext:_(<2 x i32>) = G_ASSERT_SEXT %sext_load2x1, 31
+    %copy_assert_sext31_sext:_(<2 x i32>) = COPY %assert_sext31_sext
 ...
 ---
 name:            TestVectorNumSignBitsTrunc
@@ -827,19 +827,19 @@ body:             |
   ; CHECK-NEXT: %10:_ KnownBits:00000111 SignBits:5
   ; CHECK-NEXT: %11:_ KnownBits:00000111 SignBits:5
     %0:_(p0) = G_IMPLICIT_DEF
-    %1:_(<2 x s32>) = G_LOAD %0 :: (load (<2 x s32>))
-    %2:_(<2 x s8>) = G_TRUNC %1
-    %3:_(<2 x s8>) = COPY %2
+    %1:_(<2 x i32>) = G_LOAD %0 :: (load (<2 x i32>))
+    %2:_(<2 x i8>) = G_TRUNC %1
+    %3:_(<2 x i8>) = COPY %2
 
-    %4:_(s32) = G_CONSTANT i32 -1
-    %5:_(<2 x s32>) = G_BUILD_VECTOR %4:_(s32), %4:_(s32)
-    %6:_(<2 x s8>) = G_TRUNC %5
-    %7:_(<2 x s8>) = COPY %6
+    %4:_(i32) = G_CONSTANT i32 -1
+    %5:_(<2 x i32>) = G_BUILD_VECTOR %4:_(i32), %4:_(i32)
+    %6:_(<2 x i8>) = G_TRUNC %5
+    %7:_(<2 x i8>) = COPY %6
 
-    %8:_(s32) = G_CONSTANT i32 7
-    %9:_(<2 x s32>) = G_BUILD_VECTOR %8:_(s32), %8:_(s32)
-    %10:_(<2 x s8>) = G_TRUNC %9
-    %11:_(<2 x s8>) = COPY %10
+    %8:_(i32) = G_CONSTANT i32 7
+    %9:_(<2 x i32>) = G_BUILD_VECTOR %8:_(i32), %8:_(i32)
+    %10:_(<2 x i8>) = G_TRUNC %9
+    %11:_(<2 x i8>) = COPY %10
 ...
 ---
 name:            TestVectorKnownBitsExt
@@ -857,16 +857,16 @@ body:             |
   ; CHECK-NEXT: %r2:_ KnownBits:0000000000000000000000000000000? SignBits:31
   ; CHECK-NEXT: %sext:_ KnownBits:0000000000000000000000000000000? SignBits:31
   ; CHECK-NEXT: %r3:_ KnownBits:0000000000000000000000000000000? SignBits:31
-    %c1:_(s16) = G_CONSTANT i16 1
-    %c1_splat:_(<2 x s16>) = G_BUILD_VECTOR %c1:_(s16), %c1:_(s16)
-    %x:_(<2 x s16>) = G_IMPLICIT_DEF
-    %y:_(<2 x s16>) = G_AND %x, %c1_splat
-    %anyext:_(<2 x s32>) = G_ANYEXT %y(<2 x s16>)
-    %r1:_(<2 x s32>) = COPY %anyext
-    %zext:_(<2 x s32>) = G_ZEXT %y(<2 x s16>)
-    %r2:_(<2 x s32>) = COPY %zext
-    %sext:_(<2 x s32>) = G_SEXT %y(<2 x s16>)
-    %r3:_(<2 x s32>) = COPY %sext
+    %c1:_(i16) = G_CONSTANT i16 1
+    %c1_splat:_(<2 x i16>) = G_BUILD_VECTOR %c1:_(i16), %c1:_(i16)
+    %x:_(<2 x i16>) = G_IMPLICIT_DEF
+    %y:_(<2 x i16>) = G_AND %x, %c1_splat
+    %anyext:_(<2 x i32>) = G_ANYEXT %y(<2 x i16>)
+    %r1:_(<2 x i32>) = COPY %anyext
+    %zext:_(<2 x i32>) = G_ZEXT %y(<2 x i16>)
+    %r2:_(<2 x i32>) = COPY %zext
+    %sext:_(<2 x i32>) = G_SEXT %y(<2 x i16>)
+    %r3:_(<2 x i32>) = COPY %sext
 ...
 ---
 name:            TestKnownBitsVectorSextInReg
@@ -892,40 +892,40 @@ body:             |
   ; CHECK-NEXT: %copy_inreg3:_ KnownBits:1111111111111111111111111111111? SignBits:31
   ; CHECK-NEXT: %inreg4:_ KnownBits:11111111111111111111111111111110 SignBits:31
   ; CHECK-NEXT: %copy_inreg4:_ KnownBits:11111111111111111111111111111110 SignBits:31
-    %one:_(s32) = G_CONSTANT i32 1
-    %one_splat:_(<2 x s32>) = G_BUILD_VECTOR %one:_(s32), %one:_(s32)
+    %one:_(i32) = G_CONSTANT i32 1
+    %one_splat:_(<2 x i32>) = G_BUILD_VECTOR %one:_(i32), %one:_(i32)
 
     ; 000...0010
-    %two:_(s32) = G_CONSTANT i32 2
-    %two_splat:_(<2 x s32>) = G_BUILD_VECTOR %two:_(s32), %two:_(s32)
+    %two:_(i32) = G_CONSTANT i32 2
+    %two_splat:_(<2 x i32>) = G_BUILD_VECTOR %two:_(i32), %two:_(i32)
 
     ; 000...1010
-    %ten:_(s32) = G_CONSTANT i32 10
-    %ten_splat:_(<2 x s32>) = G_BUILD_VECTOR %ten:_(s32), %ten:_(s32)
+    %ten:_(i32) = G_CONSTANT i32 10
+    %ten_splat:_(<2 x i32>) = G_BUILD_VECTOR %ten:_(i32), %ten:_(i32)
 
     ; ???...????
-    %x0:_(<2 x s32>) = COPY $x0
+    %x0:_(<2 x i32>) = COPY $x0
 
     ; ???...?1?
-    %or:_(<2 x s32>) = G_OR %x0, %two_splat
+    %or:_(<2 x i32>) = G_OR %x0, %two_splat
 
     ; All bits are known.
-    %inreg1:_(<2 x s32>) = G_SEXT_INREG %one_splat, 1
-    %copy_inreg1:_(<2 x s32>) = COPY %inreg1
+    %inreg1:_(<2 x i32>) = G_SEXT_INREG %one_splat, 1
+    %copy_inreg1:_(<2 x i32>) = COPY %inreg1
 
     ; All bits unknown
-    %inreg2:_(<2 x s32>) = G_SEXT_INREG %or, 1
-    %copy_inreg2:_(<2 x s32>) = COPY %inreg2
+    %inreg2:_(<2 x i32>) = G_SEXT_INREG %or, 1
+    %copy_inreg2:_(<2 x i32>) = COPY %inreg2
 
     ; Extending from the only (known) set bit
     ; 111...11?
-    %inreg3:_(<2 x s32>) = G_SEXT_INREG %or, 2
-    %copy_inreg3:_(<2 x s32>) = COPY %inreg3
+    %inreg3:_(<2 x i32>) = G_SEXT_INREG %or, 2
+    %copy_inreg3:_(<2 x i32>) = COPY %inreg3
 
     ; Extending from a known set bit, overwriting all of the high set bits.
     ; 111...1110
-    %inreg4:_(<2 x s32>) = G_SEXT_INREG %ten_splat, 2
-    %copy_inreg4:_(<2 x s32>) = COPY %inreg4
+    %inreg4:_(<2 x i32>) = G_SEXT_INREG %ten_splat, 2
+    %copy_inreg4:_(<2 x i32>) = COPY %inreg4
 ...
 ---
 name:            TestKnownBitsVectorAssertSext
@@ -951,40 +951,40 @@ body:             |
   ; CHECK-NEXT: %copy_assert_sext3:_ KnownBits:1111111111111111111111111111111? SignBits:31
   ; CHECK-NEXT: %assert_sext4:_ KnownBits:11111111111111111111111111111110 SignBits:31
   ; CHECK-NEXT: %copy_assert_sext4:_ KnownBits:11111111111111111111111111111110 SignBits:31
-    %one:_(s32) = G_CONSTANT i32 1
-    %one_splat:_(<2 x s32>) = G_BUILD_VECTOR %one, %one
+    %one:_(i32) = G_CONSTANT i32 1
+    %one_splat:_(<2 x i32>) = G_BUILD_VECTOR %one, %one
 
     ; 000...0010
-    %two:_(s32) = G_CONSTANT i32 2
-    %two_splat:_(<2 x s32>) = G_BUILD_VECTOR %two, %two
+    %two:_(i32) = G_CONSTANT i32 2
+    %two_splat:_(<2 x i32>) = G_BUILD_VECTOR %two, %two
 
     ; 000...1010
-    %ten:_(s32) = G_CONSTANT i32 10
-    %ten_splat:_(<2 x s32>) = G_BUILD_VECTOR %ten, %ten
+    %ten:_(i32) = G_CONSTANT i32 10
+    %ten_splat:_(<2 x i32>) = G_BUILD_VECTOR %ten, %ten
 
     ; ???...????
-    %x0:_(<2 x s32>) = COPY $x0
+    %x0:_(<2 x i32>) = COPY $x0
 
     ; ???...?1?
-    %or:_(<2 x s32>) = G_OR %x0, %two_splat
+    %or:_(<2 x i32>) = G_OR %x0, %two_splat
 
     ; All bits are known.
-    %assert_sext1:_(<2 x s32>) = G_ASSERT_SEXT %one_splat, 1
-    %copy_assert_sext1:_(<2 x s32>) = COPY %assert_sext1
+    %assert_sext1:_(<2 x i32>) = G_ASSERT_SEXT %one_splat, 1
+    %copy_assert_sext1:_(<2 x i32>) = COPY %assert_sext1
 
     ; All bits unknown
-    %assert_sext2:_(<2 x s32>) = G_ASSERT_SEXT %or, 1
-    %copy_assert_sext2:_(<2 x s32>) = COPY %assert_sext2
+    %assert_sext2:_(<2 x i32>) = G_ASSERT_SEXT %or, 1
+    %copy_assert_sext2:_(<2 x i32>) = COPY %assert_sext2
 
     ; Extending from the only (known) set bit
     ; 111...11?
-    %assert_sext3:_(<2 x s32>) = G_ASSERT_SEXT %or, 2
-    %copy_assert_sext3:_(<2 x s32>) = COPY %assert_sext3
+    %assert_sext3:_(<2 x i32>) = G_ASSERT_SEXT %or, 2
+    %copy_assert_sext3:_(<2 x i32>) = COPY %assert_sext3
 
     ; Extending from a known set bit, overwriting all of the high set bits.
     ; 111...1110
-    %assert_sext4:_(<2 x s32>) = G_ASSERT_SEXT %ten_splat, 2
-    %copy_assert_sext4:_(<2 x s32>) = COPY %assert_sext4
+    %assert_sext4:_(<2 x i32>) = G_ASSERT_SEXT %ten_splat, 2
+    %copy_assert_sext4:_(<2 x i32>) = COPY %assert_sext4
 ...
 ---
 name:            TestVectorKnownBitsBSwapBitReverse
@@ -998,12 +998,12 @@ body:             |
   ; CHECK-NEXT: %bitreverse:_ KnownBits:00100010110011000100010010001000 SignBits:2
   ; CHECK-NEXT: %copy_bswap:_ KnownBits:01000100001100110010001000010001 SignBits:1
   ; CHECK-NEXT: %copy_bitreverse:_ KnownBits:00100010110011000100010010001000 SignBits:2
-    %const:_(s32) = G_CONSTANT i32 287454020
-    %const_splat:_(<2 x s32>) = G_BUILD_VECTOR %const:_(s32), %const:_(s32)
-    %bswap:_(<2 x s32>) = G_BSWAP %const_splat
-    %bitreverse:_(<2 x s32>) = G_BITREVERSE %const_splat
-    %copy_bswap:_(<2 x s32>) = COPY %bswap
-    %copy_bitreverse:_(<2 x s32>) = COPY %bitreverse
+    %const:_(i32) = G_CONSTANT i32 287454020
+    %const_splat:_(<2 x i32>) = G_BUILD_VECTOR %const:_(i32), %const:_(i32)
+    %bswap:_(<2 x i32>) = G_BSWAP %const_splat
+    %bitreverse:_(<2 x i32>) = G_BITREVERSE %const_splat
+    %copy_bswap:_(<2 x i32>) = COPY %bswap
+    %copy_bitreverse:_(<2 x i32>) = COPY %bitreverse
 ...
 ---
 name:            TestKnownBitsVectorUMAX
@@ -1042,36 +1042,36 @@ body:             |
   ; CHECK-NEXT: %umax1:_ KnownBits:00001?1? SignBits:4
   ; CHECK-NEXT: %copy_umax1:_ KnownBits:00001?1? SignBits:4
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 10
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 1
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s8) = G_CONSTANT i8 3
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 12
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %umax0:_(<2 x s8>) = G_UMAX %val0, %val1
-    %copy_umax0:_(<2 x s8>) = COPY %umax0
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 10
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 1
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i8) = G_CONSTANT i8 3
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 12
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %umax0:_(<2 x i8>) = G_UMAX %val0, %val1
+    %copy_umax0:_(<2 x i8>) = COPY %umax0
 
-    %mask4:_(s8) = G_CONSTANT i8 14
-    %mask4_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask4, %mask4
-    %mask5:_(s8) = G_CONSTANT i8 2
-    %mask5_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask5, %mask5
-    %tmp3:_(<2 x s8>) = G_AND %unknown, %mask4_splat
-    %val3:_(<2 x s8>) = G_OR %tmp3, %mask5_splat
-    %mask6:_(s8) = G_CONSTANT i8 4
-    %mask6_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask6, %mask6
-    %mask7:_(s8) = G_CONSTANT i8 11
-    %mask7_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask7, %mask7
-    %tmp4:_(<2 x s8>) = G_AND %unknown, %mask6_splat
-    %val4:_(<2 x s8>) = G_OR %tmp4, %mask7_splat
-    %umax1:_(<2 x s8>) = G_UMAX %val3, %val4
-    %copy_umax1:_(<2 x s8>) = COPY %umax1
+    %mask4:_(i8) = G_CONSTANT i8 14
+    %mask4_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask4, %mask4
+    %mask5:_(i8) = G_CONSTANT i8 2
+    %mask5_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask5, %mask5
+    %tmp3:_(<2 x i8>) = G_AND %unknown, %mask4_splat
+    %val3:_(<2 x i8>) = G_OR %tmp3, %mask5_splat
+    %mask6:_(i8) = G_CONSTANT i8 4
+    %mask6_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask6, %mask6
+    %mask7:_(i8) = G_CONSTANT i8 11
+    %mask7_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask7, %mask7
+    %tmp4:_(<2 x i8>) = G_AND %unknown, %mask6_splat
+    %val4:_(<2 x i8>) = G_OR %tmp4, %mask7_splat
+    %umax1:_(<2 x i8>) = G_UMAX %val3, %val4
+    %copy_umax1:_(<2 x i8>) = COPY %umax1
 ...
 ---
 name:            TestVectorKnownBitsUMax
@@ -1086,12 +1086,12 @@ body:             |
   ; CHECK-NEXT: %const_splat:_ KnownBits:1111111111111111111111111111111111111111111111111111111100000000 SignBits:56
   ; CHECK-NEXT: %umax:_ KnownBits:1111111111111111111111111111111111111111111111111111111100000000 SignBits:32
   ; CHECK-NEXT: %copy_umax:_ KnownBits:1111111111111111111111111111111111111111111111111111111100000000 SignBits:32
-    %val:_(<2 x s32>) = COPY $x0
-    %zext:_(<2 x s64>) = G_ZEXT %val
-    %const:_(s64) = G_CONSTANT i64 -256
-    %const_splat:_(<2 x s64>) = G_BUILD_VECTOR %const:_(s64), %const:_(s64)
-    %umax:_(<2 x s64>) = G_UMAX %zext, %const_splat
-    %copy_umax:_(<2 x s64>) = COPY %umax
+    %val:_(<2 x i32>) = COPY $x0
+    %zext:_(<2 x i64>) = G_ZEXT %val
+    %const:_(i64) = G_CONSTANT i64 -256
+    %const_splat:_(<2 x i64>) = G_BUILD_VECTOR %const:_(i64), %const:_(i64)
+    %umax:_(<2 x i64>) = G_UMAX %zext, %const_splat
+    %copy_umax:_(<2 x i64>) = COPY %umax
 ...
 ---
 name:            TestKnownBitsVectorUMIN
@@ -1116,21 +1116,21 @@ body:             |
   ; CHECK-NEXT: %umin:_ KnownBits:0000?0?1 SignBits:4
   ; CHECK-NEXT: %copy_umin:_ KnownBits:0000?0?1 SignBits:4
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 10
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 1
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s8) = G_CONSTANT i8 3
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 12
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %umin:_(<2 x s8>) = G_UMIN %val0, %val1
-    %copy_umin:_(<2 x s8>) = COPY %umin
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 10
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 1
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i8) = G_CONSTANT i8 3
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 12
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %umin:_(<2 x i8>) = G_UMIN %val0, %val1
+    %copy_umin:_(<2 x i8>) = COPY %umin
 ...
 ---
 name:            TestKnownBitsVectorSMAX
@@ -1155,21 +1155,21 @@ body:             |
   ; CHECK-NEXT: %smax:_ KnownBits:?1000000 SignBits:1
   ; CHECK-NEXT: %copy_smax:_ KnownBits:?1000000 SignBits:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 128
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 64
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s8) = G_CONSTANT i8 1
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 128
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %smax:_(<2 x s8>) = G_SMAX %val0, %val1
-    %copy_smax:_(<2 x s8>) = COPY %smax
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 128
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 64
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i8) = G_CONSTANT i8 1
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 128
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %smax:_(<2 x i8>) = G_SMAX %val0, %val1
+    %copy_smax:_(<2 x i8>) = COPY %smax
 ...
 ---
 name:            TestKnownBitsVectorSMIN
@@ -1194,21 +1194,21 @@ body:             |
   ; CHECK-NEXT: %smin:_ KnownBits:1000000? SignBits:1
   ; CHECK-NEXT: %copy_smin:_ KnownBits:1000000? SignBits:1
     %ptr:_(p0) = G_IMPLICIT_DEF
-    %unknown:_(<2 x s8>) = G_LOAD %ptr(p0) :: (load (<2 x s8>))
-    %mask0:_(s8) = G_CONSTANT i8 128
-    %mask0_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask0, %mask0
-    %mask1:_(s8) = G_CONSTANT i8 64
-    %mask1_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask1, %mask1
-    %tmp0:_(<2 x s8>) = G_AND %unknown, %mask0_splat
-    %val0:_(<2 x s8>) = G_OR %tmp0, %mask1_splat
-    %mask2:_(s8) = G_CONSTANT i8 1
-    %mask2_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask2, %mask2
-    %mask3:_(s8) = G_CONSTANT i8 128
-    %mask3_splat:_(<2 x s8>) = G_BUILD_VECTOR %mask3, %mask3
-    %tmp1:_(<2 x s8>) = G_AND %unknown, %mask2_splat
-    %val1:_(<2 x s8>) = G_OR %tmp1, %mask3_splat
-    %smin:_(<2 x s8>) = G_SMIN %val0, %val1
-    %copy_smin:_(<2 x s8>) = COPY %smin
+    %unknown:_(<2 x i8>) = G_LOAD %ptr(p0) :: (load (<2 x i8>))
+    %mask0:_(i8) = G_CONSTANT i8 128
+    %mask0_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask0, %mask0
+    %mask1:_(i8) = G_CONSTANT i8 64
+    %mask1_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask1, %mask1
+    %tmp0:_(<2 x i8>) = G_AND %unknown, %mask0_splat
+    %val0:_(<2 x i8>) = G_OR %tmp0, %mask1_splat
+    %mask2:_(i8) = G_CONSTANT i8 1
+    %mask2_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask2, %mask2
+    %mask3:_(i8) = G_CONSTANT i8 128
+    %mask3_splat:_(<2 x i8>) = G_BUILD_VECTOR %mask3, %mask3
+    %tmp1:_(<2 x i8>) = G_AND %unknown, %mask2_splat
+    %val1:_(<2 x i8>) = G_OR %tmp1, %mask3_splat
+    %smin:_(<2 x i8>) = G_SMIN %val0, %val1
+    %copy_smin:_(<2 x i8>) = COPY %smin
 ...
 ---
 name:            TestVectorInvalidQueries
@@ -1226,15 +1226,15 @@ body:             |
   ; CHECK-NEXT: %thirty3_splat:_ KnownBits:00000000000000000000000000100001 SignBits:26
   ; CHECK-NEXT: %biggerSized:_ KnownBits:00000000000000000000000000000000 SignBits:32
   ; CHECK-NEXT: %copy2:_ KnownBits:00000000000000000000000000000000 SignBits:32
-    %src:_(<2 x s32>) = COPY $x0
-    %thirty2:_(s32) = G_CONSTANT i32 32
-    %thirty2_splat:_(<2 x s32>) = G_BUILD_VECTOR %thirty2:_(s32), %thirty2:_(s32)
-    %equalSized:_(<2 x s32>) = G_SHL %src, %thirty2_splat
-    %copy1:_(<2 x s32>) = COPY %equalSized
-    %thirty3:_(s32) = G_CONSTANT i32 33
-    %thirty3_splat:_(<2 x s32>) = G_BUILD_VECTOR %thirty3:_(s32), %thirty3:_(s32)
-    %biggerSized:_(<2 x s32>) = G_SHL %src, %thirty3_splat
-    %copy2:_(<2 x s32>) = COPY %biggerSized
+    %src:_(<2 x i32>) = COPY $x0
+    %thirty2:_(i32) = G_CONSTANT i32 32
+    %thirty2_splat:_(<2 x i32>) = G_BUILD_VECTOR %thirty2:_(i32), %thirty2:_(i32)
+    %equalSized:_(<2 x i32>) = G_SHL %src, %thirty2_splat
+    %copy1:_(<2 x i32>) = COPY %equalSized
+    %thirty3:_(i32) = G_CONSTANT i32 33
+    %thirty3_splat:_(<2 x i32>) = G_BUILD_VECTOR %thirty3:_(i32), %thirty3:_(i32)
+    %biggerSized:_(<2 x i32>) = G_SHL %src, %thirty3_splat
+    %copy2:_(<2 x i32>) = COPY %biggerSized
 ...
 ---
 name:            TestKnownBitsVectorAssertZext
@@ -1254,21 +1254,21 @@ body:             |
   ; CHECK-NEXT: %copy_assert63:_ KnownBits:0??????????????????????????????????????????????????????????????? SignBits:1
   ; CHECK-NEXT: %assert3:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000??? SignBits:61
   ; CHECK-NEXT: %copy_assert3:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000??? SignBits:61
-    %copy_x0:_(s64) = COPY $x0
-    %copy_x1:_(s64) = COPY $x1
-    %x0_x1:_(<2 x s64>) = G_BUILD_VECTOR %copy_x0, %copy_x1
+    %copy_x0:_(i64) = COPY $x0
+    %copy_x1:_(i64) = COPY $x1
+    %x0_x1:_(<2 x i64>) = G_BUILD_VECTOR %copy_x0, %copy_x1
 
-    %assert8:_(<2 x s64>) = G_ASSERT_ZEXT %x0_x1, 8
-    %copy_assert8:_(<2 x s64>) = COPY %assert8
+    %assert8:_(<2 x i64>) = G_ASSERT_ZEXT %x0_x1, 8
+    %copy_assert8:_(<2 x i64>) = COPY %assert8
 
-    %assert1:_(<2 x s64>) = G_ASSERT_ZEXT %x0_x1, 1
-    %copy_assert1:_(<2 x s64>) = COPY %assert1
+    %assert1:_(<2 x i64>) = G_ASSERT_ZEXT %x0_x1, 1
+    %copy_assert1:_(<2 x i64>) = COPY %assert1
 
-    %assert63:_(<2 x s64>) = G_ASSERT_ZEXT %x0_x1, 63
-    %copy_assert63:_(<2 x s64>) = COPY %assert63
+    %assert63:_(<2 x i64>) = G_ASSERT_ZEXT %x0_x1, 63
+    %copy_assert63:_(<2 x i64>) = COPY %assert63
 
-    %assert3:_(<2 x s64>) = G_ASSERT_ZEXT %x0_x1, 3
-    %copy_assert3:_(<2 x s64>) = COPY %assert3
+    %assert3:_(<2 x i64>) = G_ASSERT_ZEXT %x0_x1, 3
+    %copy_assert3:_(<2 x i64>) = COPY %assert3
 ...
 ---
 name:            TestNumSignBitsUAddoOverflow
@@ -1283,9 +1283,9 @@ body:             |
   ; CHECK-NEXT: %uaddo:_ KnownBits:???????????????????????????????????????????????????????????????? SignBits:1
   ; CHECK-NEXT: %overflow:_ KnownBits:???????????????????????????????? SignBits:32
   ; CHECK-NEXT: %result:_ KnownBits:???????????????????????????????? SignBits:32
-    %copy_x0:_(s64) = COPY $x0
-    %copy_x1:_(s64) = COPY $x1
-    %x0_x1:_(<2 x s64>) = G_BUILD_VECTOR %copy_x0, %copy_x1
-    %uaddo:_(<2 x s64>), %overflow:_(<2 x s32>) = G_UADDO %x0_x1, %x0_x1
-    %result:_(<2 x s32>) = COPY %overflow
+    %copy_x0:_(i64) = COPY $x0
+    %copy_x1:_(i64) = COPY $x1
+    %x0_x1:_(<2 x i64>) = G_BUILD_VECTOR %copy_x0, %copy_x1
+    %uaddo:_(<2 x i64>), %overflow:_(<2 x i32>) = G_UADDO %x0_x1, %x0_x1
+    %result:_(<2 x i32>) = COPY %overflow
 ...

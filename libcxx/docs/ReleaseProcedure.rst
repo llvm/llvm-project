@@ -11,8 +11,6 @@ This page describes the libc++ procedure for that release.
 Prepare the release
 ===================
 
-This is done by the libc++ developers.
-
 It should be finished before the Release managers start branching the new
 release:
 
@@ -37,10 +35,8 @@ release:
 * Make sure all libc++ supported compilers in the CI are updated to their
   latest release.
 
-Branching
-=========
-
-This is done by the LLVM Release managers.
+After the branch is created
+===========================
 
 After branching for an LLVM release:
 
@@ -48,28 +44,21 @@ After branching for an LLVM release:
 2. Update the version number in ``libcxx/docs/conf.py``
 3. Update ``_LIBCPPABI_VERSION`` in ``libcxxabi/include/cxxabi.h``
 4. Update ``_LIBUNWIND_VERSION`` in ``libunwind/include/__libunwind_config.h``
-5. Create a release notes file for the next release from the template
-6. Point to the new release notes file from ``libcxx/docs/ReleaseNotes.rst``
-
-Post branching
-==============
-
-This is done by the libc++ developers.
-
-After branching it takes a couple of days before the new LLVM ToT version is
-available on `<https://apt.llvm.org>`_. Once it is available the pre-commit CI
-can start using the new ToT version. In order to make sure patches can be
-backported to the release branch the oldest compiler is not removed yet.
-
-The section ``Upcoming Deprecations and Removals`` is cleared by the release
-managers. Copy back the items that were in this section.
+5. Create a release notes file for the next release from the previous ones and point to it from
+   ``libcxx/docs/ReleaseNotes.rst``. Remove entries that do not apply anymore, but keep in mind
+   that some entries (such as upcoming deprecations) may still apply, may need rewording and may
+   also require follow up PRs to implement.
+6. Update the set of runners targeted by the CI on the release branch to ``llvm-premerge-libcxx-release-runners``, and
+   make sure that runner set is using the appropriate image. This ensures that the release branch CI keeps working even
+   if the main branch starts using newer images.
+7. Update the pre-commit CI to use the new ToT version of Clang available from Compiler Explorer. In order
+   to make sure patches can be backported to the release branch, we don't remove the oldest compiler yet.
 
 Post release
 ============
 
-This is done by the libc++ developers.
-
-Support for the ToT - 3 version is removed:
+Once the release is done and cherry-picks are not expected, we remove support for the ToT - 3 version Clang.
+We also perform associated cleanups:
 
 - Search for ``LLVM RELEASE`` and address their comments
 - Search for test that have ``UNSUPPORTED`` or ``XFAIL`` for the no longer supported version

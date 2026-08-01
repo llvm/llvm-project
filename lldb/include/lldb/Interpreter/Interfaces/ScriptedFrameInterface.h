@@ -53,6 +53,11 @@ public:
 
   virtual lldb::ValueObjectListSP GetVariables() { return nullptr; }
 
+  virtual std::optional<lldb::ValueType>
+  GetValueTypeForVariable(lldb::ValueObjectSP value) {
+    return std::nullopt;
+  }
+
   virtual lldb::ValueObjectSP
   GetValueObjectForVariableExpression(llvm::StringRef expr, uint32_t options,
                                       Status &error) {

@@ -1,7 +1,6 @@
-; RUN: llc -filetype=null %s
+; RUN: llc -mtriple=amdgpu6.00-- -filetype=null %s
 ; Check that renameDisconnectedComponents() does not create vregs without a
 ; definition on every path (there should at least be IMPLICIT_DEF instructions).
-target triple = "amdgcn--"
 
 define amdgpu_kernel void @func(i1 %c0, i1 %c1, i1 %c2) {
 B0:

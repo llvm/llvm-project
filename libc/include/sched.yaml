@@ -18,12 +18,37 @@ types:
 enums: []
 objects: []
 functions:
+  - name: __sched_andcpuset
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: size_t
+      - type: cpu_set_t *
+      - type: const cpu_set_t *
+      - type: const cpu_set_t *
+  - name: __sched_clrcpuset
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: int
+      - type: size_t
+      - type: cpu_set_t *
   - name: __sched_cpualloc
     standards:
       - llvm_libc_ext
     return_type: cpu_set_t *
     arguments:
       - type: size_t
+  - name: __sched_cpuequal
+    standards:
+      - llvm_libc_ext
+    return_type: int
+    arguments:
+      - type: size_t
+      - type: const cpu_set_t *
+      - type: const cpu_set_t *
   - name: __sched_cpufree
     standards:
       - llvm_libc_ext
@@ -45,6 +70,15 @@ functions:
       - type: int
       - type: size_t
       - type: const cpu_set_t *
+  - name: __sched_orcpuset
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: size_t
+      - type: cpu_set_t *
+      - type: const cpu_set_t *
+      - type: const cpu_set_t *
   - name: __sched_setcpuset
     standards:
       - llvm_libc_ext
@@ -60,6 +94,15 @@ functions:
     arguments:
       - type: size_t
       - type: cpu_set_t *
+  - name: __sched_xorcpuset
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: size_t
+      - type: cpu_set_t *
+      - type: const cpu_set_t *
+      - type: const cpu_set_t *
   - name: getcpu
     standards:
       - linux

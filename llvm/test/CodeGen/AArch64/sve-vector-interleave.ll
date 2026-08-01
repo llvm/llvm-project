@@ -876,8 +876,8 @@ define <vscale x 12 x i64> @interleave6_nxv12i64(<vscale x 2 x i64> %vec0, <vsca
 ; SME2-NEXT:    mov z3.d, z7.d
 ; SME2-NEXT:    ptrue p0.d
 ; SME2-NEXT:    st3d { z4.d - z6.d }, p0, [sp]
-; SME2-NEXT:    st3d { z1.d - z3.d }, p0, [sp, #3, mul vl]
 ; SME2-NEXT:    ldr z0, [sp]
+; SME2-NEXT:    st3d { z1.d - z3.d }, p0, [sp, #3, mul vl]
 ; SME2-NEXT:    ldr z1, [sp, #1, mul vl]
 ; SME2-NEXT:    ldr z2, [sp, #2, mul vl]
 ; SME2-NEXT:    ldr z3, [sp, #3, mul vl]

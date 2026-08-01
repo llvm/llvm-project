@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -33,7 +34,7 @@ using namespace acc;
 namespace {
 
 /// Generic helper for single-region OpenACC ops that execute their body once
-/// and then return to the parent operation with their results (if any).
+/// and then continue after the operation with their results (if any).
 static void
 getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
                                   RegionBranchPoint point,
@@ -42,12 +43,12 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
     regions.push_back(RegionSuccessor(&region));
     return;
   }
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(op));
 }
 
 static ValueRange getSingleRegionSuccessorInputs(Operation *op,
                                                  RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(op->getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(op->getResults()) : ValueRange();
 }
 
 /// Remove empty acc.kernel_environment operations. If the operation has wait
@@ -486,6 +487,16 @@ LogicalResult ReductionAccumulateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionAccumulateArrayOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReductionAccumulateArrayOp::verify() {
+  if (getParDims().getArray().empty())
+    return emitOpError("par_dims must specify at least one parallel dimension");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionCombineOp
 //===----------------------------------------------------------------------===//
 
@@ -778,6 +789,42 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
 
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GPUSharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUSharedMemoryOp::verify() {
+  if (getNumCopies() <= 0)
+    return emitOpError("num_copies must be positive");
+  if (getStaticUpperBoundBytes() <= 0)
+    return emitOpError("static_upper_bound_bytes must be positive");
+
+  bool hasScaling = static_cast<bool>(getDynamicSharedMemoryScalingBytes());
+  bool hasFixed = static_cast<bool>(getDynamicSharedMemoryFixedBytes());
+  if (hasScaling != hasFixed)
+    return emitOpError(
+        "dynamic_shared_memory_scaling_bytes and "
+        "dynamic_shared_memory_fixed_bytes must both be present or both be "
+        "absent");
+  if (auto scalingAttr = getDynamicSharedMemoryScalingBytesAttr())
+    if (scalingAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_scaling_bytes must be "
+                         "non-negative");
+  if (auto fixedAttr = getDynamicSharedMemoryFixedBytesAttr())
+    if (fixedAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_fixed_bytes must be "
+                         "non-negative");
+
+  auto resultTy = cast<MemRefType>(getResult().getType());
+  auto addrSpace =
+      dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
+  if (!addrSpace ||
+      addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
+    return emitOpError("result memref must use #gpu.address_space<workgroup>");
 
   return success();
 }

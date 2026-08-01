@@ -29,7 +29,7 @@ public:
   bare_allocator() TEST_NOEXCEPT {}
 
   template <class U>
-  bare_allocator(bare_allocator<U>) TEST_NOEXCEPT {}
+  explicit bare_allocator(bare_allocator<U>) TEST_NOEXCEPT {}
 
   T* allocate(std::size_t n) { return static_cast<T*>(::operator new(n * sizeof(T))); }
 
@@ -59,7 +59,7 @@ public:
   typedef T value_type;
 
   template <class U>
-  TEST_CONSTEXPR_CXX20 no_default_allocator(no_default_allocator<U>) TEST_NOEXCEPT {}
+  TEST_CONSTEXPR_CXX20 explicit no_default_allocator(no_default_allocator<U>) TEST_NOEXCEPT {}
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return static_cast<T*>(std::allocator<T>().allocate(n)); }
 
@@ -102,7 +102,7 @@ public:
   malloc_allocator() TEST_NOEXCEPT { assert(!disable_default_constructor); }
 
   template <class U>
-  malloc_allocator(malloc_allocator<U>) TEST_NOEXCEPT {}
+  explicit malloc_allocator(malloc_allocator<U>) TEST_NOEXCEPT {}
 
   T* allocate(std::size_t n) {
     const std::size_t nbytes = n * sizeof(T);
@@ -466,7 +466,7 @@ public:
   TEST_CONSTEXPR_CXX20 safe_allocator() TEST_NOEXCEPT {}
 
   template <class U>
-  TEST_CONSTEXPR_CXX20 safe_allocator(safe_allocator<U>) TEST_NOEXCEPT {}
+  TEST_CONSTEXPR_CXX20 explicit safe_allocator(safe_allocator<U>) TEST_NOEXCEPT {}
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
     T* memory = std::allocator<T>().allocate(n);
@@ -499,7 +499,7 @@ struct tiny_size_allocator {
   tiny_size_allocator() = default;
 
   template <class U>
-  TEST_CONSTEXPR_CXX20 tiny_size_allocator(tiny_size_allocator<MaxSize, U>) {}
+  TEST_CONSTEXPR_CXX20 explicit tiny_size_allocator(tiny_size_allocator<MaxSize, U>) {}
 
   TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
     assert(n <= MaxSize);

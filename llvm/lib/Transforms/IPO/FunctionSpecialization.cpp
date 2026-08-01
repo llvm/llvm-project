@@ -795,14 +795,13 @@ bool FunctionSpecializer::run() {
       std::optional<uint64_t> Count =
           BFI.getBlockProfileCount(Call->getParent());
       if (Count && !ProfcheckDisableMetadataFixes) {
-        std::optional<llvm::Function::ProfileCount> MaybeCloneCount =
-            Clone->getEntryCount();
+        std::optional<uint64_t> MaybeCloneCount = Clone->getEntryCount();
         if (MaybeCloneCount) {
-          uint64_t CallCount = *Count + MaybeCloneCount->getCount();
+          uint64_t CallCount = *Count + *MaybeCloneCount;
           Clone->setEntryCount(CallCount);
-          if (std::optional<llvm::Function::ProfileCount> MaybeOriginalCount =
+          if (std::optional<uint64_t> MaybeOriginalCount =
                   S.F->getEntryCount()) {
-            uint64_t OriginalCount = MaybeOriginalCount->getCount();
+            uint64_t OriginalCount = *MaybeOriginalCount;
             if (OriginalCount >= *Count) {
               S.F->setEntryCount(OriginalCount - *Count);
             } else {
@@ -1034,6 +1033,9 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
 
 bool FunctionSpecializer::isCandidateFunction(Function *F) {
   if (F->isDeclaration() || F->arg_empty())
+    return false;
+
+  if (F->isInterposable())
     return false;
 
   if (F->hasFnAttribute(Attribute::NoDuplicate))

@@ -1,11 +1,11 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX8,PREGFX11 %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX8,PREGFX11 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10,PREGFX11 %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10,PREGFX11 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.02 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX8,PREGFX11 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu8.02 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX8,PREGFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu10.10 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10,PREGFX11 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu10.10 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX10,PREGFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu11.00 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu11.00 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.00 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.00 -amdgpu-enable-vopd=0 < %s | FileCheck -strict-whitespace -check-prefixes=GCN,GFX11 %s
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #1
 declare void @llvm.amdgcn.exp.i32(i32, i32, i32, i32, i32, i32, i1, i1) #1

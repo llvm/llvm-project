@@ -1,0 +1,151 @@
+; REQUIRES: x86-registered-target
+
+; Test case 1 - General options
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Select logical elements.
+; The following prints all 'instructions', 'symbols' and 'types' that
+; contain 'LOAD' or 'store' in their names or types, using a tab layout
+; and given the number of matches.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select-nocase --select-regex \
+; RUN:                         --select=LOAD --select=store \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types,instructions,summary \
+; RUN:                         %p/Inputs/test-clang.ll 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} 'test-clang.ll'
+; ONE-EMPTY:
+; ONE-NEXT: [001]           {CompileUnit} 'test.cpp'
+; ONE-NEXT: [003]           {Code} '%0 = load i8, ptr %ParamBool.addr, align 1, !dbg !26'
+; ONE-NEXT: [003]           {Code} '%1 = load i32, ptr %ParamUnsigned.addr, align 4, !dbg !34'
+; ONE-NEXT: [003]           {Code} '%2 = load i32, ptr %retval, align 4, !dbg !36'
+; ONE-NEXT: [003]           {Code} '%loadedv = trunc i8 %0 to i1, !dbg !26'
+; ONE-NEXT: [003]           {Code} '%storedv = zext i1 %ParamBool to i8'
+; ONE-NEXT: [003]           {Code} 'br i1 %loadedv, label %if.then, label %if.end, !dbg !26'
+; ONE-NEXT: [003]           {Code} 'store i32 %1, ptr %retval, align 4, !dbg !35'
+; ONE-NEXT: [003]           {Code} 'store i32 %ParamUnsigned, ptr %ParamUnsigned.addr, align 4'
+; ONE-NEXT: [004]           {Code} 'store i32 7, ptr %CONSTANT, align 4, !dbg !32'
+; ONE-NEXT: [004]           {Code} 'store i32 7, ptr %retval, align 4, !dbg !33'
+; ONE-NEXT: [003]           {Code} 'store i8 %storedv, ptr %ParamBool.addr, align 1'
+; ONE-NEXT: [003]           {Code} 'store ptr %ParamPtr, ptr %ParamPtr.addr, align 8'
+; ONE-EMPTY:
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Element      Total    Printed
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Scopes           5          0
+; ONE-NEXT: Symbols          4          0
+; ONE-NEXT: Types            2          0
+; ONE-NEXT: Lines           23         12
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Total           34         12
+
+; RUN: llvm-as %p/Inputs/test-clang.ll -o %t.test-clang.bc
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select-regex --select-nocase \
+; RUN:                         --select=INTe \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types \
+; RUN:                         %t.test-clang.bc \
+; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
+
+; TWO:      Logical View:
+; TWO-NEXT: [000]           {File} '{{.*}}test-clang.bc'
+; TWO-EMPTY:
+; TWO-NEXT: [001]           {CompileUnit} 'test.cpp'
+; TWO-NEXT: [003]     4     {TypeAlias} 'INTEGER' -> 'int'
+; TWO-NEXT: [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
+; TWO-EMPTY:
+; TWO-NEXT: Logical View:
+; TWO-NEXT: [000]           {File} 'test-dwarf-gcc.o'
+; TWO-EMPTY:
+; TWO-NEXT: [001]           {CompileUnit} 'test.cpp'
+; TWO-NEXT: [004]     4     {TypeAlias} 'INTEGER' -> 'int'
+; TWO-NEXT: [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
+
+; Select logical elements based on linkage names.
+; The following prints all symbols that contain "_Z3fooPKijb" in their
+; linkage names, using a tab layout and given the number of matches.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select=_Z3fooPKijb \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,summary \
+; RUN:                         %p/Inputs/test-clang.ll \
+; RUN:                         %p/../DWARF/Inputs/test-dwarf-gcc.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=THREE %s
+
+; THREE:      Logical View:
+; THREE-NEXT: [000]           {File} 'test-clang.ll'
+; THREE-EMPTY:
+; THREE-NEXT: [001]           {CompileUnit} 'test.cpp'
+; THREE-NEXT: [002]     2     {Function} extern not_inlined 'foo' -> 'int'
+; THREE-EMPTY:
+; THREE-NEXT: -----------------------------
+; THREE-NEXT: Element      Total    Printed
+; THREE-NEXT: -----------------------------
+; THREE-NEXT: Scopes           5          1
+; THREE-NEXT: Symbols          4          0
+; THREE-NEXT: Types            2          0
+; THREE-NEXT: Lines            0          0
+; THREE-NEXT: -----------------------------
+; THREE-NEXT: Total           11          1
+; THREE-EMPTY:
+; THREE-NEXT: Logical View:
+; THREE-NEXT: [000]           {File} 'test-dwarf-gcc.o'
+; THREE-EMPTY:
+; THREE-NEXT: [001]           {CompileUnit} 'test.cpp'
+; THREE-NEXT: [002]     2     {Function} extern not_inlined 'foo' -> 'int'
+; THREE-EMPTY:
+; THREE-NEXT: -----------------------------
+; THREE-NEXT: Element      Total    Printed
+; THREE-NEXT: -----------------------------
+; THREE-NEXT: Scopes           3          1
+; THREE-NEXT: Symbols          4          0
+; THREE-NEXT: Types            2          0
+; THREE-NEXT: Lines            0          0
+; THREE-NEXT: -----------------------------
+; THREE-NEXT: Total            9          1
+
+; Select logical elements using exact match.
+; The following prints all 'symbols' and 'types' that contain 'INTPTR' in
+; their names or types, using a tab layout and given the number of matches.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select=INTPTR \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types,instructions,summary \
+; RUN:                         %p/Inputs/test-clang.ll 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=FOUR %s
+
+; FOUR:      Logical View:
+; FOUR-NEXT: [000]           {File} 'test-clang.ll'
+; FOUR-EMPTY:
+; FOUR-NEXT: [001]           {CompileUnit} 'test.cpp'
+; FOUR-NEXT: [002]     1     {TypeAlias} 'INTPTR' -> '* const int'
+; FOUR-NEXT: [003]     2     {Parameter} 'ParamPtr' -> 'INTPTR'
+; FOUR-EMPTY:
+; FOUR-NEXT: -----------------------------
+; FOUR-NEXT: Element      Total    Printed
+; FOUR-NEXT: -----------------------------
+; FOUR-NEXT: Scopes           5          0
+; FOUR-NEXT: Symbols          4          1
+; FOUR-NEXT: Types            2          1
+; FOUR-NEXT: Lines           23          0
+; FOUR-NEXT: -----------------------------
+; FOUR-NEXT: Total           34          2

@@ -53,6 +53,14 @@ public:
                   LoopVectorizationCostModel &CM, VPBuilder &Builder)
       : Plan(Plan), Legal(Legal), CM(CM), Builder(Builder) {}
 
+  /// Returns true if \p I needs to be predicated (i.e. cannot be executed
+  /// unconditionally for all lanes) in the loop being vectorized.
+  /// FIXME: Fully migrate logic to determine if mask is needed to VPlan.
+  bool isPredicatedInst(Instruction *I) const;
+
+  /// Returns true if the target prefers vectorized addressing.
+  bool prefersVectorizedAddressing() const;
+
   /// Create and return a widened recipe for a non-phi recipe \p R if one can be
   /// created within the given VF \p Range.
   VPRecipeBase *tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,

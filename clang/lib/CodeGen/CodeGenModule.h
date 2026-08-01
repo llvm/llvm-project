@@ -561,6 +561,16 @@ private:
   /// was emitted for the class.
   llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
 
+  /// Pending MSVC __global_delete variants that may need forwarding bodies.
+  /// Maps each __global_delete wrapper alias to the corresponding global
+  /// ::operator delete FunctionDecl, in insertion order.
+  llvm::MapVector<llvm::GlobalAlias *, const FunctionDecl *>
+      PendingMSVCGlobalDeletes;
+
+  /// Whether this TU contains a direct use of global ::operator delete
+  /// (indicating that __global_delete forwarding bodies should be emitted).
+  bool HasDirectGlobalDelete = false;
+
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
@@ -619,6 +629,9 @@ private:
   /// A vector of metadata strings for dependent libraries for ELF.
   SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
 
+  /// Global variable for copyright pragma comment (if present).
+  llvm::GlobalVariable *LoadTimeCommentGlobal = nullptr;
+
   /// @name Cache for Objective-C runtime types
   /// @{
 
@@ -640,7 +653,6 @@ private:
   void createCUDARuntime();
   void createHLSLRuntime();
 
-  bool isTriviallyRecursive(const FunctionDecl *F);
   bool shouldEmitFunction(GlobalDecl GD);
   // Whether a global variable should be emitted by CUDA/HIP host/device
   // related attributes.
@@ -696,6 +708,7 @@ private:
   MetadataTypeMap MetadataIdMap;
   MetadataTypeMap VirtualMetadataIdMap;
   MetadataTypeMap GeneralizedMetadataIdMap;
+  MetadataTypeMap CallGraphMetadataIdMap;
 
   // Helps squashing blocks of TopLevelStmtDecl into a single llvm::Function
   // when used with -fincremental-extensions.
@@ -911,8 +924,9 @@ public:
   const llvm::abi::TargetInfo &getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB);
 
   /// True when -fexperimental-abi-lowering is in effect AND the active target
-  /// has an LLVMABI implementation we can route to.
-  bool shouldUseLLVMABILowering() const;
+  /// has an LLVMABI implementation that supports the given LLVM calling
+  /// convention. Unsupported CCs fall back to the legacy ABIInfo path.
+  bool shouldUseLLVMABILowering(unsigned CallingConv) const;
 
   /// Drive the experimental LLVMABI-based lowering path: map argument and
   /// return types into the LLVMABI library, ask its target lowering to fill
@@ -1544,7 +1558,6 @@ public:
   /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
-
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 
   void setFunctionLinkage(GlobalDecl GD, llvm::Function *F) {
@@ -1554,6 +1567,11 @@ public:
   /// Return the appropriate linkage for the vtable, VTT, and type information
   /// of the given class.
   llvm::GlobalVariable::LinkageTypes getVTableLinkage(const CXXRecordDecl *RD);
+
+  /// Returns true if a vtable with the given linkage may be emitted with more
+  /// than one address in the program, because the vtable is weak and the
+  /// target's ABI allows weak vtables to be duplicated across images.
+  bool mayVTableBeDuplicated(llvm::GlobalValue::LinkageTypes Linkage) const;
 
   /// Return the store size, in character units, of the given LLVM type.
   CharUnits GetTargetTypeStoreSize(llvm::Type *Ty) const;
@@ -1635,6 +1653,24 @@ public:
   /// Record that new[] was called for the class, transform vector deleting
   /// destructor definition in a form of alias to the actual definition.
   void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
+
+  /// Record a pending __global_delete variant that may need a forwarding body.
+  void addPendingGlobalDelete(llvm::GlobalAlias *GlobalDeleteAlias,
+                              const FunctionDecl *OperatorDeleteFD);
+
+  /// Get or create the MSVC-compatible __global_delete wrapper for the given
+  /// global ::operator delete, registering it as a pending variant so a
+  /// forwarding body can be emitted if this TU directly uses global
+  /// ::operator delete.
+  llvm::Constant *
+  getOrCreateMSVCGlobalDeleteWrapper(const FunctionDecl *GlobOD);
+
+  /// Note that global ::operator delete is directly used in this TU.
+  void noteDirectGlobalDelete();
+
+  /// Emit __global_delete forwarding bodies for any pending variants,
+  /// if this TU directly uses global ::operator delete.
+  void emitGlobalDeleteForwardingBodies();
 
   /// Check that class need vector deleting destructor body.
   bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
@@ -1725,6 +1761,11 @@ public:
   /// internal identifiers).
   llvm::Metadata *CreateMetadataIdentifierForType(QualType T);
 
+  /// Create a metadata identifier for the Call Graph Section.
+  /// This is a generalized type identifier that is guaranteed to be an
+  /// MDString.
+  llvm::Metadata *CreateMetadataIdentifierForCallGraphType(QualType T);
+
   /// Create a metadata identifier that is intended to be used to check virtual
   /// calls via a member function pointer.
   llvm::Metadata *CreateMetadataIdentifierForVirtualMemPtrType(QualType T);
@@ -1738,11 +1779,11 @@ public:
   void createFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
 
-  /// Create and attach type metadata if the function is a potential indirect
-  /// call target to support call graph section.
+  /// Create and attach callgraph metadata if the function is a potential
+  /// indirect call target to support call graph section.
   void createIndirectFunctionTypeMD(const FunctionDecl *FD, llvm::Function *F);
 
-  /// Create and attach type metadata to the given call.
+  /// Create and attach callee_type metadata to the given call.
   void createCalleeTypeMetadataForIcall(const QualType &QT, llvm::CallBase *CB);
 
   /// Set type metadata to the given function.
@@ -1953,6 +1994,9 @@ private:
   ABIArgInfo convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
                                QualType Type);
 
+  /// Process #pragma comment(copyright, ...).
+  void ProcessPragmaCommentCopyright(StringRef Comment, bool isFromASTFile);
+
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -2161,7 +2205,8 @@ private:
                                     llvm::AttrBuilder &FuncAttrs);
 
   llvm::Metadata *CreateMetadataIdentifierImpl(QualType T, MetadataTypeMap &Map,
-                                               StringRef Suffix);
+                                               StringRef Suffix,
+                                               bool ForceString = false);
 
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.

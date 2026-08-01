@@ -1731,9 +1731,9 @@ define i32 @ustest_f16i32_nsat(half %x) {
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    i32.trunc_sat_f32_s
 ; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 31
 ; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    local.tee 0
 ; CHECK-NEXT:    i32.const 0

@@ -791,7 +791,7 @@ ClangModulesDeclVendor::Create(Target &target) {
       instance->getPreprocessor(), instance->getSema(), skipFunctionBodies));
 
   instance->getPreprocessor().EnterMainSourceFile();
-  parser->Initialize();
+  parser->ConsumeToken();
 
   clang::Parser::DeclGroupPtrTy parsed;
   auto ImportState = clang::Sema::ModuleImportState::NotACXX20Module;

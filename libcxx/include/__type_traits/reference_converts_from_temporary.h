@@ -16,9 +16,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Up>
 struct _LIBCPP_NO_SPECIALIZATIONS reference_converts_from_temporary
@@ -28,8 +28,8 @@ template <class _Tp, class _Up>
 _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_converts_from_temporary_v =
     __reference_converts_from_temporary(_Tp, _Up);
 
-#endif
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif //  _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___TYPE_TRAITS_REFERENCE_CONVERTS_FROM_TEMPORARY_H

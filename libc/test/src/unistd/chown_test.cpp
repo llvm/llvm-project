@@ -13,12 +13,11 @@
 #include "src/unistd/getuid.h"
 #include "src/unistd/unlink.h"
 
+#include "hdr/fcntl_macros.h"
+#include "hdr/sys_stat_macros.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/fcntl_macros.h"
-#include <sys/stat.h>
 
 using LlvmLibcChownTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
@@ -26,7 +25,7 @@ TEST_F(LlvmLibcChownTest, ChownSuccess) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   uid_t my_uid = LIBC_NAMESPACE::getuid();
   gid_t my_gid = LIBC_NAMESPACE::getgid();
-  constexpr const char *FILENAME = "chown.test";
+  constexpr const char *FILENAME = APPEND_LIBC_TEST("chown.test");
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
 
   // Create a test file.

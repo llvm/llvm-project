@@ -892,9 +892,11 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
     OS << "samesign ";
   if (MI.getFlag(MachineInstr::InBounds))
     OS << "inbounds ";
+  if (MI.getFlag(MachineInstr::LRSplit))
+    OS << "lr-split ";
 
   // NOTE: Please add new MIFlags also to the MI_FLAGS_STR in
-  // llvm/utils/update_mir_test_checks.py.
+  // llvm/utils/UpdateTestChecks/mir.py.
 
   OS << TII->getName(MI.getOpcode());
 

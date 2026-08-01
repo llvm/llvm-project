@@ -497,7 +497,6 @@ bool DYLDRendezvous::RemoveSOEntriesFromRemote(
 
 bool DYLDRendezvous::AddSOEntries() {
   SOEntry entry;
-  iterator pos;
 
   assert(m_previous.state == eAdd);
 
@@ -525,7 +524,6 @@ bool DYLDRendezvous::AddSOEntries() {
 
 bool DYLDRendezvous::RemoveSOEntries() {
   SOEntryList entry_list;
-  iterator pos;
 
   assert(m_previous.state == eDelete);
 

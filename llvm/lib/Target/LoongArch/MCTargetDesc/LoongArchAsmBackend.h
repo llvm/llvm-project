@@ -38,7 +38,7 @@ public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                       const MCTargetOptions &Options);
 
-  bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
+  void addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                 uint64_t &FixedValue, bool IsResolved);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,

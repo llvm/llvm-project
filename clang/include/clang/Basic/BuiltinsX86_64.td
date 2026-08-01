@@ -248,10 +248,6 @@ let Features = "amx-avx512,avx10.2", Attributes = [NoThrow, RequiredVectorWidth<
   def tilemovrow_internal : X86Builtin<"_Vector<16, int>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
 }
 
-let Features = "amx-tf32", Attributes = [NoThrow] in {
-  def tmmultf32ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
-}
-
 let Features = "amx-fp8", Attributes = [NoThrow] in {
   def tdpbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
   def tdpbhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
@@ -321,10 +317,6 @@ let Features = "amx-fp8", Attributes = [NoThrow] in {
   def tdpbhf8ps : X86Builtin<"void(_Constant unsigned char, unsigned _Constant char, unsigned _Constant char)">;
   def tdphbf8ps : X86Builtin<"void(_Constant unsigned char, unsigned _Constant char, unsigned _Constant char)">;
   def tdphf8ps : X86Builtin<"void(_Constant unsigned char, unsigned _Constant char, unsigned _Constant char)">;
-}
-
-let Features = "amx-tf32", Attributes = [NoThrow] in {
-  def tmmultf32ps : X86Builtin<"void(_Constant unsigned char, _Constant unsigned char, _Constant unsigned char)">;
 }
 
 let Features = "prefetchi", Attributes = [NoThrow, Const] in {

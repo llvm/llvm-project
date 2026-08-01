@@ -1186,9 +1186,8 @@ void DXILBitcodeWriter::writeModuleInfo() {
   writeStringRecord(Stream, bitc::MODULE_CODE_TRIPLE, Triple, 0 /*TODO*/);
   writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
 
-  if (!M.getModuleInlineAsm().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_ASM, M.getModuleInlineAsm(),
-                      0 /*TODO*/);
+  // The original bitcode writer wrote inline assembly here. Inline assembly
+  // isn't valid in DXIL, so this is removed.
 
   // Emit information about sections and GC, computing how many there are. Also
   // compute the maximum alignment value.

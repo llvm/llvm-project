@@ -39,8 +39,9 @@ public:
   using iterator = const MCPhysReg*;
   using const_iterator = const MCPhysReg*;
 
-  const iterator RegsBegin;
-  const uint8_t *const RegSet;
+  // TODO: reorder fields to reduce memory usage.
+  const uint32_t RegsOff;   ///< Relative offset to MCPhysReg array.
+  const uint32_t RegSetOff; ///< Relative offset to uint8_t array.
   const uint32_t NameIdx;
   const uint32_t RegSizeInBits;
   const uint16_t RegsSize;
@@ -50,14 +51,38 @@ public:
   const bool Allocatable;
   const bool BaseClass;
 
+  const uint32_t SubClassMaskOff;    ///< Relative offset to uint32_t array.
+  const uint32_t SuperRegIndicesOff; ///< Relative offset to MCPhysReg array.
+  const LaneBitmask LaneMask;
+  /// Classes with a higher priority value are assigned first by register
+  /// allocators using a greedy heuristic. The value is in the range [0,31].
+  const uint8_t AllocationPriority;
+
+  // Change allocation priority heuristic used by greedy.
+  const bool GlobalPriority;
+
+  /// Configurable target specific flags.
+  const uint8_t TSFlags;
+  const uint8_t SpillStackID;
+  /// Whether the class supports two (or more) disjunct subregister indices.
+  const bool HasDisjunctSubRegs;
+  /// Whether a combination of subregisters can cover every register in the
+  /// class. See also the CoveredBySubRegs description in Target.td.
+  const bool CoveredBySubRegs;
+  const uint32_t SuperClassesOff; ///< Relative offset to unsigned array.
+  const uint16_t SuperClassesSize;
+
   /// getID() - Return the register class ID number.
   ///
   unsigned getID() const { return ID; }
 
   /// begin/end - Return all of the registers in this class.
   ///
-  iterator       begin() const { return RegsBegin; }
-  iterator         end() const { return RegsBegin + RegsSize; }
+  iterator begin() const {
+    return reinterpret_cast<iterator>(reinterpret_cast<const char *>(this) +
+                                      RegsOff);
+  }
+  iterator end() const { return begin() + RegsSize; }
 
   /// getNumRegs - Return the number of registers in this class.
   ///
@@ -67,7 +92,11 @@ public:
   ///
   MCRegister getRegister(unsigned i) const {
     assert(i < getNumRegs() && "Register number out of range!");
-    return RegsBegin[i];
+    return begin()[i];
+  }
+
+  ArrayRef<MCPhysReg> getRegisters() const {
+    return ArrayRef(begin(), RegsSize);
   }
 
   /// contains - Return true if the specified register is included in this
@@ -78,6 +107,7 @@ public:
     unsigned Byte = RegNo / 8;
     if (Byte >= RegSetSize)
       return false;
+    const uint8_t *RegSet = reinterpret_cast<const uint8_t *>(this) + RegSetOff;
     return (RegSet[Byte] & (1 << InByte)) != 0;
   }
 
@@ -97,12 +127,101 @@ public:
   /// to copy e.g. status flag register classes.
   uint8_t getCopyCost() const { return CopyCost; }
 
+  /// \return true if register class is very expensive to copy e.g. status flag
+  /// register classes.
+  bool expensiveOrImpossibleToCopy() const {
+    return CopyCost == std::numeric_limits<uint8_t>::max();
+  }
+
   /// isAllocatable - Return true if this register class may be used to create
   /// virtual registers.
   bool isAllocatable() const { return Allocatable; }
 
   /// Return true if this register class has a defined BaseClassOrder.
   bool isBaseClass() const { return BaseClass; }
+
+  /// Return true if the specified TargetRegisterClass
+  /// is a proper sub-class of this TargetRegisterClass.
+  bool hasSubClass(const MCRegisterClass *RC) const {
+    return RC != this && hasSubClassEq(RC);
+  }
+
+  /// Returns true if RC is a sub-class of or equal to this class.
+  bool hasSubClassEq(const MCRegisterClass *RC) const {
+    unsigned ID = RC->getID();
+    return (getSubClassMask()[ID / 32] >> (ID % 32)) & 1;
+  }
+
+  /// Return true if the specified MCRegisterClass is a
+  /// proper super-class of this MCRegisterClass.
+  bool hasSuperClass(const MCRegisterClass *RC) const {
+    return RC->hasSubClass(this);
+  }
+
+  /// Returns true if RC is a super-class of or equal to this class.
+  bool hasSuperClassEq(const MCRegisterClass *RC) const {
+    return RC->hasSubClassEq(this);
+  }
+
+  /// Returns a bit vector of subclasses, including this one.
+  /// The vector is indexed by class IDs.
+  ///
+  /// To use it, consider the returned array as a chunk of memory that
+  /// contains an array of bits of size NumRegClasses. Each 32-bit chunk
+  /// contains a bitset of the ID of the subclasses in big-endian style.
+
+  /// I.e., the representation of the memory from left to right at the
+  /// bit level looks like:
+  /// [31 30 ... 1 0] [ 63 62 ... 33 32] ...
+  ///                     [ XXX NumRegClasses NumRegClasses - 1 ... ]
+  /// Where the number represents the class ID and XXX bits that
+  /// should be ignored.
+  ///
+  /// See the implementation of hasSubClassEq for an example of how it
+  /// can be used.
+  const uint32_t *getSubClassMask() const {
+    return reinterpret_cast<const uint32_t *>(
+        reinterpret_cast<const char *>(this) + SubClassMaskOff);
+  }
+
+  /// Returns a 0-terminated list of sub-register indices that project some
+  /// super-register class into this register class. The list has an entry for
+  /// each Idx such that:
+  ///
+  ///   There exists SuperRC where:
+  ///     For all Reg in SuperRC:
+  ///       this->contains(Reg:Idx)
+  const uint16_t *getSuperRegIndices() const {
+    return reinterpret_cast<const uint16_t *>(
+        reinterpret_cast<const char *>(this) + SuperRegIndicesOff);
+  }
+
+  /// Returns a list of super-classes.  The
+  /// classes are ordered by ID which is also a topological ordering from large
+  /// to small classes.  The list does NOT include the current class.
+  ArrayRef<unsigned> superclasses() const {
+    const unsigned *SuperClasses = reinterpret_cast<const unsigned *>(
+        reinterpret_cast<const char *>(this) + SuperClassesOff);
+    return ArrayRef(SuperClasses, SuperClassesSize);
+  }
+
+  /// Returns the combination of all lane masks of register in this class.
+  /// The lane masks of the registers are the combination of all lane masks
+  /// of their subregisters. Returns 1 if there are no subregisters.
+  LaneBitmask getLaneMask() const { return LaneMask; }
+};
+
+template <unsigned RegClassCount, unsigned RegCount, unsigned BitSetSize,
+          unsigned SubClassMaskSize, unsigned SuperRegIdxSeqSize,
+          unsigned SuperClassSize>
+struct MCRegisterClassStorage {
+  MCRegisterClass Classes[RegClassCount];
+  MCPhysReg Regs[RegCount];
+  uint8_t BitSets[BitSetSize];
+  uint32_t SubClassMasks[SubClassMaskSize];
+  uint16_t SuperRegIdxSeqs[SuperRegIdxSeqSize];
+  // Avoid zero-sized arrays.
+  unsigned SuperClasses[SuperClassSize > 0 ? SuperClassSize : 1];
 };
 
 /// MCRegisterDesc - This record contains information about a particular

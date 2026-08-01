@@ -346,16 +346,6 @@ int32_t test_vcvts_s32_f32(float32_t a) {
   return (int32_t)vcvts_s32_f32(a);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test_vcvtd_s64_f64
-// CHECK-SAME: (double noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTD_S64_F64_I:%.*]] = call i64 @llvm.fptosi.sat.i64.f64(double [[A]])
-// CHECK-NEXT:    ret i64 [[VCVTD_S64_F64_I]]
-//
-int64_t test_vcvtd_s64_f64(float64_t a) {
-  return (int64_t)vcvtd_s64_f64(a);
-}
-
 // CHECK-LABEL: define {{[^@]+}}@test_vcvts_s64_f32
 // CHECK-SAME: (float noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
@@ -364,16 +354,6 @@ int64_t test_vcvtd_s64_f64(float64_t a) {
 //
 int64_t test_vcvts_s64_f32(float32_t a) {
   return (int64_t)vcvts_s64_f32(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vcvtd_s32_f64
-// CHECK-SAME: (double noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTD_S32_F64_I:%.*]] = call i32 @llvm.fptosi.sat.i32.f64(double [[A]])
-// CHECK-NEXT:    ret i32 [[VCVTD_S32_F64_I]]
-//
-int32_t test_vcvtd_s32_f64(float64_t a) {
-  return (int32_t)vcvtd_s32_f64(a);
 }
 
 // CHECK-LABEL: define {{[^@]+}}@test_vcvts_u32_f32
@@ -386,16 +366,6 @@ uint32_t test_vcvts_u32_f32(float32_t a) {
   return (uint32_t)vcvts_u32_f32(a);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test_vcvtd_u64_f64
-// CHECK-SAME: (double noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTD_U64_F64_I:%.*]] = call i64 @llvm.fptoui.sat.i64.f64(double [[A]])
-// CHECK-NEXT:    ret i64 [[VCVTD_U64_F64_I]]
-//
-uint64_t test_vcvtd_u64_f64(float64_t a) {
-  return (uint64_t)vcvtd_u64_f64(a);
-}
-
 // CHECK-LABEL: define {{[^@]+}}@test_vcvts_u64_f32
 // CHECK-SAME: (float noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
@@ -404,15 +374,5 @@ uint64_t test_vcvtd_u64_f64(float64_t a) {
 //
 uint64_t test_vcvts_u64_f32(float32_t a) {
   return (uint64_t)vcvts_u64_f32(a);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vcvtd_u32_f64
-// CHECK-SAME: (double noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VCVTD_U32_F64_I:%.*]] = call i32 @llvm.fptoui.sat.i32.f64(double [[A]])
-// CHECK-NEXT:    ret i32 [[VCVTD_U32_F64_I]]
-//
-uint32_t test_vcvtd_u32_f64(float64_t a) {
-  return (uint32_t)vcvtd_u32_f64(a);
 }
 

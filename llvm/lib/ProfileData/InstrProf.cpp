@@ -949,6 +949,44 @@ void InstrProfRecord::mergeValueProfData(
     ThisSiteRecords[I].merge(OtherSiteRecords[I], Weight, Warn);
 }
 
+void InstrProfRecord::computeBlockUniformity() {
+  if (UniformCounts.empty())
+    return;
+
+  if (UniformCounts.size() != Counts.size()) {
+    UniformityBits.clear();
+    return;
+  }
+
+  UniformityBits.assign((Counts.size() + 7) / 8, 0xFF);
+  for (size_t I = 0, E = Counts.size(); I < E; ++I) {
+    uint64_t TotalCount = Counts[I];
+    uint64_t UniformCount = UniformCounts[I];
+    uint64_t MinUniformCount = TotalCount - TotalCount / 10;
+    bool IsUniform = UniformCount >= MinUniformCount;
+    if (!IsUniform)
+      UniformityBits[I / 8] &= ~(1 << (I % 8));
+  }
+}
+
+static void mergeUniformityBits(std::vector<uint8_t> &Dst,
+                                ArrayRef<uint8_t> Src) {
+  if (Dst.empty()) {
+    Dst.assign(Src.begin(), Src.end());
+    return;
+  }
+  if (Src.empty())
+    return;
+
+  if (Dst.size() != Src.size()) {
+    Dst.clear();
+    return;
+  }
+
+  for (size_t I = 0, E = Src.size(); I < E; ++I)
+    Dst[I] &= Src[I];
+}
+
 void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
                             function_ref<void(instrprof_error)> Warn) {
   // If the number of counters doesn't match we either have bad data
@@ -957,6 +995,9 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     Warn(instrprof_error::count_mismatch);
     return;
   }
+
+  computeBlockUniformity();
+  Other.computeBlockUniformity();
 
   // Special handling of the first count as the PseudoCount.
   CountPseudoKind OtherKind = Other.getCountPseudoKind();
@@ -975,7 +1016,9 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
       setPseudoCount(PseudoWarm);
     return;
   }
-
+  OffloadDeviceWaveSize = Other.OffloadDeviceWaveSize;
+  bool HasUniformCounts = !UniformCounts.empty();
+  bool OtherHasUniformCounts = !Other.UniformCounts.empty();
   for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
     bool Overflowed;
     uint64_t Value =
@@ -987,6 +1030,29 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     Counts[I] = Value;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
+  }
+
+  if (HasUniformCounts && OtherHasUniformCounts) {
+    if (UniformCounts.size() != Other.UniformCounts.size()) {
+      UniformCounts.clear();
+      UniformityBits.clear();
+    } else {
+      for (size_t I = 0, E = Other.UniformCounts.size(); I < E; ++I) {
+        bool Overflowed;
+        UniformCounts[I] = SaturatingMultiplyAdd(Other.UniformCounts[I], Weight,
+                                                 UniformCounts[I], &Overflowed);
+        if (UniformCounts[I] > getInstrMaxCountValue()) {
+          UniformCounts[I] = getInstrMaxCountValue();
+          Overflowed = true;
+        }
+        if (Overflowed)
+          Warn(instrprof_error::counter_overflow);
+      }
+      computeBlockUniformity();
+    }
+  } else {
+    UniformCounts.clear();
+    mergeUniformityBits(UniformityBits, Other.UniformityBits);
   }
 
   // If the number of bitmap bytes doesn't match we either have bad data
@@ -1025,6 +1091,17 @@ void InstrProfRecord::scale(uint64_t N, uint64_t D,
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }
+  for (auto &Count : this->UniformCounts) {
+    bool Overflowed;
+    Count = SaturatingMultiply(Count, N, &Overflowed) / D;
+    if (Count > getInstrMaxCountValue()) {
+      Count = getInstrMaxCountValue();
+      Overflowed = true;
+    }
+    if (Overflowed)
+      Warn(instrprof_error::counter_overflow);
+  }
+  computeBlockUniformity();
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     scaleValueProfData(Kind, N, D, Warn);
 }
@@ -1715,7 +1792,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
       IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version14,
                 "Please update the reader as needed when a new field is added "
                 "or when indexed profile version gets bumped.");
 
@@ -1748,10 +1825,11 @@ size_t Header::size() const {
     // of the header, and byte offset of existing fields shouldn't change when
     // indexed profile version gets incremented.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version13,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version14,
         "Please update the size computation below if a new field has "
         "been added to the header; for a version bump without new "
         "fields, add a case statement to fall through to the latest version.");
+  case 14ull: // UniformityBits added in record data, no header change
   case 13ull:
   case 12ull:
     return 72;

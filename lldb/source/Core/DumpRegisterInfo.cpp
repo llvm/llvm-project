@@ -8,7 +8,7 @@
 
 #include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;

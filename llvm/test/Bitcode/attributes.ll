@@ -592,6 +592,11 @@ define void @dead_on_return_sized(ptr dead_on_return(4) %p) {
   ret void
 }
 
+; CHECK: define void @noipa() [[NOIPA:#[0-9]+]]
+define void @noipa() noipa {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }
@@ -654,4 +659,5 @@ define void @dead_on_return_sized(ptr dead_on_return(4) %p) {
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
+; CHECK: attributes [[NOIPA]] = { noipa }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

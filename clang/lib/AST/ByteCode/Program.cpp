@@ -124,8 +124,12 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-unsigned Program::getOrCreateDummy(const DeclTy &D, bool IsConstexprUnknown) {
+unsigned Program::getOrCreateDummy(DeclTy D, bool IsConstexprUnknown) {
   assert(D);
+
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(dyn_cast<const Decl *>(D)))
+    D = VD->getFirstDecl();
+
   // Dedup blocks since they are immutable and pointers cannot be compared.
   if (auto It = DummyVariables.find(D.getOpaqueValue());
       It != DummyVariables.end())
@@ -196,9 +200,10 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
     return std::nullopt;
 
   Global *NewGlobal = Globals[*Idx];
-  // Note that this loop has one iteration where Redecl == VD.
-  for (const Decl *Redecl : VD->redecls()) {
+  GlobalIndices[VD] = *Idx;
 
+  for (const Decl *Redecl = VD->getPreviousDecl(); Redecl;
+       Redecl = Redecl->getPreviousDecl()) {
     // If this redecl was registered as a dummy variable, it is now a proper
     // global variable and points to the block we just created.
     if (auto DummyIt = DummyVariables.find(Redecl);
@@ -218,17 +223,15 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
       continue;
     }
 
-    if (Redecl != VD) {
-      Block *RedeclBlock = Globals[Iter->second]->block();
-      // All pointers pointing to the previous extern decl now point to the
-      // new decl.
-      // A previous iteration might've already fixed up the pointers for this
-      // global.
-      if (RedeclBlock != NewGlobal->block())
-        RedeclBlock->movePointersTo(NewGlobal->block());
+    Block *RedeclBlock = Globals[Iter->second]->block();
+    // All pointers pointing to the previous extern decl now point to the
+    // new decl.
+    // A previous iteration might've already fixed up the pointers for this
+    // global.
+    if (RedeclBlock != NewGlobal->block())
+      RedeclBlock->movePointersTo(NewGlobal->block());
 
-      Globals[Iter->second] = NewGlobal;
-    }
+    Globals[Iter->second] = NewGlobal;
     Iter->second = *Idx;
   }
 

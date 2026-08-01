@@ -47,7 +47,8 @@ class StringRef;
 class raw_ostream;
 class LiveIntervals;
 class LiveVariables;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 // This structure uniquely identifies a basic block section.

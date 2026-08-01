@@ -73,11 +73,90 @@ public:
     SymbolRef symbol_;
   };
 
+  // F2023 R1526 conditional-arg: runtime selection of actual arguments.
+  // Recursive structure mirroring the parser: each ConditionalArg holds
+  // a condition, a consequent, and a tail that is either another
+  // ConditionalArg (continuing the chain) or a terminal Consequent.
+  // std::nullopt represents .NIL. (absent optional argument).
+  class ConditionalArg {
+  public:
+    using Consequent =
+        std::optional<common::CopyableIndirection<Expr<SomeType>>>;
+    using ConditionalArgPartOrConsequent =
+        std::variant<common::CopyableIndirection<ConditionalArg>, Consequent>;
+
+    ConditionalArg(Expr<SomeLogical> &&condition, Consequent &&consequent,
+        ConditionalArgPartOrConsequent &&tail);
+    DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(ConditionalArg)
+
+    Expr<SomeLogical> &condition() { return condition_.value(); }
+    const Expr<SomeLogical> &condition() const { return condition_.value(); }
+    const Consequent &consequent() const { return consequent_; }
+    Consequent &consequent() { return consequent_; }
+    ConditionalArgPartOrConsequent &tail() { return tail_; }
+    const ConditionalArgPartOrConsequent &tail() const { return tail_; }
+
+    // Dispatch on the tail: calls onConditionalArg(const ConditionalArg &)
+    // if the tail continues the chain, or onConsequent(const Consequent &)
+    // if the tail is the terminal consequent.
+    template <typename F, typename G>
+    auto VisitTail(F onConditionalArg, G onConsequent) const {
+      return common::visit(
+          common::visitors{
+              [&](const common::CopyableIndirection<ConditionalArg> &inner) {
+                return onConditionalArg(inner.value());
+              },
+              [&](const Consequent &cons) { return onConsequent(cons); },
+          },
+          tail_);
+    }
+
+    template <typename F, typename G>
+    auto VisitTail(F onConditionalArg, G onConsequent) {
+      return common::visit(
+          common::visitors{
+              [&](common::CopyableIndirection<ConditionalArg> &inner) {
+                return onConditionalArg(inner.value());
+              },
+              [&](Consequent &cons) { return onConsequent(cons); },
+          },
+          tail_);
+    }
+
+    // Apply a callback to every Consequent in the chain (including .NIL.
+    // entries).  This encapsulates the recurring "process consequent, then
+    // VisitTail with recursion" pattern.
+    template <typename F> void ForEachConsequent(F f) const {
+      f(consequent_);
+      VisitTail(
+          [&](const ConditionalArg &inner) { inner.ForEachConsequent(f); },
+          [&](const Consequent &cons) { f(cons); });
+    }
+    template <typename F> void ForEachConsequent(F f) {
+      f(consequent_);
+      VisitTail([&](ConditionalArg &inner) { inner.ForEachConsequent(f); },
+          [&](Consequent &cons) { f(cons); });
+    }
+
+    // Returns the first non-.NIL. consequent expression, or nullptr.
+    const Expr<SomeType> *FirstNonNilConsequent() const;
+    bool HasNilConsequent() const;
+
+    bool operator==(const ConditionalArg &) const;
+    llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
+
+  private:
+    common::CopyableIndirection<Expr<SomeLogical>> condition_;
+    Consequent consequent_;
+    ConditionalArgPartOrConsequent tail_;
+  };
+
   DECLARE_CONSTRUCTORS_AND_ASSIGNMENTS(ActualArgument)
   explicit ActualArgument(Expr<SomeType> &&);
   explicit ActualArgument(common::CopyableIndirection<Expr<SomeType>> &&);
   explicit ActualArgument(AssumedType);
   explicit ActualArgument(common::Label);
+  explicit ActualArgument(ConditionalArg &&);
   ~ActualArgument();
   ActualArgument &operator=(Expr<SomeType> &&);
 
@@ -121,6 +200,27 @@ public:
   }
   bool isAlternateReturn() const {
     return std::holds_alternative<common::Label>(u_);
+  }
+  bool isConditionalArg() const {
+    return std::holds_alternative<ConditionalArg>(u_);
+  }
+  const ConditionalArg *GetConditionalArg() const {
+    return std::get_if<ConditionalArg>(&u_);
+  }
+  ConditionalArg *GetConditionalArg() {
+    return std::get_if<ConditionalArg>(&u_);
+  }
+  const Expr<SomeType> *GetConditionalArgExpr() const {
+    const auto *condArg{GetConditionalArg()};
+    return condArg ? condArg->FirstNonNilConsequent() : nullptr;
+  }
+  // Returns the expression from a direct Expr argument or, failing that,
+  // the first non-NIL consequent from a ConditionalArg.
+  const Expr<SomeType> *GetArgExpr() const {
+    if (const auto *expr{UnwrapExpr()}) {
+      return expr;
+    }
+    return GetConditionalArgExpr();
   }
   bool isPassedObject() const { return attrs_.test(Attr::PassedObject); }
   ActualArgument &set_isPassedObject(bool yes = true) {
@@ -169,7 +269,7 @@ private:
   // first as a variable, then as an expression, and the distinction appears
   // in the parse tree.
   std::variant<common::CopyableIndirection<Expr<SomeType>>, AssumedType,
-      common::Label>
+      common::Label, ConditionalArg>
       u_;
   std::optional<parser::CharBlock> keyword_;
   Attrs attrs_;

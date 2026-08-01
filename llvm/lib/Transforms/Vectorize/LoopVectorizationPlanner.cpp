@@ -134,16 +134,12 @@ void LoopVectorizationUtils::reportVectorization(OptimizationRemarkEmitter *ORE,
   });
 }
 
-bool VFSelectionContext::isLegalMaskedLoadOrStore(Instruction *I,
-                                                  ElementCount VF) const {
-  assert(isa<LoadInst>(I) || isa<StoreInst>(I));
-  auto *Ty = getLoadStoreType(I);
-  const unsigned AS = getLoadStoreAddressSpace(I);
-  const Align Alignment = getLoadStoreAlignment(I);
-
+bool VFSelectionContext::isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy,
+                                                  Align Alignment,
+                                                  unsigned AddressSpace) const {
   return ForceTargetSupportsMaskedMemoryOps ||
-         (isa<LoadInst>(I) ? TTI.isLegalMaskedLoad(Ty, Alignment, AS)
-                           : TTI.isLegalMaskedStore(Ty, Alignment, AS));
+         (IsLoad ? TTI.isLegalMaskedLoad(ScalarTy, Alignment, AddressSpace)
+                 : TTI.isLegalMaskedStore(ScalarTy, Alignment, AddressSpace));
 }
 
 bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
@@ -162,7 +158,8 @@ bool VFSelectionContext::isLegalGatherOrScatter(Value *V,
 }
 
 bool VFSelectionContext::supportsScalableVectors() const {
-  return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors;
+  return TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors ||
+         VectorizerParams::VectorizationFactor.isScalable();
 }
 
 bool VFSelectionContext::useMaxBandwidth(bool IsScalable) const {
@@ -807,7 +804,10 @@ VFSelectionContext::computeVPlanOuterloopVF(ElementCount UserVF) {
                        : TargetTransformInfo::RGK_FixedWidthVector;
 
     TypeSize RegSize = TTI.getRegisterBitWidth(RegKind);
-    unsigned N = RegSize.getKnownMinValue() / WidestType;
+    // The widest type may be wider than the register width and WidestType may
+    // not be a power of two; round the element count down to a power of two.
+    unsigned N = std::max<uint64_t>(
+        1, llvm::bit_floor(RegSize.getKnownMinValue() / WidestType));
     VF = ElementCount::get(N, RegSize.isScalable());
     LLVM_DEBUG(dbgs() << "LV: VPlan computed VF " << VF << ".\n");
 

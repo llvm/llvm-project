@@ -659,19 +659,6 @@ MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
   return DefMI && DefMI->getOpcode() == Opcode ? DefMI : nullptr;
 }
 
-APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {
-  if (Size == 32)
-    return APFloat(float(Val));
-  if (Size == 64)
-    return APFloat(Val);
-  if (Size != 16)
-    llvm_unreachable("Unsupported FPConstant size");
-  bool Ignored;
-  APFloat APF(Val);
-  APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &Ignored);
-  return APF;
-}
-
 std::optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode,
                                              const Register Op1,
                                              const Register Op2,
@@ -1527,12 +1514,11 @@ bool llvm::isConstantOrConstantVector(const MachineInstr &MI,
 }
 
 std::optional<APInt>
-llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
+llvm::isConstantOrConstantSplatVector(Register Def,
                                       const MachineRegisterInfo &MRI) {
-  Register Def = MI.getOperand(0).getReg();
   if (auto C = getIConstantVRegValWithLookThrough(Def, MRI))
     return C->Value;
-  auto MaybeCst = getIConstantSplatSExtVal(MI, MRI);
+  auto MaybeCst = getIConstantSplatSExtVal(Def, MRI);
   if (!MaybeCst)
     return std::nullopt;
   const unsigned ScalarSize = MRI.getType(Def).getScalarSizeInBits();
@@ -1540,9 +1526,8 @@ llvm::isConstantOrConstantSplatVector(MachineInstr &MI,
 }
 
 std::optional<APFloat>
-llvm::isConstantOrConstantSplatVectorFP(MachineInstr &MI,
+llvm::isConstantOrConstantSplatVectorFP(Register Def,
                                         const MachineRegisterInfo &MRI) {
-  Register Def = MI.getOperand(0).getReg();
   if (auto FpConst = getFConstantVRegValWithLookThrough(Def, MRI))
     return FpConst->Value;
   auto MaybeCstFP = getFConstantSplat(Def, MRI, /*allowUndef=*/false);
@@ -2089,7 +2074,8 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
                                           unsigned DstAS, unsigned SrcAS,
                                           const AttributeList &FuncAttributes,
                                           const TargetLowering &TLI) {
-  if (Op.isMemcpyWithFixedDstAlign() && Op.getSrcAlign() < Op.getDstAlign())
+  if (Op.isMemcpyOrMemmoveWithFixedDstAlign() &&
+      Op.getSrcAlign() < Op.getDstAlign())
     return false;
 
   LLT Ty = TLI.getOptimalMemOpLLT(Op, FuncAttributes);
@@ -2128,7 +2114,7 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
       unsigned Fast;
       // Need to get a VT equivalent for allowMisalignedMemoryAccesses().
       MVT VT = getMVTForLLT(Ty);
-      if (NumMemOps && Op.allowOverlap() && NewTySize < Size &&
+      if (NumMemOps && !Op.isVolatile() && NewTySize < Size &&
           TLI.allowsMisalignedMemoryAccesses(
               VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
               MachineMemOperand::MONone, &Fast) &&
@@ -2159,7 +2145,8 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
   const unsigned Opc = MI.getOpcode();
   assert((Opc == TargetOpcode::G_MEMCPY ||
           Opc == TargetOpcode::G_MEMCPY_INLINE ||
-          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET) &&
+          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET ||
+          Opc == TargetOpcode::G_MEMSET_INLINE) &&
          "Expected memcpy like instruction");
 
   auto MMOIt = MI.memoperands_begin();
@@ -2171,7 +2158,7 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
   Register Len;
   std::tie(Dst, Src, Len) = MI.getFirst3Regs();
 
-  if (Opc != TargetOpcode::G_MEMSET) {
+  if (Opc != TargetOpcode::G_MEMSET && Opc != TargetOpcode::G_MEMSET_INLINE) {
     assert(MMOIt != MI.memoperands_end() && "Expected a second MMO on MI");
     MemOp = *(++MMOIt);
     SrcAlign = MemOp->getBaseAlign();
@@ -2181,9 +2168,10 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
   // See if this is a constant length copy.
   auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
   if (!LenVRegAndVal) {
-    // FIXME: support dynamically sized G_MEMCPY_INLINE
+    // FIXME: support dynamically sized G_MEMCPY_INLINE and G_MEMSET_INLINE
     assert(Opc != TargetOpcode::G_MEMCPY_INLINE &&
-           "inline memcpy with dynamic size is not yet supported");
+           Opc != TargetOpcode::G_MEMSET_INLINE &&
+           "inline memcpy and memset with dynamic size are not yet supported");
     return false;
   }
 
@@ -2193,7 +2181,8 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
   if (KnownLen == 0)
     return true;
 
-  if (Opc != TargetOpcode::G_MEMCPY_INLINE && MaxLen && KnownLen > MaxLen)
+  if (Opc != TargetOpcode::G_MEMCPY_INLINE &&
+      Opc != TargetOpcode::G_MEMSET_INLINE && MaxLen && KnownLen > MaxLen)
     return false;
 
   bool IsVolatile = MemOp->isVolatile();
@@ -2232,18 +2221,18 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
     const auto &SrcMMO = **std::next(MI.memoperands_begin());
     MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
     unsigned Limit = TLI.getMaxStoresPerMemmove(OptSize);
-    // FIXME: SelectionDAG always passes false for 'AllowOverlap', apparently
-    // due to a bug in it's findOptimalMemOpLowering implementation. For now do
-    // the same thing here.
     return findGISelOptimalMemOpLowering(
         MemOps, Limit,
-        MemOp::Copy(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
-                    SrcAlign, /*IsVolatile=*/true),
+        MemOp::Move(KnownLen, DstAlignCanChange, std::min(DstAlign, SrcAlign),
+                    SrcAlign, IsVolatile),
         DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
         MF.getFunction().getAttributes(), TLI);
   }
-  case TargetOpcode::G_MEMSET: {
-    unsigned Limit = TLI.getMaxStoresPerMemset(OptSize);
+  case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE: {
+    unsigned Limit = Opc == TargetOpcode::G_MEMSET_INLINE
+                         ? std::numeric_limits<unsigned>::max()
+                         : TLI.getMaxStoresPerMemset(OptSize);
     auto ValVRegAndVal = getIConstantVRegValWithLookThrough(Src, MRI);
     bool IsZeroVal = ValVRegAndVal && ValVRegAndVal->Value == 0;
     return findGISelOptimalMemOpLowering(

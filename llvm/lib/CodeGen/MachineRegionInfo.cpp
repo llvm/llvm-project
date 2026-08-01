@@ -72,6 +72,39 @@ void MachineRegionInfo::recalculate(MachineFunction &F,
   calculate(F);
 }
 
+bool MachineRegionInfo::invalidate(
+    MachineFunction &F, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG has been preserved.
+  auto PAC = PA.getChecker<MachineRegionInfoAnalysis>();
+  return !(PAC.preserved() ||
+           PAC.preservedSet<AllAnalysesOn<MachineFunction>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
+//===----------------------------------------------------------------------===//
+// MachineRegionAnalysis implementation
+//
+AnalysisKey MachineRegionInfoAnalysis::Key;
+MachineRegionInfo
+MachineRegionInfoAnalysis::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  MachineRegionInfo MRI;
+  MRI.recalculate(MF, &MFAM.getResult<MachineDominatorTreeAnalysis>(MF),
+                  &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF),
+                  &MFAM.getResult<MachineDominanceFrontierAnalysis>(MF));
+  return MRI;
+}
+
+PreservedAnalyses
+MachineRegionInfoPrinterPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MachineRegionInfo &MRI = MFAM.getResult<MachineRegionInfoAnalysis>(MF);
+  MRI.print(OS);
+  return PreservedAnalyses::all();
+}
+
 //===----------------------------------------------------------------------===//
 // MachineRegionInfoPass implementation
 //

@@ -19,12 +19,12 @@ void test(char8_t u8, char16_t u16, char32_t u32) {
 
 
     c8(char32_t(0x7f));
-    c8(char32_t(0x80));   // expected-warning {{implicit conversion from 'char32_t' to 'char8_t' changes the meaning of the code point '<U+0080>'}}
+    c8(char32_t(0x80));   // expected-warning {{implicit conversion from 'char32_t' to 'char8_t' changes the meaning of the code point U+0080}}
 
     c8(char16_t(0x7f));
-    c8(char16_t(0x80));   // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code point '<U+0080>'}}
-    c8(char16_t(0xD800)); // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code unit '<0xD800>'}}
-    c8(char16_t(0xE000)); // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code point '<U+E000>'}}
+    c8(char16_t(0x80));   // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code point U+0080}}
+    c8(char16_t(0xD800)); // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code unit <0xD800>}}
+    c8(char16_t(0xE000)); // expected-warning {{implicit conversion from 'char16_t' to 'char8_t' changes the meaning of the code point U+E000}}
 
 
     c16(char32_t(0x7f));
@@ -36,8 +36,8 @@ void test(char8_t u8, char16_t u16, char32_t u32) {
 
 
     c32(char8_t(0x7f));
-    c32(char8_t(0x80)); // expected-warning {{implicit conversion from 'char8_t' to 'char32_t' changes the meaning of the code unit '<0x80>'}}
-    c32(char8_t(0xFF)); // expected-warning {{implicit conversion from 'char8_t' to 'char32_t' changes the meaning of the code unit '<0xFF>'}}
+    c32(char8_t(0x80)); // expected-warning {{implicit conversion from 'char8_t' to 'char32_t' changes the meaning of the code unit <0x80>}}
+    c32(char8_t(0xFF)); // expected-warning {{implicit conversion from 'char8_t' to 'char32_t' changes the meaning of the code unit <0xFF>}}
 
 
     c32(char16_t(0x7f));
@@ -90,19 +90,19 @@ void test_comp(char8_t u8, char16_t u16, char32_t u32) {
     (void)(char8_t(0x7f) == char32_t(0x7f));
 
     (void)(char8_t(0x80) == char8_t(0x80));
-    (void)(char8_t(0x80) == char16_t(0x80)); // expected-warning{{comparing values of different Unicode code unit types 'char8_t' and 'char16_t' compares unrelated code units '<0x80>' and '<U+0080>}}
-    (void)(char8_t(0x80) == char32_t(0x80)); // expected-warning{{comparing values of different Unicode code unit types 'char8_t' and 'char32_t' compares unrelated code units '<0x80>' and '<U+0080>}}
+    (void)(char8_t(0x80) == char16_t(0x80)); // expected-warning{{comparing values of different Unicode code unit types 'char8_t' and 'char16_t' compares unrelated code units <0x80> and U+0080}}
+    (void)(char8_t(0x80) == char32_t(0x80)); // expected-warning{{comparing values of different Unicode code unit types 'char8_t' and 'char32_t' compares unrelated code units <0x80> and U+0080}}
 
     (void)(char8_t(0x80) == char8_t(0x7f));
-    (void)(char8_t(0x80) == char16_t(0x7f)); // expected-warning{{comparing values of different Unicode code unit types 'char8_t' and 'char16_t' compares unrelated code units '<0x80>' and '<U+007F>'}}
-    (void)(char8_t(0x80) == char32_t(0x7f)); // expected-warning{{comparing values of different Unicode code unit types 'char8_t' and 'char32_t' compares unrelated code units '<0x80>' and '<U+007F>'}}
+    (void)(char8_t(0x80) == char16_t(0x7f)); // expected-warning{{comparing values of different Unicode code unit types 'char8_t' and 'char16_t' compares unrelated code units <0x80> and U+007F}}
+    (void)(char8_t(0x80) == char32_t(0x7f)); // expected-warning{{comparing values of different Unicode code unit types 'char8_t' and 'char32_t' compares unrelated code units <0x80> and U+007F}}
 
 
     (void)(char16_t(0x7f) < char8_t(0x7f));
     (void)(char16_t(0x7f) < char16_t(0x7f));
     (void)(char16_t(0x7f) < char32_t(0x7f));
 
-    (void)(char16_t(0x80) < char8_t(0x80)); // expected-warning{{comparing values of different Unicode code unit types 'char16_t' and 'char8_t' compares unrelated code units '<U+0080>' and '<0x80>'}}
+    (void)(char16_t(0x80) < char8_t(0x80)); // expected-warning{{comparing values of different Unicode code unit types 'char16_t' and 'char8_t' compares unrelated code units U+0080 and <0x80>}}
     (void)(char16_t(0x80) < char16_t(0x80));
     (void)(char16_t(0x80) < char32_t(0x80));
 
@@ -115,7 +115,7 @@ void test_comp(char8_t u8, char16_t u16, char32_t u32) {
     (void)(char32_t(0x7f) < char16_t(0x7f));
     (void)(char32_t(0x7f) < char32_t(0x7f));
 
-    (void)(char32_t(0x80) < char8_t(0x80)); // expected-warning{{comparing values of different Unicode code unit types 'char32_t' and 'char8_t' compares unrelated code units '<U+0080>' and '<0x80>'}}
+    (void)(char32_t(0x80) < char8_t(0x80)); // expected-warning{{comparing values of different Unicode code unit types 'char32_t' and 'char8_t' compares unrelated code units U+0080 and <0x80>}}
     (void)(char32_t(0x80) < char16_t(0x80));
     (void)(char32_t(0x80) < char32_t(0x80));
 
@@ -124,10 +124,10 @@ void test_comp(char8_t u8, char16_t u16, char32_t u32) {
     (void)(char32_t(0x80) < char32_t(0x7f));
 
 
-    (void)(char32_t(U'🐉') <= char16_t(0xD800)); // expected-warning{{comparing values of different Unicode code unit types 'char32_t' and 'char16_t' compares unrelated code units '🐉' and '<0xD800>'}}
+    (void)(char32_t(U'🐉') <= char16_t(0xD800)); // expected-warning{{comparing values of different Unicode code unit types 'char32_t' and 'char16_t' compares unrelated code units '🐉' U+1F409 and <0xD800>}}
     (void)(char32_t(U'🐉') <= char16_t(0xD7FF));
 
-    (void)(char16_t(0xD800) >= char32_t(U'🐉')); // expected-warning{{comparing values of different Unicode code unit types 'char16_t' and 'char32_t' compares unrelated code units '<0xD800>' and '🐉'}}
+    (void)(char16_t(0xD800) >= char32_t(U'🐉')); // expected-warning{{comparing values of different Unicode code unit types 'char16_t' and 'char32_t' compares unrelated code units <0xD800> and '🐉' U+1F409}}
     (void)(char16_t(0xD7FF) >= char32_t(U'🐉'));
 }
 

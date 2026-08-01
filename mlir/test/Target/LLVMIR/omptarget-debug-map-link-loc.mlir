@@ -12,7 +12,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %6 = llvm.mlir.addressof @_QMtest_0Esp : !llvm.ptr loc(#loc1)
     %7 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr loc(#loc3)
     %8 = omp.map.info var_ptr(%6 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr loc(#loc3)
-    omp.target map_entries(%7 -> %arg0, %8 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%7 -> %arg0, %8 -> %arg1 : !llvm.ptr, !llvm.ptr) {
       %16 = llvm.load %arg1 : !llvm.ptr -> i32 loc(#loc5)
       llvm.store %16, %arg0 : i32, !llvm.ptr loc(#loc5)
       omp.terminator loc(#loc5)

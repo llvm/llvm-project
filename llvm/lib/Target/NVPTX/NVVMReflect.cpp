@@ -39,18 +39,19 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
-#define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
-#define NVVM_REFLECT_OCL_FUNCTION "__nvvm_reflect_ocl"
-// Argument of reflect call to retrive arch number
-#define CUDA_ARCH_NAME "__CUDA_ARCH"
-// Argument of reflect call to retrive ftz mode
-#define CUDA_FTZ_NAME "__CUDA_FTZ"
-// Name of module metadata where ftz mode is stored
-#define CUDA_FTZ_MODULE_NAME "nvvm-reflect-ftz"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "nvvm-reflect"
+
+#define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
+#define NVVM_REFLECT_OCL_FUNCTION "__nvvm_reflect_ocl"
+// Argument of reflect call to retrive arch number.
+#define CUDA_ARCH_NAME "__CUDA_ARCH"
+// Argument of reflect call to retrive ftz mode.
+#define CUDA_FTZ_NAME "__CUDA_FTZ"
+// Name of module metadata where ftz mode is stored.
+#define CUDA_FTZ_MODULE_NAME "nvvm-reflect-ftz"
 
 namespace {
 class NVVMReflect {
@@ -108,21 +109,19 @@ void NVVMReflect::populateReflectMap(Module &M) {
           M.getModuleFlag(CUDA_FTZ_MODULE_NAME)))
     ReflectMap[CUDA_FTZ_NAME] = Flag->getSExtValue();
 
-  for (auto &Option : ReflectList) {
+  for (StringRef Option : ReflectList) {
     LLVM_DEBUG(dbgs() << "ReflectOption : " << Option << "\n");
-    StringRef OptionRef(Option);
-    auto [Name, Val] = OptionRef.split('=');
+    auto [Name, Val] = Option.split('=');
     if (Name.empty())
-      report_fatal_error(Twine("Empty name in nvvm-reflect-add option '") +
-                         Option + "'");
+      report_fatal_error("Empty name in nvvm-reflect-add option '" + Option +
+                         "'");
     if (Val.empty())
-      report_fatal_error(Twine("Missing value in nvvm-reflect-add option '") +
-                         Option + "'");
+      report_fatal_error("Missing value in nvvm-reflect-add option '" + Option +
+                         "'");
     unsigned ValInt;
     if (!to_integer(Val.trim(), ValInt, 10))
-      report_fatal_error(
-          Twine("integer value expected in nvvm-reflect-add option '") +
-          Option + "'");
+      report_fatal_error("integer value expected in nvvm-reflect-add option '" +
+                         Option + "'");
     ReflectMap[Name] = ValInt;
   }
 }
@@ -192,7 +191,7 @@ void NVVMReflect::foldReflectCall(CallInst *Call, Constant *NewValue) {
   // Replace an instruction with a constant and add all users of the instruction
   // to the worklist
   auto ReplaceInstructionWithConst = [&](Instruction *I, Constant *C) {
-    for (auto *U : I->users())
+    for (User *U : I->users())
       if (auto *UI = dyn_cast<Instruction>(U))
         Worklist.push_back(UI);
     I->replaceAllUsesWith(C);
@@ -203,7 +202,7 @@ void NVVMReflect::foldReflectCall(CallInst *Call, Constant *NewValue) {
   auto &DL = Call->getModule()->getDataLayout();
   while (!Worklist.empty()) {
     auto *I = Worklist.pop_back_val();
-    if (auto *C = ConstantFoldInstruction(I, DL)) {
+    if (Constant *C = ConstantFoldInstruction(I, DL)) {
       ReplaceInstructionWithConst(I, C);
       if (isInstructionTriviallyDead(I))
         I->eraseFromParent();

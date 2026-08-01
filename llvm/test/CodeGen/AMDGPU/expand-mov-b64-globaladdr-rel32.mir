@@ -1,0 +1,27 @@
+# RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -verify-machineinstrs -run-pass=postrapseudos -o - %s | FileCheck %s
+
+# This test verifies that rel32 target flags on 64-bit global-address pseudos
+# are split into rel32 lo/hi flags when post-RA pseudos are expanded.
+
+--- |
+  define amdgpu_kernel void @v_mov_b64_pseudo_globaladdr_rel32() {
+    ret void
+  }
+
+  @gv = external addrspace(1) global i32
+...
+
+---
+name: v_mov_b64_pseudo_globaladdr_rel32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $exec
+
+    ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_rel32
+    ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-rel32-lo) @gv, implicit $exec
+    ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-rel32-hi) @gv, implicit $exec
+
+    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-rel32-lo) @gv, implicit $exec
+...
+

@@ -41,7 +41,7 @@ void pass_nocopy(NoCopy e) {}
 // LLVM-LABEL: define {{.*}} void @_ZN13check_structs11pass_nocopyENS_6NoCopyE(
 
 // OGCG: define{{.*}} void @_ZN13check_structs10ret_nocopyEv{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// OGCG: define{{.*}} void @_ZN13check_structs11pass_nocopyENS_6NoCopyE{{.*}}(ptr noundef dead_on_return %
+// OGCG: define{{.*}} void @_ZN13check_structs11pass_nocopyENS_6NoCopyE{{.*}}(ptr noundef align 4 dead_on_return %
 
 struct Huge {
   int a[1024];
@@ -91,7 +91,7 @@ void pass_nocopy(NoCopy e) {}
 // LLVM-LABEL: define {{.*}} void @_ZN12check_unions11pass_nocopyENS_6NoCopyE(
 
 // OGCG: define{{.*}} void @_ZN12check_unions10ret_nocopyEv{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// OGCG: define{{.*}} void @_ZN12check_unions11pass_nocopyENS_6NoCopyE{{.*}}(ptr noundef dead_on_return %
+// OGCG: define{{.*}} void @_ZN12check_unions11pass_nocopyENS_6NoCopyE{{.*}}(ptr noundef align 4 dead_on_return %
 } // namespace check_unions
 
 //************ Passing `this` pointers

@@ -1234,8 +1234,13 @@ static ReturnLikeExitCombiner createSingleExitBlocksForReturnLike(
 /// Returns failure if any precondition is violated.
 static LogicalResult
 checkTransformationPreconditions(Region &region, CFGToSCFInterface &interface) {
+  llvm::df_iterator_default_set<Block *, 16> reachable;
+  // Find all blocks reachable from the entry.
+  for (Block *block : depth_first_ext(&region.front(), reachable))
+    (void)block;
+
   for (Block &block : region.getBlocks())
-    if (block.hasNoPredecessors() && !block.isEntryBlock())
+    if (!reachable.contains(&block))
       return block.front().emitOpError(
           "transformation does not support unreachable blocks");
 

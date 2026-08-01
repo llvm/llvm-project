@@ -21,7 +21,6 @@ end program
 ! CHECK-NEXT: 'fir.global' Pipeline
 ! CHECK-NEXT:   CharacterConversion
 ! CHECK-NEXT: 'func.func' Pipeline
-! CHECK-NEXT:   ArrayValueCopy
 ! CHECK-NEXT:   CharacterConversion
 ! CHECK-NEXT: 'omp.declare_mapper' Pipeline
 ! CHECK-NEXT:   CharacterConversion
@@ -48,6 +47,8 @@ end program
 ! CHECK-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! CHECK-NEXT: PolymorphicOpConversion
+! CHECK-NEXT: 'func.func' Pipeline
+! CHECK-NEXT: SelectOpsConversion
 ! CHECK-NEXT: AssumedRankOpConversion
 ! CHECK-NEXT: 'func.func' Pipeline
 ! CHECK-NEXT:   OptimizeArrayRepacking

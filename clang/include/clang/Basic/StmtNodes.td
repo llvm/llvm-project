@@ -60,6 +60,11 @@ def CXXForRangeStmt : StmtNode<Stmt>;
 def CoroutineBodyStmt : StmtNode<Stmt>;
 def CoreturnStmt : StmtNode<Stmt>;
 
+// C++ expansion statements (P1306)
+def CXXExpansionStmtPattern : StmtNode<Stmt>;
+def CXXExpansionStmtInstantiation
+    : StmtNode<Stmt>; // *Not* derived from CXXExpansionStmtPattern!
+
 // Expressions
 def Expr : StmtNode<ValueStmt, 1>;
 def PredefinedExpr : StmtNode<Expr>;
@@ -183,6 +188,9 @@ def RequiresExpr : StmtNode<Expr>;
 
 // c++ 26 reflection
 def CXXReflectExpr : StmtNode<Expr>;
+
+// C++26 Expansion statement support expressions
+def CXXExpansionSelectExpr : StmtNode<Expr>;
 
 // Obj-C Expressions.
 def ObjCObjectLiteral : StmtNode<Expr, 1>;

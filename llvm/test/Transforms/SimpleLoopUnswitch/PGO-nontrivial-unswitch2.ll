@@ -17,39 +17,28 @@
 
 define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, ptr %C) !prof !36 {
 ; CHECK-LABEL: define void @_Z11hotFunctionbiiPiS_S_
-; CHECK-SAME: (i1 [[COND:%.*]], i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) !prof [[PROF33:![0-9]+]] {
+; CHECK-SAME: (i1 [[COND:%.*]], i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]]) {{.*}}{
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp eq i32 [[M]], 0
-; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], !prof [[PROF34:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP19_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], !prof [[PROF17:![0-9]+]]
 ; CHECK:       for.cond1.preheader.lr.ph:
 ; CHECK-NEXT:    [[CMP217_NOT:%.*]] = icmp eq i32 [[N]], 0
-; CHECK-NEXT:    br i1 [[CMP217_NOT]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT:%.*]], !prof [[PROF35:![0-9]+]]
-; CHECK:       for.cond1.preheader.lr.ph.split.us:
-; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
-; CHECK:       for.cond1.preheader.us:
-; CHECK-NEXT:    [[J_020_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_US]] ], [ [[INC10_US:%.*]], [[FOR_COND_CLEANUP3_US:%.*]] ]
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_US]]
-; CHECK:       for.cond.cleanup3.us:
-; CHECK-NEXT:    [[INC10_US]] = add nuw i32 [[J_020_US]], 1
-; CHECK-NEXT:    [[EXITCOND22_NOT_US:%.*]] = icmp eq i32 [[INC10_US]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND22_NOT_US]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US]], !prof [[PROF34]]
-; CHECK:       for.cond.cleanup.loopexit.split.us:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[CMP217_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT:%.*]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT:%.*]], !prof [[PROF18:![0-9]+]]
 ; CHECK:       for.cond1.preheader.lr.ph.split:
 ; CHECK-NEXT:    br i1 [[COND]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_LR_PH_SPLIT_SPLIT:%.*]]
 ; CHECK:       for.cond1.preheader.lr.ph.split.split.us:
-; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US1:%.*]]
-; CHECK:       for.cond1.preheader.us1:
-; CHECK-NEXT:    [[J_020_US2:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_SPLIT_US]] ], [ [[INC10_US4:%.*]], [[FOR_COND_CLEANUP3_US3:%.*]] ]
+; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
+; CHECK:       for.cond1.preheader.us:
+; CHECK-NEXT:    [[J_020_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_LR_PH_SPLIT_SPLIT_US]] ], [ [[INC10_US:%.*]], [[FOR_COND_CLEANUP3_US:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY4_PREHEADER_US:%.*]]
-; CHECK:       for.cond.cleanup3.us3:
-; CHECK-NEXT:    [[INC10_US4]] = add nuw i32 [[J_020_US2]], 1
-; CHECK-NEXT:    [[EXITCOND22_NOT_US5:%.*]] = icmp eq i32 [[INC10_US4]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND22_NOT_US5]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_SPLIT_US:%.*]], label [[FOR_COND1_PREHEADER_US1]], !prof [[PROF34]]
+; CHECK:       for.cond.cleanup3.us:
+; CHECK-NEXT:    [[INC10_US]] = add nuw i32 [[J_020_US]], 1
+; CHECK-NEXT:    [[EXITCOND22_NOT_US:%.*]] = icmp eq i32 [[INC10_US]], [[M]]
+; CHECK-NEXT:    br i1 [[EXITCOND22_NOT_US]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT2_US:%.*]], label [[FOR_COND1_PREHEADER_US]], !prof [[PROF17]]
 ; CHECK:       for.body4.preheader.us:
 ; CHECK-NEXT:    br label [[FOR_BODY4_PREHEADER_SPLIT_US_US:%.*]]
 ; CHECK:       for.cond.cleanup3.loopexit.us:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_US3]]
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_US]]
 ; CHECK:       for.body4.preheader.split.us.us:
 ; CHECK-NEXT:    br label [[FOR_BODY4_US_US:%.*]]
 ; CHECK:       for.body4.us.us:
@@ -69,11 +58,11 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT_US_US:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT_US_US]] = add nuw nsw i64 [[INDVARS_IV_US_US]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT_US_US:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT_US_US]], [[WIDE_TRIP_COUNT_US_US]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT_US_US]], label [[FOR_COND_CLEANUP3_LOOPEXIT_SPLIT_US_US:%.*]], label [[FOR_BODY4_US_US]], !prof [[PROF35]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT_US_US]], label [[FOR_COND_CLEANUP3_LOOPEXIT_SPLIT_US_US:%.*]], label [[FOR_BODY4_US_US]], !prof [[PROF18]]
 ; CHECK:       for.cond.cleanup3.loopexit.split.us.us:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP3_LOOPEXIT_US:%.*]]
-; CHECK:       for.cond.cleanup.loopexit.split.split.us:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT:%.*]]
+; CHECK:       for.cond.cleanup.loopexit.split2.us:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
 ; CHECK:       for.cond1.preheader.lr.ph.split.split:
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
@@ -83,11 +72,11 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK-NEXT:    br label [[FOR_BODY4_PREHEADER_SPLIT:%.*]]
 ; CHECK:       for.body4.preheader.split:
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
-; CHECK:       for.cond.cleanup.loopexit.split.split:
-; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT]]
-; CHECK:       for.cond.cleanup.loopexit.split:
+; CHECK:       for.cond.cleanup.loopexit.split2:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT]]
 ; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT]]
+; CHECK:       for.cond.cleanup.loopexit.split:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
@@ -98,7 +87,7 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK:       for.cond.cleanup3:
 ; CHECK-NEXT:    [[INC10]] = add nuw i32 [[J_020]], 1
 ; CHECK-NEXT:    [[EXITCOND22_NOT:%.*]] = icmp eq i32 [[INC10]], [[M]]
-; CHECK-NEXT:    br i1 [[EXITCOND22_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT_SPLIT:%.*]], label [[FOR_COND1_PREHEADER]], !prof [[PROF34]]
+; CHECK-NEXT:    br i1 [[EXITCOND22_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT_SPLIT2:%.*]], label [[FOR_COND1_PREHEADER]], !prof [[PROF17]]
 ; CHECK:       for.body4:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY4_PREHEADER_SPLIT]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDVARS_IV]]
@@ -113,7 +102,7 @@ define void @_Z11hotFunctionbiiPiS_S_(i1 %cond, i32 %M, i32 %N, ptr %A, ptr %B, 
 ; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3_LOOPEXIT_SPLIT:%.*]], label [[FOR_BODY4]], !prof [[PROF35]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP3_LOOPEXIT_SPLIT:%.*]], label [[FOR_BODY4]], !prof [[PROF18]]
 ;
 entry:
   %cmp19.not = icmp eq i32 %M, 0

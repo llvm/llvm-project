@@ -1,6 +1,6 @@
-#include <cstdio>
+int g = 0;
 
-void greet() { printf("Hello"); }
+void greet() { g++; }
 
 struct Test {
   void foo() {}

@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti  < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX6 %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga   < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX8 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900  < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a  < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX101 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefixes=GCN,NOMADMACF32,GFX103 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11 %s
+; RUN: llc -mtriple=amdgpu6.00  < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX6 %s
+; RUN: llc -mtriple=amdgpu8.02   < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX8 %s
+; RUN: llc -mtriple=amdgpu9.00  < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
+; RUN: llc -mtriple=amdgpu9.0a  < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX9 %s
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck -check-prefixes=GCN,MADMACF32,GFX101 %s
+; RUN: llc -mtriple=amdgpu10.30 < %s | FileCheck -check-prefixes=GCN,NOMADMACF32,GFX103 %s
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck -check-prefixes=GFX11 %s
 
 ; GCN-LABEL: {{^}}test_mul_legacy_f32:
 ; GCN: v_mul_legacy_f32{{[_e3264]*}} v{{[0-9]+}}, s{{[0-9]+}}, {{[sv][0-9]+}}

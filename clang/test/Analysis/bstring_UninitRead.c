@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -verify %s \
-// RUN: -analyzer-checker=core,alpha.unix.cstring
+// RUN: -analyzer-checker=core,unix.cstring.UninitializedRead
 
 //===----------------------------------------------------------------------===//
 // mempcpy() using character array. This is the easiest case, as memcpy

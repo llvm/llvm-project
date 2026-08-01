@@ -17,7 +17,10 @@ entry:
 define ptr @fp0f() nounwind {
 ; CHECK-LABEL: fp0f DS 0H
 ; CHECK:         stmg 6,7,1904(4)
+; CHECK-NEXT:    L#stack_update0 DS 0H
 ; CHECK-NEXT:    aghi 4,-160
+; CHECK-NEXT:    *FENCE
+; CHECK-NEXT:    L#end_of_prologue0 DS 0H
 ; CHECK-NEXT:    la 3,2048(4)
 ; CHECK-NEXT:    lg 7,2072(4)
 ; CHECK-NEXT:    aghi 4,160

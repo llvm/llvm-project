@@ -432,8 +432,8 @@ getContainerFromBeginEndCall(const Expr *Init, bool IsBegin, bool *IsArrow,
 ///
 /// BeginExpr must be a member call to a function named "begin()", and EndExpr
 /// must be a member.
-static const Expr *findContainer(ASTContext *Context, const Expr *BeginExpr,
-                                 const Expr *EndExpr,
+static const Expr *findContainer(const ASTContext *Context,
+                                 const Expr *BeginExpr, const Expr *EndExpr,
                                  bool *ContainerNeedsDereference,
                                  bool IsReverse) {
   // Now that we know the loop variable and test expression, make sure they are
@@ -461,7 +461,7 @@ static const Expr *findContainer(ASTContext *Context, const Expr *BeginExpr,
 }
 
 /// Obtain the original source code text from a SourceRange.
-static StringRef getStringFromRange(SourceManager &SourceMgr,
+static StringRef getStringFromRange(const SourceManager &SourceMgr,
                                     const LangOptions &LangOpts,
                                     SourceRange Range) {
   if (SourceMgr.getFileID(Range.getBegin()) !=

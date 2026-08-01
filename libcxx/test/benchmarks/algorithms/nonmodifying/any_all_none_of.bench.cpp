@@ -45,10 +45,7 @@ int main(int argc, char** argv) {
 
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c);
-              auto result = any_of(c.begin(), c.end(), [&](auto element) {
-                benchmark::DoNotOptimize(element);
-                return element == y;
-              });
+              auto result = any_of(c.begin(), c.end(), [&](auto element) { return element == y; });
               benchmark::DoNotOptimize(result);
             }
           })

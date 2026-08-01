@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I%S %s -triple amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck %s -check-prefix=AS
+// RUN: %clang_cc1 -I%S %s -triple amdgpu-amd-amdhsa -emit-llvm -o - | FileCheck %s -check-prefix=AS
 // RUN: %clang_cc1 -I%S %s -triple spirv64-amd-amdhsa -emit-llvm -o - | FileCheck %s -check-prefix=NONZERO-DEFAULT-AS
 // RUN: %clang_cc1 -I%S %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s -check-prefix=NO-AS
 #include <typeinfo>

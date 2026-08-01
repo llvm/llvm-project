@@ -123,14 +123,12 @@ static_assert(sizeof(KernelArgsTy) ==
                    4 * sizeof(void **) + 2 * sizeof(int64_t *)),
               "Invalid struct size");
 
-/// Flat array of kernel launch parameters and their total size.
+/// Array of pointers to kernel launch arguments and the size of that array.
 struct KernelLaunchParamsTy {
-  /// Size of the Data array.
-  size_t Size = 0;
-  /// Flat array of kernel parameters.
-  void *Data = nullptr;
-  /// Ptrs to the Data entries. Only strictly required for the host plugin.
-  void **Ptrs = nullptr;
+  /// Number of kernel arguments in \p Args.
+  uint32_t NumArgs = 0;
+  /// Array of \p NumArgs pointers, each pointing at one argument's value.
+  void **Args = nullptr;
 };
 
 /// The outcome of a kernel replay.

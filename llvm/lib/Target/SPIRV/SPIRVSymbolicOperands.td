@@ -1054,6 +1054,8 @@ defm Rg16ui : ImageFormatOperand<36, [StorageImageExtendedFormats]>;
 defm Rg8ui : ImageFormatOperand<37, [StorageImageExtendedFormats]>;
 defm R16ui : ImageFormatOperand<38, [StorageImageExtendedFormats]>;
 defm R8ui : ImageFormatOperand<39, [StorageImageExtendedFormats]>;
+defm R64ui : ImageFormatOperand<40, [Int64ImageEXT]>;
+defm R64i : ImageFormatOperand<41, [Int64ImageEXT]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define ImageChannelOrder enum values and at the same time

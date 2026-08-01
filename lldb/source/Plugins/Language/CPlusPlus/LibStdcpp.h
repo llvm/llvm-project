@@ -56,6 +56,10 @@ bool LibStdcppStrongOrderingSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libstdc++ std::strong_ordering
 
+bool LibStdcppSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libstdc++ std::source_location
+
 SyntheticChildrenFrontEnd *
 LibstdcppMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                              lldb::ValueObjectSP);

@@ -120,7 +120,6 @@ void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
   OS << "TheVarBitInitPool size = " << TheVarBitInitPool.size() << '\n';
   OS << "TheVarDefInitPool size = " << TheVarDefInitPool.size() << '\n';
   OS << "TheFieldInitPool size = " << TheFieldInitPool.size() << '\n';
-  OS << "Bytes allocated = " << Allocator.getBytesAllocated() << '\n';
   OS << "Total allocator memory = " << Allocator.getTotalMemory() << "\n\n";
 
   OS << "Number of records instantiated = " << LastRecordID << '\n';
@@ -2739,6 +2738,16 @@ const Init *CondOpInit::resolveReferences(Resolver &R) const {
     const Init *NewVal = Val->resolveReferences(R);
     NewVals.push_back(NewVal);
     Changed |= NewVal != Val;
+
+    // Short-circuit if this cond is true.
+    if (auto *NewCondVal = dyn_cast_or_null<IntInit>(
+            NewCond->convertInitializerTo(IntRecTy::get(getRecordKeeper())))) {
+      if (NewCondVal->getValue()) {
+        Changed = true;
+        // Don't push the rest of the conds and values.
+        break;
+      }
+    }
   }
 
   if (Changed)

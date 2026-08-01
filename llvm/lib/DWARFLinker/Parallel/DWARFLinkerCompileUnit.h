@@ -220,6 +220,36 @@ public:
       return false;
     }
 
+    /// Atomically joins \p Placement into the current placement: the
+    /// least-upper-bound of the lattice NotSet < {TypeTable, PlainDwarf} <
+    /// Both, which is a plain OR because the values are bit flags. The join is
+    /// monotone and never clears a bit, so unlike setPlacement it composes
+    /// correctly when applied concurrently from several marks.
+    void joinPlacement(DieOutputPlacement Placement) {
+      auto InputData = Flags.load();
+      while (!Flags.compare_exchange_weak(InputData, (InputData | Placement))) {
+      }
+    }
+
+    /// Atomically joins \p Placement for a DW_TAG_variable, for which
+    /// PlainDwarf is absorbing because a variable cannot occupy the type table
+    /// and plain DWARF at once. Once the placement is (or concurrently becomes)
+    /// PlainDwarf it stays PlainDwarf, otherwise \p Placement is OR-joined.
+    /// Recomputing inside the compare_exchange loop keeps a racing PlainDwarf
+    /// mark from turning the variable into Both.
+    void joinVariablePlacement(DieOutputPlacement Placement) {
+      auto InputData = Flags.load();
+      uint16_t Desired;
+      do {
+        DieOutputPlacement Current = DieOutputPlacement(InputData & 0x7);
+        DieOutputPlacement Joined =
+            (Current == PlainDwarf || Current == Both)
+                ? PlainDwarf
+                : DieOutputPlacement(Current | Placement);
+        Desired = (InputData & ~0x7) | Joined;
+      } while (!Flags.compare_exchange_weak(InputData, Desired));
+    }
+
 #define SINGLE_FLAG_METHODS_SET(Name, Value)                                   \
   bool get##Name() const { return Flags & Value; }                             \
   void set##Name() {                                                           \

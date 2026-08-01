@@ -877,9 +877,10 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
   } else {
     // Pattern match DINS.
     //  $dst = or (and $src, mask0), mask1
-    //  where mask0 = ((1 << SMSize0) -1) << SMPos0
+    //  where mask0 = maskTrailingOnes<uint64_t>(SMSize0) << SMPos0
     //  => dins $dst, $src, pos, size
-    if (~CN->getSExtValue() == ((((int64_t)1 << SMSize0) - 1) << SMPos0) &&
+    uint64_t Mask = maskTrailingOnes<uint64_t>(SMSize0) << SMPos0;
+    if (~CN->getSExtValue() == (int64_t)Mask &&
         ((SMSize0 + SMPos0 <= 64 && Subtarget.hasMips64r2()) ||
          (SMSize0 + SMPos0 <= 32))) {
       // Check if AND instruction has constant as argument
@@ -3138,6 +3139,7 @@ static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
                                         ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
                                         CCState &State);
 
+#define GET_CALLING_CONV_IMPL
 #include "MipsGenCallingConv.inc"
 
  CCAssignFn *MipsTargetLowering::CCAssignFnForCall() const{

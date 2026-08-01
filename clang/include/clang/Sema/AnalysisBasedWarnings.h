@@ -66,6 +66,10 @@ private:
   Policy PolicyOverrides;
   void clearOverrides();
 
+  /// Caches results for getPolicyInEffectAt().
+  /// Flushed whenever a diagnostic pragma changes severities.
+  llvm::DenseMap<const void *, Policy> PolicyCache[4];
+
   /// \name Statistics
   /// @{
 
@@ -117,6 +121,11 @@ public:
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
 
+  // Run analysis-based warnings on an implicitly-defined function body (e.g. a
+  // defaulted/implicit default constructor). Such functions never reach the
+  // normal IssueWarnings path.
+  void IssueWarningsForImplicitFunction(const Decl *D);
+
   void registerVarDeclWarning(VarDecl *VD, PossiblyUnreachableDiag PUD);
 
   void issueWarningsForRegisteredVarDecl(VarDecl *VD);
@@ -128,6 +137,9 @@ public:
   // diagnostic handling. If a caller sets any of these policies to true, that
   // will override the policy used to issue warnings.
   Policy &getPolicyOverrides() { return PolicyOverrides; }
+
+  /// Drop cached getPolicyInEffectAt() results (diagnostic state changed).
+  void clearPolicyCache();
 
   void PrintStats() const;
 };

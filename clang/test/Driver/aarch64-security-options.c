@@ -13,6 +13,9 @@
 // RUN: %clang --target=aarch64 -c %s -### -mbranch-protection=standard                                2>&1 | \
 // RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-A --check-prefix=BTE-ON --check-prefix=GCS-ON --check-prefix=WARN
 
+// RUN: %clang --target=aarch64-windows-msvc -c %s -### -mbranch-protection=standard                  2>&1 | \
+// RUN: FileCheck %s --check-prefix=RA-NON-LEAF --check-prefix=KEY-B --check-prefix=BTE-ON --check-prefix=GCS-ON --check-prefix=WARN
+
 // If the -msign-return-address and -mbranch-protection are both used, the
 // right-most one controls return address signing.
 // RUN: %clang --target=aarch64 -c %s -### -msign-return-address=non-leaf -mbranch-protection=none     2>&1 | \
@@ -37,6 +40,7 @@
 // RA-ALL: "-msign-return-address=all"
 
 // KEY-A: "-msign-return-address-key=a_key"
+// KEY-B: "-msign-return-address-key=b_key"
 // KEY-NOT: "-msign-return-address-key"
 
 // BTE-OFF-NOT: "-mbranch-target-enforce"

@@ -1,9 +1,14 @@
-//===--- A platform independent Dir class ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Platform independent Dir class definition.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FILE_DIR_H
@@ -14,7 +19,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/mutex.h"
 
-#include <dirent.h>
+#include "hdr/types/struct_dirent.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -31,11 +36,19 @@ int platform_closedir(int fd);
 // failure.
 ErrorOr<size_t> platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer);
 
+// Platform specific function which checks if |fd| is a valid file descriptor
+// open for reading, and refers to a directory. Returns 0 on success, or the
+// error number on failure.
+int platform_check_dir(int fd);
+
+// Platform specific function to get the size of the directory entry record.
+size_t platform_dir_reclen(struct dirent *d);
+
 // This class is designed to allow implementation of the POSIX dirent.h API.
 // By itself, it is platform independent but calls platform specific
 // functions to perform OS operations.
 class Dir {
-  static constexpr size_t BUFSIZE = 1024;
+  static constexpr size_t BUFSIZE = 4096;
   int fd;
   size_t readptr = 0;  // The current read pointer.
   size_t fillsize = 0; // The number of valid bytes availabe in the buffer.
@@ -43,7 +56,8 @@ class Dir {
   // This is a buffer of struct dirent values which will be fetched
   // from the OS. Since the d_name of struct dirent can be of a variable
   // size, we store the data in a byte array.
-  uint8_t buffer[BUFSIZE];
+  // We align the buffer to struct dirent to avoid unaligned accesses.
+  alignas(struct dirent) uint8_t buffer[BUFSIZE];
 
   Mutex mutex;
 
@@ -63,8 +77,9 @@ class Dir {
 
 public:
   static ErrorOr<Dir *> open(const char *path);
+  static ErrorOr<Dir *> fdopen(int fd);
 
-  ErrorOr<struct ::dirent *> read();
+  ErrorOr<struct dirent *> read();
 
   // Returns 0 on success or the error number on failure. If an error number
   // was returned, then the resources associated with the directory are not

@@ -332,12 +332,12 @@ contains
 ! CHECK: %[[C2_REBOX:.*]] = fir.rebox %[[C2_LOAD2]] : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
 ! CHECK: fir.dispatch "proc2"(%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
-! CHECK-LABEL: %{{.*}} = fir.do_loop
+! CHECK-LABEL: fir.do_loop
 ! CHECK: %[[C3_LOAD:.*]] = fir.load %[[C3_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[DESIGNATE_C3:.*]] = hlfir.designate %[[C3_LOAD]] (%{{.*}})  : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
 ! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C3]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
-! CHECK-LABEL: %{{.*}} = fir.do_loop
+! CHECK-LABEL: fir.do_loop
 ! CHECK: %[[C4_LOAD:.*]] = fir.load %[[C4_DECL]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
 ! CHECK: %[[DESIGNATE_C4:.*]] = hlfir.designate %[[C4_LOAD]] (%{{.*}})  : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
 ! CHECK: fir.dispatch "proc2"(%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[DESIGNATE_C4]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}

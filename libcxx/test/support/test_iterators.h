@@ -1175,6 +1175,36 @@ private:
 template <class It>
 sized_sentinel(It) -> sized_sentinel<It>;
 
+template <class Base = int*>
+struct forward_sized_iterator {
+  Base it_ = nullptr;
+
+  using iterator_category = std::forward_iterator_tag;
+  using value_type        = int;
+  using difference_type   = std::intptr_t;
+  using pointer           = Base;
+  using reference         = decltype(*Base{});
+
+  forward_sized_iterator() = default;
+  constexpr forward_sized_iterator(Base it) : it_(it) {}
+
+  constexpr reference operator*() const { return *it_; }
+
+  constexpr forward_sized_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr forward_sized_iterator operator++(int) { return forward_sized_iterator(it_++); }
+
+  friend constexpr bool operator==(const forward_sized_iterator&, const forward_sized_iterator&) = default;
+
+  friend constexpr difference_type operator-(const forward_sized_iterator& x, const forward_sized_iterator& y) {
+    return x.it_ - y.it_;
+  }
+};
+static_assert(std::forward_iterator<forward_sized_iterator<>>);
+static_assert(std::sized_sentinel_for<forward_sized_iterator<>, forward_sized_iterator<>>);
+
 namespace adl {
 
 class Iterator {
@@ -1879,6 +1909,5 @@ using cpp20_input_iterator_list =
     concatenate_t<forward_iterator_list<Ptr>, type_list<cpp20_input_iterator<Ptr>, cpp17_input_iterator<Ptr>>>;
 #endif
 } // namespace types
-
 
 #endif // SUPPORT_TEST_ITERATORS_H

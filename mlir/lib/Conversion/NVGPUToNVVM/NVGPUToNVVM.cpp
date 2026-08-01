@@ -20,6 +20,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -329,6 +330,10 @@ static FailureOr<NVVM::MMATypes> getNvvmMmaType(Type t) {
     return NVVM::MMATypes::f64;
   if (elType.isF32())
     return NVVM::MMATypes::tf32;
+  if (elType.isF8E4M3FN())
+    return NVVM::MMATypes::e4m3;
+  if (elType.isF8E5M2())
+    return NVVM::MMATypes::e5m2;
   return failure();
 }
 
@@ -461,6 +466,7 @@ struct ConvertNVGPUToNVVMPass
     target.addLegalDialect<::mlir::arith::ArithDialect>();
     target.addLegalDialect<::mlir::memref::MemRefDialect>();
     target.addLegalDialect<::mlir::NVVM::NVVMDialect>();
+    target.addLegalDialect<::mlir::vector::VectorDialect>();
     mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
         converter, patterns, target);
     if (failed(applyPartialConversion(getOperation(), target,
@@ -1709,6 +1715,668 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
         rewriter);
   }
 };
+
+//===----------------------------------------------------------------------===//
+// NVGPUTruncfOp Lowering
+//===----------------------------------------------------------------------===//
+
+enum class FPKind { F32, BF16, F16, F8, F6, F4 };
+
+/// Get the effective bit width of a floating-point type.
+/// f6 types are 6-bit but NVVM Ops expect 8-bit (i8) containers.
+static int getEffectiveBitWidth(int bitWidth) {
+  return bitWidth == 6 ? 8 : bitWidth;
+}
+
+static std::optional<FPKind> classifyFPType(Type t) {
+  static constexpr auto isConvertibleF8Type = [](Type t) {
+    return isa<Float8E4M3FNType, Float8E5M2Type, Float8E8M0FNUType>(t);
+  };
+  static constexpr auto isConvertibleF6Type = [](Type t) {
+    return isa<Float6E2M3FNType, Float6E3M2FNType>(t);
+  };
+  static constexpr auto isConvertibleF4Type = [](Type t) {
+    return isa<Float4E2M1FNType>(t);
+  };
+
+  if (t.isF32())
+    return FPKind::F32;
+  if (t.isBF16())
+    return FPKind::BF16;
+  if (t.isF16())
+    return FPKind::F16;
+  if (isConvertibleF8Type(t))
+    return FPKind::F8;
+  if (isConvertibleF6Type(t))
+    return FPKind::F6;
+  if (isConvertibleF4Type(t))
+    return FPKind::F4;
+
+  return std::nullopt;
+}
+
+/// Conversion op identifier for nvgpu.truncf lowering dispatch table.
+enum class FPTruncConvOp {
+  F32x2_TO_F16x2,
+  F32x2_TO_BF16x2,
+  F32x2_TO_F8x2,
+  F32x2_TO_F6x2,
+  F32x2_TO_F4x2,
+  F16x2_TO_F8x2,
+  F16x2_TO_F6x2,
+  F16x2_TO_F4x2,
+  BF16x2_TO_F8x2,
+  BF16x2_TO_F6x2,
+  BF16x2_TO_F4x2,
+};
+
+struct FPTruncTableEntry {
+  FPKind src;
+  FPKind dst;
+  FPTruncConvOp convOp;
+};
+
+static constexpr FPTruncTableEntry kFPTruncTable[] = {
+    // f32 source
+    {FPKind::F32, FPKind::F16, FPTruncConvOp::F32x2_TO_F16x2},
+    {FPKind::F32, FPKind::BF16, FPTruncConvOp::F32x2_TO_BF16x2},
+    {FPKind::F32, FPKind::F8, FPTruncConvOp::F32x2_TO_F8x2},
+    {FPKind::F32, FPKind::F6, FPTruncConvOp::F32x2_TO_F6x2},
+    {FPKind::F32, FPKind::F4, FPTruncConvOp::F32x2_TO_F4x2},
+    // f16 source
+    {FPKind::F16, FPKind::F8, FPTruncConvOp::F16x2_TO_F8x2},
+    {FPKind::F16, FPKind::F6, FPTruncConvOp::F16x2_TO_F6x2},
+    {FPKind::F16, FPKind::F4, FPTruncConvOp::F16x2_TO_F4x2},
+    // bf16 source
+    {FPKind::BF16, FPKind::F8, FPTruncConvOp::BF16x2_TO_F8x2},
+    {FPKind::BF16, FPKind::F6, FPTruncConvOp::BF16x2_TO_F6x2},
+    {FPKind::BF16, FPKind::F4, FPTruncConvOp::BF16x2_TO_F4x2},
+};
+
+/// Find the conversion table entry whose source/destination `FPKind`s match the
+/// given element types.
+template <typename TableEntry, size_t N>
+static std::optional<TableEntry>
+lookupConvOp(const TableEntry (&table)[N], Type srcElemType, Type dstElemType) {
+  std::optional<FPKind> srcKind = classifyFPType(srcElemType);
+  std::optional<FPKind> dstKind = classifyFPType(dstElemType);
+  if (!srcKind || !dstKind)
+    return std::nullopt;
+  for (const TableEntry &entry : table) {
+    if (entry.src == *srcKind && entry.dst == *dstKind)
+      return entry;
+  }
+  return std::nullopt;
+}
+
+/// Extract a single element from a vector.
+static Value extractElement(ImplicitLocOpBuilder &b, Value srcVec, int idx) {
+  assert(idx >= 0 &&
+         idx < cast<VectorType>(srcVec.getType()).getNumElements() &&
+         "extractElement: index out of bounds");
+  IntegerType i64Ty = b.getI64Type();
+  return b.create<LLVM::ExtractElementOp>(
+      srcVec, b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(idx)));
+}
+
+/// Extract a pair of f32 values from an i32 vector at the given base index.
+static std::pair<Value, Value> extractF32Pair(ImplicitLocOpBuilder &b,
+                                              Value srcI32Vec, int baseIdx) {
+  FloatType f32Ty = b.getF32Type();
+  Value elem0 = extractElement(b, srcI32Vec, baseIdx);
+  Value elem1 = extractElement(b, srcI32Vec, baseIdx + 1);
+  return {b.create<LLVM::BitcastOp>(f32Ty, elem0),
+          b.create<LLVM::BitcastOp>(f32Ty, elem1)};
+}
+
+/// Extract a vector of elements of size i32 from an i32 vector and bitcast to
+/// the specified vector type.
+static Value extractAndBitcast(ImplicitLocOpBuilder &b, Value srcI32Vec,
+                               int idx, VectorType vecTy) {
+  Value elem = extractElement(b, srcI32Vec, idx);
+  return b.create<LLVM::BitcastOp>(vecTy, elem);
+}
+
+/// Create a sub-byte conversion from an f32 pair source and return the native
+/// result.
+template <typename ConvertOp, typename... Args>
+static Value convertFromF32Pair(ImplicitLocOpBuilder &b, Value srcI32Vec,
+                                int srcBaseIdx, Type resultTy, Args &&...args) {
+  auto [lo, hi] = extractF32Pair(b, srcI32Vec, srcBaseIdx);
+  return b.create<ConvertOp>(resultTy, hi, lo, std::forward<Args>(args)...);
+}
+
+/// Create a sub-byte conversion from a packed f16x2/bf16x2 source and return
+/// the native result.
+template <typename ConvertOp, typename... Args>
+static Value convertFromPacked(ImplicitLocOpBuilder &b, Value srcI32Vec,
+                               int srcBaseIdx, Type srcElemTy, Type resultTy,
+                               Args &&...args) {
+  Value src = extractAndBitcast(b, srcI32Vec, srcBaseIdx,
+                                VectorType::get(2, srcElemTy));
+  return b.create<ConvertOp>(resultTy, src, std::forward<Args>(args)...);
+}
+
+/// Create a typed NVVM truncation conversion.
+static Value createTruncConversion(
+    ImplicitLocOpBuilder &b, MLIRContext *ctx, FPTruncConvOp convOp,
+    Value srcI32Vec, int srcBaseIdx, NVVM::FPRoundingModeAttr rndAttr,
+    NVVM::SaturationModeAttr satAttr, BoolAttr reluAttr, Type dstElemType,
+    Type actualDstFloatType, Value randomBits = Value()) {
+  IntegerType i8Ty = b.getI8Type();
+  IntegerType i16Ty = b.getI16Type();
+  IntegerType i32Ty = b.getI32Type();
+  TypeAttr dstTyAttr = TypeAttr::get(dstElemType);
+  TypeAttr actualDstTyAttr = TypeAttr::get(actualDstFloatType);
+
+  switch (convOp) {
+  case FPTruncConvOp::F32x2_TO_F16x2: {
+    auto [lo, hi] = extractF32Pair(b, srcI32Vec, srcBaseIdx);
+    Value r = b.create<NVVM::ConvertF32x2ToF16x2Op>(
+        VectorType::get(2, b.getF16Type()), hi, lo, randomBits, rndAttr,
+        satAttr, reluAttr);
+    return b.create<LLVM::BitcastOp>(i32Ty, r);
+  }
+  case FPTruncConvOp::F32x2_TO_BF16x2: {
+    auto [lo, hi] = extractF32Pair(b, srcI32Vec, srcBaseIdx);
+    Value r = b.create<NVVM::ConvertF32x2ToBF16x2Op>(
+        VectorType::get(2, b.getBF16Type()), hi, lo, randomBits, rndAttr,
+        satAttr, reluAttr);
+    return b.create<LLVM::BitcastOp>(i32Ty, r);
+  }
+  case FPTruncConvOp::F32x2_TO_F8x2:
+    return convertFromF32Pair<NVVM::ConvertF32x2ToF8x2Op>(
+        b, srcI32Vec, srcBaseIdx, i16Ty, rndAttr, satAttr, reluAttr, dstTyAttr);
+  case FPTruncConvOp::F32x2_TO_F6x2:
+    return convertFromF32Pair<NVVM::ConvertF32x2ToF6x2Op>(
+        b, srcI32Vec, srcBaseIdx, i16Ty, reluAttr, actualDstTyAttr);
+  case FPTruncConvOp::F32x2_TO_F4x2:
+    return convertFromF32Pair<NVVM::ConvertF32x2ToF4x2Op>(
+        b, srcI32Vec, srcBaseIdx, i8Ty, reluAttr, dstTyAttr);
+  case FPTruncConvOp::F16x2_TO_F8x2:
+    return convertFromPacked<NVVM::ConvertF16x2ToF8x2Op>(
+        b, srcI32Vec, srcBaseIdx, b.getF16Type(), i16Ty, reluAttr, dstTyAttr);
+  case FPTruncConvOp::F16x2_TO_F6x2:
+    return convertFromPacked<NVVM::ConvertF16x2ToF6x2Op>(
+        b, srcI32Vec, srcBaseIdx, b.getF16Type(), i16Ty, reluAttr,
+        actualDstTyAttr);
+  case FPTruncConvOp::F16x2_TO_F4x2:
+    return convertFromPacked<NVVM::ConvertF16x2ToF4x2Op>(
+        b, srcI32Vec, srcBaseIdx, b.getF16Type(), i8Ty, reluAttr,
+        actualDstTyAttr);
+  case FPTruncConvOp::BF16x2_TO_F8x2:
+    return convertFromPacked<NVVM::ConvertBF16x2ToF8x2Op>(
+        b, srcI32Vec, srcBaseIdx, b.getBF16Type(), i16Ty, rndAttr, satAttr,
+        reluAttr, dstTyAttr);
+  case FPTruncConvOp::BF16x2_TO_F6x2:
+    return convertFromPacked<NVVM::ConvertBF16x2ToF6x2Op>(
+        b, srcI32Vec, srcBaseIdx, b.getBF16Type(), i16Ty, reluAttr,
+        actualDstTyAttr);
+  case FPTruncConvOp::BF16x2_TO_F4x2:
+    return convertFromPacked<NVVM::ConvertBF16x2ToF4x2Op>(
+        b, srcI32Vec, srcBaseIdx, b.getBF16Type(), i8Ty, reluAttr,
+        actualDstTyAttr);
+  }
+  llvm_unreachable("unhandled FPTruncConvOp");
+}
+
+static LogicalResult lowerTruncf(nvgpu::TruncfOp op,
+                                 nvgpu::TruncfOp::Adaptor adaptor,
+                                 ConversionPatternRewriter &rewriter,
+                                 const LLVMTypeConverter *typeConverter) {
+  MLIRContext *ctx = op.getContext();
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  IntegerType i32Ty = b.getI32Type();
+  IntegerType i64Ty = b.getI64Type();
+  static constexpr int regBits = 32;
+
+  auto srcType = llvm::dyn_cast<VectorType>(op.getIn().getType());
+  auto dstType = llvm::dyn_cast<VectorType>(op.getOut().getType());
+  if (!srcType || srcType.getRank() != 1 || !dstType || dstType.getRank() != 1)
+    return rewriter.notifyMatchFailure(
+        op, "expected 1-D vector; canonicalize pattern handles other shapes");
+
+  auto srcElemType = srcType.getElementType();
+  auto dstElemType = dstType.getElementType();
+  int srcBW = srcType.getElementTypeBitWidth();
+  int dstBW = dstType.getElementTypeBitWidth();
+  int numElems = srcType.getNumElements();
+
+  NVVM::FPRoundingModeAttr rndModeAttr = op.getRndAttr();
+  NVVM::SaturationModeAttr satModeAttr = op.getSatAttr();
+  auto reluBoolAttr = op.getReluAttr();
+  Value randomBits = adaptor.getRandomBits();
+  Type actualDstFloatType = dstElemType;
+
+  // STEP 1: bitcast input vector to i32 vector type.
+  // f64 -> f32/f16/bf16 lowers to a single direct LLVM fptrunc
+  // f64 -> f8/f6/f4 first truncates to f32 and then reuses the narrow
+  //        conversion path below.
+  Value input = adaptor.getIn();
+  if (srcBW == 64) {
+    if (dstBW >= 16) {
+      Type convertedType = typeConverter->convertType(dstType);
+      assert(convertedType && "failed to convert type");
+      Value result = b.create<LLVM::FPTruncOp>(convertedType, input);
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+    auto f32VecTy = VectorType::get(srcType.getShape(), b.getF32Type());
+    input = b.create<LLVM::FPTruncOp>(f32VecTy, input);
+    srcType = f32VecTy;
+    srcElemType = b.getF32Type();
+    srcBW = 32;
+  }
+
+  // f6 types are 6-bit in MLIR but NVVM uses 8-bit containers.
+  int effectiveDstBW = getEffectiveBitWidth(dstBW);
+
+  int srcI32Elems = numElems * srcBW / regBits;
+  int dstI32Elems = numElems * effectiveDstBW / regBits;
+  Value srcI32Vec =
+      b.create<LLVM::BitcastOp>(VectorType::get(srcI32Elems, i32Ty), input);
+  Value dstI32Vec =
+      b.create<LLVM::UndefOp>(VectorType::get(dstI32Elems, i32Ty));
+
+  // STEP 2: look up the conversion op from the (srcType, dstType) table.
+  auto convEntry = lookupConvOp(kFPTruncTable, srcElemType, dstElemType);
+  if (!convEntry)
+    return rewriter.notifyMatchFailure(
+        op, "unsupported type combination for truncation");
+  FPTruncConvOp convOp = convEntry->convOp;
+
+  // Number of source-side i32 register slots consumed by each NVVM convert Op.
+  auto getNumSrcI32PerConvert = [](FPKind src) {
+    return src == FPKind::F32 ? 2 : 1;
+  };
+  int numSrcI32PerConv = getNumSrcI32PerConvert(convEntry->src);
+
+  // STEP 3: pack conversion results into destination i32 vector.
+  const int srcStep = srcBW / effectiveDstBW;
+  const int resultBW =
+      effectiveDstBW * 2; // each conversion produces 2 (packed) elements
+  const int numConvsPerI32 = regBits / resultBW;
+
+  for (int srcIdx = 0, dstIdx = 0; dstIdx < dstI32Elems;
+       srcIdx += srcStep, dstIdx++) {
+    Value dstIdxConst =
+        b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(dstIdx));
+    Value dstValue;
+
+    if (numConvsPerI32 == 1) {
+      // f16/bf16 destinations
+      dstValue = createTruncConversion(
+          b, ctx, convOp, srcI32Vec, srcIdx, rndModeAttr, satModeAttr,
+          reluBoolAttr, dstElemType, actualDstFloatType, randomBits);
+    } else {
+      // f8/f6/f4 destinations: pack sub-results via vector insert + bitcast.
+      auto subResultType = IntegerType::get(ctx, resultBW);
+      auto subVecTy = VectorType::get(numConvsPerI32, subResultType);
+      Value subVec = b.create<LLVM::UndefOp>(subVecTy);
+
+      int insertIdx = numConvsPerI32 - 1;
+      int curStep = srcStep;
+      while (curStep > 0) {
+        curStep -= numSrcI32PerConv;
+        Value subResult = createTruncConversion(
+            b, ctx, convOp, srcI32Vec, srcIdx + curStep, rndModeAttr,
+            satModeAttr, reluBoolAttr, dstElemType, actualDstFloatType,
+            /*randomBits=*/Value());
+        subVec = b.create<LLVM::InsertElementOp>(
+            subVec, subResult,
+            b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(insertIdx)));
+        insertIdx--;
+      }
+
+      dstValue = b.create<LLVM::BitcastOp>(i32Ty, subVec);
+    }
+
+    dstI32Vec =
+        b.create<LLVM::InsertElementOp>(dstI32Vec, dstValue, dstIdxConst);
+  }
+
+  // STEP 4: produce final result.
+  Type convertedType = typeConverter->convertType(dstType);
+  assert(convertedType && "failed to convert type");
+  if (convEntry->dst == FPKind::F6) {
+    IntegerType i8Ty = b.getI8Type();
+    auto i8VecTy = VectorType::get(numElems, i8Ty);
+    Value i8Vec = b.create<LLVM::BitcastOp>(i8VecTy, dstI32Vec);
+    Value truncVec = b.create<LLVM::TruncOp>(convertedType, i8Vec);
+    rewriter.replaceOp(op, truncVec);
+  } else {
+    auto dstVec = b.create<LLVM::BitcastOp>(convertedType, dstI32Vec);
+    rewriter.replaceOp(op, dstVec);
+  }
+  return success();
+}
+
+struct NVGPUTruncfOpLowering : public ConvertOpToLLVMPattern<nvgpu::TruncfOp> {
+  using ConvertOpToLLVMPattern<nvgpu::TruncfOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::TruncfOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    return lowerTruncf(op, adaptor, rewriter, getTypeConverter());
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// NVGPUExtfOp Lowering
+//===----------------------------------------------------------------------===//
+
+/// Conversion op identifier for nvgpu.extf lowering dispatch table.
+enum class FPExtConvOp {
+  F8x2_TO_F16x2,
+  F8x2_TO_BF16x2,
+  F6x2_TO_F16x2,
+  F6x2_TO_BF16x2,
+  F4x2_TO_F16x2,
+  F4x2_TO_BF16x2,
+};
+
+struct FPExtTableEntry {
+  FPKind src;
+  FPKind dst;
+  FPExtConvOp convOp;
+};
+
+static constexpr FPExtTableEntry kFPExtTable[] = {
+    {FPKind::F8, FPKind::F16, FPExtConvOp::F8x2_TO_F16x2},
+    {FPKind::F8, FPKind::BF16, FPExtConvOp::F8x2_TO_BF16x2},
+    {FPKind::F6, FPKind::F16, FPExtConvOp::F6x2_TO_F16x2},
+    {FPKind::F6, FPKind::BF16, FPExtConvOp::F6x2_TO_BF16x2},
+    {FPKind::F4, FPKind::F16, FPExtConvOp::F4x2_TO_F16x2},
+    {FPKind::F4, FPKind::BF16, FPExtConvOp::F4x2_TO_BF16x2},
+};
+
+/// Create a typed NVVM extension conversion.
+/// For f8/f6: src is vector<2xi8>.  For f4: src is i8.
+/// Returns i32 (bitcast from vector<2xf16> or vector<2xbf16>).
+static Value createExtConversion(ImplicitLocOpBuilder &b, MLIRContext *ctx,
+                                 FPExtConvOp convOp, Value src,
+                                 BoolAttr reluAttr, Type actualSrcFloatType,
+                                 Value extScaleFactor = Value()) {
+  IntegerType i32Ty = b.getI32Type();
+  auto srcTyAttr = TypeAttr::get(actualSrcFloatType);
+
+  switch (convOp) {
+  case FPExtConvOp::F8x2_TO_F16x2: {
+    Value r = NVVM::ConvertF8x2ToF16x2Op::create(
+        b, VectorType::get(2, b.getF16Type()), src, srcTyAttr, reluAttr);
+    return b.create<LLVM::BitcastOp>(i32Ty, r);
+  }
+  case FPExtConvOp::F8x2_TO_BF16x2: {
+    Value r = NVVM::ConvertF8x2ToBF16x2Op::create(
+        b, VectorType::get(2, b.getBF16Type()), src, extScaleFactor, srcTyAttr);
+    return b.create<LLVM::BitcastOp>(i32Ty, r);
+  }
+  case FPExtConvOp::F6x2_TO_F16x2: {
+    Value r = NVVM::ConvertF6x2ToF16x2Op::create(
+        b, VectorType::get(2, b.getF16Type()), src, srcTyAttr, reluAttr);
+    return b.create<LLVM::BitcastOp>(i32Ty, r);
+  }
+  case FPExtConvOp::F6x2_TO_BF16x2: {
+    Value r = NVVM::ConvertF6x2ToBF16x2Op::create(
+        b, VectorType::get(2, b.getBF16Type()), src, extScaleFactor, srcTyAttr);
+    return b.create<LLVM::BitcastOp>(i32Ty, r);
+  }
+  case FPExtConvOp::F4x2_TO_F16x2: {
+    Value r = NVVM::ConvertF4x2ToF16x2Op::create(
+        b, VectorType::get(2, b.getF16Type()), src, srcTyAttr, reluAttr);
+    return b.create<LLVM::BitcastOp>(i32Ty, r);
+  }
+  case FPExtConvOp::F4x2_TO_BF16x2: {
+    Value r = NVVM::ConvertF4x2ToBF16x2Op::create(
+        b, VectorType::get(2, b.getBF16Type()), src, extScaleFactor, srcTyAttr);
+    return b.create<LLVM::BitcastOp>(i32Ty, r);
+  }
+  }
+  llvm_unreachable("unhandled FPExtConvOp");
+}
+
+static LogicalResult lowerExtf(nvgpu::ExtfOp op, nvgpu::ExtfOp::Adaptor adaptor,
+                               ConversionPatternRewriter &rewriter,
+                               const LLVMTypeConverter *typeConverter) {
+  MLIRContext *ctx = op.getContext();
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  IntegerType i8Ty = b.getI8Type();
+  IntegerType i16Ty = b.getI16Type();
+  IntegerType i32Ty = b.getI32Type();
+  IntegerType i64Ty = b.getI64Type();
+
+  static constexpr int regBits = 32;
+  auto srcType = llvm::dyn_cast<VectorType>(op.getIn().getType());
+  auto dstType = llvm::dyn_cast<VectorType>(op.getOut().getType());
+  if (!srcType || srcType.getRank() != 1 || !dstType || dstType.getRank() != 1)
+    return rewriter.notifyMatchFailure(
+        op, "expected 1-D vector; canonicalize pattern handles other shapes");
+
+  auto srcElemType = srcType.getElementType();
+  auto dstElemType = dstType.getElementType();
+  int srcBW = srcType.getElementTypeBitWidth();
+  int dstBW = dstType.getElementTypeBitWidth();
+  int numElems = srcType.getNumElements();
+
+  auto reluBoolAttr = op.getReluAttr();
+  Type actualSrcFloatType = srcElemType;
+
+  assert(dstBW == 16 || dstBW == 32 || dstBW == 64);
+
+  // Wide source (f16/bf16/f32) to wide destination (f32/f64): single FPExt.
+  if (srcBW >= 16 && dstBW >= 32) {
+    Value result = adaptor.getIn();
+    if (srcElemType != dstElemType) {
+      Type convertedType = typeConverter->convertType(dstType);
+      assert(convertedType && "failed to convert type");
+      result = b.create<LLVM::FPExtOp>(convertedType, result);
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+
+  // Narrow source (f8/f6/f4): NVVM typed op produces f16/bf16; optionally
+  // followed by FPExt to the final f32/f64 destination.
+  bool needsFinalFPExt = (dstBW >= 32);
+  Type intermediateDstElem = dstElemType;
+  if (needsFinalFPExt && llvm::isa<Float8E8M0FNUType>(srcElemType))
+    intermediateDstElem = b.getBF16Type();
+  else if (needsFinalFPExt)
+    intermediateDstElem = b.getF16Type();
+  int intermediateDstBW = needsFinalFPExt ? 16 : dstBW;
+
+  // f6 types are 6-bit in MLIR but NVVM uses 8-bit containers.
+  int effectiveSrcBW = getEffectiveBitWidth(srcBW);
+
+  // STEP 1: prepare input as i32 register vector.
+  // For f6: zext from vector<Nxi6> to vector<Nxi8>, then bitcast to i32s.
+  Value inputVec = adaptor.getIn();
+  if (srcBW == 6) {
+    auto i8VecTy = VectorType::get(numElems, i8Ty);
+    inputVec = b.create<LLVM::ZExtOp>(i8VecTy, inputVec);
+  }
+
+  int srcI32Elems = numElems * effectiveSrcBW / regBits;
+  int dstI32Elems = numElems * intermediateDstBW / regBits;
+  Value srcI32Vec =
+      b.create<LLVM::BitcastOp>(VectorType::get(srcI32Elems, i32Ty), inputVec);
+  Value dstI32Vec =
+      b.create<LLVM::UndefOp>(VectorType::get(dstI32Elems, i32Ty));
+
+  // STEP 2: look up the conversion op from the (srcType, dstType) table.
+  auto convEntry = lookupConvOp(kFPExtTable, srcElemType, intermediateDstElem);
+  if (!convEntry)
+    return rewriter.notifyMatchFailure(
+        op, "unsupported type combination for extension");
+  FPExtConvOp convOp = convEntry->convOp;
+  Value extScaleFactor;
+
+  // STEP 3: iterate over source i32 elements, producing destination i32s.
+  for (int srcIdx = 0, dstIdx = 0; srcIdx < srcI32Elems; srcIdx++) {
+    Value srcI32 = b.create<LLVM::ExtractElementOp>(
+        srcI32Vec,
+        b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(srcIdx)));
+
+    if (effectiveSrcBW == 8) {
+      // f8/f6: one i32 holds 4 bytes -> split into 2 pairs of i16 -> 2 convs.
+      Value i16Vec =
+          b.create<LLVM::BitcastOp>(VectorType::get(2, i16Ty), srcI32);
+      for (int half = 0; half < 2; half++) {
+        Value halfI16 = b.create<LLVM::ExtractElementOp>(
+            i16Vec,
+            b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(half)));
+        Value src =
+            b.create<LLVM::BitcastOp>(VectorType::get(2, i8Ty), halfI16);
+        Value dstValue =
+            createExtConversion(b, ctx, convOp, src, reluBoolAttr,
+                                actualSrcFloatType, extScaleFactor);
+        Value dstIdxConst =
+            b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(dstIdx));
+        dstI32Vec =
+            b.create<LLVM::InsertElementOp>(dstI32Vec, dstValue, dstIdxConst);
+        dstIdx++;
+      }
+    } else {
+      // f4: one i32 holds 4 bytes -> each byte is one conversion input.
+      Value i8Vec = b.create<LLVM::BitcastOp>(VectorType::get(4, i8Ty), srcI32);
+      for (int byteIdx = 0; byteIdx < 4; byteIdx++) {
+        Value src = b.create<LLVM::ExtractElementOp>(
+            i8Vec,
+            b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(byteIdx)));
+        Value dstValue =
+            createExtConversion(b, ctx, convOp, src, reluBoolAttr,
+                                actualSrcFloatType, extScaleFactor);
+        Value dstIdxConst =
+            b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(dstIdx));
+        dstI32Vec =
+            b.create<LLVM::InsertElementOp>(dstI32Vec, dstValue, dstIdxConst);
+        dstIdx++;
+      }
+    }
+  }
+
+  // STEP 4: produce final result.
+  Type convertedType = typeConverter->convertType(dstType);
+  assert(convertedType && "failed to convert type");
+  Value result;
+  if (needsFinalFPExt) {
+    auto intermediateVecTy = VectorType::get(numElems, intermediateDstElem);
+    Value intermediateVec =
+        b.create<LLVM::BitcastOp>(intermediateVecTy, dstI32Vec);
+    result = b.create<LLVM::FPExtOp>(convertedType, intermediateVec);
+  } else {
+    result = b.create<LLVM::BitcastOp>(convertedType, dstI32Vec);
+  }
+  rewriter.replaceOp(op, result);
+  return success();
+}
+
+struct NVGPUExtfOpLowering : public ConvertOpToLLVMPattern<nvgpu::ExtfOp> {
+  using ConvertOpToLLVMPattern<nvgpu::ExtfOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::ExtfOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    return lowerExtf(op, adaptor, rewriter, getTypeConverter());
+  }
+};
+
+static int64_t computePaddedElems(int64_t numElems, int srcBW, int dstBW,
+                                  int step) {
+  static constexpr int regBits = 32;
+  int effSrcBW = getEffectiveBitWidth(srcBW);
+  int effDstBW = getEffectiveBitWidth(dstBW);
+  auto ceilDiv = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
+  int64_t padded =
+      std::max(ceilDiv(numElems * effSrcBW, regBits) * regBits / effSrcBW,
+               ceilDiv(numElems * effDstBW, regBits) * regBits / effDstBW);
+  return ceilDiv(padded, step) * step;
+}
+
+/// Canonicalization pattern for nvgpu.truncf / nvgpu.extf:
+/// handles scalar inputs, non-32-bit-aligned vectors, and multi-rank vectors.
+/// Runs as an OpRewritePattern on MLIR types before LLVM type conversion.
+template <typename CvtOp, bool IsTrunc>
+struct NVGPUFPCanonicalizePattern : public OpRewritePattern<CvtOp> {
+  using OpRewritePattern<CvtOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(CvtOp op,
+                                PatternRewriter &rewriter) const override {
+    Type inType = op.getIn().getType();
+    Type outType = op.getOut().getType();
+
+    Type srcElemTy = getElementTypeOrSelf(inType);
+    Type dstElemTy = getElementTypeOrSelf(outType);
+    int srcBW = srcElemTy.getIntOrFloatBitWidth();
+    int dstBW = dstElemTy.getIntOrFloatBitWidth();
+    int effSrcBW = getEffectiveBitWidth(srcBW);
+    int effDstBW = getEffectiveBitWidth(dstBW);
+
+    bool isScalar = !isa<VectorType>(inType);
+    auto srcVecTy = dyn_cast<VectorType>(inType);
+    bool isMultiRank = srcVecTy && srcVecTy.getRank() > 1;
+    int64_t numElems = isScalar ? 1 : srcVecTy.getNumElements();
+    int step = IsTrunc ? effSrcBW / effDstBW : effDstBW / effSrcBW;
+    int64_t paddedElems = computePaddedElems(numElems, srcBW, dstBW, step);
+    bool needsPad = (paddedElems != numElems);
+
+    if (!isScalar && !isMultiRank && !needsPad)
+      return failure();
+
+    ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+    Value input = op.getIn();
+
+    if (isScalar)
+      input = vector::BroadcastOp::create(b, VectorType::get({1}, srcElemTy),
+                                          input);
+    if (isMultiRank)
+      input = vector::ShapeCastOp::create(
+          b, VectorType::get({numElems}, srcElemTy), input);
+
+    if (needsPad) {
+      auto paddedTy = VectorType::get({paddedElems}, srcElemTy);
+      Value zero = arith::ConstantOp::create(
+          b, DenseElementsAttr::get(paddedTy, b.getZeroAttr(srcElemTy)));
+      input = vector::InsertStridedSliceOp::create(
+          b, input, zero, SmallVector<int64_t>{0}, SmallVector<int64_t>{1});
+    }
+
+    auto cvtDstTy =
+        VectorType::get({needsPad ? paddedElems : numElems}, dstElemTy);
+    Value cvt;
+    if constexpr (IsTrunc) {
+      cvt = CvtOp::create(b, cvtDstTy, input, op.getRndAttr(), op.getSatAttr(),
+                          op.getReluAttr(), op.getRandomBits());
+    } else {
+      cvt =
+          CvtOp::create(b, cvtDstTy, input, op.getRndAttr(), op.getReluAttr());
+    }
+    Value result = cvt;
+
+    if (needsPad) {
+      result = vector::ExtractStridedSliceOp::create(
+          b, result, SmallVector<int64_t>{0}, SmallVector<int64_t>{numElems},
+          SmallVector<int64_t>{1});
+    }
+
+    if (isMultiRank) {
+      result =
+          vector::ShapeCastOp::create(b, cast<VectorType>(outType), result);
+    }
+
+    if (isScalar) {
+      result = vector::ExtractOp::create(b, result, SmallVector<int64_t>{0});
+    }
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+using NVGPUTruncfCanonicalizePattern =
+    NVGPUFPCanonicalizePattern<nvgpu::TruncfOp, true>;
+using NVGPUExtfCanonicalizePattern =
+    NVGPUFPCanonicalizePattern<nvgpu::ExtfOp, false>;
 } // namespace
 
 void mlir::nvgpu::populateCommonGPUTypeAndAttributeConversions(
@@ -1753,7 +2421,12 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
       NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma
       NVGPUWarpgroupMmaStoreOpLowering,         // nvgpu.warpgroup.mma.store
       NVGPUWarpgroupMmaInitAccumulatorOpLowering, // nvgpu.warpgroup.mma.init.accumulator
+      NVGPUTruncfOpLowering,                      // nvgpu.truncf
+      NVGPUExtfOpLowering,                        // nvgpu.extf
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering, NVGPURcpOpLowering>(converter);
+
+  patterns.add<NVGPUTruncfCanonicalizePattern, NVGPUExtfCanonicalizePattern>(
+      patterns.getContext());
 }

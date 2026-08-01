@@ -148,7 +148,6 @@ bool HexagonDYLDRendezvous::UpdateSOEntries() {
 
 bool HexagonDYLDRendezvous::UpdateSOEntriesForAddition() {
   SOEntry entry;
-  iterator pos;
 
   assert(m_previous.state == eAdd);
 
@@ -176,7 +175,6 @@ bool HexagonDYLDRendezvous::UpdateSOEntriesForAddition() {
 
 bool HexagonDYLDRendezvous::UpdateSOEntriesForDeletion() {
   SOEntryList entry_list;
-  iterator pos;
 
   assert(m_previous.state == eDelete);
 

@@ -734,7 +734,7 @@ void FormatStringConverter::appendFormatText(const StringRef Text) {
 }
 
 static std::string withoutCStrReplacement(const BoundNodes &CStrRemovalMatch,
-                                          ASTContext &Context) {
+                                          const ASTContext &Context) {
   const auto *Arg = CStrRemovalMatch.getNodeAs<Expr>("arg");
   const auto *Member = CStrRemovalMatch.getNodeAs<MemberExpr>("member");
   const bool Arrow = Member->isArrow();

@@ -183,6 +183,20 @@ static constexpr OptionEnumValueElement g_plugin_domain_values[] = {
     {lldb::ePluginDomainKindTarget, "target", "Apply to the current target."},
 };
 
+static constexpr OptionEnumValueElement g_resolver_mask_values[] = {
+    {lldb::eResolverFileAndLine, "file_and_line",
+     "Matches file and line breakpoint resolvers."},
+    {lldb::eResolverAddress, "address",
+     "Matches address breakpoint resolvers."},
+    {lldb::eResolverName, "name", "Matches symbol name breakpoint resolvers."},
+    {lldb::eResolverFileRegex, "source",
+     "Matches source text pattern resolvers."},
+    {lldb::eResolverPython, "scripted",
+     "Matches scripted breakpoint resolvers."},
+    {lldb::eResolverException, "exception",
+     "Matches language exception breakpoint resolvers."},
+};
+
 static constexpr OptionEnumValueElement g_completion_type[] = {
     {lldb::eNoCompletion, "none", "No completion."},
     {lldb::eSourceFileCompletion, "source-file", "Completes to a source file."},
@@ -349,6 +363,8 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypeExceptionStage, "exception-stage", lldb::CompletionType::eNoCompletion, g_exception_stage, { nullptr, false }, "Specify at which stage of the exception raise to stop." },
     { lldb::eArgTypeNameMatchStyle, "match-style", lldb::CompletionType::eNoCompletion, g_name_match_style, { nullptr, false }, "Specify the kind of match to use when looking up names." },
     { lldb::eArgTypePluginDomain, "plugin-domain", lldb::CompletionType::eNoCompletion, g_plugin_domain_values, { nullptr, false }, "The domain to apply the plugin operation to." },
+    { lldb::eArgTypeBreakpointResolverMask, "resolver-mask", lldb::CompletionType::eNoCompletion, g_resolver_mask_values, { nullptr, false }, "Specify the breakpoint resolver type your override will handle. Can be specified more than once to specify a mask of resolver types." },
+    { lldb::eArgTypeScriptedExtension, "scripting-extension", lldb::CompletionType::eScriptedExtensionCompletion, {}, { nullptr, false }, "The name of a scripting extension." },
     // clang-format on
 };
 

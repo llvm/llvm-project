@@ -22,7 +22,10 @@ template <ol_alloc_type_t AllocType>
 struct olGetMemInfoTest : olGetMemInfoBaseTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_SUCCESS(olMemAlloc(Device, AllocType, SIZE, &Ptr));
+    if constexpr (AllocType == OL_ALLOC_TYPE_HOST)
+      ASSERT_SUCCESS(olMemAllocHost(Device, SIZE, &Ptr));
+    else
+      ASSERT_SUCCESS(olMemAlloc(Device, AllocType, SIZE, &Ptr));
   }
 
   void TearDown() override {

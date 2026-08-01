@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no unwinder support for tail-call frames
 class TestCrossObjectTailCalls(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "22.0"])
     @skipIf(dwarf_version=["<", "4"])

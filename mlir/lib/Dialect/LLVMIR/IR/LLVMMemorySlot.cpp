@@ -256,6 +256,11 @@ static Value createExtractAndCast(OpBuilder &builder, Location loc,
                                  /*narrowingConversion=*/true) &&
          "expected that the compatibility was checked before");
 
+  // Nothing has to be done if the types are already the same. This also
+  // avoids querying the bit size of scalable vector types below.
+  if (srcType == targetType)
+    return srcValue;
+
   uint64_t srcTypeSize = dataLayout.getTypeSizeInBits(srcType);
   uint64_t targetTypeSize = dataLayout.getTypeSizeInBits(targetType);
   if (srcTypeSize == targetTypeSize)
@@ -291,6 +296,12 @@ static Value createInsertAndCast(OpBuilder &builder, Location loc,
                                  srcValue.getType(),
                                  /*narrowingConversion=*/false) &&
          "expected that the compatibility was checked before");
+
+  // Nothing has to be done if the types are already the same. This also
+  // avoids querying the bit size of scalable vector types below.
+  if (srcValue.getType() == reachingDef.getType())
+    return srcValue;
+
   uint64_t valueTypeSize = dataLayout.getTypeSizeInBits(srcValue.getType());
   uint64_t slotTypeSize = dataLayout.getTypeSizeInBits(reachingDef.getType());
   if (slotTypeSize == valueTypeSize)

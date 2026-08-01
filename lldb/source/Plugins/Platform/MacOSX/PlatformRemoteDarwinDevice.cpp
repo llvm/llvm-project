@@ -291,8 +291,7 @@ uint32_t PlatformRemoteDarwinDevice::GetConnectedSDKIndex() {
         const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
         for (uint32_t i = 0; i < num_sdk_infos; ++i) {
           const SDKDirectoryInfo &sdk_dir_info = m_sdk_directory_infos[i];
-          if (strstr(sdk_dir_info.directory.GetFilename().AsCString(""),
-                     build->c_str())) {
+          if (sdk_dir_info.directory.GetFilename().contains(build->c_str())) {
             m_connected_module_sdk_idx = i;
           }
         }

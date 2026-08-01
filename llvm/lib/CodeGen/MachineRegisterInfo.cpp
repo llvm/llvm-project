@@ -674,3 +674,43 @@ bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {
   }
   return false;
 }
+
+void MachineRegisterInfo::updateDbgUsersToReg(
+    MCRegister OldReg, MCRegister NewReg,
+    ArrayRef<MachineInstr *> Users) const {
+  // If this operand is a register, check whether it overlaps with OldReg.
+  // If it does, replace with NewReg.
+  auto *TRI = getTargetRegisterInfo();
+  auto UpdateOp = [&NewReg, &OldReg, &TRI](MachineOperand &Op) {
+    if (!Op.isReg() || !TRI->regsOverlap(Op.getReg(), OldReg))
+      return;
+    if (Op.getReg() == OldReg) {
+      // Registers exactly match; replace OldReg with NewReg.
+      Op.setReg(NewReg);
+      return;
+    }
+    if (unsigned Idx = TRI->getSubRegIndex(OldReg, Op.getReg())) {
+      // Debug user refers to a subregister of OldReg; map to the corresponding
+      // subregister of NewReg.
+      if (MCRegister NewSubReg = TRI->getSubReg(NewReg, Idx)) {
+        Op.setReg(NewSubReg);
+        return;
+      }
+    }
+    // Registers have some more complicated relationship; discard the use.
+    Op.setReg(MCRegister::NoRegister);
+  };
+
+  // Iterate through (possibly several) operands to DBG_VALUEs and update
+  // each. For DBG_PHIs, only one operand will be present.
+  for (MachineInstr *MI : Users) {
+    if (MI->isDebugValue()) {
+      for (auto &Op : MI->debug_operands())
+        UpdateOp(Op);
+    } else if (MI->isDebugPHI()) {
+      UpdateOp(MI->getOperand(0));
+    } else {
+      llvm_unreachable("Non-DBG_VALUE, Non-DBG_PHI debug instr updated");
+    }
+  }
+}

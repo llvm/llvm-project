@@ -159,7 +159,6 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     return LangOpts.CPlusPlus ? KS_Unknown : KS_Enabled;
   case KEYNOOPENCL:
   case KEYNOMS18:
-  case KEYNOZOS:
   case KEYNOHLSL:
     // The disable behavior for this is handled in getKeywordStatus.
     return KS_Unknown;
@@ -183,8 +182,6 @@ KeywordStatus clang::getKeywordStatus(const LangOptions &LangOpts,
     return KS_Disabled;
   if (LangOpts.MSVCCompat && (Flags & KEYNOMS18) &&
       !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
-    return KS_Disabled;
-  if (LangOpts.ZOSExt && (Flags & KEYNOZOS))
     return KS_Disabled;
   KeywordStatus CurStatus = KS_Unknown;
 

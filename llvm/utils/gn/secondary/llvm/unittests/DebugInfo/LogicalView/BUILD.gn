@@ -20,6 +20,7 @@ unittest("DebugInfoLogicalViewTests") {
     "CompareElementsTest.cpp",
     "DWARFGeneratedTest.cpp",
     "DWARFReaderTest.cpp",
+    "IRReaderTest.cpp",
     "LocationRangesTest.cpp",
     "LogicalElementsTest.cpp",
     "SelectElementsTest.cpp",

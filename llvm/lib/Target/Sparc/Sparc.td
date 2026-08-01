@@ -242,7 +242,7 @@ def : Processor<"at697f", LEON2Itineraries,
 
 // LEON 3 FT generic
 def : Processor<"leon3", LEON3Itineraries,
-                [FeatureLeon, UMACSMACSupport]>;
+                [FeatureLeon, UMACSMACSupport, LeonCASA]>;
 
 // LEON 3 FT (UT699). Provides features for the UT699 processor
 // - covers all the erratum fixes for LEON3, but does not support the CASA instruction.

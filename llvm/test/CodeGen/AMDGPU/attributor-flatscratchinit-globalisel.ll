@@ -1,5 +1,5 @@
 ; Test the generation of the attribute amdgpu-no-flat-scratch-init
-; RUN: opt -S -O2 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -global-isel -stop-after=irtranslator | FileCheck -check-prefixes=GFX10 %s
+; RUN: opt -S -O2 -mtriple=amdgpu10.10-amd-amdhsa %s | llc -global-isel -stop-after=irtranslator | FileCheck -check-prefixes=GFX10 %s
 
 ;; tests of addrspacecast
 

@@ -75,6 +75,19 @@ class ChangeValueAPITestCase(TestBase):
         self.assertSuccess(error, "Got a changed value from val")
         self.assertEqual(actual_value, 12345, "Got the right changed value from val")
 
+        # A normal variable backed by memory reports that it can be modified.
+        self.assertTrue(val_value.CanSetValue(), "val can be modified")
+
+        # A constant expression result has no writable storage, so it cannot be
+        # modified and CanSetValue() is False.
+        const_value = frame0.EvaluateExpression("val + 1")
+        self.assertTrue(const_value.IsValid(), "Got a valid expression result")
+        self.assertFalse(const_value.CanSetValue(), "A constant cannot be modified")
+        error.Clear()
+        result = const_value.SetValueFromCString("0", error)
+        self.assertFalse(result, "SetValueFromCString on a constant failed")
+        self.assertIn("constant", error.GetCString())
+
         # Now check that we can set a structure element:
 
         mine_value = frame0.FindVariable("mine")

@@ -42,7 +42,7 @@ registers:
 body:             |
   bb.0:
     successors: %bb.0, %bb.1
-    %1(s32) = COPY $w0
+    %1(i32) = COPY $w0
     G_BRCOND %1, %bb.1
     G_BR %bb.0
 

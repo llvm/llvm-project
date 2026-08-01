@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DumpRegisterInfo.h"
-#include "lldb/Target/RegisterFlags.h"
+#include "lldb/Utility/RegisterFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gtest/gtest.h"
 

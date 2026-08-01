@@ -160,10 +160,10 @@ public:
     //   NSString *reason;
     //   NSDictionary *userInfo;
     //   id reserved;
-    static ConstString g_name("name");
-    static ConstString g_reason("reason");
-    static ConstString g_userInfo("userInfo");
-    static ConstString g_reserved("reserved");
+    static constexpr llvm::StringLiteral g_name("name");
+    static constexpr llvm::StringLiteral g_reason("reason");
+    static constexpr llvm::StringLiteral g_userInfo("userInfo");
+    static constexpr llvm::StringLiteral g_reserved("reserved");
     if (name == g_name) return 0;
     if (name == g_reason) return 1;
     if (name == g_userInfo) return 2;

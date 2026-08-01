@@ -330,4 +330,5 @@ static bool CC_ARM_AAPCS_Common_Custom_f16_Stack(unsigned ValNo, MVT ValVT,
 }
 
 // Include the table generated calling convention implementations.
+#define GET_CALLING_CONV_IMPL
 #include "ARMGenCallingConv.inc"

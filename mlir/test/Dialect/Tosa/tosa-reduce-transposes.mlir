@@ -174,6 +174,22 @@ func.func @test_reshape_for_broadcast(%arg0: tensor<4x3x2xi32>) -> tensor<4x3x2x
 
 // -----
 
+// CHECK-LABEL: @test_multi_dim_reshape_for_broadcast
+// CHECK-DAG: %[[SHAPE:.*]] = tosa.const_shape  {values = dense<[4, 1, 1]> : tensor<3xindex>}
+// CHECK: %[[RESHAPE:.*]] = tosa.reshape %arg0, %[[SHAPE]] : (tensor<1x4x1xi32>, !tosa.shape<3>) -> tensor<4x1x1xi32>
+// CHECK: %[[ADD:.*]] = tosa.add %arg1, %[[RESHAPE]]
+// CHECK: return %[[ADD]]
+func.func @test_multi_dim_reshape_for_broadcast(%arg0: tensor<1x4x1xi32>, %arg1: tensor<4x3x2xi32>) -> tensor<4x3x2xi32> {
+  %shape = tosa.const_shape {values = dense<[1, 1, 4]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %reshape = tosa.reshape %arg0, %shape : (tensor<1x4x1xi32>, !tosa.shape<3>) -> tensor<1x1x4xi32>
+  %transpose0 = tosa.transpose %arg1 {perms = array<i32: 2, 1, 0>}: (tensor<4x3x2xi32>) -> tensor<2x3x4xi32>
+  %add = tosa.add %transpose0, %reshape : (tensor<2x3x4xi32>, tensor<1x1x4xi32>) -> tensor<2x3x4xi32>
+  %transpose1 = tosa.transpose %add {perms = array<i32: 2, 1, 0>}: (tensor<2x3x4xi32>) -> tensor<4x3x2xi32>
+  return %transpose1 : tensor<4x3x2xi32>
+}
+
+// -----
+
 // COM: taken directly from ResNet18 translation.
 // COM: changes: %74 as argument instead of result of conv2d
 
@@ -580,4 +596,22 @@ func.func @test_unimplemented_static_diverges_to_one_nullifying_one_non_nullifyi
   %add = tosa.add %clamp, %abs : (tensor<1x3x4x2xi32>, tensor<1x3x4x2xi32>) -> tensor<1x3x4x2xi32>
   %result = tosa.transpose %add {perms = array<i32: 0, 3, 1, 2>}: (tensor<1x3x4x2xi32>) -> tensor<1x2x3x4xi32>
   return %result : tensor<1x2x3x4xi32>
+}
+
+// CHECK-LABEL: @test_transpose_bool
+// CHECK: %{{.*}} = "tosa.const"()
+// CHECK-SAME{LITERAL}: dense<[[true, false], [false, false], [false, true]]>
+func.func @test_transpose_bool() -> tensor<3x2xi1> {
+  %0 = "tosa.const"() <{values = dense<[[true, false, false], [false, false, true]]> : tensor<2x3xi1>}> : () -> tensor<2x3xi1>
+  %1 = tosa.transpose %0 {perms = array<i32: 1, 0>} : (tensor<2x3xi1>) -> tensor<3x2xi1>
+  return %1 : tensor<3x2xi1>
+}
+
+// CHECK-LABEL: @test_transpose_i4
+// CHECK: %{{.*}} = "tosa.const"()
+// CHECK-SAME{LITERAL}: dense<[[1, 4], [2, 5], [3, 6]]>
+func.func @test_transpose_i4() -> tensor<3x2xi4> {
+  %0 = "tosa.const"() <{values = dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi4>}> : () -> tensor<2x3xi4>
+  %1 = tosa.transpose %0 {perms = array<i32: 1, 0>} : (tensor<2x3xi4>) -> tensor<3x2xi4>
+  return %1 : tensor<3x2xi4>
 }

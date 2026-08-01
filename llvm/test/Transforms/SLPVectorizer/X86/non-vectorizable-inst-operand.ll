@@ -16,9 +16,9 @@ define void @test_two_calls_with_vectorizable_operands(ptr %p, ptr %out0, ptr %o
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT0:%.*]], ptr [[OUT1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 2.000000e+00, double 3.000000e+00>
-; CHECK-NEXT:    [[M0:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
+; CHECK-NEXT:    [[M0:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[R0:%.*]] = call double @user_func(double [[M0]])
-; CHECK-NEXT:    [[M1:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
+; CHECK-NEXT:    [[M1:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[R1:%.*]] = call double @user_func(double [[M1]])
 ; CHECK-NEXT:    store double [[R0]], ptr [[OUT0]], align 8
 ; CHECK-NEXT:    store double [[R1]], ptr [[OUT1]], align 8
@@ -45,11 +45,11 @@ define void @test_two_calls_paired_operands(ptr %p, ptr %q, ptr %out0, ptr %out1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 2.000000e+00, double 3.000000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[Q]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], <double 4.000000e+00, double 5.000000e+00>
-; CHECK-NEXT:    [[M0:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
-; CHECK-NEXT:    [[N0:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
+; CHECK-NEXT:    [[M0:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
+; CHECK-NEXT:    [[N0:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[R0:%.*]] = call double @another_user_func(double [[M0]], double [[N0]])
-; CHECK-NEXT:    [[M1:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
-; CHECK-NEXT:    [[N1:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[M1:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
+; CHECK-NEXT:    [[N1:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[R1:%.*]] = call double @another_user_func(double [[M1]], double [[N1]])
 ; CHECK-NEXT:    store double [[R0]], ptr [[OUT0]], align 8
 ; CHECK-NEXT:    store double [[R1]], ptr [[OUT1]], align 8
@@ -150,13 +150,13 @@ define void @test_atomicrmw_value_chain(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr 
 ; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]], ptr [[P4:%.*]], ptr [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], splat (i32 7)
-; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    [[OLD0:%.*]] = atomicrmw add ptr [[P1]], i32 [[V0]] seq_cst, align 4
-; CHECK-NEXT:    [[V1:%.*]] = extractelement <4 x i32> [[TMP2]], i32 1
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <4 x i32> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[OLD1:%.*]] = atomicrmw add ptr [[P2]], i32 [[V1]] seq_cst, align 4
-; CHECK-NEXT:    [[V2:%.*]] = extractelement <4 x i32> [[TMP2]], i32 2
+; CHECK-NEXT:    [[V2:%.*]] = extractelement <4 x i32> [[TMP2]], i64 2
 ; CHECK-NEXT:    [[OLD2:%.*]] = atomicrmw add ptr [[P3]], i32 [[V2]] seq_cst, align 4
-; CHECK-NEXT:    [[V3:%.*]] = extractelement <4 x i32> [[TMP2]], i32 3
+; CHECK-NEXT:    [[V3:%.*]] = extractelement <4 x i32> [[TMP2]], i64 3
 ; CHECK-NEXT:    [[OLD3:%.*]] = atomicrmw add ptr [[P4]], i32 [[V3]] seq_cst, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -187,11 +187,11 @@ define void @test_cmpxchg_value_chain(ptr %p1, ptr %p2, ptr %src_a, ptr %src_b) 
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i32> [[TMP5]], <i32 11, i32 11, i32 13, i32 13>
-; CHECK-NEXT:    [[CMP0:%.*]] = extractelement <4 x i32> [[TMP6]], i32 0
-; CHECK-NEXT:    [[NEW0:%.*]] = extractelement <4 x i32> [[TMP6]], i32 2
+; CHECK-NEXT:    [[CMP0:%.*]] = extractelement <4 x i32> [[TMP6]], i64 0
+; CHECK-NEXT:    [[NEW0:%.*]] = extractelement <4 x i32> [[TMP6]], i64 2
 ; CHECK-NEXT:    [[R0:%.*]] = cmpxchg ptr [[P1]], i32 [[CMP0]], i32 [[NEW0]] seq_cst seq_cst, align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = extractelement <4 x i32> [[TMP6]], i32 1
-; CHECK-NEXT:    [[NEW1:%.*]] = extractelement <4 x i32> [[TMP6]], i32 3
+; CHECK-NEXT:    [[CMP1:%.*]] = extractelement <4 x i32> [[TMP6]], i64 1
+; CHECK-NEXT:    [[NEW1:%.*]] = extractelement <4 x i32> [[TMP6]], i64 3
 ; CHECK-NEXT:    [[R1:%.*]] = cmpxchg ptr [[P2]], i32 [[CMP1]], i32 [[NEW1]] seq_cst seq_cst, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -237,13 +237,13 @@ define void @test_scattered_stores(ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %src)
 ; CHECK-SAME: ptr [[P1:%.*]], ptr [[P2:%.*]], ptr [[P3:%.*]], ptr [[P4:%.*]], ptr [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], <double 2.000000e+00, double 3.000000e+00, double 5.000000e+00, double 7.000000e+00>
-; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x double> [[TMP2]], i32 0
+; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x double> [[TMP2]], i64 0
 ; CHECK-NEXT:    store double [[V0]], ptr [[P1]], align 8
-; CHECK-NEXT:    [[V1:%.*]] = extractelement <4 x double> [[TMP2]], i32 1
+; CHECK-NEXT:    [[V1:%.*]] = extractelement <4 x double> [[TMP2]], i64 1
 ; CHECK-NEXT:    store double [[V1]], ptr [[P2]], align 8
-; CHECK-NEXT:    [[V2:%.*]] = extractelement <4 x double> [[TMP2]], i32 2
+; CHECK-NEXT:    [[V2:%.*]] = extractelement <4 x double> [[TMP2]], i64 2
 ; CHECK-NEXT:    store double [[V2]], ptr [[P3]], align 8
-; CHECK-NEXT:    [[V3:%.*]] = extractelement <4 x double> [[TMP2]], i32 3
+; CHECK-NEXT:    [[V3:%.*]] = extractelement <4 x double> [[TMP2]], i64 3
 ; CHECK-NEXT:    store double [[V3]], ptr [[P4]], align 8
 ; CHECK-NEXT:    ret void
 ;

@@ -4207,18 +4207,17 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   if (SrcVal)
     Args.add(RValue::get(SrcVal), SrcParam->getType());
 
-  // Add the rest of the default arguments.
+  // Get the rest of the default arguments.
   SmallVector<const Stmt *, 4> ArgVec;
-  ArrayRef<ParmVarDecl *> params = CD->parameters().drop_front(IsCopy ? 1 : 0);
-  for (const ParmVarDecl *PD : params) {
-    assert(PD->hasDefaultArg() && "ctor closure lacks default args");
-    ArgVec.push_back(PD->getDefaultArg());
-  }
+  for (const CXXDefaultArgExpr *Expr :
+       CD->getCtorClosureDefaultArgs().drop_front(IsCopy ? 1 : 0))
+    ArgVec.push_back(Expr);
+  assert(ArgVec.size() == CD->getNumParams() - IsCopy);
 
   CodeGenFunction::RunCleanupsScope Cleanups(CGF);
 
   const auto *FPT = CD->getType()->castAs<FunctionProtoType>();
-  CGF.EmitCallArgs(Args, FPT, llvm::ArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
+  CGF.EmitCallArgs(Args, FPT, ArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
 
   // Insert any ABI-specific implicit constructor arguments.
   AddedStructorArgCounts ExtraArgs =
@@ -4230,8 +4229,12 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
       CGM.getAddrOfCXXStructor(GlobalDecl(CD, Ctor_Complete));
   CGCallee Callee =
       CGCallee::forDirect(CalleePtr, GlobalDecl(CD, Ctor_Complete));
+  // Microsoft ABI constructors always use the default method calling
+  // convention (see SemaType.cpp adjustMemberFunctionCC), so no caller
+  // declaration is needed for SysV ABI selection.
   const CGFunctionInfo &CalleeInfo = CGM.getTypes().arrangeCXXConstructorCall(
-      Args, CD, Ctor_Complete, ExtraArgs.Prefix, ExtraArgs.Suffix);
+      Args, CD, Ctor_Complete, ExtraArgs.Prefix, ExtraArgs.Suffix,
+      /*ABIInfoFD=*/nullptr);
   CGF.EmitCall(CalleeInfo, Callee, ReturnValueSlot(), Args);
 
   Cleanups.ForceCleanup();

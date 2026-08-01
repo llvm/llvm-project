@@ -18,11 +18,11 @@ define void @foo(ptr %c, ptr %d) {
 ; X86-NEXT:    [[TMP2:%.*]] = load <2 x i8>, ptr [[ARRAYIDX12]], align 1
 ; X86-NEXT:    [[TMP3:%.*]] = zext <2 x i8> [[TMP2]] to <2 x i16>
 ; X86-NEXT:    [[TMP4:%.*]] = shl <2 x i16> [[TMP3]], splat (i16 2)
-; X86-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[SHL6]], i32 0
+; X86-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[SHL6]], i64 0
 ; X86-NEXT:    [[TMP6:%.*]] = zext <2 x i16> [[TMP4]] to <2 x i32>
 ; X86-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; X86-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> [[TMP7]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
-; X86-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[AND]], i32 3
+; X86-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[AND]], i64 3
 ; X86-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> undef, [[TMP9]]
 ; X86-NEXT:    [[TMP11:%.*]] = sitofp <4 x i32> [[TMP10]] to <4 x float>
 ; X86-NEXT:    [[TMP12:%.*]] = fdiv <4 x float> [[TMP11]], undef

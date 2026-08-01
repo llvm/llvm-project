@@ -494,38 +494,35 @@ struct ParamType : PyConcreteType<ParamType> {
 
 namespace {
 void onlyReadsHandle(nb::iterable &operands,
-                     PyMemoryEffectsInstanceList effects) {
+                     const PyMemoryEffectsInstanceList &effects) {
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
-  mlirTransformOnlyReadsHandle(operandsVec.data(), operandsVec.size(),
-                               effects.effects);
+  mlirTransformOnlyReadsHandle(operandsVec.data(), operandsVec.size(), effects);
 };
 
 void consumesHandle(nb::iterable &operands,
-                    PyMemoryEffectsInstanceList effects) {
+                    const PyMemoryEffectsInstanceList &effects) {
   std::vector<MlirOpOperand> operandsVec;
   for (auto operand : operands)
     operandsVec.push_back(nb::cast<PyOpOperand>(operand));
-  mlirTransformConsumesHandle(operandsVec.data(), operandsVec.size(),
-                              effects.effects);
+  mlirTransformConsumesHandle(operandsVec.data(), operandsVec.size(), effects);
 };
 
 void producesHandle(nb::iterable &results,
-                    PyMemoryEffectsInstanceList effects) {
+                    const PyMemoryEffectsInstanceList &effects) {
   std::vector<MlirValue> resultsVec;
   for (auto result : results)
     resultsVec.push_back(nb::cast<PyOpResult>(result).get());
-  mlirTransformProducesHandle(resultsVec.data(), resultsVec.size(),
-                              effects.effects);
+  mlirTransformProducesHandle(resultsVec.data(), resultsVec.size(), effects);
 };
 
-void modifiesPayload(PyMemoryEffectsInstanceList effects) {
-  mlirTransformModifiesPayload(effects.effects);
+void modifiesPayload(const PyMemoryEffectsInstanceList &effects) {
+  mlirTransformModifiesPayload(effects);
 }
 
-void onlyReadsPayload(PyMemoryEffectsInstanceList effects) {
-  mlirTransformOnlyReadsPayload(effects.effects);
+void onlyReadsPayload(const PyMemoryEffectsInstanceList &effects) {
+  mlirTransformOnlyReadsPayload(effects);
 }
 } // namespace
 

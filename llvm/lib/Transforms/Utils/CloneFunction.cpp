@@ -105,6 +105,12 @@ createIdentityMDPredicate(const Function &F, CloneFunctionChangeType Changes) {
       if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
         return ShouldKeep(S->getSubprogram());
 
+    // DIGlobalVariableExpression representing static local variable may be
+    // encountered in DISubprogram's retainedNodes list. Do not remap it, and
+    // remove it from retainedNodes after mapping.
+    if (isa<DIGlobalVariableExpression>(MD))
+      return true;
+
     // Clone types that are local to subprograms being cloned.
     // Avoid cloning other types.
     auto *Type = dyn_cast<DIType>(MD);
@@ -350,6 +356,15 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   CloneFunctionBodyInto(*NewFunc, *OldFunc, VMap, RemapFlag, Returns,
                         NameSuffix, CodeInfo, TypeMapper, Materializer,
                         &IdentityMD);
+
+  // DIGlobalVariableExpressions representing static locals stay in the scope of
+  // OldSP after function cloning. Remove them from retainedNodes of NewSP.
+  if (DISubprogram *NewSP = NewFunc->getSubprogram())
+    NewSP->cleanupRetainedNodesIf([NewSP](Metadata *N) {
+      auto *GVE = dyn_cast_or_null<DIGlobalVariableExpression>(N);
+      return !GVE ||
+             DISubprogram::getRetainedNodeScope(GVE)->getSubprogram() == NewSP;
+    });
 
   // Only update !llvm.dbg.cu for DifferentModule (not CloneModule). In the
   // same module, the compile unit will already be listed (or not). When
@@ -1006,6 +1021,8 @@ void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
 ///
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
 /// \p LoopDomBB.  Insert the new blocks before block specified in \p Before.
+/// The client needs to further update the CFG and DominatorTree after calling
+/// this function, to ensure the IR remains valid.
 Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                                    Loop *OrigLoop, ValueToValueMapTy &VMap,
                                    const Twine &NameSuffix, LoopInfo *LI,

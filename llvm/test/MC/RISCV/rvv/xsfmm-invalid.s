@@ -21,10 +21,10 @@ sf.mm.e4m3.e5m2 mt10, v8, v9 # CHECK: :[[@LINE]]:17: error: invalid operand for 
 
 sf.mm.e4m3.e4m3 mt14, v8, v9 # CHECK: :[[@LINE]]:17: error: invalid operand for instruction
 
-sf.mm.u.u mt1, v8, v9 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+sf.mm.u.u mt1, v8, v9 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
-sf.mm.s.u mt2, v8, v9 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+sf.mm.s.u mt2, v8, v9 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
-sf.mm.u.s mt3, v8, v9 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+sf.mm.u.s mt3, v8, v9 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
-sf.mm.s.s mt1, v8, v9 # CHECK: :[[@LINE]]:11: error: invalid operand for instruction
+sf.mm.s.s mt1, v8, v9 # CHECK: :[[@LINE]]:1: error: invalid instruction

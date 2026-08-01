@@ -282,7 +282,7 @@ define i128 @test_ext(i32 %p1) {
 ; CHECK-NEXT:    [[I1:%.*]] = zext i32 [[P1]] to i128
 ; CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[I1]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_cast_ind(ptr [[TMP2]], i32 8, i32 12, i32 4, ptr [[TMP1]], i32 16, i32 12, i32 16, i32 40) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_cast_ind(ptr [[TMP2]], i32 12, i32 4, ptr [[TMP1]], i32 12, i32 16, i32 40) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i128, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret i128 [[TMP4]]
 ;

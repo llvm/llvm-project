@@ -65,6 +65,17 @@ module attributes {gpu.container_module} {
     return
   }
 
+  // CHECK-LABEL: func @launch_async_object(%{{.*}}: index, %{{.*}}: index) {
+  func.func @launch_async_object(%blk : index, %thrd : index) {
+    %stream = llvm.mlir.zero : !llvm.ptr
+    // CHECK: gpu.launch <%{{.*}} : !llvm.ptr> blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
+    gpu.launch <%stream : !llvm.ptr> blocks(%arg0, %arg1, %arg2) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
+               threads(%arg3, %arg4, %arg5) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd) {
+      gpu.terminator
+    }
+    return
+  }
+
   // CHECK-LABEL:func @launch_async_no_deps(%{{.*}}: index, %{{.*}}: index) {
   func.func @launch_async_no_deps(%blk : index, %thrd : index) {
     // CHECK: %{{.*}} = gpu.launch async blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})

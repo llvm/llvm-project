@@ -38,6 +38,9 @@ FPType = ByteSizes([
    ("bfloat", 2),
    ("float",  4),
    ("double", 8)])
+
+FP128LoadType = ByteSizes([
+   ("fp128", 16)])
 # fmt: on
 
 
@@ -248,11 +251,11 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
         f.write(test)
 
 
-def all_load(f):
-    for aligned in Aligned:
-        for ty, val in Type:
+def emit_load_tests(f, datatypes, alignments, orderings):
+    for aligned in alignments:
+        for ty, val in datatypes:
             alignval = align(val, aligned)
-            for ordering in ATOMIC_LOAD_ORDERS:
+            for ordering in orderings:
                 for const in [False, True]:
                     name = f"load_atomic_{ty}_{aligned}_{ordering}"
                     instr = "load atomic"
@@ -269,6 +272,12 @@ def all_load(f):
                     """
                         )
                     )
+
+
+def all_load(f, feature):
+    emit_load_tests(f, Type, Aligned, ATOMIC_LOAD_ORDERS)
+    if feature in [Feature.lse2, Feature.rcpc3, Feature.lse2_lse128]:
+        emit_load_tests(f, FP128LoadType, [Aligned.aligned], [AtomicOrder.seq_cst])
 
 
 def all_store(f):
@@ -389,7 +398,7 @@ def write_lit_tests(feature, datatypes, ops):
             with open(f"{triple}-atomic-load-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
                 header(f, triple, [feat], filter_args)
-                all_load(f)
+                all_load(f, feat)
 
             with open(f"{triple}-atomic-store-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'

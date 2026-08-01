@@ -13,7 +13,7 @@ program p
 
    type(t1) :: a, b
    !CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) mapper(@_QQFxx) -> {{.*}} {name = "a"}
-   !CHECK: omp.target map_entries(%[[MAP_A]] -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}) {
+   !CHECK: omp.target kernel_type(generic) map_entries(%[[MAP_A]] -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}) {
    !$omp target map(mapper(xx) : a)
    do i = 1, n
       a%x(i) = i
@@ -21,7 +21,7 @@ program p
    !$omp end target
 
    !CHECK: %[[MAP_B:.*]] = omp.map.info var_ptr(%{{.*}} : {{.*}}, {{.*}}) map_clauses(tofrom) capture(ByRef) mapper(@_QQFt1_omp_default_mapper) -> {{.*}} {name = "b"}
-   !CHECK: omp.target map_entries(%[[MAP_B]] -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}) {
+   !CHECK: omp.target kernel_type(generic) map_entries(%[[MAP_B]] -> %{{.*}}, %{{.*}} -> %{{.*}} : {{.*}}, {{.*}}) {
    !$omp target map(mapper(default) : b)
    do i = 1, n
       b%x(i) = i

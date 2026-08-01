@@ -1,10 +1,27 @@
 add_lldb_unittest(ProtocolTests
+  MCPClientTest.cpp
+  MCPErrorTest.cpp
+  MCPPluginTest.cpp
+  MCPServerInfoTest.cpp
+  MCPTransportTest.cpp
   ProtocolMCPTest.cpp
   ProtocolMCPServerTest.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
+    lldbCore
+    lldbCommands
     lldbHost
+    lldbInterpreter
     lldbProtocolMCP
+    lldbPluginPlatformMacOSX
+    lldbPluginProtocolServerMCP
+    lldbPluginScriptInterpreterNone
+    lldbSymbol
+    lldbTarget
     lldbUtility
+    lldbUtilityHelpers
+    lldbHostHelpers
     LLVMTestingSupport
   )

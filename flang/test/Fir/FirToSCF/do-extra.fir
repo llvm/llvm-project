@@ -137,7 +137,7 @@ func.func @mv_(%arg0: !fir.ref<!fir.array<3xi32>> {fir.bindc_name = "a", llvm.no
 // CHECK:           scf.for %{{.*}} = %[[C0]] to %[[VAL_2]] step %[[C1]] iter_args(%{{.*}} = %[[ARG0]]) -> (index) {
 // CHECK:             %[[MUL:.*]] = arith.muli %{{.*}}, %[[ARG2]] : index
 // CHECK:             %[[ADD0:.*]] = arith.addi %[[ARG0]], %[[MUL]] : index
-// CHECK:             %[[ADD1:.*]] = arith.addi %[[ADD0]], %[[ARG2]] : index
+// CHECK:             %[[ADD1:.*]] = arith.addi %[[ADD0]], %[[ARG2]] overflow<nsw> : index
 // CHECK:             scf.yield %[[ADD1]] : index
 // CHECK:           }
 

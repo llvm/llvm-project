@@ -41,6 +41,10 @@ void RTDECL(CUFSyncGlobalDescriptor)(
 void RTDECL(CUFDescriptorCheckSection)(
     const Descriptor *, const char *sourceFile = nullptr, int sourceLine = 0);
 
+/// True unless the device's primary context has been torn down (e.g. by a user
+/// cudaDeviceReset()); used to skip scope-exit device frees safely.
+bool RTDECL(CUFDeviceIsActive)();
+
 } // extern "C"
 
 } // namespace Fortran::runtime::cuda

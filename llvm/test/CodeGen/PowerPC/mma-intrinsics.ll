@@ -641,46 +641,44 @@ define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-NEXT:    cmpwi r4, 1
 ; CHECK-NEXT:    bltlr cr0
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    clrldi r4, r4, 32
-; CHECK-NEXT:    li r6, 0
-; CHECK-NEXT:    mtctr r4
-; CHECK-NEXT:    li r4, 0
+; CHECK-NEXT:    clrldi r6, r4, 32
+; CHECK-NEXT:    addi r4, r5, 48
+; CHECK-NEXT:    li r5, 0
+; CHECK-NEXT:    mtctr r6
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB9_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    rldic r7, r6, 4, 28
+; CHECK-NEXT:    lxv vs0, -48(r4)
+; CHECK-NEXT:    lxv vs1, -32(r4)
 ; CHECK-NEXT:    xxsetaccz acc2
 ; CHECK-NEXT:    xxsetaccz acc1
-; CHECK-NEXT:    addi r6, r6, 6
-; CHECK-NEXT:    add r8, r5, r7
-; CHECK-NEXT:    lxvx vs0, r5, r7
-; CHECK-NEXT:    rldic r7, r4, 6, 26
-; CHECK-NEXT:    addi r4, r4, 3
-; CHECK-NEXT:    lxv vs1, 16(r8)
+; CHECK-NEXT:    rldic r6, r5, 6, 26
+; CHECK-NEXT:    addi r5, r5, 3
+; CHECK-NEXT:    add r7, r3, r6
 ; CHECK-NEXT:    xvf32gerpp acc2, vs0, vs1
-; CHECK-NEXT:    lxv vs0, 32(r8)
-; CHECK-NEXT:    lxv vs1, 48(r8)
+; CHECK-NEXT:    lxv vs0, -16(r4)
+; CHECK-NEXT:    lxv vs1, 0(r4)
 ; CHECK-NEXT:    xvf32gerpn acc1, vs0, vs1
-; CHECK-NEXT:    lxv vs12, 64(r8)
-; CHECK-NEXT:    lxv vs13, 80(r8)
+; CHECK-NEXT:    lxv vs12, 16(r4)
+; CHECK-NEXT:    lxv vs13, 32(r4)
 ; CHECK-NEXT:    xxsetaccz acc0
-; CHECK-NEXT:    add r8, r3, r7
-; CHECK-NEXT:    xxmfacc acc2
+; CHECK-NEXT:    addi r4, r4, 96
 ; CHECK-NEXT:    xvf32gernp acc0, vs12, vs13
-; CHECK-NEXT:    stxvx vs11, r3, r7
-; CHECK-NEXT:    stxv vs8, 48(r8)
+; CHECK-NEXT:    xxmfacc acc2
 ; CHECK-NEXT:    xxmfacc acc1
-; CHECK-NEXT:    stxv vs9, 32(r8)
-; CHECK-NEXT:    stxv vs10, 16(r8)
-; CHECK-NEXT:    stxv vs4, 112(r8)
-; CHECK-NEXT:    stxv vs5, 96(r8)
+; CHECK-NEXT:    stxvx vs11, r3, r6
+; CHECK-NEXT:    stxv vs8, 48(r7)
+; CHECK-NEXT:    stxv vs9, 32(r7)
+; CHECK-NEXT:    stxv vs10, 16(r7)
 ; CHECK-NEXT:    xxmfacc acc0
-; CHECK-NEXT:    stxv vs6, 80(r8)
-; CHECK-NEXT:    stxv vs7, 64(r8)
-; CHECK-NEXT:    stxv vs0, 176(r8)
-; CHECK-NEXT:    stxv vs1, 160(r8)
-; CHECK-NEXT:    stxv vs2, 144(r8)
-; CHECK-NEXT:    stxv vs3, 128(r8)
+; CHECK-NEXT:    stxv vs4, 112(r7)
+; CHECK-NEXT:    stxv vs5, 96(r7)
+; CHECK-NEXT:    stxv vs6, 80(r7)
+; CHECK-NEXT:    stxv vs7, 64(r7)
+; CHECK-NEXT:    stxv vs0, 176(r7)
+; CHECK-NEXT:    stxv vs1, 160(r7)
+; CHECK-NEXT:    stxv vs2, 144(r7)
+; CHECK-NEXT:    stxv vs3, 128(r7)
 ; CHECK-NEXT:    bdnz .LBB9_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
 ; CHECK-NEXT:    blr
@@ -690,46 +688,44 @@ define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-BE-NEXT:    cmpwi r4, 1
 ; CHECK-BE-NEXT:    bltlr cr0
 ; CHECK-BE-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-BE-NEXT:    clrldi r4, r4, 32
-; CHECK-BE-NEXT:    li r6, 0
-; CHECK-BE-NEXT:    mtctr r4
-; CHECK-BE-NEXT:    li r4, 0
+; CHECK-BE-NEXT:    clrldi r6, r4, 32
+; CHECK-BE-NEXT:    addi r4, r5, 48
+; CHECK-BE-NEXT:    li r5, 0
+; CHECK-BE-NEXT:    mtctr r6
 ; CHECK-BE-NEXT:    .p2align 4
 ; CHECK-BE-NEXT:  .LBB9_2: # %for.body
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    rldic r7, r6, 4, 28
+; CHECK-BE-NEXT:    lxv vs0, -48(r4)
+; CHECK-BE-NEXT:    lxv vs1, -32(r4)
 ; CHECK-BE-NEXT:    xxsetaccz acc2
 ; CHECK-BE-NEXT:    xxsetaccz acc1
-; CHECK-BE-NEXT:    addi r6, r6, 6
-; CHECK-BE-NEXT:    add r8, r5, r7
-; CHECK-BE-NEXT:    lxvx vs0, r5, r7
-; CHECK-BE-NEXT:    rldic r7, r4, 6, 26
-; CHECK-BE-NEXT:    addi r4, r4, 3
-; CHECK-BE-NEXT:    lxv vs1, 16(r8)
+; CHECK-BE-NEXT:    rldic r6, r5, 6, 26
+; CHECK-BE-NEXT:    addi r5, r5, 3
+; CHECK-BE-NEXT:    add r7, r3, r6
 ; CHECK-BE-NEXT:    xvf32gerpp acc2, vs0, vs1
-; CHECK-BE-NEXT:    lxv vs0, 32(r8)
-; CHECK-BE-NEXT:    lxv vs1, 48(r8)
+; CHECK-BE-NEXT:    lxv vs0, -16(r4)
+; CHECK-BE-NEXT:    lxv vs1, 0(r4)
 ; CHECK-BE-NEXT:    xvf32gerpn acc1, vs0, vs1
-; CHECK-BE-NEXT:    lxv vs12, 64(r8)
-; CHECK-BE-NEXT:    lxv vs13, 80(r8)
+; CHECK-BE-NEXT:    lxv vs12, 16(r4)
+; CHECK-BE-NEXT:    lxv vs13, 32(r4)
 ; CHECK-BE-NEXT:    xxsetaccz acc0
-; CHECK-BE-NEXT:    add r8, r3, r7
-; CHECK-BE-NEXT:    xxmfacc acc2
+; CHECK-BE-NEXT:    addi r4, r4, 96
 ; CHECK-BE-NEXT:    xvf32gernp acc0, vs12, vs13
-; CHECK-BE-NEXT:    stxvx vs8, r3, r7
-; CHECK-BE-NEXT:    stxv vs9, 16(r8)
+; CHECK-BE-NEXT:    xxmfacc acc2
 ; CHECK-BE-NEXT:    xxmfacc acc1
-; CHECK-BE-NEXT:    stxv vs11, 48(r8)
-; CHECK-BE-NEXT:    stxv vs10, 32(r8)
-; CHECK-BE-NEXT:    stxv vs5, 80(r8)
-; CHECK-BE-NEXT:    stxv vs4, 64(r8)
+; CHECK-BE-NEXT:    stxvx vs8, r3, r6
+; CHECK-BE-NEXT:    stxv vs9, 16(r7)
+; CHECK-BE-NEXT:    stxv vs11, 48(r7)
+; CHECK-BE-NEXT:    stxv vs10, 32(r7)
 ; CHECK-BE-NEXT:    xxmfacc acc0
-; CHECK-BE-NEXT:    stxv vs7, 112(r8)
-; CHECK-BE-NEXT:    stxv vs6, 96(r8)
-; CHECK-BE-NEXT:    stxv vs1, 144(r8)
-; CHECK-BE-NEXT:    stxv vs0, 128(r8)
-; CHECK-BE-NEXT:    stxv vs3, 176(r8)
-; CHECK-BE-NEXT:    stxv vs2, 160(r8)
+; CHECK-BE-NEXT:    stxv vs5, 80(r7)
+; CHECK-BE-NEXT:    stxv vs4, 64(r7)
+; CHECK-BE-NEXT:    stxv vs7, 112(r7)
+; CHECK-BE-NEXT:    stxv vs6, 96(r7)
+; CHECK-BE-NEXT:    stxv vs1, 144(r7)
+; CHECK-BE-NEXT:    stxv vs0, 128(r7)
+; CHECK-BE-NEXT:    stxv vs3, 176(r7)
+; CHECK-BE-NEXT:    stxv vs2, 160(r7)
 ; CHECK-BE-NEXT:    bdnz .LBB9_2
 ; CHECK-BE-NEXT:  # %bb.3: # %for.cond.cleanup
 ; CHECK-BE-NEXT:    blr
@@ -741,44 +737,42 @@ define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-WACC-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-WACC-NEXT:    clrldi r4, r4, 32
 ; CHECK-WACC-NEXT:    mtctr r4
-; CHECK-WACC-NEXT:    li r4, 0
-; CHECK-WACC-NEXT:    li r6, 0
+; CHECK-WACC-NEXT:    addi r4, r5, 48
+; CHECK-WACC-NEXT:    li r5, 0
 ; CHECK-WACC-NEXT:    .p2align 4
 ; CHECK-WACC-NEXT:  .LBB9_2: # %for.body
 ; CHECK-WACC-NEXT:    #
-; CHECK-WACC-NEXT:    rldic r7, r6, 4, 28
-; CHECK-WACC-NEXT:    add r8, r5, r7
-; CHECK-WACC-NEXT:    lxvx vs0, r5, r7
-; CHECK-WACC-NEXT:    lxv vs1, 16(r8)
+; CHECK-WACC-NEXT:    lxv vs0, -48(r4)
+; CHECK-WACC-NEXT:    lxv vs1, -32(r4)
 ; CHECK-WACC-NEXT:    dmxxsetaccz wacc2
 ; CHECK-WACC-NEXT:    dmxxsetaccz wacc1
 ; CHECK-WACC-NEXT:    dmxxsetaccz wacc0
 ; CHECK-WACC-NEXT:    xvf32gerpp wacc2, vs0, vs1
-; CHECK-WACC-NEXT:    lxv vs0, 32(r8)
-; CHECK-WACC-NEXT:    lxv vs1, 48(r8)
-; CHECK-WACC-NEXT:    rldic r7, r4, 6, 26
-; CHECK-WACC-NEXT:    addi r4, r4, 3
-; CHECK-WACC-NEXT:    addi r6, r6, 6
+; CHECK-WACC-NEXT:    lxv vs0, -16(r4)
+; CHECK-WACC-NEXT:    lxv vs1, 0(r4)
+; CHECK-WACC-NEXT:    rldic r6, r5, 6, 26
+; CHECK-WACC-NEXT:    add r7, r3, r6
+; CHECK-WACC-NEXT:    addi r5, r5, 3
 ; CHECK-WACC-NEXT:    xvf32gerpn wacc1, vs0, vs1
-; CHECK-WACC-NEXT:    lxv vs0, 64(r8)
-; CHECK-WACC-NEXT:    lxv vs1, 80(r8)
-; CHECK-WACC-NEXT:    add r8, r3, r7
+; CHECK-WACC-NEXT:    lxv vs0, 16(r4)
+; CHECK-WACC-NEXT:    lxv vs1, 32(r4)
+; CHECK-WACC-NEXT:    addi r4, r4, 96
 ; CHECK-WACC-NEXT:    xvf32gernp wacc0, vs0, vs1
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc2, 0
-; CHECK-WACC-NEXT:    stxvx v3, r3, r7
-; CHECK-WACC-NEXT:    stxv v4, 48(r8)
-; CHECK-WACC-NEXT:    stxv v5, 32(r8)
-; CHECK-WACC-NEXT:    stxv v2, 16(r8)
+; CHECK-WACC-NEXT:    stxvx v3, r3, r6
+; CHECK-WACC-NEXT:    stxv v4, 48(r7)
+; CHECK-WACC-NEXT:    stxv v5, 32(r7)
+; CHECK-WACC-NEXT:    stxv v2, 16(r7)
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc1, 0
-; CHECK-WACC-NEXT:    stxv v4, 112(r8)
-; CHECK-WACC-NEXT:    stxv v5, 96(r8)
-; CHECK-WACC-NEXT:    stxv v2, 80(r8)
-; CHECK-WACC-NEXT:    stxv v3, 64(r8)
+; CHECK-WACC-NEXT:    stxv v4, 112(r7)
+; CHECK-WACC-NEXT:    stxv v5, 96(r7)
+; CHECK-WACC-NEXT:    stxv v2, 80(r7)
+; CHECK-WACC-NEXT:    stxv v3, 64(r7)
 ; CHECK-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
-; CHECK-WACC-NEXT:    stxv v4, 176(r8)
-; CHECK-WACC-NEXT:    stxv v5, 160(r8)
-; CHECK-WACC-NEXT:    stxv v2, 144(r8)
-; CHECK-WACC-NEXT:    stxv v3, 128(r8)
+; CHECK-WACC-NEXT:    stxv v4, 176(r7)
+; CHECK-WACC-NEXT:    stxv v5, 160(r7)
+; CHECK-WACC-NEXT:    stxv v2, 144(r7)
+; CHECK-WACC-NEXT:    stxv v3, 128(r7)
 ; CHECK-WACC-NEXT:    bdnz .LBB9_2
 ; CHECK-WACC-NEXT:  # %bb.3: # %for.cond.cleanup
 ; CHECK-WACC-NEXT:    blr
@@ -790,44 +784,42 @@ define void @testcse4(ptr %res, i32 %lim, ptr %vc) {
 ; CHECK-BE-WACC-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-BE-WACC-NEXT:    clrldi r4, r4, 32
 ; CHECK-BE-WACC-NEXT:    mtctr r4
-; CHECK-BE-WACC-NEXT:    li r4, 0
-; CHECK-BE-WACC-NEXT:    li r6, 0
+; CHECK-BE-WACC-NEXT:    addi r4, r5, 48
+; CHECK-BE-WACC-NEXT:    li r5, 0
 ; CHECK-BE-WACC-NEXT:    .p2align 4
 ; CHECK-BE-WACC-NEXT:  .LBB9_2: # %for.body
 ; CHECK-BE-WACC-NEXT:    #
-; CHECK-BE-WACC-NEXT:    rldic r7, r6, 4, 28
-; CHECK-BE-WACC-NEXT:    add r8, r5, r7
-; CHECK-BE-WACC-NEXT:    lxvx vs0, r5, r7
-; CHECK-BE-WACC-NEXT:    lxv vs1, 16(r8)
+; CHECK-BE-WACC-NEXT:    lxv vs0, -48(r4)
+; CHECK-BE-WACC-NEXT:    lxv vs1, -32(r4)
 ; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc2
 ; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc1
 ; CHECK-BE-WACC-NEXT:    dmxxsetaccz wacc0
 ; CHECK-BE-WACC-NEXT:    xvf32gerpp wacc2, vs0, vs1
-; CHECK-BE-WACC-NEXT:    lxv vs0, 32(r8)
-; CHECK-BE-WACC-NEXT:    lxv vs1, 48(r8)
-; CHECK-BE-WACC-NEXT:    rldic r7, r4, 6, 26
-; CHECK-BE-WACC-NEXT:    addi r4, r4, 3
-; CHECK-BE-WACC-NEXT:    addi r6, r6, 6
+; CHECK-BE-WACC-NEXT:    lxv vs0, -16(r4)
+; CHECK-BE-WACC-NEXT:    lxv vs1, 0(r4)
+; CHECK-BE-WACC-NEXT:    rldic r6, r5, 6, 26
+; CHECK-BE-WACC-NEXT:    add r7, r3, r6
+; CHECK-BE-WACC-NEXT:    addi r5, r5, 3
 ; CHECK-BE-WACC-NEXT:    xvf32gerpn wacc1, vs0, vs1
-; CHECK-BE-WACC-NEXT:    lxv vs0, 64(r8)
-; CHECK-BE-WACC-NEXT:    lxv vs1, 80(r8)
-; CHECK-BE-WACC-NEXT:    add r8, r3, r7
+; CHECK-BE-WACC-NEXT:    lxv vs0, 16(r4)
+; CHECK-BE-WACC-NEXT:    lxv vs1, 32(r4)
+; CHECK-BE-WACC-NEXT:    addi r4, r4, 96
 ; CHECK-BE-WACC-NEXT:    xvf32gernp wacc0, vs0, vs1
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc2, 0
-; CHECK-BE-WACC-NEXT:    stxvx v2, r3, r7
-; CHECK-BE-WACC-NEXT:    stxv v5, 48(r8)
-; CHECK-BE-WACC-NEXT:    stxv v4, 32(r8)
-; CHECK-BE-WACC-NEXT:    stxv v3, 16(r8)
+; CHECK-BE-WACC-NEXT:    stxvx v2, r3, r6
+; CHECK-BE-WACC-NEXT:    stxv v5, 48(r7)
+; CHECK-BE-WACC-NEXT:    stxv v4, 32(r7)
+; CHECK-BE-WACC-NEXT:    stxv v3, 16(r7)
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc1, 0
-; CHECK-BE-WACC-NEXT:    stxv v5, 112(r8)
-; CHECK-BE-WACC-NEXT:    stxv v4, 96(r8)
-; CHECK-BE-WACC-NEXT:    stxv v3, 80(r8)
-; CHECK-BE-WACC-NEXT:    stxv v2, 64(r8)
+; CHECK-BE-WACC-NEXT:    stxv v5, 112(r7)
+; CHECK-BE-WACC-NEXT:    stxv v4, 96(r7)
+; CHECK-BE-WACC-NEXT:    stxv v3, 80(r7)
+; CHECK-BE-WACC-NEXT:    stxv v2, 64(r7)
 ; CHECK-BE-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
-; CHECK-BE-WACC-NEXT:    stxv v5, 176(r8)
-; CHECK-BE-WACC-NEXT:    stxv v4, 160(r8)
-; CHECK-BE-WACC-NEXT:    stxv v3, 144(r8)
-; CHECK-BE-WACC-NEXT:    stxv v2, 128(r8)
+; CHECK-BE-WACC-NEXT:    stxv v5, 176(r7)
+; CHECK-BE-WACC-NEXT:    stxv v4, 160(r7)
+; CHECK-BE-WACC-NEXT:    stxv v3, 144(r7)
+; CHECK-BE-WACC-NEXT:    stxv v2, 128(r7)
 ; CHECK-BE-WACC-NEXT:    bdnz .LBB9_2
 ; CHECK-BE-WACC-NEXT:  # %bb.3: # %for.cond.cleanup
 ; CHECK-BE-WACC-NEXT:    blr

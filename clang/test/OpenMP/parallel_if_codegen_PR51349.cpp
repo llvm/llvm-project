@@ -22,7 +22,7 @@ void foo() {
 // CHECK-NEXT:    [[DOTBOUND_ZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
-// CHECK-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
+// CHECK-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4, !tbaa [[INT_TBAA7:![0-9]+]]
 // CHECK-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK-NEXT:    call void @_Z3foov.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
@@ -36,8 +36,8 @@ void foo() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA7:![0-9]+]]
-// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA7]]
+// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA8:![0-9]+]]
+// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA8]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -47,8 +47,8 @@ void foo() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA7]]
-// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA7]]
+// CHECK-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA8]]
+// CHECK-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA8]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -60,7 +60,7 @@ void foo() {
 // CHECK-NOINLINE-NEXT:    [[DOTBOUND_ZERO_ADDR:%.*]] = alloca i32, align 4
 // CHECK-NOINLINE-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK-NOINLINE-NEXT:    call void @__kmpc_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
-// CHECK-NOINLINE-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
+// CHECK-NOINLINE-NEXT:    store i32 [[TMP0]], ptr [[DOTTHREADID_TEMP_]], align 4, !tbaa [[INT_TBAA7:![0-9]+]]
 // CHECK-NOINLINE-NEXT:    store i32 0, ptr [[DOTBOUND_ZERO_ADDR]], align 4
 // CHECK-NOINLINE-NEXT:    call void @_Z3foov.omp_outlined(ptr [[DOTTHREADID_TEMP_]], ptr [[DOTBOUND_ZERO_ADDR]]) #[[ATTR2:[0-9]+]]
 // CHECK-NOINLINE-NEXT:    call void @__kmpc_end_serialized_parallel(ptr @[[GLOB1]], i32 [[TMP0]])
@@ -74,8 +74,8 @@ void foo() {
 // CHECK-NOINLINE-NEXT:  [[ENTRY:.*:]]
 // CHECK-NOINLINE-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NOINLINE-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NOINLINE-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA7:![0-9]+]]
-// CHECK-NOINLINE-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA7]]
+// CHECK-NOINLINE-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA8:![0-9]+]]
+// CHECK-NOINLINE-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA8]]
 // CHECK-NOINLINE-NEXT:    ret void
 //
 //
@@ -85,24 +85,24 @@ void foo() {
 // CHECK-NOINLINE-NEXT:  [[ENTRY:.*:]]
 // CHECK-NOINLINE-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NOINLINE-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NOINLINE-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA7]]
-// CHECK-NOINLINE-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA7]]
+// CHECK-NOINLINE-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA8]]
+// CHECK-NOINLINE-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8, !tbaa [[INTPTR_TBAA8]]
 // CHECK-NOINLINE-NEXT:    ret void
 //
 //.
-// CHECK: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
-// CHECK: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META4:![0-9]+]] = !{!"int", [[META5:![0-9]+]], i64 0}
 // CHECK: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
 // CHECK: [[META6]] = !{!"Simple C++ TBAA"}
-// CHECK: [[INTPTR_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// CHECK: [[META8]] = !{!"p1 int", [[META9:![0-9]+]], i64 0}
-// CHECK: [[META9]] = !{!"any pointer", [[META5]], i64 0}
+// CHECK: [[INT_TBAA7]] = !{[[META4]], [[META4]], i64 0}
+// CHECK: [[INTPTR_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
+// CHECK: [[META9]] = !{!"p1 int", [[META10:![0-9]+]], i64 0}
+// CHECK: [[META10]] = !{!"any pointer", [[META5]], i64 0}
 //.
-// CHECK-NOINLINE: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
-// CHECK-NOINLINE: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+// CHECK-NOINLINE: [[META4:![0-9]+]] = !{!"int", [[META5:![0-9]+]], i64 0}
 // CHECK-NOINLINE: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
 // CHECK-NOINLINE: [[META6]] = !{!"Simple C++ TBAA"}
-// CHECK-NOINLINE: [[INTPTR_TBAA7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
-// CHECK-NOINLINE: [[META8]] = !{!"p1 int", [[META9:![0-9]+]], i64 0}
-// CHECK-NOINLINE: [[META9]] = !{!"any pointer", [[META5]], i64 0}
+// CHECK-NOINLINE: [[INT_TBAA7]] = !{[[META4]], [[META4]], i64 0}
+// CHECK-NOINLINE: [[INTPTR_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
+// CHECK-NOINLINE: [[META9]] = !{!"p1 int", [[META10:![0-9]+]], i64 0}
+// CHECK-NOINLINE: [[META10]] = !{!"any pointer", [[META5]], i64 0}
 //.

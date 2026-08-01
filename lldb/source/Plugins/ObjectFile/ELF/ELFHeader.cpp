@@ -260,7 +260,7 @@ ELFSymbol::ELFSymbol() { memset(this, 0, sizeof(ELFSymbol)); }
   case e:                                                                      \
     return #e
 
-const char *ELFSymbol::bindingToCString(unsigned char binding) {
+llvm::StringRef ELFSymbol::bindingToString(unsigned char binding) {
   switch (binding) {
     ENUM_TO_CSTR(STB_LOCAL);
     ENUM_TO_CSTR(STB_GLOBAL);
@@ -273,7 +273,7 @@ const char *ELFSymbol::bindingToCString(unsigned char binding) {
   return "";
 }
 
-const char *ELFSymbol::typeToCString(unsigned char type) {
+llvm::StringRef ELFSymbol::typeToString(unsigned char type) {
   switch (type) {
     ENUM_TO_CSTR(STT_NOTYPE);
     ENUM_TO_CSTR(STT_OBJECT);
@@ -290,8 +290,9 @@ const char *ELFSymbol::typeToCString(unsigned char type) {
   return "";
 }
 
-const char *ELFSymbol::sectionIndexToCString(
-    elf_half shndx, const lldb_private::SectionList *section_list) {
+llvm::StringRef
+ELFSymbol::sectionIndexToString(elf_half shndx,
+                                const lldb_private::SectionList *section_list) {
   switch (shndx) {
     ENUM_TO_CSTR(SHN_UNDEF);
     ENUM_TO_CSTR(SHN_LOPROC);
@@ -305,7 +306,7 @@ const char *ELFSymbol::sectionIndexToCString(
     const lldb_private::Section *section =
         section_list->GetSectionAtIndex(shndx).get();
     if (section)
-      return section->GetName().AsCString("");
+      return section->GetName();
   } break;
   }
   return "";
@@ -314,11 +315,11 @@ const char *ELFSymbol::sectionIndexToCString(
 void ELFSymbol::Dump(lldb_private::Stream *s, uint32_t idx,
                      const lldb_private::DataExtractor *strtab_data,
                      const lldb_private::SectionList *section_list) {
-  s->Printf("[%3u] 0x%16.16" PRIx64 " 0x%16.16" PRIx64
-            " 0x%8.8x 0x%2.2x (%-10s %-13s) 0x%2.2x 0x%4.4x (%-10s) %s\n",
+  s->Format("[{0,3}] 0x{1,16:x} 0x{2,16:x} 0x{3,8:x} 0x{4,2:x} ({5,-10} "
+            "{-6,13}) 0x{7,-2:x} 0x{8,4:x} ({9,-10}) {10}\n",
             idx, st_value, st_size, st_name, st_info,
-            bindingToCString(getBinding()), typeToCString(getType()), st_other,
-            st_shndx, sectionIndexToCString(st_shndx, section_list),
+            bindingToString(getBinding()), typeToString(getType()), st_other,
+            st_shndx, sectionIndexToString(st_shndx, section_list),
             strtab_data ? strtab_data->PeekCStr(st_name) : "");
 }
 

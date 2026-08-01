@@ -173,4 +173,30 @@ contains
 ! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<1000x100x10xf32>>) bounds(%[[BOUND1]], %[[BOUND2]], %[[BOUND3]]) -> !fir.ref<!fir.array<1000x100x10xf32>> {name = "arr(:1000,:100,:10)"}
 ! CHECK: acc.data dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<1000x100x10xf32>>) {
 
+  subroutine acc_explicit_shape_scalar_dims(arr)
+    real :: arr(10,10,10,10)
+    !$acc data copyin(arr(:,1,:,4))
+    !$acc end data
+  end subroutine
+
+! Scalar dimensions select one element but must not reduce outer linear strides.
+! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_explicit_shape_scalar_dims(
+! CHECK: %[[B0:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c10{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B1:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%c0{{.*}} : index) extent(%c1{{.*}} : index) stride(%c10{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B2:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c10{{.*}} : index) stride(%c100{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B3:.*]] = acc.bounds lowerbound(%c3{{.*}} : index) upperbound(%c3{{.*}} : index) extent(%c1{{.*}} : index) stride(%c1000{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<10x10x10x10xf32>>) bounds(%[[B0]], %[[B1]], %[[B2]], %[[B3]]) -> !fir.ref<!fir.array<10x10x10x10xf32>> {name = "arr(:,1,:,4)"}
+
+  subroutine acc_explicit_shape_leading_scalar(arr)
+    real :: arr(2,3,4)
+    !$acc data copyin(arr(2,:,:))
+    !$acc end data
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_explicit_shape_leading_scalar(
+! CHECK: %[[B0:.*]] = acc.bounds lowerbound(%c1{{.*}} : index) upperbound(%c1{{.*}} : index) extent(%c1{{.*}} : index) stride(%c1{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B1:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c3{{.*}} : index) stride(%c2{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[B2:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%c4{{.*}} : index) stride(%c6{{.*}} : index) startIdx(%c1{{.*}} : index)
+! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr({{.*}} : !fir.ref<!fir.array<2x3x4xf32>>) bounds(%[[B0]], %[[B1]], %[[B2]]) -> !fir.ref<!fir.array<2x3x4xf32>> {name = "arr(2,:,:)"}
+
 end module

@@ -26,6 +26,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
@@ -1568,7 +1569,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, {}, {}, normal, unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
+        unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -1577,8 +1579,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
                      ValueRange unwindOps) {
   build(builder, state, tys,
         /*var_callee_type=*/nullptr, callee, ops, /*arg_attrs=*/nullptr,
-        /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr, {}, {},
-        normal, unwind);
+        /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr,
+        /*default_func_attrs=*/nullptr, {}, {}, normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -1588,7 +1590,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, getCallOpResultTypes(calleeType),
         getCallOpVarCalleeType(calleeType), callee, ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
-        nullptr, nullptr, {}, {}, normal, unwind);
+        nullptr, nullptr, /*default_func_attrs=*/nullptr, {}, {}, normal,
+        unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {
@@ -3044,7 +3047,9 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
     result.addAttribute(getComdatAttrName(result.name), comdat);
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
-                        builder.getI64IntegerAttr(functionEntryCount.value()));
+                        FunctionEntryCountAttr::get(
+                            builder.getContext(), *functionEntryCount,
+                            ProfileCountType::Real, ArrayRef<uint64_t>{}));
 #ifndef NDEBUG
   std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
   if (duplicate.has_value()) {
@@ -3868,10 +3873,16 @@ OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult LLVM::BitcastOp::verify() {
-  auto resultType = llvm::dyn_cast<LLVMPointerType>(
-      extractVectorElementType(getResult().getType()));
-  auto sourceType = llvm::dyn_cast<LLVMPointerType>(
-      extractVectorElementType(getArg().getType()));
+  Type srcElemType = extractVectorElementType(getArg().getType());
+  Type dstElemType = extractVectorElementType(getResult().getType());
+
+  // TODO: 'bitcast' requires result and operand type to be identical in size.
+  // Byte types may be cast from/to any type pointer constraints.
+  if (isa<LLVMByteType>(srcElemType) || isa<LLVMByteType>(dstElemType))
+    return success();
+
+  auto resultType = llvm::dyn_cast<LLVMPointerType>(dstElemType);
+  auto sourceType = llvm::dyn_cast<LLVMPointerType>(srcElemType);
 
   // If one of the types is a pointer (or vector of pointers), then
   // both source and result type have to be pointers.

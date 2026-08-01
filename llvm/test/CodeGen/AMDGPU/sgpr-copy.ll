@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}phi1:
 ; CHECK: s_buffer_load_dword [[DST:s[0-9]]], {{s\[[0-9]+:[0-9]+\]}}, 0x0
@@ -7,10 +7,10 @@
 ; CHECK: s_xor_b32 s{{[0-9]}}, [[DST]]
 define amdgpu_ps void @phi1(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
 main_body:
-  %tmp20 = load <4 x i32>, ptr addrspace(4) %arg, !tbaa !0
-  %tmp21 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 0, i32 0)
-  %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 16, i32 0)
-  %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 32, i32 0)
+  %tmp20 = load ptr addrspace(8), ptr addrspace(4) %arg, !tbaa !0
+  %tmp21 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 0, i32 0), !invariant.load !{}
+  %tmp22 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 16, i32 0), !invariant.load !{}
+  %tmp23 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 32, i32 0), !invariant.load !{}
   %tmp24 = fptosi float %tmp22 to i32
   %tmp25 = icmp ne i32 %tmp24, 0
   br i1 %tmp25, label %ENDIF, label %ELSE
@@ -30,22 +30,22 @@ ENDIF:                                            ; preds = %ELSE, %main_body
 ; CHECK-LABEL: {{^}}phi2:
 define amdgpu_ps void @phi2(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #1 {
 main_body:
-  %tmp20 = load <4 x i32>, ptr addrspace(4) %arg, !tbaa !0
-  %tmp21 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 16, i32 0)
-  %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 32, i32 0)
-  %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 36, i32 0)
-  %tmp24 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 40, i32 0)
-  %tmp25 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 48, i32 0)
-  %tmp26 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 52, i32 0)
-  %tmp27 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 56, i32 0)
-  %tmp28 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 64, i32 0)
-  %tmp29 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 68, i32 0)
-  %tmp30 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 72, i32 0)
-  %tmp31 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 76, i32 0)
-  %tmp32 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 80, i32 0)
-  %tmp33 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 84, i32 0)
-  %tmp34 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 88, i32 0)
-  %tmp35 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 92, i32 0)
+  %tmp20 = load ptr addrspace(8), ptr addrspace(4) %arg, !tbaa !0
+  %tmp21 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 16, i32 0), !invariant.load !{}
+  %tmp22 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 32, i32 0), !invariant.load !{}
+  %tmp23 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 36, i32 0), !invariant.load !{}
+  %tmp24 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 40, i32 0), !invariant.load !{}
+  %tmp25 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 48, i32 0), !invariant.load !{}
+  %tmp26 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 52, i32 0), !invariant.load !{}
+  %tmp27 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 56, i32 0), !invariant.load !{}
+  %tmp28 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 64, i32 0), !invariant.load !{}
+  %tmp29 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 68, i32 0), !invariant.load !{}
+  %tmp30 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 72, i32 0), !invariant.load !{}
+  %tmp31 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 76, i32 0), !invariant.load !{}
+  %tmp32 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 80, i32 0), !invariant.load !{}
+  %tmp33 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 84, i32 0), !invariant.load !{}
+  %tmp34 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 88, i32 0), !invariant.load !{}
+  %tmp35 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 92, i32 0), !invariant.load !{}
   %tmp37 = load <8 x i32>, ptr addrspace(4) %arg2, !tbaa !0
   %tmp39 = load <4 x i32>, ptr addrspace(4) %arg1, !tbaa !0
   %i.i = extractelement <2 x i32> %arg5, i32 0
@@ -167,11 +167,11 @@ ENDIF24:                                          ; preds = %IF25, %ENDIF
 ; CHECK-LABEL: {{^}}loop:
 define amdgpu_ps void @loop(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19) #0 {
 main_body:
-  %tmp20 = load <4 x i32>, ptr addrspace(4) %arg, !tbaa !0
-  %tmp21 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 0, i32 0)
-  %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 4, i32 0)
-  %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 8, i32 0)
-  %tmp24 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp20, i32 12, i32 0)
+  %tmp20 = load ptr addrspace(8), ptr addrspace(4) %arg, !tbaa !0
+  %tmp21 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 0, i32 0), !invariant.load !{}
+  %tmp22 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 4, i32 0), !invariant.load !{}
+  %tmp23 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 8, i32 0), !invariant.load !{}
+  %tmp24 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp20, i32 12, i32 0), !invariant.load !{}
   %tmp25 = fptosi float %tmp24 to i32
   %tmp26 = bitcast i32 %tmp25 to float
   %tmp27 = bitcast float %tmp26 to i32
@@ -206,21 +206,20 @@ ENDIF:                                            ; preds = %LOOP
 ; an assertion failure.
 
 ; CHECK-LABEL: {{^}}sample_v3:
-; CHECK: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
-; CHECK: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 5
+; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 7
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v[[[SAMPLE_LO]]:[[SAMPLE_HI]]]
 ; CHECK: s_cbranch
 
-; CHECK: BB{{[0-9]+_[0-9]+}}:
 ; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_LO:[0-9]+]], 11
 ; CHECK-DAG: v_mov_b32_e32 v[[SAMPLE_HI:[0-9]+]], 13
-
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v[[[SAMPLE_LO]]:[[SAMPLE_HI]]]
 ; CHECK: exp
 ; CHECK: s_endpgm
 define amdgpu_ps void @sample_v3(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
 entry:
-  %tmp21 = load <4 x i32>, ptr addrspace(4) %arg, !tbaa !0
-  %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 16, i32 0)
+  %tmp21 = load ptr addrspace(8), ptr addrspace(4) %arg, !tbaa !0
+  %tmp22 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp21, i32 16, i32 0), !invariant.load !{}
   %tmp24 = load <8 x i32>, ptr addrspace(4) %arg2, !tbaa !0
   %tmp26 = load <4 x i32>, ptr addrspace(4) %arg1, !tbaa !0
   %tmp27 = fcmp oeq float %tmp22, 0.000000e+00
@@ -307,19 +306,18 @@ ENDIF69:                                          ; preds = %LOOP68
 ; CHECK-LABEL:{{^}}sample_rsrc
 
 ; CHECK: s_cmp_eq_u32
-; CHECK: s_cbranch_scc1 [[END:.LBB[0-9]+_[0-9]+]]
+; CHECK: s_cbranch_scc1
+
+; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
+; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]]
+; CHECK: s_cbranch_scc1
 
 ; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}
 ; CHECK: s_endpgm
-
-; [[END]]:
-; CHECK: v_add_{{[iu]}}32_e32 v[[ADD:[0-9]+]], vcc, 1, v{{[0-9]+}}
-; CHECK: image_sample v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+}}:[[ADD]]]
-; CHECK: s_branch
 define amdgpu_ps void @sample_rsrc(ptr addrspace(4) inreg %arg, ptr addrspace(4) inreg %arg1, ptr addrspace(4) inreg %arg2, ptr addrspace(4) inreg %arg3, float inreg %arg4, i32 inreg %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <2 x i32> %arg8, <3 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, <2 x i32> %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, i32 %arg19, float %arg20, float %arg21) #0 {
 bb:
-  %tmp22 = load <4 x i32>, ptr addrspace(4) %arg1, !tbaa !3
-  %tmp23 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp22, i32 16, i32 0)
+  %tmp22 = load ptr addrspace(8), ptr addrspace(4) %arg1, !tbaa !3
+  %tmp23 = call float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8) %tmp22, i32 16, i32 0), !invariant.load !{}
   %tmp26 = load <8 x i32>, ptr addrspace(4) %arg3, !tbaa !3
   %tmp28 = load <4 x i32>, ptr addrspace(4) %arg2, !tbaa !3
   %i.i = extractelement <2 x i32> %arg7, i32 0
@@ -401,7 +399,7 @@ declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) 
 declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #2
-declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
+declare float @llvm.amdgcn.ptr.s.buffer.load.f32(ptr addrspace(8), i32, i32) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

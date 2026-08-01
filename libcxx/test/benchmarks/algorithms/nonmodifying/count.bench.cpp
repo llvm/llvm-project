@@ -21,10 +21,7 @@
 int main(int argc, char** argv) {
   auto std_count    = [](auto first, auto last, auto const& value) { return std::count(first, last, value); };
   auto std_count_if = [](auto first, auto last, auto const& value) {
-    return std::count_if(first, last, [&](auto element) {
-      benchmark::DoNotOptimize(element);
-      return element == value;
-    });
+    return std::count_if(first, last, [&](auto element) { return element == value; });
   };
 
   // Benchmark {std,ranges}::{count,count_if} on a sequence where every other element is counted.

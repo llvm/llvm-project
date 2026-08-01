@@ -380,21 +380,6 @@ public:
 
   MCSection *getPCSection(StringRef Name, const MCSection *TextSec) const;
 
-  // ELF specific sections.
-  MCSection *getDataRelROSection() const { return DataRelROSection; }
-  const MCSection *getMergeableConst4Section() const {
-    return MergeableConst4Section;
-  }
-  const MCSection *getMergeableConst8Section() const {
-    return MergeableConst8Section;
-  }
-  const MCSection *getMergeableConst16Section() const {
-    return MergeableConst16Section;
-  }
-  const MCSection *getMergeableConst32Section() const {
-    return MergeableConst32Section;
-  }
-
   // MachO specific sections.
   const MCSection *getTLSTLVSection() const { return TLSTLVSection; }
   const MCSection *getTLSThreadInitSection() const {

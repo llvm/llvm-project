@@ -65,7 +65,7 @@ Knowing their handles help us keep track of who’s who across platforms, coordi
      - Validas
      - slotosch
      - oscarslotosch_66740
-     - \-
+     - slotosch
    * - Petter Berntsson
      - Arm Limited
      - petbernt
@@ -82,7 +82,7 @@ Knowing their handles help us keep track of who’s who across platforms, coordi
      - YoungJunLee
      - IamYJLee
    * - Zaky Hermawan
-     - No Affiliation
+     - (No affiliation)
      - ZakyHermawan
      - quarkz99
      - zakyHermawan
@@ -169,7 +169,6 @@ During the biannual membership review, members who have not participated in disc
 
 This transition is procedural and does not restrict participation. Members may resume **active contributor** status at any time when their engagement increases.
 
-
 Decision Making
 ---------------
 
@@ -210,6 +209,28 @@ Documentation
 
 Final decisions should be briefly documented (e.g., in meeting minutes, the corresponding GitHub issue, or Discord discussion thread). Once stable, the resulting policy or outcome may be reflected in this documentation for reference.
 
+Working Group artifacts
+=======================
+
+The LLVM Qualification Working Group develops and maintains its public
+artifacts and working materials in the
+`fusa-qual-wg directory of the llvm-wgs repository <https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg>`_.
+
+**This directory is the central location for the group's technical outputs**,
+including qualification guidance, documentation templates, analyses,
+proposals, and other materials related to LLVM tools, libraries, quality,
+and safety. It also contains supporting documentation from the group's
+activities and meetings.
+
+The artifacts are developed collaboratively and may have different levels
+of maturity. Unless stated otherwise, they should be understood as working
+group materials rather than formally approved LLVM policies, certification
+evidence, or guarantees of suitability for a particular safety-critical
+application.
+
+Feedback and contributions are welcome through the standard GitHub review
+process and the group's public discussion channels.
+
 Current Topics & Backlog
 ========================
 
@@ -225,13 +246,22 @@ contributions and feedback.
 Meeting Materials
 =================
 
-Agendas, meeting notes, and presentation slides for the sync-ups are shared to ensure transparency and continuity.
+Meeting agendas, minutes, and supporting materials are published to ensure transparency and continuity.
 
 Upcoming and past meeting agendas, and meeting minutes are published in a dedicated thread
 on the LLVM Discourse forum: `Meeting Agendas and Minutes <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`_ 
 
-Slides used to support discussions during sync-up meetings are stored in a dedicated Google Drive folder: `Link <https://drive.google.com/drive/u/1/folders/1nu3JAanE0gqQDll0S9ofVy4FOFezc6Mm>`_.
+Slides used to support discussions during sync-up meetings are stored in a
+`dedicated Google Drive folder <https://drive.google.com/drive/u/1/folders/1nu3JAanE0gqQDll0S9ofVy4FOFezc6Mm>`_.
 Note that the naming convention for these slides is *YYYYMM*\_llvm_qual_wg.
+
+While Discourse is our active communication channel for agendas and announcements,
+the `llvm-wgs` repository is our durable, central location for both WG artifacts and meeting records.
+The `meeting directory in the llvm-wgs repository <https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg/meetings>`_
+provides the long-term archive of the working group's meeting records. It contains:
+
+* `archived meeting materials <https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg/meetings/materials>`_, and
+* `archived meeting agendas and minutes <https://github.com/llvm/llvm-wgs/tree/main/fusa-qual-wg/meetings/minutes>`_.
 
 AI Transcription Policy
 =======================

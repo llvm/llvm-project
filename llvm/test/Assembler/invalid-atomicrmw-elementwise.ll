@@ -3,6 +3,7 @@
 ; RUN: not llvm-as -disable-output %t/odd-sized.ll           2>&1 | FileCheck %t/odd-sized.ll
 ; RUN: not llvm-as -disable-output %t/add-must-be-integer.ll 2>&1 | FileCheck %t/add-must-be-integer.ll
 ; RUN: not llvm-as -disable-output %t/fadd-must-be-fp.ll     2>&1 | FileCheck %t/fadd-must-be-fp.ll
+; RUN: not llvm-as -disable-output %t/seq-cst.ll             2>&1 | FileCheck %t/seq-cst.ll
 
 ;--- scalar.ll
 ; CHECK: atomicrmw elementwise operand must be a fixed vector type
@@ -19,15 +20,22 @@ define <5 x i32> @bad_odd_sized_vector(ptr %p, <5 x i32> %v) {
 }
 
 ;--- add-must-be-integer.ll
-; CHECK: atomicrmw add operand must be an integer
+; CHECK: atomicrmw add operand must be an integer or fixed vector of integer type
 define <4 x float> @bad_add(ptr %p, <4 x float> %v) {
   %old = atomicrmw elementwise add ptr %p, <4 x float> %v monotonic
   ret <4 x float> %old
 }
 
 ;--- fadd-must-be-fp.ll
-; CHECK: atomicrmw fadd operand must be a floating point type
+; CHECK: atomicrmw fadd operand must be a floating point or fixed vector of floating point type
 define <4 x i32> @bad_fadd(ptr %p, <4 x i32> %v) {
   %old = atomicrmw elementwise fadd ptr %p, <4 x i32> %v monotonic
+  ret <4 x i32> %old
+}
+
+;--- seq-cst.ll
+; CHECK: atomicrmw elementwise cannot be sequentially consistent
+define <4 x i32> @bad_seq_cst(ptr %p, <4 x i32> %v) {
+  %old = atomicrmw elementwise add ptr %p, <4 x i32> %v seq_cst
   ret <4 x i32> %old
 }

@@ -416,6 +416,14 @@ public:
 
 class NoTerminator : public DynamicOpTraitImpl<OpTrait::NoTerminator> {};
 
+class IsIsolatedFromAbove
+    : public DynamicOpTraitImpl<OpTrait::IsIsolatedFromAbove> {
+public:
+  LogicalResult verifyRegionTrait(Operation *op) const override {
+    return OpTrait::impl::verifyIsIsolatedFromAbove(op);
+  }
+};
+
 } // namespace DynamicOpTraits
 
 //===----------------------------------------------------------------------===//

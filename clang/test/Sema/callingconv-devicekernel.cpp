@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda- -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple spir64 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple spirv64 -fsyntax-only -verify %s

@@ -24,7 +24,6 @@ define <2 x i16> @test_ret_const() #0 {
 ; COMMON-LABEL: test_ret_const(
 ; COMMON:       {
 ; COMMON-EMPTY:
-; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    st.param.b32 [func_retval0], 131073;
 ; COMMON-NEXT:    ret;

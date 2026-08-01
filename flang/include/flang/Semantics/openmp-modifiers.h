@@ -47,7 +47,7 @@ namespace Fortran::semantics {
 ENUM_CLASS(OmpProperty, Required, Unique, Exclusive, Ultimate, Post)
 using OmpProperties = common::EnumSet<OmpProperty, OmpProperty_enumSize>;
 using OmpClauses =
-    common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
+    llvm::omp::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
 
 struct OmpModifierDescriptor {
   // Modifier name for use in diagnostic messages.
@@ -90,6 +90,7 @@ DECLARE_DESCRIPTOR(parser::OmpInteropType);
 DECLARE_DESCRIPTOR(parser::OmpIterator);
 DECLARE_DESCRIPTOR(parser::OmpLastprivateModifier);
 DECLARE_DESCRIPTOR(parser::OmpLinearModifier);
+DECLARE_DESCRIPTOR(parser::OmpLoopModifier);
 DECLARE_DESCRIPTOR(parser::OmpLowerBound);
 DECLARE_DESCRIPTOR(parser::OmpMapper);
 DECLARE_DESCRIPTOR(parser::OmpMapType);

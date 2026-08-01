@@ -699,6 +699,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   if (const LoadInst *LI = dyn_cast<LoadInst>(L)) {
     if (int Res = cmpNumbers(LI->isVolatile(), cast<LoadInst>(R)->isVolatile()))
       return Res;
+    if (int Res =
+            cmpNumbers(LI->isElementwise(), cast<LoadInst>(R)->isElementwise()))
+      return Res;
     if (int Res = cmpAligns(LI->getAlign(), cast<LoadInst>(R)->getAlign()))
       return Res;
     if (int Res =
@@ -796,6 +799,9 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       return Res;
     if (int Res = cmpNumbers(RMWI->isVolatile(),
                              cast<AtomicRMWInst>(R)->isVolatile()))
+      return Res;
+    if (int Res = cmpNumbers(RMWI->isElementwise(),
+                             cast<AtomicRMWInst>(R)->isElementwise()))
       return Res;
     if (int Res = cmpOrderings(RMWI->getOrdering(),
                                cast<AtomicRMWInst>(R)->getOrdering()))

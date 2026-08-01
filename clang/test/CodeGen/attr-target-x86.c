@@ -19,6 +19,17 @@
 // CHECK: define {{.*}}@f_avx10_1{{.*}} [[f_avx10_1:#[0-9]+]]
 // CHECK: define {{.*}}@f_prefer_256_bit({{.*}} [[f_prefer_256_bit:#[0-9]+]]
 // CHECK: define {{.*}}@f_no_prefer_256_bit({{.*}} [[f_no_prefer_256_bit:#[0-9]+]]
+// CHECK: define {{.*}}@f_apxf({{.*}} [[f_apxf:#[0-9]+]]
+// CHECK: define {{.*}}@f_no_apxf({{.*}} [[f_no_apxf:#[0-9]+]]
+// CHECK: define {{.*}}@f_egpr({{.*}} [[f_egpr:#[0-9]+]]
+// CHECK: define {{.*}}@f_ndd({{.*}} [[f_ndd:#[0-9]+]]
+// CHECK: define {{.*}}@f_ccmp({{.*}} [[f_ccmp:#[0-9]+]]
+// CHECK: define {{.*}}@f_nf({{.*}} [[f_nf:#[0-9]+]]
+// CHECK: define {{.*}}@f_cf({{.*}} [[f_cf:#[0-9]+]]
+// CHECK: define {{.*}}@f_zu({{.*}} [[f_zu:#[0-9]+]]
+// CHECK: define {{.*}}@f_push2pop2({{.*}} [[f_push2pop2:#[0-9]+]]
+// CHECK: define {{.*}}@f_ppx({{.*}} [[f_ppx:#[0-9]+]]
+// CHECK: define {{.*}}@f_jmpabs({{.*}} [[f_jmpabs:#[0-9]+]]
 
 // CHECK: [[f_default]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87" "tune-cpu"="i686"
 void f_default(void) {}
@@ -33,7 +44,7 @@ __attribute__((target("fpmath=387")))
 void f_fpmath_387(void) {}
 
 // CHECK-NOT: tune-cpu
-// CHECK: [[f_no_sse2]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-aes,-amx-avx512,-avx,-avx10.1,-avx10.2,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512fp16,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-avxifma,-avxneconvert,-avxvnni,-avxvnniint16,-avxvnniint8,-f16c,-fma,-fma4,-gfni,-kl,-pclmul,-sha,-sha512,-sm3,-sm4,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-vaes,-vpclmulqdq,-widekl,-xop" "tune-cpu"="i686"
+// CHECK: [[f_no_sse2]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-aes,-amx-avx512,-avx,-avx10.1,-avx10.2,-avx2,-avx512bf16,-avx512bitalg,-avx512bmm,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512fp16,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-avxifma,-avxneconvert,-avxvnni,-avxvnniint16,-avxvnniint8,-f16c,-fma,-fma4,-gfni,-kl,-pclmul,-sha,-sha512,-sm3,-sm4,-sse2,-sse3,-sse4.1,-sse4.2,-sse4a,-ssse3,-vaes,-vpclmulqdq,-widekl,-xop" "tune-cpu"="i686"
 __attribute__((target("no-sse2")))
 void f_no_sse2(void) {}
 
@@ -41,7 +52,7 @@ void f_no_sse2(void) {}
 __attribute__((target("sse4")))
 void f_sse4(void) {}
 
-// CHECK: [[f_no_sse4]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-amx-avx512,-avx,-avx10.1,-avx10.2,-avx2,-avx512bf16,-avx512bitalg,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512fp16,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-avxifma,-avxneconvert,-avxvnni,-avxvnniint16,-avxvnniint8,-f16c,-fma,-fma4,-sha512,-sm3,-sm4,-sse4.1,-sse4.2,-vaes,-vpclmulqdq,-xop" "tune-cpu"="i686"
+// CHECK: [[f_no_sse4]] = {{.*}}"target-cpu"="i686" "target-features"="+cmov,+cx8,+x87,-amx-avx512,-avx,-avx10.1,-avx10.2,-avx2,-avx512bf16,-avx512bitalg,-avx512bmm,-avx512bw,-avx512cd,-avx512dq,-avx512f,-avx512fp16,-avx512ifma,-avx512vbmi,-avx512vbmi2,-avx512vl,-avx512vnni,-avx512vp2intersect,-avx512vpopcntdq,-avxifma,-avxneconvert,-avxvnni,-avxvnniint16,-avxvnniint8,-f16c,-fma,-fma4,-sha512,-sm3,-sm4,-sse4.1,-sse4.2,-vaes,-vpclmulqdq,-xop" "tune-cpu"="i686"
 __attribute__((target("no-sse4")))
 void f_no_sse4(void) {}
 
@@ -108,3 +119,47 @@ void f_prefer_256_bit(void) {}
 // CHECK: [[f_no_prefer_256_bit]] = {{.*}}"target-features"="{{.*}}-prefer-256-bit
 __attribute__((target("no-prefer-256-bit")))
 void f_no_prefer_256_bit(void) {}
+
+// CHECK: [[f_apxf]] = {{.*}}"target-features"="{{.*}}+ccmp{{.*}}+egpr{{.*}}+jmpabs{{.*}}+ndd{{.*}}+nf{{.*}}+ppx{{.*}}+push2pop2{{.*}}+zu
+__attribute__((target("apxf")))
+void f_apxf(void) {}
+
+// CHECK: [[f_no_apxf]] = {{.*}}"target-features"="{{.*}}-ccmp{{.*}}-egpr{{.*}}-jmpabs{{.*}}-ndd{{.*}}-nf{{.*}}-ppx{{.*}}-push2pop2{{.*}}-zu
+__attribute__((target("no-apxf")))
+void f_no_apxf(void) {}
+
+// CHECK: [[f_egpr]] = {{.*}}"target-features"="{{.*}}+egpr
+__attribute__((target("egpr")))
+void f_egpr(void) {}
+
+// CHECK: [[f_ndd]] = {{.*}}"target-features"="{{.*}}+ndd
+__attribute__((target("ndd")))
+void f_ndd(void) {}
+
+// CHECK: [[f_ccmp]] = {{.*}}"target-features"="{{.*}}+ccmp
+__attribute__((target("ccmp")))
+void f_ccmp(void) {}
+
+// CHECK: [[f_nf]] = {{.*}}"target-features"="{{.*}}+nf
+__attribute__((target("nf")))
+void f_nf(void) {}
+
+// CHECK: [[f_cf]] = {{.*}}"target-features"="{{.*}}+cf
+__attribute__((target("cf")))
+void f_cf(void) {}
+
+// CHECK: [[f_zu]] = {{.*}}"target-features"="{{.*}}+zu
+__attribute__((target("zu")))
+void f_zu(void) {}
+
+// CHECK: [[f_push2pop2]] = {{.*}}"target-features"="{{.*}}+push2pop2
+__attribute__((target("push2pop2")))
+void f_push2pop2(void) {}
+
+// CHECK: [[f_ppx]] = {{.*}}"target-features"="{{.*}}+ppx
+__attribute__((target("ppx")))
+void f_ppx(void) {}
+
+// CHECK: [[f_jmpabs]] = {{.*}}"target-features"="{{.*}}+jmpabs
+__attribute__((target("jmpabs")))
+void f_jmpabs(void) {}

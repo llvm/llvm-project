@@ -84,8 +84,7 @@ void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
     emitAttribute(RISCVAttrs::STACK_ALIGN, StackAlign);
   }
 
-  auto ParseResult = RISCVFeatures::parseFeatureBits(
-      STI.hasFeature(RISCV::Feature64Bit), STI.getFeatureBits());
+  auto ParseResult = RISCVFeatures::parseFeatureBits(STI);
   if (!ParseResult) {
     report_fatal_error(ParseResult.takeError());
   } else {

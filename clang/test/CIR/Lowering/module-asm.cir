@@ -5,7 +5,8 @@
 // RUN: FileCheck -check-prefix=LLVM --input-file=%t.ll %s
 
 // CHECK: llvm.module_asm =  [".globl bar", ".globl foo"]
-// LLVM: module asm ".globl bar"
-// LLVM: module asm ".globl foo"
+// LLVM: module asm
+// LLVM-NEXT: ".globl bar"
+// LLVM-NEXT: ".globl foo"
 module attributes {cir.module_asm = [".globl bar", ".globl foo"]} {
 }

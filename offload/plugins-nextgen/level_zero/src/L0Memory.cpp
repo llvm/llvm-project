@@ -12,7 +12,6 @@
 
 #include "L0Memory.h"
 #include "L0Device.h"
-#include "L0Plugin.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -654,24 +653,24 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
     HostDesc.pNext = &RelaxedDesc;
   }
 
-  auto ZeDevice = Device ? Device->getZeDevice() : nullptr;
-  auto ZeContext = L0Context->getZeContext();
+  auto zeDevice = Device ? Device->getZeDevice() : nullptr;
+  auto zeContext = L0Context->getZeContext();
   bool MakeResident = false;
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
     MakeResident = true;
-    CALL_ZE_RET_ERROR(zeMemAllocDevice, ZeContext, &DeviceDesc, Size, Align,
-                      ZeDevice, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocDevice, zeContext, &DeviceDesc, Size, Align,
+                      zeDevice, &Mem);
     ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of device memory "
                      << Mem;
     break;
   case TARGET_ALLOC_HOST:
-    CALL_ZE_RET_ERROR(zeMemAllocHost, ZeContext, &HostDesc, Size, Align, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocHost, zeContext, &HostDesc, Size, Align, &Mem);
     ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of host memory " << Mem;
     break;
   case TARGET_ALLOC_SHARED:
-    CALL_ZE_RET_ERROR(zeMemAllocShared, ZeContext, &DeviceDesc, &HostDesc, Size,
-                      Align, ZeDevice, &Mem);
+    CALL_ZE_RET_ERROR(zeMemAllocShared, zeContext, &DeviceDesc, &HostDesc, Size,
+                      Align, zeDevice, &Mem);
     ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of shared memory "
                      << Mem;
     break;

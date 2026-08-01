@@ -56,6 +56,10 @@
       parameter(omp_interop_kind=int_ptr_kind())
       integer omp_interop_fr_kind
       parameter(omp_interop_fr_kind=omp_integer_kind)
+      integer omp_interop_property_kind
+      parameter(omp_interop_property_kind=omp_integer_kind)
+      integer omp_interop_rc_kind
+      parameter(omp_interop_rc_kind=omp_integer_kind)
 
       integer(kind=omp_integer_kind)openmp_version
       parameter(openmp_version=@LIBOMP_OMP_YEAR_MONTH@)
@@ -295,6 +299,46 @@
 
       integer(kind=omp_interop_kind)omp_interop_none
       parameter(omp_interop_none=0)
+
+!     interop property constants
+      integer(kind=omp_interop_property_kind)omp_ipr_fr_id
+      parameter(omp_ipr_fr_id=-1)
+      integer(kind=omp_interop_property_kind)omp_ipr_fr_name
+      parameter(omp_ipr_fr_name=-2)
+      integer(kind=omp_interop_property_kind)omp_ipr_vendor
+      parameter(omp_ipr_vendor=-3)
+      integer(kind=omp_interop_property_kind)omp_ipr_vendor_name
+      parameter(omp_ipr_vendor_name=-4)
+      integer(kind=omp_interop_property_kind)omp_ipr_device_num
+      parameter(omp_ipr_device_num=-5)
+      integer(kind=omp_interop_property_kind)omp_ipr_platform
+      parameter(omp_ipr_platform=-6)
+      integer(kind=omp_interop_property_kind)omp_ipr_device
+      parameter(omp_ipr_device=-7)
+      integer(kind=omp_interop_property_kind)omp_ipr_device_context
+      parameter(omp_ipr_device_context=-8)
+      integer(kind=omp_interop_property_kind)omp_ipr_targetsync
+      parameter(omp_ipr_targetsync=-9)
+      integer(kind=omp_interop_property_kind)omp_ipr_first
+      parameter(omp_ipr_first=-9)
+
+!     interop return code constants
+      integer(kind=omp_interop_rc_kind)omp_irc_no_value
+      parameter(omp_irc_no_value=1)
+      integer(kind=omp_interop_rc_kind)omp_irc_success
+      parameter(omp_irc_success=0)
+      integer(kind=omp_interop_rc_kind)omp_irc_empty
+      parameter(omp_irc_empty=-1)
+      integer(kind=omp_interop_rc_kind)omp_irc_out_of_range
+      parameter(omp_irc_out_of_range=-2)
+      integer(kind=omp_interop_rc_kind)omp_irc_type_int
+      parameter(omp_irc_type_int=-3)
+      integer(kind=omp_interop_rc_kind)omp_irc_type_ptr
+      parameter(omp_irc_type_ptr=-4)
+      integer(kind=omp_interop_rc_kind)omp_irc_type_str
+      parameter(omp_irc_type_str=-5)
+      integer(kind=omp_interop_rc_kind)omp_irc_other
+      parameter(omp_irc_other=-6)
 
       interface
 
@@ -1129,6 +1173,67 @@
 
         subroutine kmp_set_warnings_off() bind(c)
         end subroutine kmp_set_warnings_off
+
+!       ***
+!       *** interop query routines
+!       ***
+
+        function omp_get_num_interop_properties(interop) bind(c)
+          import
+          integer (kind=omp_interop_kind), value :: interop
+          integer (kind=omp_integer_kind) omp_get_num_interop_properties
+        end function omp_get_num_interop_properties
+
+        function omp_get_interop_int(interop, property_id, err) bind(c)
+          use, intrinsic :: iso_c_binding, only: c_intptr_t, c_int
+          import
+          integer (kind=omp_interop_kind), value :: interop
+          integer (kind=omp_interop_property_kind), value :: property_id
+          integer (kind=c_int) :: err
+          integer (kind=c_intptr_t) omp_get_interop_int
+        end function omp_get_interop_int
+
+        function omp_get_interop_ptr(interop, property_id, err) bind(c)
+          use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+          import
+          integer (kind=omp_interop_kind), value :: interop
+          integer (kind=omp_interop_property_kind), value :: property_id
+          integer (kind=c_int) :: err
+          type(c_ptr) omp_get_interop_ptr
+        end function omp_get_interop_ptr
+
+        function omp_get_interop_str(interop, property_id, err) bind(c)
+          use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+          import
+          integer (kind=omp_interop_kind), value :: interop
+          integer (kind=omp_interop_property_kind), value :: property_id
+          integer (kind=c_int) :: err
+          type(c_ptr) omp_get_interop_str
+        end function omp_get_interop_str
+
+        function omp_get_interop_name(interop, property_id) bind(c)
+          use, intrinsic :: iso_c_binding, only: c_ptr
+          import
+          integer (kind=omp_interop_kind), value :: interop
+          integer (kind=omp_interop_property_kind), value :: property_id
+          type(c_ptr) omp_get_interop_name
+        end function omp_get_interop_name
+
+        function omp_get_interop_type_desc(interop, property_id) bind(c)
+          use, intrinsic :: iso_c_binding, only: c_ptr
+          import
+          integer (kind=omp_interop_kind), value :: interop
+          integer (kind=omp_interop_property_kind), value :: property_id
+          type(c_ptr) omp_get_interop_type_desc
+        end function omp_get_interop_type_desc
+
+        function omp_get_interop_rc_desc(interop, ret_code) bind(c)
+          use, intrinsic :: iso_c_binding, only: c_ptr
+          import
+          integer (kind=omp_interop_kind), value :: interop
+          integer (kind=omp_interop_rc_kind), value :: ret_code
+          type(c_ptr) omp_get_interop_rc_desc
+        end function omp_get_interop_rc_desc
       end interface
 
 #ifdef __INTEL_COMPILER

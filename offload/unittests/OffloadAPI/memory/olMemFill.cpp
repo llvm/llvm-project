@@ -8,7 +8,9 @@
 
 #include "../common/Fixtures.hpp"
 #include <OffloadAPI.h>
+#include <array>
 #include <gtest/gtest.h>
+#include <vector>
 
 struct olMemFillTest : OffloadQueueTest {
   void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp()); }
@@ -16,11 +18,6 @@ struct olMemFillTest : OffloadQueueTest {
   template <typename PatternTy, PatternTy PatternVal, size_t Size,
             bool Block = false>
   void test_body() {
-    if constexpr (Block) {
-      // Only tests relying on olLaunchHostFunction are failing.
-      SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
-    }
-
     ManuallyTriggeredTask Manual;
 
     // Block/enqueue tests ensure that the test has been enqueued to a queue
@@ -103,7 +100,6 @@ TEST_P(olMemFillTest, SuccessLarge) {
 }
 
 TEST_P(olMemFillTest, SuccessLargeEnqueue) {
-  SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
   constexpr size_t Size = 1024;
   void *Alloc;
   ManuallyTriggeredTask Manual;
@@ -188,7 +184,7 @@ TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
   olMemFree(Alloc);
 }
 
-TEST_P(olMemFillTest, InvalidPatternSize) {
+TEST_P(olMemFillTest, InvalidSizeNotMultipleOfPatternSize) {
   constexpr size_t Size = 1025;
   void *Alloc;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
@@ -198,5 +194,97 @@ TEST_P(olMemFillTest, InvalidPatternSize) {
                olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
 
   olSyncQueue(Queue);
+  olMemFree(Alloc);
+}
+
+TEST_P(olMemFillTest, InvalidPatternSizeLargerThanFillSize) {
+  constexpr size_t Size = 4;
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+
+  uint64_t Pattern = 0x4242424242424242;
+  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
+               olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
+
+  olSyncQueue(Queue);
+  olMemFree(Alloc);
+}
+
+// Even though L0, CUDA and HSA do not support non-power-of-two patterns,
+// plugins are currently expected to handle arbitrary pattern sizes.
+// The following tests are intended to cover the fallback paths
+// for non-power-of-two patterns.
+static constexpr std::array<unsigned char, 3> FallbackPattern = {0x11, 0x22,
+                                                                 0x33};
+
+TEST_P(olMemFillTest, SuccessNonPow2PatternManaged) {
+  constexpr size_t Size = FallbackPattern.size() * 1000;
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+
+  ASSERT_SUCCESS(olMemFill(Queue, Alloc, FallbackPattern.size(),
+                           FallbackPattern.data(), Size));
+  olSyncQueue(Queue);
+
+  auto *AllocPtr = reinterpret_cast<unsigned char *>(Alloc);
+  for (size_t I = 0; I < Size; I++)
+    ASSERT_EQ(AllocPtr[I], FallbackPattern[I % FallbackPattern.size()]);
+
+  olMemFree(Alloc);
+}
+
+TEST_P(olMemFillTest, SuccessNonPow2PatternManagedEnqueue) {
+  constexpr size_t Size = FallbackPattern.size() * 1000;
+  ManuallyTriggeredTask Manual;
+  ASSERT_SUCCESS(Manual.enqueue(Queue));
+
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+
+  ASSERT_SUCCESS(olMemFill(Queue, Alloc, FallbackPattern.size(),
+                           FallbackPattern.data(), Size));
+  ASSERT_SUCCESS(Manual.trigger());
+  olSyncQueue(Queue);
+
+  auto *AllocPtr = reinterpret_cast<unsigned char *>(Alloc);
+  for (size_t I = 0; I < Size; I++)
+    ASSERT_EQ(AllocPtr[I], FallbackPattern[I % FallbackPattern.size()]);
+
+  olMemFree(Alloc);
+}
+
+TEST_P(olMemFillTest, SuccessNonPow2PatternDevice) {
+  constexpr size_t Size = FallbackPattern.size() * 1000;
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+
+  ASSERT_SUCCESS(olMemFill(Queue, Alloc, FallbackPattern.size(),
+                           FallbackPattern.data(), Size));
+
+  std::vector<unsigned char> HostBuf(Size);
+  ASSERT_SUCCESS(olMemcpy(Queue, HostBuf.data(), Host, Alloc, Device, Size));
+  olSyncQueue(Queue);
+
+  for (size_t I = 0; I < Size; I++)
+    ASSERT_EQ(HostBuf[I], FallbackPattern[I % FallbackPattern.size()]);
+
+  olMemFree(Alloc);
+}
+
+TEST_P(olMemFillTest, SuccessNonPow2PatternDeviceSmall) {
+  constexpr size_t Size = FallbackPattern.size() * 2;
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, Size, &Alloc));
+
+  ASSERT_SUCCESS(olMemFill(Queue, Alloc, FallbackPattern.size(),
+                           FallbackPattern.data(), Size));
+
+  std::vector<unsigned char> HostBuf(Size);
+  ASSERT_SUCCESS(olMemcpy(Queue, HostBuf.data(), Host, Alloc, Device, Size));
+  olSyncQueue(Queue);
+
+  for (size_t I = 0; I < Size; I++)
+    ASSERT_EQ(HostBuf[I], FallbackPattern[I % FallbackPattern.size()]);
+
   olMemFree(Alloc);
 }

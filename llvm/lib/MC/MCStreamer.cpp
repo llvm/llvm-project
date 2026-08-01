@@ -300,8 +300,7 @@ void MCStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,
                                     bool PrologueEnd, bool IsStmt,
                                     StringRef FileName, SMLoc Loc) {}
 
-bool MCStreamer::checkCVLocSection(unsigned FuncId, unsigned FileNo,
-                                   SMLoc Loc) {
+bool MCStreamer::checkCVLocSection(unsigned FuncId, SMLoc Loc) {
   CodeViewContext &CVC = getContext().getCVContext();
   MCCVFunctionInfo *FI = CVC.getCVFunctionInfo(FuncId);
   if (!FI) {
@@ -414,7 +413,7 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
 
   if (LFIRewriter)
-    LFIRewriter->onLabel(Symbol);
+    LFIRewriter->onLabel(Symbol, *this);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
@@ -743,6 +742,28 @@ void MCStreamer::emitCFINegateRAStateWithPC(SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
   MCCFIInstruction Instruction =
       MCCFIInstruction::createNegateRAStateWithPC(Label, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                       SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createSetRAState(Label, State, PACSym, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                       SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createSetRAState(Label, State, Offset, Loc);
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
     return;
@@ -1284,6 +1305,9 @@ void MCStreamer::finish(SMLoc EndLoc) {
     return;
   }
 
+  if (LFIRewriter)
+    LFIRewriter->finish(*this);
+
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)
     TS->finish();
@@ -1524,7 +1548,7 @@ void MCStreamer::emitFill(const MCExpr &NumValues, int64_t Size, int64_t Expr,
 void MCStreamer::emitValueToAlignment(Align, int64_t, uint8_t, unsigned) {}
 void MCStreamer::emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
                                uint8_t Fill, const MCSubtargetInfo &STI) {}
-void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+void MCStreamer::emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                                    unsigned MaxBytesToEmit) {}
 void MCStreamer::emitValueToOffset(const MCExpr *Offset, unsigned char Value,
                                    SMLoc Loc) {}

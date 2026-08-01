@@ -210,8 +210,8 @@ void SBLaunchInfo::Clear() {
 const char *SBLaunchInfo::GetWorkingDirectory() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetWorkingDirectory().GetPathAsConstString().AsCString(
-      nullptr);
+  return ConstString(m_opaque_sp->GetWorkingDirectory().GetPath())
+      .AsCString(nullptr);
 }
 
 void SBLaunchInfo::SetWorkingDirectory(const char *working_dir) {

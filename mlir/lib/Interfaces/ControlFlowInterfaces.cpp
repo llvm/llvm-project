@@ -187,7 +187,7 @@ LogicalResult detail::verifyRegionBranchOpInterface(Operation *op) {
         if (Region *region = successor.getSuccessor()) {
           diag << "Region #" << region->getRegionNumber();
         } else {
-          diag << "parent";
+          diag << "Operation " << successor.getSuccessorOp()->getName();
         }
         return diag;
       };
@@ -260,13 +260,13 @@ static bool traverseRegionGraph(Region *begin,
       LDBG() << "Found " << successors.size()
              << " successors from terminator in block";
       for (RegionSuccessor successor : successors) {
-        if (!successor.isParent()) {
+        if (successor.isRegion()) {
           worklist.push_back(successor.getSuccessor());
           LDBG() << "Added region #"
                  << successor.getSuccessor()->getRegionNumber()
                  << " to worklist";
         } else {
-          LDBG() << "Skipping parent successor";
+          LDBG() << "Skipping operation successor";
         }
       }
     }
@@ -410,7 +410,7 @@ bool RegionBranchOpInterface::hasLoop() {
   LDBG() << "Found " << entryRegions.size() << " entry regions";
 
   for (RegionSuccessor successor : entryRegions) {
-    if (!successor.isParent()) {
+    if (successor.isRegion()) {
       LDBG() << "Checking entry region #"
              << successor.getSuccessor()->getRegionNumber() << " for loops";
 
@@ -428,7 +428,7 @@ bool RegionBranchOpInterface::hasLoop() {
         return true;
       }
     } else {
-      LDBG() << "Skipping parent successor";
+      LDBG() << "Skipping operation successor";
     }
   }
 
@@ -447,13 +447,13 @@ RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
 SmallVector<Value>
 RegionBranchOpInterface::getNonSuccessorInputs(RegionSuccessor successor) {
   SmallVector<Value> results = llvm::to_vector(
-      successor.isParent()
-          ? ValueRange(getOperation()->getResults())
+      successor.isOperation()
+          ? ValueRange(successor.getSuccessorOp()->getResults())
           : ValueRange(successor.getSuccessor()->getArguments()));
   ValueRange successorInputs = getSuccessorInputs(successor);
   if (!successorInputs.empty()) {
     unsigned inputBegin =
-        successor.isParent()
+        successor.isOperation()
             ? cast<OpResult>(successorInputs.front()).getResultNumber()
             : cast<BlockArgument>(successorInputs.front()).getArgNumber();
     results.erase(results.begin() + inputBegin,
@@ -1103,19 +1103,20 @@ getSuccessorRegionsWithAttrs(RegionBranchOpInterface op,
 /// Find the single acyclic path through the given region branch op. Return an
 /// empty vector if no such path or multiple such paths exist.
 ///
-/// Example: "scf.if %true" has a single path: parent => then_region => parent
+/// Example: "scf.if %true" has a single path:
+///          parent => then_region => op
 ///
-/// Example: "scf.if ???" has multiple paths:
-///          (1) parent => then_region => parent
-///          (2) parent => else_region => parent
+/// Example: "scf.if %cond" has multiple paths:
+///          (1) parent => then_region => ancestor op
+///          (2) parent => else_region => ancestor op
 ///
 /// Example: "scf.while with scf.condition(%false)" has a single path:
-///          parent => before_region => parent
+///          parent => before_region => ancestor op
 ///
-/// Example: "scf.for with 0 iterations" has a single path: parent => parent
+/// Example: "scf.for with 0 iterations" has a single path: parent => op
 ///
-/// Note: Each path starts and ends with "parent". The "parent" at the beginning
-/// of the path is omitted from the result.
+/// Note: Each path starts from the op. The initial parent branch point is
+/// omitted from the result.
 ///
 /// Note: This function also returns an "empty" path when a region with multiple
 /// blocks was found.
@@ -1135,8 +1136,8 @@ computeSingleAcyclicRegionBranchPath(RegionBranchOpInterface op) {
       return {};
     }
     path.push_back(successors.front());
-    if (successors.front().isParent()) {
-      // Found path that ends with "parent".
+    if (successors.front().isOperation()) {
+      // Found path that ends after an operation.
       return path;
     }
     Region *region = successors.front().getSuccessor();
@@ -1238,20 +1239,20 @@ struct InlineRegionBranchOp : public RewritePattern {
       unsigned firstSuccessorInputIdx = 0;
       if (!successorInputs.empty())
         firstSuccessorInputIdx =
-            nextSuccessor.isParent()
+            nextSuccessor.isOperation()
                 ? cast<OpResult>(successorInputs.front()).getResultNumber()
                 : cast<BlockArgument>(successorInputs.front()).getArgNumber();
       // Query the total number of block arguments / op results.
       unsigned numValues =
-          nextSuccessor.isParent()
-              ? op->getNumResults()
+          nextSuccessor.isOperation()
+              ? nextSuccessor.getSuccessorOp()->getNumResults()
               : nextSuccessor.getSuccessor()->getNumArguments();
       // Compute replacement values for all block arguments / op results.
       SmallVector<Value> replacements;
       // Helper function to get the i-th block argument / op result.
       auto getValue = [&](unsigned idx) {
-        return nextSuccessor.isParent()
-                   ? Value(op->getResult(idx))
+        return nextSuccessor.isOperation()
+                   ? Value(nextSuccessor.getSuccessorOp()->getResult(idx))
                    : Value(nextSuccessor.getSuccessor()->getArgument(idx));
       };
       // Compute replacement values for all non-successor-input values that
@@ -1267,9 +1268,12 @@ struct InlineRegionBranchOp : public RewritePattern {
       for (unsigned i = replacements.size(); i < numValues; ++i)
         replacements.push_back(
             replBuilderFn(rewriter, op->getLoc(), getValue(i)));
-      if (nextSuccessor.isParent()) {
-        // The path ends with "parent". Replace the region branch op with the
+      if (nextSuccessor.isOperation()) {
+        // The path ends after the region branch op. Replace it with the
         // computed replacement values.
+        if (nextSuccessor.getSuccessorOp() != op)
+          return rewriter.notifyMatchFailure(
+              op, "path ends after a different operation");
         assert(remainingPath.empty() && "expected that the path ended");
         rewriter.replaceOp(op, replacements);
         return success();
@@ -1287,7 +1291,7 @@ struct InlineRegionBranchOp : public RewritePattern {
       rewriter.eraseOp(terminator);
     }
 
-    llvm_unreachable("expected that paths ends with parent");
+    llvm_unreachable("expected that path ends with an operation");
   }
 
   NonSuccessorInputReplacementBuilderFn replBuilderFn;

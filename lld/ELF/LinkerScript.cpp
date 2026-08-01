@@ -119,7 +119,7 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
                       ".init_array",  ".fini_array", ".tbss",
                       ".tdata",       ".ARM.exidx",  ".ARM.extab",
                       ".ctors",       ".dtors",      ".sbss",
-                      ".sdata",       ".srodata"})
+                      ".sdata",       ".srodata",    ".gnu.build.attributes"})
     if (isSectionPrefix(v, s->name))
       return v;
 
@@ -1010,11 +1010,12 @@ void LinkerScript::addOrphanSections() {
   StringMap<TinyPtrVector<OutputSection *>> map;
   SmallVector<OutputDesc *, 0> v;
 
-  auto add = [&](InputSectionBase *s) {
+  auto add = [&](InputSectionBase *s, StringRef name = {}) {
     if (s->isLive() && !s->parent) {
       orphanSections.push_back(s);
 
-      StringRef name = getOutputSectionName(s);
+      if (name.empty())
+        name = getOutputSectionName(s);
       if (ctx.arg.unique) {
         v.push_back(createSection(ctx, s, name));
       } else if (OutputSection *sec = findByName(sectionCommands, name)) {
@@ -1030,8 +1031,19 @@ void LinkerScript::addOrphanSections() {
 
   const bool copyRelocs = ctx.arg.copyRelocs;
   const bool relocatable = ctx.arg.relocatable;
+  // Under --emit-relocs/-r, getOutputSectionName derives the name from the
+  // relocated section, and saving it is not thread-safe. Otherwise, the names
+  // can be precomputed in parallel.
+  SmallVector<StringRef, 0> names(ctx.inputSections.size());
+  if (!copyRelocs) {
+    parallelFor(0, ctx.inputSections.size(), [&](size_t i) {
+      InputSectionBase *s = ctx.inputSections[i];
+      if (s->isLive() && !s->parent)
+        names[i] = getOutputSectionName(s);
+    });
+  }
   size_t n = 0;
-  for (InputSectionBase *isec : ctx.inputSections) {
+  for (auto [i, isec] : llvm::enumerate(ctx.inputSections)) {
     // Process InputSection and MergeInputSection.
     if (LLVM_LIKELY(isa<InputSection>(isec)))
       ctx.inputSections[n++] = isec;
@@ -1056,7 +1068,7 @@ void LinkerScript::addOrphanSections() {
         }
     }
 
-    add(isec);
+    add(isec, names[i]);
     if (LLVM_UNLIKELY(relocatable))
       for (InputSectionBase *depSec : isec->dependentSections)
         if (depSec->flags & SHF_LINK_ORDER)
@@ -1185,7 +1197,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   if (!(sec->flags & SHF_ALLOC)) {
     // Non-SHF_ALLOC sections have zero addresses.
     dot = 0;
-  } else if (isTbss) {
+  } else if (isTbss && !sec->addrExpr) {
     // Allow consecutive SHF_TLS SHT_NOBITS output sections. The address range
     // starts from the end address of the previous tbss section.
     if (state->tbssAddr == 0)

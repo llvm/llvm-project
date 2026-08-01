@@ -1,5 +1,7 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK
-; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_function_pointers %s -o - | FileCheck %s --check-prefix=CHECK
+
+; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; CHECK-ERROR: Function used as a data pointer requires SPV_INTEL_function_pointers extension
 
 ; CHECK: OpCapability Kernel
 ; CHECK-DAG: %[[#typeInt64:]] = OpTypeInt 64 0
@@ -43,6 +45,13 @@
 ; CHECK-DAG: OpName %[[#InvokeKernel5:]] "__device_side_enqueue_block_invoke_5_kernel"
 ; CHECK-DAG: OpName %[[#InvokeKernel6:]] "__device_side_enqueue_block_invoke_6_kernel"
 
+; CHECK-DAG: %[[#InvokeKernel1Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel1]]
+; CHECK-DAG: %[[#InvokeKernel2Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel2]]
+; CHECK-DAG: %[[#InvokeKernel3Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel3]]
+; CHECK-DAG: %[[#InvokeKernel4Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel4]]
+; CHECK-DAG: %[[#InvokeKernel5Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel5]]
+; CHECK-DAG: %[[#InvokeKernel6Ptr:]] = OpConstantFunctionPointerINTEL %[[#]] %[[#InvokeKernel6]]
+
 ; CHECK-LABEL: ; -- Begin function device_side_enqueue
 
 ; CHECK: %[[#NDRange3sret:]] = OpBuildNDRange %[[#TypeNDRangeStruct]] %[[#]] %[[#]] %[[#]]
@@ -60,7 +69,7 @@
 ;;     const size_t gs[] = {1,2,4};
 ;;
 ;;     // enqueue empty kernel
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue:]] %[[#Num1i32]] %[[#NDRange3]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel1]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue:]] %[[#Num1i32]] %[[#NDRange3]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel1Ptr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue,
 ;;             CLK_ENQUEUE_FLAGS_WAIT_KERNEL,
 ;;             ndrange_3D(gs),
@@ -68,7 +77,7 @@
 ;;             ^(){});
 ;;
 ;;     // no events, no var args
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel2]] %[[#]] %[[#Num29i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel2Ptr]] %[[#]] %[[#Num29i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue, flags, ndrange,
 ;;             ^(void) {
 ;;             a[i] = c0;
@@ -77,14 +86,14 @@
 ;;     // event, no var args
 ; CHECK: %[[#event1:]] = OpPtrCastToGeneric %[[#typeEventPtr]] %[[#]]
 ; CHECK-NEXT: %[[#event2:]] = OpPtrCastToGeneric %[[#typeEventPtr]] %[[#]]
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num2i32]] %[[#event1]] %[[#event2]] %[[#InvokeKernel3]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num2i32]] %[[#event1]] %[[#event2]] %[[#InvokeKernel3Ptr]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue, flags, ndrange, 2, &event_wait_list, &clk_event,
 ;;             ^(void) {
 ;;             a[i] = b[i];
 ;;             });
 ;;
 ;;     // events, var arg
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num2i32]] %[[#event_wait_list2:]] %[[#event2]] %[[#InvokeKernel4]] %[[#]] %[[#Num16i32]] %[[#Num8i32]] %[[#]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num2i32]] %[[#event_wait_list2:]] %[[#event2]] %[[#InvokeKernel4Ptr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]] %[[#]]
 ;;     char c;
 ;;     enqueue_kernel(default_queue, flags, ndrange, 2, event_wait_list2, &clk_event,
 ;;             ^(local void *p) {
@@ -93,7 +102,7 @@
 ;;             c);
 ;;
 ;;     // no events, three var args
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel5]] %[[#]] %[[#Num16i32]] %[[#Num8i32]] %[[#]] %[[#]] %[[#]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel5Ptr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]] %[[#]] %[[#]] %[[#]]
 ;;     enqueue_kernel(default_queue, flags, ndrange,
 ;;             ^(local void *p1, local void *p2, local void *p3) {
 ;;             return;
@@ -101,7 +110,7 @@
 ;;             101, 102, 104);
 ;;
 ;;     // null event, no var args
-; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#event2]] %[[#InvokeKernel6]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
+; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#event2]] %[[#InvokeKernel6Ptr]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue, flags, ndrange, 0, NULL, &clk_event,
 ;;             ^(void) {
 ;;             a[i] = b[i];

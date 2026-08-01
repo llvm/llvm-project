@@ -114,6 +114,23 @@ DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
   return llvm::MDNode::get(llvmCtx, llvmElements);
 }
 
+llvm::MDTuple *
+DebugTranslation::getRetainedNodesOrNull(ArrayRef<Attribute> retainedNodes) {
+  if (retainedNodes.empty())
+    return nullptr;
+  SmallVector<llvm::Metadata *> llvmElements = llvm::map_to_vector(
+      retainedNodes, [&](Attribute attr) -> llvm::Metadata * {
+        if (auto GVE = dyn_cast<DIGlobalVariableExpressionAttr>(attr))
+          return translateGlobalVariableExpression(GVE);
+
+        auto diAttr = dyn_cast<DINodeAttr>(attr);
+        if (!diAttr)
+          llvm_unreachable("unknown retained node kind");
+        return translate(diAttr);
+      });
+  return llvm::MDNode::get(llvmCtx, llvmElements);
+}
+
 llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
   return llvm::DIBasicType::get(
       llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
@@ -400,7 +417,7 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       /*ThisAdjustment=*/0, llvm::DINode::FlagZero,
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
       compileUnit, /*TemplateParams=*/nullptr, /*Declaration=*/nullptr,
-      getMDTupleOrNull(attr.getRetainedNodes()), nullptr,
+      getRetainedNodesOrNull(attr.getRetainedNodes()), nullptr,
       getMDTupleOrNull(attr.getAnnotations()));
   if (attr.getId())
     distinctAttrToNode.try_emplace(attr.getId(), node);

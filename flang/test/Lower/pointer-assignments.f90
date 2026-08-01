@@ -291,62 +291,62 @@ end subroutine
 !  Test pointer assignments where pointers are stored as descriptors (boxes).
 ! -----------------------------------------------------------------------------
 
-! CHECK-LABEL: func @_QPissue857(
-! CHECK-SAME: %[[arg0:[^:]*]]: !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>>>
-subroutine issue857(rhs)
+! CHECK-LABEL: func @_QPboxed_derived_pointer_assignment(
+! CHECK-SAME: %[[arg0:[^:]*]]: !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>>>
+subroutine boxed_derived_pointer_assignment(rhs)
   type t
     integer :: i
   end type
   type(t), pointer :: rhs, lhs
-  ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>> {bindc_name = "lhs", uniq_name = "_QFissue857Elhs"}
-  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFissue857Elhs"}
+  ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>> {bindc_name = "lhs", uniq_name = "_QFboxed_derived_pointer_assignmentElhs"}
+  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFboxed_derived_pointer_assignmentElhs"}
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %[[arg0]]
-  ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>>>
-  ! CHECK: fir.store %[[box_load]] to %[[lhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFissue857Tt{i:i32}>>>>
+  ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>>>
+  ! CHECK: fir.store %[[box_load]] to %[[lhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFboxed_derived_pointer_assignmentTt{i:i32}>>>>
   lhs => rhs
 end subroutine
 
-! CHECK-LABEL: func @_QPissue857_array(
-! CHECK-SAME: %[[arg0:[^:]*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>>>
-subroutine issue857_array(rhs)
+! CHECK-LABEL: func @_QPboxed_derived_pointer_assignment_array(
+! CHECK-SAME: %[[arg0:[^:]*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_arrayTt{i:i32}>>>>>
+subroutine boxed_derived_pointer_assignment_array(rhs)
   type t
     integer :: i
   end type
   type(t), contiguous,  pointer :: rhs(:), lhs(:)
-  ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>> {bindc_name = "lhs", uniq_name = "_QFissue857_arrayElhs"}
-  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFissue857_arrayElhs"}
+  ! CHECK: %[[lhs_box:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_arrayTt{i:i32}>>>> {bindc_name = "lhs", uniq_name = "_QFboxed_derived_pointer_assignment_arrayElhs"}
+  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %[[lhs_box]] {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_arrayElhs"}
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %[[arg0]]
-  ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_arrayTt{i:i32}>>>>>
+  ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_arrayTt{i:i32}>>>>>
   ! CHECK: fir.store %[[box_load]] to %[[lhs]]#0
   lhs => rhs
 end subroutine
 
-! CHECK-LABEL: func @_QPissue857_array_shift(
-! CHECK-SAME: %[[arg0:[^:]*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_array_shiftTt{i:i32}>>>>>
-subroutine issue857_array_shift(rhs)
+! CHECK-LABEL: func @_QPboxed_derived_pointer_assignment_array_shift(
+! CHECK-SAME: %[[arg0:[^:]*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_array_shiftTt{i:i32}>>>>>
+subroutine boxed_derived_pointer_assignment_array_shift(rhs)
   ! Test lower bounds is the one from the shift
   type t
     integer :: i
   end type
   type(t), contiguous,  pointer :: rhs(:), lhs(:)
-  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFissue857_array_shiftElhs"}
+  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_array_shiftElhs"}
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %[[arg0]]
   ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0
   ! CHECK: %[[c42:.*]] = fir.convert %c42{{.*}} : (i64) -> index
   ! CHECK: %[[shift:.*]] = fir.shift %[[c42]] : (index) -> !fir.shift<1>
-  ! CHECK: %[[rebox:.*]] = fir.rebox %[[box_load]](%[[shift]]) : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_array_shiftTt{i:i32}>>>>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_array_shiftTt{i:i32}>>>>
+  ! CHECK: %[[rebox:.*]] = fir.rebox %[[box_load]](%[[shift]]) : (!fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_array_shiftTt{i:i32}>>>>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_array_shiftTt{i:i32}>>>>
   ! CHECK: fir.store %[[rebox]] to %[[lhs]]#0
   lhs(42:) => rhs
 end subroutine
 
-! CHECK-LABEL: func @_QPissue857_array_remap
-subroutine issue857_array_remap(rhs)
+! CHECK-LABEL: func @_QPboxed_derived_pointer_assignment_array_remap
+subroutine boxed_derived_pointer_assignment_array_remap(rhs)
   ! Test lower bounds is the one from the shift
   type t
     integer :: i
   end type
   type(t), contiguous,  pointer :: rhs(:, :), lhs(:)
-  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFissue857_array_remapElhs"}
+  ! CHECK: %[[lhs:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_array_remapElhs"}
   ! CHECK: %[[rhs:.*]]:2 = hlfir.declare %{{.*}}
   ! CHECK: %[[box_load:.*]] = fir.load %[[rhs]]#0
   ! CHECK: %[[c101:.*]] = fir.convert %c101{{.*}} : (i64) -> index
@@ -356,18 +356,18 @@ subroutine issue857_array_remap(rhs)
   ! CHECK: %[[cmp:.*]] = arith.cmpi sgt, %[[raw_extent]], %c0{{.*}} : index
   ! CHECK: %[[extent:.*]] = arith.select %[[cmp]], %[[raw_extent]], %c0{{.*}} : index
   ! CHECK: %[[ss:.*]] = fir.shape_shift %[[c101]], %[[extent]] : (index, index) -> !fir.shapeshift<1>
-  ! CHECK: %[[rebox:.*]] = fir.rebox %[[box_load]](%[[ss]]) : (!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFissue857_array_remapTt{i:i32}>>>>
+  ! CHECK: %[[rebox:.*]] = fir.rebox %[[box_load]](%[[ss]]) : (!fir.box<!fir.ptr<!fir.array<?x?x!fir.type<_QFboxed_derived_pointer_assignment_array_remapTt{i:i32}>>>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.type<_QFboxed_derived_pointer_assignment_array_remapTt{i:i32}>>>>
   ! CHECK: fir.store %[[rebox]] to %[[lhs]]#0
   lhs(101:200) => rhs
 end subroutine
 
-! CHECK-LABEL: func @_QPissue857_char
-subroutine issue857_char(rhs)
+! CHECK-LABEL: func @_QPboxed_derived_pointer_assignment_char
+subroutine boxed_derived_pointer_assignment_char(rhs)
   ! Check that the character slice is correctly reboxed into the pointer descriptor.
   character(:), contiguous,  pointer ::  lhs1(:), lhs2(:, :)
   character(*), target ::  rhs(100)
-  ! CHECK: %[[lhs1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFissue857_charElhs1"}
-  ! CHECK: %[[lhs2:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFissue857_charElhs2"}
+  ! CHECK: %[[lhs1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_charElhs1"}
+  ! CHECK: %[[lhs2:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "_QFboxed_derived_pointer_assignment_charElhs2"}
   ! CHECK: %[[slice1:.*]] = hlfir.designate %{{.*}} ({{.*}}:{{.*}}:{{.*}})  shape %{{.*}} typeparams %{{.*}} : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index, index, !fir.shape<1>, index) -> !fir.box<!fir.array<50x!fir.char<1,?>>>
   ! CHECK: %[[rebox1:.*]] = fir.rebox %[[slice1]] : (!fir.box<!fir.array<50x!fir.char<1,?>>>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
   ! CHECK: fir.store %[[rebox1]] to %[[lhs1]]#0

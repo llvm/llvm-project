@@ -18,7 +18,7 @@ REGULAR: define private void @.cfi.jumptable()
 ;; CHECK that @llvm.type.test() is lowered to an actual check.
 RUN: opt test0.bc -passes=lowertypetests -lowertypetests-read-summary=exported.yaml \
 RUN:   -lowertypetests-summary-action=import -S -o - | FileCheck %s --check-prefix=THIN
-THIN:      define i1 @test() {
+THIN:      define i1 @test() !guid !{{.*}} {
 THIN-NEXT:   %1 = icmp eq i64 ptrtoint (ptr @alias to i64), ptrtoint (ptr @__typeid__ZTSFvvE_global_addr to i64)
 THIN-NEXT:   ret i1 %1
 THIN-NEXT: }

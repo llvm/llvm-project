@@ -2,8 +2,6 @@
 The PDB TPI and IPI Streams
 =====================================
 
-.. contents::
-   :local:
 
 .. _tpi_intro:
 

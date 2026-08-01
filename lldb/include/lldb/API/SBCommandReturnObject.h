@@ -17,6 +17,7 @@
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
+class CommandReturnObject;
 class SBCommandReturnObjectImpl;
 namespace python {
 class SWIGBridge;
@@ -144,6 +145,7 @@ protected:
 
   friend class lldb_private::CommandPluginInterfaceImplementation;
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::ScriptInterpreter;
 
   SBCommandReturnObject(lldb_private::CommandReturnObject &ref);
 

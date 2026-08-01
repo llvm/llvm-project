@@ -24,9 +24,6 @@ class FirOpBuilder;
 
 namespace fir::factory {
 
-/// Get the C standard library `realloc` function.
-mlir::func::FuncOp getRealloc(FirOpBuilder &builder);
-
 /// Get the `llvm.get.rounding` intrinsic.
 mlir::func::FuncOp getLlvmGetRounding(FirOpBuilder &builder);
 

@@ -45,6 +45,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+
+#include <algorithm>
 #include <optional>
 
 using namespace lldb;
@@ -530,6 +532,7 @@ public:
           m_is_valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len,
                                                 pc, inst, inst_size);
           m_opcode.Clear();
+          inst_size = std::min<uint64_t>(inst_size, Opcode::kMaxByteSize);
           if (inst_size != 0) {
             if (arch.GetTriple().isRISCV())
               m_opcode.SetOpcode16_32TupleBytes(opcode_data, inst_size,

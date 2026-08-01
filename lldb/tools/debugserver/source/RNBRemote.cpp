@@ -4116,20 +4116,27 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
                             process_username + "'";
           return SendErrorPacket("E96", msg);
         }
+        // The remaining checks can only guess at the cause from the session
+        // environment. When debugserver does have an error of its own, fold in
+        // the actual message so it's never lost.
+        auto with_err_str = [&err_str](std::string explanation) -> std::string {
+          if (err_str[0] != '\0')
+            return explanation + " (" + std::string(err_str) + ")";
+          return explanation;
+        };
         if (!login_session_has_gui_access() && !developer_mode_enabled()) {
           DNBLogError("Developer mode is not enabled and this is a "
                       "non-interactive session");
-          return SendErrorPacket("E96", "developer mode is "
-                                        "not enabled on this machine "
-                                        "and this is a non-interactive "
-                                        "debug session.");
+          return SendErrorPacket(
+              "E96", with_err_str("developer mode is not enabled on this "
+                                  "machine and this is a non-interactive "
+                                  "debug session."));
         }
         if (!login_session_has_gui_access()) {
           DNBLogError("This is a non-interactive session");
-          return SendErrorPacket("E96", "this is a "
-                                        "non-interactive debug session, "
-                                        "cannot get permission to debug "
-                                        "processes.");
+          return SendErrorPacket(
+              "E96", with_err_str("this is a non-interactive debug session, "
+                                  "cannot get permission to debug processes."));
         }
       }
 

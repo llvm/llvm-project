@@ -38,11 +38,11 @@ void fallsthrough() {
 
 
 // LLVM and OGCG check labels are identical other than the 1 difference called out (and ordering).
-// CIR-LABEL: cir.func private @_ZN4BaseC2Ei(!cir.ptr<!rec_Base>{{.*}}, !s32i{{.*}}) special_member<#cir.cxx_ctor<!rec_Base, custom>>
+// CIR-LABEL: cir.func private @_ZN4BaseC2Ei(!cir.ptr<!rec_Base>{{.*}}, !s32i{{.*}}) func_info<#cir.cxx_ctor<!rec_Base, custom>>
 // LLVM-LABEL: declare void @_ZN4BaseC2Ei(ptr {{.*}}, i32 {{.*}})
 //
 //
-// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN7DerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_Derived>{{.*}}, %{{.*}}: !s32i{{.*}}) special_member<#cir.cxx_ctor<!rec_Derived, custom>>
+// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN7DerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_Derived>{{.*}}, %{{.*}}: !s32i{{.*}}) func_info<#cir.cxx_ctor<!rec_Derived, custom>>
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR: %[[INT_ALLOCA:.*]] = cir.alloca "" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
@@ -63,7 +63,7 @@ void fallsthrough() {
 // LLVM-LABEL: define dso_local void @_Z20emitDelegateCallArgsv()
 // LLVM: call void @_ZN7DerivedCI14BaseEi(ptr {{.*}}, i32 {{.*}}1)
 //
-// CIR-LABEL: cir.func private @_ZN4BaseC2Efz(!cir.ptr<!rec_Base>{{.*}}, !cir.float{{.*}}, ...) special_member<#cir.cxx_ctor<!rec_Base, custom>>
+// CIR-LABEL: cir.func private @_ZN4BaseC2Efz(!cir.ptr<!rec_Base>{{.*}}, !cir.float{{.*}}, ...) func_info<#cir.cxx_ctor<!rec_Base, custom>>
 // LLVM-LABEL: declare void @_ZN4BaseC2Efz(ptr {{.*}}, float {{.*}}, ...)
 //
 // CIR-LABEL: cir.func no_inline dso_local @_Z26cannotEmitDelegateCallArgsv()
@@ -80,7 +80,7 @@ void fallsthrough() {
 // LLVM: %[[TMP_LOAD:.*]] = load ptr, ptr %[[TMP_ALLOCA]]
 // LLVM: call void (ptr, float, ...) @_ZN4BaseC2Efz(ptr {{.*}}%[[TMP_LOAD]], float {{.*}}1.100000e+00, i32 {{.*}}2, double {{.*}}3.000000e+00)
 //
-// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN11VirtDerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_VirtDerived> {{.*}}, %{{.*}}: !cir.ptr<!cir.ptr<!void>>{{.*}}) special_member<#cir.cxx_ctor<!rec_VirtDerived, custom>>
+// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN11VirtDerivedCI24BaseEi(%{{.*}}: !cir.ptr<!rec_VirtDerived> {{.*}}, %{{.*}}: !cir.ptr<!cir.ptr<!void>>{{.*}}) func_info<#cir.cxx_ctor<!rec_VirtDerived, custom>>
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_VirtDerived>>
 // CIR: %[[VTT_ALLOCA:.]] = cir.alloca "vtt" align(8) init : !cir.ptr<!cir.ptr<!cir.ptr<!void>>>
 // CIR: %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtDerived>>, !cir.ptr<!rec_VirtDerived>
@@ -100,7 +100,7 @@ void fallsthrough() {
 // LLVM: store ptr %[[VTT_ADDR_LOAD]], ptr %[[THIS]]
 //
 //
-// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN21VirtualDelegatingCtorC1Ei(%{{.*}}: !cir.ptr<!rec_VirtualDelegatingCtor> {{.*}}, %{{.*}}: !s32i {{.*}}) special_member<#cir.cxx_ctor<!rec_VirtualDelegatingCtor, custom>>
+// CIR-LABEL: cir.func no_inline comdat linkonce_odr @_ZN21VirtualDelegatingCtorC1Ei(%{{.*}}: !cir.ptr<!rec_VirtualDelegatingCtor> {{.*}}, %{{.*}}: !s32i {{.*}}) func_info<#cir.cxx_ctor<!rec_VirtualDelegatingCtor, custom>>
 // CIR: %[[THIS_ALLOCA:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_VirtualDelegatingCtor>>
 // CIR: %[[X_ALLOCA:.*]] = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
 // CIR: %[[THIS_LOAD:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtualDelegatingCtor>>, !cir.ptr<!rec_VirtualDelegatingCtor>

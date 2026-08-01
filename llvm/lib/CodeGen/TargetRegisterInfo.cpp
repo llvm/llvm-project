@@ -50,9 +50,8 @@ static cl::opt<unsigned>
                      cl::init(5000));
 
 TargetRegisterInfo::TargetRegisterInfo(
-    const TargetRegisterInfoDesc *ID,
-    ArrayRef<const TargetRegisterClass *> RegisterClasses,
-    const char *SubRegIndexStrings, ArrayRef<uint32_t> SubRegIndexNameOffsets,
+    const TargetRegisterInfoDesc *ID, const char *SubRegIndexStrings,
+    ArrayRef<uint32_t> SubRegIndexNameOffsets,
     const SubRegCoveredBits *SubRegIdxRanges,
     const LaneBitmask *SubRegIndexLaneMasks, LaneBitmask CoveringLanes,
     const RegClassInfo *const RCInfos,
@@ -60,9 +59,7 @@ TargetRegisterInfo::TargetRegisterInfo(
     : InfoDesc(ID), SubRegIndexStrings(SubRegIndexStrings),
       SubRegIndexNameOffsets(SubRegIndexNameOffsets),
       SubRegIdxRanges(SubRegIdxRanges),
-      SubRegIndexLaneMasks(SubRegIndexLaneMasks),
-      RegClassBegin(RegisterClasses.begin()),
-      RegClassEnd(RegisterClasses.end()), CoveringLanes(CoveringLanes),
+      SubRegIndexLaneMasks(SubRegIndexLaneMasks), CoveringLanes(CoveringLanes),
       RCInfos(RCInfos), RCVTLists(RCVTLists), HwMode(Mode) {}
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
@@ -212,9 +209,9 @@ getCommonMinimalPhysRegClass(const TargetRegisterInfo *TRI, MCRegister Reg1,
 
   // Pick the most specific register class that contains both physregs.
   const TargetRegisterClass *BestRC = nullptr;
-  for (const TargetRegisterClass *RC : TRI->regclasses()) {
-    if (RC->contains(Reg1, Reg2) && (!BestRC || BestRC->hasSubClass(RC)))
-      BestRC = RC;
+  for (const TargetRegisterClass &RC : TRI->regclasses()) {
+    if (RC.contains(Reg1, Reg2) && (!BestRC || BestRC->hasSubClass(&RC)))
+      BestRC = &RC;
   }
 
   assert(BestRC && "Couldn't find the register class");
@@ -232,7 +229,8 @@ TargetRegisterInfo::getCommonMinimalPhysRegClass(MCRegister Reg1,
 static void getAllocatableSetForRC(const MachineFunction &MF,
                                    const TargetRegisterClass *RC, BitVector &R){
   assert(RC->isAllocatable() && "invalid for nonallocatable sets");
-  ArrayRef<MCPhysReg> Order = RC->getRawAllocationOrder(MF);
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  ArrayRef<MCPhysReg> Order = TRI.getRawAllocationOrder(*RC, MF);
   for (MCPhysReg PR : Order)
     R.set(PR);
 }
@@ -246,9 +244,9 @@ BitVector TargetRegisterInfo::getAllocatableSet(const MachineFunction &MF,
     if (SubClass)
       getAllocatableSetForRC(MF, SubClass, Allocatable);
   } else {
-    for (const TargetRegisterClass *C : regclasses())
-      if (C->isAllocatable())
-        getAllocatableSetForRC(MF, C, Allocatable);
+    for (const TargetRegisterClass &C : regclasses())
+      if (C.isAllocatable())
+        getAllocatableSetForRC(MF, &C, Allocatable);
   }
 
   // Mask out the reserved registers

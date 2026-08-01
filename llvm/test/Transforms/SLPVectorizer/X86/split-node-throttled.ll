@@ -7,8 +7,8 @@ define fastcc void @test(i32 %arg) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 false, i32 0, i32 0
 ; CHECK-NEXT:    [[GETELEMENTPTR:%.*]] = getelementptr i8, ptr poison, i64 16
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[ARG]], i32 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[SELECT]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[ARG]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[SELECT]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[TMP0]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 0>

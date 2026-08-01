@@ -23,6 +23,9 @@
 //
 // void notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk);
 
+// segmentation fault
+// XFAIL: LLVM-LIBC-FIXME
+
 #include "make_test_thread.h"
 #include "test_macros.h"
 

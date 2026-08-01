@@ -1,6 +1,7 @@
 // RUN: cir-opt %s --cir-to-llvm -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
+!rec_mixed = !cir.struct<{!s32i, !cir.ptr<!s32i>}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.global "private" constant cir_private dso_local @g0 = #cir.int<0> : !s32i
@@ -12,7 +13,18 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
       #cir.global_view<@g1> : !cir.ptr<!s32i>,
       #cir.global_view<@g2> : !cir.ptr<!s32i>
   ]> : !cir.array<!cir.ptr<!s32i> x 3>
+
+  cir.global constant external dso_local @mixed = #cir.const_record<{
+      #cir.int<7> : !s32i,
+      #cir.global_view<@g0> : !cir.ptr<!s32i>
+  }> : !rec_mixed
 }
 
 // CHECK-LABEL: llvm.mlir.global external constant @ptrs(
 // CHECK-NOT:   llvm.insertvalue
+
+// CHECK-LABEL: llvm.mlir.global external constant @mixed(
+// CHECK-SAME:    [7 : i32, @g0]
+// CHECK-SAME:    : !llvm.struct<(i32, ptr)>
+// CHECK-NOT:   llvm.insertvalue
+// CHECK-NOT:   llvm.return

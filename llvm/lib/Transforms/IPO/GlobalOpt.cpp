@@ -1983,6 +1983,10 @@ OptimizeFunctions(Module &M,
     if (!F.hasLocalLinkage())
       continue;
 
+    // Ensure function definition is available for interprocedural analysis.
+    if (!F.isDefinitionExact())
+      continue;
+
     // If we have an inalloca parameter that we can safely remove the
     // inalloca attribute from, do so. This unlocks optimizations that
     // wouldn't be safe in the presence of inalloca.

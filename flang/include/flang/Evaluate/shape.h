@@ -15,10 +15,8 @@
 #include "expression.h"
 #include "traverse.h"
 #include "variable.h"
-#include "flang/Common/indirection.h"
 #include "flang/Evaluate/type.h"
 #include <optional>
-#include <variant>
 
 namespace Fortran::parser {
 class ContextualMessages;
@@ -184,6 +182,7 @@ public:
   Result operator()(const CoarrayRef &) const;
   Result operator()(const Substring &) const;
   Result operator()(const ProcedureRef &) const;
+  Result operator()(const ActualArgument &) const;
 
   template <typename T>
   Result operator()(const ArrayConstructor<T> &aconst) const {

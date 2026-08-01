@@ -24,9 +24,9 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/WindowsError.h"
 
-#if LLDB_ENABLE_POSIX
-#include "lldb/Host/posix/DomainSocket.h"
+#include "lldb/Host/DomainSocket.h"
 
+#if LLDB_ENABLE_POSIX
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -241,10 +241,17 @@ Socket::CreatePair(std::optional<SocketProtocol> protocol) {
   switch (protocol.value_or(kBestProtocol)) {
   case ProtocolTcp:
     return TCPSocket::CreatePair();
-#if LLDB_ENABLE_POSIX
   case ProtocolUnixDomain:
+#if LLDB_ENABLE_POSIX
+    return DomainSocketPlatform::CreatePair();
+#else
+    return llvm::createStringError("unsupported protocol");
+#endif
   case ProtocolUnixAbstract:
-    return DomainSocket::CreatePair();
+#if LLDB_ENABLE_POSIX
+    return DomainSocketPlatform::CreatePair();
+#else
+    return llvm::createStringError("unsupported protocol");
 #endif
   default:
     return llvm::createStringError("unsupported protocol");

@@ -31,7 +31,7 @@ namespace bolt {
 
 /// Tests textual profile parsing using dummy input and
 /// performs negative checks on PERFTEXT headers.
-struct PerfScriptTestHelper : public testing::Test {
+struct PerfScriptTestHelper : public testing::TestWithParam<Triple::ArchType> {
   void SetUp() override {
     initalizeLLVM();
     prepareElf();
@@ -40,12 +40,15 @@ struct PerfScriptTestHelper : public testing::Test {
 
 protected:
   void initalizeLLVM() {
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllDisassemblers();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllAsmPrinters();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
+
+#include "bolt/Core/TargetConfig.def"
   }
 
   void prepareElf() {
@@ -53,7 +56,7 @@ protected:
     ELF64LE::Ehdr *EHdr = reinterpret_cast<typename ELF64LE::Ehdr *>(ElfBuf);
     EHdr->e_ident[llvm::ELF::EI_CLASS] = llvm::ELF::ELFCLASS64;
     EHdr->e_ident[llvm::ELF::EI_DATA] = llvm::ELF::ELFDATA2LSB;
-    EHdr->e_machine = llvm::ELF::EM_AARCH64;
+    EHdr->e_machine = GetParam() == Triple::aarch64 ? EM_AARCH64 : EM_X86_64;
     MemoryBufferRef Source(StringRef(ElfBuf, sizeof(ElfBuf)), "ELF");
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
   }
@@ -126,7 +129,21 @@ protected:
 } // namespace bolt
 } // namespace llvm
 
-TEST_F(PerfScriptTestHelper, CheckMissingEndOfLineChar) {
+#ifdef X86_AVAILABLE
+
+INSTANTIATE_TEST_SUITE_P(X86, PerfScriptTestHelper,
+                         ::testing::Values(Triple::x86_64));
+
+#endif
+
+#ifdef AARCH64_AVAILABLE
+
+INSTANTIATE_TEST_SUITE_P(AArch64, PerfScriptTestHelper,
+                         ::testing::Values(Triple::aarch64));
+
+#endif
+
+TEST_P(PerfScriptTestHelper, CheckMissingEndOfLineChar) {
   opts::ReadPreAggregated = true;
   std::string ErrorMessage = "expected rest of line";
   std::string Buffer =
@@ -135,7 +152,7 @@ TEST_F(PerfScriptTestHelper, CheckMissingEndOfLineChar) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptTestHelper, CheckMissingPerfMagicString) {
+TEST_P(PerfScriptTestHelper, CheckMissingPerfMagicString) {
   // Checks missing/wrong "PERFTEXT" string.
   opts::ReadPreAggregated = true;
   std::string ErrorMessage = "expected 'PERFTEXT' magic string";
@@ -145,7 +162,7 @@ TEST_F(PerfScriptTestHelper, CheckMissingPerfMagicString) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptTestHelper, CheckMissingEventAndSizeContent) {
+TEST_P(PerfScriptTestHelper, CheckMissingEventAndSizeContent) {
   opts::ReadPreAggregated = true;
   std::string ErrorMessage = "expected type=length content";
   std::string Buffer = "PERFTEXT;BUILDID?1;\n";
@@ -153,7 +170,7 @@ TEST_F(PerfScriptTestHelper, CheckMissingEventAndSizeContent) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptTestHelper, CheckMalformedTypes) {
+TEST_P(PerfScriptTestHelper, CheckMalformedTypes) {
   // Checks malformed type: actual: BUID, expected: BUILDID.
   opts::ReadPreAggregated = true;
   std::string ErrorMessage = "supported types: BUILDID, MAIN, MMAP, TASK, MEM";
@@ -163,7 +180,7 @@ TEST_F(PerfScriptTestHelper, CheckMalformedTypes) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptTestHelper, CheckExpectedHexNumber) {
+TEST_P(PerfScriptTestHelper, CheckExpectedHexNumber) {
   // Checks expected hexadecimal number error message: BUILDIDS=32y.
   opts::ReadPreAggregated = true;
   std::string ErrorMessage = "expected hexadecimal number";
@@ -173,7 +190,7 @@ TEST_F(PerfScriptTestHelper, CheckExpectedHexNumber) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptTestHelper, CheckCorruptedTextProfile) {
+TEST_P(PerfScriptTestHelper, CheckCorruptedTextProfile) {
   // Checks the sum of events length is not equal to file size.
   opts::ReadPreAggregated = true;
   std::string ErrorMessage = "corrupted perfscript profile";
@@ -183,7 +200,7 @@ TEST_F(PerfScriptTestHelper, CheckCorruptedTextProfile) {
   checkPreParsedFileHeaderErrors(Buffer, ErrorMessage);
 }
 
-TEST_F(PerfScriptTestHelper, ParseAndCheckFileHeader) {
+TEST_P(PerfScriptTestHelper, ParseAndCheckFileHeader) {
   opts::ReadPreAggregated = true;
   opts::ArmSPE = true;
   const int Pid = 1234;

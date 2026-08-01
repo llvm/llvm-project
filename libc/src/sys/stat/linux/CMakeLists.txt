@@ -60,18 +60,6 @@ add_entrypoint_object(
     libc.src.errno.errno
 )
 
-add_header_library(
-  kernel_statx
-  HDRS
-    kernel_statx.h
-  DEPENDS
-    libc.hdr.stdint_proxy
-    libc.hdr.types.struct_stat
-    libc.src.__support.OSUtil.linux.syscall_wrappers.statx
-    libc.src.__support.common
-    libc.src.__support.libc_errno
-)
-
 add_entrypoint_object(
   stat
   SRCS
@@ -79,9 +67,11 @@ add_entrypoint_object(
   HDRS
     ../stat.h
   DEPENDS
-    .kernel_statx
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
 )
 
 add_entrypoint_object(
@@ -91,9 +81,11 @@ add_entrypoint_object(
   HDRS
     ../lstat.h
   DEPENDS
-    .kernel_statx
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
 )
 
 add_entrypoint_object(
@@ -103,9 +95,11 @@ add_entrypoint_object(
   HDRS
     ../fstat.h
   DEPENDS
-    .kernel_statx
     libc.hdr.fcntl_macros
     libc.hdr.types.struct_stat
+    libc.src.__support.error_or
+    libc.src.__support.libc_errno
+    libc.src.__support.OSUtil.linux.stat.stat_via_statx
 )
 
 add_entrypoint_object(

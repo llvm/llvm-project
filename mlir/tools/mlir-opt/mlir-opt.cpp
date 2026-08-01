@@ -39,7 +39,6 @@ void registerLoopLikeInterfaceTestPasses();
 void registerPassManagerTestPass();
 void registerPrintSpirvAvailabilityPass();
 void registerRegionTestPasses();
-void registerPrintTosaAvailabilityPass();
 void registerShapeFunctionTestPasses();
 void registerSideEffectTestPasses();
 void registerSliceAnalysisTestPass();
@@ -185,7 +184,6 @@ void registerTestTransformsTransformDialectExtension(DialectRegistry &);
 static void registerTestPasses() {
   registerCloneTestPasses();
   registerConvertToTargetEnvPass();
-  registerPrintTosaAvailabilityPass();
   registerLazyLoadingTestPasses();
   registerLoopLikeInterfaceTestPasses();
   registerPassManagerTestPass();

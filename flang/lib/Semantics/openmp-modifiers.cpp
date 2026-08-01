@@ -281,7 +281,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_depend}},
-          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}},
           {52, {Clause::OMPC_doacross}},
       },
   };
@@ -451,6 +451,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_linear}},
+      },
+  };
+  return desc;
+}
+
+template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLoopModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"loop-modifier",
+      /*props=*/
+      {
+          {60, {}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_apply}},
       },
   };
   return desc;
@@ -715,7 +731,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_depend}},
-          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}},
       },
   };
   return desc;

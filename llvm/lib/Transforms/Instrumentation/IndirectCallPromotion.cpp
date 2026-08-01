@@ -32,6 +32,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -44,7 +45,6 @@
 #include <cstdint>
 #include <set>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -161,13 +161,21 @@ static cl::list<std::string> ICPIgnoredBaseTypes(
         "binary could be different due to profiling limitations. Type info "
         "names are those string literals used in LLVM type metadata"));
 
+static cl::opt<int> HotFuncCutoffForICP(
+    "hot-func-cutoff-for-icp", cl::Hidden, cl::init(-1),
+    cl::desc("A count is hot for indirect call promotion if it exceeds "
+             "the minimum count to reach this percentile of total counts."
+             "Note that this percentile is specified as "
+             "percentile * 10000 = HotFuncCutoffForICP."
+             "Default value -1 means that if the flag is unspecified then "
+             "the value of ProfileSummaryCutoffHot will be used instead."));
 namespace {
 
 // The key is a vtable global variable, and the value is a map.
 // In the inner map, the key represents address point offsets and the value is a
 // constant for this address point.
 using VTableAddressPointOffsetValMap =
-    SmallDenseMap<const GlobalVariable *, std::unordered_map<int, Constant *>>;
+    SmallDenseMap<const GlobalVariable *, DenseMap<int, Constant *>>;
 
 // A struct to collect type information for a virtual call site.
 struct VirtualCallSiteInfo {
@@ -882,8 +890,14 @@ bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
                           << TotalCount << "\n");
         continue;
       }
-      // Only pormote hot if ICPAllowHotOnly is true.
-      if (ICPAllowHotOnly && !PSI->isHotCount(TotalCount)) {
+      // Only promote hot if ICPAllowHotOnly is true. ICP has its own cutoff
+      // threshold for hotness, which defaults to ProfileSummaryCutoffHot if
+      // unspecified.
+      if (ICPAllowHotOnly &&
+          !PSI->isHotCountNthPercentile(HotFuncCutoffForICP == -1
+                                            ? ProfileSummaryCutoffHot
+                                            : HotFuncCutoffForICP,
+                                        TotalCount)) {
         LLVM_DEBUG(dbgs() << "Don't promote the non-hot candidate: TotalCount="
                           << TotalCount << "\n");
         continue;

@@ -227,7 +227,7 @@ static bool loadLevelZero() {
   // use a new Level Zero API routine.
   // zeCommandListHostSynchronize was introduced in loader 1.10.0 (API 1.6.0).
   constexpr uint32_t MinVersion{ZE_MAKE_VERSION(1, 10)};
-  auto emitCheckVersion = [&]() {
+  auto EmitCheckVersion = [&]() {
     ODBG(OLDT_Init) << "Level Zero Loader compatible with version "
                     << ZE_MAJOR_VERSION(MinVersion) << "."
                     << ZE_MINOR_VERSION(MinVersion) << " is required";
@@ -250,7 +250,7 @@ static bool loadLevelZero() {
       ErrMsg = "unknown error";
     ODBG(OLDT_Init) << "Unable to load library '" << L0Library
                     << "': " << ErrMsg << "!";
-    emitCheckVersion();
+    EmitCheckVersion();
     return false;
   }
 
@@ -264,7 +264,7 @@ static bool loadLevelZero() {
       if (!Fallback) {
         ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
                         << "' and no fallback is available!";
-        emitCheckVersion();
+        EmitCheckVersion();
         return false;
       }
       ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library

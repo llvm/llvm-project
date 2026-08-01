@@ -339,6 +339,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Converts memref.copy to spirv.CopyMemory.
+class CopyOpPattern final : public OpConversionPattern<memref::CopyOp> {
+public:
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp copyOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 class ReinterpretCastPattern final
     : public OpConversionPattern<memref::ReinterpretCastOp> {
 public:
@@ -1171,6 +1181,48 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// CopyOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+CopyOpPattern::matchAndRewrite(memref::CopyOp copyOp, OpAdaptor adaptor,
+                               ConversionPatternRewriter &rewriter) const {
+  auto memrefType = cast<MemRefType>(copyOp.getSource().getType());
+  if (!memrefType.hasStaticShape())
+    return rewriter.notifyMatchFailure(copyOp, "unsupported dynamic shape");
+
+  for (MemRefType type :
+       {memrefType, cast<MemRefType>(copyOp.getTarget().getType())}) {
+    auto memorySpaceAttr =
+        dyn_cast_if_present<spirv::StorageClassAttr>(type.getMemorySpace());
+    if (memorySpaceAttr &&
+        memorySpaceAttr.getValue() == spirv::StorageClass::Image)
+      return rewriter.notifyMatchFailure(
+          copyOp, "cannot lower memref.copy in image storage class");
+  }
+
+  // The converted operands are SPIR-V pointers to the source and target
+  // storage. spirv.CopyMemory copies the whole pointed-to object, so it only
+  // applies when both pointers point to the same fixed-size element type.
+  Value source = adaptor.getSource();
+  Value target = adaptor.getTarget();
+  auto sourcePtrType = dyn_cast<spirv::PointerType>(source.getType());
+  auto targetPtrType = dyn_cast<spirv::PointerType>(target.getType());
+  if (!sourcePtrType || !targetPtrType)
+    return rewriter.notifyMatchFailure(copyOp, "failed to convert memref type");
+
+  if (sourcePtrType.getPointeeType() != targetPtrType.getPointeeType())
+    return rewriter.notifyMatchFailure(
+        copyOp, "source and target pointee types do not match");
+
+  rewriter.replaceOpWithNewOp<spirv::CopyMemoryOp>(
+      copyOp, target, source, /*memory_access=*/spirv::MemoryAccessAttr{},
+      /*alignment=*/IntegerAttr{}, /*source_memory_access=*/
+      spirv::MemoryAccessAttr{}, /*source_alignment=*/IntegerAttr{});
+  return success();
+}
+
 LogicalResult ReinterpretCastPattern::matchAndRewrite(
     memref::ReinterpretCastOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
@@ -1239,10 +1291,10 @@ namespace mlir {
 void populateMemRefToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
   patterns.add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
-               DeallocOpPattern, IntLoadOpPattern, ImageLoadOpPattern,
-               IntStoreOpPattern, LoadOpPattern, MemorySpaceCastOpPattern,
-               StoreOpPattern, ReinterpretCastPattern, CastPattern,
-               ExtractAlignedPointerAsIndexOpPattern>(typeConverter,
-                                                      patterns.getContext());
+               CopyOpPattern, DeallocOpPattern, IntLoadOpPattern,
+               ImageLoadOpPattern, IntStoreOpPattern, LoadOpPattern,
+               MemorySpaceCastOpPattern, StoreOpPattern, ReinterpretCastPattern,
+               CastPattern, ExtractAlignedPointerAsIndexOpPattern>(
+      typeConverter, patterns.getContext());
 }
 } // namespace mlir

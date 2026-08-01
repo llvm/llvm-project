@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no expression evaluation
 class TestCppGlobalOperators(TestBase):
     def prepare_executable_and_get_frame(self):
         self.build()

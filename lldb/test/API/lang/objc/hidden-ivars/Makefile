@@ -13,7 +13,7 @@ stripped: a.out.dSYM
 endif
 
 stripped: a.out libInternalDefiner.dylib
-	mkdir stripped
+	mkdir -p stripped
 	$(STRIP) -Sx a.out -o stripped/a.out
 	$(STRIP) -Sx libInternalDefiner.dylib -o stripped/libInternalDefiner.dylib
 ifneq "$(CODESIGN)" ""
@@ -23,5 +23,6 @@ ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -fs - stripped/libInternalDefiner.dylib
 endif
 ifeq "$(MAKE_DSYM)" "YES"
+	rm -rf stripped/a.out.dSYM
 	cp -r a.out.dSYM stripped/a.out.dSYM
 endif

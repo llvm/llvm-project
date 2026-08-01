@@ -10,8 +10,7 @@ define <vscale x 16 x i8> @ursra_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ursra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.urshr.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, i32 1)
+  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.urshr.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %b, i32 1)
   %add = add <vscale x 16 x i8> %a, %shift
   ret <vscale x 16 x i8> %add
 }
@@ -21,8 +20,7 @@ define <vscale x 8 x i16> @ursra_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ursra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.urshr.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %b, i32 2)
+  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.urshr.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %b, i32 2)
   %add = add <vscale x 8 x i16> %a, %shift
   ret <vscale x 8 x i16> %add
 }
@@ -32,8 +30,7 @@ define <vscale x 4 x i32> @ursra_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ursra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.urshr.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, i32 3)
+  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.urshr.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %b, i32 3)
   %add = add <vscale x 4 x i32> %a, %shift
   ret <vscale x 4 x i32> %add
 }
@@ -43,8 +40,7 @@ define <vscale x 2 x i64> @ursra_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ursra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.urshr.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, i32 4)
+  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.urshr.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %b, i32 4)
   %add = add <vscale x 2 x i64> %a, %shift
   ret <vscale x 2 x i64> %add
 }
@@ -56,8 +52,7 @@ define <vscale x 16 x i8> @srsra_i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    srsra z0.b, z1.b, #1
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.srshr.nxv16i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %b, i32 1)
+  %shift = call <vscale x 16 x i8> @llvm.aarch64.sve.srshr.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %b, i32 1)
   %add = add <vscale x 16 x i8> %a, %shift
   ret <vscale x 16 x i8> %add
 }
@@ -67,8 +62,7 @@ define <vscale x 8 x i16> @srsra_i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    srsra z0.h, z1.h, #2
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 31)
-  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.srshr.nxv8i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %b, i32 2)
+  %shift = call <vscale x 8 x i16> @llvm.aarch64.sve.srshr.nxv8i16(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> %b, i32 2)
   %add = add <vscale x 8 x i16> %a, %shift
   ret <vscale x 8 x i16> %add
 }
@@ -78,8 +72,7 @@ define <vscale x 4 x i32> @srsra_i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    srsra z0.s, z1.s, #3
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.srshr.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, i32 3)
+  %shift = call <vscale x 4 x i32> @llvm.aarch64.sve.srshr.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %b, i32 3)
   %add = add <vscale x 4 x i32> %a, %shift
   ret <vscale x 4 x i32> %add
 }
@@ -89,17 +82,10 @@ define <vscale x 2 x i64> @srsra_i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    srsra z0.d, z1.d, #4
 ; CHECK-NEXT:    ret
-  %pg = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.srshr.nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %b, i32 4)
+  %shift = call <vscale x 2 x i64> @llvm.aarch64.sve.srshr.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %b, i32 4)
   %add = add <vscale x 2 x i64> %a, %shift
   ret <vscale x 2 x i64> %add
 }
-
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 immarg)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 immarg)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 immarg)
 
 declare <vscale x 16 x i8> @llvm.aarch64.sve.urshr.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>, i32)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.urshr.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>, i32)

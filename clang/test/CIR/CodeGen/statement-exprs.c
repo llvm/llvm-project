@@ -236,7 +236,7 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR:     %[[S:.+]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:     %[[CONST:.*]] = cir.get_global @[[TEST3_S]] : !cir.ptr<!rec_S>
 // CIR:     cir.copy %[[CONST]] to %[[S]] : !cir.ptr<!rec_S>
-// CIR:     cir.copy %[[S]] to %[[REF_TMP0]] : !cir.ptr<!rec_S>
+// CIR:     cir.copy %[[S]] align(4) to %[[REF_TMP0]] align(4) : !cir.ptr<!rec_S>
 // CIR:   }
 // CIR:   %[[GEP_X_TMP:.+]] = cir.get_member %[[REF_TMP0]][0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
 // CIR:   %[[XVAL:.+]] = cir.load {{.*}} %[[GEP_X_TMP]] : !cir.ptr<!s32i>, !s32i
@@ -251,8 +251,8 @@ int test3() { return ({ struct S s = {1}; s; }).x; }
 // LLVM:   %[[VAR4:.+]] = alloca %struct.S, i64 1
 // LLVM:   br label %[[LBL5:.+]]
 // LLVM: [[LBL5]]:
-// LLVM:     call void @llvm.memcpy{{.*}}(ptr %[[VAR1]], ptr @[[TEST3_S]], i64 4, i1 false)
-// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr %[[VAR3]], ptr %[[VAR1]], i64 4, i1 false)
+// LLVM:     call void @llvm.memcpy{{.*}}(ptr align 4 %[[VAR1]], ptr align 4 @[[TEST3_S]], i64 4, i1 false)
+// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAR3]], ptr align 4 %[[VAR1]], i64 4, i1 false)
 // LLVM:     br label %[[LBL6:.+]]
 // LLVM: [[LBL6]]:
 // LLVM:     %[[GEP_VAR3:.+]] = getelementptr inbounds nuw %struct.S, ptr %[[VAR3]], i32 0, i32 0

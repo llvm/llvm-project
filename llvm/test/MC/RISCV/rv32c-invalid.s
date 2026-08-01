@@ -6,29 +6,29 @@
 ## GPRC
 .LBB:
 c.lw  ra, 4(sp)
-# CHECK: :[[#@LINE-1]]:7: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:7: error: register must be a GPR from x8 to x15
 c.sw  sp, 4(sp)
-# CHECK: :[[#@LINE-1]]:7: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:7: error: register must be a GPR from x8 to x15
 c.beqz  t0, .LBB
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.bnez  s8, .LBB
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.addi4spn  s4, sp, 12
-# CHECK: :[[#@LINE-1]]:13: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:13: error: register must be a GPR from x8 to x15
 c.srli  s7, 12
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.srai  t0, 12
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.andi  t1, 12
-# CHECK: :[[#@LINE-1]]:9: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.and  t1, a0
-# CHECK: :[[#@LINE-1]]:8: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:8: error: register must be a GPR from x8 to x15
 c.or   a0, s8
-# CHECK: :[[#@LINE-1]]:12: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:12: error: register must be a GPR from x8 to x15
 c.xor  t2, a0
-# CHECK: :[[#@LINE-1]]:8: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:8: error: register must be a GPR from x8 to x15
 c.sub  a0, s8
-# CHECK: :[[#@LINE-1]]:12: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:12: error: register must be a GPR from x8 to x15
 
 ## GPRNoX0
 c.lwsp  x0, 4(sp)
@@ -42,7 +42,7 @@ c.jalr  zero
 c.mv  ra, x0
 # CHECK: :[[#@LINE-1]]:11: error: register must be a GPR excluding zero (x0)
 c.add  ra, ra, x0
-# CHECK: :[[#@LINE-1]]:16: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:16: error: unexpected extra operand for instruction
 
 ## GPRNoX2
 c.lui x2, 4
@@ -92,7 +92,9 @@ c.addi t0, %hi(foo)
 
 ## simm6nonzero
 c.nop 32
-# CHECK: :[[#@LINE-1]]:7: error: immediate must be non-zero in the range [-32, 31]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[#@LINE-2]]:7: note: unexpected extra operand for instruction
+# CHECK: :[[#@LINE-3]]:7: note: immediate must be non-zero in the range [-32, 31]
 
 ## c_lui_imm
 c.lui t0, 0
@@ -113,9 +115,14 @@ c.swsp  ra, -4(sp)
 # CHECK: :[[#@LINE-1]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 252]
 ## uimm7_lsb00
 c.lw  s0, -4(sp)
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 bytes in the range [0, 124]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[#@LINE-2]]:11: note: invalid operand for instruction
+# CHECK: :[[#@LINE-3]]:11: note: immediate must be a multiple of 4 bytes in the range [0, 124]
+
 c.sw  s0, 128(sp)
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 bytes in the range [0, 124]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[#@LINE-2]]:11: note: invalid operand for instruction
+# CHECK: :[[#@LINE-3]]:11: note: immediate must be a multiple of 4 bytes in the range [0, 124]
 
 ## simm9_lsb0
 c.bnez  s1, -258

@@ -1,5 +1,6 @@
 ; RUN: opt %S/Inputs/SourceInfo.ll -dxil-embed -dxil-globals -S -o - | FileCheck %s
-; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
+; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj --dx-pdb-path=%t.pdb -o /dev/null
+; RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.pdb | FileCheck %s --check-prefix=DXC
 ; REQUIRES: zlib
 
 ; CHECK: @dx.srci = private constant [348 x i8] c"{{.*}}", section "SRCI", align 4

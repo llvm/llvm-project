@@ -22,6 +22,7 @@ UseOverrideCheck::UseOverrideCheck(StringRef Name, ClangTidyContext *Context)
       IgnoreTemplateInstantiations(
           Options.get("IgnoreTemplateInstantiations", false)),
       AllowOverrideAndFinal(Options.get("AllowOverrideAndFinal", false)),
+      AllowVirtualAndOverride(Options.get("AllowVirtualAndOverride", false)),
       OverrideSpelling(Options.get("OverrideSpelling", "override")),
       FinalSpelling(Options.get("FinalSpelling", "final")) {}
 
@@ -30,6 +31,7 @@ void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreTemplateInstantiations",
                 IgnoreTemplateInstantiations);
   Options.store(Opts, "AllowOverrideAndFinal", AllowOverrideAndFinal);
+  Options.store(Opts, "AllowVirtualAndOverride", AllowVirtualAndOverride);
   Options.store(Opts, "OverrideSpelling", OverrideSpelling);
   Options.store(Opts, "FinalSpelling", FinalSpelling);
 }
@@ -105,8 +107,14 @@ void UseOverrideCheck::check(const MatchFinder::MatchResult &Result) {
   const bool OnlyVirtualSpecified = HasVirtual && !HasOverride && !HasFinal;
   const unsigned KeywordCount = HasVirtual + HasOverride + HasFinal;
 
-  if ((!OnlyVirtualSpecified && KeywordCount == 1) ||
-      (!HasVirtual && HasOverride && HasFinal && AllowOverrideAndFinal))
+  const bool AcceptsOverrideAndFinal =
+      !HasVirtual && HasOverride && HasFinal && AllowOverrideAndFinal;
+  const bool AcceptsVirtualAndOverride = HasVirtual && HasOverride &&
+                                         AllowVirtualAndOverride &&
+                                         (!HasFinal || AllowOverrideAndFinal);
+
+  if ((!OnlyVirtualSpecified && KeywordCount == 1) || AcceptsOverrideAndFinal ||
+      AcceptsVirtualAndOverride)
     return; // Nothing to do.
 
   std::string Message;

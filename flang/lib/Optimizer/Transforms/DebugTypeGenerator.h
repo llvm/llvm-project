@@ -19,7 +19,6 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/DataLayout.h"
-#include "llvm/Support/Debug.h"
 
 namespace fir {
 

@@ -68,6 +68,7 @@ struct GlobalVariableModel
     : public mlir::acc::GlobalVariableOpInterface::ExternalModel<
           GlobalVariableModel, fir::GlobalOp> {
   bool isConstant(mlir::Operation *op) const;
+  bool hasInitializer(mlir::Operation *op) const;
   mlir::Region *getInitRegion(mlir::Operation *op) const;
   bool isDeviceData(mlir::Operation *op) const;
 };
@@ -97,6 +98,20 @@ struct OutlineRematerializationModel<fir::ConvertOp>
     : public mlir::acc::OutlineRematerializationOpInterface::ExternalModel<
           OutlineRematerializationModel<fir::ConvertOp>, fir::ConvertOp> {
   bool isRematerializationCandidate(mlir::Operation *op) const;
+};
+
+/// External model for OutlineIdentityOperandOpInterface.
+/// Drops the dummy_scope operand (an identity token that must not be
+/// duplicated) from a [hl]fir.declare instance that has been sunk or
+/// rematerialized into an offload region. Alias analysis falls back to a
+/// dominance-based lookup of the enclosing dummy scope when this operand is
+/// absent, so correctness is preserved without needing to keep or clone the
+/// original operand.
+template <typename Op>
+struct OutlineIdentityOperandDeclareModel
+    : public mlir::acc::OutlineIdentityOperandOpInterface::ExternalModel<
+          OutlineIdentityOperandDeclareModel<Op>, Op> {
+  void dropOutlinedIdentityOperands(mlir::Operation *op) const;
 };
 
 /// External model for OffloadRegionOpInterface.

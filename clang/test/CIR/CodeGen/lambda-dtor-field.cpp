@@ -92,7 +92,7 @@ void capture_two(S a, S b) {
 // LLVM:   call void @"_ZZ11capture_two1SS_EN3$_0D1Ev"(ptr {{.*}} %[[LAM2]])
 // LLVM:   ret void
 
-// OGCG-LABEL: define dso_local void @_Z11capture_two1SS_(ptr noundef %a, ptr noundef %b){{.*}}personality ptr @__gxx_personality_v0
+// OGCG-LABEL: define dso_local void @_Z11capture_two1SS_(ptr noundef {{.*}}%a, ptr noundef {{.*}}%b){{.*}}personality ptr @__gxx_personality_v0
 // OGCG:   %[[LAM2:.*]] = alloca %[[LAM_TY_2:.*]], align 4
 // OGCG:   %[[FA:.*]] = getelementptr inbounds nuw %[[LAM_TY_2]], ptr %[[LAM2]], i32 0, i32 0
 // OGCG:   call void @_ZN1SC1ERKS_(ptr {{.*}} %[[FA]], ptr {{.*}} %a)

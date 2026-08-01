@@ -14,7 +14,6 @@ import os
 import re
 import sys
 import textwrap
-from operator import methodcaller
 from typing import Optional, Tuple, Match
 
 
@@ -378,10 +377,11 @@ def update_checks_list(clang_tidy_path: str) -> None:
     for subdir in filter(
         lambda s: os.path.isdir(os.path.join(docs_dir, s)), os.listdir(docs_dir)
     ):
-        for file in filter(
-            methodcaller("endswith", ".rst"), os.listdir(os.path.join(docs_dir, subdir))
-        ):
-            doc_files.append((subdir, file))
+        for file in os.listdir(os.path.join(docs_dir, subdir)):
+            # TODO: Stop discovering reST files once all clang-tidy check
+            # documentation has been migrated to MyST.
+            if os.path.splitext(file)[1] in (".md", ".rst"):
+                doc_files.append((subdir, file))
     doc_files.sort()
 
     # We couldn't find the source file from the check name, so try to find the
@@ -488,7 +488,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
         return ""
 
     def detect_alias_target(check_name: str, content: str) -> Optional[str]:
-        """Return the :doc: target for non-redirect alias pages.
+        """Return the documentation target for non-redirect alias pages.
 
         This recognizes pages that keep their own documentation content, but
         whose paragraph explicitly states that the current check is an
@@ -512,19 +512,33 @@ def update_checks_list(clang_tidy_path: str) -> None:
 
         for paragraph in paragraphs:
             if self_alias.search(paragraph) or named_alias.search(paragraph):
-                if match := re.search(r":doc:`[^`<]+?<([^>]+)>`", paragraph):
+                # Matches :doc:`label <target>` and {doc}`label <target>` roles.
+                # TODO: Remove the reST role handling once all clang-tidy check
+                # documentation has been migrated to MyST.
+                if match := re.search(
+                    r"(?:\{doc\}|:doc:)`[^`<]+?<([^>]+)>`", paragraph
+                ):
                     return match.group(1)
+                # TODO: Remove the reST link handling once all clang-tidy check
+                # documentation has been migrated to MyST.
                 if match := re.search(r"`[^`<]+?<(.+?)\.html(?:#[^>]+)?>`_", paragraph):
+                    return match.group(1)
+                # Matches a Markdown link of the form [label](target).
+                if match := re.search(r"\[[^]]+\]\(([^)]+)\)", paragraph):
                     return match.group(1)
         return None
 
     def process_doc(doc_file: Tuple[str, str]) -> Tuple[str, Optional[str]]:
-        check_name = f"{doc_file[0]}-{doc_file[1].replace('.rst', '')}"
+        check_file = os.path.splitext(doc_file[1])[0]
+        check_name = f"{doc_file[0]}-{check_file}"
 
         with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
             content = doc.read()
 
-            if match := re.search(".*:orphan:.*", content):
+            # Matches `:orphan:` and `orphan: true`
+            # TODO: Remove the reST orphan handling once all clang-tidy check
+            # documentation has been migrated to MyST.
+            if re.search(r"^\s*(?::orphan:|orphan:\s*true)\s*$", content, re.MULTILINE):
                 # Orphan page, don't list it.
                 return "", None
 
@@ -533,8 +547,9 @@ def update_checks_list(clang_tidy_path: str) -> None:
     def format_link(doc_file: Tuple[str, str]) -> str:
         check_name, match = process_doc(doc_file)
         if not match and check_name and not check_name.startswith("clang-analyzer-"):
+            check_file = os.path.splitext(doc_file[1])[0]
             return (
-                f"   :doc:`{check_name} <{doc_file[0]}/{doc_file[1].replace('.rst', '')}>`,"
+                f"   :doc:`{check_name} <{doc_file[0]}/{check_file}>`,"
                 f"{has_auto_fix(check_name)}\n"
             )
         else:
@@ -547,20 +562,16 @@ def update_checks_list(clang_tidy_path: str) -> None:
             return ""
 
         module = doc_file[0]
-        check_file = doc_file[1].replace(".rst", "")
+        check_file = os.path.splitext(doc_file[1])[0]
         if is_clang_analyzer:
             title = f"Clang Static Analyzer {check_file}"
             # Clang Static Analyzer aliases still need the external redirect
             # target so list.rst can link to the upstream analyzer docs.
             with open(os.path.join(docs_dir, *doc_file), "r", encoding="utf8") as doc:
                 content = doc.read()
-            redirect = re.search(
-                r".*:http-equiv=refresh: \d+;URL=(.*).html(.*)", content
-            )
-            # Preserve the anchor in checkers.html from group 2.
-            target = (
-                "" if not redirect else f"{redirect.group(1)}.html{redirect.group(2)}"
-            )
+            redirect = re.search(r"http-equiv=refresh.*?URL=([^\"'\s]+)", content)
+            # Preserve any anchor in checkers.html as part of the redirect target.
+            target = "" if not redirect else redirect.group(1)
             autofix = ""
             ref_begin = ""
             ref_end = "_"
@@ -606,23 +617,20 @@ def write_docs(module_path: str, module: str, check_name: str) -> None:
     check_name_dashes = f"{module}-{check_name}"
     filename = os.path.normpath(
         os.path.join(
-            module_path, "../../docs/clang-tidy/checks/", module, f"{check_name}.rst"
+            module_path, "../../docs/clang-tidy/checks/", module, f"{check_name}.md"
         )
     )
     print(f"Creating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         f.write(
-            """.. title:: clang-tidy - %(check_name_dashes)s
+            """```{title} clang-tidy - %(check_name_dashes)s
+```
 
-%(check_name_dashes)s
-%(underline)s
+# %(check_name_dashes)s
 
 FIXME: Describe what patterns does the check detect and why. Give examples.
 """
-            % {
-                "check_name_dashes": check_name_dashes,
-                "underline": "=" * len(check_name_dashes),
-            }
+            % {"check_name_dashes": check_name_dashes}
         )
 
 

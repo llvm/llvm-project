@@ -31,19 +31,47 @@ define i64 @combine_psadbw_demandedelt(<16 x i8> %0, <16 x i8> %1) nounwind {
 ; X64-SSE-LABEL: combine_psadbw_demandedelt:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    psadbw %xmm1, %xmm0
-; X64-SSE-NEXT:    movq %xmm0, %rax
+; X64-SSE-NEXT:    movd %xmm0, %eax
 ; X64-SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_psadbw_demandedelt:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovq %xmm0, %rax
+; AVX2-NEXT:    vmovd %xmm0, %eax
 ; AVX2-NEXT:    retq
   %3 = shufflevector <16 x i8> %0, <16 x i8> %0, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>
   %4 = shufflevector <16 x i8> %1, <16 x i8> %1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>
   %5 = tail call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %3, <16 x i8> %4)
   %6 = extractelement <2 x i64> %5, i32 0
   ret i64 %6
+}
+
+; Ensure movq->movd narrowing doesn't affect the i64 store.
+define void @combine_psadbw_demandedelt_store(<16 x i8> %0, <16 x i8> %1, ptr %p0) nounwind {
+; X86-SSE-LABEL: combine_psadbw_demandedelt_store:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    psadbw %xmm1, %xmm0
+; X86-SSE-NEXT:    movq %xmm0, (%eax)
+; X86-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: combine_psadbw_demandedelt_store:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    psadbw %xmm1, %xmm0
+; X64-SSE-NEXT:    movq %xmm0, (%rdi)
+; X64-SSE-NEXT:    retq
+;
+; AVX2-LABEL: combine_psadbw_demandedelt_store:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+  %3 = shufflevector <16 x i8> %0, <16 x i8> %0, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>
+  %4 = shufflevector <16 x i8> %1, <16 x i8> %1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11>
+  %5 = tail call <2 x i64> @llvm.x86.sse2.psad.bw(<16 x i8> %3, <16 x i8> %4)
+  %6 = extractelement <2 x i64> %5, i32 0
+  store i64 %6, ptr %p0
+  ret void
 }
 
 ; TODO: Each PSADBW source element has a maximum value of 3 - so max sum-of-diffs for each <8 x i8> should be 24.

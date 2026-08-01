@@ -1842,3 +1842,14 @@ define i32 @test_umin_or_neg1_nuw(i32 %x, i32 range(i32 1, 0) %w) {
   %r = select i1 %cmp, i32 %x, i32 %sub
   ret i32 %r
 }
+
+; Make sure that poison-generating/UB-implying parameters are swapped.
+
+define i32 @umax_commute_operand_swap_attrs(i32 %x) {
+; CHECK-LABEL: @umax_commute_operand_swap_attrs(
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 -10, 0) i32 @llvm.umax.i32(i32 [[X:%.*]], i32 noundef range(i32 -10, -8) -10)
+; CHECK-NEXT:    ret i32 [[RET]]
+;
+  %ret = call range(i32 -10, 0) i32 @llvm.umax.i32(i32 noundef range(i32 -10, -8) -10, i32 %x)
+  ret i32 %ret
+}

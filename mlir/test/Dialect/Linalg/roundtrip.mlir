@@ -599,6 +599,21 @@ func.func @broadcast_memref(%input: memref<8x32xf32>,
 
 // -----
 
+func.func @broadcast_0d_tensor(%input: tensor<i32>,
+                               %init: tensor<32x2xi32>) -> tensor<32x2xi32> {
+  %bcast = linalg.broadcast
+      ins(%input:tensor<i32>)
+      outs(%init:tensor<32x2xi32>)
+      dimensions = [0, 1]
+  func.return %bcast : tensor<32x2xi32>
+}
+// CHECK-LABEL: func @broadcast_0d_tensor
+//      CHECK:    linalg.broadcast ins(%{{.*}} : tensor<i32>)
+// CHECK-SAME:    outs(%{{.*}} : tensor<32x2xi32>)
+// CHECK-SAME:    dimensions = [0, 1]
+
+// -----
+
 func.func @map_arith_with_attr(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
                       %init: tensor<64xf32>) -> tensor<64xf32> {
   %add = linalg.map

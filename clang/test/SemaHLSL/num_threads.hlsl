@@ -82,11 +82,19 @@ int forwardDecl() {
 [numthreads(1024,1,1)]
 #endif // __SHADER_TARGET_MAJOR
 #endif // FAIL
+
+#if __SHADER_TARGET_STAGE == __SHADER_STAGE_COMPUTE
+[shader("compute")]
+#elif __SHADER_TARGET_STAGE == __SHADER_STAGE_MESH
+[shader("mesh")]
+#elif __SHADER_TARGET_STAGE == __SHADER_STAGE_AMPLIFICATION
+[shader("amplification")]
+#elif __SHADER_TARGET_STAGE == __SHADER_STAGE_LIBRARY
+[shader("library")]
+#endif
 // CHECK: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:{{[0-9]+}}:2, col:18> 1 2 1
 [numthreads(1,2,1)]
-int entry() {
- return 1;
-}
+void main() {}
 
 // Because these two attributes match, they should both appear in the AST
 [numthreads(2,2,1)]
@@ -115,6 +123,11 @@ int largeZ();
 #endif 
 
 #else // Vertex and Pixel only beyond here
+#if __SHADER_TARGET_STAGE == __SHADER_STAGE_PIXEL
+[shader("pixel")]
+#elif __SHADER_TARGET_STAGE == __SHADER_STAGE_VERTEX
+[shader("vertex")]
+#endif
 // expected-error-re@+1 {{attribute 'numthreads' is unsupported in '{{[A-Za-z]+}}' shaders, requires one of the following: compute, amplification, mesh}}
 [numthreads(1,1,1)]
 int main() : A {

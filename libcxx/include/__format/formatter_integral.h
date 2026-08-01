@@ -22,6 +22,7 @@
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__locale_dir/num.h>
 #include <__memory/pointer_traits.h>
 #include <__system_error/errc.h>
 #include <__type_traits/make_unsigned.h>

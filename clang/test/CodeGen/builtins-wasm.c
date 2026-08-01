@@ -737,13 +737,13 @@ f16x8 pmax_f16x8(f16x8 a, f16x8 b) {
 }
 __externref_t externref_null() {
   return __builtin_wasm_ref_null_extern();
-  // WEBASSEMBLY: tail call ptr addrspace(10) @llvm.wasm.ref.null.extern()
+  // WEBASSEMBLY: tail call target("wasm.externref") @llvm.wasm.ref.null.extern()
   // WEBASSEMBLY-NEXT: ret
 }
 
 int externref_is_null(__externref_t arg) {
   return __builtin_wasm_ref_is_null_extern(arg);
-  // WEBASSEMBLY: tail call i32 @llvm.wasm.ref.is_null.extern(ptr addrspace(10) %arg)
+  // WEBASSEMBLY: tail call i32 @llvm.wasm.ref.is_null.extern(target("wasm.externref") %arg)
   // WEBASSEMBLY-NEXT: ret
 }
 

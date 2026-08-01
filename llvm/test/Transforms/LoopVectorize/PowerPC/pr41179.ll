@@ -4,12 +4,12 @@
 define void @foo(ptr %start, ptr %end) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[START2:%.*]] = ptrtoint ptr [[START:%.*]] to i64
-; CHECK-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[END1]] to i32
+; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START:%.*]] to i64
+; CHECK-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[END1]], -1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[START2]], i64 [[TMP1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[UMIN]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[END1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP3]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]

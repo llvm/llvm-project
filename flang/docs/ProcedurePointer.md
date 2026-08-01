@@ -457,7 +457,6 @@ Current list of TODOs in lowering:
 - `flang/lib/Lower/CallInterface.cpp:708`: not yet implemented: procedure pointer result not yet handled
 - `flang/lib/Lower/CallInterface.cpp:961`: not yet implemented: procedure pointer arguments
 - `flang/lib/Lower/CallInterface.cpp:993`: not yet implemented: procedure pointer results
-- `flang/lib/Lower/ConvertExpr.cpp:1119`: not yet implemented: procedure pointer component in derived type assignment
 - `flang/lib/Lower/ConvertType.cpp:228`: not yet implemented: procedure pointers
 - `flang/lib/Lower/Bridge.cpp:2438`: not yet implemented: procedure pointer assignment
 - `flang/lib/Lower/ConvertVariable.cpp:348`: not yet implemented: procedure pointer component default initialization

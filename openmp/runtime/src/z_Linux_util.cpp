@@ -446,7 +446,7 @@ void __kmp_terminate_thread(int gtid) {
   if (!th)
     return;
 
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   KA_TRACE(10, ("__kmp_terminate_thread: kill (%d)\n", gtid));
   status = pthread_cancel(th->th.th_info.ds.ds_thread);
   if (status != 0 && status != ESRCH) {
@@ -558,7 +558,7 @@ static void *__kmp_launch_worker(void *thr) {
   __kmp_affinity_bind_init_mask(gtid);
 #endif
 
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   status = pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &old_type);
   KMP_CHECK_SYSFAIL("pthread_setcanceltype", status);
   // josh todo: isn't PTHREAD_CANCEL_ENABLE default for newly-created threads?
@@ -636,7 +636,7 @@ static void *__kmp_launch_monitor(void *thr) {
 
   __kmp_check_stack_overlap((kmp_info_t *)thr);
 
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   status = pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &old_type);
   KMP_CHECK_SYSFAIL("pthread_setcanceltype", status);
   // josh todo: isn't PTHREAD_CANCEL_ENABLE default for newly-created threads?
@@ -1274,7 +1274,7 @@ void __kmp_remove_signals(void) {
 #endif // KMP_HANDLE_SIGNALS
 
 void __kmp_enable(int new_state) {
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   int status, old_state;
   status = pthread_setcancelstate(new_state, &old_state);
   KMP_CHECK_SYSFAIL("pthread_setcancelstate", status);
@@ -1283,7 +1283,7 @@ void __kmp_enable(int new_state) {
 }
 
 void __kmp_disable(int *old_state) {
-#ifdef KMP_CANCEL_THREADS
+#if KMP_CANCEL_THREADS
   int status;
   status = pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, old_state);
   KMP_CHECK_SYSFAIL("pthread_setcancelstate", status);

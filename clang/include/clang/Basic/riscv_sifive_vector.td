@@ -300,7 +300,7 @@ multiclass RVVOp0Op1Op2BuiltinSet<string intrinsic_name, string type_range,
 multiclass RVVSFMatMulBuiltinSet<string prototype, string suffix,
                                  string type_range, list<int> widens> {
   foreach widen = widens in
-    let OverloadedName = NAME,
+    let OverloadedName = "sf_mm_w" # !cast<string>(widen),
         TWiden = widen,
         HasVL = false,
         Log2LMUL = [3],
@@ -313,7 +313,7 @@ multiclass RVVSFMatMulFloatBuiltinSet<string name, string prototype, string suff
                                       list<string> type_range, int widen> {
   // Currently the XSfmm spec doesn't support w8.
   foreach type = type_range in
-    let OverloadedName = name # !strconcat("_w", !cast<string>(widen)),
+    let OverloadedName = "sf_mm_w" # !cast<string>(widen),
         TWiden = widen,
         HasVL = false,
         Log2LMUL = [3],
@@ -390,10 +390,11 @@ let RequiredFeatures = ["xsfmm32a32f"] in
 let RequiredFeatures = ["xsfmm32a8f"] in
   foreach e1 = [5, 4] in
     foreach e2 = [5, 4] in
-      let OverloadedName = "sf_mm_e" # e1 # "m" # !sub(7, e1) # "_e" # e2 # "m" # !sub(7, e2) in
-        defm : RVVSFMatMulFloatBuiltinSet<
-            "sf_mm_e" # e1 # "m" # !sub(7, e1) # "_e" # e2 # "m" # !sub(7, e2),
-            "0KzUvUvzzz", "UvUv", ["c"], 4>;
+      defm : RVVSFMatMulFloatBuiltinSet<
+          "sf_mm_e" # e1 # "m" # !sub(7, e1) # "_e" # e2 # "m" # !sub(7, e2),
+          !if(!eq(e1, e2), "0Kzvvzzz", "0KzvAvzzz"),
+          !if(!eq(e1, e2), "vv", "vAv"),
+          [!if(!eq(e1, 5), "b", "a")], 4>;
 
 let RequiredFeatures = ["xsfmm64a64f"] in
   defm : RVVSFMatMulFloatBuiltinSet<"sf_mm_f_f", "0Kzvvzzz", "v", ["d"], 1>;

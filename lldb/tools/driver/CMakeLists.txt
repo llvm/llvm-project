@@ -52,6 +52,8 @@ add_dependencies(lldb
   ${tablegen_deps}
 )
 
+lldb_prevent_liblldb_symbol_interposition(lldb)
+
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.
   # The installed framework can be in different locations.

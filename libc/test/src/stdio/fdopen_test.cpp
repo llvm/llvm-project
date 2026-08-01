@@ -9,6 +9,7 @@
 #include "src/stdio/fdopen.h"
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/sys_stat_macros.h" // For S_IRWXU
 #include "src/fcntl/open.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/fgets.h"
@@ -17,8 +18,6 @@
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/stat.h> // For S_IRWXU
 
 using LlvmLibcStdioFdopenTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 

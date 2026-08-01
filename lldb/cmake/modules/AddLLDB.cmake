@@ -188,6 +188,22 @@ function(add_lldb_library name)
     "LINK_LIBS;CLANG_LIBS;ALLOWED_INTERNAL_DEPENDENCIES"
     ${ARGN})
 
+  foreach(link_lib ${PARAM_LINK_LIBS})
+    # May not be a target yet.
+    if (NOT TARGET ${link_lib})
+      continue()
+    endif()
+
+    if (link_lib MATCHES "^clang")
+      message(FATAL_ERROR "Library ${name} links against clang library ${link_lib} via LINK_LIBS but must be added via CLANG_LIBS")
+    endif()
+
+    get_target_property(_is_llvm_component ${link_lib} LLVM_COMPONENT)
+    if (link_lib MATCHES "^LLVM" AND ${_is_llvm_component})
+      message(FATAL_ERROR "Library ${name} links against LLVM library ${link_lib} via LINK_LIBS but must be added via LINK_COMPONENTS")
+    endif()
+  endforeach()
+
   set(_check_internal_deps FALSE)
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
     set(_allowed_internal_deps "")
@@ -347,10 +363,12 @@ function(add_lldb_library name)
     set_target_properties(${name} PROPERTIES FOLDER "LLDB/Libraries")
   endif()
 
-  # If we want to export all lldb symbols (i.e LLDB_EXPORT_ALL_SYMBOLS=ON), we
-  # need to use default visibility for all LLDB libraries even if a global
-  # `CMAKE_CXX_VISIBILITY_PRESET=hidden`is present.
-  if (LLDB_EXPORT_ALL_SYMBOLS)
+  # When liblldb re-exports private symbols (due to LLDB_EXPORT_ALL_SYMBOLS
+  # and/or LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS) those symbols must keep
+  # default visibility in the contributing libraries, even if a global
+  # `CMAKE_CXX_VISIBILITY_PRESET=hidden` is present. A linker version script
+  # cannot re-export a symbol that was hidden at compile time.
+  if (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     set_target_properties(${name} PROPERTIES CXX_VISIBILITY_PRESET default)
   endif()
 endfunction(add_lldb_library)
@@ -467,10 +485,32 @@ function(add_lldb_tool name)
   set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
+# liblldb statically absorbs lldbHost, lldbUtility, and every plugin. A tool
+# that links the shared liblldb while also linking those archives statically
+# carries a second copy of their object code. On ELF, if the tool re-exports
+# the archive symbols through its own .dynsym, the dynamic linker can bind the
+# shared liblldb's internal references to the tool's copy instead of its own,
+# breaking shared state such as the HostInfo singletons. --exclude-libs,ALL
+# keeps the archive symbols out of the tool's .dynsym. Only ELF is affected:
+# Mach-O uses two-level namespaces and PE/COFF does not export symbols by
+# default.
+function(lldb_prevent_liblldb_symbol_interposition name)
+  if(UNIX AND NOT APPLE)
+    target_link_options(${name} PRIVATE "LINKER:--exclude-libs,ALL")
+  endif()
+endfunction()
+
 # The test suite relies on finding LLDB.framework binary resources in the
 # build-tree. Remove them before installing to avoid collisions with their
 # own install targets.
 function(lldb_add_to_buildtree_lldb_framework name subdir)
+  # The rpaths needed to find the LLVM dylib in the buildtree differ from installation rpaths.
+  if (LLVM_LINK_LLVM_DYLIB)
+    set_target_properties(${name} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH OFF
+    )
+  endif()
+
   # Destination for the copy in the build-tree. While the framework target may
   # not exist yet, it will exist when the generator expression gets expanded.
   set(copy_dest "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/${subdir}/$<TARGET_FILE_NAME:${name}>")
@@ -488,6 +528,39 @@ function(lldb_add_to_buildtree_lldb_framework name subdir)
     COMMENT "Removing ${name} from LLDB.framework")
   add_dependencies(lldb-framework-cleanup
     ${name}-cleanup)
+endfunction()
+
+# PluginManager discovers dynamic script interpreter plugins at runtime by
+# scanning the directory that holds liblldb, so a plugin is loaded only when it
+# sits beside it. A framework build moves liblldb into the bundle, so the plugin
+# must move with it and carry an rpath that reaches liblldb from its new
+# location.
+function(lldb_add_scriptinterpreter_plugin_to_framework name)
+  if(NOT LLDB_BUILD_FRAMEWORK)
+    return()
+  endif()
+
+  # The rpaths needed to find the LLVM dylib in the buildtree differ from installation rpaths.
+  if (LLVM_LINK_LLVM_DYLIB)
+    set_target_properties(${name} PROPERTIES
+      BUILD_WITH_INSTALL_RPATH OFF
+    )
+  endif()
+
+  set_property(TARGET ${name} APPEND PROPERTY
+    INSTALL_RPATH "@loader_path/../../..")
+  # Copy under the unversioned name: PluginManager derives a plugin's
+  # initializer symbol from it. A versioned copy would load but never
+  # initialize.
+  set(plugin_in_framework
+    "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/$<TARGET_LINKER_FILE_NAME:${name}>")
+  add_custom_command(TARGET ${name} POST_BUILD VERBATIM
+    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${name}>" "${plugin_in_framework}"
+    COMMENT "Copy ${name} into LLDB.framework")
+  add_custom_target(${name}-framework-cleanup
+    COMMAND ${CMAKE_COMMAND} -E remove "${plugin_in_framework}"
+    COMMENT "Removing ${name} from LLDB.framework")
+  add_dependencies(lldb-framework-cleanup ${name}-framework-cleanup)
 endfunction()
 
 # Add extra install steps for dSYM creation and stripping for the given target.

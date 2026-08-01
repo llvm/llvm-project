@@ -34,6 +34,14 @@ place of the matching command-line arguments.
 """
 
 
+# Symbols that are ignored by the idt check.
+IGNORED_SYMBOLS = [
+    # The entry point for the pass plugin. It is meant to be defined in another
+    # library and is not exported by LLVM.
+    "llvmGetPassPluginInfo",
+]
+
+
 # Headers we skip outright. Each entry is matched against the changed-file
 # path with `startswith`, so it can be either a directory prefix (trailing /)
 # or a specific file path.
@@ -429,6 +437,7 @@ View the diff from {self.name} here.
                 fwd(cdb_dir),
                 f"--main-file={donor_path}",
                 f"--export-macro={EXPORT_MACRO[category]}",
+                f"--ignore={','.join(IGNORED_SYMBOLS)}",
                 "--apply-fixits",
                 "--inplace",
             ]

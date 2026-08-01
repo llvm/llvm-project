@@ -2,109 +2,94 @@
 Test lldb-dap logpoints feature.
 """
 
-
-import dap_server
-import shutil
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
 import os
+
+from lldbsuite.test.decorators import (
+    skipIfTargetDoesNotSupportSharedLibraries,
+    skipIfWindows,
+)
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase, DAPTestSession
+from lldbsuite.test.tools.lldb_dap.types import (
+    LaunchArgs,
+    SourceBreakpoint,
+    StoppedEvent,
+)
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()
-class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_logpoints(DAPTestCaseBase):
     def setUp(self):
-        lldbdap_testcase.DAPTestCaseBase.setUp(self)
+        DAPTestCaseBase.setUp(self)
 
         self.main_basename = "main-copy.cpp"
         self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
 
-    @skipIfWindows
-    def test_logmessage_basic(self):
-        """Tests breakpoint logmessage basic functionality."""
+    def stop_at_before_loop_line(self, session: DAPTestSession) -> StoppedEvent:
+        """Launch, set a breakpoint at 'before loop' line and stop there"""
         before_loop_line = line_number("main.cpp", "// before loop")
-        loop_line = line_number("main.cpp", "// break loop")
-        after_loop_line = line_number("main.cpp", "// after loop")
-
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        with session.configure(LaunchArgs(program)) as ctx:
+            [bp] = session.resolve_source_breakpoints(
+                self.main_path, [before_loop_line]
+            )
 
-        # Set a breakpoint at a line before loop
-        before_loop_breakpoint_ids = self.set_source_breakpoints(
-            self.main_path, [before_loop_line]
-        )
-        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
+        return session.verify_stopped_on_breakpoint(bp, after=ctx.process_event)
 
-        self.dap_server.request_continue()
-
-        # Verify we hit the breakpoint before loop line
-        self.verify_breakpoint_hit(before_loop_breakpoint_ids)
-
-        # Swallow old console output
-        self.get_console()
+    @skipIfWindows
+    def test_logMessage_basic(self):
+        """Tests breakpoint logMessage basic functionality."""
+        session = self.build_and_create_session()
+        initial_stop = self.stop_at_before_loop_line(session)
+        source = self.getSourcePath("main.cpp")
+        loop_line = line_number(source, "// break loop")
+        after_loop_line = line_number(source, "// after loop")
 
         # Set two breakpoints:
-        # 1. First at the loop line with logMessage
-        # 2. Second guard breakpoint at a line after loop
+        # 1. First at the loop line with logMessage.
+        # 2. Second guard breakpoint at a line after loop.
         logMessage_prefix = "This is log message for { -- "
         logMessage = logMessage_prefix + "{i + 3}, {message}"
-        [loop_breakpoint_id, post_loop_breakpoint_id] = self.set_source_breakpoints(
+        [_, post_loop_breakpoint_id] = session.resolve_source_breakpoints(
             self.main_path,
-            [loop_line, after_loop_line],
-            [{"logMessage": logMessage}, {}],
+            [
+                SourceBreakpoint(loop_line, logMessage=logMessage),
+                SourceBreakpoint(after_loop_line),
+            ],
         )
 
-        # Continue to trigger the breakpoint with log messages
-        self.dap_server.request_continue()
+        # Continue and verify we hit the breakpoint after loop line.
+        post_loop_stop = session.continue_to_breakpoint(post_loop_breakpoint_id)
 
-        # Verify we hit the breakpoint after loop line
-        self.verify_breakpoint_hit([post_loop_breakpoint_id])
-
-        output = self.get_console()
-        lines = output.splitlines()
-        logMessage_output = []
-        for line in lines:
-            if line.startswith(logMessage_prefix):
-                logMessage_output.append(line)
-
-        # Verify logMessage count
-        loop_count = 10
-        self.assertEqual(len(logMessage_output), loop_count)
+        captured = session.collect_console(after=initial_stop, until=post_loop_stop)
+        logMessage_output = [
+            line
+            for line in captured.seen_texts.splitlines()
+            if line.startswith(logMessage_prefix)
+        ]
+        # Verify logMessage count.
+        self.assertEqual(len(logMessage_output), 10)
 
         message_addr_pattern = r"\b0x[0-9A-Fa-f]+\b"
         message_content = '"Hello from main!"'
-        # Verify log message match
+
+        # Verify logMessage match.
         for idx, logMessage_line in enumerate(logMessage_output):
             result = idx + 3
-            reg_str = (
-                f"{logMessage_prefix}{result}, {message_addr_pattern} {message_content}"
+            self.assertRegex(
+                logMessage_line,
+                f"{logMessage_prefix}{result}, {message_addr_pattern} {message_content}",
             )
-            self.assertRegex(logMessage_line, reg_str)
+        session.continue_to_exit()
 
     @skipIfWindows
     def test_logmessage_advanced(self):
         """Tests breakpoint logmessage functionality for complex expression."""
-        before_loop_line = line_number("main.cpp", "// before loop")
-        loop_line = line_number("main.cpp", "// break loop")
-        after_loop_line = line_number("main.cpp", "// after loop")
-
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-
-        # Set a breakpoint at a line before loop
-        before_loop_breakpoint_ids = self.set_source_breakpoints(
-            self.main_path, [before_loop_line]
-        )
-        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
-
-        self.dap_server.request_continue()
-
-        # Verify we hit the breakpoint before loop line
-        self.verify_breakpoint_hit(before_loop_breakpoint_ids)
-
-        # Swallow old console output
-        self.get_console()
+        session = self.build_and_create_session()
+        initial_stop = self.stop_at_before_loop_line(session)
+        source = self.getSourcePath("main.cpp")
+        before_loop_line = line_number(source, "// break loop")
+        after_loop_line = line_number(source, "// after loop")
 
         # Set two breakpoints:
         # 1. First at the loop line with logMessage
@@ -114,91 +99,64 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
             logMessage_prefix
             + "{int y = 0; if (i % 3 == 0) { y = i + 3;} else {y = i * 3;} y}"
         )
-        [loop_breakpoint_id, post_loop_breakpoint_id] = self.set_source_breakpoints(
+        [_, post_loop_breakpoint_id] = session.resolve_source_breakpoints(
             self.main_path,
-            [loop_line, after_loop_line],
-            [{"logMessage": logMessage}, {}],
+            [
+                SourceBreakpoint(before_loop_line, logMessage=logMessage),
+                SourceBreakpoint(after_loop_line),
+            ],
         )
 
-        # Continue to trigger the breakpoint with log messages
-        self.dap_server.request_continue()
+        post_loop_stop = session.continue_to_breakpoint(post_loop_breakpoint_id)
+        captured = session.collect_console(after=initial_stop, until=post_loop_stop)
+        logMessage_output = [
+            line
+            for line in captured.seen_texts.splitlines()
+            if line.startswith(logMessage_prefix)
+        ]
+        # Verify logMessage count.
+        self.assertEqual(len(logMessage_output), 10)
 
-        # Verify we hit the breakpoint after loop line
-        self.verify_breakpoint_hit([post_loop_breakpoint_id])
-
-        output = self.get_console()
-        lines = output.splitlines()
-        logMessage_output = []
-        for line in lines:
-            if line.startswith(logMessage_prefix):
-                logMessage_output.append(line)
-
-        # Verify logMessage count
-        loop_count = 10
-        self.assertEqual(len(logMessage_output), loop_count)
-
-        # Verify log message match
+        # Verify logMessage match.
         for idx, logMessage_line in enumerate(logMessage_output):
             result = idx + 3 if idx % 3 == 0 else idx * 3
             self.assertEqual(logMessage_line, logMessage_prefix + str(result))
 
     @skipIfWindows
     def test_logmessage_format(self):
-        """
-        Tests breakpoint logmessage functionality with format.
-        """
-        before_loop_line = line_number("main.cpp", "// before loop")
-        loop_line = line_number("main.cpp", "// break loop")
-        after_loop_line = line_number("main.cpp", "// after loop")
-
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-
-        # Set a breakpoint at a line before loop
-        before_loop_breakpoint_ids = self.set_source_breakpoints(
-            self.main_path, [before_loop_line]
-        )
-        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
-
-        self.dap_server.request_continue()
-
-        # Verify we hit the breakpoint before loop line
-        self.verify_breakpoint_hit(before_loop_breakpoint_ids)
-
-        # Swallow old console output
-        self.get_console()
+        """Tests breakpoint logmessage functionality with format."""
+        session = self.build_and_create_session()
+        initial_stop = self.stop_at_before_loop_line(session)
+        source = self.getSourcePath("main.cpp")
+        loop_line = line_number(source, "// break loop")
+        after_loop_line = line_number(source, "// after loop")
 
         # Set two breakpoints:
-        # 1. First at the loop line with logMessage
-        # 2. Second guard breakpoint at a line after loop
+        # 1. First at the loop line with logMessage.
+        # 2. Second guard breakpoint at a line after loop.
         logMessage_prefix = "This is log message for -- "
         logMessage_with_format = "part1\tpart2\bpart3\x64part4"
         logMessage_with_format_raw = r"part1\tpart2\bpart3\x64part4"
         logMessage = logMessage_prefix + logMessage_with_format_raw + "{i - 1}"
-        [loop_breakpoint_id, post_loop_breakpoint_id] = self.set_source_breakpoints(
+        [_, post_loop_breakpoint_id] = session.resolve_source_breakpoints(
             self.main_path,
-            [loop_line, after_loop_line],
-            [{"logMessage": logMessage}, {}],
+            [
+                SourceBreakpoint(loop_line, logMessage=logMessage),
+                SourceBreakpoint(after_loop_line),
+            ],
         )
 
-        # Continue to trigger the breakpoint with log messages
-        self.dap_server.request_continue()
+        post_loop_stop = session.continue_to_breakpoint(post_loop_breakpoint_id)
+        captured = session.collect_console(after=initial_stop, until=post_loop_stop)
+        logMessage_output = [
+            line
+            for line in captured.seen_texts.splitlines()
+            if line.startswith(logMessage_prefix)
+        ]
+        # Verify logMessage count.
+        self.assertEqual(len(logMessage_output), 10)
 
-        # Verify we hit the breakpoint after loop line
-        self.verify_breakpoint_hit([post_loop_breakpoint_id])
-
-        output = self.get_console()
-        lines = output.splitlines()
-        logMessage_output = []
-        for line in lines:
-            if line.startswith(logMessage_prefix):
-                logMessage_output.append(line)
-
-        # Verify logMessage count
-        loop_count = 10
-        self.assertEqual(len(logMessage_output), loop_count)
-
-        # Verify log message match
+        # Verify logMessage match.
         for idx, logMessage_line in enumerate(logMessage_output):
             result = idx - 1
             self.assertEqual(
@@ -208,64 +166,41 @@ class TestDAP_logpoints(lldbdap_testcase.DAPTestCaseBase):
 
     @skipIfWindows
     def test_logmessage_format_failure(self):
-        """
-        Tests breakpoint logmessage format with parsing failure.
-        """
-        before_loop_line = line_number("main.cpp", "// before loop")
-        loop_line = line_number("main.cpp", "// break loop")
-        after_loop_line = line_number("main.cpp", "// after loop")
-
-        program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
-
-        # Set a breakpoint at a line before loop
-        before_loop_breakpoint_ids = self.set_source_breakpoints(
-            self.main_path, [before_loop_line]
-        )
-        self.assertEqual(len(before_loop_breakpoint_ids), 1, "expect one breakpoint")
-
-        self.dap_server.request_continue()
-
-        # Verify we hit the breakpoint before loop line
-        self.verify_breakpoint_hit(before_loop_breakpoint_ids)
-
-        # Swallow old console output
-        self.get_console()
+        """Tests breakpoint logmessage format with parsing failure."""
+        session = self.build_and_create_session()
+        initial_stop = self.stop_at_before_loop_line(session)
+        source = self.getSourcePath("main.cpp")
+        loop_line = line_number(source, "// break loop")
+        after_loop_line = line_number(source, "// after loop")
 
         # Set two breakpoints:
-        # 1. First at the loop line with logMessage
-        # 2. Second guard breakpoint at a line after loop
+        # 1. First at the loop line with logMessage.
+        # 2. Second guard breakpoint at a line after loop.
         logMessage_prefix = "This is log message for -- "
         # log message missing hex number.
-        logMessage_with_format_raw = r"part1\x"
-        logMessage = logMessage_prefix + logMessage_with_format_raw
-        [loop_breakpoint_id, post_loop_breakpoint_id] = self.set_source_breakpoints(
+        logMessage = logMessage_prefix + r"part1\x"
+        [loop_breakpoint_id, _] = session.resolve_source_breakpoints(
             self.main_path,
-            [loop_line, after_loop_line],
-            [{"logMessage": logMessage}, {}],
+            [
+                SourceBreakpoint(loop_line, logMessage=logMessage),
+                SourceBreakpoint(after_loop_line),
+            ],
         )
 
-        # Continue to trigger the breakpoint with log messages
-        self.dap_server.request_continue()
-
-        # Verify we hit logpoint breakpoint if it's format has error.
-        self.verify_breakpoint_hit([loop_breakpoint_id])
-
-        output = self.get_console()
-        lines = output.splitlines()
+        # The adapter emits the format error to the console during
+        # setBreakpoints and falls back to a real stop at the loop breakpoint
+        # when execution resumes.
+        loop_stop_event = session.continue_to_breakpoint(loop_breakpoint_id)
+        captured = session.collect_console(after=initial_stop, until=loop_stop_event)
 
         failure_prefix = "Log message has error:"
-        logMessage_output = []
-        logMessage_failure_output = []
-        for line in lines:
-            if line.startswith(logMessage_prefix):
-                logMessage_output.append(line)
-            elif line.startswith(failure_prefix):
-                logMessage_failure_output.append(line)
-
-        # Verify logMessage failure message
+        logMessage_failure_output = [
+            line.strip()
+            for line in captured.seen_texts.splitlines()
+            if line.startswith(failure_prefix)
+        ]
         self.assertEqual(len(logMessage_failure_output), 1)
         self.assertEqual(
-            logMessage_failure_output[0].strip(),
+            logMessage_failure_output[0],
             failure_prefix + " missing hex number following '\\x'",
         )

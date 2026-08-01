@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A,DPP64-GFX9 -DCTL=row_newbcast
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX942 -DCTL=row_newbcast
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10 -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11 -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1250 -DCTL=row_share
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1251 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX1251 -DCTL=row_share
+; RUN: llc -mtriple=amdgpu9.0a < %s | FileCheck %s -check-prefixes=GCN,DPP64,GFX90A,DPP64-GFX9 -DCTL=row_newbcast
+; RUN: llc -mtriple=amdgpu9.42 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX9,GFX942 -DCTL=row_newbcast
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX10 -DCTL=row_share
+; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX10PLUS,GFX11 -DCTL=row_share
+; RUN: llc -mtriple=amdgpu12.50 < %s | FileCheck %s -check-prefixes=GCN,DPP32,GFX1250 -DCTL=row_share
+; RUN: llc -mtriple=amdgpu12.51 < %s | FileCheck %s -check-prefixes=GCN,DPP64,DPPMOV64,DPP64-GFX1251 -DCTL=row_share
 
 ; GCN-LABEL: {{^}}dpp64_ceil:
 ; GCN:           global_load_{{dwordx2|b64}} [[V:v\[[0-9:]+\]]],

@@ -15,6 +15,7 @@
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 

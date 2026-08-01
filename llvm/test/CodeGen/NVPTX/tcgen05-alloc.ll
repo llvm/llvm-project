@@ -176,14 +176,12 @@ define void @test_tcgen05_relinquish_alloc_permit_cg1() {
 ; CHECK_PTX64-LABEL: test_tcgen05_relinquish_alloc_permit_cg1(
 ; CHECK_PTX64:       {
 ; CHECK_PTX64-EMPTY:
-; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
 ; CHECK_PTX64-NEXT:    tcgen05.relinquish_alloc_permit.cta_group::1.sync.aligned;
 ; CHECK_PTX64-NEXT:    ret;
 ;
 ; CHECK_PTX64_SHARED32-LABEL: test_tcgen05_relinquish_alloc_permit_cg1(
 ; CHECK_PTX64_SHARED32:       {
-; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.relinquish_alloc_permit.cta_group::1.sync.aligned;
@@ -196,14 +194,12 @@ define void @test_tcgen05_relinquish_alloc_permit_cg2() {
 ; CHECK_PTX64-LABEL: test_tcgen05_relinquish_alloc_permit_cg2(
 ; CHECK_PTX64:       {
 ; CHECK_PTX64-EMPTY:
-; CHECK_PTX64-EMPTY:
 ; CHECK_PTX64-NEXT:  // %bb.0:
 ; CHECK_PTX64-NEXT:    tcgen05.relinquish_alloc_permit.cta_group::2.sync.aligned;
 ; CHECK_PTX64-NEXT:    ret;
 ;
 ; CHECK_PTX64_SHARED32-LABEL: test_tcgen05_relinquish_alloc_permit_cg2(
 ; CHECK_PTX64_SHARED32:       {
-; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-EMPTY:
 ; CHECK_PTX64_SHARED32-NEXT:  // %bb.0:
 ; CHECK_PTX64_SHARED32-NEXT:    tcgen05.relinquish_alloc_permit.cta_group::2.sync.aligned;

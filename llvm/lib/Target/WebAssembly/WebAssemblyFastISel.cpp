@@ -35,6 +35,7 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Operator.h"
 
 using namespace llvm;
@@ -833,11 +834,6 @@ bool WebAssemblyFastISel::fastLowerArguments() {
 bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   const auto *Call = cast<CallInst>(I);
 
-  // FastISel does not support calls through funcref
-  if (Call->getCalledOperand()->getType()->getPointerAddressSpace() !=
-      WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_DEFAULT)
-    return false;
-
   // TODO: Support tail calls in FastISel
   if (Call->isMustTailCall() || Call->isInlineAsm() ||
       Call->getFunctionType()->isVarArg())
@@ -942,10 +938,49 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   }
 
   unsigned CalleeReg = 0;
+  // A call through a funcref is expressed as a call through the pointer
+  // produced by llvm.wasm.funcref.to_ptr. Recover the funcref operand, place it
+  // into __funcref_call_table, and call it.
+  //
+  // TODO: Use call_ref if wasm-gc feature is available, would lead to simpler
+  // code here.
+  const Value *FuncrefArg = nullptr;
+  if (const auto *Conv = dyn_cast<CallInst>(Call->getCalledOperand()))
+    if (Conv->getIntrinsicID() == Intrinsic::wasm_funcref_to_ptr)
+      FuncrefArg = Conv->getArgOperand(0);
+
+  const bool IsFuncrefCall = FuncrefArg != nullptr;
+  MCSymbolWasm *Table = nullptr;
+
   if (!IsDirect) {
-    CalleeReg = getRegForValue(Call->getCalledOperand());
-    if (!CalleeReg)
-      return false;
+    if (!IsFuncrefCall) {
+      // Table is ___indirect_function_table
+      Table = WebAssembly::getOrCreateFunctionTableSymbol(MF->getContext(),
+                                                          Subtarget);
+      CalleeReg = getRegForValue(Call->getCalledOperand());
+      if (!CalleeReg)
+        return false;
+    } else {
+      // Table is __funcref_call_table
+      Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(MF->getContext(),
+                                                             Subtarget);
+      CalleeReg = getRegForValue(FuncrefArg);
+      // Put the funcref in slot 0 of __funcref_call_table
+      unsigned ZeroReg = createResultReg(&WebAssembly::I32RegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(WebAssembly::CONST_I32), ZeroReg)
+          .addImm(0);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(WebAssembly::TABLE_SET_FUNCREF))
+          .addSym(Table)
+          .addReg(ZeroReg)
+          .addReg(CalleeReg);
+      // Set CalleeReg to an immediate 0
+      CalleeReg = createResultReg(&WebAssembly::I32RegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+              TII.get(WebAssembly::CONST_I32), CalleeReg)
+          .addImm(0);
+    }
   }
 
   auto MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc));
@@ -958,9 +993,6 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   } else {
     // Placeholder for the type index.
     MIB.addImm(0);
-    // The table into which this call_indirect indexes.
-    MCSymbolWasm *Table = WebAssembly::getOrCreateFunctionTableSymbol(
-        MF->getContext(), Subtarget);
     if (Subtarget->hasCallIndirectOverlong()) {
       MIB.addSym(Table);
     } else {
@@ -977,6 +1009,22 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
   if (!IsDirect)
     MIB.addReg(CalleeReg);
+
+  if (IsFuncrefCall) {
+    // Clear slot 0 of the funcref call table after the call.
+    unsigned ZeroReg = createResultReg(&WebAssembly::I32RegClass);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            TII.get(WebAssembly::CONST_I32), ZeroReg)
+        .addImm(0);
+    unsigned NullReg = createResultReg(&WebAssembly::FUNCREFRegClass);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            TII.get(WebAssembly::REF_NULL_FUNCREF), NullReg);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+            TII.get(WebAssembly::TABLE_SET_FUNCREF))
+        .addSym(Table)
+        .addReg(ZeroReg)
+        .addReg(NullReg);
+  }
 
   if (!IsVoid)
     updateValueMap(Call, ResultReg);

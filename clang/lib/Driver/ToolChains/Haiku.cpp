@@ -279,10 +279,9 @@ Tool *Haiku::buildLinker() const { return new tools::haiku::Linker(*this); }
 bool Haiku::HasNativeLLVMSupport() const { return true; }
 
 SanitizerMask
-Haiku::getSupportedSanitizers(StringRef BoundArch,
+Haiku::getSupportedSanitizers(BoundArch BA,
                               Action::OffloadKind DeviceOffloadKind) const {
-  SanitizerMask Res =
-      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
+  SanitizerMask Res = ToolChain::getSupportedSanitizers(BA, DeviceOffloadKind);
 
   Res |= SanitizerKind::Address;
 

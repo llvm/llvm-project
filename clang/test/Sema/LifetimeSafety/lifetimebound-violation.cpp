@@ -166,3 +166,8 @@ struct AssignementIncorr {
 void implicit_lifetimebound_in_nested_std_namespace() {
   (void)std::basic_string_view<char>("hello");
 }
+struct ViewWithMember {
+  // No warning. A lifetimebound constructor parameter may escape into a field of the constructed object.
+  ViewWithMember(const char *data [[clang::lifetimebound]]) : mData(data) {}
+  const char *mData;
+};

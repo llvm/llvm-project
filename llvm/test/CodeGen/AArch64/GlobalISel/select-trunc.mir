@@ -104,7 +104,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[COPY]].dsub
     ; CHECK-NEXT: $x0 = COPY [[COPY1]]
-    %0(s128) = COPY $q0
+    %0(i128) = COPY $q0
     %1(i64) = G_TRUNC %0
     $x0 = COPY %1(i64)
 ...
@@ -127,7 +127,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr128 = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]].ssub
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
-    %0(s128) = COPY $q0
+    %0(i128) = COPY $q0
     %1(i32) = G_TRUNC %0
     $w0 = COPY %1(i32)
 ...

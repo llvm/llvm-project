@@ -423,7 +423,7 @@ void Writer::layoutMemory() {
   // Even in the absense of any actual TLS data, this symbol can still be
   // referenced (for example by __builtin_thread_pointer, which should not
   // return NULL).
-  if (!ctx.arg.sharedMemory && ctx.sym.tlsBase) {
+  if (!ctx.arg.isMultithreaded() && ctx.sym.tlsBase) {
     setGlobalPtr(ctx.sym.tlsBase, fixedTLSBase);
   }
 
@@ -650,7 +650,7 @@ void Writer::populateTargetFeatures() {
                  sym->importModule && sym->importModule == "env";
         }))
       error(fileName + ": object file uses globals for thread context, "
-                       "but --libcall-thread-context was specified");
+                       "but --cooperative-threading was specified");
   }
 
   if (inferFeatures)
@@ -673,10 +673,12 @@ void Writer::populateTargetFeatures() {
   }
 
   if (tlsUsed) {
-    for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.contains(feature))
-        error(StringRef("'") + feature +
-              "' feature must be used in order to use thread-local storage");
+    if (!allowed.contains("bulk-memory"))
+      error("'bulk-memory' feature must be used in order to use thread-local "
+            "storage");
+    if (!allowed.contains("atomics") && !ctx.arg.cooperativeThreading)
+      error("'atomics' feature must be used in order to use thread-local "
+            "storage");
   }
 
   // Validate that used features are allowed in output
@@ -1054,7 +1056,14 @@ static StringRef getOutputDataSegmentName(const InputChunk &seg) {
 OutputSegment *Writer::createOutputSegment(StringRef name) {
   LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
   OutputSegment *s = make<OutputSegment>(name);
-  if (ctx.arg.sharedMemory)
+  // In the shared memory case, all data segments must be passive since they
+  // will be initialized once by the main thread and then shared with other
+  // threads. In the cooperative threading case, TLS segments need to exist to
+  // be able to run TLS initialization on spawned threads, so that's managed
+  // here by flagging TLS as passive as well.
+  bool needsPassiveInit =
+      ctx.arg.sharedMemory || (ctx.arg.cooperativeThreading && s->isTLS());
+  if (needsPassiveInit)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
     s->isBss = true;
@@ -1113,7 +1122,7 @@ void Writer::combineOutputSegments() {
   // This restriction does not apply when the extended const extension is
   // available: https://github.com/WebAssembly/extended-const
   assert(!ctx.arg.extendedConst);
-  assert(ctx.isPic && !ctx.arg.sharedMemory);
+  assert(ctx.isPic && !ctx.arg.isMultithreaded());
   if (segments.size() <= 1)
     return;
   OutputSegment *combined = make<OutputSegment>(".data");
@@ -1188,22 +1197,25 @@ void Writer::createSyntheticInitFunctions() {
         "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
     ctx.sym.initMemory->markLive();
-    if (ctx.arg.sharedMemory) {
-      // This global is assigned during  __wasm_init_memory in the shared memory
-      // case.
+    // __wasm_init_memory uses __tls_base/__wasm_set_tls_base
+    if (ctx.sym.setTLSBase)
+      ctx.sym.setTLSBase->markLive();
+    else if (ctx.arg.sharedMemory)
       ctx.sym.tlsBase->markLive();
-    }
   }
 
-  if (ctx.arg.sharedMemory) {
+  if (ctx.arg.isMultithreaded()) {
     if (out.globalSec->needsTLSRelocations()) {
       ctx.sym.applyGlobalTLSRelocs = symtab->addSyntheticFunction(
           "__wasm_apply_global_tls_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
           make<SyntheticFunction>(nullSignature,
                                   "__wasm_apply_global_tls_relocs"));
       ctx.sym.applyGlobalTLSRelocs->markLive();
-      // TLS relocations depend on  the __tls_base symbols
-      ctx.sym.tlsBase->markLive();
+      // TLS relocations depend on the __tls_base/__wasm_get_tls_base symbols
+      if (ctx.sym.getTLSBase)
+        ctx.sym.getTLSBase->markLive();
+      else if (ctx.arg.sharedMemory)
+        ctx.sym.tlsBase->markLive();
     }
 
     auto hasTLSRelocs = [](const OutputSegment *segment) {
@@ -1375,7 +1387,7 @@ void Writer::createInitMemoryFunction() {
         // When we initialize the TLS segment we also set the TLS base.
         // This allows the runtime to use this static copy of the TLS data
         // for the first/main thread.
-        if (ctx.arg.sharedMemory && s->isTLS()) {
+        if (ctx.arg.isMultithreaded() && s->isTLS()) {
           if (ctx.isPic) {
             // Cache the result of the addionion in local 0
             writeU8(os, WASM_OPCODE_LOCAL_TEE, "local.tee");
@@ -1446,7 +1458,7 @@ void Writer::createInitMemoryFunction() {
       if (needsPassiveInitialization(s) && !s->isBss) {
         // The TLS region should not be dropped since its is needed
         // during the initialization of each thread (__wasm_init_tls).
-        if (ctx.arg.sharedMemory && s->isTLS())
+        if (ctx.arg.isMultithreaded() && s->isTLS())
           continue;
         // data.drop instruction
         writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
@@ -1499,7 +1511,7 @@ void Writer::createApplyDataRelocationsFunction() {
     writeUleb128(os, 0, "num locals");
     bool generated = false;
     for (const OutputSegment *seg : segments)
-      if (!ctx.arg.sharedMemory || !seg->isTLS())
+      if (!ctx.arg.isMultithreaded() || !seg->isTLS())
         for (const InputChunk *inSeg : seg->inputSegments)
           generated |= inSeg->generateRelocationCode(os);
 
@@ -1655,7 +1667,6 @@ void Writer::createInitTLSFunction() {
     if (tlsSeg) {
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
       writeUleb128(os, 0, "local index");
-
       writeSetTLSBase(ctx, os);
 
       // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend
@@ -1788,9 +1799,9 @@ void Writer::run() {
   // `__memory_base` import.  Unless we support the extended const expression we
   // can't do addition inside the constant expression, so we much combine the
   // segments into a single one that can live at `__memory_base`.
-  if (ctx.isPic && !ctx.arg.extendedConst && !ctx.arg.sharedMemory) {
-    // In shared memory mode all data segments are passive and initialized
-    // via __wasm_init_memory.
+  if (ctx.isPic && !ctx.arg.extendedConst && !ctx.arg.isMultithreaded()) {
+    // In multithreaded modes (shared or cooperative), data segments may be
+    // passive and must not be combined into a single active segment.
     log("-- combineOutputSegments");
     combineOutputSegments();
   }

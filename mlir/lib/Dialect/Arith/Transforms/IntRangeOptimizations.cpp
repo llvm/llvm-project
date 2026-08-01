@@ -75,6 +75,13 @@ LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
   // will crash, so eagerly check for an integer type to avoid this.
   if (!getElementTypeOrSelf(type).isIntOrIndex())
     return failure();
+
+  // Bail out if the inferred APInt bitwidth does not match the storage width
+  // of the IR type; IntegerAttr::get would assert otherwise.
+  unsigned storageWidth = ConstantIntRanges::getStorageBitwidth(type);
+  if (storageWidth != 0 && maybeConstValue->getBitWidth() != storageWidth)
+    return failure();
+
   Location loc = value.getLoc();
   Operation *maybeDefiningOp = value.getDefiningOp();
   Dialect *valueDialect =
@@ -137,14 +144,22 @@ struct MaterializeKnownConstantValues : public RewritePattern {
     if (matchPattern(op, m_Constant()))
       return failure();
 
-    // We need to check isIntOrIndex() here as well to avoid infinite loops in
-    // the greedy pattern rewriter. If we only check it in
-    // maybeReplaceWithConstant, this lambda might still return true for
-    // non-integral types, causing the pattern to match and claim success
-    // without making any changes, leading to non-convergence.
+    // We need to check isIntOrIndex() and APInt bitwidth compatibility here
+    // as well to avoid infinite loops in the greedy pattern rewriter. If we
+    // only check in maybeReplaceWithConstant, this lambda might still return
+    // true for values that cannot be materialized, causing the pattern to
+    // match and claim success without making any changes, leading to
+    // non-convergence.
     auto needsReplacing = [&](Value v) {
-      return getElementTypeOrSelf(v.getType()).isIntOrIndex() &&
-             getMaybeConstantValue(solver, v).has_value() && !v.use_empty();
+      if (!getElementTypeOrSelf(v.getType()).isIntOrIndex())
+        return false;
+      std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, v);
+      if (!maybeConstValue.has_value() || v.use_empty())
+        return false;
+      unsigned storageWidth =
+          ConstantIntRanges::getStorageBitwidth(v.getType());
+      return storageWidth == 0 ||
+             maybeConstValue->getBitWidth() == storageWidth;
     };
     bool hasConstantResults = llvm::any_of(op->getResults(), needsReplacing);
     if (op->getNumRegions() == 0)

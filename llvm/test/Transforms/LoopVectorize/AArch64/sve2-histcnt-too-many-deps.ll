@@ -66,8 +66,7 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[CONFLICT_RDX9:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT8]]
 ; NORMAL_DEP_LIMIT-NEXT:    br i1 [[CONFLICT_RDX9]], label [[SCALAR_PH]], label [[ENTRY:%.*]]
 ; NORMAL_DEP_LIMIT:       vector.ph:
-; NORMAL_DEP_LIMIT-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; NORMAL_DEP_LIMIT-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP4]], 2
+; NORMAL_DEP_LIMIT-NEXT:    [[TMP8:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NORMAL_DEP_LIMIT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP8]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()

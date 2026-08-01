@@ -2,88 +2,77 @@
 Test lldb-dap breakpointLocations request
 """
 
-
-import dap_server
-import shutil
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
-import lldbdap_testcase
 import os
+
+from lldbsuite.test.decorators import (
+    skipIfTargetDoesNotSupportSharedLibraries,
+    skipIfWindows,
+)
+from lldbsuite.test.lldbtest import line_number
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import BreakpointLocation, LaunchArgs
 
 
 @skipIfTargetDoesNotSupportSharedLibraries()
-class TestDAP_breakpointLocations(lldbdap_testcase.DAPTestCaseBase):
-    def setUp(self):
-        lldbdap_testcase.DAPTestCaseBase.setUp(self)
-
-        self.main_basename = "main-copy.cpp"
-        self.main_path = os.path.realpath(self.getBuildArtifact(self.main_basename))
-
+class TestDAP_breakpointLocations(DAPTestCaseBase):
     @skipIfWindows
     def test_column_breakpoints(self):
         """Test retrieving the available breakpoint locations."""
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program, stopOnEntry=True)
-        loop_line = line_number(self.main_path, "// break loop")
-        self.dap_server.request_continue()
+        session = self.build_and_create_session()
+        main_path = os.path.realpath(self.getBuildArtifact("main-copy.cpp"))
 
-        # Ask for the breakpoint locations based only on the line number
-        response = self.dap_server.request_breakpointLocations(
-            self.main_path, loop_line
-        )
-        self.assertTrue(response["success"])
-        self.assertEqual(
-            response["body"]["breakpoints"],
-            [
-                {"line": loop_line, "column": 9},
-                {"line": loop_line, "column": 13},
-                {"line": loop_line, "column": 20},
-                {"line": loop_line, "column": 23},
-                {"line": loop_line, "column": 25},
-                {"line": loop_line, "column": 34},
-                {"line": loop_line, "column": 37},
-                {"line": loop_line, "column": 39},
-                {"line": loop_line, "column": 51},
-            ],
-        )
+        process_event = session.launch(LaunchArgs(program, stopOnEntry=True))
+        session.verify_stopped_on_entry(after=process_event)
 
-        # Ask for the breakpoint locations for a column range
-        response = self.dap_server.request_breakpointLocations(
-            self.main_path,
-            loop_line,
-            column=24,
-            end_column=46,
-        )
-        self.assertTrue(response["success"])
-        self.assertEqual(
-            response["body"]["breakpoints"],
-            [
-                {"line": loop_line, "column": 25},
-                {"line": loop_line, "column": 34},
-                {"line": loop_line, "column": 37},
-                {"line": loop_line, "column": 39},
-            ],
-        )
+        # Ask for the breakpoint locations based only on the line number.
+        loop_line = line_number(main_path, "// break loop")
+        response = session.get_breakpoint_locations(main_path, loop_line)
+        breakpoint_locations = response.body.breakpoints
 
-        # Ask for the breakpoint locations for a range of line numbers
-        response = self.dap_server.request_breakpointLocations(
-            self.main_path,
-            line=loop_line,
-            end_line=loop_line + 2,
-            column=39,
+        expected_locations = [
+            BreakpointLocation(line=loop_line, column=9),
+            BreakpointLocation(line=loop_line, column=13),
+            BreakpointLocation(line=loop_line, column=20),
+            BreakpointLocation(line=loop_line, column=23),
+            BreakpointLocation(line=loop_line, column=25),
+            BreakpointLocation(line=loop_line, column=34),
+            BreakpointLocation(line=loop_line, column=37),
+            BreakpointLocation(line=loop_line, column=39),
+            BreakpointLocation(line=loop_line, column=51),
+        ]
+        self.assertEqual(breakpoint_locations, expected_locations)
+
+        # Ask for the breakpoint locations for a column range.
+        response = session.get_breakpoint_locations(
+            main_path, loop_line, column=24, endColumn=46
+        )
+        breakpoint_locations = response.body.breakpoints
+        expected_locations = [
+            BreakpointLocation(line=loop_line, column=25),
+            BreakpointLocation(line=loop_line, column=34),
+            BreakpointLocation(line=loop_line, column=37),
+            BreakpointLocation(line=loop_line, column=39),
+        ]
+        self.assertEqual(breakpoint_locations, expected_locations)
+
+        # Ask for the breakpoint locations for a range of line numbers.
+        response = session.get_breakpoint_locations(
+            main_path, line=loop_line, column=39, endLine=loop_line + 2
         )
         self.maxDiff = None
-        self.assertTrue(response["success"])
         # On some systems, there is an additional breakpoint available
         # at loop_line + 1, column 3, i.e. at the end of the loop. To make
         # this test more portable, only check that all expected breakpoints
         # are presented, but also accept additional breakpoints.
-        expected_breakpoints = [
-            {"column": 39, "line": loop_line},
-            {"column": 51, "line": loop_line},
-            {"column": 3, "line": loop_line + 2},
-            {"column": 18, "line": loop_line + 2},
+        expected_locations = [
+            BreakpointLocation(line=loop_line, column=39),
+            BreakpointLocation(line=loop_line, column=51),
+            BreakpointLocation(line=loop_line + 2, column=3),
+            BreakpointLocation(line=loop_line + 2, column=18),
         ]
-        for bp in expected_breakpoints:
-            self.assertIn(bp, response["body"]["breakpoints"])
+        breakpoint_locations = response.body.breakpoints
+        for bp in expected_locations:
+            self.assertIn(bp, breakpoint_locations)
+
+        session.continue_to_exit()

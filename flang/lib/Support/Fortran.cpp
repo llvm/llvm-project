@@ -108,7 +108,7 @@ std::string AsFortran(IgnoreTKRSet tkr) {
 bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
     std::optional<CUDADataAttr> y, IgnoreTKRSet ignoreTKR,
     bool allowUnifiedMatchingRule, bool isHostDeviceProcedure,
-    const LanguageFeatureControl *features) {
+    const LanguageFeatureControl *features, bool actualIsVariable) {
   bool isCudaManaged{features
           ? features->IsEnabled(common::LanguageFeature::CudaManaged)
           : false};
@@ -160,18 +160,21 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
         // by host modules to mark device-typed dummies as overload
         // discriminators that should only accept actuals with an explicit
         // device/managed/unified attribute.
+        // Non-variable actuals (expression results, intrinsic call results)
+        // are host temporaries whose storage is not accessible from device
+        // code even under unified memory, so the relaxation does not apply.
         if (!y && (isCudaUnified || isCudaManaged) &&
-            !ignoreTKR.test(IgnoreTKR::Managed)) {
+            !ignoreTKR.test(IgnoreTKR::Managed) && actualIsVariable) {
           return true;
         }
       } else if (*x == CUDADataAttr::Managed) {
         if ((y && *y == CUDADataAttr::Unified) ||
-            (!y && (isCudaUnified || isCudaManaged))) {
+            (!y && (isCudaUnified || isCudaManaged) && actualIsVariable)) {
           return true;
         }
       } else if (*x == CUDADataAttr::Unified) {
         if ((y && *y == CUDADataAttr::Managed) ||
-            (!y && (isCudaUnified || isCudaManaged))) {
+            (!y && (isCudaUnified || isCudaManaged) && actualIsVariable)) {
           return true;
         }
       }

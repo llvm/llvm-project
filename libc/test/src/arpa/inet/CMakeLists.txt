@@ -45,6 +45,34 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  inet_ntoa
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    inet_ntoa_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.inet_ntoa
+    libc.hdr.types.struct_in_addr
+    libc.src.__support.endian_internal
+)
+
+add_libc_unittest(
+  inet_ntop
+  SUITE
+    libc_arpa_inet_unittests
+  SRCS
+    inet_ntop_test.cpp
+  DEPENDS
+    libc.src.arpa.inet.inet_ntop
+    libc.hdr.errno_macros
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_in_addr
+    libc.hdr.types.struct_in6_addr
+    libc.src.__support.common
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
   ntohl
   SUITE
     libc_arpa_inet_unittests

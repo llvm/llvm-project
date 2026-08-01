@@ -9,16 +9,13 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_CANONICALIZETEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_CANONICALIZETEST_H
 
-#undef LIBC_MATH_USE_SYSTEM_FENV
-
+#include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/integer_literals.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/math_macros.h"
 
 #define TEST_SPECIAL(x, y, expected, expected_exception)                       \
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                         \

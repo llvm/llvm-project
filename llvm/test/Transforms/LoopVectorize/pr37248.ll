@@ -16,9 +16,9 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-LABEL: define void @f1(
 ; CHECK-SAME: ptr noalias [[B:%.*]], i1 [[C:%.*]], i32 [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START]], 1
 ; CHECK-NEXT:    [[SMIN1:%.*]] = call i32 @llvm.smin.i32(i32 [[START]], i32 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[START]], [[SMIN1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
@@ -89,9 +89,9 @@ define void @f2(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-LABEL: define void @f2(
 ; CHECK-SAME: ptr noalias [[B:%.*]], i1 [[C:%.*]], i32 [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START]], 1
 ; CHECK-NEXT:    [[SMIN1:%.*]] = call i32 @llvm.smin.i32(i32 [[START]], i32 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[START]], [[SMIN1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:

@@ -2102,6 +2102,10 @@ class BF16_VCVT<string opc, bits<2> op7_6>
 def BF16_VCVTB : BF16_VCVT<"vcvtb", 0b01>;
 def BF16_VCVTT : BF16_VCVT<"vcvtt", 0b11>;
 
+let Predicates = [HasBF16] in
+def : Pat<(bf16 (any_fpround (f32 SPR:$Sm))),
+          (COPY_TO_REGCLASS (BF16_VCVTB (IMPLICIT_DEF), SPR:$Sm), HPR)>;
+
 //===----------------------------------------------------------------------===//
 // FP Multiply-Accumulate Operations.
 //

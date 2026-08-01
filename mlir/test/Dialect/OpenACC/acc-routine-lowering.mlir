@@ -123,3 +123,14 @@ acc.routine @r_b func(@f_a) vector
 func.func @f_a() {
   return
 }
+
+// -----
+
+// Test nohost routine is specialized.
+acc.routine @routine_nohost func(@host_nohost) gang nohost
+// CHECK: func.func @host_nohost()
+// CHECK: acc.routine @routine_nohost func(@
+// CHECK: acc.specialized_routine = #acc.specialized_routine<@routine_nohost, <gang_dim1>, "host_nohost">
+func.func @host_nohost() {
+  return
+}

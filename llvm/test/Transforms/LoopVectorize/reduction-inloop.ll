@@ -1097,10 +1097,11 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP14:%.*]] = xor <4 x i1> [[TMP3]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP11:%.*]] = select <4 x i1> [[TMP10]], <4 x i1> [[TMP6]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
-; CHECK-NEXT:    [[PREDPHI2:%.*]] = select <4 x i1> [[TMP5]], <4 x float> [[TMP9]], <4 x float> [[PREDPHI]]
-; CHECK-NEXT:    [[PREDPHI3]] = select <4 x i1> [[TMP3]], <4 x float> [[PREDPHI2]], <4 x float> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or <4 x i1> [[TMP11]], [[TMP14]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP15]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
+; CHECK-NEXT:    [[PREDPHI3]] = select <4 x i1> [[TMP5]], <4 x float> [[TMP9]], <4 x float> [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
@@ -1145,14 +1146,16 @@ define float @reduction_conditional(ptr %A, ptr %B, ptr %C, float %S) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP8]], <4 x i1> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP17:%.*]] = fadd fast <4 x float> [[VEC_PHI]], [[WIDE_LOAD]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP18:%.*]] = fadd fast <4 x float> [[VEC_PHI1]], [[WIDE_LOAD2]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP27:%.*]] = xor <4 x i1> [[TMP5]], splat (i1 true)
+; CHECK-INTERLEAVED-NEXT:    [[TMP28:%.*]] = xor <4 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = select <4 x i1> [[TMP19]], <4 x i1> [[TMP11]], <4 x i1> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP22:%.*]] = select <4 x i1> [[TMP21]], <4 x i1> [[TMP12]], <4 x i1> zeroinitializer
-; CHECK-INTERLEAVED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP20]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP13]]
-; CHECK-INTERLEAVED-NEXT:    [[PREDPHI5:%.*]] = select <4 x i1> [[TMP15]], <4 x float> [[TMP17]], <4 x float> [[PREDPHI]]
-; CHECK-INTERLEAVED-NEXT:    [[PREDPHI6]] = select <4 x i1> [[TMP5]], <4 x float> [[PREDPHI5]], <4 x float> [[VEC_PHI]]
-; CHECK-INTERLEAVED-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP22]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP14]]
-; CHECK-INTERLEAVED-NEXT:    [[PREDPHI8:%.*]] = select <4 x i1> [[TMP16]], <4 x float> [[TMP18]], <4 x float> [[PREDPHI7]]
-; CHECK-INTERLEAVED-NEXT:    [[PREDPHI9]] = select <4 x i1> [[TMP6]], <4 x float> [[PREDPHI8]], <4 x float> [[VEC_PHI1]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP25:%.*]] = or <4 x i1> [[TMP20]], [[TMP27]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP26:%.*]] = or <4 x i1> [[TMP22]], [[TMP28]]
+; CHECK-INTERLEAVED-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP25]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP13]]
+; CHECK-INTERLEAVED-NEXT:    [[PREDPHI6]] = select <4 x i1> [[TMP15]], <4 x float> [[TMP17]], <4 x float> [[PREDPHI]]
+; CHECK-INTERLEAVED-NEXT:    [[PREDPHI7:%.*]] = select <4 x i1> [[TMP26]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP14]]
+; CHECK-INTERLEAVED-NEXT:    [[PREDPHI9]] = select <4 x i1> [[TMP16]], <4 x float> [[TMP18]], <4 x float> [[PREDPHI7]]
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-INTERLEAVED-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP23]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]

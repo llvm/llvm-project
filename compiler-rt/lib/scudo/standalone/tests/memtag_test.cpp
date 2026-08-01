@@ -24,23 +24,24 @@ TEST(MemtagBasicDeathTest, Unsupported) {
   if (&__hwasan_init != 0)
     TEST_SKIP("Incompatible with HWASan");
 
-  EXPECT_DEATH(archMemoryTagGranuleSize(), "not supported");
-  EXPECT_DEATH(untagPointer((uptr)0), "not supported");
-  EXPECT_DEATH(extractTag((uptr)0), "not supported");
+  SCUDO_EXPECT_DEATH(archMemoryTagGranuleSize(), "not supported");
+  SCUDO_EXPECT_DEATH(untagPointer((uptr)0), "not supported");
+  SCUDO_EXPECT_DEATH(extractTag((uptr)0), "not supported");
 
-  EXPECT_DEATH(systemDetectsMemoryTagFaultsTestOnly(), "not supported");
-  EXPECT_DEATH(enableSystemMemoryTaggingTestOnly(), "not supported");
+  SCUDO_EXPECT_DEATH(systemDetectsMemoryTagFaultsTestOnly(), "not supported");
+  SCUDO_EXPECT_DEATH(enableSystemMemoryTaggingTestOnly(), "not supported");
 
-  EXPECT_DEATH(selectRandomTag((uptr)0, 0), "not supported");
-  EXPECT_DEATH(addFixedTag((uptr)0, 1), "not supported");
-  EXPECT_DEATH(storeTags((uptr)0, (uptr)0 + sizeof(0)), "not supported");
-  EXPECT_DEATH(storeTag((uptr)0), "not supported");
-  EXPECT_DEATH(loadTag((uptr)0), "not supported");
+  SCUDO_EXPECT_DEATH(selectRandomTag((uptr)0, 0), "not supported");
+  SCUDO_EXPECT_DEATH(addFixedTag((uptr)0, 1), "not supported");
+  SCUDO_EXPECT_DEATH(storeTags((uptr)0, (uptr)0 + sizeof(0)), "not supported");
+  SCUDO_EXPECT_DEATH(storeTag((uptr)0), "not supported");
+  SCUDO_EXPECT_DEATH(loadTag((uptr)0), "not supported");
 
-  EXPECT_DEATH(setRandomTag(nullptr, 64, 0, nullptr, nullptr), "not supported");
-  EXPECT_DEATH(untagPointer(nullptr), "not supported");
-  EXPECT_DEATH(loadTag(nullptr), "not supported");
-  EXPECT_DEATH(addFixedTag(nullptr, 0), "not supported");
+  SCUDO_EXPECT_DEATH(setRandomTag(nullptr, 64, 0, nullptr, nullptr),
+                     "not supported");
+  SCUDO_EXPECT_DEATH(untagPointer(nullptr), "not supported");
+  SCUDO_EXPECT_DEATH(loadTag(nullptr), "not supported");
+  SCUDO_EXPECT_DEATH(addFixedTag(nullptr, 0), "not supported");
 }
 
 class MemtagTest : public Test {
@@ -96,8 +97,8 @@ TEST_F(MemtagDeathTest, AddFixedTag) {
   for (uptr Tag = 0; Tag < 0x10; ++Tag)
     EXPECT_EQ(Tag, extractTag(addFixedTag(Addr, Tag)));
   if (SCUDO_DEBUG) {
-    EXPECT_DEATH(addFixedTag(Addr, 16), "");
-    EXPECT_DEATH(addFixedTag(~Addr, 0), "");
+    SCUDO_EXPECT_DEATH(addFixedTag(Addr, 16), "");
+    SCUDO_EXPECT_DEATH(addFixedTag(~Addr, 0), "");
   }
 }
 
@@ -113,7 +114,7 @@ TEST_F(MemtagDeathTest, ScopedDisableMemoryTagChecks) {
   u8 *P = reinterpret_cast<u8 *>(addFixedTag(Addr, 1));
   EXPECT_NE(P, Buffer);
 
-  EXPECT_DEATH(*P = 20, "");
+  SCUDO_EXPECT_DEATH(*P = 20, "");
   ScopedDisableMemoryTagChecks Disable;
   *P = 10;
 }
@@ -151,8 +152,8 @@ TEST_F(MemtagDeathTest, SKIP_NO_DEBUG(LoadStoreTagUnaligned)) {
   for (uptr P = Addr; P < Addr + 4 * archMemoryTagGranuleSize(); ++P) {
     if (P % archMemoryTagGranuleSize() == 0)
       continue;
-    EXPECT_DEATH(loadTag(P), "");
-    EXPECT_DEATH(storeTag(P), "");
+    SCUDO_EXPECT_DEATH(loadTag(P), "");
+    SCUDO_EXPECT_DEATH(storeTag(P), "");
   }
 }
 
@@ -173,7 +174,7 @@ TEST_F(MemtagDeathTest, SKIP_NO_DEBUG(StoreTagsUnaligned)) {
     uptr Tagged = addFixedTag(P, 5);
     if (Tagged % archMemoryTagGranuleSize() == 0)
       continue;
-    EXPECT_DEATH(storeTags(Tagged, Tagged), "");
+    SCUDO_EXPECT_DEATH(storeTags(Tagged, Tagged), "");
   }
 }
 

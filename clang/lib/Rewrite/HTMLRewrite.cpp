@@ -247,7 +247,7 @@ static void AddLineNumber(RewriteBuffer &RB, unsigned LineNo,
     RB.InsertTextBefore(B, OS.str());
   } else {
     RB.InsertTextBefore(B, OS.str());
-    RB.InsertTextBefore(E, "</td></tr>");
+    RB.InsertTextAfter(E, "</td></tr>");
   }
 }
 

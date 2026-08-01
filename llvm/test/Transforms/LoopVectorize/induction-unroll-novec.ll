@@ -22,8 +22,8 @@ define void @test_nonconst_start_and_step(ptr %dst, i32 %start, i32 %step, i64 %
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDUCTION4:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[NEG_STEP]]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[START]], [[TMP3]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[TMP2]], [[NEG_STEP]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[START]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 1, [[NEG_STEP]]
 ; CHECK-NEXT:    [[INDUCTION2:%.*]] = add i32 [[OFFSET_IDX]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nsw i32 [[OFFSET_IDX]], [[STEP]]

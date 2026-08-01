@@ -68,4 +68,4 @@ hostOSLibraryLookup(void *Handle, const std::vector<std::string> &Names) {
   return Result;
 }
 
-} // anonymous namespace
+} // namespace

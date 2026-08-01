@@ -92,7 +92,8 @@ Status ScriptedPlatformPythonInterface::KillProcess(lldb::pid_t pid) {
 void ScriptedPlatformPythonInterface::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "Mock platform and interact with its processes.",
-      CreateInstance, eScriptLanguagePython, {});
+      CreateInstance, eScriptedExtensionScriptedPlatform, eScriptLanguagePython,
+      {});
 }
 
 void ScriptedPlatformPythonInterface::Terminate() {

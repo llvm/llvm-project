@@ -761,6 +761,22 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
   } else if (name == "int" || name == "int2" || name == "int8" ||
       name == "uint") {
     if (auto *expr{UnwrapExpr<Expr<SomeType>>(args[0])}) {
+      // Check for enumeration type argument first — extract __ordinal
+      if (auto *derivedExpr{std::get_if<Expr<SomeDerived>>(&expr->u)}) {
+        if (auto type{derivedExpr->GetType()}) {
+          if (const auto *derived{GetDerivedTypeSpec(*type)}) {
+            if (derived->IsEnumerationType()) {
+              if (auto ordExpr{GetEnumerationOrdinal(*derivedExpr)}) {
+                if (auto ordVal{ToInt64(*ordExpr)}) {
+                  return Expr<T>{Constant<T>{Scalar<T>{*ordVal}}};
+                }
+              }
+              // Non-constant enumeration argument — leave unfolded
+              return Expr<T>{std::move(funcRef)};
+            }
+          }
+        }
+      }
       return common::visit(
           [&](auto &&x) -> Expr<T> {
             using From = std::decay_t<decltype(x)>;

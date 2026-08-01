@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 #include <cassert>
+#include <thread>
 
 namespace lldb_private {
 
@@ -28,7 +29,7 @@ class Stream;
 /// top of the private unwinder stack. The private state thread must see the
 /// raw unwinder frames, while public clients see the augmented view. Rather
 /// than checking thread identity at every callsite, the private state thread
-/// pushes Policy::PrivateState() and the rest follows from the policy.
+/// pushes Policy::CreatePrivateState() and the rest follows from the policy.
 struct Policy {
   /// What view of the process this thread sees.
   enum class View {
@@ -51,24 +52,30 @@ struct Policy {
     bool can_run_frame_recognizers = true;
   };
 
+  /// Why a private-state policy is being pushed. Distinguishes a PST's
+  /// ordinary private-state processing from a PST created to service
+  /// RunThreadPlan expression evaluation, which must not run frame
+  /// providers or recognizers (see StackFrameList::SelectMostRelevantFrame
+  /// and Thread::GetStackFrameList).
+  enum class PrivateStatePurpose {
+    Default,
+    RunningExpression,
+  };
+
   View view = View::Public;
   Capabilities capabilities;
 
-  static Policy PublicState() { return {}; }
-
-  static Policy PrivateState() {
-    Policy p;
-    p.view = View::Private;
-    p.capabilities.can_load_frame_providers = false;
-    p.capabilities.can_run_frame_recognizers = false;
-    return p;
-  }
-
-  static Policy PublicStateRunningExpression() {
-    Policy p;
-    p.capabilities.can_run_breakpoint_actions = false;
-    return p;
-  }
+  /// @name Factories
+  ///
+  /// CreatePublicState is the baseline (returns default Policy{}). The
+  /// transition factories below start from PolicyStack::Get().Current() and
+  /// apply their named change on top.
+  /// @{
+  static Policy CreatePublicState();
+  static Policy CreatePrivateState(
+      PrivateStatePurpose purpose = PrivateStatePurpose::Default);
+  static Policy CreatePublicStateRunningExpression();
+  /// @}
 
   void Dump(Stream &s) const;
 };
@@ -79,18 +86,61 @@ struct Policy {
 /// initialized with a default-constructed base entry that is never popped.
 /// RAII guards (Guard) push and pop policies.
 ///
+/// Policies are pushed via named factory methods (PushPrivateState, etc.)
+/// that return an RAII Guard. Direct Push is private to prevent callers
+/// from assembling arbitrary capability combinations.
+///
 /// For thread pool workers that don't inherit thread_local storage, the
 /// policy must be passed into the lambda and pushed onto the worker
 /// thread's stack when the task starts.
 class PolicyStack {
 public:
-  static PolicyStack &Get() {
-    static thread_local PolicyStack s_stack;
-    return s_stack;
-  }
+  static PolicyStack &Get();
 
   Policy Current() const;
 
+  void Dump(Stream &s) const;
+
+  /// RAII guard that pops a policy on destruction.
+  ///
+  /// A Guard is bound to the thread that created it: the policy stack lives
+  /// in thread_local storage, so popping from a different thread would
+  /// corrupt that thread's stack. Guards may be moved, but only on the
+  /// owning thread; a cross-thread move or destruction is a fatal error.
+  class Guard {
+    friend class PolicyStack;
+
+  public:
+    ~Guard();
+    Guard(Guard &&other);
+    Guard &operator=(Guard &&other);
+
+    Guard(const Guard &) = delete;
+    Guard &operator=(const Guard &) = delete;
+
+  private:
+    Guard() : m_thread_id(std::this_thread::get_id()), m_active(true) {}
+    std::thread::id m_thread_id;
+    bool m_active = false;
+  };
+
+  /// All Push* methods delegate to the named static factories on Policy,
+  /// which already inherit from Current(). So the pushed policy preserves
+  /// existing stack state instead of resetting unrelated fields.
+
+  [[nodiscard]] Guard
+  PushPrivateState(Policy::PrivateStatePurpose purpose =
+                       Policy::PrivateStatePurpose::Default) {
+    Push(Policy::CreatePrivateState(purpose));
+    return Guard();
+  }
+
+  [[nodiscard]] Guard PushPublicStateRunningExpression() {
+    Push(Policy::CreatePublicStateRunningExpression());
+    return Guard();
+  }
+
+private:
   void Push(Policy policy) { m_stack.push_back(std::move(policy)); }
 
   void Pop() {
@@ -98,19 +148,6 @@ public:
     m_stack.pop_back();
   }
 
-  void Dump(Stream &s) const;
-
-  /// RAII guard that pushes a policy on construction and pops on destruction.
-  class Guard {
-  public:
-    explicit Guard(Policy policy) { Get().Push(std::move(policy)); }
-    ~Guard() { Get().Pop(); }
-
-    Guard(const Guard &) = delete;
-    Guard &operator=(const Guard &) = delete;
-  };
-
-private:
   llvm::SmallVector<Policy> m_stack = {Policy{}};
 };
 

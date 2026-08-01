@@ -22,11 +22,7 @@
 
 int main(int argc, char** argv) {
   auto ranges_ends_with_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::ranges::ends_with(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::ranges::ends_with(first1, last1, first2, last2, [](auto x, auto y) { return x == y; });
   };
 
   // Benchmark ranges::ends_with where we find the mismatching element at the very end.

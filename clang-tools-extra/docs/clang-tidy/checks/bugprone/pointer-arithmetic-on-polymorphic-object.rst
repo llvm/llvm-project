@@ -65,4 +65,4 @@ References
 
 This check corresponds to the SEI Cert rule
 `CTR56-CPP. Do not use pointer arithmetic on polymorphic objects
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/CTR56-CPP.+Do+not+use+pointer+arithmetic+on+polymorphic+objects>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/containers-ctr/ctr56-cpp/>`_.

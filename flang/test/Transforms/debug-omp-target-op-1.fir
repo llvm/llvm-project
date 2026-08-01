@@ -14,7 +14,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     %3 = fircg.ext_declare %2 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc2)
     %4 = omp.map.info var_ptr(%1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "x"}
     %5 = omp.map.info var_ptr(%3 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "y"}
-    omp.target map_entries(%4 -> %arg0, %5 -> %arg1 : !fir.ref<i32>, !fir.ref<i32>) {
+    omp.target kernel_type(generic) map_entries(%4 -> %arg0, %5 -> %arg1 : !fir.ref<i32>, !fir.ref<i32>) {
       %16 = fircg.ext_declare %arg0 {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
       %17 = fircg.ext_declare %arg1 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc4)
       omp.terminator

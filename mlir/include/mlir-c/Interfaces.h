@@ -28,7 +28,10 @@ extern "C" {
   };                                                                           \
   typedef struct name name
 
+DEFINE_C_API_STRUCT(MlirMemoryEffect, void);
+DEFINE_C_API_STRUCT(MlirMemoryEffectInstance, void);
 DEFINE_C_API_STRUCT(MlirMemoryEffectInstancesList, void);
+DEFINE_C_API_STRUCT(MlirSideEffectResource, void);
 
 #undef DEFINE_C_API_STRUCT
 
@@ -143,6 +146,81 @@ mlirConditionallySpeculatableOpInterfaceGetSpeculatability(
 //===---------------------------------------------------------------------===//
 // MemoryEffectsOpInterface
 //===---------------------------------------------------------------------===//
+
+/// Returns the borrowed singleton instance of the allocate memory effect.
+MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsAllocateGet(void);
+
+/// Returns the borrowed singleton instance of the free memory effect.
+MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsFreeGet(void);
+
+/// Returns the borrowed singleton instance of the read memory effect.
+MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsReadGet(void);
+
+/// Returns the borrowed singleton instance of the write memory effect.
+MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsWriteGet(void);
+
+/// Returns the borrowed singleton instance of the default side effect
+/// resource.
+MLIR_CAPI_EXPORTED MlirSideEffectResource
+mlirSideEffectsDefaultResourceGet(void);
+
+/// Creates a memory effect instance without an associated IR entity.
+/// `parameters` may be a null attribute. The caller owns the returned instance
+/// and must destroy it with `mlirMemoryEffectInstanceDestroy`.
+MLIR_CAPI_EXPORTED MlirMemoryEffectInstance mlirMemoryEffectInstanceCreate(
+    MlirMemoryEffect effect, MlirAttribute parameters, int stage,
+    bool effectOnFullRegion, MlirSideEffectResource resource);
+
+/// Creates a memory effect instance associated with an operation operand.
+/// `parameters` may be a null attribute. The caller owns the returned instance
+/// and must destroy it with `mlirMemoryEffectInstanceDestroy`.
+MLIR_CAPI_EXPORTED MlirMemoryEffectInstance
+mlirMemoryEffectInstanceCreateForOpOperand(MlirMemoryEffect effect,
+                                           MlirOpOperand opOperand,
+                                           MlirAttribute parameters, int stage,
+                                           bool effectOnFullRegion,
+                                           MlirSideEffectResource resource);
+
+/// Creates a memory effect instance associated with an operation result.
+/// `result` must wrap an OpResult. `parameters` may be a null attribute. The
+/// caller owns the returned instance and must destroy it with
+/// `mlirMemoryEffectInstanceDestroy`.
+MLIR_CAPI_EXPORTED MlirMemoryEffectInstance
+mlirMemoryEffectInstanceCreateForOpResult(MlirMemoryEffect effect,
+                                          MlirValue result,
+                                          MlirAttribute parameters, int stage,
+                                          bool effectOnFullRegion,
+                                          MlirSideEffectResource resource);
+
+/// Creates a memory effect instance associated with a block argument.
+/// `blockArgument` must wrap a BlockArgument. `parameters` may be a null
+/// attribute. The caller owns the returned instance and must destroy it with
+/// `mlirMemoryEffectInstanceDestroy`.
+MLIR_CAPI_EXPORTED MlirMemoryEffectInstance
+mlirMemoryEffectInstanceCreateForBlockArgument(
+    MlirMemoryEffect effect, MlirValue blockArgument, MlirAttribute parameters,
+    int stage, bool effectOnFullRegion, MlirSideEffectResource resource);
+
+/// Creates a memory effect instance associated with a symbol. `symbol` must be
+/// a SymbolRefAttr. `parameters` may be a null attribute. The caller owns the
+/// returned instance and must destroy it with
+/// `mlirMemoryEffectInstanceDestroy`.
+MLIR_CAPI_EXPORTED MlirMemoryEffectInstance
+mlirMemoryEffectInstanceCreateForSymbol(MlirMemoryEffect effect,
+                                        MlirAttribute symbol,
+                                        MlirAttribute parameters, int stage,
+                                        bool effectOnFullRegion,
+                                        MlirSideEffectResource resource);
+
+/// Destroys a memory effect instance created by one of the functions above.
+MLIR_CAPI_EXPORTED void
+mlirMemoryEffectInstanceDestroy(MlirMemoryEffectInstance instance);
+
+/// Appends a copy of `instance` to the given list. This does not take ownership
+/// of `instance`; the caller remains responsible for destroying it.
+MLIR_CAPI_EXPORTED void
+mlirMemoryEffectInstancesListAppend(MlirMemoryEffectInstancesList list,
+                                    MlirMemoryEffectInstance instance);
 
 /// Returns the interface TypeID of the MemoryEffectsOpInterface.
 MLIR_CAPI_EXPORTED MlirTypeID mlirMemoryEffectsOpInterfaceTypeID(void);

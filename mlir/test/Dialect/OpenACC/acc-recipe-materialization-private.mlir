@@ -4,12 +4,17 @@ acc.private.recipe @privatization_memref_i64 : memref<i64> init {
 ^bb0(%arg0: memref<i64>):
   %0 = memref.alloca() : memref<i64>
   acc.yield %0 : memref<i64>
+} destroy {
+^bb0(%arg0: memref<i64>, %arg1: memref<i64>):
+  memref.dealloc %arg1 : memref<i64>
+  acc.terminator
 }
 
 // CHECK-LABEL: func.func @private_i64
 // CHECK: acc.loop control([[IV:%.+]] : index)
 // CHECK: [[ALLOC:%.+]] = memref.alloca() : memref<i64>
 // CHECK: memref.store {{.*}}, [[ALLOC]][]
+// CHECK: memref.dealloc [[ALLOC]] : memref<i64>
 
 func.func @private_i64(%arg0 : memref<i64>) {
   %c16 = arith.constant 16 : index

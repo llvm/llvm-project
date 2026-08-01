@@ -621,8 +621,7 @@ define <2 x double> @v2f128_double(<2 x fp128> %a, <2 x fp128> %b, <2 x double> 
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
-; CHECK-SD-NEXT:    cset w8, mi
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    csetm x8, mi
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -630,8 +629,7 @@ define <2 x double> @v2f128_double(<2 x fp128> %a, <2 x fp128> %b, <2 x double> 
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
-; CHECK-SD-NEXT:    cset w8, mi
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    csetm x8, mi
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    ldp q2, q1, [sp, #48] // 32-byte Folded Reload
@@ -696,31 +694,28 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr q1, [sp, #64] // 16-byte Reload
-; CHECK-SD-NEXT:    cset w8, mi
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    csetm x8, mi
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    cset w8, mi
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
+; CHECK-SD-NEXT:    csetm x8, mi
 ; CHECK-SD-NEXT:    fmov d1, x8
 ; CHECK-SD-NEXT:    mov v1.d[1], v0.d[0]
 ; CHECK-SD-NEXT:    str q1, [sp, #64] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp, #112] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __lttf2
-; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldp q1, q0, [sp, #32] // 32-byte Folded Reload
-; CHECK-SD-NEXT:    ldp q2, q4, [sp, #64] // 32-byte Folded Reload
-; CHECK-SD-NEXT:    cset w8, mi
-; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
-; CHECK-SD-NEXT:    ldr q3, [sp, #96] // 16-byte Reload
+; CHECK-SD-NEXT:    cmp w0, #0
+; CHECK-SD-NEXT:    ldp q2, q3, [sp, #64] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    csetm x8, mi
 ; CHECK-SD-NEXT:    ldr x30, [sp, #144] // 8-byte Reload
 ; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    fmov d2, x8
-; CHECK-SD-NEXT:    bsl v2.16b, v4.16b, v3.16b
+; CHECK-SD-NEXT:    fmov d1, x8
+; CHECK-SD-NEXT:    ldr q2, [sp, #96] // 16-byte Reload
+; CHECK-SD-NEXT:    bit v2.16b, v3.16b, v1.16b
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2

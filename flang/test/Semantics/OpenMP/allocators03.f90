@@ -10,7 +10,7 @@ use omp_lib
 
   integer, allocatable :: arr1(:), arr2(:)
 
-  !ERROR: PRIVATE clause is not allowed on the ALLOCATORS directive
+  !ERROR: PRIVATE clause is not allowed on ALLOCATORS directive
   !$omp allocators allocate(arr1) private(arr2)
     allocate(arr1(23), arr2(2))
 

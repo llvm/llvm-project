@@ -359,6 +359,29 @@ TEST(DiagnosticsTest, ClangTidy) {
                "function 'bar' is within a recursive call chain"))));
 }
 
+TEST(DiagnosticsTest, ClangTidyRedundantParenthesesFix) {
+  Annotations Test(R"cpp(
+    int func() {
+      return$lparen[[(]]0$rparen[[)]];
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  TU.ClangTidyProvider = addTidyChecks("readability-redundant-parentheses");
+
+  clangd::Fix ExpectedFix;
+  ExpectedFix.Message = "redundant parentheses around expression";
+  ExpectedFix.Edits.push_back(TextEdit{Test.range("lparen"), " "});
+  ExpectedFix.Edits.push_back(TextEdit{Test.range("rparen"), ""});
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(ElementsAre(AllOf(
+          Diag(Test.range("lparen"), "redundant parentheses around expression"),
+          diagSource(Diag::ClangTidy),
+          diagName("readability-redundant-parentheses"),
+          withFix(equalToFix(ExpectedFix))))));
+}
+
 TEST(DiagnosticsTest, ClangTidyEOF) {
   // clang-format off
   Annotations Test(R"cpp(

@@ -1,0 +1,73 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file is used as the registry of passes that are part of the WebAssembly
+// backend.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MACHINE_MODULE_PASS
+#define MACHINE_MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_MODULE_PASS("wasm-mclower-prepass", WebAssemblyMCLowerPrePass())
+#undef MACHINE_MODULE_PASS
+
+#ifndef MODULE_PASS
+#define MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MODULE_PASS("wasm-add-missing-prototypes", WebAssemblyAddMissingPrototypesPass())
+MODULE_PASS("wasm-coalesce-features-and-strip-atomics",
+            WebAssemblyCoalesceFeaturesAndStripAtomicsPass(*this))
+MODULE_PASS("wasm-fix-function-bitcasts", WebAssemblyFixFunctionBitcastsPass())
+MODULE_PASS("wasm-lower-em-ehsjlj", WebAssemblyLowerEmscriptenEHSjLjPass())
+#undef MODULE_PASS
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+FUNCTION_PASS("wasm-optimize-returned", WebAssemblyOptimizeReturnedPass())
+FUNCTION_PASS("wasm-reduce-to-any-all-true", WebAssemblyReduceToAnyAllTruePass(*this))
+FUNCTION_PASS("wasm-ref-type-mem2local", WebAssemblyRefTypeMem2LocalPass())
+#undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_ANALYSIS
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_ANALYSIS("wasm-exception-info", WebAssemblyExceptionAnalysis())
+#undef MACHINE_FUNCTION_ANALYSIS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("wasm-argument-move", WebAssemblyArgumentMovePass())
+MACHINE_FUNCTION_PASS("wasm-cfg-sort", WebAssemblyCFGSortPass())
+MACHINE_FUNCTION_PASS("wasm-cfg-stackify", WebAssemblyCFGStackifyPass())
+MACHINE_FUNCTION_PASS("wasm-clean-code-after-trap",
+                      WebAssemblyCleanCodeAfterTrapPass())
+MACHINE_FUNCTION_PASS("wasm-debug-fixup", WebAssemblyDebugFixupPass())
+MACHINE_FUNCTION_PASS("wasm-explicit-locals", WebAssemblyExplicitLocalsPass())
+MACHINE_FUNCTION_PASS("wasm-isel", WebAssemblyISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("wasm-fix-br-table-defaults",
+                      WebAssemblyFixBrTableDefaultsPass())
+MACHINE_FUNCTION_PASS("wasm-fix-irreducible-control-flow",
+                      WebAssemblyFixIrreducibleControlFlowPass())
+MACHINE_FUNCTION_PASS("wasm-late-eh-prepare", WebAssemblyLateEHPreparePass())
+MACHINE_FUNCTION_PASS("wasm-lower-br-unless", WebAssemblyLowerBrUnlessPass())
+MACHINE_FUNCTION_PASS("wasm-mem-intrinsic-results", WebAssemblyMemIntrinsicResultsPass())
+MACHINE_FUNCTION_PASS("wasm-nullify-dbg-value-lists",
+                      WebAssemblyNullifyDebugValueListsPass())
+MACHINE_FUNCTION_PASS("wasm-optimize-live-intervals",
+                      WebAssemblyOptimizeLiveIntervalsPass())
+MACHINE_FUNCTION_PASS("wasm-peephole", WebAssemblyPeepholePass())
+MACHINE_FUNCTION_PASS("wasm-reg-coloring", WebAssemblyRegColoringPass())
+MACHINE_FUNCTION_PASS("wasm-reg-numbering", WebAssemblyRegNumberingPass())
+MACHINE_FUNCTION_PASS("wasm-reg-stackify", WebAssemblyRegStackifyPass(getOptLevel()))
+MACHINE_FUNCTION_PASS("wasm-replace-phys-regs", WebAssemblyReplacePhysRegsPass())
+MACHINE_FUNCTION_PASS("wasm-set-p2align-operands",
+                      WebAssemblySetP2AlignOperandsPass())
+#undef MACHINE_FUNCTION_PASS

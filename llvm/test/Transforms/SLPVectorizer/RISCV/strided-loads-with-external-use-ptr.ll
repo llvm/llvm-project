@@ -17,8 +17,8 @@ define i16 @test() {
 ; CHECK-NEXT:    [[PPREV_0_I]] = getelementptr [[S]], ptr [[PPREV_062_I]], i64 -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i16> @llvm.masked.load.v3i16.p0(ptr align 2 [[PPREV_0_I]], <3 x i1> <i1 true, i1 false, i1 true>, <3 x i16> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i16> [[TMP1]], <3 x i16> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP2]], i64 1
 ; CHECK-NEXT:    [[CMP_I178:%.*]] = icmp ult i16 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    br label [[WHILE_BODY_I]]
 ;

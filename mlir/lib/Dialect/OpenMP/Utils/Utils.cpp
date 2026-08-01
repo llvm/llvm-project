@@ -87,8 +87,7 @@ bool mlir::omp::opInSharedDeviceContext(Operation &op) {
     targetOp = dyn_cast<omp::TargetOp>(op);
 
   if (targetOp) {
-    if (targetOp.getKernelExecFlags(targetOp.getInnermostCapturedOmpOp()) !=
-        omp::TargetExecMode::generic)
+    if (targetOp.getKernelType() != omp::TargetExecMode::generic)
       return false;
   } else {
     auto declTargetIface = op.getParentOfType<omp::DeclareTargetInterface>();

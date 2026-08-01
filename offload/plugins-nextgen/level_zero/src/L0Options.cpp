@@ -12,9 +12,7 @@
 
 #include "omptarget.h"
 
-#include "L0Defs.h"
 #include "L0Options.h"
-#include "L0Trace.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -195,9 +193,6 @@ void L0OptionsTy::processEnvironmentVars() {
               "LIBOMPTARGET_LEVEL_ZERO_COMMAND_MODE=%s\n",
               CommandModeVar.get().c_str());
   }
-
-  // Detect if we need to enable compatibility with Level Zero debug mode.
-  ZeDebugEnabled = BoolEnvar("ZET_ENABLE_PROGRAM_DEBUGGING", false);
 }
 
 } // namespace llvm::omp::target::plugin

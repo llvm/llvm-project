@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx942 -show-encoding %s | FileCheck -check-prefix=GFX942 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx90a %s -filetype=null 2>&1 | FileCheck -check-prefix=GFX90A %s
+// RUN: llvm-mc -triple=amdgpu9.42 -show-encoding %s | FileCheck -check-prefix=GFX942 %s
+// RUN: not llvm-mc -triple=amdgpu9.0a %s -filetype=null 2>&1 | FileCheck -check-prefix=GFX90A %s
 
 //===----------------------------------------------------------------------===//
 // Misc opcodes.

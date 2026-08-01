@@ -2583,7 +2583,7 @@ void GICombinerEmitter::collectMatchOpcodes(ArrayRef<RuleMatcher> Rules) {
 
 void GICombinerEmitter::emitCanMatchOpcodeFn(raw_ostream &OS,
                                              StringRef FnName) const {
-  OS << "static bool " << FnName << "(unsigned Opc) {\n";
+  OS << "bool " << FnName << "(unsigned Opc) const {\n";
   if (MatchOpcodes.empty()) {
     OS << "  (void)Opc;\n"
        << "  return false;\n"
@@ -2602,12 +2602,11 @@ void GICombinerEmitter::emitCanMatchOpcodeFn(raw_ostream &OS,
 }
 
 void GICombinerEmitter::emitAdditionalImpl(raw_ostream &OS) {
-  std::string CanMatchOpcodeFnName = (getClassName() + "_canMatchOpcode").str();
+  std::string CanMatchOpcodeFnName =
+      (getClassName() + "::canMatchOpcode").str();
   emitCanMatchOpcodeFn(OS, CanMatchOpcodeFnName);
   OS << "bool " << getClassName() << "::" << getCombineAllMethodName()
      << "(MachineInstr &I) const {\n"
-     << "  if (!" << CanMatchOpcodeFnName << "(I.getOpcode()))\n"
-     << "    return false;\n"
      << "  const PredicateBitset AvailableFeatures = "
         "getAvailableFeatures();\n"
      << "  State.MIs.clear();\n"
@@ -2824,6 +2823,10 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   emitPredicateBitset(OS, "GET_GICOMBINER_TYPES");
 
   // GET_GICOMBINER_CLASS_MEMBERS, which need to be included inside the class.
+  {
+    IfDefGuardEmitter If(OS, "GET_GICOMBINER_CLASS_MEMBERS");
+    OS << "  bool canMatchOpcode(unsigned Opc) const override;\n";
+  }
   emitPredicatesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");
   emitTemporariesDecl(OS, "GET_GICOMBINER_CLASS_MEMBERS");
 

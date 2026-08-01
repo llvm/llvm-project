@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/arg_list.h"
-#include "src/stdio/printf_core/parser.h"
+#include "src/__support/printf_core/parser.h"
 
 #include <stdarg.h>
 #include <stdint.h>

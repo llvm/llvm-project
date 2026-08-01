@@ -229,7 +229,7 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             const GOFF::EDAttr &Attr)
+             const GOFF::EDAttr &Attr, GOFF::ESDAlignment Alignment)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_ElementDefinition) {
     this->NameSpace = Attr.NameSpace;
@@ -243,7 +243,7 @@ public:
     BehavAttrs.setTextStyle(Attr.TextStyle);
     BehavAttrs.setBindingAlgorithm(Attr.BindAlgorithm);
     BehavAttrs.setLoadingBehavior(Attr.LoadBehavior);
-    BehavAttrs.setAlignment(Attr.Alignment);
+    BehavAttrs.setAlignment(Alignment);
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
@@ -259,14 +259,15 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             const GOFF::EDAttr &EDAttr, const GOFF::PRAttr &Attr)
+             const GOFF::EDAttr &EDAttr, GOFF::ESDAlignment Alignment,
+             const GOFF::PRAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_PartReference), NameSpace(EDAttr.NameSpace) {
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setBindingScope(Attr.BindingScope);
-    BehavAttrs.setAlignment(EDAttr.Alignment);
+    BehavAttrs.setAlignment(Alignment);
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
@@ -323,7 +324,8 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
 
   if (Section.isED()) {
     GOFFSymbol ED(Section.getExternalName(), Section.getOrdinal(),
-                  Section.getParent()->getOrdinal(), Section.getEDAttributes());
+                  Section.getParent()->getOrdinal(), Section.getEDAttributes(),
+                  Section.getEDAlignment());
     ED.SectionLength = Asm.getSectionAddressSize(Section);
     writeSymbol(ED);
   }
@@ -332,7 +334,7 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
     MCSectionGOFF *Parent = Section.getParent();
     GOFFSymbol PR(Section.getExternalName(), Section.getOrdinal(),
                   Parent->getOrdinal(), Parent->getEDAttributes(),
-                  Section.getPRAttributes());
+                  Parent->getEDAlignment(), Section.getPRAttributes());
     PR.SectionLength = Asm.getSectionAddressSize(Section);
     if (Section.requiresNonZeroLength()) {
       // We cannot have a zero-length section for data.  If we do,
@@ -364,7 +366,7 @@ void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
   if (Symbol.getCodeData() == GOFF::ESD_EXE_DATA) {
     MCSectionGOFF *ED = Symbol.getADA()->getParent();
     GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
-                  ED->getEDAttributes(),
+                  ED->getEDAttributes(), ED->getEDAlignment(),
                   GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
                                Symbol.getLinkage(), Symbol.getBindingScope(),
                                0});

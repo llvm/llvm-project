@@ -237,6 +237,56 @@ TLI_DEFINE_VECFUNC("llvm.log.f64", "_ZGVdN4v_log", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.log.f32", "_ZGVbN4v_logf", FIXED(4), "_ZGV_LLVM_N4v")
 TLI_DEFINE_VECFUNC("llvm.log.f32", "_ZGVdN8v_logf", FIXED(8), "_ZGV_LLVM_N8v")
 
+// Functions added to libmvec in GLIBC 2.35 (no corresponding LLVM intrinsic).
+
+TLI_DEFINE_VECFUNC("erf", "_ZGVbN2v_erf", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("erf", "_ZGVdN4v_erf", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("erff", "_ZGVbN4v_erff", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("erff", "_ZGVdN8v_erff", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("erfc", "_ZGVbN2v_erfc", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("erfc", "_ZGVdN4v_erfc", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("erfcf", "_ZGVbN4v_erfcf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("erfcf", "_ZGVdN8v_erfcf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("cbrt", "_ZGVbN2v_cbrt", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("cbrt", "_ZGVdN4v_cbrt", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("cbrtf", "_ZGVbN4v_cbrtf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("cbrtf", "_ZGVdN8v_cbrtf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("expm1", "_ZGVbN2v_expm1", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("expm1", "_ZGVdN4v_expm1", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("expm1f", "_ZGVbN4v_expm1f", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("expm1f", "_ZGVdN8v_expm1f", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("log1p", "_ZGVbN2v_log1p", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("log1p", "_ZGVdN4v_log1p", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("log1pf", "_ZGVbN4v_log1pf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("log1pf", "_ZGVdN8v_log1pf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("asinh", "_ZGVbN2v_asinh", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("asinh", "_ZGVdN4v_asinh", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("asinhf", "_ZGVbN4v_asinhf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("asinhf", "_ZGVdN8v_asinhf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("acosh", "_ZGVbN2v_acosh", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("acosh", "_ZGVdN4v_acosh", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("acoshf", "_ZGVbN4v_acoshf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("acoshf", "_ZGVdN8v_acoshf", FIXED(8), "_ZGV_LLVM_N8v")
+
+TLI_DEFINE_VECFUNC("atanh", "_ZGVbN2v_atanh", FIXED(2), "_ZGV_LLVM_N2v")
+TLI_DEFINE_VECFUNC("atanh", "_ZGVdN4v_atanh", FIXED(4), "_ZGV_LLVM_N4v")
+
+TLI_DEFINE_VECFUNC("atanhf", "_ZGVbN4v_atanhf", FIXED(4), "_ZGV_LLVM_N4v")
+TLI_DEFINE_VECFUNC("atanhf", "_ZGVdN8v_atanhf", FIXED(8), "_ZGV_LLVM_N8v")
+
 #elif defined(TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS)
 
 TLI_DEFINE_VECFUNC("acos", "_ZGVnN2v_acos", FIXED(2), NOMASK, "_ZGV_LLVM_N2v", CallingConv::AArch64_VectorCall)

@@ -4,8 +4,6 @@ TableGen Backend Developer's Guide
 
 .. sectnum::
 
-.. contents::
-   :local:
 
 Introduction
 ============

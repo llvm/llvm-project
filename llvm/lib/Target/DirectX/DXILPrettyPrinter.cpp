@@ -153,7 +153,7 @@ struct FormatResourceDimension
 
   bool HasCounter;
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     dxil::ResourceKind RK = Item.getResourceKind();
     switch (RK) {
     default: {
@@ -193,7 +193,7 @@ struct FormatBindingID
       : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI),
         RC(RTI.getResourceClass()) {}
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     OS << getRCPrefix(RC).upper() << Item.getBinding().RecordID;
   }
 };
@@ -207,7 +207,7 @@ struct FormatBindingLocation
       : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI),
         RC(RTI.getResourceClass()) {}
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     const auto &Binding = Item.getBinding();
     OS << getRCPrefix(RC) << Binding.LowerBound;
     if (Binding.Space)
@@ -220,7 +220,7 @@ struct FormatBindingSize
   explicit FormatBindingSize(const dxil::ResourceInfo &RI)
       : llvm::FormatAdapter<const dxil::ResourceInfo &>(RI) {}
 
-  void format(llvm::raw_ostream &OS, StringRef Style) override {
+  void format(llvm::raw_ostream &OS, StringRef Style) {
     uint32_t Size = Item.getBinding().Size;
     if (Size == 0)
       OS << "unbounded";

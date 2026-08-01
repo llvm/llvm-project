@@ -120,6 +120,15 @@ public:
   void SetMaxReadSize(size_t size) { m_bytes_left = size; }
   void SetFiller(int filler) { m_filler = filler; }
 };
+
+// A MemoryCache subclass that exposes the otherwise-protected L1 cache so a
+// test can assert on the exact set of chunks it holds.
+class TestMemoryCache : public MemoryCache {
+public:
+  using MemoryCache::MemoryCache;
+
+  const BlockMap &GetL1Cache() const { return m_L1_cache; }
+};
 } // namespace
 
 TargetSP CreateTarget(DebuggerSP &debugger_sp, ArchSpec &arch) {
@@ -281,6 +290,114 @@ TEST_F(MemoryTest, TesetMemoryCacheRead) {
   ASSERT_TRUE(process->m_bytes_left == l2_cache_size); // Verify that we re-read
                                                        // instead of using an
                                                        // old cache
+}
+
+TEST_F(MemoryTest, TestL1Cache) {
+  ArchSpec arch("arm64-apple-macosx");
+
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+
+  ProcessSP process_sp = CreateProcess(target_sp);
+  ASSERT_TRUE(process_sp);
+
+  DummyProcess *process = static_cast<DummyProcess *>(process_sp.get());
+  TestMemoryCache mem_cache(*process);
+
+  auto add = [&](lldb::addr_t addr, size_t size, uint8_t fill) {
+    mem_cache.AddL1CacheData(addr,
+                             std::make_shared<DataBufferHeap>(size, fill));
+  };
+
+  // Asserts the L1 cache holds exactly `expected` chunks, matched by start
+  // address, byte size, and a single repeated fill byte, in address order.
+  struct Chunk {
+    lldb::addr_t addr;
+    size_t size;
+    uint8_t fill;
+  };
+  auto expect_l1 = [&](std::vector<Chunk> expected) {
+    const auto &l1 = mem_cache.GetL1Cache();
+    ASSERT_EQ(l1.size(), expected.size());
+    size_t i = 0;
+    for (const auto &[addr, data_sp] : l1) {
+      const Chunk &c = expected[i++];
+      EXPECT_EQ(addr, c.addr);
+      ASSERT_EQ(data_sp->GetByteSize(), c.size);
+      const uint8_t *bytes = data_sp->GetBytes();
+      for (size_t j = 0; j < c.size; ++j)
+        EXPECT_EQ(bytes[j], c.fill)
+            << "chunk 0x" << std::hex << addr << " byte " << std::dec << j;
+    }
+  };
+
+  // Partial overlap: the new chunk overhangs the existing one on the right.
+  mem_cache.Clear();
+  add(0x1000, 0x100, 0xAA);
+  add(0x1080, 0x100, 0xBB);
+  expect_l1({{0x1000, 0x100, 0xAA}, {0x1080, 0x100, 0xBB}});
+
+  // Partial overlap: the new chunk overhangs the existing one on the left.
+  mem_cache.Clear();
+  add(0x2080, 0x100, 0xAA);
+  add(0x2000, 0x100, 0xBB);
+  expect_l1({{0x2000, 0x100, 0xBB}, {0x2080, 0x100, 0xAA}});
+
+  // New chunk fully contains an existing one: both are kept.
+  mem_cache.Clear();
+  add(0x3040, 0x40, 0xAA);
+  add(0x3000, 0x100, 0xBB);
+  expect_l1({{0x3000, 0x100, 0xBB}, {0x3040, 0x40, 0xAA}});
+
+  // New chunk is fully contained by an existing one: both are kept.
+  mem_cache.Clear();
+  add(0x4000, 0x200, 0xAA);
+  add(0x4080, 0x80, 0xBB);
+  expect_l1({{0x4000, 0x200, 0xAA}, {0x4080, 0x80, 0xBB}});
+
+  // New chunk partially overlaps two existing chunks; all three are kept.
+  mem_cache.Clear();
+  add(0x5000, 0x80, 0xAA);
+  add(0x5100, 0x80, 0xCC);
+  add(0x5040, 0x100, 0xBB);
+  expect_l1(
+      {{0x5000, 0x80, 0xAA}, {0x5040, 0x100, 0xBB}, {0x5100, 0x80, 0xCC}});
+
+  // Disjoint chunks stay separate.
+  mem_cache.Clear();
+  add(0x6000, 0x80, 0xAA);
+  add(0x6100, 0x80, 0xBB);
+  expect_l1({{0x6000, 0x80, 0xAA}, {0x6100, 0x80, 0xBB}});
+
+  // Adjacent (touching but not overlapping) chunks stay separate.
+  mem_cache.Clear();
+  add(0x7000, 0x80, 0xAA);
+  add(0x7080, 0x80, 0xBB);
+  expect_l1({{0x7000, 0x80, 0xAA}, {0x7080, 0x80, 0xBB}});
+
+  // Flush must erase every chunk intersecting the flush range, including a
+  // chunk that starts below the flushed address. Here 0x8140 lies only in the
+  // lower-starting, longer chunk; it must be dropped while the chunk that does
+  // not intersect survives untouched.
+  mem_cache.Clear();
+  add(0x8000, 0x180, 0xAA);
+  add(0x8080, 0x40, 0xBB);
+  mem_cache.Flush(0x8140, 0x4);
+  expect_l1({{0x8080, 0x40, 0xBB}});
+
+  // A flush intersecting several partially overlapping chunks drops all of
+  // them, while a chunk it does not intersect is left in place.
+  mem_cache.Clear();
+  add(0x9000, 0x80, 0xAA);
+  add(0x9040, 0x100, 0xBB);
+  add(0x9100, 0x80, 0xCC);
+  mem_cache.Flush(0x9060, 0x1);
+  expect_l1({{0x9100, 0x80, 0xCC}});
 }
 
 TEST_F(MemoryTest, TestReadInteger) {

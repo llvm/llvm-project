@@ -7,6 +7,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbtest
 
 
+@skipIfWasm  # checks the platform-specific TLS-uninitialized error, N/A to wasm
 class PlatformProcessCrashInfoTestCase(TestBase):
     @expectedFailureAll(oslist=["windows", "linux", "freebsd", "netbsd"])
     @skipIfDarwin  # rdar://120795095

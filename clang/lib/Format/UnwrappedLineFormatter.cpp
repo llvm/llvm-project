@@ -314,8 +314,7 @@ private:
       }
     }
 
-    auto ShouldMergeShortFunctions = [this, &I, &NextLine, PreviousLine,
-                                      TheLine]() {
+    auto ShouldMergeShortFunctions = [&] {
       if (Style.AllowShortFunctionsOnASingleLine.isAll())
         return true;
 
@@ -326,12 +325,12 @@ private:
 
       if (Style.AllowShortFunctionsOnASingleLine.Inline &&
           !Style.AllowShortFunctionsOnASingleLine.Other) {
-        // Just checking TheLine->Level != 0 is not enough, because it
-        // provokes treating functions inside indented namespaces as short.
         if (Style.isJavaScript() && TheLine->Last->is(TT_FunctionLBrace))
           return true;
 
-        if (TheLine->Level != 0) {
+        // Just checking `TheLine->Level > 0` is not enough because it would
+        // cause functions inside indented namespaces to be treated as short.
+        if (const auto Level = TheLine->Level; Level > 0) {
           if (!PreviousLine)
             return false;
 
@@ -339,15 +338,16 @@ private:
           // Find the last line with lower level.
           const AnnotatedLine *Line = nullptr;
           for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
-            assert(*J);
-            if (((*J)->InPPDirective && !(*J)->InMacroBody) ||
-                (*J)->isComment() || (*J)->Level > TheLine->Level) {
+            const auto *L = *J;
+            assert(L);
+            if (TheLine->InMacroBody && !L->InMacroBody)
+              break;
+            if (L->isComment() || (!TheLine->InPPDirective && L->InPPDirective))
               continue;
-            }
-            if ((*J)->Level < TheLine->Level ||
-                (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
-                 (*J)->First->is(tok::l_brace))) {
-              Line = *J;
+            if (L->Level < Level ||
+                (L->Level == Level && L->First->is(tok::l_brace) &&
+                 Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths)) {
+              Line = L;
               break;
             }
           }

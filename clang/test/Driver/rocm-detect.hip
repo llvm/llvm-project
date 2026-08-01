@@ -29,7 +29,7 @@
 
 // RUN: rm -rf %t/myhip
 // RUN: mkdir -p %t/myhip
-// RUN: cp -r %S/Inputs/rocm/bin %t/myhip
+// RUN: cp -R %S/Inputs/rocm/bin %t/myhip
 
 // Test HIP_PATH overrides ROCM_PATH.
 // RUN: env ROCM_PATH=%S/Inputs/rocm HIP_PATH=%t/myhip \
@@ -68,8 +68,8 @@
 // RUN: rm -rf %t/myhip_nouse
 // RUN: mkdir -p %t/myhip
 // RUN: mkdir -p %t/myhip_nouse
-// RUN: cp -r %S/Inputs/rocm/bin %t/myhip
-// RUN: cp -r %S/Inputs/rocm/bin %t/myhip_nouse
+// RUN: cp -R %S/Inputs/rocm/bin %t/myhip
+// RUN: cp -R %S/Inputs/rocm/bin %t/myhip_nouse
 // RUN: env ROCM_PATH=%S/Inputs/rocm HIP_PATH=%t/myhip_nouse \
 // RUN:   %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 --hip-link \
 // RUN:   --hip-path=%t/myhip --print-rocm-search-dirs %s 2>&1 \
@@ -77,7 +77,7 @@
 
 // Test detecting /usr directory.
 // RUN: rm -rf %t/*
-// RUN: cp -r %S/Inputs/rocm %t/usr
+// RUN: cp -R %S/Inputs/rocm %t/usr
 // RUN: mkdir -p %t/usr/share/hip
 // RUN: mv %t/usr/bin/.hipVersion %t/usr/share/hip/version
 // RUN: mkdir -p %t/usr/local
@@ -88,8 +88,8 @@
 // Test detecting latest /opt/rocm-{release} directory.
 // RUN: rm -rf %t/*
 // RUN: mkdir -p %t/opt
-// RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.9.0-1234
-// RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.10.0
+// RUN: cp -R %S/Inputs/rocm %t/opt/rocm-3.9.0-1234
+// RUN: cp -R %S/Inputs/rocm %t/opt/rocm-3.10.0
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx1010 --sysroot=%t \
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-REL %s

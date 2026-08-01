@@ -43,7 +43,7 @@ IncrementalParser::IncrementalParser(CompilerInstance &Instance,
   if (ExternalASTSource *External = S.getASTContext().getExternalSource())
     External->StartTranslationUnit(Consumer);
 
-  P->Initialize();
+  P->ConsumeToken();
 }
 
 IncrementalParser::~IncrementalParser() { P.reset(); }

@@ -5,13 +5,13 @@ define void @foo(double %i) {
 ; CHECK-LABEL: define void @foo(
 ; CHECK-SAME: double [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double 0.000000e+00>, double [[I]], i32 2
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double 0.000000e+00>, double [[I]], i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x double> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[I82:%.*]] = fsub double 0.000000e+00, poison
 ; CHECK-NEXT:    [[I103:%.*]] = fsub double 0.000000e+00, [[I]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <8 x i32> <i32 poison, i32 0, i32 poison, i32 1, i32 poison, i32 0, i32 poison, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP8]], <8 x double> <double 0.000000e+00, double poison, double poison, double poison, double 0.000000e+00, double poison, double poison, double poison>, <8 x i32> <i32 8, i32 1, i32 poison, i32 3, i32 12, i32 5, i32 poison, i32 7>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x double> [[TMP5]], double [[I82]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x double> [[TMP5]], double [[I82]], i64 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[TMP6]], <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul <8 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, [[TMP7]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd <8 x double> zeroinitializer, [[TMP12]]
@@ -33,8 +33,7 @@ define void @foo(double %i) {
 ; CHECK-NEXT:    [[TMP29:%.*]] = fptosi <4 x double> [[TMP28]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP30:%.*]] = or <4 x i32> zeroinitializer, [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP30]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = icmp slt i32 [[TMP31]], 32000
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP31]], i32 32000
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP31]], i32 32000)
 ; CHECK-NEXT:    [[I163:%.*]] = fcmp ogt double [[I118]], 0.000000e+00
 ; CHECK-NEXT:    [[I164:%.*]] = icmp slt i32 0, [[OP_RDX1]]
 ; CHECK-NEXT:    ret void
@@ -105,29 +104,25 @@ bb115:
   %i134 = fmul double %i133, 0.000000e+00
   %i135 = fptosi double %i134 to i32
   %i136 = or i32 0, %i135
-  %i137 = icmp slt i32 %i136, 32000
-  %i138 = select i1 %i137, i32 %i136, i32 32000
+  %i138 = call i32 @llvm.smin(i32 %i136, i32 32000)
   %i139 = select i1 false, double 0.000000e+00, double %i130
   %i140 = fmul double %i139, 0.000000e+00
   %i141 = fmul double %i140, 0.000000e+00
   %i142 = fptosi double %i141 to i32
   %i143 = or i32 0, %i142
-  %i144 = icmp slt i32 %i143, %i138
-  %i145 = select i1 %i144, i32 %i143, i32 %i138
+  %i145 = call i32 @llvm.smin(i32 %i143, i32 %i138)
   %i146 = select i1 false, double 0.000000e+00, double %i129
   %i147 = fmul double %i146, 0.000000e+00
   %i148 = fmul double %i147, 0.000000e+00
   %i149 = fptosi double %i148 to i32
   %i150 = or i32 0, %i149
-  %i151 = icmp slt i32 %i150, %i145
-  %i152 = select i1 %i151, i32 %i150, i32 %i145
+  %i152 = call i32 @llvm.smin(i32 %i150, i32 %i145)
   %i153 = select i1 false, double 0.000000e+00, double %i126
   %i154 = fmul double %i153, 0.000000e+00
   %i155 = fmul double %i154, 0.000000e+00
   %i156 = fptosi double %i155 to i32
   %i157 = or i32 0, %i156
-  %i158 = icmp slt i32 %i157, %i152
-  %i159 = select i1 %i158, i32 %i157, i32 %i152
+  %i159 = call i32 @llvm.smin(i32 %i157, i32 %i152)
   %i163 = fcmp ogt double %i118, 0.000000e+00
   %i164 = icmp slt i32 0, %i159
   ret void

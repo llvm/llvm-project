@@ -46,6 +46,7 @@
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -254,7 +255,7 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
   // current MSBs, but the next VALU needs different MSBs, so this
   // S_SET_VGPR_MSB would land right after the setreg. Insert S_NOP to
   // prevent it from being silently dropped.
-  if (needNopBeforeSetVGPRMSB(I))
+  if (needNopBeforeSetVGPRMSB(InsertPt))
     BuildMI(*MBB, InsertPt, {}, TII->get(AMDGPU::S_NOP)).addImm(0);
   MostRecentModeSet =
       BuildMI(*MBB, InsertPt, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
@@ -432,23 +433,41 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   return I;
 }
 
+/// Returns whether \p MI is a S_SETREG_IMM32_B32(MODE).
+static bool isSetregMode(const MachineInstr &MI, const SIInstrInfo &TII) {
+  if (MI.getOpcode() != AMDGPU::S_SETREG_IMM32_B32)
+    return false;
+
+  const MachineOperand *SIMM16Op =
+      TII.getNamedOperand(MI, AMDGPU::OpName::simm16);
+  auto [HwRegId, _Offset, _Size] =
+      AMDGPU::Hwreg::HwregEncoding::decode(SIMM16Op->getImm());
+  return HwRegId == AMDGPU::Hwreg::ID_MODE;
+}
+
 bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
     MachineBasicBlock::instr_iterator I) {
-  while (I != MBB->begin()) {
-    I = std::prev(I);
-    if (I->getOpcode() == AMDGPU::S_SETREG_IMM32_B32) {
-      MachineOperand *SIMM16Op =
-          TII->getNamedOperand(*I, AMDGPU::OpName::simm16);
-      auto [HwRegId, Offset, Size] =
-          AMDGPU::Hwreg::HwregEncoding::decode(SIMM16Op->getImm());
-      if (HwRegId == AMDGPU::Hwreg::ID_MODE)
+  MachineBasicBlock *CurrentMBB = MBB;
+  while (true) {
+    // Walk the block backward until we hit a non-meta instruction or the
+    // beginning of the block.
+    while (I != CurrentMBB->instr_begin()) {
+      I = std::prev(I);
+      if (isSetregMode(*I, *TII))
         return true;
+      if (!I->isMetaInstruction())
+        return false;
     }
-    if (!I->isMetaInstruction())
+
+    // Look for a potential fallthrough predecessor block. When it ends with a
+    // S_SETREG_IMM32_B32(MODE) we need to insert a S_NOP too. We assume that an
+    // explicit jump to the current block from the block that would otherwise
+    // have naturally fallen through to it will remain in the final assembly.
+    CurrentMBB = CurrentMBB->getPrevNode();
+    if (!CurrentMBB || !CurrentMBB->canFallThrough())
       return false;
+    I = CurrentMBB->instr_end();
   }
-  // FIXME: Return true if the previous MBB falls through and ends with
-  // S_SETREG_IMM32_B32.
   return false;
 }
 
@@ -471,8 +490,8 @@ bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
   MachineOperand *ImmOp = TII->getNamedOperand(MI, AMDGPU::OpName::imm);
   int64_t OldImm = ImmOp->getImm();
   // Note that Offset is ignored for mode bits here.
-  int64_t NewImm =
-      (OldImm & ~AMDGPU::Hwreg::VGPR_MSB_MASK) | (SetregMode << VGPRMSBShift);
+  int64_t NewImm = (OldImm & ~int64_t(AMDGPU::Hwreg::VGPR_MSB_MASK)) |
+                   (SetregMode << VGPRMSBShift);
   ImmOp->setImm(NewImm);
   return NewImm != OldImm;
 }

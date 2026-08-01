@@ -347,7 +347,9 @@ enum LoweringMethodID {
   AbsToNegMax,
   AbsToS32,
   DynStackAlloc,
-  DeletePrefetch
+  DeletePrefetch,
+  LowerSetRounding,
+  LowerGetRounding
 };
 
 enum FastRulesTypes {

@@ -22,11 +22,7 @@
 int main(int argc, char** argv) {
   auto std_unique      = [](auto first, auto last) { return std::unique(first, last); };
   auto std_unique_pred = [](auto first, auto last) {
-    return std::unique(first, last, [](auto a, auto b) {
-      benchmark::DoNotOptimize(a);
-      benchmark::DoNotOptimize(b);
-      return a == b;
-    });
+    return std::unique(first, last, [](auto a, auto b) { return a == b; });
   };
 
   // Create a sequence of the form xxxxxxxxxxyyyyyyyyyy and unique the

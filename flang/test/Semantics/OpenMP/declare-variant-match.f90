@@ -108,11 +108,38 @@ end subroutine
 
 subroutine f09
   !$omp declare variant (sub:vsub) match (construct={parallel}) &
-!ERROR: At most one MATCH clause can appear on the DECLARE VARIANT directive
+!ERROR: At most one MATCH clause can appear on DECLARE VARIANT directive
   !$omp & match (construct={teams})
 contains
   subroutine vsub
   end subroutine
   subroutine sub
+  end subroutine
+end subroutine
+
+! ADJUST_ARGS is accepted by parsing but variant selection does not honour it
+! yet.
+subroutine f10
+contains
+  subroutine vsub(v1)
+    integer, value :: v1
+  end subroutine
+  subroutine sub(v1)
+    integer, value :: v1
+!ERROR: ADJUST_ARGS clause on the DECLARE VARIANT directive is not yet implemented
+    !$omp declare variant(vsub) match(construct={dispatch}) adjust_args(nothing: v1)
+  end subroutine
+end subroutine
+
+! APPEND_ARGS is likewise not yet honoured.
+subroutine f11
+contains
+  subroutine vsub(v1)
+    integer, value :: v1
+  end subroutine
+  subroutine sub(v1)
+    integer, value :: v1
+!ERROR: APPEND_ARGS clause on the DECLARE VARIANT directive is not yet implemented
+    !$omp declare variant(vsub) match(construct={dispatch}) append_args(interop(target))
   end subroutine
 end subroutine

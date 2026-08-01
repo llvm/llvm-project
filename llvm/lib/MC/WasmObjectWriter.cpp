@@ -676,7 +676,8 @@ WasmObjectWriter::getProvisionalValue(const MCAssembler &Asm,
   case wasm::R_WASM_MEMORY_ADDR_I64:
   case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB:
   case wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64:
-  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I32: {
+  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I32:
+  case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64: {
     // Provisional value is address of the global plus the offset
     // For undefined symbols, use zero
     if (!RelEntry.Symbol->isDefined())
@@ -778,6 +779,7 @@ void WasmObjectWriter::applyRelocations(
     case wasm::R_WASM_TABLE_INDEX_I64:
     case wasm::R_WASM_MEMORY_ADDR_I64:
     case wasm::R_WASM_FUNCTION_OFFSET_I64:
+    case wasm::R_WASM_MEMORY_ADDR_LOCREL_I64:
       patchI64(Stream, Value, Offset);
       break;
     case wasm::R_WASM_TABLE_INDEX_SLEB:

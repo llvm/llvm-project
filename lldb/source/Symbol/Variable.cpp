@@ -31,6 +31,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 
@@ -200,8 +201,6 @@ bool Variable::DumpDeclaration(Stream *s, bool show_fullpaths,
   return dumped_declaration_info;
 }
 
-size_t Variable::MemorySize() const { return sizeof(Variable); }
-
 CompilerDeclContext Variable::GetDeclContext() {
   Type *type = GetType();
   if (type)
@@ -281,6 +280,10 @@ bool Variable::LocationIsValidForAddress(const Address &address) {
 }
 
 bool Variable::IsInScope(StackFrame *frame) {
+  // Synthetic values are always in scope.
+  if (IsSyntheticValueType(m_scope))
+    return true;
+
   switch (m_scope) {
   case eValueTypeRegister:
   case eValueTypeRegisterSet:

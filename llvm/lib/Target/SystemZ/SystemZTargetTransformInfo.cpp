@@ -478,7 +478,9 @@ unsigned SystemZTTIImpl::getMinPrefetchStride(unsigned NumMemAccesses,
   return ST->hasMiscellaneousExtensions3() ? 8192 : 2048;
 }
 
-unsigned SystemZTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+SystemZTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
   return VF.isVector() ? 8 : 1;
 }
 

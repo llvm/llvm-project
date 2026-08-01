@@ -73,7 +73,7 @@ void readStrings(
   OnComplete(std::move(Values));
 }
 
-} // anonymous namespace
+} // namespace
 namespace orc_rt::sps_ci {
 
 ORC_RT_SPS_WRAPPER(orc_rt_ci_sps_mem_write_uint8s,

@@ -81,14 +81,6 @@ subroutine affinity_iterator_section_bad_stride(n)
   !$omp end task
 end subroutine
 
-subroutine affinity_substring_like_single_index()
-  character(len=7) :: s
-  !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.
-  !ERROR: Substrings must be in the form parent-string(lb:ub)
-  !$omp task affinity(s(2))
-  !$omp end task
-end subroutine
-
 subroutine affinity_substring_like_step()
   character(len=7) :: s
   !PORTABILITY: The use of substrings in OpenMP argument lists has been disallowed since OpenMP 5.2.

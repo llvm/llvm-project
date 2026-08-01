@@ -348,7 +348,7 @@ define half @test_tailcall_flipped(half %a, half %b) #0 {
 ; No conversion is needed
 define void @test_select(ptr %p, ptr %q, i1 zeroext %c) #0 {
 ; CHECK-ALL-LABEL: test_select:
-; CHECK-ALL:         cmp r2, #0
+; CHECK-ALL:         tst r2, #1
 ; CHECK-ALL-NEXT:    movne r1, r0
 ; CHECK-ALL-NEXT:    ldrh r1, [r1]
 ; CHECK-ALL-NEXT:    strh r1, [r0]

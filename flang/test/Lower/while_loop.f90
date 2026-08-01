@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -emit-hlfir -o - %s | FileCheck %s
 
 ! Test a simple while loop.
 ! CHECK-LABEL: simple_loop
@@ -11,6 +11,7 @@ subroutine simple_loop
   ! CHECK: hlfir.assign %[[C5]] to %[[I]]#0
   i = 5
 
+  ! CHECK: scf.execute_region no_inline {
   ! CHECK: cf.br ^[[BB1:.*]]
   ! CHECK: ^[[BB1]]:  // 2 preds: ^{{.*}}, ^[[BB2:.*]]
   ! CHECK: %[[IVAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
@@ -23,11 +24,13 @@ subroutine simple_loop
   ! CHECK: %[[INC:.*]] = arith.subi %[[IVAL2]], %[[C2]] : i32
   ! CHECK: hlfir.assign %[[INC]] to %[[I]]#0 : i32, !fir.ref<i32>
   ! CHECK: cf.br ^[[BB1]]
+  ! CHECK: ^[[BB3]]:  // pred: ^[[BB1]]
+  ! CHECK: scf.yield
+  ! CHECK: }
   do while (i .gt. 1)
     i = i - 2
   end do
 
-  ! CHECK: ^[[BB3]]:  // pred: ^[[BB1]]
   ! CHECK: %[[IVAL3:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[IVAL3]])
   print *, i
@@ -46,8 +49,9 @@ subroutine while_inside_while_loop
   ! CHECK: hlfir.assign %[[C13]] to %[[I]]#0
   i = 13
 
+  ! CHECK: scf.execute_region no_inline {
   ! CHECK: cf.br ^[[HDR1:.*]]
-  ! CHECK: ^[[HDR1]]:  // 2 preds: ^{{.*}}, ^[[EXIT2:.*]]
+  ! CHECK: ^[[HDR1]]:  // 2 preds: ^{{.*}}, ^{{.*}}
   ! CHECK: %[[IVAL:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: %[[C8:.*]] = arith.constant 8 : i32
   ! CHECK: %[[COND:.*]] = arith.cmpi sgt, %[[IVAL]], %[[C8]] : i32
@@ -64,8 +68,9 @@ subroutine while_inside_while_loop
     ! CHECK: hlfir.assign %[[C3]] to %[[J]]#0
     j = 3
 
+    ! CHECK: scf.execute_region no_inline {
     ! CHECK: cf.br ^[[HDR2:.*]]
-    ! CHECK: ^[[HDR2]]:  // 2 preds: ^[[BODY1]], ^[[BODY2:.*]]
+    ! CHECK: ^[[HDR2]]:  // 2 preds: ^{{.*}}, ^[[BODY2:.*]]
     ! CHECK: %[[JVAL:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>
     ! CHECK: %[[IVAL3:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
     ! CHECK: %[[COND2:.*]] = arith.cmpi slt, %[[JVAL]], %[[IVAL3]] : i32
@@ -81,10 +86,14 @@ subroutine while_inside_while_loop
     end do
 
     ! CHECK: ^[[EXIT2]]: // pred: ^[[HDR2]]
+    ! CHECK: scf.yield
+    ! CHECK: }
     ! CHECK: cf.br ^[[HDR1]]
   end do
 
   ! CHECK: ^[[EXIT1]]:  // pred: ^[[HDR1]]
+  ! CHECK: scf.yield
+  ! CHECK: }
   ! CHECK: %[[IPRINT:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
   ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[IPRINT]])
   ! CHECK: %[[JPRINT:.*]] = fir.load %[[J]]#0 : !fir.ref<i32>

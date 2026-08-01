@@ -242,9 +242,9 @@ subroutine test_cache_2d_loop_vars()
 ! CHECK: %[[I_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_cache_2d_loop_varsEi"}
 ! CHECK: fir.store %[[I_IV]] to %[[I_DECL]]#0 : !fir.ref<i32>
 ! Inner loop j (non-acc loop, fir.do_loop)
-! CHECK: fir.do_loop %[[J_IV:.*]] = {{.*}} iter_args(%[[J_ITER:.*]] = {{.*}})
+! CHECK: fir.do_loop %[[J_IV:.*]] = {{.*}} to {{.*}} step {{.*}} : i32 {
 ! Inner loop iterator j is stored to j variable
-! CHECK: fir.store %[[J_ITER]] to %[[J_REF:.*]] : !fir.ref<i32>
+! CHECK: fir.store %[[J_IV]] to %[[J_REF:.*]] : !fir.ref<i32>
 ! Dimension 1 bounds from j: lowerbound = j-1, upperbound = j
 ! CHECK: %[[BOUND1:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%{{.*}} : index)
 ! Dimension 2 bounds from i: lowerbound = i-1, upperbound = i

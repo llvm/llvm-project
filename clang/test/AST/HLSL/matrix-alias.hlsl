@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -hlsl-entry entry -ast-dump -o - %s | FileCheck %s
 
 // Test that matrix aliases are set up properly for HLSL
 
@@ -20,8 +20,8 @@
 // Make sure we got a using directive at the end.
 // CHECK: UsingDirectiveDecl 0x{{[0-9a-fA-F]+}} <<invalid sloc>> <invalid sloc> Namespace 0x{{[0-9a-fA-F]+}} 'hlsl'
 
-[numthreads(1,1,1)]
-int entry() {
+[shader("compute"), numthreads(1,1,1)]
+void entry() {
   // Verify that the alias is generated inside the hlsl namespace.
   hlsl::matrix<float, 2, 2> Mat2x2f;
 
@@ -45,5 +45,5 @@ int entry() {
 
   // CHECK: DeclStmt 0x{{[0-9a-fA-F]+}} <line:44:3, col:21>
   // CHECK-NEXT: VarDecl 0x{{[0-9a-fA-F]+}} <col:3, col:12> col:12 ImpMat4x4 'matrix<>':'matrix<float, 4, 4>'
-  return 1;
+  return;
 }

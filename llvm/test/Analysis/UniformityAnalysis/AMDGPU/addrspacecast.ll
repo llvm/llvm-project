@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s --check-prefix=UNI
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s --check-prefix=DIV
+; RUN: opt -mtriple=amdgpu9.00-amd-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s --check-prefix=UNI
+; RUN: opt -mtriple=amdgpu12.50-amd-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s --check-prefix=DIV
 
 ; UNI: ALL VALUES UNIFORM
 ; DIV: DIVERGENT:   %cast = addrspacecast ptr addrspace(5) %alloca to ptr

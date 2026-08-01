@@ -128,6 +128,38 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_EXTRACT_SUBVECTOR) {
   EXPECT_TRUE(Known.isZero());
 }
 
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_GET_ACTIVE_LANE_MASK) {
+  // GET_ACTIVE_LANE_MASK promoted/widened to a vector integer type wider
+  // than i1 (e.g. v8i8) should report that all bits of each lane are sign
+  // bits.
+  SDLoc Loc;
+  const TargetLowering &TLI = DAG->getTargetLoweringInfo();
+  EVT MaskVT =
+      TLI.getSetCCResultType(DAG->getDataLayout(), Context, MVT::v8i16);
+  SDValue Base = DAG->getConstant(0, Loc, MVT::i64);
+  SDValue TripCount = DAG->getConstant(8, Loc, MVT::i64);
+  SDValue Op =
+      DAG->getNode(ISD::GET_ACTIVE_LANE_MASK, Loc, MaskVT, Base, TripCount);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 16u);
+}
+
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_GET_ACTIVE_LANE_MASK) {
+  SDLoc Loc;
+  const TargetLowering &TLI = DAG->getTargetLoweringInfo();
+  EVT MaskVT =
+      TLI.getSetCCResultType(DAG->getDataLayout(), Context, MVT::nxv8i16);
+  SDValue Base = DAG->getConstant(0, Loc, MVT::i64);
+  SDValue TripCount = DAG->getConstant(8, Loc, MVT::i64);
+  SDValue Op =
+      DAG->getNode(ISD::GET_ACTIVE_LANE_MASK, Loc, MaskVT, Base, TripCount);
+  EXPECT_EQ(DAG->ComputeNumSignBits(Op), 1u);
+
+  // Test for extended (although illegal) mask type.
+  SDValue OpIllegal = DAG->getNode(ISD::GET_ACTIVE_LANE_MASK, Loc, MVT::nxv8i16,
+                                   Base, TripCount);
+  EXPECT_EQ(DAG->ComputeNumSignBits(OpIllegal), 16u);
+}
+
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);

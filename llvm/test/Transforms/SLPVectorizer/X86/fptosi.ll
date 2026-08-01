@@ -5,6 +5,10 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX --check-prefix=AVX256NODQ
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skylake-avx512 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX --check-prefix=AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skylake-avx512 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX --check-prefix=AVX256DQ
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX --check-prefix=AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX --check-prefix=AVX256DQ
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX --check-prefix=AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefix=CHECK --check-prefix=AVX --check-prefix=AVX256DQ
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -445,10 +449,10 @@ define void @fptosi_8f32_8i8() #0 {
 
 define <4 x i32> @fptosi_4xf64_4i32(double %a0, double %a1, double %a2, double %a3) #0 {
 ; CHECK-LABEL: @fptosi_4xf64_4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[A0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[A1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[A2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[A3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[A0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[A2:%.*]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> [[TMP3]], double [[A3:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = fptosi <4 x double> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP5]]
 ;
@@ -465,10 +469,10 @@ define <4 x i32> @fptosi_4xf64_4i32(double %a0, double %a1, double %a2, double %
 
 define <4 x i32> @fptosi_4xf32_4i32(float %a0, float %a1, float %a2, float %a3) #0 {
 ; CHECK-LABEL: @fptosi_4xf32_4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[A1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[A2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[A3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[A0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[A1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> [[TMP2]], float [[A2:%.*]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[A3:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = fptosi <4 x float> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP5]]
 ;

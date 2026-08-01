@@ -7,6 +7,7 @@ set(
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 add_clang_library(clangCIR
+  CIRDataLayoutSpec.cpp
   CIRGenerator.cpp
   CIRGenAsm.cpp
   CIRGenAtomic.cpp
@@ -55,6 +56,7 @@ add_clang_library(clangCIR
   CIRGenVTables.cpp
   TargetInfo.cpp
   Targets/AMDGPU.cpp
+  Targets/NVPTX.cpp
   Targets/SPIRV.cpp
 
   DEPENDS

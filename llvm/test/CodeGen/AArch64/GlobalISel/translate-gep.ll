@@ -40,8 +40,7 @@ define ptr @first_offset_trivial(ptr %addr) {
   ; CHECK-NEXT:   liveins: $x0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(p0) = COPY [[COPY]](p0)
-  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](p0)
+  ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %res = getelementptr %type, ptr %addr, i32 0
   ret ptr %res

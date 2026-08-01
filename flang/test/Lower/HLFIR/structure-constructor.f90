@@ -314,7 +314,7 @@ subroutine test7(n)
   x = t7(n)
 end subroutine test7
 ! CHECK-LABEL:   func.func @_QPtest7(
-! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
+! CHECK-SAME:                        %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n", fir.read_only}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMtypesTt7{c1:i32,c2:!fir.box<!fir.heap<!fir.array<?xf32>>>}>
 ! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFtest7En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.type<_QMtypesTt7{c1:i32,c2:!fir.box<!fir.heap<!fir.array<?xf32>>>}> {bindc_name = "x", uniq_name = "_QFtest7Ex"}

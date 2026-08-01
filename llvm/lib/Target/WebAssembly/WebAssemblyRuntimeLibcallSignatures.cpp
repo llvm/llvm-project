@@ -275,6 +275,12 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::FMAX_F32] = f32_func_f32_f32;
     Table[RTLIB::FMAX_F64] = f64_func_f64_f64;
     Table[RTLIB::FMAX_F128] = i64_i64_func_i64_i64_i64_i64;
+    // wasi-libc and emscripten do not yet have these symbols.
+    // We currently expand them in performMinMaxF128Combine.
+    // Table[RTLIB::FMINIMUM_F128] = i64_i64_func_i64_i64_i64_i64;
+    // Table[RTLIB::FMAXIMUM_F128] = i64_i64_func_i64_i64_i64_i64;
+    // Table[RTLIB::FMINIMUM_NUM_F128] = i64_i64_func_i64_i64_i64_i64;
+    // Table[RTLIB::FMAXIMUM_NUM_F128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::LDEXP_F32] = f32_func_f32_i32;
     Table[RTLIB::LDEXP_F64] = f64_func_f64_i32;
     Table[RTLIB::LDEXP_F128] = i64_i64_func_i64_i64_i32;

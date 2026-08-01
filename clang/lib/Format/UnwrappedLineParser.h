@@ -48,8 +48,6 @@ struct UnwrappedLine {
   bool InPragmaDirective = false;
   /// Whether it is part of a macro body.
   bool InMacroBody = false;
-  /// Whether it is a C++20 module/import declaration.
-  bool IsModuleOrImportDecl = false;
 
   /// Nesting level of unbraced body of a control statement.
   unsigned UnbracedBodyLevel = 0;
@@ -62,6 +60,9 @@ struct UnwrappedLine {
   /// \c True if this line should be indented by ContinuationIndent in
   /// addition to the normal indention level.
   bool IsContinuation = false;
+
+  /// Whether it is a C++20 module/import declaration.
+  bool IsModuleOrImportDecl = false;
 
   /// If this \c UnwrappedLine closes a block in a sequence of lines,
   /// \c MatchingOpeningBlockLineIndex stores the index of the corresponding
@@ -161,8 +162,7 @@ private:
   void parseLoopBody(bool KeepBraces, bool WrapRightBrace);
   void parseForOrWhileLoop(bool HasParens = true);
   void parseDoWhile();
-  void parseLabel(FormatStyle::IndentGotoLabelStyle IndentGotoLabels =
-                      FormatStyle::IGLS_OuterIndent);
+  void parseLabel(bool IsGotoLabel = false);
   void parseCaseLabel();
   void parseSwitch(bool IsExpr);
   void parseNamespace();

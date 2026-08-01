@@ -70,10 +70,9 @@ public:
   MachineFunction *MF = nullptr;
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   const MachineLoopInfo *MLI = nullptr;
-  const MachineDominatorTree *MDT = nullptr;
   const InstrItineraryData *InstrItins = nullptr;
   const TargetInstrInfo *TII = nullptr;
-  RegisterClassInfo RegClassInfo;
+  const RegisterClassInfo *RegClassInfo = nullptr;
   bool disabledByPragma = false;
   unsigned II_setByPragma = 0;
 
@@ -288,6 +287,12 @@ class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
   unsigned MII = 0;
   /// The maximum initiation interval between iterations for this schedule.
   unsigned MAX_II = 0;
+  /// The resource-constrained minimum initiation interval, i.e. the lower
+  /// bound on MII imposed by the availability of processor resources.
+  unsigned ResMII = 0;
+  /// The recurrence-constrained minimum initiation interval, i.e. the lower
+  /// bound on MII imposed by loop-carried dependence cycles.
+  unsigned RecMII = 0;
   /// Set to true if a valid pipelined schedule is found for the loop.
   bool Scheduled = false;
   MachineLoop &Loop;

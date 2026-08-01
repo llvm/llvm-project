@@ -29,12 +29,15 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
     Constexpr = F->isConstexpr();
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
       Virtual = CD->isVirtual();
+      ExplicitThisPointer = CD->isExplicitObjectMemberFunction();
       Kind = CD->isCopyOrMoveConstructor() ? FunctionKind::CopyOrMoveCtor
                                            : FunctionKind::Ctor;
     } else if (const auto *CD = dyn_cast<CXXDestructorDecl>(F)) {
+      ExplicitThisPointer = CD->isExplicitObjectMemberFunction();
       Virtual = CD->isVirtual();
       Kind = FunctionKind::Dtor;
     } else if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
+      ExplicitThisPointer = MD->isExplicitObjectMemberFunction();
       Virtual = MD->isVirtual();
       if (IsLambdaStaticInvoker)
         Kind = FunctionKind::LambdaStaticInvoker;
@@ -43,9 +46,11 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
       else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
         Kind = FunctionKind::CopyOrMoveOperator;
     } else {
+      ExplicitThisPointer = false;
       Virtual = false;
     }
   } else {
+    ExplicitThisPointer = false;
     Variadic = false;
     Virtual = false;
     Immediate = false;

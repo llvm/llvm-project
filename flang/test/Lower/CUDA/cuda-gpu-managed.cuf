@@ -65,20 +65,19 @@ end subroutine
 ! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_explicit_managedEm"}
 
 ! -----------------------------------------------------------------------------
-! Test 5: Pointer variables are NOT affected by -gpu=managed
+! Test 5: Pointer variables are also implicitly managed with -gpu=managed
 ! -----------------------------------------------------------------------------
-subroutine test_pointer_not_managed()
+subroutine test_pointer_managed()
   real, pointer :: ptr(:)
   allocate(ptr(100))
   ptr = 1.0
   deallocate(ptr)
 end subroutine
 
-! CHECK-LABEL: func.func @_QPtest_pointer_not_managed()
-! CHECK: %[[BOX:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = "ptr", uniq_name = "_QFtest_pointer_not_managedEptr"}
-! CHECK-NOT: data_attr = #cuf.cuda<managed>
-! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_pointer_not_managedEptr"}
-! CHECK: fir.call @_FortranAPointerAllocate
+! CHECK-LABEL: func.func @_QPtest_pointer_managed()
+! CHECK: %[[BOX:.*]] = cuf.alloc !fir.box<!fir.ptr<!fir.array<?xf32>>> {bindc_name = "ptr", data_attr = #cuf.cuda<managed>, uniq_name = "_QFtest_pointer_managedEptr"}
+! CHECK: %[[BOX_DECL:.*]]:2 = hlfir.declare %[[BOX]] {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_pointer_managedEptr"}
+! CHECK: cuf.allocate %[[BOX_DECL]]#0 : {{.*}} {data_attr = #cuf.cuda<managed>, pointer}
 
 ! -----------------------------------------------------------------------------
 ! Test 6: Multiple allocatables - mix of implicit and explicit

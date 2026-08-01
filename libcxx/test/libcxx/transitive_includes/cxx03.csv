@@ -69,6 +69,7 @@ any streambuf
 any string
 any string_view
 any system_error
+any text_encoding
 any tuple
 any type_traits
 any typeinfo
@@ -122,15 +123,19 @@ atomic ratio
 atomic type_traits
 atomic version
 barrier atomic
+barrier cctype
 barrier climits
 barrier cmath
 barrier compare
 barrier concepts
 barrier cstddef
 barrier cstdint
+barrier cstdio
 barrier cstdlib
 barrier cstring
 barrier ctime
+barrier cwchar
+barrier cwctype
 barrier exception
 barrier initializer_list
 barrier iosfwd
@@ -234,6 +239,7 @@ ccomplex streambuf
 ccomplex string
 ccomplex string_view
 ccomplex system_error
+ccomplex text_encoding
 ccomplex tuple
 ccomplex type_traits
 ccomplex typeinfo
@@ -292,6 +298,7 @@ chrono streambuf
 chrono string
 chrono string_view
 chrono system_error
+chrono text_encoding
 chrono tuple
 chrono type_traits
 chrono typeinfo
@@ -337,6 +344,7 @@ codecvt stdexcept
 codecvt string
 codecvt string_view
 codecvt system_error
+codecvt text_encoding
 codecvt tuple
 codecvt type_traits
 codecvt typeinfo
@@ -396,6 +404,7 @@ complex streambuf
 complex string
 complex string_view
 complex system_error
+complex text_encoding
 complex tuple
 complex type_traits
 complex typeinfo
@@ -501,6 +510,7 @@ ctgmath streambuf
 ctgmath string
 ctgmath string_view
 ctgmath system_error
+ctgmath text_encoding
 ctgmath tuple
 ctgmath type_traits
 ctgmath typeinfo
@@ -552,6 +562,7 @@ deque streambuf
 deque string
 deque string_view
 deque system_error
+deque text_encoding
 deque tuple
 deque type_traits
 deque typeinfo
@@ -607,6 +618,7 @@ experimental/iterator streambuf
 experimental/iterator string
 experimental/iterator string_view
 experimental/iterator system_error
+experimental/iterator text_encoding
 experimental/iterator tuple
 experimental/iterator type_traits
 experimental/iterator typeinfo
@@ -732,6 +744,7 @@ format streambuf
 format string
 format string_view
 format system_error
+format text_encoding
 format tuple
 format type_traits
 format typeinfo
@@ -778,6 +791,7 @@ forward_list streambuf
 forward_list string
 forward_list string_view
 forward_list system_error
+forward_list text_encoding
 forward_list tuple
 forward_list type_traits
 forward_list typeinfo
@@ -834,6 +848,7 @@ fstream streambuf
 fstream string
 fstream string_view
 fstream system_error
+fstream text_encoding
 fstream tuple
 fstream type_traits
 fstream typeinfo
@@ -879,6 +894,7 @@ functional streambuf
 functional string
 functional string_view
 functional system_error
+functional text_encoding
 functional tuple
 functional type_traits
 functional typeinfo
@@ -936,6 +952,7 @@ future streambuf
 future string
 future string_view
 future system_error
+future text_encoding
 future thread
 future tuple
 future type_traits
@@ -993,6 +1010,7 @@ iomanip streambuf
 iomanip string
 iomanip string_view
 iomanip system_error
+iomanip text_encoding
 iomanip tuple
 iomanip type_traits
 iomanip typeinfo
@@ -1033,6 +1051,7 @@ ios stdexcept
 ios string
 ios string_view
 ios system_error
+ios text_encoding
 ios tuple
 ios type_traits
 ios typeinfo
@@ -1086,6 +1105,7 @@ iostream streambuf
 iostream string
 iostream string_view
 iostream system_error
+iostream text_encoding
 iostream tuple
 iostream type_traits
 iostream typeinfo
@@ -1139,6 +1159,7 @@ istream streambuf
 istream string
 istream string_view
 istream system_error
+istream text_encoding
 istream tuple
 istream type_traits
 istream typeinfo
@@ -1223,6 +1244,7 @@ list streambuf
 list string
 list string_view
 list system_error
+list text_encoding
 list tuple
 list type_traits
 list typeinfo
@@ -1266,6 +1288,7 @@ locale streambuf
 locale string
 locale string_view
 locale system_error
+locale text_encoding
 locale tuple
 locale type_traits
 locale typeinfo
@@ -1310,6 +1333,7 @@ map streambuf
 map string
 map string_view
 map system_error
+map text_encoding
 map tuple
 map type_traits
 map typeinfo
@@ -1442,6 +1466,7 @@ numeric streambuf
 numeric string
 numeric string_view
 numeric system_error
+numeric text_encoding
 numeric tuple
 numeric type_traits
 numeric typeinfo
@@ -1523,6 +1548,7 @@ ostream streambuf
 ostream string
 ostream string_view
 ostream system_error
+ostream text_encoding
 ostream tuple
 ostream type_traits
 ostream typeinfo
@@ -1573,6 +1599,7 @@ print streambuf
 print string
 print string_view
 print system_error
+print text_encoding
 print tuple
 print type_traits
 print typeinfo
@@ -1620,6 +1647,7 @@ queue streambuf
 queue string
 queue string_view
 queue system_error
+queue text_encoding
 queue tuple
 queue type_traits
 queue typeinfo
@@ -1668,6 +1696,7 @@ random streambuf
 random string
 random string_view
 random system_error
+random text_encoding
 random tuple
 random type_traits
 random typeinfo
@@ -1742,6 +1771,7 @@ regex streambuf
 regex string
 regex string_view
 regex system_error
+regex text_encoding
 regex tuple
 regex type_traits
 regex typeinfo
@@ -1830,6 +1860,7 @@ set streambuf
 set string
 set string_view
 set system_error
+set text_encoding
 set tuple
 set type_traits
 set typeinfo
@@ -1914,6 +1945,7 @@ span streambuf
 span string
 span string_view
 span system_error
+span text_encoding
 span tuple
 span type_traits
 span typeinfo
@@ -1968,6 +2000,7 @@ sstream streambuf
 sstream string
 sstream string_view
 sstream system_error
+sstream text_encoding
 sstream tuple
 sstream type_traits
 sstream typeinfo
@@ -2015,6 +2048,7 @@ stack streambuf
 stack string
 stack string_view
 stack system_error
+stack text_encoding
 stack tuple
 stack type_traits
 stack typeinfo
@@ -2032,6 +2066,7 @@ stdexcept new
 stdexcept type_traits
 stdexcept typeinfo
 stdexcept version
+stop_token cstddef
 stop_token iosfwd
 stop_token version
 streambuf algorithm
@@ -2067,6 +2102,7 @@ streambuf stdexcept
 streambuf string
 streambuf string_view
 streambuf system_error
+streambuf text_encoding
 streambuf tuple
 streambuf type_traits
 streambuf typeinfo
@@ -2184,6 +2220,7 @@ strstream streambuf
 strstream string
 strstream string_view
 strstream system_error
+strstream text_encoding
 strstream tuple
 strstream type_traits
 strstream typeinfo
@@ -2239,6 +2276,7 @@ syncstream streambuf
 syncstream string
 syncstream string_view
 syncstream system_error
+syncstream text_encoding
 syncstream tuple
 syncstream type_traits
 syncstream typeinfo
@@ -2331,6 +2369,7 @@ thread streambuf
 thread string
 thread string_view
 thread system_error
+thread text_encoding
 thread tuple
 thread type_traits
 thread typeinfo
@@ -2443,6 +2482,7 @@ unordered_set streambuf
 unordered_set string
 unordered_set string_view
 unordered_set system_error
+unordered_set text_encoding
 unordered_set tuple
 unordered_set type_traits
 unordered_set typeinfo
@@ -2499,6 +2539,7 @@ valarray streambuf
 valarray string
 valarray string_view
 valarray system_error
+valarray text_encoding
 valarray tuple
 valarray type_traits
 valarray typeinfo
@@ -2560,6 +2601,7 @@ vector streambuf
 vector string
 vector string_view
 vector system_error
+vector text_encoding
 vector tuple
 vector type_traits
 vector typeinfo

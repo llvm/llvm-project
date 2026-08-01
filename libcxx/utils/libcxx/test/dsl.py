@@ -32,6 +32,21 @@ class ConfigurationRuntimeError(ConfigurationError):
     pass
 
 
+def _compilerFingerprint(config):
+    """
+    Returns an opaque value that changes whenever the compiler being tested is
+    rebuilt, even if it keeps the same path.
+    """
+    try:
+        cxx = _getSubstitution("%{cxx}", config.substitutions)
+        path = shutil.which(cxx) or cxx
+        path = os.path.realpath(path)
+        st = os.stat(path)
+        return (path, st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+
+
 def _memoizeExpensiveOperation(extractCacheKey):
     """
     Allows memoizing a very expensive operation.
@@ -62,7 +77,12 @@ def _memoizeExpensiveOperation(extractCacheKey):
                 with open(persistentCache, "rb") as cacheFile:
                     cache = pickle.load(cacheFile)
 
-            cacheKey = pickle.dumps(extractCacheKey(config, *args, **kwargs))
+            # Mix in the compiler fingerprint so that rebuilding clang
+            # in-place invalidates any cached verdicts obtained against the
+            # previous build, instead of silently reusing them.
+            cacheKey = pickle.dumps(
+                (_compilerFingerprint(config), extractCacheKey(config, *args, **kwargs))
+            )
             if cacheKey not in cache:
                 cache[cacheKey] = function(config, *args, **kwargs)
                 # Update the persistent cache so it knows about the new key

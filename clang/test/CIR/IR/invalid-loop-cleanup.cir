@@ -1,0 +1,109 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+
+cir.func private @ctor(!cir.ptr<!rec_S>)
+cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool
+cir.func private @dtor(!cir.ptr<!rec_S>) func_info<#cir.cxx_dtor<!rec_S>>
+    attributes {nothrow}
+
+cir.func @while_cleanup_missing_kind() {
+  %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+  cir.while {
+    cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+    %cond = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+    cir.condition(%cond)
+  } do {
+    cir.yield
+  // expected-error @below {{expected valid keyword or string}}
+  // expected-error @below {{failed to parse CIR_CleanupKindAttr}}
+  } cleanup {
+    cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+
+cir.func private @ctor(!cir.ptr<!rec_S>)
+cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool
+cir.func private @dtor(!cir.ptr<!rec_S>) func_info<#cir.cxx_dtor<!rec_S>>
+    attributes {nothrow}
+
+cir.func @for_cleanup_missing_kind() {
+  %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+  cir.for : cond {
+    cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+    %cond = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+    cir.condition(%cond)
+  } body {
+    cir.yield
+  } step {
+    cir.yield
+  // expected-error @below {{expected valid keyword or string}}
+  // expected-error @below {{failed to parse CIR_CleanupKindAttr}}
+  } cleanup {
+    cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+
+cir.func private @ctor(!cir.ptr<!rec_S>)
+cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool
+cir.func private @dtor(!cir.ptr<!rec_S>) func_info<#cir.cxx_dtor<!rec_S>>
+    attributes {nothrow}
+
+cir.func @while_cleanup_eh() {
+  %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+  // expected-error @below {{loop cleanup kind must be 'normal' or 'all', not 'eh'}}
+  cir.while {
+    cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+    %cond = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+    cir.condition(%cond)
+  } do {
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!rec_S = !cir.struct<"S" padded {!u8i}>
+
+cir.func private @ctor(!cir.ptr<!rec_S>)
+cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool
+cir.func private @dtor(!cir.ptr<!rec_S>) func_info<#cir.cxx_dtor<!rec_S>>
+    attributes {nothrow}
+
+cir.func @for_cleanup_eh() {
+  %s = cir.alloca "s" align(1) init : !cir.ptr<!rec_S>
+  // expected-error @below {{loop cleanup kind must be 'normal' or 'all', not 'eh'}}
+  cir.for : cond {
+    cir.call @ctor(%s) : (!cir.ptr<!rec_S>) -> ()
+    %cond = cir.call @operatorBool(%s) : (!cir.ptr<!rec_S>) -> !cir.bool
+    cir.condition(%cond)
+  } body {
+    cir.yield
+  } step {
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
+    cir.yield
+  }
+  cir.return
+}

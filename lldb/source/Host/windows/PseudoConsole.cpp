@@ -188,6 +188,8 @@ void PseudoConsole::Close() {
   std::unique_lock<std::mutex> guard(m_mutex);
   if (m_conpty_handle != INVALID_HANDLE_VALUE)
     kernel32.ClosePseudoConsole(m_conpty_handle);
+  if (m_mode == Mode::Pipe && m_conpty_output != INVALID_HANDLE_VALUE)
+    CancelIoEx(m_conpty_output, nullptr);
   m_conpty_handle = INVALID_HANDLE_VALUE;
   SetStopping(false);
   m_cv.notify_all();

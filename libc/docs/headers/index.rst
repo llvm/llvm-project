@@ -20,6 +20,7 @@ Implementation Status
    float
    glob
    inttypes
+   libgen
    locale
    math/index.rst
    net/if

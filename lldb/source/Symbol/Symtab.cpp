@@ -364,13 +364,13 @@ void Symtab::InitNameIndexes() {
       for (Language *lang : languages) {
         for (auto variant : lang->GetMethodNameVariants(name)) {
           if (variant.GetType() & lldb::eFunctionNameTypeSelector)
-            selector_to_index.Append(variant.GetName(), value);
+            selector_to_index.Append(ConstString(variant.GetName()), value);
           else if (variant.GetType() & lldb::eFunctionNameTypeFull)
-            name_to_index.Append(variant.GetName(), value);
+            name_to_index.Append(ConstString(variant.GetName()), value);
           else if (variant.GetType() & lldb::eFunctionNameTypeMethod)
-            method_to_index.Append(variant.GetName(), value);
+            method_to_index.Append(ConstString(variant.GetName()), value);
           else if (variant.GetType() & lldb::eFunctionNameTypeBase)
-            basename_to_index.Append(variant.GetName(), value);
+            basename_to_index.Append(ConstString(variant.GetName()), value);
         }
       }
     }
@@ -1228,6 +1228,15 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
 
 constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
 constexpr uint32_t CURRENT_CACHE_VERSION = 1;
+
+// If the size of the Symbol object changes, the serialized
+// format likely also needs to change so the
+// CURRENT_CACHE_VERSION number will need to be incremented.
+#if __SIZEOF_POINTER__ == 8
+static_assert(
+    sizeof(lldb_private::Symbol) == 80,
+    "Symbol size has changed, DataFileCache version likely needs updating");
+#endif
 
 /// The encoding format for the symbol table is as follows:
 ///

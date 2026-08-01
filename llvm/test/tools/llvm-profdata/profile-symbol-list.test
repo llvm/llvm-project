@@ -8,6 +8,12 @@
 
 ; NOSYMLIST: ProfileSymbolListSection {{.*}} Size: 0
 
+;; Verify that -md5-prof-sym-list records the md5 section flag for ProfileSymbolListSection.
+; RUN: llvm-profdata merge -sample -extbinary -md5-prof-sym-list -prof-sym-list=%S/Inputs/profile-symbol-list-1.text %S/Inputs/sample-profile.proftext -o %t.md5.output
+; RUN: llvm-profdata show -sample -show-sec-info-only %t.md5.output | FileCheck %s -check-prefix=MD5
+
+; MD5: ProfileSymbolListSection - Offset: {{.*}}, Size: {{.*}}, Flags: {{{.*}}md5}
+
 ;; Generate two SampleFDO binary profiles and merge them.
 ;; Tests that the vtable counters in the merged profile are the aggregated
 ;; result from both sources.

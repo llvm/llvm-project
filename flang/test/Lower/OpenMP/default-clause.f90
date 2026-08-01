@@ -463,12 +463,12 @@ subroutine nested_constructs
 
 !CHECK: %[[INNER_J_DECL:.*]]:2 = hlfir.declare %[[INNER_J]] {{.*}}
     !$omp parallel default(private) firstprivate(y)
-!CHECK: {{.*}} = fir.do_loop {{.*}} {
+!CHECK: fir.do_loop {{.*}} {
       do i = 1, 10
 !CHECK: %[[CONST_1:.*]] = arith.constant 1 : i32
 !CHECK: hlfir.assign %[[CONST_1]] to %[[INNER_Y_DECL]]#0 : i32, !fir.ref<i32>
         y = 1
-!CHECK: {{.*}} = fir.do_loop {{.*}} {
+!CHECK: fir.do_loop {{.*}} {
         do j = 1, 10
 !CHECK: %[[CONST_20:.*]] = arith.constant 20 : i32
 !CHECK: hlfir.assign %[[CONST_20]] to %[[INNER_Z_DECL]]#0 : i32, !fir.ref<i32>

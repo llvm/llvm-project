@@ -139,6 +139,11 @@ TEST(LEB128Test, DecodeULEB128) {
   EXPECT_DECODE_ULEB128_EQ(0x80000000'00000000ul,
                            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x01");
 
+  // Decode overlong ULEB128 whose trailing zero-extension bytes push the shift
+  // amount to 64 or beyond.
+  EXPECT_DECODE_ULEB128_EQ(0u, "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x00");
+  EXPECT_DECODE_ULEB128_EQ(1u, "\x81\x80\x80\x80\x80\x80\x80\x80\x80\x80\x00");
+
 #undef EXPECT_DECODE_ULEB128_EQ
 }
 
@@ -215,6 +220,12 @@ TEST(LEB128Test, DecodeSLEB128) {
                            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x7F");
   EXPECT_DECODE_SLEB128_EQ(INT64_MAX,
                            "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x00");
+
+  // Decode overlong SLEB128 whose trailing sign-extension bytes push the shift
+  // amount to 64 or beyond.
+  EXPECT_DECODE_SLEB128_EQ(0L, "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x00");
+  EXPECT_DECODE_SLEB128_EQ(-1L, "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F");
+  EXPECT_DECODE_SLEB128_EQ(-2L, "\xFE\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x7F");
 
 #undef EXPECT_DECODE_SLEB128_EQ
 }

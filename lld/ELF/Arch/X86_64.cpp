@@ -54,8 +54,9 @@ public:
   void relaxCFIJumpTables() const override;
   void applyBranchToBranchOpt() const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override;
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -642,8 +643,9 @@ RelType X86_64::getDynRel(RelType type) const {
 }
 
 template <class ELFT, class RelTy>
-void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                             unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
@@ -769,11 +771,11 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
                       [](auto &l, auto &r) { return l.offset < r.offset; });
 }
 
-void X86_64::scanSection(InputSectionBase &sec) {
+void X86_64::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.is64)
-    elf::scanSection1<X86_64, ELF64LE>(*this, sec);
+    elf::scanSection1<X86_64, ELF64LE>(*this, sec, shard);
   else // ilp32
-    elf::scanSection1<X86_64, ELF32LE>(*this, sec);
+    elf::scanSection1<X86_64, ELF32LE>(*this, sec, shard);
 }
 
 void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,

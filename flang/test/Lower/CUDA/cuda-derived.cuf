@@ -15,7 +15,11 @@ contains
 ! CHECK-LABEL: func.func @_QMm1Psub1()
 ! CHECK: %[[ALLOC:.*]] = cuf.alloc !fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QMm1Fsub1Ea"} -> !fir.ref<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
 ! CHECK: %[[DECL:.*]]:2 = hlfir.declare %[[ALLOC]] {data_attr = #cuf.cuda<managed>, uniq_name = "_QMm1Fsub1Ea"} : (!fir.ref<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
-! CHECK: cuf.free %[[DECL]]#0 : !fir.ref<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {data_attr = #cuf.cuda<managed>}
+! CHECK: %[[ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() {{.*}} : () -> i1
+! CHECK-NEXT: fir.if %[[ACTIVE]] {
+! CHECK: fir.call @_FortranADestroy
+! CHECK-NEXT: cuf.free %[[DECL]]#0 : !fir.ref<!fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> {data_attr = #cuf.cuda<managed>}
+! CHECK-NEXT: }
 
 end module
 

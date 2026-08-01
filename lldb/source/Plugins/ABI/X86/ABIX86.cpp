@@ -205,11 +205,10 @@ void ABIX86::AugmentRegisterInfo(
   if (!process_sp)
     return;
 
-  uint32_t gpr_base_size =
-      process_sp->GetTarget().GetArchitecture().GetAddressByteSize();
+  uint32_t gpr_base_size = Is64Bit() ? 8 : 4;
 
   // primary map from a base register to its subregisters
-  BaseRegToRegsMap base_reg_map = makeBaseRegMap(gpr_base_size == 8);
+  BaseRegToRegsMap base_reg_map = makeBaseRegMap(Is64Bit());
   // set used for fast matching of register names to subregisters
   llvm::SmallDenseSet<llvm::StringRef, 64> subreg_name_set;
   // convenience array providing access to all subregisters of given kind,

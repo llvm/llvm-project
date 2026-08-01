@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu -std=c++17 -fgpu-rdc \
 // RUN:   -emit-llvm -o - -x hip %s > %t.dev
 
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -cuid=abc \
-// RUN:   -aux-triple amdgcn-amd-amdhsa -std=c++17 -fgpu-rdc \
+// RUN:   -aux-triple amdgpu-amd-amdhsa -std=c++17 -fgpu-rdc \
 // RUN:   -emit-llvm -o - -x hip %s > %t.host
 
 // RUN: cat %t.dev %t.host | FileCheck -check-prefixes=HIP,COMMON %s

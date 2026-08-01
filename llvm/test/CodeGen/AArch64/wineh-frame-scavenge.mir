@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
-# RUN:   -stop-after=prologepilog | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prolog-epilog \
+# RUN:   -stop-after=prolog-epilog | FileCheck %s
 # Check where the stack variable is placed
 
 # CHECK:      - { id: 0, name: '', type: default, offset: -4, size: 4, alignment: 4,

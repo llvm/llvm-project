@@ -44,6 +44,104 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
+// template <class charT> class numpunct
+
+template <class _CharT>
+class numpunct;
+
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct<char> : public locale::facet {
+public:
+  typedef char char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct(size_t __refs = 0);
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
+
+  static locale::id id;
+
+protected:
+  ~numpunct() override;
+  virtual char_type do_decimal_point() const;
+  virtual char_type do_thousands_sep() const;
+  virtual string do_grouping() const;
+  virtual string_type do_truename() const;
+  virtual string_type do_falsename() const;
+
+  char_type __decimal_point_;
+  char_type __thousands_sep_;
+  string __grouping_;
+};
+
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct<wchar_t> : public locale::facet {
+public:
+  typedef wchar_t char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct(size_t __refs = 0);
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
+
+  static locale::id id;
+
+protected:
+  ~numpunct() override;
+  virtual char_type do_decimal_point() const;
+  virtual char_type do_thousands_sep() const;
+  virtual string do_grouping() const;
+  virtual string_type do_truename() const;
+  virtual string_type do_falsename() const;
+
+  char_type __decimal_point_;
+  char_type __thousands_sep_;
+  string __grouping_;
+};
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+// template <class charT> class numpunct_byname
+
+template <class _CharT>
+class numpunct_byname;
+
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<char> : public numpunct<char> {
+public:
+  typedef char char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct_byname(const char* __nm, size_t __refs = 0);
+  explicit numpunct_byname(const string& __nm, size_t __refs = 0);
+
+protected:
+  ~numpunct_byname() override;
+};
+
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<wchar_t> : public numpunct<wchar_t> {
+public:
+  typedef wchar_t char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct_byname(const char* __nm, size_t __refs = 0);
+  explicit numpunct_byname(const string& __nm, size_t __refs = 0);
+
+protected:
+  ~numpunct_byname() override;
+};
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
 struct _LIBCPP_EXPORTED_FROM_ABI __num_get_base {
   static const int __num_get_buf_sz = 40;
 
@@ -96,9 +194,8 @@ struct __num_get : protected __num_get_base {
       _LIBCPP_DIAGNOSTIC_PUSH
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
       using __vec   = __simd_vector<char, 32>;
-      __vec __chars = std::__broadcast<__vec>(__val);
       __vec __cmp   = std::__partial_load<__vec, __int_chr_cnt>(__atoms);
-      auto __res    = __chars == __cmp;
+      auto __res    = __vec(__val) == __cmp;
       if (std::__none_of(__res))
         return __int_chr_cnt;
       return std::min(__int_chr_cnt, std::__find_first_set(__res));

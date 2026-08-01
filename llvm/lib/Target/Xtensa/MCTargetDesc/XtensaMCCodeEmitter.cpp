@@ -618,7 +618,7 @@ XtensaMCCodeEmitter::getSelect_256OpValue(const MCInst &MI, unsigned OpNo,
   const MCOperand &MO = MI.getOperand(OpNo);
   uint8_t Res = static_cast<uint8_t>(MO.getImm());
 
-  assert(isUInt<8> && "Unexpected operand value!");
+  assert(isUInt<8>(Res) && "Unexpected operand value!");
 
   return Res;
 }

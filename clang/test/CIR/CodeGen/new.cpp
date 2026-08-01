@@ -355,11 +355,11 @@ void t_constant_size_memset_init() {
 // CHECK:    %[[ELEM_PTR:.*]] = cir.cast bitcast %[[ALLOC_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
 // CHECK:    %[[VOID_PTR:.*]] = cir.cast bitcast %[[ELEM_PTR]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-// CHECK:    cir.libc.memset %[[ALLOCATION_SIZE]] bytes at %[[VOID_PTR]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+// CHECK:    cir.libc.memset %[[ALLOCATION_SIZE]] bytes at %[[VOID_PTR]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 
 // LLVM: define {{.*}} void @_Z27t_constant_size_memset_initv()
 // LLVM:   %[[P:.*]] = call noundef nonnull ptr @_Znam(i64 noundef 64)
-// LLVM:   call void @llvm.memset.p0.i64(ptr %[[P]], i8 0, i64 64, i1 false)
+// LLVM:   call void @llvm.memset.p0.i64(ptr{{.*}} %[[P]], i8 0, i64 64, i1 false)
 
 // OGCG: define {{.*}} void @_Z27t_constant_size_memset_initv()
 // OGCG:   %[[P:.*]] = call{{.*}} ptr @_Znam(i64{{.*}} 64)
@@ -432,7 +432,7 @@ void t_constant_size_partial_init() {
 // CHECK:    %[[REMAINING_SIZE:.*]] = cir.sub %[[ALLOCATION_SIZE]], %[[INIT_SIZE]] : !u64i
 // CHECK:    %[[VOID_PTR:.*]] = cir.cast bitcast %[[ELEM_3_PTR]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-// CHECK:    cir.libc.memset %[[REMAINING_SIZE]] bytes at %[[VOID_PTR]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+// CHECK:    cir.libc.memset %[[REMAINING_SIZE]] bytes at %[[VOID_PTR]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 
 // LLVM: define {{.*}} void @_Z28t_constant_size_partial_initv()
 // LLVM:   %[[P:.*]] = call noundef nonnull ptr @_Znam(i64 {{.*}} 64)
@@ -442,7 +442,7 @@ void t_constant_size_partial_init() {
 // LLVM:   %[[ELEM_2:.*]] = getelementptr i32, ptr %[[ELEM_1]], i64 1
 // LLVM:   store i32 3, ptr %[[ELEM_2]]
 // LLVM:   %[[ELEM_3:.*]] = getelementptr i32, ptr %[[ELEM_2]], i64 1
-// LLVM:   call void @llvm.memset.p0.i64(ptr %[[ELEM_3]], i8 0, i64 52, i1 false)
+// LLVM:   call void @llvm.memset.p0.i64(ptr{{.*}} %[[ELEM_3]], i8 0, i64 52, i1 false)
 
 // OGCG: define {{.*}} void @_Z28t_constant_size_partial_initv()
 // OGCG:   %[[P:.*]] = call{{.*}} ptr @_Znam(i64{{.*}} 64)
@@ -614,7 +614,7 @@ void t_new_var_size6(int n) {
 // CHECK:    %[[REMAINING_SIZE:.*]] = cir.sub %[[ALLOC_SIZE]], %[[INIT_SIZE]] : !u64i
 // CHECK:    %[[PTR_DOUBLE_3_VOID:.*]] = cir.cast bitcast %[[PTR_DOUBLE_3]] : !cir.ptr<!cir.double> -> !cir.ptr<!void>
 // CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-// CHECK:    cir.libc.memset{{.*}} bytes at %[[PTR_DOUBLE_3_VOID]] to %[[ZERO]]
+// CHECK:    cir.libc.memset{{.*}} bytes at %[[PTR_DOUBLE_3_VOID]]{{.*}} to %[[ZERO]]
 
 // LLVM: define{{.*}} void @_Z15t_new_var_size6i
 // LLVM:   %[[N:.*]] = load i32, ptr %{{.+}}
@@ -633,7 +633,7 @@ void t_new_var_size6(int n) {
 // LLVM:   store double 3.000000e+00, ptr %[[ELEM_2]], align 8
 // LLVM:   %[[ELEM_3:.*]] = getelementptr double, ptr %[[ELEM_2]], i64 1
 // LLVM:   %[[REMAINING_SIZE:.*]] = sub i64 %[[ALLOC_SIZE]], 24
-// LLVM:   call void @llvm.memset.p0.i64(ptr %[[ELEM_3]], i8 0, i64 %[[REMAINING_SIZE]], i1 false)
+// LLVM:   call void @llvm.memset.p0.i64(ptr{{.*}} %[[ELEM_3]], i8 0, i64 %[[REMAINING_SIZE]], i1 false)
 
 // OGCG: define{{.*}} void @_Z15t_new_var_size6i
 // OGCG:   %[[N:.*]] = load i32, ptr %{{.+}}

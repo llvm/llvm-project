@@ -160,6 +160,20 @@ func.func @compute_region_two_dims(%data: memref<8xi32>,
 
 // -----
 
+// CHECK-LABEL: func @reduction_init_with_bounds
+func.func @reduction_init_with_bounds(%arg0: memref<?xi32>, %lb: index, %ext: index) {
+  %c1 = arith.constant 1 : index
+  %bnd = acc.bounds lowerbound(%lb : index) extent(%ext : index) stride(%c1 : index)
+  %0 = acc.reduction_init %arg0 bounds(%bnd) <add> : memref<?xi32> {
+    acc.yield %arg0 : memref<?xi32>
+  }
+  return
+}
+// CHECK: %[[BND:.*]] = acc.bounds
+// CHECK: acc.reduction_init %{{.*}} bounds(%[[BND]]) <add> : memref<?xi32>
+
+// -----
+
 // CHECK-LABEL: func @compute_region_unknown_width
 func.func @compute_region_unknown_width(%data: memref<100xf32>) {
   %copyin = acc.copyin varPtr(%data : memref<100xf32>) -> memref<100xf32>
@@ -320,6 +334,15 @@ func.func @reduction_accumulate_block_thread(%partial: i32, %private: memref<i32
 
 // -----
 
+// CHECK-LABEL: func @reduction_accumulate_array
+func.func @reduction_accumulate_array(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
+  acc.reduction_accumulate_array %private bounds(%bounds) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+  return
+}
+// CHECK: acc.reduction_accumulate_array  %{{.*}} bounds(%{{.*}}) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+
+// -----
+
 // CHECK-LABEL: func @compute_region_with_results
 func.func @compute_region_with_results() -> i32 {
   %w0 = acc.par_width {par_dim = #acc.par_dim<thread_x>}
@@ -419,3 +442,42 @@ func.func @predicate_region_gang_redundant_setup(%idx: memref<i32>, %table: memr
 // CHECK: acc.predicate_region {
 // CHECK:   memref.store
 // CHECK: }
+
+// -----
+
+// CHECK-LABEL: func @gpu_shared_memory_static
+func.func @gpu_shared_memory_static() {
+  %c1024 = arith.constant 1024 : index
+  %sm = acc.gpu_shared_memory(%c1024)
+      {num_copies = 1 : i64, static_upper_bound_bytes = 4096 : i64}
+      : (index) -> memref<?xf32, #gpu.address_space<workgroup>>
+  return
+}
+// CHECK: acc.gpu_shared_memory(%{{.*}}) {num_copies = 1 : i64, static_upper_bound_bytes = 4096 : i64}
+// CHECK-SAME: : (index) -> memref<?xf32, #gpu.address_space<workgroup>>
+
+// -----
+
+// CHECK-LABEL: func @gpu_shared_memory_runtime_sized
+func.func @gpu_shared_memory_runtime_sized() {
+  %c128 = arith.constant 128 : index
+  %sm = acc.gpu_shared_memory(%c128)
+      {num_copies = 1 : i64,
+       static_upper_bound_bytes = 1560 : i64,
+       dynamic_shared_memory_scaling_bytes = 12 : i64,
+       dynamic_shared_memory_fixed_bytes = 24 : i64}
+      : (index) -> memref<?xf32, #gpu.address_space<workgroup>>
+  return
+}
+// CHECK: acc.gpu_shared_memory(%{{.*}}) {dynamic_shared_memory_fixed_bytes = 24 : i64, dynamic_shared_memory_scaling_bytes = 12 : i64, num_copies = 1 : i64, static_upper_bound_bytes = 1560 : i64}
+
+// -----
+
+// CHECK-LABEL: func @gpu_shared_memory_worker_copies
+func.func @gpu_shared_memory_worker_copies() {
+  %sm = acc.gpu_shared_memory()
+      {num_copies = 4 : i64, static_upper_bound_bytes = 256 : i64}
+      : () -> memref<8xf32, #gpu.address_space<workgroup>>
+  return
+}
+// CHECK: acc.gpu_shared_memory {num_copies = 4 : i64, static_upper_bound_bytes = 256 : i64}

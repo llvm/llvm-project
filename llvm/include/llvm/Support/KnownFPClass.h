@@ -20,6 +20,7 @@
 
 namespace llvm {
 class APFloat;
+class APInt;
 struct fltSemantics;
 struct KnownBits;
 
@@ -448,10 +449,17 @@ struct KnownFPClass {
   static LLVM_ABI KnownFPClass frexp_mant(
       const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
-  /// Propagate known class for ldexp
+  /// Propagate known class for ldexp, assuming the exponent is known to be
+  /// within [\p ConstantRangeMin, \p ConstantRangeMax]
+  ///
+  // TODO: This really ought to use ConstantRange, but it's in IR not Support.
   static LLVM_ABI KnownFPClass
-  ldexp(const KnownFPClass &Src, const KnownBits &N, const fltSemantics &Flt,
+  ldexp(const KnownFPClass &Src, const APInt &ConstantRangeMin,
+        const APInt &ConstantRangeMax, const fltSemantics &Flt,
         DenormalMode Mode = DenormalMode::getDynamic());
+  static LLVM_ABI KnownFPClass ldexp(
+      const KnownFPClass &Src, const KnownBits &ExpBits,
+      const fltSemantics &Flt, DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for powi
   static LLVM_ABI KnownFPClass powi(const KnownFPClass &Src,

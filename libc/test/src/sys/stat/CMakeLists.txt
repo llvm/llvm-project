@@ -10,7 +10,8 @@ add_libc_unittest(
     chmod_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
-    libc.include.sys_stat
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.stat.chmod
@@ -28,7 +29,8 @@ add_libc_unittest(
     fchmodat_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
-    libc.include.sys_stat
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.stat.fchmodat
@@ -46,7 +48,8 @@ add_libc_unittest(
     fchmod_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
-    libc.include.sys_stat
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
     libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.stat.fchmod
@@ -80,7 +83,8 @@ add_libc_unittest(
     stat_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
-    libc.include.sys_stat
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
     libc.src.errno.errno
     libc.src.sys.stat.stat
     libc.src.fcntl.open
@@ -98,7 +102,8 @@ add_libc_unittest(
     lstat_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
-    libc.include.sys_stat
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
     libc.src.errno.errno
     libc.src.sys.stat.lstat
     libc.src.fcntl.open
@@ -116,7 +121,8 @@ add_libc_unittest(
     fstat_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
-    libc.include.sys_stat
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
     libc.src.errno.errno
     libc.src.sys.stat.fstat
     libc.src.fcntl.open
@@ -136,7 +142,8 @@ add_libc_unittest(
     libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
     libc.hdr.types.struct_timespec
-    libc.include.sys_stat
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
     libc.src.errno.errno
     libc.src.sys.stat.utimensat
     libc.src.fcntl.open

@@ -200,7 +200,7 @@ public:
   [[nodiscard]] _LIBCPP_TRY_ACQUIRE_CAPABILITY(true) _LIBCPP_HIDE_FROM_ABI bool try_lock() {
     return __base_.try_lock();
   }
-  _LIBCPP_RELEASE_CAPABILITY _LIBCPP_HIDE_FROM_ABI void unlock() { return __base_.unlock(); }
+  _LIBCPP_RELEASE_CAPABILITY() _LIBCPP_HIDE_FROM_ABI void unlock() { return __base_.unlock(); }
 
   // Shared ownership
   _LIBCPP_ACQUIRE_SHARED_CAPABILITY _LIBCPP_HIDE_FROM_ABI void lock_shared() { return __base_.lock_shared(); }
@@ -262,7 +262,7 @@ public:
     return true;
   }
 
-  _LIBCPP_RELEASE_CAPABILITY void unlock();
+  _LIBCPP_RELEASE_CAPABILITY() void unlock();
 
   // Shared ownership
   _LIBCPP_ACQUIRE_SHARED_CAPABILITY void lock_shared();

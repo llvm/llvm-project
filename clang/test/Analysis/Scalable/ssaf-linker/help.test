@@ -5,7 +5,13 @@
 
 // CHECK:      OVERVIEW: SSAF Linker
 // CHECK-EMPTY:
-// CHECK-NEXT: USAGE: clang-ssaf-linker{{(\.exe)?}} [options] <input files>
+// CHECK-NEXT: USAGE: clang-ssaf-linker{{(\.exe)?}} [subcommand] [options] <input files>
+// CHECK-EMPTY:
+// CHECK-NEXT: SUBCOMMANDS:
+// CHECK-EMPTY:
+// CHECK-NEXT:   static-library - Operations on StaticLibraries
+// CHECK-EMPTY:
+// CHECK-NEXT:   Type "clang-ssaf-linker{{(\.exe)?}} <subcommand> --help" to get more help on a specific subcommand
 // CHECK-EMPTY:
 // CHECK-NEXT: OPTIONS:
 // CHECK-NEXT:   -h                  - Alias for --help

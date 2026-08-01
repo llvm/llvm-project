@@ -224,7 +224,7 @@ __int128 f17() {
 
 // Test that a statement expression compiles.
 // CHECK-LABEL: define dso_local void @f18(
-// CHECK-SAME: ptr nofree noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readonly align 8 captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[T_ADDR:%.*]] = alloca i128, align 8
 // CHECK-NEXT:    [[T:%.*]] = load i128, ptr [[TMP0]], align 8, !tbaa [[__INT128_TBAA5]]

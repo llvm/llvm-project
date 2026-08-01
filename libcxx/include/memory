@@ -633,6 +633,9 @@ public:
     explicit operator bool() const noexcept;
     template<class U> bool owner_before(shared_ptr<U> const& b) const noexcept;
     template<class U> bool owner_before(weak_ptr<U> const& b) const noexcept;
+    size_t owner_hash() const noexcept;                                        // C++26
+    template<class U> bool owner_equal(shared_ptr<U> const& b) const noexcept; // C++26
+    template<class U> bool owner_equal(weak_ptr<U> const& b) const noexcept;   // C++26
 };
 
 template<class T>
@@ -771,6 +774,9 @@ public:
     shared_ptr<T> lock() const noexcept;
     template<class U> bool owner_before(shared_ptr<U> const& b) const noexcept;
     template<class U> bool owner_before(weak_ptr<U> const& b) const noexcept;
+    size_t owner_hash() const noexcept;                                        // C++26
+    template<class U> bool owner_equal(shared_ptr<U> const& b) const noexcept; // C++26
+    template<class U> bool owner_equal(weak_ptr<U> const& b) const noexcept;   // C++26
 };
 
 template<class T>
@@ -815,6 +821,31 @@ struct owner_less<void>
     bool operator()(   weak_ptr<_Tp> const& __x,   weak_ptr<_Up> const& __y) const noexcept;
 
     typedef void is_transparent;
+};
+
+// struct owner_hash
+struct owner_hash {                                                            // C++26
+  template<class T>
+    size_t operator()(const shared_ptr<T>&) const noexcept;
+
+  template<class T>
+    size_t operator()(const weak_ptr<T>&) const noexcept;
+
+  using is_transparent = unspecified;
+};
+
+// struct owner_equal
+struct owner_equal {                                                           // C++26
+  template<class T, class U>
+    bool operator()(const shared_ptr<T>&, const shared_ptr<U>&) const noexcept;
+  template<class T, class U>
+    bool operator()(const shared_ptr<T>&, const weak_ptr<U>&) const noexcept;
+  template<class T, class U>
+    bool operator()(const weak_ptr<T>&, const shared_ptr<U>&) const noexcept;
+  template<class T, class U>
+    bool operator()(const weak_ptr<T>&, const weak_ptr<U>&) const noexcept;
+
+  using is_transparent = unspecified;
 };
 
 template<class T>

@@ -12,14 +12,13 @@
 #include "src/fenv/feraiseexcept.h"
 #include "src/fenv/fetestexcept.h"
 
+#include "hdr/fenv_macros.h"
+#include "hdr/signal_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPExceptMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include "hdr/fenv_macros.h"
-#include <signal.h>
 
 #include "excepts.h"
 

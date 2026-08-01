@@ -257,6 +257,17 @@ enum class IterationAction {
   Stop,
 };
 
+/// Controls how the `show-autosuggestion` setting drives inline suggestions
+/// in the interactive command line.
+enum AutosuggestionMode {
+  /// Do not show any autosuggestion.
+  eAutosuggestionOff = 0,
+  /// Show a suggestion sourced from previously entered commands.
+  eAutosuggestionOn = 1,
+  /// Show the prefix that tab completion would insert for the current line.
+  eAutosuggestionTabMode = 2,
+};
+
 /// Specifies the type of PCs when creating a `HistoryThread`.
 /// - `Returns` - Usually, when LLDB unwinds the stack or we retrieve a stack
 ///   trace via `backtrace()` we are collecting return addresses (except for the

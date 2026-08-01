@@ -35,6 +35,7 @@ static_library("LLVMNVPTXCodeGen") {
   ]
   include_dirs = [ "." ]
   sources = [
+    "NVPTXAddressFolder.cpp",
     "NVPTXAliasAnalysis.cpp",
     "NVPTXAllocaHoisting.cpp",
     "NVPTXAsmPrinter.cpp",
@@ -58,11 +59,11 @@ static_library("LLVMNVPTXCodeGen") {
     "NVPTXMarkKernelPtrsGlobal.cpp",
     "NVPTXPeephole.cpp",
     "NVPTXPrologEpilogPass.cpp",
+    "NVPTXPromoteParamAlign.cpp",
     "NVPTXProxyRegErasure.cpp",
     "NVPTXRegisterInfo.cpp",
     "NVPTXReplaceImageHandles.cpp",
     "NVPTXSelectionDAGInfo.cpp",
-    "NVPTXSetByValParamAlign.cpp",
     "NVPTXSubtarget.cpp",
     "NVPTXTagInvariantLoads.cpp",
     "NVPTXTargetMachine.cpp",

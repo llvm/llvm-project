@@ -10,9 +10,9 @@ The check heavily relies on the functions from the
 
 The check implements the following rules from the CERT C Coding Standard:
   - Recommendation `MSC24-C. Do not use deprecated or obsolescent functions
-    <https://wiki.sei.cmu.edu/confluence/display/c/MSC24-C.+Do+not+use+deprecated+or+obsolescent+functions>`_.
+    <https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/recommendations/miscellaneous-msc/msc24-c/>`_.
   - Rule `MSC33-C. Do not pass invalid data to the asctime() function
-    <https://wiki.sei.cmu.edu/confluence/display/c/MSC33-C.+Do+not+pass+invalid+data+to+the+asctime%28%29+function>`_.
+    <https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/miscellaneous-msc/msc33-c/>`_.
 
 `cert-msc24-c` and `cert-msc33-c` redirect here as aliases of this check.
 

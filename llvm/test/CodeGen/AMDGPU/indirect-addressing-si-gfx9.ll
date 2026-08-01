@@ -1,4 +1,4 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mtriple=amdgpu9.00 -mattr=-flat-for-global < %s | FileCheck --check-prefix=GCN %s
 
 ; indexing of vectors.
 

@@ -207,3 +207,13 @@ linked list."
 
 %feature("docstring", "Returns an expression path for this value."
 ) lldb::SBValue::GetExpressionPath;
+
+%feature("docstring", "
+    Returns whether this value can be modified through SetValueFromCString()
+    or SetData().
+
+    Returns False when the value is not writable. An example would be a
+    variable value reconstructed from debug info via a computation or a constant.
+    A True result does not guarantee a write will succeed; other
+    runtime conditions may still prevent a successful write."
+) lldb::SBValue::CanSetValue;

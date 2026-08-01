@@ -144,6 +144,11 @@ public:
     return getLocation().getStackFrame();
   }
 
+  /// Iterates over the current stack frame and all of its ancestors.
+  llvm::iterator_range<StackFrame::parent_iterator> stackframes() const {
+    return getStackFrame()->parentsIncludingSelf();
+  }
+
   const Decl &getCodeDecl() const { return *getStackFrame()->getDecl(); }
 
   CFG &getCFG() const { return *getStackFrame()->getCFG(); }

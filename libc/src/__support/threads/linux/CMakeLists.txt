@@ -41,10 +41,16 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.common
     libc.src.__support.error_or
+    libc.src.__support.OSUtil.linux.syscall_wrappers.close
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.mprotect
     libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.OSUtil.linux.syscall_wrappers.read
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getparam
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_getscheduler
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sched_setscheduler
+    libc.src.__support.OSUtil.linux.syscall_wrappers.write
     libc.src.__support.threads.thread_common
   COMPILE_OPTIONS
     ${libc_opt_high_flag}

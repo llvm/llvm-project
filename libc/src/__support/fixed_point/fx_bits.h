@@ -20,6 +20,7 @@
 #include "src/__support/macros/null_check.h"   // LIBC_CRASH_ON_VALUE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/math_extras.h"
+#include "src/__support/uint128.h"
 
 #include "fx_rep.h"
 
@@ -331,6 +332,44 @@ template <typename XType> LIBC_INLINE constexpr XType divi(int n, int d) {
   } else {
     return static_cast<XType>(res);
   }
+}
+
+// Divide an integer operand by a fixed-point operand and return the
+// mathematically exact result as an IntType rounded towards 0. Assumes
+// signedness of IntType matches the signedness of FXType.
+template <typename IntType, typename FXType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<FXType>, IntType>
+divifx(IntType n, FXType d) {
+  using FXBits = FXBits<FXType>;
+  using FXRep = FXRep<FXType>;
+  using CompType = typename FXRep::CompType;
+
+  static_assert(cpp::is_signed_v<IntType> == (FXRep::SIGN_LEN > 0),
+                "IntType and FXType must have matching signedness");
+
+  // UB if denominator is 0.
+  LIBC_CRASH_ON_VALUE(d, FXRep::ZERO());
+
+  if (LIBC_UNLIKELY(n == 0)) {
+    return static_cast<IntType>(0);
+  }
+
+  CompType d_comp = static_cast<CompType>(FXBits(d).get_bits());
+
+  constexpr int F = FXRep::FRACTION_LEN;
+
+  constexpr int INTERMEDIATE_BITS =
+      sizeof(IntType) * 8 - cpp::is_signed_v<IntType> + F;
+
+  using WideType = cpp::conditional_t<
+      cpp::is_signed_v<IntType>,
+      cpp::conditional_t<INTERMEDIATE_BITS <= 64, int64_t, Int128>,
+      cpp::conditional_t<INTERMEDIATE_BITS <= 64, uint64_t, UInt128>>;
+
+  WideType scaled_n = static_cast<WideType>(n) << F;
+  WideType result = scaled_n / static_cast<WideType>(d_comp);
+
+  return static_cast<IntType>(result);
 }
 
 } // namespace fixed_point

@@ -85,9 +85,7 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
   // If the throw statement does not throw by pointer then it throws by value
   // which is ok.
   // There are addition checks that emit diagnosis messages if the thrown value
-  // is not an RValue. See:
-  // https://www.securecoding.cert.org/confluence/display/cplusplus/ERR09-CPP.+Throw+anonymous+temporaries
-  // This behavior can be influenced by an option.
+  // is not an RValue. This behavior can be influenced by an option.
 
   // If we encounter a CXXThrowExpr, we move through all casts until you either
   // encounter a DeclRefExpr or a CXXConstructExpr.

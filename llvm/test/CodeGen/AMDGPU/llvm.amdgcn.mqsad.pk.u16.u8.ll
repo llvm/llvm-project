@@ -1,12 +1,17 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,GFX600 %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -check-prefixes=GCN,GFX803 %s
+; RUN: llc -mtriple=amdgpu13.10 < %s | FileCheck -check-prefixes=GCN,GFX13 %s
 
 declare i64 @llvm.amdgcn.mqsad.pk.u16.u8(i64, i32, i64) #0
 
 ; GCN-LABEL: {{^}}v_mqsad_pk_u16_u8:
-; GCN: v_mqsad_pk_u16_u8 v[0:1], v[4:5], s{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
-; GCN-DAG: v_mov_b32_e32 v5, v1
-; GCN-DAG: v_mov_b32_e32 v4, v0
+; GFX600: v_mqsad_pk_u16_u8 v[0:1], v[4:5], s{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
+; GFX600-DAG: v_mov_b32_e32 v5, v1
+; GFX600-DAG: v_mov_b32_e32 v4, v0
+; GFX803: v_mqsad_pk_u16_u8 v[0:1], v[4:5], s{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}]
+; GFX803-DAG: v_mov_b32_e32 v5, v1
+; GFX803-DAG: v_mov_b32_e32 v4, v0
+; GFX13: v_mqsad_pk_u16_u8 v[0:1], v[4:5], 0x64, 0x64
 define amdgpu_kernel void @v_mqsad_pk_u16_u8(ptr addrspace(1) %out, i64 %src) {
   %tmp = call i64 asm "v_lsrlrev_b64 $0, $1, 1", "={v[4:5]},v"(i64 %src) #0
   %tmp1 = call i64 @llvm.amdgcn.mqsad.pk.u16.u8(i64 %tmp, i32 100, i64 100) #0
@@ -17,8 +22,10 @@ define amdgpu_kernel void @v_mqsad_pk_u16_u8(ptr addrspace(1) %out, i64 %src) {
 
 ; GCN-LABEL: {{^}}v_mqsad_pk_u16_u8_non_immediate:
 ; GCN: v_mqsad_pk_u16_u8 v[0:1], v[2:3], v4, v[6:7]
-; GCN-DAG: v_mov_b32_e32 v3, v1
-; GCN-DAG: v_mov_b32_e32 v2, v0
+; GFX600-DAG: v_mov_b32_e32 v3, v1
+; GFX600-DAG: v_mov_b32_e32 v2, v0
+; GFX803-DAG: v_mov_b32_e32 v3, v1
+; GFX803-DAG: v_mov_b32_e32 v2, v0
 define amdgpu_kernel void @v_mqsad_pk_u16_u8_non_immediate(ptr addrspace(1) %out, i64 %src, i32 %a, i64 %b) {
   %tmp = call i64 asm "v_lsrlrev_b64 $0, $1, 1", "={v[2:3]},v"(i64 %src) #0
   %tmp1 = call i32 asm "v_mov_b32 $0, $1", "={v4},v"(i32 %a) #0

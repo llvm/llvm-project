@@ -46,7 +46,7 @@ module attributes {omp.is_target_device = true} {
         omp.declare_target =
           #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
       } {
-    omp.target {}
+    omp.target kernel_type(generic) {}
     func.return
   }
   func.func @host_target() -> ()
@@ -54,11 +54,11 @@ module attributes {omp.is_target_device = true} {
         omp.declare_target =
           #omp.declaretarget<device_type = (host), capture_clause = (to)>
       } {
-    omp.target {}
+    omp.target kernel_type(generic) {}
     func.return
   }
   func.func @none_target() -> i32 {
-    omp.target {}
+    omp.target kernel_type(generic) {}
     %0 = arith.constant 25 : i32
     func.return %0 : i32
   }
@@ -67,7 +67,7 @@ module attributes {omp.is_target_device = true} {
         omp.declare_target =
           #omp.declaretarget<device_type = (host), capture_clause = (to)>
       } {
-    omp.target {}
+    omp.target kernel_type(generic) {}
     %0 = call @none_target() : () -> i32
     func.return %0 : i32
   }
@@ -119,7 +119,7 @@ module attributes {omp.is_target_device = false} {
         omp.declare_target =
           #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
       } {
-    omp.target {}
+    omp.target kernel_type(generic) {}
     func.return
   }
   func.func @host_target() -> ()
@@ -127,11 +127,11 @@ module attributes {omp.is_target_device = false} {
         omp.declare_target =
           #omp.declaretarget<device_type = (host), capture_clause = (to)>
       } {
-    omp.target {}
+    omp.target kernel_type(generic) {}
     func.return
   }
   func.func @none_target() -> () {
-    omp.target {}
+    omp.target kernel_type(generic) {}
     func.return
   }
 }

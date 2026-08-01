@@ -77,7 +77,7 @@ public:
   iterator end() { return Frontiers.end(); }
   const_iterator end() const { return Frontiers.end(); }
   iterator find(BlockT *B) { return Frontiers.find(B); }
-  const_iterator find(BlockT *B) const { return Frontiers.find(B); }
+  const_iterator find(const BlockT *B) const { return Frontiers.find(B); }
 
   /// print - Convert to human readable form
   ///

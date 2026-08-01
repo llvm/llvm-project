@@ -177,6 +177,20 @@ csrrs t1, sip, zero
 # uimm12
 csrrs t2, 0x144, zero
 
+# sspcs
+# name
+# CHECK-INST: csrrs t1, sspcs, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x14]
+# CHECK-INST-ALIAS: csrr t1, sspcs
+# uimm12
+# CHECK-INST: csrrs t2, sspcs, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x14]
+# CHECK-INST-ALIAS: csrr t2, sspcs
+# name
+csrrs t1, sspcs, zero
+# uimm12
+csrrs t2, 0x149, zero
+
 
 #########################################
 # Supervisor Protection and Translation

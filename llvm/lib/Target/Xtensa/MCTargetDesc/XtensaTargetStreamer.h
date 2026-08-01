@@ -24,13 +24,13 @@ public:
   // section is not switched yet (SwitchLiteralSection is true) then switch to
   // literal section.
   virtual void emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
-                           bool SwitchLiteralSection, SMLoc L = SMLoc()) = 0;
+                           bool SwitchLiteralSection, SMLoc L = SMLoc()) {};
 
-  virtual void emitLiteralPosition() = 0;
+  virtual void emitLiteralPosition() {};
 
   // Switch to the literal section. The BaseSection name is used to construct
   // literal section name.
-  virtual void startLiteralSection(MCSection *BaseSection) = 0;
+  virtual void startLiteralSection(MCSection *BaseSection) {};
 };
 
 class XtensaTargetAsmStreamer : public XtensaTargetStreamer {
@@ -50,7 +50,6 @@ public:
   MCELFStreamer &getStreamer();
   void emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
                    bool SwitchLiteralSection, SMLoc L) override;
-  void emitLiteralPosition() override {}
   void startLiteralSection(MCSection *Section) override;
 };
 } // end namespace llvm

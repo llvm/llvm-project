@@ -30,8 +30,8 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/UnresolvedSet.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "clang/Basic/ExpressionTraits.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
 #include "clang/Basic/LangOptions.h"
@@ -39,7 +39,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TemplateKinds.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
@@ -5184,6 +5183,10 @@ public:
 
   ArrayRef<Expr *> getInitExprs() const { return getTrailingObjects(NumExprs); }
 
+  MutableArrayRef<Expr *> getUserSpecifiedInitExprs() {
+    return getTrailingObjects(NumUserSpecifiedExprs);
+  }
+
   ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
     return getTrailingObjects(NumUserSpecifiedExprs);
   }
@@ -5549,6 +5552,48 @@ public:
   }
 };
 
+/// Helper that selects an expression from an InitListExpr depending on the
+/// current expansion index. See 'CXXExpansionStmtPattern' for how this is used.
+class CXXExpansionSelectExpr : public Expr {
+  friend class ASTStmtReader;
+
+  enum SubExpr { RANGE, INDEX, COUNT };
+  Expr *SubExprs[COUNT];
+
+public:
+  CXXExpansionSelectExpr(EmptyShell Empty);
+  CXXExpansionSelectExpr(const ASTContext &C, InitListExpr *Range, Expr *Idx);
+
+  InitListExpr *getRangeExpr() { return cast<InitListExpr>(SubExprs[RANGE]); }
+
+  const InitListExpr *getRangeExpr() const {
+    return cast<InitListExpr>(SubExprs[RANGE]);
+  }
+
+  void setRangeExpr(InitListExpr *E) { SubExprs[RANGE] = E; }
+
+  Expr *getIndexExpr() { return SubExprs[INDEX]; }
+  const Expr *getIndexExpr() const { return SubExprs[INDEX]; }
+  void setIndexExpr(Expr *E) { SubExprs[INDEX] = E; }
+
+  SourceLocation getBeginLoc() const { return getRangeExpr()->getBeginLoc(); }
+  SourceLocation getEndLoc() const { return getRangeExpr()->getEndLoc(); }
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(SubExprs),
+                       reinterpret_cast<Stmt **>(SubExprs + COUNT));
+  }
+
+  const_child_range children() const {
+    return const_child_range(
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs)),
+        reinterpret_cast<Stmt **>(const_cast<Expr **>(SubExprs + COUNT)));
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXExpansionSelectExprClass;
+  }
+};
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_EXPRCXX_H

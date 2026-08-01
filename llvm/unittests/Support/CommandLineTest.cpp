@@ -18,6 +18,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TypeSize.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -2200,6 +2201,90 @@ TEST(CommandLineTest, ConsumeOptionalString) {
   ASSERT_TRUE(Input.has_value());
   EXPECT_EQ("\"value\"", *Input);
   EXPECT_TRUE(Errs.empty());
+}
+
+TEST(CommandLineTest, ParseElementCount) {
+  cl::ResetCommandLineParser();
+
+  StackOption<ElementCount> Count("count", cl::init(ElementCount::getFixed(1)));
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *FixedArgs[] = {"prog", "--count=4"};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(std::size(FixedArgs), FixedArgs,
+                                          StringRef(), &OS));
+  EXPECT_EQ(Count, ElementCount::getFixed(4));
+  EXPECT_TRUE(Errs.empty());
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *SpacedScalableArgs[] = {"prog", "--count=vscale x 8"};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(
+      std::size(SpacedScalableArgs), SpacedScalableArgs, StringRef(), &OS));
+  EXPECT_EQ(Count, ElementCount::getScalable(8));
+  EXPECT_TRUE(Errs.empty());
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *FlexibleWhitespaceArgs[] = {"prog", "--count=\tvscale\t x\t12  "};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(std::size(FlexibleWhitespaceArgs),
+                                          FlexibleWhitespaceArgs, StringRef(),
+                                          &OS));
+  EXPECT_EQ(Count, ElementCount::getScalable(12));
+  EXPECT_TRUE(Errs.empty());
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *CompactScalableArgs[] = {"prog", "--count=vscalex4"};
+  ASSERT_TRUE(cl::ParseCommandLineOptions(
+      std::size(CompactScalableArgs), CompactScalableArgs, StringRef(), &OS));
+  EXPECT_EQ(Count, ElementCount::getScalable(4));
+  EXPECT_TRUE(Errs.empty());
+}
+
+TEST(CommandLineTest, RejectInvalidElementCount) {
+  cl::ResetCommandLineParser();
+
+  StackOption<ElementCount> Count("count");
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+
+  const char *MissingMultiplierArgs[] = {"prog", "--count=vscale"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(MissingMultiplierArgs),
+                                           MissingMultiplierArgs, StringRef(),
+                                           &OS));
+  std::string ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(
+      ErrorOutput.find("'vscale' value invalid for ElementCount argument!"),
+      std::string::npos);
+
+  Errs.clear();
+  cl::ResetAllOptionOccurrences();
+
+  const char *TrailingJunkArgs[] = {"prog", "--count=vscale x 8x"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(TrailingJunkArgs),
+                                           TrailingJunkArgs, StringRef(), &OS));
+  ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(ErrorOutput.find(
+                "'vscale x 8x' value invalid for ElementCount argument!"),
+            std::string::npos);
+
+  const char *TrailingJunkFixedArgs[] = {"prog", "--count=4adsf"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(TrailingJunkFixedArgs),
+                                           TrailingJunkFixedArgs, StringRef(),
+                                           &OS));
+  ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(
+      ErrorOutput.find("'4adsf' value invalid for ElementCount argument!"),
+      std::string::npos);
 }
 
 TEST(CommandLineTest, ResetAllOptionOccurrences) {

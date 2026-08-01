@@ -607,7 +607,7 @@ func.func @slice_attr_repeat_dim() {
 // -----
 func.func @create_mem_desc_non_slm() {
   %m = memref.alloca() {alignment = 1024} : memref<2048xi8, 1>
-  // expected-error@+1 {{operand #0 must be reside in share memory and statically 1d shaped memref }}
+  // expected-error@+1 {{operand #0 must be reside in share memory and statically shaped memref }}
   %mem_desc = xegpu.create_mem_desc %m : memref<2048xi8, 1> -> !xegpu.mem_desc<16x64xf16>
   return
 }
@@ -787,5 +787,30 @@ func.func @dpas_mx_scale_a_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b
 func.func @dpas_mx_scale_b_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b: vector<16x16xf8E5M2>, %acc: vector<8x16xf32>, %scale_a_val: vector<8x2xf8E8M0FNU>, %scale_b_val: vector<2x16xf8E8M0FNU>) {
   // expected-error@+1 {{ScaleB shape is not distributable with the layout}}
   %1 = xegpu.dpas_mx %a, %b, %acc scale_a = %scale_a_val scale_b = %scale_b_val {layout_b_scale = #layout_b_scale_invalid} : (vector<8x16xf8E5M2>, vector<16x16xf8E5M2>, vector<8x16xf32>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @contiguity_too_small(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // expected-error@+1 {{contiguity = 1 (must be >= 2)}}
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 1 : i64}>
+      : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  return
+}
+
+// -----
+func.func @contiguity_does_not_divide(%src: i64, %offset: vector<6xindex>, %mask: vector<6xi1>) {
+  // expected-error@+1 {{contiguity = 4 (must divide the innermost offsets dim 6)}}
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 4 : i64}>
+      : i64, vector<6xindex>, vector<6xi1> -> vector<6xf32>
+  return
+}
+
+// -----
+func.func @create_mem_desc_non_contiguous() {
+  %m = memref.alloca() {alignment = 1024} : memref<32x64xf16, 3>
+  %m_sub = memref.subview %m[0, 0][16, 32][1, 1] : memref<32x64xf16, 3> to memref<16x32xf16, strided<[64, 1]>, 3>
+  // expected-error@+1 {{source memref must be contiguous.}}
+  %mem_desc = xegpu.create_mem_desc %m_sub : memref<16x32xf16, strided<[64, 1]>, 3> -> !xegpu.mem_desc<16x32xf16>
   return
 }

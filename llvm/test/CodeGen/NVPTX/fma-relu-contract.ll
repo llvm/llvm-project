@@ -122,6 +122,7 @@ define half @fma_f16_expanded_no_nans_multiple_uses_of_fma(half %a, half %b, hal
 define half @fma_f16_expanded_unsafe_with_nans(half %a, half %b, half %c) {
 ; CHECK-LABEL: fma_f16_expanded_unsafe_with_nans(
 ; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
 ; CHECK-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -130,12 +131,14 @@ define half @fma_f16_expanded_unsafe_with_nans(half %a, half %b, half %c) {
 ; CHECK-NEXT:    ld.param.b16 %rs3, [fma_f16_expanded_unsafe_with_nans_param_2];
 ; CHECK-NEXT:    fma.rn.f16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-NEXT:    mov.b16 %rs5, 0x0000;
-; CHECK-NEXT:    max.f16 %rs6, %rs4, %rs5;
+; CHECK-NEXT:    setp.gt.f16 %p1, %rs4, %rs5;
+; CHECK-NEXT:    selp.b16 %rs6, %rs4, 0x0000, %p1;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-NEXT:    ret;
 ;
 ; CHECK-FTZ-LABEL: fma_f16_expanded_unsafe_with_nans(
 ; CHECK-FTZ:       {
+; CHECK-FTZ-NEXT:    .reg .pred %p<2>;
 ; CHECK-FTZ-NEXT:    .reg .b16 %rs<7>;
 ; CHECK-FTZ-EMPTY:
 ; CHECK-FTZ-NEXT:  // %bb.0:
@@ -144,7 +147,8 @@ define half @fma_f16_expanded_unsafe_with_nans(half %a, half %b, half %c) {
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs3, [fma_f16_expanded_unsafe_with_nans_param_2];
 ; CHECK-FTZ-NEXT:    fma.rn.ftz.f16 %rs4, %rs1, %rs2, %rs3;
 ; CHECK-FTZ-NEXT:    mov.b16 %rs5, 0x0000;
-; CHECK-FTZ-NEXT:    max.ftz.f16 %rs6, %rs4, %rs5;
+; CHECK-FTZ-NEXT:    setp.gt.ftz.f16 %p1, %rs4, %rs5;
+; CHECK-FTZ-NEXT:    selp.b16 %rs6, %rs4, 0x0000, %p1;
 ; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs6;
 ; CHECK-FTZ-NEXT:    ret;
 ;
@@ -219,30 +223,38 @@ define half @fma_f16_expanded_maxnum_no_nans(half %a, half %b, half %c) {
 define bfloat @fma_bf16_expanded_unsafe_with_nans(bfloat %a, bfloat %b, bfloat %c) {
 ; CHECK-LABEL: fma_bf16_expanded_unsafe_with_nans(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<7>;
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b16 %rs<6>;
+; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b16 %rs1, [fma_bf16_expanded_unsafe_with_nans_param_0];
 ; CHECK-NEXT:    ld.param.b16 %rs2, [fma_bf16_expanded_unsafe_with_nans_param_1];
 ; CHECK-NEXT:    ld.param.b16 %rs3, [fma_bf16_expanded_unsafe_with_nans_param_2];
 ; CHECK-NEXT:    fma.rn.bf16 %rs4, %rs1, %rs2, %rs3;
-; CHECK-NEXT:    mov.b16 %rs5, 0x0000;
-; CHECK-NEXT:    max.bf16 %rs6, %rs4, %rs5;
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs6;
+; CHECK-NEXT:    cvt.u32.u16 %r1, %rs4;
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r2, 0f00000000;
+; CHECK-NEXT:    selp.b16 %rs5, %rs4, 0x0000, %p1;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %rs5;
 ; CHECK-NEXT:    ret;
 ;
 ; CHECK-FTZ-LABEL: fma_bf16_expanded_unsafe_with_nans(
 ; CHECK-FTZ:       {
-; CHECK-FTZ-NEXT:    .reg .b16 %rs<7>;
+; CHECK-FTZ-NEXT:    .reg .pred %p<2>;
+; CHECK-FTZ-NEXT:    .reg .b16 %rs<6>;
+; CHECK-FTZ-NEXT:    .reg .b32 %r<3>;
 ; CHECK-FTZ-EMPTY:
 ; CHECK-FTZ-NEXT:  // %bb.0:
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs1, [fma_bf16_expanded_unsafe_with_nans_param_0];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs2, [fma_bf16_expanded_unsafe_with_nans_param_1];
 ; CHECK-FTZ-NEXT:    ld.param.b16 %rs3, [fma_bf16_expanded_unsafe_with_nans_param_2];
 ; CHECK-FTZ-NEXT:    fma.rn.bf16 %rs4, %rs1, %rs2, %rs3;
-; CHECK-FTZ-NEXT:    mov.b16 %rs5, 0x0000;
-; CHECK-FTZ-NEXT:    max.bf16 %rs6, %rs4, %rs5;
-; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs6;
+; CHECK-FTZ-NEXT:    cvt.u32.u16 %r1, %rs4;
+; CHECK-FTZ-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-FTZ-NEXT:    setp.gt.ftz.f32 %p1, %r2, 0f00000000;
+; CHECK-FTZ-NEXT:    selp.b16 %rs5, %rs4, 0x0000, %p1;
+; CHECK-FTZ-NEXT:    st.param.b16 [func_retval0], %rs5;
 ; CHECK-FTZ-NEXT:    ret;
 ;
 ; CHECK-SM70-LABEL: fma_bf16_expanded_unsafe_with_nans(

@@ -279,7 +279,7 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
   if (m_watch_read && !m_watch_modify && !m_watch_write)
     return printed_anything;
 
-  s->Printf("\n");
+  s->PutCString("\n");
   s->Printf("Watchpoint %u hit:\n", GetID());
 
   StreamString values_ss;
@@ -310,7 +310,7 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
 
   if (m_new_value_sp) {
     if (values_ss.GetSize())
-      values_ss.Printf("\n");
+      values_ss.PutCString("\n");
 
     if (auto *new_value_cstr = m_new_value_sp->GetValueAsCString())
       values_ss.Printf("new value: %s", new_value_cstr);
@@ -334,7 +334,7 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
   }
 
   if (values_ss.GetSize()) {
-    s->Printf("%s", values_ss.GetData());
+    s->PutCString(values_ss.GetData());
     printed_anything = true;
   }
 
@@ -350,7 +350,7 @@ void Watchpoint::DumpWithLevel(Stream *s,
          description_level <= lldb::eDescriptionLevelVerbose);
 
   s->Printf("Watchpoint %u: addr = 0x%8.8" PRIx64
-            " size = %u state = %s type = %s%s%s",
+            ", size = %u, state = %s, type = %s%s%s",
             GetID(), GetLoadAddress(), m_byte_size,
             IsEnabled() ? "enabled" : "disabled", m_watch_read ? "r" : "",
             m_watch_write ? "w" : "", m_watch_modify ? "m" : "");
@@ -364,7 +364,7 @@ void Watchpoint::DumpWithLevel(Stream *s,
       if (ProcessSP process_sp = m_target.GetProcessSP()) {
         auto &resourcelist = process_sp->GetWatchpointResourceList();
         size_t idx = 0;
-        s->Printf("\n    watchpoint resources:");
+        s->PutCString("\n    watchpoint resources:");
         for (WatchpointResourceSP &wpres : resourcelist.Sites()) {
           if (wpres->ConstituentsContains(this)) {
             s->Printf("\n       #%zu: ", idx);

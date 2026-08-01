@@ -12,7 +12,6 @@
 
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/Support/CommandLine.h"
 #include <optional>

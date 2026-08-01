@@ -40,26 +40,25 @@ S gSMulti = {{0x50, 0x4B, 0x03, 0x04}};
 
 char *get_ptr_to_element() { return ptrToElement; }
 
-// CIR: cir.global {{.*}} @_ZL2gS = #cir.const_record<{#cir.const_record<{#cir.int<80> : !s8i, #cir.int<75> : !s8i, #cir.int<3> : !s8i, #cir.int<4> : !s8i, #cir.zero : !cir.array<!s8i x 24>}> : !rec_anon_struct}> : !rec_anon_struct1
+// CIR: cir.global {{.*}} @_ZL2gS = #cir.const_record<{#cir.const_array<[#cir.int<80> : !s8i, #cir.int<75> : !s8i, #cir.int<3> : !s8i, #cir.int<4> : !s8i], trailing_zeros> : !cir.array<!s8i x 28>}> : !rec_S
 // CIR: cir.global {{.*}} @ptrToS = #cir.global_view<@_ZL2gS> : !cir.ptr<!rec_S>
 
 // CIR: cir.func {{.*}} @_ZN1RC2Ev
-// CIR:   %[[GS_PTR:.*]] = cir.get_global @_ZL2gS : !cir.ptr<!rec_anon_struct1>
-// CIR:   %[[GS_AS_S:.*]] = cir.cast bitcast %[[GS_PTR]] : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!rec_S>
-// CIR:   %[[GS_AS_VOID:.*]] = cir.cast bitcast %[[GS_AS_S]] : !cir.ptr<!rec_S> -> !cir.ptr<!void>
+// CIR:   %[[GS_PTR:.*]] = cir.get_global @_ZL2gS : !cir.ptr<!rec_S>
+// CIR:   %[[GS_AS_VOID:.*]] = cir.cast bitcast %[[GS_PTR]] : !cir.ptr<!rec_S> -> !cir.ptr<!void>
 // CIR:   cir.call @_Z3usePv(%[[GS_AS_VOID]]) : (!cir.ptr<!void> {{.*}}) -> ()
 
 // Multi-index case: ptrToElement = &gSMulti.arr[5] produces a global_view with
 // multiple indices, exercising createNewGlobalView.
 // CIR: cir.global {{.*}} @gSMulti = #cir.const_record<
-// CIR: cir.global {{.*}} @ptrToElement = #cir.global_view<@gSMulti, [0, 4, 1]> : !cir.ptr<
+// CIR: cir.global {{.*}} @ptrToElement = #cir.global_view<@gSMulti, [0 : i32, 5 : i32]> : !cir.ptr<!s8i>
 
 // CIR: cir.func {{.*}} @_Z15use_as_constantv()
 // CIR:   %[[PTR_TO_S:.*]] = cir.alloca "ptrToS" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_S>>
 // CIR:   %[[GLOBAL_PTR:.*]] = cir.const #cir.global_view<@_ZL2gS> : !cir.ptr<!rec_S>
 // CIR:   cir.store{{.*}} %[[GLOBAL_PTR]], %[[PTR_TO_S]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
 
-// LLVM: @_ZL2gS = internal global { <{ i8, i8, i8, i8, [24 x i8] }> } { <{ i8, i8, i8, i8, [24 x i8] }> <{ i8 80, i8 75, i8 3, i8 4, [24 x i8] zeroinitializer }> }, align 1
+// LLVM: @_ZL2gS = internal global %struct.S { [28 x i8] c"PK\03\04\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00" }, align 1
 // LLVM: @ptrToS = global ptr @_ZL2gS, align 8
 // LLVM: @gSMulti = global {{.*}} align 1
 // LLVM: @ptrToElement = global ptr getelementptr

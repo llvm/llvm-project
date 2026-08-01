@@ -139,6 +139,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CodeGen.h"
@@ -2346,16 +2347,221 @@ bool ARMFrameLowering::restoreCalleeSavedRegisters(
 
 // FIXME: Make generic?
 static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
-                                            const ARMBaseInstrInfo &TII) {
+                                            const ARMBaseInstrInfo &TII,
+                                            const ARMSubtarget &STI,
+                                            const ARMBaseRegisterInfo *RegInfo,
+                                            BitVector &SavedRegs,
+                                            bool BigFrameOffsets) {
   unsigned FnSize = 0;
-  for (auto &MBB : MF) {
-    for (auto &MI : MBB)
-      FnSize += TII.getInstSizeInBytes(MI);
+
+  bool KCFI = MF.getFunction().getParent()->getModuleFlag("kcfi");
+
+  if (MF.shouldSplitStack()) {
+    // Split stack prologue saves r4,r5; makes a copy of sp and loads
+    // a literal; compares the two, and if sp < literal, pushes
+    // further registers and calls __morestack.
+    FnSize += 0x24;
   }
-  if (MF.getJumpTableInfo())
-    for (auto &Table: MF.getJumpTableInfo()->getJumpTables())
-      FnSize += Table.MBBs.size() * 4;
-  FnSize += MF.getConstantPool()->getConstants().size() * 4;
+
+  // Count the number of saved high registers, which take more effort
+  // to push and pop in the prologue and epilogue.
+  unsigned SavedHighRegs = 0;
+  for (auto Reg : {ARM::R8, ARM::R9, ARM::R10, ARM::R11, ARM::R12})
+    if (SavedRegs.test(Reg))
+      ++SavedHighRegs;
+
+  // Size of a particularly large Thumb1 stack setup prologue:
+  // update sp for variadic functions (2 bytes)
+  // + push registers (2 bytes for PUSH {low regs} + 4 bytes per high register
+  //   that needs to be copied into a low reg and then pushed)
+  // + frame pointer (might use r11, requiring pushing it first, 6 bytes)
+  // + stack update (up to 12 bytes if a constant load is needed and a branch
+  //   required later to skip the constant)
+  // + stack realignment (8, if needed)
+  // + make base pointer (2).
+  unsigned PrologueSize = 2 + 4 * SavedHighRegs + 6 + 12 + 2;
+  if (RegInfo->hasStackRealignment(MF))
+    PrologueSize += 8;
+  FnSize += PrologueSize;
+
+  // Size of a large epilogue:
+  // restore sp from frame pointer (6 bytes if it's in r11)
+  // + pop registers (2 bytes + 4 per high register, as above)
+  // + pop r11 if it was saved to make frame pointer (4 bytes)
+  // + pop return address into a low reg (2 bytes)
+  // + update sp to undo variadic function setup (2 bytes)
+  // + BX to where you popped the return address (2 bytes)
+  unsigned EpilogueSize = 6 + 2 + 4 * SavedHighRegs + 4 + 2 + 2;
+
+  bool FirstBlock = true;
+  for (auto &MBB : MF) {
+    if (!FirstBlock) {
+      // We might have to insert padding to align the start of this basic
+      // block.
+      unsigned Alignment = MBB.getMaxBytesForAlignment();
+      FnSize += Alignment;
+    }
+
+    unsigned SizeBeforeThisBB = FnSize;
+
+    bool seenBranch = false, seenConstantLoad = false;
+    for (auto &MI : MBB) {
+      unsigned InstSize;
+      switch (MI.getOpcode()) {
+      case ARM::tADDframe:
+        if (BigFrameOffsets)
+          // We might need two ADD instructions, or even a constant
+          // load. In the latter case we must count the constant as
+          // well as the load instruction and the addition, for 8
+          // bytes total.
+          InstSize = 8;
+        else
+          InstSize = 2;
+        break;
+      case ARM::tLDRspi:
+      case ARM::tSTRspi:
+        if (BigFrameOffsets)
+          // In a really nasty case, accessing a stack slot might
+          // require saving and restoring a scratch register (4 bytes)
+          // to make space to load (2 bytes) a constant (4 bytes) to
+          // add to SP or FP (2 bytes) and then do the load/store to
+          // the resulting register (2 bytes).
+          InstSize = 14;
+        else
+          InstSize = 2;
+        break;
+      case TargetOpcode::COPY:
+        // In some situations, COPY has to go via a high register, to
+        // avoid corrupting the PSR flags: Thumb moves between low and
+        // high registers don't write the PSR, whereas low/low moves
+        // do.
+        InstSize = 4; // may have to go via a high reg
+        break;
+      case ARM::MEMCPY:
+        InstSize = 4; // becomes one LDMIA_UPD + STMIA_UPD pair
+        break;
+
+      case ARM::Int_eh_sjlj_dispatchsetup:
+        // Worst case is 6 bytes, loading a constant from a literal pool.
+        InstSize = 6;
+        break;
+
+      case ARM::tLDRpci_pic:
+        InstSize = 4; // ordinary LDRpci + add to pc
+        break;
+
+      case ARM::ADJCALLSTACKDOWN:
+      case ARM::ADJCALLSTACKUP:
+        InstSize = 2;
+        break;
+
+      case ARM::tBLXNS_CALL:
+        // A call across a CMSE trust boundary involves a lot of work. We must
+        // clear all the registers that might contain our own secrets, which
+        // means pushing them first. So first push low registers, then move
+        // four high regs into them and push those too.
+        InstSize = 2 + 2 * 4 + 2;
+        // Then we must clear the low bit of the target register, because
+        // instead of indicating Arm/Thumb it indicates the CMSE security
+        // status. That takes two instructions.
+        InstSize += 4;
+        // Now actually clear all the registers, via a MOV for each one. This
+        // includes argument registers as well as saved regs, so it can be
+        // r1-r12 inclusive.
+        InstSize += 2 * 12;
+        // Clear the PSR flags (a wide instruction even in Armv8-M Baseline).
+        InstSize += 4;
+        // Perform the BLXNS call itself.
+        InstSize += 2;
+        // Now pop all the saved registers, which takes the same amount of
+        // effort as pushing them did.
+        InstSize += 2 + 2 * 4 + 2;
+        break;
+
+      case ARM::tBXNS_RET:
+        // When returning across a CMSE boundary, we must potentially clear all
+        // the registers that we haven't restored to the caller's value: r0-r3
+        // and r12. We also clear the PSR flags, and finally return via BXNS.
+        InstSize = 5 * 2 + 4 + 2;
+        break;
+
+      case TargetOpcode::LOAD_STACK_GUARD:
+        if (STI.genExecuteOnly())
+          // In execute-only code generation, it costs seven 2-byte
+          // instructions (MOV + 3 ADD + 3 LSL) to load an arbitrary
+          // 32-bit constant, plus two 4-byte MSRs to save/restore the
+          // flags those instructions clobber. Then we load from the
+          // resulting address with one more 2-byte instruction.
+          InstSize = 7 * 2 + 2 * 4 + 8;
+        else
+          // If we're not generating execute-only code, the constant
+          // just costs an LDR and a literal, and then another LDR is
+          // needed to load from that address.
+          InstSize = 2 * 2 + 4;
+        break;
+
+      default:
+        InstSize = TII.getInstSizeInBytes(MI);
+        break;
+      }
+
+      FnSize += InstSize;
+
+      // If the instruction loads a constant, score the size of the
+      // constant, in case it can't be shared with other basic blocks.
+      for (MachineMemOperand *MO : MI.memoperands()) {
+        const PseudoSourceValue *PSV =
+            dyn_cast_if_present<const PseudoSourceValue *>(
+                MO->getPointerInfo().V);
+        if (PSV && PSV->kind() == PseudoSourceValue::ConstantPool) {
+          unsigned ConstSize = MO->getType().getSizeInBytes();
+          FnSize += ConstSize;
+          seenConstantLoad = true;
+        }
+      }
+
+      // If the instruction is a return or a tailcall, count the size
+      // of an epilogue. (We do this for each return, in case the
+      // epilogue must be duplicated.)
+      if (MI.isReturn() || TII.isTailCall(MI)) {
+        FnSize += EpilogueSize;
+      }
+
+      // If the instruction is a call, and KCFI is enabled, then count the
+      // cost of a KCFI_CHECK_Thumb1 pseudo.
+      if (KCFI && MI.isCall() && MI.getCFIType()) {
+        const MCInstrDesc &MCID = TII.get(ARM::KCFI_CHECK_Thumb1);
+        FnSize += MCID.getSize();
+      }
+
+      if (MI.isUnconditionalBranch())
+        seenBranch = true;
+    }
+
+    // If there's no branch instruction in the block and we saw a constant,
+    // count a branch + realignment to 4 bytes, in case we have to branch round
+    // it.
+    if (seenConstantLoad && !seenBranch) {
+      FnSize += 4;
+    }
+
+    // Also, if the block is really, really big, then count an extra 4 bytes
+    // (again branch + realignment) for potentially splitting it in order to
+    // put constants in the middle, avoiding the problem of an LDR not being
+    // able to reach all the way to the end. The LDR offset limit is 1024
+    // bytes; the splitting itself adds some cost, but since any function this
+    // large is likely to have already gone over the "must stack LR" limit, we
+    // can keep things simple by assuming we split at half that rate.
+    unsigned BBSize = FnSize - SizeBeforeThisBB;
+    FnSize += 4 * BBSize / 512;
+  }
+  if (MF.getJumpTableInfo()) {
+    for (auto &Table : MF.getJumpTableInfo()->getJumpTables()) {
+      unsigned TableLen = Table.MBBs.size();
+      unsigned TableSizeBytes = TableLen * 4;
+      FnSize += TableSizeBytes;
+    }
+  }
   LLVM_DEBUG(dbgs() << "Estimated function size for " << MF.getName() << " = "
                     << FnSize << " bytes\n");
   return FnSize;
@@ -2706,15 +2912,6 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   }
 
   bool ForceLRSpill = false;
-  if (!LRSpilled && AFI->isThumb1OnlyFunction()) {
-    unsigned FnSize = EstimateFunctionSizeInBytes(MF, TII);
-    // Force LR to be spilled if the Thumb function size is > 2048. This enables
-    // use of BL to implement far jump.
-    if (FnSize >= (1 << 11)) {
-      CanEliminateFrame = false;
-      ForceLRSpill = true;
-    }
-  }
 
   // If any of the stack slot references may be out of range of an immediate
   // offset, make sure a register (or a spill slot) is available for the
@@ -2810,6 +3007,19 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
                     << "; EstimatedStack: " << EstimatedStackSize
                     << "; EstimatedFPStack: " << MaxFixedOffset - MaxFPOffset
                     << "; BigFrameOffsets: " << BigFrameOffsets << "\n");
+
+  if (!LRSpilled && AFI->isThumb1OnlyFunction()) {
+    unsigned FnSize = EstimateFunctionSizeInBytes(MF, TII, STI, RegInfo,
+                                                  SavedRegs, BigFrameOffsets);
+
+    if (FnSize >= (1 << 11)) {
+      // Force LR to be spilled if the Thumb function size is > 2048. This
+      // enables use of BL to implement far jump.
+      CanEliminateFrame = false;
+      ForceLRSpill = true;
+    }
+  }
+
   if (BigFrameOffsets ||
       !CanEliminateFrame || RegInfo->cannotEliminateFrame(MF)) {
     AFI->setHasStackFrame(true);

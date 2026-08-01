@@ -30,13 +30,13 @@ body:             |
     ; CHECK-NEXT: [[INSvi64lane:%[0-9]+]]:fpr128 = INSvi64lane [[INSERT_SUBREG]], 1, [[INSERT_SUBREG1]], 0
     ; CHECK-NEXT: $q0 = COPY [[INSvi64lane]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<2 x s64>) = COPY $q0
+    %0:fpr(<2 x i64>) = COPY $q0
 
     ; Since 2 * 64 = 128, we can just directly copy.
-    %2:fpr(s64), %3:fpr(s64) = G_UNMERGE_VALUES %0(<2 x s64>)
+    %2:fpr(i64), %3:fpr(i64) = G_UNMERGE_VALUES %0(<2 x i64>)
 
-    %1:fpr(<2 x s64>) = G_BUILD_VECTOR %2(s64), %3(s64)
-    $q0 = COPY %1(<2 x s64>)
+    %1:fpr(<2 x i64>) = G_BUILD_VECTOR %2(i64), %3(i64)
+    $q0 = COPY %1(<2 x i64>)
     RET_ReallyLR implicit $q0
 ...
 ---
@@ -76,13 +76,13 @@ body:             |
     ; CHECK-NEXT: [[INSvi32lane2:%[0-9]+]]:fpr128 = INSvi32lane [[INSvi32lane1]], 3, [[INSERT_SUBREG3]], 0
     ; CHECK-NEXT: $q0 = COPY [[INSvi32lane2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<4 x s32>) = COPY $q0
+    %0:fpr(<4 x i32>) = COPY $q0
 
     ; Since 4 * 32 = 128, we can just directly copy.
-    %2:fpr(s32), %3:fpr(s32), %4:fpr(s32), %5:fpr(s32) = G_UNMERGE_VALUES %0(<4 x s32>)
+    %2:fpr(i32), %3:fpr(i32), %4:fpr(i32), %5:fpr(i32) = G_UNMERGE_VALUES %0(<4 x i32>)
 
-    %1:fpr(<4 x s32>) = G_BUILD_VECTOR %2(s32), %3(s32), %4(s32), %5(s32)
-    $q0 = COPY %1(<4 x s32>)
+    %1:fpr(<4 x i32>) = G_BUILD_VECTOR %2(i32), %3(i32), %4(i32), %5(i32)
+    $q0 = COPY %1(<4 x i32>)
     RET_ReallyLR implicit $q0
 ...
 ---
@@ -112,15 +112,15 @@ body:             |
     ; CHECK-NEXT: $h0 = COPY [[COPY1]]
     ; CHECK-NEXT: $h1 = COPY [[DUPi16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0, implicit $h1
-    %0:fpr(<2 x s16>) = COPY $s0
+    %0:fpr(<2 x i16>) = COPY $s0
 
     ; Since 2 * 16 != 128, we need to widen using implicit defs.
     ; Note that we expect to reuse one of the INSERT_SUBREG results, as CPYi16
     ; expects a lane > 0.
-    %2:fpr(s16), %3:fpr(s16) = G_UNMERGE_VALUES %0(<2 x s16>)
+    %2:fpr(i16), %3:fpr(i16) = G_UNMERGE_VALUES %0(<2 x i16>)
 
-    $h0 = COPY %2(s16)
-    $h1 = COPY %3(s16)
+    $h0 = COPY %2(i16)
+    $h1 = COPY %3(i16)
 
     RET_ReallyLR implicit $h0, implicit $h1
 ...
@@ -168,15 +168,15 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[INSvi16lane2]].dsub
     ; CHECK-NEXT: $d0 = COPY [[COPY2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(<4 x s16>) = COPY $d0
+    %0:fpr(<4 x i16>) = COPY $d0
 
     ; Since 4 * 16 != 128, we need to widen using implicit defs.
     ; Note that we expect to reuse one of the INSERT_SUBREG results, as CPYi16
     ; expects a lane > 0.
-    %2:fpr(s16), %3:fpr(s16), %4:fpr(s16), %5:fpr(s16) = G_UNMERGE_VALUES %0(<4 x s16>)
+    %2:fpr(i16), %3:fpr(i16), %4:fpr(i16), %5:fpr(i16) = G_UNMERGE_VALUES %0(<4 x i16>)
 
-    %1:fpr(<4 x s16>) = G_BUILD_VECTOR %2(s16), %3(s16), %4(s16), %5(s16)
-    $d0 = COPY %1(<4 x s16>)
+    %1:fpr(<4 x i16>) = G_BUILD_VECTOR %2(i16), %3(i16), %4(i16), %5(i16)
+    $d0 = COPY %1(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -236,13 +236,13 @@ body:             |
     ; CHECK-NEXT: [[INSvi16lane6:%[0-9]+]]:fpr128 = INSvi16lane [[INSvi16lane5]], 7, [[INSERT_SUBREG7]], 0
     ; CHECK-NEXT: $q0 = COPY [[INSvi16lane6]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<8 x s16>) = COPY $q0
+    %0:fpr(<8 x i16>) = COPY $q0
 
     ; Since 8 * 16 = 128, we can just directly copy.
-    %2:fpr(s16), %3:fpr(s16), %4:fpr(s16), %5:fpr(s16), %6:fpr(s16), %7:fpr(s16), %8:fpr(s16), %9:fpr(s16) = G_UNMERGE_VALUES %0(<8 x s16>)
+    %2:fpr(i16), %3:fpr(i16), %4:fpr(i16), %5:fpr(i16), %6:fpr(i16), %7:fpr(i16), %8:fpr(i16), %9:fpr(i16) = G_UNMERGE_VALUES %0(<8 x i16>)
 
-    %1:fpr(<8 x s16>) = G_BUILD_VECTOR %2:fpr(s16), %3:fpr(s16), %4:fpr(s16), %5:fpr(s16), %6:fpr(s16), %7:fpr(s16), %8:fpr(s16), %9:fpr(s16)
-    $q0 = COPY %1(<8 x s16>)
+    %1:fpr(<8 x i16>) = G_BUILD_VECTOR %2:fpr(i16), %3:fpr(i16), %4:fpr(i16), %5:fpr(i16), %6:fpr(i16), %7:fpr(i16), %8:fpr(i16), %9:fpr(i16)
+    $q0 = COPY %1(<8 x i16>)
     RET_ReallyLR implicit $q0
 ...
 ---
@@ -289,8 +289,8 @@ body:             |
     ; CHECK-NEXT: $b6 = COPY [[DUPi8_5]]
     ; CHECK-NEXT: $b7 = COPY [[DUPi8_6]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(<8 x s8>) = COPY $d0
-    %2:fpr(s8), %3:fpr(s8), %4:fpr(s8), %5:fpr(s8), %6:fpr(s8), %7:fpr(s8), %8:fpr(s8), %9:fpr(s8) = G_UNMERGE_VALUES %0(<8 x s8>)
+    %0:fpr(<8 x i8>) = COPY $d0
+    %2:fpr(i8), %3:fpr(i8), %4:fpr(i8), %5:fpr(i8), %6:fpr(i8), %7:fpr(i8), %8:fpr(i8), %9:fpr(i8) = G_UNMERGE_VALUES %0(<8 x i8>)
     $b0 = COPY %2
     $b1 = COPY %3
     $b2 = COPY %4
@@ -379,11 +379,11 @@ body:             |
     ; CHECK-NEXT: [[INSvi8lane14:%[0-9]+]]:fpr128 = INSvi8lane [[INSvi8lane13]], 15, [[INSERT_SUBREG15]], 0
     ; CHECK-NEXT: $q0 = COPY [[INSvi8lane14]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(<16 x s8>) = COPY $q0
-    %2:fpr(s8), %3:fpr(s8), %4:fpr(s8), %5:fpr(s8), %6:fpr(s8), %7:fpr(s8), %8:fpr(s8), %9:fpr(s8), %10:fpr(s8), %11:fpr(s8), %12:fpr(s8), %13:fpr(s8), %14:fpr(s8), %15:fpr(s8), %16:fpr(s8), %17:fpr(s8) = G_UNMERGE_VALUES %0(<16 x s8>)
+    %0:fpr(<16 x i8>) = COPY $q0
+    %2:fpr(i8), %3:fpr(i8), %4:fpr(i8), %5:fpr(i8), %6:fpr(i8), %7:fpr(i8), %8:fpr(i8), %9:fpr(i8), %10:fpr(i8), %11:fpr(i8), %12:fpr(i8), %13:fpr(i8), %14:fpr(i8), %15:fpr(i8), %16:fpr(i8), %17:fpr(i8) = G_UNMERGE_VALUES %0(<16 x i8>)
 
-    %1:fpr(<16 x s8>) = G_BUILD_VECTOR %2:fpr(s8), %3:fpr(s8), %4:fpr(s8), %5:fpr(s8), %6:fpr(s8), %7:fpr(s8), %8:fpr(s8), %9:fpr(s8), %10:fpr(s8), %11:fpr(s8), %12:fpr(s8), %13:fpr(s8), %14:fpr(s8), %15:fpr(s8), %16:fpr(s8), %17:fpr(s8)
-    $q0 = COPY %1(<16 x s8>)
+    %1:fpr(<16 x i8>) = G_BUILD_VECTOR %2:fpr(i8), %3:fpr(i8), %4:fpr(i8), %5:fpr(i8), %6:fpr(i8), %7:fpr(i8), %8:fpr(i8), %9:fpr(i8), %10:fpr(i8), %11:fpr(i8), %12:fpr(i8), %13:fpr(i8), %14:fpr(i8), %15:fpr(i8), %16:fpr(i8), %17:fpr(i8)
+    $q0 = COPY %1(<16 x i8>)
     RET_ReallyLR implicit $q0
 ...
 ---
@@ -404,10 +404,10 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY [[COPY1]]
     ; CHECK-NEXT: $d1 = COPY [[DUPi64_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %0:fpr(<4 x s32>) = COPY $q0
-    %1:fpr(<2 x s32>), %2:fpr(<2 x s32>) = G_UNMERGE_VALUES %0(<4 x s32>)
-    $d0 = COPY %1(<2 x s32>)
-    $d1 = COPY %2(<2 x s32>)
+    %0:fpr(<4 x i32>) = COPY $q0
+    %1:fpr(<2 x i32>), %2:fpr(<2 x i32>) = G_UNMERGE_VALUES %0(<4 x i32>)
+    $d0 = COPY %1(<2 x i32>)
+    $d1 = COPY %2(<2 x i32>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -430,10 +430,10 @@ body:             |
     ; CHECK-NEXT: $s0 = COPY [[COPY1]]
     ; CHECK-NEXT: $s1 = COPY [[DUPi32_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
-    %0:fpr(<4 x s16>) = COPY $d0
-    %1:fpr(<2 x s16>), %2:fpr(<2 x s16>) = G_UNMERGE_VALUES %0(<4 x s16>)
-    $s0 = COPY %1(<2 x s16>)
-    $s1 = COPY %2(<2 x s16>)
+    %0:fpr(<4 x i16>) = COPY $d0
+    %1:fpr(<2 x i16>), %2:fpr(<2 x i16>) = G_UNMERGE_VALUES %0(<4 x i16>)
+    $s0 = COPY %1(<2 x i16>)
+    $s1 = COPY %2(<2 x i16>)
     RET_ReallyLR implicit $s0
 ...
 ---
@@ -454,10 +454,10 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY [[COPY1]]
     ; CHECK-NEXT: $d1 = COPY [[DUPi64_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0, implicit $d1
-    %0:fpr(s128) = COPY $q0
-    %1:fpr(s64), %2:fpr(s64) = G_UNMERGE_VALUES %0(s128)
-    $d0 = COPY %1(s64)
-    $d1 = COPY %2(s64)
+    %0:fpr(i128) = COPY $q0
+    %1:fpr(i64), %2:fpr(i64) = G_UNMERGE_VALUES %0(i128)
+    $d0 = COPY %1(i64)
+    $d1 = COPY %2(i64)
     RET_ReallyLR implicit $d0, implicit $d1
 ...
 ---
@@ -480,10 +480,10 @@ body:             |
     ; CHECK-NEXT: $h0 = COPY [[COPY1]]
     ; CHECK-NEXT: $h1 = COPY [[DUPi16_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0, implicit $h1
-    %0:fpr(s32) = COPY $s0
-    %1:fpr(s16), %2:fpr(s16) = G_UNMERGE_VALUES %0(s32)
-    $h0 = COPY %1(s16)
-    $h1 = COPY %2(s16)
+    %0:fpr(i32) = COPY $s0
+    %1:fpr(i16), %2:fpr(i16) = G_UNMERGE_VALUES %0(i32)
+    $h0 = COPY %1(i16)
+    $h1 = COPY %2(i16)
     RET_ReallyLR implicit $h0, implicit $h1
 ...
 ---
@@ -506,10 +506,10 @@ body:             |
     ; CHECK-NEXT: $s0 = COPY [[COPY1]]
     ; CHECK-NEXT: $s1 = COPY [[DUPi32_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0, implicit $s1
-    %0:fpr(s64) = COPY $d0
-    %1:fpr(s32), %2:fpr(s32) = G_UNMERGE_VALUES %0(s64)
-    $s0 = COPY %1(s32)
-    $s1 = COPY %2(s32)
+    %0:fpr(i64) = COPY $d0
+    %1:fpr(i32), %2:fpr(i32) = G_UNMERGE_VALUES %0(i64)
+    $s0 = COPY %1(i32)
+    $s1 = COPY %2(i32)
     RET_ReallyLR implicit $s0, implicit $s1
 ...
 ---
@@ -540,12 +540,12 @@ body:             |
     ; CHECK-NEXT: $h2 = COPY [[DUPi16_1]]
     ; CHECK-NEXT: $h3 = COPY [[DUPi16_2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0, implicit $h1, implicit $h2, implicit $h3
-    %0:fpr(s64) = COPY $d0
-    %1:fpr(s16), %2:fpr(s16), %3:fpr(s16), %4:fpr(s16) = G_UNMERGE_VALUES %0(s64)
-    $h0 = COPY %1(s16)
-    $h1 = COPY %2(s16)
-    $h2 = COPY %3(s16)
-    $h3 = COPY %4(s16)
+    %0:fpr(i64) = COPY $d0
+    %1:fpr(i16), %2:fpr(i16), %3:fpr(i16), %4:fpr(i16) = G_UNMERGE_VALUES %0(i64)
+    $h0 = COPY %1(i16)
+    $h1 = COPY %2(i16)
+    $h2 = COPY %3(i16)
+    $h3 = COPY %4(i16)
     RET_ReallyLR implicit $h0, implicit $h1, implicit $h2, implicit $h3
 ...
 ---
@@ -576,11 +576,11 @@ body:             |
     ; CHECK-NEXT: $b2 = COPY [[DUPi8_1]]
     ; CHECK-NEXT: $b3 = COPY [[DUPi8_2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $b0, implicit $b1, implicit $b2, implicit $b3
-    %0:fpr(s32) = COPY $s0
-    %1:fpr(s8), %2:fpr(s8), %3:fpr(s8), %4:fpr(s8) = G_UNMERGE_VALUES %0(s32)
-    $b0 = COPY %1(s8)
-    $b1 = COPY %2(s8)
-    $b2 = COPY %3(s8)
-    $b3 = COPY %4(s8)
+    %0:fpr(i32) = COPY $s0
+    %1:fpr(i8), %2:fpr(i8), %3:fpr(i8), %4:fpr(i8) = G_UNMERGE_VALUES %0(i32)
+    $b0 = COPY %1(i8)
+    $b1 = COPY %2(i8)
+    $b2 = COPY %3(i8)
+    $b3 = COPY %4(i8)
     RET_ReallyLR implicit $b0, implicit $b1, implicit $b2, implicit $b3
 ...

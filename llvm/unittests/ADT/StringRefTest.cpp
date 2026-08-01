@@ -1208,6 +1208,13 @@ TEST(StringRefTest, LFCRLineEnding) {
   EXPECT_EQ(StringRef("\n\r"), Cases[2].detectEOL());
 }
 
+TEST(StringRefTest, NonEmptyOr) {
+  constexpr StringLiteral empty("");
+  constexpr StringLiteral populated("yay!");
+  EXPECT_EQ(populated, empty.nonEmptyOr("yay!"));
+  EXPECT_EQ(populated, populated.nonEmptyOr("boo!"));
+}
+
 static_assert(std::is_trivially_copyable_v<StringRef>, "trivially copyable");
 
 } // end anonymous namespace

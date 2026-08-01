@@ -1422,11 +1422,11 @@ float64x1_t test_vmls_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[C:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// UNCONSTRAINED-NEXT:    [[__P1_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P1_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[C]] to i64
-// UNCONSTRAINED-NEXT:    [[__P2_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P2_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__P1_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__P2_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -1440,11 +1440,11 @@ float64x1_t test_vmls_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]], <1 x double> noundef [[C:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// CONSTRAINED-NEXT:    [[__P1_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// CONSTRAINED-NEXT:    [[__P1_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[C]] to i64
-// CONSTRAINED-NEXT:    [[__P2_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// CONSTRAINED-NEXT:    [[__P2_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
 // CONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__P1_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__P2_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -1463,11 +1463,11 @@ float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[FNEG_I:%.*]] = fneg <1 x double> [[B]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[FNEG_I]] to i64
-// UNCONSTRAINED-NEXT:    [[__P1_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P1_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[C]] to i64
-// UNCONSTRAINED-NEXT:    [[__P2_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P2_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__P1_ADDR_I_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__P2_ADDR_I_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -1482,11 +1482,11 @@ float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[FNEG_I:%.*]] = fneg <1 x double> [[B]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[FNEG_I]] to i64
-// CONSTRAINED-NEXT:    [[__P1_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// CONSTRAINED-NEXT:    [[__P1_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <1 x double> [[C]] to i64
-// CONSTRAINED-NEXT:    [[__P2_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// CONSTRAINED-NEXT:    [[__P2_ADDR_I_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i64 0
 // CONSTRAINED-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP4:%.*]] = bitcast <1 x i64> [[__P1_ADDR_I_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP5:%.*]] = bitcast <1 x i64> [[__P2_ADDR_I_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
@@ -1520,7 +1520,7 @@ float64x1_t test_vsub_f64(float64x1_t a, float64x1_t b) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // UNCONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.fptosi.sat.v1i64.v1f64(<1 x double> [[TMP2]])
@@ -1530,7 +1530,7 @@ float64x1_t test_vsub_f64(float64x1_t a, float64x1_t b) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> [[TMP2]]) #[[ATTR3]]
@@ -1544,7 +1544,7 @@ int64x1_t test_vcvt_s64_f64(float64x1_t a) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // UNCONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.fptoui.sat.v1i64.v1f64(<1 x double> [[TMP2]])
@@ -1554,7 +1554,7 @@ int64x1_t test_vcvt_s64_f64(float64x1_t a) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CONSTRAINED-NEXT:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> [[TMP2]]) #[[ATTR3]]
@@ -1608,7 +1608,7 @@ float64x1_t test_vcvt_f64_u64(uint64x1_t a) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[VRNDA_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // UNCONSTRAINED-NEXT:    [[VRNDA1_I:%.*]] = call <1 x double> @llvm.round.v1f64(<1 x double> [[VRNDA_I]])
@@ -1618,7 +1618,7 @@ float64x1_t test_vcvt_f64_u64(uint64x1_t a) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDA_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CONSTRAINED-NEXT:    [[VRNDA1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.round.v1f64(<1 x double> [[VRNDA_I]], metadata !"fpexcept.strict") #[[ATTR3]]
@@ -1632,7 +1632,7 @@ float64x1_t test_vrnda_f64(float64x1_t a) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[VRNDP_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // UNCONSTRAINED-NEXT:    [[VRNDP1_I:%.*]] = call <1 x double> @llvm.ceil.v1f64(<1 x double> [[VRNDP_I]])
@@ -1642,7 +1642,7 @@ float64x1_t test_vrnda_f64(float64x1_t a) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDP_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CONSTRAINED-NEXT:    [[VRNDP1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.ceil.v1f64(<1 x double> [[VRNDP_I]], metadata !"fpexcept.strict") #[[ATTR3]]
@@ -1656,7 +1656,7 @@ float64x1_t test_vrndp_f64(float64x1_t a) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[VRNDM_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // UNCONSTRAINED-NEXT:    [[VRNDM1_I:%.*]] = call <1 x double> @llvm.floor.v1f64(<1 x double> [[VRNDM_I]])
@@ -1666,7 +1666,7 @@ float64x1_t test_vrndp_f64(float64x1_t a) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDM_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CONSTRAINED-NEXT:    [[VRNDM1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.floor.v1f64(<1 x double> [[VRNDM_I]], metadata !"fpexcept.strict") #[[ATTR3]]
@@ -1680,7 +1680,7 @@ float64x1_t test_vrndm_f64(float64x1_t a) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[VRNDX_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // UNCONSTRAINED-NEXT:    [[VRNDX1_I:%.*]] = call <1 x double> @llvm.rint.v1f64(<1 x double> [[VRNDX_I]])
@@ -1690,7 +1690,7 @@ float64x1_t test_vrndm_f64(float64x1_t a) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDX_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CONSTRAINED-NEXT:    [[VRNDX1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.rint.v1f64(<1 x double> [[VRNDX_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
@@ -1704,7 +1704,7 @@ float64x1_t test_vrndx_f64(float64x1_t a) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[VRNDZ_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // UNCONSTRAINED-NEXT:    [[VRNDZ1_I:%.*]] = call <1 x double> @llvm.trunc.v1f64(<1 x double> [[VRNDZ_I]])
@@ -1714,7 +1714,7 @@ float64x1_t test_vrndx_f64(float64x1_t a) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDZ_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CONSTRAINED-NEXT:    [[VRNDZ1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.trunc.v1f64(<1 x double> [[VRNDZ_I]], metadata !"fpexcept.strict") #[[ATTR3]]
@@ -1728,7 +1728,7 @@ float64x1_t test_vrnd_f64(float64x1_t a) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[VRNDI_V_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // UNCONSTRAINED-NEXT:    [[VRNDI_V1_I:%.*]] = call <1 x double> @llvm.nearbyint.v1f64(<1 x double> [[VRNDI_V_I]])
@@ -1738,7 +1738,7 @@ float64x1_t test_vrnd_f64(float64x1_t a) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[VRNDI_V_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CONSTRAINED-NEXT:    [[VRNDI_V1_I:%.*]] = call <1 x double> @llvm.experimental.constrained.nearbyint.v1f64(<1 x double> [[VRNDI_V_I]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]
@@ -1752,7 +1752,7 @@ float64x1_t test_vrndi_f64(float64x1_t a) {
 // UNCONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // UNCONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // UNCONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// UNCONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // UNCONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // UNCONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // UNCONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <1 x double> @llvm.sqrt.v1f64(<1 x double> [[TMP2]])
@@ -1762,7 +1762,7 @@ float64x1_t test_vrndi_f64(float64x1_t a) {
 // CONSTRAINED-SAME: <1 x double> noundef [[A:%.*]]) #[[ATTR0]] {
 // CONSTRAINED-NEXT:  [[ENTRY:.*:]]
 // CONSTRAINED-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CONSTRAINED-NEXT:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CONSTRAINED-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CONSTRAINED-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
 // CONSTRAINED-NEXT:    [[VSQRT_I:%.*]] = call <1 x double> @llvm.experimental.constrained.sqrt.v1f64(<1 x double> [[TMP2]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR3]]

@@ -212,7 +212,8 @@ public:
   }
 };
 
-class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
+class BlockInCriticalSectionChecker
+    : public Checker<check::PostCall, eval::Call> {
 private:
   const std::array<MutexDescriptor, 9> MutexDescriptors{
       // NOTE: There are standard library implementations where some methods
@@ -263,7 +264,7 @@ private:
                        bool IsLock) const;
 
   void handleLock(const MutexDescriptor &Mutex, const CallEvent &Call,
-                  CheckerContext &C) const;
+                  CheckerContext &C, ProgramStateRef State) const;
 
   void handleUnlock(const MutexDescriptor &Mutex, const CallEvent &Call,
                     CheckerContext &C) const;
@@ -276,6 +277,9 @@ public:
   /// Process lock.
   /// Process blocking functions (sleep, getc, fgets, read, recv)
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+
+  // Process RAII lock guard object ctors/dtors.
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
 } // end anonymous namespace
@@ -321,7 +325,7 @@ static const MemRegion *getRegion(const CallEvent &Call,
 
 void BlockInCriticalSectionChecker::handleLock(
     const MutexDescriptor &LockDescriptor, const CallEvent &Call,
-    CheckerContext &C) const {
+    CheckerContext &C, ProgramStateRef State) const {
   const MemRegion *MutexRegion =
       getRegion(Call, LockDescriptor, /*IsLock=*/true);
   if (!MutexRegion)
@@ -329,7 +333,7 @@ void BlockInCriticalSectionChecker::handleLock(
 
   const CritSectionMarker MarkToAdd{Call.getOriginExpr(), MutexRegion};
   ProgramStateRef StateWithLockEvent =
-      C.getState()->add<ActiveCritSections>(MarkToAdd);
+      State->add<ActiveCritSections>(MarkToAdd);
   C.addTransition(StateWithLockEvent, createCritSectionNote(MarkToAdd, C));
 }
 
@@ -373,13 +377,40 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
   if (isBlockingInCritSection(Call, C)) {
     reportBlockInCritSection(Call, C);
-  } else if (std::optional<MutexDescriptor> LockDesc =
-                 checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
-    handleLock(*LockDesc, Call, C);
-  } else if (std::optional<MutexDescriptor> UnlockDesc =
-                 checkDescriptorMatch(Call, C, /*IsLock=*/false)) {
+    return;
+  }
+
+  if (std::optional<MutexDescriptor> LockDesc =
+          checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
+    if (!std::holds_alternative<RAIIMutexDescriptor>(*LockDesc))
+      handleLock(*LockDesc, Call, C, C.getState());
+    return;
+  }
+  if (std::optional<MutexDescriptor> UnlockDesc =
+          checkDescriptorMatch(Call, C, /*IsLock=*/false)) {
     handleUnlock(*UnlockDesc, Call, C);
   }
+}
+
+bool BlockInCriticalSectionChecker::evalCall(const CallEvent &Call,
+                                             CheckerContext &C) const {
+  if (std::optional<MutexDescriptor> LockDesc =
+          checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
+    if (std::holds_alternative<RAIIMutexDescriptor>(*LockDesc)) {
+      ProgramStateRef State = C.getState();
+      // Escape the object under construction to model the side-effects of the
+      // constructor.
+      if (const auto *Ctor = dyn_cast<AnyCXXConstructorCall>(&Call)) {
+        const MemRegion *ObjRegion = Ctor->getCXXThisVal().getAsRegion();
+        State = State->invalidateRegions(ObjRegion, C.getCFGElementRef(),
+                                         C.blockCount(), C.getStackFrame(),
+                                         /*CausesPointerEscape=*/false);
+      }
+      handleLock(*LockDesc, Call, C, State);
+      return true;
+    }
+  }
+  return false;
 }
 
 void BlockInCriticalSectionChecker::reportBlockInCritSection(

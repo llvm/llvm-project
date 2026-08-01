@@ -14,7 +14,6 @@
 #include "Linkage.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -2102,6 +2101,10 @@ public:
 
   Type *VisitPackExpansionType(const PackExpansionType *T) {
     return Visit(T->getPattern());
+  }
+
+  Type *VisitAtomicType(const AtomicType *T) {
+    return Visit(T->getValueType());
   }
 };
 

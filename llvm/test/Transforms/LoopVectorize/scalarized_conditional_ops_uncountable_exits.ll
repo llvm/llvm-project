@@ -13,15 +13,15 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP25]]
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
 ; CHECK-NEXT:    [[UNCOUNTABLE_EXIT_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[TMP3]])
+; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP25]]
+; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x i1> [[UNCOUNTABLE_EXIT_MASK]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP35]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:

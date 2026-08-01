@@ -2,41 +2,43 @@
 Test lldb-dap launch request.
 """
 
-from lldbsuite.test.decorators import expectedFailureWindows
-import lldbdap_testcase
+from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
-class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
-    def test_environment_with_object(self):
-        """
-        Tests launch of a simple program with environment variables
-        """
+class TestDAP_launch_environment_with_object(DAPTestCaseBase):
+    """
+    Tests launch of a simple program with environment variables
+    """
+
+    @skipIfWindows
+    def test(self):
         program = self.getBuildArtifact("a.out")
-        env = {
-            "NO_VALUE": "",
+        expected_env = {
+            "NO_VALUE": None,
             "WITH_VALUE": "BAR",
             "EMPTY_VALUE": "",
             "SPACE": "Hello World",
         }
 
-        self.build_and_launch(program, env=env)
-        self.continue_to_exit()
+        session = self.build_and_create_session()
+        process_event = session.launch(LaunchArgs(program=program, env=expected_env))
+        session.verify_process_exited(after=process_event)
 
-        # Now get the STDOUT and verify our arguments got passed correctly
-        output = self.get_stdout()
-        self.assertTrue(output and len(output) > 0, "expect program output")
-        lines = output.splitlines()
-        # Skip the all arguments so we have only environment vars left
-        while len(lines) and lines[0].startswith("arg["):
-            lines.pop(0)
-        # Make sure each environment variable in "env" is actually set in the
-        # program environment that was printed to STDOUT
-        for var in env:
-            found = False
-            for program_var in lines:
-                if var in program_var:
-                    found = True
-                    break
-            self.assertTrue(
-                found, '"%s" must exist in program environment (%s)' % (var, lines)
+        # Now get the STDOUT and verify our arguments got passed correctly.
+        output = session.get_stdout()
+        self.assertTrue(output, "expect program output")
+
+        # Collect environment lines.
+        env_output = "\n".join(l for l in output.splitlines() if l.startswith("env["))
+        # Make sure each environment variable in "expected_env" is actually set in the
+        # program environment and contains the right value.
+        for variable, value in expected_env.items():
+            expected_value = value or ""
+            expected_str = f'"{variable}={expected_value}"'
+            self.assertIn(
+                expected_str,
+                env_output,
+                f"\n{expected_str} must exist in program's environment \n{env_output}",
             )

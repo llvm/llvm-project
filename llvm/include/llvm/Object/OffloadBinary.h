@@ -249,16 +249,24 @@ LLVM_ABI OffloadKind getOffloadKind(StringRef Name);
 /// Convert an offload kind to its string representation.
 LLVM_ABI StringRef getOffloadKindName(OffloadKind Name);
 
-/// If the target is AMD we check the target IDs for mutual compatibility. A
-/// target id is a string conforming to the folowing BNF syntax:
+/// Returns true if an image built for target \p Provided can provide the device
+/// code for a request for target \p Requested. This is directional: a
+/// feature-unspecified or generic image serves a more specific request (e.g. a
+/// generic static-archive member pulled into a specific device-image group),
+/// but not vice versa. For AMDGPU a target id is a string conforming to the
+/// following BNF syntax:
 ///
 ///  target-id ::= '<arch> ( : <feature> ( '+' | '-' ) )*'
 ///
 /// The features 'xnack' and 'sramecc' are currently supported. These can be in
-/// the state of on, off, and any when unspecified. A target marked as any can
-/// bind with either on or off. This is used to link mutually compatible
-/// architectures together. Returns false in the case of an exact match.
-LLVM_ABI bool areTargetsCompatible(const OffloadFile::TargetID &LHS,
+/// the state of on, off, and any when unspecified. A provided target marked as
+/// any can bind with either on or off.
+LLVM_ABI bool areTargetsCompatible(const OffloadFile::TargetID &Provided,
+                                   const OffloadFile::TargetID &Requested);
+
+/// Returns true if \p LHS and \p RHS denote the same logical target, i.e. the
+/// same processor and features.
+LLVM_ABI bool areTargetsEquivalent(const OffloadFile::TargetID &LHS,
                                    const OffloadFile::TargetID &RHS);
 
 } // namespace object

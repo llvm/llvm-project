@@ -6,12 +6,12 @@ define void @test(i8 %0) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i8 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> <i8 0, i8 poison>, i8 [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> <i8 0, i8 poison>, i8 [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext <2 x i8> [[TMP1]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <2 x i8> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i8> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
 ; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], 1

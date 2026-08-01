@@ -367,3 +367,60 @@ module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<()>, dense<[64]> : vector<1xi32>>
 >} {
 }
+
+// -----
+
+module {
+    // CHECK: @byte_types
+    func.func @byte_types() {
+        // 8-bit byte type: same width as i8
+        // CHECK: alignment = 1
+        // CHECK: bitsize = 8
+        // CHECK: index = 0
+        // CHECK: preferred = 1
+        // CHECK: size = 1
+        "test.data_layout_query"() : () -> !llvm.byte<8>
+
+        // 16-bit byte type
+        // CHECK: alignment = 2
+        // CHECK: bitsize = 16
+        // CHECK: index = 0
+        // CHECK: preferred = 2
+        // CHECK: size = 2
+        "test.data_layout_query"() : () -> !llvm.byte<16>
+
+        // 32-bit byte type: same width as i32/f32
+        // CHECK: alignment = 4
+        // CHECK: bitsize = 32
+        // CHECK: index = 0
+        // CHECK: preferred = 4
+        // CHECK: size = 4
+        "test.data_layout_query"() : () -> !llvm.byte<32>
+
+        // 64-bit byte type: same width as i64/f64
+        // CHECK: alignment = 8
+        // CHECK: bitsize = 64
+        // CHECK: index = 0
+        // CHECK: preferred = 8
+        // CHECK: size = 8
+        "test.data_layout_query"() : () -> !llvm.byte<64>
+
+        // 24-bit byte type: non-power-of-2 byte count (3 bytes), alignment rounds up to 4
+        // CHECK: alignment = 4
+        // CHECK: bitsize = 24
+        // CHECK: index = 0
+        // CHECK: preferred = 4
+        // CHECK: size = 3
+        "test.data_layout_query"() : () -> !llvm.byte<24>
+
+        // 1-bit byte type: sub-byte, still takes up 1 byte in memory
+        // CHECK: alignment = 1
+        // CHECK: bitsize = 1
+        // CHECK: index = 0
+        // CHECK: preferred = 1
+        // CHECK: size = 1
+        "test.data_layout_query"() : () -> !llvm.byte<1>
+
+        return
+    }
+}

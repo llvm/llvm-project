@@ -58,6 +58,21 @@ using float16 = _Float16;
 // LIBC_TYPES_HAS_FLOAT128 and 'float128' type are provided by
 // "include/llvm-libc-types/float128.h"
 
+// -- Emulated float128 support ------------------------------------------------
+// Float128 is always available regardless of built-in float128 type support in
+// the compiler.
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+struct Float128;
+}
+} // namespace LIBC_NAMESPACE_DECL
+
+// #ifndef LIBC_TYPES_HAS_FLOAT128
+// using float128 = LIBC_NAMESPACE::fputil::Float128;
+// #endif // LIBC_TYPES_HAS_FLOAT128
+// TODO: Commented till we modify all required functions to support emulated
+// Float128.
+
 // -- bfloat16 support ---------------------------------------------------------
 
 namespace LIBC_NAMESPACE_DECL {

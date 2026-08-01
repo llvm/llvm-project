@@ -39,7 +39,7 @@ func.func @parallel_seq_loop(%buf: memref<4xi32>) {
   // CHECK: acc.kernel_environment
   // CHECK: acc.par_width {{.*}} {par_dim = #acc.par_dim<block_x>}
   // CHECK: acc.compute_region launch(
-  // CHECK: scf.parallel
+  // CHECK: scf.for
   // CHECK: acc.par_dims = #acc<par_dims[sequential]>
   acc.parallel num_gangs({%c10_i32 : i32}) dataOperands(%dev : memref<4xi32>) {
     acc.loop control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
@@ -66,7 +66,7 @@ func.func @serial_loop(%buf: memref<4xi32>) {
   // CHECK: acc.kernel_environment
   // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
   // CHECK: acc.compute_region launch(
-  // CHECK: scf.parallel
+  // CHECK: scf.for
   // CHECK: acc.par_dims = #acc<par_dims[sequential]>
   acc.serial dataOperands(%dev : memref<4xi32>) {
     acc.loop control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
@@ -150,7 +150,7 @@ func.func @parallel_unit_launch_serial_loops(%buf: memref<4xi32>) {
   // CHECK: acc.kernel_environment
   // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
   // CHECK: acc.compute_region launch(
-  // CHECK: scf.parallel
+  // CHECK: scf.for
   // CHECK: acc.par_dims = #acc<par_dims[sequential]>
   acc.parallel num_gangs({%c1_i32 : i32}) num_workers(%c1_i32 : i32) vector_length(%c1_i32 : i32) dataOperands(%dev : memref<4xi32>) {
     acc.loop control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {
@@ -182,7 +182,7 @@ func.func @kernels_unit_launch_serial_loops(%buf: memref<4xi32>) {
   // CHECK: acc.kernel_environment
   // CHECK: acc.par_width {par_dim = #acc.par_dim<sequential>}
   // CHECK: acc.compute_region launch(
-  // CHECK: scf.parallel
+  // CHECK: scf.for
   // CHECK: acc.par_dims = #acc<par_dims[sequential]>
   acc.kernels num_gangs({%c1_i32 : i32}) num_workers(%c1_i32 : i32) vector_length(%c1_i32 : i32) dataOperands(%dev : memref<4xi32>) {
     acc.loop control(%i : index) = (%c0 : index) to (%c4 : index) step (%c1 : index) {

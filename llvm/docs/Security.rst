@@ -43,7 +43,6 @@ username for an individual isn't available, the brackets will be empty.
 * Dimitry Andric (individual; FreeBSD) [@DimitryAndric]
 * Ed Maste (individual; FreeBSD) [@emaste]
 * George Burgess IV (Google) [@gburgessiv]
-* Josh Stone (Red Hat; Rust) [@cuviper]
 * Kristof Beyls (ARM) [@kbeyls]
 * Mario Cupelli (HighTec EDV Systeme) [@mariocup]
 * Matthew Riley (Google) [@mmdriley]

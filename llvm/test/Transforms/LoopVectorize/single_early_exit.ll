@@ -289,9 +289,9 @@ for.end:
   ret i32 0
 }
 
-define void @inner_loop_trip_count_depends_on_outer_iv(ptr align 8 dereferenceable(1792) %this, ptr %dst) {
+define void @inner_loop_trip_count_depends_on_outer_iv(ptr align 8 dereferenceable(1792) %this, ptr %dst) nofree {
 ; CHECK-LABEL: define void @inner_loop_trip_count_depends_on_outer_iv(
-; CHECK-SAME: ptr align 8 dereferenceable(1792) [[THIS:%.*]], ptr [[DST:%.*]]) {
+; CHECK-SAME: ptr align 8 dereferenceable(1792) [[THIS:%.*]], ptr [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[THIS]], i64 1000
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]

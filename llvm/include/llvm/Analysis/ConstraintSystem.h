@@ -144,7 +144,14 @@ public:
     return R;
   }
 
+  /// Build and return a sub-system of constraints connected (transitively) to
+  /// query \p R, with variables compacted to a dense index range. Also
+  /// translate \p R's entries to the sub-system.
+  LLVM_ABI std::pair<ConstraintSystem, SmallVector<int64_t, 8>>
+  getSubSystem(ArrayRef<int64_t> R) const;
+
   LLVM_ABI bool isConditionImplied(SmallVector<int64_t, 8> R) const;
+  LLVM_ABI bool isConditionImpliedInSubSystem(SmallVector<int64_t, 8> R) const;
 
   SmallVector<int64_t> getLastConstraint() const {
     assert(!Constraints.empty() && "Constraint system is empty");

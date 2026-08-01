@@ -27,7 +27,8 @@ static void DiagnoseUninitializedSubobject(InterpState &S, SourceLocation Loc,
 }
 
 static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
-                                   PtrView BasePtr, const Record *R);
+                                   PtrView BasePtr, const Record *R,
+                                   bool IsCompleteClass = true);
 
 static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
                                   PtrView BasePtr) {
@@ -66,7 +67,8 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
 }
 
 static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
-                                   PtrView BasePtr, const Record *R) {
+                                   PtrView BasePtr, const Record *R,
+                                   bool IsCompleteClass) {
   assert(R);
   bool Result = true;
   // Check all fields of this record are initialized.
@@ -94,26 +96,39 @@ static bool CheckFieldsInitialized(InterpState &S, SourceLocation Loc,
     }
   }
 
-  // Check Fields in all bases
+  auto diagnoseBase = [&](const Record::Base &B, unsigned Index) -> bool {
+    const Descriptor *Desc = BasePtr.getDeclDesc();
+    if (const auto *CD = dyn_cast_if_present<CXXRecordDecl>(R->getDecl())) {
+      const auto &BS = *std::next(CD->bases_begin(), Index);
+      SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
+      S.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
+          << B.Desc->getType() << SourceRange(TypeBeginLoc, BS.getEndLoc());
+    } else {
+      S.FFDiag(Desc->getLocation(), diag::note_constexpr_uninitialized_base)
+          << B.Desc->getType();
+    }
+    return false;
+  };
+
+  // Check Fields in all bases.
   for (auto [I, B] : llvm::enumerate(R->bases())) {
     PtrView P = BasePtr.atField(B.Offset);
-    if (!P.isInitialized()) {
-      const Descriptor *Desc = BasePtr.getDeclDesc();
-      if (const auto *CD = dyn_cast_if_present<CXXRecordDecl>(R->getDecl())) {
-        const auto &BS = *std::next(CD->bases_begin(), I);
-        SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
-        S.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType() << SourceRange(TypeBeginLoc, BS.getEndLoc());
-      } else {
-        S.FFDiag(Desc->getLocation(), diag::note_constexpr_uninitialized_base)
-            << B.Desc->getType();
-      }
-      return false;
-    }
-    Result &= CheckFieldsInitialized(S, Loc, P, B.R);
+    if (!P.isInitialized())
+      return diagnoseBase(B, I);
+    Result &= CheckFieldsInitialized(S, Loc, P, B.R, /*IsCompleteClass=*/false);
   }
 
-  // TODO: Virtual bases
+  // And virtual bases.
+  if (IsCompleteClass) {
+    for (auto [I, B] : llvm::enumerate(R->virtual_bases())) {
+      PtrView P = BasePtr.atField(B.Offset);
+      if (!P.isInitialized())
+        return diagnoseBase(B, I);
+      Result &=
+          CheckFieldsInitialized(S, Loc, P, B.R, /*IsCompleteClass=*/false);
+    }
+  }
+
   return Result;
 }
 
@@ -156,13 +171,15 @@ static bool isOrHasPtr(const Descriptor *D) {
   return false;
 }
 
-static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
+static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks,
+                          bool IsCompleteClass = true) {
   auto isUsefulPtr = [](const Pointer &P) -> bool {
     return P.isLive() && P.isBlockPointer() && !P.isZero() && !P.isDummy() &&
            P.isDereferencable() && !P.isUnknownSizeArray() && !P.isOnePastEnd();
   };
 
-  if (!isUsefulPtr(Pointer(Ptr)))
+  if (!Ptr.isLive() || Ptr.isZero() || Ptr.isDummy() ||
+      Ptr.isUnknownSizeArray() || Ptr.isOnePastEnd())
     return;
 
   Blocks.insert(Ptr.Pointee);
@@ -171,7 +188,16 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
   if (!Desc)
     return;
 
-  if (const Record *R = Desc->ElemRecord; R && R->hasPtrField()) {
+  if (const Record *R = Desc->ElemRecord) {
+    if (!R->hasPtrField())
+      return;
+
+    for (const Record::Base &B : R->bases()) {
+      if (!B.R->hasPtrField())
+        continue;
+      PtrView BasePtr = Ptr.atField(B.Offset);
+      collectBlocks(BasePtr, Blocks, /*IsCompleteClass=*/false);
+    }
 
     for (const Record::Field &F : R->fields()) {
       if (!isOrHasPtr(F.Desc))
@@ -179,18 +205,37 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
       PtrView FieldPtr = Ptr.atField(F.Offset);
       collectBlocks(FieldPtr, Blocks);
     }
-  } else if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
+
+    if (IsCompleteClass) {
+      for (const Record::Base &B : R->virtual_bases()) {
+        if (!B.R->hasPtrField())
+          continue;
+        PtrView BasePtr = Ptr.atField(B.Offset);
+        collectBlocks(BasePtr, Blocks, /*IsCompleteClass=*/false);
+      }
+    }
+
+    return;
+  }
+
+  if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
     Pointer Pointee = Ptr.deref<Pointer>();
     if (isUsefulPtr(Pointee) && !Blocks.contains(Pointee.block()))
       collectBlocks(Pointee.view(), Blocks);
 
-  } else if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
+    return;
+  }
+
+  if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
       Pointer ElemPointee = Ptr.elem<Pointer>(I);
       if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
         collectBlocks(ElemPointee.view(), Blocks);
     }
-  } else if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
+    return;
+  }
+
+  if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
       PtrView ElemPtr = Ptr.atIndex(I).narrow();
       collectBlocks(ElemPtr, Blocks);
@@ -198,9 +243,10 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
   }
 }
 
-bool EvaluationResult::checkReturnValue(InterpState &S, const Context &Ctx,
-                                        const Pointer &Ptr,
-                                        const SourceInfo &Info) {
+bool EvaluationResult::checkDynamicAllocations(InterpState &S,
+                                               const Context &Ctx,
+                                               const Pointer &Ptr,
+                                               SourceInfo Info) {
   if (!Ptr.isBlockPointer())
     return true;
   // Collect all blocks that this pointer (transitively) points to and

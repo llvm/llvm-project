@@ -11,14 +11,14 @@ func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   %0 = arith.constant dense<42.> : vector<4xf32>
 // CHECK-NEXT:  %1 = llvm.fadd %arg0, %0 : vector<4xf32>
   %1 = arith.addf %arg0, %0 : vector<4xf32>
-// CHECK-NEXT:  %2 = llvm.sdiv %arg2, %arg2 : vector<4xi64>
-  %3 = arith.divsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg2 : vector<4xi64>
-  %4 = arith.divui %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %4 = llvm.srem %arg2, %arg2 : vector<4xi64>
-  %5 = arith.remsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %5 = llvm.urem %arg2, %arg2 : vector<4xi64>
-  %6 = arith.remui %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %2 = llvm.sdiv %arg2, %arg3 : vector<4xi64>
+  %3 = arith.divsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %3 = llvm.udiv %arg2, %arg3 : vector<4xi64>
+  %4 = arith.divui %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %4 = llvm.srem %arg2, %arg3 : vector<4xi64>
+  %5 = arith.remsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %5 = llvm.urem %arg2, %arg3 : vector<4xi64>
+  %6 = arith.remui %arg2, %arg3 : vector<4xi64>
 // CHECK-NEXT:  %6 = llvm.fdiv %arg0, %0 : vector<4xf32>
   %7 = arith.divf %arg0, %0 : vector<4xf32>
 // CHECK-NEXT:  %7 = llvm.frem %arg0, %0 : vector<4xf32>
@@ -31,10 +31,10 @@ func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4
   %11 = arith.xori %arg2, %arg3 : vector<4xi64>
 // CHECK-NEXT:  %11 = llvm.shl %arg2, %arg2 : vector<4xi64>
   %12 = arith.shli %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg2 : vector<4xi64>
-  %13 = arith.shrsi %arg2, %arg2 : vector<4xi64>
-// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg2 : vector<4xi64>
-  %14 = arith.shrui %arg2, %arg2 : vector<4xi64>
+// CHECK-NEXT:  %12 = llvm.ashr %arg2, %arg3 : vector<4xi64>
+  %13 = arith.shrsi %arg2, %arg3 : vector<4xi64>
+// CHECK-NEXT:  %13 = llvm.lshr %arg2, %arg3 : vector<4xi64>
+  %14 = arith.shrui %arg2, %arg3 : vector<4xi64>
   return %1 : vector<4xf32>
 }
 
@@ -780,16 +780,16 @@ func.func @ceildivsi(%arg0 : i64, %arg1 : i64) -> i64 {
 }
 
 // CHECK-LABEL: @ceildivui
-// CHECK-SAME: %[[ARG0:.*]]: i32) -> i32
-func.func @ceildivui(%arg0 : i32) -> i32 {
+// CHECK-SAME: %[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32) -> i32
+func.func @ceildivui(%arg0 : i32, %arg1 : i32) -> i32 {
 // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK: %[[CMP0:.*]] = llvm.icmp "eq" %[[ARG0]], %[[CST0]] : i32
 // CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK: %[[SUB0:.*]] = llvm.sub %[[ARG0]], %[[CST1]] : i32
-// CHECK: %[[DIV0:.*]] = llvm.udiv %[[SUB0]], %[[ARG0]] : i32
+// CHECK: %[[DIV0:.*]] = llvm.udiv %[[SUB0]], %[[ARG1]] : i32
 // CHECK: %[[ADD0:.*]] = llvm.add %[[DIV0]], %[[CST1]] : i32
 // CHECK: %[[SEL0:.*]] = llvm.select %[[CMP0]], %[[CST0]], %[[ADD0]] : i1, i32
-  %0 = arith.ceildivui %arg0, %arg0 : i32
+  %0 = arith.ceildivui %arg0, %arg1 : i32
   return %0: i32
 }
 

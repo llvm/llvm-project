@@ -19,6 +19,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
@@ -822,6 +823,7 @@ Attribute DenseArrayAttrImpl<T>::parse(AsmParser &parser, Type odsType) {
 template <typename T>
 DenseArrayAttrImpl<T>::operator ArrayRef<T>() const {
   ArrayRef<char> raw = getRawData();
+  assert(llvm::isAddrAligned(llvm::Align(alignof(T)), raw.data()));
   assert((raw.size() % sizeof(T)) == 0);
   return ArrayRef<T>(reinterpret_cast<const T *>(raw.data()),
                      raw.size() / sizeof(T));

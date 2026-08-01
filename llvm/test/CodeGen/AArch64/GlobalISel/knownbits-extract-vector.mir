@@ -11,11 +11,11 @@ body: |
   ; CHECK-NEXT: %2:_ KnownBits:0000?01? SignBits:4
   ; CHECK-NEXT: %idx:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000001 SignBits:63
   ; CHECK-NEXT: %4:_ KnownBits:00001010 SignBits:4
-    %0:_(s8) = G_CONSTANT i8 3
-    %1:_(s8) = G_CONSTANT i8 10
-    %2:_(<2 x s8>) = G_BUILD_VECTOR %0, %1
-    %idx:_(s64) = G_CONSTANT i64 1
-    %3:_(s8) = G_EXTRACT_VECTOR_ELT %2, %idx
+    %0:_(i8) = G_CONSTANT i8 3
+    %1:_(i8) = G_CONSTANT i8 10
+    %2:_(<2 x i8>) = G_BUILD_VECTOR %0, %1
+    %idx:_(i64) = G_CONSTANT i64 1
+    %3:_(i8) = G_EXTRACT_VECTOR_ELT %2, %idx
 ...
 ---
 name: all_knownbits
@@ -27,11 +27,11 @@ body: |
   ; CHECK-NEXT: %2:_ KnownBits:0000?01? SignBits:4
   ; CHECK-NEXT: %idx:_ KnownBits:???????????????????????????????????????????????????????????????? SignBits:1
   ; CHECK-NEXT: %4:_ KnownBits:0000?01? SignBits:4
-    %0:_(s8) = G_CONSTANT i8 3
-    %1:_(s8) = G_CONSTANT i8 10
-    %2:_(<2 x s8>) = G_BUILD_VECTOR %0, %1
-    %idx:_(s64) = COPY $d0
-    %3:_(s8) = G_EXTRACT_VECTOR_ELT %2, %idx
+    %0:_(i8) = G_CONSTANT i8 3
+    %1:_(i8) = G_CONSTANT i8 10
+    %2:_(<2 x i8>) = G_BUILD_VECTOR %0, %1
+    %idx:_(i64) = COPY $d0
+    %3:_(i8) = G_EXTRACT_VECTOR_ELT %2, %idx
 ...
 ---
 name: no_knownbits_const_idx
@@ -41,9 +41,9 @@ body: |
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
   ; CHECK-NEXT: %idx:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000001 SignBits:63
   ; CHECK-NEXT: %2:_ KnownBits:???????? SignBits:1
-    %0:_(<2 x s8>) = COPY $h0
-    %idx:_(s64) = G_CONSTANT i64 1
-    %1:_(s8) = G_EXTRACT_VECTOR_ELT %0, %idx
+    %0:_(<2 x i8>) = COPY $h0
+    %idx:_(i64) = G_CONSTANT i64 1
+    %1:_(i8) = G_EXTRACT_VECTOR_ELT %0, %idx
 ...
 ---
 name: no_knownbits
@@ -53,9 +53,9 @@ body: |
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1
   ; CHECK-NEXT: %idx:_ KnownBits:???????????????????????????????????????????????????????????????? SignBits:1
   ; CHECK-NEXT: %2:_ KnownBits:???????? SignBits:1
-    %0:_(<2 x s8>) = COPY $h0
-    %idx:_(s64) = COPY $d1
-    %1:_(s8) = G_EXTRACT_VECTOR_ELT %0, %idx
+    %0:_(<2 x i8>) = COPY $h0
+    %idx:_(i64) = COPY $d1
+    %1:_(i8) = G_EXTRACT_VECTOR_ELT %0, %idx
 ...
 ---
 name: zext_const_idx
@@ -66,10 +66,10 @@ body: |
   ; CHECK-NEXT: %zext0:_ KnownBits:00000000???????? SignBits:8
   ; CHECK-NEXT: %idx:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000001 SignBits:63
   ; CHECK-NEXT: %3:_ KnownBits:00000000???????? SignBits:8
-    %0:_(<2 x s8>) = COPY $h0
-    %zext0:_(<2 x s16>) = G_ZEXT %0
-    %idx:_(s64) = G_CONSTANT i64 1
-    %1:_(s16) = G_EXTRACT_VECTOR_ELT %zext0, %idx
+    %0:_(<2 x i8>) = COPY $h0
+    %zext0:_(<2 x i16>) = G_ZEXT %0
+    %idx:_(i64) = G_CONSTANT i64 1
+    %1:_(i16) = G_EXTRACT_VECTOR_ELT %zext0, %idx
 ...
 ---
 name: zext
@@ -81,10 +81,10 @@ body: |
   ; CHECK-NEXT: %zext0:_ KnownBits:00000000???????? SignBits:8
   ; CHECK-NEXT: %idx:_ KnownBits:???????????????????????????????????????????????????????????????? SignBits:1
   ; CHECK-NEXT: %3:_ KnownBits:00000000???????? SignBits:8
-    %0:_(<2 x s8>) = COPY $h0
-    %zext0:_(<2 x s16>) = G_ZEXT %0
-    %idx:_(s64) = COPY $d1
-    %1:_(s16) = G_EXTRACT_VECTOR_ELT %zext0, %idx
+    %0:_(<2 x i8>) = COPY $h0
+    %zext0:_(<2 x i16>) = G_ZEXT %0
+    %idx:_(i64) = COPY $d1
+    %1:_(i16) = G_EXTRACT_VECTOR_ELT %zext0, %idx
 ...
 ---
 name: sext_const_idx
@@ -95,10 +95,10 @@ body: |
   ; CHECK-NEXT: %sext0:_ KnownBits:???????????????? SignBits:9
   ; CHECK-NEXT: %idx:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000001 SignBits:63
   ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1
-    %0:_(<2 x s8>) = COPY $h0
-    %sext0:_(<2 x s16>) = G_SEXT %0
-    %idx:_(s64) = G_CONSTANT i64 1
-    %1:_(s16) = G_EXTRACT_VECTOR_ELT %sext0, %idx
+    %0:_(<2 x i8>) = COPY $h0
+    %sext0:_(<2 x i16>) = G_SEXT %0
+    %idx:_(i64) = G_CONSTANT i64 1
+    %1:_(i16) = G_EXTRACT_VECTOR_ELT %sext0, %idx
 ...
 ---
 name: sext
@@ -109,10 +109,10 @@ body: |
   ; CHECK-NEXT: %sext0:_ KnownBits:???????????????? SignBits:9
   ; CHECK-NEXT: %idx:_ KnownBits:???????????????????????????????????????????????????????????????? SignBits:1
   ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1
-    %0:_(<2 x s8>) = COPY $h0
-    %sext0:_(<2 x s16>) = G_SEXT %0
-    %idx:_(s64) = COPY $d1
-    %1:_(s16) = G_EXTRACT_VECTOR_ELT %sext0, %idx
+    %0:_(<2 x i8>) = COPY $h0
+    %sext0:_(<2 x i16>) = G_SEXT %0
+    %idx:_(i64) = COPY $d1
+    %1:_(i16) = G_EXTRACT_VECTOR_ELT %sext0, %idx
 ...
 ---
 # Verifies known bit computation bails if return type differs from vector
@@ -126,8 +126,8 @@ body: |
   ; CHECK-NEXT: %2:_ KnownBits:0000?01? SignBits:4
   ; CHECK-NEXT: %idx:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000001 SignBits:63
   ; CHECK-NEXT: %4:_ KnownBits:???????????????? SignBits:1
-    %0:_(s8) = G_CONSTANT i8 3
-    %1:_(s8) = G_CONSTANT i8 10
-    %2:_(<2 x s8>) = G_BUILD_VECTOR %0, %1
-    %idx:_(s64) = G_CONSTANT i64 1
-    %3:_(s16) = G_EXTRACT_VECTOR_ELT %2, %idx
+    %0:_(i8) = G_CONSTANT i8 3
+    %1:_(i8) = G_CONSTANT i8 10
+    %2:_(<2 x i8>) = G_BUILD_VECTOR %0, %1
+    %idx:_(i64) = G_CONSTANT i64 1
+    %3:_(i16) = G_EXTRACT_VECTOR_ELT %2, %idx

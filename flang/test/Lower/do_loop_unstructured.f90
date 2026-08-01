@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir -fwrapv -o - %s | FileCheck %s --check-prefix=NO-NSW
+! RUN: %flang_fc1 -emit-hlfir -mmlir --wrap-unstructured-constructs-in-execute-region -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fwrapv -mmlir --wrap-unstructured-constructs-in-execute-region -o - %s | FileCheck %s --check-prefix=NO-NSW
 
 ! Tests for unstructured loops.
 
@@ -100,91 +100,39 @@ subroutine nested_unstructured()
     end do
   end do
 end subroutine
+! With the wrap-unstructured-constructs-in-execute-region pass, the innermost
+! k-loop is the only one classified unstructured (the `goto 404`/`404 continue`
+! pattern). It gets wrapped in scf.execute_region, and the outer i and j
+! loops fold back to fir.do_loop.
 ! CHECK-LABEL: nested_unstructured
 ! CHECK:   %[[TRIP_VAR_K_REF:.*]] = fir.alloca i32
-! CHECK:   %[[TRIP_VAR_J_REF:.*]] = fir.alloca i32
-! CHECK:   %[[TRIP_VAR_I_REF:.*]] = fir.alloca i32
 ! CHECK:   %[[LOOP_VAR_I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFnested_unstructuredEi"}
 ! CHECK:   %[[LOOP_VAR_I_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_I_REF]]
 ! CHECK:   %[[LOOP_VAR_J_REF:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFnested_unstructuredEj"}
 ! CHECK:   %[[LOOP_VAR_J_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_J_REF]]
 ! CHECK:   %[[LOOP_VAR_K_REF:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFnested_unstructuredEk"}
 ! CHECK:   %[[LOOP_VAR_K_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_K_REF]]
-! CHECK:   %[[I_START:.*]] = arith.constant 1 : i32
-! CHECK:   %[[I_END:.*]] = arith.constant 100 : i32
-! CHECK:   %[[I_STEP:.*]] = arith.constant 1 : i32
-! CHECK:   %[[TMP1:.*]] = arith.subi %[[I_END]], %[[I_START]] : i32
-! CHECK:   %[[TMP2:.*]] = arith.addi %[[TMP1]], %[[I_STEP]] : i32
-! CHECK:   %[[TRIP_COUNT_I:.*]] = arith.divsi %[[TMP2]], %[[I_STEP]] : i32
-! CHECK:   fir.store %[[TRIP_COUNT_I]] to %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
-! CHECK:   fir.store %[[I_START]] to %[[LOOP_VAR_I_DECL]]#0 : !fir.ref<i32>
-! CHECK:   cf.br ^[[HEADER_I:.*]]
-! CHECK: ^[[HEADER_I]]:
-! CHECK:   %[[TRIP_VAR_I:.*]] = fir.load %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
-! CHECK:   %[[ZERO_1:.*]] = arith.constant 0 : i32
-! CHECK:   %[[COND_I:.*]] = arith.cmpi sgt, %[[TRIP_VAR_I]], %[[ZERO_1]] : i32
-! CHECK:   cf.cond_br %[[COND_I]], ^[[BODY_I:.*]], ^[[EXIT_I:.*]]
-! CHECK: ^[[BODY_I]]:
-! CHECK:   %[[J_START:.*]] = arith.constant 1 : i32
-! CHECK:   %[[J_END:.*]] = arith.constant 200 : i32
-! CHECK:   %[[J_STEP:.*]] = arith.constant 1 : i32
-! CHECK:   %[[TMP3:.*]] = arith.subi %[[J_END]], %[[J_START]] : i32
-! CHECK:   %[[TMP4:.*]] = arith.addi %[[TMP3]], %[[J_STEP]] : i32
-! CHECK:   %[[TRIP_COUNT_J:.*]] = arith.divsi %[[TMP4]], %[[J_STEP]] : i32
-! CHECK:   fir.store %[[TRIP_COUNT_J]] to %[[TRIP_VAR_J_REF]] : !fir.ref<i32>
-! CHECK:   fir.store %[[J_START]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
-! CHECK:   cf.br ^[[HEADER_J:.*]]
-! CHECK: ^[[HEADER_J]]:
-! CHECK:   %[[TRIP_VAR_J:.*]] = fir.load %[[TRIP_VAR_J_REF]] : !fir.ref<i32>
-! CHECK:   %[[ZERO_2:.*]] = arith.constant 0 : i32
-! CHECK:   %[[COND_J:.*]] = arith.cmpi sgt, %[[TRIP_VAR_J]], %[[ZERO_2]] : i32
-! CHECK:   cf.cond_br %[[COND_J]], ^[[BODY_J:.*]], ^[[EXIT_J:.*]]
-! CHECK: ^[[BODY_J]]:
-! CHECK:   %[[K_START:.*]] = arith.constant 1 : i32
-! CHECK:   %[[K_END:.*]] = arith.constant 300 : i32
-! CHECK:   %[[K_STEP:.*]] = arith.constant 1 : i32
-! CHECK:   %[[TMP3:.*]] = arith.subi %[[K_END]], %[[K_START]] : i32
-! CHECK:   %[[TMP4:.*]] = arith.addi %[[TMP3]], %[[K_STEP]] : i32
-! CHECK:   %[[TRIP_COUNT_K:.*]] = arith.divsi %[[TMP4]], %[[K_STEP]] : i32
-! CHECK:   fir.store %[[TRIP_COUNT_K]] to %[[TRIP_VAR_K_REF]] : !fir.ref<i32>
-! CHECK:   fir.store %[[K_START]] to %[[LOOP_VAR_K_DECL]]#0 : !fir.ref<i32>
-! CHECK:   cf.br ^[[HEADER_K:.*]]
-! CHECK: ^[[HEADER_K]]:
-! CHECK:   %[[TRIP_VAR_K:.*]] = fir.load %[[TRIP_VAR_K_REF]] : !fir.ref<i32>
-! CHECK:   %[[ZERO_2:.*]] = arith.constant 0 : i32
-! CHECK:   %[[COND_K:.*]] = arith.cmpi sgt, %[[TRIP_VAR_K]], %[[ZERO_2]] : i32
-! CHECK:   cf.cond_br %[[COND_K]], ^[[BODY_K:.*]], ^[[EXIT_K:.*]]
-! CHECK: ^[[BODY_K]]:
-! CHECK:   %[[TRIP_VAR_K:.*]] = fir.load %[[TRIP_VAR_K_REF]] : !fir.ref<i32>
-! CHECK:   %[[ONE_1:.*]] = arith.constant 1 : i32
-! CHECK:   %[[TRIP_VAR_K_NEXT:.*]] = arith.subi %[[TRIP_VAR_K]], %[[ONE_1]] : i32
-! CHECK:   fir.store %[[TRIP_VAR_K_NEXT]] to %[[TRIP_VAR_K_REF]] : !fir.ref<i32>
-! CHECK:   %[[LOOP_VAR_K:.*]] = fir.load %[[LOOP_VAR_K_DECL]]#0 : !fir.ref<i32>
-! CHECK:   %[[K_STEP_2:.*]] = arith.constant 1 : i32
-! CHECK:   %[[LOOP_VAR_K_NEXT:.*]] = arith.addi %[[LOOP_VAR_K]], %[[K_STEP_2]] overflow<nsw> : i32
-! CHECK:   fir.store %[[LOOP_VAR_K_NEXT]] to %[[LOOP_VAR_K_DECL]]#0 : !fir.ref<i32>
-! CHECK:   cf.br ^[[HEADER_K]]
-! CHECK: ^[[EXIT_K]]:
-! CHECK:   %[[TRIP_VAR_J:.*]] = fir.load %[[TRIP_VAR_J_REF]] : !fir.ref<i32>
-! CHECK:   %[[ONE_1:.*]] = arith.constant 1 : i32
-! CHECK:   %[[TRIP_VAR_J_NEXT:.*]] = arith.subi %[[TRIP_VAR_J]], %[[ONE_1]] : i32
-! CHECK:   fir.store %[[TRIP_VAR_J_NEXT]] to %[[TRIP_VAR_J_REF]] : !fir.ref<i32>
-! CHECK:   %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
-! CHECK:   %[[J_STEP_2:.*]] = arith.constant 1 : i32
-! CHECK:   %[[LOOP_VAR_J_NEXT:.*]] = arith.addi %[[LOOP_VAR_J]], %[[J_STEP_2]] overflow<nsw> : i32
-! CHECK:   fir.store %[[LOOP_VAR_J_NEXT]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
-! CHECK:   cf.br ^[[HEADER_J]]
-! CHECK: ^[[EXIT_J]]:
-! CHECK:   %[[TRIP_VAR_I:.*]] = fir.load %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
-! CHECK:   %[[ONE_1:.*]] = arith.constant 1 : i32
-! CHECK:   %[[TRIP_VAR_I_NEXT:.*]] = arith.subi %[[TRIP_VAR_I]], %[[ONE_1]] : i32
-! CHECK:   fir.store %[[TRIP_VAR_I_NEXT]] to %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
-! CHECK:   %[[LOOP_VAR_I:.*]] = fir.load %[[LOOP_VAR_I_DECL]]#0 : !fir.ref<i32>
-! CHECK:   %[[I_STEP_2:.*]] = arith.constant 1 : i32
-! CHECK:   %[[LOOP_VAR_I_NEXT:.*]] = arith.addi %[[LOOP_VAR_I]], %[[I_STEP_2]] overflow<nsw> : i32
-! CHECK:   fir.store %[[LOOP_VAR_I_NEXT]] to %[[LOOP_VAR_I_DECL]]#0 : !fir.ref<i32>
-! CHECK:   cf.br ^[[HEADER_I]]
-! CHECK: ^[[EXIT_I]]:
+! CHECK:   fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
+! CHECK:     fir.do_loop %{{[^ ]+}} = %{{.*}} to %{{.*}} step %{{.*}} : i32 {
+! CHECK:       scf.execute_region no_inline {
+! CHECK:         cf.br ^[[HEADER_K:.*]]
+! CHECK:       ^[[HEADER_K]]:
+! CHECK:         %[[TRIP_COUNT_K:.*]] = arith.divsi %{{.*}}, %{{.*}} : i32
+! CHECK:         fir.store %[[TRIP_COUNT_K]] to %[[TRIP_VAR_K_REF]] : !fir.ref<i32>
+! CHECK:         fir.store %{{.*}} to %[[LOOP_VAR_K_DECL]]#0 : !fir.ref<i32>
+! CHECK:         cf.br ^[[HEADER_K_BODY:.*]]
+! CHECK:       ^[[HEADER_K_BODY]]:
+! CHECK:         %[[TRIP_VAR_K:.*]] = fir.load %[[TRIP_VAR_K_REF]] : !fir.ref<i32>
+! CHECK:         %[[COND_K:.*]] = arith.cmpi sgt, %[[TRIP_VAR_K]], %{{.*}} : i32
+! CHECK:         cf.cond_br %[[COND_K]], ^[[BODY_K:.*]], ^[[EXIT_K:.*]]
+! CHECK:       ^[[BODY_K]]:
+! CHECK:         cf.br ^{{.*}}
+! CHECK:         cf.br ^[[HEADER_K_BODY]]
+! CHECK:       ^[[EXIT_K]]:
+! CHECK:         scf.yield
+! CHECK:       }
+! CHECK:     }
+! CHECK:   }
 ! CHECK:   return
 
 ! Test the existence of a structured loop inside an unstructured loop.
@@ -219,13 +167,23 @@ end subroutine
 ! CHECK:   %[[COND:.*]] = arith.cmpi sgt, %[[TRIP_VAR]], %[[ZERO]] : i32
 ! CHECK:   cf.cond_br %[[COND]], ^[[BODY:.*]], ^[[EXIT:.*]]
 ! CHECK: ^[[BODY]]:
-! CHECK:   %{{.*}} = fir.do_loop %[[J_INDEX:[^ ]*]] =
-! CHECK-SAME: %{{.*}} to %{{.*}} step %[[ST:[^ ]*]]
-! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (i32) {
+! CHECK:   fir.do_loop %[[J_IV:[^ ]*]] =
+! CHECK-SAME: %[[J_LB:[^ ]*]] to %[[J_UB:[^ ]*]] step %[[J_ST:[^ ]*]] : i32 {
 ! CHECK:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
-! CHECK:     %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
-! CHECK:     %[[LOOP_VAR_J_NEXT:.*]] = arith.addi %[[LOOP_VAR_J]], %{{[^ ]*}} overflow<nsw> : i32
 ! CHECK:   }
+! CHECK:   %[[J_LBIDX:.*]] = fir.convert %[[J_LB]] : (i32) -> index
+! CHECK:   %[[J_UBIDX:.*]] = fir.convert %[[J_UB]] : (i32) -> index
+! CHECK:   %[[J_STIDX:.*]] = fir.convert %[[J_ST]] : (i32) -> index
+! CHECK:   %[[J_C0:.*]] = arith.constant 0 : index
+! CHECK:   %[[J_DIFF:.*]] = arith.subi %[[J_UBIDX]], %[[J_LBIDX]] : index
+! CHECK:   %[[J_ADD:.*]] = arith.addi %[[J_DIFF]], %[[J_STIDX]] : index
+! CHECK:   %[[J_TRIP:.*]] = arith.divsi %[[J_ADD]], %[[J_STIDX]] : index
+! CHECK:   %[[J_CMP:.*]] = arith.cmpi slt, %[[J_TRIP]], %[[J_C0]] : index
+! CHECK:   %[[J_SEL:.*]] = arith.select %[[J_CMP]], %[[J_C0]], %[[J_TRIP]] : index
+! CHECK:   %[[J_MUL:.*]] = arith.muli %[[J_SEL]], %[[J_STIDX]] : index
+! CHECK:   %[[J_LASTIDX:.*]] = arith.addi %[[J_LBIDX]], %[[J_MUL]] : index
+! CHECK:   %[[J_LAST:.*]] = fir.convert %[[J_LASTIDX]] : (index) -> i32
+! CHECK:   fir.store %[[J_LAST]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[TRIP_VAR_I:.*]] = fir.load %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
 ! CHECK:   %[[C1_3:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[TRIP_VAR_I_NEXT:.*]] = arith.subi %[[TRIP_VAR_I]], %[[C1_3]] : i32
@@ -247,13 +205,14 @@ subroutine unstructured_do_concurrent
 end
 ! CHECK-LABEL: func.func @_QPunstructured_do_concurrent
 ! CHECK:         %[[ITER_VAR:.*]] = fir.alloca i32
-
-! CHECK:       ^[[HEADER]]:
-! CHECK:         %{{.*}} = fir.load %[[ITER_VAR]] : !fir.ref<i32>
-! CHECK:         cf.cond_br %{{.*}}, ^[[BODY:.*]], ^[[EXIT:.*]]
-
-! CHECK:       ^[[BODY]]:
-! CHECK-NEXT:    %{{.*}} = fir.alloca !fir.logical<4> {bindc_name = "success", {{.*}}}
-
-! CHECK:       ^[[EXIT]]:
-! CHECK-NEXT:    return
+! CHECK:         scf.execute_region no_inline {
+! CHECK:           cf.br ^[[HEADER:.*]]
+! CHECK:         ^[[HEADER]]:
+! CHECK:           %{{.*}} = fir.load %[[ITER_VAR]] : !fir.ref<i32>
+! CHECK:           cf.cond_br %{{.*}}, ^[[BODY:.*]], ^[[EXIT:.*]]
+! CHECK:         ^[[BODY]]:
+! CHECK-NEXT:      %{{.*}} = fir.alloca !fir.logical<4> {bindc_name = "success", {{.*}}}
+! CHECK:         ^[[EXIT]]:
+! CHECK-NEXT:      scf.yield
+! CHECK:         }
+! CHECK:         return

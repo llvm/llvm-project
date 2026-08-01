@@ -2629,3 +2629,54 @@ entry:
   %res = lshr i64 %or2, 32
   ret i64 %res
 }
+
+define i16 @combine_four_i8_loads_i16_poison(ptr %p) {
+; LE-LABEL: @combine_four_i8_loads_i16_poison(
+; LE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 2
+; LE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; LE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
+; LE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
+; LE-NEXT:    [[Z3:%.*]] = zext i8 [[L3]] to i16
+; LE-NEXT:    [[Z4:%.*]] = zext i8 [[L4]] to i16
+; LE-NEXT:    ret i16 poison
+;
+; BE-LABEL: @combine_four_i8_loads_i16_poison(
+; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
+; BE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; BE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
+; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
+; BE-NEXT:    [[Z1:%.*]] = zext i8 [[L1]] to i16
+; BE-NEXT:    [[Z2:%.*]] = zext i8 [[L2]] to i16
+; BE-NEXT:    [[Z3:%.*]] = zext i8 [[L3]] to i16
+; BE-NEXT:    [[Z4:%.*]] = zext i8 [[L4]] to i16
+; BE-NEXT:    [[SH2:%.*]] = shl i16 [[Z2]], 8
+; BE-NEXT:    [[OR1:%.*]] = or i16 [[Z1]], [[SH2]]
+; BE-NEXT:    [[SH3:%.*]] = shl i16 [[Z3]], 16
+; BE-NEXT:    [[OR2:%.*]] = or i16 [[OR1]], [[SH3]]
+; BE-NEXT:    [[SH4:%.*]] = shl i16 [[Z4]], 24
+; BE-NEXT:    [[OR3:%.*]] = or i16 [[OR2]], [[SH4]]
+; BE-NEXT:    ret i16 [[OR3]]
+;
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %p2 = getelementptr i8, ptr %p, i64 2
+  %p3 = getelementptr i8, ptr %p, i64 3
+  %l1 = load i8, ptr %p
+  %l2 = load i8, ptr %p1
+  %l3 = load i8, ptr %p2
+  %l4 = load i8, ptr %p3
+  %z1 = zext i8 %l1 to i16
+  %z2 = zext i8 %l2 to i16
+  %z3 = zext i8 %l3 to i16
+  %z4 = zext i8 %l4 to i16
+  %sh2 = shl i16 %z2, 8
+  %or1 = or i16 %z1, %sh2
+  %sh3 = shl i16 %z3, 16
+  %or2 = or i16 %or1, %sh3
+  %sh4 = shl i16 %z4, 24
+  %or3 = or i16 %or2, %sh4
+  ret i16 %or3
+}
+

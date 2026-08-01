@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=none -filetype=null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" %s
+# RUN: not --crash llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=none -filetype=null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" %s
 
 # 64-bit vsrc operands were not correctly diagnosed with unaligned registers.
 

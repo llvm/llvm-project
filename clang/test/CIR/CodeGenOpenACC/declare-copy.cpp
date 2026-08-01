@@ -36,17 +36,17 @@ struct Struct {
     // CHECK-NEXT: %[[LOC_HSE_COPYIN:.*]] = acc.copyin varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier always>, name = "LocalHSE"} 
     // CHECK-NEXT: %[[LOC_INT_COPYIN:.*]] = acc.copyin varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier always>, name = "LocalInt"}
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT: %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT: %[[UB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT: %[[IDX:.*]] = arith.constant 0 : i64
     // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
     // CHECK-NEXT: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
     // CHECK-NEXT: %[[ARG_HSE_PTR_COPYIN:.*]] = acc.copyin varPtr(%[[ARG_HSE_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) bounds(%[[BOUND1]]) -> !cir.ptr<!cir.ptr<!rec_HasSideEffects>> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier always>, name = "ArgHSEPtr[1:1]"}
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT: %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT: %[[UB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT: %[[IDX:.*]] = arith.constant 0 : i64
     // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
     // CHECK-NEXT: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
@@ -99,9 +99,9 @@ void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEP
     // CHECK: %[[ARG_HSE_COPYIN:.*]] = acc.copyin varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier alwaysin>, name = "ArgHSE"}
     // CHECK-NEXT: %[[ARG_INT_COPYIN:.*]] = acc.copyin varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier alwaysin>, name = "ArgInt"} 
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT: %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT: %[[UB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT: %[[IDX:.*]] = arith.constant 0 : i64
     // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
     // CHECK-NEXT: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
@@ -113,9 +113,9 @@ void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEP
     // CHECK-NEXT:   %[[LOC_HSE_COPYIN:.*]] = acc.copyin varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalHSE"} 
     // CHECK-NEXT:   %[[LOC_INT_COPYIN:.*]] = acc.copyin varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalInt"}
     // CHECK-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT:   %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT:   %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT:   %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT:   %[[UB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT:   %[[IDX:.*]] = arith.constant 0 : i64
     // CHECK-NEXT:   %[[STRIDE:.*]] = arith.constant 1 : i64
     // CHECK-NEXT:   %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
@@ -167,9 +167,9 @@ extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *Ar
     // CHECK: %[[ARG_HSE_COPYIN:.*]] = acc.copyin varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier capture>, name = "ArgHSE"}
     // CHECK-NEXT: %[[ARG_INT_COPYIN:.*]] = acc.copyin varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copy>, modifiers = #acc<data_clause_modifier capture>, name = "ArgInt"} 
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT: %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT: %[[UB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT: %[[IDX:.*]] = arith.constant 0 : i64
     // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
     // CHECK-NEXT: %[[BOUND1:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
@@ -183,9 +183,9 @@ extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *Ar
     // CHECK-NEXT:     %[[LOC_HSE_COPYIN:.*]] = acc.copyin varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_copy>, name = "LocalHSE"} 
     // CHECK-NEXT:     %[[LOC_INT_COPYIN:.*]] = acc.copyin varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copy>, name = "LocalInt"}
     // CHECK-NEXT:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT:     %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT:     %[[LB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT:     %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT:     %[[UB:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
     // CHECK-NEXT:     %[[IDX:.*]] = arith.constant 0 : i64
     // CHECK-NEXT:     %[[STRIDE:.*]] = arith.constant 1 : i64
     // CHECK-NEXT:     %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)

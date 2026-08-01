@@ -15,14 +15,16 @@ define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr no
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_LATCH:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds double, ptr [[A_IN]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP0]], <4 x i1> splat (i1 true), <4 x double> poison)
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[B_IN]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 8 [[TMP1]], <4 x i1> splat (i1 true), <4 x double> poison)
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[TMP1]], i64 0
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER1:%.*]] = load <4 x double>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x double> @llvm.sqrt.v4f64(<4 x double> [[WIDE_MASKED_GATHER1]])
 ; CHECK-NEXT:    br label %[[FOR2_HEADER2:.*]]
 ; CHECK:       [[FOR2_HEADER2]]:
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[FOR2_HEADER2]] ]
-; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x double> [ [[WIDE_MASKED_GATHER]], %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[FOR2_HEADER2]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x double> [ [[WIDE_LOAD]], %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[FOR2_HEADER2]] ]
 ; CHECK-NEXT:    [[TMP3]] = fadd <4 x double> [[TMP2]], [[VEC_PHI3]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i32> [[VEC_PHI]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[TMP4]], splat (i32 10000)
@@ -30,7 +32,8 @@ define void @widen_call_instruction(ptr noalias nocapture readonly %a.in, ptr no
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[FOR2_HEADER2]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[C_OUT]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> [[TMP3]], <4 x ptr> align 8 [[TMP7]], <4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x ptr> [[TMP7]], i64 0
+; CHECK-NEXT:    store <4 x double> [[TMP3]], ptr [[TMP12]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000

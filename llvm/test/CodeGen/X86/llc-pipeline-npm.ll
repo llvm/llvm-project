@@ -160,7 +160,6 @@
 ; O2-NEXT:     greedy<all>
 ; O2-NEXT:     virt-reg-rewriter
 ; O2-NEXT:     stack-slot-coloring
-; O2-NEXT:     stack-slot-coloring
 ; O2-NEXT:     machine-cp
 ; O2-NEXT:     machinelicm
 ; O2-NEXT:     x86-lower-tile-copy
@@ -360,7 +359,6 @@
 ; O3-WINDOWS-NEXT:     machine-scheduler
 ; O3-WINDOWS-NEXT:     greedy<all>
 ; O3-WINDOWS-NEXT:     virt-reg-rewriter
-; O3-WINDOWS-NEXT:     stack-slot-coloring
 ; O3-WINDOWS-NEXT:     stack-slot-coloring
 ; O3-WINDOWS-NEXT:     machine-cp
 ; O3-WINDOWS-NEXT:     machinelicm

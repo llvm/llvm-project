@@ -120,7 +120,7 @@ void MetaRename(Function &F) {
       Arg.setName("arg");
 
   for (auto &BB : F) {
-    BB.setName("bb");
+    BB.setName("bbl");
 
     for (auto &I : BB)
       if (!I.getType()->isVoidTy())

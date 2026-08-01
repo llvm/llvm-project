@@ -126,7 +126,7 @@ define void @decrementing_loop(ptr %arr, ptr %len_ptr, i32 %K, i32 %M) {
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_PRELOOP_COPY:%.*]], [[MAINLOOP:%.*]] ], [ [[IDX_DEC:%.*]], [[IN_BOUNDS:%.*]] ]
 ; CHECK-NEXT:    [[IDX_DEC]] = sub nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[GUARD:%.*]] = icmp slt i32 [[IDX]], [[LEN]]
-; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT1:%.*]]
+; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label %[[OUT_OF_BOUNDS_LOOPEXIT:[^, ]+]]
 ; CHECK:       in.bounds:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[ARR]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 0, ptr [[ADDR]], align 4
@@ -134,7 +134,7 @@ define void @decrementing_loop(ptr %arr, ptr %len_ptr, i32 %K, i32 %M) {
 ; CHECK-NEXT:    br i1 [[NEXT]], label [[LOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT:%.*]]
 ; CHECK:       out.of.bounds.loopexit:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
-; CHECK:       out.of.bounds.loopexit1:
+; CHECK:       [[OUT_OF_BOUNDS_LOOPEXIT]]:
 ; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
 ; CHECK:       out.of.bounds:
 ; CHECK-NEXT:    ret void

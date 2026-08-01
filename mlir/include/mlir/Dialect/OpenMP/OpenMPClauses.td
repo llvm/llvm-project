@@ -163,32 +163,6 @@ class OpenMP_AllocatorClauseSkip<
 def OpenMP_AllocatorClause : OpenMP_AllocatorClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
-// LLVM OpenMP extension `ompx_bare` clause
-//===----------------------------------------------------------------------===//
-
-class OpenMP_BareClauseSkip<
-    bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
-                    extraClassDeclaration> {
-  let arguments = (ins
-    UnitAttr:$bare
-  );
-
-  let optAssemblyFormat = [{
-    `ompx_bare` $bare
-  }];
-
-  let description = [{
-    `ompx_bare` allows `omp target teams` to be executed on a GPU with an
-    explicit number of teams and threads. This clause also allows the teams and
-    threads sizes to have up to 3 dimensions.
-  }];
-}
-
-def OpenMP_BareClause : OpenMP_BareClauseSkip<>;
-
-//===----------------------------------------------------------------------===//
 // V5.2: [16.1, 16.2] `cancel-directive-name` clause set
 //===----------------------------------------------------------------------===//
 
@@ -790,9 +764,17 @@ class OpenMP_InReductionClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
   );
 
-  // Description varies depending on the operation. Assembly format not defined
-  // because this clause must be processed together with the first region of the
-  // operation, as it defines entry block arguments.
+  // This assembly format should only be used by operations where `in_reduction`
+  // does not define entry block arguments (e.g. `omp.target`). Otherwise, it
+  // must be printed and parsed together with the corresponding region, because
+  // it defines entry block arguments.
+  let optAssemblyFormat = [{
+    `in_reduction` `(`
+      custom<InReductionClause>($in_reduction_vars, type($in_reduction_vars),
+                                $in_reduction_byref, $in_reduction_syms) `)`
+  }];
+
+  // Description varies depending on the operation.
 }
 
 def OpenMP_InReductionClause : OpenMP_InReductionClauseSkip<>;

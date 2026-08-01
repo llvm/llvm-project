@@ -2822,6 +2822,11 @@ TEST_F(ConstantRangeTest, Ctpop) {
       [](const APInt &N) { return APInt(N.getBitWidth(), N.popcount()); });
 }
 
+TEST_F(ConstantRangeTest, SqrtFloor) {
+  TestUnaryOpExhaustive([](const ConstantRange &CR) { return CR.sqrtFloor(); },
+                        [](const APInt &N) { return N.sqrtFloor(); });
+}
+
 TEST_F(ConstantRangeTest, castOps) {
   ConstantRange A(APInt(16, 66), APInt(16, 128));
   ConstantRange FpToI8 = A.castOp(Instruction::FPToSI, 8);

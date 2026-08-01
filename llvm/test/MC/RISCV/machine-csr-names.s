@@ -257,6 +257,20 @@ csrrs t1, mip, zero
 # uimm12
 csrrs t2, 0x344, zero
 
+# mspcs
+# name
+# CHECK-INST: csrrs t1, mspcs, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x34]
+# CHECK-INST-ALIAS: csrr t1, mspcs
+# uimm12
+# CHECK-INST: csrrs t2, mspcs, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x34]
+# CHECK-INST-ALIAS: csrr t2, mspcs
+# name
+csrrs t1, mspcs, zero
+# uimm12
+csrrs t2, 0x349, zero
+
 # mtinst
 # name
 # CHECK-INST: csrrs t1, mtinst, zero

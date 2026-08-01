@@ -779,8 +779,9 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
 }
 
 Expected<std::unique_ptr<TargetMachine>>
-codegen::createTargetMachineForTriple(StringRef TargetTriple,
+codegen::createTargetMachineForTriple(const Triple &TargetTriple,
                                       CodeGenOptLevel OptLevel) {
+  // lookupTarget may mutate the triple, so we need a copy.
   Triple TheTriple(TargetTriple);
   std::string Error;
   const auto *TheTarget =
@@ -795,7 +796,7 @@ codegen::createTargetMachineForTriple(StringRef TargetTriple,
   if (!Target)
     return createStringError(inconvertibleErrorCode(),
                              Twine("could not allocate target machine for ") +
-                                 TargetTriple);
+                                 TheTriple.str());
   return std::unique_ptr<TargetMachine>(Target);
 }
 

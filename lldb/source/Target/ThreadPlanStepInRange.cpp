@@ -99,15 +99,15 @@ void ThreadPlanStepInRange::GetDescription(Stream *s,
   };
 
   if (level == lldb::eDescriptionLevelBrief) {
-    s->Printf("step in");
+    s->PutCString("step in");
     PrintFailureIfAny();
     return;
   }
 
-  s->Printf("Stepping in");
+  s->PutCString("Stepping in");
   bool printed_line_info = false;
   if (m_addr_context.line_entry.IsValid()) {
-    s->Printf(" through line ");
+    s->PutCString(" through line ");
     m_addr_context.line_entry.DumpStopContext(s, false);
     printed_line_info = true;
   }
@@ -116,7 +116,7 @@ void ThreadPlanStepInRange::GetDescription(Stream *s,
     s->Format(" targeting {0}", m_step_into_target);
 
   if (!printed_line_info || level == eDescriptionLevelVerbose) {
-    s->Printf(" using ranges:");
+    s->PutCString(" using ranges:");
     DumpRanges(s);
   }
 

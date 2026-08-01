@@ -32,7 +32,8 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
 }
 
 // Test 2-level nested loop tiling with tile(4, 8)
-// Creates: tile_loop_1 -> tile_loop_2 -> element_loop_1 -> element_loop_2
+// Produces one multi-IV tile-group loop (gang) wrapping one multi-IV
+// element-group loop (vector), each carrying both tiled induction variables.
 
 // CHECK-LABEL: func.func @nested_loop_tile
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
@@ -41,22 +42,16 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
 // CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
 // CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
-// Outer tile loop with gang
-// CHECK:         acc.loop gang control(%[[I:.*]] : index) = (%[[C0]] : index) to (%[[C100]] : index) step (%[[C4]] : index) {
-// Inner tile loop
-// CHECK:           acc.loop control(%[[J:.*]] : index) = (%[[C0]] : index) to (%[[C50]] : index) step (%[[C8]] : index) {
-// Outer element loop with vector
-// CHECK:             acc.loop vector control({{.*}} : index) = (%[[I]] : index) to ({{.*}} : index) step (%[[C1]] : index) {
-// Inner element loop
-// CHECK:               acc.loop control({{.*}} : index) = (%[[J]] : index) to ({{.*}} : index) step (%[[C1]] : index) {
-// CHECK:                 acc.yield
-// CHECK:               }
-// CHECK:               acc.yield
-// CHECK:             }
+// Tile-group loop with gang; steps scaled by the tile sizes.
+// CHECK:         acc.loop gang control(%[[I:.*]] : index, %[[J:.*]] : index) = (%[[C0]], %[[C0]] : index, index) to (%[[C100]], %[[C50]] : index, index) step (%[[C4]], %[[C8]] : index, index) {
+// CHECK:           %[[MUB0:.*]] = arith.minsi
+// CHECK:           %[[MUB1:.*]] = arith.minsi
+// Element-group loop with vector.
+// CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to (%[[MUB0]], %[[MUB1]] : index, index) step (%[[C1]], %[[C1]] : index, index) {
 // CHECK:             acc.yield
-// CHECK:           }
+// CHECK:           } attributes {independent = [#acc.device_type<none>]}
 // CHECK:           acc.yield
-// CHECK:         }
+// CHECK:         } attributes {independent = [#acc.device_type<none>]}
 func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
   %c0 = arith.constant 0 : index
   %c100 = arith.constant 100 : index
@@ -65,6 +60,74 @@ func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
   %c4 = arith.constant 4 : index
   %c8 = arith.constant 8 : index
   acc.loop gang vector tile({%c4 : index, %c8 : index}) control(%i : index, %j : index) = (%c0, %c0 : index, index) to (%c100, %c50 : index, index) step (%c1, %c1 : index, index) {
+    %sum = arith.addi %i, %j : index
+    %val = arith.index_castui %sum : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>]}
+  return
+}
+
+// Regression test: a loop with GANG(STATIC: N) combined with a multi-dim
+// TILE clause used to crash with an assertion failure inside
+// LoopOp::getGangValue() when a leftover gang operand was copied onto a
+// generated loop without a corresponding gang device-type attribute. Check
+// that the pass completes and that gang (with its static operand) is only
+// preserved on the tile-group loop, never on the element group.
+
+// CHECK-LABEL: func.func @gang_static_with_multi_dim_tile
+// CHECK:         acc.loop gang({static=%{{.*}} : i32}) control(%[[I:.*]] : index, %[[J:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK:           acc.loop control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:         gang
+// CHECK:             acc.yield
+// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           acc.yield
+// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+func.func @gang_static_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
+  %c0 = arith.constant 0 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %cs = arith.constant 1 : i32
+  acc.loop gang({static=%cs : i32}) tile({%c4 : index, %c8 : index}) control(%i : index, %j : index) = (%c0, %c0 : index, index) to (%c100, %c50 : index, index) step (%c1, %c1 : index, index) {
+    %sum = arith.addi %i, %j : index
+    %val = arith.index_castui %sum : index to i32
+    %fval = arith.sitofp %val : i32 to f32
+    memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
+    acc.yield
+  } attributes {independent = [#acc.device_type<none>]}
+  return
+}
+
+// Regression test: a loop with WORKER(N) combined with VECTOR and a
+// multi-dim TILE clause used to produce invalid IR because a worker attribute
+// was removed from a generated loop without also clearing the worker operand
+// value copied onto it, leaving a non-empty worker operand list with no worker
+// device-type attribute (rejected by the verifier). Check that the pass
+// produces valid IR, with worker only on the tile-group loop and vector only
+// on the element-group loop.
+
+// CHECK-LABEL: func.func @worker_num_with_multi_dim_tile
+// CHECK:         acc.loop worker(%{{.*}} : i32) control(%[[I:.*]] : index, %[[J:.*]] : index) = ({{.*}}) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:       vector
+// CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to ({{.*}}) step ({{.*}}) {
+// CHECK-NOT:         worker
+// CHECK:             acc.yield
+// CHECK:           } attributes {independent = [#acc.device_type<none>]}
+// CHECK:           acc.yield
+// CHECK:         } attributes {independent = [#acc.device_type<none>]}
+func.func @worker_num_with_multi_dim_tile(%arg0: memref<100x50xf32>) {
+  %c0 = arith.constant 0 : index
+  %c100 = arith.constant 100 : index
+  %c50 = arith.constant 50 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %cw = arith.constant 4 : i32
+  acc.loop worker(%cw : i32) vector tile({%c4 : index, %c8 : index}) control(%i : index, %j : index) = (%c0, %c0 : index, index) to (%c100, %c50 : index, index) step (%c1, %c1 : index, index) {
     %sum = arith.addi %i, %j : index
     %val = arith.index_castui %sum : index to i32
     %fval = arith.sitofp %val : i32 to f32

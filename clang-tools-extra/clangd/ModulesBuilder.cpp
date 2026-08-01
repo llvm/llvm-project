@@ -16,6 +16,7 @@
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LockFileManager.h"
@@ -322,6 +323,8 @@ public:
            llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>) const override {
     return false;
   }
+
+  llvm::StringSet<> getRequiredModuleNames() const override { return {}; }
 };
 
 /// Represents a reference to a module file (*.pcm).
@@ -502,10 +505,20 @@ public:
     RequiredModules.emplace_back(std::move(MF));
   }
 
+  void setDirectModuleNames(std::vector<std::string> Names) {
+    DirectModuleNames.insert_range(Names);
+  }
+
+  llvm::StringSet<> getRequiredModuleNames() const override {
+    return DirectModuleNames;
+  }
+
 private:
   llvm::SmallVector<std::shared_ptr<const ModuleFile>, 8> RequiredModules;
   // A helper class to speedup the query if a module is built.
   llvm::StringSet<> BuiltModuleNames;
+  // The directly required module names as scanned from the source file.
+  llvm::StringSet<> DirectModuleNames;
 };
 
 bool IsModuleFileUpToDate(PathRef ModuleFilePath,
@@ -1228,6 +1241,16 @@ bool ModulesBuilder::hasRequiredModules(PathRef File) {
   return !CachedMDB.getRequiredModules(File).empty();
 }
 
+std::vector<std::string> ModulesBuilder::getRequiredModuleNames(PathRef File) {
+  std::unique_ptr<ProjectModules> MDB = Impl->getCDB().getProjectModules(File);
+  if (!MDB)
+    return {};
+
+  CachingProjectModules CachedMDB(std::move(MDB),
+                                  Impl->getProjectModulesCache());
+  return CachedMDB.getRequiredModules(File);
+}
+
 std::unique_ptr<PrerequisiteModules>
 ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
                                             const ThreadsafeFS &TFS) {
@@ -1245,6 +1268,7 @@ ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
     return std::make_unique<ReusablePrerequisiteModules>();
 
   auto RequiredModules = std::make_unique<ReusablePrerequisiteModules>();
+  RequiredModules->setDirectModuleNames(RequiredModuleNames);
   for (llvm::StringRef RequiredModuleName : RequiredModuleNames) {
     // Return early if there is any error.
     if (llvm::Error Err = Impl->getOrBuildModuleFile(

@@ -74,13 +74,13 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/ASTMatchers/LowLevelHelpers.h"
 #include "clang/Basic/AttrKinds.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -8367,9 +8367,9 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CUDAKernelCallExpr>
 ///   matches the initializer for v1, v2, v3, cp, and ip. Does not match the
 ///   initializer for i.
 AST_MATCHER_FUNCTION(internal::Matcher<Expr>, nullPointerConstant) {
-  return anyOf(
-      gnuNullExpr(), cxxNullPtrLiteralExpr(),
-      integerLiteral(equals(0), hasParent(expr(hasType(pointerType())))));
+  return anyOf(gnuNullExpr(), cxxNullPtrLiteralExpr(),
+               integerLiteral(equals(0), hasParent(castExpr(
+                                             hasCastKind(CK_NullToPointer)))));
 }
 
 /// Matches the DecompositionDecl the binding belongs to.

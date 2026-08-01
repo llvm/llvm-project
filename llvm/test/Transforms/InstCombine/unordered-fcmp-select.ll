@@ -152,8 +152,8 @@ define float @pr141017(float %x) {
 
 define float @pr141017_select_nsz(float %x) {
 ; CHECK-LABEL: @pr141017_select_nsz(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp ole float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ugt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
 ; CHECK-NEXT:    ret float [[SEL1]]
 ;
   %cmp = fcmp olt float %x, 0.0

@@ -253,7 +253,6 @@ define void @global_8xi32_all_mask_off(ptr addrspace(1) %a, ptr addrspace(1) %b)
 ; CHECK-LABEL: global_8xi32_all_mask_off(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ret;
   %a.load = load <8 x i32>, ptr addrspace(1) %a

@@ -145,7 +145,7 @@ template <typename Config> static void testBasic() {
 
   // If the Secondary can't cache that pointer, it will be unmapped.
   if (!Info.Allocator->canCache(Size)) {
-    EXPECT_DEATH(
+    SCUDO_EXPECT_DEATH(
         {
           // Repeat few time to avoid missing crash if it's mmaped by unrelated
           // code.
@@ -314,6 +314,12 @@ void testGetMappedSize(scudo::uptr Size, scudo::uptr *mapped,
 
   Info.Allocator->deallocate(Info.Options, Ptr);
 
+  // Cache is disabled therefore every deallocation is guaranteed to bypass the
+  // cache and increment UncacheableUnmaps.
+  scudo::ScopedString Str;
+  Info.Allocator->getStats(&Str);
+  EXPECT_NE(strstr(Str.data(), "Uncacheable unmaps: 1"), nullptr);
+
   *guard_page_size = Info.Allocator->getGuardPageSize();
 }
 
@@ -478,6 +484,10 @@ TEST(ScudoSecondaryTest, AllocatorCacheMemoryLeakTest) {
   // Evicted entry should be marked due to unmap callback
   EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
             UnmappedMarker);
+  scudo::ScopedString Str;
+  Info.Cache->getStats(&Str);
+  Str.output();
+  EXPECT_NE(strstr(Str.data(), "Unmapped due to eviction: 1"), nullptr);
 }
 
 TEST(ScudoSecondaryTest, AllocatorCacheOptions) {

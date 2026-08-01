@@ -218,7 +218,8 @@ void ScriptedProcessPythonInterface::Initialize() {
       "SBTarget.Launch"};
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), llvm::StringRef("Mock process state"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedProcess, eScriptLanguagePython,
+      {ci_usages, api_usages});
 }
 
 void ScriptedProcessPythonInterface::Terminate() {

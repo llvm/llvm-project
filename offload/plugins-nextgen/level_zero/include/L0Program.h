@@ -83,7 +83,7 @@ public:
         Modules(std::move(Modules)), GlobalModule(GlobalModule) {}
   ~L0ProgramTy() = default;
 
-  L0ProgramTy(const L0ProgramTy &other) = delete;
+  L0ProgramTy(const L0ProgramTy &Other) = delete;
   L0ProgramTy(L0ProgramTy &&) = delete;
   L0ProgramTy &operator=(const L0ProgramTy &) = delete;
   L0ProgramTy &operator=(const L0ProgramTy &&) = delete;
@@ -126,6 +126,9 @@ struct L0GlobalHandlerTy final : public GenericGlobalHandlerTy {
   Error getGlobalMetadataFromDevice(GenericDeviceTy &Device,
                                     DeviceImageTy &Image,
                                     GlobalTy &DeviceGlobal) override;
+
+protected:
+  bool isExportedSymbol(uint32_t Flags) override;
 };
 
 bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,

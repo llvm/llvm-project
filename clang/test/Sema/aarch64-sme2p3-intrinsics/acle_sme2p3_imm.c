@@ -1,6 +1,6 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +sme2p3 -target-feature +bf16 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sme -target-feature +sme2 -target-feature +sme2p3 -fsyntax-only -verify %s
 
 #include <arm_sme.h>
 

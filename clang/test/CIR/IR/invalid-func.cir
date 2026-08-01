@@ -13,7 +13,16 @@ module {
 // -----
 
 module {
-  cir.func @l0() special_member<> { // expected-error {{expected attribute value}}
+  cir.func @l0() func_info<> { // expected-error {{expected attribute value}}
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  // expected-error@below {{expected a function info attribute, got 32 : i32}}
+  cir.func @l0() func_info<32 : i32> {
     cir.return
   }
 }

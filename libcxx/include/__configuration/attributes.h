@@ -215,6 +215,15 @@
 #endif
 #define _LIBCPP_HIDE_FROM_ABI_VIRTUAL _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 
+// This macro makes sure that private classes which aren't necessarily part of the ABI change their name every release.
+// The intention is _not_ to put it on every private class, but only on classes where type name stability implies ABI
+// stability. This is essentially the case for classes that are only accessed through the vtable after instantiation,
+// for example the control blocks of `shared_ptr`. These classes can change in ABI breaking ways as long as their name
+// (and hence their vtable symbol) changes too. Note that the vtable and RTTI are not marked with
+// [[gnu::visibility("hidden")]], since the vtable and RTTI should still be deduplicated across dylibs with the same
+// instatiations.
+#define _LIBCPP_HIDE_STRUCT_FROM_ABI [[__gnu__::__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE))]]
+
 // Optional attributes
 // -------------------
 
@@ -333,10 +342,10 @@
 #  define _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(...)
 #endif
 
-#if __has_cpp_attribute(_Clang::__release_capability__)
-#  define _LIBCPP_RELEASE_CAPABILITY [[_Clang::__release_capability__]]
+#if __has_attribute(__release_capability__)
+#  define _LIBCPP_RELEASE_CAPABILITY(...) __attribute__((__release_capability__(__VA_ARGS__)))
 #else
-#  define _LIBCPP_RELEASE_CAPABILITY
+#  define _LIBCPP_RELEASE_CAPABILITY(...)
 #endif
 
 #if __has_cpp_attribute(_Clang::__release_shared_capability__)

@@ -496,6 +496,7 @@ void DWARFUnit::extractDIEsToVector(
 
     // Stop when compile unit die is removed from the parents stack.
   } while (Parents.size() > 1);
+  Dies.shrink_to_fit();
 }
 
 void DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {

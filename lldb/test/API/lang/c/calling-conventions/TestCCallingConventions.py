@@ -87,6 +87,7 @@ class TestCase(TestBase):
             return
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
+    @skipIfWasm  # no expression evaluation
     def test_sysv_abi(self):
         if not self.build_and_run("sysv_abi.c"):
             return

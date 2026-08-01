@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/APInt.h"
 
 namespace fir {
 
@@ -98,6 +99,16 @@ static constexpr llvm::StringRef getVolatileAttrName() {
   return "fir.volatile";
 }
 
+/// Attribute to mark a dummy data object argument as read-only, i.e. the callee
+/// does not write through this argument. Lowered to the LLVM `readonly`
+/// argument attribute by the FunctionAttr pass. CallInterface currently emits
+/// it for a conservative subset of by-reference INTENT(IN) dummies. The
+/// attribute is shallow: on a reference to a descriptor, it only protects the
+/// descriptor storage and does not imply that the described data is read-only.
+static constexpr llvm::StringRef getReadOnlyAttrName() {
+  return "fir.read_only";
+}
+
 /// Attribute to mark that a function argument is a character dummy procedure.
 /// Character dummy procedure have special ABI constraints.
 static constexpr llvm::StringRef getCharacterProcedureDummyAttrName() {
@@ -135,6 +146,9 @@ static constexpr llvm::StringRef getHasLifetimeMarkerAttrName() {
 static constexpr llvm::StringRef getAccessGroupsAttrName() {
   return "access_groups";
 }
+
+/// Attribute to mark coarray Fortran entities with the CORANK attribute.
+constexpr llvm::StringRef getCorankAttrName() { return "fir.corank"; }
 
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
@@ -175,8 +189,8 @@ bool valueMayHaveFirAttributes(mlir::Value value,
 /// function has any host associations, for example.
 bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
 
-/// Unwrap integer constant from an mlir::Value.
-std::optional<std::int64_t> getIntIfConstant(mlir::Value value);
+/// Unwrap an integer constant from an mlir::Value as an APInt.
+std::optional<llvm::APInt> getIntIfConstant(mlir::Value value);
 
 static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";

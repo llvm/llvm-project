@@ -20,7 +20,7 @@ private:
 
 void Foo::bar() {
   [m_constObj doWork]; // no-warning
-  [m_obj doWork]; // expected-warning{{Receiver is unretained and unsafe}}
+  [m_obj doWork]; // expected-warning{{Receiver 'this->m_obj' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 }
 
 } // namespace call_args_const_retainptr_member
@@ -39,7 +39,7 @@ private:
 
 void Foo::bar() {
   consume_cf(m_cf1.get()); // no-warning
-  consume_cf(m_cf2.get()); // expected-warning{{Call argument is unretained and unsafe}}
+  consume_cf(m_cf2.get()); // expected-warning{{Function argument 'this->m_cf2.get()' (to 'consume_cf') is a RetainPtr-capable type 'CFArrayRef'}}
 }
 
 } // namespace call_args_const_retainptr_cf_member
@@ -56,7 +56,7 @@ struct Bar {
 
 void Bar::baz() {
   [m_constObj doWork]; // no-warning
-  [m_obj doWork]; // expected-warning{{Receiver is unretained and unsafe}}
+  [m_obj doWork]; // expected-warning{{Receiver 'this->m_obj' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 }
 
 } // namespace call_args_const_retainptr_struct_member
@@ -73,7 +73,7 @@ struct Bar {
 
 void Bar::baz() {
   consume_cf(m_cf1.get()); // no-warning
-  consume_cf(m_cf2.get()); // expected-warning{{Call argument is unretained and unsafe}}
+  consume_cf(m_cf2.get()); // expected-warning{{Function argument 'this->m_cf2.get()' (to 'consume_cf') is a RetainPtr-capable type 'CFArrayRef'}}
 }
 
 } // namespace call_args_const_retainptr_cf_struct_member
@@ -92,7 +92,7 @@ private:
 
 void Foo::bar() {
   consume_obj(m_constObj.get()); // no-warning
-  consume_obj(m_obj.get()); // expected-warning{{Call argument is unretained and unsafe}}
+  consume_obj(m_obj.get()); // expected-warning{{Function argument 'this->m_obj.get()' (to 'consume_obj') is a RetainPtr-capable type 'WTF::RetainPtr<SomeObj>::PtrType'}}
 }
 
 } // namespace call_args_const_retainptr_get_as_objc_arg
@@ -111,7 +111,7 @@ private:
 
 void Foo::bar() {
   consume_obj(m_constObj); // no-warning
-  consume_obj(m_obj); // expected-warning{{Call argument is unretained and unsafe}}
+  consume_obj(m_obj); // expected-warning{{Function argument 'this->m_obj' (to 'consume_obj') is a RetainPtr-capable type 'WTF::RetainPtr<SomeObj>::PtrType'}}
 }
 
 } // namespace call_args_const_retainptr_implicit_conv_arg
@@ -130,7 +130,7 @@ private:
 
 void Foo::bar() {
   consume_obj(m_constObj.get()); // no-warning
-  consume_obj(m_obj.get()); // expected-warning{{Call argument is unretained and unsafe}}
+  consume_obj(m_obj.get()); // expected-warning{{Function argument 'this->m_obj.get()' (to 'consume_obj') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 }
 
 } // namespace call_args_const_osobjectptr_member
@@ -149,7 +149,7 @@ private:
 
 void Foo::bar() {
   [m_constObj doWork]; // no-warning
-  [m_obj doWork]; // expected-warning{{Receiver is unretained and unsafe}}
+  [m_obj doWork]; // expected-warning{{Receiver 'this->m_obj' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
 }
 
 } // namespace call_args_const_osobjectptr_receiver

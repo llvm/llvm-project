@@ -112,7 +112,7 @@ void ThreadPlanStepThrough::LookForPlanToStepThroughFromCurrentPC() {
 void ThreadPlanStepThrough::GetDescription(Stream *s,
                                            lldb::DescriptionLevel level) {
   if (level == lldb::eDescriptionLevelBrief)
-    s->Printf("Step through");
+    s->PutCString("Step through");
   else {
     s->PutCString("Stepping through trampoline code from: ");
     DumpAddress(s->AsRawOstream(), m_start_address, sizeof(addr_t));

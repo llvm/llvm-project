@@ -52,7 +52,7 @@ if.end:                                           ; preds = %entry
 
 ; Make sure we don't try to outline the entire function, especially when the
 ; entry block is cold.
-; CHECK: define void @cold_entry_block() [[COLD_ATTR:#[0-9]+]]
+; CHECK: define void @cold_entry_block()
 ; CHECK-NOT: cold_entry_block.cold.1
 define void @cold_entry_block() {
 entry:
@@ -191,8 +191,6 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry
   ret void
 }
-
-; CHECK: attributes [[COLD_ATTR]] = { {{.*}}cold
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 

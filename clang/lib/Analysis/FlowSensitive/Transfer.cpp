@@ -371,12 +371,12 @@ public:
         } else {
           Loc->addChild(*Field, &Env.createStorageLocation(FieldType));
         }
+      }
 
-        for (const auto &Entry :
-             Env.getDataflowAnalysisContext().getSyntheticFields(Derived)) {
-          Loc->addSyntheticField(Entry.getKey(),
-                                 Env.createStorageLocation(Entry.getValue()));
-        }
+      for (const auto &Entry :
+           Env.getDataflowAnalysisContext().getSyntheticFields(Derived)) {
+        Loc->addSyntheticField(Entry.getKey(),
+                               Env.createStorageLocation(Entry.getValue()));
       }
       Env.initializeFieldsWithValues(*Loc, Derived);
 

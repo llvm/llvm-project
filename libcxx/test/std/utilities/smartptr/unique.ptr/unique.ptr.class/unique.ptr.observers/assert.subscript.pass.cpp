@@ -49,8 +49,8 @@ struct MyDeleter {
 
 template <class WithCookie, class NoCookie>
 void test() {
-  LIBCPP_STATIC_ASSERT(std::__has_array_cookie<WithCookie>::value);
-  LIBCPP_STATIC_ASSERT(!std::__has_array_cookie<NoCookie>::value);
+  LIBCPP_STATIC_ASSERT(std::__has_array_cookie_v<WithCookie>);
+  LIBCPP_STATIC_ASSERT(!std::__has_array_cookie_v<NoCookie>);
 
   // For types with an array cookie, we can always detect OOB accesses. Note that reliance on an array
   // cookie is limited to the default deleter, since a unique_ptr with a custom deleter may not have

@@ -93,7 +93,7 @@ void SimpleNativeMemoryMap::release(OnReleaseCompleteFn &&OnComplete,
   }
 
   for (auto &[Addr, DAAs] : SI->DeallocActions)
-    runDeallocActions(std::move(DAAs));
+    runDeallocActions(std::move(DAAs), ReportErrorsViaSession(S));
 
   OnComplete(hostOSMemoryRelease(Addr, SI->Size));
 }
@@ -153,12 +153,13 @@ void SimpleNativeMemoryMap::initialize(OnInitializeCompleteFn &&OnComplete,
                                 "finalization requires at least "
                                 "one standard-lifetime segment"));
 
-  auto DeallocActions = runFinalizeActions(std::move(IR.AAPs));
+  auto DeallocActions =
+      runFinalizeActions(std::move(IR.AAPs), ReportErrorsViaSession(S));
   if (!DeallocActions)
     return OnComplete(DeallocActions.takeError());
 
   if (auto Err = recordDeallocActions(Base, std::move(*DeallocActions))) {
-    runDeallocActions(std::move(*DeallocActions));
+    runDeallocActions(std::move(*DeallocActions), ReportErrorsViaSession(S));
     return OnComplete(std::move(Err));
   }
 
@@ -192,7 +193,7 @@ void SimpleNativeMemoryMap::deinitialize(OnDeinitializeCompleteFn &&OnComplete,
     SI->DeallocActions.erase(I);
   }
 
-  runDeallocActions(std::move(DAAs));
+  runDeallocActions(std::move(DAAs), ReportErrorsViaSession(S));
   OnComplete(Error::success());
 }
 

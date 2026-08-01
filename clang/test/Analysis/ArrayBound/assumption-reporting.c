@@ -139,10 +139,12 @@ int assumingConvertedToIntP(struct foo f, int arg) {
   // result type of the subscript operator.
   int a = ((int*)(f.a))[arg];
   // expected-note@-1 {{Assuming index is non-negative and less than 2, the number of 'int' elements in 'f.a'}}
-  // However, if the extent of the memory region is not divisible by the
-  // element size, the checker measures the offset and extent in bytes.
+  // The extent of 'f.b' (5 bytes) is not divisible by the element size, so in
+  // general the checker would measure the offset and extent in bytes. Here
+  // 'arg' was already constrained to [0, 1] by the access above, so the range
+  // inferrer proves that the byte offset arg*4 is within [0, 5) and no
+  // assumption note is emitted.
   int b = ((int*)(f.b))[arg];
-  // expected-note@-1 {{Assuming byte offset is less than 5, the extent of 'f.b'}}
   int c = TenElements[arg-2];
   // expected-warning@-1 {{Out of bound access to memory preceding 'TenElements'}}
   // expected-note@-2 {{Access of 'TenElements' at a negative index}}
@@ -160,10 +162,10 @@ int assumingPlainOffset(struct foo f, int arg) {
     return 0;
 
   int b = ((int*)(f.b))[arg];
-  // expected-note@-1 {{Assuming byte offset is non-negative and less than 5, the extent of 'f.b'}}
-  // FIXME: this should be {{Assuming offset is non-negative}}
-  // but the current simplification algorithm doesn't realize that arg <= 1
-  // implies that the byte offset arg*4 will be less than 5.
+  // expected-note@-1 {{Assuming index is non-negative}}
+  // Since 'arg' is known to be < 2, the range inferrer proves that the byte
+  // offset arg*4 will be less than 5, so only the lower bound needs to be
+  // assumed here (this used to also require assuming the byte offset was < 5).
 
   int c = TenElements[arg+10];
   // expected-warning@-1 {{Out of bound access to memory after the end of 'TenElements'}}

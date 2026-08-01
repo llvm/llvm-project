@@ -11,5 +11,6 @@
 # RUN: %{python} %{libcxx-dir}/../clang-tools-extra/clang-tidy/tool/run-clang-tidy.py   \
 # RUN:      -clang-tidy-binary %{clang-tidy}                                            \
 # RUN:      -warnings-as-errors "*"                                                     \
-# RUN:      -source-filter=".*libcxx/src.*"                                             \
-# RUN:      -quiet -p %{bin-dir}/..
+# RUN:      -source-filter=".*libcxx(abi?)/src.*"                                       \
+# RUN:      -quiet -p %{bin-dir}/..                                                     \
+# RUN:      -header-filter=".*libcxx(abi?)/src.*"

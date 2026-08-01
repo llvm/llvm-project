@@ -9,6 +9,7 @@ from lldbsuite.test import configuration
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # wasm has no memory-protection faults/signals
 class ChangedInferiorTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 

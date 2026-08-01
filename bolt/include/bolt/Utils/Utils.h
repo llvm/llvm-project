@@ -76,6 +76,9 @@ std::optional<StringRef> getLTOCommonName(const StringRef Name);
 // If the expression is defining the CFA, return std::nullopt.
 std::optional<uint8_t> readDWARFExpressionTargetReg(StringRef ExprBytes);
 
+void safePWrite(raw_fd_ostream &OS, const char *Src, size_t Size,
+                uint64_t Offset);
+
 } // namespace bolt
 
 bool operator==(const llvm::MCCFIInstruction &L,

@@ -5,7 +5,8 @@ add_entrypoint_object(
   HDRS
     ../getrandom.h
   DEPENDS
-    libc.include.sys_random
+    libc.hdr.types.size_t
+    libc.hdr.types.ssize_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
     libc.src.errno.errno
 )

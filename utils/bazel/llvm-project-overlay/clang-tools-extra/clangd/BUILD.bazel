@@ -36,6 +36,7 @@ cc_library(
         "Feature.cpp",
         "Features.inc",
         "JSONTransport.cpp",
+        "LSPBinder.cpp",
         "Protocol.cpp",
         "URI.cpp",
         "index/SymbolID.cpp",

@@ -682,6 +682,11 @@ define void @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c, ptr %p) {
 ; FIXED:       vector.body:
 ; FIXED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; FIXED-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 -12, i8 -11, i8 -10, i8 -9>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; FIXED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
+; FIXED-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
+; FIXED-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; FIXED:       middle.block:
 ; FIXED-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.masked.udiv.v4i8(<4 x i8> [[VEC_IND]], <4 x i8> [[BROADCAST_SPLAT2]], <4 x i1> [[TMP0]])
 ; FIXED-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i16>
 ; FIXED-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.masked.sdiv.v4i16(<4 x i16> [[TMP2]], <4 x i16> [[BROADCAST_SPLAT4]], <4 x i1> [[TMP0]])
@@ -689,11 +694,6 @@ define void @udiv_sdiv_with_invariant_divisors(i8 %x, i16 %y, i1 %c, ptr %p) {
 ; FIXED-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <4 x i32> zeroinitializer, <4 x i32> [[TMP4]]
 ; FIXED-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 3
 ; FIXED-NEXT:    store i32 [[TMP7]], ptr [[P:%.*]], align 4
-; FIXED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; FIXED-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
-; FIXED-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 12
-; FIXED-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
-; FIXED:       middle.block:
 ; FIXED-NEXT:    br label [[LOOP_LATCH:%.*]]
 ; FIXED:       exit:
 ; FIXED-NEXT:    ret void

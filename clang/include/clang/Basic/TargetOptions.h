@@ -92,6 +92,22 @@ public:
   /// \brief AMDGPU Printf lowering scheme
   AMDGPUPrintfKind AMDGPUPrintfKindVal = AMDGPUPrintfKind::Hostcall;
 
+  /// \brief Enumeration values for AMDGPU xnack/sramecc settings
+  enum class AMDGPUFeatureState {
+    /// Feature state not specified and should generate most compatible code.
+    Any = 0,
+    /// Feature explicitly disabled
+    Disabled = 1,
+    /// Feature explicitly enabled
+    Enabled = 2
+  };
+
+  /// \brief AMDGPU xnack setting from -mxnack/-mno-xnack
+  AMDGPUFeatureState AMDGPUXnackState = AMDGPUFeatureState::Any;
+
+  /// \brief AMDGPU sramecc setting from -msramecc/-mno-sramecc
+  AMDGPUFeatureState AMDGPUSramEccState = AMDGPUFeatureState::Any;
+
   // The code model to be used as specified by the user. Corresponds to
   // CodeModel::Model enum defined in include/llvm/Support/CodeGen.h, plus
   // "default" for the case when the user has not explicitly specified a

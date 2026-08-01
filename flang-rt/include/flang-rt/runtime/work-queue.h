@@ -429,11 +429,15 @@ struct Ticket {
   bool begun{false};
   std::variant<NullTicket, InitializeTicket, InitializeCloneTicket,
       FinalizeTicket, DestroyTicket, AssignTicket, DerivedAssignTicket<false>,
-      DerivedAssignTicket<true>,
+      DerivedAssignTicket<true>
+#if !defined(RT_CUDA_THIN_IO)
+      ,
       io::descr::DescriptorIoTicket<io::Direction::Output>,
       io::descr::DescriptorIoTicket<io::Direction::Input>,
       io::descr::DerivedIoTicket<io::Direction::Output>,
-      io::descr::DerivedIoTicket<io::Direction::Input>>
+      io::descr::DerivedIoTicket<io::Direction::Input>
+#endif
+      >
       u;
 };
 
@@ -526,6 +530,9 @@ public:
   RT_API_ATTRS int BeginDescriptorIo(io::IoStatementState &io,
       const Descriptor &descriptor, const io::NonTbpDefinedIoTable *table,
       bool &anyIoTookPlace) {
+#if defined(RT_CUDA_THIN_IO)
+    terminator_.Crash("descriptor I/O is unsupported in thin CUDA runtime");
+#else
     if (runTicketsImmediately_) {
       return io::descr::DescriptorIoTicket<DIR>{
           io, descriptor, table, anyIoTookPlace}
@@ -535,11 +542,15 @@ public:
           io, descriptor, table, anyIoTookPlace);
       return StatContinue;
     }
+#endif
   }
   template <io::Direction DIR>
   RT_API_ATTRS int BeginDerivedIo(io::IoStatementState &io,
       const Descriptor &descriptor, const typeInfo::DerivedType &derived,
       const io::NonTbpDefinedIoTable *table, bool &anyIoTookPlace) {
+#if defined(RT_CUDA_THIN_IO)
+    terminator_.Crash("derived type I/O is unsupported in thin CUDA runtime");
+#else
     if (runTicketsImmediately_) {
       return io::descr::DerivedIoTicket<DIR>{
           io, descriptor, derived, table, anyIoTookPlace}
@@ -549,6 +560,7 @@ public:
           io, descriptor, derived, table, anyIoTookPlace);
       return StatContinue;
     }
+#endif
   }
 
   RT_API_ATTRS int Run();

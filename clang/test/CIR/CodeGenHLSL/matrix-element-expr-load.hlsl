@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x hlsl -finclude-default-header -triple spirv-unknown-vulkan-compute %s \
+// RUN: %clang_cc1 -x hlsl -finclude-default-header -triple spirv-unknown-vulkan-library %s \
 // RUN:   -fclangir -emit-cir -disable-llvm-passes -verify
 
 // expected-error@*:* {{ClangIR code gen Not Yet Implemented: processing of type: ConstantMatrix}}
