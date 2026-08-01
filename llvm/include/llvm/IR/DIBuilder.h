@@ -38,10 +38,7 @@ namespace llvm {
   class LLVMContext;
   class Module;
   class Value;
-  class DbgAssignIntrinsic;
   class DbgRecord;
-
-  using DbgInstPtr = PointerUnion<Instruction *, DbgRecord *>;
 
   class DIBuilder {
     Module &M;
@@ -1163,7 +1160,7 @@ namespace llvm {
     /// \param Expr        A complex location expression.
     /// \param DL          Debug info location.
     /// \param InsertAtEnd Location for the new record.
-    LLVM_ABI DbgInstPtr insertDeclare(Value *Storage, DILocalVariable *VarInfo,
+    LLVM_ABI DbgRecord *insertDeclare(Value *Storage, DILocalVariable *VarInfo,
                                       DIExpression *Expr, const DILocation *DL,
                                       BasicBlock *InsertAtEnd);
 
@@ -1181,7 +1178,7 @@ namespace llvm {
     /// \param DL            Debug info location, usually: (line: 0,
     ///                      column: 0, scope: var-decl-scope). See
     ///                      getDebugValueLoc.
-    LLVM_ABI DbgInstPtr insertDbgAssign(Instruction *LinkedInstr, Value *Val,
+    LLVM_ABI DbgRecord *insertDbgAssign(Instruction *LinkedInstr, Value *Val,
                                         DILocalVariable *SrcVar,
                                         DIExpression *ValExpr, Value *Addr,
                                         DIExpression *AddrExpr,
@@ -1193,7 +1190,7 @@ namespace llvm {
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertPt     Location for the new record.
-    LLVM_ABI DbgInstPtr insertDeclare(llvm::Value *Storage,
+    LLVM_ABI DbgRecord *insertDeclare(llvm::Value *Storage,
                                       DILocalVariable *VarInfo,
                                       DIExpression *Expr, const DILocation *DL,
                                       InsertPosition InsertPt);
@@ -1204,7 +1201,7 @@ namespace llvm {
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertPt     Location for the new record.
-    LLVM_ABI DbgInstPtr insertDeclareValue(Value *Storage,
+    LLVM_ABI DbgRecord *insertDeclareValue(Value *Storage,
                                            DILocalVariable *VarInfo,
                                            DIExpression *Expr,
                                            const DILocation *DL,
@@ -1214,7 +1211,7 @@ namespace llvm {
     /// \param LabelInfo    Label's debug info descriptor.
     /// \param DL           Debug info location.
     /// \param InsertPt     Location for the new record.
-    LLVM_ABI DbgInstPtr insertLabel(DILabel *LabelInfo, const DILocation *DL,
+    LLVM_ABI DbgRecord *insertLabel(DILabel *LabelInfo, const DILocation *DL,
                                     InsertPosition InsertPt);
 
     /// Insert a new #dbg_value record.
@@ -1223,7 +1220,7 @@ namespace llvm {
     /// \param Expr         A complex location expression.
     /// \param DL           Debug info location.
     /// \param InsertPt     Location for the new record.
-    LLVM_ABI DbgInstPtr insertDbgValue(llvm::Value *Val,
+    LLVM_ABI DbgRecord *insertDbgValue(llvm::Value *Val,
                                        DILocalVariable *VarInfo,
                                        DIExpression *Expr, const DILocation *DL,
                                        InsertPosition InsertPt);

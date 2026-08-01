@@ -219,6 +219,7 @@ set(files
   __atomic/atomic_sync_timed.h
   __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
+  __atomic/clear_padding.h
   __atomic/contention_t.h
   __atomic/fence.h
   __atomic/floating_point_helper.h
@@ -471,6 +472,7 @@ set(files
   __fwd/mdspan.h
   __fwd/memory.h
   __fwd/memory_resource.h
+  __fwd/optional.h
   __fwd/ostream.h
   __fwd/pair.h
   __fwd/queue.h
@@ -665,6 +667,14 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __optional/common.h
+  __optional/comparison.h
+  __optional/hash.h
+  __optional/make_optional.h
+  __optional/nullopt_t.h
+  __optional/optional.h
+  __optional/optional_ref.h
+  __optional/swap.h
   __ostream/basic_ostream.h
   __ostream/print.h
   __ostream/put_character_sequence.h

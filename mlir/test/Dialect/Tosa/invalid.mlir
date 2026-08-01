@@ -1133,6 +1133,28 @@ func.func @test_resize_invalid_output_width(%arg0: tensor<1x8x8x8xf32>) -> tenso
 
 // -----
 
+func.func @test_resize_mixed_fp8_types(%arg0: tensor<1x32x32x8xf8E4M3FN>) -> tensor<1x64x64x8xf8E5M2> {
+  %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op illegal: operation operand/result data types did not align with any profile or extension, got (fp8e4m3,fp8e5m2)}}
+  %0 = tosa.resize %arg0, %scale, %offset, %border { mode = BILINEAR } : (tensor<1x32x32x8xf8E4M3FN>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf8E5M2>
+  return %0 : tensor<1x64x64x8xf8E5M2>
+}
+
+// -----
+
+func.func @test_resize_mixed_mxfp_types(%arg0: tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>> {
+  %scale = tosa.const_shape { values = dense<[4, 2, 4, 2]> : tensor<4xindex> } : () -> !tosa.shape<4>
+  %offset = tosa.const_shape { values = dense<[-1, -1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  %border = tosa.const_shape { values = dense<[1, 1]> : tensor<2xindex> } : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.resize' op illegal: operation operand/result data types did not align with any profile or extension, got (bs32_fp8e8m0_fp4e2m1,bs32_fp8e8m0_fp6e2m3)}}
+  %0 = tosa.resize %arg0, %scale, %offset, %border { mode = NEAREST_NEIGHBOR } : (tensor<1x32x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+  return %0 : tensor<1x64x64x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+}
+
+// -----
+
 // CHECK-LABEL: broadcast_resize_nearest_f32
 func.func @broadcast_resize_nearest_f32(%arg0 : tensor<3x1x1x7xf32>) -> tensor<3x1x5x7xf32> {
   %scale = tosa.const_shape { values = dense<[2, 1, 3, 1]> : tensor<4xindex> } : () -> !tosa.shape<4>

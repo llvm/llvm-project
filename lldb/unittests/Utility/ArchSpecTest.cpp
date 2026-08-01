@@ -482,6 +482,32 @@ TEST(ArchSpecTest, Compatibility) {
   }
 }
 
+TEST(ArchSpecTest, WasmCompatibility) {
+  // A Wasm module encodes no vendor or OS: those are properties of the runtime
+  // executing it. A bare wasm32 or wasm64 architecture therefore has to stay
+  // compatible with the more specific triple a runtime reports at launch.
+  {
+    ArchSpec A("wasm32");
+    ArchSpec B("wasm32-wamr-wasi-wasm");
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+    ASSERT_TRUE(B.IsCompatibleMatch(A));
+  }
+  {
+    // An explicitly specified "unknown" OS is still a specified OS, and does
+    // not match a runtime that reports a different one.
+    ArchSpec A("wasm32-unknown-unknown-wasm");
+    ArchSpec B("wasm32-wamr-wasi-wasm");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+  {
+    ArchSpec A("wasm32");
+    ArchSpec B("wasm64-wamr-wasi-wasm");
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+    ASSERT_FALSE(B.IsCompatibleMatch(A));
+  }
+}
+
 TEST(ArchSpecTest, OperatorBool) {
   EXPECT_FALSE(ArchSpec());
   EXPECT_TRUE(ArchSpec("x86_64-pc-linux"));

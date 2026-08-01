@@ -724,8 +724,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   if (sym.isTagged())
     relrDyn = nullptr;
   if (relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    relrDyn->addRelativeReloc(isec, offsetInSec, sym, addend, type, expr,
-                              shard);
+    relrDyn->addRelativeReloc<concurrent>(isec, offsetInSec, sym, addend, type,
+                                          expr, shard);
     return;
   }
   RelType relativeType = ctx.target->relativeRel;
@@ -1968,8 +1968,12 @@ bool ThunkCreator::createThunks(uint32_t pass,
               rel.addend = -getPCBias(ctx, *isec, rel);
           }
 
-        for (auto &p : isd->thunkSections)
+        for (auto &p : isd->thunkSections) {
+          // Sort in pass 0, which creates most thunks.
+          if (pass == 0)
+            p.first->sortByDestination();
           addressesChanged |= p.first->assignOffsets();
+        }
       });
 
   for (auto &p : thunkedSections)

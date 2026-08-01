@@ -6210,6 +6210,37 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   replaceValue(I, *CastToOrig);
   return true;
 }
+
+/// Given the maximum shuffle index and load vector type, compute the number of
+/// elements for the shrunk load, rounding up to the next full vector register
+/// boundary to avoid scalar remainders that legalize poorly.
+static unsigned getAlignedNumElements(unsigned MaxIdx, FixedVectorType *LoadTy,
+                                      const TargetTransformInfo &TTI,
+                                      const DataLayout &DL) {
+  unsigned RawNumElements = MaxIdx + 1u;
+  Type *ElemTy = LoadTy->getElementType();
+  // Skip alignment for illegal element types.
+  if (!TTI.isTypeLegal(ElemTy))
+    return RawNumElements;
+
+  TypeSize ElemSize = DL.getTypeSizeInBits(ElemTy);
+  if (ElemSize.isScalable() || ElemSize.isZero())
+    return RawNumElements;
+
+  TypeSize RegSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+  if (RegSize.isScalable() || RegSize.isZero())
+    return RawNumElements;
+
+  unsigned ElemsPerReg = RegSize.getFixedValue() / ElemSize.getFixedValue();
+  // If the load already fits in a register, keep the exact size.
+  // Otherwise round up to the next full register boundary.
+  if (ElemsPerReg == 0 || RawNumElements <= ElemsPerReg)
+    return RawNumElements;
+
+  return alignTo(RawNumElements, ElemsPerReg);
+}
+
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -6259,7 +6290,8 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
-    unsigned const NewNumElements = Indices->second + 1u;
+    unsigned const NewNumElements =
+        getAlignedNumElements(Indices->second, OldLoadTy, TTI, *DL);
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.

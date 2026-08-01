@@ -87,6 +87,14 @@ static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
   return State;
 }
 
+std::string lifetime_modeling::getRegionName(const MemRegion *Reg) {
+  // FIXME: Once the checker supports heap allocation, more region kinds
+  // should be handled to produce the correct descriptive name.
+  if (const std::string RegName = Reg->getDescriptiveName(); !RegName.empty())
+    return RegName;
+  return "the region";
+}
+
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
                                      CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -242,8 +250,9 @@ void DebugLifetimeModeling::analyzerDumpLifetimeOriginsOf(
 
     llvm::SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
-    OS << " Origin " << ArgSVal << " bound to ";
-    llvm::interleaveComma(RegionNames, OS);
+    OS << " Origin '" << ArgSVal << "' bound to ";
+    llvm::interleaveComma(RegionNames, OS,
+                          [&](StringRef Name) { OS << "'" << Name << "'"; });
     C.emitReport(std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N));
   }
 }
