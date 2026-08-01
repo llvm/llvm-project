@@ -9,10 +9,9 @@
 #include "hdr/limits_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "src/__support/macros/properties/types.h"
-
 
 using LIBC_NAMESPACE::Sign;
 using LIBC_NAMESPACE::fputil::Float128;
