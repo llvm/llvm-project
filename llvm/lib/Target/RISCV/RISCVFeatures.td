@@ -1072,6 +1072,20 @@ def FeatureStdExtSsaia
 def FeatureStdExtSmcntrpmf
     : RISCVExtension<1, 0, "Cycle and Instret Privilege Mode Filtering">;
 
+def FeatureStdExtSmcsps
+    : RISCVExperimentalExtension<0, 19,
+                                 "Conditional Stack Pointer Swap at Machine Level">;
+def HasStdExtSmcsps : Predicate<"Subtarget->hasStdExtSmcsps()">,
+                      AssemblerPredicate<(all_of FeatureStdExtSmcsps),
+                          "'Smcsps' (Conditional Stack Pointer Swap at Machine Level)">;
+def FeatureStdExtSscsps
+    : RISCVExperimentalExtension<0, 19,
+                                 "Conditional Stack Pointer Swap at Supervisor Level",
+                                 [FeatureStdExtSmcsps]>;
+def HasStdExtSscsps : Predicate<"Subtarget->hasStdExtSscsps()">,
+                      AssemblerPredicate<(all_of FeatureStdExtSscsps),
+                          "'Sscsps' (Conditional Stack Pointer Swap at Supervisor Level)">;
+
 def FeatureStdExtSmcsrind
     : RISCVExtension<1, 0, "Indirect CSR Access Machine Level">;
 def FeatureStdExtSscsrind
