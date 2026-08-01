@@ -301,7 +301,7 @@ struct char_traits<char16_t> : __char_traits_base<char16_t, uint_least16_t, stat
   }
 };
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX17 int
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 int
 char_traits<char16_t>::compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
   for (; __n; --__n, ++__s1, ++__s2) {
     if (lt(*__s1, *__s2))
@@ -312,7 +312,7 @@ char_traits<char16_t>::compare(const char_type* __s1, const char_type* __s2, siz
   return 0;
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t
 char_traits<char16_t>::length(const char_type* __s) _NOEXCEPT {
   size_t __len = 0;
   for (; !eq(*__s, char_type(0)); ++__s)
@@ -336,7 +336,7 @@ struct char_traits<char32_t> : __char_traits_base<char32_t, uint_least32_t, stat
   }
 };
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX17 int
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 int
 char_traits<char32_t>::compare(const char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
   for (; __n; --__n, ++__s1, ++__s2) {
     if (lt(*__s1, *__s2))
@@ -347,7 +347,7 @@ char_traits<char32_t>::compare(const char_type* __s1, const char_type* __s2, siz
   return 0;
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 size_t
 char_traits<char32_t>::length(const char_type* __s) _NOEXCEPT {
   size_t __len = 0;
   for (; !eq(*__s, char_type(0)); ++__s)

@@ -88,7 +88,8 @@ _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 #    if _LIBCPP_HAS_UNICODE
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI void __vprint_unicode(ostream& __os, string_view __fmt, format_args __args, bool __write_nl) {
+_LIBCPP_HIDE_FROM_ABI inline void
+__vprint_unicode(ostream& __os, string_view __fmt, format_args __args, bool __write_nl) {
 #      ifndef _WIN32
   return std::__vprint_nonunicode(__os, __fmt, __args, __write_nl);
 #      else
@@ -133,7 +134,8 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(ostream& __os, string_view __fm
 #    endif // _LIBCPP_HAS_UNICODE
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI void print(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
+_LIBCPP_HIDE_FROM_ABI
+_LIBCPP_ALWAYS_INLINE void print(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
 #    if _LIBCPP_HAS_UNICODE
   if constexpr (__print::__use_unicode_execution_charset)
     std::__vprint_unicode(__os, __fmt.get(), std::make_format_args(__args...), false);
@@ -145,7 +147,8 @@ _LIBCPP_HIDE_FROM_ABI void print(ostream& __os, format_string<_Args...> __fmt, _
 }
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI void println(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void
+println(ostream& __os, format_string<_Args...> __fmt, _Args&&... __args) {
 #    if _LIBCPP_HAS_UNICODE
   // Note the wording in the Standard is inefficient. The output of
   // std::format is a std::string which is then copied. This solution

@@ -2483,7 +2483,7 @@ private:
     std::__throw_out_of_range("basic_string");
   }
 
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string
   __concatenate_strings<>(const _Allocator&, __type_identity_t<__self_view>, __type_identity_t<__self_view>);
 
   template <class _CharT2, class _Traits2, class _Allocator2>
@@ -2839,8 +2839,9 @@ basic_string<_CharT, _Traits, _Allocator>::operator=(const basic_string& __str) 
 #  ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__move_assign(
-    basic_string& __str, false_type) noexcept(__alloc_traits::is_always_equal::value) {
+_LIBCPP_HIDE_FROM_ABI inline
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::__move_assign(
+        basic_string& __str, false_type) noexcept(__alloc_traits::is_always_equal::value) {
   if (__alloc_ != __str.__alloc_)
     assign(__str);
   else
@@ -2848,7 +2849,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocat
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, true_type)
 #    if _LIBCPP_STD_VER >= 17
     noexcept
@@ -3296,7 +3297,7 @@ basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos, size_type __n)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 typename basic_string<_CharT, _Traits, _Allocator>::iterator
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX20 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __pos) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
       __pos != end(), "string::erase(iterator) called with a non-dereferenceable iterator");
@@ -3307,7 +3308,7 @@ basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __pos) {
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 typename basic_string<_CharT, _Traits, _Allocator>::iterator
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX20 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __first, const_iterator __last) {
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(__first <= __last, "string::erase(first, last) called with invalid range");
   iterator __b  = begin();
@@ -3317,13 +3318,14 @@ basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __first, const_i
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::pop_back() {
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::pop_back() {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string::pop_back(): string is already empty");
   __erase_to_end(size() - 1);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::clear() _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+basic_string<_CharT, _Traits, _Allocator>::clear() _NOEXCEPT {
   size_type __old_size;
   if (__is_long()) {
     __old_size = __get_long_size();
@@ -3435,7 +3437,8 @@ basic_string<_CharT, _Traits, _Allocator>::copy(value_type* __s, size_type __n, 
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
 #  if _LIBCPP_STD_VER >= 14
     _NOEXCEPT
 #  else
@@ -3481,7 +3484,8 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX20 int basic_string<_CharT, _Traits, _Allocato
 // __invariants
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool basic_string<_CharT, _Traits, _Allocator>::__invariants() const {
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
+basic_string<_CharT, _Traits, _Allocator>::__invariants() const {
   if (size() > capacity())
     return false;
   if (capacity() < __min_cap - 1)

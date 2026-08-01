@@ -158,6 +158,7 @@ template <class _Pointer>
 inline const bool __has_arrow_v<_Pointer, decltype((void)std::declval<const _Pointer&>().operator->()) > = true;
 
 template <class _Pointer, __enable_if_t<__has_to_address_v<_Pointer>, int> = 0>
+_LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR __decay_t<decltype(pointer_traits<_Pointer>::to_address(std::declval<const _Pointer&>()))>
 __to_address(const _Pointer& __p) _NOEXCEPT {
   return pointer_traits<_Pointer>::to_address(__p);
@@ -167,7 +168,8 @@ template <class _Pointer>
 struct __to_address_arrow_result;
 
 template <class _Pointer, __enable_if_t<!__has_to_address_v<_Pointer> && __has_arrow_v<_Pointer>, int> = 0>
-_LIBCPP_CONSTEXPR typename __to_address_arrow_result<_Pointer>::type __to_address(const _Pointer& __p) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR typename __to_address_arrow_result<_Pointer>::type
+__to_address(const _Pointer& __p) _NOEXCEPT {
   return std::__to_address(__p.operator->());
 }
 

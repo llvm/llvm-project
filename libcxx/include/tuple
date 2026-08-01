@@ -558,15 +558,16 @@ class _LIBCPP_NO_SPECIALIZATIONS tuple {
   _BaseT __base_;
 
   template <size_t _Jp, class... _Up>
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Jp, tuple<_Up...> >::type& get(tuple<_Up...>&) _NOEXCEPT;
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Jp, tuple<_Up...> >::type&
+  get(tuple<_Up...>&) _NOEXCEPT;
   template <size_t _Jp, class... _Up>
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Jp, tuple<_Up...> >::type&
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Jp, tuple<_Up...> >::type&
   get(const tuple<_Up...>&) _NOEXCEPT;
   template <size_t _Jp, class... _Up>
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Jp, tuple<_Up...> >::type&&
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Jp, tuple<_Up...> >::type&&
   get(tuple<_Up...>&&) _NOEXCEPT;
   template <size_t _Jp, class... _Up>
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Jp, tuple<_Up...> >::type&&
+  friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Jp, tuple<_Up...> >::type&&
   get(const tuple<_Up...>&&) _NOEXCEPT;
 
 public:
