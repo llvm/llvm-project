@@ -1,7 +1,6 @@
 // RUN: mlir-opt %s --xevm-attach-target='module=xevm_* O=3 chip=pvc' -convert-vector-to-xegpu -split-input-file | FileCheck %s --check-prefixes=STORE-ND,CHECK
 // RUN: mlir-opt %s -convert-vector-to-xegpu -split-input-file | FileCheck %s --check-prefixes=STORE-SCATTER,CHECK
 
-
 gpu.module @xevm_module {
 gpu.func @store_1D_vector(%vec: vector<8xf32>,
     %source: memref<8x16x32xf32>, %offset: index) {
@@ -256,11 +255,8 @@ gpu.func @no_store_masked(%vec: vector<4xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @no_store_masked(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_masked(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_masked(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -273,11 +269,8 @@ gpu.func @no_store_tensor(%vec: vector<8x16xf32>,
   gpu.return %0 : tensor<32x64xf32>
 }
 
-// STORE-ND-LABEL: @no_store_tensor(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_tensor(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_tensor(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -290,11 +283,8 @@ gpu.func @no_store_non_unit_inner_stride(%vec: vector<8xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @no_store_non_unit_inner_stride(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_non_unit_inner_stride(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_non_unit_inner_stride(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -308,11 +298,8 @@ gpu.func @no_store_unsupported_map(%vec: vector<8x16xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @no_store_unsupported_map(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_unsupported_map(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_unsupported_map(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -325,11 +312,8 @@ gpu.func @no_store_out_of_bounds_1D_vector(%vec: vector<8xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @no_store_out_of_bounds_1D_vector(
-// STORE-ND:       vector.transfer_write
-
-// STORE-SCATTER-LABEL:  @no_store_out_of_bounds_1D_vector(
-// STORE-SCATTER:        vector.transfer_write
+// CHECK-LABEL:  @no_store_out_of_bounds_1D_vector(
+// CHECK:        vector.transfer_write
 }
 
 // -----
@@ -376,22 +360,13 @@ gpu.func @store_2D_vector_addrspace3(%vec: vector<8x16xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @store_2D_vector_addrspace3
-// STORE-ND-SAME: %[[VEC:.+]]: vector<8x16xf32>
-// STORE-ND-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
-// STORE-ND-SAME: %[[OFFSET:.+]]: index
-// STORE-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
-// STORE-ND: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>, !xegpu.mem_desc<16x32xf32>, index, index
-// STORE-ND: gpu.return
-
-// STORE-SCATTER-LABEL: @store_2D_vector_addrspace3
-// STORE-SCATTER-SAME: %[[VEC:.+]]: vector<8x16xf32>
-// STORE-SCATTER-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
-// STORE-SCATTER-SAME: %[[OFFSET:.+]]: index
-// STORE-SCATTER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
-// STORE-SCATTER: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>, !xegpu.mem_desc<16x32xf32>, index, index
-// STORE-SCATTER: gpu.return
-
+// CHECK-LABEL: @store_2D_vector_addrspace3
+// CHECK-SAME: %[[VEC:.+]]: vector<8x16xf32>
+// CHECK-SAME: %[[SOURCE:.+]]: memref<16x32xf32, 3>
+// CHECK-SAME: %[[OFFSET:.+]]: index
+// CHECK: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<16x32xf32, 3> -> !xegpu.mem_desc<16x32xf32>
+// CHECK: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]], %[[OFFSET]]] : vector<8x16xf32>, !xegpu.mem_desc<16x32xf32>, index, index
+// CHECK: gpu.return
 }
 
 // -----
@@ -404,22 +379,13 @@ gpu.func @store_1D_vector_addrspace3(%vec: vector<8xf32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @store_1D_vector_addrspace3
-// STORE-ND-SAME: %[[VEC:.+]]: vector<8xf32>
-// STORE-ND-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
-// STORE-ND-SAME: %[[OFFSET:.+]]: index
-// STORE-ND: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
-// STORE-ND: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]]] : vector<8xf32>, !xegpu.mem_desc<32xf32>, index
-// STORE-ND: gpu.return
-
-// STORE-SCATTER-LABEL: @store_1D_vector_addrspace3
-// STORE-SCATTER-SAME: %[[VEC:.+]]: vector<8xf32>
-// STORE-SCATTER-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
-// STORE-SCATTER-SAME: %[[OFFSET:.+]]: index
-// STORE-SCATTER: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
-// STORE-SCATTER: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]]] : vector<8xf32>, !xegpu.mem_desc<32xf32>, index
-// STORE-SCATTER: gpu.return
-
+// CHECK-LABEL: @store_1D_vector_addrspace3
+// CHECK-SAME: %[[VEC:.+]]: vector<8xf32>
+// CHECK-SAME: %[[SOURCE:.+]]: memref<32xf32, 3>
+// CHECK-SAME: %[[OFFSET:.+]]: index
+// CHECK: %[[MEM_DESC:.+]] = xegpu.create_mem_desc %[[SOURCE]] : memref<32xf32, 3> -> !xegpu.mem_desc<32xf32>
+// CHECK: xegpu.store_matrix %[[VEC]], %[[MEM_DESC]][%[[OFFSET]]] : vector<8xf32>, !xegpu.mem_desc<32xf32>, index
+// CHECK: gpu.return
 }
 
 // -----
@@ -431,10 +397,6 @@ gpu.func @store_0D_vector_unsupported(%vec: vector<f32>,
   gpu.return
 }
 
-// STORE-ND-LABEL: @store_0D_vector_unsupported
-// STORE-ND: vector.transfer_write
-
-// STORE-SCATTER-LABEL: @store_0D_vector_unsupported
-// STORE-SCATTER: vector.transfer_write
-
+// CHECK-LABEL: @store_0D_vector_unsupported
+// CHECK: vector.transfer_write
 }
