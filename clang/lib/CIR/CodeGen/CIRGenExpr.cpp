@@ -406,15 +406,22 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
     if (dst.isExtVectorElt())
       return emitStoreThroughExtVectorComponentLValue(src, dst);
 
+    if (dst.isMatrixElt()) {
+      cgm.errorNYI("emitStoreThroughLValue: !dst.isSimple() && isMatrixElt");
+      return;
+    }
+
+    if (dst.isMatrixRow()) {
+      cgm.errorNYI("emitStoreThroughLValue: !dst.isSimple() && isMatrixRow");
+      return;
+    }
+
     assert(dst.isBitField() && "Unknown LValue type");
     emitStoreThroughBitfieldLValue(src, dst);
     return;
-
-    cgm.errorNYI(dst.getPointer().getLoc(),
-                 "emitStoreThroughLValue: non-simple lvalue");
-    return;
   }
 
+  assert(!cir::MissingFeatures::objCLifetime());
   assert(!cir::MissingFeatures::opLoadStoreObjC());
 
   assert(src.isScalar() && "Can't emit an aggregate store with this method");
@@ -2419,11 +2426,10 @@ RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
   assert(!cir::MissingFeatures::hip());
-  assert(!cir::MissingFeatures::opCallMustTail());
 
   cir::CIRCallOpInterface callOp;
   RValue callResult = emitCall(funcInfo, callee, returnValue, args, &callOp,
-                               getLoc(e->getExprLoc()));
+                               e == mustTailCall, getLoc(e->getExprLoc()));
 
   assert(!cir::MissingFeatures::generateDebugInfo());
 

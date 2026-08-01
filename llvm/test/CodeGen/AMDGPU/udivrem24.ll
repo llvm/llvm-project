@@ -60,7 +60,7 @@ define amdgpu_kernel void @udiv24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 23, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 19, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -71,21 +71,17 @@ define amdgpu_kernel void @udiv24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     UINT_TO_FLT * T0.Y, T1.X,
-; EG-NEXT:     RECIP_IEEE * T0.Z, PS,
 ; EG-NEXT:     UINT_TO_FLT * T0.X, T0.X,
-; EG-NEXT:     MUL_IEEE * T0.W, PS, T0.Z,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.X, T0.Y,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.Y, T0.X,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.Y,
-; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
-; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
-; EG-NEXT:     ADD_INT * T1.W, PS, PV.W,
+; EG-NEXT:     TRUNC T0.W, PV.W,
+; EG-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T1.W, PS, literal.x,
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.y,
+; EG-NEXT:     FLT_TO_UINT * T0.X, PV.W,
+; EG-NEXT:     AND_INT T0.W, PS, literal.x,
+; EG-NEXT:     LSHL * T1.W, T1.W, literal.y,
 ; EG-NEXT:    255(3.573311e-43), 3(4.203895e-45)
 ; EG-NEXT:     LSHL T0.X, PV.W, PS,
 ; EG-NEXT:     LSHL * T0.W, literal.x, PS,
@@ -159,7 +155,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in_out(ptr addrspace(1) %out, 
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 23, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 19, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -170,21 +166,17 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in_out(ptr addrspace(1) %out, 
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     UINT_TO_FLT * T0.Y, T1.X,
-; EG-NEXT:     RECIP_IEEE * T0.Z, PS,
 ; EG-NEXT:     UINT_TO_FLT * T0.X, T0.X,
-; EG-NEXT:     MUL_IEEE * T0.W, PS, T0.Z,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.X, T0.Y,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.Y, T0.X,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.Y,
-; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
-; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
-; EG-NEXT:     ADD_INT * T1.W, PS, PV.W,
+; EG-NEXT:     TRUNC T0.W, PV.W,
+; EG-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T1.W, PS, literal.x,
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.y,
+; EG-NEXT:     FLT_TO_UINT * T0.X, PV.W,
+; EG-NEXT:     AND_INT T0.W, PS, literal.x,
+; EG-NEXT:     LSHL * T1.W, T1.W, literal.y,
 ; EG-NEXT:    255(3.573311e-43), 3(4.203895e-45)
 ; EG-NEXT:     LSHL T0.X, PV.W, PS,
 ; EG-NEXT:     LSHL * T0.W, literal.x, PS,
@@ -258,7 +250,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in(ptr addrspace(1) %out, ptr 
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 23, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 19, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -269,21 +261,17 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_in(ptr addrspace(1) %out, ptr 
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     UINT_TO_FLT * T0.Y, T1.X,
-; EG-NEXT:     RECIP_IEEE * T0.Z, PS,
 ; EG-NEXT:     UINT_TO_FLT * T0.X, T0.X,
-; EG-NEXT:     MUL_IEEE * T0.W, PS, T0.Z,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.X, T0.Y,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.Y, T0.X,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.Y,
-; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
-; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
-; EG-NEXT:     ADD_INT * T1.W, PS, PV.W,
+; EG-NEXT:     TRUNC T0.W, PV.W,
+; EG-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T1.W, PS, literal.x,
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.y,
+; EG-NEXT:     FLT_TO_UINT * T0.X, PV.W,
+; EG-NEXT:     AND_INT T0.W, PS, literal.x,
+; EG-NEXT:     LSHL * T1.W, T1.W, literal.y,
 ; EG-NEXT:    255(3.573311e-43), 3(4.203895e-45)
 ; EG-NEXT:     LSHL T0.X, PV.W, PS,
 ; EG-NEXT:     LSHL * T0.W, literal.x, PS,
@@ -357,7 +345,7 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_out(ptr addrspace(1) %out, ptr
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 23, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 19, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -368,21 +356,17 @@ define amdgpu_kernel void @udiv24_i8_denorm_flush_out(ptr addrspace(1) %out, ptr
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     UINT_TO_FLT * T0.Y, T1.X,
-; EG-NEXT:     RECIP_IEEE * T0.Z, PS,
 ; EG-NEXT:     UINT_TO_FLT * T0.X, T0.X,
-; EG-NEXT:     MUL_IEEE * T0.W, PS, T0.Z,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.X, T0.Y,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.Y, T0.X,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.Y,
-; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
-; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
-; EG-NEXT:     ADD_INT * T1.W, PS, PV.W,
+; EG-NEXT:     TRUNC T0.W, PV.W,
+; EG-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T1.W, PS, literal.x,
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.y,
+; EG-NEXT:     FLT_TO_UINT * T0.X, PV.W,
+; EG-NEXT:     AND_INT T0.W, PS, literal.x,
+; EG-NEXT:     LSHL * T1.W, T1.W, literal.y,
 ; EG-NEXT:    255(3.573311e-43), 3(4.203895e-45)
 ; EG-NEXT:     LSHL T0.X, PV.W, PS,
 ; EG-NEXT:     LSHL * T0.W, literal.x, PS,
@@ -456,7 +440,7 @@ define amdgpu_kernel void @udiv24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 23, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 19, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -467,21 +451,17 @@ define amdgpu_kernel void @udiv24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     UINT_TO_FLT * T0.Y, T1.X,
-; EG-NEXT:     RECIP_IEEE * T0.Z, PS,
 ; EG-NEXT:     UINT_TO_FLT * T0.X, T0.X,
-; EG-NEXT:     MUL_IEEE * T0.W, PS, T0.Z,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.X, T0.Y,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
 ; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     MULADD_IEEE T1.W, -PV.W, T0.Y, T0.X,
-; EG-NEXT:     TRUNC * T0.W, PV.W,
-; EG-NEXT:     SETGE * T1.W, |PV.W|, T0.Y,
-; EG-NEXT:     CNDE T1.W, PV.W, 0.0, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.X, T0.W,
-; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
-; EG-NEXT:     ADD_INT * T1.W, PS, PV.W,
+; EG-NEXT:     TRUNC T0.W, PV.W,
+; EG-NEXT:     AND_INT * T1.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; EG-NEXT:     AND_INT T1.W, PS, literal.x,
-; EG-NEXT:     LSHL * T0.W, PV.W, literal.y,
+; EG-NEXT:     FLT_TO_UINT * T0.X, PV.W,
+; EG-NEXT:     AND_INT T0.W, PS, literal.x,
+; EG-NEXT:     LSHL * T1.W, T1.W, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), 3(4.203895e-45)
 ; EG-NEXT:     LSHL T0.X, PV.W, PS,
 ; EG-NEXT:     LSHL * T0.W, literal.x, PS,
@@ -1385,7 +1365,7 @@ define amdgpu_kernel void @urem24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 25, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 21, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1396,18 +1376,14 @@ define amdgpu_kernel void @urem24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     UINT_TO_FLT * T0.Y, T1.X,
-; EG-NEXT:     RECIP_IEEE * T0.Z, PS,
-; EG-NEXT:     UINT_TO_FLT * T0.W, T0.X,
-; EG-NEXT:     MUL_IEEE * T1.W, PS, T0.Z,
-; EG-NEXT:     TRUNC * T1.W, PV.W,
-; EG-NEXT:     MULADD_IEEE T0.W, -PV.W, T0.Y, T0.W,
-; EG-NEXT:     TRUNC * T1.W, PV.W,
-; EG-NEXT:     SETGE * T0.W, |PV.W|, T0.Y,
-; EG-NEXT:     CNDE T0.W, PV.W, 0.0, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.Y, T1.W,
-; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MULLO_INT * T0.Y, PV.W, T1.X,
+; EG-NEXT:     UINT_TO_FLT * T0.Z, T0.X,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.Y, T0.Y,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
+; EG-NEXT:     TRUNC * T0.W, PV.W,
+; EG-NEXT:     TRUNC * T0.W, PV.W,
+; EG-NEXT:     FLT_TO_UINT * T0.Y, PV.W,
+; EG-NEXT:     MULLO_INT * T0.Y, PS, T1.X,
 ; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
 ; EG-NEXT:     SUB_INT * T1.W, T0.X, PS,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)
@@ -1490,7 +1466,7 @@ define amdgpu_kernel void @urem24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @10, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 1 @6
-; EG-NEXT:    ALU 25, @11, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 21, @11, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
@@ -1501,18 +1477,14 @@ define amdgpu_kernel void @urem24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     UINT_TO_FLT * T0.Y, T1.X,
-; EG-NEXT:     RECIP_IEEE * T0.Z, PS,
-; EG-NEXT:     UINT_TO_FLT * T0.W, T0.X,
-; EG-NEXT:     MUL_IEEE * T1.W, PS, T0.Z,
-; EG-NEXT:     TRUNC * T1.W, PV.W,
-; EG-NEXT:     MULADD_IEEE T0.W, -PV.W, T0.Y, T0.W,
-; EG-NEXT:     TRUNC * T1.W, PV.W,
-; EG-NEXT:     SETGE * T0.W, |PV.W|, T0.Y,
-; EG-NEXT:     CNDE T0.W, PV.W, 0.0, literal.x,
-; EG-NEXT:     FLT_TO_UINT * T0.Y, T1.W,
-; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     ADD_INT * T0.W, PS, PV.W,
-; EG-NEXT:     MULLO_INT * T0.Y, PV.W, T1.X,
+; EG-NEXT:     UINT_TO_FLT * T0.Z, T0.X,
+; EG-NEXT:     ADD_INT T0.W, PS, 1,
+; EG-NEXT:     RECIP_IEEE * T0.Y, T0.Y,
+; EG-NEXT:     MUL_IEEE * T0.W, PV.W, PS,
+; EG-NEXT:     TRUNC * T0.W, PV.W,
+; EG-NEXT:     TRUNC * T0.W, PV.W,
+; EG-NEXT:     FLT_TO_UINT * T0.Y, PV.W,
+; EG-NEXT:     MULLO_INT * T0.Y, PS, T1.X,
 ; EG-NEXT:     AND_INT T0.W, KC0[2].Y, literal.x,
 ; EG-NEXT:     SUB_INT * T1.W, T0.X, PS,
 ; EG-NEXT:    3(4.203895e-45), 0(0.000000e+00)

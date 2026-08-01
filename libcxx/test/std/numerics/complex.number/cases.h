@@ -14,7 +14,9 @@
 #define CASES_H
 
 #include <cassert>
+#include <cmath>
 #include <complex>
+#include <limits>
 #include <type_traits>
 
 #include "test_macros.h"

@@ -97,6 +97,11 @@ MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
   return wrap(unwrap(context)->getOrLoadDialect(unwrap(name)));
 }
 
+MlirDialect mlirContextGetLoadedDialect(MlirContext context,
+                                        MlirStringRef name) {
+  return wrap(unwrap(context)->getLoadedDialect(unwrap(name)));
+}
+
 bool mlirContextIsRegisteredOperation(MlirContext context, MlirStringRef name) {
   return unwrap(context)->isOperationRegistered(unwrap(name));
 }
@@ -1216,6 +1221,16 @@ void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
   }
 
   oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
+}
+
+void mlirValueReplaceUsesWithIf(MlirValue of, MlirValue with,
+                                MlirOpOperandReplaceFilterCallback filter,
+                                void *userData) {
+  assert(filter && "expected non-null filter callback");
+  unwrap(of).replaceUsesWithIf(unwrap(with),
+                               [filter, userData](OpOperand &operand) -> bool {
+                                 return filter(wrap(&operand), userData);
+                               });
 }
 
 MlirLocation mlirValueGetLocation(MlirValue v) {

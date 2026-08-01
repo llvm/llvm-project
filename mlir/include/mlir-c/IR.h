@@ -140,6 +140,13 @@ mlirContextGetNumLoadedDialects(MlirContext context);
 MLIR_CAPI_EXPORTED MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
                                                            MlirStringRef name);
 
+/// Gets the dialect instance owned by the given context using the dialect
+/// namespace to identify it. If the dialect is not loaded by the context,
+/// returns null. Use mlirContextGetOrLoadDialect to load a dialect if it is
+/// registered with the context.
+MLIR_CAPI_EXPORTED MlirDialect mlirContextGetLoadedDialect(MlirContext context,
+                                                           MlirStringRef name);
+
 /// Set threading mode (must be set to false to mlir-print-ir-after-all).
 MLIR_CAPI_EXPORTED void mlirContextEnableMultithreading(MlirContext context,
                                                         bool enable);
@@ -1122,6 +1129,21 @@ MLIR_CAPI_EXPORTED void
 mlirValueReplaceAllUsesExcept(MlirValue of, MlirValue with,
                               intptr_t numExceptions,
                               MlirOperation *exceptions);
+
+/// Callback deciding whether a particular use should be replaced. It is passed
+/// the use as an MlirOpOperand (from which the owner operation, operand number
+/// and value can be queried) and the user-provided `userData`. Returns true to
+/// replace this use.
+typedef bool (*MlirOpOperandReplaceFilterCallback)(MlirOpOperand opOperand,
+                                                   void *userData);
+
+/// Replace uses of 'of' value with 'with' value, but only for the uses for
+/// which the `filter` callback returns true. `filter` must not be NULL; this is
+/// only checked by an assertion, i.e. in builds with assertions enabled.
+MLIR_CAPI_EXPORTED void
+mlirValueReplaceUsesWithIf(MlirValue of, MlirValue with,
+                           MlirOpOperandReplaceFilterCallback filter,
+                           void *userData);
 
 /// Gets the location of the value.
 MLIR_CAPI_EXPORTED MlirLocation mlirValueGetLocation(MlirValue v);

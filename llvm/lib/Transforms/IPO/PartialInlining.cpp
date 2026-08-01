@@ -29,6 +29,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -348,8 +349,10 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(
   BasicBlock *EntryBlock = &F.front();
 
   DominatorTree DT(F);
+  CycleInfo CI;
+  CI.compute(F);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(F, LI);
+  BranchProbabilityInfo BPI(F, CI);
   std::unique_ptr<BlockFrequencyInfo> ScopedBFI;
   BlockFrequencyInfo *BFI;
   if (!GetBFI) {
@@ -902,9 +905,11 @@ void PartialInlinerImpl::computeCallsiteToProfCountMap(
   auto ComputeCurrBFI = [&,this](Function *Caller) {
       // For the old pass manager:
       if (!GetBFI) {
-        DominatorTree DT(*Caller);
-        LoopInfo LI(DT);
-        BranchProbabilityInfo BPI(*Caller, LI);
+        CycleInfo CI;
+        CI.compute(*Caller);
+        LoopInfo LI;
+        LI.analyze(Caller);
+        BranchProbabilityInfo BPI(*Caller, CI);
         TempBFI.reset(new BlockFrequencyInfo(*Caller, BPI, LI));
         CurrentCallerBFI = TempBFI.get();
       } else {
@@ -1088,8 +1093,10 @@ bool PartialInlinerImpl::FunctionCloner::doMultiRegionFunctionOutlining() {
   DT.recalculate(*ClonedFunc);
 
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
+  CycleInfo CI;
+  CI.compute(*ClonedFunc);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*ClonedFunc, LI);
+  BranchProbabilityInfo BPI(*ClonedFunc, CI);
   ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
 
   // Cache and recycle the CodeExtractor analysis to avoid O(n^2) compile-time.
@@ -1163,8 +1170,10 @@ PartialInlinerImpl::FunctionCloner::doSingleRegionFunctionOutlining() {
   DT.recalculate(*ClonedFunc);
 
   // Manually calculate a BlockFrequencyInfo and BranchProbabilityInfo.
+  CycleInfo CI;
+  CI.compute(*ClonedFunc);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*ClonedFunc, LI);
+  BranchProbabilityInfo BPI(*ClonedFunc, CI);
   ClonedFuncBFI.reset(new BlockFrequencyInfo(*ClonedFunc, BPI, LI));
 
   // Gather up the blocks that we're going to extract.

@@ -4167,6 +4167,15 @@ bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
         .addReg(UndefValReg)
         .addReg(UndefExecReg);
 
+    Register PoisonUnshiftedIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SET_INACTIVE_B32),
+            PoisonUnshiftedIdxReg)
+        .addImm(0)
+        .addReg(IdxReg)
+        .addImm(0)
+        .addReg(UndefValReg)
+        .addReg(UndefExecReg);
+
     // Get permutation of each half, then we'll select which one to use
     Register SameSidePermReg = MRI->createVirtualRegister(DstRC);
     BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), SameSidePermReg)
@@ -4200,7 +4209,7 @@ bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
     Register XORReg = MRI->createVirtualRegister(DstRC);
     BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_XOR_B32_e64), XORReg)
         .addReg(ThreadIDReg)
-        .addReg(PoisonIdxReg);
+        .addReg(PoisonUnshiftedIdxReg);
 
     Register ANDReg = MRI->createVirtualRegister(DstRC);
     BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_AND_B32_e64), ANDReg)
@@ -7599,12 +7608,6 @@ void AMDGPUInstructionSelector::renderExtractCpolSetGLC(
                         (AMDGPU::isGFX12Plus(STI) ? AMDGPU::CPol::ALL
                                                   : AMDGPU::CPol::ALL_pregfx12);
   MIB.addImm(Cpol | AMDGPU::CPol::GLC);
-}
-
-void AMDGPUInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
-                                                 const MachineInstr &MI,
-                                                 int OpIdx) const {
-  MIB.addFrameIndex(MI.getOperand(1).getIndex());
 }
 
 void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,

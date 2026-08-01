@@ -11,6 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef MACHINE_MODULE_PASS
+#define MACHINE_MODULE_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_MODULE_PASS("wasm-mclower-prepass", WebAssemblyMCLowerPrePass())
+#undef MACHINE_MODULE_PASS
+
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
@@ -29,20 +35,38 @@ FUNCTION_PASS("wasm-reduce-to-any-all-true", WebAssemblyReduceToAnyAllTruePass(*
 FUNCTION_PASS("wasm-ref-type-mem2local", WebAssemblyRefTypeMem2LocalPass())
 #undef FUNCTION_PASS
 
+#ifndef MACHINE_FUNCTION_ANALYSIS
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_ANALYSIS("wasm-exception-info", WebAssemblyExceptionAnalysis())
+#undef MACHINE_FUNCTION_ANALYSIS
+
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("wasm-argument-move", WebAssemblyArgumentMovePass())
+MACHINE_FUNCTION_PASS("wasm-cfg-sort", WebAssemblyCFGSortPass())
+MACHINE_FUNCTION_PASS("wasm-cfg-stackify", WebAssemblyCFGStackifyPass())
 MACHINE_FUNCTION_PASS("wasm-clean-code-after-trap",
                       WebAssemblyCleanCodeAfterTrapPass())
+MACHINE_FUNCTION_PASS("wasm-debug-fixup", WebAssemblyDebugFixupPass())
+MACHINE_FUNCTION_PASS("wasm-explicit-locals", WebAssemblyExplicitLocalsPass())
 MACHINE_FUNCTION_PASS("wasm-isel", WebAssemblyISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("wasm-fix-br-table-defaults",
                       WebAssemblyFixBrTableDefaultsPass())
 MACHINE_FUNCTION_PASS("wasm-fix-irreducible-control-flow",
                       WebAssemblyFixIrreducibleControlFlowPass())
 MACHINE_FUNCTION_PASS("wasm-late-eh-prepare", WebAssemblyLateEHPreparePass())
+MACHINE_FUNCTION_PASS("wasm-lower-br-unless", WebAssemblyLowerBrUnlessPass())
+MACHINE_FUNCTION_PASS("wasm-mem-intrinsic-results", WebAssemblyMemIntrinsicResultsPass())
 MACHINE_FUNCTION_PASS("wasm-nullify-dbg-value-lists",
                       WebAssemblyNullifyDebugValueListsPass())
+MACHINE_FUNCTION_PASS("wasm-optimize-live-intervals",
+                      WebAssemblyOptimizeLiveIntervalsPass())
+MACHINE_FUNCTION_PASS("wasm-peephole", WebAssemblyPeepholePass())
+MACHINE_FUNCTION_PASS("wasm-reg-coloring", WebAssemblyRegColoringPass())
+MACHINE_FUNCTION_PASS("wasm-reg-numbering", WebAssemblyRegNumberingPass())
+MACHINE_FUNCTION_PASS("wasm-reg-stackify", WebAssemblyRegStackifyPass(getOptLevel()))
 MACHINE_FUNCTION_PASS("wasm-replace-phys-regs", WebAssemblyReplacePhysRegsPass())
 MACHINE_FUNCTION_PASS("wasm-set-p2align-operands",
                       WebAssemblySetP2AlignOperandsPass())

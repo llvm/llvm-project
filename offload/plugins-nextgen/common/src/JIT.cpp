@@ -135,6 +135,14 @@ JITEngine::JITEngine(Triple::ArchType TA) : TT(Triple::getArchTypeName(TA)) {
     LLVMInitializeAMDGPUAsmPrinter();
   }
 #endif
+#ifdef LIBOMPTARGET_JIT_SPIRV
+  if (TT.isSPIRV()) {
+    LLVMInitializeSPIRVTargetInfo();
+    LLVMInitializeSPIRVTarget();
+    LLVMInitializeSPIRVTargetMC();
+    LLVMInitializeSPIRVAsmPrinter();
+  }
+#endif
 }
 
 void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,

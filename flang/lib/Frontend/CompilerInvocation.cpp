@@ -174,6 +174,23 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   opts.DebugInfoForProfiling =
       args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_compress_debug_sections_EQ)) {
+    auto type = llvm::StringSwitch<std::optional<llvm::DebugCompressionType>>(
+                    a->getValue())
+                    .Case("none", llvm::DebugCompressionType::None)
+                    .Case("zlib", llvm::DebugCompressionType::Zlib)
+                    .Case("zstd", llvm::DebugCompressionType::Zstd)
+                    .Default(std::nullopt);
+    if (type) {
+      opts.setCompressDebugSections(*type);
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+      return false;
+    }
+  }
+
   return true;
 }
 
