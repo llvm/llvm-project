@@ -61,6 +61,8 @@ int linux_file_close(File *f) {
     auto result = linux_syscalls::close(lf->get_fd());
     if (!result)
       retval = result.error();
+  } else {
+    retval = EBADF;
   }
   delete lf;
   return retval;
@@ -192,7 +194,7 @@ int get_fileno(File *f) {
   return lf->get_fd();
 }
 
-int reopenfile(File *f, const char *path, const char *mode) {
+int reopenfile_unlocked(File *f, const char *path, const char *mode) {
   f->flush_unlocked();
 
   auto modeflags = File::mode_flags(mode);
@@ -307,6 +309,18 @@ int reopenfile(File *f, const char *path, const char *mode) {
       return seek_result.error();
   }
   return 0;
+}
+
+int reopenfile(File *f, const char *path, const char *mode) {
+  f->lock();
+  int ret = reopenfile_unlocked(f, path, mode);
+  f->unlock();
+
+  if (ret != 0) {
+    f->close();
+  }
+
+  return ret;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

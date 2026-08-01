@@ -26,12 +26,11 @@ LLVM_LIBC_FUNCTION(::FILE *, freopen,
                    (const char *__restrict filename,
                     const char *__restrict mode, ::FILE *__restrict stream)) {
   LIBC_CRASH_ON_NULLPTR(stream);
+  LIBC_CRASH_ON_NULLPTR(mode);
 
   auto *file = reinterpret_cast<File *>(stream);
 
-  file->lock();
   int error = reopenfile(file, filename, mode);
-  file->unlock();
 
   if (error != 0) {
     libc_errno = error;

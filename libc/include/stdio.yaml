@@ -151,9 +151,9 @@ functions:
       - stdc
     return_type: FILE *
     arguments:
-      - type: const char *
-      - type: const char *
-      - type: FILE *
+      - type: const char *__restrict
+      - type: const char *__restrict
+      - type: FILE *__restrict
   - name: fopencookie
     standards:
       - gnu
