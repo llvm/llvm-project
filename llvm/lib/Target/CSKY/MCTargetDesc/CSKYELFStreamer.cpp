@@ -177,7 +177,8 @@ void CSKYELFStreamer::EmitMappingSymbol(StringRef Name) {
   Symbol->setBinding(ELF::STB_LOCAL);
 }
 
-void CSKYTargetELFStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
+void CSKYTargetELFStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
+                                                 bool HardFloatABI) {
   StringRef CPU = STI.getCPU();
   CSKY::ArchKind ArchID = CSKY::parseCPUArch(CPU);
 
@@ -309,8 +310,11 @@ void CSKYTargetELFStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
                         STI.hasFeature(CSKY::FeatureFPUV3_SF) ||
                         STI.hasFeature(CSKY::FeatureFPUV3_DF);
 
-  if (hasAnyFloatExt && STI.hasFeature(CSKY::ModeHardFloat) &&
-      STI.hasFeature(CSKY::ModeHardFloatABI))
+  // The hard-float *ABI* (FP values in FP registers at call boundaries) is
+  // selected by the "float-abi" module flag, resolved by the caller; it does
+  // not depend on ModeHardFloat, which only distinguishes the soft-float ABI
+  // that still uses hard-float instructions (SOFTFP) from pure soft float.
+  if (hasAnyFloatExt && HardFloatABI)
     emitAttribute(CSKYAttrs::CSKY_FPU_ABI, CSKYAttrs::FPU_ABI_HARD);
   else if (hasAnyFloatExt && STI.hasFeature(CSKY::ModeHardFloat))
     emitAttribute(CSKYAttrs::CSKY_FPU_ABI, CSKYAttrs::FPU_ABI_SOFTFP);
