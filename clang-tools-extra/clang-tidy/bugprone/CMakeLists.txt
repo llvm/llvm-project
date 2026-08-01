@@ -15,7 +15,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   BugproneTidyModule.cpp
   CapturingThisInMemberVariableCheck.cpp
   CastingThroughVoidCheck.cpp
-  CerrnoCheck.cpp
+  CustomErrnoDeclarationCheck.cpp
   ChainedComparisonCheck.cpp
   CommandProcessorCheck.cpp
   ComparePointerToMemberVirtualFunctionCheck.cpp

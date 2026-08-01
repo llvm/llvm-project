@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CerrnoCheck.h"
+#include "CustomErrnoDeclarationCheck.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
-void CerrnoCheck::registerMatchers(MatchFinder *Finder) {
+void CustomErrnoDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(varDecl(hasType(asString("int")), hasName("errno"), hasExternalFormalLinkage()).bind("errnoDecl"), this);
 }
 
-void CerrnoCheck::check(const MatchFinder::MatchResult &Result) {
+void CustomErrnoDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<VarDecl>("errnoDecl"); // NULL?
   const SourceManager &SM = *Result.SourceManager;
   const auto Location = MatchedDecl->getLocation();
