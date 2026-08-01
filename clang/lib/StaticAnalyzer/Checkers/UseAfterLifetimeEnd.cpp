@@ -121,11 +121,8 @@ PathDiagnosticPieceRef UseAfterLifetimeEndBRVisitor::createSourcePiece(
 
   PathDiagnosticLocation Pos;
 
-  if (Arg != nullptr)
-    Pos =
-        PathDiagnosticLocation(Arg, BRC.getSourceManager(), N->getStackFrame());
-  else
-    Pos = PathDiagnosticLocation(S, BRC.getSourceManager(), N->getStackFrame());
+  Pos = PathDiagnosticLocation(Arg ? Arg : S, BRC.getSourceManager(),
+                               N->getStackFrame());
 
   auto Note = std::make_shared<PathDiagnosticEventPiece>(Pos, Message, true);
   if (SourceRange Range = getRegionDeclRange(SourceRegion); Range.isValid())
