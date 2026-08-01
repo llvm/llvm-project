@@ -25,6 +25,7 @@
 #include "test_execution_policies.h"
 #include "test_iterators.h"
 #include "test_macros.h"
+#include "type_algorithms.h"
 #include "runway_sample.h"
 
 EXECUTION_POLICY_SFINAE_TEST(is_sorted_until);
