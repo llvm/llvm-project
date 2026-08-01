@@ -1,3 +1,53 @@
+add_custom_target(libc_semaphore_unittests)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
+
+add_libc_test(
+  sem_test
+  SUITE
+    libc_semaphore_unittests
+  SRCS
+    sem_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.hdr.time_macros
+    libc.hdr.types.sem_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.time.clock_gettime
+    libc.src.errno.errno
+    libc.src.semaphore.sem_clockwait
+    libc.src.semaphore.sem_destroy
+    libc.src.semaphore.sem_getvalue
+    libc.src.semaphore.sem_init
+    libc.src.semaphore.sem_post
+    libc.src.semaphore.sem_timedwait
+    libc.src.semaphore.sem_trywait
+    libc.src.semaphore.sem_wait
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  sem_open_test
+  SUITE
+    libc_semaphore_unittests
+  SRCS
+    sem_open_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.semaphore_macros
+    libc.hdr.types.sem_t
+    libc.src.errno.errno
+    libc.src.semaphore.sem_close
+    libc.src.semaphore.sem_getvalue
+    libc.src.semaphore.sem_open
+    libc.src.semaphore.sem_post
+    libc.src.semaphore.sem_unlink
+    libc.src.semaphore.sem_wait
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

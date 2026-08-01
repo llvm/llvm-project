@@ -4,12 +4,13 @@ add_header_library(
     semaphore.h
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.limits_macros
     libc.hdr.time_macros
     libc.hdr.types.clockid_t
     libc.hdr.types.mode_t
     libc.hdr.types.struct_timespec
+    libc.include.llvm-libc-types.sem_t
     libc.src.__support.CPP.atomic
-    libc.src.__support.CPP.limits
     libc.src.__support.error_or
     libc.src.__support.libc_assert
     libc.src.__support.threads.futex_utils
@@ -41,4 +42,155 @@ add_object_library(
     libc.src.__support.OSUtil.linux.syscall_wrappers.unlink
     libc.src.string.memory_utils.inline_memcpy
     libc.src.sys.mman.linux.shm_common
+)
+
+add_entrypoint_object(
+  sem_init
+  SRCS
+    sem_init.cpp
+  HDRS
+    ../sem_init.h
+  DEPENDS
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.hdr.types.sem_t
+    libc.src.__support.CPP.new
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_destroy
+  SRCS
+    sem_destroy.cpp
+  HDRS
+    ../sem_destroy.h
+  DEPENDS
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.types.sem_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_getvalue
+  SRCS
+    sem_getvalue.cpp
+  HDRS
+    ../sem_getvalue.h
+  DEPENDS
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.types.sem_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_open
+  SRCS
+    sem_open.cpp
+  HDRS
+    ../sem_open.h
+  DEPENDS
+    .named_semaphore
+    .semaphore
+    libc.hdr.fcntl_macros
+    libc.hdr.semaphore_macros
+    libc.hdr.types.mode_t
+    libc.hdr.types.sem_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_close
+  SRCS
+    sem_close.cpp
+  HDRS
+    ../sem_close.h
+  DEPENDS
+    .named_semaphore
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.types.sem_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_unlink
+  SRCS
+    sem_unlink.cpp
+  HDRS
+    ../sem_unlink.h
+  DEPENDS
+    .named_semaphore
+    .semaphore
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_post
+  SRCS
+    sem_post.cpp
+  HDRS
+    ../sem_post.h
+  DEPENDS
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.types.sem_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_wait
+  SRCS
+    sem_wait.cpp
+  HDRS
+    ../sem_wait.h
+  DEPENDS
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.types.sem_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_trywait
+  SRCS
+    sem_trywait.cpp
+  HDRS
+    ../sem_trywait.h
+  DEPENDS
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.types.sem_t
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_timedwait
+  SRCS
+    sem_timedwait.cpp
+  HDRS
+    ../sem_timedwait.h
+  DEPENDS
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.types.sem_t
+    libc.hdr.types.struct_timespec
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sem_clockwait
+  SRCS
+    sem_clockwait.cpp
+  HDRS
+    ../sem_clockwait.h
+  DEPENDS
+    .semaphore
+    libc.hdr.errno_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.sem_t
+    libc.hdr.types.struct_timespec
+    libc.src.errno.errno
 )

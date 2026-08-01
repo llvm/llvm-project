@@ -10,12 +10,13 @@
 #define LLVM_LIBC_SRC_SEMAPHORE_LINUX_SEMAPHORE_H
 
 #include "hdr/errno_macros.h"
+#include "hdr/limits_macros.h"
 #include "hdr/time_macros.h"
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/mode_t.h"
 #include "hdr/types/struct_timespec.h"
+#include "include/llvm-libc-types/sem_t.h"
 #include "src/__support/CPP/atomic.h"
-#include "src/__support/CPP/limits.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_assert.h"
@@ -23,10 +24,6 @@
 #include "src/__support/time/abs_timeout.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
-// Define SEM_VALUE_MAX as INT_MAX
-constexpr unsigned int SEM_VALUE_MAX =
-    static_cast<unsigned int>(cpp::numeric_limits<int>::max());
 
 class Semaphore {
   Futex value;
@@ -185,6 +182,14 @@ public:
   // removes a named semaphore from the filesystem.
   static int unlink(const char *name);
 };
+
+// The public sem_t mirrors the layout of the internal Semaphore class.
+// At entrypoints sem_t object operate through a reinterpret_cast,
+// so they must be the same layout.
+static_assert(sizeof(Semaphore) == sizeof(sem_t) &&
+                  alignof(Semaphore) == alignof(sem_t),
+              "The public sem_t type must be of the same size and alignment as "
+              "the internal semaphore type.");
 
 } // namespace LIBC_NAMESPACE_DECL
 
