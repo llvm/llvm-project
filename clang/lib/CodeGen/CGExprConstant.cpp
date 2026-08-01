@@ -1089,7 +1089,7 @@ tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
   llvm::Constant *C = emitter.tryEmitForInitializer(E->getInitializer(),
                                                     addressSpace, E->getType());
   if (!C) {
-    assert(!E->isFileScope() && !E->hasGlobalStorage() &&
+    assert(!E->hasGlobalStorage() &&
            "global compound literal did not have constant initializer!");
     return ConstantAddress::invalid();
   }

@@ -659,7 +659,7 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
 
   case Stmt::CompoundLiteralExprClass: {
     if (auto *CLE = dyn_cast<CompoundLiteralExpr>(Init)) {
-      if (!CLE->isFileScope() && !CLE->hasGlobalStorage())
+      if (!CLE->hasGlobalStorage())
         Visit(Path, Local(CLE), RK);
     }
     break;
