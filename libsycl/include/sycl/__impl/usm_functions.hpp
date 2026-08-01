@@ -40,26 +40,28 @@ _LIBSYCL_EXPORT void *malloc_device(std::size_t numBytes,
                                     const context &syclContext,
                                     const property_list &propList = {});
 
+/// Forward declaration of aligned_alloc_device for use in malloc_device.
+template <typename T>
+T *aligned_alloc_device(std::size_t alignment, std::size_t count,
+                        const device &syclDevice, const context &syclContext,
+                        const property_list &propList = {});
+
 /// Allocates device USM.
 ///
 /// \param count the number of elements of type T to allocate.
 /// \param syclDevice the device to use for the allocation.
-/// \param syclContext a context containing syclDevice or its parent device if
-/// syclDevice is a subdevice.
+/// \param syclContext a context containing syclDevice or its parent device
+/// if syclDevice is a subdevice.
 /// \param propList the list of properties for the allocation.
 /// \return a pointer to the newly allocated memory, which is allocated on
-/// syclDevice and which must eventually be deallocated with sycl::free in order
-/// to avoid a memory leak.
+/// syclDevice and which must eventually be deallocated with sycl::free in
+/// order to avoid a memory leak.
 template <typename T>
 T *malloc_device(std::size_t count, const device &syclDevice,
                  const context &syclContext,
                  const property_list &propList = {}) {
-  // TODO: to rewrite with aligned_malloc_device once it's supported in
-  // liboffload.
-  // Why does this need to be rewrited to use aligned version when there is
-  // explicit aligned_malloc_device ?
-  return static_cast<T *>(
-      malloc_device(count * sizeof(T), syclDevice, syclContext, propList));
+  return aligned_alloc_device<T>(alignof(T), count, syclDevice, syclContext,
+                                 propList);
 }
 
 /// Allocates device USM.
@@ -119,7 +121,7 @@ void *aligned_alloc_device(std::size_t alignment, std::size_t numBytes,
 template <typename T>
 T *aligned_alloc_device(std::size_t alignment, std::size_t count,
                         const device &syclDevice, const context &syclContext,
-                        const property_list &propList = {}) {
+                        const property_list &propList) {
   return static_cast<T *>(aligned_alloc_device(
       alignment, count * sizeof(T), syclDevice, syclContext, propList));
 }
@@ -151,8 +153,8 @@ template <typename T>
 T *aligned_alloc_device(std::size_t alignment, std::size_t count,
                         const queue &syclQueue,
                         const property_list &propList = {}) {
-  return alligned_alloc_device<T>(alignment, count, syclQueue.get_device(),
-                                  syclQueue.get_context(), propList);
+  return aligned_alloc_device<T>(alignment, count, syclQueue.get_device(),
+                                 syclQueue.get_context(), propList);
 }
 
 /// @}

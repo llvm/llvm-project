@@ -10,6 +10,7 @@
 
 #include <detail/device_impl.hpp>
 #include <detail/offload/offload_utils.hpp>
+#include <sycl/__impl/detail/common.hpp>
 
 #include <OffloadAPI.h>
 
@@ -176,7 +177,10 @@ void *malloc(std::size_t numBytes, const queue &syclQueue, usm::alloc kind,
 void *aligned_alloc(std::size_t alignment, std::size_t numBytes,
                     const device &syclDevice, const context &syclContext,
                     usm::alloc kind, const property_list &propList) {
-  // TODO: this is the important function to implement
+  if (alignment == 0 || !detail::isPowerOf2(alignment))
+    throw exception(make_error_code(errc::invalid),
+                    "Alignment must be a non-zero power of two");
+
   auto ContextDevices = syclContext.get_devices();
   assert(!ContextDevices.empty() && "Context can't be created without device");
   if (std::none_of(ContextDevices.begin(), ContextDevices.end(),
