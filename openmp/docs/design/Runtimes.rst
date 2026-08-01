@@ -741,6 +741,7 @@ variables is defined below.
     * ``LIBOMPTARGET_JIT_REPLACEMENT_MODULE=<in:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
     * ``LIBOMPTARGET_JIT_POST_OPT_IR_MODULE=<out:Filename> (LLVM-IR file)``
+    * ``LIBOMPTARGET_JIT_SAVE_IMAGE_FILENAME=<out:Filename> (device image file)``
     * ``LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT=<Num> (default: 32)``
     * ``LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT=[TRUE/FALSE] (default TRUE)``
     * ``OFFLOAD_TRACK_ALLOCATION_TRACES=[TRUE/FALSE] (default FALSE)``
@@ -1162,6 +1163,14 @@ which the LLVM-IR module is written. The module can be the analyzed, and
 transformed and loaded back into the JIT pipeline via
 :ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
 
+.. _libomptarget_jit_save_image_filename:
+
+LIBOMPTARGET_JIT_SAVE_IMAGE_FILENAME
+""""""""""""""""""""""""""""""""""""
+
+This environment variable can be used to save the device image produced by the
+device JIT after target-specific post-processing. The value is expected to be a
+filename into which the binary device image is written.
 
 LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT
 """""""""""""""""""""""""""""""""""""""""""
@@ -1253,22 +1262,6 @@ others:
   (default 1).
 * ``--num-threads=N``: Overrides the number of threads per team.
 * ``--num-teams=N``: Overrides the number of teams.
-* ``--load-bitcode``: Loads the recorded IR bitcode image instead of the
-  recorded device image. The bitcode is JIT compiled for the selected device.
-* ``--save-jit-image``: Requires ``--load-bitcode`` and saves the resulting
-  JIT-compiled device image alongside the recorded bitcode as an ``.image``
-  file.
-
-For example, use the following command after modifying a recorded bitcode
-image. It JIT compiles the bitcode once, saves the executable device image, and
-replays the kernel:
-
-.. code-block:: console
-
-    $ llvm-omp-kernel-replay --load-bitcode --save-jit-image records/5681756204876336171_6652394454608725381.json
-
-Subsequent replays can omit both options and load the saved ``.image`` file
-directly, avoiding another JIT compilation.
 
 If ``--num-threads`` or ``--num-teams`` are not specified, the replay
 automatically defaults to the values used during the original recorded run. The

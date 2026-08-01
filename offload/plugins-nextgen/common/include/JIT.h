@@ -103,8 +103,8 @@ private:
       StringEnvar("LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE");
   StringEnvar PostOptIRModuleFileName =
       StringEnvar("LIBOMPTARGET_JIT_POST_OPT_IR_MODULE");
-  StringEnvar PostOptSaveImageFileName =
-      StringEnvar("LIBOMPTARGET_JIT_POST_OPT_SAVE_IMAGE");
+  StringEnvar SaveImageFileName =
+      StringEnvar("LIBOMPTARGET_JIT_SAVE_IMAGE_FILENAME");
   UInt32Envar JITOptLevel = UInt32Envar("LIBOMPTARGET_JIT_OPT_LEVEL", 3);
   BoolEnvar JITSkipOpt = BoolEnvar("LIBOMPTARGET_JIT_SKIP_OPT", false);
 };

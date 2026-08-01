@@ -294,9 +294,9 @@ JITEngine::process(StringRef Image, target::plugin::GenericDeviceTy &Device) {
 
   auto ImageOrError = compile(Image, ComputeUnitKind, PostProcessing);
 
-  if (PostOptSaveImageFileName.isPresent() && ImageOrError) {
+  if (SaveImageFileName.isPresent() && ImageOrError) {
     std::error_code EC;
-    raw_fd_ostream OS(PostOptSaveImageFileName.get(), EC);
+    raw_fd_ostream OS(SaveImageFileName.get(), EC);
     if (EC)
       return createStringError(error::ErrorCode::HOST_IO,
                                "saving JIT image file\n");

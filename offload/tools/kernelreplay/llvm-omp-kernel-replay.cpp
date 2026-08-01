@@ -73,12 +73,6 @@ static cl::opt<bool>
                    cl::desc("Load the recorded IR bitcode image file."),
                    cl::init(false), cl::cat(ReplayOptions));
 
-static cl::opt<bool>
-    SaveJITImageOpt("save-jit-image",
-                    cl::desc("Save the JIT-compiled image next to the bitcode "
-                             "image file."),
-                    cl::init(false), cl::cat(ReplayOptions));
-
 template <typename... ArgsTy>
 Error createErr(const char *ErrFmt, ArgsTy &&...Args) {
   return llvm::createStringError(llvm::inconvertibleErrorCode(), ErrFmt,
@@ -312,16 +306,6 @@ Error replayKernel() {
 
   // Load the device image file.
   Filepath.replace_extension(LoadBitcodeOpt ? "bc" : "image");
-  if (SaveJITImageOpt) {
-    if (!LoadBitcodeOpt)
-      return createErr("--save-jit-image requires --load-bitcode");
-
-    std::filesystem::path JITImageFilepath = Filepath;
-    JITImageFilepath.replace_extension("image");
-    if (setenv("LIBOMPTARGET_JIT_POST_OPT_SAVE_IMAGE", JITImageFilepath.c_str(),
-               /*Replace=*/1) != 0)
-      return createErr("failed to configure JIT image output file");
-  }
   auto ImageBufferOrErr =
       MemoryBuffer::getFile(Filepath.c_str(), /*isText=*/false,
                             /*RequiresNullTerminator=*/false);
