@@ -54,7 +54,7 @@ on:
       - closed
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.release-version || github.event.pull_request.number }}
+  group: release-documentation-${{ inputs.release-version || github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
