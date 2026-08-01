@@ -1929,7 +1929,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
 
   // If the index may be poison, check if we can insert a freeze before the
   // range of the index is restricted.
-  Value *IdxBase;
+  Value *IdxBase = nullptr;
   ConstantInt *CI;
   if (match(Idx, m_And(m_Value(IdxBase), m_ConstantInt(CI)))) {
     IdxRange = IdxRange.binaryAnd(CI->getValue());
@@ -1937,7 +1937,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
     IdxRange = IdxRange.urem(CI->getValue());
   }
 
-  if (ValidIndices.contains(IdxRange))
+  if (IdxBase && ValidIndices.contains(IdxRange))
     return ScalarizationResult::safeWithFreeze(IdxBase);
   return ScalarizationResult::unsafe();
 }
@@ -2086,7 +2086,7 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
   if (!TTI.allowVectorElementIndexingUsingGEP())
     return false;
 
-  DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
+  DenseMap<Instruction *, ScalarizationResult> NeedFreeze;
   llvm::scope_exit FailureGuard([&]() {
     // If the transform is aborted, discard the ScalarizationResults.
     for (auto &Pair : NeedFreeze)
@@ -2106,7 +2106,8 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     if (ScalarIdx.isUnsafe())
       return false;
     if (ScalarIdx.isSafeWithFreeze()) {
-      NeedFreeze.try_emplace(UI, ScalarIdx);
+      NeedFreeze.try_emplace(cast<Instruction>(UI->getIndexOperand()),
+                             ScalarIdx);
       ScalarIdx.discard();
     }
 
@@ -2140,9 +2141,11 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     Value *Idx = EI->getIndexOperand();
 
     // Insert 'freeze' for poison indexes.
-    auto It = NeedFreeze.find(EI);
-    if (It != NeedFreeze.end())
+    auto It = NeedFreeze.find(cast<Instruction>(Idx));
+    if (It != NeedFreeze.end()) {
       It->second.freeze(Builder, *cast<Instruction>(Idx));
+      NeedFreeze.erase(It);
+    }
 
     Builder.SetInsertPoint(EI);
     Value *GEP =
