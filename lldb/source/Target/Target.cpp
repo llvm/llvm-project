@@ -75,6 +75,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ThreadPool.h"
 
@@ -798,15 +799,20 @@ lldb::BreakpointSP Target::CreateScriptedBreakpoint(
         shared_from_this());
   }
 
-  BreakpointResolverSP resolver_sp(new BreakpointResolverScripted(
-      nullptr, class_name, depth, StructuredDataImpl(extra_args_sp)));
-  return CreateBreakpoint(filter_sp, resolver_sp, internal, false, true);
+  BreakpointResolverSP resolver_sp =
+      std::make_shared<BreakpointResolverScripted>(
+          nullptr, class_name, depth, StructuredDataImpl(extra_args_sp));
+  return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
+                          true, creation_error);
 }
 
 BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
                                       BreakpointResolverSP &resolver_sp,
                                       bool internal, bool request_hardware,
-                                      bool resolve_indirect_symbols) {
+                                      bool resolve_indirect_symbols,
+                                      Status *creation_error) {
+  if (creation_error)
+    creation_error->Clear();
   BreakpointSP bp_sp;
   if (filter_sp && resolver_sp) {
     // Now check whether there are any "Breakpoint Overrides" registered, and
@@ -822,6 +828,13 @@ BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
     bp_sp.reset(new Breakpoint(*this, filter_sp, resolver_sp, hardware,
                                resolve_indirect_symbols));
     resolver_sp->SetBreakpoint(bp_sp);
+    if (auto *scripted_resolver =
+            llvm::dyn_cast<BreakpointResolverScripted>(resolver_sp.get());
+        scripted_resolver && scripted_resolver->GetError().Fail()) {
+      if (creation_error)
+        *creation_error = scripted_resolver->GetError().Clone();
+      return {};
+    }
     AddBreakpoint(bp_sp, internal);
   }
   return bp_sp;

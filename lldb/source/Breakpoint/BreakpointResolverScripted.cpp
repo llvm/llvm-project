@@ -49,9 +49,6 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
     return;
   }
 
-  if (m_class_name.empty())
-    return;
-
   if (!breakpoint_sp)
     return;
 
@@ -62,6 +59,11 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
 
 void BreakpointResolverScripted::CreateImplementationIfNeeded(
     Target &target, BreakpointSP breakpoint_sp) {
+  if (m_class_name.empty()) {
+    m_error = Status::FromErrorString("scripted breakpoint class is empty");
+    return;
+  }
+
   if (m_interface_sp) {
     if (!m_breakpoint_sent && breakpoint_sp) {
       m_interface_sp->SetBreakpoint(breakpoint_sp);
@@ -72,8 +74,11 @@ void BreakpointResolverScripted::CreateImplementationIfNeeded(
 
   ScriptInterpreter *script_interp =
       target.GetDebugger().GetScriptInterpreter();
-  if (!script_interp)
+  if (!script_interp) {
+    m_error = Status::FromErrorString(
+        "scripted breakpoint requires a script interpreter");
     return;
+  }
 
   if (!m_interface_sp)
     m_interface_sp = script_interp->CreateScriptedBreakpointInterface();

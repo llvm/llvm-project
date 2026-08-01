@@ -42,6 +42,48 @@ class TestScriptedResolver(TestBase):
         self.build()
         self.do_test_copy_from_dummy_target()
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    def test_scripted_resolver_creation(self):
+        self.build()
+        target = self.make_target_and_import()
+        extra_args = self.make_extra_args()
+        module_list = lldb.SBFileSpecList()
+        file_list = lldb.SBFileSpecList()
+        initial_count = target.GetNumBreakpoints()
+
+        failed = target.BreakpointCreateFromScript(
+            "resolver.DoesNotExist", extra_args, module_list, file_list, False
+        )
+        self.assertFalse(failed.IsValid())
+        self.assertEqual(initial_count, target.GetNumBreakpoints())
+
+        self.expect(
+            "breakpoint set -P resolver.DoesNotExist",
+            error=True,
+            substrs=[
+                "Error creating scripted breakpoint",
+                "Could not find script class: resolver.DoesNotExist",
+            ],
+        )
+        self.assertEqual(initial_count, target.GetNumBreakpoints())
+
+        error = lldb.SBError()
+        target.AddBreakpointOverride(
+            "resolver.OverrideResolver",
+            "scripted resolver override",
+            lldb.eResolverPython,
+            extra_args,
+            error,
+        )
+        self.assertSuccess(error)
+
+        overridden = target.BreakpointCreateFromScript(
+            "resolver.DoesNotExist", extra_args, module_list, file_list, True
+        )
+        self.assertTrue(overridden.IsValid())
+        self.assertTrue(overridden.IsHardware())
+        self.assertEqual(initial_count + 1, target.GetNumBreakpoints())
+
     def make_target_and_import(self):
         target = self.make_target()
         self.import_resolver_script()

@@ -945,7 +945,8 @@ public:
   lldb::BreakpointSP CreateBreakpoint(lldb::SearchFilterSP &filter_sp,
                                       lldb::BreakpointResolverSP &resolver_sp,
                                       bool internal, bool request_hardware,
-                                      bool resolve_indirect_symbols);
+                                      bool resolve_indirect_symbols,
+                                      Status *creation_error = nullptr);
 
   // Use this to create a watchpoint:
   lldb::WatchpointSP CreateWatchpoint(lldb::addr_t addr, size_t size,

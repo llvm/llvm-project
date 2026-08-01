@@ -43,6 +43,8 @@ public:
 
   lldb::SearchDepth GetDepth() override;
 
+  const Status &GetError() const { return m_error; }
+
   void GetDescription(Stream *s) override;
 
   lldb::BreakpointLocationSP WasHit(lldb::StackFrameSP frame_sp,
