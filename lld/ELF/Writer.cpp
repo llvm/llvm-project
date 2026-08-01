@@ -1755,7 +1755,7 @@ static bool mayGrowLate(Ctx &ctx, SyntheticSection *sec) {
   if (ctx.in.relrAuthDyn && ctx.in.relrAuthDyn->isNeeded())
     return true;
   // PPC64PILongBranchThunk adds a relative relocation for its .branch_lt entry.
-  return ctx.in.ppc64LongBranchTarget && ctx.arg.isPic;
+  return ctx.in.ppc64LongBranchTarget && ctx.arg.picThunk;
 }
 
 // In order to allow users to manipulate linker-synthesized sections,

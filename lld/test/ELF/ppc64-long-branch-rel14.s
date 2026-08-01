@@ -11,14 +11,19 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
 # RUN: ld.lld -pie -T %t.lds %t.o -o %t
-# RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC-PIE %s
+# RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC-PI -DOFF0=a0b0 -DOFF1=a0b8 %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+
+## --pic-veneer selects PI long-branch thunks in a non-PIC link.
+# RUN: ld.lld --pic-veneer -T %t.lds %t.o -o %t
+# RUN: llvm-readelf -r %t | FileCheck --check-prefix=SEC-PI -DOFF0=a010 -DOFF1=a018 %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # SEC: There are no relocations in this file.
 
-# SEC-PIE:      Relocation section '.rela.dyn' {{.*}} contains 2 entries:
-# SEC-PIE:      000000000000a0b0 {{[0-9a-f]+}} R_PPC64_RELATIVE a004
-# SEC-PIE-NEXT: 000000000000a0b8 {{[0-9a-f]+}} R_PPC64_RELATIVE a010
+# SEC-PI:      Relocation section '.rela.dyn' {{.*}} contains 2 entries:
+# SEC-PI:      {{0+}}[[OFF0]] {{[0-9a-f]+}} R_PPC64_RELATIVE a004
+# SEC-PI-NEXT: {{0+}}[[OFF1]] {{[0-9a-f]+}} R_PPC64_RELATIVE a010
 
 # CHECK-LABEL: <_start>:
 # CHECK-NEXT:  2000: bt 2, 0x2040
