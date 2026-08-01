@@ -2543,6 +2543,28 @@ static MlirSpeculatability conditionallySpeculatableCallback(MlirOperation op,
   return MlirSpeculatabilityRecursivelySpeculatable;
 }
 
+typedef struct {
+  intptr_t callbackCount;
+  intptr_t effectCount;
+} MemoryEffectsCallbackData;
+
+static void memoryEffectsCallback(intptr_t numEffects,
+                                  MlirMemoryEffectInstance *effects,
+                                  void *userData) {
+  MemoryEffectsCallbackData *data = (MemoryEffectsCallbackData *)userData;
+  ++data->callbackCount;
+  data->effectCount += numEffects;
+  for (intptr_t i = 0; i < numEffects; ++i) {
+    MlirMemoryEffectInstance clone = mlirMemoryEffectInstanceClone(effects[i]);
+    assert(clone.ptr && "expected a cloned memory effect instance");
+    assert(mlirMemoryEffectInstanceGetEffect(clone).ptr &&
+           "expected a memory effect");
+    assert(mlirMemoryEffectInstanceGetResource(clone).ptr &&
+           "expected a side effect resource");
+    mlirMemoryEffectInstanceDestroy(clone);
+  }
+}
+
 int testInterfaces(MlirContext ctx) {
   // CHECK-LABEL: @testInterfaces
   fprintf(stderr, "@testInterfaces\n");
@@ -2590,7 +2612,8 @@ int testInterfaces(MlirContext ctx) {
 
   MlirOperationState storeState = mlirOperationStateGet(storeName, loc);
   MlirValue constantResult = mlirOperationGetResult(constantOp, 0);
-  mlirOperationStateAddOperands(&storeState, 1, &constantResult);
+  MlirValue storeOperands[] = {constantResult, constantResult};
+  mlirOperationStateAddOperands(&storeState, 2, storeOperands);
   MlirOperation storeOp = mlirOperationCreate(&storeState);
   if (mlirOperationImplementsInterface(storeOp, condSpecTypeID)) {
     fprintf(stderr, "ERROR: Expected memref.store instance to not implement "
@@ -2621,6 +2644,23 @@ int testInterfaces(MlirContext ctx) {
   // CHECK: memref.store speculatability: 2
   // CHECK: callback count: 1
 
+  MlirTypeID memoryEffectsTypeID = mlirMemoryEffectsOpInterfaceTypeID();
+  if (!mlirOperationImplementsInterface(storeOp, memoryEffectsTypeID)) {
+    fprintf(
+        stderr,
+        "ERROR: Expected memref.store to implement MemoryEffectsOpInterface\n");
+    return 6;
+  }
+  MemoryEffectsCallbackData memoryEffectsData = {0};
+  mlirMemoryEffectsOpInterfaceGetEffects(storeOp, memoryEffectsCallback,
+                                         &memoryEffectsData);
+  fprintf(stderr, "memory effects callback count: %" PRIdPTR "\n",
+          memoryEffectsData.callbackCount);
+  fprintf(stderr, "memory effects count: %" PRIdPTR "\n",
+          memoryEffectsData.effectCount);
+  // CHECK: memory effects callback count: 1
+  // CHECK: memory effects count: 1
+
   MlirMemoryEffect allocate = mlirMemoryEffectsAllocateGet();
   MlirMemoryEffect free = mlirMemoryEffectsFreeGet();
   MlirMemoryEffect read = mlirMemoryEffectsReadGet();
@@ -2631,6 +2671,27 @@ int testInterfaces(MlirContext ctx) {
     fprintf(stderr, "ERROR: Expected memory effect components\n");
     return 6;
   }
+
+  MlirTypeID effectIDs[] = {
+      mlirMemoryEffectGetEffectID(allocate),
+      mlirMemoryEffectGetEffectID(free),
+      mlirMemoryEffectGetEffectID(read),
+      mlirMemoryEffectGetEffectID(write),
+  };
+  for (intptr_t i = 0; i < 4; ++i) {
+    if (mlirTypeIDIsNull(effectIDs[i])) {
+      fprintf(stderr, "ERROR: Expected a non-null memory effect ID\n");
+      return 6;
+    }
+    for (intptr_t j = 0; j < i; ++j) {
+      if (mlirTypeIDEqual(effectIDs[i], effectIDs[j])) {
+        fprintf(stderr, "ERROR: Expected distinct memory effect IDs\n");
+        return 6;
+      }
+    }
+  }
+  fprintf(stderr, "memory effect IDs are distinct\n");
+  // CHECK: memory effect IDs are distinct
 
   MlirAttribute nullParameters = {NULL};
   MlirOpOperand opOperand = mlirOperationGetOpOperand(storeOp, 0);
@@ -2651,16 +2712,38 @@ int testInterfaces(MlirContext ctx) {
       mlirMemoryEffectInstanceCreateForSymbol(read, symbol, zero, 4, true,
                                               defaultResource),
   };
+  MlirMemoryEffect expectedEffects[] = {allocate, read, write, free, read};
+  MlirValue expectedValues[] = {
+      {NULL}, constantResult, constantResult, blockArgument, {NULL}};
   for (intptr_t i = 0; i < 5; ++i) {
     if (!instances[i].ptr) {
       fprintf(stderr, "ERROR: Expected memory effect instance\n");
       return 7;
     }
-    mlirMemoryEffectInstanceDestroy(instances[i]);
+    if (!mlirTypeIDEqual(mlirMemoryEffectGetEffectID(
+                             mlirMemoryEffectInstanceGetEffect(instances[i])),
+                         mlirMemoryEffectGetEffectID(expectedEffects[i])) ||
+        mlirMemoryEffectInstanceGetStage(instances[i]) != i ||
+        mlirMemoryEffectInstanceGetEffectOnFullRegion(instances[i]) !=
+            (i == 4) ||
+        !mlirValueEqual(mlirMemoryEffectInstanceGetValue(instances[i]),
+                        expectedValues[i])) {
+      fprintf(stderr, "ERROR: Unexpected memory effect instance properties\n");
+      return 7;
+    }
   }
+  if (!mlirAttributeEqual(mlirMemoryEffectInstanceGetSymbolRef(instances[4]),
+                          symbol) ||
+      !mlirAttributeEqual(mlirMemoryEffectInstanceGetParameters(instances[4]),
+                          zero)) {
+    fprintf(stderr, "ERROR: Unexpected symbol memory effect properties\n");
+    return 7;
+  }
+  for (intptr_t i = 0; i < 5; ++i)
+    mlirMemoryEffectInstanceDestroy(instances[i]);
   mlirBlockDestroy(block);
-  fprintf(stderr, "memory effect instances constructed\n");
-  // CHECK: memory effect instances constructed
+  fprintf(stderr, "memory effect instance properties verified\n");
+  // CHECK: memory effect instance properties verified
 
   mlirOperationDestroy(storeOp);
   mlirOperationDestroy(constantOp);

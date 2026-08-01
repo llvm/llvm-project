@@ -44,13 +44,10 @@ MlirAttribute unwrapOptionalAttribute(const nb::object &attribute) {
   return pyAttribute->get();
 }
 
-void appendMemoryEffectInstance(PyMemoryEffectsInstanceList &effects,
-                                const PyMemoryEffect &effect,
-                                const nb::object &target,
-                                const nb::object &parameters, int stage,
-                                bool effectOnFullRegion,
-                                const PySideEffectResource &resource) {
-  MlirMemoryEffectInstancesList list = effects.get();
+MlirMemoryEffectInstance createMemoryEffectInstance(
+    const PyMemoryEffect &effect, const nb::object &target,
+    const nb::object &parameters, int stage, bool effectOnFullRegion,
+    const PySideEffectResource &resource) {
   MlirAttribute unwrappedParameters = unwrapOptionalAttribute(parameters);
 
   MlirMemoryEffectInstance rawInstance{nullptr};
@@ -93,9 +90,7 @@ void appendMemoryEffectInstance(PyMemoryEffectsInstanceList &effects,
           "SymbolRefAttr, or None");
     }
   }
-
-  PyMemoryEffectInstance instance(rawInstance);
-  mlirMemoryEffectInstancesListAppend(list, instance.get());
+  return rawInstance;
 }
 
 /// Takes in an optional ist of operands and converts them into a std::vector
@@ -175,6 +170,61 @@ wrapRegions(std::optional<std::vector<PyRegion>> regions) {
 }
 
 } // namespace
+
+PyMemoryEffectInstance::PyMemoryEffectInstance(
+    const PyMemoryEffect &effect, const nb::object &target,
+    const nb::object &parameters, int stage, bool effectOnFullRegion,
+    const PySideEffectResource &resource)
+    : PyMemoryEffectInstance(createMemoryEffectInstance(
+          effect, target, parameters, stage, effectOnFullRegion, resource)) {}
+
+PyMemoryEffect PyMemoryEffectInstance::getEffect() const {
+  return PyMemoryEffect(mlirMemoryEffectInstanceGetEffect(instance));
+}
+
+PySideEffectResource PyMemoryEffectInstance::getResource() const {
+  return PySideEffectResource(mlirMemoryEffectInstanceGetResource(instance));
+}
+
+int PyMemoryEffectInstance::getStage() const {
+  return mlirMemoryEffectInstanceGetStage(instance);
+}
+
+bool PyMemoryEffectInstance::getEffectOnFullRegion() const {
+  return mlirMemoryEffectInstanceGetEffectOnFullRegion(instance);
+}
+
+nb::object PyMemoryEffectInstance::getParameters() const {
+  MlirAttribute parameters = mlirMemoryEffectInstanceGetParameters(instance);
+  if (mlirAttributeIsNull(parameters))
+    return nb::none();
+  PyMlirContextRef context =
+      PyMlirContext::forContext(mlirAttributeGetContext(parameters));
+  return PyAttribute(context, parameters).maybeDownCast();
+}
+
+nb::object PyMemoryEffectInstance::getValue() const {
+  MlirValue value = mlirMemoryEffectInstanceGetValue(instance);
+  if (mlirValueIsNull(value))
+    return nb::none();
+  MlirOperation owner =
+      mlirValueIsAOpResult(value)
+          ? mlirOpResultGetOwner(value)
+          : mlirBlockGetParentOperation(mlirBlockArgumentGetOwner(value));
+  PyMlirContextRef context =
+      PyMlirContext::forContext(mlirOperationGetContext(owner));
+  return PyValue(PyOperation::forOperation(context, owner), value)
+      .maybeDownCast();
+}
+
+nb::object PyMemoryEffectInstance::getSymbolRef() const {
+  MlirAttribute symbol = mlirMemoryEffectInstanceGetSymbolRef(instance);
+  if (mlirAttributeIsNull(symbol))
+    return nb::none();
+  PyMlirContextRef context =
+      PyMlirContext::forContext(mlirAttributeGetContext(symbol));
+  return PyAttribute(context, symbol).maybeDownCast();
+}
 
 /// Python wrapper for InferTypeOpInterface. This interface has only static
 /// methods.
@@ -494,22 +544,36 @@ public:
       nb::handle(static_cast<PyObject *>(userData)).dec_ref();
     };
     callbacks.getEffects = [](MlirOperation op,
-                              MlirMemoryEffectInstancesList effects,
-                              void *userData) {
+                              MlirMemoryEffectInstancesCallback callback,
+                              void *callbackUserData, void *userData) {
       nb::handle pyClass(static_cast<PyObject *>(userData));
 
       // Get the 'get_effects' method from the Python class.
       auto pyGetEffects =
           nb::cast<nb::callable>(nb::getattr(pyClass, "get_effects"));
 
-      PyMemoryEffectsInstanceList effectsWrapper{effects};
-
       PyMlirContextRef context =
           PyMlirContext::forContext(mlirOperationGetContext(op));
       auto opview = PyOperation::forOperation(context, op)->createOpView();
 
-      // Invoke `pyClass.get_effects(op, effects)`.
-      pyGetEffects(opview, effectsWrapper);
+      // Invoke `pyClass.get_effects(op)` and pass the resulting instances back
+      // to the C++ interface as a borrowed array.
+      nb::object result = pyGetEffects(opview);
+      nb::iterable iterable;
+      if (!nb::try_cast<nb::iterable>(result, iterable))
+        throw nb::type_error("get_effects must return an iterable");
+
+      std::vector<nb::object> effectObjects;
+      std::vector<MlirMemoryEffectInstance> effects;
+      for (nb::handle object : iterable) {
+        PyMemoryEffectInstance *effect = nullptr;
+        if (!nb::try_cast<PyMemoryEffectInstance *>(object, effect) || !effect)
+          throw nb::type_error(
+              "get_effects must return MemoryEffectInstance objects");
+        effectObjects.push_back(nb::borrow<nb::object>(object));
+        effects.push_back(effect->get());
+      }
+      callback(effects.size(), effects.data(), callbackUserData);
     };
 
     mlirMemoryEffectsOpInterfaceAttachFallbackModel(
@@ -517,7 +581,33 @@ public:
         callbacks);
   }
 
+  std::vector<PyMemoryEffectInstance> getEffects() {
+    if (isStatic())
+      throw nb::type_error("Cannot query effects on a static interface");
+
+    auto operationObject = getOperationObject();
+    auto *operation = nb::cast<PyOperation *>(operationObject);
+    std::vector<PyMemoryEffectInstance> effects;
+
+    mlirMemoryEffectsOpInterfaceGetEffects(
+        operation->get(),
+        [](intptr_t numEffects, MlirMemoryEffectInstance *effects,
+           void *userData) {
+          auto *result =
+              static_cast<std::vector<PyMemoryEffectInstance> *>(userData);
+          result->reserve(result->size() + numEffects);
+          for (intptr_t i = 0; i < numEffects; ++i) {
+            result->emplace_back(mlirMemoryEffectInstanceClone(effects[i]));
+          }
+        },
+        &effects);
+    return effects;
+  }
+
   static void bindDerived(ClassTy &cls) {
+    cls.def("get_effects", &PyMemoryEffectsOpInterface::getEffects,
+            nb::sig("def get_effects(self) -> list[MemoryEffectInstance]"),
+            "Returns the memory effects of the operation.");
     cls.attr("attach") = classmethod(
         [](const nb::object &cls, const nb::object &opName, nb::object target,
            DefaultingPyMlirContext context) {
@@ -539,6 +629,13 @@ void populateIRInterfaces(nb::module_ &m) {
       .value("RecursivelySpeculatable",
              MlirSpeculatabilityRecursivelySpeculatable);
   nb::class_<PyMemoryEffect>(m, "MemoryEffect", "A memory effect.")
+      .def(
+          "__eq__",
+          [](const PyMemoryEffect &self, const PyMemoryEffect &other) {
+            return mlirTypeIDEqual(mlirMemoryEffectGetEffectID(self.get()),
+                                   mlirMemoryEffectGetEffectID(other.get()));
+          },
+          nb::is_operator(), "Compares two memory effects for equality.")
       .def_prop_ro_static("Allocate",
                           [](nb::object & /*class*/) {
                             return PyMemoryEffect(
@@ -562,22 +659,44 @@ void populateIRInterfaces(nb::module_ &m) {
         return PySideEffectResource(mlirSideEffectsDefaultResourceGet());
       });
 
-  nb::class_<PyMemoryEffectsInstanceList>(
-      m, "MemoryEffectInstancesList",
-      "A memory effect list that is valid only during get_effects.")
-      .def("append", &appendMemoryEffectInstance, nb::arg("effect"),
-           nb::arg("target").none() = nb::none(), nb::kw_only(),
-           nb::arg("parameters").none() = nb::none(), nb::arg("stage") = 0,
-           nb::arg("effect_on_full_region") = false,
+  nb::class_<PyMemoryEffectInstance>(m, "MemoryEffectInstance",
+                                     "A concrete instance of a memory effect.")
+      .def(nb::init<const PyMemoryEffect &, const nb::object &,
+                    const nb::object &, int, bool,
+                    const PySideEffectResource &>(),
+           nb::arg("effect"), nb::arg("target").none() = nb::none(),
+           nb::kw_only(), nb::arg("parameters").none() = nb::none(),
+           nb::arg("stage") = 0, nb::arg("effect_on_full_region") = false,
            nb::arg("resource") =
                PySideEffectResource(mlirSideEffectsDefaultResourceGet()),
-           nb::sig("def append(self, effect: MemoryEffect, target: OpOperand | "
-                   "OpResult | BlockArgument | SymbolRefAttr | None = None, *, "
-                   "parameters: Attribute | None = None, stage: int = 0, "
+           nb::sig("def __init__(self, effect: MemoryEffect, target: "
+                   "OpOperand | OpResult | BlockArgument | SymbolRefAttr | "
+                   "FlatSymbolRefAttr | None = None, *, parameters: Attribute "
+                   "| None = None, stage: int = 0, "
                    "effect_on_full_region: bool = False, resource: "
                    "SideEffectResource = ...) -> None"),
-           "Append a memory effect instance. The target may be an OpOperand, "
-           "OpResult, BlockArgument, SymbolRefAttr, or None.");
+           "Creates a memory effect instance. The target may be an OpOperand, "
+           "OpResult, BlockArgument, SymbolRefAttr, or None.")
+      .def_prop_ro("effect", &PyMemoryEffectInstance::getEffect,
+                   "Returns the kind of memory effect.")
+      .def_prop_ro("resource", &PyMemoryEffectInstance::getResource,
+                   "Returns the affected side effect resource.")
+      .def_prop_ro("stage", &PyMemoryEffectInstance::getStage,
+                   "Returns the stage at which the effect occurs.")
+      .def_prop_ro("effect_on_full_region",
+                   &PyMemoryEffectInstance::getEffectOnFullRegion,
+                   "Returns whether the effect applies to the full resource.")
+      .def_prop_ro("parameters", &PyMemoryEffectInstance::getParameters,
+                   nb::sig("def parameters(self) -> Attribute | None"),
+                   "Returns the effect parameters, if any.")
+      .def_prop_ro(
+          "value", &PyMemoryEffectInstance::getValue,
+          nb::sig("def value(self) -> OpResult | BlockArgument | None"),
+          "Returns the affected value, if any.")
+      .def_prop_ro("symbol_ref", &PyMemoryEffectInstance::getSymbolRef,
+                   nb::sig("def symbol_ref(self) -> SymbolRefAttr | "
+                           "FlatSymbolRefAttr | None"),
+                   "Returns the affected symbol reference, if any.");
 
   PyConditionallySpeculatableOpInterface::bind(m);
   PyInferShapedTypeOpInterface::bind(m);

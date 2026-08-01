@@ -246,25 +246,30 @@ MLIR_CAPI_EXPORTED void mlirPatternDescriptorOpInterfaceAttachFallbackModel(
 /// Helper to mark operands as only reading handles.
 MLIR_CAPI_EXPORTED void
 mlirTransformOnlyReadsHandle(MlirOpOperand *operands, intptr_t numOperands,
-                             MlirMemoryEffectInstancesList effects);
+                             MlirMemoryEffectInstancesCallback callback,
+                             void *userData);
 
 /// Helper to mark operands as consuming handles.
 MLIR_CAPI_EXPORTED void
 mlirTransformConsumesHandle(MlirOpOperand *operands, intptr_t numOperands,
-                            MlirMemoryEffectInstancesList effects);
+                            MlirMemoryEffectInstancesCallback callback,
+                            void *userData);
 
 /// Helper to mark results as producing handles.
 MLIR_CAPI_EXPORTED void
 mlirTransformProducesHandle(MlirValue *results, intptr_t numResults,
-                            MlirMemoryEffectInstancesList effects);
+                            MlirMemoryEffectInstancesCallback callback,
+                            void *userData);
 
 /// Helper to mark potential modifications to the payload IR.
 MLIR_CAPI_EXPORTED void
-mlirTransformModifiesPayload(MlirMemoryEffectInstancesList effects);
+mlirTransformModifiesPayload(MlirMemoryEffectInstancesCallback callback,
+                             void *userData);
 
 /// Helper to mark potential reads from the payload IR.
 MLIR_CAPI_EXPORTED void
-mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesList effects);
+mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesCallback callback,
+                              void *userData);
 
 #ifdef __cplusplus
 }

@@ -30,7 +30,6 @@ extern "C" {
 
 DEFINE_C_API_STRUCT(MlirMemoryEffect, void);
 DEFINE_C_API_STRUCT(MlirMemoryEffectInstance, void);
-DEFINE_C_API_STRUCT(MlirMemoryEffectInstancesList, void);
 DEFINE_C_API_STRUCT(MlirSideEffectResource, void);
 
 #undef DEFINE_C_API_STRUCT
@@ -159,6 +158,10 @@ MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsReadGet(void);
 /// Returns the borrowed singleton instance of the write memory effect.
 MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsWriteGet(void);
 
+/// Returns the TypeID identifying the concrete type of the given memory effect.
+MLIR_CAPI_EXPORTED MlirTypeID
+mlirMemoryEffectGetEffectID(MlirMemoryEffect effect);
+
 /// Returns the borrowed singleton instance of the default side effect
 /// resource.
 MLIR_CAPI_EXPORTED MlirSideEffectResource
@@ -212,15 +215,53 @@ mlirMemoryEffectInstanceCreateForSymbol(MlirMemoryEffect effect,
                                         bool effectOnFullRegion,
                                         MlirSideEffectResource resource);
 
-/// Destroys a memory effect instance created by one of the functions above.
+/// Destroys an owned memory effect instance created or cloned by this API.
 MLIR_CAPI_EXPORTED void
 mlirMemoryEffectInstanceDestroy(MlirMemoryEffectInstance instance);
 
-/// Appends a copy of `instance` to the given list. This does not take ownership
-/// of `instance`; the caller remains responsible for destroying it.
-MLIR_CAPI_EXPORTED void
-mlirMemoryEffectInstancesListAppend(MlirMemoryEffectInstancesList list,
-                                    MlirMemoryEffectInstance instance);
+/// Creates an owned copy of a memory effect instance. The caller must destroy
+/// the returned instance with `mlirMemoryEffectInstanceDestroy`.
+MLIR_CAPI_EXPORTED MlirMemoryEffectInstance
+mlirMemoryEffectInstanceClone(MlirMemoryEffectInstance instance);
+
+/// Returns the memory effect of the given instance.
+MLIR_CAPI_EXPORTED MlirMemoryEffect
+mlirMemoryEffectInstanceGetEffect(MlirMemoryEffectInstance instance);
+
+/// Returns the side effect resource of the given instance.
+MLIR_CAPI_EXPORTED MlirSideEffectResource
+mlirMemoryEffectInstanceGetResource(MlirMemoryEffectInstance instance);
+
+/// Returns the stage of the given instance.
+MLIR_CAPI_EXPORTED int
+mlirMemoryEffectInstanceGetStage(MlirMemoryEffectInstance instance);
+
+/// Returns true if the given instance has effect on every single value of
+/// the resource.
+MLIR_CAPI_EXPORTED bool mlirMemoryEffectInstanceGetEffectOnFullRegion(
+    MlirMemoryEffectInstance instance);
+
+/// Returns the parameters of the given instance, or a null attribute if there
+/// are no parameters.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirMemoryEffectInstanceGetParameters(MlirMemoryEffectInstance instance);
+
+/// Returns the value (OpOperand, OpResult, or BlockArgument) of the given
+/// instance, or a null value if there is no associated value.
+MLIR_CAPI_EXPORTED MlirValue
+mlirMemoryEffectInstanceGetValue(MlirMemoryEffectInstance instance);
+
+/// Returns the symbol reference of the given instance, or a null attribute if
+/// there is no associated symbol.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirMemoryEffectInstanceGetSymbolRef(MlirMemoryEffectInstance instance);
+
+/// Callback used to return a list of memory effect instances. `effects` points
+/// to `numEffects` consecutive borrowed instances that are only valid for the
+/// duration of the callback. The caller-provided `userData` is forwarded to
+/// the callback.
+typedef void (*MlirMemoryEffectInstancesCallback)(
+    intptr_t numEffects, MlirMemoryEffectInstance *effects, void *userData);
 
 /// Returns the interface TypeID of the MemoryEffectsOpInterface.
 MLIR_CAPI_EXPORTED MlirTypeID mlirMemoryEffectsOpInterfaceTypeID(void);
@@ -231,9 +272,12 @@ typedef struct {
   void (*construct)(void *userData);
   /// Optional destructor for user data. Set to nullptr to disable it.
   void (*destruct)(void *userData);
-  /// Get memory effects callback.
-  void (*getEffects)(MlirOperation op, MlirMemoryEffectInstancesList effects,
-                     void *userData);
+  /// Get memory effects callback. Implementations return effects by invoking
+  /// `callback` with an array of memory effect instances. The callback copies
+  /// the instances synchronously, so implementations retain ownership of them.
+  void (*getEffects)(MlirOperation op,
+                     MlirMemoryEffectInstancesCallback callback,
+                     void *callbackUserData, void *userData);
   void *userData;
 } MlirMemoryEffectsOpInterfaceCallbacks;
 
@@ -242,6 +286,13 @@ typedef struct {
 MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
     MlirContext ctx, MlirStringRef opName,
     MlirMemoryEffectsOpInterfaceCallbacks callbacks);
+
+/// Gets the memory effects of the given operation. The operation must
+/// implement the MemoryEffectsOpInterface. Invokes `callback` once with all
+/// effects; the instances are borrowed and only valid during the callback.
+MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceGetEffects(
+    MlirOperation operation, MlirMemoryEffectInstancesCallback callback,
+    void *userData);
 
 #ifdef __cplusplus
 }
