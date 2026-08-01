@@ -18,7 +18,7 @@
 #include "BranchCloneCheck.h"
 #include "CapturingThisInMemberVariableCheck.h"
 #include "CastingThroughVoidCheck.h"
-#include "CerrnoCheck.h"
+#include "CustomErrnoDeclarationCheck.h"
 #include "ChainedComparisonCheck.h"
 #include "CommandProcessorCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
@@ -145,8 +145,8 @@ public:
         "bugprone-capturing-this-in-member-variable");
     CheckFactories.registerCheck<CastingThroughVoidCheck>(
         "bugprone-casting-through-void");
-    CheckFactories.registerCheck<CerrnoCheck>(
-        "bugprone-cerrno");
+    CheckFactories.registerCheck<CustomErrnoDeclarationCheck>(
+        "bugprone-custom-errno-declaration");
     CheckFactories.registerCheck<ChainedComparisonCheck>(
         "bugprone-chained-comparison");
     CheckFactories.registerCheck<CommandProcessorCheck>(

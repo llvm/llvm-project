@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CERRNOCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CERRNOCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CUSTOMERRNODECLARATIONCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CUSTOMERRNODECLARATIONCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -16,10 +16,10 @@ namespace clang::tidy::bugprone {
 /// Warns if you declare an extern int variable named 'errno'.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/cerrno.html
-class CerrnoCheck : public ClangTidyCheck {
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/custom-errno-declaration.html
+class CustomErrnoDeclarationCheck : public ClangTidyCheck {
 public:
-  CerrnoCheck(StringRef Name, ClangTidyContext *Context)
+  CustomErrnoDeclarationCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -32,4 +32,4 @@ private:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CERRNOCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CUSTOMERRNODECLARATIONCHECK_H
