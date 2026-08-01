@@ -31,7 +31,7 @@ class Triple;
 namespace AMDGPU {
 
 /// GPU kinds supported by the AMDGPU target.
-enum GPUKind : uint32_t {
+enum GPUKind : uint8_t {
   // Not specified processor.
   GK_NONE = 0,
 

@@ -2745,9 +2745,11 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedCommand(
         cmd_retobj, exe_ctx_ref_sp);
   }
 
-  if (!ret_val)
+  if (!ret_val) {
     error = Status::FromErrorString("unable to execute script function");
-  else if (cmd_retobj.GetStatus() == eReturnStatusFailed)
+    return false;
+  }
+  if (cmd_retobj.GetStatus() == eReturnStatusFailed)
     return false;
 
   error.Clear();
