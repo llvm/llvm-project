@@ -140,11 +140,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // Hard-float ABIs that don't match the F/D extensions are already rejected
   // by RISCVABI::computeTargetABI() when the subtarget is constructed.
   assert(((ABI != RISCVABI::ABI_ILP32F && ABI != RISCVABI::ABI_LP64F) ||
-         Subtarget.hasStdExtF()) &&
-        "F ABI without F extension");
+          Subtarget.hasStdExtF()) &&
+         "F ABI without F extension");
   assert(((ABI != RISCVABI::ABI_ILP32D && ABI != RISCVABI::ABI_LP64D) ||
-         Subtarget.hasStdExtD()) &&
-        "D ABI without D extension");
+          Subtarget.hasStdExtD()) &&
+         "D ABI without D extension");
 
   switch (ABI) {
   default:

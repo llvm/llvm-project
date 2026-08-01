@@ -89,11 +89,9 @@ Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
   }
   if (!IsRV64 && IsRVE && IsXCheriot && TargetABI != ABI_CHERIOT &&
       TargetABI != ABI_Unknown) {
-    return createStringError(
-        "only the cheriot ABI is supported for XCheriot");
+    return createStringError("only the cheriot ABI is supported for XCheriot");
   }
-  if (IsRV64 && IsRVE && TargetABI != ABI_LP64E &&
-      TargetABI != ABI_Unknown) {
+  if (IsRV64 && IsRVE && TargetABI != ABI_LP64E && TargetABI != ABI_Unknown) {
     return createStringError("only the lp64e ABI is supported for RV64E");
   }
 
