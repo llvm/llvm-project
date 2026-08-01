@@ -3106,9 +3106,6 @@ public:
   /// already been emitted.
   bool isOpaqueValueEmitted(const OpaqueValueExpr *E);
 
-
-
-
   /// Get the index of the current ArrayInitLoopExpr, if any.
   llvm::Value *getArrayInitIndex() { return ArrayInitIndex; }
 
