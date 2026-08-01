@@ -1910,6 +1910,14 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 
+// Materializes "$base + (imm << 12)" as a single pseudo so that
+// MachineLateInstrsCleanup can CSE identical upper-immediate additions.
+// Expanded to LUI+ADD by RISCVPostRAExpandPseudo.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8 in
+def PseudoAddUpperImm
+    : Pseudo<(outs GPR:$dst), (ins GPR:$base, uimm20_lui:$hi), []>,
+      Sched<[WriteIALU, ReadIALU]>;
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
     isCodeGenOnly = 0 in
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
@@ -2370,6 +2378,10 @@ include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZilsd.td"
 include "RISCVInstrInfoZibi.td"
+include "RISCVInstrInfoZilx.td"
+
+// Privileged
+include "RISCVInstrInfoSmcsps.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"

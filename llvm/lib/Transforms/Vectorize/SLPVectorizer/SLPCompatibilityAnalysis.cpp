@@ -15,13 +15,19 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include <array>
+#include <cassert>
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 namespace llvm::slpvectorizer {
 
@@ -310,6 +316,157 @@ bool BinOpSameOpcodeHelper::add(const Instruction *I) {
   return MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
          (initializeAltOp(I) &&
           AltOp.trySet(OpcodeInMaskForm, InterchangeableMask));
+}
+
+bool InstructionsState::isSameOperation(const Instruction *I,
+                                        const Instruction *Op) {
+  if (I->getOpcode() != Op->getOpcode())
+    return false;
+  const auto *II = dyn_cast<IntrinsicInst>(I);
+  const auto *IOp = dyn_cast<IntrinsicInst>(Op);
+  if (II || IOp)
+    return II && IOp &&
+           isEquivalentIntrinsicID(II->getIntrinsicID(),
+                                   IOp->getIntrinsicID()) !=
+               Intrinsic::not_intrinsic;
+  return true;
+}
+
+Instruction *InstructionsState::getMatchingMainOpOrAltOp(Instruction *I) const {
+  assert(MainOp && "MainOp cannot be nullptr.");
+  if (isSameOperation(I, MainOp))
+    return MainOp;
+  if (MainOp->getOpcode() == Instruction::Select &&
+      I->getOpcode() == Instruction::ZExt && !isAltShuffle())
+    return MainOp;
+  // Prefer AltOp instead of interchangeable instruction of MainOp.
+  assert(AltOp && "AltOp cannot be nullptr.");
+  if (isSameOperation(I, AltOp))
+    return AltOp;
+  // BinOpSameOpcodeHelper handles only BinaryOperators; a call cannot match.
+  if (!I->isBinaryOp() || !MainOp->isBinaryOp())
+    return nullptr;
+  BinOpSameOpcodeHelper Converter(MainOp);
+  if (!Converter.add(I) || !Converter.add(MainOp))
+    return nullptr;
+  if (isAltShuffle() && !Converter.hasCandidateOpcode(MainOp->getOpcode())) {
+    BinOpSameOpcodeHelper AltConverter(AltOp);
+    if (AltConverter.add(I) && AltConverter.add(AltOp) &&
+        AltConverter.hasCandidateOpcode(AltOp->getOpcode()))
+      return AltOp;
+  }
+  if (Converter.hasAltOp() && !isAltShuffle())
+    return nullptr;
+  return Converter.hasAltOp() ? AltOp : MainOp;
+}
+
+bool InstructionsState::isMulDivLikeOp() const {
+  constexpr std::array<unsigned, 8> MulDiv = {
+      Instruction::Mul,  Instruction::FMul, Instruction::SDiv,
+      Instruction::UDiv, Instruction::FDiv, Instruction::SRem,
+      Instruction::URem, Instruction::FRem};
+  return is_contained(MulDiv, getOpcode()) &&
+         is_contained(MulDiv, getAltOpcode());
+}
+
+bool InstructionsState::isAddSubLikeOp() const {
+  constexpr std::array<unsigned, 4> AddSub = {
+      Instruction::Add, Instruction::Sub, Instruction::FAdd, Instruction::FSub};
+  return is_contained(AddSub, getOpcode()) &&
+         is_contained(AddSub, getAltOpcode());
+}
+
+bool InstructionsState::isCopyableElement(Value *V) const {
+  assert(valid() && "InstructionsState is invalid.");
+  if (!HasCopyables)
+    return false;
+  if (isAltShuffle() || getOpcode() == Instruction::GetElementPtr)
+    return false;
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return !isa<PoisonValue>(V);
+  if (I->getParent() != MainOp->getParent() &&
+      (!isVectorLikeInstWithConstOps(I) ||
+       !isVectorLikeInstWithConstOps(MainOp)))
+    return true;
+  if (isSameOperation(I, MainOp))
+    return false;
+  // BinOpSameOpcodeHelper handles only BinaryOperators; a call is copyable.
+  if (!I->isBinaryOp() || !MainOp->isBinaryOp())
+    return true;
+  BinOpSameOpcodeHelper Converter(MainOp);
+  return !Converter.add(I) || !Converter.add(MainOp) || Converter.hasAltOp() ||
+         !Converter.hasCandidateOpcode(getOpcode());
+}
+
+bool InstructionsState::isExpandedBinOp(Value *V) const {
+  assert(valid() && "InstructionsState is invalid.");
+  if (isCopyableElement(V))
+    return false;
+  auto *ExpandingOp = dyn_cast<BinaryOperator>(V);
+  if (!ExpandingOp)
+    return false;
+  auto CheckForTransformedOpcode = [](const Instruction *RefOp,
+                                      const Instruction *ExpandingOp) {
+    switch (RefOp->getOpcode()) {
+    case Instruction::Add:
+      switch (ExpandingOp->getOpcode()) {
+      case Instruction::Shl:
+        return match(ExpandingOp, m_Shl(m_Value(), m_One()));
+      default:
+        break;
+      }
+      break;
+    default:
+      break;
+    }
+    return false;
+  };
+  // getMatchingMainOpOrAltOp() may legitimately return nullptr, e.g. for a
+  // split node, whose Scalars combine two unrelated operations (main/alt
+  // ops of the split state), so V is not required to match either of them.
+  Instruction *MainOp = getMatchingMainOpOrAltOp(ExpandingOp);
+  if (!MainOp)
+    return false;
+  return CheckForTransformedOpcode(MainOp, ExpandingOp);
+}
+
+bool InstructionsState::isExpandedOperand(Instruction *I, unsigned Idx) const {
+  assert(isExpandedBinOp(I) && "Expected an expanded binop.");
+  switch (I->getOpcode()) {
+  case Instruction::Shl:
+    assert(match(I, m_Shl(m_Value(), m_One())) && "Expected shl x, 1 only.");
+    return Idx == 1;
+  default:
+    llvm_unreachable("Unexpected opcode for an expanded operand.");
+  }
+}
+
+bool InstructionsState::isNonSchedulable(Value *V) const {
+  assert(valid() && "InstructionsState is invalid.");
+  auto *I = dyn_cast<Instruction>(V);
+  if (!HasCopyables)
+    return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
+           doesNotNeedToBeScheduled(V);
+  // MainOp for copyables always schedulable to correctly identify
+  // non-schedulable copyables.
+  if (getMainOp() == V)
+    return false;
+  if (isCopyableElement(V)) {
+    auto IsNonSchedulableCopyableElement = [this](Value *V) {
+      auto *I = dyn_cast<Instruction>(V);
+      return !I || isa<PHINode>(I) || I->getParent() != MainOp->getParent() ||
+             (doesNotNeedToBeScheduled(I) &&
+              // If the copyable instructions comes after MainOp
+              // (non-schedulable, but used in the block) - cannot vectorize
+              // it, will possibly generate use before def.
+              !MainOp->comesBefore(I));
+    };
+
+    return IsNonSchedulableCopyableElement(V);
+  }
+  return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
+         doesNotNeedToBeScheduled(V);
 }
 
 } // namespace llvm::slpvectorizer
