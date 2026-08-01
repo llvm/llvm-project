@@ -533,12 +533,9 @@ defm V_CVT_U16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_u16_f16",
 defm V_CVT_I16_F16 : VOP1Inst_t16_with_profiles <"v_cvt_i16_f16",
   VOP_I16_F16_SPECIAL_OMOD, VOP_I16_F16_SPECIAL_OMOD_t16, VOP_I16_F16_SPECIAL_OMOD_fake16, fp_to_sint>;
 
-
-let HasOMod = 0 in {
 def V_TRANS_BF16_Profile :  VOPProfile <[bf16, bf16, untyped, untyped]>;
 def V_TRANS_BF16_t16_Profile :  VOPProfile_True16 <VOP_BF16_BF16>;
 def V_TRANS_BF16_fake16_Profile :  VOPProfile_Fake16 <VOP_BF16_BF16>;
-}
 
 let TRANS = 1, SchedRW = [WriteTrans32] in {
 defm V_RCP_F16 : VOP1Inst_t16 <"v_rcp_f16", VOP_F16_F16, AMDGPUrcp>;
@@ -683,7 +680,7 @@ class VOPProfile_Base_CVT_F32_F8<ValueType vt> : VOPProfileI2F <vt, i32> {
 def VOPProfileCVT_F32_F8    : VOPProfile_Base_CVT_F32_F8 <f32>;
 def VOPProfileCVT_PK_F32_F8 : VOPProfile_Base_CVT_F32_F8 <v2f32>;
 
-let OtherPredicates = [HasFP8ConversionInsts], mayRaiseFPException = 0,
+let SubtargetPredicate = HasCvtFP8SDWASrcSel, mayRaiseFPException = 0,
     SchedRW = [WriteFloatCvt] in {
   defm V_CVT_F32_FP8    : VOP1Inst<"v_cvt_f32_fp8", VOPProfileCVT_F32_F8>;
   defm V_CVT_F32_BF8    : VOP1Inst<"v_cvt_f32_bf8", VOPProfileCVT_F32_F8>;
@@ -697,29 +694,34 @@ class Cvt_F32_F8_Pat<SDPatternOperator node, int index,
     (inst_sdwa 0, $src, 0, 0, index)
 >;
 
-let SubtargetPredicate = HasFP8ConversionInsts in {
-let OtherPredicates = [HasCvtFP8VOP1Bug] in {
+// Route byte 0 through the SDWA form where the VOP1 encoding is unreliable.
+// FeatureCvtFP8VOP1Bug implies FeatureFP8ConversionInsts.
+let SubtargetPredicate = HasCvtFP8VOP1Bug in {
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
                (V_CVT_F32_FP8_sdwa 0, $src, 0, 0, 0)>;
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
                (V_CVT_F32_BF8_sdwa 0, $src, 0, 0, 0)>;
 }
 
-let OtherPredicates = [NotHasCvtFP8VOP1Bug, HasSDWA] in { // FIXME: HasSDWA is a substitute for !gfx12
+let SubtargetPredicate = HasCvtFP8SDWASrcSelNotVOP1Bug in {
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_fp8 i32:$src, 0)),
                (V_CVT_F32_FP8_e32 $src)>;
   def : GCNPat<(f32 (int_amdgcn_cvt_f32_bf8 i32:$src, 0)),
                (V_CVT_F32_BF8_e32 $src)>;
 }
 
-let OtherPredicates = [HasSDWA] in {
+let SubtargetPredicate = HasCvtFP8SDWASrcSel in {
 foreach Index = [1, 2, 3] in {
   def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_fp8, Index, V_CVT_F32_FP8_sdwa>;
   def : Cvt_F32_F8_Pat<int_amdgcn_cvt_f32_bf8, Index, V_CVT_F32_BF8_sdwa>;
 }
-} // End OtherPredicates = [HasSDWA]
+} // End SubtargetPredicate = HasCvtFP8SDWASrcSel
 
-} // End SubtargetPredicate = HasFP8ConversionInsts
+let SubtargetPredicate = HasCvtFP8SDWASrcSel,
+    OtherPredicates = [HasOCPFP8ConversionInsts] in {
+  def : GCNPat<(f32 (cvt_from_fp8 i32:$src)), (V_CVT_F32_FP8_e32 $src)>;
+  def : GCNPat<(f32 (cvt_from_bf8 i32:$src)), (V_CVT_F32_BF8_e32 $src)>;
+}
 
 class Cvt_PK_F32_F8_Pat<SDPatternOperator node, int index,
     VOP1_Pseudo inst_e32, VOP1_SDWA_Pseudo inst_sdwa> : GCNPat<
@@ -729,13 +731,23 @@ class Cvt_PK_F32_F8_Pat<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
-let SubtargetPredicate = HasFP8ConversionInsts, OtherPredicates = [HasSDWA] in {
+let SubtargetPredicate = HasCvtFP8SDWASrcSel in {
   foreach Index = [0, -1] in {
     def : Cvt_PK_F32_F8_Pat<int_amdgcn_cvt_pk_f32_fp8, Index,
                             V_CVT_PK_F32_FP8_e32, V_CVT_PK_F32_FP8_sdwa>;
     def : Cvt_PK_F32_F8_Pat<int_amdgcn_cvt_pk_f32_bf8, Index,
                             V_CVT_PK_F32_BF8_e32, V_CVT_PK_F32_BF8_sdwa>;
   }
+}
+
+class Cvt_PK_F32_F8_Conv_Pat<SDPatternOperator node, Instruction inst> : GCNPat<
+  (v2f32 (node i32:$src)),
+  (inst $src)
+>;
+
+let SubtargetPredicate = HasCvtFP8SDWASrcSel in {
+  def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_fp8, V_CVT_PK_F32_FP8_e32>;
+  def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_bf8, V_CVT_PK_F32_BF8_e32>;
 }
 
 let HasClamp = 0, HasOMod = 0, HasExtDPP = 0, HasExtVOP3DPP = 0,
@@ -768,14 +780,15 @@ def V_CVT_F16_F8_True16_Profile : VOP3_Profile_True16<V_CVT_F16_F8_Profile>;
 def V_CVT_F16_F8_Fake16_Profile : VOP3_Profile_Fake16<V_CVT_F16_F8_Profile>;
 }
 
-let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts],
+let SubtargetPredicate = HasCvtFP8ByteSel,
+    OtherPredicates = [HasOCPFP8ConversionInsts],
     mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
-  let SubtargetPredicate = isGFX11PlusNot12_50 in
-    defm V_CVT_F32_FP8_OP_SEL    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>>;
-  let SubtargetPredicate = isGFX125xOnly in
-    defm V_CVT_F32_FP8_gfx1250   : VOP1Inst<"v_cvt_f32_fp8_gfx1250", VOPProfile_Base_CVT_F_F8_ByteSel<f32, 1>>;
+  let SubtargetPredicate = HasCvtFP8ByteSelNotE5M3 in
+    defm V_CVT_F32_FP8_op_sel    : VOP1Inst<"v_cvt_f32_fp8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>, cvt_from_fp8>;
+  let SubtargetPredicate = HasCvtFP8ByteSelE5M3 in
+    defm V_CVT_F32_FP8_gfx1250   : VOP1Inst<"v_cvt_f32_fp8_gfx1250", VOPProfile_Base_CVT_F_F8_ByteSel<f32, 1>, cvt_from_fp8>;
 
-  defm V_CVT_F32_BF8_OP_SEL    : VOP1Inst<"v_cvt_f32_bf8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>>;
+  defm V_CVT_F32_BF8_op_sel    : VOP1Inst<"v_cvt_f32_bf8_op_sel", VOPProfile_Base_CVT_F_F8_ByteSel<f32>, cvt_from_bf8>;
 
   let True16Predicate = UseFakeTrue16Insts in {
     defm V_CVT_PK_F32_FP8_fake16 : VOP1Inst<"v_cvt_pk_f32_fp8_fake16", VOPProfile_Base_CVT_PK_F32_F8_fake16>;
@@ -793,18 +806,18 @@ class Cvt_F_F8_Pat_ByteSel<SDPatternOperator node, VOP3_Pseudo inst, bit HasOpSe
                 (inst $src0, (as_i32timm $byte_sel)))
 >;
 
-let OtherPredicates = [HasFP8ConversionInsts] in {
-  let SubtargetPredicate = isGFX11PlusNot12_50 in
-    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_fp8, V_CVT_F32_FP8_OP_SEL_e64>;
-  let SubtargetPredicate = isGFX125xOnly in {
-    def : GCNPat<(int_amdgcn_cvt_f32_fp8 i32:$src0, timm:$byte_sel),
-                 (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.NONE, (as_i32timm $byte_sel))>;
-    def : GCNPat<(int_amdgcn_cvt_f32_fp8_e5m3 i32:$src0, timm:$byte_sel),
-                 (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.ENABLE, (as_i32timm $byte_sel))>;
-  }
-  let SubtargetPredicate = isGFX11Plus in
-    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_bf8, V_CVT_F32_BF8_OP_SEL_e64>;
+let SubtargetPredicate = HasCvtFP8ByteSelNotE5M3 in
+  def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_fp8, V_CVT_F32_FP8_op_sel_e64>;
+
+let SubtargetPredicate = HasCvtFP8ByteSelE5M3 in {
+  def : GCNPat<(int_amdgcn_cvt_f32_fp8 i32:$src0, timm:$byte_sel),
+               (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.NONE, (as_i32timm $byte_sel))>;
+  def : GCNPat<(int_amdgcn_cvt_f32_fp8_e5m3 i32:$src0, timm:$byte_sel),
+               (V_CVT_F32_FP8_gfx1250_e64 $src0, DSTCLAMP.ENABLE, (as_i32timm $byte_sel))>;
 }
+
+let SubtargetPredicate = HasCvtFP8ByteSel in
+  def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f32_bf8, V_CVT_F32_BF8_op_sel_e64>;
 
 class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
     VOP1_Pseudo inst_e32, VOP3_Pseudo inst_e64> : GCNPat<
@@ -814,13 +827,18 @@ class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
-let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts] in {
+let SubtargetPredicate = HasCvtFP8ByteSel in {
   foreach Index = [0, -1] in {
     def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
                                   V_CVT_PK_F32_FP8_fake16_e32, V_CVT_PK_F32_FP8_fake16_e64>;
     def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
                                   V_CVT_PK_F32_BF8_fake16_e32, V_CVT_PK_F32_BF8_fake16_e64>;
   }
+}
+
+let SubtargetPredicate = HasCvtFP8ByteSel in {
+  def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_fp8, V_CVT_PK_F32_FP8_fake16_e32>;
+  def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_bf8, V_CVT_PK_F32_BF8_fake16_e32>;
 }
 
 // FIXME-TRUE16: True16 versions of these instructions are untested.
@@ -830,18 +848,20 @@ def VOPProfile_CVT_PK_F16_F8_true16 : VOP3_Profile_True16<VOPProfile_CVT_PK_F16_
 def VOPProfile_CVT_PK_F16_F8_fake16 : VOP3_Profile_Fake16<VOPProfile_CVT_PK_F16_F8>;
 }
 
-let SubtargetPredicate = isGFX1250Plus in {
+let SubtargetPredicate = HasFP8F16ConversionInsts in {
   let mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
     defm V_CVT_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_f16_fp8",
-      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile>;
+      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile,
+      cvt_from_fp8>;
     defm V_CVT_F16_BF8 : VOP1Inst_t16_with_profiles<"v_cvt_f16_bf8",
-      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile>;
+      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile,
+      cvt_from_bf8>;
     defm V_CVT_PK_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_fp8",
       VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
-      int_amdgcn_cvt_pk_f16_fp8>;
+      cvt_pk_f16_fp8>;
     defm V_CVT_PK_F16_BF8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_bf8",
       VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
-      int_amdgcn_cvt_pk_f16_bf8>;
+      cvt_pk_f16_bf8>;
   }
 
   let True16Predicate = UseRealTrue16Insts in {
@@ -853,6 +873,9 @@ let SubtargetPredicate = isGFX1250Plus in {
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_fake16_e64, 1>;
   }
 
+} // End SubtargetPredicate = HasFP8F16ConversionInsts
+
+let SubtargetPredicate = isGFX1250Plus in {
   defm V_SAT_PK4_I4_I8 : VOP1Inst_t16<"v_sat_pk4_i4_i8", VOP1_I16_I32, int_amdgcn_sat_pk4_i4_i8>;
   defm V_SAT_PK4_U4_U8 : VOP1Inst_t16<"v_sat_pk4_u4_u8", VOP1_I16_I32, int_amdgcn_sat_pk4_u4_u8>;
 } // End SubtargetPredicate = isGFX1250Plus
@@ -1169,6 +1192,14 @@ multiclass VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<
        VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_fake16", asmName>;
 }
 
+multiclass VOP1_Real_FULL_t16_and_fake16_gfx13<
+    bits<9> op, string asmName = !tolower(NAME), string opName = NAME> {
+  defm opName#"_t16" :
+       VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_t16", asmName>;
+  defm opName#"_fake16":
+       VOP1_Real_FULL_with_name<GFX13Gen, op, opName#"_fake16", asmName>;
+}
+
 multiclass VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<bits<9> op, string opName,
                                                                   string asmName> :
   VOP1_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
@@ -1182,14 +1213,44 @@ multiclass VOP1_Real_OpSelIsDPP<GFXGen Gen, bits<9> op> : VOP1_Real_e32<Gen, op>
         VOP3OpSelIsDPP_gfx12<{0, 1, 1, op{6-0}}, ps.Pfl>;
 }
 
+let HasClamp = 0 in {
+class VOP1_CVT_PK_F8_F16_Profile<RegisterOperand RC> : VOPProfile<[i16, v2f16, untyped, untyped]> {
+  let Src0RC32 = RC;
+  let Src0RC64 = RC;
+}
+class VOP1_CVT_PK_F8_F16_True16_Profile<RegisterOperand RC> : VOPProfile_True16<VOP_I16_V2F16> {
+  let Src0RC32 = RC;
+  let Src0RC64 = RC;
+}
+class VOP1_CVT_PK_F8_F16_Fake16_Profile<RegisterOperand RC> : VOPProfile_Fake16<VOP_I16_V2F16> {
+  let Src0RC32 = RC;
+  let Src0RC64 = RC;
+}
+}
+
+let SubtargetPredicate = isGFX1250Plus in {
+let ReadsModeReg = 0 in {
+  defm V_CVT_PK_FP8_F16 : VOP1Inst_t16_with_profiles<"v_cvt_pk_fp8_f16",
+                                                      VOP1_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
+                                                      int_amdgcn_cvt_pk_fp8_f16>;
+  defm V_CVT_PK_BF8_F16 : VOP1Inst_t16_with_profiles<"v_cvt_pk_bf8_f16",
+                                                      VOP1_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_True16_Profile<VSrc_NoInline_v2f16>,
+                                                      VOP1_CVT_PK_F8_F16_Fake16_Profile<VSrc_NoInline_v2f16>,
+                                                      int_amdgcn_cvt_pk_bf8_f16>;
+}
+}
+
 multiclass VOP1_Real_OpSelIsDPP_gfx1250_gfx13<bits<9> op> :
   VOP1_Real_OpSelIsDPP<GFX1250Gen, op>,
   VOP1_Real_OpSelIsDPP<GFX13Gen, op>;
 
-defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<0x06c, "V_CVT_F32_FP8_OP_SEL", "v_cvt_f32_fp8">;
+defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13_not_gfx1250<0x06c, "V_CVT_F32_FP8_op_sel", "v_cvt_f32_fp8">;
 defm V_CVT_F32_FP8           : VOP1_Real_FULL_with_name<GFX1250Gen, 0x06c, "V_CVT_F32_FP8_gfx1250", "v_cvt_f32_fp8">;
 
-defm V_CVT_F32_BF8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x06d, "V_CVT_F32_BF8_OP_SEL", "v_cvt_f32_bf8">;
+defm V_CVT_F32_BF8           : VOP1_Real_FULL_with_name_gfx11_gfx12_gfx13<0x06d, "V_CVT_F32_BF8_op_sel", "v_cvt_f32_bf8">;
 
 defm V_CVT_PK_F32_FP8_fake16 : VOP1_Real_e32_with_name_gfx11_gfx12_gfx13<0x06e, "V_CVT_PK_F32_FP8_fake16", "v_cvt_pk_f32_fp8">;
 defm V_CVT_PK_F32_FP8_t16    : VOP1_Real_e32_with_name_gfx11_gfx12_gfx13<0x06e, "V_CVT_PK_F32_FP8_t16", "v_cvt_pk_f32_fp8">;
@@ -1271,6 +1332,9 @@ defm V_LOG_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07c
 defm V_EXP_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07d>;
 defm V_SIN_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07e>;
 defm V_COS_BF16              : VOP1_Real_FULL_t16_and_fake16_gfx1250_gfx13<0x07f>;
+
+defm V_CVT_PK_FP8_F16        : VOP1_Real_FULL_t16_and_fake16_gfx13<0x2c>;
+defm V_CVT_PK_BF8_F16        : VOP1_Real_FULL_t16_and_fake16_gfx13<0x2d>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

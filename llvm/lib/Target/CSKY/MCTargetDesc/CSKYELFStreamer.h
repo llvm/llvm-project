@@ -91,7 +91,8 @@ private:
   void finishAttributeSection() override;
   size_t calculateContentSize() const;
 
-  void emitTargetAttributes(const MCSubtargetInfo &STI) override;
+  void emitTargetAttributes(const MCSubtargetInfo &STI,
+                            bool HardFloatABI = false) override;
 
 public:
   MCELFStreamer &getStreamer();

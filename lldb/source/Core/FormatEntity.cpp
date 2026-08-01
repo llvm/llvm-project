@@ -437,7 +437,7 @@ void FormatEntity::Entry::Dump(Stream &s, int depth) const {
   if (number != 0)
     s.Printf("number = %" PRIu64 " (0x%" PRIx64 "), ", number, number);
   if (deref)
-    s.Printf("deref = true, ");
+    s.PutCString("deref = true, ");
   s.EOL();
   for (const auto &children : children_stack) {
     for (const auto &child : children)
@@ -461,7 +461,7 @@ static bool RunScriptFormatKeyword(Stream &s, const SymbolContext *sc,
       if (script_interpreter->RunScriptFormatKeyword(script_function_name, t,
                                                      script_output, error) &&
           error.Success()) {
-        s.Printf("%s", script_output.c_str());
+        s.PutCString(script_output.c_str());
         return true;
       } else {
         s.Printf("<error: %s>", error.AsCString());
@@ -626,14 +626,14 @@ static bool DumpFile(Stream &s, const FileSpec &file, FileKind file_kind) {
     break;
 
   case FileKind::Basename:
-    if (file.GetFilename()) {
+    if (!file.GetFilename().empty()) {
       s << file.GetFilename();
       return true;
     }
     break;
 
   case FileKind::Dirname:
-    if (file.GetDirectory()) {
+    if (!file.GetDirectory().empty()) {
       s << file.GetDirectory();
       return true;
     }
@@ -2049,12 +2049,12 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
           Address pc;
           pc.SetLoadAddress(pc_loadaddr, m_exe_ctx->GetTargetPtr());
           if (pc == *m_addr) {
-            s.Printf("-> ");
+            s.PutCString("-> ");
             return true;
           }
         }
       }
-      s.Printf("   ");
+      s.PutCString("   ");
       return true;
     }
     return false;
@@ -2557,10 +2557,10 @@ bool FormatEntity::FormatFileSpec(const FileSpec &file_spec, Stream &s,
     file_spec.Dump(s.AsRawOstream());
     return true;
   } else if (variable_name == ".basename") {
-    s.PutCString(file_spec.GetFilename().GetStringRef());
+    s.PutCString(file_spec.GetFilename());
     return true;
   } else if (variable_name == ".dirname") {
-    s.PutCString(file_spec.GetFilename().GetStringRef());
+    s.PutCString(file_spec.GetFilename());
     return true;
   }
   return false;

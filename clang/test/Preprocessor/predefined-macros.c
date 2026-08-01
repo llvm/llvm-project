@@ -145,6 +145,8 @@
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL20
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL3.0 \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL30
+// RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=CL3.1 \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CL31
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-fast-relaxed-math \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-FRM
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -cl-std=clc++ \
@@ -158,6 +160,7 @@
 // CHECK-CL10: #define CL_VERSION_1_2 120
 // CHECK-CL10: #define CL_VERSION_2_0 200
 // CHECK-CL10: #define CL_VERSION_3_0 300
+// CHECK-CL10: #define CL_VERSION_3_1 310
 // CHECK-CL10: #define __OPENCL_C_VERSION__ 100
 // CHECK-CL10-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-CL11: #define CL_VERSION_1_0 100
@@ -165,6 +168,7 @@
 // CHECK-CL11: #define CL_VERSION_1_2 120
 // CHECK-CL11: #define CL_VERSION_2_0 200
 // CHECK-CL11: #define CL_VERSION_3_0 300
+// CHECK-CL11: #define CL_VERSION_3_1 310
 // CHECK-CL11: #define __OPENCL_C_VERSION__ 110
 // CHECK-CL11-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-CL12: #define CL_VERSION_1_0 100
@@ -172,6 +176,7 @@
 // CHECK-CL12: #define CL_VERSION_1_2 120
 // CHECK-CL12: #define CL_VERSION_2_0 200
 // CHECK-CL12: #define CL_VERSION_3_0 300
+// CHECK-CL12: #define CL_VERSION_3_1 310
 // CHECK-CL12: #define __OPENCL_C_VERSION__ 120
 // CHECK-CL12-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-CL20: #define CL_VERSION_1_0 100
@@ -179,6 +184,7 @@
 // CHECK-CL20: #define CL_VERSION_1_2 120
 // CHECK-CL20: #define CL_VERSION_2_0 200
 // CHECK-CL20: #define CL_VERSION_3_0 300
+// CHECK-CL20: #define CL_VERSION_3_1 310
 // CHECK-CL20: #define __OPENCL_C_VERSION__ 200
 // CHECK-CL20-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-CL30: #define CL_VERSION_1_0 100
@@ -186,8 +192,17 @@
 // CHECK-CL30: #define CL_VERSION_1_2 120
 // CHECK-CL30: #define CL_VERSION_2_0 200
 // CHECK-CL30: #define CL_VERSION_3_0 300
+// CHECK-CL30: #define CL_VERSION_3_1 310
 // CHECK-CL30: #define __OPENCL_C_VERSION__ 300
 // CHECK-CL30-NOT: #define __FAST_RELAXED_MATH__ 1
+// CHECK-CL31: #define CL_VERSION_1_0 100
+// CHECK-CL31: #define CL_VERSION_1_1 110
+// CHECK-CL31: #define CL_VERSION_1_2 120
+// CHECK-CL31: #define CL_VERSION_2_0 200
+// CHECK-CL31: #define CL_VERSION_3_0 300
+// CHECK-CL31: #define CL_VERSION_3_1 310
+// CHECK-CL31: #define __OPENCL_C_VERSION__ 310
+// CHECK-CL31-NOT: #define __FAST_RELAXED_MATH__ 1
 // CHECK-FRM: #define __FAST_RELAXED_MATH__ 1
 // CHECK-CLCPP10: #define __CL_CPP_VERSION_1_0__ 100
 // CHECK-CLCPP10: #define __CL_CPP_VERSION_2021__ 202100
@@ -276,19 +291,28 @@
 // CHECK-HIP-NEG-NOT: #define __CLANG_RDC__ 1
 // CHECK-HIP-NEG-NOT: #define HIP_API_PER_THREAD_DEFAULT_STREAM
 
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa \
 // RUN:   -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-DEV
 // CHECK-HIP-DEV: #define __HIPCC__ 1
 // CHECK-HIP-DEV: #define __HIP_DEVICE_COMPILE__ 1
 // CHECK-HIP-DEV: #define __HIP__ 1
+// CHECK-HIP-DEV-NOT: #define __HIP_LLVM__ 1
+
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa-llvm \
+// RUN:   -fcuda-is-device \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-LLVM
+// CHECK-HIP-LLVM: #define __HIPCC__ 1
+// CHECK-HIP-LLVM: #define __HIP_DEVICE_COMPILE__ 1
+// CHECK-HIP-LLVM: #define __HIP_LLVM__ 1
+// CHECK-HIP-LLVM: #define __HIP__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x cuda -triple nvptx \
 // RUN:   -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-CUDA-DEV-NEG
 // CHECK-CUDA-DEV-NEG-NOT: #define __CLANG_RDC__ 1
 
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa \
 // RUN:   -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-HIP-DEV-NEG
 // CHECK-HIP-DEV-NEG-NOT: #define __CUDA_ARCH__
@@ -302,7 +326,7 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-RDC
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-rdc | FileCheck %s --check-prefix=CHECK-RDC
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa \
 // RUN:   -fgpu-rdc -fcuda-is-device \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-RDC
 // CHECK-RDC: #define __CLANG_RDC__ 1
@@ -310,7 +334,7 @@
 // RUN: %clang_cc1 %s -E -dM -o - -x hip -triple x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-default-stream=per-thread \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-PTH
-// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgcn-amd-amdhsa \
+// RUN: %clang_cc1 %s -E -dM -o - -x hip -triple amdgpu-amd-amdhsa \
 // RUN:   -fcuda-is-device -fgpu-default-stream=per-thread \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-PTH
 // CHECK-PTH: #define HIP_API_PER_THREAD_DEFAULT_STREAM 1
@@ -329,7 +353,7 @@
 // CHECK-HIPSTDPAR-INTERPOSE: #define __HIPSTDPAR__ 1
 
 // RUN: %clang_cc1 %s -E -dM -o - -x hip --hipstdpar --hipstdpar-interpose-alloc \
-// RUN:  -triple amdgcn-amd-amdhsa -fcuda-is-device | FileCheck -match-full-lines \
+// RUN:  -triple amdgpu-amd-amdhsa -fcuda-is-device | FileCheck -match-full-lines \
 // RUN:  %s --check-prefix=CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG
 // CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG: #define __HIPSTDPAR__ 1
 // CHECK-HIPSTDPAR-INTERPOSE-DEV-NEG-NOT: #define __HIPSTDPAR_INTERPOSE_ALLOC_V1__ 1

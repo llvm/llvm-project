@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -verify-machineinstrs %s -o - | FileCheck -check-prefixes=FULL,ALL %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -verify-machineinstrs %s -o - | FileCheck -check-prefixes=FULL,ALL %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -mattr=+dx10-clamp-and-ieee-mode -run-pass=none -simplify-mir -verify-machineinstrs %s -o - | FileCheck -check-prefixes=SIMPLE,ALL %s
 
 
 ---
@@ -88,6 +88,7 @@
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT: occupancy: 8
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 name: kernel0
 machineFunctionInfo:
@@ -187,6 +188,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 
 name: no_mfi
@@ -269,6 +271,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT:  occupancy: 10
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 
 name: empty_mfi
@@ -353,6 +356,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
 # SIMPLE-NEXT: occupancy: 10
+# SIMPLE-NEXT: dynamicVGPRBlockSize: 0
 # SIMPLE-NEXT: body:
 
 name: empty_mfi_entry_func

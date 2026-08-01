@@ -31,7 +31,7 @@ void CSKYConstantPool::emitAll(MCStreamer &Streamer) {
   for (const ConstantPoolEntry &Entry : Entries) {
     Streamer.emitCodeAlignment(
         Align(Entry.Size),
-        Streamer.getContext().getSubtargetInfo()); // align naturally
+        *Streamer.getContext().getSubtargetInfo()); // align naturally
     Streamer.emitLabel(Entry.Label);
     Streamer.emitValue(Entry.Value, Entry.Size, Entry.Loc);
   }
@@ -124,7 +124,8 @@ void CSKYTargetStreamer::finish() {
   finishAttributeSection();
 }
 
-void CSKYTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {}
+void CSKYTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
+                                              bool HardFloatABI) {}
 
 void CSKYTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void CSKYTargetStreamer::emitTextAttribute(unsigned Attribute,

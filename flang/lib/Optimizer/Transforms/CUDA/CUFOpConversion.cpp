@@ -17,14 +17,8 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Runtime/CUDA/allocatable.h"
 #include "flang/Runtime/CUDA/common.h"
-#include "flang/Runtime/CUDA/descriptor.h"
 #include "flang/Runtime/CUDA/memory.h"
-#include "flang/Runtime/CUDA/pointer.h"
-#include "flang/Runtime/allocatable.h"
-#include "flang/Runtime/allocator-registry-consts.h"
-#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -485,22 +479,22 @@ public:
       args.push_back(arg);
     }
     mlir::Value dynamicShmemSize = op.getBytes() ? op.getBytes() : zero;
+    mlir::Type tokenType = nullptr;
+    SmallVector<Value, 1> tokens;
+    if (op.getStream()) {
+      tokens.push_back(
+          cuf::StreamCastOp::create(rewriter, loc, op.getStream()));
+      tokenType = tokens.front().getType();
+    }
     auto gpuLaunchOp = mlir::gpu::LaunchFuncOp::create(
         rewriter, loc, kernelName,
         mlir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
         mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ},
-        dynamicShmemSize, args);
+        dynamicShmemSize, args, tokenType, tokens);
     if (clusterDimX && clusterDimY && clusterDimZ) {
       gpuLaunchOp.getClusterSizeXMutable().assign(clusterDimX);
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
-    }
-    if (op.getStream()) {
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPoint(gpuLaunchOp);
-      mlir::Value stream =
-          cuf::StreamCastOp::create(rewriter, loc, op.getStream());
-      gpuLaunchOp.getAsyncDependenciesMutable().append(stream);
     }
     if (procAttr)
       gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
@@ -509,7 +503,7 @@ public:
       gpuLaunchOp->setAttr(cuf::getProcAttrName(),
                            cuf::ProcAttributeAttr::get(
                                op.getContext(), cuf::ProcAttribute::Global));
-    rewriter.replaceOp(op, gpuLaunchOp);
+    rewriter.eraseOp(op);
     return mlir::success();
   }
 

@@ -355,9 +355,10 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
         continue;
       if (!TopInterval.contains(OpI))
         continue;
-      OpN->incrUnscheduledSuccs();
-      if (!OpN->scheduled())
+      if (!OpN->scheduled()) {
+        OpN->incrUnscheduledSuccs();
         ++CntUnscheduledPreds;
+      }
     }
     *BotN->UnscheduledPreds += CntUnscheduledPreds;
   }
@@ -582,8 +583,10 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
     // If this is a non-mem node we only need to update UnscheduledSuccs.
     if (!N->scheduled()) {
       for (auto *PredN : N->preds(*this))
-        PredN->decrUnscheduledSuccs();
+        if (!PredN->scheduled())
+          PredN->decrUnscheduledSuccs();
       for (auto *SuccN : N->succs(*this))
+        /// TODO: Does the successor also need to be guarded?
         SuccN->decrUnscheduledPreds();
     }
   }
