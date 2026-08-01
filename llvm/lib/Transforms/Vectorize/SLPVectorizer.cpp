@@ -29649,10 +29649,6 @@ namespace {
 class HorizontalReduction {
   using ReductionOpsType = SmallVector<Value *, 16>;
   using ReductionOpsListType = SmallVector<ReductionOpsType, 2>;
-  enum class ReductionContext {
-    None,
-    CmpZero,
-  };
 
   ReductionOpsListType ReductionOps;
   /// List of possibly reduced values.
@@ -29687,22 +29683,22 @@ class HorizontalReduction {
 
   /// Return CmpZero for a scalar OR/UMax reduction whose only use is an eq/ne
   /// comparison against zero.
-  ReductionContext getReductionContext() const {
+  TTI::VectorInstrContext getReductionContext() const {
     auto *Root = dyn_cast<Instruction>(ReductionRoot);
     if (!Root || !Root->getType()->isIntegerTy() || !Root->hasOneUse() ||
         (RdxKind != RecurKind::Or && RdxKind != RecurKind::UMax))
-      return ReductionContext::None;
+      return TTI::VectorInstrContext::None;
 
     CmpPredicate Pred;
     if (!match(*Root->user_begin(),
                m_c_ICmp(Pred, m_Specific(Root), m_ZeroInt())) ||
         !ICmpInst::isEquality(Pred))
-      return ReductionContext::None;
-    return ReductionContext::CmpZero;
+      return TTI::VectorInstrContext::None;
+    return TTI::VectorInstrContext::CmpZero;
   }
 
-  static bool isZeroCmpContext(ReductionContext Context) {
-    return Context == ReductionContext::CmpZero;
+  static bool isZeroCmpContext(TTI::VectorInstrContext Context) {
+    return Context == TTI::VectorInstrContext::CmpZero;
   }
 
   /// Checks if instruction is associative and can be vectorized.
@@ -30509,7 +30505,7 @@ public:
     if (RK == ReductionOrdering::Ordered)
       IgnoreList.clear();
     bool IsCmpSelMinMax = isCmpSelMinMax(cast<Instruction>(ReductionRoot));
-    ReductionContext RdxContext = getReductionContext();
+    TTI::VectorInstrContext RdxContext = getReductionContext();
 
     // Need to track reduced vals, they may be changed during vectorization of
     // subvectors.
@@ -30529,7 +30525,8 @@ public:
     // nodes and thus requiring extract if fully vectorized in other trees.
     SmallPtrSet<Value *, 4> RequiredExtract;
     WeakTrackingVH VectorizedTree = nullptr;
-    ReductionContext VectorizedReductionContext = ReductionContext::None;
+    TTI::VectorInstrContext VectorizedReductionContext =
+        TTI::VectorInstrContext::None;
     bool CheckForReusedReductionOps = false;
     // Try to vectorize elements based on their type.
     SmallVector<InstructionsState> States;
@@ -30910,7 +30907,8 @@ public:
 
         // Use the zero-test cost only for a complete, standalone scalar
         // reduction that can become one vector comparison and i1 reduction.
-        ReductionContext CostContext = ReductionContext::None;
+        TTI::VectorInstrContext CostContext =
+            TTI::VectorInstrContext::None;
         if (isZeroCmpContext(RdxContext) &&
             this->ReducedVals.size() == 1 &&
             VL.size() == this->ReducedVals.front().size() &&
@@ -31365,8 +31363,8 @@ public:
 
       InstructionCost ReductionCost = getReductionCost(
           TTI, VL, EmptySameValuesCounter,
-          /*IsCmpSelMinMax=*/false, ReductionContext::None, RdxFMF, V, DT, DL,
-          TLI);
+          /*IsCmpSelMinMax=*/false, TTI::VectorInstrContext::None, RdxFMF, V,
+          DT, DL, TLI);
       InstructionCost Cost =
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
@@ -31549,9 +31547,9 @@ private:
   InstructionCost getReductionCost(
       TargetTransformInfo *TTI, ArrayRef<Value *> ReducedVals,
       const SmallMapVector<Value *, unsigned, 16> SameValuesCounter,
-      bool IsCmpSelMinMax, ReductionContext Context, FastMathFlags FMF,
-      const BoUpSLP &R, DominatorTree &DT, const DataLayout &DL,
-      const TargetLibraryInfo &TLI) {
+      bool IsCmpSelMinMax, TargetTransformInfo::VectorInstrContext Context,
+      FastMathFlags FMF, const BoUpSLP &R, DominatorTree &DT,
+      const DataLayout &DL, const TargetLibraryInfo &TLI) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
@@ -31828,7 +31826,8 @@ private:
   /// sub-registers, combines them with the given reduction operation as a
   /// vector operation and then performs single (small enough) reduction.
   Value *emitReduction(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
-                       Type *DestTy, ReductionContext Context) {
+                       Type *DestTy,
+                       TargetTransformInfo::VectorInstrContext Context) {
     if (isZeroCmpContext(Context)) {
       assert(VectorValuesAndScales.size() == 1 &&
              !std::get<3>(VectorValuesAndScales.front()) &&
