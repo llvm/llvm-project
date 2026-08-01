@@ -3379,12 +3379,14 @@ void allocate_void_ptr() {
 
 } // namespace new_allocation
 
-namespace ownership_functions {
+namespace allocating_freeing_functions {
 
 // Allocating/freeing functions are annotated with the ownership attributes:
 //   * ownership_returns: the result is a fresh allocation with a new loan.
 //   * ownership_takes:   the annotated arguments are freed, invalidating their
 //                        origins.
+// Plain malloc/free-style builtins are modeled the same way without any
+// attributes.
 
 __attribute__((ownership_returns(malloc))) int *myalloc(void);
 __attribute__((ownership_takes(malloc, 1))) void myfree(int *p);
@@ -3511,7 +3513,27 @@ void ownership_returns_member_realloc() {
   *p = 1;       // expected-note {{later used here}}
 }
 
-} // namespace ownership_functions
+void builtin_malloc_free_uaf() {
+  int *p = (int *)malloc(sizeof(int)); // expected-warning {{object allocated by 'malloc' does not live long enough}}
+  free(p);                             // expected-note {{object allocated by 'malloc' is freed here}}
+  *p = 1;                              // expected-note {{later used here}}
+}
+
+void builtin_malloc_prefixed_uaf() {
+  int *p = (int *)__builtin_malloc(sizeof(int)); // expected-warning {{object allocated by '__builtin_malloc' does not live long enough}}
+  __builtin_free(p);                             // expected-note {{object allocated by '__builtin_malloc' is freed here}}
+  *p = 1;                                        // expected-note {{later used here}}
+}
+
+void builtin_realloc() {
+  int *p = (int *)malloc(sizeof(int));
+  p = (int *)realloc(p, sizeof(int) * 2); // expected-warning {{object allocated by 'realloc' does not live long enough}}
+  *p = 1;
+  free(p); // expected-note {{object allocated by 'realloc' is freed here}}
+  *p = 1;  // expected-note {{later used here}}
+}
+
+} // namespace allocating_freeing_functions
 
 namespace placement_new {
 

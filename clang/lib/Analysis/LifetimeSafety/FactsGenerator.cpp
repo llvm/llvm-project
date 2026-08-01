@@ -1086,21 +1086,34 @@ void FactsGenerator::handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
   // arguments, so the index mapping would be off by one.
   if (isa<CXXConstructorDecl>(FD))
     return;
+  if (!isFreeingFunction(*FD))
+    return;
+  auto InvalidateArg = [&](unsigned ArgIndex) {
+    if (ArgIndex >= Args.size())
+      return;
+    OriginList *ArgList = getOriginsList(*Args[ArgIndex]);
+    if (!ArgList)
+      return;
+    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+        ArgList->getOuterOriginID(), Call));
+  };
+
+  bool HasAttr = false;
   for (const OwnershipAttr *Attr : FD->specific_attrs<OwnershipAttr>()) {
     if (Attr->getOwnKind() != OwnershipAttr::Takes)
       continue;
+    HasAttr = true;
     for (const ParamIdx &Idx : Attr->args()) {
       // `getLLVMIndex` encodes zero-origin indices including any implicit
       // 'this' parameter, matching the layout of the Args array.
-      unsigned ArgIndex = Idx.getLLVMIndex();
-      if (ArgIndex >= Args.size())
-        continue;
-      OriginList *ArgList = getOriginsList(*Args[ArgIndex]);
-      if (!ArgList)
-        continue;
-      CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
-          ArgList->getOuterOriginID(), Call));
+      InvalidateArg(Idx.getLLVMIndex());
     }
+  }
+  // Allocating/freeing builtins (e.g. `free`, `realloc`) free their first
+  // argument.
+  if (!HasAttr) {
+    assert(!Args.empty() && "freeing builtins take at least one argument");
+    InvalidateArg(0);
   }
 }
 
