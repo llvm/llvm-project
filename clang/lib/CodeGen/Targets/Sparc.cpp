@@ -31,47 +31,46 @@ private:
   /// Whether how `_Complex` values are passed and returned is GCC-compatible.
   bool IsComplexGnuABI;
 
-  llvm::Type *getComplexIntCoerceType(QualType Ty) const;
+  ABIArgInfo classifyComplexType(const ComplexType *Ty, bool IsRet) const;
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType Ty) const;
   void computeInfo(CGFunctionInfo &FI) const override;
 };
 } // end anonymous namespace
 
-llvm::Type *SparcV8ABIInfo::getComplexIntCoerceType(QualType Ty) const {
-  if (!IsComplexGnuABI)
-    return nullptr;
+ABIArgInfo SparcV8ABIInfo::classifyComplexType(const ComplexType *CT,
+                                               bool IsRet) const {
+  QualType ElementTy = CT->getElementType();
 
-  const auto *CT = Ty->getAs<ComplexType>();
-  if (!CT || !CT->getElementType()->isIntegerType())
-    return nullptr;
+  if (IsComplexGnuABI && ElementTy->isIntegerType()) {
+    // The default path already does the right thing for `long long _Complex`.
+    uint64_t ElementTypeSize = getContext().getTypeSize(ElementTy);
+    if (ElementTypeSize <= 32) {
+      // Coerce to an integer to get the correct scalar-like behavior.
+      return ABIArgInfo::getDirect(
+          llvm::IntegerType::get(getVMContext(), 2 * ElementTypeSize));
+    }
+  }
 
-  // The default path already does the right thing for `long long _Complex`.
-  uint64_t ElementTypeSize = getContext().getTypeSize(CT->getElementType());
-  if (ElementTypeSize > 32)
-    return nullptr;
+  // Any other complex value is passed indirectly, but returned in registers.
+  if (!IsRet)
+    return getNaturalAlignIndirect(QualType(CT, 0),
+                                   getDataLayout().getAllocaAddrSpace());
 
-  // Coerce to an integer to get the correct scalar-like behavior.
-  return llvm::IntegerType::get(getVMContext(), 2 * ElementTypeSize);
+  // long double _Complex is special, it is marked as inreg.
+  const auto *BT = ElementTy->getAs<BuiltinType>();
+  if (BT && BT->getKind() == BuiltinType::LongDouble)
+    return ABIArgInfo::getDirectInReg();
+
+  return ABIArgInfo::getDirect();
 }
 
 ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
-  const auto *CT = Ty->getAs<ComplexType>();
-  const auto *BT = Ty->getAs<BuiltinType>();
-  if (CT)
-    BT = CT->getElementType()->getAs<BuiltinType>();
-  bool IsLongDouble = BT && BT->getKind() == BuiltinType::LongDouble;
+  if (const auto *CT = Ty->getAs<ComplexType>())
+    return classifyComplexType(CT, /*IsRet=*/true);
 
-  // long double _Complex is special in that it should be marked as inreg.
-  if (CT) {
-    if (IsLongDouble)
-      return ABIArgInfo::getDirectInReg();
-    if (llvm::Type *CoerceTy = getComplexIntCoerceType(Ty))
-      return ABIArgInfo::getDirect(CoerceTy);
-    return ABIArgInfo::getDirect();
-  }
-
-  if (IsLongDouble)
+  if (const auto *BT = Ty->getAs<BuiltinType>();
+      BT && BT->getKind() == BuiltinType::LongDouble)
     return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                    /*ByVal=*/false);
 
@@ -79,13 +78,12 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
 }
 
 ABIArgInfo SparcV8ABIInfo::classifyArgumentType(QualType Ty) const {
-  if (const auto *BT = Ty->getAs<BuiltinType>();
-      BT && BT->getKind() == BuiltinType::LongDouble)
-    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
+  if (const auto *CT = Ty->getAs<ComplexType>())
+    return classifyComplexType(CT, /*IsRet=*/false);
 
-  // Complex integers go in registers.
-  if (llvm::Type *CoerceTy = getComplexIntCoerceType(Ty))
-    return ABIArgInfo::getDirect(CoerceTy);
+  const auto *BT = Ty->getAs<BuiltinType>();
+  if (BT && BT->getKind() == BuiltinType::LongDouble)
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
   return DefaultABIInfo::classifyArgumentType(Ty);
 }
