@@ -845,11 +845,6 @@ template <typename Op0_t> inline auto m_Not(const Op0_t &Op0) {
                      m_c_Binary<Instruction::Xor>(m_AllOnes(), Op0));
 }
 
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline auto m_c_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return m_CombineOr(m_Select(Op0, Op1, Op2), m_Select(m_Not(Op0), Op2, Op1));
-}
-
 template <typename Op0_t, typename Op1_t>
 inline auto m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
   return m_CombineOr(
