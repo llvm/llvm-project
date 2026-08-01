@@ -3163,6 +3163,95 @@ struct AlwaysTrueOrFalseIf : public OpRewritePattern<AffineIfOp> {
     return success();
   }
 };
+
+// Returns true if both AffineIfOps share the exact same set of Dim operands.
+static bool hasSameDimOperands(AffineIfOp a, AffineIfOp b) {
+  auto dimsA = a.getOperands().take_front(a.getIntegerSet().getNumDims());
+  auto dimsB = b.getOperands().take_front(b.getIntegerSet().getNumDims());
+  return llvm::SmallDenseSet<Value, 4>(dimsA.begin(), dimsA.end()) ==
+         llvm::SmallDenseSet<Value, 4>(dimsB.begin(), dimsB.end());
+}
+
+// Collapses nested single-then AffineIfOps into a single AffineIfOp by merging
+// their constraints when both ops operate on the same set of Dim operands.
+struct CollapseNestedIf : public OpRewritePattern<AffineIfOp> {
+  using OpRewritePattern<AffineIfOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AffineIfOp innerIf,
+                                PatternRewriter &rewriter) const override {
+    // Only combine single-then AffineIfOps where innerIf is the sole statement
+    // in outerIf's then block.
+    if (innerIf.hasElse())
+      return failure();
+
+    auto outerIf = dyn_cast<AffineIfOp>(innerIf->getParentOp());
+    if (!outerIf || outerIf.hasElse())
+      return failure();
+
+    Block *outerThen = outerIf.getThenBlock();
+    if (&outerThen->front() != innerIf.getOperation() ||
+        std::distance(outerThen->begin(), outerThen->end()) != 2)
+      return failure();
+
+    // Only merge when both ops share the same Dim operands (loop IVs). Merging
+    // different dim operands causes the if-statement to lose scheduling
+    // opportunities.
+    if (!hasSameDimOperands(innerIf, outerIf))
+      return failure();
+
+    IntegerSet outerSet = outerIf.getIntegerSet();
+    IntegerSet innerSet = innerIf.getIntegerSet();
+
+    OperandRange outerValues = outerIf.getOperands();
+    OperandRange innerValues = innerIf->getOperands();
+    ValueRange outerDimValues(outerValues.take_front(outerSet.getNumDims()));
+    ValueRange innerDimValues(innerValues.take_front(innerSet.getNumDims()));
+
+    // Map each inner Dim to its position in outer Dims.
+    SmallVector<AffineExpr, 4> dimRepls;
+    for (Value v : innerDimValues) {
+      auto it = llvm::find(outerDimValues, v);
+      dimRepls.push_back(
+          rewriter.getAffineDimExpr(std::distance(outerDimValues.begin(), it)));
+    }
+
+    // Shift inner Symbols after outer Symbols.
+    SmallVector<AffineExpr, 4> symRepls;
+    for (size_t i = 0, e = innerSet.getNumSymbols(),
+                m = outerSet.getNumSymbols();
+         i < e; ++i) {
+      symRepls.push_back(rewriter.getAffineSymbolExpr(m + i));
+    }
+
+    // Remap inner constraints and append to outer constraints.
+    SmallVector<AffineExpr, 8> constraints(outerSet.getConstraints().begin(),
+                                           outerSet.getConstraints().end());
+    for (AffineExpr e : innerSet.getConstraints())
+      constraints.push_back(e.replaceDimsAndSymbols(dimRepls, symRepls));
+
+    SmallVector<bool, 8> eqFlags(outerSet.getEqFlags().begin(),
+                                 outerSet.getEqFlags().end());
+    llvm::append_range(eqFlags, innerSet.getEqFlags());
+    auto newSet =
+        IntegerSet::get(outerSet.getNumDims(),
+                        outerSet.getNumSymbols() + innerSet.getNumSymbols(),
+                        constraints, eqFlags);
+
+    SmallVector<Value, 8> newOperands(outerValues);
+    llvm::append_range(newOperands,
+                       innerValues.drop_front(outerSet.getNumDims()));
+
+    rewriter.eraseOp(outerThen->getTerminator());
+    rewriter.mergeBlocks(innerIf.getThenBlock(), outerThen);
+    rewriter.modifyOpInPlace(outerIf, [&]() {
+      outerIf.setIntegerSet(newSet);
+      outerIf->setOperands(newOperands);
+    });
+    rewriter.eraseOp(innerIf);
+    return success();
+  }
+};
+
 } // namespace
 
 /// AffineIfOp has two regions -- `then` and `else`. The flow of data should be
@@ -3378,7 +3467,7 @@ LogicalResult AffineIfOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
 
 void AffineIfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  results.add<SimplifyDeadElse, AlwaysTrueOrFalseIf>(context);
+  results.add<SimplifyDeadElse, AlwaysTrueOrFalseIf, CollapseNestedIf>(context);
 }
 
 //===----------------------------------------------------------------------===//
