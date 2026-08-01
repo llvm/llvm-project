@@ -5129,29 +5129,34 @@ void CodeGenFunction::EmitCallArgs(
       std::swap(Args.back(), *(&Args.back() - 1));
   };
 
-  SmallVector<const MaterializeTemporaryExpr *, 4> MTEsToPreEvaluate;
+  SmallVector<const CoroutineSuspendParameterBypassExpr *, 4>
+      BypassesToPreEvaluate;
   if (isCoroutine() && hasInAllocaArgs(CGM, ExplicitCC, ArgTypes)) {
     for (const Expr *A : ArgRange) {
       if (auto *Bypass = dyn_cast<CoroutineSuspendParameterBypassExpr>(A)) {
-        if (auto *MTE =
-                dyn_cast<MaterializeTemporaryExpr>(Bypass->getSubExpr())) {
-          MTEsToPreEvaluate.push_back(MTE);
-        }
+        BypassesToPreEvaluate.push_back(Bypass);
       }
     }
   }
 
-  if (!MTEsToPreEvaluate.empty()) {
+  SmallVector<std::unique_ptr<OpaqueValueMapping>, 4> Mappings;
+  if (!BypassesToPreEvaluate.empty()) {
     if (LeftToRight) {
-      for (const MaterializeTemporaryExpr *MTE : MTEsToPreEvaluate) {
+      for (const CoroutineSuspendParameterBypassExpr *Bypass :
+           BypassesToPreEvaluate) {
+        const auto *MTE = cast<MaterializeTemporaryExpr>(Bypass->getSubExpr());
         LValue LV = EmitMaterializeTemporaryExpr(MTE);
-        PreEvaluatedMaterializedTemporaries[MTE] = LV;
+        Mappings.push_back(std::make_unique<OpaqueValueMapping>(
+            *this, Bypass->getOpaqueValue(), LV));
       }
     } else {
-      for (int i = MTEsToPreEvaluate.size() - 1; i >= 0; --i) {
-        const MaterializeTemporaryExpr *MTE = MTEsToPreEvaluate[i];
+      for (int i = BypassesToPreEvaluate.size() - 1; i >= 0; --i) {
+        const CoroutineSuspendParameterBypassExpr *Bypass =
+            BypassesToPreEvaluate[i];
+        const auto *MTE = cast<MaterializeTemporaryExpr>(Bypass->getSubExpr());
         LValue LV = EmitMaterializeTemporaryExpr(MTE);
-        PreEvaluatedMaterializedTemporaries[MTE] = LV;
+        Mappings.push_back(std::make_unique<OpaqueValueMapping>(
+            *this, Bypass->getOpaqueValue(), LV));
       }
     }
   }

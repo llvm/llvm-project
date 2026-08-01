@@ -779,16 +779,6 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
 
 void AggExprEmitter::VisitMaterializeTemporaryExpr(
     MaterializeTemporaryExpr *E) {
-  if (CGF.hasPreEvaluatedTemporary(E)) {
-    LValue SrcLV = CGF.getPreEvaluatedTemporary(E);
-    QualType Type = E->getType();
-    assert((!Type->getAsCXXRecordDecl() ||
-            Type->getAsCXXRecordDecl()->isTriviallyCopyable()) &&
-           "Non-trivially copyable MTE should not be visited as aggregate when "
-           "pre-evaluated");
-    EmitFinalDestCopy(Type, SrcLV);
-    return;
-  }
   Visit(E->getSubExpr());
 }
 
@@ -802,7 +792,6 @@ void AggExprEmitter::VisitOpaqueValueExpr(OpaqueValueExpr *e) {
 
 void AggExprEmitter::VisitCoroutineSuspendParameterBypassExpr(
     CoroutineSuspendParameterBypassExpr *E) {
-  CodeGenFunction::CoroutineSuspendParameterBypassMapping Mapping(CGF, E);
   Visit(E->getMoveExpr());
 }
 

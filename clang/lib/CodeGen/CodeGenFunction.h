@@ -1774,8 +1774,6 @@ private:
   /// expressions.
   llvm::DenseMap<const OpaqueValueExpr *, LValue> OpaqueLValues;
   llvm::DenseMap<const OpaqueValueExpr *, RValue> OpaqueRValues;
-  llvm::DenseMap<const MaterializeTemporaryExpr *, LValue>
-      PreEvaluatedMaterializedTemporaries;
 
   // VLASizeMap - This keeps track of the associated size for each VLA type.
   // We track this by the size expression rather than the type itself because
@@ -3108,26 +3106,8 @@ public:
   /// already been emitted.
   bool isOpaqueValueEmitted(const OpaqueValueExpr *E);
 
-  bool hasPreEvaluatedTemporary(const MaterializeTemporaryExpr *M) const {
-    return PreEvaluatedMaterializedTemporaries.count(M);
-  }
-  LValue getPreEvaluatedTemporary(const MaterializeTemporaryExpr *M) {
-    auto It = PreEvaluatedMaterializedTemporaries.find(M);
-    assert(It != PreEvaluatedMaterializedTemporaries.end() &&
-           "MTE is not pre-evaluated");
-    return It->second;
-  }
 
-  class CoroutineSuspendParameterBypassMapping {
-    OpaqueValueMapping OVM;
 
-  public:
-    CoroutineSuspendParameterBypassMapping(
-        CodeGenFunction &CGF, const CoroutineSuspendParameterBypassExpr *E)
-        : OVM(CGF, OpaqueValueExpr::findInCopyConstruct(E->getMoveExpr()),
-              CGF.getPreEvaluatedTemporary(
-                  cast<MaterializeTemporaryExpr>(E->getSubExpr()))) {}
-  };
 
   /// Get the index of the current ArrayInitLoopExpr, if any.
   llvm::Value *getArrayInitIndex() { return ArrayInitIndex; }
