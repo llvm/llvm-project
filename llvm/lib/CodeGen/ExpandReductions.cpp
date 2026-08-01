@@ -23,6 +23,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <numeric>
 
 using namespace llvm;
 
@@ -125,9 +126,17 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
       auto *FTy = cast<FixedVectorType>(Vec->getType());
       unsigned NumElts = FTy->getNumElements();
 
-      if (FTy->getElementType() == Builder.getInt1Ty() &&
-          isPowerOf2_32(NumElts)) {
-        Rdx = Builder.CreateBitCast(Vec, Builder.getIntNTy(NumElts));
+      if (FTy->getElementType() == Builder.getInt1Ty()) {
+        unsigned Width = PowerOf2Ceil(NumElts);
+        if (Width != NumElts) {
+          Constant *Identity = ID == Intrinsic::vector_reduce_and
+                                   ? Constant::getAllOnesValue(FTy)
+                                   : Constant::getNullValue(FTy);
+          SmallVector<int, 16> Mask(Width);
+          std::iota(Mask.begin(), Mask.end(), 0);
+          Vec = Builder.CreateShuffleVector(Vec, Identity, Mask);
+        }
+        Rdx = Builder.CreateBitCast(Vec, Builder.getIntNTy(Width));
         if (ID == Intrinsic::vector_reduce_and) {
           Rdx = Builder.CreateICmpEQ(
               Rdx, ConstantInt::getAllOnesValue(Rdx->getType()));

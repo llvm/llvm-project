@@ -20,6 +20,9 @@ declare double @llvm.vector.reduce.fmin.v2f64(<2 x double>)
 
 declare i8 @llvm.vector.reduce.and.i8.v3i8(<3 x i8>)
 
+declare i1 @llvm.vector.reduce.or.v3i1(<3 x i1>)
+declare i1 @llvm.vector.reduce.and.v7i1(<7 x i1>)
+
 define i64 @add_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @add_i64(
 ; CHECK-NEXT:  entry:
@@ -315,4 +318,32 @@ define i8 @test_v3i8(<3 x i8> %a) nounwind {
 entry:
   %b = call i8 @llvm.vector.reduce.and.i8.v3i8(<3 x i8> %a)
   ret i8 %b
+}
+
+; i1 reductions of a non power of two vector are padded out with the identity
+; element rather than scalarized.
+define i1 @test_or_v3i1(<3 x i1> %a) nounwind {
+; CHECK-LABEL: @test_or_v3i1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <3 x i1> [[A:%.*]], <3 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[TMP0]] to i4
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i4 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+entry:
+  %b = call i1 @llvm.vector.reduce.or.v3i1(<3 x i1> %a)
+  ret i1 %b
+}
+
+define i1 @test_and_v7i1(<7 x i1> %a) nounwind {
+; CHECK-LABEL: @test_and_v7i1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <7 x i1> [[A:%.*]], <7 x i1> splat (i1 true), <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x i1> [[TMP0]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+entry:
+  %b = call i1 @llvm.vector.reduce.and.v7i1(<7 x i1> %a)
+  ret i1 %b
 }
