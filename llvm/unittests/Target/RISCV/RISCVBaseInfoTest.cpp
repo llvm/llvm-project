@@ -40,8 +40,7 @@ RISCVABI::ABI computeTargetABI(StringRef TripleName, StringRef FeatureStr,
 std::string computeTargetABIError(StringRef TripleName, StringRef FeatureStr,
                                   StringRef ABIName) {
   auto STI = createSTI(TripleName, FeatureStr);
-  Expected<RISCVABI::ABI> Result =
-      RISCVABI::computeTargetABI(*STI, ABIName);
+  Expected<RISCVABI::ABI> Result = RISCVABI::computeTargetABI(*STI, ABIName);
   if (Result) {
     ADD_FAILURE() << "expected an error for -target-abi " << ABIName;
     return {};
