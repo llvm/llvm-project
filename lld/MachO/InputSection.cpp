@@ -207,8 +207,9 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy,
   if (copy->symbols.empty())
     return;
   auto *it = copy->symbols.begin();
-  // symbol.front() needs to keep the entry.
-  // In the case of `symbols.empty()`, skip the first element.
+  // The first symbol in the merged section (symbols.front()) must keep its
+  // unwind entry. If this section is empty, the copy's first symbol becomes the
+  // new front, so we skip clearing it.
   if (symbols.empty())
     ++it;
   for (; it != copy->symbols.end(); ++it) {
