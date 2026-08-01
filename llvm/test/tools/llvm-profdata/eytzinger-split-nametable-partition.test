@@ -9,9 +9,9 @@
 
 # CHECK: ProfileSummarySection - Offset: {{.*}}, Size: {{.*}}, Flags: {}
 # CHECK: NameTableSection - Offset: {{.*}}, Size: {{.*}}, Flags: {eytzinger,fixlenmd5}
-# CHECK: FuncOffsetTableSection - Offset: {{.*}}, Size: {{.*}}, Flags: {}
+# CHECK: FuncOffsetTableSection - Offset: {{.*}}, Size: {{.*}}, Flags: {eytzinger}
 # CHECK: LBRProfileSection - Offset: {{.*}}, Size: {{.*}}, Flags: {}
-# CHECK: FuncOffsetTableSection - Offset: {{.*}}, Size: {{.*}}, Flags: {flat}
+# CHECK: FuncOffsetTableSection - Offset: {{.*}}, Size: {{.*}}, Flags: {flat,eytzinger}
 # CHECK: LBRProfileSection - Offset: {{.*}}, Size: {{.*}}, Flags: {flat}
 
 # COUNTS: [1, 1, 1]
