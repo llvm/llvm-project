@@ -157,7 +157,6 @@ namespace {
     case ConstantExprKind::Normal:
     case ConstantExprKind::ClassTemplateArgument:
     case ConstantExprKind::ImmediateInvocation:
-    case ConstantExprKind::CompoundLiteralInitializer:
       // Note that non-type template arguments of class type are emitted as
       // template parameter objects.
       return false;
@@ -172,7 +171,6 @@ namespace {
     switch (Kind) {
     case ConstantExprKind::Normal:
     case ConstantExprKind::ImmediateInvocation:
-    case ConstantExprKind::CompoundLiteralInitializer:
       return false;
 
     case ConstantExprKind::ClassTemplateArgument:
@@ -815,8 +813,6 @@ namespace {
     /// not supported by the interpreter, an error is triggered.
     bool EnableNewConstInterp;
 
-    ConstantExprKind ConstantKind;
-
     /// BottomFrame - The frame in which evaluation started. This must be
     /// initialized after CurrentCall and CallStackDepth.
     CallStackFrame BottomFrame;
@@ -917,13 +913,11 @@ namespace {
     /// initialization.
     uint64_t ArrayInitIndex = -1;
 
-    EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode,
-             ConstantExprKind Kind = ConstantExprKind::Normal)
+    EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
         : State(const_cast<ASTContext &>(C), S), CurrentCall(nullptr),
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
           EnableNewConstInterp(C.getLangOpts().EnableNewConstInterp),
-          ConstantKind(Kind),
           BottomFrame(*this, SourceLocation(), /*Callee=*/nullptr,
                       /*This=*/nullptr,
                       /*CallExpr=*/nullptr, CallRef()),
@@ -4663,12 +4657,6 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   }
 
   bool IsAccess = isAnyAccess(AK);
-  bool IsConstexprInitializer =
-      Info.ConstantKind == ConstantExprKind::CompoundLiteralInitializer;
-  if (const auto *VD = dyn_cast_if_present<VarDecl>(
-          Info.EvaluatingDecl.dyn_cast<const ValueDecl *>()))
-    IsConstexprInitializer |= VD->isConstexpr();
-
   // C++11 DR1311: An lvalue-to-rvalue conversion on a volatile-qualified type
   // is not a constant expression (even if the object is non-volatile). We also
   // apply this rule to C++98, in order to conform to the expected 'volatile'
@@ -4765,7 +4753,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         return CompleteObject();
       } else if (VD->isConstexpr()) {
         // OK, we can read this variable.
-      } else if (Info.getLangOpts().C23 && IsConstexprInitializer) {
+      } else if (Info.getLangOpts().C23 &&
+                 Info.EvalMode == EvaluationMode::ConstantExpression) {
         Info.FFDiag(E);
         return CompleteObject();
       } else if (BaseType->isIntegralOrEnumerationType()) {
@@ -22000,14 +21989,13 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   bool IsConst;
-  if (Kind != ConstantExprKind::CompoundLiteralInitializer &&
-      FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst) &&
+  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst) &&
       Result.Val.hasValue())
     return true;
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
   EvaluationMode EM = EvaluationMode::ConstantExpression;
-  EvalInfo Info(Ctx, Result, EM, Kind);
+  EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
   if (Info.EnableNewConstInterp) {

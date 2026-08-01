@@ -765,8 +765,6 @@ public:
     /// evaluation is not part of the evaluation, but all other temporaries
     /// are destroyed.
     ImmediateInvocation,
-    /// The initializer of a compound literal constant.
-    CompoundLiteralInitializer,
   };
 
   /// Evaluate an expression that is required to be a constant expression. Does
