@@ -41,6 +41,7 @@ Implemented Papers
 - P0493R5: Atomic minimum/maximum (`Github <https://llvm.org/PR105418>`__)
 - P3059R2: Making user-defined constructors of view iterators/sentinels private (`Github <https://github.com/llvm/llvm-project/issues/189599>`__)
 - P0792R14: ``function_ref`` : a type-erased callable reference (`Github <https://llvm.org/PR105376>`__)
+- P3612R1: Harmonize proxy-reference operations (LWG 3638 and 4187) (`Github <https://llvm.org/PR171281>`__)
 - P3948R1: ``constant_wrapper`` is the only tool needed for passing constant expressions via function arguments (`Github <https://llvm.org/PR189604>`__)
 - P3961R1: Less double indirection in ``function_ref`` (RU-220) (`Github <https://llvm.org/PR189606>`__)
 - P1901R2: Enabling the Use of ``weak_ptr`` as Keys in Unordered Associative Containers (`Github <https://llvm.org/PR105372>`__)
