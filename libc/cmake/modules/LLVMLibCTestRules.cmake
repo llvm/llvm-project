@@ -206,6 +206,14 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           if(fq_target_name STREQUAL "libc.test.include.issignaling_c_test.__unit__" OR fq_target_name STREQUAL "libc.test.include.iscanonical_c_test.__unit__")
             string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
           endif()
+          # Adding libc.src.stdlib.exit normally contributes the internal entrypoint
+          # object. External baremetal startup code can reference the public C exit
+          # symbol, so use the public-packaging object for exit in this configuration.
+          if(dep STREQUAL "libc.src.stdlib.exit" AND
+             NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND
+             LIBC_TARGET_OS_IS_BAREMETAL)
+            string(REPLACE ".__internal__" "" object_file_raw ${object_file_raw})
+          endif()
           list(APPEND dep_obj ${object_file_raw})
         endif()
       endif()
@@ -755,10 +763,24 @@ endfunction(add_integration_test)
 #     LOADER_ARGS <list of special args to loaders (like the GPU loader)>
 #   )
 function(add_libc_hermetic test_name)
-  if(NOT TARGET libc.startup.${LIBC_TARGET_OS}.crt1)
-    message(VERBOSE "Skipping ${fq_target_name} as it is not available on ${LIBC_TARGET_OS}.")
+  get_fq_target_name(${test_name} fq_target_name)
+  get_fq_target_name(${test_name}.libc fq_libc_target_name)
+
+  set(startup_target libc.startup.${LIBC_TARGET_OS}.crt1)
+  set(startup_deps "")
+  if(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
+    if(NOT TARGET ${startup_target})
+      message(VERBOSE "Skipping ${fq_target_name} as ${startup_target} is not available on ${LIBC_TARGET_OS}.")
+      return()
+    endif()
+    list(APPEND startup_deps ${startup_target})
+  endif()
+
+  if(NOT startup_deps AND NOT LIBC_TEST_LINK_OPTIONS_DEFAULT)
+    message(VERBOSE "Skipping ${fq_target_name} as it has no startup provider.")
     return()
   endif()
+
   cmake_parse_arguments(
     "HERMETIC_TEST"
     "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD" # Optional arguments
@@ -774,14 +796,9 @@ function(add_libc_hermetic test_name)
     message(FATAL_ERROR "The SRCS list for add_integration_test is missing.")
   endif()
 
-  get_fq_target_name(${test_name} fq_target_name)
-  get_fq_target_name(${test_name}.libc fq_libc_target_name)
-
   get_fq_deps_list(fq_deps_list ${HERMETIC_TEST_DEPENDS})
   list(APPEND fq_deps_list
-      # Hermetic tests use the platform's startup object. So, their deps also
-      # have to be collected.
-      libc.startup.${LIBC_TARGET_OS}.crt1
+      ${startup_deps}
       # We always add the memory functions objects. This is because the
       # compiler's codegen can emit calls to the C memory functions.
       libc.src.__support.StringUtil.error_to_string
@@ -810,6 +827,16 @@ function(add_libc_hermetic test_name)
         libc.src.unistd.close
         libc.src.unistd.fork
         libc.src.unistd.pipe
+    )
+  endif()
+
+  if(NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP AND LIBC_TARGET_OS_IS_BAREMETAL)
+    # External baremetal startup objects still need libc's process startup and
+    # termination entrypoints, even when the test itself does not depend on them.
+    list(APPEND fq_deps_list
+      libc.src.stdlib.atexit
+      libc.src.stdlib.exit
+      libc.startup.baremetal.init
     )
   endif()
 
@@ -929,7 +956,7 @@ function(add_libc_hermetic test_name)
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
-      libc.startup.${LIBC_TARGET_OS}.crt1
+      ${startup_deps}
       ${link_libraries}
       LibcHermeticTestSupport.hermetic
       ${fq_target_name}.__libc__
