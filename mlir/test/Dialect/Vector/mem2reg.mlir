@@ -190,3 +190,22 @@ func.func @negative_subview(%pad: f32) -> vector<4xf32> {
   %r = vector.transfer_read %sv[%c0], %pad {in_bounds = [true]} : memref<4xf32, strided<[1]>>, vector<4xf32>
   return %r : vector<4xf32>
 }
+
+// -----
+
+// A dynamic-shape memref never yields a promotable slot (its extents are not
+// known statically, so it cannot map to a fixed-size vector): must NOT be
+// promoted.
+
+// CHECK-LABEL: func.func @negative_dynamic_shape
+//        CHECK:   memref.alloca
+//        CHECK:   vector.transfer_write
+//        CHECK:   vector.transfer_read
+func.func @negative_dynamic_shape(%pad: f32, %d: index) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant dense<1.0> : vector<4xf32>
+  %a = memref.alloca(%d) : memref<?xf32>
+  vector.transfer_write %cst, %a[%c0] {in_bounds = [true]} : vector<4xf32>, memref<?xf32>
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<?xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
