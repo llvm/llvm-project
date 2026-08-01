@@ -15,7 +15,10 @@ namespace llvm {
 
 class UnifyLoopExitsPass : public RequiredPassInfoMixin<UnifyLoopExitsPass> {
 public:
+  UnifyLoopExitsPass(bool SwitchGuards = false) : SwitchGuards(SwitchGuards) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  bool SwitchGuards;
 };
 } // namespace llvm
 
