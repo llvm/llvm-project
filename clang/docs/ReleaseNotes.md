@@ -117,6 +117,8 @@ features cannot lower the translation-unit ABI level;
 
 #### C++23 Feature Support
 
+- Clang now allows indirect goto statements in `constexpr` functions in C++23 ([P2242R3](https://wg21.link/p2242r3)). (#213449)
+
 #### C++20 Feature Support
 
 #### C++17 Feature Support
