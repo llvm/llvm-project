@@ -1922,27 +1922,27 @@ def : CompressPat<(QC_E_LW GPRC:$rd, BasePtrC:$rs1, uimm7_lsb00:$imm),
                   (C_LW GPRC:$rd, BasePtrC:$rs1, uimm7_lsb00:$imm)>;
 def : CompressPat<(QC_E_LW GPRNoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
                   (C_LWSP GPRNoX0:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
-def : CompressPat<(QC_E_LB GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
-                  (LB GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_LBU GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
-                  (LBU GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_LH GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
-                  (LH GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_LHU GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
-                  (LHU GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_LW GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
-                  (LW GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LB GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12),
+                  (LB GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12)>;
+def : CompressPat<(QC_E_LBU GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12),
+                  (LBU GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12)>;
+def : CompressPat<(QC_E_LH GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12),
+                  (LH GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12)>;
+def : CompressPat<(QC_E_LHU GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12),
+                  (LHU GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12)>;
+def : CompressPat<(QC_E_LW GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12),
+                  (LW GPR:$rd, BasePtr:$rs1, simm12_lo_optional:$imm12)>;
 
 def : CompressPat<(QC_E_SW GPRC:$rs2, BasePtrC:$rs1, uimm7_lsb00:$imm),
                   (C_SW GPRC:$rs2, BasePtrC:$rs1, uimm7_lsb00:$imm)>;
 def : CompressPat<(QC_E_SW GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
                   (C_SWSP GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
-def : CompressPat<(QC_E_SB GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
-                  (SB GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_SH GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
-                  (SH GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_SW GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
-                  (SW GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_SB GPR:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12),
+                  (SB GPR:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12)>;
+def : CompressPat<(QC_E_SH GPR:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12),
+                  (SH GPR:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12)>;
+def : CompressPat<(QC_E_SW GPR:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12),
+                  (SW GPR:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12)>;
 } // isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32]
 
 let Predicates = [HasVendorXqcicm, IsRV32] in {

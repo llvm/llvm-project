@@ -25,6 +25,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -117,7 +118,15 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   HasStdExtC = hasFeature(RISCV::FeatureStdExtC);
   HasStdExtZce = hasFeature(RISCV::FeatureStdExtZce);
 
-  TargetABI = RISCVABI::computeTargetABI(*this, ABIName);
+  // Can't be fatal: per-function subtargets mean this one may just be the
+  // module-level default with no matching function, e.g. -target-abi ilp32f
+  // with no global -mattr=+f but all functions have their own "+f" attribute.
+  if (auto ABIOrErr = RISCVABI::computeTargetABI(*this, ABIName)) {
+    TargetABI = *ABIOrErr;
+  } else {
+    errs() << toString(ABIOrErr.takeError()) << " (ignoring target-abi)\n";
+    TargetABI = cantFail(RISCVABI::computeTargetABI(*this, ""));
+  }
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
 }

@@ -1260,6 +1260,22 @@ TEST(ComputeDefaultABI, SelectsExpectedABI) {
   EXPECT_EQ(GetABIFromFeatures(64, {"+f", "+d"}), "lp64d");
   EXPECT_EQ(GetABIFromFeatures(64, {"+e"}), "lp64e");
 
+  // With the Y extension enabled, the capability ABI is selected by default.
+  // Arch strings can't currently combine 'y' with 'e', or place 'y' anywhere
+  // other than right after the base ISA letter (see RejectsInvalidYPosition),
+  // so use parseFeatures to build the extension sets directly instead.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y"}), "il32pc64");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f"}), "il32pc64f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+f", "+d"}),
+            "il32pc64d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+experimental-y", "+e"}), "il32pc64e");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y"}), "l64pc128");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f"}), "l64pc128f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f", "+d"}),
+            "l64pc128d");
+  // There is no l64pc128e ABI, so RV64E+Y still defaults to the integer ABI.
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+e"}), "lp64e");
+
   // CHERIoT always selects the cheriot ABI by default.
   EXPECT_EQ(GetABIFromFeatures(32, {"+xcheriot"}), "cheriot");
 }

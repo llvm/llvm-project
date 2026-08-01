@@ -206,6 +206,7 @@ class ImmXLenAsmOperand<string prefix, string suffix = ""> : AsmOperandClass {
 
 class ImmAsmOperand<string prefix, int width, string suffix> : AsmOperandClass {
   let Name = prefix # "Imm" # width # suffix;
+  let PredicateMethod = "is" # prefix # "Imm" # width # suffix;
   let RenderMethod = "addImmOperands";
   let DiagnosticType = !strconcat("Invalid", Name);
 }
@@ -251,6 +252,18 @@ class UImmAsmOperand<int width, string suffix = "">
 class BareSImmNLsb0AsmOperand<int width>
     : ImmAsmOperand<"BareS", width, "Lsb0"> {
   let PredicateMethod = "isBareSimmNLsb0<" # width # ">";
+}
+
+// Use for memory operands where offset may be omitted entirely: "lb a0, (a1)"
+// parses as an offset of 0 without needing a separate zero-offset InstAlias
+// for every load/store instruction.
+class OptionalMemOffsetAsmOperand<AsmOperandClass base> : AsmOperandClass {
+  let Name = "Optional" # base.Name;
+  let PredicateMethod = "isOptionalMemOffset<&RISCVOperand::" # base.PredicateMethod # ">";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = base.DiagnosticType;
+  let IsOptional = 1;
+  let DefaultMethod = "defaultZeroOffset";
 }
 
 class RISCVOp<ValueType vt = XLenVT> : Operand<vt> {
@@ -351,8 +364,7 @@ def uimm64 : RISCVUImmOp<64>;
 
 def simm12 : RISCVSImmLeafOp<12>;
 
-def simm12_lo : RISCVSImmLeafOp<12> {
-  let ParserMatchClass = SImmAsmOperand<12, "LO">;
+class Simm12LoOp : RISCVSImmLeafOp<12> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -360,6 +372,16 @@ def simm12_lo : RISCVSImmLeafOp<12> {
     return MCOp.isBareSymbolRef();
   }];
   let OperandType = "OPERAND_SIMM12_LO";
+}
+
+def simm12_lo : Simm12LoOp {
+  let ParserMatchClass = SImmAsmOperand<12, "LO">;
+}
+
+// Variant of simm12_lo for memory-operand offsets that may be omitted
+// entirely, e.g. "lb a0, (a1)". See OptionalMemOffsetAsmOperand.
+def simm12_lo_optional : Simm12LoOp {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<simm12_lo.ParserMatchClass>;
 }
 
 // A 12-bit signed immediate which cannot fit in 6-bit signed immediate,
@@ -655,7 +677,8 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class Load_ri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
-    : RVInstI<funct3, OPC_LOAD, (outs rty:$rd), (ins BasePtr:$rs1, simm12_lo:$imm12),
+    : RVInstI<funct3, OPC_LOAD, (outs rty:$rd),
+              (ins BasePtr:$rs1, simm12_lo_optional:$imm12),
               opcodestr, "$rd, ${imm12}(${rs1})">;
 
 class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
@@ -671,7 +694,7 @@ class HLoad_r<bits<7> funct7, bits<5> funct5, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class Store_rri<bits<3> funct3, string opcodestr, DAGOperand rty = GPR>
     : RVInstS<funct3, OPC_STORE, (outs),
-              (ins rty:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
+              (ins rty:$rs2, BasePtr:$rs1, simm12_lo_optional:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">;
 
 class HStore_rr<bits<7> funct7, string opcodestr>
@@ -767,7 +790,7 @@ def JAL : RVInstJ<OPC_JAL, (outs GPR:$rd), (ins simm21_lsb0_jal:$imm20),
                   "jal", "$rd, $imm20">, Sched<[WriteJal]>;
 
 def JALR : RVInstI<0b000, OPC_JALR, (outs GPR:$rd),
-                   (ins GPR:$rs1, simm12_lo:$imm12),
+                   (ins GPR:$rs1, simm12_lo_optional:$imm12),
                    "jalr", "$rd, ${imm12}(${rs1})">,
            Sched<[WriteJalr, ReadJalr]>;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
@@ -1107,11 +1130,12 @@ def : InstAlias<"j $offset",   (JAL X0, simm21_lsb0_jal:$offset)>;
 def : InstAlias<"jal $offset", (JAL X1, simm21_lsb0_jal:$offset)>;
 
 // Non-zero offset aliases of "jalr" are the lowest weight, followed by the
-// two-register form, then the one-register forms and finally "ret".
+// two-register form, then the one-register forms and finally "ret". The
+// "(${rs})" offset-less forms are covered by simm12_lo_optional.
 def : InstAlias<"jr $rs",                (JALR      X0, GPR:$rs, 0), 3>;
-def : InstAlias<"jr ${offset}(${rs})",   (JALR      X0, GPR:$rs, simm12_lo:$offset)>;
+def : InstAlias<"jr ${offset}(${rs})",   (JALR      X0, GPR:$rs, simm12_lo_optional:$offset)>;
 def : InstAlias<"jalr $rs",              (JALR      X1, GPR:$rs, 0), 3>;
-def : InstAlias<"jalr ${offset}(${rs})", (JALR      X1, GPR:$rs, simm12_lo:$offset)>;
+def : InstAlias<"jalr ${offset}(${rs})", (JALR      X1, GPR:$rs, simm12_lo_optional:$offset)>;
 def : InstAlias<"jalr $rd, $rs",         (JALR GPR:$rd, GPR:$rs, 0), 2>;
 def : InstAlias<"ret",                   (JALR      X0,      X1, 0), 4>;
 
@@ -1119,9 +1143,6 @@ def : InstAlias<"ret",                   (JALR      X0,      X1, 0), 4>;
 def : InstAlias<"jr $rs, $offset",        (JALR      X0, GPR:$rs, simm12_lo:$offset), 0>;
 def : InstAlias<"jalr $rs, $offset",      (JALR      X1, GPR:$rs, simm12_lo:$offset), 0>;
 def : InstAlias<"jalr $rd, $rs, $offset", (JALR GPR:$rd, GPR:$rs, simm12_lo:$offset), 0>;
-def : InstAlias<"jr (${rs})",             (JALR      X0, GPR:$rs, 0), 0>;
-def : InstAlias<"jalr (${rs})",           (JALR      X1, GPR:$rs, 0), 0>;
-def : InstAlias<"jalr $rd, (${rs})",      (JALR GPR:$rd, GPR:$rs, 0), 0>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
@@ -1178,24 +1199,6 @@ def : InstAlias<"ntl.s1",     (ADD   X0, X0, X4)>;
 def : InstAlias<"ntl.all",    (ADD   X0, X0, X5)>;
 
 let EmitPriority = 0 in {
-def : InstAlias<"lb $rd, (${rs1})",
-                (LB  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lh $rd, (${rs1})",
-                (LH  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lw $rd, (${rs1})",
-                (LW  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lbu $rd, (${rs1})",
-                (LBU  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"lhu $rd, (${rs1})",
-                (LHU  GPR:$rd, GPR:$rs1, 0)>;
-
-def : InstAlias<"sb $rs2, (${rs1})",
-                (SB  GPR:$rs2, GPR:$rs1, 0)>;
-def : InstAlias<"sh $rs2, (${rs1})",
-                (SH  GPR:$rs2, GPR:$rs1, 0)>;
-def : InstAlias<"sw $rs2, (${rs1})",
-                (SW  GPR:$rs2, GPR:$rs1, 0)>;
-
 def : InstAlias<"add $rd, $rs1, $imm12",
                 (ADDI  GPR:$rd, GPR:$rs1, simm12_lo:$imm12)>;
 def : InstAlias<"and $rd, $rs1, $imm12",
@@ -1211,13 +1214,6 @@ def : InstAlias<"srl $rd, $rs1, $shamt",
 def : InstAlias<"sra $rd, $rs1, $shamt",
                 (SRAI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
 let Predicates = [IsRV64] in {
-def : InstAlias<"lwu $rd, (${rs1})",
-                (LWU  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"ld $rd, (${rs1})",
-                (LD  GPR:$rd, GPR:$rs1, 0)>;
-def : InstAlias<"sd $rs2, (${rs1})",
-                (SD  GPR:$rs2, GPR:$rs1, 0)>;
-
 def : InstAlias<"addw $rd, $rs1, $imm12",
                 (ADDIW  GPR:$rd, GPR:$rs1, simm12_lo:$imm12)>;
 def : InstAlias<"sllw $rd, $rs1, $shamt",
@@ -1308,7 +1304,7 @@ def InsnI : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode, uimm3:$
 def InsnI_Mem : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                                                        uimm3:$funct3,
                                                        AnyReg:$rs1,
-                                                       simm12_lo:$imm12),
+                                                       simm12_lo_optional:$imm12),
                                "$opcode, $funct3, $rd, ${imm12}(${rs1})">;
 def InsnB : DirectiveInsnB<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs1, AnyReg:$rs2,
@@ -1322,7 +1318,7 @@ def InsnJ : DirectiveInsnJ<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                            "$opcode, $rd, $imm20">;
 def InsnS : DirectiveInsnS<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs2, AnyReg:$rs1,
-                                        simm12_lo:$imm12),
+                                        simm12_lo_optional:$imm12),
                            "$opcode, $funct3, $rs2, ${imm12}(${rs1})">;
 } // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo
 
@@ -1346,10 +1342,7 @@ def : InstAlias<".insn_i $opcode, $funct3, $rd, $rs1, $imm12",
                        simm12_lo:$imm12)>;
 def : InstAlias<".insn_i $opcode, $funct3, $rd, ${imm12}(${rs1})",
                 (InsnI_Mem AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3,
-                           AnyReg:$rs1, simm12_lo:$imm12)>;
-def : InstAlias<".insn_i $opcode, $funct3, $rd, (${rs1})",
-                (InsnI_Mem AnyReg:$rd, uimm7_opcode:$opcode, uimm3:$funct3,
-                           AnyReg:$rs1, 0)>;
+                           AnyReg:$rs1, simm12_lo_optional:$imm12)>;
 def : InstAlias<".insn_b $opcode, $funct3, $rs1, $rs2, $imm12",
                 (InsnB uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
                        AnyReg:$rs2, bare_simm13_lsb0:$imm12)>;
@@ -1366,10 +1359,7 @@ def : InstAlias<".insn_uj $opcode, $rd, $imm20",
                 (InsnJ AnyReg:$rd, uimm7_opcode:$opcode, simm21_lsb0_jal:$imm20)>;
 def : InstAlias<".insn_s $opcode, $funct3, $rs2, ${imm12}(${rs1})",
                 (InsnS uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
-                       AnyReg:$rs1, simm12_lo:$imm12)>;
-def : InstAlias<".insn_s $opcode, $funct3, $rs2, (${rs1})",
-                (InsnS uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs2,
-                       AnyReg:$rs1, 0)>;
+                       AnyReg:$rs1, simm12_lo_optional:$imm12)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1783,10 +1773,14 @@ let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in {
 // Use GPRJALRNonX7 to avoid X7 which is reserved for landing pad labels
 // in cf-protection-branch. The NonX7 constraint is applied unconditionally
 // to simplify the code at a negligible performance cost.
-def PseudoBRIND : Pseudo<(outs), (ins GPRJALRNonX7:$rs1, simm12_lo:$imm12), []>,
-                  PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
-def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo:$imm12), []>,
-                    PseudoInstExpansion<(JALR X0, GPR:$rs1, simm12_lo:$imm12)>;
+def PseudoBRIND : Pseudo<(outs),
+                         (ins GPRJALRNonX7:$rs1, simm12_lo_optional:$imm12), []>,
+                  PseudoInstExpansion<(JALR X0, GPR:$rs1,
+                                       simm12_lo_optional:$imm12)>;
+def PseudoBRINDX7 : Pseudo<(outs), (ins GPRX7:$rs1, simm12_lo_optional:$imm12),
+                           []>,
+                    PseudoInstExpansion<(JALR X0, GPR:$rs1,
+                                         simm12_lo_optional:$imm12)>;
 }
 
 def : Pat<(riscv_sw_guarded_brind GPRX7:$rs1), (PseudoBRINDX7 GPRX7:$rs1, 0)>;
