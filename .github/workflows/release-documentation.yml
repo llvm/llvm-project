@@ -111,6 +111,7 @@ jobs:
         run: |
           ./llvm/utils/release/build-docs.sh \
             $(test -n "$INPUTS_RELEASE_VERSION" && echo -release "$INPUTS_RELEASE_VERSION" || echo -srcdir llvm)
+            ls -ltr
           echo "man-page-tarball-name=$(basename $(find . -iname 'llvm_man_pages-*.tar.xz'))" >> "$GITHUB_OUTPUT"
           echo "doxygen-tarball-name=$(basename $(find . -iname '*doxygen*.tar.xz'))" >> "$GITHUB_OUTPUT"
 
