@@ -72,16 +72,27 @@ public:
                         ExecutionSession &ES, ExecutorAddr CallerFnAddr,
                         ExecutorAddr FnAddr, const ArgTs &...Args) {
     using namespace llvm::orc::shared;
-    ES.callSPSWrapperAsync<SPSSigT>(
-        CallerFnAddr,
-        [OnComplete = std::move(OnComplete)](Error SerErr,
-                                             CalleeRetT Result) mutable {
-          if (SerErr)
-            return OnComplete(std::move(SerErr));
-          else
-            return OnComplete(std::move(Result));
-        },
-        FnAddr, Args...);
+    if constexpr (std::is_void_v<CalleeRetT>) {
+      // Void result: the executor-side function produces no value, so the only
+      // thing to report is the dispatch error (success if the call ran).
+      ES.callSPSWrapperAsync<SPSSigT>(
+          CallerFnAddr,
+          [OnComplete = std::move(OnComplete)](Error SerErr) mutable {
+            OnComplete(std::move(SerErr));
+          },
+          FnAddr, Args...);
+    } else {
+      ES.callSPSWrapperAsync<SPSSigT>(
+          CallerFnAddr,
+          [OnComplete = std::move(OnComplete)](Error SerErr,
+                                               CalleeRetT Result) mutable {
+            if (SerErr)
+              return OnComplete(std::move(SerErr));
+            else
+              return OnComplete(std::move(Result));
+          },
+          FnAddr, Args...);
+    }
   }
 
   void operator()(unique_function<void(ErrorRetT)> OnComplete,
@@ -102,6 +113,29 @@ inline constexpr char CallMainCIName[] = "orc_rt_ci_sps_call_main";
 /// SPS caller for rt::MainCaller: runs a main-like function
 /// (int(int argc, char *argv[])) in the executor.
 using MainCaller = Caller<rt::MainCaller, CallMainSPSSig, CallMainCIName>;
+
+using CallVoidVoidSPSSig = void(shared::SPSExecutorAddr);
+inline constexpr char CallVoidVoidCIName[] = "orc_rt_ci_sps_call_void_void";
+/// SPS caller for rt::VoidVoidCaller: runs a void() function in the executor.
+/// WARNING: This Caller is experimental and may be removed.
+using VoidVoidCaller =
+    Caller<rt::VoidVoidCaller, CallVoidVoidSPSSig, CallVoidVoidCIName>;
+
+using CallInt32VoidSPSSig = int32_t(shared::SPSExecutorAddr);
+inline constexpr char CallInt32VoidCIName[] = "orc_rt_ci_sps_call_int32_void";
+/// SPS caller for rt::Int32VoidCaller: runs an int32_t() function in the
+/// executor.
+/// WARNING: This Caller is experimental and may be removed.
+using Int32VoidCaller =
+    Caller<rt::Int32VoidCaller, CallInt32VoidSPSSig, CallInt32VoidCIName>;
+
+using CallInt32Int32SPSSig = int32_t(shared::SPSExecutorAddr, int32_t);
+inline constexpr char CallInt32Int32CIName[] = "orc_rt_ci_sps_call_int32_int32";
+/// SPS caller for rt::Int32Int32Caller: runs an int32_t(int32_t) function in
+/// the executor.
+/// WARNING: This Caller is experimental and may be removed.
+using Int32Int32Caller =
+    Caller<rt::Int32Int32Caller, CallInt32Int32SPSSig, CallInt32Int32CIName>;
 
 } // namespace llvm::orc::rt::sps
 

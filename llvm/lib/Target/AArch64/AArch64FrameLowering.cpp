@@ -861,12 +861,15 @@ void AArch64FrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
   BitVector GPRsToZero(TRI.getNumRegs());
   BitVector FPRsToZero(TRI.getNumRegs());
   bool HasSVE = STI.isSVEorStreamingSVEAvailable();
+  // Without an FP unit (e.g. -mgeneral-regs-only) the FP/vector registers can't
+  // hold a value and there is no instruction to clear them, so leave them out.
+  bool HasFPR = STI.hasFPARMv8();
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
       // For GPRs, we only care to clear out the 64-bit register.
       if (MCRegister XReg = getRegisterOrZero(Reg, HasSVE))
         GPRsToZero.set(XReg);
-    } else if (AArch64InstrInfo::isFpOrNEON(Reg)) {
+    } else if (HasFPR && AArch64InstrInfo::isFpOrNEON(Reg)) {
       // For FPRs,
       if (MCRegister XReg = getRegisterOrZero(Reg, HasSVE))
         FPRsToZero.set(XReg);
