@@ -5982,13 +5982,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
         if (SrcDef && SrcDef->isMoveImmediate()) {
           int64_t Imm = SrcDef->getOperand(1).getImm();
-          unsigned XorMovOp = Opc == AMDGPU::S_XOR_B32
-                                  ? AMDGPU::S_MOV_B32
-                                  : AMDGPU::S_MOV_B64_IMM_PSEUDO;
-          if (Imm == 0) { // 0 * parity(exec) = 0
-            BuildMI(BB, MI, DL, TII->get(XorMovOp), DstReg).addImm(0);
-            break;
-          }
           if (Imm == 1) { // 1 * parity(exec) = parity(exec)
             if (Opc == AMDGPU::S_XOR_B32) {
               BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg)
@@ -6025,15 +6018,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       }
       case AMDGPU::S_SUB_I32: {
         Register NegatedVal = MRI.createVirtualRegister(DstRegClass);
-        // Check if Src is a known identity constant.
-        MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
-        if (SrcDef && SrcDef->isMoveImmediate()) {
-          int64_t Imm = SrcDef->getOperand(1).getImm();
-          if (Imm == 0) { // 0 * bitcount(exec) = 0
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addImm(0);
-            break;
-          }
-        }
         // Take the negation of the source operand.
         BuildMI(BB, MI, DL, TII->get(AMDGPU::S_SUB_I32), NegatedVal)
             .addImm(0)
@@ -6048,10 +6032,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
         if (SrcDef && SrcDef->isMoveImmediate()) {
           int64_t Imm = SrcDef->getOperand(1).getImm();
-          if (Imm == 0) { // 0 * bitcount(exec) = 0
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addImm(0);
-            break;
-          }
           if (Imm == 1) { // 1 * bitcount(exec) = bitcount(exec)
             BuildMI(BB, MI, DL, TII->get(AMDGPU::COPY), DstReg)
                 .addReg(NewAccumulator->getOperand(0).getReg());
@@ -6084,11 +6064,6 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
         MachineInstr *SrcDef = MRI.getVRegDef(SrcReg);
         if (SrcDef && SrcDef->isMoveImmediate()) {
           int64_t Imm = SrcDef->getOperand(1).getImm();
-          if (Imm == 0) { // 0 * bitcount(exec) = 0
-            BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B64_IMM_PSEUDO), DstReg)
-                .addImm(0);
-            break;
-          }
           if (Imm == 1 && Opc == AMDGPU::S_ADD_U64_PSEUDO) {
             // 1 * bitcount(exec) = bitcount(exec)
             Register DstHi =
