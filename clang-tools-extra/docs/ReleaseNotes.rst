@@ -103,6 +103,12 @@ New checks
   Finds calls to ``value_or`` (and alternative spellings ``valueOr``,
   ``ValueOr``) on optional types where the return type is expensive to copy.
 
+- New :doc:`readability-use-span-first-last
+  <clang-tidy/checks/readability/use-span-first-last>` check.
+
+  Suggests using ``std::span::first()`` and ``std::span::last()`` member
+  functions instead of equivalent ``subspan()`` calls.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
