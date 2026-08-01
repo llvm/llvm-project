@@ -216,7 +216,7 @@ jobs:
        with:
          persist-credentials: false
          sparse-checkout: |
-           .github/workflows/upload-release-artifact
+           .github/workflows/
          sparse-checkout-cone-mode: false
 
      - name: Upload Man Page Artifacts
