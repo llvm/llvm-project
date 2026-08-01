@@ -126,6 +126,10 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    std::reverse(pol, non_bidir, non_bidir); // expected-error@*:* {{static assertion failed: reverse}}
+  }
+
+  {
     (void)std::reverse_copy(
         pol, non_bidir, non_bidir, it);            // expected-error@*:* {{static assertion failed: reverse_copy}}
     (void)std::reverse_copy(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: reverse_copy}}
