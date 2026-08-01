@@ -1,6 +1,10 @@
 # Enable errors for any global constructors.
 add_flag_if_supported("-Werror=global-constructors" WERROR_GLOBAL_CONSTRUCTOR)
 
+# MLIRIR defines the PCH that most other MLIR libraries reuse. CMake can only
+# reuse a PCH from an already-defined target, so IR must come first.
+add_subdirectory(IR)
+
 add_subdirectory(ABI)
 add_subdirectory(Analysis)
 add_subdirectory(AsmParser)
@@ -8,7 +12,6 @@ add_subdirectory(Bytecode)
 add_subdirectory(Conversion)
 add_subdirectory(Debug)
 add_subdirectory(Dialect)
-add_subdirectory(IR)
 add_subdirectory(Interfaces)
 add_subdirectory(Parser)
 add_subdirectory(Pass)
