@@ -76,7 +76,7 @@
     },
     "LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES": {
       "value": false,
-      "doc": "Add __iso99_* aliases for scanf's functions."
+      "doc": "Add __isoc99_* aliases for scanf's functions."
     }
   },
   "str_to_float": {

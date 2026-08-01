@@ -194,7 +194,7 @@ function(_get_compile_options_from_config output_var)
   endif()
 
   if(LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES)
-    list(APPEND config_options "-DLIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES")
+    list(APPEND config_options "-DLIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES")
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)
