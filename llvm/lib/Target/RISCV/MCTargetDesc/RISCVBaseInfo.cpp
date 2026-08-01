@@ -53,7 +53,7 @@ namespace RISCV {
 } // namespace RISCV
 
 namespace RISCVABI {
-ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
+Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
   const Triple &TT = STI.getTargetTriple();
   const FeatureBitset &FeatureBits = STI.getFeatureBits();
   auto TargetABI = getTargetABI(ABIName);
@@ -62,37 +62,43 @@ ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
   bool IsXCheriot = FeatureBits[RISCV::FeatureVendorXCheriot];
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
-    errs()
-        << "'" << ABIName
-        << "' is not a recognized ABI for this target (ignoring target-abi)\n";
-  } else if (ABIName.starts_with("ilp32") && IsRV64) {
-    errs() << "32-bit ABIs are not supported for 64-bit targets (ignoring "
-              "target-abi)\n";
-    TargetABI = ABI_Unknown;
-  } else if (ABIName.starts_with("lp64") && !IsRV64) {
-    errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
-              "target-abi)\n";
-    TargetABI = ABI_Unknown;
-  } else if (!IsRV64 && IsRVE && !IsXCheriot && TargetABI != ABI_ILP32E &&
-             TargetABI != ABI_Unknown) {
-    // TODO: move this checking to RISCVTargetLowering and RISCVAsmParser
-    errs()
-        << "Only the ilp32e ABI is supported for RV32E (ignoring target-abi)\n";
-    TargetABI = ABI_Unknown;
-  } else if (!IsRV64 && IsRVE && IsXCheriot && TargetABI != ABI_CHERIOT &&
-             TargetABI != ABI_Unknown) {
-    errs() << "Only the cheriot ABI is supported for XCheriot (ignoring "
-              "target-abi)\n";
-    TargetABI = ABI_Unknown;
-  } else if (IsRV64 && IsRVE && TargetABI != ABI_LP64E &&
-             TargetABI != ABI_Unknown) {
-    // TODO: move this checking to RISCVTargetLowering and RISCVAsmParser
-    errs()
-        << "Only the lp64e ABI is supported for RV64E (ignoring target-abi)\n";
-    TargetABI = ABI_Unknown;
+    return createStringError(Twine("'") + ABIName +
+                             "' is not a recognized ABI for this target");
+  }
+  if (ABIName.starts_with("ilp32") && IsRV64) {
+    return createStringError(
+        "32-bit ABIs are not supported for 64-bit targets");
+  }
+  if (ABIName.starts_with("lp64") && !IsRV64) {
+    return createStringError(
+        "64-bit ABIs are not supported for 32-bit targets");
+  }
+  if (ABIName.ends_with("f") && !FeatureBits[RISCV::FeatureStdExtF]) {
+    return createStringError(
+        "hard-float 'f' ABI can't be used for a target that doesn't "
+        "support the F instruction set extension");
+  }
+  if (ABIName.ends_with("d") && !FeatureBits[RISCV::FeatureStdExtD]) {
+    return createStringError(
+        "hard-float 'd' ABI can't be used for a target that doesn't "
+        "support the D instruction set extension");
+  }
+  if (!IsRV64 && IsRVE && !IsXCheriot && TargetABI != ABI_ILP32E &&
+      TargetABI != ABI_Unknown) {
+    return createStringError("only the ilp32e ABI is supported for RV32E");
+  }
+  if (!IsRV64 && IsRVE && IsXCheriot && TargetABI != ABI_CHERIOT &&
+      TargetABI != ABI_Unknown) {
+    return createStringError(
+        "only the cheriot ABI is supported for XCheriot");
+  }
+  if (IsRV64 && IsRVE && TargetABI != ABI_LP64E &&
+      TargetABI != ABI_Unknown) {
+    return createStringError("only the lp64e ABI is supported for RV64E");
   }
 
-  if ((TargetABI == RISCVABI::ABI::ABI_ILP32E ||
+  // Unconditionally fatal: no sensible default ABI to fall back to here.
+  if ((TargetABI == ABI_ILP32E ||
        (TargetABI == ABI_Unknown && IsRVE && !IsRV64)) &&
       FeatureBits[RISCV::FeatureStdExtD])
     reportFatalUsageError("ILP32E cannot be used with the D ISA extension");
