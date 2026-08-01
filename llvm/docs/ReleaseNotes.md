@@ -92,6 +92,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the RISC-V Backend
 
+* Added experimental MC support for the `Smcsps` and `Sscsps`
+  conditional stack pointer swap extensions.
+
 * Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
   Load) extension.
 
