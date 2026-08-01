@@ -2358,6 +2358,9 @@ bool DSEState::tryFoldIntoCalloc(MemoryDef *Def, const Value *DefUO) {
   if (!Calloc)
     return false;
 
+  if (MDNode *MD = Malloc->getMetadata(LLVMContext::MD_alloc_token))
+    cast<Instruction>(Calloc)->setMetadata(LLVMContext::MD_alloc_token, MD);
+
   MemorySSAUpdater Updater(&MSSA);
   auto *NewAccess = Updater.createMemoryAccessAfter(cast<Instruction>(Calloc),
                                                     nullptr, MallocDef);

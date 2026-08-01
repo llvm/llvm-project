@@ -46,7 +46,6 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
@@ -728,38 +727,6 @@ RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
     break;
   default:
     break;
-  }
-}
-
-static void RenderDebugInfoCompressionArgs(const ArgList &Args,
-                                           ArgStringList &CmdArgs,
-                                           const Driver &D,
-                                           const ToolChain &TC) {
-  const Arg *A = Args.getLastArg(options::OPT_gz_EQ);
-  if (!A)
-    return;
-  if (checkDebugInfoOption(A, Args, D, TC)) {
-    StringRef Value = A->getValue();
-    if (Value == "none") {
-      CmdArgs.push_back("--compress-debug-sections=none");
-    } else if (Value == "zlib") {
-      if (llvm::compression::zlib::isAvailable()) {
-        CmdArgs.push_back(
-            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
-      } else {
-        D.Diag(diag::warn_debug_compression_unavailable) << "zlib";
-      }
-    } else if (Value == "zstd") {
-      if (llvm::compression::zstd::isAvailable()) {
-        CmdArgs.push_back(
-            Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
-      } else {
-        D.Diag(diag::warn_debug_compression_unavailable) << "zstd";
-      }
-    } else {
-      D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getSpelling() << Value;
-    }
   }
 }
 
@@ -5034,7 +5001,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     CmdArgs.push_back("-dwarf-explicit-import");
 
   renderDwarfFormat(D, T, Args, CmdArgs, EffectiveDWARFVersion);
-  RenderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
+  renderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
 
   // This controls whether or not we perform JustMyCode instrumentation.
   if (Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false)) {
@@ -9353,7 +9320,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           llvm::DebuggerKind::Default);
   renderDwarfFormat(D, Triple, Args, CmdArgs, DwarfVersion);
-  RenderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
+  renderDebugInfoCompressionArgs(Args, CmdArgs, D, getToolChain());
 
   // Handle -fPIC et al -- the relocation-model affects the assembler
   // for some targets.
