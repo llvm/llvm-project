@@ -19,8 +19,8 @@
 #include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/os.h"
 
-#if defined(__APPLE__) ||                                                      \
-    (defined(LIBC_TARGET_OS_IS_WINDOWS) && defined(LIBC_TARGET_ARCH_IS_X86_32))
+#if defined(__APPLE__) || (defined(LIBC_TARGET_OS_IS_WINDOWS) &&               \
+                           defined(LIBC_TARGET_ARCH_IS_X86_32))
 #define LIBC_TARGET_USES_LEADING_UNDERSCORE
 #endif
 
