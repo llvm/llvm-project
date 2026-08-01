@@ -5146,8 +5146,11 @@ void CodeGenFunction::EmitCallArgs(
            BypassesToPreEvaluate) {
         const auto *MTE = cast<MaterializeTemporaryExpr>(Bypass->getSubExpr());
         LValue LV = EmitMaterializeTemporaryExpr(MTE);
-        Mappings.push_back(std::make_unique<OpaqueValueMapping>(
-            *this, Bypass->getOpaqueValue(), LV));
+        const OpaqueValueExpr *OVE =
+            OpaqueValueExpr::findInCopyConstruct(Bypass->getMoveExpr());
+        assert(OVE && "OVE not found in MoveExpr");
+        Mappings.push_back(
+            std::make_unique<OpaqueValueMapping>(*this, OVE, LV));
       }
     } else {
       for (int i = BypassesToPreEvaluate.size() - 1; i >= 0; --i) {
@@ -5155,8 +5158,11 @@ void CodeGenFunction::EmitCallArgs(
             BypassesToPreEvaluate[i];
         const auto *MTE = cast<MaterializeTemporaryExpr>(Bypass->getSubExpr());
         LValue LV = EmitMaterializeTemporaryExpr(MTE);
-        Mappings.push_back(std::make_unique<OpaqueValueMapping>(
-            *this, Bypass->getOpaqueValue(), LV));
+        const OpaqueValueExpr *OVE =
+            OpaqueValueExpr::findInCopyConstruct(Bypass->getMoveExpr());
+        assert(OVE && "OVE not found in MoveExpr");
+        Mappings.push_back(
+            std::make_unique<OpaqueValueMapping>(*this, OVE, LV));
       }
     }
   }
@@ -5308,8 +5314,9 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   bool HasAggregateEvalKind = hasAggregateEvaluationKind(type);
 
   if (IsBypassed && HasAggregateEvalKind) {
-    LValue LV =
-        getPreEvaluatedTemporary(cast<MaterializeTemporaryExpr>(SubExpr));
+    const OpaqueValueExpr *OVE = OpaqueValueExpr::findInCopyConstruct(MoveExpr);
+    assert(OVE && "OVE not found in MoveExpr");
+    LValue LV = getOrCreateOpaqueLValueMapping(OVE);
     args.addUncopiedAggregate(LV, type);
     args.back().setMoveExpr(MoveExpr);
     return;
