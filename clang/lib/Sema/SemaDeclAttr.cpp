@@ -72,6 +72,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/NVPTXTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -6129,8 +6130,8 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
     // launch bounds attribute within ompx_attribute to support other archs.
     if (!IgnoreArch) {
       // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-      auto SM = getOffloadArch(Context.getTargetInfo());
-      if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
+      OffloadArch SM = getOffloadArch(Context.getTargetInfo());
+      if (SM.isUnknown() || llvm::NVPTX::getSmVersion(SM.nvptxKind()) < 900) {
         Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
             << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
         // Ignore it by setting MaxBlocks to null;
@@ -6244,7 +6245,8 @@ void Sema::addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI) {
 static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const TargetInfo &TTI = S.Context.getTargetInfo();
   OffloadArch Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
-  if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
+  if ((TTI.getTriple().isNVPTX() &&
+       llvm::NVPTX::getSmVersion(Arch.nvptxKind()) < 900) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
     S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported) << AL;
@@ -6263,7 +6265,8 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleNoClusterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const TargetInfo &TTI = S.Context.getTargetInfo();
   OffloadArch Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
-  if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
+  if ((TTI.getTriple().isNVPTX() &&
+       llvm::NVPTX::getSmVersion(Arch.nvptxKind()) < 900) ||
       (TTI.getTriple().isAMDGPU() &&
        !TTI.hasFeatureEnabled(TTI.getTargetOpts().FeatureMap, "clusters"))) {
     S.Diag(AL.getLoc(), diag::err_cluster_attr_not_supported) << AL;
