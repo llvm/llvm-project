@@ -145,6 +145,8 @@ def warn_utf8_symbol_homoglyph : Warning<
 def warn_utf8_symbol_zero_width : Warning<
   "identifier contains character %0 that is invisible in "
   "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
+defm mathematical_notation : CXX29Compat<
+  "mathematical notation character %0 in an identifier is">;
 def ext_mathematical_notation : ExtWarn<
   "mathematical notation character %0 in an identifier is a Clang extension">,
   InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;
@@ -863,6 +865,13 @@ def err_pp_include_in_arc_cf_code_audited : Error<
   "inside '#pragma clang arc_cf_code_audited'">;
 def err_pp_eof_in_arc_cf_code_audited : Error<
   "'#pragma clang arc_cf_code_audited' was not ended within this file">;
+
+def err_pp_pragma_set_pp_state_expected_name : Error<
+  "expected identifier after '#pragma clang __set_pp_state'">;
+def err_pp_pragma_set_pp_state_expected_int_after : Error<
+  "expected integer after '#pragma clang __set_pp_state %0'">;
+def err_pp_pragma_set_pp_state_invalid_arg : Error<
+  "invalid argument %0 in '#pragma clang __set_pp_state'">;
 
 def warn_pp_date_time : Warning<
   "expansion of date or time macro is not reproducible">,

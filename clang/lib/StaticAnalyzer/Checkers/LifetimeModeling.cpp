@@ -73,7 +73,7 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
 
 bool lifetime_modeling::isDeallocated(ProgramStateRef State,
                                       const MemRegion *Region) {
-  return State->contains<DeallocatedSourceSet>(Region);
+  return State->contains<DeallocatedSourceSet>(Region->getBaseRegion());
 }
 
 static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
@@ -85,6 +85,14 @@ static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
   Set = F.add(Set, Source);
   State = State->set<LifetimeBoundMap>(RetVal, Set);
   return State;
+}
+
+std::string lifetime_modeling::getRegionName(const MemRegion *Reg) {
+  // FIXME: Once the checker supports heap allocation, more region kinds
+  // should be handled to produce the correct descriptive name.
+  if (const std::string RegName = Reg->getDescriptiveName(); !RegName.empty())
+    return RegName;
+  return "the region";
 }
 
 void LifetimeModeling::checkPostCall(const CallEvent &Call,
@@ -242,8 +250,9 @@ void DebugLifetimeModeling::analyzerDumpLifetimeOriginsOf(
 
     llvm::SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
-    OS << " Origin " << ArgSVal << " bound to ";
-    llvm::interleaveComma(RegionNames, OS);
+    OS << " Origin '" << ArgSVal << "' bound to ";
+    llvm::interleaveComma(RegionNames, OS,
+                          [&](StringRef Name) { OS << "'" << Name << "'"; });
     C.emitReport(std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N));
   }
 }

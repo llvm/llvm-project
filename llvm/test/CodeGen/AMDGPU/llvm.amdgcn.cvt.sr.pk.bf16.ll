@@ -2,6 +2,9 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 < %s | FileCheck -check-prefix=GCN %s
 ; xUN: llc -global-isel=1 -mtriple=amdgpu12.50 < %s | FileCheck -check-prefix=GCN %s
 
+; RUN: not --crash llc -global-isel=0 -mtriple=amdgpu9.50 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.cvt.sr.pk.bf16.f32
+
 ; FIXME: GlobalISel does not work with bf16
 
 declare <2 x bfloat> @llvm.amdgcn.cvt.sr.pk.bf16.f32(float, float, i32) #0

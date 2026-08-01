@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Instruction.h"
 
 #include <cstdint>
@@ -123,6 +124,140 @@ public:
   }
   SmallVector<Value *> getOperand(const Instruction *I) const {
     return MainOp.getOperand(I);
+  }
+};
+
+/// Main data required for vectorization of instructions.
+class InstructionsState {
+  /// MainOp and AltOp are primarily determined by getSameOpcode. Currently,
+  /// only BinaryOperator, CastInst, and CmpInst support alternate instructions
+  /// (i.e., AltOp is not equal to MainOp; this can be checked using
+  /// isAltShuffle).
+  /// A rare exception is TrySplitNode, where the InstructionsState is derived
+  /// from getMainAltOpsNoStateVL.
+  /// For those InstructionsState that use alternate instructions, the resulting
+  /// vectorized output ultimately comes from a shufflevector. For example,
+  /// given a vector list (VL):
+  /// VL[0] = add i32 a, e
+  /// VL[1] = sub i32 b, f
+  /// VL[2] = add i32 c, g
+  /// VL[3] = sub i32 d, h
+  /// The vectorized result would be:
+  /// intermediated_0 = add <4 x i32> <a, b, c, d>, <e, f, g, h>
+  /// intermediated_1 = sub <4 x i32> <a, b, c, d>, <e, f, g, h>
+  /// result = shufflevector <4 x i32> intermediated_0,
+  ///                        <4 x i32> intermediated_1,
+  ///                        <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  /// Since shufflevector is used in the final result, when calculating the cost
+  /// (getEntryCost), we must account for the usage of shufflevector in
+  /// GetVectorCost.
+  Instruction *MainOp = nullptr;
+  Instruction *AltOp = nullptr;
+  /// Whether the instruction state represents copyable instructions.
+  bool HasCopyables = false;
+  /// Index of the operand modeling the copyable values: the addend for
+  /// fmuladd (retried with a multiplicand), the first operand otherwise.
+  unsigned CopyableOpIdx = 0;
+
+public:
+  Instruction *getMainOp() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return MainOp;
+  }
+
+  Instruction *getAltOp() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return AltOp;
+  }
+
+  /// The main/alternate opcodes for the list of instructions.
+  unsigned getOpcode() const { return getMainOp()->getOpcode(); }
+
+  unsigned getAltOpcode() const { return getAltOp()->getOpcode(); }
+
+  /// Some of the instructions in the list have alternate opcodes.
+  bool isAltShuffle() const { return getMainOp() != getAltOp(); }
+
+  /// Checks if \p I is the same operation as \p Op, distinguishing calls by
+  /// intrinsic ID (all calls share the Call opcode, so e.g. umax != smax).
+  static bool isSameOperation(const Instruction *I, const Instruction *Op);
+
+  /// Checks if the instruction matches either the main or alternate opcode.
+  /// \returns
+  /// - MainOp if \param I matches MainOp's opcode directly or can be converted
+  /// to it
+  /// - AltOp if \param I matches AltOp's opcode directly or can be converted to
+  /// it
+  /// - nullptr if \param I cannot be matched or converted to either opcode
+  Instruction *getMatchingMainOpOrAltOp(Instruction *I) const;
+
+  /// Checks if main/alt instructions are shift operations.
+  bool isShiftOp() const {
+    return getMainOp()->isShift() && getAltOp()->isShift();
+  }
+
+  /// Checks if main/alt instructions are bitwise logic operations.
+  bool isBitwiseLogicOp() const {
+    return getMainOp()->isBitwiseLogicOp() && getAltOp()->isBitwiseLogicOp();
+  }
+
+  /// Checks if main/alt instructions are mul/div/rem/fmul/fdiv/frem operations.
+  bool isMulDivLikeOp() const;
+
+  /// Checks if main/alt instructions are add/sub/fadd/fsub operations.
+  bool isAddSubLikeOp() const;
+
+  /// Checks if main/alt instructions are cmp operations.
+  bool isCmpOp() const {
+    return (getOpcode() == Instruction::ICmp ||
+            getOpcode() == Instruction::FCmp) &&
+           getAltOpcode() == getOpcode();
+  }
+
+  /// Checks if the current state is valid, i.e. has non-null MainOp
+  bool valid() const { return MainOp && AltOp; }
+
+  explicit operator bool() const { return valid(); }
+
+  InstructionsState() = delete;
+  InstructionsState(Instruction *MainOp, Instruction *AltOp,
+                    bool HasCopyables = false)
+      : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables),
+        CopyableOpIdx(MainOp && RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)
+                          ? 2
+                          : 0) {}
+  static InstructionsState invalid() { return {nullptr, nullptr}; }
+
+  /// Checks if the value is a copyable element.
+  bool isCopyableElement(Value *V) const;
+
+  /// Checks if the value \p V is a transformed instruction, compatible either
+  /// with main or alternate ops.
+  bool isExpandedBinOp(Value *V) const;
+
+  /// Checks if the operand at index \p Idx of instruction \p I is an expanded
+  /// operand.
+  bool isExpandedOperand(Instruction *I, unsigned Idx) const;
+
+  /// Checks if the value is non-schedulable.
+  bool isNonSchedulable(Value *V) const;
+
+  /// Checks if the state represents copyable instructions.
+  bool areInstructionsWithCopyableElements() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return HasCopyables;
+  }
+
+  /// Returns the index of the operand the copyable value is modeled in.
+  unsigned getCopyableOpIdx() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return CopyableOpIdx;
+  }
+
+  /// Sets the index of the operand the copyable value is modeled in.
+  void setCopyableOpIdx(unsigned Idx) {
+    assert((Idx == 0 || Idx == 2) && "Unexpected copyable operand index.");
+    CopyableOpIdx = Idx;
   }
 };
 
