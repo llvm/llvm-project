@@ -143,8 +143,7 @@ define void @logical_and_inner_commute(ptr noalias %p, ptr noalias %q, ptr noali
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i32> [[WIDE_LOAD]] to <4 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i32> [[WIDE_LOAD1]] to <4 x i1>
-; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <4 x i1> [[TMP7]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[R]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[TMP9]], align 4
