@@ -111,10 +111,15 @@ protected:
                            SmallVector<MachineInstr *> &RestoreUses, int FI,
                            DenseMap<Register, DomGroup> &RestoreRegToDomGroup);
 
-  unsigned loopWeight(unsigned LoopDepth) {
-    uint64_t Weight = 1;
+  int64_t loopWeight(unsigned LoopDepth) {
+    // Set a limit in order not to reach the int64_t max limit.
+    // We do a similar thing to next-use distance.
+    if (LoopDepth > 7)
+      LoopDepth = 7;
+
+    int64_t Weight = 1;
     for (unsigned i = 0; i < LoopDepth; ++i)
-      Weight *= 100;
+      Weight *= 500;
     return Weight;
   }
 
