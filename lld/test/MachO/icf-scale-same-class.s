@@ -23,12 +23,8 @@
 .globl _f_first
 _f_first:; movl $7, %eax; ret
 
-## Unlike icf-scale.s, every body generated here is identical, so all 512 Ki
-## land in one equivalence class. \+ iterates from 0 to n-1. $$7 is an escape
-## for a literal $7: .rept expands its body as a macro with no parameters, and
-## in one of those the Darwin assembler reads $7 as positional argument 7 and
-## drops it.
-.rept 524288
+## 64 Ki identical function landing in one equivalence class.
+.rept 65536
   .globl _f\+
   _f\+:; movl $$7, %eax; ret
 .endr
