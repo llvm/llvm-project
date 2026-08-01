@@ -54,11 +54,6 @@ LIBC_INLINE constexpr To fpconvert(FromBits x_bits) {
   using ToBits = fputil::FPBits<To>;
   using ToStorageType = typename ToBits::StorageType;
 
-  FromBits x_bits(x);
-
-  if constexpr (cpp::is_same_v<To, From>)
-    return x;
-
   if (x_bits.is_nan()) {
     typename FromBits::StorageType x_frac = x_bits.get_mantissa();
     if constexpr (ToBits::FRACTION_LEN >= FromBits::FRACTION_LEN) {
@@ -88,7 +83,10 @@ LIBC_INLINE constexpr To fpconvert(FromBits x_bits) {
 // Convert a floating-point value from From to To (extend or truncate).
 template <typename To, typename From>
 LIBC_INLINE constexpr To fpconvert(From x) {
-  return internal::fpconvert<To>(fputil::FPBits<From>(x));
+  if constexpr (cpp::is_same_v<To, From>)
+    return x;
+  else
+    return internal::fpconvert<To>(fputil::FPBits<From>(x));
 }
 
 // Same, for a float16/bfloat16 source delivered as raw bits.  Reconstructing
@@ -96,8 +94,11 @@ LIBC_INLINE constexpr To fpconvert(From x) {
 // ABI lowering, which would emit a circular __extendhfsf2.
 template <typename To, typename From>
 LIBC_INLINE constexpr To fpconvert_from_bits(uint16_t bits) {
-  return internal::fpconvert<To>(
-      fputil::FPBits<From>(cpp::bit_cast<From>(bits)));
+  if constexpr (cpp::is_same_v<To, From>)
+    return cpp::bit_cast<To>(bits);
+  else
+    return internal::fpconvert<To>(
+        fputil::FPBits<From>(cpp::bit_cast<From>(bits)));
 }
 
 } // namespace builtins
