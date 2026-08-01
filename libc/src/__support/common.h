@@ -17,6 +17,12 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
+#include "src/__support/macros/properties/os.h"
+
+#if defined(__APPLE__) ||                                                      \
+    (defined(LIBC_TARGET_OS_IS_WINDOWS) && defined(LIBC_TARGET_ARCH_IS_X86_32))
+#define LIBC_TARGET_USES_LEADING_UNDERSCORE
+#endif
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR
@@ -44,25 +50,24 @@
 
 #define LLVM_LIBC_ATTR(name) EXPAND_THEN_SECOND(LLVM_LIBC_FUNCTION_ATTR_##name)
 
-// At the moment, [[gnu::alias()]] is not supported on MacOS, and it is needed
-// to cleanly export and alias the C++ symbol `LIBC_NAMESPACE::func` with the C
-// symbol `func`.  So for public packaging on MacOS, we will only export the C
-// symbol.  Moreover, a C symbol `func` in macOS is mangled as `_func`.
+// Export both `func` and `LIBC_NAMESPACE::func` using an alias symbol.
+// This does not work on platfors with LIBC_TARGET_USES_LEADING_UNDERSCORE
+// so there this only exports `_func`.
 #if defined(LIBC_COPT_PUBLIC_PACKAGING) && !defined(LIBC_COMPILER_IS_MSVC)
-#ifndef __APPLE__
+#ifndef LIBC_TARGET_USES_LEADING_UNDERSCORE
 #define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
   LLVM_LIBC_ATTR(name)                                                         \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name)                       \
       __##name##_impl__ asm(c_alias);                                          \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(c_alias)]];                 \
   type __##name##_impl__ arglist
-#else // __APPLE__
+#else // LIBC_TARGET_USES_LEADING_UNDERSCORE
 #define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
   LLVM_LIBC_ATTR(name)                                                         \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name) name asm(             \
       "_" c_alias);                                                            \
   type name arglist
-#endif // __APPLE__
+#endif // LIBC_TARGET_USES_LEADING_UNDERSCORE
 
 #else  // LIBC_COPT_PUBLIC_PACKAGING
 #define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
@@ -78,25 +83,23 @@
   GET_FIFTH(__VA_ARGS__, LLVM_LIBC_FUNCTION_IMPL_4, LLVM_LIBC_FUNCTION_IMPL_3, \
             GET_NOTHING)(__VA_ARGS__)
 
-// At the moment, [[gnu::alias()]] is not supported on MacOS, and it is needed
-// to cleanly export and alias the C++ symbol `LIBC_NAMESPACE::func` with the C
-// symbol `func`.  So for public packaging on MacOS, we will only export the C
-// symbol.  Moreover, a C symbol `func` in macOS is mangled as `_func`.
+// See comment on LLVM_LIBC_FUNCTION_IMPL_4 for why this checks
+// LIBC_TARGET_USES_LEADING_UNDERSCORE.
 #if defined(LIBC_COPT_PUBLIC_PACKAGING) && !defined(LIBC_COMPILER_IS_MSVC)
-#ifndef __APPLE__
+#ifndef LIBC_TARGET_USES_LEADING_UNDERSCORE
 #define LLVM_LIBC_VARIABLE_IMPL(type, name)                                    \
   LLVM_LIBC_ATTR(name)                                                         \
   extern LLVM_LIBC_VARIABLE_ATTR decltype(LIBC_NAMESPACE::name)                \
       __##name##_impl__ asm(#name);                                            \
   extern decltype(LIBC_NAMESPACE::name) name [[gnu::alias(#name)]];            \
   type __##name##_impl__
-#else // __APPLE__
+#else // LIBC_TARGET_USES_LEADING_UNDERSCORE
 #define LLVM_LIBC_VARIABLE_IMPL(type, name)                                    \
   LLVM_LIBC_ATTR(name)                                                         \
   extern LLVM_LIBC_VARIABLE_ATTR decltype(LIBC_NAMESPACE::name) name asm(      \
       "_" #name);                                                              \
   type name
-#endif // __APPLE__
+#endif // LIBC_TARGET_USES_LEADING_UNDERSCORE
 #else  // LIBC_COPT_PUBLIC_PACKAGING
 #define LLVM_LIBC_VARIABLE_IMPL(type, name) type name
 #endif // LIBC_COPT_PUBLIC_PACKAGING
