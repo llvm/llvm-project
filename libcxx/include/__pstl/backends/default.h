@@ -69,6 +69,8 @@ namespace __pstl {
 // mismatch family
 // ---------------
 // - adjacent_find
+// - is_sorted
+// - is_sorted_until
 // - lexicographical_compare
 // - mismatch_3leg
 //
@@ -96,7 +98,6 @@ namespace __pstl {
 // - count
 // - equal(3 legs)
 // - equal
-// - is_sorted
 // - reduce
 //
 // transform and transform_binary family
@@ -322,6 +323,42 @@ struct __adjacent_find<__default_backend_tag, _ExecutionPolicy> {
   }
 };
 
+template <class _ExecutionPolicy>
+struct __is_sorted_until<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    using _AdjacentFind = __dispatch<__adjacent_find, __current_configuration, _ExecutionPolicy>;
+    using _Ref          = __iterator_reference<_ForwardIterator>;
+    // Find the first pair of adjacent elements that are not in sorted order (i.e. __comp(__rhs, __lhs) is true).
+    auto __res = _AdjacentFind()(__policy, std::move(__first), __last, [&](_Ref __lhs, _Ref __rhs) {
+      return __comp(__rhs, __lhs);
+    });
+    if (!__res) {
+      return nullopt; // Failed to run the algorithm, propagate the error.
+    }
+    if (*__res == __last) {
+      return __last; // Range is sorted, return __last.
+    }
+    ++*__res; // Advance the iterator to the first unsorted element.
+    return *__res;
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    using _IsSortedUntil = __dispatch<__is_sorted_until, __current_configuration, _ExecutionPolicy>;
+    auto __res           = _IsSortedUntil()(__policy, std::move(__first), __last, std::forward<_Comp>(__comp));
+    if (!__res) {
+      return nullopt; // Failed to run the algorithm, propagate the error.
+    }
+    return *__res == __last; // If the first unsorted element is the end of the range, the range is sorted.
+  }
+};
+
 //////////////////////////////////////////////////////////////
 // for_each family
 //////////////////////////////////////////////////////////////
@@ -529,35 +566,6 @@ struct __reduce<__default_backend_tag, _ExecutionPolicy> {
         std::move(__init),
         std::forward<_BinaryOperation>(__op),
         __identity{});
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _Comp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
-  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
-    if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
-      if (__first == __last)
-        return true; // Empty, sorted by definition
-      _ForwardIterator __first2 = std::next(__first);
-      if (__first2 == __last)
-        return true; // Only one element, sorted by definition
-      --__last;      // Make two iterator ranges: [__first, __first + n - 1) and [__first + 1, __first + n)
-      using _TransformReduce = __dispatch<__transform_reduce_binary, __current_configuration, _ExecutionPolicy>;
-      using _Ref             = __iterator_reference<_ForwardIterator>;
-      return _TransformReduce()(
-          __policy,
-          std::move(__first),
-          std::move(__last),
-          std::move(__first2),
-          true,
-          std::logical_and{},
-          [&](_Ref __left, _Ref __right) -> bool { return !__comp(__right, __left); });
-    } else {
-      // Currently anything outside bidirectional iterators has to be processed serially
-      return std::is_sorted(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
-    }
   }
 };
 

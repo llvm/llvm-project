@@ -137,6 +137,18 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::is_sorted(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: is_sorted}}
+    (void)std::is_sorted(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_sorted}}
+  }
+
+  {
+    (void)std::is_sorted_until(
+        pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: is_sorted_until}}
+    (void)std::is_sorted_until(
+        pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_sorted_until}}
+  }
+
+  {
     (void)std::merge(pol, non_fwd, non_fwd, it, it, out); // expected-error@*:* {{static assertion failed: merge}}
     (void)std::merge(pol, it, it, non_fwd, non_fwd, out); // expected-error@*:* {{static assertion failed: merge}}
     (void)std::merge(pol, it, it, it, it, non_output);    // expected-error@*:* {{static assertion failed: merge}}
