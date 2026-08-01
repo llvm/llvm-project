@@ -2569,7 +2569,11 @@ static void emitValidateOperandClass(const CodeGenTarget &Target,
   unsigned NumClassesByHwMode = RegClassesByHwMode.size();
 
   if (!RegClassesByHwMode.empty()) {
-    OS << "  if (Operand.isReg() && Kind > MCK_LAST_REGISTER &&"
+    // Resolve RegClassByHwMode kinds to their concrete class regardless of
+    // whether Operand is actually a register, so that the diagnostic
+    // fallback paths below (for both register and non-register operands)
+    // see a concrete class rather than an unresolved by-hwmode one.
+    OS << "  if (Kind > MCK_LAST_REGISTER &&"
           " Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {\n";
 
     const CodeGenHwModes &CGH = Target.getHwModes();
