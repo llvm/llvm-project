@@ -1021,6 +1021,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
         ExplodedNodeSet evaluated;
         evalBind(evaluated, CNE, Pred, Result, V, true);
 
+        assert(evaluated.size() == 1);
         Pred = *evaluated.begin();
         State = Pred->getState();
       }
