@@ -4,6 +4,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/NVPTXTargetParser.h"
+#include <cassert>
 
 namespace clang {
 
@@ -78,16 +79,16 @@ CudaVersion ToCudaVersion(llvm::VersionTuple Version) {
 }
 
 CudaVersion MinVersionForOffloadArch(OffloadArch A) {
-  if (A == OffloadArch::Unknown)
+  if (A.isUnknown())
     return CudaVersion::UNKNOWN;
 
   // AMD GPUs do not depend on CUDA versions.
   if (IsAMDOffloadArch(A))
     return CudaVersion::CUDA_70;
 
-  switch (A) {
+  switch (A.nvptxKind()) {
 #define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
-  case OffloadArch::KIND:                                                      \
+  case llvm::NVPTX::GK_##KIND:                                                 \
     return CudaVersion::MIN_VER;
 #include "llvm/TargetParser/NVPTXTargetParser.def"
   default:
@@ -100,11 +101,12 @@ CudaVersion MaxVersionForOffloadArch(OffloadArch A) {
   if (IsAMDOffloadArch(A))
     return CudaVersion::NEW;
 
-  switch (A) {
-  case OffloadArch::Unknown:
+  if (!A.isNVPTX())
     return CudaVersion::UNKNOWN;
+
+  switch (A.nvptxKind()) {
 #define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
-  case OffloadArch::KIND:                                                      \
+  case llvm::NVPTX::GK_##KIND:                                                 \
     return CudaVersion::MAX_VER;
 #include "llvm/TargetParser/NVPTXTargetParser.def"
   default:
@@ -127,33 +129,15 @@ bool CudaFeatureEnabled(CudaVersion Version, CudaFeature Feature) {
 }
 
 unsigned CudaArchToID(OffloadArch Arch) {
-  switch (Arch) {
-#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
-  case OffloadArch::KIND:                                                      \
-    return SM_ID;
-#include "llvm/TargetParser/NVPTXTargetParser.def"
-  default:
-    break;
-  }
-  llvm_unreachable("invalid NVIDIA GPU architecture");
-}
-
-static llvm::NVPTX::GPUKind OffloadArchToNVPTXKind(OffloadArch Arch) {
-  switch (Arch) {
-#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
-  case OffloadArch::KIND:                                                      \
-    return llvm::NVPTX::GK_##KIND;
-#include "llvm/TargetParser/NVPTXTargetParser.def"
-  default:
-    return llvm::NVPTX::GK_NONE;
-  }
+  assert(Arch.isNVPTX() && "invalid NVIDIA GPU architecture");
+  return llvm::NVPTX::getSmVersion(Arch.nvptxKind());
 }
 
 bool IsNVIDIAAcceleratedOffloadArch(OffloadArch Arch) {
-  return llvm::NVPTX::isAcceleratedArch(OffloadArchToNVPTXKind(Arch));
+  return Arch.isNVPTX() && llvm::NVPTX::isAcceleratedArch(Arch.nvptxKind());
 }
 
 bool IsNVIDIAFamilySpecificOffloadArch(OffloadArch Arch) {
-  return llvm::NVPTX::isFamilySpecificArch(OffloadArchToNVPTXKind(Arch));
+  return Arch.isNVPTX() && llvm::NVPTX::isFamilySpecificArch(Arch.nvptxKind());
 }
 } // namespace clang
