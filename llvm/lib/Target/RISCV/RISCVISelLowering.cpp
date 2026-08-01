@@ -25738,6 +25738,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   case CallingConv::PreserveMost:
   case CallingConv::GRAAL:
   case CallingConv::RISCV_VectorCall:
+  case CallingConv::Swift:
 #define CC_VLS_CASE(ABI_VLEN) case CallingConv::RISCV_VLSCall_##ABI_VLEN:
     CC_VLS_CASE(32)
     CC_VLS_CASE(64)

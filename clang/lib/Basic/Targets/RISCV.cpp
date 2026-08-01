@@ -612,7 +612,10 @@ RISCVTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_RISCVVLSCall_16384:
   case CC_RISCVVLSCall_32768:
   case CC_RISCVVLSCall_65536:
+  case CC_Swift:
     return CCCR_OK;
+  case CC_SwiftAsync:
+    return CCCR_Error;
   }
 }
 
