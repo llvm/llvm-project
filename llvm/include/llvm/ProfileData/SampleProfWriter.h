@@ -241,9 +241,6 @@ protected:
   /// Whether a profile payload callback is currently being executed.
   bool WritingProfileType = false;
 
-  inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
-                                std::set<FunctionId> &V);
-
   MapVector<FunctionId, uint32_t> NameTable;
 
   void addName(FunctionId FName);
