@@ -244,13 +244,20 @@ define i1 @test_any_v7i1(<7 x i1> %x) {
 ; CHECK-LABEL: test_any_v7i1:
 ; CHECK:         .functype test_any_v7i1 (i32, i32, i32, i32, i32, i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.or $push0=, $0, $1
-; CHECK-NEXT:    i32.or $push1=, $pop0, $2
-; CHECK-NEXT:    i32.or $push2=, $pop1, $3
-; CHECK-NEXT:    i32.or $push3=, $pop2, $4
-; CHECK-NEXT:    i32.or $push4=, $pop3, $5
-; CHECK-NEXT:    i32.or $push5=, $pop4, $6
-; CHECK-NEXT:    return $pop5
+; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i16x8.replace_lane $push1=, $pop0, 0, $0
+; CHECK-NEXT:    i16x8.replace_lane $push2=, $pop1, 1, $1
+; CHECK-NEXT:    i16x8.replace_lane $push3=, $pop2, 2, $2
+; CHECK-NEXT:    i16x8.replace_lane $push4=, $pop3, 3, $3
+; CHECK-NEXT:    i16x8.replace_lane $push5=, $pop4, 4, $4
+; CHECK-NEXT:    i16x8.replace_lane $push6=, $pop5, 5, $5
+; CHECK-NEXT:    i16x8.replace_lane $push7=, $pop6, 6, $6
+; CHECK-NEXT:    i32.const $push8=, 15
+; CHECK-NEXT:    i16x8.shl $push9=, $pop7, $pop8
+; CHECK-NEXT:    i32.const $push12=, 15
+; CHECK-NEXT:    i16x8.shr_s $push10=, $pop9, $pop12
+; CHECK-NEXT:    v128.any_true $push11=, $pop10
+; CHECK-NEXT:    return $pop11
   %ret = call i1 @llvm.vector.reduce.or.v7i1(<7 x i1> %x)
   ret i1 %ret
 }
@@ -259,13 +266,20 @@ define i1 @test_all_v7i1(<7 x i1> %x) {
 ; CHECK-LABEL: test_all_v7i1:
 ; CHECK:         .functype test_all_v7i1 (i32, i32, i32, i32, i32, i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.and $push0=, $0, $1
-; CHECK-NEXT:    i32.and $push1=, $pop0, $2
-; CHECK-NEXT:    i32.and $push2=, $pop1, $3
-; CHECK-NEXT:    i32.and $push3=, $pop2, $4
-; CHECK-NEXT:    i32.and $push4=, $pop3, $5
-; CHECK-NEXT:    i32.and $push5=, $pop4, $6
-; CHECK-NEXT:    return $pop5
+; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0, 0, 0, 0, 65535
+; CHECK-NEXT:    i16x8.replace_lane $push1=, $pop0, 0, $0
+; CHECK-NEXT:    i16x8.replace_lane $push2=, $pop1, 1, $1
+; CHECK-NEXT:    i16x8.replace_lane $push3=, $pop2, 2, $2
+; CHECK-NEXT:    i16x8.replace_lane $push4=, $pop3, 3, $3
+; CHECK-NEXT:    i16x8.replace_lane $push5=, $pop4, 4, $4
+; CHECK-NEXT:    i16x8.replace_lane $push6=, $pop5, 5, $5
+; CHECK-NEXT:    i16x8.replace_lane $push7=, $pop6, 6, $6
+; CHECK-NEXT:    i32.const $push8=, 15
+; CHECK-NEXT:    i16x8.shl $push9=, $pop7, $pop8
+; CHECK-NEXT:    i32.const $push12=, 15
+; CHECK-NEXT:    i16x8.shr_s $push10=, $pop9, $pop12
+; CHECK-NEXT:    i16x8.all_true $push11=, $pop10
+; CHECK-NEXT:    return $pop11
   %ret = call i1 @llvm.vector.reduce.and.v7i1(<7 x i1> %x)
   ret i1 %ret
 }
