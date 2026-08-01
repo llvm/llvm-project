@@ -40,6 +40,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/IR/Assumptions.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
@@ -3185,6 +3186,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addNoFPClassAttr(getNoFPClassTestMask(getLangOpts()));
       break;
     case ABIArgInfo::Indirect: {
+      assert(!ParamType->isIncompleteType() &&
+             "Pass-by-value parameter has incomplete definition?");
+
       if (AI.getInReg())
         Attrs.addAttribute(llvm::Attribute::InReg);
 
@@ -3235,21 +3239,17 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       assert(!Align.isZero());
       Attrs.addAlignmentAttr(Align.getQuantity());
 
-      // According to [basic.stc.auto], parameters have automatic storage
-      // duration. Therefore, the underlying object of this pointer will not be
-      // freed during the function's execution. If the parameter is realigned,
-      // this may not be true, but realignment does not currently occur for
-      // non-byval. Hmm....
-      //
-      // We can already infer noalias and nofree like optimization behavior if
-      // the byval attribute is present.
+      // The `nofree` and `dereferenceable` attributes can already be inferred
+      // for `byval` arguments. We'll need to provide additional hints
+      // otherwise.
       if (!AI.getIndirectByVal()) {
-        assert(!AI.getIndirectRealign() &&
-               "Pointer copied from realign legal to be freed?");
+        // Both 6.9.1 of the C standard and [basic.stc.auto] of the C++ standard
+        // require parameters to have automatic storage duration. Therefore, the
+        // underlying object of this pointer will not be freed during the
+        // function's execution.
         Attrs.addAttribute(llvm::Attribute::NoFree);
-        if (!ParamType->isIncompleteType() && ParamType->isConstantSizeType())
-          Attrs.addDereferenceableAttr(
-              getMinimumObjectSize(ParamType).getQuantity());
+        Attrs.addDereferenceableAttr(
+            getMinimumObjectSize(ParamType).getQuantity());
       }
 
       // byval disables readnone and readonly.
