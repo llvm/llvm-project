@@ -65,11 +65,13 @@ Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
     return createStringError(Twine("'") + ABIName +
                              "' is not a recognized ABI for this target");
   }
-  if (ABIName.starts_with("ilp32") && IsRV64) {
+  if ((ABIName.starts_with("ilp32") || ABIName.starts_with("il32pc64")) &&
+      IsRV64) {
     return createStringError(
         "32-bit ABIs are not supported for 64-bit targets");
   }
-  if (ABIName.starts_with("lp64") && !IsRV64) {
+  if ((ABIName.starts_with("lp64") || ABIName.starts_with("l64pc128")) &&
+      !IsRV64) {
     return createStringError(
         "64-bit ABIs are not supported for 32-bit targets");
   }
@@ -83,17 +85,20 @@ Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
         "hard-float 'd' ABI can't be used for a target that doesn't "
         "support the D instruction set extension");
   }
+  if ((ABIName.starts_with("il32pc64") || ABIName.starts_with("l64pc128")) &&
+      !FeatureBits[RISCV::FeatureStdExtY]) {
+    return createStringError(Twine('\'') + ABIName +
+                             "' ABI is only supported for RVY targets");
+  }
   if (!IsRV64 && IsRVE && !IsXCheriot && TargetABI != ABI_ILP32E &&
       TargetABI != ABI_Unknown) {
     return createStringError("only the ilp32e ABI is supported for RV32E");
   }
   if (!IsRV64 && IsRVE && IsXCheriot && TargetABI != ABI_CHERIOT &&
       TargetABI != ABI_Unknown) {
-    return createStringError(
-        "only the cheriot ABI is supported for XCheriot");
+    return createStringError("only the cheriot ABI is supported for XCheriot");
   }
-  if (IsRV64 && IsRVE && TargetABI != ABI_LP64E &&
-      TargetABI != ABI_Unknown) {
+  if (IsRV64 && IsRVE && TargetABI != ABI_LP64E && TargetABI != ABI_Unknown) {
     return createStringError("only the lp64e ABI is supported for RV64E");
   }
 

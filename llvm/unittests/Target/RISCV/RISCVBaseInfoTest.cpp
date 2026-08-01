@@ -40,8 +40,7 @@ RISCVABI::ABI computeTargetABI(StringRef TripleName, StringRef FeatureStr,
 std::string computeTargetABIError(StringRef TripleName, StringRef FeatureStr,
                                   StringRef ABIName) {
   auto STI = createSTI(TripleName, FeatureStr);
-  Expected<RISCVABI::ABI> Result =
-      RISCVABI::computeTargetABI(*STI, ABIName);
+  Expected<RISCVABI::ABI> Result = RISCVABI::computeTargetABI(*STI, ABIName);
   if (Result) {
     ADD_FAILURE() << "expected an error for -target-abi " << ABIName;
     return {};
@@ -75,11 +74,10 @@ TEST(ComputeTargetABI, SelectsExpectedABI) {
   // An explicitly requested ABI is unaffected by the Y-based default: even
   // with Y (and F/D) enabled, asking for the plain integer ABI still gives
   // the integer ABI rather than the capability one.
-  EXPECT_EQ(
-      computeTargetABI("riscv32", "+experimental-y", /*ABIName=*/"ilp32"),
-      RISCVABI::ABI_ILP32);
+  EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y", /*ABIName=*/"ilp32"),
+            RISCVABI::ABI_ILP32);
   EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f,+d",
-                              /*ABIName=*/"lp64d"),
+                             /*ABIName=*/"lp64d"),
             RISCVABI::ABI_LP64D);
 
   // CHERIoT always selects the cheriot ABI by default.
@@ -111,6 +109,14 @@ TEST(ComputeTargetABI, ReportsInvalidExplicitABI) {
             "only the cheriot ABI is supported for XCheriot");
   EXPECT_EQ(computeTargetABIError("riscv64", "+e", "lp64"),
             "only the lp64e ABI is supported for RV64E");
+  EXPECT_EQ(
+      computeTargetABIError("riscv32", "+experimental-y,+f,+d", "l64pc128d"),
+      "64-bit ABIs are not supported for 32-bit targets");
+  EXPECT_EQ(
+      computeTargetABIError("riscv64", "+experimental-y,+f,+d", "il32pc64f"),
+      "32-bit ABIs are not supported for 64-bit targets");
+  EXPECT_EQ(computeTargetABIError("riscv64", "+f,+d", "l64pc128d"),
+            "'l64pc128d' ABI is only supported for RVY targets");
 }
 
 } // namespace
