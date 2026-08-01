@@ -7,24 +7,6 @@ Both provide a way of driving the analyzer, detecting compilation flags, and gen
 CodeChecker is more actively maintained, provides heuristics for working with multiple versions of popular compilers and it also comes with a web-based GUI for viewing, filtering, categorizing and suppressing the results.
 Therefore CodeChecker is recommended in case you need any of the above features or just more customizability in general.
 
-Machine-readable output
------------------------
-
-For a direct analysis of a source file, the ``clang`` driver can write a SARIF report::
-
-  $ clang --analyze --analyzer-output sarif -o report.sarif source.c
-
-``--analyzer-output`` selects the report format.
-The available formats are ``html``, ``plist``, ``plist-multi-file``, ``plist-html``, ``sarif``, ``sarif-html``, and ``text``.
-``sarif`` writes a SARIF JSON report to the path specified by ``-o``; ``sarif-html`` also creates HTML files for interactive inspection.
-The default format is ``plist``.
-
-This direct form analyzes a translation unit.
-For project-wide analysis, use a tool such as scan-build or CodeChecker to drive the individual compiler invocations.
-``scan-build`` can emit a SARIF report for each analyzed translation unit with its ``-sarif`` option::
-
-  $ scan-build -sarif -o reports make
-
 Comparison of CodeChecker and scan-build
 ----------------------------------------
 

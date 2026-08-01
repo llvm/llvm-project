@@ -89,6 +89,10 @@ public:
   MOCK_METHOD(ol_result_t, olIterateDevices,
               (ol_device_iterate_cb_t Callback, void *UserData));
   MOCK_METHOD(ol_result_t, olDestroyProgram, (ol_program_handle_t Program));
+  MOCK_METHOD(ol_result_t, olCreateContext,
+              (size_t NumDevices, ol_device_handle_t *Devices,
+               ol_context_handle_t *Context));
+  MOCK_METHOD(ol_result_t, olDestroyContext, (ol_context_handle_t Context));
   MOCK_METHOD(ol_result_t, olCreateQueue,
               (ol_device_handle_t Device, ol_queue_handle_t *Queue));
   MOCK_METHOD(ol_result_t, olDestroyQueue, (ol_queue_handle_t Queue));

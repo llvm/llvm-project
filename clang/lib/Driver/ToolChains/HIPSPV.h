@@ -55,7 +55,12 @@ public:
     return HostTC ? &HostTC->getTriple() : nullptr;
   }
 
-  bool IsIntegratedBackendDefault() const override;
+  // Keep IsIntegratedBackendDefault() at the base class' "true": it also
+  // decides whether clang's compile and backend jobs are collapsed into a
+  // single -cc1 invocation, so making it depend on whether the SPIR-V backend
+  // was built would change the device compilation job layout of every HIPSPV
+  // compile. The fallback to the external llvm-spirv translator is decided in
+  // HIPSPV::Linker::constructLinkAndEmitSpirvCommand instead.
   bool IsIntegratedBackendSupported() const override;
   bool IsNonIntegratedBackendSupported() const override { return true; }
 

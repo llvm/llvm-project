@@ -3319,7 +3319,36 @@ void cir::CoroBodyOp::build(OpBuilder &builder, OperationState &result,
 // CopyOp Definitions
 //===----------------------------------------------------------------------===//
 
+// Prints the pointer type(s) for a `cir.copy`. `src` and `dst` share the same
+// pointee type but may differ in address space; a single type is printed when
+// they match, otherwise both are printed (`src` first).
+static void printCopyTypes(mlir::OpAsmPrinter &printer, mlir::Operation *,
+                           mlir::Type srcType, mlir::Type dstType) {
+  printer.printType(srcType);
+  if (srcType != dstType) {
+    printer << ", ";
+    printer.printType(dstType);
+  }
+}
+
+static mlir::ParseResult parseCopyTypes(mlir::OpAsmParser &parser,
+                                        mlir::Type &srcType,
+                                        mlir::Type &dstType) {
+  if (parser.parseType(srcType))
+    return mlir::failure();
+  if (parser.parseOptionalComma().succeeded()) {
+    if (parser.parseType(dstType))
+      return mlir::failure();
+  } else {
+    dstType = srcType;
+  }
+  return mlir::success();
+}
+
 LogicalResult cir::CopyOp::verify() {
+  // The pointee types of `src` and `dst` are guaranteed to match by the
+  // SameOperandsPointeeType trait; they may still differ in address space.
+
   // A data layout is required for us to know the number of bytes to be copied.
   if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
     return emitError() << "missing data layout for pointee type";
@@ -3508,10 +3537,36 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// CmpOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CmpOp::verify() {
+  if (getFenvAttr() && !cir::isAnyFloatingPointType(getLhs().getType()))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point comparisons";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult cir::VecCmpOp::verify() {
+  if (getFenvAttr() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point comparisons";
+  return success();
+}
+
 OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
+  // Do not fold when fenv is present.
+  // TODO(cir): This is overly conservative. We could fold comparisons as long
+  //            as we can prove that the operation wouldn't raise exceptions or
+  //            when the fenv attribute does not require strict exception
+  //            semantics.
+  if (getFenvAttr())
+    return {};
+
   auto lhsVecAttr =
       mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
   auto rhsVecAttr =
