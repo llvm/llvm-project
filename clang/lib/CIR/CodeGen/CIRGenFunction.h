@@ -586,6 +586,10 @@ public:
     }
   };
 
+  // The CallExpr within the current statement that the musttail attribute
+  // applies to.  nullptr if there is no 'musttail' on the current statement.
+  const CallExpr *mustTailCall = nullptr;
+
   struct VlaSizePair {
     mlir::Value numElts;
     QualType type;
@@ -1786,14 +1790,14 @@ public:
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
-                  mlir::Location loc);
+                  bool isMustTail, mlir::Location loc);
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
-                  const CallArgList &args,
+                  const CallArgList &args, bool isMustTail,
                   cir::CIRCallOpInterface *callOrTryCall = nullptr) {
     assert(currSrcLoc && "source location must have been set");
     return emitCall(funcInfo, callee, returnValue, args, callOrTryCall,
-                    *currSrcLoc);
+                    isMustTail, *currSrcLoc);
   }
 
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
@@ -2311,7 +2315,16 @@ public:
 
   std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
-
+  cir::GetGlobalOp createGetCpuModel(mlir::Location loc);
+  cir::GetGlobalOp createGetCpuFeatures2(mlir::Location loc);
+  mlir::Value emitX86CpuIs(const CallExpr *expr);
+  mlir::Value emitX86CpuIs(mlir::Location loc, StringRef cpuStr);
+  mlir::Value emitX86CpuSupports(const CallExpr *expr);
+  mlir::Value emitX86CpuSupports(mlir::Location loc,
+                                 ArrayRef<StringRef> FeatureStrs);
+  mlir::Value emitX86CpuSupports(mlir::Location loc,
+                                 std::array<uint32_t, 4> FeatureMask);
+  mlir::Value emitX86CpuInit(mlir::Location loc);
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 

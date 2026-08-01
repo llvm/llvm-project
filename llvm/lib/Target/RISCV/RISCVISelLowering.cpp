@@ -6541,8 +6541,6 @@ static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
   SDLoc DL(SVN);
   unsigned NumElts = VT.getVectorNumElements();
   ArrayRef<int> Mask = SVN->getMask();
-  if (V2.isUndef())
-    return SDValue();
 
   // A splat operand's lanes are all equal, so a lane selecting from it matches
   // any of its positions. This covers the zero operand XformToShuffleWithZero
@@ -6551,38 +6549,59 @@ static SDValue lowerVECTOR_SHUFFLEAsPPair(ShuffleVectorSDNode *SVN,
   bool V1IsSplat = DAG.isSplatValue(V1);
   bool V2IsSplat = DAG.isSplatValue(V2);
 
-  // Match the packed pair shuffle forms:
-  //   <V1Start, N+V2Start, V1Start+2, N+V2Start+2, ...>
-  // where each start is 0 for even lanes or 1 for odd lanes. This covers all
-  // four PPAIRE/PPAIREO/PPAIROE/PPAIRO combinations. Trailing lanes may be
-  // undef when a 4-byte source was widened to v8i8.
-  auto IsStrided = [&](unsigned V1Start, unsigned V2Start) {
-    for (unsigned I = 0; I != NumElts / 2; ++I) {
-      int M0 = Mask[2 * I];
-      int M1 = Mask[2 * I + 1];
-      if (M0 >= 0 &&
-          (V1IsSplat ? M0 >= (int)NumElts : M0 != (int)(V1Start + 2 * I)))
-        return false;
-      if (M1 >= 0 && (V2IsSplat ? M1 < (int)NumElts
-                                : M1 != (int)(NumElts + V2Start + 2 * I)))
-        return false;
-    }
-    return true;
-  };
+  // Walk the mask once, tracking the operand feeding the destination's even
+  // lanes (index 0) and the operand feeding its odd lanes (index 1) — either
+  // may turn out to be V1 or V2 — along with whether each pulls the even or
+  // odd element out of its pair. All even (resp. odd) lanes must agree on
+  // both the operand and the parity used; a splat operand's lanes are all
+  // equal so it never constrains the parity.
+  SDValue Src[2];
+  std::optional<bool> Parity[2];
+  for (unsigned I = 0; I != NumElts; ++I) {
+    int M = Mask[I];
+    if (M < 0)
+      continue;
+    unsigned Lane = I % 2;
+    bool FromV1 = (unsigned)M < NumElts;
+    SDValue Cand = FromV1 ? V1 : V2;
+    unsigned Local = (unsigned)M % NumElts;
+    if (!Src[Lane])
+      Src[Lane] = Cand;
+    else if (Src[Lane] != Cand)
+      return SDValue();
 
-  unsigned Opc;
-  if (IsStrided(0, 0))
-    Opc = RISCVISD::PPAIRE;
-  else if (IsStrided(1, 1))
-    Opc = RISCVISD::PPAIRO;
-  else if (IsStrided(0, 1))
-    Opc = RISCVISD::PPAIREO;
-  else if (IsStrided(1, 0))
-    Opc = RISCVISD::PPAIROE;
-  else
+    // Splats don't constrain parity.
+    if (FromV1 ? V1IsSplat : V2IsSplat)
+      continue;
+
+    // The index must be from the even/odd element of its pair.
+    if (Local / 2 != I / 2)
+      return SDValue();
+
+    bool P = Local % 2;
+    if (!Parity[Lane])
+      Parity[Lane] = P;
+    else if (*Parity[Lane] != P)
+      return SDValue();
+  }
+
+  // Make sure we have a source for both lanes.
+  if (!Src[0] || !Src[1])
     return SDValue();
 
-  return DAG.getNode(Opc, DL, VT, V1, V2);
+  bool EvenIsOdd = Parity[0].value_or(false);
+  bool OddIsOdd = Parity[1].value_or(false);
+  unsigned Opc;
+  if (!EvenIsOdd && !OddIsOdd)
+    Opc = RISCVISD::PPAIRE;
+  else if (EvenIsOdd && OddIsOdd)
+    Opc = RISCVISD::PPAIRO;
+  else if (!EvenIsOdd && OddIsOdd)
+    Opc = RISCVISD::PPAIREO;
+  else
+    Opc = RISCVISD::PPAIROE;
+
+  return DAG.getNode(Opc, DL, VT, Src[0], Src[1]);
 }
 
 SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
@@ -7577,7 +7596,7 @@ SDValue RISCVTargetLowering::expandUnalignedVPStore(SDValue Op,
 
   MVT MaskVT = MVT::getVectorVT(MVT::i1, NewVT.getVectorElementCount());
   return DAG.getStoreVP(Store->getChain(), DL, StoredVal, Store->getBasePtr(),
-                        DAG.getUNDEF(Store->getBasePtr().getValueType()),
+                        DAG.getPOISON(Store->getBasePtr().getValueType()),
                         DAG.getAllOnesConstant(DL, MaskVT), VL, NewVT, MMO,
                         ISD::UNINDEXED);
 }
@@ -13865,29 +13884,12 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   if (VecVT.getVectorElementType() == MVT::i1)
     return widenVectorOpsToi8(Op, DL, DAG);
 
-  // Convert to scalable vectors first.
-  if (VecVT.isFixedLengthVector()) {
-    MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
-    SmallVector<SDValue, 8> Ops(Factor);
-    for (unsigned i = 0U; i < Factor; ++i)
-      Ops[i] = convertToScalableVector(ContainerVT, Op.getOperand(i), DAG,
-                                       Subtarget);
-
-    SmallVector<EVT, 8> VTs(Factor, ContainerVT);
-    SDValue NewInterleave = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTs, Ops);
-
-    SmallVector<SDValue, 8> Res(Factor);
-    for (unsigned i = 0U; i < Factor; ++i)
-      Res[i] = convertFromScalableVector(VecVT, NewInterleave.getValue(i), DAG,
-                                         Subtarget);
-    return DAG.getMergeValues(Res, DL);
-  }
-
-  MVT XLenVT = Subtarget.getXLenVT();
-  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+  MVT ContainerVecVT = VecVT;
+  if (VecVT.isFixedLengthVector())
+    ContainerVecVT = getContainerForFixedLengthVector(VecVT);
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
-  if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
+  if ((ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
       (8 * RISCV::RVVBitsPerBlock)) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
@@ -13915,6 +13917,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
     return DAG.getMergeValues(Concats, DL);
   }
 
+  MVT XLenVT = Subtarget.getXLenVT();
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVecVT, DL, DAG, Subtarget);
+
   SDValue Interleaved;
 
   // Spill to the stack using a segment store for simplicity.
@@ -13924,6 +13929,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
                          VecVT.getVectorElementCount() * Factor);
 
     // Allocate a stack slot.
+    // Note that in the case where VecVT is fixed vector, even we later
+    // create a container for each (fixed vector) operand, we still allocate
+    // the stack with fixed vector size, rather than container size, as
+    // fixed vector size is already sufficient.
     Align Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(MemVT.getStoreSize(), Alignment);
@@ -13939,15 +13948,18 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
         Intrinsic::riscv_vsseg8_mask,
     };
 
-    unsigned Sz =
-        Factor * VecVT.getVectorMinNumElements() * VecVT.getScalarSizeInBits();
+    unsigned Sz = Factor * ContainerVecVT.getVectorMinNumElements() *
+                  ContainerVecVT.getScalarSizeInBits();
     EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, Factor);
 
     SDValue StoredVal = DAG.getUNDEF(VecTupTy);
-    for (unsigned i = 0; i < Factor; i++)
-      StoredVal =
-          DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
-                      Op.getOperand(i), DAG.getTargetConstant(i, DL, MVT::i32));
+    for (unsigned i = 0; i < Factor; i++) {
+      SDValue OpVal = Op.getOperand(i);
+      if (VecVT.isFixedLengthVector())
+        OpVal = convertToScalableVector(ContainerVecVT, OpVal, DAG, Subtarget);
+      StoredVal = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
+                              OpVal, DAG.getTargetConstant(i, DL, MVT::i32));
+    }
 
     SDValue Ops[] = {DAG.getEntryNode(),
                      DAG.getTargetConstant(IntrIds[Factor - 2], DL, XLenVT),
@@ -13975,6 +13987,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
     return DAG.getMergeValues(Loads, DL);
   }
+
+  assert(!VecVT.isFixedLengthVector() &&
+         "Fixed factor=2 vector interleave should already lower to "
+         "SHUFFLE_VECTOR");
 
   if (Subtarget.hasStdExtZvzip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
@@ -23285,11 +23301,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     SmallVector<int> ShuffleMask;
     if (MGN->getExtensionType() == ISD::NON_EXTLOAD &&
         matchIndexAsShuffle(VT, Index, MGN->getMask(), ShuffleMask)) {
-      SDValue Load = DAG.getMaskedLoad(VT, DL, MGN->getChain(),
-                                       MGN->getBasePtr(), DAG.getUNDEF(XLenVT),
-                                       MGN->getMask(), DAG.getUNDEF(VT),
-                                       MGN->getMemoryVT(), MGN->getMemOperand(),
-                                       ISD::UNINDEXED, ISD::NON_EXTLOAD);
+      SDValue Load = DAG.getMaskedLoad(
+          VT, DL, MGN->getChain(), MGN->getBasePtr(), DAG.getPOISON(XLenVT),
+          MGN->getMask(), DAG.getPOISON(VT), MGN->getMemoryVT(),
+          MGN->getMemOperand(), ISD::UNINDEXED, ISD::NON_EXTLOAD);
       SDValue Shuffle =
         DAG.getVectorShuffle(VT, DL, Load, DAG.getUNDEF(VT), ShuffleMask);
       return DAG.getMergeValues({Shuffle, Load.getValue(1)}, DL);
@@ -23356,7 +23371,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       SDValue Shuffle = DAG.getVectorShuffle(VT, DL, MSN->getValue(),
                                              DAG.getUNDEF(VT), ShuffleMask);
       return DAG.getMaskedStore(MSN->getChain(), DL, Shuffle, MSN->getBasePtr(),
-                                DAG.getUNDEF(XLenVT), MSN->getMask(),
+                                DAG.getPOISON(XLenVT), MSN->getMask(),
                                 MSN->getMemoryVT(), MSN->getMemOperand(),
                                 ISD::UNINDEXED, false);
     }

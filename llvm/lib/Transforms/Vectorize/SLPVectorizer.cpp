@@ -592,257 +592,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
 
 namespace {
 
-/// Main data required for vectorization of instructions.
-class InstructionsState {
-  /// MainOp and AltOp are primarily determined by getSameOpcode. Currently,
-  /// only BinaryOperator, CastInst, and CmpInst support alternate instructions
-  /// (i.e., AltOp is not equal to MainOp; this can be checked using
-  /// isAltShuffle).
-  /// A rare exception is TrySplitNode, where the InstructionsState is derived
-  /// from getMainAltOpsNoStateVL.
-  /// For those InstructionsState that use alternate instructions, the resulting
-  /// vectorized output ultimately comes from a shufflevector. For example,
-  /// given a vector list (VL):
-  /// VL[0] = add i32 a, e
-  /// VL[1] = sub i32 b, f
-  /// VL[2] = add i32 c, g
-  /// VL[3] = sub i32 d, h
-  /// The vectorized result would be:
-  /// intermediated_0 = add <4 x i32> <a, b, c, d>, <e, f, g, h>
-  /// intermediated_1 = sub <4 x i32> <a, b, c, d>, <e, f, g, h>
-  /// result = shufflevector <4 x i32> intermediated_0,
-  ///                        <4 x i32> intermediated_1,
-  ///                        <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-  /// Since shufflevector is used in the final result, when calculating the cost
-  /// (getEntryCost), we must account for the usage of shufflevector in
-  /// GetVectorCost.
-  Instruction *MainOp = nullptr;
-  Instruction *AltOp = nullptr;
-  /// Wether the instruction state represents copyable instructions.
-  bool HasCopyables = false;
-
-public:
-  Instruction *getMainOp() const {
-    assert(valid() && "InstructionsState is invalid.");
-    return MainOp;
-  }
-
-  Instruction *getAltOp() const {
-    assert(valid() && "InstructionsState is invalid.");
-    return AltOp;
-  }
-
-  /// The main/alternate opcodes for the list of instructions.
-  unsigned getOpcode() const { return getMainOp()->getOpcode(); }
-
-  unsigned getAltOpcode() const { return getAltOp()->getOpcode(); }
-
-  /// Some of the instructions in the list have alternate opcodes.
-  bool isAltShuffle() const { return getMainOp() != getAltOp(); }
-
-  /// Checks if \p I is the same operation as \p Op, distinguishing calls by
-  /// intrinsic ID (all calls share the Call opcode, so e.g. umax != smax).
-  static bool isSameOperation(const Instruction *I, const Instruction *Op) {
-    if (I->getOpcode() != Op->getOpcode())
-      return false;
-    const auto *II = dyn_cast<IntrinsicInst>(I);
-    const auto *IOp = dyn_cast<IntrinsicInst>(Op);
-    if (II || IOp)
-      return II && IOp &&
-             isEquivalentIntrinsicID(II->getIntrinsicID(),
-                                     IOp->getIntrinsicID()) !=
-                 Intrinsic::not_intrinsic;
-    return true;
-  }
-
-  /// Checks if the instruction matches either the main or alternate opcode.
-  /// \returns
-  /// - MainOp if \param I matches MainOp's opcode directly or can be converted
-  /// to it
-  /// - AltOp if \param I matches AltOp's opcode directly or can be converted to
-  /// it
-  /// - nullptr if \param I cannot be matched or converted to either opcode
-  Instruction *getMatchingMainOpOrAltOp(Instruction *I) const {
-    assert(MainOp && "MainOp cannot be nullptr.");
-    if (isSameOperation(I, MainOp))
-      return MainOp;
-    if (MainOp->getOpcode() == Instruction::Select &&
-        I->getOpcode() == Instruction::ZExt && !isAltShuffle())
-      return MainOp;
-    // Prefer AltOp instead of interchangeable instruction of MainOp.
-    assert(AltOp && "AltOp cannot be nullptr.");
-    if (isSameOperation(I, AltOp))
-      return AltOp;
-    // BinOpSameOpcodeHelper handles only BinaryOperators; a call cannot match.
-    if (!I->isBinaryOp() || !MainOp->isBinaryOp())
-      return nullptr;
-    BinOpSameOpcodeHelper Converter(MainOp);
-    if (!Converter.add(I) || !Converter.add(MainOp))
-      return nullptr;
-    if (isAltShuffle() && !Converter.hasCandidateOpcode(MainOp->getOpcode())) {
-      BinOpSameOpcodeHelper AltConverter(AltOp);
-      if (AltConverter.add(I) && AltConverter.add(AltOp) &&
-          AltConverter.hasCandidateOpcode(AltOp->getOpcode()))
-        return AltOp;
-    }
-    if (Converter.hasAltOp() && !isAltShuffle())
-      return nullptr;
-    return Converter.hasAltOp() ? AltOp : MainOp;
-  }
-
-  /// Checks if main/alt instructions are shift operations.
-  bool isShiftOp() const {
-    return getMainOp()->isShift() && getAltOp()->isShift();
-  }
-
-  /// Checks if main/alt instructions are bitwise logic operations.
-  bool isBitwiseLogicOp() const {
-    return getMainOp()->isBitwiseLogicOp() && getAltOp()->isBitwiseLogicOp();
-  }
-
-  /// Checks if main/alt instructions are mul/div/rem/fmul/fdiv/frem operations.
-  bool isMulDivLikeOp() const {
-    constexpr std::array<unsigned, 8> MulDiv = {
-        Instruction::Mul,  Instruction::FMul, Instruction::SDiv,
-        Instruction::UDiv, Instruction::FDiv, Instruction::SRem,
-        Instruction::URem, Instruction::FRem};
-    return is_contained(MulDiv, getOpcode()) &&
-           is_contained(MulDiv, getAltOpcode());
-  }
-
-  /// Checks if main/alt instructions are add/sub/fadd/fsub operations.
-  bool isAddSubLikeOp() const {
-    constexpr std::array<unsigned, 4> AddSub = {
-        Instruction::Add, Instruction::Sub, Instruction::FAdd,
-        Instruction::FSub};
-    return is_contained(AddSub, getOpcode()) &&
-           is_contained(AddSub, getAltOpcode());
-  }
-
-  /// Checks if main/alt instructions are cmp operations.
-  bool isCmpOp() const {
-    return (getOpcode() == Instruction::ICmp ||
-            getOpcode() == Instruction::FCmp) &&
-           getAltOpcode() == getOpcode();
-  }
-
-  /// Checks if the current state is valid, i.e. has non-null MainOp
-  bool valid() const { return MainOp && AltOp; }
-
-  explicit operator bool() const { return valid(); }
-
-  InstructionsState() = delete;
-  InstructionsState(Instruction *MainOp, Instruction *AltOp,
-                    bool HasCopyables = false)
-      : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables) {}
-  static InstructionsState invalid() { return {nullptr, nullptr}; }
-
-  /// Checks if the value is a copyable element.
-  bool isCopyableElement(Value *V) const {
-    assert(valid() && "InstructionsState is invalid.");
-    if (!HasCopyables)
-      return false;
-    if (isAltShuffle() || getOpcode() == Instruction::GetElementPtr)
-      return false;
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      return !isa<PoisonValue>(V);
-    if (I->getParent() != MainOp->getParent() &&
-        (!isVectorLikeInstWithConstOps(I) ||
-         !isVectorLikeInstWithConstOps(MainOp)))
-      return true;
-    if (isSameOperation(I, MainOp))
-      return false;
-    // BinOpSameOpcodeHelper handles only BinaryOperators; a call is copyable.
-    if (!I->isBinaryOp() || !MainOp->isBinaryOp())
-      return true;
-    BinOpSameOpcodeHelper Converter(MainOp);
-    return !Converter.add(I) || !Converter.add(MainOp) ||
-           Converter.hasAltOp() || !Converter.hasCandidateOpcode(getOpcode());
-  }
-
-  /// Checks if the value \p V is a transformed instruction, compatible either
-  /// with main or alternate ops.
-  bool isExpandedBinOp(Value *V) const {
-    assert(valid() && "InstructionsState is invalid.");
-    if (isCopyableElement(V))
-      return false;
-    auto *ExpandingOp = dyn_cast<Instruction>(V);
-    if (!ExpandingOp)
-      return false;
-    auto CheckForTransformedOpcode = [](const Instruction *RefOp,
-                                        const Instruction *ExpandingOp) {
-      switch (RefOp->getOpcode()) {
-      case Instruction::Add:
-        switch (ExpandingOp->getOpcode()) {
-        case Instruction::Shl:
-          return match(ExpandingOp, m_Shl(m_Value(), m_One()));
-        default:
-          break;
-        }
-        break;
-      default:
-        break;
-      }
-      return false;
-    };
-    // getMatchingMainOpOrAltOp() may legitimately return nullptr, e.g. for a
-    // split node, whose Scalars combine two unrelated operations (main/alt
-    // ops of the split state), so V is not required to match either of them.
-    Instruction *MainOp = getMatchingMainOpOrAltOp(ExpandingOp);
-    if (!MainOp)
-      return false;
-    return CheckForTransformedOpcode(MainOp, ExpandingOp);
-  }
-
-  /// Checks if the operand at index \p Idx of instruction \p I is an expanded
-  /// operand.
-  bool isExpandedOperand(Instruction *I, unsigned Idx) const {
-    assert(isExpandedBinOp(I) && "Expected an expanded binop.");
-    switch (I->getOpcode()) {
-    case Instruction::Shl:
-      assert(match(I, m_Shl(m_Value(), m_One())) && "Expected shl x, 1 only.");
-      return Idx == 1;
-    default:
-      llvm_unreachable("Unexpected opcode for an expanded operand.");
-    }
-  }
-
-  /// Checks if the value is non-schedulable.
-  bool isNonSchedulable(Value *V) const {
-    assert(valid() && "InstructionsState is invalid.");
-    auto *I = dyn_cast<Instruction>(V);
-    if (!HasCopyables)
-      return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
-             doesNotNeedToBeScheduled(V);
-    // MainOp for copyables always schedulable to correctly identify
-    // non-schedulable copyables.
-    if (getMainOp() == V)
-      return false;
-    if (isCopyableElement(V)) {
-      auto IsNonSchedulableCopyableElement = [this](Value *V) {
-        auto *I = dyn_cast<Instruction>(V);
-        return !I || isa<PHINode>(I) || I->getParent() != MainOp->getParent() ||
-               (doesNotNeedToBeScheduled(I) &&
-                // If the copyable instructions comes after MainOp
-                // (non-schedulable, but used in the block) - cannot vectorize
-                // it, will possibly generate use before def.
-                !MainOp->comesBefore(I));
-      };
-
-      return IsNonSchedulableCopyableElement(V);
-    }
-    return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
-           doesNotNeedToBeScheduled(V);
-  }
-
-  /// Checks if the state represents copyable instructions.
-  bool areInstructionsWithCopyableElements() const {
-    assert(valid() && "InstructionsState is invalid.");
-    return HasCopyables;
-  }
-};
-
 std::pair<Instruction *, SmallVector<Value *>>
 convertTo(Instruction *I, const InstructionsState &S) {
   Instruction *SelectedOp = S.getMatchingMainOpOrAltOp(I);
@@ -5539,7 +5288,12 @@ private:
                       continue;
                     for (ScheduleCopyableData *CD :
                          getScheduleCopyableData(In, U.getOperandNo(), OpI)) {
-                      DecrUnsched(CD, /*IsControl=*/false);
+                      // Deps of reassoc scalars modeled as copyable tree
+                      // operands are released by the operand scan above;
+                      // release each remaining dep only once.
+                      if (Checked.insert(std::make_pair(CD, U.getOperandNo()))
+                              .second)
+                        DecrUnsched(CD, /*IsControl=*/false);
                       ReleasedAsCopyable = true;
                     }
                   }
@@ -10812,8 +10566,8 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::Call: {
     if (S.getMainOp()->getType()->isFloatingPointTy() &&
         TTI->isFPVectorizationPotentiallyUnsafe() && any_of(VL, [](Value *V) {
-          auto *I = dyn_cast<Instruction>(V);
-          return I && !I->isFast();
+          auto *FPOp = dyn_cast<FPMathOperator>(V);
+          return FPOp && !FPOp->isFast();
         }))
       return TreeEntry::NeedToGather;
     // Check if the calls are all to the same vectorizable intrinsic or
@@ -11584,9 +11338,12 @@ class InstructionsCompatibilityAnalysis {
       return {V, V};
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
-    // fmuladd(0.0, -0.0, V) == V.
     if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
       Type *Ty = MainOp->getType();
+      // fmuladd(V, 1.0, -0.0) == V.
+      if (S.getCopyableOpIdx() == 0)
+        return {V, ConstantFP::get(Ty, 1.0), ConstantFP::getNegativeZero(Ty)};
+      // fmuladd(0.0, -0.0, V) == V.
       return {ConstantFP::getZero(Ty), ConstantFP::getNegativeZero(Ty), V};
     }
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
@@ -12109,7 +11866,7 @@ public:
         return OrigS;
       return S;
     }
-    // fmuladd is the only 3-operand copyable; the value sits in the addend.
+    // fmuladd is the only 3-operand copyable.
     assert((Operands.size() == 2 ||
             (Operands.size() == 3 &&
              RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
@@ -12162,8 +11919,9 @@ public:
         }
       }
     }
-    // 2. Check, if operands can be vectorized. Skip for fmuladd; its addend
-    // is checked below and may legitimately hold many instructions.
+    // 2. Check, if operands can be vectorized. Skip for fmuladd; the
+    // copyable operand is checked below and may legitimately hold many
+    // instructions.
     if (Operands.size() == 2 &&
         count_if(Operands.back(), IsaPred<Instruction>) > 1)
       return OrigS;
@@ -12200,10 +11958,16 @@ public:
           count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
       return CopyableNum <= VL.size() / 2;
     };
-    // Check the addend for fmuladd, first operand otherwise.
-    if (!CheckOperand(Operands.size() == 2 ? Operands.front()
-                                           : Operands.back()))
-      return OrigS;
+    // Check the operand holding the copyable values.
+    if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
+      if (Operands.size() == 2)
+        return OrigS;
+      // Retry with the copyable modeled as the first multiplicand.
+      S.setCopyableOpIdx(0);
+      Operands = buildOperands(S, VL);
+      if (!CheckOperand(Operands[S.getCopyableOpIdx()]))
+        return OrigS;
+    }
 
     return S;
   }
@@ -19662,18 +19426,21 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     }
     if (DeletedNodes.contains(TE.get()))
       continue;
-    if (!NodesCosts.contains(TE.get())) {
+    // Gather costs depend on the set of vectorized nodes available for
+    // reuse, which changes during trimming, so recalculate them for all
+    // gather nodes, not just for the transformed ones.
+    if (TE->isGather() || !NodesCosts.contains(TE.get())) {
       InstructionCost C =
           getEntryCost(TE.get(), VectorizedVals, CheckedExtracts);
       if (!C.isValid() || C == 0) {
-        NodesCosts.try_emplace(TE.get(), C);
+        NodesCosts[TE.get()] = C;
         continue;
       }
       uint64_t Scale = EntryToScale.lookup(TE.get());
       if (!Scale)
         Scale = getEntryEffectiveScale(*TE);
       C *= Scale;
-      NodesCosts.try_emplace(TE.get(), C);
+      NodesCosts[TE.get()] = C;
     }
   }
 
@@ -25052,6 +24819,14 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       BasicBlock::Create(Ctx, BB->getName() + ".rtscalar", Fn);
   BasicBlock *Tail = BasicBlock::Create(Ctx, BB->getName() + ".rtcont", Fn);
 
+  // Emit the runtime alias check while the block is still fully connected:
+  // LCSSA-preserving SCEV expansion rewrites out-of-loop uses of
+  // loop-defined bases to poison in predecessor-less blocks.
+  IRBuilder<> ChkBuilder(Term);
+  ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
+  SCEVExpander Exp(*SE, "slp.rtcheck");
+  Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
+
   // Clone the body into the scalar fallback block, in the original program
   // order (RTOrigBodyOrder).
   SmallDenseMap<Value *, Value *, 16> VMap;
@@ -25071,21 +24846,12 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       if (Value *V = VMap.lookup(U.get()))
         U.set(V);
 
-  // Move the body (everything but PHIs and the terminator) into the vector
-  // block in the scheduled order.
-  for (Instruction &I : make_early_inc_range(*BB)) {
-    if (isa<PHINode>(&I) || I.isTerminator())
-      continue;
-    I.removeFromParent();
-    I.insertInto(VecBB, VecBB->end());
-  }
-
-  // Emit the runtime alias check before the still-present terminator, so the
-  // SCEV bounds are expanded at a valid insertion point.
-  IRBuilder<> ChkBuilder(Term);
-  ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
-  SCEVExpander Exp(*SE, "slp.rtcheck");
-  Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
+  // Move the original body into the vector block in the current (scheduled)
+  // order, keeping the emitted check instructions in the header block.
+  SmallPtrSet<Instruction *, 16> BodyInsts(llvm::from_range, RTOrigBodyOrder);
+  for (Instruction &I : make_early_inc_range(*BB))
+    if (BodyInsts.contains(&I))
+      I.moveBefore(*VecBB, VecBB->end());
 
   // Move the original terminator into the continuation block and replace it
   // with the guard branch.

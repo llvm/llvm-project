@@ -2467,6 +2467,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       case NEON::BI__builtin_neon_vst1q_v:
       case NEON::BI__builtin_neon_vst1_lane_v:
       case NEON::BI__builtin_neon_vst1q_lane_v:
+      case NEON::BI__builtin_neon_vstrq_p128:
         // Get the alignment for the argument in addition to the value;
         // we'll use it later.
         ptrOp0 = emitPointerWithAlignment(expr->getArg(0));
@@ -2538,7 +2539,14 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return builder.createBitcast(result, convertType(expr->getType()));
   }
   case NEON::BI__builtin_neon_vldrq_p128:
-  case NEON::BI__builtin_neon_vstrq_p128:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vstrq_p128: {
+    builder.createStore(loc, ops[1], ptrOp0);
+    return nullptr;
+  }
   case NEON::BI__builtin_neon_vcvts_f32_u32:
   case NEON::BI__builtin_neon_vcvtd_f64_u64:
   case NEON::BI__builtin_neon_vcvts_f32_s32:

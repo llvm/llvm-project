@@ -51,6 +51,7 @@ body {
 
 /* Pygments emits Error tokens that the theme's style renders as
    red-bordered boxes. Render them like ordinary code text instead. */
+body[data-theme="dark"] .highlight .err,
 .highlight .err {
     border: none;
     background-color: transparent;
