@@ -363,7 +363,7 @@ void *operator new(std::size_t, const std::nothrow_t &) noexcept;
 void *operator new(std::size_t, std::align_val_t,
                    const std::nothrow_t &) noexcept;
 
-extern "C" void *malloc(unsigned long);
+extern "C" void *malloc(std::size_t);
 extern "C" void free(void *);
-extern "C" void *calloc(unsigned long, unsigned long);
-extern "C" void *realloc(void *, unsigned long);
+extern "C" void *calloc(std::size_t, std::size_t);
+extern "C" void *realloc(void *, std::size_t);
