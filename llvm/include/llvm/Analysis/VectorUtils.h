@@ -378,6 +378,15 @@ LLVM_ABI void getMetadataToPropagate(
     Instruction *Inst,
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
 
+/// Add the metadata that can be preserved when combining all of \p VL into a
+/// single instruction to \p Metadata. \p Repr is a representative for the
+/// combined instruction, used to determine which metadata kinds it can carry.
+/// Callers that already have the combined instruction should use
+/// propagateMetadata() instead.
+LLVM_ABI void getMetadataToPropagate(
+    const Instruction *Repr, ArrayRef<Value *> VL,
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
+
 /// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
 /// MD_nontemporal, MD_access_group, MD_mmra].
 /// For K in Kinds, we get the MDNode for K from each of the

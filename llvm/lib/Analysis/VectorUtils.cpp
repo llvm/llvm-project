@@ -1075,17 +1075,21 @@ void llvm::getMetadataToPropagate(
   }
 }
 
-/// \returns \p I after propagating metadata from \p VL.
-Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
+/// Add metadata from all of \p VL to \p Metadata, if it can be preserved after
+/// combining them into \p Repr.
+void llvm::getMetadataToPropagate(
+    const Instruction *Repr, ArrayRef<Value *> VL,
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata) {
   if (VL.empty())
-    return Inst;
-  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+    return;
   getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
   for (auto &[Kind, MD] : Metadata) {
-    // Skip MMRA metadata if the instruction cannot have it.
-    if (Kind == LLVMContext::MD_mmra && !canInstructionHaveMMRAs(*Inst))
+    // Drop MMRA metadata if the combined instruction cannot have it.
+    if (Kind == LLVMContext::MD_mmra && !canInstructionHaveMMRAs(*Repr)) {
+      MD = nullptr;
       continue;
+    }
 
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
@@ -1093,7 +1097,7 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
 
       switch (Kind) {
       case LLVMContext::MD_mmra: {
-        MD = MMRAMetadata::combine(Inst->getContext(), MD, IMD);
+        MD = MMRAMetadata::combine(Repr->getContext(), MD, IMD);
         break;
       }
       case LLVMContext::MD_tbaa:
@@ -1111,16 +1115,21 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
         MD = MDNode::intersect(MD, IMD);
         break;
       case LLVMContext::MD_access_group:
-        MD = intersectAccessGroups(Inst, IJ);
+        MD = intersectAccessGroups(Repr, IJ);
         break;
       default:
         llvm_unreachable("unhandled metadata");
       }
     }
-
-    Inst->setMetadata(Kind, MD);
   }
+}
 
+/// \returns \p Inst after propagating metadata from \p VL.
+Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+  getMetadataToPropagate(Inst, VL, Metadata);
+  for (auto &[Kind, MD] : Metadata)
+    Inst->setMetadata(Kind, MD);
   return Inst;
 }
 
