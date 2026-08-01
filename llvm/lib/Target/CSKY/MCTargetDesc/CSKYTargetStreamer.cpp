@@ -124,7 +124,8 @@ void CSKYTargetStreamer::finish() {
   finishAttributeSection();
 }
 
-void CSKYTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {}
+void CSKYTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
+                                              bool HardFloatABI) {}
 
 void CSKYTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void CSKYTargetStreamer::emitTextAttribute(unsigned Attribute,

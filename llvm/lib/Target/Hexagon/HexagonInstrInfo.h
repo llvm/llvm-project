@@ -139,8 +139,9 @@ public:
 
   /// Analyze loop L, which must be a single-basic-block loop, and if the
   /// conditions can be understood enough produce a PipelinerLoopInfo object.
-  std::unique_ptr<PipelinerLoopInfo>
-  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
+  std::unique_ptr<PipelinerLoopInfo> analyzeLoopForPipelining(
+      MachineBasicBlock *LoopBB,
+      MachineOptimizationRemarkEmitter *ORE = nullptr) const override;
 
   /// Return true if it's profitable to predicate
   /// instructions with accumulated instruction latency of "NumCycles"

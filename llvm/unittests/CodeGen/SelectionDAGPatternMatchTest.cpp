@@ -118,7 +118,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
 
   SDValue Ch = DAG->getEntryNode();
   SDValue BasePtr = DAG->getRegister(1, MVT::i64);
-  SDValue Offset = DAG->getUNDEF(MVT::i64);
+  SDValue Offset = DAG->getPOISON(MVT::i64);
   MachinePointerInfo PtrInfo;
   SDValue Load = DAG->getLoad(MVT::i32, DL, Ch, BasePtr, PtrInfo);
 
