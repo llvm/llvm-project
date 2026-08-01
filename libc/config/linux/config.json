@@ -5,6 +5,9 @@
     },
     "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
       "value": "word"
-    }
+    },
+    "LIBC_CONF_SCANF_PROVIDE_ISO99_ALIASES": {
+      "value": "${LLVM_LIBC_OVERLAY}"
+    }    
   }
 }
