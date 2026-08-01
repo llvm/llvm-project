@@ -167,6 +167,14 @@ constexpr int DisallowedStmtsCXX14_7() {
   int n; // beforecxx20-warning {{uninitialized variable in a constexpr function}}
 }
 
+constexpr int DisallowedStmtsCXX14_8() {
+  return 0; // beforecxx14-note {{previous}}
+  //  - an indirect goto statement
+  goto *(&&x); // beforecxx23-warning {{use of this statement in a constexpr function is a C++23 extension}}
+  x:;
+    return 0; // beforecxx14-warning {{multiple return}}
+}
+
 constexpr int ForStmt() {
   for (int n = 0; n < 10; ++n) {} // beforecxx14-error {{statement not allowed in constexpr function}}
     return 0;
