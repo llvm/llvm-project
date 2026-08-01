@@ -66,20 +66,12 @@ protected:
                        const lldb_private::ConstString &set_name,
                        uint32_t byte_offset);
 
-  /// \brief Retrieves enabled RISC-V ISA extension feature names from the
-  ///        module's ArchSpec.
+  /// Retrieves enabled RISC-V ISA extension feature names from the module's
+  /// ArchSpec.
   ///
-  /// CSR metadata selection depends on which ISA extensions are enabled in the
-  /// debug target. This routine fetches the feature list from the module's
-  /// ArchSpec to select CSR patch sets during postmortem debugging.
-  /// This routine fetches the feature list from the module's ArchSpec to select
-  /// CSR patch sets during postmortem debugging.
-  ///
-  /// \param[out] features List of enabled ISA extension feature names. Returns
-  ///                      an empty list if the thread/process/target/module is
-  ///                      unavailable or the feature list is empty. Features
-  ///                      are normalized by stripping leading '+' and removing
-  ///                      empty entries.
+  /// Fetch the feature list from the module's ArchSpec, filter disabled
+  /// features, normalize enabled features by stripping leading '+', and remove
+  /// empty entries.
   void GetFeatures(llvm::SmallVectorImpl<std::string> &features) const;
 
 private:
