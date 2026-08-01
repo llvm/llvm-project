@@ -19,10 +19,6 @@ TEST(LlvmLibcSharedBuiltinsTest, SinglePrecisionArithmtic) {
   EXPECT_FP_EQ(6.0f, shared::mulsf3(2.0f, 3.0f));
   EXPECT_FP_EQ(-5.0, shared::negsf2(5.0));
   EXPECT_FP_EQ(2.0f, shared::subsf3(5.0f, 3.0f));
-namespace shared = LIBC_NAMESPACE::shared;
-
-TEST(LlvmLibcSharedBuiltinsTest, AllFloat) {
-  // TODO: assertions for shared::*sf3 builtins.
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, DoublePrecisionArithmtic) {
