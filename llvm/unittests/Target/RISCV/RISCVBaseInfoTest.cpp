@@ -32,7 +32,21 @@ std::unique_ptr<MCSubtargetInfo> createSTI(StringRef TripleName,
 RISCVABI::ABI computeTargetABI(StringRef TripleName, StringRef FeatureStr,
                                StringRef ABIName = "") {
   auto STI = createSTI(TripleName, FeatureStr);
-  return RISCVABI::computeTargetABI(*STI, ABIName);
+  return cantFail(RISCVABI::computeTargetABI(*STI, ABIName));
+}
+
+// Returns the error message for a StringRef/FeatureStr/ABIName combination
+// that is expected to be rejected by computeTargetABI.
+std::string computeTargetABIError(StringRef TripleName, StringRef FeatureStr,
+                                  StringRef ABIName) {
+  auto STI = createSTI(TripleName, FeatureStr);
+  Expected<RISCVABI::ABI> Result =
+      RISCVABI::computeTargetABI(*STI, ABIName);
+  if (Result) {
+    ADD_FAILURE() << "expected an error for -target-abi " << ABIName;
+    return {};
+  }
+  return toString(Result.takeError());
 }
 
 TEST(ComputeTargetABI, SelectsExpectedABI) {
@@ -45,6 +59,33 @@ TEST(ComputeTargetABI, SelectsExpectedABI) {
 
   // CHERIoT always selects the cheriot ABI by default.
   EXPECT_EQ(computeTargetABI("riscv32", "+xcheriot"), RISCVABI::ABI_CHERIOT);
+}
+
+TEST(ComputeTargetABI, ReportsInvalidExplicitABI) {
+  EXPECT_EQ(computeTargetABIError("riscv32", "", "foo"),
+            "'foo' is not a recognized ABI for this target");
+  EXPECT_EQ(computeTargetABIError("riscv64", "", "ilp32"),
+            "32-bit ABIs are not supported for 64-bit targets");
+  EXPECT_EQ(computeTargetABIError("riscv32", "", "lp64"),
+            "64-bit ABIs are not supported for 32-bit targets");
+  EXPECT_EQ(computeTargetABIError("riscv32", "", "ilp32f"),
+            "hard-float 'f' ABI can't be used for a target that doesn't "
+            "support the F instruction set extension");
+  EXPECT_EQ(computeTargetABIError("riscv64", "", "lp64f"),
+            "hard-float 'f' ABI can't be used for a target that doesn't "
+            "support the F instruction set extension");
+  EXPECT_EQ(computeTargetABIError("riscv32", "", "ilp32d"),
+            "hard-float 'd' ABI can't be used for a target that doesn't "
+            "support the D instruction set extension");
+  EXPECT_EQ(computeTargetABIError("riscv32", "+f", "ilp32d"),
+            "hard-float 'd' ABI can't be used for a target that doesn't "
+            "support the D instruction set extension");
+  EXPECT_EQ(computeTargetABIError("riscv32", "+e", "ilp32"),
+            "only the ilp32e ABI is supported for RV32E");
+  EXPECT_EQ(computeTargetABIError("riscv32", "+e,+xcheriot", "ilp32e"),
+            "only the cheriot ABI is supported for XCheriot");
+  EXPECT_EQ(computeTargetABIError("riscv64", "+e", "lp64"),
+            "only the lp64e ABI is supported for RV64E");
 }
 
 } // namespace
