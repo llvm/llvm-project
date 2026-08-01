@@ -223,9 +223,9 @@ void LoadFormattersForModule(ModuleSP module_sp) {
               std::make_shared<BytecodeSyntheticChildren>(std::move(impl));
           category->AddTypeSynthetic(type_name, match_type,
                                      synthetic_children_sp);
-          LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-                   "Loaded embedded type synthetic for '{0}' from {1}.",
-                   type_name, module_sp->GetFileSpec());
+          LLDB_LOG_VERBOSE(GetLog(LLDBLog::DataFormatters),
+                           "Loaded embedded type synthetic for '{0}' from {1}.",
+                           type_name, module_sp->GetFileSpec());
         } else {
           LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                    "No summary or synthetic methods found for '{0}' in {1}, "

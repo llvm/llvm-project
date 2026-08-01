@@ -20,6 +20,8 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/LEB128.h"
 #include "gtest/gtest.h"
 #include <optional>
@@ -29,34 +31,25 @@
 using namespace lldb;
 using namespace lldb_private;
 
-namespace {
+// Helpers for building bytecode formatter records, embedded into a binary and
+// then read by LoadFormattersForModule.
 
-// --- Helpers for hand-assembling the embedded formatter/summary record
-// format read by FormatterSection.cpp, so malformed inputs can be expressed
-// as typed fields instead of raw hex blobs. ---
+template <typename T>
+static void AppendBytes(std::vector<uint8_t> &bytes, T data) {
+  bytes.insert(bytes.end(), data.begin(), data.end());
+}
 
-void AppendULEB(std::vector<uint8_t> &bytes, uint64_t value) {
+static void AppendULEB(std::vector<uint8_t> &bytes, uint64_t value) {
   uint8_t buf[10];
   unsigned len = llvm::encodeULEB128(value, buf);
-  bytes.insert(bytes.end(), buf, buf + len);
+  AppendBytes(bytes, llvm::ArrayRef(buf, len));
 }
 
-void AppendBytes(std::vector<uint8_t> &bytes, llvm::StringRef data) {
-  bytes.insert(bytes.end(), data.begin(), data.end());
-}
-
-void AppendBytes(std::vector<uint8_t> &bytes, llvm::ArrayRef<uint8_t> data) {
-  bytes.insert(bytes.end(), data.begin(), data.end());
-}
-
-// Appends one length-framed record: [version][record_size][type_size]
-// [type_name][entry]. `record_size` is declared honestly as the size of
-// [type_size][type_name][entry] unless a test overrides it to exercise a
-// mismatched/corrupt size.
-void AppendRecord(std::vector<uint8_t> &section, uint64_t version,
-                   llvm::StringRef type_name,
-                   llvm::ArrayRef<uint8_t> entry,
-                   std::optional<uint64_t> record_size_override = {}) {
+/// Append a bytecode formatter record to a section.
+static void AppendRecord(std::vector<uint8_t> &section, uint64_t version,
+                         llvm::StringRef type_name,
+                         llvm::ArrayRef<uint8_t> entry,
+                         std::optional<uint64_t> record_size_override = {}) {
   std::vector<uint8_t> body;
   AppendULEB(body, type_name.size());
   AppendBytes(body, type_name);
@@ -67,21 +60,10 @@ void AppendRecord(std::vector<uint8_t> &section, uint64_t version,
   AppendBytes(section, llvm::ArrayRef<uint8_t>(body));
 }
 
-std::string ToHex(llvm::ArrayRef<uint8_t> bytes) {
-  static const char digits[] = "0123456789ABCDEF";
-  std::string hex;
-  hex.reserve(bytes.size() * 2);
-  for (uint8_t b : bytes) {
-    hex.push_back(digits[b >> 4]);
-    hex.push_back(digits[b & 0xF]);
-  }
-  return hex;
-}
-
-// Builds a minimal ELF with a single section named `section_name` whose
-// contents are exactly `content` (no implicit padding).
-std::string BuildSectionYaml(llvm::StringRef section_name,
-                              llvm::ArrayRef<uint8_t> content) {
+/// Build a minimal ELF binary with a single named section with the given
+/// contents.
+static std::string BuildBinaryYaml(llvm::StringRef section_name,
+                                   llvm::ArrayRef<uint8_t> content) {
   return ("--- !ELF\n"
           "FileHeader:\n"
           "  Class:           ELFCLASS64\n"
@@ -97,15 +79,13 @@ std::string BuildSectionYaml(llvm::StringRef section_name,
           "    Address:         0x2010\n"
           "    AddressAlign:    0x10\n"
           "    Content:         " +
-          ToHex(content) +
+          llvm::toHex(content) +
           "\n"
           "    Size:            " +
           std::to_string(content.size()) +
           "\n"
           "...\n");
 }
-
-} // namespace
 
 namespace {
 
@@ -142,7 +122,7 @@ public:
     // binary registered.
     TypeCategoryImplSP category;
     DataVisualization::Categories::GetCategory(ConstString("default"),
-                                                category);
+                                               category);
     if (category)
       category->Clear();
 
@@ -235,14 +215,13 @@ Sections:
   ASSERT_EQ(dest, "BBBBB");
 }
 
-/// A lone continuation byte (high bit set) is not a complete ULEB128 value,
-/// so even the leading version number can't be decoded. This must not read
-/// out of bounds or crash.
+/// Test an invalid leading version number can't be decoded.
 TEST_F(FormatterSectionTest, MalformedULEBAtStart) {
+  //  A lone continuation byte (high bit set) is not a complete ULEB128 value.
   std::vector<uint8_t> section = {0x80};
 
   auto ExpectedFile =
-      TestFile::fromYaml(BuildSectionYaml(".lldbformatters", section));
+      TestFile::fromYaml(BuildBinaryYaml(".lldbformatters", section));
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
@@ -254,9 +233,7 @@ TEST_F(FormatterSectionTest, MalformedULEBAtStart) {
   EXPECT_EQ(category->GetCount(), 0u);
 }
 
-/// A record whose version isn't 1 is unsupported and should be skipped over
-/// (using its honestly-declared record_size) without disturbing a
-/// well-formed record that follows it.
+/// A record whose version isn't 1 is unsupported and should be skipped.
 TEST_F(FormatterSectionTest, SkipsRecordWithUnsupportedVersion) {
   std::vector<uint8_t> entry;
   AppendULEB(entry, /*flags=*/0);
@@ -269,7 +246,7 @@ TEST_F(FormatterSectionTest, SkipsRecordWithUnsupportedVersion) {
   AppendRecord(section, /*version=*/1, "Good", entry);
 
   auto ExpectedFile =
-      TestFile::fromYaml(BuildSectionYaml(".lldbformatters", section));
+      TestFile::fromYaml(BuildBinaryYaml(".lldbformatters", section));
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
@@ -286,13 +263,10 @@ TEST_F(FormatterSectionTest, SkipsRecordWithUnsupportedVersion) {
             nullptr);
 }
 
-/// The record declares a type name of length 10, but the record itself
-/// (honestly sized by the outer record_size field) only has room for 3
-/// bytes of name and nothing else. The type name read must fail cleanly
-/// instead of reading past the record's bounds, and a well-formed record
-/// that follows must still be reached.
-TEST_F(FormatterSectionTest, InnerTypeSizeExceedsRecordBounds) {
+/// Test mismatch of decalred type name size and actual length of type name.
+TEST_F(FormatterSectionTest, TypeNameSizeExceedsLengthOfTypeName) {
   std::vector<uint8_t> body;
+  // Declare a type name of incorrect length (name: "Foo", length: 10).
   AppendULEB(body, /*type_size=*/10);
   AppendBytes(body, llvm::StringRef("Foo"));
 
@@ -309,7 +283,7 @@ TEST_F(FormatterSectionTest, InnerTypeSizeExceedsRecordBounds) {
   AppendRecord(section, /*version=*/1, "Good", entry);
 
   auto ExpectedFile =
-      TestFile::fromYaml(BuildSectionYaml(".lldbformatters", section));
+      TestFile::fromYaml(BuildBinaryYaml(".lldbformatters", section));
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
@@ -324,11 +298,7 @@ TEST_F(FormatterSectionTest, InnerTypeSizeExceedsRecordBounds) {
             nullptr);
 }
 
-/// A record_size far larger than the number of bytes actually remaining in
-/// the section is an internally-inconsistent (corrupt/truncated) record: its
-/// own declared size can't be trusted to locate the next record, so it must
-/// be rejected rather than silently parsed from whatever bytes happen to be
-/// left. A well-formed record preceding it is unaffected.
+// Test that a record does not extend past the section it is within.
 TEST_F(FormatterSectionTest, RecordSizeExceedsRemainingSectionIsRejected) {
   std::vector<uint8_t> entry;
   AppendULEB(entry, /*flags=*/0);
@@ -339,10 +309,10 @@ TEST_F(FormatterSectionTest, RecordSizeExceedsRemainingSectionIsRejected) {
   std::vector<uint8_t> section;
   AppendRecord(section, /*version=*/1, "Good", entry);
   AppendRecord(section, /*version=*/1, "Oversized", entry,
-              /*record_size_override=*/1000000);
+               /*record_size_override=*/1000000);
 
   auto ExpectedFile =
-      TestFile::fromYaml(BuildSectionYaml(".lldbformatters", section));
+      TestFile::fromYaml(BuildBinaryYaml(".lldbformatters", section));
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
@@ -360,12 +330,11 @@ TEST_F(FormatterSectionTest, RecordSizeExceedsRemainingSectionIsRejected) {
             nullptr);
 }
 
-/// An unrecognized signature byte (with otherwise well-formed size/bytecode
-/// framing) is logged and skipped without preventing a later, valid
-/// signature in the same entry from being picked up.
-TEST_F(FormatterSectionTest, UnsupportedSignatureByteIsSkippedWithinEntry) {
+// Test that an unrecognized signature skips the current formatter entry.
+TEST_F(FormatterSectionTest, UnsupportedSignatureSkipsEntry) {
   std::vector<uint8_t> entry;
   AppendULEB(entry, /*flags=*/0);
+  // Invalid signature.
   entry.push_back(0xFF);
   AppendULEB(entry, /*size=*/2);
   AppendBytes(entry, llvm::ArrayRef<uint8_t>({0x11, 0x22}));
@@ -377,7 +346,7 @@ TEST_F(FormatterSectionTest, UnsupportedSignatureByteIsSkippedWithinEntry) {
   AppendRecord(section, /*version=*/1, "Widget", entry);
 
   auto ExpectedFile =
-      TestFile::fromYaml(BuildSectionYaml(".lldbformatters", section));
+      TestFile::fromYaml(BuildBinaryYaml(".lldbformatters", section));
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
@@ -391,21 +360,19 @@ TEST_F(FormatterSectionTest, UnsupportedSignatureByteIsSkippedWithinEntry) {
             nullptr);
 }
 
-/// The declared bytecode size (500) is far larger than the 0 bytes that
-/// actually remain in the entry, so reading it fails cleanly rather than
-/// reading out of bounds. Since no summary and no synthetic method was
-/// successfully parsed, nothing should be registered for the type.
+/// Test a signature body being declared with too large a size.
 TEST_F(FormatterSectionTest, TruncatedBytecodeSizeAbortsEntryParsing) {
   std::vector<uint8_t> entry;
   AppendULEB(entry, /*flags=*/0);
   entry.push_back(FormatterBytecode::Signatures::sig_init);
+  // Declared bytecode size is larger than the 0 bytes of the entry.
   AppendULEB(entry, /*size=*/500);
 
   std::vector<uint8_t> section;
   AppendRecord(section, /*version=*/1, "Broken", entry);
 
   auto ExpectedFile =
-      TestFile::fromYaml(BuildSectionYaml(".lldbformatters", section));
+      TestFile::fromYaml(BuildBinaryYaml(".lldbformatters", section));
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
@@ -415,13 +382,14 @@ TEST_F(FormatterSectionTest, TruncatedBytecodeSizeAbortsEntryParsing) {
   DataVisualization::Categories::GetCategory(ConstString("default"), category);
   ASSERT_TRUE(category != nullptr);
   EXPECT_EQ(category->GetCount(), 0u);
-  EXPECT_EQ(category->GetSyntheticForType(std::make_shared<TypeNameSpecifierImpl>(
-                "Broken", lldb::eFormatterMatchExact)),
-            nullptr);
+  EXPECT_EQ(
+      category->GetSyntheticForType(std::make_shared<TypeNameSpecifierImpl>(
+          "Broken", lldb::eFormatterMatchExact)),
+      nullptr);
 }
 
-/// An entry that has flags but no summary or synthetic-method sub-entries
-/// at all (valid framing, just empty) must not register a formatter either.
+/// Test that an entry which has flags but neither summary or synthetic
+/// signature (valid framing, but empty) must not register a formatter either.
 TEST_F(FormatterSectionTest, EmptyEntryRegistersNothing) {
   std::vector<uint8_t> entry;
   AppendULEB(entry, /*flags=*/0);
@@ -430,7 +398,7 @@ TEST_F(FormatterSectionTest, EmptyEntryRegistersNothing) {
   AppendRecord(section, /*version=*/1, "Empty", entry);
 
   auto ExpectedFile =
-      TestFile::fromYaml(BuildSectionYaml(".lldbformatters", section));
+      TestFile::fromYaml(BuildBinaryYaml(".lldbformatters", section));
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
@@ -442,8 +410,8 @@ TEST_F(FormatterSectionTest, EmptyEntryRegistersNothing) {
   EXPECT_EQ(category->GetCount(), 0u);
 }
 
-/// An embedded type summary with an empty summary string is dropped instead
-/// of being registered.
+/// Test that an embedded type summary with an empty summary string is dropped
+/// instead of being registered.
 TEST_F(FormatterSectionTest, EmptySummaryStringIsNotRegistered) {
   std::vector<uint8_t> entry;
   AppendULEB(entry, /*summary_size=*/0);
@@ -452,7 +420,7 @@ TEST_F(FormatterSectionTest, EmptySummaryStringIsNotRegistered) {
   AppendRecord(section, /*version=*/1, "Empty", entry);
 
   auto ExpectedFile =
-      TestFile::fromYaml(BuildSectionYaml(".lldbsummaries", section));
+      TestFile::fromYaml(BuildBinaryYaml(".lldbsummaries", section));
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
@@ -464,8 +432,8 @@ TEST_F(FormatterSectionTest, EmptySummaryStringIsNotRegistered) {
   EXPECT_EQ(category->GetCount(), 0u);
 }
 
-/// A declared summary_size larger than the bytes actually available in the
-/// entry must fail cleanly instead of reading out of bounds, and the
+/// Test that a declared summary size larger than the bytes actually available
+/// in the entry must fail cleanly instead of reading out of bounds, and the
 /// summary must not be registered.
 TEST_F(FormatterSectionTest, SummarySizeExceedsAvailableBytes) {
   std::vector<uint8_t> entry;
@@ -476,7 +444,7 @@ TEST_F(FormatterSectionTest, SummarySizeExceedsAvailableBytes) {
   AppendRecord(section, /*version=*/1, "Oops", entry);
 
   auto ExpectedFile =
-      TestFile::fromYaml(BuildSectionYaml(".lldbsummaries", section));
+      TestFile::fromYaml(BuildBinaryYaml(".lldbsummaries", section));
   ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
   auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
 
