@@ -312,6 +312,58 @@ TypeSystemFortran::GetBitSize(opaque_compiler_type_t type,
   return fortran_type->GetBitSize();
 }
 
+BasicType
+TypeSystemFortran::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return eBasicTypeInvalid;
+  FortranType *fortran_type = static_cast<FortranType *>(type);
+  switch (fortran_type->GetKind()) {
+  case FortranType::KIND_INTEGER:
+    switch (fortran_type->GetBitSize()) {
+    case 8:
+      return eBasicTypeSignedChar;
+    case 16:
+      return eBasicTypeShort;
+    case 32:
+      return eBasicTypeInt;
+    case 64:
+      return eBasicTypeLongLong;
+    case 128:
+      return eBasicTypeInt128;
+    default:
+      return eBasicTypeInvalid;
+    }
+  case FortranType::KIND_LOGICAL:
+    return eBasicTypeBool;
+  case FortranType::KIND_COMPLEX:
+    switch (fortran_type->GetBitSize()) {
+    case 64:
+      return eBasicTypeFloatComplex;
+    case 128:
+      return eBasicTypeDoubleComplex;
+    case 256:
+      return eBasicTypeLongDoubleComplex;
+    default:
+      return eBasicTypeInvalid;
+    }
+  case FortranType::KIND_REAL:
+    switch (fortran_type->GetBitSize()) {
+    case 16:
+      return eBasicTypeHalf;
+    case 32:
+      return eBasicTypeFloat;
+    case 64:
+      return eBasicTypeDouble;
+    case 128:
+      return eBasicTypeFloat128;
+    default:
+      return eBasicTypeInvalid;
+    }
+  default:
+    return eBasicTypeInvalid;
+  }
+}
+
 Encoding TypeSystemFortran::GetEncoding(opaque_compiler_type_t type) {
   if (!type)
     return eEncodingInvalid;

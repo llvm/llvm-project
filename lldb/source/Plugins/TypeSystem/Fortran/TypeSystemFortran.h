@@ -314,9 +314,7 @@ public:
     return 0;
   }
   lldb::BasicType
-  GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override {
-    return lldb::eBasicTypeInt;
-  }
+  GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override;
 
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override {
     return 0;
