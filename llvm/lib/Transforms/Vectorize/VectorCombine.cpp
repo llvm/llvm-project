@@ -2141,10 +2141,12 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     Value *Idx = EI->getIndexOperand();
 
     // Insert 'freeze' for poison indexes.
-    auto It = NeedFreeze.find(cast<Instruction>(Idx));
-    if (It != NeedFreeze.end()) {
-      It->second.freeze(Builder, *cast<Instruction>(Idx));
-      NeedFreeze.erase(It);
+    if (auto *IdxInst = dyn_cast<Instruction>(Idx)) {
+      auto It = NeedFreeze.find(IdxInst);
+      if (It != NeedFreeze.end()) {
+        It->second.freeze(Builder, *IdxInst);
+        NeedFreeze.erase(It);
+      }
     }
 
     Builder.SetInsertPoint(EI);
