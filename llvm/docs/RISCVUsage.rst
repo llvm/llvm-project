@@ -347,7 +347,7 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `1.0 release specification <https://github.com/riscv/riscv-cfi/releases/tag/v1.0>`__.
 
-``experimental-smcsps``, ``experimental-sscsps``
+``experimental-smcsps``, ``experimental-sscsps``, ``experimental-smijt``, ``experimental-ssijt``, ``experimental-smehv``, ``experimental-ssehv``
   LLVM implements the `0.19 release specification <https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.19>`__.
 
 ``experimental-zvbc32e``, ``experimental-zvkgs``
