@@ -87,6 +87,25 @@ define void @insert_store_dynamic_p32_index(ptr %p, i8 %x, i4 %idx) {
   ret void
 }
 
+; A vector of pointers reaches getScalarizedGEPIndexInfo as VecTy through the
+; insert/store path. PtrTy remains scalar, as required by load and store.
+define void @insert_store_pointer_vector_dynamic_p32_index(ptr %p, ptr %x, i4 %idx) {
+; P32-LABEL: define void @insert_store_pointer_vector_dynamic_p32_index(
+; P32-SAME: ptr [[P:%.*]], ptr [[X:%.*]], i4 [[IDX:%.*]]) #[[ATTR0]] {
+; P32-NEXT:    [[IDX_FROZEN:%.*]] = freeze i4 [[IDX]]
+; P32-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX_FROZEN]], -1
+; P32-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i4 [[BOUNDED]] to i32
+; P32-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <15 x ptr>, ptr [[P]], i32 0, i32 [[BOUNDED_GEPIDX]]
+; P32-NEXT:    store ptr [[X]], ptr [[TMP1]], align 8
+; P32-NEXT:    ret void
+;
+  %bounded = urem i4 %idx, 15
+  %v = load <15 x ptr>, ptr %p, align 8
+  %v1 = insertelement <15 x ptr> %v, ptr %x, i4 %bounded
+  store <15 x ptr> %v1, ptr %p, align 8
+  ret void
+}
+
 ; The i4 bit pattern -2 denotes unsigned lane 14. Materializing it for an i32
 ; GEP index must not create an instruction or reinterpret it as a negative
 ; signed index.
@@ -122,4 +141,22 @@ define i8 @load_extract_dynamic_p32_index(ptr %p, i4 %idx) {
   %v = load <15 x i8>, ptr %p, align 1
   %x = extractelement <15 x i8> %v, i4 %bounded
   ret i8 %x
+}
+
+; A vector of pointers reaches getScalarizedGEPIndexInfo as VecTy through the
+; load/extract path. PtrTy remains scalar, as required by load instructions.
+define ptr @load_extract_pointer_vector_dynamic_p32_index(ptr %p, i4 %idx) {
+; P32LOAD-LABEL: define ptr @load_extract_pointer_vector_dynamic_p32_index(
+; P32LOAD-SAME: ptr [[P:%.*]], i4 [[IDX:%.*]]) #[[ATTR0]] {
+; P32LOAD-NEXT:    [[IDX_FROZEN:%.*]] = freeze i4 [[IDX]]
+; P32LOAD-NEXT:    [[BOUNDED:%.*]] = urem i4 [[IDX_FROZEN]], -1
+; P32LOAD-NEXT:    [[BOUNDED_GEPIDX:%.*]] = zext i4 [[BOUNDED]] to i32
+; P32LOAD-NEXT:    [[GEP:%.*]] = getelementptr inbounds <15 x ptr>, ptr [[P]], i32 0, i32 [[BOUNDED_GEPIDX]]
+; P32LOAD-NEXT:    [[X:%.*]] = load ptr, ptr [[GEP]], align 8
+; P32LOAD-NEXT:    ret ptr [[X]]
+;
+  %bounded = urem i4 %idx, 15
+  %v = load <15 x ptr>, ptr %p, align 8
+  %x = extractelement <15 x ptr> %v, i4 %bounded
+  ret ptr %x
 }
