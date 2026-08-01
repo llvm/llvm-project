@@ -29,9 +29,8 @@ using namespace mlir::vector;
 
 /// Returns whether `xferOp` accesses exactly the whole contents of `slot`, so
 /// it can act as a plain whole-buffer load/store during Mem2Reg.
-template <typename TransferOpTy>
 static bool
-isWholeBufferTransfer(TransferOpTy xferOp, const MemorySlot &slot,
+isWholeBufferTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
                       const SmallPtrSetImpl<OpOperand *> &blockingUses) {
   // The sole blocking use must be the slot pointer as the transfer's base.
   if (blockingUses.size() != 1)
@@ -60,11 +59,14 @@ isWholeBufferTransfer(TransferOpTy xferOp, const MemorySlot &slot,
   if (!xferOp.getPermutationMap().isIdentity())
     return false;
 
-  // All dimensions in bounds: no out-of-buffer element, no padding.
+  // All dimensions must be in bounds. An out-of-bounds dimension means the
+  // transfer reaches past the buffer, so a read would materialize padding
+  // rather than buffer contents and a write would only cover part of the
+  // buffer: in neither case does the transfer stand in for the whole slot.
   if (xferOp.hasOutOfBoundsDim())
     return false;
 
-  // A mask would make the access partial.
+  // A mask could make the access partial.
   if (xferOp.getMask())
     return false;
 
@@ -95,7 +97,7 @@ struct TransferReadOpMemOpModel
                         const SmallPtrSetImpl<OpOperand *> &blockingUses,
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
-    return isWholeBufferTransfer(cast<vector::TransferReadOp>(op), slot,
+    return isWholeBufferTransfer(cast<VectorTransferOpInterface>(op), slot,
                                  blockingUses);
   }
 
@@ -131,7 +133,7 @@ struct TransferWriteOpMemOpModel
                         SmallVectorImpl<OpOperand *> &newBlockingUses,
                         const DataLayout &dataLayout) const {
     // No self-store guard needed: a vector value can never equal a memref slot.
-    return isWholeBufferTransfer(cast<vector::TransferWriteOp>(op), slot,
+    return isWholeBufferTransfer(cast<VectorTransferOpInterface>(op), slot,
                                  blockingUses);
   }
 

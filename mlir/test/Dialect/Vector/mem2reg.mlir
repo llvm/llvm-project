@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(mem2reg))' --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --mem2reg --split-input-file | FileCheck %s
 
 // A memref that is only ever accessed as a whole buffer through
 // vector.transfer_read / vector.transfer_write is promoted to a single vector
