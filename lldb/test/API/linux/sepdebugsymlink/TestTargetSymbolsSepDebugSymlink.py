@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 
 class TestTargetSymbolsSepDebugSymlink(TestBase):
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     @skipIf(hostoslist=["windows"])
     @skipIfRemote  # llvm.org/pr36237
     @skipIf(bugnumber="rdar://38550275")
