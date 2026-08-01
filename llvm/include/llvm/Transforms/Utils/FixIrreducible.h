@@ -13,7 +13,10 @@
 
 namespace llvm {
 struct FixIrreduciblePass : RequiredPassInfoMixin<FixIrreduciblePass> {
+  FixIrreduciblePass(bool SwitchGuards = false) : SwitchGuards(SwitchGuards) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  bool SwitchGuards;
 };
 } // namespace llvm
 
