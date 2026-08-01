@@ -37,3 +37,26 @@ void alloc_align_function_reference(
 void alloc_align_block_pointer(
     char *(^fn)(char *) __attribute__((alloc_align(1))));
 // CHECK: attr-source-range.cpp:[[@LINE-1]]:52:{[[@LINE-1]]:17-[[@LINE-1]]:23}: error: 'alloc_align' attribute argument may only refer to a function parameter of integer type
+
+char *reference_target(char *);
+char *(&alloc_align_function_reference_variable)(char *)
+    __attribute__((alloc_align(1))) = reference_target;
+// CHECK: attr-source-range.cpp:[[@LINE-1]]:32:{[[@LINE-2]]:50-[[@LINE-2]]:56}: error: 'alloc_align' attribute argument may only refer to a function parameter of integer type
+
+struct MemberPointerField {
+  char *(S::*fn)(char *) __attribute__((alloc_align(1)));
+};
+// CHECK: attr-source-range.cpp:[[@LINE-2]]:53:{[[@LINE-2]]:18-[[@LINE-2]]:24}: error: 'alloc_align' attribute argument may only refer to a function parameter of integer type
+
+struct StaticDataMember {
+  static char *(*fn)(char *) __attribute__((alloc_align(1)));
+};
+// CHECK: attr-source-range.cpp:[[@LINE-2]]:57:{[[@LINE-2]]:22-[[@LINE-2]]:28}: error: 'alloc_align' attribute argument may only refer to a function parameter of integer type
+
+// type alias (TypedefNameDecl)
+using alloc_align_alias __attribute__((alloc_align(1))) = char *(*)(char *);
+// CHECK: attr-source-range.cpp:[[@LINE-1]]:52:{[[@LINE-1]]:69-[[@LINE-1]]:75}: error: 'alloc_align' attribute argument may only refer to a function parameter of integer type
+
+// typedef of a function type
+typedef char *alloc_align_function_t(char *) __attribute__((alloc_align(1)));
+// CHECK: attr-source-range.cpp:[[@LINE-1]]:73:{[[@LINE-1]]:38-[[@LINE-1]]:44}: error: 'alloc_align' attribute argument may only refer to a function parameter of integer type
