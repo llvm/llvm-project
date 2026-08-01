@@ -4917,11 +4917,13 @@ public:
   VPlan(Loop *L, Type *IdxTy);
 
   /// Construct a VPlan with a new VPBasicBlock as entry, a VPIRBasicBlock
-  /// wrapping \p ScalarHeaderBB and vector loop index of type \p IdxTy.
+  /// wrapping \p ScalarHeaderBB and vector loop index of type \p IdxTy. The
+  /// scalar header is left empty; callers that need recipes for the
+  /// instructions in \p ScalarHeaderBB must create them themselves.
   VPlan(BasicBlock *ScalarHeaderBB, Type *IdxTy)
       : VectorTripCount(IdxTy), VF(IdxTy), UF(IdxTy), VFxUF(IdxTy) {
     setEntry(createVPBasicBlock("preheader"));
-    ScalarHeader = createVPIRBasicBlock(ScalarHeaderBB);
+    ScalarHeader = createEmptyVPIRBasicBlock(ScalarHeaderBB);
   }
 
   LLVM_ABI_FOR_TEST ~VPlan();
