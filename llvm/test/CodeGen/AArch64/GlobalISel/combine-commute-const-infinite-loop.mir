@@ -15,14 +15,14 @@ body:             |
     ; CHECK-LABEL: name: add
     ; CHECK: liveins: $s0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %c0:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %c1:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: %add:_(s32) = G_ADD %c0, %c1
-    ; CHECK-NEXT: $s0 = COPY %add(s32)
+    ; CHECK-NEXT: %c0:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %c1:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: %add:_(i32) = G_ADD %c0, %c1
+    ; CHECK-NEXT: $s0 = COPY %add(i32)
     ; CHECK-NEXT: RET_ReallyLR
-    %c0:_(s32) = G_CONSTANT i32 1
-    %c1:_(s32) = G_CONSTANT i32 2
-    %add:_(s32) = G_ADD %c0, %c1
+    %c0:_(i32) = G_CONSTANT i32 1
+    %c1:_(i32) = G_CONSTANT i32 2
+    %add:_(i32) = G_ADD %c0, %c1
     $s0 = COPY %add
     RET_ReallyLR
 

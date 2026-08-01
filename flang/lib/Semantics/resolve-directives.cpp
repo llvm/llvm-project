@@ -2511,22 +2511,20 @@ void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
   // The DEFAULT clause may also be used on METADIRECTIVE. In that case
   // there is nothing to do.
   using DataSharingAttribute = parser::OmpDefaultClause::DataSharingAttribute;
-  if (auto *dsa{std::get_if<DataSharingAttribute>(&x.u)}) {
-    if (!dirContext_.empty()) {
-      switch (*dsa) {
-      case DataSharingAttribute::Private:
-        SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
-        break;
-      case DataSharingAttribute::Firstprivate:
-        SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
-        break;
-      case DataSharingAttribute::Shared:
-        SetContextDefaultDSA(Symbol::Flag::OmpShared);
-        break;
-      case DataSharingAttribute::None:
-        SetContextDefaultDSA(Symbol::Flag::OmpNone);
-        break;
-      }
+  if (!dirContext_.empty()) {
+    switch (x.v) {
+    case DataSharingAttribute::Private:
+      SetContextDefaultDSA(Symbol::Flag::OmpPrivate);
+      break;
+    case DataSharingAttribute::Firstprivate:
+      SetContextDefaultDSA(Symbol::Flag::OmpFirstPrivate);
+      break;
+    case DataSharingAttribute::Shared:
+      SetContextDefaultDSA(Symbol::Flag::OmpShared);
+      break;
+    case DataSharingAttribute::None:
+      SetContextDefaultDSA(Symbol::Flag::OmpNone);
+      break;
     }
   }
 }
@@ -3102,7 +3100,7 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
       }
     }
     if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
-      if (symbol->IsFuncResult()) {
+      if (IsFunctionResultWithSameNameAsFunction(*symbol)) {
         if (Symbol * func{currScope().symbol()}) {
           CHECK(func->IsSubprogram());
           func->set(ompFlag);

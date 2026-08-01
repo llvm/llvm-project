@@ -11990,7 +11990,7 @@ SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
   // - If value is NaN, the comparison is unordered (FU bit set)
   // - If value is not NaN, the comparison is equal (EQ bit set)
 
-  if ((Category & ~fcNan) && (Category != ~fcNan)) {
+  if ((Category != fcNan) && (Category != ~fcNan)) {
     // If not checking for NaN or non-NaN, we can't handle this without P9Vector
     return SDValue();
   }

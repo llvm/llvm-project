@@ -716,3 +716,33 @@ class RegisterCommandsTestCase(TestBase):
         self.expect("register read pc", substrs=[err_msg], error=True)
         self.expect("register write pc 0", substrs=[err_msg], error=True)
         self.expect("register info pc", substrs=[err_msg], error=True)
+
+    @expectedFailureDarwin(bugnumber="github.com/llvm/llvm-project/issues/213386")
+    def test_case_insensitivity(self):
+        """
+        Register names, their aliases and any generic names like "sp" and "ra"
+        should be looked up case insensitively.
+        """
+
+        def setup():
+            self.build()
+            self.common_setup()
+
+        expected = "0x1122334455667788"
+
+        if self.getArchitecture() in ["amd64", "x86_64"]:
+            setup()
+            self.runCmd(f"register write rsp {expected}")
+            # This checks a primary name (rsp) and a generic name (sp)
+            # (and no registers have an alias).
+            for name in ["rsp", "RSP", "sp", "SP"]:
+                self.expect(f"register read {name}", substrs=[expected])
+        elif self.isAArch64():
+            setup()
+            self.runCmd(f"register write x30 {expected}")
+            # This checks a primary name (lr), an alias (x30), and
+            # a generic name (ra).
+            for name in ["x30", "X30", "lr", "LR", "ra", "RA"]:
+                self.expect(f"register read {name}", substrs=[expected])
+        else:
+            self.skipTest("Unsupported architecture.")

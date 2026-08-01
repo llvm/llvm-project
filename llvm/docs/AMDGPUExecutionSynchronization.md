@@ -2,9 +2,6 @@
 
 # AMDGPU Execution Synchronization
 
-```{contents}
-:local: true
-```
 
 (amdgpu-execution-synchronization-barriers)=
 

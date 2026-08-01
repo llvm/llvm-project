@@ -19,10 +19,10 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/Cuda.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/TargetParser/NVPTXTargetParser.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -2259,136 +2259,22 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
   return false;
 }
 
-static OffloadArch getOffloadArch(const CodeGenModule &CGM) {
-  // FIXME: This should not require parsing
-  return StringToOffloadArch(CGM.getTarget().getTargetOpts().CPU);
-}
-
 /// Check to see if target architecture supports unified addressing which is
 /// a restriction for OpenMP requires clause "unified_shared_memory".
 void CGOpenMPRuntimeGPU::processRequiresDirective(const OMPRequiresDecl *D) {
-  for (const OMPClause *Clause : D->clauselists()) {
-    if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
-      OffloadArch Arch = getOffloadArch(CGM);
-      switch (Arch) {
-      case OffloadArch::SM_20:
-      case OffloadArch::SM_21:
-      case OffloadArch::SM_30:
-      case OffloadArch::SM_32_:
-      case OffloadArch::SM_35:
-      case OffloadArch::SM_37:
-      case OffloadArch::SM_50:
-      case OffloadArch::SM_52:
-      case OffloadArch::SM_53: {
-        SmallString<256> Buffer;
-        llvm::raw_svector_ostream Out(Buffer);
-        Out << "Target architecture " << OffloadArchToString(Arch)
-            << " does not support unified addressing";
-        CGM.Error(Clause->getBeginLoc(), Out.str());
+  StringRef CPU = CGM.getTarget().getTargetOpts().CPU;
+  if (CGM.getTarget().getTriple().isNVPTX() &&
+      !llvm::NVPTX::supportsUnifiedAddressing(llvm::NVPTX::parseArch(CPU))) {
+    for (const OMPClause *Clause : D->clauselists()) {
+      if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
+        CGM.getDiags().Report(Clause->getBeginLoc(),
+                              diag::err_omp_unified_shared_memory_unsupported)
+            << CPU;
         return;
-      }
-      case OffloadArch::SM_60:
-      case OffloadArch::SM_61:
-      case OffloadArch::SM_62:
-      case OffloadArch::SM_70:
-      case OffloadArch::SM_72:
-      case OffloadArch::SM_75:
-      case OffloadArch::SM_80:
-      case OffloadArch::SM_86:
-      case OffloadArch::SM_87:
-      case OffloadArch::SM_88:
-      case OffloadArch::SM_89:
-      case OffloadArch::SM_90:
-      case OffloadArch::SM_90a:
-      case OffloadArch::SM_100:
-      case OffloadArch::SM_100a:
-      case OffloadArch::SM_100f:
-      case OffloadArch::SM_101:
-      case OffloadArch::SM_101a:
-      case OffloadArch::SM_101f:
-      case OffloadArch::SM_103:
-      case OffloadArch::SM_103a:
-      case OffloadArch::SM_103f:
-      case OffloadArch::SM_110:
-      case OffloadArch::SM_110a:
-      case OffloadArch::SM_110f:
-      case OffloadArch::SM_120:
-      case OffloadArch::SM_120a:
-      case OffloadArch::SM_120f:
-      case OffloadArch::SM_121:
-      case OffloadArch::SM_121a:
-      case OffloadArch::SM_121f:
-      case OffloadArch::GFX600:
-      case OffloadArch::GFX601:
-      case OffloadArch::GFX602:
-      case OffloadArch::GFX700:
-      case OffloadArch::GFX701:
-      case OffloadArch::GFX702:
-      case OffloadArch::GFX703:
-      case OffloadArch::GFX704:
-      case OffloadArch::GFX705:
-      case OffloadArch::GFX801:
-      case OffloadArch::GFX802:
-      case OffloadArch::GFX803:
-      case OffloadArch::GFX805:
-      case OffloadArch::GFX810:
-      case OffloadArch::GFX9_GENERIC:
-      case OffloadArch::GFX900:
-      case OffloadArch::GFX902:
-      case OffloadArch::GFX904:
-      case OffloadArch::GFX906:
-      case OffloadArch::GFX908:
-      case OffloadArch::GFX909:
-      case OffloadArch::GFX90a:
-      case OffloadArch::GFX90c:
-      case OffloadArch::GFX9_4_GENERIC:
-      case OffloadArch::GFX942:
-      case OffloadArch::GFX950:
-      case OffloadArch::GFX10_1_GENERIC:
-      case OffloadArch::GFX1010:
-      case OffloadArch::GFX1011:
-      case OffloadArch::GFX1012:
-      case OffloadArch::GFX1013:
-      case OffloadArch::GFX10_3_GENERIC:
-      case OffloadArch::GFX1030:
-      case OffloadArch::GFX1031:
-      case OffloadArch::GFX1032:
-      case OffloadArch::GFX1033:
-      case OffloadArch::GFX1034:
-      case OffloadArch::GFX1035:
-      case OffloadArch::GFX1036:
-      case OffloadArch::GFX11_GENERIC:
-      case OffloadArch::GFX1100:
-      case OffloadArch::GFX1101:
-      case OffloadArch::GFX1102:
-      case OffloadArch::GFX1103:
-      case OffloadArch::GFX1150:
-      case OffloadArch::GFX1151:
-      case OffloadArch::GFX1152:
-      case OffloadArch::GFX1153:
-      case OffloadArch::GFX1154:
-      case OffloadArch::GFX11_7_GENERIC:
-      case OffloadArch::GFX1170:
-      case OffloadArch::GFX1171:
-      case OffloadArch::GFX1172:
-      case OffloadArch::GFX12_GENERIC:
-      case OffloadArch::GFX1200:
-      case OffloadArch::GFX1201:
-      case OffloadArch::GFX12_5_GENERIC:
-      case OffloadArch::GFX1250:
-      case OffloadArch::GFX1251:
-      case OffloadArch::GFX13_GENERIC:
-      case OffloadArch::GFX1310:
-      case OffloadArch::AMDGCNSPIRV:
-      case OffloadArch::Generic:
-      case OffloadArch::GRANITERAPIDS:
-      case OffloadArch::BMG_G21:
-      case OffloadArch::Unused:
-      case OffloadArch::Unknown:
-        break;
       }
     }
   }
+
   CGOpenMPRuntime::processRequiresDirective(D);
 }
 
