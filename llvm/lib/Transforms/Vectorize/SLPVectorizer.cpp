@@ -30907,10 +30907,8 @@ public:
 
         // Use the zero-test cost only for a complete, standalone scalar
         // reduction that can become one vector comparison and i1 reduction.
-        TTI::VectorInstrContext CostContext =
-            TTI::VectorInstrContext::None;
-        if (isZeroCmpContext(RdxContext) &&
-            this->ReducedVals.size() == 1 &&
+        TTI::VectorInstrContext CostContext = TTI::VectorInstrContext::None;
+        if (isZeroCmpContext(RdxContext) && this->ReducedVals.size() == 1 &&
             VL.size() == this->ReducedVals.front().size() &&
             VectorValuesAndScales.empty() && !VectorizedTree &&
             !isa<VectorType>(VL.front()->getType()) && !allConstant(VL) &&

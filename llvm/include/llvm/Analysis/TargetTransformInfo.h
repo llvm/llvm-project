@@ -191,7 +191,7 @@ enum class VectorInstrContext : uint8_t {
   Load,  ///< The value being inserted comes from a load (InsertElement only).
   Store, ///< The extracted value is stored (ExtractElement only).
   BinaryOp, ///< One of the operands is a binary op.
-  CmpZero, ///< The reduction result is compared against zero.
+  CmpZero,  ///< The reduction result is compared against zero.
 };
 
 class IntrinsicCostAttributes {
