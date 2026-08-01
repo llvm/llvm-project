@@ -11,6 +11,8 @@ define ptr @mix_pointer(ptr %pa, ptr %pb) {
   ret ptr %pc
 }
 
+; Ensure it is identical to `captures(address, provenance)`.
+
 define ptr @identity(ptr %a) {
   ret ptr %a
 }

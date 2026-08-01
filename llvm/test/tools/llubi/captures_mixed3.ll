@@ -11,6 +11,8 @@ define ptr @mix_pointer(ptr %pa, ptr %pb) {
   ret ptr %pc
 }
 
+; The returned pointer only captures read_provenance. So it cannot be mixed with the input.
+
 define ptr @identity(ptr captures(read_provenance) %a) {
   ret ptr %a
 }
@@ -40,6 +42,6 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: mix_pointer
 ; CHECK-NEXT:   %mixed = call ptr @mix_pointer(ptr %p1, ptr %p2) => ptr 0x8 [nullary]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   store i32 0, ptr %mixed, align 4 at @main <stdin>:22
+; CHECK-NEXT: #0   store i32 0, ptr %mixed, align 4 at @main <stdin>:24
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

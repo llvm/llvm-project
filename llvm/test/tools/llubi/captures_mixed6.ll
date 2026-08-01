@@ -17,6 +17,8 @@ define ptr @capture_read_provenance(ptr captures(read_provenance) %a) {
   ret ptr %a
 }
 
+; The only one component (read_provenance) is captured through the memory. The stored pointer should be identical to the input.
+
 define void @captured_by_mem(ptr captures(read_provenance) %a) {
   store ptr %a, ptr @g
   ret void
@@ -56,6 +58,6 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: mix_pointer
 ; CHECK-NEXT:   %mixed = call ptr @mix_pointer(ptr %p2, ptr %p3) => ptr 0x14 [nullary]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   %v = load i32, ptr %mixed, align 4 at @main <stdin>:31
+; CHECK-NEXT: #0   %v = load i32, ptr %mixed, align 4 at @main <stdin>:33
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

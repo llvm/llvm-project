@@ -11,6 +11,8 @@ define ptr @mix_pointer(ptr %pa, ptr %pb) {
   ret ptr %pc
 }
 
+; All components are captured through the memory. The stored pointer should be identical to the input.
+
 @g = global ptr null
 
 define void @captured_by_mem(ptr captures(address, provenance) %a) {

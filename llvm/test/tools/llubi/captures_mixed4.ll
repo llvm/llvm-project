@@ -11,6 +11,8 @@ define ptr @mix_pointer(ptr %pa, ptr %pb) {
   ret ptr %pc
 }
 
+; Only provenance is captured through the memory. So the stored pointer cannot be mixed with the input.
+
 @g = global ptr null
 
 define void @captured_by_mem(ptr captures(provenance) %a) {
@@ -46,6 +48,6 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: mix_pointer
 ; CHECK-NEXT:   %mixed = call ptr @mix_pointer(ptr %p1, ptr %p2) => ptr 0x14 [nullary]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   store i32 0, ptr %mixed, align 4 at @main <stdin>:26
+; CHECK-NEXT: #0   store i32 0, ptr %mixed, align 4 at @main <stdin>:28
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

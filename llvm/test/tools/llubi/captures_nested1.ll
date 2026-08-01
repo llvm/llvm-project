@@ -7,8 +7,10 @@ define ptr @g(ptr captures(read_provenance) %a) {
 }
 
 define ptr @f(ptr captures(none) %a) {
+  ; %a has full provenance here.
   store i32 0, ptr %a
   %res = call ptr @g(ptr %a)
+  ; %res has only read_provenance.
   %v = load i32, ptr %res
   ret ptr %res
 }
@@ -16,6 +18,7 @@ define ptr @f(ptr captures(none) %a) {
 define void @main() {
   %p1 = alloca i32
   %p2 = call ptr @f(ptr %p1)
+  ; %p2 has nullary provenance.
   %v = load i32, ptr %p2
   ret void
 }

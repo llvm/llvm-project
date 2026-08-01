@@ -9,6 +9,7 @@ define ptr @address_read_provenance(ptr captures(address, read_provenance) %p) {
 
 define void @main() {
   %g_address_read_provenance = call ptr @address_read_provenance(ptr @g)
+  ; Only read_provenance is captured. It is UB to store via the pointer.
   store i8 1, ptr %g_address_read_provenance
   ret void
 }
@@ -19,6 +20,6 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: address_read_provenance
 ; CHECK-NEXT:   %g_address_read_provenance = call ptr @address_read_provenance(ptr @g) => ptr 0x8 [@g read_provenance]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   store i8 1, ptr %g_address_read_provenance, align 1 at @main <stdin>:12
+; CHECK-NEXT: #0   store i8 1, ptr %g_address_read_provenance, align 1 at @main <stdin>:13
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
