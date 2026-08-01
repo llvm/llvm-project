@@ -26,9 +26,9 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace builtins {
 
-// float <- __int128_t conversion, round to nearest.
+// float <- Int128 conversion, round to nearest.
 // Mirrors compiler-rt's __floattisf.
-LIBC_INLINE float floattisf(__int128_t x) { return floatint<float>(x); }
+LIBC_INLINE float floattisf(Int128 x) { return floatint<float>(x); }
 
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
