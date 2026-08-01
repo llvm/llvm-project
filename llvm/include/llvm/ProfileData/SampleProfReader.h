@@ -220,6 +220,37 @@
 //          in the text format documentation above).
 //        FUNCTION BODY
 //          A FUNCTION BODY entry describing the inlined function.
+//
+// An ExtBinary file may contain both legacy and typified profile sections.
+// Each section's type independently selects its function-body encoding.
+//
+// TYPIFIED FUNCTION BODY (used by SecTypifiedProfile)
+//    NAME_IDX (uint64_t)
+//        Index into the name table indicating the function name.
+//    NUM_PROFILE_TYPES (uint64_t)
+//        Number of typed profile blocks attached to this function. Zero is
+//        valid when the function has no payload for any profile type.
+//    PROFILE TYPE BLOCKS
+//        A list of NUM_PROFILE_TYPES entries. Each entry contains:
+//          TYPE (uint64_t)
+//              Profile type ID. A type may occur at most once per function;
+//              duplicate IDs make the profile malformed.
+//          PAYLOAD_SIZE (uint64_t)
+//              Size of PAYLOAD in bytes.
+//          PAYLOAD
+//              Type-specific data occupying exactly PAYLOAD_SIZE bytes.
+//              Readers skip unknown types using PAYLOAD_SIZE.
+//              A known type must consume exactly PAYLOAD_SIZE bytes; extend an
+//              existing payload by assigning a new profile type ID.
+//
+//        The ProfTypeLBR payload contains HEAD_SAMPLES for top-level functions,
+//        followed by SAMPLES, NRECS, and BODY RECORDS as described above.
+//        Nested functions omit HEAD_SAMPLES.
+//    NUM_INLINED_FUNCTIONS (uint32_t)
+//        Number of callees inlined into this function.
+//    INLINED FUNCTION RECORDS
+//        Encoded as described above, except each nested FUNCTION BODY uses the
+//        typified representation.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_PROFILEDATA_SAMPLEPROFREADER_H
@@ -639,8 +670,11 @@ public:
     return EC;
   }
 
-  /// Return whether the profile uses typified profile blocks.
-  bool profileIsTypified() const { return IsProfileTypified; }
+  /// Return whether the input contains a typified profile section.
+  virtual bool hasTypifiedProfileSection() const { return false; }
+
+  /// Return whether any unknown typified profile blocks were skipped.
+  bool hasUnknownProfileTypes() const { return HasUnknownProfileTypes; }
 
   /// Return whether names in the profile are all MD5 numbers.
   bool useMD5() const { return ProfileIsMD5; }
@@ -711,11 +745,21 @@ protected:
   DenseMap<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
       FuncMetadataIndex;
 
-  std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
-  /// Whether the input uses SecTypifiedProfile for function profiles.
-  bool IsProfileTypified = false;
+  /// A profile section retained for loading additional functions on demand.
+  struct ProfileSectionRange {
+    /// First byte of the retained section.
+    const uint8_t *Start = nullptr;
+    /// One-past-the-end byte of the retained section.
+    const uint8_t *End = nullptr;
+    /// Whether the retained section uses typified payload encoding.
+    bool IsTypified = false;
+  };
+  /// Profile section most recently selected for on-demand loading.
+  ProfileSectionRange ProfileSecRange;
   /// Optional stream for typified block structure; null disables the output.
   raw_ostream *ProfileTypeInfoOS = nullptr;
+  /// Whether reading skipped at least one unknown typified profile block.
+  bool HasUnknownProfileTypes = false;
 
   /// Whether the profile has attribute metadata.
   bool ProfileHasAttribute = false;
@@ -1120,6 +1164,13 @@ public:
   /// Get the total size of header and all sections.
   uint64_t getFileSize();
   bool dumpSectionInfo(raw_ostream &OS = dbgs()) override;
+  /// Return whether the section table contains a typified profile section.
+  bool hasTypifiedProfileSection() const override {
+    for (const auto &Entry : SecHdrTable)
+      if (Entry.Type == SecTypifiedProfile)
+        return true;
+    return false;
+  }
 
   /// Collect functions with definitions in Module M. Return true if
   /// the reader has been given a module.

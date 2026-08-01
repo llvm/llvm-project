@@ -183,8 +183,10 @@ static inline std::string getSecName(SecType Type) {
   }
 }
 
-// Types of sample profiles that can be placed in SecTypifiedProfile.
-enum ProfTypes { ProfTypeLBR = 0, ProfTypeNum };
+// Types of sample profiles that can be placed in SecTypifiedProfile. These
+// values are persisted on disk; never change existing values, only append new
+// profile type IDs.
+enum ProfTypes { ProfTypeLBR = 0 };
 
 static inline StringRef getProfTypeName(uint64_t Type) {
   switch (Type) {

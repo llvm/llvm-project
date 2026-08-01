@@ -289,7 +289,7 @@ SampleProfileWriterExtBinaryBase::writeSample(const FunctionSamples &S) {
   FuncOffsetTable[Context] = Offset - SecLBRProfileStart;
   if (!WriteTypifiedProf)
     encodeULEB128(S.getHeadSamples(), *OutputStream);
-  return writeBody(S, false);
+  return writeBody(S, /*IsNested=*/false);
 }
 
 std::error_code
@@ -1093,6 +1093,9 @@ public:
     SetBuffer(FrontBuffer, sizeof(FrontBuffer));
   }
 
+  /// Flush staged bytes before raw_ostream verifies that its buffer is empty.
+  ~BoundedBufferingStream() override { flush(); }
+
   /// Prepare the stream to count and, if possible, retain another payload.
   void resetPayload() {
     assert(GetNumBytesInBuffer() == 0 && "front buffer is not empty");
@@ -1228,8 +1231,8 @@ std::error_code SampleProfileWriterBinary::writeProfileType(
     // An oversized payload was discarded during the counting pass, so serialize
     // it directly now that its size has been emitted.
     uint64_t PayloadStart = OS.tell();
-    if (std::error_code EC = WritePayload())
-      return EC;
+    if (std::error_code SecondPassEC = WritePayload())
+      return SecondPassEC;
     // Reject output if the callback did not reproduce the counted size.
     if (OS.tell() - PayloadStart != BufferStream->payloadSize())
       return sampleprof_error::malformed;
@@ -1284,7 +1287,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S,
   for (const auto &J : S.getCallsiteSamples())
     for (const auto &FS : J.second) {
       J.first.serialize(OS);
-      if (std::error_code EC = writeBody(FS.second, true))
+      if (std::error_code EC = writeBody(FS.second, /*IsNested=*/true))
         return EC;
     }
 
@@ -1300,7 +1303,7 @@ std::error_code SampleProfileWriterBinary::writeBody(const FunctionSamples &S,
 std::error_code
 SampleProfileWriterBinary::writeSample(const FunctionSamples &S) {
   encodeULEB128(S.getHeadSamples(), *OutputStream);
-  return writeBody(S, false);
+  return writeBody(S, /*IsNested=*/false);
 }
 
 /// Create a sample profile file writer based on the specified format.

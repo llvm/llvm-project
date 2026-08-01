@@ -6,12 +6,19 @@
 ; RUN: not llvm-profdata merge --sample %t.undersized -o /dev/null 2>&1 | FileCheck %s --check-prefix=TRUNCATED
 
 ; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.valid %t.oversized oversized
-; RUN: not llvm-profdata merge --sample %t.oversized -o /dev/null 2>&1 | FileCheck %s --check-prefix=MALFORMED
+; RUN: not llvm-profdata merge --sample %t.oversized -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNCONSUMED
+
+; Verify that duplicate type IDs are rejected instead of decoding and merging
+; the same logical payload twice.
+; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.valid %t.duplicate duplicate-type
+; RUN: not llvm-profdata merge --sample %t.duplicate -o /dev/null 2>&1 | FileCheck %s --check-prefix=DUPLICATE
 
 ; RUN: %python %S/Inputs/corrupt-typified-payload.py %t.valid %t.unknown-out-of-bounds unknown-out-of-bounds
-; RUN: not llvm-profdata merge --sample %t.unknown-out-of-bounds -o /dev/null 2>&1 | FileCheck %s --check-prefix=TRUNCATED
+; RUN: not llvm-profdata merge --sample %t.unknown-out-of-bounds -o /dev/null 2>&1 | FileCheck %s --check-prefix=DECLARED-SIZE
 ; RUN: not llvm-profdata show --sample --show-typified-info-only %t.unknown-out-of-bounds 2>&1 | FileCheck %s --check-prefix=INSPECT
 
 ; TRUNCATED: error: {{.*}}Truncated profile data
-; MALFORMED: error: {{.*}}Malformed sample profile data
+; UNCONSUMED: Profile type ID 0 did not consume its complete payload; unread bytes: 1
+; DUPLICATE: Duplicate profile type ID: 0
+; DECLARED-SIZE: Profile type ID 127 declares payload size 18446744073709551615
 ; INSPECT: Type: 127 (unknown), Payload size: 18446744073709551615

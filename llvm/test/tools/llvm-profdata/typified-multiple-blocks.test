@@ -5,10 +5,17 @@
 ; RUN: llvm-profdata show --sample --show-typified-info-only %t.multiple | FileCheck %s
 ; RUN: llvm-profdata merge --sample --text %t.multiple -o - | FileCheck %s --check-prefix=PROFILE --match-full-lines --strict-whitespace
 
+; Verify that re-emitting a profile warns about the unknown block that cannot
+; be preserved, while retaining the known LBR payload.
+; RUN: llvm-profdata merge --sample --extbinary %t.multiple -o %t.reemitted 2>&1 | FileCheck %s --check-prefix=WARNING
+; RUN: llvm-profdata merge --sample --text %t.reemitted -o - | FileCheck %s --check-prefix=PROFILE --match-full-lines --strict-whitespace
+
 ; CHECK: Function: foo
 ; CHECK-NEXT:   Profile blocks: 2
 ; CHECK-NEXT:   Type: 127 (unknown), Payload size: 1
 ; CHECK-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}
+
+; WARNING: warning: {{.*}}: unknown typified profile blocks were ignored and will not be preserved
 
 ; PROFILE:foo:10:1
 ; PROFILE-NEXT: 0: 10

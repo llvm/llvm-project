@@ -22,6 +22,7 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -720,7 +721,7 @@ SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
 std::error_code
 SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile,
                                           bool IsNested) {
-  if (IsProfileTypified && !IsNested) {
+  if (ProfileSecRange.IsTypified && !IsNested) {
     auto NumHeadSamples = readNumber<uint64_t>();
     if (std::error_code EC = NumHeadSamples.getError())
       return EC;
@@ -791,11 +792,21 @@ SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile,
                        << FProfile.getContext().toString()
                        << "\n  Profile blocks: " << *ProfNum << "\n";
 
+  // Each type identifies one logical payload for the function. Decoding the
+  // same type twice would merge absolute counters from malformed input.
+  SmallSet<uint64_t, 4> SeenTypes;
+
   // Read the specified number of typified profiles.
-  for (uint64_t i = 0; i < *ProfNum; i++) {
+  for (uint64_t I = 0; I < *ProfNum; ++I) {
     auto Type = readNumber<uint64_t>();
     if (std::error_code EC = Type.getError())
       return EC;
+    // Report the conflicting ID so malformed profiles can be diagnosed
+    // without inspecting their binary encoding.
+    if (!SeenTypes.insert(*Type).second) {
+      reportError(0, "Duplicate profile type ID: " + Twine(*Type));
+      return sampleprof_error::malformed;
+    }
     auto Size = readNumber<uint64_t>();
     if (std::error_code EC = Size.getError())
       return EC;
@@ -803,8 +814,15 @@ SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile,
       *ProfileTypeInfoOS << "  Type: " << *Type << " ("
                          << getProfTypeName(*Type)
                          << "), Payload size: " << *Size << "\n";
-    if (*Size > static_cast<uint64_t>(End - Data))
+    const uint64_t RemainingSize = End - Data;
+    // Diagnose a size that would let the payload cross its containing section.
+    if (*Size > RemainingSize) {
+      reportError(0, "Profile type ID " + Twine(*Type) +
+                         " declares payload size " + Twine(*Size) +
+                         ", but only " + Twine(RemainingSize) +
+                         " bytes remain");
       return sampleprof_error::truncated;
+    }
 
     const uint8_t *PayloadEnd = Data + *Size;
     std::error_code EC = sampleprof_error::success;
@@ -817,14 +835,22 @@ SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile,
       break;
     default:
       // Skip unknown profile types for forward compatibility.
+      HasUnknownProfileTypes = true;
       Data = PayloadEnd;
       break;
     }
 
     if (EC)
       return EC;
-    if (Data != PayloadEnd)
+    // Reject trailing bytes because every known decoder must consume exactly
+    // the payload declared for its type.
+    if (Data != PayloadEnd) {
+      reportError(0,
+                  "Profile type ID " + Twine(*Type) +
+                      " did not consume its complete payload; unread bytes: " +
+                      Twine(PayloadEnd - Data));
       return sampleprof_error::malformed;
+    }
   }
 
   return sampleprof_error::success;
@@ -833,7 +859,7 @@ SampleProfileReaderBinary::readTypifiedProfile(FunctionSamples &FProfile,
 std::error_code
 SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile,
                                        bool IsNested) {
-  if (IsProfileTypified) {
+  if (ProfileSecRange.IsTypified) {
     if (std::error_code EC = readTypifiedProfile(FProfile, IsNested))
       return EC;
   } else {
@@ -865,7 +891,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile,
     FunctionSamples &CalleeProfile = FProfile.functionSamplesAt(
         LineLocation(*LineOffset, DiscriminatorVal))[*FName];
     CalleeProfile.setFunction(*FName);
-    if (std::error_code EC = readProfile(CalleeProfile, true))
+    if (std::error_code EC = readProfile(CalleeProfile, /*IsNested=*/true))
       return EC;
   }
 
@@ -880,7 +906,7 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
                                            SampleProfileMap &Profiles) {
   Data = Start;
   ErrorOr<uint64_t> NumHeadSamples = 0;
-  if (!IsProfileTypified) {
+  if (!ProfileSecRange.IsTypified) {
     NumHeadSamples = readNumber<uint64_t>();
     if (std::error_code EC = NumHeadSamples.getError())
       return EC;
@@ -894,13 +920,13 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
   auto Res = Profiles.try_emplace(Hash, FContext, FunctionSamples());
   FunctionSamples &FProfile = Res.first->second;
   FProfile.setContext(FContext);
-  if (!IsProfileTypified)
+  if (!ProfileSecRange.IsTypified)
     FProfile.addHeadSamples(*NumHeadSamples);
 
   if (FContext.hasContext())
     CSProfileCount++;
 
-  if (std::error_code EC = readProfile(FProfile, false))
+  if (std::error_code EC = readProfile(FProfile, /*IsNested=*/false))
     return EC;
   return sampleprof_error::success;
 }
@@ -962,7 +988,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
   }
   case SecLBRProfile:
   case SecTypifiedProfile:
-    ProfileSecRange = std::make_pair(Data, End);
+    // Retain the section and its encoding for subsequent on-demand reads.
+    ProfileSecRange = {Data, End, Entry.Type == SecTypifiedProfile};
     if (std::error_code EC = readFuncProfiles())
       return EC;
     break;
@@ -1037,8 +1064,8 @@ SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
   if (FuncsToUse.empty())
     return sampleprof_error::success;
 
-  Data = ProfileSecRange.first;
-  End = ProfileSecRange.second;
+  Data = ProfileSecRange.Start;
+  End = ProfileSecRange.End;
   if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
     return EC;
   End = Data;
@@ -1283,9 +1310,6 @@ std::error_code SampleProfileReaderExtBinaryBase::readImpl() {
       reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
 
   for (auto &Entry : SecHdrTable) {
-    if (Entry.Type == SecTypifiedProfile)
-      IsProfileTypified = true;
-
     // Skip empty section.
     if (!Entry.Size)
       continue;

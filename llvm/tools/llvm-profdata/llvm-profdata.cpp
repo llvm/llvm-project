@@ -1630,6 +1630,13 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
       continue;
     }
 
+    // Merging cannot preserve payloads that this reader does not understand,
+    // so make the otherwise intentional forward-compatible skip visible.
+    if (Reader->hasUnknownProfileTypes())
+      warn("unknown typified profile blocks were ignored and will not be "
+           "preserved",
+           Input.Filename);
+
     SampleProfileMap &Profiles = Reader->getProfiles();
     if (ProfileIsProbeBased &&
         ProfileIsProbeBased != FunctionSamples::ProfileIsProbeBased)
@@ -3247,6 +3254,10 @@ static int showHotFunctionList(const sampleprof::SampleProfileMap &Profiles,
 static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   if (SFormat == ShowFormat::Yaml)
     exitWithError("YAML output is not supported for sample profiles");
+  if (ShowSectionInfoOnly && ShowTypifiedInfoOnly)
+    exitWithError("-show-sec-info-only and "
+                  "-show-typified-info-only cannot be used together");
+
   using namespace sampleprof;
   LLVMContext Context;
   auto FS = vfs::getRealFileSystem();
@@ -3256,23 +3267,20 @@ static int showSampleProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     exitWithErrorCode(EC, Filename);
 
   auto Reader = std::move(ReaderOrErr.get());
-  if (ShowSectionInfoOnly && ShowTypifiedInfoOnly)
-    exitWithError("-show-sec-info-only and "
-                  "-show-typified-info-only cannot be used together");
   if (ShowSectionInfoOnly) {
     showSectionInfo(Reader.get(), OS);
     return 0;
   }
 
   if (ShowTypifiedInfoOnly) {
+    if (!Reader->hasTypifiedProfileSection()) {
+      WithColor::warning() << "no typified profile section; nothing to show\n";
+      return 0;
+    }
     if (std::error_code EC = Reader->dumpProfileTypeInfo(OS)) {
       OS.flush();
       exitWithErrorCode(EC, Filename);
     }
-    if (!Reader->profileIsTypified())
-      WithColor::warning()
-          << "-show-typified-info-only is only supported for "
-             "typified sample profiles and is ignored for other formats.\n";
     return 0;
   }
 

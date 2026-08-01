@@ -28,4 +28,4 @@
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/sample-flatten-profile.proftext -o %t.legacy
 ; RUN: llvm-profdata show --sample --show-typified-info-only %t.legacy 2>&1 | FileCheck %s --check-prefix=LEGACY
 
-; LEGACY: warning: -show-typified-info-only is only supported for typified sample profiles and is ignored for other formats.
+; LEGACY: warning: no typified profile section; nothing to show

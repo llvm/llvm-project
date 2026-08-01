@@ -5,7 +5,7 @@
 ; RUN: opt -S %s -passes=sample-profile -sample-profile-file=%t.prof | FileCheck %s --check-prefix=IR
 ; RUN: llvm-profdata merge --sample --extbinary-force-typified-prof --extbinary \
 ; RUN:   %S/Inputs/indirect-call-csspgo.prof -o %t.payload.prof
-; RUN: opt -S %S/csspgo-inline-icall.ll -passes=sample-profile \
+; RUN: opt -S %S/Inputs/typified-cs-inline-icall.ll -passes=sample-profile \
 ; RUN:   -sample-profile-file=%t.payload.prof \
 ; RUN:   -sample-profile-icp-relative-hotness=1 -pass-remarks=sample-profile \
 ; RUN:   -sample-profile-inline-size=0 -o /dev/null 2>&1 | \

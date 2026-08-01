@@ -17,6 +17,7 @@
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
@@ -26,7 +27,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
-#include <cassert>
 #include <string>
 #include <vector>
 
@@ -48,28 +48,28 @@ namespace {
 /// option when the test scope ends.
 class ScopedForceTypifiedProfile {
 public:
-  /// Save the current option value and replace it with \p Enabled.
-  explicit ScopedForceTypifiedProfile(bool Enabled) {
+  /// Select the requested option value for the lifetime of this scope.
+  explicit ScopedForceTypifiedProfile(bool Enabled) { set(Enabled); }
+
+  /// Restore the default disabled state when leaving the test scope.
+  ~ScopedForceTypifiedProfile() { set(false); }
+
+  /// Select whether ExtBinary writes use typified profile sections through the
+  /// same type-checked command-line parser used by the production tool.
+  void set(bool Enabled) {
+    constexpr StringLiteral OptionName = "extbinary-force-typified-prof";
     auto &Options = cl::getRegisteredOptions();
-    auto OptionIt = Options.find("extbinary-force-typified-prof");
-    assert(OptionIt != Options.end() &&
-           "typified profile option is not registered");
-    Option = static_cast<cl::opt<bool> *>(OptionIt->second);
-    SavedValue = Option->getValue();
-    set(Enabled);
+    auto OptionIt = Options.find(OptionName);
+    if (OptionIt == Options.end())
+      report_fatal_error("typified profile option is not registered");
+
+    // Reset only the option controlled by this scope, leaving unrelated test
+    // process configuration unchanged.
+    cl::Option *Option = OptionIt->second;
+    Option->reset();
+    if (Option->addOccurrence(0, OptionName, Enabled ? "true" : "false"))
+      report_fatal_error("failed to set typified profile option");
   }
-
-  /// Restore the option value that was active before this scope.
-  ~ScopedForceTypifiedProfile() { set(SavedValue); }
-
-  /// Select whether ExtBinary writes use typified profile sections.
-  void set(bool Enabled) { *Option = Enabled; }
-
-private:
-  /// Registered option controlling forced typified ExtBinary output.
-  cl::opt<bool> *Option = nullptr;
-  /// Option value restored when this scope ends.
-  bool SavedValue = false;
 };
 
 struct SampleProfTest : ::testing::Test {
@@ -536,7 +536,7 @@ TEST_F(SampleProfTest, ext_binary_writer_typified_to_legacy) {
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     auto ProfileReader = std::move(ReaderOrErr.get());
     ASSERT_TRUE(NoError(ProfileReader->read()));
-    EXPECT_EQ(IsTypified, ProfileReader->profileIsTypified());
+    EXPECT_EQ(IsTypified, ProfileReader->hasTypifiedProfileSection());
   };
 
   ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));

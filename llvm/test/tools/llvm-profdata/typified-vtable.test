@@ -1,0 +1,11 @@
+; Verify that vtable type profiles remain readable when their function records
+; use typified LBR payloads.
+; RUN: llvm-profdata merge --sample --extbinary \
+; RUN:   --extbinary-force-typified-prof \
+; RUN:   --extbinary-write-vtable-type-prof \
+; RUN:   %S/Inputs/sample-profile-ext.proftext -o %t.prof
+; RUN: llvm-profdata show --sample --show-sec-info-only %t.prof | FileCheck %s
+; RUN: llvm-profdata merge --sample --text %t.prof -o %t.proftext
+; RUN: diff -b %S/Inputs/sample-profile-ext.proftext %t.proftext
+
+; CHECK: TypifiedProfileSection
