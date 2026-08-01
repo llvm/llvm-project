@@ -1929,7 +1929,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
 
   // If the index may be poison, check if we can insert a freeze before the
   // range of the index is restricted.
-  Value *IdxBase = nullptr;
+  Value *IdxBase;
   ConstantInt *CI;
   if (match(Idx, m_And(m_Value(IdxBase), m_ConstantInt(CI)))) {
     IdxRange = IdxRange.binaryAnd(CI->getValue());
@@ -1937,7 +1937,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
     IdxRange = IdxRange.urem(CI->getValue());
   }
 
-  if (IdxBase && ValidIndices.contains(IdxRange))
+  if (ValidIndices.contains(IdxRange))
     return ScalarizationResult::safeWithFreeze(IdxBase);
   return ScalarizationResult::unsafe();
 }
