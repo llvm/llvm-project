@@ -4056,12 +4056,10 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 ErrorAttr *Sema::mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
                                 StringRef NewUserDiagnostic) {
+  auto *NewAttr = ::new (Context) ErrorAttr(Context, CI, NewUserDiagnostic);
   if (const auto *EA = D->getAttr<ErrorAttr>()) {
-    std::string NewAttr = CI.getNormalizedFullName();
-    assert((NewAttr == "error" || NewAttr == "warning") &&
-           "unexpected normalized full name");
-    bool Match = (EA->isError() && NewAttr == "error") ||
-                 (EA->isWarning() && NewAttr == "warning");
+    bool Match = (EA->isError() && NewAttr->isError()) ||
+                 (EA->isWarning() && NewAttr->isWarning());
     if (!Match) {
       Diag(EA->getLocation(), diag::err_attributes_are_not_compatible)
           << CI << EA
@@ -4076,7 +4074,7 @@ ErrorAttr *Sema::mergeErrorAttr(Decl *D, const AttributeCommonInfo &CI,
     }
     D->dropAttr<ErrorAttr>();
   }
-  return ::new (Context) ErrorAttr(Context, CI, NewUserDiagnostic);
+  return NewAttr;
 }
 
 FormatAttr *Sema::mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
