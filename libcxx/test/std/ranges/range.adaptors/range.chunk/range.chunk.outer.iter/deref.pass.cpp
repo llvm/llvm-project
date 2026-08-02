@@ -16,7 +16,6 @@
 //     constexpr default_sentinel_t outer_iterator::value_type::end() const noexcept;
 
 #include <cassert>
-#include <compare>
 #include <iterator>
 #include <ranges>
 #include <vector>
@@ -29,7 +28,9 @@ constexpr bool test() {
 
   // Test `constexpr value_type outer_iterator::operator*() const`
   {
-    static_assert(std::ranges::input_range<decltype(*input_chunked.begin())>);
+    using OuterIterator = std::ranges::iterator_t<decltype(input_chunked)>;
+    static_assert(std::same_as<decltype(*input_chunked.begin()), typename OuterIterator::value_type>);
+    static_assert(std::ranges::input_range<typename OuterIterator::value_type>);
   }
 
   // Test `constexpr inner_iterator outer_iterator::value_type::begin() const noexcept`
@@ -43,7 +44,7 @@ constexpr bool test() {
   {
     /*chunk_view::__outer_iterator::value_type*/ std::ranges::input_range auto inner = *input_chunked.begin();
     [[maybe_unused]] std::same_as<std::default_sentinel_t> auto it                   = inner.end();
-    static_assert(noexcept((inner.end())));
+    static_assert(noexcept(inner.end()));
   }
 
   return true;
