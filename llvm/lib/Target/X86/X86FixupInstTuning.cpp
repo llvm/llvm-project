@@ -332,7 +332,7 @@ bool X86FixupInstTuningImpl::processSpills(MachineBasicBlock &MBB,
         InvalidateReg(MO.getReg());
     }
 
-    // --- Step 5: Track loads from stack slots ---
+    // Track loads from stack slots
     if (LoadedReg) {
       int MemIdx = X86::getFirstAddrOperandIdx(MI);
       if (MemIdx >= 0 && !MI.memoperands_empty()) {
