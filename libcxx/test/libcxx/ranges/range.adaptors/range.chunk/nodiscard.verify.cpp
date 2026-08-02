@@ -18,14 +18,14 @@
 #include "types.h"
 
 void test() {
-  char range[6]      = {'x', 'x', 'y', 'y', 'z', 'z'};
-  auto view          = range | std::views::chunk(2);
-  auto it            = view.begin();
-  int input_range[]  = {1, 2, 3, 4, 5, 6};
-  auto input_view    = input_span(input_range, 6) | std::views::chunk(2);
-  auto outer         = input_view.begin();
-  auto value         = *outer;
-  auto inner         = value.begin();
+  char range[6]     = {'x', 'x', 'y', 'y', 'z', 'z'};
+  auto view         = range | std::views::chunk(2);
+  auto it           = view.begin();
+  int input_range[] = {1, 2, 3, 4, 5, 6};
+  auto input_view   = input_span(input_range, 6) | std::views::chunk(2);
+  auto outer        = input_view.begin();
+  auto value        = *outer;
+  auto inner        = value.begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   view.base();

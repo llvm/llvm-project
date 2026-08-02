@@ -57,7 +57,7 @@ constexpr bool test() {
 
   // Test `views::chunk | adaptor`
   {
-    auto adaptors                           = std::views::chunk(5) | std::views::join;
+    auto adaptors                          = std::views::chunk(5) | std::views::join;
     std::ranges::input_range auto rejoined = view | adaptors;
     assert(std::ranges::equal(rejoined, view));
     std::ranges::input_range auto const_rejoined = std::as_const(view) | adaptors;

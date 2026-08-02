@@ -38,7 +38,8 @@ constexpr void test_iterator_types() {
 
   static_assert(std::same_as<typename ChunkIterator::iterator_category, std::input_iterator_tag>);
   static_assert(std::same_as<typename ChunkIterator::value_type, std::ranges::range_value_t<ChunkView>>);
-  static_assert(std::same_as<typename ChunkIterator::difference_type, std::ranges::range_difference_t<test_view<Iter>>>);
+  static_assert(
+      std::same_as<typename ChunkIterator::difference_type, std::ranges::range_difference_t<test_view<Iter>>>);
 }
 
 constexpr void test() {
@@ -48,10 +49,9 @@ constexpr void test() {
   test_iterator_types<contiguous_iterator>();
 
   static_assert(std::same_as<ChunkIteratorFor<forward_iterator>::iterator_concept, std::forward_iterator_tag>);
-  static_assert(std::same_as<ChunkIteratorFor<bidirectional_iterator>::iterator_concept,
-                             std::bidirectional_iterator_tag>);
-  static_assert(std::same_as<ChunkIteratorFor<random_access_iterator>::iterator_concept,
-                             std::random_access_iterator_tag>);
-  static_assert(std::same_as<ChunkIteratorFor<contiguous_iterator>::iterator_concept,
-                             std::random_access_iterator_tag>);
+  static_assert(
+      std::same_as<ChunkIteratorFor<bidirectional_iterator>::iterator_concept, std::bidirectional_iterator_tag>);
+  static_assert(
+      std::same_as<ChunkIteratorFor<random_access_iterator>::iterator_concept, std::random_access_iterator_tag>);
+  static_assert(std::same_as<ChunkIteratorFor<contiguous_iterator>::iterator_concept, std::random_access_iterator_tag>);
 }
