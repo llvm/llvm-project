@@ -4239,9 +4239,13 @@ TEST(CompletionTest, DerivedMethodsAreAlwaysVisible) {
 
 TEST(CompletionTest, NoCrashWithIncompleteLambda) {
   auto Completions = completions("auto&& x = []{^").Completions;
-  // The completion of x itself can cause a problem: in the code completion
-  // callback, its type is not known, which affects the linkage calculation.
-  // A bad linkage value gets cached, and subsequently updated.
+  // x itself is offered as a completion while its type is still undeduced.
+  // Its linkage depends on that type, so it must not be computed yet.
+  EXPECT_THAT(Completions, Contains(named("x")));
+
+  // With an index, documentation is looked up by symbol ID, which must not
+  // compute the linkage of x either.
+  Completions = completions("auto&& x = []{^", {var("y")}).Completions;
   EXPECT_THAT(Completions, Contains(named("x")));
 
   auto Signatures = signatures("auto x() { x(^").signatures;
