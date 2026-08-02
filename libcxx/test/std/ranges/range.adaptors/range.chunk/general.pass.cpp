@@ -17,8 +17,6 @@
 #include <ranges>
 #include <string_view>
 
-#include "test_range.h"
-
 constexpr bool test() {
   std::string_view str = "Cheese with chicken chunk by chunk on truck with my trick";
   // clang-format off
