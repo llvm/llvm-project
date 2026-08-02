@@ -40,6 +40,7 @@ You must execute the `cmake` command from within a dedicated build directory. Yo
      -DCMAKE_BUILD_TYPE=Release \
      -DLLVM_ENABLE_PROJECTS="clang;lldb" \
      -DLLVM_TARGETS_TO_BUILD="X86;RISCV" \
+     -DLLVM_BUILD_LLVM_DYLIB=ON \
      -DLLVM_LINK_LLVM_DYLIB=ON \
      -DLLVM_OPTIMIZED_TABLEGEN=ON \
      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
