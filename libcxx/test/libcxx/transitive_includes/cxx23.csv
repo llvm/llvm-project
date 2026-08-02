@@ -9,6 +9,7 @@ algorithm cwctype
 algorithm initializer_list
 algorithm iosfwd
 algorithm limits
+algorithm optional
 algorithm ratio
 algorithm tuple
 algorithm version
@@ -122,6 +123,7 @@ chrono iosfwd
 chrono istream
 chrono limits
 chrono locale
+chrono optional
 chrono ratio
 chrono sstream
 chrono stdexcept
@@ -347,6 +349,7 @@ flat_map cwchar
 flat_map cwctype
 flat_map initializer_list
 flat_map limits
+flat_map optional
 flat_map stdexcept
 flat_map tuple
 flat_map version
@@ -359,6 +362,7 @@ flat_set cwchar
 flat_set cwctype
 flat_set initializer_list
 flat_set limits
+flat_set optional
 flat_set stdexcept
 flat_set tuple
 flat_set version
@@ -381,6 +385,7 @@ format initializer_list
 format ios
 format iosfwd
 format limits
+format optional
 format ratio
 format stdexcept
 format streambuf
@@ -439,6 +444,7 @@ functional cwchar
 functional cwctype
 functional initializer_list
 functional limits
+functional optional
 functional stdexcept
 functional tuple
 functional typeinfo
@@ -550,6 +556,7 @@ iostream iosfwd
 iostream istream
 iostream limits
 iostream locale
+iostream optional
 iostream ostream
 iostream print
 iostream ratio
@@ -654,6 +661,7 @@ map cwchar
 map cwctype
 map initializer_list
 map limits
+map optional
 map stdexcept
 map tuple
 map version
@@ -710,6 +718,7 @@ numeric cwchar
 numeric cwctype
 numeric initializer_list
 numeric limits
+numeric optional
 numeric ratio
 numeric tuple
 numeric version
@@ -741,6 +750,7 @@ ostream ios
 ostream iosfwd
 ostream limits
 ostream locale
+ostream optional
 ostream print
 ostream ratio
 ostream stdexcept
@@ -771,6 +781,7 @@ print initializer_list
 print ios
 print iosfwd
 print limits
+print optional
 print ratio
 print stdexcept
 print streambuf
@@ -818,6 +829,7 @@ random initializer_list
 random iosfwd
 random limits
 random numeric
+random optional
 random ratio
 random stdexcept
 random string
@@ -837,6 +849,7 @@ ranges initializer_list
 ranges iosfwd
 ranges iterator
 ranges limits
+ranges optional
 ranges span
 ranges stdexcept
 ranges tuple
@@ -890,6 +903,7 @@ set cwchar
 set cwctype
 set initializer_list
 set limits
+set optional
 set tuple
 set version
 shared_mutex cerrno
@@ -1059,6 +1073,7 @@ syncstream iosfwd
 syncstream limits
 syncstream locale
 syncstream map
+syncstream optional
 syncstream ostream
 syncstream print
 syncstream ratio
@@ -1138,6 +1153,7 @@ unordered_map cstdint
 unordered_map cstring
 unordered_map initializer_list
 unordered_map limits
+unordered_map optional
 unordered_map stdexcept
 unordered_map tuple
 unordered_map version
@@ -1146,6 +1162,7 @@ unordered_set cstdint
 unordered_set cstring
 unordered_set initializer_list
 unordered_set limits
+unordered_set optional
 unordered_set tuple
 unordered_set version
 utility compare
