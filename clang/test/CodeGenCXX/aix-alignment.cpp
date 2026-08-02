@@ -1,4 +1,4 @@
-// powerpc-registered-target
+// REQUIRES: powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc-unknown-aix \
 // RUN:     -emit-llvm -o - -x c++ %s | \
 // RUN:   FileCheck %s --check-prefixes=AIX,AIX32
