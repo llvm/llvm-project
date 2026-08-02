@@ -2192,9 +2192,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
             // non-negative)
             AddFact(CmpInst::ICMP_SLE, BO, X);
           }
-          if (Info.doesHold(CmpInst::ICMP_SGT, N, Zero) ||
+          if (Info.doesHold(CmpInst::ICMP_SGE, N, Zero) ||
               isKnownPositive(N, F.getDataLayout())) {
-            // srem x, n: result < n, if n > 0 (|result| < n, so result <= n - 1
+            // srem x, n: result <= n, if n >= 0 (|result| < n, so result <= n -
+            // 1
             AddFact(CmpInst::ICMP_SLT, BO, N);
           }
           continue;

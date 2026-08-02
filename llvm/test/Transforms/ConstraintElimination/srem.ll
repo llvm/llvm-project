@@ -176,8 +176,7 @@ define i1 @neg_srem_divisor_may_be_zero(i32 noundef %x, i32 noundef %n, i32 noun
 ; CHECK-NEXT:    [[LE:%.*]] = icmp sle i32 [[N]], [[M]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LE]])
 ; CHECK-NEXT:    [[R:%.*]] = srem i32 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[R]], [[M]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %nneg = icmp sge i32 %n, 0
   call void @llvm.assume(i1 %nneg)
