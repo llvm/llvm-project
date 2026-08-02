@@ -9465,6 +9465,8 @@ LegalizerHelper::lowerMergeValues(MachineInstr &MI) {
     }
 
     MIRBuilder.buildIntToPtr(DstReg, ResultReg);
+  } else if (WideTy != DstTy) {
+    MIRBuilder.buildBitcast(DstReg, ResultReg);
   }
 
   MI.eraseFromParent();
