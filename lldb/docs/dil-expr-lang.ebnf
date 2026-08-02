@@ -5,12 +5,18 @@
 
 expression = assignment_expression ;
 
-assignment_expression = shift_expression
-                      | shift_expression assignment_operator assignment_expression ;
+assignment_expression = inclusive_or_expression
+                      | inclusive_or_expression assignment_operator assignment_expression ;
 
 assignment_operator = "="
                     | "+="
                     | "-=" ;
+
+inclusive_or_expression = exclusive_or_expression {"|" exclusive_or_expression} ;
+
+exclusive_or_expression = and_expression {"^" and_expression} ;
+
+and_expression = shift_expression {"&" shift_expression} ;
 
 shift_expression = additive_expression {"<<" additive_expression}
                  | additive_expression {">>" additive_expression} ;
@@ -28,7 +34,7 @@ cast_expression = unary_expression
 unary_expression = postfix_expression
                  | unary_operator cast_expression ;
 
-unary_operator = "*" | "&" | "+" | "-";
+unary_operator = "*" | "&" | "+" | "-" | "~";
 
 postfix_expression = primary_expression
                    | postfix_expression "[" expression "]"

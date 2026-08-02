@@ -460,7 +460,6 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   case scZeroExtend:
   case scSignExtend:
   case scPtrToAddr:
-  case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
   case scUDivExpr:
@@ -599,6 +598,22 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
 
 Value *SCEVExpander::visitMulExpr(SCEVUseT<const SCEVMulExpr *> S) {
   Type *Ty = S->getType();
+
+  const SCEVConstant *C1, *C2;
+  const SCEV *Val;
+  // mul(PowerOf2C, (udiv X, PowerOf2C)) == (X >> C) << C
+  //  -> X & (-1 << C)
+  if (match(S, m_scev_Mul(m_SCEVConstant(C1),
+                          m_scev_UDiv(m_SCEV(Val), m_SCEVConstant(C2)))) &&
+      C1 == C2 && C1->getAPInt().isPowerOf2()) {
+    Value *LHS = expand(Val);
+    unsigned ShAmtC = C1->getAPInt().logBase2();
+    unsigned BitWidth = Ty->getScalarSizeInBits();
+    APInt Mask(APInt::getBitsSetFrom(BitWidth, ShAmtC));
+    Value *Res = InsertBinop(Instruction::And, LHS, ConstantInt::get(Ty, Mask),
+                             SCEV::FlagAnyWrap, /*IsSafeToHoist*/ true);
+    return Res;
+  }
 
   // Collect all the mul operands in a loop, along with their associated loops.
   // Iterate in reverse so that constants are emitted last, all else equal.
@@ -1495,12 +1510,6 @@ Value *SCEVExpander::visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S) {
                            GetOptimalInsertionPointForCastOf(V));
 }
 
-Value *SCEVExpander::visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S) {
-  Value *V = expand(S->getOperand());
-  return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
-                           GetOptimalInsertionPointForCastOf(V));
-}
-
 Value *SCEVExpander::visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S) {
   Type *Ty = S->getType();
 
@@ -2050,9 +2059,6 @@ template<typename T> static InstructionCost costAndCollectOperands(
   case scPtrToAddr:
     Cost = CastCost(Instruction::PtrToAddr);
     break;
-  case scPtrToInt:
-    Cost = CastCost(Instruction::PtrToInt);
-    break;
   case scTruncate:
     Cost = CastCost(Instruction::Trunc);
     break;
@@ -2188,7 +2194,6 @@ bool SCEVExpander::isHighCostExpansionHelper(
   }
   case scTruncate:
   case scPtrToAddr:
-  case scPtrToInt:
   case scZeroExtend:
   case scSignExtend: {
     Cost +=

@@ -250,7 +250,7 @@ void ARMTargetLowering::setAllExpand(MVT VT) {
   setOperationAction(ISD::BITCAST, VT, Legal);
   setOperationAction(ISD::LOAD, VT, Legal);
   setOperationAction(ISD::STORE, VT, Legal);
-  setOperationAction(ISD::UNDEF, VT, Legal);
+  setOperationAction({ISD::UNDEF, ISD::POISON}, VT, Legal);
 }
 
 void ARMTargetLowering::addAllExtLoads(const MVT From, const MVT To,
@@ -1709,8 +1709,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
     if (!getTM().isAAPCS_ABI())
       return CallingConv::ARM_APCS;
     else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
-             getTargetMachine().Options.FloatABIType == FloatABI::Hard &&
-             !isVarArg)
+             Subtarget->isTargetHardFloat() && !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
       return CallingConv::ARM_AAPCS;
@@ -2989,7 +2988,7 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     SDValue Arg = OutVals[realRVLocIdx];
     bool ReturnF16 = false;
 
-    if (Subtarget->hasFullFP16() && getTM().isTargetHardFloat()) {
+    if (Subtarget->hasFullFP16() && Subtarget->isTargetHardFloat()) {
       // Half-precision return values can be returned like this:
       //
       // t11 f16 = fadd ...
@@ -18031,7 +18030,7 @@ static SDValue PerformSplittingToWideningLoad(SDNode *N, SelectionDAG &DAG) {
 
   ISD::LoadExtType NewExtType =
       N->getOpcode() == ISD::SIGN_EXTEND ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
-  SDValue Offset = DAG.getUNDEF(BasePtr.getValueType());
+  SDValue Offset = DAG.getPOISON(BasePtr.getValueType());
   EVT NewFromVT = EVT::getVectorVT(
       C, EVT::getIntegerVT(C, FromEltVT.getScalarSizeInBits()), NumElements);
   EVT NewToVT = EVT::getVectorVT(
@@ -19003,7 +19002,7 @@ static SDValue PerformSplittingMVEEXTToWideningLoad(SDNode *N,
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();
 
-  SDValue Offset = DAG.getUNDEF(BasePtr.getValueType());
+  SDValue Offset = DAG.getPOISON(BasePtr.getValueType());
   EVT NewFromVT = EVT::getVectorVT(
       C, EVT::getIntegerVT(C, FromEltVT.getScalarSizeInBits()), NumElements);
   EVT NewToVT = EVT::getVectorVT(

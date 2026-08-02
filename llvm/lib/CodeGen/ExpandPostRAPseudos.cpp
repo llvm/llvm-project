@@ -46,9 +46,6 @@ struct ExpandPostRALegacy : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addPreservedID(MachineLoopInfoID);
-    AU.addPreservedID(MachineDominatorsID);
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -63,10 +60,7 @@ ExpandPostRAPseudosPass::run(MachineFunction &MF,
   if (!ExpandPostRA().run(MF))
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses()
-      .preserveSet<CFGAnalyses>()
-      .preserve<MachineLoopAnalysis>()
-      .preserve<MachineDominatorTreeAnalysis>();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
 
 char ExpandPostRALegacy::ID = 0;

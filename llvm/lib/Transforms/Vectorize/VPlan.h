@@ -1098,10 +1098,10 @@ private:
   }
 
 public:
-  /// Returns default flags for \p Opcode for opcodes that support it, asserts
-  /// otherwise. Opcodes not supporting default flags include compares and
-  /// ComputeReductionResult.
-  static VPIRFlags getDefaultFlags(unsigned Opcode);
+  /// Returns default flags for \p Opcode and scalar \p ResultTy for opcodes
+  /// that support it, asserts otherwise. Opcodes not supporting default flags
+  /// include compares and ComputeReductionResult.
+  static VPIRFlags getDefaultFlags(unsigned Opcode, Type *ResultTy = nullptr);
 
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
@@ -2669,6 +2669,10 @@ public:
   /// otherwise.
   TruncInst *getTruncInst() { return Trunc; }
   const TruncInst *getTruncInst() const { return Trunc; }
+
+  /// Return the cost of this VPWidenIntOrFpInductionRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
 
   /// Returns true if the induction is canonical, i.e. starting at 0 and
   /// incremented by UF * VF (= the original IV is incremented by 1) and has the
@@ -4675,6 +4679,14 @@ public:
   /// An indicator whether this region is to generate multiple replicated
   /// instances of output IR corresponding to its VPBlockBases.
   bool isReplicator() const { return !CanIVInfo; }
+
+  /// Return the VPBranchOnMaskRecipe from the entry block of this replicating
+  /// region.
+  const VPBranchOnMaskRecipe *getEntryBranchOnMask() const;
+  VPBranchOnMaskRecipe *getEntryBranchOnMask() {
+    return const_cast<VPBranchOnMaskRecipe *>(
+        static_cast<const VPRegionBlock *>(this)->getEntryBranchOnMask());
+  }
 
   /// The method which generates the output IR instructions that correspond to
   /// this VPRegionBlock, thereby "executing" the VPlan.
