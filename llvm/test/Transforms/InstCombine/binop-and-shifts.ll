@@ -955,10 +955,7 @@ define <4 x i8> @xor_ashr_not_vec_poison_2(<4 x i8> %x, <4 x i8> %y, <4 x i8> %s
 
 define i8 @xor_lshr_signmask(i8 %x, i8 %shamt) {
 ; CHECK-LABEL: @xor_lshr_signmask(
-; CHECK-NEXT:    [[SIGNMASK:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[FLIPPED:%.*]] = xor i8 [[X]], [[SIGNMASK]]
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i8 [[FLIPPED]], [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SHIFTED]], [[SIGNMASK]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %signmask = ashr i8 %x, 7
@@ -970,10 +967,7 @@ define i8 @xor_lshr_signmask(i8 %x, i8 %shamt) {
 
 define i8 @xor_lshr_signmask_commuted(i8 %x, i8 %shamt) {
 ; CHECK-LABEL: @xor_lshr_signmask_commuted(
-; CHECK-NEXT:    [[SIGNMASK:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[FLIPPED:%.*]] = xor i8 [[SIGNMASK]], [[X]]
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i8 [[FLIPPED]], [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SIGNMASK]], [[SHIFTED]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %signmask = ashr i8 %x, 7
@@ -985,10 +979,7 @@ define i8 @xor_lshr_signmask_commuted(i8 %x, i8 %shamt) {
 
 define i8 @xor_lshr_signmask_exact(i8 %x, i8 %shamt) {
 ; CHECK-LABEL: @xor_lshr_signmask_exact(
-; CHECK-NEXT:    [[SIGNMASK:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[FLIPPED:%.*]] = xor i8 [[X]], [[SIGNMASK]]
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr exact i8 [[FLIPPED]], [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SHIFTED]], [[SIGNMASK]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %signmask = ashr i8 %x, 7
@@ -1011,10 +1002,7 @@ define i1 @xor_lshr_signmask_i1(i1 %x, i1 %shamt) {
 
 define i13 @xor_lshr_signmask_i13(i13 %x, i13 %shamt) {
 ; CHECK-LABEL: @xor_lshr_signmask_i13(
-; CHECK-NEXT:    [[SIGNMASK:%.*]] = ashr i13 [[X:%.*]], 12
-; CHECK-NEXT:    [[FLIPPED:%.*]] = xor i13 [[X]], [[SIGNMASK]]
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i13 [[FLIPPED]], [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i13 [[SHIFTED]], [[SIGNMASK]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i13 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i13 [[R]]
 ;
   %signmask = ashr i13 %x, 12
@@ -1026,10 +1014,7 @@ define i13 @xor_lshr_signmask_i13(i13 %x, i13 %shamt) {
 
 define i8 @xor_lshr_signmask_signmask_exact(i8 %x, i8 %shamt) {
 ; CHECK-LABEL: @xor_lshr_signmask_signmask_exact(
-; CHECK-NEXT:    [[SIGNMASK:%.*]] = ashr exact i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[FLIPPED:%.*]] = xor i8 [[X]], [[SIGNMASK]]
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i8 [[FLIPPED]], [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SHIFTED]], [[SIGNMASK]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %signmask = ashr exact i8 %x, 7
@@ -1043,8 +1028,7 @@ define { i8, i8 } @xor_lshr_signmask_inner_multiuse(i8 %x, i8 %shamt) {
 ; CHECK-LABEL: @xor_lshr_signmask_inner_multiuse(
 ; CHECK-NEXT:    [[SIGNMASK:%.*]] = ashr i8 [[X:%.*]], 7
 ; CHECK-NEXT:    [[FLIPPED:%.*]] = xor i8 [[X]], [[SIGNMASK]]
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i8 [[FLIPPED]], [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SHIFTED]], [[SIGNMASK]]
+; CHECK-NEXT:    [[R:%.*]] = ashr i8 [[X]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    [[R0:%.*]] = insertvalue { i8, i8 } poison, i8 [[R]], 0
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i8, i8 } [[R0]], i8 [[FLIPPED]], 1
 ; CHECK-NEXT:    ret { i8, i8 } [[R1]]
@@ -1060,10 +1044,7 @@ define { i8, i8 } @xor_lshr_signmask_inner_multiuse(i8 %x, i8 %shamt) {
 
 define <4 x i8> @xor_lshr_signmask_vec_poison(<4 x i8> %x, <4 x i8> %shamt) {
 ; CHECK-LABEL: @xor_lshr_signmask_vec_poison(
-; CHECK-NEXT:    [[SIGNMASK:%.*]] = ashr <4 x i8> [[X:%.*]], <i8 7, i8 poison, i8 7, i8 poison>
-; CHECK-NEXT:    [[FLIPPED:%.*]] = xor <4 x i8> [[X]], [[SIGNMASK]]
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr <4 x i8> [[FLIPPED]], [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <4 x i8> [[SHIFTED]], [[SIGNMASK]]
+; CHECK-NEXT:    [[R:%.*]] = ashr <4 x i8> [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret <4 x i8> [[R]]
 ;
   %signmask = ashr <4 x i8> %x, <i8 7, i8 poison, i8 7, i8 poison>
@@ -1075,10 +1056,7 @@ define <4 x i8> @xor_lshr_signmask_vec_poison(<4 x i8> %x, <4 x i8> %shamt) {
 
 define <vscale x 4 x i8> @xor_lshr_signmask_scalable(<vscale x 4 x i8> %x, <vscale x 4 x i8> %shamt) {
 ; CHECK-LABEL: @xor_lshr_signmask_scalable(
-; CHECK-NEXT:    [[SIGNMASK:%.*]] = ashr <vscale x 4 x i8> [[X:%.*]], splat (i8 7)
-; CHECK-NEXT:    [[FLIPPED:%.*]] = xor <vscale x 4 x i8> [[X]], [[SIGNMASK]]
-; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr <vscale x 4 x i8> [[FLIPPED]], [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <vscale x 4 x i8> [[SHIFTED]], [[SIGNMASK]]
+; CHECK-NEXT:    [[R:%.*]] = ashr <vscale x 4 x i8> [[X:%.*]], [[SHAMT:%.*]]
 ; CHECK-NEXT:    ret <vscale x 4 x i8> [[R]]
 ;
   %signmask = ashr <vscale x 4 x i8> %x, splat (i8 7)
