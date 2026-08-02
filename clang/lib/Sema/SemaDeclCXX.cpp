@@ -1655,16 +1655,19 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   if (auto *CAT = Context.getAsConstantArrayType(DecompType)) {
     if (checkArrayDecomposition(*this, Bindings, DD, DecompType, CAT))
       DD->setInvalidDecl();
+    CleanupVarDeclMarking();
     return;
   }
   if (auto *VT = DecompType->getAs<VectorType>()) {
     if (checkVectorDecomposition(*this, Bindings, DD, DecompType, VT))
       DD->setInvalidDecl();
+    CleanupVarDeclMarking();
     return;
   }
   if (auto *CT = DecompType->getAs<ComplexType>()) {
     if (checkComplexDecomposition(*this, Bindings, DD, DecompType, CT))
       DD->setInvalidDecl();
+    CleanupVarDeclMarking();
     return;
   }
 
@@ -1680,6 +1683,7 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   case IsTupleLike::TupleLike:
     if (checkTupleLikeDecomposition(*this, Bindings, DD, DecompType, TupleSize))
       DD->setInvalidDecl();
+    CleanupVarDeclMarking();
     return;
 
   case IsTupleLike::NotTupleLike:
@@ -1701,6 +1705,7 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
   //   E or of the same unambiguous public base class of E, ...
   if (checkMemberDecomposition(*this, Bindings, DD, DecompType, RD))
     DD->setInvalidDecl();
+  CleanupVarDeclMarking();
 }
 
 UnsignedOrNone Sema::GetDecompositionElementCount(QualType T,

@@ -424,6 +424,9 @@ features cannot lower the translation-unit ABI level;
   copy so the union's object representation is copied, matching the defaulted
   union copy constructor.
 
+- Fixed an assertion failure when evaluating C++26 `constexpr` structured binding packs during template
+  instantiation. (#GH170991)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
