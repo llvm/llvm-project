@@ -38,7 +38,7 @@ jobs:
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           fetch-depth: 250
@@ -77,7 +77,7 @@ jobs:
     needs: abi-dump-setup
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:cb3aea3ecdd521194ca12cfa239ab5a53f9e160a13a55ae3abdc1dfbf134476e" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b"
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:a948062f8abb4b2e9d0bfca80c307f1e679f292230af67eee8b2518ad7aa206f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b"
     strategy:
       matrix:
         name:
@@ -93,23 +93,37 @@ jobs:
             ref: ${{ github.sha }}
             repo: ${{ github.repository }}
     steps:
+      - name: Check for cached baseline ABI
+        if: ${{ matrix.name == 'build-baseline' }}
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
+        with:
+          key: ${{ matrix.ref}}.abi
+          path: |
+            ${{ matrix.ref }}.abi
+            llvm.symbols
+
       - name: Download source code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
           persist-credentials: false
           ref: ${{ matrix.ref }}
           repository: ${{ matrix.repo }}
       - name: Configure
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           mkdir install
           cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
       - name: Build
+        if: steps.cache.outputs.cache-hit != 'true'
         # Need to run install-LLVM twice to ensure the symlink is installed (this is a bug).
         run: |
           ninja -C build install-LLVM
           ninja -C build install-LLVM
           ninja -C build install-llvm-headers
       - name: Dump ABI
+        if: steps.cache.outputs.cache-hit != 'true'
         env:
           REF: ${{ matrix.ref }}
           ABI_HEADERS: ${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}
@@ -138,11 +152,20 @@ jobs:
           name: symbol-list
           path: llvm.symbols
 
+      - name: Cache baseline ABI
+        if: ${{ matrix.name == 'build-baseline' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
+        with:
+          key: ${{ matrix.ref }}.abi
+          path: |
+            ${{ matrix.ref }}.abi
+            llvm.symbols
+
   abi-compare:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:cb3aea3ecdd521194ca12cfa239ab5a53f9e160a13a55ae3abdc1dfbf134476e" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:a948062f8abb4b2e9d0bfca80c307f1e679f292230af67eee8b2518ad7aa206f" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:bb0bd382ab2b
     needs:
       - abi-dump-setup
       - abi-dump

@@ -20,12 +20,14 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/IR/Intrinsics.h"
 
 #include <optional>
 #include <string>
 
 namespace llvm {
 class Constant;
+class DataLayout;
 class Instruction;
 class TargetLibraryInfo;
 class TargetTransformInfo;
@@ -42,6 +44,12 @@ inline constexpr int UsesLimit = 64;
 /// \returns True if the value is a constant (but not globals/constant
 /// expressions).
 bool isConstant(Value *V);
+
+/// \returns True if \p V is the integer identity constant for binary \p Opcode
+/// (e.g. 0 for add, 1 for mul, all-ones for and). Floating-point identities are
+/// excluded: a ConstantInt never matches the ConstantFP getBinOpIdentity()
+/// returns for FAdd/FMul, whose identity fast-math may break anyway.
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
 
 /// Checks if \p V is one of vector-like instructions, i.e. undef,
 /// insertelement/extractelement with constant indices for fixed vector type
@@ -77,6 +85,14 @@ bool allConstant(ArrayRef<Value *> VL);
 /// \returns True if all of the values in \p VL are identical or some of them
 /// are UndefValue.
 bool isSplat(ArrayRef<Value *> VL);
+
+/// Checks if \p LHS and \p RHS are the same intrinsic, or one is llvm.fma
+/// and the other is llvm.fmuladd, since both lower to the same fused
+/// vector operation.
+/// \returns the intrinsic ID to use for the pair (\p RHS if the IDs match,
+/// otherwise Intrinsic::fma), or Intrinsic::not_intrinsic if they are not
+/// equivalent.
+Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS);
 
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 /// For BinaryOperator, it also checks if \p ValWithUses is used in specific
@@ -247,6 +263,20 @@ MemoryLocation getLocation(Instruction *I);
 /// \returns True if the instruction is not a volatile or atomic load/store.
 bool isSimple(Instruction *I);
 
+/// Checks if the loads with scalar type \p ScalarTy and pointer operands
+/// \p PointerOps are each (optionally via a constant-offset GEP) a
+/// `select Cond, A, B` picking between the same two base pointers A/B on
+/// every lane - the shape a fully unrolled `x = cond ? A[i] : B[i]` takes. On
+/// success \p TrueBase / \p FalseBase are the candidate bases and
+/// \p Conditions holds each lane's `select` condition, used to build the
+/// blend mask. Lane \p Idx must be at `Base + Idx * sizeof(ScalarTy)`; only
+/// dense, natural lane order starting at the base is recognized (reordered or
+/// partial groups fall back to Gather/Scatter).
+bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
+                        const DataLayout &DL, Value *&TrueBase,
+                        Value *&FalseBase,
+                        SmallVectorImpl<Value *> &Conditions);
+
 /// Shuffles \p Mask in accordance with the given \p SubMask.
 /// \param ExtendingManyInputs Supports reshuffling of the mask with not only
 /// one but two input vectors.
@@ -272,6 +302,11 @@ SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
 
 /// Replicates the given \p Val \p VF times.
 SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF);
+
+/// \returns the masked division/remainder intrinsic corresponding to \p
+/// Opcode. Disabled lanes of these intrinsics are poison rather than UB,
+/// unlike the plain opcode.
+Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
 
 } // namespace llvm::slpvectorizer
 

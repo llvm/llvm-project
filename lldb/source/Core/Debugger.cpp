@@ -10,6 +10,7 @@
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleList.h"
@@ -1068,6 +1069,9 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   m_collection_sp->AppendProperty(
       LanguageProperties::GetSettingName(), "Language settings.", true,
       Language::GetGlobalLanguageProperties().GetValueProperties());
+  m_collection_sp->AppendProperty(
+      "diagnostics", "Diagnostics settings.", true,
+      Diagnostics::GetGlobalProperties().GetValueProperties());
   if (m_command_interpreter_up) {
     m_collection_sp->AppendProperty(
         "interpreter",

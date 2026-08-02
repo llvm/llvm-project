@@ -1,9 +1,9 @@
 // Host compilation (x86 host, AMDGPU offload target): no address space on allocas.
-// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -emit-cir -fclangir %s -o - \
+// RUN: %clang_cc1 -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa -emit-cir -fclangir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CIR-HOST
 
 // Device compilation (AMDGPU): allocas in private address space, addrspacecast for map info.
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fopenmp -fopenmp-is-target-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fopenmp -fopenmp-is-target-device \
 // RUN:   -emit-cir -fclangir %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CIR-DEVICE
 

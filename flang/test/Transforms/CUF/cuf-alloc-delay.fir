@@ -326,8 +326,8 @@ func.func @_QPuse_in_multi_successor(%arg0: !fir.ref<i32>) {
 
 // -----
 
-// Test 10: Host-association tuple store — fir.store to fir.llvm_ptr
-// should not block delaying and should move along with the group.
+// Test 10: A host-association store (fir.store to fir.llvm_ptr) is a use, so
+// the group sinks to just before it and the store is not moved.
 func.func @_QPhost_assoc() {
   %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
   %c0_i32 = arith.constant 0 : i32
@@ -349,19 +349,87 @@ func.func @_QPhost_assoc() {
 func.func private @_QFPcontained(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>)
 
 // CHECK-LABEL: func.func @_QPhost_assoc
-// The fir.store to fir.llvm_ptr (host-assoc tuple) does not block delaying.
-// cuf.alloc+store+declare+host-assoc-store all move past %c99 to just
-// before cuf.allocate.
 // CHECK:         fir.alloca
 // CHECK:         fir.coordinate_of
 // CHECK:         fir.zero_bits
 // CHECK:         fir.embox
-// CHECK:         arith.constant 99
 // CHECK:         cuf.alloc
 // CHECK:         fir.store {{.*}} : !fir.ref<!fir.box
 // CHECK:         fir.declare
 // CHECK:         fir.store {{.*}} : !fir.llvm_ptr
+// CHECK:         arith.constant 99
 // CHECK:         cuf.allocate
 // CHECK:         fir.call @_QFPcontained
+// CHECK:         cuf.free
+// CHECK:         return
+
+// -----
+
+// Test 11: The descriptor's only entry-block use is its host-association store
+// (the allocate happens inside the callee). The group and store stay before the
+// call, so the callee sees an initialized descriptor.
+func.func @_QPhost_assoc_call() {
+  %tuple = fir.alloca tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %c0_i32 = arith.constant 0 : i32
+  %slot = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFhost_assoc_callEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFhost_assoc_callEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  fir.store %4 to %slot : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  fir.call @_QFPgo(%tuple) : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>) -> ()
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>}
+  return
+}
+func.func private @_QFPgo(!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>)
+
+// CHECK-LABEL: func.func @_QPhost_assoc_call
+// CHECK:         cuf.alloc
+// CHECK:         fir.store {{.*}} : !fir.ref<!fir.box
+// CHECK:         fir.declare
+// CHECK:         fir.store {{.*}} : !fir.llvm_ptr
+// CHECK:         fir.call @_QFPgo
+// CHECK:         cuf.free
+// CHECK:         return
+
+// -----
+
+// Test 12: A shared tuple whose slots fill in order, so the descriptor's own
+// slot (index 1) is defined after an earlier coordinate_of of the same tuple
+// (index 0). The group must sink to before its host-association store.
+func.func @_QPhost_assoc_late_slot() {
+  %tuple = fir.alloca tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", data_attr = #cuf.cuda<managed>, uniq_name = "_QFhost_assoc_late_slotEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) {allocator_idx = 3 : i32} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 {data_attr = #cuf.cuda<managed>, fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFhost_assoc_late_slotEa"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %slot0 = fir.coordinate_of %tuple, %c0_i32 : (!fir.ref<tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<i32>>
+  %scalar = fir.alloca i32
+  fir.store %scalar to %slot0 : !fir.llvm_ptr<!fir.ref<i32>>
+  %slot1 = fir.coordinate_of %tuple, %c1_i32 : (!fir.ref<tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  fir.store %4 to %slot1 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>
+  fir.call @_QFPgo2(%tuple) : (!fir.ref<tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>) -> ()
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {data_attr = #cuf.cuda<managed>}
+  return
+}
+func.func private @_QFPgo2(!fir.ref<tuple<!fir.ref<i32>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>>>)
+
+// CHECK-LABEL: func.func @_QPhost_assoc_late_slot
+// CHECK:         fir.coordinate_of {{.*}} -> !fir.llvm_ptr<!fir.ref<i32>>
+// CHECK:         fir.store {{.*}} : !fir.llvm_ptr<!fir.ref<i32>>
+// CHECK:         fir.coordinate_of {{.*}} -> !fir.llvm_ptr<!fir.ref<!fir.box
+// CHECK:         cuf.alloc
+// CHECK:         fir.store {{.*}} : !fir.ref<!fir.box
+// CHECK:         fir.declare
+// CHECK:         fir.store {{.*}} : !fir.llvm_ptr<!fir.ref<!fir.box
+// CHECK:         fir.call @_QFPgo2
 // CHECK:         cuf.free
 // CHECK:         return

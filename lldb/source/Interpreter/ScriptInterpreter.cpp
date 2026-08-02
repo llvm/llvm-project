@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "API/SBCommandReturnObjectImpl.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Pipe.h"
@@ -15,6 +16,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/StringSwitch.h"
 #if defined(_WIN32)
@@ -48,6 +50,12 @@ void ScriptInterpreter::CollectDataForWatchpointCommandCallback(
 
 StructuredData::DictionarySP ScriptInterpreter::GetInterpreterInfo() {
   return nullptr;
+}
+
+llvm::Expected<FileSpec> ScriptInterpreter::GenerateExtensionTemplate(
+    const std::string &name, std::vector<ExtensionTemplateRequest> &extensions,
+    bool generate_non_abstract_methods, std::string output_file) {
+  return llvm::make_error<UnimplementedError>();
 }
 
 bool ScriptInterpreter::LoadScriptingModule(
@@ -87,6 +95,16 @@ lldb::BreakpointLocationSP
 ScriptInterpreter::GetOpaqueTypeFromSBBreakpointLocation(
     const lldb::SBBreakpointLocation &break_loc) const {
   return break_loc.m_opaque_wp.lock();
+}
+
+CommandReturnObject *ScriptInterpreter::GetOpaqueTypeFromSBCommandReturnObject(
+    const lldb::SBCommandReturnObject &cmd_retobj) const {
+  return cmd_retobj.m_opaque_up->get();
+}
+
+lldb::DebuggerSP ScriptInterpreter::GetOpaqueTypeFromSBDebugger(
+    const lldb::SBDebugger &debugger) const {
+  return debugger.m_opaque_sp;
 }
 
 lldb::ProcessAttachInfoSP ScriptInterpreter::GetOpaqueTypeFromSBAttachInfo(
@@ -214,6 +232,14 @@ ScriptInterpreter::ExtensionToString(lldb::ScriptedExtension extension) {
     return "ScriptedFrame";
   case eScriptedExtensionScriptedStackFrameRecognizer:
     return "ScriptedStackFrameRecognizer";
+  case eScriptedExtensionScriptedCommand:
+    return "ScriptedCommand";
+  case eScriptedExtensionParsedCommand:
+    return "ParsedCommand";
+  case eScriptedExtensionScriptedStringSummary:
+    return "ScriptedStringSummary";
+  case eScriptedExtensionScriptedSyntheticChildren:
+    return "ScriptedSyntheticChildren";
   }
   llvm_unreachable("unhandled ScriptedExtension");
 }
@@ -234,6 +260,12 @@ ScriptInterpreter::StringToExtension(llvm::StringRef string) {
       .CaseLower("ScriptedFrame", eScriptedExtensionScriptedFrame)
       .CaseLower("ScriptedStackFrameRecognizer",
                  eScriptedExtensionScriptedStackFrameRecognizer)
+      .CaseLower("ScriptedCommand", eScriptedExtensionScriptedCommand)
+      .CaseLower("ParsedCommand", eScriptedExtensionParsedCommand)
+      .CaseLower("ScriptedStringSummary",
+                 eScriptedExtensionScriptedStringSummary)
+      .CaseLower("ScriptedSyntheticChildren",
+                 eScriptedExtensionScriptedSyntheticChildren)
       .Default(eScriptedExtensionInvalid);
 }
 

@@ -46,15 +46,58 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### C/C++ Language Potentially Breaking Changes
 
+- `-Wunicode-whitespace` now defaults to an error.
+The previous behavior can be restored with `-Wno-error=unicode-whitespace`.
+Clang will stop accepting non-ascii whitespaces as token separators
+in a future version of Clang.
+
 ### C++ Specific Potentially Breaking Changes
 
 ### ABI Changes in This Version
+
+- Except on PlayStation, Clang now derives the x86-64 System V AVX ABI level
+for 256- and 512-bit vector arguments and returns from effective per-function
+target features. Features and `arch=` CPUs that imply AVX or AVX512F are
+honored, and calls use the caller's features, matching GCC. Per-function
+features cannot lower the translation-unit ABI level;
+`-fclang-abi-compat=23` restores the previous behavior. (#GH193298)
+
+- On MIPS, a `_Complex` value with an integer element type is now returned packed
+  into a single integer register when it fits in one, matching GCC. A `_Complex char` or
+  `_Complex short`, and on N32/N64 also a `_Complex int`, is no longer returned
+  with one part per register. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH212109)
+
+- On MIPS N32/N64, a `_Complex float` or `_Complex double` argument is now packed
+  into integer registers, or onto the stack, once there is no longer room to give
+  each of its parts a floating-point register, matching GCC. Clang previously
+  always passed the parts separately. `-fclang-abi-compat=23` restores the previous
+  behavior. (#GH212109)
 
 ### AST Dumping Potentially Breaking Changes
 
 ### Clang Frontend Potentially Breaking Changes
 
+- Templight support has been removed.
+
 ### Clang Python Bindings Potentially Breaking Changes
+
+- `CompletionChunkKind` instance's `__str__` representation has been adapted to be consistent with other enums in the library.
+  The representation now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
+
+- Remove the deprecated `SPELLING_CACHE` alias.
+  All usage should be migrated to use `CompletionChunk.SPELLING_CACHE` instead.
+  Note that this uses `CompletionChunkKind` enumeration as keys, instead of integer values.
+
+- Remove the deprecated `CompletionChunk.isKind...` methods.
+  Existing uses should be adapted to directly compare equality of the `CompletionChunk` kind with the corresponding `CompletionChunkKind` variant.
+
+  Affected methods: `isKindOptional`, `isKindTypedText`, `isKindPlaceHolder`,
+  `isKindInformative` and `isKindResultType`.
+
+- `CompletionString.availability` now returns instances of `AvailabilityKind`.
+  As a result, the `__str__` representation of its return values changed.
+  Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`. 
 
 ### OpenCL Potentially Breaking Changes
 
@@ -63,6 +106,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### C++ Language Changes
 
 #### C++2d Feature Support
+
+- Clang now supports [P3658R1](https://wg21.link/p3658r1) (Adjust identifier
+  following new Unicode recommendations), applied as a DR to all C++ language
+  modes.
 
 #### C++2c Feature Support
 
@@ -113,15 +160,28 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### New Compiler Flags
 
+- New option `-fdefined-pointer-subtraction` added to preserve stable semantics
+  when subtracting pointers to unrelated objects.
+
+- Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
+  the C++ standard library selected by the driver and the include directories
+  added for it.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
+
+- All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
 
+- Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
+
 ### Improvements to Clang's diagnostics
+
+- More consistent rendering of Unicode characters in diagnostic messages.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
@@ -288,6 +348,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   against or converted to a null pointer, the same as a bare function name.
   (#GH46362)
 
+- Clang now attempts to print enumerator names rather than C-style cast expressions
+  in more diagnostics.
+
 
 ### Improvements to Clang's time-trace
 
@@ -295,10 +358,20 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Bug Fixes in This Version
 
+- Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
+- Fixed an assertion on omp taskloop transparent (#GH197162)
+- Fixed a bug where `__func__`, `__PRETTY_FUNCTION__` and `__FUNCTION__` were not resolving to the proper function when inside a lambda return type (#GH211811)
+- Fixed USR generation for declarations whose signature mentions a class-type
+  non-type template parameter. (#GH212351)
 
 #### Bug Fixes to Compiler Builtins
+
+- Fixed a crash when classifying a call to a builtin with dependent arguments,
+  such as when the call is used as an `auto` non-type template argument.
+- Fixed a crash in ``__builtin_dump_struct`` when ``-Werror`` promotes
+  format warnings to errors. (#GH211943)
 
 #### Bug Fixes to Attribute Support
 
@@ -308,13 +381,48 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   the `sized_by`/`sized_by_or_null` attributes. Because `sized_by` and
   `sized_by_or_null` describe the size in bytes rather than a count of elements,
   they are now correctly accepted on such pointers.
+- Propagate attributes on redeclarations across modules.
 
 #### Bug Fixes to C++ Support
 
--Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
+- Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
+
+- Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
+
+- Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
+
+- Fixed a regression where an internal-linkage function (e.g. a `static` or
+  anonymous-namespace helper) declared in the global module fragment of the
+  current translation unit was removed from the overload set when the calling
+  template was instantiated after the global module fragment was closed,
+  producing a spurious "no matching function" error with no candidate notes.
+  (#GH210822)
+  
+- Fixed a crash when a lambda parameter pack was given a default argument that
+  is a pack expansion referencing an enclosing function's parameter pack (e.g.
+  `[](Types... = args...) {}`). Clang now diagnoses the illegal default
+  argument instead of asserting. (#GH210714)
+
+- Fixed a crash on invalid code where a ``decltype`` not followed by ``(`` was
+  parsed where a nested-name-specifier could appear (e.g. ``int decltype = 0;``).
+  Clang now diagnoses the error instead of asserting. (#GH211207)
+
+- Fixed a crash when computing the implicit deletion of a defaulted comparison
+  operator required an access check that ran while an enclosing declaration
+  was still being parsed. (#GH210692)
+
+- A workaround that was introduced to fix an issue with the `<format>` header present in some versions of
+  libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
+  compilation step would result in the fix not being applied. (#GH160314)
+
+- A defaulted copy or move assignment operator for a union was left with an
+  empty body and copied nothing when the operator was actually called, for
+  example through a pointer to member. Clang now synthesizes a whole-object
+  copy so the union's object representation is copied, matching the defaulted
+  union copy constructor.
 
 #### Bug Fixes to AST Handling
 
@@ -325,6 +433,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
+- Fixed a crash when instantiating an invalid dependent friend destructor declaration in a class template. (#GH210234)
+- Fixed an assertion failure in `-extract-api` when a documentation comment
+  contains invalid UTF-8. (#GH212393)
 
 ### OpenACC Specific Changes
 
@@ -354,12 +465,15 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 #### Arm and AArch64 Support
 
-- On AArch64 Windows targets, `-mbranch-protection=standard` and `-mbranch-protection=pac-ret`
-  now uses the B-key by default.
-
 #### Android Support
 
 #### Windows Support
+
+- Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
+  over-aligned base class is followed by another base class. MSVC on Arm64 (but
+  not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
+  subsequent base; Clang now does the same.
+  ([#210174](https://github.com/llvm/llvm-project/issues/210174))
 
 #### LoongArch Support
 
@@ -389,7 +503,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### clang-format
 
+- Add `SpacesInBlockComments` option to control spacing after `/*` and
+  before `*/` in ordinary block comments.
+
 ### libclang
+
+- visit identifier initializers in lambda capture as VarDecl instead of VariableRef. Warning: this changes behaviour.
 
 ### Code Completion
 
@@ -424,6 +543,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 ### Python Binding Changes
 
 ### OpenMP Support
+
+- Added parsing and semantic support for `dims` modifier in `num_teams` and
+  `thread_limit` clauses for OpenMP 6.1 or later.
 
 ### SYCL Support
 

@@ -520,12 +520,6 @@ public:
   LLVM_ABI static Type *getWasm_ExternrefTy(LLVMContext &C);
   LLVM_ABI static Type *getWasm_FuncrefTy(LLVMContext &C);
 
-  /// Return a pointer to the current type. This is equivalent to
-  /// PointerType::get(Ctx, AddrSpace).
-  /// TODO: Remove this after opaque pointer transition is complete.
-  LLVM_ABI LLVM_DEPRECATED("Use PointerType::get instead", "PointerType::get")
-      PointerType *getPointerTo(unsigned AddrSpace = 0) const;
-
 private:
   /// Derived types like structures and arrays are sized iff all of the members
   /// of the type are sized as well. Since asking for their size is relatively

@@ -331,8 +331,24 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
   Declaration decl;
   llvm::StringRef name = DropNameScope(enumerator.getName());
 
+  clang::EnumDecl *enum_decl = TypeSystemClang::GetAsEnumDecl(m_derived_ct);
+  if (!enum_decl)
+    return Error::success();
+
+  llvm::APSInt val = enumerator.Value;
+  clang::QualType int_ty = enum_decl->getIntegerType();
+  uint64_t n_bits = m_ast_builder.clang().getASTContext().getTypeSize(int_ty);
+  if (n_bits == 0)
+    return Error::success();
+
+  // MSVC encodes 64 Bit unsigned enum values as signed integers. For example,
+  // ULONGLONG_MAX will be encoded as -1. LLVM encodes all values as unsigned.
+  // Fix this by explicitly setting the bit width and signedness.
+  val = val.extOrTrunc(n_bits);
+  val.setIsSigned(int_ty->isSignedIntegerType());
+
   m_ast_builder.clang().AddEnumerationValueToEnumerationType(
-      m_derived_ct, decl, name.str().c_str(), enumerator.Value);
+      m_derived_ct, decl, name.str().c_str(), val);
   return Error::success();
 }
 
