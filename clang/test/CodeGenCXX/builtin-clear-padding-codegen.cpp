@@ -15,6 +15,15 @@ struct Empty {};
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testEmpty@@YAXPEAUEmpty@@@Z"(ptr noundef %e) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %e.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %e, ptr %e.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %e.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 0
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testEmpty(Empty *e) {
   // This should clear the one byte that Empty occupies.
   __builtin_clear_padding(e);
@@ -28,6 +37,13 @@ void testEmpty(Empty *e) {
 // LINUX-NEXT:    store ptr [[I]], ptr [[I_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[I_ADDR]], align 8
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testPrimitiveNoPadding@@YAXPEAH@Z"(ptr noundef %i) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %i.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %i, ptr %i.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %i.addr, align 8
+// WINDOWS-NEXT:   ret void
 //
 void testPrimitiveNoPadding(int *i) {
   // This should not clear any padding, since int has no padding.
@@ -55,6 +71,13 @@ void testPrimitiveNoPadding(int *i) {
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testPrimitiveLongDouble@@YAXPEAO@Z"(ptr noundef %ld) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %ld.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %ld, ptr %ld.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %ld.addr, align 8
+// WINDOWS-NEXT:   ret void
+//
 void testPrimitiveLongDouble(long double *ld) {
   // padding [10, 15] on x86
   __builtin_clear_padding(ld);
@@ -77,6 +100,23 @@ void testPrimitiveLongDouble(long double *ld) {
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testBitInt@@YAXPEAU?$_BitInt@$0GB@@__clang@@@Z"(ptr noundef %bi) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %bi.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %bi, ptr %bi.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %bi.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 12
+// WINDOWS-NEXT:   %2 = load i8, ptr %1, align 4
+// WINDOWS-NEXT:   %3 = and i8 %2, 1
+// WINDOWS-NEXT:   store i8 %3, ptr %1, align 4
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 13
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 1
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 14
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 2
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %0, i32 15
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testBitInt(_BitInt(97) *bi) {
   // Storage is widened to 128 bits; clear bits [97, 128).
@@ -116,6 +156,13 @@ void testBitInt(_BitInt(97) *bi) {
 // LINUX-NEXT:    store i8 0, ptr [[TMP12]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testPrimitiveComplexLongDouble@@YAXPEAU?$_Complex@O@__clang@@@Z"(ptr noundef %c) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %c.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %c, ptr %c.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %c.addr, align 8
+// WINDOWS-NEXT:   ret void
+//
 void testPrimitiveComplexLongDouble(_Complex long double *c) {
   // padding [10, 15] and [26, 31] on x86
   __builtin_clear_padding(c);
@@ -133,6 +180,13 @@ union U1 {
 // LINUX-NEXT:    store ptr [[U]], ptr [[U_ADDR]], align 8
 // LINUX-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[U_ADDR]], align 8
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testUnionDifferentLength@@YAXPEATU1@@@Z"(ptr noundef %u) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %u.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %u, ptr %u.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %u.addr, align 8
+// WINDOWS-NEXT:   ret void
 //
 void testUnionDifferentLength(U1 *u) {
   // This should not clear the object representation bits of the non-active member.
@@ -170,6 +224,27 @@ union U2 {
 // LINUX-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testUnionTailPaddingOfLongestMember@@YAXPEATU2@@@Z"(ptr noundef %u) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %u.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %u, ptr %u.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %u.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 1
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 2
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 2
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 3
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 4
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 4
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %0, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 2
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testUnionTailPaddingOfLongestMember(U2 *u) {
   // This should clear the tail padding of the longest member.
@@ -221,6 +296,27 @@ struct alignas(4) Baz : Foo {
 // LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testStructPaddingInBetweenMembers@@YAXPEAUBaz@@@Z"(ptr noundef %baz) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %baz.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %baz, ptr %baz.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %baz.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 1
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 3
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 2
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %0, i32 9
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %0, i32 11
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testStructPaddingInBetweenMembers(Baz *baz) {
   // this should clear all the padding in between various members
   __builtin_clear_padding(baz);
@@ -248,6 +344,27 @@ void testStructPaddingInBetweenMembers(Baz *baz) {
 // LINUX-NEXT:    store i8 0, ptr [[TMP7]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testStructVolatile@@YAXPECUBaz@@@Z"(ptr noundef %baz) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %baz.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %baz, ptr %baz.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %baz.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 1
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 3
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 2
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %0, i32 9
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %0, i32 11
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testStructVolatile(volatile Baz *baz) {
   // this should clear all the padding in between various members
   __builtin_clear_padding(baz);
@@ -274,6 +391,25 @@ class S2 {
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testNoUniqueAddress@@YAXPEAVS2@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 2
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 9
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 1
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 10
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 2
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %0, i32 11
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testNoUniqueAddress(S2 *s) {
   // "x [0-3]",  "c" , "b", PAD [6-7]
@@ -335,6 +471,27 @@ struct S3 {
 // LINUX-NEXT:    store i8 0, ptr [[TMP21]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testStructWithLongDouble@@YAXPEAUS3@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 9
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 10
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 2
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 11
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 12
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 4
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 13
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %0, i32 14
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 2
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %0, i32 15
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testStructWithLongDouble(S3 *s) {
   // "long double data[0-9]", PAD [10-15], "b", PAD [17-31]
   __builtin_clear_padding(s);
@@ -360,6 +517,19 @@ struct S4 : Empty, B {
 // LINUX-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testStructWithEmptyBase@@YAXPEAUS4@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 2
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testStructWithEmptyBase(S4 *s) {
   // "i" [0-3], "b" [4], PAD [5-7]
@@ -394,6 +564,25 @@ struct S5 : B1, B2 {
 // LINUX-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testPaddingBetweenBases@@YAXPEAUS5@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 1
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 2
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 2
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 3
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 1
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 2
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testPaddingBetweenBases(S5 *s) {
   // "c1" [0], PAD [1-3] , "c2" [4], PAD [5-7]
@@ -430,6 +619,23 @@ struct S6 : B3, B4 {
 // LINUX-NEXT:    store i8 0, ptr [[TMP5]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testPaddingAfterLastBase@@YAXPEAUS6@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 2
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 2
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 3
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 2
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testPaddingAfterLastBase(S6 *s) {
   // "c1"[0], "c2"[1], PAD [2-3], "c3" [4], PAD [5-7]
   __builtin_clear_padding(s);
@@ -438,9 +644,7 @@ void testPaddingAfterLastBase(S6 *s) {
 
 struct VirtualBase {
   unsigned int x;
-//
   virtual int call() { return x; };
-//
   virtual ~VirtualBase() = default;
 };
 
@@ -449,7 +653,6 @@ struct NonVirtualBase {
 };
 
 struct S7 : VirtualBase, NonVirtualBase {
-//
   virtual int call() override { return 5; }
   bool z;
 };
@@ -465,6 +668,33 @@ struct S7 : VirtualBase, NonVirtualBase {
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testVtable@@YAXUS7@@@Z"(ptr nofree noundef align 8 dead_on_return dereferenceable(24) %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.indirect_addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.indirect_addr, align 8
+// WINDOWS-NEXT:   %0 = getelementptr i8, ptr %s, i32 12
+// WINDOWS-NEXT:   store i8 0, ptr %0, align 4
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %s, i32 13
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %s, i32 14
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 2
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %s, i32 15
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %s, i32 18
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 2
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %s, i32 19
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %s, i32 20
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 4
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %s, i32 21
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 1
+// WINDOWS-NEXT:   %8 = getelementptr i8, ptr %s, i32 22
+// WINDOWS-NEXT:   store i8 0, ptr %8, align 2
+// WINDOWS-NEXT:   %9 = getelementptr i8, ptr %s, i32 23
+// WINDOWS-NEXT:   store i8 0, ptr %9, align 1
+// WINDOWS-NEXT:   call void @"??1S7@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(24) dereferenceable(24) %s) #1
+// WINDOWS-NEXT:   ret void
+//
 void testVtable(S7 s) {
   // "vtable ptr" [0-7], "x" [8-11], "y" [12], "z" [13], PAD [14-15]
   __builtin_clear_padding(&s);
@@ -472,21 +702,18 @@ void testVtable(S7 s) {
 
 struct VirtualBase1 {
   unsigned int x1;
-//
   virtual int call1() { return x1; };
   virtual ~VirtualBase1() = default;
 };
 
 struct VirtualBase2 {
   unsigned int x2;
-//
   virtual int call2() { return x2; };
   virtual ~VirtualBase2() = default;
 };
 
 struct VirtualBase3 {
   unsigned int x3;
-//
   virtual int call3() { return x3; };
   virtual ~VirtualBase3() = default;
 };
@@ -495,7 +722,6 @@ struct NonVirtualBase1 {
   char y;
 };
 struct S8 : VirtualBase1, VirtualBase2, NonVirtualBase1, VirtualBase3 {
-//
   virtual int call1() override { return 5; }
   bool z;
 };
@@ -527,6 +753,49 @@ struct S8 : VirtualBase1, VirtualBase2, NonVirtualBase1, VirtualBase3 {
 // LINUX-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testMultipleBasesVtable@@YAXUS8@@@Z"(ptr nofree noundef align 8 dead_on_return dereferenceable(56) %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.indirect_addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.indirect_addr, align 8
+// WINDOWS-NEXT:   %0 = getelementptr i8, ptr %s, i32 12
+// WINDOWS-NEXT:   store i8 0, ptr %0, align 4
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %s, i32 13
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %s, i32 14
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 2
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %s, i32 15
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %s, i32 28
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 4
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %s, i32 29
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %s, i32 30
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 2
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %s, i32 31
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 1
+// WINDOWS-NEXT:   %8 = getelementptr i8, ptr %s, i32 44
+// WINDOWS-NEXT:   store i8 0, ptr %8, align 4
+// WINDOWS-NEXT:   %9 = getelementptr i8, ptr %s, i32 45
+// WINDOWS-NEXT:   store i8 0, ptr %9, align 1
+// WINDOWS-NEXT:   %10 = getelementptr i8, ptr %s, i32 46
+// WINDOWS-NEXT:   store i8 0, ptr %10, align 2
+// WINDOWS-NEXT:   %11 = getelementptr i8, ptr %s, i32 47
+// WINDOWS-NEXT:   store i8 0, ptr %11, align 1
+// WINDOWS-NEXT:   %12 = getelementptr i8, ptr %s, i32 50
+// WINDOWS-NEXT:   store i8 0, ptr %12, align 2
+// WINDOWS-NEXT:   %13 = getelementptr i8, ptr %s, i32 51
+// WINDOWS-NEXT:   store i8 0, ptr %13, align 1
+// WINDOWS-NEXT:   %14 = getelementptr i8, ptr %s, i32 52
+// WINDOWS-NEXT:   store i8 0, ptr %14, align 4
+// WINDOWS-NEXT:   %15 = getelementptr i8, ptr %s, i32 53
+// WINDOWS-NEXT:   store i8 0, ptr %15, align 1
+// WINDOWS-NEXT:   %16 = getelementptr i8, ptr %s, i32 54
+// WINDOWS-NEXT:   store i8 0, ptr %16, align 2
+// WINDOWS-NEXT:   %17 = getelementptr i8, ptr %s, i32 55
+// WINDOWS-NEXT:   store i8 0, ptr %17, align 1
+// WINDOWS-NEXT:   call void @"??1S8@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(56) dereferenceable(56) %s) #1
+// WINDOWS-NEXT:   ret void
+//
 void testMultipleBasesVtable(S8 s) {
   // "vtable ptr" [0-7], "x1" [8-11], PAD "[12-15]",
   // "vtable ptr" [16-23], "x2" [24-27], "y" [28], PAD "[29-31]",
@@ -536,21 +805,18 @@ void testMultipleBasesVtable(S8 s) {
 
 struct VirtualChain1 {
   unsigned int x1;
-//
   virtual int call1() { return x1; };
   virtual ~VirtualChain1() = default;
 };
 
 struct VirtualChain2 : VirtualChain1 {
   unsigned int x2;
-//
   virtual int call2() { return x2; };
   virtual ~VirtualChain2() = default;
 };
 
 struct VirtualChain3 : VirtualChain2 {
   unsigned int x3;
-//
   virtual int call3() { return x3; };
   virtual ~VirtualChain3() = default;
 };
@@ -573,6 +839,49 @@ struct S9 : NonVirtualBase2, VirtualChain3 {
 // LINUX-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 23
 // LINUX-NEXT:    store i8 0, ptr [[TMP1]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testVirtualChain@@YAXUS9@@@Z"(ptr nofree noundef align 8 dead_on_return dereferenceable(40) %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.indirect_addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.indirect_addr, align 8
+// WINDOWS-NEXT:   %0 = getelementptr i8, ptr %s, i32 12
+// WINDOWS-NEXT:   store i8 0, ptr %0, align 4
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %s, i32 13
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %s, i32 14
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 2
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %s, i32 15
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %s, i32 20
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 4
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %s, i32 21
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %s, i32 22
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 2
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %s, i32 23
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 1
+// WINDOWS-NEXT:   %8 = getelementptr i8, ptr %s, i32 28
+// WINDOWS-NEXT:   store i8 0, ptr %8, align 4
+// WINDOWS-NEXT:   %9 = getelementptr i8, ptr %s, i32 29
+// WINDOWS-NEXT:   store i8 0, ptr %9, align 1
+// WINDOWS-NEXT:   %10 = getelementptr i8, ptr %s, i32 30
+// WINDOWS-NEXT:   store i8 0, ptr %10, align 2
+// WINDOWS-NEXT:   %11 = getelementptr i8, ptr %s, i32 31
+// WINDOWS-NEXT:   store i8 0, ptr %11, align 1
+// WINDOWS-NEXT:   %12 = getelementptr i8, ptr %s, i32 34
+// WINDOWS-NEXT:   store i8 0, ptr %12, align 2
+// WINDOWS-NEXT:   %13 = getelementptr i8, ptr %s, i32 35
+// WINDOWS-NEXT:   store i8 0, ptr %13, align 1
+// WINDOWS-NEXT:   %14 = getelementptr i8, ptr %s, i32 36
+// WINDOWS-NEXT:   store i8 0, ptr %14, align 4
+// WINDOWS-NEXT:   %15 = getelementptr i8, ptr %s, i32 37
+// WINDOWS-NEXT:   store i8 0, ptr %15, align 1
+// WINDOWS-NEXT:   %16 = getelementptr i8, ptr %s, i32 38
+// WINDOWS-NEXT:   store i8 0, ptr %16, align 2
+// WINDOWS-NEXT:   %17 = getelementptr i8, ptr %s, i32 39
+// WINDOWS-NEXT:   store i8 0, ptr %17, align 1
+// WINDOWS-NEXT:   call void @"??1S9@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(40) dereferenceable(40) %s) #1
+// WINDOWS-NEXT:   ret void
 //
 void testVirtualChain(S9 s) {
   // This should clear the padding after the bool z.
@@ -625,6 +934,46 @@ struct S10 : D1, D2 {
 // LINUX-NEXT:    store i8 0, ptr [[TMP8]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testVirtualInheritance@@YAXUS10@@@Z"(ptr nofree noundef align 8 dead_on_return dereferenceable(40) %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.indirect_addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.indirect_addr, align 8
+// WINDOWS-NEXT:   %0 = getelementptr i8, ptr %s, i32 13
+// WINDOWS-NEXT:   store i8 0, ptr %0, align 1
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %s, i32 14
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 2
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %s, i32 15
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %s, i32 29
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %s, i32 30
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 2
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %s, i32 31
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %s, i32 33
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %s, i32 34
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 2
+// WINDOWS-NEXT:   %8 = getelementptr i8, ptr %s, i32 35
+// WINDOWS-NEXT:   store i8 0, ptr %8, align 1
+// WINDOWS-NEXT:   %9 = getelementptr i8, ptr %s, i32 36
+// WINDOWS-NEXT:   store i8 0, ptr %9, align 4
+// WINDOWS-NEXT:   %10 = getelementptr i8, ptr %s, i32 37
+// WINDOWS-NEXT:   store i8 0, ptr %10, align 1
+// WINDOWS-NEXT:   %11 = getelementptr i8, ptr %s, i32 38
+// WINDOWS-NEXT:   store i8 0, ptr %11, align 2
+// WINDOWS-NEXT:   %12 = getelementptr i8, ptr %s, i32 39
+// WINDOWS-NEXT:   store i8 0, ptr %12, align 1
+// WINDOWS-NEXT:   %13 = getelementptr i8, ptr %s, i32 44
+// WINDOWS-NEXT:   store i8 0, ptr %13, align 4
+// WINDOWS-NEXT:   %14 = getelementptr i8, ptr %s, i32 45
+// WINDOWS-NEXT:   store i8 0, ptr %14, align 1
+// WINDOWS-NEXT:   %15 = getelementptr i8, ptr %s, i32 46
+// WINDOWS-NEXT:   store i8 0, ptr %15, align 2
+// WINDOWS-NEXT:   %16 = getelementptr i8, ptr %s, i32 47
+// WINDOWS-NEXT:   store i8 0, ptr %16, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testVirtualInheritance(S10 s) {
   // note derived member placed before the virtual base
   // "vtable ptr" [0-7],  "d1" [8-11], "b1" [12], PAD [13-15],
@@ -660,6 +1009,27 @@ struct S10_2 : virtual Base {
 // LINUX-NEXT:    store i8 0, ptr [[TMP6]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testVirtualInheritanceAndVirtualFunction@@YAXUS10_2@@@Z"(ptr nofree noundef align 8 dead_on_return dereferenceable(24) %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.indirect_addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.indirect_addr, align 8
+// WINDOWS-NEXT:   %0 = getelementptr i8, ptr %s, i32 21
+// WINDOWS-NEXT:   store i8 0, ptr %0, align 1
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %s, i32 22
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 2
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %s, i32 23
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %s, i32 28
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 4
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %s, i32 29
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 1
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %s, i32 30
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 2
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %s, i32 31
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   call void @"??_DS10_2@@QEAAXXZ"(ptr noundef nonnull align 8 dereferenceable(24) %s) #1
+// WINDOWS-NEXT:   ret void
+//
 void testVirtualInheritanceAndVirtualFunction(S10_2 s) {
   __builtin_clear_padding(&s);
 }
@@ -684,6 +1054,17 @@ struct S11 {
 // LINUX-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testBitFields@@YAXPEAUS11@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 0
+// WINDOWS-NEXT:   %2 = load i8, ptr %1, align 1
+// WINDOWS-NEXT:   %3 = and i8 %2, 31
+// WINDOWS-NEXT:   store i8 %3, ptr %1, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testBitFields(S11 *s) {
   // "b1" [0-2], "b2" [3-4], PAD [5-7], "b3" [8-13], "b4" [14-15]
   // to clear 5-7, we should AND 0b00011111 (31)
@@ -696,6 +1077,11 @@ void testBitFields(S11 *s) {
 // LINUX-NEXT:  [[ENTRY:.*:]]
 // LINUX-NEXT:    [[I:%.*]] = alloca [4 x i32], align 16
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testArrayNoPadding@@YAXXZ"() #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %i = alloca [4 x i32], align 4
+// WINDOWS-NEXT:   ret void
 //
 void testArrayNoPadding() {
   int i[4];
@@ -733,6 +1119,11 @@ void testArrayNoPadding() {
 // LINUX-NEXT:    store i8 0, ptr [[TMP11]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testArrayLongDouble@@YAXXZ"() #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %ld = alloca [2 x double], align 8
+// WINDOWS-NEXT:   ret void
+//
 void testArrayLongDouble() {
   // long double 0, [0-9] PAD [10-15]
   // long double 1, [16-25] PAD [26-31]
@@ -769,6 +1160,35 @@ void testArrayLongDouble() {
 // LINUX-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[S]], i32 31
 // LINUX-NEXT:    store i8 0, ptr [[TMP11]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testArrayOfStruct@@YAXXZ"() #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s = alloca [2 x %struct.S.0], align 4
+// WINDOWS-NEXT:   %0 = getelementptr i8, ptr %s, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %0, align 1
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %s, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 2
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %s, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %s, i32 13
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %s, i32 14
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 2
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %s, i32 15
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 1
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %s, i32 21
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %s, i32 22
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 2
+// WINDOWS-NEXT:   %8 = getelementptr i8, ptr %s, i32 23
+// WINDOWS-NEXT:   store i8 0, ptr %8, align 1
+// WINDOWS-NEXT:   %9 = getelementptr i8, ptr %s, i32 29
+// WINDOWS-NEXT:   store i8 0, ptr %9, align 1
+// WINDOWS-NEXT:   %10 = getelementptr i8, ptr %s, i32 30
+// WINDOWS-NEXT:   store i8 0, ptr %10, align 2
+// WINDOWS-NEXT:   %11 = getelementptr i8, ptr %s, i32 31
+// WINDOWS-NEXT:   store i8 0, ptr %11, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testArrayOfStruct() {
   struct S {
@@ -811,6 +1231,21 @@ struct ArrOfStructsWithPadding {
 // LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testArrOfStructsWithPadding@@YAXPEAUArrOfStructsWithPadding@@@Z"(ptr noundef %arr) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %arr.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %arr, ptr %arr.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %arr.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 1
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 3
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testArrOfStructsWithPadding(ArrOfStructsWithPadding *arr) {
   __builtin_clear_padding(arr);
 }
@@ -835,6 +1270,19 @@ struct S12 {
 // LINUX-NEXT:    store i8 0, ptr [[TMP3]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testTemplateStruct@@YAXPEAU?$S12@H@@@Z"(ptr noundef %s12) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s12.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s12, ptr %s12.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s12.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 2
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testTemplateStruct(S12<int>* s12) {
   __builtin_clear_padding(s12);
 }
@@ -851,6 +1299,17 @@ void testTemplateStruct(S12<int>* s12) {
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testAtomic@@YAXPEAU?$_Atomic@UBar@@@__clang@@@Z"(ptr noundef %bar) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %bar.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %bar, ptr %bar.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %bar.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 1
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 1
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 3
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testAtomic(_Atomic(Bar)* bar) {
   __builtin_clear_padding(bar);
 }
@@ -860,11 +1319,8 @@ struct NonTriviallyCopyable {
   int i;
   char c;
 
-//
   NonTriviallyCopyable(){}
-//
   NonTriviallyCopyable(const NonTriviallyCopyable&) {}
-//
   ~NonTriviallyCopyable() {}
 };
 
@@ -880,6 +1336,19 @@ struct NonTriviallyCopyable {
 // LINUX-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NTC]], i32 7
 // LINUX-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testNonTriviallyCopyable@@YAXUNonTriviallyCopyable@@@Z"(ptr nofree noundef align 4 dead_on_return dereferenceable(8) %ntc) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %ntc.indirect_addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %ntc, ptr %ntc.indirect_addr, align 8
+// WINDOWS-NEXT:   %0 = getelementptr i8, ptr %ntc, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %0, align 1
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %ntc, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 2
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %ntc, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   call void @"??1NonTriviallyCopyable@@QEAA@XZ"(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) %ntc) #1
+// WINDOWS-NEXT:   ret void
 //
 void testNonTriviallyCopyable(NonTriviallyCopyable ntc) {
   __builtin_clear_padding(&ntc);
@@ -903,6 +1372,21 @@ typedef long double LongDouble3Vec __attribute__((ext_vector_type(3)));
 // LINUX-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
 // LINUX-NEXT:    store i8 0, ptr [[TMP4]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testAttributedType@@YAXPEAT?$__vector@M$02@__clang@@@Z"(ptr noundef %v) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %v.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %v, ptr %v.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %v.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 12
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 4
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 13
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 14
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 2
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 15
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testAttributedType(Float3Vec* v) {
   __builtin_clear_padding(v);
@@ -984,6 +1468,29 @@ void testAttributedType(Float3Vec* v) {
 // LINUX-NEXT:    store i8 0, ptr [[TMP34]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testAttributedLongDoubleType@@YAXPEAT?$__vector@O$02@__clang@@@Z"(ptr noundef %v) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %v.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %v, ptr %v.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %v.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 24
+// WINDOWS-NEXT:   store i8 0, ptr %1, align 8
+// WINDOWS-NEXT:   %2 = getelementptr i8, ptr %0, i32 25
+// WINDOWS-NEXT:   store i8 0, ptr %2, align 1
+// WINDOWS-NEXT:   %3 = getelementptr i8, ptr %0, i32 26
+// WINDOWS-NEXT:   store i8 0, ptr %3, align 2
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 27
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 1
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 28
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 4
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %0, i32 29
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %0, i32 30
+// WINDOWS-NEXT:   store i8 0, ptr %7, align 2
+// WINDOWS-NEXT:   %8 = getelementptr i8, ptr %0, i32 31
+// WINDOWS-NEXT:   store i8 0, ptr %8, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testAttributedLongDoubleType(LongDouble3Vec *v) {
   // long double elements occupy [0-9], [16-25], [32-41] on x86.
   __builtin_clear_padding(v);
@@ -1006,6 +1513,17 @@ struct UnnamedBitfieldSingleBit {
 // LINUX-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -9
 // LINUX-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testUnnamedBitfieldSingleBit@@YAXPEAUUnnamedBitfieldSingleBit@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 0
+// WINDOWS-NEXT:   %2 = load i8, ptr %1, align 1
+// WINDOWS-NEXT:   %3 = and i8 %2, -9
+// WINDOWS-NEXT:   store i8 %3, ptr %1, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testUnnamedBitfieldSingleBit(struct UnnamedBitfieldSingleBit *s) {
   // byte 0: a[bits 0-2], unnamed[bit 3], b[bits 4-7]
@@ -1031,6 +1549,17 @@ struct UnnamedBitfieldMiddle {
 // LINUX-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], -25
 // LINUX-NEXT:    store i8 [[TMP3]], ptr [[TMP1]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testUnnamedBitfieldMiddle@@YAXPEAUUnnamedBitfieldMiddle@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 0
+// WINDOWS-NEXT:   %2 = load i8, ptr %1, align 1
+// WINDOWS-NEXT:   %3 = and i8 %2, -25
+// WINDOWS-NEXT:   store i8 %3, ptr %1, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testUnnamedBitfieldMiddle(struct UnnamedBitfieldMiddle *s) {
   // byte 0: a[0-2], unnamed[3-4], b[5-7]
@@ -1060,6 +1589,21 @@ struct UnnamedBitfieldSurrounding {
 // LINUX-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 63
 // LINUX-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
 // LINUX-NEXT:    ret void
+//
+// WINDOWS-LABEL: define dso_local void @"?testUnnamedBitfieldSurrounding@@YAXPEAUUnnamedBitfieldSurrounding@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 0
+// WINDOWS-NEXT:   %2 = load i8, ptr %1, align 1
+// WINDOWS-NEXT:   %3 = and i8 %2, -4
+// WINDOWS-NEXT:   store i8 %3, ptr %1, align 1
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 0
+// WINDOWS-NEXT:   %5 = load i8, ptr %4, align 1
+// WINDOWS-NEXT:   %6 = and i8 %5, 63
+// WINDOWS-NEXT:   store i8 %6, ptr %4, align 1
+// WINDOWS-NEXT:   ret void
 //
 void testUnnamedBitfieldSurrounding(struct UnnamedBitfieldSurrounding *s) {
   // byte 0: unnamed[0-1], a[2-5], unnamed[6-7]
@@ -1104,6 +1648,33 @@ struct UnnamedZeroWidthBitfield {
 // LINUX-NEXT:    store i8 0, ptr [[TMP12]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testUnnamedZeroWidthBitfield@@YAXPEAUUnnamedZeroWidthBitfield@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 0
+// WINDOWS-NEXT:   %2 = load i8, ptr %1, align 4
+// WINDOWS-NEXT:   %3 = and i8 %2, 15
+// WINDOWS-NEXT:   store i8 %3, ptr %1, align 4
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 1
+// WINDOWS-NEXT:   store i8 0, ptr %4, align 1
+// WINDOWS-NEXT:   %5 = getelementptr i8, ptr %0, i32 2
+// WINDOWS-NEXT:   store i8 0, ptr %5, align 2
+// WINDOWS-NEXT:   %6 = getelementptr i8, ptr %0, i32 3
+// WINDOWS-NEXT:   store i8 0, ptr %6, align 1
+// WINDOWS-NEXT:   %7 = getelementptr i8, ptr %0, i32 4
+// WINDOWS-NEXT:   %8 = load i8, ptr %7, align 4
+// WINDOWS-NEXT:   %9 = and i8 %8, 15
+// WINDOWS-NEXT:   store i8 %9, ptr %7, align 4
+// WINDOWS-NEXT:   %10 = getelementptr i8, ptr %0, i32 5
+// WINDOWS-NEXT:   store i8 0, ptr %10, align 1
+// WINDOWS-NEXT:   %11 = getelementptr i8, ptr %0, i32 6
+// WINDOWS-NEXT:   store i8 0, ptr %11, align 2
+// WINDOWS-NEXT:   %12 = getelementptr i8, ptr %0, i32 7
+// WINDOWS-NEXT:   store i8 0, ptr %12, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testUnnamedZeroWidthBitfield(struct UnnamedZeroWidthBitfield *s) {
   // byte 0: a[0-3], unnamed[4-7]
   // bytes 1-3: struct padding
@@ -1143,6 +1714,21 @@ struct UnnamedBitfieldMultiByte {
 // LINUX-NEXT:    store i8 [[TMP6]], ptr [[TMP4]], align 1
 // LINUX-NEXT:    ret void
 //
+// WINDOWS-LABEL: define dso_local void @"?testUnnamedBitfieldMultiByte@@YAXPEAUUnnamedBitfieldMultiByte@@@Z"(ptr noundef %s) #0 {
+// WINDOWS-NEXT: entry:
+// WINDOWS-NEXT:   %s.addr = alloca ptr, align 8
+// WINDOWS-NEXT:   store ptr %s, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %0 = load ptr, ptr %s.addr, align 8
+// WINDOWS-NEXT:   %1 = getelementptr i8, ptr %0, i32 0
+// WINDOWS-NEXT:   %2 = load i8, ptr %1, align 2
+// WINDOWS-NEXT:   %3 = and i8 %2, 15
+// WINDOWS-NEXT:   store i8 %3, ptr %1, align 2
+// WINDOWS-NEXT:   %4 = getelementptr i8, ptr %0, i32 1
+// WINDOWS-NEXT:   %5 = load i8, ptr %4, align 1
+// WINDOWS-NEXT:   %6 = and i8 %5, -16
+// WINDOWS-NEXT:   store i8 %6, ptr %4, align 1
+// WINDOWS-NEXT:   ret void
+//
 void testUnnamedBitfieldMultiByte(struct UnnamedBitfieldMultiByte *s) {
   // 2 bytes: a[0-3], unnamed[4-11], b[12-15]
   // byte 0: clear bits 4-7
@@ -1153,5 +1739,3 @@ void testUnnamedBitfieldMultiByte(struct UnnamedBitfieldMultiByte *s) {
   //   0b11110000 == -16
   __builtin_clear_padding(s);
 }
-//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-// WINDOWS: {{.*}}
