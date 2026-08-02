@@ -2511,6 +2511,38 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       return TyBits - 1; // Every always-zero bit is a sign bit.
     break;
   }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    unsigned NumOps = MI.getNumOperands();
+    Register SrcReg = MI.getOperand(NumOps - 1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+
+    if ((SrcTy.isVector() && SrcTy.getScalarType() != DstTy.getScalarType()) ||
+        (SrcTy.isScalar() && DstTy.isVector()))
+      break;
+
+    // Figure out the result operand index
+    unsigned DstIdx = 0;
+    for (; DstIdx != NumOps - 1 && MI.getOperand(DstIdx).getReg() != R;
+         ++DstIdx)
+      ;
+
+    APInt SubDemandedElts = DemandedElts;
+    unsigned DstLanes = DstTy.isVector() ? DstTy.getNumElements() : 1;
+    if (SrcTy.isVector()) {
+      SubDemandedElts =
+          DemandedElts.zext(SrcTy.getNumElements()).shl(DstIdx * DstLanes);
+    }
+
+    unsigned SrcOpKnown =
+        computeNumSignBits(SrcReg, SubDemandedElts, Depth + 1);
+    if (SrcTy.isVector())
+      FirstAnswer = SrcOpKnown;
+    else if (SrcOpKnown >= (MI.getNumOperands() - DstIdx - 2) * TyBits)
+      FirstAnswer = SrcOpKnown >= (MI.getNumOperands() - DstIdx - 1) * TyBits
+                        ? TyBits
+                        : SrcOpKnown % TyBits;
+    break;
+  }
   case TargetOpcode::G_BUILD_VECTOR: {
     // Collect the known bits that are shared by every demanded vector element.
     FirstAnswer = TyBits;
