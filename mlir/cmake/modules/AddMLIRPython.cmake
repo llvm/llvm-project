@@ -249,7 +249,9 @@ endfunction()
 #   SOURCES: C++ sources making up the module.
 #   PRIVATE_LINK_LIBS: List of libraries to link in privately to the module
 #     regardless of how it is included in the project (generally should be
-#     static libraries that can be included with hidden visibility).
+#     static libraries that can be included with hidden visibility). Do not
+#     list C++ LLVM/MLIR libraries here; use the C++ standard library instead,
+#     or wrap the functionality in the C API first.
 #   EMBED_CAPI_LINK_LIBS: Dependent CAPI libraries that this extension depends
 #     on. These will be collected for all extensions and put into an
 #     aggregate dylib that is linked against.
