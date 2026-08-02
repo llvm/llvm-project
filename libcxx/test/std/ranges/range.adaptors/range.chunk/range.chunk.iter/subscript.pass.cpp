@@ -16,11 +16,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <iterator>
 #include <ranges>
 #include <vector>
-
-#include "test_range.h"
 
 constexpr bool test() {
   std::vector<int> vector                                                  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
@@ -28,6 +27,9 @@ constexpr bool test() {
 
   // Test `constexpr value_type iterator::operator[](difference_type n) const`
   {
+    using Iterator = std::ranges::iterator_t<decltype(chunked)>;
+    static_assert(std::same_as<decltype(chunked.begin()[1]), typename Iterator::value_type>);
+
     assert(std::ranges::equal(chunked.begin()[1], std::vector{4, 5, 6}));
   }
 
