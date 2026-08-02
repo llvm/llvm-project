@@ -53,6 +53,13 @@ static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
   return parseAssemblyString(ModuleStr, Err, Context);
 }
 
+static BasicBlock *getBlockByName(Function *F, StringRef Name) {
+  for (auto &BB : *F)
+    if (BB.getName() == Name)
+      return &BB;
+  return nullptr;
+}
+
 // This tests that for a loop with a single latch, we get the loop id from
 // its only latch, even in case the loop may not be in a simplified form.
 TEST(LoopInfoTest, LoopWithSingleLatch) {
@@ -1645,4 +1652,113 @@ TEST(LoopInfoTest, TokenLCSSA) {
     EXPECT_FALSE(
         InnerLoop->isRecursivelyLCSSAForm(DT, LI, /*IgnoreTokens*/ false));
   });
+}
+
+TEST(LoopInfoTest, Recompute) {
+  const char *ModuleStr = "define void @test(i1 %c) {\n"
+                          "entry:\n"
+                          "  br label %outer\n"
+                          "outer:\n"
+                          "  br label %inner\n"
+                          "inner:\n"
+                          "  br i1 %c, label %inner, label %outer.latch\n"
+                          "outer.latch:\n"
+                          "  br i1 %c, label %outer, label %exit\n"
+                          "exit:\n"
+                          "  ret void\n"
+                          "}\n";
+
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+  Function *F = M->getFunction("test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  BasicBlock *Outer = getBlockByName(F, "outer");
+  BasicBlock *Inner = getBlockByName(F, "inner");
+  Loop *OuterL = LI.getLoopFor(Outer);
+  Loop *InnerL = LI.getLoopFor(Inner);
+  ASSERT_NE(OuterL, nullptr);
+  ASSERT_NE(InnerL, nullptr);
+
+  // An unchanged CFG must reproduce the same forest in the same objects.
+  auto Removed = LI.recompute(DT);
+  EXPECT_TRUE(Removed.empty());
+  EXPECT_EQ(LI.getLoopFor(Outer), OuterL);
+  EXPECT_EQ(LI.getLoopFor(Inner), InnerL);
+  EXPECT_EQ(InnerL->getParentLoop(), OuterL);
+  EXPECT_EQ(OuterL->getSubLoops().size(), 1u);
+  EXPECT_EQ(OuterL->getNumBlocks(), 3u);
+  LI.verify();
+
+  // Drop the inner backedge. The outer loop keeps its identity and absorbs the
+  // block; only the inner loop is reported as removed.
+  Inner->getTerminator()->setSuccessor(0, getBlockByName(F, "outer.latch"));
+  DT.recalculate(*F);
+  Removed = LI.recompute(DT);
+  EXPECT_EQ(LI.getLoopFor(Outer), OuterL);
+  EXPECT_EQ(LI.getLoopFor(Inner), OuterL);
+  EXPECT_TRUE(OuterL->getSubLoops().empty());
+  ASSERT_EQ(Removed.size(), 1u);
+  EXPECT_EQ(Removed[0].first, InnerL);
+  EXPECT_EQ(Removed[0].second, Inner);
+  LI.verify();
+  LI.destroy(InnerL);
+
+  // Dropping the last backedge leaves no loops at all.
+  getBlockByName(F, "outer.latch")
+      ->getTerminator()
+      ->setSuccessor(0, getBlockByName(F, "exit"));
+  DT.recalculate(*F);
+  Removed = LI.recompute(DT);
+  EXPECT_TRUE(LI.empty());
+  ASSERT_EQ(Removed.size(), 1u);
+  EXPECT_EQ(Removed[0].first, OuterL);
+  EXPECT_EQ(Removed[0].second, Outer);
+  LI.verify();
+  LI.destroy(OuterL);
+}
+
+TEST(LoopInfoTest, RecomputeHoist) {
+  const char *ModuleStr = "define void @test(i1 %c) {\n"
+                          "entry:\n"
+                          "  br label %outer\n"
+                          "outer:\n"
+                          "  br label %inner\n"
+                          "inner:\n"
+                          "  br i1 %c, label %inner, label %outer.latch\n"
+                          "outer.latch:\n"
+                          "  br i1 %c, label %outer, label %exit\n"
+                          "exit:\n"
+                          "  ret void\n"
+                          "}\n";
+
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+  Function *F = M->getFunction("test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  BasicBlock *Outer = getBlockByName(F, "outer");
+  BasicBlock *Inner = getBlockByName(F, "inner");
+  Loop *OuterL = LI.getLoopFor(Outer);
+  Loop *InnerL = LI.getLoopFor(Inner);
+  ASSERT_NE(OuterL, nullptr);
+  ASSERT_NE(InnerL, nullptr);
+
+  // Drop the outer backedge. The inner loop keeps its identity and becomes
+  // top-level; only the outer loop is reported as removed.
+  getBlockByName(F, "outer.latch")
+      ->getTerminator()
+      ->setSuccessor(0, getBlockByName(F, "exit"));
+  DT.recalculate(*F);
+  auto Removed = LI.recompute(DT);
+  EXPECT_EQ(LI.getLoopFor(Inner), InnerL);
+  EXPECT_EQ(InnerL->getParentLoop(), nullptr);
+  EXPECT_EQ(LI.getLoopFor(Outer), nullptr);
+  ASSERT_EQ(Removed.size(), 1u);
+  EXPECT_EQ(Removed[0].first, OuterL);
+  EXPECT_EQ(Removed[0].second, Outer);
+  LI.verify();
+  LI.destroy(OuterL);
 }
