@@ -190,6 +190,10 @@ LLVM_LIBC_HEADERS = [
     ),
     libc_header_info("nl_types"),
     libc_header_info("poll"),
+    libc_header_info(
+        "llvm-libc-proxy/elf_proxy",
+        proxy = True,
+    ),
     libc_header_info("pthread"),
     libc_header_info("sched"),
     libc_header_info("search"),
@@ -241,18 +245,11 @@ LLVM_LIBC_HEADERS = [
         name = info.target_name,
         hdr = info.staging_path,
         other_srcs = info.other_srcs,
+        proxy = info.proxy,
         yaml_template = info.yaml_template,
     )
     for info in LLVM_LIBC_HEADERS
 ]
-
-# needed for startup and VDSO. Doesn't get placed in /include so is handled separately.
-libc_generated_header(
-    name = "hdr_elf_proxy_h",
-    hdr = "staging/hdr/elf_proxy.h",
-    proxy = True,
-    yaml_template = "include/elf.yaml",
-)
 
 # Static headers that need to be in staging/include
 STATIC_HEADERS = glob(
@@ -617,9 +614,7 @@ libc_support_library(
 
 libc_support_library(
     name = "hdr_elf_proxy",
-    hdrs = ["staging/hdr/elf_proxy.h"],
-    includes = ["staging"],
-    deps = [":hdr_elf_proxy_h"],
+    hdrs = ["hdr/elf_proxy.h"],
 )
 
 libc_support_library(
@@ -1002,6 +997,7 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
+        ":__support_macros_properties_os",
         ":hdr_stdint_proxy",
     ],
 )

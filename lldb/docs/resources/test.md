@@ -137,6 +137,35 @@ the test should be run or not.
 @skipTestIfFn(checking_function_name)
 ```
 
+### Skipped versus unsupported
+
+A test that doesn't run does so for one of two very different reasons, and the
+decorator you pick says which:
+
+* The test **can never** run in this configuration. A test for Mach-O debug
+  maps has nothing to say on Linux; a test that calls `fork()` has nothing to
+  say on Windows. Use the `require*` family. These are reported as
+  **UNSUPPORTED**.
+
+* The test **ought to** run in this configuration but doesn't work yet. Use the
+  `skipIf*` / `skipUnless*` family. These are reported as **SKIPPED**, which
+  keeps them visible as work still to be done.
+
+```python
+@requireDarwin      # inherently Darwin-only: reported UNSUPPORTED elsewhere
+@skipIfWindows      # ought to work on Windows, currently broken: reported SKIPPED
+```
+
+The `require*` decorators mirror the `skip*` ones one-for-one:
+`requireDarwin` / `requireNotDarwin`, `requireLinux` / `requireNotLinux`,
+`requireWindows` / `requireNotWindows`, plus `requirePOSIX`, `requireSignals`,
+`requireNotWasm`, `requireDarwinHost`, and the general
+`requirePlatform(oslist)` / `requireNotPlatform(oslist)`.
+
+Reach for `require*` when the test is tied to a platform-specific file format,
+API, or OS feature. If the test is merely untested or broken somewhere, keep
+`skipIf*` so nobody mistakes a bug for a design decision.
+
 In addition to providing a lot more flexibility when it comes to writing the
 test, the API test also allow for much more complex scenarios when it comes to
 building inferiors. Every test has its own `Makefile`, most of them only a

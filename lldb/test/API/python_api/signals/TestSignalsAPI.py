@@ -50,3 +50,9 @@ class SignalsAPITestCase(TestBase):
         self.assertEqual(
             process.GetExitStatus(), 0, "The process should have returned 0"
         )
+
+        self.assertIn(
+            sigint,
+            unix_signals.get_unix_signals_list(),
+            "SIGINT should be in the list of supported signals",
+        )
