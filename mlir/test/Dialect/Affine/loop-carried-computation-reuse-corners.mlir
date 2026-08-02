@@ -272,3 +272,60 @@ func.func @loop_invariant_duplicates(%src0: memref<1xi32>,
   }
   return
 }
+
+// A first-iteration preload must not cross a potentially non-terminating
+// operation. With a dynamic memref, the original program need not execute an
+// access at all when %continue is true.
+
+// CHECK-LABEL: func.func @non_speculatable_prefix
+// CHECK-NOT: affine.load
+// CHECK: affine.for
+// CHECK-NOT: iter_args
+func.func @non_speculatable_prefix(%src0: memref<?xi32>,
+                                   %dst0: memref<2xi32>, %continue: i1) {
+  %src, %dst = memref.distinct_objects %src0, %dst0
+      : memref<?xi32>, memref<2xi32>
+  affine.for %i = 0 to 2 {
+    scf.while : () -> () {
+      scf.condition(%continue)
+    } do {
+      scf.yield
+    }
+    %a = affine.load %src[%i] : memref<?xi32>
+    %b = affine.load %src[%i + 1] : memref<?xi32>
+    %c = affine.load %src[%i + 2] : memref<?xi32>
+    %left = arith.addi %a, %b : i32
+    %right = arith.addi %b, %c : i32
+    %difference = arith.subi %right, %left : i32
+    affine.store %difference, %dst[%i] : memref<2xi32>
+  }
+  return
+}
+
+// The same operation after both producer DAGs does not block a prologue that
+// only moves work which was already executed before it.
+
+// CHECK-LABEL: func.func @non_speculatable_after_producers
+// CHECK: %[[INIT:.*]] = arith.addi
+// CHECK: affine.for {{.*}} iter_args(%{{.*}} = %[[INIT]])
+func.func @non_speculatable_after_producers(%src0: memref<4xi32>,
+                                            %dst0: memref<2xi32>,
+                                            %continue: i1) {
+  %src, %dst = memref.distinct_objects %src0, %dst0
+      : memref<4xi32>, memref<2xi32>
+  affine.for %i = 0 to 2 {
+    %a = affine.load %src[%i] : memref<4xi32>
+    %b = affine.load %src[%i + 1] : memref<4xi32>
+    %c = affine.load %src[%i + 2] : memref<4xi32>
+    %left = arith.addi %a, %b : i32
+    %right = arith.addi %b, %c : i32
+    scf.while : () -> () {
+      scf.condition(%continue)
+    } do {
+      scf.yield
+    }
+    %difference = arith.subi %right, %left : i32
+    affine.store %difference, %dst[%i] : memref<2xi32>
+  }
+  return
+}

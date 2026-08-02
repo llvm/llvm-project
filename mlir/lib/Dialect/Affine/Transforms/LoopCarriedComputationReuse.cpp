@@ -235,12 +235,23 @@ private:
   bool hasTranslatedLoad = false;
 };
 
-static bool sourceIsStable(AffineForOp loop, Value source,
+static bool isSourceStable(AffineForOp loop, Value source,
                            AliasAnalysis &aliasAnalysis) {
-  for (Operation &operation : loop.getBody()->without_terminator())
-    if (aliasAnalysis.getModRef(&operation, source).isMod())
-      return false;
-  return true;
+  bool stable = true;
+  (void)loop.getBody()->walk<WalkOrder::PostOrder>([&](Operation *operation) {
+    // Recursive-effect operations derive their effects from nested operations
+    // unless they also expose direct effects. The post-order walk has already
+    // checked those nested operations.
+    if (operation->hasTrait<OpTrait::HasRecursiveMemoryEffects>() &&
+        !isa<MemoryEffectOpInterface>(operation))
+      return WalkResult::advance();
+    if (aliasAnalysis.getModRef(operation, source).isMod()) {
+      stable = false;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return stable;
 }
 
 /// Return whether the loop is proven to execute at least twice. Handle
@@ -261,13 +272,39 @@ static bool hasAtLeastTwoIterations(AffineForOp loop) {
   return tripCount && !tripCount->isNegative() && tripCount->ugt(1);
 }
 
+/// Return true only when the loop executes at least twice, every source is
+/// stable, and moving `prologueOps` before the loop does not cross a blocking
+/// operation in the first iteration.
+static bool isSafeToPreload(AffineForOp loop, ValueRange sources,
+                            ArrayRef<Operation *> prologueOps,
+                            AliasAnalysis &aliasAnalysis) {
+  if (loop.getLowerBoundMap().getNumResults() != 1 ||
+      !hasAtLeastTwoIterations(loop) || sources.empty() || prologueOps.empty())
+    return false;
+  if (llvm::any_of(sources, [&](Value source) {
+        return !isSourceStable(loop, source, aliasAnalysis);
+      }))
+    return false;
+
+  Operation *root = prologueOps.back();
+  if (!root || root->getParentOp() != loop)
+    return false;
+  llvm::SmallPtrSet<Operation *, 16> prologueSet(prologueOps.begin(),
+                                                 prologueOps.end());
+  for (Operation &operation : loop.getBody()->without_terminator()) {
+    bool reachedRoot = &operation == root;
+    if (!prologueSet.contains(&operation) &&
+        !isa<AffineReadOpInterface, AffineWriteOpInterface>(operation) &&
+        !isPure(&operation))
+      return false;
+    if (reachedRoot)
+      return true;
+  }
+  return false;
+}
+
 static std::optional<ReuseCandidate>
 findReuseCandidate(AffineForOp loop, AliasAnalysis &aliasAnalysis) {
-  if (loop.getLowerBoundMap().getNumResults() != 1)
-    return std::nullopt;
-  if (!hasAtLeastTwoIterations(loop))
-    return std::nullopt;
-
   SmallVector<Operation *> bodyOps;
   for (Operation &operation : loop.getBody()->without_terminator())
     bodyOps.push_back(&operation);
@@ -298,9 +335,7 @@ findReuseCandidate(AffineForOp loop, AliasAnalysis &aliasAnalysis) {
         SmallVector<Operation *> earlierOps = matcher.takeEarlierOps();
         SmallVector<Value> sources = matcher.takeSources();
         if (earlierOps.empty() || sources.empty() ||
-            llvm::any_of(sources, [&](Value source) {
-              return !sourceIsStable(loop, source, aliasAnalysis);
-            }))
+            !isSafeToPreload(loop, sources, earlierOps, aliasAnalysis))
           continue;
 
         llvm::SmallPtrSet<Operation *, 16> earlierSet(earlierOps.begin(),
