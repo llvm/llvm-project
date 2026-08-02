@@ -212,8 +212,8 @@ define dso_local void @Test128_1Add(fp128 %d1) nounwind {
 ; WIN-NEXT:    subq $88, %rsp
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps vf128(%rip), %xmm1
-; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
@@ -469,8 +469,8 @@ define dso_local void @Test128_1Sub(fp128 %d1) nounwind {
 ; WIN-NEXT:    subq $88, %rsp
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps vf128(%rip), %xmm1
-; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
@@ -726,8 +726,8 @@ define dso_local void @Test128_1Mul(fp128 %d1) nounwind {
 ; WIN-NEXT:    subq $88, %rsp
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps vf128(%rip), %xmm1
-; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
@@ -983,8 +983,8 @@ define dso_local void @Test128_1Div(fp128 %d1) nounwind {
 ; WIN-NEXT:    subq $88, %rsp
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps vf128(%rip), %xmm1
-; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8
@@ -1222,8 +1222,8 @@ define dso_local void @Test128_1Rem(fp128 %d1) nounwind {
 ; WIN-NEXT:    subq $88, %rsp
 ; WIN-NEXT:    movaps (%rcx), %xmm0
 ; WIN-NEXT:    movaps vf128(%rip), %xmm1
-; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; WIN-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN-NEXT:    leaq {{[0-9]+}}(%rsp), %r8

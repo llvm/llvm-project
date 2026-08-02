@@ -183,8 +183,8 @@ define { float, i32 } @test_frexp_f32_i32(float %a) nounwind {
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    addl $20, %esp
 ; WIN32-NEXT:    retl
   %result = call { float, i32 } @llvm.frexp.f32.i32(float %a)
@@ -306,27 +306,27 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; WIN32-NEXT:    pushl %esi
 ; WIN32-NEXT:    subl $44, %esp
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    leal 24(%esi), %eax
-; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstpl (%esp)
-; WIN32-NEXT:    calll _frexp
-; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
 ; WIN32-NEXT:    leal 20(%esi), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
 ; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
-; WIN32-NEXT:    leal 16(%esi), %eax
+; WIN32-NEXT:    leal 24(%esi), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
 ; WIN32-NEXT:    leal 28(%esi), %eax
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    leal 16(%esi), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
 ; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
@@ -338,7 +338,9 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) nounwi
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fxch %st(3)
 ; WIN32-NEXT:    fstps 12(%esi)
+; WIN32-NEXT:    fxch %st(1)
 ; WIN32-NEXT:    fstps 8(%esi)
 ; WIN32-NEXT:    fstps 4(%esi)
 ; WIN32-NEXT:    fstps (%esi)
@@ -419,7 +421,9 @@ define <4 x float> @test_frexp_v4f32_v4i32_only_use_fract(<4 x float> %a) nounwi
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fxch %st(3)
 ; WIN32-NEXT:    fstps 12(%esi)
+; WIN32-NEXT:    fxch %st(1)
 ; WIN32-NEXT:    fstps 8(%esi)
 ; WIN32-NEXT:    fstps 4(%esi)
 ; WIN32-NEXT:    fstps (%esi)

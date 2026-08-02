@@ -232,6 +232,7 @@ define <2 x float> @ldexp_v2f32(<2 x float> %val, <2 x i32> %exp) nounwind {
 ; WIN32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fxch %st(1)
 ; WIN32-NEXT:    addl $20, %esp
 ; WIN32-NEXT:    popl %esi
 ; WIN32-NEXT:    retl
@@ -365,7 +366,9 @@ define <4 x float> @ldexp_v4f32(<4 x float> %val, <4 x i32> %exp) nounwind {
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fxch %st(3)
 ; WIN32-NEXT:    fstps 12(%esi)
+; WIN32-NEXT:    fxch %st(1)
 ; WIN32-NEXT:    fstps 8(%esi)
 ; WIN32-NEXT:    fstps 4(%esi)
 ; WIN32-NEXT:    fstps (%esi)

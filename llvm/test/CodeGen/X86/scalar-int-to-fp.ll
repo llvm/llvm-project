@@ -336,8 +336,8 @@ define float @u64_to_f(i64 %a) nounwind {
 ; AVX512F_32-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; AVX512F_32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; AVX512F_32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512F_32-NEXT:    vmovss %xmm0, (%esp)
-; AVX512F_32-NEXT:    flds (%esp)
+; AVX512F_32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
+; AVX512F_32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512F_32-NEXT:    movl %ebp, %esp
 ; AVX512F_32-NEXT:    popl %ebp
 ; AVX512F_32-NEXT:    retl
@@ -356,8 +356,8 @@ define float @u64_to_f(i64 %a) nounwind {
 ; SSE2_32-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; SSE2_32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2_32-NEXT:    movss %xmm0, (%esp)
-; SSE2_32-NEXT:    flds (%esp)
+; SSE2_32-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; SSE2_32-NEXT:    flds {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    movl %ebp, %esp
 ; SSE2_32-NEXT:    popl %ebp
 ; SSE2_32-NEXT:    retl
@@ -395,8 +395,8 @@ define float @u64_to_f(i64 %a) nounwind {
 ; SSE1_32-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; SSE1_32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE1_32-NEXT:    movss %xmm0, (%esp)
-; SSE1_32-NEXT:    flds (%esp)
+; SSE1_32-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    flds {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    movl %ebp, %esp
 ; SSE1_32-NEXT:    popl %ebp
 ; SSE1_32-NEXT:    retl
