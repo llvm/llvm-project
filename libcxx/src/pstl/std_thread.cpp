@@ -9,6 +9,7 @@
 #include <__algorithm/max.h>
 #include <__atomic/aliases.h>
 #include <__atomic/atomic.h>
+#include <__atomic/atomic_ref.h>
 #include <__config>
 #include <__mutex/lock_guard.h>
 #include <__mutex/mutex.h>
@@ -177,13 +178,15 @@ private:
   static Task* get(Buffer* buffer, std::size_t index) noexcept {
     Task** elements  = reinterpret_cast<Task**>(reinterpret_cast<std::byte*>(buffer) + sizeof(Buffer));
     std::size_t mask = (1Z << buffer->log_size) - 1;
-    return elements[index & mask];
+    // Chase-Lev is inherently racy with regards to the elements of the array, wrap access with atomic_ref to quiet TSAN
+    return std::atomic_ref<Task*>(elements[index & mask]).load(std::memory_order_relaxed);
   }
 
   static void put(Buffer* buffer, std::size_t index, Task* task) noexcept {
-    Task** elements        = reinterpret_cast<Task**>(reinterpret_cast<std::byte*>(buffer) + sizeof(Buffer));
-    std::size_t mask       = (1Z << buffer->log_size) - 1;
-    elements[index & mask] = task;
+    Task** elements  = reinterpret_cast<Task**>(reinterpret_cast<std::byte*>(buffer) + sizeof(Buffer));
+    std::size_t mask = (1Z << buffer->log_size) - 1;
+    // Chase-Lev is inherently racy with regards to the elements of the array, wrap access with atomic_ref to quiet TSAN
+    std::atomic_ref<Task*>(elements[index & mask]).store(task, std::memory_order_relaxed);
   }
 
   std::atomic_uint64_t bottom;
