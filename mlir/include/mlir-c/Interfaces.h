@@ -146,24 +146,23 @@ mlirConditionallySpeculatableOpInterfaceGetSpeculatability(
 // MemoryEffectsOpInterface
 //===---------------------------------------------------------------------===//
 
-/// Returns the borrowed singleton instance of the allocate memory effect.
+/// Returns the singleton instance of the allocate memory effect.
 MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsAllocateGet(void);
 
-/// Returns the borrowed singleton instance of the free memory effect.
+/// Returns the singleton instance of the free memory effect.
 MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsFreeGet(void);
 
-/// Returns the borrowed singleton instance of the read memory effect.
+/// Returns the singleton instance of the read memory effect.
 MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsReadGet(void);
 
-/// Returns the borrowed singleton instance of the write memory effect.
+/// Returns the singleton instance of the write memory effect.
 MLIR_CAPI_EXPORTED MlirMemoryEffect mlirMemoryEffectsWriteGet(void);
 
 /// Returns the TypeID identifying the concrete type of the given memory effect.
 MLIR_CAPI_EXPORTED MlirTypeID
 mlirMemoryEffectGetEffectID(MlirMemoryEffect effect);
 
-/// Returns the borrowed singleton instance of the default side effect
-/// resource.
+/// Returns the singleton instance of the default side effect resource.
 MLIR_CAPI_EXPORTED MlirSideEffectResource
 mlirSideEffectsDefaultResourceGet(void);
 
@@ -215,14 +214,14 @@ mlirMemoryEffectInstanceCreateForSymbol(MlirMemoryEffect effect,
                                         bool effectOnFullRegion,
                                         MlirSideEffectResource resource);
 
-/// Destroys an owned memory effect instance created or cloned by this API.
-MLIR_CAPI_EXPORTED void
-mlirMemoryEffectInstanceDestroy(MlirMemoryEffectInstance instance);
-
-/// Creates an owned copy of a memory effect instance. The caller must destroy
+/// Creates a copy of a memory effect instance. The caller must destroy
 /// the returned instance with `mlirMemoryEffectInstanceDestroy`.
 MLIR_CAPI_EXPORTED MlirMemoryEffectInstance
 mlirMemoryEffectInstanceClone(MlirMemoryEffectInstance instance);
+
+/// Destroys a memory effect instance created or cloned by APIs above.
+MLIR_CAPI_EXPORTED void
+mlirMemoryEffectInstanceDestroy(MlirMemoryEffectInstance instance);
 
 /// Returns the memory effect of the given instance.
 MLIR_CAPI_EXPORTED MlirMemoryEffect
@@ -257,7 +256,7 @@ MLIR_CAPI_EXPORTED MlirAttribute
 mlirMemoryEffectInstanceGetSymbolRef(MlirMemoryEffectInstance instance);
 
 /// Callback used to return a list of memory effect instances. `effects` points
-/// to `numEffects` consecutive borrowed instances that are only valid for the
+/// to `numEffects` consecutive instances that are only valid for the
 /// duration of the callback. The caller-provided `userData` is forwarded to
 /// the callback.
 typedef void (*MlirMemoryEffectInstancesCallback)(
@@ -289,7 +288,7 @@ MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
 
 /// Gets the memory effects of the given operation. The operation must
 /// implement the MemoryEffectsOpInterface. Invokes `callback` once with all
-/// effects; the instances are borrowed and only valid during the callback.
+/// effects; the lifetime of the instances are only valid during the callback.
 MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceGetEffects(
     MlirOperation operation, MlirMemoryEffectInstancesCallback callback,
     void *userData);
