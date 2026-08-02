@@ -1871,7 +1871,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return builder.createVecShuffle(getLoc(expr->getExprLoc()), ops[0], op1,
                                     mask);
   }
+  case X86::BI__builtin_ia32_pmovdb512_mask:
+  case X86::BI__builtin_ia32_pmovdw512_mask:
   case X86::BI__builtin_ia32_pmovqd512_mask:
+  case X86::BI__builtin_ia32_pmovqw512_mask:
   case X86::BI__builtin_ia32_pmovwb512_mask: {
     mlir::Value Res =
         builder.createIntCast(ops[0], cast<cir::VectorType>(ops[1].getType()));

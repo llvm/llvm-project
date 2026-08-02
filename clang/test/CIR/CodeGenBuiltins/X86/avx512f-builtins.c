@@ -1066,6 +1066,51 @@ __m256i test_mm512_cvtepi64_epi32(__m512i __A) {
   return _mm512_cvtepi64_epi32(__A);
 }
 
+__m128i test_mm512_cvtepi32_epi8(__m512i a) {
+  // CIR-LABEL: test_mm512_cvtepi32_epi8
+  // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} :
+  // CIR-SAME: !cir.vector<16 x !s32i> -> !cir.vector<16 x !s8i>
+  //
+  // LLVM-LABEL: test_mm512_cvtepi32_epi8
+  // LLVM: trunc <16 x i32> %{{.*}} to <16 x i8>
+  //
+  // OGCG-LABEL: test_mm512_cvtepi32_epi8
+  // OGCG: trunc <16 x i32> %{{.*}} to <16 x i8>
+  return _mm512_cvtepi32_epi8(a);
+}
+
+__m128i test_mm512_mask_cvtepi32_epi8(__m128i src, __mmask16 k,
+                                      __m512i a) {
+  // CIR-LABEL: test_mm512_mask_cvtepi32_epi8
+  // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} :
+  // CIR-SAME: !cir.vector<16 x !s32i> -> !cir.vector<16 x !s8i>
+  // CIR: %[[MASK:.*]] = cir.cast bitcast {{.*}} :
+  // CIR-SAME: !u16i -> !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: %[[SELECT:.*]] = cir.vec.ternary(%[[MASK]], %[[TRUNC]], {{.*}}) :
+  // CIR-SAME: !cir.vector<16 x !cir.int<s, 1>>,
+  // CIR-SAME: !cir.vector<16 x !s8i>
+  //
+  // LLVM-LABEL: test_mm512_mask_cvtepi32_epi8
+  // LLVM: %[[TRUNC:.*]] = trunc <16 x i32> %{{.*}} to <16 x i8>
+  // LLVM: %[[MASK:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: select <16 x i1> %[[MASK]], <16 x i8> %[[TRUNC]],
+  //
+  // OGCG-LABEL: test_mm512_mask_cvtepi32_epi8
+  // OGCG: call <16 x i8> @llvm.x86.avx512.mask.pmov.db.512
+  return _mm512_mask_cvtepi32_epi8(src, k, a);
+}
+
+__m128i test_mm512_maskz_cvtepi32_epi8(__mmask16 k, __m512i a) {
+  // CIR-LABEL: test_mm512_maskz_cvtepi32_epi8
+  // CIR: cir.call
+  //
+  // LLVM-LABEL: test_mm512_maskz_cvtepi32_epi8
+  // LLVM: trunc <16 x i32> %{{.*}} to <16 x i8>
+  // LLVM: bitcast i16 %{{.*}} to <16 x i1>
+  // LLVM: select <16 x i1>
+  return _mm512_maskz_cvtepi32_epi8(k, a);
+}
+
 __m256i test_mm512_mask_cvtepi64_epi32(__m256i __O, __mmask8 __M, __m512i __A) {
   // CIR-LABEL: test_mm512_mask_cvtepi64_epi32
   // CIR: %[[TRUNC:.*]] = cir.cast integral {{.*}} : !cir.vector<8 x !s64i> -> !cir.vector<8 x !s32i>
