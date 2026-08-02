@@ -8849,11 +8849,6 @@ static Instruction *foldFCmpFmulIntoFCmp(FCmpInst &I, Instruction *LHSI,
   if (!match(LHSI->getOperand(1), m_APFloat(C1)) || !match(RHSC, m_APFloat(C2)))
     return nullptr;
 
-  Type *FPTy = LHSI->getType()->getScalarType();
-  if (I.getFunction()->getDenormalMode(FPTy->getFltSemantics()) !=
-      DenormalMode::getIEEE())
-    return nullptr;
-
   if (C1->isNegative())
     Pred = I.getSwappedPredicate();
 

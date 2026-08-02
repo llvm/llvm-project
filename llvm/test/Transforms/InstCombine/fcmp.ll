@@ -3111,8 +3111,7 @@ define i1 @fcmp_ogt_fmul_no_const(float %x, float %y) {
 
 define i1 @fcmp_oeq_fmul_pos_const_daz(float %x) denormal_fpenv(ieee|preservesign) {
 ; CHECK-LABEL: @fcmp_oeq_fmul_pos_const_daz(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[MUL]], 6.000000e+00
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[X:%.*]], 3.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %mul = fmul float %x, 2.0
