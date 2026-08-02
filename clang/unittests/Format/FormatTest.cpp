@@ -6000,6 +6000,15 @@ TEST_F(FormatTest, HashInMacroDefinition) {
       "firstArgumentThatIsQuiteLongEnoughToForceAWrapHere11111111, "
       "##__VA_ARGS__);",
       CommaPasteStyle);
+  CommaPasteStyle.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  verifyFormat(
+      "#define M(...) \\\n"
+      "    call(firstArgumentThatIsQuiteLongEnoughToForceAWrapHere11111111, \\\n"
+      "         ##__VA_ARGS__, extra)",
+      "#define M(...) \\\n"
+      "    call(firstArgumentThatIsQuiteLongEnoughToForceAWrapHere11111111, "
+      "##__VA_ARGS__, extra)",
+      CommaPasteStyle);
   Style.ColumnLimit = 60;
   Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
   verifyFormat(
