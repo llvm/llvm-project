@@ -192,15 +192,6 @@ public:
   virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
 
-  // TODO: move this to ORC runtime.
-  /// Run function with a int (*)(void) signature.
-  virtual Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) = 0;
-
-  // TODO: move this to ORC runtime.
-  /// Run function with a int (*)(int) signature.
-  virtual Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr,
-                                             int Arg) = 0;
-
   /// Run a wrapper function in the executor. The given WFRHandler will be
   /// called on the result when it is returned.
   ///
