@@ -908,14 +908,6 @@ ScalableVectorType *ScalableVectorType::get(Type *ElementType,
 //                         PointerType Implementation
 //===----------------------------------------------------------------------===//
 
-PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
-  assert(EltTy && "Can't get a pointer to <null> type!");
-  assert(isValidElementType(EltTy) && "Invalid type for pointer element!");
-
-  // Automatically convert typed pointers to opaque pointers.
-  return get(EltTy->getContext(), AddressSpace);
-}
-
 PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
   LLVMContextImpl *CImpl = C.pImpl;
 
@@ -931,10 +923,6 @@ PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
 PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
     : Type(C, PointerTyID) {
   setSubclassData(AddrSpace);
-}
-
-PointerType *Type::getPointerTo(unsigned AddrSpace) const {
-  return PointerType::get(getContext(), AddrSpace);
 }
 
 bool PointerType::isValidElementType(Type *ElemTy) {

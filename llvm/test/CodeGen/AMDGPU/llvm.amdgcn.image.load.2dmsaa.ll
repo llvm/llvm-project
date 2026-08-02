@@ -1225,6 +1225,33 @@ main_body:
   ret [4 x float] %i7
 }
 
+define amdgpu_ps <2 x float> @load_2dmsaa_v2f32_dmask_mismatch(<8 x i32> inreg %rsrc, i32 %s, i32 %t) {
+; NO-MSAA-LABEL: define amdgpu_ps <2 x float> @load_2dmsaa_v2f32_dmask_mismatch(
+; NO-MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) {
+; NO-MSAA-NEXT:  main_body:
+; NO-MSAA-NEXT:    [[A:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[B:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; NO-MSAA-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[A]], i32 0
+; NO-MSAA-NEXT:    [[V1:%.*]] = insertelement <2 x float> [[V0]], float [[B]], i32 1
+; NO-MSAA-NEXT:    ret <2 x float> [[V1]]
+;
+; MSAA-LABEL: define amdgpu_ps <2 x float> @load_2dmsaa_v2f32_dmask_mismatch(
+; MSAA-SAME: <8 x i32> inreg [[RSRC:%.*]], i32 [[S:%.*]], i32 [[T:%.*]]) {
+; MSAA-NEXT:  main_body:
+; MSAA-NEXT:    [[A:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 [[S]], i32 [[T]], i32 0, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[B:%.*]] = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 8, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
+; MSAA-NEXT:    [[V0:%.*]] = insertelement <2 x float> poison, float [[A]], i32 0
+; MSAA-NEXT:    [[V1:%.*]] = insertelement <2 x float> [[V0]], float [[B]], i32 1
+; MSAA-NEXT:    ret <2 x float> [[V1]]
+;
+main_body:
+  %a = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 1, i32 %s, i32 %t, i32 0, <8 x i32> %rsrc, i32 0, i32 0)
+  %b = call float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32 8, i32 %s, i32 %t, i32 1, <8 x i32> %rsrc, i32 0, i32 0)
+  %v0 = insertelement <2 x float> poison, float %a, i32 0
+  %v1 = insertelement <2 x float> %v0, float %b, i32 1
+  ret <2 x float> %v1
+}
+
 declare float @llvm.amdgcn.image.load.2dmsaa.f32.i32.v8i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0
 declare <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0
 declare <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32, i32, i32, i32, <8 x i32>, i32, i32) #0

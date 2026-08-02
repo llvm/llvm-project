@@ -2368,7 +2368,7 @@ void RewriteMFMAFormStage::resetRewriteCandsToVGPR(
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
   if (!static_cast<const SIInstrInfo *>(DAG.TII)->isMAI(*MI))
     return false;
-  if (AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) == -1)
+  if (AMDGPU::getAGPRFormOp(MI->getOpcode()) == -1)
     return false;
   // Reject candidates whose users force an unavoidable bridge copy.
   Register DstReg = MI->getOperand(0).getReg();
@@ -2406,7 +2406,7 @@ bool RewriteMFMAFormStage::initHeuristics(
       if (!isRewriteCandidate(&MI))
         continue;
 
-      int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI.getOpcode());
+      int ReplacementOp = AMDGPU::getAGPRFormOp(MI.getOpcode());
       assert(ReplacementOp != -1);
 
       RewriteCands.push_back({&MI, MI.getOpcode()});
@@ -2666,7 +2666,7 @@ bool RewriteMFMAFormStage::rewrite(
   }
 
   for (auto &[MI, OriginalOpcode] : RewriteCands) {
-    int ReplacementOp = AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode());
+    int ReplacementOp = AMDGPU::getAGPRFormOp(MI->getOpcode());
     if (ReplacementOp == -1)
       continue;
     MI->setDesc(TII->get(ReplacementOp));
