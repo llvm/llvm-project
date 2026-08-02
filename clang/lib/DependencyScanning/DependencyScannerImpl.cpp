@@ -189,7 +189,7 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                            /*DirectlyImported=*/true);
   if (ASTReader::readASTFileControlBlock(
           PrebuiltModuleFilename, CI.getFileManager(), CI.getModuleCache(),
-          CI.getPCHContainerReader(),
+          CI.getPCHContainerReader(), CI.getLangOpts(),
           /*FindModuleFileExtensions=*/false, Listener,
           /*ValidateDiagnosticOptions=*/false, ASTReader::ARR_OutOfDate))
     return true;
@@ -205,7 +205,7 @@ static bool visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                              /*DirectlyImported=*/false);
     if (ASTReader::readASTFileControlBlock(
             Worklist.pop_back_val(), CI.getFileManager(), CI.getModuleCache(),
-            CI.getPCHContainerReader(),
+            CI.getPCHContainerReader(), CI.getLangOpts(),
             /*FindModuleFileExtensions=*/false, Listener,
             /*ValidateDiagnosticOptions=*/false))
       return true;
