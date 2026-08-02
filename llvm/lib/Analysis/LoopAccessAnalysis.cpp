@@ -282,8 +282,8 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
 
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
-  // Total distance (in bytes) walked between the first and the last
-  // accessed pointer; MaxBTC * |Step|.
+  // Total distance (in bytes) between the first and the last
+  // accessed pointer.
   const SCEV *WalkBytes = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
   if (!WalkBytes) {
     // Re-try with constant max backedge-taken count if using the symbolic one
