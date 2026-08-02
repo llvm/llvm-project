@@ -302,6 +302,7 @@ function(runtime_default_target)
     # OpenMP tests. install-libomp-mod is a separate distribution component
     # so that install-openmp does not require building flang.
     list(APPEND extra_targets "libomp-mod")
+    list(APPEND extra_targets "libomp-mod-barrier")
     list(APPEND extra_targets "install-libomp-mod")
     list(APPEND extra_targets "install-libomp-mod-stripped")
 
@@ -864,6 +865,7 @@ ${_flag_values}\
     endif ()
     if (TARGET libomp-mod)
       add_dependencies(flang-rt-test-deps libomp-mod)
+      add_dependencies(flang-rt-test-deps libomp-mod-barrier)
     endif ()
   endif ()
 endif()
