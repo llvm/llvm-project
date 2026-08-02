@@ -13,7 +13,7 @@ define amdgpu_ps <2 x float> @test_add_u64_vv(i64 %a, i64 %b) {
 ;
 ; GFX1250-LABEL: test_add_u64_vv:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], v[0:1], v[2:3]
@@ -33,7 +33,7 @@ define amdgpu_ps <2 x float> @test_add_u64_vs(i64 %a, i64 inreg %b) {
 ;
 ; GFX1250-LABEL: test_add_u64_vs:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
@@ -53,7 +53,7 @@ define amdgpu_ps <2 x float> @test_add_u64_sv(i64 inreg %a, i64 %b) {
 ;
 ; GFX1250-LABEL: test_add_u64_sv:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
@@ -73,7 +73,7 @@ define amdgpu_ps <2 x float> @test_add_u64_ss(i64 inreg %a, i64 inreg %b) {
 ;
 ; GFX1250-LABEL: test_add_u64_ss:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
@@ -95,7 +95,7 @@ define amdgpu_ps <2 x float> @test_add_u64_v_inline_lit(i64 %a) {
 ;
 ; GFX1250-LABEL: test_add_u64_v_inline_lit:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], 5, v[0:1]
@@ -115,7 +115,7 @@ define amdgpu_ps <2 x float> @test_add_u64_v_small_imm(i64 %a) {
 ;
 ; GFX1250-LABEL: test_add_u64_v_small_imm:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], 0x1f4, v[0:1]
@@ -135,7 +135,7 @@ define amdgpu_ps <2 x float> @test_add_u64_v_64bit_imm(i64 %a) {
 ;
 ; GFX1250-LABEL: test_add_u64_v_64bit_imm:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], 0x13b9ac9ff, v[0:1]
@@ -155,7 +155,7 @@ define amdgpu_ps <2 x float> @test_add_u64_s_small_imm(i64 inreg %a) {
 ;
 ; GFX1250-LABEL: test_add_u64_s_small_imm:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x1f4

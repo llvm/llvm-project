@@ -3332,8 +3332,8 @@ are similar.
      shouldn't impact your testing.
 
 #. Introduce an AST node for your new expression.  This starts with declaring
-   the node in ``include/Basic/StmtNodes.td`` and creating a new class for your
-   expression in the appropriate ``include/AST/Expr*.h`` header.  It's best to
+   the node in ``include/clang/Basic/StmtNodes.td`` and creating a new class for your
+   expression in the appropriate ``include/clang/AST/Expr*.h`` header.  It's best to
    look at the class for a similar expression to get ideas, and there are some
    specific things to watch for:
 

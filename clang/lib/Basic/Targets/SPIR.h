@@ -28,75 +28,43 @@ namespace clang {
 namespace targets {
 
 // Used by both the SPIR and SPIR-V targets.
-static const unsigned SPIRDefIsPrivMap[] = {
-    0, // Default
-    1, // opencl_global
-    3, // opencl_local
-    2, // opencl_constant
-    0, // opencl_private
-    4, // opencl_generic
-    5, // opencl_global_device
-    6, // opencl_global_host
-    0, // cuda_device
-    0, // cuda_constant
-    0, // cuda_shared
-    // SYCL address space values for this map are dummy
-    0,  // sycl_global
-    0,  // sycl_global_device
-    0,  // sycl_global_host
-    0,  // sycl_local
-    0,  // sycl_private
-    0,  // ptr32_sptr
-    0,  // ptr32_uptr
-    0,  // ptr64
-    3,  // hlsl_groupshared
-    12, // hlsl_constant
-    10, // hlsl_private
-    11, // hlsl_device
-    7,  // hlsl_input
-    8,  // hlsl_output
-    13, // hlsl_push_constant
-    // Wasm address space values for this target are dummy values,
-    // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+static constexpr LangASMap SPIRDefIsPrivMap = {
+    {LangAS::opencl_global, 1},        {LangAS::opencl_local, 3},
+    {LangAS::opencl_constant, 2},      {LangAS::opencl_generic, 4},
+    {LangAS::opencl_global_device, 5}, {LangAS::opencl_global_host, 6},
+    {LangAS::hlsl_groupshared, 3},     {LangAS::hlsl_constant, 12},
+    {LangAS::hlsl_private, 10},        {LangAS::hlsl_device, 11},
+    {LangAS::hlsl_input, 7},           {LangAS::hlsl_output, 8},
+    {LangAS::hlsl_push_constant, 13},
 };
 
 // Used by both the SPIR and SPIR-V targets.
-static const unsigned SPIRDefIsGenMap[] = {
-    4, // Default
-    1, // opencl_global
-    3, // opencl_local
-    2, // opencl_constant
-    0, // opencl_private
-    4, // opencl_generic
-    5, // opencl_global_device
-    6, // opencl_global_host
+static constexpr LangASMap SPIRDefIsGenMap = {
+    {LangAS::Default, 4},
+    {LangAS::opencl_global, 1},
+    {LangAS::opencl_local, 3},
+    {LangAS::opencl_constant, 2},
+    {LangAS::opencl_generic, 4},
+    {LangAS::opencl_global_device, 5},
+    {LangAS::opencl_global_host, 6},
     // cuda_* address space mapping is intended for HIPSPV (HIP to SPIR-V
     // translation). This mapping is enabled when the language mode is HIP.
-    1, // cuda_device
+    {LangAS::cuda_device, 1},
     // cuda_constant pointer can be casted to default/"flat" pointer, but in
     // SPIR-V casts between constant and generic pointers are not allowed. For
     // this reason cuda_constant is mapped to SPIR-V CrossWorkgroup.
-    1,  // cuda_constant
-    3,  // cuda_shared
-    1,  // sycl_global
-    5,  // sycl_global_device
-    6,  // sycl_global_host
-    3,  // sycl_local
-    0,  // sycl_private
-    0,  // ptr32_sptr
-    0,  // ptr32_uptr
-    0,  // ptr64
-    3,  // hlsl_groupshared
-    0,  // hlsl_constant
-    10, // hlsl_private
-    11, // hlsl_device
-    7,  // hlsl_input
-    8,  // hlsl_output
-    13, // hlsl_push_constant
-    // Wasm address space values for this target are dummy values,
-    // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+    {LangAS::cuda_constant, 1},
+    {LangAS::cuda_shared, 3},
+    {LangAS::sycl_global, 1},
+    {LangAS::sycl_global_device, 5},
+    {LangAS::sycl_global_host, 6},
+    {LangAS::sycl_local, 3},
+    {LangAS::hlsl_groupshared, 3},
+    {LangAS::hlsl_private, 10},
+    {LangAS::hlsl_device, 11},
+    {LangAS::hlsl_input, 7},
+    {LangAS::hlsl_output, 8},
+    {LangAS::hlsl_push_constant, 13},
 };
 
 // Base class for SPIR and SPIR-V target info.

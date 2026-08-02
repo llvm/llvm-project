@@ -71,6 +71,10 @@ LIBC_INLINE int raise_except(int excepts) {
   return feraiseexcept(excepts);
 }
 
+LIBC_INLINE int enable_except(int) { return 0; }
+
+LIBC_INLINE int disable_except(int) { return 0; }
+
 LIBC_INLINE int get_round() {
   LIBC_FENV_ACCESS_ON
   return fegetround();
@@ -79,6 +83,16 @@ LIBC_INLINE int get_round() {
 LIBC_INLINE int set_round(int rounding_mode) {
   LIBC_FENV_ACCESS_ON
   return fesetround(rounding_mode);
+}
+
+LIBC_INLINE int get_env(fenv_t *env) {
+  LIBC_FENV_ACCESS_ON
+  return fegetenv(env);
+}
+
+LIBC_INLINE int set_env(const fenv_t *env) {
+  LIBC_FENV_ACCESS_ON
+  return fesetenv(env);
 }
 
 } // namespace fputil

@@ -11,31 +11,42 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_DGRAM
+#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_STREAM
 #include "src/__support/CPP/scope.h"
+#include "src/sys/socket/send.h"
 #include "src/sys/socket/sockatmark.h"
 #include "src/sys/socket/socketpair.h"
 #include "src/unistd/close.h"
 #include "src/unistd/pipe.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
+#include "test/UnitTest/TestLogger.h"
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcSockatmarkTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::cpp::scope_exit;
 
-TEST_F(LlvmLibcSockatmarkTest, SocketpairReturnsFalse) {
+TEST_F(LlvmLibcSockatmarkTest, Socketpair) {
   int sockpair[2] = {-1, -1};
-  ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_DGRAM, 0, sockpair),
+  ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair),
               Succeeds(0));
   scope_exit close_sockpair([&] {
     ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
     ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
   });
 
+  if (LIBC_NAMESPACE::send(sockpair[0], ".", 1, MSG_OOB) != 1) {
+    ASSERT_ERRNO_EQ(EOPNOTSUPP);
+    LIBC_NAMESPACE::testing::tlog << "No kernel support for AF_UNIX OOB\n";
+    ASSERT_THAT(LIBC_NAMESPACE::sockatmark(sockpair[0]), Fails(ENOTTY));
+    return;
+  }
+
+  // sockpair[1] has OOB data because we've sent it above. sockpair[0] does not
+  // because it's empty.
   ASSERT_THAT(LIBC_NAMESPACE::sockatmark(sockpair[0]), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::sockatmark(sockpair[1]), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::sockatmark(sockpair[1]), Succeeds(1));
 }
 
 TEST_F(LlvmLibcSockatmarkTest, InvalidFdFails) {

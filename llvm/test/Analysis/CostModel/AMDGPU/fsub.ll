@@ -6,7 +6,7 @@
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgpu9.0a-unknown-amdhsa  -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=FASTF16-SIZE,GFX90A-FASTF64-SIZE %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgpu9.00-unknown-amdhsa  -mattr=+half-rate-64-ops < %s | FileCheck -check-prefixes=NOPACKEDF32-SIZE,FASTF16-SIZE %s
 ; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgpu6.01-unknown-amdhsa -mattr=-half-rate-64-ops < %s | FileCheck -check-prefixes=NOPACKEDF32-SIZE,SLOWF64-SIZE %s
-; RUN  opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250-SIZE %s
+; RUN  opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=amdgpu12.50-unknown-amdhsa < %s | FileCheck -check-prefixes=GFX1250-SIZE %s
 ; END.
 
 define amdgpu_kernel void @fsub_f32() #0 {
