@@ -56,7 +56,7 @@ struct MoveAccumulatorForContractLoop
                       "transfer_read/load/constant_zero or multiple users of "
                       "contract operation.");
 
-    if (dyn_cast<arith::ConstantOp>(accReadOp))
+    if (isa<arith::ConstantOp>(accReadOp))
       return rewriter.notifyMatchFailure(
           contractOp,
           "The input acc to contract is already a constant vector.");
@@ -75,7 +75,7 @@ struct MoveAccumulatorForContractLoop
     Operation *firstUser = *accValue.getUsers().begin();
     rewriter.setInsertionPoint(firstUser);
 
-    auto vecTy = llvm::dyn_cast<VectorType>(accValue.getType());
+    auto vecTy = dyn_cast<VectorType>(accValue.getType());
     if (!vecTy)
       return rewriter.notifyMatchFailure(contractOp, "Expects vector type.");
 
@@ -95,10 +95,10 @@ struct MoveAccumulatorForContractLoop
 
     Value addition;
 
-    if (llvm::isa<FloatType>(elemTy)) {
+    if (isa<FloatType>(elemTy)) {
       addition =
           arith::AddFOp::create(rewriter, locUser, contractValue, accValue);
-    } else if (llvm::isa<IntegerType>(elemTy)) {
+    } else if (isa<IntegerType>(elemTy)) {
       addition =
           arith::AddIOp::create(rewriter, locUser, contractValue, accValue);
     } else {

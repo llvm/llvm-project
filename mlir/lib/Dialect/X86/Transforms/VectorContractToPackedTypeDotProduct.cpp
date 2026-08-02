@@ -353,7 +353,7 @@ struct VectorContractToPackedTypeDotProduct
         if (!accReadOp0 || !accReadOp1)
           return rewriter.notifyMatchFailure(
               contractOp, "Operands doesn't have load or transfer_read or "
-                          "dense constant attribute as it's parent op");
+                          "dense constant attribute as its parent op");
 
         if (!resultWriteOp0 || !resultWriteOp1)
           return rewriter.notifyMatchFailure(
