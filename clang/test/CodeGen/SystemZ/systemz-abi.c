@@ -1,4 +1,3 @@
-
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu \
 // RUN:   -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,HARD-FLOAT
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple s390x-linux-gnu -target-feature +vector \
