@@ -664,16 +664,18 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
   //       register file accordingly.
   if (hasGFX90AInsts()) {
     unsigned MinNumAGPRs = 0;
+    unsigned MinCapVGPRs = ~0u;
+    unsigned MaxCapVGPRs = 0;
     const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
 
     const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
-
+    const std::pair<unsigned, unsigned> DefaultNumVGPR = {~0u, 0};
     // TODO: The lower bound should probably force the number of required
     // registers up, overriding amdgpu-waves-per-eu.
     std::tie(MinNumAGPRs, MaxNumAGPRs) =
         AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", DefaultNumAGPR,
                                         /*OnlyFirstRequired=*/true);
-
+    
     if (MinNumAGPRs == DefaultNumAGPR.first) {
       // Default to splitting half the registers if AGPRs are required.
       MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
@@ -682,6 +684,9 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
       MinNumAGPRs = alignTo(MinNumAGPRs, 4);
 
       MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
+      std::tie(MinCapVGPRs, MaxCapVGPRs) =
+        AMDGPU::getIntegerPairAttribute(F, "amdgpu-vgpr-budget", DefaultNumVGPR,
+                                        /*OnlyFirstRequired=*/true);
     }
 
     // Clamp values to be inbounds of our limits, and ensure min <= max.
@@ -689,9 +694,11 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
     MinNumAGPRs = std::min({MinNumAGPRs, TotalNumAGPRs, MaxNumAGPRs});
 
-    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
-    MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
+    MaxNumVGPRs = std::min({MaxVectorRegs - MinNumAGPRs, NumArchVGPRs, MinCapVGPRs});
+    MaxNumAGPRs = std::min({MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs, MaxVectorRegs - MaxCapVGPRs});
 
+    LLVM_DEBUG(dbgs() << "MaxNumVGPRs: " << MaxNumVGPRs << ", MaxNumAGPRs: "
+                      << MaxNumAGPRs << " (" << F.getName() << ")\n");
     assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
            MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= NumArchVGPRs &&
            "invalid register counts");
