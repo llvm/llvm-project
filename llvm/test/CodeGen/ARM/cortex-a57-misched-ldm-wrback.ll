@@ -15,7 +15,7 @@
 ; CHECK:       Successors:
 ; CHECK:       Data
 ; CHECK-SAME:  Latency=1
-; CHECK-NEXT:  Data
+; CHECK:       Data
 ; CHECK-SAME:  Latency=3
 ; CHECK-NEXT:  Data
 ; CHECK-SAME:  Latency=0

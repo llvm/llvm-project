@@ -225,8 +225,8 @@ define i32 @bfi1(i32 %a, i32 %b) {
 ; CHECK-NEXT:    bic r1, r1, #19
 ; CHECK-NEXT:    orr r1, r1, r2
 ; CHECK-NEXT:    and r2, r0, #16
-; CHECK-NEXT:    orr r1, r1, r2
 ; CHECK-NEXT:    and r0, r0, #2
+; CHECK-NEXT:    orr r0, r2, r0
 ; CHECK-NEXT:    orr r0, r1, r0
 ; CHECK-NEXT:    bx lr
   %x1 = and i32 %a, 1
@@ -274,15 +274,15 @@ define i32 @bfi2(i32 %a, i32 %b) {
 ; CHECK-LABEL: bfi2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movw r2, #65148
+; CHECK-NEXT:    and r3, r0, #2
 ; CHECK-NEXT:    movt r2, #65535
 ; CHECK-NEXT:    and r1, r1, r2
 ; CHECK-NEXT:    and r2, r0, #1
-; CHECK-NEXT:    orr r1, r1, r2
-; CHECK-NEXT:    and r2, r0, #2
+; CHECK-NEXT:    orr r2, r2, r3
 ; CHECK-NEXT:    orr r1, r1, r2
 ; CHECK-NEXT:    and r2, r0, #128
-; CHECK-NEXT:    orr r1, r1, r2
 ; CHECK-NEXT:    and r0, r0, #256
+; CHECK-NEXT:    orr r0, r2, r0
 ; CHECK-NEXT:    orr r0, r1, r0
 ; CHECK-NEXT:    bx lr
   %x1 = and i32 %a, 1
@@ -335,15 +335,15 @@ define i32 @bfi3(i32 %a, i32 %b) {
 ; CHECK-LABEL: bfi3:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movw r2, #65148
+; CHECK-NEXT:    and r3, r0, #128
 ; CHECK-NEXT:    movt r2, #65535
 ; CHECK-NEXT:    and r1, r1, r2
 ; CHECK-NEXT:    and r2, r0, #1
-; CHECK-NEXT:    orr r1, r1, r2
-; CHECK-NEXT:    and r2, r0, #128
+; CHECK-NEXT:    orr r2, r2, r3
 ; CHECK-NEXT:    orr r1, r1, r2
 ; CHECK-NEXT:    and r2, r0, #2
-; CHECK-NEXT:    orr r1, r1, r2
 ; CHECK-NEXT:    and r0, r0, #256
+; CHECK-NEXT:    orr r0, r2, r0
 ; CHECK-NEXT:    orr r0, r1, r0
 ; CHECK-NEXT:    bx lr
   %x1 = and i32 %a, 1

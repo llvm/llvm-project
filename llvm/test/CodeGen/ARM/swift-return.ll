@@ -105,8 +105,8 @@ define swiftcc { i32, i32, i32, i32, i32 } @gen2(i32 %key) {
 ; CHECK-LABEL: test3:
 ; CHECK: bl {{.*}}gen3
 ; CHECK: add r0, r0, r1
-; CHECK: add r0, r0, r2
-; CHECK: add r0, r0, r3
+; CHECK: add r1, r2, r3
+; CHECK: add r0, r0, r1
 ; CHECK-O0-LABEL: test3:
 ; CHECK-O0: bl {{.*}}gen3
 ; CHECK-O0: add r0, r0, r1
@@ -191,8 +191,8 @@ declare swiftcc { double, double, double, double } @gen5()
 ; CHECK: bl      _gen6
 ; CHECK-DAG: vadd.f64        [[TMP:d.*]], d0, d1
 ; CHECK-DAG: add     r0, r0, r1
-; CHECK-DAG: add     r0, r0, r2
-; CHECK-DAG: add     r0, r0, r3
+; CHECK-DAG: add     r1, r2, r3
+; CHECK-DAG: add     r0, r0, r1
 ; CHECK-DAG: vadd.f64        [[TMP]], [[TMP]], d2
 ; CHECK-DAG: vadd.f64        d0, [[TMP]], d3
 define swiftcc { double, i32 } @test6() #0 {
