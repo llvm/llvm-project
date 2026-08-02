@@ -442,19 +442,11 @@ CharUnits PPC32_SVR4_ABIInfo::getParamTypeAlignment(QualType Ty) const {
 }
 
 ABIArgInfo PPC32_SVR4_ABIInfo::classifyComplexType(QualType Ty) const {
+  assert(Ty->isAnyComplexType() && "not a complex type");
+
   uint64_t Size = getContext().getTypeSize(Ty);
   llvm::LLVMContext &VMC = getVMContext();
   llvm::Type *I32 = llvm::Type::getInt32Ty(VMC);
-
-  assert(Ty->isAnyComplexType() && "not a complex type");
-  QualType ElemTy = Ty->castAs<ComplexType>()->getElementType();
-
-  // Work around https://github.com/llvm/llvm-project/issues/44482.
-  // This is a bug where the two halves of a ppc_fp128 are swapped.
-  // Using i128 for the ABI instead circumvents this issue.
-  if (CGT.ConvertType(ElemTy)->isPPC_FP128Ty())
-    return ABIArgInfo::getDirect(
-        llvm::ArrayType::get(llvm::Type::getInt128Ty(VMC), 2));
 
   // Coerce to an integer for _Complex char and _Complex short.
   if (Size <= GPRBits)
