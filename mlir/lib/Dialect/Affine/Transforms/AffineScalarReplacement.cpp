@@ -12,20 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/AliasAnalysis.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/IR/Block.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IntegerSet.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/PatternMatch.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 namespace affine {
