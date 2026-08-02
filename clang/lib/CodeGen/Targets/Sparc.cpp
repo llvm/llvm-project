@@ -315,8 +315,8 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
 
   // When being GCC-compatible, cast a complex char, short and int to an integer
   // type of the right size to get the correct scalar-like behavior. Other
-  // comple types fall through and are treated like any other struct, e.g.
-  // `{ i64, i64 }` or `{ double, double }`.
+  // complex types fall through and are treated like a struct containing the
+  // real and imaginary parts, e.g. `{ i64, i64 }` or `{ double, double }`.
   if (IsComplexGnuABI) {
     const auto *CT = Ty->getAs<ComplexType>();
     if (CT && CT->getElementType()->isIntegerType()) {
