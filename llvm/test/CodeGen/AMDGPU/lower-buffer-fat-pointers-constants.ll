@@ -117,7 +117,7 @@ define ptr @gep_of_p7_struct() {
 
 define ptr addrspace(7) @gep_p7_from_p7() {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @gep_p7_from_p7() {
-; CHECK-NEXT:    ret { ptr addrspace(8), i32 } { ptr addrspace(8) @buf, i32 48 }
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } { ptr addrspace(8) @buf, i32 64 }
 ;
   ret ptr addrspace(7) getelementptr (ptr addrspace(7),
   ptr addrspace(7) addrspacecast (ptr addrspace(8) @buf to ptr addrspace(7)),

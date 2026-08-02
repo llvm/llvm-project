@@ -412,7 +412,7 @@ define void @void_func_i95(i95 %arg0) #0 {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i95) = G_TRUNC [[MV]](i96)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[TRUNC]](i95), [[DEF]](p1) :: (store (i95) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[TRUNC]](i95), [[DEF]](p1) :: (store (i95) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i95 %arg0, ptr addrspace(1) poison
   ret void
@@ -432,7 +432,7 @@ define void @void_func_i95_zeroext(i95 zeroext %arg0) #0 {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i96) = G_ZEXT [[TRUNC]](i95)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i96) = G_ADD [[ZEXT]], [[C]]
-  ; CHECK-NEXT:   G_STORE [[ADD]](i96), [[DEF]](p1) :: (store (i96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[ADD]](i96), [[DEF]](p1) :: (store (i96) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %ext = zext i95 %arg0 to i96
   %add = add i96 %ext, 12
@@ -454,7 +454,7 @@ define void @void_func_i95_signext(i95 signext %arg0) #0 {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(i96) = G_SEXT [[TRUNC]](i95)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i96) = G_ADD [[SEXT]], [[C]]
-  ; CHECK-NEXT:   G_STORE [[ADD]](i96), [[DEF]](p1) :: (store (i96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[ADD]](i96), [[DEF]](p1) :: (store (i96) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %ext = sext i95 %arg0 to i96
   %add = add i96 %ext, 12
@@ -472,7 +472,7 @@ define void @void_func_i96(i96 %arg0) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[MV]](i96), [[DEF]](p1) :: (store (i96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[MV]](i96), [[DEF]](p1) :: (store (i96) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i96 %arg0, ptr addrspace(1) poison
   ret void
@@ -2875,7 +2875,7 @@ define void @void_func_i96_inreg(i96 inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr18
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[MV]](i96), [[DEF]](p1) :: (store (i96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[MV]](i96), [[DEF]](p1) :: (store (i96) into `ptr addrspace(1) poison`, align 16, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i96 %arg0, ptr addrspace(1) poison
   ret void
@@ -2892,7 +2892,7 @@ define void @void_func_i128_inreg(i128 inreg %arg0) #0 {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $sgpr19
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32), [[COPY2]](i32), [[COPY3]](i32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[MV]](i128), [[DEF]](p1) :: (store (i128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[MV]](i128), [[DEF]](p1) :: (store (i128) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   store i128 %arg0, ptr addrspace(1) poison
   ret void

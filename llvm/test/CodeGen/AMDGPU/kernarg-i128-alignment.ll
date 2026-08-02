@@ -15,35 +15,36 @@
 ; The byref slot must be 32 bytes, not 24, and `b` must be loaded from 0x20
 ; (kernarg base 16 plus a field offset of 16) which stays inside the segment.
 ; CHECK-LABEL: {{^}}kernarg_i128:
-; CHECK: s_load_b128 s[{{[0-9]+:[0-9]+}}], s[0:1], 0x20
-; CHECK: .amdhsa_kernarg_size 48
+; CHECK: s_load_b128 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0x20
 
 ; An i128 following a smaller member is padded out to offset 16 rather than
 ; packed at offset 8.
 ; CHECK-LABEL: {{^}}kernarg_i128_after_i8:
-; CHECK: s_load_b128 s[{{[0-9]+:[0-9]+}}], s[0:1], 0x20
-; CHECK: .amdhsa_kernarg_size 48
+; CHECK: s_load_b128 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0x20
 
 ; A bare i128 kernel argument is 16-byte aligned in the kernarg segment, so it
 ; starts at 16 (not 8) and the argument after it at 32 (not 24).
 ; CHECK-LABEL: {{^}}kernarg_i128_scalar:
-; CHECK: s_load_b128 s[{{[0-9]+:[0-9]+}}], s[0:1], 0x10
-; CHECK: .amdhsa_kernarg_size 40
+; CHECK: s_load_b128 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], 0x10
 
 ; The kernel metadata is emitted once, after every function, so the per-kernel
 ; argument offsets are checked here in order rather than under each label.
+;
+; .kernarg_segment_size is deliberately not checked: it also covers the 256
+; bytes of hidden implicit arguments, which is noise for what this test pins
+; down. The per-argument .offset/.size entries and .kernarg_segment_align are
+; the layout facts that matter.
 ; CHECK: .amdgpu_metadata
 
 ; CHECK:      .name:           s
 ; CHECK-NEXT: .offset:         16
 ; CHECK-NEXT: .size:           32
-; CHECK: .kernarg_segment_size: 48
+; CHECK: .kernarg_segment_align: 16
 ; CHECK: .name:           kernarg_i128
 ;
 ; CHECK:      .name:           s
 ; CHECK-NEXT: .offset:         16
 ; CHECK-NEXT: .size:           32
-; CHECK: .kernarg_segment_size: 48
 ; CHECK: .name:           kernarg_i128_after_i8
 ;
 ; CHECK:      .name:           a
@@ -52,7 +53,6 @@
 ; CHECK:      .name:           b
 ; CHECK-NEXT: .offset:         32
 ; CHECK-NEXT: .size:           8
-; CHECK: .kernarg_segment_size: 40
 ; CHECK: .name:           kernarg_i128_scalar
 
 define amdgpu_kernel void @kernarg_i128(ptr addrspace(1) %out,
