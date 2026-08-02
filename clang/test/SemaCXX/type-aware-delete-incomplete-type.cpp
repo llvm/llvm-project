@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=warn %s
 // RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=warn %s
 // RUN: %clang_cc1 -std=c++26 -fsyntax-only -verify=err %s
-// RUN: %clang_cc1 -std=c++17 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 class Foo; // warn-note {{forward declaration of 'Foo'}} \
            // err-note {{forward declaration of 'Foo'}}
@@ -21,8 +21,10 @@ void operator delete(std::type_identity<T>, void *, size_t, std::align_val_t); /
 
 void f(Foo *o) {
   delete o;
-  // warn-warning@-1 {{deleting pointer to incomplete type 'Foo' is incompatible with C++2c and may cause undefined behavior}}
-  // err-error@-2 {{cannot delete pointer to incomplete type 'Foo'}}
+  // warn-warning@-1 {{type-aware deallocation is not used for deletion of pointer to incomplete type 'Foo'}}
+  // warn-warning@-2 {{deleting pointer to incomplete type 'Foo' is incompatible with C++2c and may cause undefined behavior}}
+  // err-warning@-3 {{type-aware deallocation is not used for deletion of pointer to incomplete type 'Foo'}}
+  // err-error@-4 {{cannot delete pointer to incomplete type 'Foo'}}
 }
 
 // CHECK-LABEL: define {{.*}} @_Z1fP3Foo

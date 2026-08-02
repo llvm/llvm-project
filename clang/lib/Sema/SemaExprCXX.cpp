@@ -4151,8 +4151,11 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     bool IsComplete = isCompleteType(StartLoc, Pointee);
     TypeAwareAllocationMode PassTypeIdentity =
-        IsComplete ? ShouldUseTypeAwareOperatorNewOrDelete()
-                   : TypeAwareAllocationMode::No;
+        ShouldUseTypeAwareOperatorNewOrDelete();
+    if (!IsComplete && isTypeAwareAllocation(PassTypeIdentity)) {
+      Diag(StartLoc, diag::warn_type_aware_delete_incomplete) << Pointee;
+      PassTypeIdentity = TypeAwareAllocationMode::No;
+    }
 
     if (PointeeRD) {
       ImplicitDeallocationParameters IDP = {Pointee, PassTypeIdentity,
