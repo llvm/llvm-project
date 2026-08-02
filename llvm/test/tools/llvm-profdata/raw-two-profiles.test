@@ -22,7 +22,7 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\254\275\030\333\114\302\370\134' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
@@ -32,15 +32,19 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\20\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\1\0\0\0' >> %t-foo.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\023\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t-foo.profraw
-RUN: printf '\050\0\0\0\1\0\0\0' >> %t-foo.profraw
+RUN: printf '\110\0\0\0\2\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\40\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\7\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\2\0\0\0\1\0\0\0' >> %t-foo.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\10\60\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\11\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\201rforpl\377' > %t-bar.profraw
 RUN: printf '\13\0\0\0\0\0\0\0' >> %t-bar.profraw
@@ -58,9 +62,9 @@ RUN: printf '\10\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\1\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\2\0\0\0' >> %t-bar.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\10\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\2\0\0\0\0\0\0\0' >> %t-bar.profraw
 
 RUN: printf '\067\265\035\031\112\165\023\344' >> %t-bar.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t-bar.profraw
@@ -75,9 +79,16 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\101\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\3\0bar\0\0\0' >> %t-bar.profraw
+RUN: printf '\320\115\170\140\375\107\0\250' >> %t-bar.profraw
+RUN: printf '\0\60\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\20\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\6\0_ZTV1A' >> %t-bar.profraw
 
 RUN: cat %t-foo.profraw %t-bar.profraw > %t-pad.profraw
-RUN: llvm-profdata show %t-pad.profraw -all-functions -counts -ic-targets | FileCheck %s
+RUN: llvm-profdata show %t-pad.profraw -all-functions -counts -ic-targets -show-vtables | FileCheck %s
+RUN: cp %t-pad.profraw %t-bad-value-size.profraw
+RUN: printf '\1\0\0\0' | dd of=%t-bad-value-size.profraw bs=1 seek=240 conv=notrunc 2>/dev/null
+RUN: not llvm-profdata show %t-bad-value-size.profraw 2>&1 | FileCheck %s --check-prefix=BAD-VALUE-SIZE
 
 CHECK: Counters:
 CHECK:   foo:
@@ -85,9 +96,12 @@ CHECK:     Hash: 0x0000000000000001
 CHECK:     Counters: 1
 CHECK:     Function count: 19
 CHECK:     Indirect Call Site Count: 1
+CHECK:     Number of instrumented vtables: 1
 CHECK:     Block counts: []
 CHECK:     Indirect Target Results:
 CHECK:         [  0, bar,          7 ]
+CHECK:     VTable Results:
+CHECK:         [  0, _ZTV1A,          9 ]
 CHECK:   bar:
 CHECK:     Hash: 0x0000000000000002
 CHECK:     Counters: 2
@@ -97,3 +111,5 @@ CHECK: Functions shown: 2
 CHECK: Total functions: 2
 CHECK: Maximum function count: 55
 CHECK: Maximum internal block count: 65
+
+BAD-VALUE-SIZE: malformed instrumentation profile data: invalid total size for value profile data
