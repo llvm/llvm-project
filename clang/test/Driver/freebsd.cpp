@@ -19,24 +19,32 @@
 // CHECK-PG-FOURTEEN: "-lc++" "-lm"
 // CHECK-PG-TEN: "-lc++_p" "-lm_p"
 
+// Test that FreeBSD prefers install tree libc++ headers over system ones.
+// RUN: %clang -### %s --target=amd64-unknown-freebsd -r 2>&1 \
+// RUN:     -ccc-install-dir %S/Inputs/install_tree_with_libcxx/bin \
+// RUN:     --sysroot=%S/Inputs/basic_freebsd_libcxx_tree \
+// RUN:   | FileCheck %s --check-prefix=DRIVER-INSTALL-INCLUDES
+// DRIVER-INSTALL-INCLUDES:      "-internal-isystem" "{{.*}}bin[[SEP:/|\\\\]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"
+// DRIVER-INSTALL-INCLUDES-NOT:  "-internal-isystem" "{{.*}}[[SEP]]/usr[[SEP]]include[[SEP]]c++[[SEP]]v1"
+
 // Test include paths with a sysroot.
 // RUN: %clangxx %s -### -fsyntax-only 2>&1 \
 // RUN:     --target=amd64-unknown-freebsd \
+// RUN:     -ccc-install-dir %S/Inputs/install_tree_without_libcxx/bin \
 // RUN:     --sysroot=%S/Inputs/basic_openbsd_libcxx_tree \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-LIBCXX-SYSROOT %s
 // CHECK-LIBCXX-SYSROOT: "-cc1"
 // CHECK-LIBCXX-SYSROOT-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-LIBCXX-SYSROOT-SAME: "-internal-isystem" "{{.*}}/bin/../include/c++/v1"
-// CHECK-LIBCXX-SYSROOT-NOT:  "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
+// CHECK-LIBCXX-SYSROOT-SAME: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
 // Test include paths when the sysroot path ends with `/`.
 // RUN: %clangxx %s -### -fsyntax-only 2>&1 \
 // RUN:     --target=amd64-unknown-freebsd \
+// RUN:     -ccc-install-dir %S/Inputs/install_tree_without_libcxx/bin \
 // RUN:     --sysroot=%S/Inputs/basic_openbsd_libcxx_tree/ \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-LIBCXX-SYSROOT-SLASH %s
 // CHECK-LIBCXX-SYSROOT-SLASH: "-cc1"
 // CHECK-LIBCXX-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
-// CHECK-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "{{.*}}/bin/../include/c++/v1"
-// CHECK-LIBCXX-SYSROOT-SLASH-NOT:  "-internal-isystem" "[[SYSROOT]]usr/include/c++/v1"
+// CHECK-LIBCXX-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/include/c++/v1"
