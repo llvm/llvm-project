@@ -36,11 +36,11 @@ using namespace lldb_private;
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread, lldb::StreamSP &stream_sp)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_enabled(false), m_stream_sp(stream_sp), m_thread(nullptr) {}
+      m_enabled(true), m_stream_sp(stream_sp), m_thread(nullptr) {}
 
 ThreadPlanTracer::ThreadPlanTracer(Thread &thread)
     : m_process(*thread.GetProcess().get()), m_tid(thread.GetID()),
-      m_enabled(false), m_stream_sp(), m_thread(nullptr) {}
+      m_enabled(true), m_stream_sp(), m_thread(nullptr) {}
 
 StreamSP ThreadPlanTracer::GetLogStreamSP() {
   if (m_stream_sp)
@@ -61,25 +61,32 @@ Thread &ThreadPlanTracer::GetThread() {
   m_thread = thread_sp.get();
   return *m_thread;
 }
-void ThreadPlanTracer::Log() {
-  SymbolContext sc;
-  bool show_frame_index = false;
-  bool show_fullpaths = false;
 
-  if (StreamSP stream_sp = GetLogStreamSP()) {
-    GetThread().GetStackFrameAtIndex(0)->Dump(stream_sp.get(), show_frame_index,
-                                              show_fullpaths);
-    stream_sp->Printf("\n");
-    stream_sp->Flush();
-  }
+   
+
+ void ThreadPlanTracer::Log() {
+    if (!GetThread().GetTraceEnabledState())
+        return;
+
+    SymbolContext sc;
+    bool show_frame_index = false;
+    bool show_fullpaths = false;
+
+    if (StreamSP stream_sp = GetLogStreamSP()) {
+        GetThread().GetStackFrameAtIndex(0)->Dump(
+            stream_sp.get(), show_frame_index, show_fullpaths);
+        stream_sp->PutCString("\n");
+        stream_sp->Flush();
+    }
 }
 
+
 bool ThreadPlanTracer::TracerExplainsStop() {
-  if (m_enabled) {
-    lldb::StopInfoSP stop_info = GetThread().GetStopInfo();
-    return (stop_info->GetStopReason() == eStopReasonTrace);
-  } else
+  if (!GetThread().GetTraceEnabledState())
     return false;
+
+  lldb::StopInfoSP stop_info = GetThread().GetStopInfo();
+  return stop_info && stop_info->GetStopReason() == eStopReasonTrace;
 }
 
 #pragma mark ThreadPlanAssemblyTracer
@@ -129,6 +136,7 @@ void ThreadPlanAssemblyTracer::TracingStarted() {
 void ThreadPlanAssemblyTracer::TracingEnded() { m_register_values.clear(); }
 
 void ThreadPlanAssemblyTracer::Log() {
+
   StreamSP stream_sp = GetLogStreamSP();
 
   if (!stream_sp)
@@ -224,6 +232,7 @@ void ThreadPlanAssemblyTracer::Log() {
           reg_value != m_register_values[reg_num]) {
         if (reg_value.GetType() != RegisterValue::eTypeInvalid) {
           stream_sp->PutCString("\n\t");
+
           DumpRegisterValue(reg_value, *stream_sp, *reg_info, true, false,
                             eFormatDefault);
         }
