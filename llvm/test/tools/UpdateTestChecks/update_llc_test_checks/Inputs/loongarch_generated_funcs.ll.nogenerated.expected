@@ -15,9 +15,9 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    st.w $zero, $fp, -12
 ; CHECK-NEXT:    st.w $zero, $fp, -16
-; CHECK-NEXT:    ori $a0, $zero, 1
-; CHECK-NEXT:    beq $zero, $zero, .LBB0_3
+; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ld.w $a0, $fp, -16
 ; CHECK-NEXT:    beq $a0, $zero, .LBB0_4
@@ -26,6 +26,7 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    b .LBB0_5
 ; CHECK-NEXT:  .LBB0_3:
+; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -16
 ; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.w $a0, $fp, -20
