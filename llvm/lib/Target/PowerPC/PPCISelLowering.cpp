@@ -4288,6 +4288,8 @@ SDValue PPCTargetLowering::LowerFormalArguments_32SVR4(
           break;
         case MVT::v2f64:
         case MVT::v2i64:
+        case MVT::v1i128:
+        case MVT::f128:
           RC = &PPC::VRRCRegClass;
           break;
       }
