@@ -1271,7 +1271,6 @@ const SettingsView = {
 const HeatmapView = {
   async render() {
     const container = h('div', {});
-    container.appendChild(h('h2', { style: { margin: '0 0 12px' } }, 'Hotspots'));
 
     const snap = State.get('currentSnapshot');
     if (!snap) {
@@ -1312,36 +1311,80 @@ const HeatmapView = {
       return;
     }
 
-    // Sort by count descending
-    allHotspots.sort((a, b) => b.count - a.count);
+    allHotspots.sort((a, b) => (b.max_hotness || 0) - (a.max_hotness || 0));
 
-    // Render table
-    const table = h('table', { class: 'data-table' });
-    const thead = h('thead', {},
-      h('tr', {},
-        h('th', {}, 'Function'),
-        h('th', {}, 'File'),
-        h('th', {}, 'Line'),
-        h('th', {}, 'Count'),
-        h('th', {}, 'Max Hotness')
-      )
-    );
-    table.appendChild(thead);
+    const maxHotness = Math.max(...allHotspots.map(h => h.max_hotness || 0), 1);
+    const total = allHotspots.length;
+    const withHotness = allHotspots.filter(h => (h.max_hotness || 0) > 0).length;
 
-    const tbody = h('tbody');
-    allHotspots.forEach(hotspot => {
-      const row = h('tr', {},
-        h('td', { class: 'mono' }, hotspot.function || ''),
-        h('td', { class: 'mono' }, hotspot.file || ''),
-        h('td', { class: 'mono' }, String(hotspot.line || '')),
-        h('td', {}, String(hotspot.count || 0)),
-        h('td', {}, String(hotspot.max_hotness !== undefined ? hotspot.max_hotness : '-'))
-      );
-      tbody.appendChild(row);
+    const getStatus = (hotness) => {
+      if (!hotness || maxHotness <= 1) return { label: 'Low', color: '#5DB8A8' };
+      const pct = hotness / maxHotness;
+      if (pct >= 0.8) return { label: 'Critical', color: '#E06C75' };
+      if (pct >= 0.5) return { label: 'High', color: '#D4A574' };
+      if (pct >= 0.2) return { label: 'Medium', color: '#E5C07B' };
+      return { label: 'Low', color: '#5DB8A8' };
+    };
+
+    const wrap = h('div', { style: { display: 'flex', gap: '16px' } });
+
+    const stats = h('div', { style: { width: '180px', minWidth: '180px', flexShrink: 0 } });
+    stats.appendChild(h('div', { style: { fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--fg)' } }, 'Snapshot Stats'));
+    const statItems = [
+      { label: 'Total Hotspots', value: total },
+      { label: 'With Hotness', value: withHotness },
+      { label: 'Critical', value: allHotspots.filter(h => getStatus(h.max_hotness).label === 'Critical').length },
+    ];
+    statItems.forEach(s => {
+      stats.appendChild(h('div', { style: { marginBottom: '10px', padding: '8px 10px', background: 'var(--bg2)', borderRadius: '6px' } },
+        h('div', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--fg)' } }, String(s.value)),
+        h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '2px' } }, s.label)
+      ));
     });
-    table.appendChild(tbody);
+    wrap.appendChild(stats);
 
-    container.appendChild(table);
+    const main = h('div', { style: { flex: 1, minWidth: 0 } });
+    main.appendChild(h('h2', { style: { margin: '0 0 4px' } }, 'Hotspots Analysis'));
+    main.appendChild(h('div', { style: { fontSize: '12px', color: 'var(--fg3)', marginBottom: '16px' } }, `Performance-critical locations sorted by hotness (${total} total)`));
+
+    const rows = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } });
+
+    allHotspots.forEach(hs => {
+      const st = getStatus(hs.max_hotness);
+      const pct = maxHotness > 1 ? ((hs.max_hotness || 0) / maxHotness * 100).toFixed(1) : '0.0';
+      const file = (hs.file || '').split('/').pop() || 'unknown';
+      const loc = hs.line > 0 ? `${file}:${hs.line}` : file;
+
+      const row = h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: 'var(--bg2)', borderRadius: '6px', fontSize: '12px' } });
+
+      row.appendChild(h('div', { style: { width: '28px', textAlign: 'center' } },
+        h('span', { style: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: st.color } })
+      ));
+
+      row.appendChild(h('div', { style: { width: '200px', minWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--mono)', fontWeight: '500' } }, hs.function || 'unknown'));
+
+      row.appendChild(h('div', { style: { width: '160px', minWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--fg3)' } }, loc));
+
+      const barWrap = h('div', { style: { flex: 1, display: 'flex', alignItems: 'center', gap: '8px' } });
+      const barTrack = h('div', { style: { flex: 1, height: '6px', background: 'var(--bg3)', borderRadius: '3px', overflow: 'hidden' } });
+      const barFill = h('div', { style: { width: `${pct}%`, height: '100%', background: st.color, borderRadius: '3px', transition: 'width 0.3s' } });
+      barTrack.appendChild(barFill);
+      barWrap.appendChild(barTrack);
+      barWrap.appendChild(h('span', { style: { width: '50px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--fg3)' } }, `${pct}%`));
+      row.appendChild(barWrap);
+
+      row.appendChild(h('div', { style: { width: '70px', textAlign: 'center' } },
+        h('span', { style: { display: 'inline-block', padding: '2px 8px', borderRadius: '10px', fontSize: '10px', fontWeight: '600', background: st.color + '22', color: st.color } }, st.label)
+      ));
+
+      row.appendChild(h('div', { style: { width: '50px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--fg3)' } }, String(hs.count || 0)));
+
+      rows.appendChild(row);
+    });
+
+    main.appendChild(rows);
+    wrap.appendChild(main);
+    container.appendChild(wrap);
   },
 };
 
