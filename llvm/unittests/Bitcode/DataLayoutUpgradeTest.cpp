@@ -57,9 +57,10 @@ TEST(DataLayoutUpgradeTest, ValidDataLayoutUpgrade) {
 
   // Check that AMDGCN targets don't add an already declared i128 alignment,
   // and that r600 never gains one.
-  EXPECT_EQ(UpgradeDataLayoutString("e-p:64:64-i128:64-G1", "amdgcn"),
-            "m:e-e-p:64:64-i128:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:"
-            "48-p9:192:256:256:32");
+  EXPECT_EQ(
+      UpgradeDataLayoutString("e-p:64:64-i128:64-G1", "amdgcn"),
+      "m:e-e-p:64:64-i128:64-G1-ni:7:8:9-p7:160:256:256:32-p8:128:128:128:"
+      "48-p9:192:256:256:32");
   EXPECT_EQ(UpgradeDataLayoutString("e-p:32:32-i64:64-G1", "r600"),
             "m:e-e-p:32:32-i64:64-G1");
 
