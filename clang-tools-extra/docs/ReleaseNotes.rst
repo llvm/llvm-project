@@ -121,6 +121,10 @@ Changes in existing checks
   exclusively for overload resolution. Added the :option:`IgnoredTypes`
   option to allow customizing the set of ignored types.
 
+- Improved :doc:`readability-use-std-min-max
+  <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
+  trailing semicolons and lost comments when the ``if`` body has no braces.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

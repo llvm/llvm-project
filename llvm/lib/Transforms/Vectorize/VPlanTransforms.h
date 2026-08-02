@@ -571,7 +571,9 @@ struct VPlanTransforms {
   /// Optimize FindLast reductions selecting IVs (or expressions of IVs) by
   /// converting them to FindIV reductions, if their IV range excludes a
   /// suitable sentinel value. For expressions of IVs, the expression is sunk
-  /// to the middle block.
+  /// to the middle block. The decision is based on SCEV expressions for \p L,
+  /// so this must run before any transform that changes the plan's iteration
+  /// space relative to \p L.
   static void optimizeFindIVReductions(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L);
 

@@ -5497,21 +5497,23 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
     }
     if (auto *CDS = dyn_cast<ConstantDataSequential>(Cst)) {
       Type *Ty = CDS->getType();
-      Mask = APInt::getZero(Ty->getPrimitiveSizeInBits());
-      Type *EltTy = CDS->getElementType();
-      bool IsInteger = EltTy->isIntegerTy();
-      bool IsFP =
-          EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
-      if (!IsInteger && !IsFP)
-        return false;
-      unsigned EltBits = EltTy->getPrimitiveSizeInBits();
-      for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I)
-        if (IsInteger)
-          Mask.insertBits(CDS->getElementAsAPInt(I), I * EltBits);
-        else
-          Mask.insertBits(CDS->getElementAsAPFloat(I).bitcastToAPInt(),
-                          I * EltBits);
-      return true;
+      if (Ty->isVectorTy()) {
+        Mask = APInt::getZero(Ty->getPrimitiveSizeInBits());
+        Type *EltTy = CDS->getElementType();
+        bool IsInteger = EltTy->isIntegerTy();
+        bool IsFP =
+            EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
+        if (!IsInteger && !IsFP)
+          return false;
+        unsigned EltBits = EltTy->getPrimitiveSizeInBits();
+        for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I)
+          if (IsInteger)
+            Mask.insertBits(CDS->getElementAsAPInt(I), I * EltBits);
+          else
+            Mask.insertBits(CDS->getElementAsAPFloat(I).bitcastToAPInt(),
+                            I * EltBits);
+        return true;
+      }
     }
     return false;
   };
@@ -22536,10 +22538,14 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
   // result type of the fptoi instructions, INDVAL coincides with integer
   // minimum, so we don't need to explicitly check it.
   if (!IsSigned || SatWidth != TmpVT.getScalarSizeInBits()) {
-    // If Src ULT MinFloat, select MinInt. In particular, this also selects
-    // MinInt if Src is NaN.
-    Select = DAG.getSelectCC(
-      dl, Src, MinFloatNode, MinIntNode, Select, ISD::CondCode::SETULT);
+    // If Src is less than MinFloat, select MinInt. An unordered comparison
+    // also selects MinInt for NaN, which is correct except when signed and
+    // promoted to a wider TmpVT: there MinInt != 0, but the earlier
+    // truncation already mapped NaN to the correct 0, so use an ordered
+    // comparison to leave it alone.
+    ISD::CondCode MinCC = (IsSigned && DstVT != TmpVT) ? ISD::CondCode::SETOLT
+                                                       : ISD::CondCode::SETULT;
+    Select = DAG.getSelectCC(dl, Src, MinFloatNode, MinIntNode, Select, MinCC);
   }
 
   // If Src OGT MaxFloat, select MaxInt.
@@ -28582,7 +28588,7 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
 
       MVT MaskVT = MVT::getVectorVT(MVT::i1, MemVT.getVectorNumElements());
       SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
-      SDValue Offset = DAG.getUNDEF(VMask.getValueType());
+      SDValue Offset = DAG.getPOISON(VMask.getValueType());
 
       return DAG.getMaskedStore(Chain, dl, DataToTruncate, Addr, Offset, VMask,
                                 MemVT, MemIntr->getMemOperand(), ISD::UNINDEXED,
@@ -48707,6 +48713,19 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
     Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
     return DAG.getNode(N->getOpcode(), DL, VT, Cond, LHS, RHS);
+  }
+
+  // Fold vselect(mask, vtrunc(x), 0) to vmtrunc for masked vpmovqb.
+  if (Subtarget.hasAVX512() && CondVT.isVector() &&
+      CondVT.getVectorElementType() == MVT::i1 &&
+      ISD::isBuildVectorAllZeros(RHS.getNode()) && LHS.hasOneUse()) {
+    if (LHS.getOpcode() == X86ISD::VTRUNC) {
+      SDValue TruncSrc = LHS.getOperand(0);
+      EVT TruncSrcVT = TruncSrc.getValueType();
+      if (VT == MVT::v16i8 && TruncSrcVT == MVT::v8i64) {
+        return DAG.getNode(X86ISD::VMTRUNC, DL, VT, TruncSrc, RHS, Cond);
+      }
+    }
   }
 
   // AVX512 - Extend select to merge with target shuffle.

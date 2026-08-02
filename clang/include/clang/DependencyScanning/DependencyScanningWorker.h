@@ -28,10 +28,6 @@ namespace clang {
 
 class DependencyOutputOptions;
 
-namespace tooling {
-class CompilerInstanceWithContext;
-}
-
 namespace dependencies {
 
 class DependencyConsumer;
@@ -64,6 +60,18 @@ public:
       DiagnosticConsumer &DiagConsumer,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
+  /// By-name scanning over a single cc1 command line. Builds a scanning session
+  /// local to this call, then pulls module names from \p getNextName until it
+  /// returns std::nullopt. Results flow to \p DepConsumer (per-name status via
+  /// finishQuery); diagnostics flow to \p DiagConsumer.
+  /// \returns false if session setup failed, true otherwise.
+  bool computeDependenciesByName(
+      StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+      DiagnosticConsumer &DiagConsumer, DependencyActionController &Controller,
+      llvm::function_ref<std::optional<std::string>()> getNextName,
+      DependencyConsumer &DepConsumer);
+
   /// Creates the effective VFS that will be used for the scan.
   ///
   /// If provided, OverlayFS will be overlaid on top of the Worker's dependency
@@ -79,6 +87,15 @@ public:
     return TracingFS.get();
   }
 
+  // MaxNumOfByNameQueries is the upper limit of the number of names the by-name
+  // scanning API (computeDependenciesByName) can drain per call. At the time of
+  // this commit, the estimated number of total unique importable names is
+  // around 3000 from Apple's SDKs. We usually import them in parallel, so it is
+  // unlikely that all names are scanned by the same worker. Therefore the 64k
+  // (20x our estimate) size is sufficient to hold the unique source locations
+  // to report diagnostics per worker.
+  static const int32_t MaxNumOfByNameQueries = 1 << 16;
+
 private:
   /// The parent dependency scanning service.
   DependencyScanningService &Service;
@@ -89,7 +106,7 @@ private:
   /// The tracing VFS overlaid on top of the base VFS.
   IntrusiveRefCntPtr<llvm::vfs::TracingFileSystem> TracingFS;
 
-  friend tooling::CompilerInstanceWithContext;
+  friend class CompilerInstanceWithContext;
 };
 } // end namespace dependencies
 } // end namespace clang
