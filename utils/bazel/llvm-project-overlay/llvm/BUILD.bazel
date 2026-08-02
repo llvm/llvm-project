@@ -4396,6 +4396,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/*.h",
+        "include/llvm/ExecutionEngine/Orc/RTBridge/SPS/**/*.h",
     ]) + [
         "include/llvm-c/LLJIT.h",
         "include/llvm-c/Orc.h",
@@ -4440,6 +4441,7 @@ cc_library(
     ]),
     hdrs = glob([
         "include/llvm/ExecutionEngine/Orc/Shared/*.h",
+        "include/llvm/ExecutionEngine/Orc/RTBridge/*.h",
     ] + [
         "include/llvm/ExecutionEngine/Orc/SymbolStringPool.h",
     ]),
@@ -6959,23 +6961,6 @@ cc_binary(
         ":TLICheckerOptsTableGen",
         ":TargetParser",
         ":TextAPI",
-        ":config",
-    ],
-)
-
-cc_binary(
-    name = "llvm-sim",
-    testonly = True,
-    srcs = glob([
-        "tools/llvm-sim/*.cpp",
-    ]),
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":Analysis",
-        ":Core",
-        ":IRReader",
-        ":Support",
         ":config",
     ],
 )

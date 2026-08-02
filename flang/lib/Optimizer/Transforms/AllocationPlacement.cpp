@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "StackArrays.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -233,6 +234,16 @@ void AllocationPlacementPass::runOnOperation() {
     if (!alloca && !allocmem)
       return;
 
+    if (alloca) {
+      // Do not touch to fir.alloca that must stay fir.alloca (e.g.
+      // the temporary alloca for array function results that will
+      // later be promoted to hidden arguments).
+      auto attr = alloca->getAttrOfType<fir::MustBeStackAttr>(
+          fir::MustBeStackAttr::getAttrName());
+      if (attr && attr.getValue())
+        return;
+    }
+
     // Only array allocations are considered.
     mlir::Type inTy = alloca ? alloca.getInType() : allocmem.getAllocatedType();
     if (!mlir::isa<fir::SequenceType>(inTy))
@@ -288,10 +299,10 @@ void AllocationPlacementPass::runOnOperation() {
     mlir::MLIRContext &context = getContext();
     mlir::RewritePatternSet patterns(&context);
     mlir::GreedyRewriteConfig config;
+    // Prevent the pattern driver from merging blocks; otherwise use the default
+    // configuration (folding on) as the legacy stack-arrays pass did.
     config.setRegionSimplificationLevel(
         mlir::GreedySimplifyRegionLevel::Disabled);
-    config.setStrictness(mlir::GreedyRewriteStrictness::ExistingAndNewOps);
-    config.enableFolding(false);
     patterns.insert<fir::AllocMemConversion>(&context, *candidateOps, dl,
                                              kindMap);
     if (mlir::failed(mlir::applyOpPatternsGreedily(

@@ -17,6 +17,9 @@ add_header(
     __llvm-libc-common.h
 )
 
+# Has to be after common since elf_proxy depends on common.
+add_subdirectory(llvm-libc-proxy)
+
 # TODO: Can we simplify this macro expansion?
 # https://github.com/llvm/llvm-project/issues/117254
 macro(add_header_macro TARGET_NAME YAML_FILE GEN_HDR DEPENDS)
@@ -47,6 +50,11 @@ add_header_macro(
     .llvm-libc-types.ino_t
     .llvm-libc-types.DIR
     .llvm-libc-types.struct_dirent
+    .llvm-libc-types.struct_posix_dent
+    .llvm-libc-types.reclen_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.ssize_t
+    .llvm-libc-macros.dirent_macros
 )
 
 add_header_macro(
@@ -522,6 +530,17 @@ add_header_macro(
     .llvm_libc_common_h
 )
 
+add_header_macro(
+  pwd
+  ../libc/include/pwd.yaml
+  pwd.h
+  DEPENDS
+    .llvm-libc-types.struct_passwd
+    .llvm-libc-types.uid_t
+    .llvm-libc-types.gid_t
+    .llvm_libc_common_h
+)
+
 if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
   add_header_macro(
     ucontext
@@ -588,53 +607,8 @@ add_header_macro(
   ../libc/include/elf.yaml
   elf.h
   DEPENDS
-    .llvm-libc-macros.elf_macros
-    .llvm-libc-macros.sys_auxv_macros
-    .llvm-libc-types.Elf32_Addr
-    .llvm-libc-types.Elf32_Chdr
-    .llvm-libc-types.Elf32_Dyn
-    .llvm-libc-types.Elf32_Ehdr
-    .llvm-libc-types.Elf32_Half
-    .llvm-libc-types.Elf32_Lword
-    .llvm-libc-types.Elf32_Nhdr
-    .llvm-libc-types.Elf32_Off
-    .llvm-libc-types.Elf32_Phdr
-    .llvm-libc-types.Elf32_Rel
-    .llvm-libc-types.Elf32_Rela
-    .llvm-libc-types.Elf32_Shdr
-    .llvm-libc-types.Elf32_Sword
-    .llvm-libc-types.Elf32_Sym
-    .llvm-libc-types.Elf32_Verdaux
-    .llvm-libc-types.Elf32_Verdef
-    .llvm-libc-types.Elf32_Vernaux
-    .llvm-libc-types.Elf32_Verneed
-    .llvm-libc-types.Elf32_Versym
-    .llvm-libc-types.Elf32_Word
-    .llvm-libc-types.Elf32_Xword
-    .llvm-libc-types.Elf32_auxv_t
-    .llvm-libc-types.Elf64_Addr
-    .llvm-libc-types.Elf64_Chdr
-    .llvm-libc-types.Elf64_Dyn
-    .llvm-libc-types.Elf64_Ehdr
-    .llvm-libc-types.Elf64_Half
-    .llvm-libc-types.Elf64_Lword
-    .llvm-libc-types.Elf64_Nhdr
-    .llvm-libc-types.Elf64_Off
-    .llvm-libc-types.Elf64_Phdr
-    .llvm-libc-types.Elf64_Rel
-    .llvm-libc-types.Elf64_Rela
-    .llvm-libc-types.Elf64_Shdr
-    .llvm-libc-types.Elf64_Sword
-    .llvm-libc-types.Elf64_Sxword
-    .llvm-libc-types.Elf64_Sym
-    .llvm-libc-types.Elf64_Verdaux
-    .llvm-libc-types.Elf64_Verdef
-    .llvm-libc-types.Elf64_Vernaux
-    .llvm-libc-types.Elf64_Verneed
-    .llvm-libc-types.Elf64_Versym
-    .llvm-libc-types.Elf64_Word
-    .llvm-libc-types.Elf64_Xword
-    .llvm-libc-types.Elf64_auxv_t
+    .llvm-libc-proxy.elf_proxy
+    .llvm_libc_common_h
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys
@@ -842,6 +816,17 @@ add_header_macro(
     .llvm-libc-types.struct_msghdr
     .llvm-libc-types.struct_sockaddr
     .llvm-libc-types.struct_sockaddr_storage
+    .llvm-libc-types.struct_ucred
+)
+
+add_header_macro(
+  sys_statfs
+  ../libc/include/sys/statfs.yaml
+  sys/statfs.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_statfs_macros
+    .llvm-libc-types.struct_statfs
 )
 
 add_header_macro(

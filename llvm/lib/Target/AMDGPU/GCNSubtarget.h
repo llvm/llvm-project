@@ -218,12 +218,6 @@ public:
   /// the original value.
   bool zeroesHigh16BitsOfDest(unsigned Opcode) const;
 
-  bool supportsWGP() const {
-    if (HasGFX1250Insts)
-      return false;
-    return getGeneration() >= GFX10;
-  }
-
   bool hasHWFP64() const { return HasFP64; }
 
   bool hasAddr64() const {
@@ -754,6 +748,14 @@ public:
   bool hasCondSubInsts() const { return HasGFX12Insts; }
 
   bool hasSubClampInsts() const { return hasGFX10_3Insts(); }
+
+  bool hasAnyPackedFP32Ops() const {
+    return hasPackedFP32Ops() || hasPackedFP32SingleSGPROps();
+  };
+
+  bool hasAnyPackedFP64Ops() const { return hasPackedFP64SingleSGPROps(); };
+
+  bool hasAnyPackedU64Ops() const { return hasPackedU64SingleSGPROps(); };
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {

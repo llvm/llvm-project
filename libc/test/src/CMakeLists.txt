@@ -110,6 +110,7 @@ add_subdirectory(nl_types)
 add_subdirectory(signal)
 add_subdirectory(regex)
 add_subdirectory(spawn)
+add_subdirectory(pwd)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)

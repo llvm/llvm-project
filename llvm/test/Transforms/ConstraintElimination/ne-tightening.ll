@@ -10,8 +10,7 @@ define i1 @sge_zero_and_ne_zero_implies_sgt_zero(i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i64 [[N]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp sge i64 %n, 0
   call void @llvm.assume(i1 %a)
@@ -30,8 +29,7 @@ define i1 @sge_zero_and_ne_zero_from_branch(i64 %n) {
 ; CHECK-NEXT:    [[Z:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[Z]], label %[[ELSE:.*]], label %[[CONT:.*]]
 ; CHECK:       [[CONT]]:
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i64 [[N]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -56,8 +54,7 @@ define i1 @sle_zero_and_ne_zero_implies_slt_zero(i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[N]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp sle i64 %n, 0
   call void @llvm.assume(i1 %a)
@@ -74,8 +71,7 @@ define i1 @sge_const_and_ne_const_implies_sge_const_plus_one(i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[N]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i64 [[N]], 11
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp sge i64 %n, 10
   call void @llvm.assume(i1 %a)
@@ -92,8 +88,7 @@ define i1 @sle_const_and_ne_const_implies_sle_const_minus_one(i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[N]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sle i64 [[N]], 9
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp sle i64 %n, 10
   call void @llvm.assume(i1 %a)
@@ -110,8 +105,7 @@ define i1 @uge_const_and_ne_const_implies_ugt_const(i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[N]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[N]], 10
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp uge i64 %n, 10
   call void @llvm.assume(i1 %a)
@@ -129,8 +123,7 @@ define i1 @ule_const_and_ne_const_implies_ult_const(i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[N]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i64 [[N]], 10
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp ule i64 %n, 10
   call void @llvm.assume(i1 %a)
@@ -148,8 +141,7 @@ define i1 @sge_and_ne_on_add(i64 %n) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[ADD]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sge i64 [[N]], 0
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %add = add nsw i64 %n, 1
   %a = icmp sge i64 %add, 0
@@ -250,8 +242,7 @@ define i1 @neg_ne_non_constant(i64 %n, i64 %m) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A]])
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[N]], [[M]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i64 [[N]], [[M]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp sge i64 %n, %m
   call void @llvm.assume(i1 %a)

@@ -1685,8 +1685,11 @@ class Base(unittest.TestCase):
 
     def runBuildCommand(self, command):
         self.trace(shlex.join(command))
+        env = dict(os.environ)
+        if configuration.sdkroot:
+            env["SDKROOT"] = configuration.sdkroot
         try:
-            output = check_output(command, stderr=STDOUT, errors="replace")
+            output = check_output(command, stderr=STDOUT, errors="replace", env=env)
         except CalledProcessError as cpe:
             raise build_exception.BuildError(cpe)
         self.trace(output)
@@ -2978,7 +2981,6 @@ FileCheck output:
         )
 
         frame = self.frame()
-
         if not options:
             options = lldb.SBExpressionOptions()
 
