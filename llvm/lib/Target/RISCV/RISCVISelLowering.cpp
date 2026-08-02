@@ -13636,29 +13636,12 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
   if (VecVT.getVectorElementType() == MVT::i1)
     return widenVectorOpsToi8(Op, DL, DAG);
 
-  // Convert to scalable vectors first.
-  if (VecVT.isFixedLengthVector()) {
-    MVT ContainerVT = getContainerForFixedLengthVector(VecVT);
-    SmallVector<SDValue, 8> Ops(Factor);
-    for (unsigned i = 0U; i < Factor; ++i)
-      Ops[i] = convertToScalableVector(ContainerVT, Op.getOperand(i), DAG,
-                                       Subtarget);
-
-    SmallVector<EVT, 8> VTs(Factor, ContainerVT);
-    SDValue NewInterleave = DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, VTs, Ops);
-
-    SmallVector<SDValue, 8> Res(Factor);
-    for (unsigned i = 0U; i < Factor; ++i)
-      Res[i] = convertFromScalableVector(VecVT, NewInterleave.getValue(i), DAG,
-                                         Subtarget);
-    return DAG.getMergeValues(Res, DL);
-  }
-
-  MVT XLenVT = Subtarget.getXLenVT();
-  auto [Mask, VL] = getDefaultScalableVLOps(VecVT, DL, DAG, Subtarget);
+  MVT ContainerVecVT = VecVT;
+  if (VecVT.isFixedLengthVector())
+    ContainerVecVT = getContainerForFixedLengthVector(VecVT);
 
   // If the VT is larger than LMUL=8, we need to split and reassemble.
-  if ((VecVT.getSizeInBits().getKnownMinValue() * Factor) >
+  if ((ContainerVecVT.getSizeInBits().getKnownMinValue() * Factor) >
       (8 * RISCV::RVVBitsPerBlock)) {
     SmallVector<SDValue, 8> Ops(Factor * 2);
     for (unsigned i = 0; i != Factor; ++i) {
@@ -13686,6 +13669,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
     return DAG.getMergeValues(Concats, DL);
   }
 
+  MVT XLenVT = Subtarget.getXLenVT();
+  auto [Mask, VL] = getDefaultVLOps(VecVT, ContainerVecVT, DL, DAG, Subtarget);
+
   SDValue Interleaved;
 
   // Spill to the stack using a segment store for simplicity.
@@ -13695,6 +13681,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
                          VecVT.getVectorElementCount() * Factor);
 
     // Allocate a stack slot.
+    // Note that in the case where VecVT is fixed vector, even we later
+    // create a container for each (fixed vector) operand, we still allocate
+    // the stack with fixed vector size, rather than container size, as
+    // fixed vector size is already sufficient.
     Align Alignment = DAG.getReducedAlign(VecVT, /*UseABI=*/false);
     SDValue StackPtr =
         DAG.CreateStackTemporary(MemVT.getStoreSize(), Alignment);
@@ -13710,15 +13700,18 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
         Intrinsic::riscv_vsseg8_mask,
     };
 
-    unsigned Sz =
-        Factor * VecVT.getVectorMinNumElements() * VecVT.getScalarSizeInBits();
+    unsigned Sz = Factor * ContainerVecVT.getVectorMinNumElements() *
+                  ContainerVecVT.getScalarSizeInBits();
     EVT VecTupTy = MVT::getRISCVVectorTupleVT(Sz, Factor);
 
     SDValue StoredVal = DAG.getUNDEF(VecTupTy);
-    for (unsigned i = 0; i < Factor; i++)
-      StoredVal =
-          DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
-                      Op.getOperand(i), DAG.getTargetConstant(i, DL, MVT::i32));
+    for (unsigned i = 0; i < Factor; i++) {
+      SDValue OpVal = Op.getOperand(i);
+      if (VecVT.isFixedLengthVector())
+        OpVal = convertToScalableVector(ContainerVecVT, OpVal, DAG, Subtarget);
+      StoredVal = DAG.getNode(RISCVISD::TUPLE_INSERT, DL, VecTupTy, StoredVal,
+                              OpVal, DAG.getTargetConstant(i, DL, MVT::i32));
+    }
 
     SDValue Ops[] = {DAG.getEntryNode(),
                      DAG.getTargetConstant(IntrIds[Factor - 2], DL, XLenVT),
@@ -13746,6 +13739,10 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
     return DAG.getMergeValues(Loads, DL);
   }
+
+  assert(!VecVT.isFixedLengthVector() &&
+         "Fixed factor=2 vector interleave should already lower to "
+         "SHUFFLE_VECTOR");
 
   if (Subtarget.hasStdExtZvzip() && !Op.getOperand(0).isUndef() &&
       !Op.getOperand(1).isUndef()) {
