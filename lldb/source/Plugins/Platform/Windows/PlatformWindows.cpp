@@ -8,6 +8,7 @@
 
 #include "PlatformWindows.h"
 
+#include <chrono>
 #include <cstdio>
 #include <optional>
 #if defined(_WIN32)
@@ -33,10 +34,12 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -422,6 +425,8 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
+  options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
+      std::chrono::seconds(5), process->GetUtilityExpressionTimeout() / 2));
   options.SetIsForUtilityExpr(true);
 
   ExpressionResults result =
@@ -430,7 +435,10 @@ uint32_t PlatformWindows::DoLoadImage(Process *process,
   if (result != eExpressionCompleted) {
     error = Status::FromError(diagnostics.GetAsError(
         eExpressionSetupError,
-        "LoadLibrary error: failed to execute LoadLibrary helper:"));
+        llvm::formatv("failed to execute LoadLibrary helper "
+                      "({0}):",
+                      toString(result))
+            .str()));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
 
@@ -932,11 +940,16 @@ extern "C" {
   // handle currently.
   options.SetTrapExceptions(false);
   options.SetTimeout(process->GetUtilityExpressionTimeout());
+  options.SetOneThreadTimeout(std::min<std::chrono::microseconds>(
+      std::chrono::seconds(5), process->GetUtilityExpressionTimeout() / 2));
 
   ExpressionResults result = UserExpression::Evaluate(
       context, options, expression, kLoaderDecls, value);
   if (result != eExpressionCompleted)
-    return value ? value->GetError().Clone() : Status("unknown error");
+    return value
+               ? value->GetError().Clone()
+               : Status::FromErrorStringWithFormatv(
+                     "failed to execute loader helper ({0})", toString(result));
 
   if (value && value->GetError().Fail())
     return value->GetError().Clone();

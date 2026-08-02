@@ -554,7 +554,7 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   return Info;
 }
 
-Expected<GenericKernelTy &> L0DeviceTy::constructKernel(const char *Name) {
+Expected<GenericKernelTy &> L0DeviceTy::constructKernel(StringRef Name) {
   // Allocate and construct the L0 kernel.
   L0KernelTy *L0Kernel = getPlugin().allocate<L0KernelTy>();
   if (!L0Kernel)
