@@ -359,13 +359,15 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
     return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
   }
 
-  // Check for unexpanded parameter packs.
-  if (DiagnoseUnexpandedParameterPack(DefaultArg, UPPC_DefaultArgument))
-    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
-
   // C++11 [dcl.fct.default]p3
   //   A default argument expression [...] shall not be specified for a
   //   parameter pack.
+  //
+  // Check this before looking for unexpanded parameter packs in DefaultArg:
+  // if DefaultArg references a pack from an enclosing lambda/block, that
+  // check would (incorrectly) mark the lambda as containing an unexpanded
+  // pack that never actually appears in the final AST once we discard
+  // DefaultArg below.
   if (Param->isParameterPack()) {
     Diag(EqualLoc, diag::err_param_default_argument_on_parameter_pack)
         << DefaultArg->getSourceRange();
@@ -373,6 +375,10 @@ Sema::ActOnParamDefaultArgument(Decl *param, SourceLocation EqualLoc,
     Param->setDefaultArg(nullptr);
     return;
   }
+
+  // Check for unexpanded parameter packs.
+  if (DiagnoseUnexpandedParameterPack(DefaultArg, UPPC_DefaultArgument))
+    return ActOnParamDefaultArgumentError(param, EqualLoc, DefaultArg);
 
   ExprResult Result = ConvertParamDefaultArgument(Param, DefaultArg, EqualLoc);
   if (Result.isInvalid())
@@ -15501,10 +15507,30 @@ void Sema::DefineImplicitCopyAssignment(SourceLocation CurrentLocation,
     Statements.push_back(Copy.getAs<Expr>());
   }
 
+  // A defaulted copy assignment operator for a union copies the object
+  // representation as if by a memcpy, the same way the defaulted union copy
+  // constructor does.  The memberwise loop below skips union members.
+  if (ClassDecl->isUnion()) {
+    ExprBuilder &To = ExplicitObject
+                          ? static_cast<ExprBuilder &>(*ExplicitObject)
+                          : static_cast<ExprBuilder &>(*DerefThis);
+    // Copying the object representation is correct even for a union that is
+    // not trivially copyable, so -Wnontrivial-memcall is a false positive
+    // here.  Ignoring warnings rather than casting the arguments to void*
+    // keeps them typed, which preserves their address space.
+    IgnoreAllWarningDiagRAII IgnoreWarnings(Diags);
+    StmtResult Copy = buildMemcpyForAssignmentOp(
+        *this, Loc, Context.getCanonicalTagType(ClassDecl), To, OtherRef);
+    if (Copy.isInvalid()) {
+      CopyAssignOperator->setInvalidDecl();
+      return;
+    }
+    Statements.push_back(Copy.getAs<Stmt>());
+  }
+
   // Assign non-static members.
   for (auto *Field : ClassDecl->fields()) {
-    // FIXME: We should form some kind of AST representation for the implied
-    // memcpy in a union copy operation.
+    // Union members are copied by the whole-object memcpy emitted above.
     if (Field->isUnnamedBitField() || Field->getParent()->isUnion())
       continue;
 
@@ -15891,10 +15917,30 @@ void Sema::DefineImplicitMoveAssignment(SourceLocation CurrentLocation,
     Statements.push_back(Move.getAs<Expr>());
   }
 
+  // A defaulted move assignment operator for a union copies the object
+  // representation as if by a memcpy, the same way the defaulted union copy
+  // constructor does.  The memberwise loop below skips union members.
+  if (ClassDecl->isUnion()) {
+    ExprBuilder &To = ExplicitObject
+                          ? static_cast<ExprBuilder &>(*ExplicitObject)
+                          : static_cast<ExprBuilder &>(*DerefThis);
+    // Copying the object representation is correct even for a union that is
+    // not trivially copyable, so -Wnontrivial-memcall is a false positive
+    // here.  Ignoring warnings rather than casting the arguments to void*
+    // keeps them typed, which preserves their address space.
+    IgnoreAllWarningDiagRAII IgnoreWarnings(Diags);
+    StmtResult Copy = buildMemcpyForAssignmentOp(
+        *this, Loc, Context.getCanonicalTagType(ClassDecl), To, OtherRef);
+    if (Copy.isInvalid()) {
+      MoveAssignOperator->setInvalidDecl();
+      return;
+    }
+    Statements.push_back(Copy.getAs<Stmt>());
+  }
+
   // Assign non-static members.
   for (auto *Field : ClassDecl->fields()) {
-    // FIXME: We should form some kind of AST representation for the implied
-    // memcpy in a union copy operation.
+    // Union members are copied by the whole-object memcpy emitted above.
     if (Field->isUnnamedBitField() || Field->getParent()->isUnion())
       continue;
 

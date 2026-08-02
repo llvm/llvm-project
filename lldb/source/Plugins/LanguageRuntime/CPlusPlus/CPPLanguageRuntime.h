@@ -144,6 +144,16 @@ private:
 
   lldb::BreakpointSP m_cxx_exception_bp_sp;
   ItaniumABIRuntime m_itanium_runtime;
+
+  struct VTableInfoEntry {
+    VTableInfo info;
+  };
+
+  llvm::Expected<VTableInfoEntry> GetVTableInfoEntry(ValueObject &in_value,
+                                                     bool check_type);
+
+  std::map<Address, VTableInfoEntry> m_vtable_info_map;
+  std::mutex m_vtable_mutex;
 };
 
 } // namespace lldb_private

@@ -270,19 +270,6 @@ if(LIBOMP_ENABLE_ARM64X)
   set(RUNTIMES_arm64ec-pc-windows-msvc_LIBOMP_ENABLE_ARM64X ON)
 endif()
 
-foreach(_name ${LLVM_RUNTIME_TARGETS})
-  if("libc" IN_LIST RUNTIMES_${_name}_LLVM_ENABLE_RUNTIMES)
-    if("${_name}" STREQUAL "amdgpu-amd-amdhsa" OR "${_name}" STREQUAL "nvptx64-nvidia-cuda" OR "${_name}" STREQUAL "spirv64-intel-unknown")
-      set(LLVM_LIBC_GPU_BUILD ON)
-    endif()
-  endif()
-endforeach()
-if("${LIBC_TARGET_TRIPLE}" STREQUAL "amdgpu-amd-amdhsa" OR
-   "${LIBC_TARGET_TRIPLE}" STREQUAL "nvptx64-nvidia-cuda" OR
-   "${LIBC_TARGET_TRIPLE}" STREQUAL "spirv64-intel-unknown")
-  set(LLVM_LIBC_GPU_BUILD ON)
-endif()
-
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
 # several reasons:

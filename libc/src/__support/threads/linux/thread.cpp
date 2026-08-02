@@ -17,6 +17,9 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/read.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_getparam.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_getscheduler.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/sched_setscheduler.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/write.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
@@ -488,6 +491,27 @@ int Thread::get_name(cpp::StringStream &name) const {
     name_buffer[retval] = '\0';
   name << name_buffer << cpp::StringStream::ENDS;
   return 0;
+}
+
+int Thread::setschedparam(SchedParameters params) {
+  auto result = linux_syscalls::sched_setscheduler(attrib->tid, params.policy,
+                                                   &params.param);
+  if (!result.has_value())
+    return result.error();
+  return 0;
+}
+
+ErrorOr<SchedParameters> Thread::getschedparam() const {
+  auto pol_result = linux_syscalls::sched_getscheduler(attrib->tid);
+  if (!pol_result.has_value())
+    return Error(pol_result.error());
+
+  struct sched_param param;
+  auto param_result = linux_syscalls::sched_getparam(attrib->tid, &param);
+  if (!param_result.has_value())
+    return Error(param_result.error());
+
+  return SchedParameters{pol_result.value(), param};
 }
 
 void thread_exit(ThreadReturnValue retval, ThreadStyle style) {

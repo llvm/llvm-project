@@ -56,10 +56,6 @@ public:
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
-  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override;
-
-  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override;
-
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
@@ -114,8 +110,6 @@ private:
   std::unique_ptr<SimpleRemoteEPCTransport> T;
 
   ExecutorAddr RunAsMainAddr;
-  ExecutorAddr RunAsVoidFunctionAddr;
-  ExecutorAddr RunAsIntFunctionAddr;
 
   uint64_t NextSeqNo = 0;
   PendingCallWrapperResultsMap PendingCallWrapperResults;

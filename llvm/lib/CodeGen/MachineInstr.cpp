@@ -1360,7 +1360,7 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
   // Don't touch instructions that have non-trivial invariants.  For example,
   // terminators have to be at the end of a basic block.
   if (isPosition() || isDebugInstr() || isTerminator() ||
-      isJumpTableDebugInfo())
+      isJumpTableDebugInfo() || isLifetimeMarker())
     return false;
 
   // Don't touch instructions which can have non-load/store effects.
@@ -1401,11 +1401,6 @@ bool MachineInstr::wouldBeTriviallyDead() const {
   // Don't delete FAKE_USE.
   // FIXME: Why is FAKE_USE not considered in MachineInstr::isPosition?
   if (isFakeUse())
-    return false;
-
-  // LIFETIME markers should be preserved.
-  // FIXME: Why are LIFETIME markers not considered in MachineInstr::isPosition?
-  if (isLifetimeMarker())
     return false;
 
   // If we can move an instruction, we can remove it.  Otherwise, it has
