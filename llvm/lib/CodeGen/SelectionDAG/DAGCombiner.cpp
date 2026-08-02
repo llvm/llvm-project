@@ -5567,14 +5567,15 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   // computed. Defer for types that will be promoted and do not fold if DIVREM
   // is available
   unsigned DivRemOpc = isSigned ? ISD::SDIVREM : ISD::UDIVREM;
-  if (TLI.getTypeAction(*DAG.getContext(), VT) !=
-          TargetLowering::TypePromoteInteger &&
-      !TLI.isOperationLegalOrCustom(DivRemOpc, VT.getScalarType()) &&
+  if (!TLI.isOperationLegalOrCustom(DivRemOpc, VT.getScalarType()) &&
       !isDivRemLibcallAvailable(N, isSigned, DAG) &&
-      DAG.getNodeIfExists(DivOpcode, N->getVTList(), {N0, N1})) {
-    SDValue Div = DAG.getNode(DivOpcode, DL, VT, N0, N1);
-    SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, Div, N1);
-    return DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
+      TLI.getTypeAction(*DAG.getContext(), VT) !=
+          TargetLowering::TypePromoteInteger) {
+    if (SDNode *Div =
+            DAG.getNodeIfExists(DivOpcode, N->getVTList(), {N0, N1})) {
+      SDValue Mul = DAG.getNode(ISD::MUL, DL, VT, SDValue(Div, 0), N1);
+      return DAG.getNode(ISD::SUB, DL, VT, N0, Mul);
+    }
   }
 
   // sdiv, srem -> sdivrem
