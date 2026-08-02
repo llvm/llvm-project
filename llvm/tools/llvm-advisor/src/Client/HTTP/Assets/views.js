@@ -1522,11 +1522,22 @@ const CodeExplorerView = {
     ]);
 
     this._mainEl.innerHTML = '';
-    if (!srcRes.ok) { this._mainEl.appendChild(h('div', { style: { padding: '12px' } }, 'Source file not found')); return; }
-
-    this._sourceLines = (srcRes.data.content || '').split('\n');
+    this._sourceLines = srcRes.ok ? (srcRes.data.content || '').split('\n') : [];
     this._remarks = (remRes.ok && remRes.data) ? remRes.data.remarks || [] : [];
     this._remarkCount.textContent = `${this._remarks.length} remarks`;
+
+    if (!srcRes.ok && !this._remarks.length) {
+      this._mainEl.appendChild(h('div', { style: { padding: '12px' } }, 'Source file not found and no remarks available.'));
+      return;
+    }
+
+    if (!srcRes.ok) {
+      const warn = h('div', { style: { padding: '8px 12px', background: 'rgba(224,108,117,0.1)', color: '#E06C75', fontSize: '12px', borderRadius: '4px', marginBottom: '8px' } },
+        h('span', { style: { fontWeight: '600' } }, 'Source unavailable: '), 'Only remarks are shown — the original source file was not found.'
+      );
+      this._mainEl.appendChild(warn);
+    }
+
     this._renderSource();
   },
 
@@ -1562,14 +1573,20 @@ const CodeExplorerView = {
     container.appendChild(header);
 
     const codeWrap = h('div', { style: { fontFamily: 'monospace', fontSize: '13px', lineHeight: '20px' } });
-    lines.forEach((line, i) => {
-      const ln = i + 1;
+
+    // Determine which lines to render: either all source lines, or just lines that have remarks
+    const maxLine = lines.length;
+    const remarkLines = Object.keys(remarksByLine).map(Number).sort((a, b) => a - b);
+    const allLines = lines.length > 0 ? Array.from({ length: maxLine }, (_, i) => i + 1) : remarkLines;
+
+    allLines.forEach(ln => {
       const rems = remarksByLine[ln];
       const has = rems && rems.length > 0;
       const color = has ? (TYPE_COLORS[rems[0].type] || 'var(--teal)') : '';
       const rowStyle = { display: 'flex', padding: '0 8px', minHeight: '20px' };
       if (has) { rowStyle.background = TYPE_BG[rems[0].type] || 'rgba(123,224,214,0.06)'; rowStyle.cursor = 'pointer'; }
 
+      const line = lines.length > 0 ? (lines[ln - 1] || ' ') : '';
       const badge = has ? h('span', { style: { marginLeft: '8px', fontSize: '10px', padding: '0 4px', borderRadius: '3px', background: color, color: 'var(--bg)', fontWeight: '600' } }, String(rems.length)) : null;
       const row = h('div', { style: rowStyle },
         h('span', { style: { width: '44px', textAlign: 'right', paddingRight: '10px', userSelect: 'none', color: has ? color : 'var(--text-muted)', flexShrink: '0' } }, String(ln)),

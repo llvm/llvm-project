@@ -25,6 +25,49 @@ using namespace llvm::advisor;
 
 namespace {
 
+/// Infer a source root by scanning the first N remarks and finding the longest
+/// common directory prefix of their source file paths. Returns an empty string
+/// if no common prefix is found or if paths are relative.
+static std::string inferSourceRootFromRemarks(StringRef Path) {
+  SmallVector<std::string, 32> SourcePaths;
+  if (Error E = foreachRemark(Path, [&](const remarks::Remark &R) -> Error {
+        if (R.Loc && !R.Loc->SourceFilePath.empty())
+          SourcePaths.push_back(R.Loc->SourceFilePath.str());
+        if (SourcePaths.size() >= 50)
+          return createStringError(inconvertibleErrorCode(), "sampled");
+        return Error::success();
+      })) {
+    consumeError(std::move(E));
+  }
+
+  if (SourcePaths.empty())
+    return "";
+
+  // Find longest common directory prefix
+  std::string Prefix = sys::path::parent_path(SourcePaths[0]).str();
+  for (size_t I = 1; I < SourcePaths.size() && !Prefix.empty(); ++I) {
+    std::string Parent = sys::path::parent_path(SourcePaths[I]).str();
+    size_t Len = std::min(Prefix.size(), Parent.size());
+    size_t Common = 0;
+    for (size_t J = 0; J < Len; ++J) {
+      if (Prefix[J] != Parent[J])
+        break;
+      Common = J + 1;
+    }
+    Prefix = Prefix.substr(0, Common);
+    // Trim to last directory separator
+    size_t LastSep = Prefix.find_last_of("/\\");
+    if (LastSep != std::string::npos)
+      Prefix = Prefix.substr(0, LastSep);
+  }
+
+  // Only use absolute paths as roots
+  if (!Prefix.empty() && sys::path::is_absolute(Prefix))
+    return Prefix;
+
+  return "";
+}
+
 // Capability categories used to determine which artifacts must be synthesized.
 constexpr StringLiteral IRCapabilities[] = {
     "llvm.ir.summary",     "llvm.ir.function_stats",
@@ -307,10 +350,20 @@ CaptureCore::importRemarks(ArrayRef<std::string> RemarkPaths,
                      std::chrono::system_clock::now().time_since_epoch())
                      .count();
 
+  // If no source root was provided, try to infer it from the first remark file.
+  std::string InferredRoot = SourceRoot.str();
+  if (InferredRoot.empty() && !RemarkPaths.empty()) {
+    InferredRoot = inferSourceRootFromRemarks(RemarkPaths[0]);
+  }
+  // Fallback: use the parent directory of the first remark file.
+  if (InferredRoot.empty() && !RemarkPaths.empty()) {
+    InferredRoot = sys::path::parent_path(RemarkPaths[0]).str();
+  }
+
   SnapshotRecord Snapshot;
-  Snapshot.SourceRoot = SourceRoot.str();
+  Snapshot.SourceRoot = InferredRoot;
   Snapshot.CreatedUnix = Now;
-  Snapshot.ID = computeSnapshotID(SourceRoot, "imported", Now);
+  Snapshot.ID = computeSnapshotID(InferredRoot, "imported", Now);
   if (Error Err = Storage.metadata().putSnapshot(Snapshot))
     return std::move(Err);
 

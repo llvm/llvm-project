@@ -700,11 +700,6 @@ int CLIHandler::run(int argc, char **argv) {
     SmallVector<std::string, 4> Caps(ImportCapabilities.begin(),
                                      ImportCapabilities.end());
     std::string SrcRoot = ImportSourceRoot.getValue();
-    if (SrcRoot.empty()) {
-      SmallString<256> CWD;
-      sys::fs::current_path(CWD);
-      SrcRoot = CWD.str().str();
-    }
     Expected<SnapshotRecord> Snap =
         (*Client)->importRemarks(Paths, SrcRoot, Caps);
     if (!Snap)
