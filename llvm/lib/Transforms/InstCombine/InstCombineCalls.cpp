@@ -4955,6 +4955,134 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   return Changed;
 }
 
+/// Returns true if every use of \p CI is an equality (eq/ne) comparison
+/// against the constant zero. strcmp(x, y) == 0, strncmp(x, y, n) == 0,
+/// memcmp(x, y, n) == 0, and bcmp(x, y, n) == 0 all hold under exactly the
+/// same condition as their argument-swapped counterparts (the compared
+/// ranges are equal), even though the concrete nonzero return value of
+/// these functions is implementation-defined and may differ when the
+/// pointer arguments are swapped. So this property is what makes it safe to
+/// treat such a call as interchangeable with its argument-swapped sibling.
+static bool isOnlyUsedInZeroEqualityComparisons(CallInst *CI) {
+  if (CI->use_empty())
+    return false;
+  return all_of(CI->users(), [CI](User *U) {
+    auto *Cmp = dyn_cast<ICmpInst>(U);
+    if (!Cmp || !Cmp->isEquality())
+      return false;
+    Value *Other =
+        Cmp->getOperand(0) == CI ? Cmp->getOperand(1) : Cmp->getOperand(0);
+    return match(Other, PatternMatch::m_Zero());
+  });
+}
+
+/// Returns true if no instruction strictly between \p Dominator and
+/// \p Dominated may write to memory, so the two calls are guaranteed to see
+/// the same memory contents. Only the common shapes that matter in practice
+/// are handled: the two calls share a basic block, or \p Dominated's block
+/// is reached directly (and only) from \p Dominator's block, as happens for
+/// short-circuiting `&&`/`||`.
+static bool isFreeOfIntermediateWrites(CallInst *Dominator,
+                                       CallInst *Dominated) {
+  BasicBlock *DominatorBB = Dominator->getParent();
+  BasicBlock *DominatedBB = Dominated->getParent();
+
+  if (DominatorBB == DominatedBB) {
+    for (Instruction &I : make_range(std::next(Dominator->getIterator()),
+                                     Dominated->getIterator()))
+      if (I.mayWriteToMemory())
+        return false;
+    return true;
+  }
+
+  if (DominatedBB->getUniquePredecessor() != DominatorBB)
+    return false;
+
+  for (Instruction &I :
+       make_range(std::next(Dominator->getIterator()), DominatorBB->end()))
+    if (I.mayWriteToMemory())
+      return false;
+  for (Instruction &I :
+       make_range(DominatedBB->begin(), Dominated->getIterator()))
+    if (I.mayWriteToMemory())
+      return false;
+  return true;
+}
+
+/// strcmp(x, y) == 0, strncmp(x, y, n) == 0, memcmp(x, y, n) == 0, and
+/// bcmp(x, y, n) == 0 are all commutative. They hold precisely when the
+/// compared ranges are equal, regardless of which pointer is passed first.
+/// When we find two such calls in the same function whose pointer
+/// arguments are swapped, and whose results are only ever compared for
+/// equality with zero, fold away the one that is dominated by the other
+/// (memory permitting), exposing the redundancy that ordinary CSE cannot
+/// see because the two calls are not literally identical instructions.
+Instruction *InstCombinerImpl::foldCommutativeCmpLibCall(CallInst &CI) {
+  LibFunc Func;
+  if (!TLI.getLibFunc(CI, Func))
+    return nullptr;
+
+  switch (Func) {
+  case LibFunc_strcmp:
+  case LibFunc_strncmp:
+  case LibFunc_memcmp:
+  case LibFunc_bcmp:
+    break;
+  default:
+    return nullptr;
+  }
+
+  if (!isOnlyUsedInZeroEqualityComparisons(&CI))
+    return nullptr;
+
+  Function *Callee = CI.getCalledFunction();
+  Value *A = CI.getArgOperand(0);
+  Value *B = CI.getArgOperand(1);
+  if (A == B)
+    return nullptr;
+
+  // ConstantData (null, poison, ...) does not maintain a use list, and may
+  // in any case be shared by an unbounded number of unrelated instructions,
+  // so it isn't useful to search its users for a matching call.
+  if (!A->hasUseList())
+    return nullptr;
+
+  for (User *U : A->users()) {
+    auto *Other = dyn_cast<CallInst>(U);
+    if (!Other || Other == &CI || Other->getCalledFunction() != Callee)
+      continue;
+    if (Other->getArgOperand(0) != B || Other->getArgOperand(1) != A)
+      continue;
+    if (CI.arg_size() == 3 && Other->getArgOperand(2) != CI.getArgOperand(2))
+      continue;
+    if (!isOnlyUsedInZeroEqualityComparisons(Other))
+      continue;
+
+    CallInst *Dominator, *Dominated;
+    if (DT.dominates(&CI, Other)) {
+      Dominator = &CI;
+      Dominated = Other;
+    } else if (DT.dominates(Other, &CI)) {
+      Dominator = Other;
+      Dominated = &CI;
+    } else {
+      continue;
+    }
+
+    if (!isFreeOfIntermediateWrites(Dominator, Dominated))
+      continue;
+
+    if (Dominated == &CI)
+      return replaceInstUsesWith(CI, Dominator);
+
+    replaceInstUsesWith(*Dominated, Dominator);
+    eraseInstFromFunction(*Dominated);
+    return nullptr;
+  }
+
+  return nullptr;
+}
+
 /// Improvements for call, callbr and invoke instructions.
 Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   bool Changed = annotateAnyAllocSite(Call, &TLI);
@@ -5090,6 +5218,9 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   // this.  None of these calls are seen as possibly dead so go ahead and
   // delete the instruction now.
   if (CallInst *CI = dyn_cast<CallInst>(&Call)) {
+    if (Instruction *I = foldCommutativeCmpLibCall(*CI))
+      return I;
+
     Instruction *I = tryOptimizeCall(CI);
     // If we changed something return the result, etc. Otherwise let
     // the fallthrough check.
