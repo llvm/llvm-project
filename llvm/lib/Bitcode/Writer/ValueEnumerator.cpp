@@ -253,8 +253,8 @@ static void predictValueUseListOrder(const Value *V, const Function *F,
 
     // Do the actual prediction.
     IDPair.second = true;
-    if (!TopValue->use_empty()
-    && std::next(TopValue->use_begin()) != TopValue->use_end())
+    if (!TopValue->use_empty() &&
+        std::next(TopValue->use_begin()) != TopValue->use_end())
       predictValueUseListOrderImpl(TopValue, F, IDPair.first, OM, Stack);
 
     if (const Constant *C = dyn_cast<Constant>(TopValue)) {
