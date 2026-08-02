@@ -44,6 +44,19 @@ constexpr bool test() {
     assert((*outer).size() == 2);
   }
 
+  // Test `size()` after partially consuming the current chunk via the inner iterator.
+  {
+    std::ranges::chunk_view<input_span<int>> chunked(input_span<int>(arr, 8), 3);
+    auto outer = chunked.begin();
+    auto inner = (*outer).begin();
+
+    assert((*outer).size() == 3);
+    ++inner;
+    assert((*outer).size() == 2);
+    ++inner;
+    assert((*outer).size() == 1);
+  }
+
   return true;
 }
 
