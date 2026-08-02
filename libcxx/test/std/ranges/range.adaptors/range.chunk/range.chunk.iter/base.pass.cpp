@@ -22,7 +22,7 @@ constexpr bool test() {
   std::vector<int> vector = {1, 2, 3, 4, 5, 6};
 
   std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>> chunked = vector | std::views::chunk(2);
-  auto it = chunked.begin();
+  auto it                                                                  = chunked.begin();
 
   std::same_as<std::vector<int>::iterator> decltype(auto) base = it.base();
   assert(base == vector.begin());

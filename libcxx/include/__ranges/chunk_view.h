@@ -134,8 +134,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const __outer_iterator& __i, default_sentinel_t) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __outer_iterator& __i, default_sentinel_t) {
     return *__i.__parent_->__current_ == ranges::end(__i.__parent_->__base_) && __i.__parent_->__remainder_ != 0;
   }
 
@@ -219,8 +218,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator==(const __inner_iterator& __i, default_sentinel_t) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __inner_iterator& __i, default_sentinel_t) {
     return __i.__parent_->__remainder_ == 0;
   }
 

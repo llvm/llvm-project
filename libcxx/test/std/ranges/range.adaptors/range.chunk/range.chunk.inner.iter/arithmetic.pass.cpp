@@ -44,9 +44,9 @@ constexpr bool test() {
   // Test `operator-(default_sentinel_t, inner_iterator)` when the chunk itself is smaller than
   // the chunk size (`__remainder_` stays larger than `__dist`, so `__dist` is the returned minimum).
   {
-    std::vector<int> uneven_vector = {1, 2, 3, 4, 5, 6, 7, 8};
+    std::vector<int> uneven_vector                          = {1, 2, 3, 4, 5, 6, 7, 8};
     std::ranges::chunk_view<input_span<int>> uneven_chunked = input_span<int>(uneven_vector) | std::views::chunk(3);
-    auto outer = uneven_chunked.begin();
+    auto outer                                              = uneven_chunked.begin();
     ++outer;
     ++outer;
     assert(std::default_sentinel - (*outer).begin() == 2);
