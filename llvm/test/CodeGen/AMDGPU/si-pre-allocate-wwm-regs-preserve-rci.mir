@@ -1,13 +1,29 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" -debug-pass-manager -o /dev/null %s 2>&1 | FileCheck %s
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=MIR
 
-# INFO: Test that WWM preallocation updates MachineRegisterClassInfo in place
-# instead of invalidating it, so the analysis is not recomputed afterwards.
+# Test that WWM preallocation updates MachineRegisterClassInfo in place instead
+# of invalidating it. The pass manager log is matched in full, so the second
+# require<machine-register-class-info> is shown to run without recomputing
+# MachineRegisterClassAnalysis.
 
-# CHECK: Running analysis: MachineRegisterClassAnalysis on test_wwm_reserved
-# CHECK: Running pass: SIPreAllocateWWMRegsPass on test_wwm_reserved
-# CHECK-NOT: Invalidating analysis: MachineRegisterClassAnalysis on test_wwm_reserved
-# CHECK-NOT: Running analysis: MachineRegisterClassAnalysis on test_wwm_reserved
+# CHECK:      Running analysis: MachineModuleAnalysis on [module]
+# CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy<llvm::AnalysisManager<llvm::Function>, llvm::Module> on [module]
+# CHECK-NEXT: Running analysis: MachineFunctionAnalysis on test_wwm_reserved
+# CHECK-NEXT: Running analysis: OuterAnalysisManagerProxy<llvm::AnalysisManager<llvm::Module>, llvm::Function> on test_wwm_reserved
+# CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy<llvm::AnalysisManager<llvm::MachineFunction>, llvm::Function> on test_wwm_reserved
+# CHECK-NEXT: Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction> on test_wwm_reserved
+# CHECK-NEXT: Running analysis: MachineRegisterClassAnalysis on test_wwm_reserved
+# CHECK-NEXT: Running pass: SIPreAllocateWWMRegsPass on test_wwm_reserved
+# CHECK-NEXT: Running analysis: LiveIntervalsAnalysis on test_wwm_reserved
+# CHECK-NEXT: Running analysis: MachineDominatorTreeAnalysis on test_wwm_reserved
+# CHECK-NEXT: Running analysis: SlotIndexesAnalysis on test_wwm_reserved
+# CHECK-NEXT: Running analysis: LiveRegMatrixAnalysis on test_wwm_reserved
+# CHECK-NEXT: Running analysis: VirtRegMapAnalysis on test_wwm_reserved
+# CHECK-NEXT: Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction> on test_wwm_reserved
+# CHECK-NEXT: Running pass: PrintMIRPreparePass on [module]
+# CHECK-NEXT: Running pass: MachineVerifierPass on test_wwm_reserved
+# CHECK-NEXT: Running pass: PrintMIRPass on test_wwm_reserved
+# CHECK-NEXT: Running analysis: FunctionAnalysisManagerMachineFunctionProxy on test_wwm_reserved
 
 # MIR: wwmReservedRegs:
 # MIR-NEXT: - '$vgpr0'
