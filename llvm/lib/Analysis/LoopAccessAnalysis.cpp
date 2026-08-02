@@ -284,31 +284,31 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
   // Total distance (in bytes) between the first and the last
   // accessed pointer.
-  const SCEV *WalkBytes = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
-  if (!WalkBytes) {
+  const SCEV *DistToLastIter = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
+  if (!DistToLastIter) {
     // Re-try with constant max backedge-taken count if using the symbolic one
     // failed.
     MaxBTC = SE.getConstantMaxBackedgeTakenCount(AR->getLoop());
     if (isa<SCEVCouldNotCompute>(MaxBTC))
       return false;
     MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
-    WalkBytes = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
-    if (!WalkBytes)
+    DistToLastIter = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
+    if (!DistToLastIter)
       return false;
   }
 
   // Total length in bytes of the accessed range (from the first accessed
-  // byte through the end of the last access); WalkBytes + EltSize.
-  const SCEV *SpanBytes = addSCEVNoOverflow(
-      WalkBytes, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
-  if (!SpanBytes)
+  // byte through the end of the last access).
+  const SCEV *AccessedBytes = addSCEVNoOverflow(
+      DistToLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
+  if (!AccessedBytes)
     return false;
 
   // Compute MaxOffset per direction: exclusive upper offset of the
   // accessed range.
   const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
-    MaxOffset = addSCEVNoOverflow(StartOffset, SpanBytes, SE);
+    MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
     if (!MaxOffset)
       return false;
     DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
@@ -320,7 +320,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     //  2. The lower check is over-strict by EltSize and the upper is
     //     under-counted by EltSize.
     assert(SE.isKnownNegative(Step) && "must be known negative");
-    if (!SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, SpanBytes))
+    if (!SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, AccessedBytes))
       return false;
     MaxOffset = StartOffset;
   }
