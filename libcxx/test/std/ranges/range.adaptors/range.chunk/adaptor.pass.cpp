@@ -36,7 +36,7 @@ constexpr bool test() {
   // Test `views::chunk(n)(range)`
   {
     static_assert(noexcept(std::views::chunk(2)));
-    /*__pipable*/ auto adaptor = std::views::chunk(3);
+    auto adaptor = std::views::chunk(3);
     std::same_as<std::ranges::chunk_view<std::ranges::ref_view<std::array<int, 8>>>> decltype(auto) chunked =
         adaptor(view);
     assert(std::ranges::equal(*chunked.begin(), std::array{1, 2, 3}));
@@ -57,7 +57,7 @@ constexpr bool test() {
 
   // Test `views::chunk | adaptor`
   {
-    /*__pipable*/ auto adaptors            = std::views::chunk(5) | std::views::join;
+    auto adaptors                           = std::views::chunk(5) | std::views::join;
     std::ranges::input_range auto rejoined = view | adaptors;
     assert(std::ranges::equal(rejoined, view));
     std::ranges::input_range auto const_rejoined = std::as_const(view) | adaptors;

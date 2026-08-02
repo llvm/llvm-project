@@ -26,7 +26,6 @@ constexpr bool test() {
   {
     using Iterator = std::ranges::iterator_t<decltype(chunked)>;
     static_assert(std::same_as<decltype(*chunked.begin()), typename Iterator::value_type>);
-
     std::same_as<int&> decltype(auto) v = *(*chunked.begin()).begin();
     assert(v == 1);
   }
