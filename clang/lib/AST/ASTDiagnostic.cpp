@@ -616,6 +616,7 @@ class TemplateDiff {
       bool IsValidInt = false;
       Expr *ArgExpr = nullptr;
       TemplateDecl *TD = nullptr;
+      TemplateName TN;
       ValueDecl *VD = nullptr;
       bool NeedAddressOf = false;
       bool IsNullPtr = false;
@@ -694,12 +695,12 @@ class TemplateDiff {
       SetDefault(FromDefault, ToDefault);
     }
 
-    void SetTemplateTemplateDiff(TemplateDecl *FromTD, TemplateDecl *ToTD,
+    void SetTemplateTemplateDiff(TemplateName FromTN, TemplateName ToTN,
                                  bool FromDefault, bool ToDefault) {
       assert(FlatTree[CurrentNode].Kind == Invalid && "Node is not empty.");
       FlatTree[CurrentNode].Kind = TemplateTemplate;
-      FlatTree[CurrentNode].FromArgInfo.TD = FromTD;
-      FlatTree[CurrentNode].ToArgInfo.TD = ToTD;
+      FlatTree[CurrentNode].FromArgInfo.TN = FromTN;
+      FlatTree[CurrentNode].ToArgInfo.TN = ToTN;
       SetDefault(FromDefault, ToDefault);
     }
 
@@ -853,10 +854,10 @@ class TemplateDiff {
       ToExpr = FlatTree[ReadNode].ToArgInfo.ArgExpr;
     }
 
-    void GetTemplateTemplateDiff(TemplateDecl *&FromTD, TemplateDecl *&ToTD) {
+    void GetTemplateTemplateDiff(TemplateName &FromTN, TemplateName &ToTN) {
       assert(FlatTree[ReadNode].Kind == TemplateTemplate && "Unexpected kind.");
-      FromTD = FlatTree[ReadNode].FromArgInfo.TD;
-      ToTD = FlatTree[ReadNode].ToArgInfo.TD;
+      FromTN = FlatTree[ReadNode].FromArgInfo.TN;
+      ToTN = FlatTree[ReadNode].ToArgInfo.TN;
     }
 
     void GetIntegerDiff(llvm::APSInt &FromInt, llvm::APSInt &ToInt,
@@ -1218,12 +1219,13 @@ class TemplateDiff {
   /// template template difference.
   void DiffTemplateTemplates(const TSTiterator &FromIter,
                              const TSTiterator &ToIter) {
-    TemplateDecl *FromDecl = GetTemplateDecl(FromIter);
-    TemplateDecl *ToDecl = GetTemplateDecl(ToIter);
-    Tree.SetTemplateTemplateDiff(FromDecl, ToDecl, FromIter.isEnd() && FromDecl,
-                                 ToIter.isEnd() && ToDecl);
-    Tree.SetSame(FromDecl && ToDecl &&
-                 FromDecl->getCanonicalDecl() == ToDecl->getCanonicalDecl());
+    TemplateName FromName = GetTemplateName(FromIter);
+    TemplateName ToName = GetTemplateName(ToIter);
+    Tree.SetTemplateTemplateDiff(FromName, ToName,
+                                 FromIter.isEnd() && !FromName.isNull(),
+                                 ToIter.isEnd() && !ToName.isNull());
+    Tree.SetSame(!FromName.isNull() && !ToName.isNull() &&
+                 Context.hasSameTemplateName(FromName, ToName));
   }
 
   /// InitializeNonTypeDiffVariables - Helper function for DiffNonTypes
@@ -1513,14 +1515,14 @@ class TemplateDiff {
     return QualType();
   }
 
-  /// GetTemplateDecl - Retrieves the template template arguments, including
+  /// GetTemplateName - Retrieves the template template arguments, including
   /// default arguments.
-  static TemplateDecl *GetTemplateDecl(const TSTiterator &Iter) {
+  static TemplateName GetTemplateName(const TSTiterator &Iter) {
     if (!Iter.isEnd())
-      return Iter->getAsTemplate().getAsTemplateDecl();
+      return Iter->getAsTemplateOrTemplatePattern();
     if (Iter.hasDesugaredTA())
-      return Iter.getDesugaredTA().getAsTemplate().getAsTemplateDecl();
-    return nullptr;
+      return Iter.getDesugaredTA().getAsTemplateOrTemplatePattern();
+    return {};
   }
 
   /// IsEqualExpr - Returns true if the expressions are the same in regards to
@@ -1571,9 +1573,9 @@ class TemplateDiff {
         return;
       }
       case DiffTree::TemplateTemplate: {
-        TemplateDecl *FromTD, *ToTD;
-        Tree.GetTemplateTemplateDiff(FromTD, ToTD);
-        PrintTemplateTemplate(FromTD, ToTD, Tree.FromDefault(),
+        TemplateName FromTN, ToTN;
+        Tree.GetTemplateTemplateDiff(FromTN, ToTN);
+        PrintTemplateTemplate(FromTN, ToTN, Tree.FromDefault(),
                               Tree.ToDefault(), Tree.NodeIsSame());
         return;
       }
@@ -1801,20 +1803,41 @@ class TemplateDiff {
 
   /// PrintTemplateTemplate - Handles printing of template template arguments,
   /// highlighting argument differences.
-  void PrintTemplateTemplate(TemplateDecl *FromTD, TemplateDecl *ToTD,
+  void PrintTemplateTemplate(TemplateName FromTN, TemplateName ToTN,
                              bool FromDefault, bool ToDefault, bool Same) {
-    assert((FromTD || ToTD) && "Only one template argument may be missing.");
+    assert((!FromTN.isNull() || !ToTN.isNull()) &&
+           "Only one template argument may be missing.");
 
-    std::string FromName =
-        std::string(FromTD ? FromTD->getName() : "(no argument)");
-    std::string ToName = std::string(ToTD ? ToTD->getName() : "(no argument)");
-    if (FromTD && ToTD && FromName == ToName) {
-      FromName = FromTD->getQualifiedNameAsString();
-      ToName = ToTD->getQualifiedNameAsString();
+    auto GetName = [this](TemplateName TN, TemplateName::Qualified Qual) {
+      if (TN.isNull())
+        return std::string("(no argument)");
+      std::string Name;
+      llvm::raw_string_ostream Out(Name);
+      TN.print(Out, Policy, Qual);
+      return Name;
+    };
+    TemplateDecl *FromTD = FromTN.getAsTemplateDecl();
+    TemplateDecl *ToTD = ToTN.getAsTemplateDecl();
+    std::string FromName;
+    std::string ToName;
+    if (FromTD && ToTD) {
+      FromName = std::string(FromTD->getName());
+      ToName = std::string(ToTD->getName());
+      if (FromName == ToName) {
+        FromName = FromTD->getQualifiedNameAsString();
+        ToName = ToTD->getQualifiedNameAsString();
+      }
+    } else {
+      FromName = GetName(FromTN, TemplateName::Qualified::AsWritten);
+      ToName = GetName(ToTN, TemplateName::Qualified::AsWritten);
     }
 
     if (Same) {
-      OS << "template " << FromTD->getDeclName();
+      OS << "template ";
+      if (FromTD)
+        OS << FromTD->getDeclName();
+      else
+        FromTN.print(OS, Policy);
     } else if (!PrintTree) {
       OS << (FromDefault ? "(default) template " : "template ");
       Bold();
