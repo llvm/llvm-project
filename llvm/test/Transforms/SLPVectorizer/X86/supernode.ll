@@ -49,10 +49,8 @@ define void @test_supernode_addsub(ptr %Aarray, ptr %Barray, ptr %Carray, ptr %S
 ; ENABLED-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[AARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[BARRAY:%.*]], align 8
 ; ENABLED-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[CARRAY:%.*]], align 8
-; ENABLED-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP4:%.*]] = fsub fast <2 x double> [[TMP3]], [[TMP1]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <2 x i32> <i32 0, i32 3>
-; ENABLED-NEXT:    [[TMP6:%.*]] = fadd fast <2 x double> [[TMP4]], [[TMP5]]
+; ENABLED-NEXT:    [[TMP3:%.*]] = fadd reassoc nsz arcp contract afn <2 x double> [[TMP0]], [[TMP2]]
+; ENABLED-NEXT:    [[TMP6:%.*]] = fsub reassoc nsz arcp contract afn <2 x double> [[TMP3]], [[TMP1]]
 ; ENABLED-NEXT:    store <2 x double> [[TMP6]], ptr [[SARRAY:%.*]], align 8
 ; ENABLED-NEXT:    ret void
 ;

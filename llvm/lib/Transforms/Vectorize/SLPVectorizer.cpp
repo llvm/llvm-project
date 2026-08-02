@@ -3358,6 +3358,11 @@ private:
     /// inner add in add(add(v0,x),v1)). Not part of Scalars.
     SmallVector<Value *, 4> ReassocScalars;
 
+    /// Sign of each flattened operand column of a reassociated add/sub
+    /// chain, parallel to the operand columns: a negated column is
+    /// subtracted from the positive total. Empty when no column is negated.
+    SmallBitVector ReassocNegatedOps;
+
     /// MainOp and AltOp are recorded inside. S should be obtained from
     /// newTreeEntry.
     InstructionsState S = InstructionsState::invalid();
@@ -3503,6 +3508,18 @@ private:
 
     /// Returns peeled reassociated scalars.
     ArrayRef<Value *> getReassocScalars() const { return ReassocScalars; }
+
+    /// Records the signs of the flattened operand columns.
+    void setReassocNegatedOps(const SmallBitVector &NegatedOps) {
+      assert(NegatedOps.size() == getNumOperands() &&
+             "Signs must cover all operand columns.");
+      ReassocNegatedOps = NegatedOps;
+    }
+
+    /// True if operand column \p Idx is subtracted rather than added.
+    bool isReassocNegatedOp(unsigned Idx) const {
+      return Idx < ReassocNegatedOps.size() && ReassocNegatedOps[Idx];
+    }
 
     /// Returns the state of the operations.
     const InstructionsState &getOperations() const { return S; }
@@ -12327,21 +12344,41 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
 /// Poison lanes are allowed through; a lane that is not itself a matching
 /// real instruction can still be peeled as a copyable identity leaf, as
 /// long as some other lane anchors the opcode.
-static void
-scanAssociativeOperands(const InstructionsState &S, DominatorTree &DT,
-                        const DataLayout &DL, const TargetTransformInfo &TTI,
-                        const TargetLibraryInfo &TLI, const BoUpSLP &R,
-                        SmallVectorImpl<BoUpSLP::ValueList> &Operands,
-                        SmallVectorImpl<Value *> &ReassocScalars) {
-  assert(Operands.size() == 2 && "Expected the initial 2 operand columns.");
+/// Add/sub (and fadd/fsub) chains peel together: a peeled subtract keeps
+/// the column sign for its first operand and flips it for the second one,
+/// recorded per column in \p NegatedColumns, so subtracted leaves stay out
+/// of the positive total.
+static void scanAssociativeOperands(
+    const InstructionsState &S, DominatorTree &DT, const DataLayout &DL,
+    const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+    const BoUpSLP &R, SmallVectorImpl<BoUpSLP::ValueList> &Operands,
+    SmallBitVector &NegatedColumns, SmallVectorImpl<Value *> &ReassocScalars) {
+  assert(Operands.size() == 2 && NegatedColumns.empty() &&
+         "Expected the initial 2 operand columns.");
+  // The subtract family flips the sign of its second operand column.
+  auto IsSub = [](unsigned Opcode) {
+    return Opcode == Instruction::Sub || Opcode == Instruction::FSub;
+  };
+  // Signs ride with the columns so the parallel lists cannot drift apart.
+  struct SignedColumn {
+    BoUpSLP::ValueList Col;
+    bool Negated;
+  };
+  SmallVector<SignedColumn, 4> Columns = {
+      {std::move(Operands[0]), false},
+      {std::move(Operands[1]), IsSub(S.getOpcode())}};
   InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
-  // A lane whose value is itself a single-use associative instruction with
-  // S's opcode; block placement does not matter here (buildTreeRec
-  // re-checks that later for whatever columns end up as real leaves).
+  // The opcode family a column may peel into: subtracts flatten as adds of
+  // a negated leaf, other opcodes peel only into their own kind.
+  const unsigned RootFamily = getReassocCombineOpcode(S.getOpcode());
+  // A lane whose value is itself a single-use chain link; block placement
+  // does not matter here (buildTreeRec re-checks that later for whatever
+  // columns end up as real leaves).
   auto IsRealLane = [&](Value *V) {
     auto *I = dyn_cast<Instruction>(V);
-    return I && I->getOpcode() == S.getOpcode() && I->isAssociative() &&
-           I->hasOneUse();
+    return I && I->hasOneUse() &&
+           getReassocCombineOpcode(I->getOpcode()) == RootFamily &&
+           isReassocChainLink(I);
   };
   // Builds on InstructionsCompatibilityAnalysis's own opcode matching
   // (rather than the more permissive getSameOpcode()) so a column that
@@ -12349,7 +12386,8 @@ scanAssociativeOperands(const InstructionsState &S, DominatorTree &DT,
   // that InstructionsCompatibilityAnalysis::isSupportedOpcode() accepts.
   auto CanPeel = [&](ArrayRef<Value *> Column) {
     InstructionsState ColS = Analysis.buildInstructionsState(Column, R);
-    if (!ColS || ColS.getOpcode() != S.getOpcode() || ColS.isAltShuffle())
+    if (!ColS || getReassocCombineOpcode(ColS.getOpcode()) != RootFamily ||
+        ColS.isAltShuffle())
       return InstructionsState::invalid();
     // Every lane must be poison, a genuine matching real lane, or (only for
     // a copyable ColS) stand in as a copyable identity leaf
@@ -12362,26 +12400,34 @@ scanAssociativeOperands(const InstructionsState &S, DominatorTree &DT,
       return InstructionsState::invalid();
     return ColS;
   };
-  for (unsigned Idx = 0; Idx != Operands.size();) {
-    InstructionsState ColS = CanPeel(Operands[Idx]);
+  for (unsigned Idx = 0; Idx != Columns.size();) {
+    InstructionsState ColS = CanPeel(Columns[Idx].Col);
     if (!ColS) {
       ++Idx;
       continue;
     }
-    BoUpSLP::ValueList Column = std::move(Operands[Idx]);
+    BoUpSLP::ValueList Column = std::move(Columns[Idx].Col);
     SmallVector<BoUpSLP::ValueList> SubOperands =
         Analysis.buildOperands(ColS, Column);
+    assert(SubOperands.size() == 2 && "Expected 2 operand columns.");
     // Poison and copyable lanes have no real instruction left to erase
     // later: a copyable V is used as-is, not subsumed by the flattened
     // combine.
     for (Value *V : Column)
       if (!isa<PoisonValue>(V) && !ColS.isCopyableElement(V))
         ReassocScalars.push_back(V);
-    Operands[Idx] = std::move(SubOperands.front());
-    Operands.insert(std::next(Operands.begin(), Idx + 1),
-                    std::make_move_iterator(std::next(SubOperands.begin())),
-                    std::make_move_iterator(SubOperands.end()));
+    // A peeled subtract negates its second operand column.
+    const bool Negated = Columns[Idx].Negated;
+    Columns[Idx].Col = std::move(SubOperands.front());
+    Columns.insert(
+        std::next(Columns.begin(), Idx + 1),
+        {std::move(SubOperands.back()), IsSub(ColS.getOpcode()) != Negated});
     // Do not advance Idx: re-examine the column that was just placed here.
+  }
+  Operands.clear();
+  for (auto &[Col, Negated] : Columns) {
+    Operands.push_back(std::move(Col));
+    NegatedColumns.push_back(Negated);
   }
 }
 
@@ -12390,8 +12436,11 @@ scanAssociativeOperands(const InstructionsState &S, DominatorTree &DT,
 /// only (never compare hash values). Columns sharing a key are paired by the
 /// family of their first operand where available, so e.g. shifts fed by the
 /// same load family land in one column instead of pairing by encounter order.
+/// Values move between columns only within the same sign: a subtracted leaf
+/// never lands in an added column.
 static SmallVector<BoUpSLP::ValueList>
 alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
+                               const SmallBitVector &NegatedColumns,
                                const TargetLibraryInfo &TLI) {
   const unsigned NumCols = Operands.size();
   const unsigned NumLanes = Operands.front().size();
@@ -12423,18 +12472,21 @@ alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
     Aligned[Col][0] = Operands[Col][0];
 
   for (unsigned Lane : seq<unsigned>(1, NumLanes)) {
-    SmallDenseMap<std::pair<size_t, size_t>, SmallVector<unsigned, 2>, 8>
-        Buckets;
+    // Buckets are keyed by the value key and the column sign.
+    using Key = std::pair<std::pair<size_t, size_t>, unsigned>;
+    auto Sign = [&](unsigned Col) { return NegatedColumns[Col] ? 1U : 0U; };
+    SmallDenseMap<Key, SmallVector<unsigned, 2>, 8> Buckets;
     for (unsigned Col : seq<unsigned>(NumCols))
-      Buckets[GetKey(Operands[Col][Lane])].push_back(Col);
-    SmallDenseMap<std::pair<size_t, size_t>, unsigned, 8> BucketCursor;
+      Buckets[{GetKey(Operands[Col][Lane]), Sign(Col)}].push_back(Col);
+    SmallDenseMap<Key, unsigned, 8> NextInBucket;
     SmallVector<unsigned> SlotSrcCol(NumCols, NumCols);
     SmallBitVector ColClaimed(NumCols, false);
     for (unsigned Slot : seq<unsigned>(NumCols)) {
-      auto BucketIt = Buckets.find(Lane0Keys[Slot]);
+      const auto SlotKey = std::make_pair(Lane0Keys[Slot], Sign(Slot));
+      auto BucketIt = Buckets.find(SlotKey);
       if (BucketIt == Buckets.end())
         continue;
-      unsigned &Cursor = BucketCursor[Lane0Keys[Slot]];
+      unsigned &Cursor = NextInBucket[SlotKey];
       if (Cursor >= BucketIt->second.size())
         continue;
       // Among the remaining same-key columns prefer the one whose operand
@@ -12452,14 +12504,18 @@ alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
       SlotSrcCol[Slot] = SrcCol;
       ColClaimed[SrcCol] = true;
     }
-    unsigned NextLeftover = 0;
+    // Leftover slots take leftover columns of the same sign; per-lane sign
+    // counts match, so every slot finds one.
     for (unsigned Slot : seq<unsigned>(NumCols)) {
       if (SlotSrcCol[Slot] != NumCols)
         continue;
-      while (ColClaimed[NextLeftover])
-        ++NextLeftover;
-      SlotSrcCol[Slot] = NextLeftover;
-      ColClaimed[NextLeftover] = true;
+      for (unsigned Col : seq<unsigned>(NumCols)) {
+        if (!ColClaimed[Col] && NegatedColumns[Col] == NegatedColumns[Slot]) {
+          SlotSrcCol[Slot] = Col;
+          ColClaimed[Col] = true;
+          break;
+        }
+      }
     }
     for (unsigned Slot : seq<unsigned>(NumCols))
       Aligned[Slot][Lane] = Operands[SlotSrcCol[Slot]][Lane];
@@ -12469,6 +12525,7 @@ alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
 
 /// Rank reassociated operand layouts by vectorizable load columns, other load
 /// patterns, broadcast/constant columns, then fewer unique values per column.
+/// Identity columns are scored by the opcode of the emitted combines.
 static std::tuple<unsigned, unsigned, unsigned, int>
 getReassocColumnsQuality(ArrayRef<BoUpSLP::ValueList> Columns, const BoUpSLP &R,
                          unsigned Opcode) {
@@ -12476,6 +12533,7 @@ getReassocColumnsQuality(ArrayRef<BoUpSLP::ValueList> Columns, const BoUpSLP &R,
   unsigned NumOtherVecLoadCols = 0;
   unsigned NumBroadcastOrConstCols = 0;
   int NumUniqueValues = 0;
+  const unsigned CombineOpcode = getReassocCombineOpcode(Opcode);
   for (ArrayRef<Value *> Col : Columns) {
     if (all_of(Col, IsaPred<Constant>)) {
       ++NumBroadcastOrConstCols;
@@ -12484,7 +12542,7 @@ getReassocColumnsQuality(ArrayRef<BoUpSLP::ValueList> Columns, const BoUpSLP &R,
     // Identity constants are free beyond the base they are inserted into.
     SmallPtrSet<Value *, 8> UniqueValues;
     for (Value *V : Col)
-      if (!isBinOpIdentityConstant(V, Opcode))
+      if (!isBinOpIdentityConstant(V, CombineOpcode))
         UniqueValues.insert(V);
     NumUniqueValues += UniqueValues.size();
     if (UniqueValues.size() <= 1) {
@@ -12751,32 +12809,35 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   SmallVector<ValueList> Operands = Analysis.buildOperands(S, VL);
   // Flatten associative binary chains into operand columns. Only the peeled
   // chain links are required to be single-use (they are erased); the root
-  // being flattened may have other uses. Skip alt-shuffle, copyable, and
-  // non-associative nodes. Restricted to BinaryOperator: isAssociative() is
-  // also true for associative intrinsics (e.g. smax/smin/umax/umin), which are
-  // CallInst, not BinaryOperator, and are not supported by the
-  // copyable-identity machinery used below (ConstantExpr::getBinOpIdentity,
-  // isSupportedOpcode, isBinOpIdentityConstant).
+  // being flattened may have other uses. Skip alt-shuffle nodes and lanes
+  // that are neither chain links nor copyable identity leaves. Restricted to
+  // BinaryOperator: isAssociative() is also true for associative intrinsics
+  // (e.g. smax/smin/umax/umin), which are CallInst, not BinaryOperator, and
+  // are not supported by the copyable-identity machinery used below
+  // (ConstantExpr::getBinOpIdentity, isSupportedOpcode,
+  // isBinOpIdentityConstant).
   SmallVector<Value *> ReassocScalars;
+  // Sign of each flattened operand column (a subtracted leaf is negated).
+  SmallBitVector NegatedColumns;
   // Cached below (when the peel is kept) so the reorder step further down
   // does not need to redo the aligning/scoring work.
   SmallVector<ValueList> ReassocAlignedOperands;
   // Snapshot of the pre-flatten operand columns, used by both revert points.
   SmallVector<ValueList> NaturalTwoColumns;
   std::tuple<unsigned, unsigned, unsigned, int> ReassocPeeledQuality;
-  if (VectorizeReassociatedOps && !S.isAltShuffle() &&
-      !S.areInstructionsWithCopyableElements() && Operands.size() == 2 &&
-      all_of(VL, [](Value *V) {
+  if (VectorizeReassociatedOps && !S.isAltShuffle() && Operands.size() == 2 &&
+      all_of(VL, [&](Value *V) {
         auto *I = dyn_cast<BinaryOperator>(V);
-        return I && I->isAssociative();
+        return S.isCopyableElement(V) || (I && isReassocChainLink(I));
       })) {
     NaturalTwoColumns = Operands;
     scanAssociativeOperands(S, *DT, *DL, *TTI, *TLI, *this, Operands,
-                            ReassocScalars);
+                            NegatedColumns, ReassocScalars);
     // Drop flattening unless realigning improves load or broadcast column
     // structure; an unimproved peel ties and reverts to natural columns.
     if (!ReassocScalars.empty()) {
-      ReassocAlignedOperands = alignReassociatedOperandsByKey(Operands, *TLI);
+      ReassocAlignedOperands =
+          alignReassociatedOperandsByKey(Operands, NegatedColumns, *TLI);
       ReassocPeeledQuality =
           getReassocColumnsQuality(Operands, *this, S.getOpcode());
       // The unique-value count (4th field) is only a tie-break for the
@@ -12793,6 +12854,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       }
     }
   }
+  // Final once the peel is kept or reverted above.
+  const bool HasNegatedColumns = NegatedColumns.any();
   ScheduleBundle Empty;
   ScheduleBundle &Bundle = BundlePtr.value() ? *BundlePtr.value() : Empty;
   LLVM_DEBUG(dbgs() << "SLP: We are able to schedule this bundle.\n");
@@ -13110,13 +13173,32 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         // keeping the polish only if the column-quality score does not regress
         // vs the peeled order. That polish is quadratic in the column count, so
         // past ReassocReorderColumnLimit keep the realigned seed, which already
-        // groups the vectorizable columns.
+        // groups the vectorizable columns. The polish swaps values between
+        // columns per lane, which must not mix added and subtracted leaves in
+        // one column, so signed nodes polish each sign group separately.
         if (Operands.size() <= ReassocReorderColumnLimit) {
-          VLOperands Ops(ReassocAlignedOperands, VL0->getParent(), *this);
-          Ops.reorder();
-          SmallVector<ValueList> Reordered =
-              map_to_vector(seq<unsigned>(Operands.size()),
-                            [&](unsigned I) { return Ops.getVL(I); });
+          SmallVector<ValueList> Reordered;
+          if (!HasNegatedColumns) {
+            VLOperands Ops(ReassocAlignedOperands, VL0->getParent(), *this);
+            Ops.reorder();
+            Reordered = map_to_vector(seq<unsigned>(Operands.size()),
+                                      [&](unsigned I) { return Ops.getVL(I); });
+          } else {
+            Reordered = ReassocAlignedOperands;
+            SmallVector<unsigned> GroupIds[2];
+            for (unsigned I : seq<unsigned>(NegatedColumns.size()))
+              GroupIds[NegatedColumns[I]].push_back(I);
+            for (ArrayRef<unsigned> Group : GroupIds) {
+              if (Group.size() <= 1)
+                continue;
+              SmallVector<ValueList> GroupCols = map_to_vector(
+                  Group, [&](unsigned I) { return ReassocAlignedOperands[I]; });
+              VLOperands Ops(GroupCols, VL0->getParent(), *this);
+              Ops.reorder();
+              for (unsigned Pos : seq<unsigned>(Group.size()))
+                Reordered[Group[Pos]] = Ops.getVL(Pos);
+            }
+          }
           if (getReassocColumnsQuality(Reordered, *this, S.getOpcode()) >=
               ReassocPeeledQuality)
             Operands = std::move(Reordered);
@@ -13156,6 +13238,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         Operands[1] = Ops.getVL(1);
       }
       TE->setOperands(Operands);
+      if (!ReassocScalars.empty() && HasNegatedColumns)
+        TE->setReassocNegatedOps(NegatedColumns);
       for (unsigned I : seq<unsigned>(TE->getNumOperands()))
         buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
@@ -17501,22 +17585,24 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // N columns need N-1 vector combines; price extra columns
       // conservatively, skipping identity-only columns (not combined by
       // codegen).
-      if (E->hasReassocScalars())
+      if (E->hasReassocScalars()) {
+        const unsigned CombineOpcode = getReassocCombineOpcode(E->getOpcode());
         for (unsigned Idx : seq<unsigned>(2, E->getNumOperands())) {
           if (all_of(E->getOperand(Idx), [&](Value *V) {
-                return isBinOpIdentityConstant(V, E->getOpcode());
+                return isBinOpIdentityConstant(V, CombineOpcode);
               }))
             continue;
           Cost += TTI->getArithmeticInstrCost(
               ShuffleOrOp, VecTy, CostKind, {},
               getOperandInfo(E->getOperand(Idx)), {}, nullptr, TLI);
         }
+      }
       return Cost + CommonCost;
     };
     // Price peeled intermediate instructions on the scalar side: they are
     // erased when the node vectorizes. Folded into the first scalar-cost
     // query so the cost dump reports the full scalar cost. These are always
-    // 2-operand associative binops (isAssociative() excludes UnaryOperator),
+    // 2-operand chain links (adds, subtracts, or other associative binops),
     // so operand 1 is always the second operand.
     InstructionCost PeeledScalarCost = 0;
     for (Value *V : E->getReassocScalars()) {
@@ -23716,21 +23802,34 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       setInsertPointAfterBundle(E);
 
       if (E->hasReassocScalars()) {
-        // Vectorize operand columns, then combine pairwise in a balanced tree.
+        // Vectorize operand columns, then combine pairwise in a balanced
+        // tree; negated columns (flattened subtracts) are subtracted from
+        // the positive total at the end.
         SmallVector<Value *> CombinedScalars = to_vector(E->Scalars);
         append_range(CombinedScalars, E->getReassocScalars());
         // Reuse flags when a combine exactly matches a subsumed scalar pair.
-        auto MakeOperandKey = [](Value *A, Value *B) {
-          return A <= B ? std::make_pair(A, B) : std::make_pair(B, A);
+        // Commutative scalars are keyed operand-order independently,
+        // subtracts keep their operand order.
+        auto MakeOperandKey = [](Value *A, Value *B, unsigned Opcode) {
+          return Instruction::isCommutative(Opcode) && B < A
+                     ? std::make_pair(B, A)
+                     : std::make_pair(A, B);
         };
-        SmallDenseMap<std::pair<Value *, Value *>,
+        SmallDenseMap<std::pair<std::pair<Value *, Value *>, unsigned>,
                       SmallVector<Instruction *, 1>>
             ByOperands;
         for (Value *V : CombinedScalars) {
+          // Copyable leaves are used as-is, they are never combine targets.
+          if (E->isCopyableElement(V))
+            continue;
           auto *I = cast<Instruction>(V);
-          ByOperands[MakeOperandKey(I->getOperand(0), I->getOperand(1))]
+          const unsigned Opcode = I->getOpcode();
+          ByOperands[{MakeOperandKey(I->getOperand(0), I->getOperand(1),
+                                     Opcode),
+                      Opcode}]
               .push_back(I);
         }
+        const unsigned CombineOpcode = getReassocCombineOpcode(E->getOpcode());
         // Cast operand columns to VecTy when bit-width demotion changed types.
         auto GetCastOperand = [&](unsigned Idx, Value *Op) {
           if (Op->getType() == VecTy)
@@ -23738,83 +23837,153 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           return Builder.CreateIntCast(Op, VecTy, GetOperandSignedness(Idx));
         };
         SmallVector<Value *> Ops;
+        SmallVector<Value *> NegOps;
         // Track which scalar each partial result still represents for flag
         // reuse.
         SmallVector<SmallVector<Value *>> ScalarOps;
+        SmallVector<SmallVector<Value *>> NegScalarOps;
         for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
           // Identity-only columns combine to a no-op; skip them rather than
           // emitting a real binop against an identity vector.
           if (all_of(E->getOperand(Idx), [&](Value *V) {
-                return isBinOpIdentityConstant(V, E->getOpcode());
+                return isBinOpIdentityConstant(V, CombineOpcode);
               }))
             continue;
-          Ops.push_back(GetCastOperand(Idx, vectorizeOperand(E, Idx)));
-          ScalarOps.emplace_back(E->getOperand(Idx).begin(),
-                                 E->getOperand(Idx).end());
+          const bool Negated = E->isReassocNegatedOp(Idx);
+          (Negated ? NegOps : Ops)
+              .push_back(GetCastOperand(Idx, vectorizeOperand(E, Idx)));
+          (Negated ? NegScalarOps : ScalarOps)
+              .emplace_back(E->getOperand(Idx).begin(),
+                            E->getOperand(Idx).end());
         }
-        assert(!Ops.empty() && "Expected at least one non-identity column.");
-        while (Ops.size() > 1) {
-          SmallVector<Value *> NextOps((Ops.size() + 1) / 2);
-          SmallVector<SmallVector<Value *>> NextScalarOps(NextOps.size());
-          for (unsigned Idx : seq<unsigned>(NextOps.size())) {
-            if (2 * Idx + 1 == Ops.size()) {
-              // Odd one out this round: carry it over unpaired.
-              NextOps[Idx] = Ops[2 * Idx];
-              NextScalarOps[Idx] = std::move(ScalarOps[2 * Idx]);
-              continue;
-            }
-            Value *Combined = Builder.CreateBinOp(
-                static_cast<Instruction::BinaryOps>(E->getOpcode()),
-                Ops[2 * Idx], Ops[2 * Idx + 1]);
-            // Check whether this combine exactly matches a subsumed scalar.
-            const ArrayRef<Value *> LHSScalars = ScalarOps[2 * Idx];
-            const ArrayRef<Value *> RHSScalars = ScalarOps[2 * Idx + 1];
-            SmallVector<Value *> ExactMatches;
-            // Cache per-lane representatives for the next combine round.
-            SmallVector<Value *> Representatives(LHSScalars.size());
-            // Either side may be empty after a non-exact combine.
-            bool IsExact =
-                !LHSScalars.empty() && LHSScalars.size() == RHSScalars.size() &&
-                all_of(seq<unsigned>(LHSScalars.size()), [&](unsigned Lane) {
-                  if (!LHSScalars[Lane] || !RHSScalars[Lane])
-                    return false;
-                  auto It = ByOperands.find(
-                      MakeOperandKey(LHSScalars[Lane], RHSScalars[Lane]));
-                  if (It == ByOperands.end())
-                    return false;
-                  append_range(ExactMatches, It->second);
-                  Representatives[Lane] = It->second.front();
-                  return true;
-                });
-            if (IsExact) {
-              NextOps[Idx] =
-                  PropagateIRFlags(Combined, E->getOpcode(), ExactMatches);
-              NextScalarOps[Idx] = std::move(Representatives);
-              continue;
-            }
-            NextOps[Idx] =
-                PropagateIRFlags(Combined, E->getOpcode(), CombinedScalars);
-            // Drop overflow/fast-math flags not proven exact; regrouping can
-            // invalidate nsw/nuw and nnan/ninf even when each step was safe.
-            if (auto *CombinedI = dyn_cast<Instruction>(NextOps[Idx])) {
-              if (E->getOpcode() == Instruction::Add ||
-                  E->getOpcode() == Instruction::Mul) {
-                CombinedI->setHasNoSignedWrap(false);
-                if (E->getOpcode() != Instruction::Add)
-                  CombinedI->setHasNoUnsignedWrap(false);
-              } else if (E->getOpcode() == Instruction::FAdd ||
-                         E->getOpcode() == Instruction::FMul) {
-                CombinedI->setHasNoNaNs(false);
-                CombinedI->setHasNoInfs(false);
-              }
-            }
-            // No scalar match: deeper combines from this result cannot be
-            // exact.
+        const bool HasNegatedOps = !NegOps.empty();
+        // Check whether combining the partial results of \p LHSScalars and
+        // \p RHSScalars reproduces a subsumed scalar pair lane by lane, so
+        // the matched scalars' flags can be reused. Fills per-lane
+        // representatives for the next combine round on an exact match.
+        auto TryExactCombine =
+            [&](Value *Combined, unsigned Opcode, ArrayRef<Value *> LHSScalars,
+                ArrayRef<Value *> RHSScalars,
+                SmallVectorImpl<Value *> &Representatives) -> Value * {
+          // Either side may be empty after a non-exact combine.
+          if (LHSScalars.empty() || LHSScalars.size() != RHSScalars.size())
+            return nullptr;
+          SmallVector<Value *> ExactMatches;
+          Representatives.resize(LHSScalars.size());
+          bool IsExact =
+              all_of(seq<unsigned>(LHSScalars.size()), [&](unsigned Lane) {
+                if (!LHSScalars[Lane] || !RHSScalars[Lane])
+                  return false;
+                auto It = ByOperands.find(
+                    {MakeOperandKey(LHSScalars[Lane], RHSScalars[Lane], Opcode),
+                     Opcode});
+                if (It == ByOperands.end())
+                  return false;
+                append_range(ExactMatches, It->second);
+                Representatives[Lane] = It->second.front();
+                return true;
+              });
+          if (!IsExact)
+            return nullptr;
+          return PropagateIRFlags(Combined, Opcode, ExactMatches);
+        };
+        auto CombineFallback = [&](Value *Combined, unsigned Opcode) {
+          Value *V = PropagateIRFlags(Combined, Opcode, CombinedScalars);
+          // Drop overflow/fast-math flags not proven exact; regrouping can
+          // invalidate nsw/nuw and nnan/ninf even when each step was safe.
+          // nuw is kept for pure add trees only: a negated leaf can make a
+          // re-paired partial sum exceed the original running total.
+          auto *CombinedI = dyn_cast<Instruction>(V);
+          if (!CombinedI)
+            return V;
+          if (isa<FPBinaryOperator>(CombinedI)) {
+            CombinedI->setHasNoNaNs(false);
+            CombinedI->setHasNoInfs(false);
+          } else if (isa<OverflowingBinaryOperator>(CombinedI)) {
+            CombinedI->setHasNoSignedWrap(false);
+            if (Opcode != Instruction::Add || HasNegatedOps)
+              CombinedI->setHasNoUnsignedWrap(false);
           }
-          Ops = std::move(NextOps);
-          ScalarOps = std::move(NextScalarOps);
+          return V;
+        };
+        // Combine the group columns pairwise in a balanced tree and return
+        // the total with the per-lane scalars it still represents.
+        auto CombineColumns =
+            [&](SmallVector<Value *> GroupOps,
+                SmallVector<SmallVector<Value *>> GroupScalarOps,
+                unsigned Opcode) -> std::pair<Value *, SmallVector<Value *>> {
+          while (GroupOps.size() > 1) {
+            SmallVector<Value *> NextOps((GroupOps.size() + 1) / 2);
+            SmallVector<SmallVector<Value *>> NextScalarOps(NextOps.size());
+            for (unsigned Idx : seq<unsigned>(NextOps.size())) {
+              if (2 * Idx + 1 == GroupOps.size()) {
+                // Odd one out this round: carry it over unpaired.
+                NextOps[Idx] = GroupOps[2 * Idx];
+                NextScalarOps[Idx] = std::move(GroupScalarOps[2 * Idx]);
+                continue;
+              }
+              Value *Combined = Builder.CreateBinOp(
+                  static_cast<Instruction::BinaryOps>(Opcode),
+                  GroupOps[2 * Idx], GroupOps[2 * Idx + 1]);
+              // Check whether this combine exactly matches a subsumed
+              // scalar.
+              SmallVector<Value *> Representatives;
+              if (Value *Exact = TryExactCombine(
+                      Combined, Opcode, GroupScalarOps[2 * Idx],
+                      GroupScalarOps[2 * Idx + 1], Representatives)) {
+                NextOps[Idx] = Exact;
+                NextScalarOps[Idx] = std::move(Representatives);
+                continue;
+              }
+              NextOps[Idx] = CombineFallback(Combined, Opcode);
+              // No scalar match: deeper combines from this result cannot be
+              // exact.
+            }
+            GroupOps = std::move(NextOps);
+            GroupScalarOps = std::move(NextScalarOps);
+          }
+          return {GroupOps.front(), GroupScalarOps.front()};
+        };
+        // -(a+b) differs from -a + -b in the sign of a zero result, so the
+        // negated columns are summed only for integers or with nsz on every
+        // link; without it each is subtracted in turn.
+        const bool CanSumNegated =
+            CombineOpcode != Instruction::FAdd ||
+            all_of(CombinedScalars, [&](Value *V) {
+              auto *I = dyn_cast<Instruction>(V);
+              return !I || E->isCopyableElement(V) || I->hasNoSignedZeros();
+            });
+        const unsigned SubOpcode = getReassocSubOpcode(E->getOpcode());
+        Value *V;
+        SmallVector<Value *> PosReps;
+        if (Ops.empty()) {
+          // Every positive column was an identity: the total is the identity.
+          V = ConstantExpr::getBinOpIdentity(CombineOpcode, VecTy);
+        } else {
+          std::tie(V, PosReps) = CombineColumns(
+              std::move(Ops), std::move(ScalarOps), CombineOpcode);
         }
-        Value *V = FinalShuffle(Ops.front(), E);
+        if (CanSumNegated && !NegOps.empty()) {
+          auto [NegTotal, NegReps] = CombineColumns(
+              std::move(NegOps), std::move(NegScalarOps), CombineOpcode);
+          NegOps = {NegTotal};
+          NegScalarOps.clear();
+          NegScalarOps.push_back(std::move(NegReps));
+        }
+        for (auto [NegOp, NegScalars] : zip(NegOps, NegScalarOps)) {
+          Value *Combined = Builder.CreateBinOp(
+              static_cast<Instruction::BinaryOps>(SubOpcode), V, NegOp);
+          SmallVector<Value *> NextReps;
+          if (Value *Exact = TryExactCombine(Combined, SubOpcode, PosReps,
+                                             NegScalars, NextReps)) {
+            V = Exact;
+            PosReps = std::move(NextReps);
+            continue;
+          }
+          V = CombineFallback(Combined, SubOpcode);
+          PosReps.clear();
+        }
+        V = FinalShuffle(V, E);
         E->VectorizedValue = V;
         ++NumVectorInstructions;
         return V;

@@ -51,6 +51,21 @@ bool isConstant(Value *V);
 /// returns for FAdd/FMul, whose identity fast-math may break anyway.
 bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
 
+/// \returns the opcode of the combines emitted for a reassociated node:
+/// subtract chains regroup their positive and negative operand columns with
+/// plain adds.
+unsigned getReassocCombineOpcode(unsigned Opcode);
+
+/// \returns the subtract opcode applied to the negated columns of a
+/// reassociated node: fsub for the float add/sub family, plain sub for the
+/// integer one.
+unsigned getReassocSubOpcode(unsigned Opcode);
+
+/// \returns True if \p I can be a link of a flattenable binary chain:
+/// subtracts flatten as adds of a negated leaf, float subtracts need reassoc
+/// to allow the regrouping.
+bool isReassocChainLink(const Instruction *I);
+
 /// Checks if \p V is one of vector-like instructions, i.e. undef,
 /// insertelement/extractelement with constant indices for fixed vector type
 /// or extractvalue instruction.

@@ -40,6 +40,34 @@ bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
   return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
 }
 
+unsigned getReassocCombineOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::Sub:
+    return Instruction::Add;
+  case Instruction::FSub:
+    return Instruction::FAdd;
+  default:
+    return Opcode;
+  }
+}
+
+unsigned getReassocSubOpcode(unsigned Opcode) {
+  switch (getReassocCombineOpcode(Opcode)) {
+  case Instruction::FAdd:
+    return Instruction::FSub;
+  default:
+    return Instruction::Sub;
+  }
+}
+
+bool isReassocChainLink(const Instruction *I) {
+  if (I->getOpcode() == Instruction::Sub)
+    return true;
+  if (I->getOpcode() == Instruction::FSub)
+    return I->hasAllowReassoc();
+  return I->isAssociative();
+}
+
 bool isVectorLikeInstWithConstOps(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   // Non-instructions are vector-like only if they are undef.
