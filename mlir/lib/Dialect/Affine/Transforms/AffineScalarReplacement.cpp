@@ -161,11 +161,12 @@ static void analyzeIfOp(AffineIfOp ifOp, IfSinkPlan &plan) {
 /// `AffineYieldOp` terminators in both 'then' and 'else' blocks, erases
 /// internal store operations, and emits a single unified `AffineStoreOp`
 /// immediately following the new `ifOp` for each sinked pair.
-static void applySinkPlan(RewriterBase &rewriter, IfSinkPlan &plan) {
+static void applySinkPlan(IfSinkPlan &plan) {
   if (plan.pairs.empty())
     return;
 
   AffineIfOp ifOp = plan.ifOp;
+  IRRewriter rewriter(ifOp);
 
   // Collect new result types for the new AffineIfOp.
   SmallVector<Type, 4> newTypes(ifOp.getResultTypes());
@@ -263,7 +264,6 @@ mlir::affine::createAffineScalarReplacementPass() {
 
 void AffineScalarReplacement::runOnOperation() {
   SmallVector<IfSinkPlan> plans;
-  IRRewriter rewriter(getOperation());
   getOperation()->walk([&](AffineIfOp ifOp) {
     IfSinkPlan plan{/*ifOp=*/ifOp, /*pairs=*/{}};
     analyzeIfOp(ifOp, plan);
@@ -272,7 +272,7 @@ void AffineScalarReplacement::runOnOperation() {
     }
   });
   for (IfSinkPlan &plan : plans)
-    applySinkPlan(rewriter, plan);
+    applySinkPlan(plan);
 
   affineScalarReplace(getOperation(), getAnalysis<DominanceInfo>(),
                       getAnalysis<PostDominanceInfo>(),

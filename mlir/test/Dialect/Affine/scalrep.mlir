@@ -1040,7 +1040,7 @@ func.func @vector_store_dead_elim_same_type(%arg0: memref<20x1xi64>) {
 
 // CHECK-LABEL: func @sink_stores_both_branches
 //  CHECK-SAME:   %[[ARG0:.*]]: memref<10xf32>, %[[ARG1:.*]]: f32, %[[ARG2:.*]]: f32, %[[ARG3:.*]]: f32, %[[ARG4:.*]]: index)
-func.func @sink_stores_both_branches(%mem: memref<10xf32>, %arg0: f32, %arg1: f32, %arg2: f32, %N: index) {
+func.func @sink_stores_both_branches(%mem: memref<10xf32>, %arg0: f32, %arg1: f32, %arg2: f32, %N: index) -> f32 {
   %c0 = arith.constant 0 : index
   affine.store %arg0, %mem[%c0] : memref<10xf32>
   affine.if #set(%N) {
@@ -1048,7 +1048,8 @@ func.func @sink_stores_both_branches(%mem: memref<10xf32>, %arg0: f32, %arg1: f3
   } else {
     affine.store %arg2, %mem[%c0] : memref<10xf32>
   }
-  return
+  %res = affine.load %mem[%c0] : memref<10xf32>
+  return %res : f32
 }
 // CHECK: %[[CONSTANT_0:.*]] = arith.constant 0 : index
 // CHECK: %[[IF_0:.*]] = affine.if [[$SET]](%[[ARG4]]) -> f32 {
@@ -1057,16 +1058,18 @@ func.func @sink_stores_both_branches(%mem: memref<10xf32>, %arg0: f32, %arg1: f3
 // CHECK:   affine.yield %[[ARG3]] : f32
 // CHECK: }
 // CHECK: affine.store %[[IF_0]], %[[ARG0]]{{\[}}%[[CONSTANT_0]]] : memref<10xf32>
+// CHECK: return %[[IF_0]] : f32
 
 // CHECK-LABEL: func @sink_stores_then_only
 //  CHECK-SAME:   %[[ARG0:.*]]: memref<10xf32>, %[[ARG1:.*]]: f32, %[[ARG2:.*]]: f32, %[[ARG3:.*]]: index)
-func.func @sink_stores_then_only(%mem: memref<10xf32>, %arg0: f32, %arg1: f32, %N: index) {
+func.func @sink_stores_then_only(%mem: memref<10xf32>, %arg0: f32, %arg1: f32, %N: index) -> f32 {
   %c0 = arith.constant 0 : index
   affine.store %arg0, %mem[%c0] : memref<10xf32>
   affine.if #set(%N) {
     affine.store %arg1, %mem[%c0] : memref<10xf32>
   }
-  return
+  %res = affine.load %mem[%c0] : memref<10xf32>
+  return %res : f32
 }
 // CHECK: %[[CONSTANT_0:.*]] = arith.constant 0 : index
 // CHECK: %[[IF_0:.*]] = affine.if [[$SET]](%[[ARG3]]) -> f32 {
@@ -1075,17 +1078,19 @@ func.func @sink_stores_then_only(%mem: memref<10xf32>, %arg0: f32, %arg1: f32, %
 // CHECK:   affine.yield %[[ARG2]] : f32
 // CHECK: }
 // CHECK: affine.store %[[IF_0]], %[[ARG0]]{{\[}}%[[CONSTANT_0]]] : memref<10xf32>
+// CHECK: return %[[IF_0]] : f32
 
 // CHECK-LABEL: func @sink_stores_else_only
 //  CHECK-SAME:   %[[ARG0:.*]]: memref<10xf32>, %[[ARG1:.*]]: f32, %[[ARG2:.*]]: f32, %[[ARG3:.*]]: index)
-func.func @sink_stores_else_only(%mem: memref<10xf32>, %arg0: f32, %arg2: f32, %N: index) {
+func.func @sink_stores_else_only(%mem: memref<10xf32>, %arg0: f32, %arg2: f32, %N: index) -> f32 {
   %c0 = arith.constant 0 : index
   affine.store %arg0, %mem[%c0] : memref<10xf32>
   affine.if #set(%N) {
   } else {
     affine.store %arg2, %mem[%c0] : memref<10xf32>
   }
-  return
+  %res = affine.load %mem[%c0] : memref<10xf32>
+  return %res : f32
 }
 // CHECK: %[[CONSTANT_0:.*]] = arith.constant 0 : index
 // CHECK: %[[IF_0:.*]] = affine.if [[$SET]](%[[ARG3]]) -> f32 {
@@ -1094,10 +1099,11 @@ func.func @sink_stores_else_only(%mem: memref<10xf32>, %arg0: f32, %arg2: f32, %
 // CHECK:   affine.yield %[[ARG2]] : f32
 // CHECK: }
 // CHECK: affine.store %[[IF_0]], %[[ARG0]]{{\[}}%[[CONSTANT_0]]] : memref<10xf32>
+// CHECK: return %[[IF_0]] : f32
 
 // CHECK-LABEL: func @sink_multiple_pairs
 //  CHECK-SAME:   %[[ARG0:.*]]: memref<10xf32>, %[[ARG1:.*]]: f32, %[[ARG2:.*]]: f32, %[[ARG3:.*]]: index)
-func.func @sink_multiple_pairs(%mem: memref<10xf32>, %arg0: f32, %arg1: f32, %N: index) {
+func.func @sink_multiple_pairs(%mem: memref<10xf32>, %arg0: f32, %arg1: f32, %N: index) -> (f32, f32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   affine.store %arg0, %mem[%c0] : memref<10xf32>
@@ -1106,7 +1112,9 @@ func.func @sink_multiple_pairs(%mem: memref<10xf32>, %arg0: f32, %arg1: f32, %N:
     affine.store %arg1, %mem[%c0] : memref<10xf32>
     affine.store %arg1, %mem[%c1] : memref<10xf32>
   }
-  return
+  %res0 = affine.load %mem[%c0] : memref<10xf32>
+  %res1 = affine.load %mem[%c1] : memref<10xf32>
+  return %res0, %res1 : f32, f32
 }
 // CHECK: %[[CONSTANT_0:.*]] = arith.constant 0 : index
 // CHECK: %[[CONSTANT_1:.*]] = arith.constant 1 : index
@@ -1117,3 +1125,4 @@ func.func @sink_multiple_pairs(%mem: memref<10xf32>, %arg0: f32, %arg1: f32, %N:
 // CHECK: }
 // CHECK: affine.store %[[VAL_0:.*]]#0, %[[ARG0]]{{\[}}%[[CONSTANT_1]]] : memref<10xf32>
 // CHECK: affine.store %[[VAL_0]]#1, %[[ARG0]]{{\[}}%[[CONSTANT_0]]] : memref<10xf32>
+// CHECK: return %[[IF_0]]#1, %[[IF_0]]#0 : f32, f32
