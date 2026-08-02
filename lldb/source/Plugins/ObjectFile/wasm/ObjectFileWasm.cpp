@@ -1148,7 +1148,8 @@ UUID ObjectFileWasm::GetUUID() {
     if (g_sect_name_build_id != sect_info.name)
       continue;
 
-    DataExtractor section_data = ReadImageData(sect_info.offset, sect_info.size);
+    DataExtractor section_data =
+        ReadImageData(sect_info.offset, sect_info.size);
     llvm::DataExtractor data = section_data.GetAsLLVM();
     llvm::DataExtractor::Cursor c(0);
     llvm::Expected<uint32_t> length = GetULEB32(data, c);
