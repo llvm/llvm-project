@@ -5433,6 +5433,18 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *R = foldBinOpShiftWithShift(I))
     return R;
 
+  // ((X ^ SignMask) >>u ShiftAmt) ^ SignMask --> X >>s ShiftAmt
+  // where SignMask = X >>s (BitWidth - 1).
+  Value *Base, *SignMask, *ShiftAmt;
+  if (match(&I, m_c_Xor(m_Value(SignMask),
+                        m_OneUse(
+                            m_LShr(m_c_Xor(m_Deferred(SignMask), m_Value(Base)),
+                                   m_Value(ShiftAmt))))) &&
+      match(SignMask, m_AShr(m_Specific(Base),
+                             m_SpecificIntAllowPoison(
+                                 I.getType()->getScalarSizeInBits() - 1))))
+    return BinaryOperator::CreateAShr(Base, ShiftAmt);
+
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Value *X, *Y, *M;
 
