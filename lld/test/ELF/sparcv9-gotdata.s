@@ -7,6 +7,7 @@
 # RUN: llvm-mc -filetype=obj -triple=sparcv9 a.s -o a.o
 # RUN: llvm-mc -filetype=obj -triple=sparcv9 b.s -o b.o
 # RUN: llvm-mc -filetype=obj -triple=sparcv9 c.s -o c.o
+# RUN: llvm-mc -filetype=obj -triple=sparcv9 ifunc.s -o ifunc.o
 
 # RUN: ld.lld -shared a.o c.o -o a.so
 # RUN: llvm-readelf -S -r a.so | FileCheck %s --check-prefix=RELOC
@@ -59,6 +60,9 @@
 # RUN: ld.lld -shared b.o -o b.so
 # RUN: llvm-readelf -S b.so | FileCheck %s --check-prefix=HEADER
 # HEADER: [ 7] .got PROGBITS 00000000002002b8 {{[0-9a-f]+}} 000008
+
+# RUN: not ld.lld -shared ifunc.o 2>&1 | FileCheck %s --check-prefix=IFUNC --implicit-check-not=error:
+# IFUNC: error: {{.*}}relocation R_SPARC_WDISP19 out of range
 
 ## The optimization is decided before addresses are known, so an out-of-range
 ## offset is an error rather than a fallback to the GOT load. The offset is
@@ -122,3 +126,16 @@ local:
 .globl absolute
 .hidden absolute
 absolute = 0x1234
+
+#--- ifunc.s
+.globl _start
+_start:
+  sethi %gdop_hix22(ifunc), %l1
+  xor   %l1, %gdop_lox10(ifunc), %l1
+  ldx   [%l7 + %l1], %l2, %gdop(ifunc)
+
+.globl ifunc
+.hidden ifunc
+.type ifunc, @gnu_indirect_function
+ifunc:
+  nop
