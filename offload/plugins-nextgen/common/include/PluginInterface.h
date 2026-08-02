@@ -429,7 +429,7 @@ public:
 /// implement the necessary virtual function members.
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
-  GenericKernelTy(const char *Name)
+  GenericKernelTy(StringRef Name)
       : Name(Name), PreferredNumThreads(0), MaxNumThreads(0) {}
 
   virtual ~GenericKernelTy() {}
@@ -1266,7 +1266,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
 
   /// Allocate and construct a kernel object.
-  virtual Expected<GenericKernelTy &> constructKernel(const char *Name) = 0;
+  virtual Expected<GenericKernelTy &> constructKernel(StringRef Name) = 0;
 
   /// Reference to the underlying plugin that created this device.
   GenericPluginTy &Plugin;

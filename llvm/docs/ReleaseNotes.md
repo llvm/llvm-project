@@ -64,6 +64,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to Interprocedural Optimizations
 
+- The IR Outliner has been removed, due to lack of a maintainer and the presence
+  of correctness issues.
+
 ### Changes to Vectorizers
 
 ### Changes to the AArch64 Backend
@@ -88,6 +91,9 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the PowerPC Backend
 
 ### Changes to the RISC-V Backend
+
+* Added experimental MC support for the `Smcsps` and `Sscsps`
+  conditional stack pointer swap extensions.
 
 * Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
   Load) extension.
