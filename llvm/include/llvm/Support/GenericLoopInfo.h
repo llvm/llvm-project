@@ -744,16 +744,6 @@ public:
                  L.BlockData;
   }
 
-  /// Remove every block satisfying \p Pred from \p Start and each of its
-  /// ancestors up to but not including \p Stop, which must be null or an
-  /// ancestor of \p Start; a null \p Stop walks to the top level.
-  template <typename PredicateT>
-  void removeBlocksFromLoopAndAncestors(LoopT *Start, LoopT *Stop,
-                                        PredicateT Pred) {
-    for (LoopT *Cur = Start; Cur != Stop; Cur = Cur->getParentLoop())
-      removeBlocksIf(*Cur, Pred);
-  }
-
   /// Detach and return the children of \p Parent (the top-level loops if
   /// \p Parent is null) that satisfy \p Pred, clearing their parent pointers.
   /// Both the remaining and the returned children keep their relative order.

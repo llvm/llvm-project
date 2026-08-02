@@ -1840,8 +1840,9 @@ static void deleteDeadBlocksFromLoop(Loop &L,
                  [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
   // Walk from this loop up through its parents removing all of the dead blocks.
-  LI.removeBlocksFromLoopAndAncestors(
-      &L, nullptr, [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
+  for (Loop *Cur = &L; Cur; Cur = Cur->getParentLoop())
+    LI.removeBlocksIf(*Cur,
+                      [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
   // Now delete the dead child loops. The later recompute cannot retire them
   // for us: it needs every loop's header to still be in the function, and
