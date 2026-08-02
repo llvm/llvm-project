@@ -5022,6 +5022,18 @@ static void GenerateTargetArgs(const TargetOptions &Opts,
   if (!Opts.DarwinTargetVariantSDKVersion.empty())
     GenerateArg(Consumer, OPT_darwin_target_variant_sdk_version_EQ,
                 Opts.DarwinTargetVariantSDKVersion.getAsString());
+
+  // Generate AMDGPU xnack and sramecc flags.
+  if (Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Enabled)
+    GenerateArg(Consumer, OPT_mxnack);
+  else if (Opts.AMDGPUXnackState == TargetOptions::AMDGPUFeatureState::Disabled)
+    GenerateArg(Consumer, OPT_mno_xnack);
+
+  if (Opts.AMDGPUSramEccState == TargetOptions::AMDGPUFeatureState::Enabled)
+    GenerateArg(Consumer, OPT_msramecc);
+  else if (Opts.AMDGPUSramEccState ==
+           TargetOptions::AMDGPUFeatureState::Disabled)
+    GenerateArg(Consumer, OPT_mno_sramecc);
 }
 
 static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
@@ -5051,6 +5063,21 @@ static bool ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
           << A->getAsString(Args) << A->getValue();
     else
       Opts.DarwinTargetVariantSDKVersion = Version;
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mxnack, options::OPT_mno_xnack)) {
+    bool IsEnabled = A->getOption().matches(options::OPT_mxnack);
+    Opts.AMDGPUXnackState = IsEnabled
+                                ? TargetOptions::AMDGPUFeatureState::Enabled
+                                : TargetOptions::AMDGPUFeatureState::Disabled;
+  }
+
+  if (Arg *A =
+          Args.getLastArg(options::OPT_msramecc, options::OPT_mno_sramecc)) {
+    bool IsEnabled = A->getOption().matches(options::OPT_msramecc);
+    Opts.AMDGPUSramEccState = IsEnabled
+                                  ? TargetOptions::AMDGPUFeatureState::Enabled
+                                  : TargetOptions::AMDGPUFeatureState::Disabled;
   }
 
   return Diags.getNumErrors() == NumErrorsBefore;

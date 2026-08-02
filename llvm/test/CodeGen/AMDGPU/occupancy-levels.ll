@@ -1,12 +1,12 @@
-; RUN: llc -mtriple=amdgpu9.00 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgpu9.50 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX950 %s
+; RUN: llc -mtriple=amdgpu9.00 --amdgpu-xnack=false < %s | FileCheck --check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu9.50 --amdgpu-xnack=false < %s | FileCheck --check-prefixes=GCN,GFX950 %s
 ; The amdhsa OS implicitly enables the trap handler, which reserves 16 SGPRs per
 ; wave. The reported occupancy of SGPR-limited kernels must account for that, so
 ; the same kernels reach a lower occupancy than on the non-amdhsa runs above.
-; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX9TRAP %s
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX950TRAP %s
-; RUN: llc -mtriple=amdgpu10.10 -mattr=-xnack < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1010,GFX1010W32 %s
-; RUN: llc -mtriple=amdgpu10.10 -mattr=-xnack -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1010,GFX1010W64 %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa --amdgpu-xnack=false < %s | FileCheck --check-prefixes=GCN,GFX9TRAP %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa --amdgpu-xnack=false < %s | FileCheck --check-prefixes=GCN,GFX950TRAP %s
+; RUN: llc -mtriple=amdgpu10.10 --amdgpu-xnack=false < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1010,GFX1010W32 %s
+; RUN: llc -mtriple=amdgpu10.10 --amdgpu-xnack=false -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1010,GFX1010W64 %s
 ; RUN: llc -mtriple=amdgpu10.30 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W32,GFX1030,GFX1030W32 %s
 ; RUN: llc -mtriple=amdgpu10.30 -mattr=+wavefrontsize64 < %s | FileCheck --check-prefixes=GCN,GFX10,GFX10W64,GFX1030,GFX1030W64 %s
 ; RUN: llc -mtriple=amdgpu11.00 < %s | FileCheck --check-prefixes=GCN,GFX1100,GFX1100W32 %s

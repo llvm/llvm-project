@@ -2,9 +2,6 @@
 
 LLVM and API reference documentation.
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -52,6 +49,7 @@ ConvergenceAndUniformity
 MLGO
 ContentAddressableStorage
 CIBestPractices
+GitHubActionsRunners
 AIToolPolicy
 CallGraphSection
 InterfaceExportAnnotations
@@ -237,3 +235,7 @@ XRayFDRFormat
 {doc}`CIBestPractices`
 :   A list of guidelines and best practices to use when working on LLVM's
     CI systems.
+
+{doc}`GitHubActionsRunners`
+:   A reference for LLVM's GitHub Actions runner pools and their
+    platform-specific constraints.

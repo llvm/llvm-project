@@ -334,7 +334,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.stat
     libc.src.sys.stat.utimensat
 
-    # sys/statvfs.h
+    # sys/statfs.h entrypoints
+    libc.src.sys.statfs.fstatfs
+    libc.src.sys.statfs.statfs
+
+    # sys/statvfs.h entrypoints
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
@@ -798,6 +802,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
+    libc.src.math.lgammaf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
     libc.src.math.llroundf16
@@ -1084,6 +1089,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getname_np
+    libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
     libc.src.pthread.pthread_getthreadid_np
     libc.src.pthread.pthread_getunique_np
@@ -1128,6 +1134,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_spin_unlock
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setname_np
+    libc.src.pthread.pthread_setschedparam
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
@@ -1204,6 +1211,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
+    libc.src.stdlib.putenv
     libc.src.stdlib.setenv
     libc.src.stdlib.unsetenv
     libc.src.stdlib.quick_exit
@@ -1331,6 +1339,9 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
 
       # sys/ptrace.h entrypoints
       libc.src.sys.ptrace.ptrace
+
+      # time.h entrypoints
+      libc.src.time.strptime
 
       # wchar.h entrypoints
       libc.src.wchar.swprintf
