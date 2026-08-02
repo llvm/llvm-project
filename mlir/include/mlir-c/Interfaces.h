@@ -255,10 +255,10 @@ mlirMemoryEffectInstanceGetValue(MlirMemoryEffectInstance instance);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirMemoryEffectInstanceGetSymbolRef(MlirMemoryEffectInstance instance);
 
-/// Callback used to return a list of memory effect instances. `effects` points
-/// to `numEffects` consecutive instances that are only valid for the
-/// duration of the callback. The caller-provided `userData` is forwarded to
-/// the callback.
+/// Callback for receiving a batch of memory effect instances. `effects` points
+/// to `numEffects` consecutive instances. Ownership is not transferred, and
+/// the instances are valid only while `callback` is executing. The
+/// caller-provided `userData` is forwarded to the callback.
 typedef void (*MlirMemoryEffectInstancesCallback)(
     intptr_t numEffects, MlirMemoryEffectInstance *effects, void *userData);
 
@@ -271,9 +271,10 @@ typedef struct {
   void (*construct)(void *userData);
   /// Optional destructor for user data. Set to nullptr to disable it.
   void (*destruct)(void *userData);
-  /// Get memory effects callback. Implementations return effects by invoking
-  /// `callback` with an array of memory effect instances. The callback copies
-  /// the instances synchronously, so implementations retain ownership of them.
+  /// Get memory effects callback. Implementations report effects by invoking
+  /// `callback` before returning. The supplied callback copies the instances,
+  /// so implementations retain ownership of the instances and only need to
+  /// keep them valid until `callback` returns.
   void (*getEffects)(MlirOperation op,
                      MlirMemoryEffectInstancesCallback callback,
                      void *callbackUserData, void *userData);
@@ -288,7 +289,9 @@ MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
 
 /// Gets the memory effects of the given operation. The operation must
 /// implement the MemoryEffectsOpInterface. Invokes `callback` once with all
-/// effects; the lifetime of the instances are only valid during the callback.
+/// effects. Ownership is not transferred; call
+/// `mlirMemoryEffectInstanceClone` from the callback to keep a copy after the
+/// callback returns.
 MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceGetEffects(
     MlirOperation operation, MlirMemoryEffectInstancesCallback callback,
     void *userData);
