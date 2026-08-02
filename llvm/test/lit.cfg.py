@@ -239,6 +239,7 @@ tools = [
     ToolSubst("%llvm-bitcode-strip", FindTool("llvm-bitcode-strip")),
     ToolSubst("%llvm-extract-bundle-entry", FindTool("llvm-extract-bundle-entry")),
     ToolSubst("%split-file", FindTool("split-file")),
+    ToolSubst("%cmake", config.cmake_command, unresolved="ignore"),
 ]
 
 # FIXME: Why do we have both `lli` and `%lli` that do slightly different things?
