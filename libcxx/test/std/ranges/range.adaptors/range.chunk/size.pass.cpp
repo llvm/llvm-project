@@ -16,7 +16,6 @@
 #include <cassert>
 #include <ranges>
 
-#include "test_range.h"
 #include "types.h"
 
 constexpr bool test() {

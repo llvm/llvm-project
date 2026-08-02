@@ -21,8 +21,8 @@
 #include <cassert>
 #include <iterator>
 #include <ranges>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "test_range.h"
 #include "types.h"

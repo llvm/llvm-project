@@ -39,11 +39,11 @@ void test_ctad() {
   borrowed_range br;
 
   // clang-format off
-  static_assert(std::same_as<decltype(std::ranges::chunk_view(v, 0)), 
+  static_assert(std::same_as<decltype(std::ranges::chunk_view(v, 0)),
                                       std::ranges::chunk_view<view>>);
-  static_assert(std::same_as<decltype(std::ranges::chunk_view(std::move(v), 0)), 
+  static_assert(std::same_as<decltype(std::ranges::chunk_view(std::move(v), 0)),
                                       std::ranges::chunk_view<view>>);
-  static_assert(std::same_as<decltype(std::ranges::chunk_view(r, 0)), 
+  static_assert(std::same_as<decltype(std::ranges::chunk_view(r, 0)),
                                       std::ranges::chunk_view<std::ranges::ref_view<range>>>);
   static_assert(std::same_as<decltype(std::ranges::chunk_view(std::move(r), 0)),
                                       std::ranges::chunk_view<std::ranges::owning_view<range>>>);
