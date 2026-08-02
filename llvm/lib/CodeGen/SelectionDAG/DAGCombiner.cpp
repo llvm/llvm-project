@@ -138,8 +138,7 @@ static cl::opt<unsigned> StoreMergeDependenceLimit(
     cl::desc("Limit the number of times for the same StoreNode and RootNode "
              "to bail out in store merging dependence check"));
 
-// Small cap: a foldable overlapping load has few chain siblings; keeps the
-// scan linear.
+// A foldable overlapping load has few chain siblings, so a small cap suffices.
 static cl::opt<unsigned> LoadForwardMaxChainUsers(
     "combiner-load-forward-max-chain-users", cl::Hidden, cl::init(16),
     cl::desc("Limit the number of chain users scanned when forwarding a narrow "
@@ -21872,73 +21871,88 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   return SDValue();
 }
 
+/// Returns true if \p LD is a plain non-extending load of a whole fixed-width
+/// scalar integer.
+static bool isForwardableIntegerLoad(LoadSDNode *LD) {
+  if (!LD->isSimple() || LD->isIndexed() ||
+      LD->getExtensionType() != ISD::NON_EXTLOAD)
+    return false;
+  EVT VT = LD->getValueType(0);
+  return VT == LD->getMemoryVT() && VT.isInteger() && !VT.isVector() &&
+         !VT.isScalableVT();
+}
+
 /// If LD reads bytes contained in a wider load from an overlapping address on
-/// the same chain, forward it from that wider load rather than re-reading
-/// memory. This catches overlapping loads of different types (e.g. created by
-/// the vectorizer) that SelectionDAG's CSE cannot merge.
+/// the same chain, forward it from that load instead of re-reading memory.
+/// Catches differently-typed overlapping loads that DAG CSE cannot merge.
 SDValue DAGCombiner::ForwardLoadValueToDirectLoad(LoadSDNode *LD) {
-  if (OptLevel == CodeGenOptLevel::None || !LD->isSimple() || LD->isIndexed())
+  // Little-endian only, so that byte offset N is bit offset N * 8.
+  if (OptLevel == CodeGenOptLevel::None || DAG.getDataLayout().isBigEndian())
     return SDValue();
-  // Plain non-extending integer loads where the value covers the whole access,
-  // and little-endian so byte offset N maps to bit offset N*8.
-  if (LD->getExtensionType() != ISD::NON_EXTLOAD ||
-      DAG.getDataLayout().isBigEndian())
-    return SDValue();
-  EVT LDVT = LD->getValueType(0);
-  if (LDVT != LD->getMemoryVT() || !LDVT.isInteger() || LDVT.isVector() ||
-      LDVT.isScalableVT() || LD->getBasePtr().isUndef())
+  if (!isForwardableIntegerLoad(LD) || LD->getBasePtr().isUndef())
     return SDValue();
 
+  EVT LDVT = LD->getValueType(0);
+  uint64_t LDBits = LDVT.getFixedSizeInBits();
   SDValue Chain = LD->getChain();
   BaseIndexOffset LDPtr = BaseIndexOffset::match(LD, DAG);
 
-  // Bound the scan of chain users: many loads can share one chain token (e.g.
-  // the entry token in a store-free function), which would make this quadratic.
+  // Many loads can share one chain token (e.g. the entry token), so bound the
+  // scan to keep this from going quadratic.
   unsigned Scanned = 0;
   for (SDNode *U : Chain.getNode()->users()) {
     if (++Scanned > LoadForwardMaxChainUsers)
       break;
+
     auto *Wide = dyn_cast<LoadSDNode>(U);
-    if (!Wide || Wide == LD || Wide->getChain() != Chain || !Wide->isSimple() ||
-        Wide->isIndexed() || Wide->getExtensionType() != ISD::NON_EXTLOAD ||
-        Wide->getAddressSpace() != LD->getAddressSpace())
+    if (!Wide || Wide == LD || Wide->getChain() != Chain ||
+        Wide->getAddressSpace() != LD->getAddressSpace() ||
+        !isForwardableIntegerLoad(Wide))
+      continue;
+
+    // Wide must already be needed elsewhere, or this just trades one load for
+    // another and fights ReduceLoadWidth, which narrows the truncate back.
+    if (SDValue(Wide, 0).use_empty())
       continue;
 
     EVT WideVT = Wide->getValueType(0);
-    if (WideVT != Wide->getMemoryVT() || !WideVT.isInteger() ||
-        WideVT.isVector() || WideVT.isScalableVT() ||
-        WideVT.getFixedSizeInBits() <= LDVT.getFixedSizeInBits())
+    uint64_t WideBits = WideVT.getFixedSizeInBits();
+    if (WideBits <= LDBits)
       continue;
 
-    // equalBaseIndex sets Off = Wide's address - LD's address, so LD sits
-    // ByteOff = -Off bytes into Wide. Bound Off to (-WideBytes, 0] up front:
-    // that keeps LD's start inside Wide and lets the bit math below stay in
-    // range (and avoids negating INT64_MIN).
+    // Off = Wide's address - LD's address, so LD sits -Off bytes into Wide.
+    // Bounding Off to (-WideBytes, 0] keeps the bit math below in range.
     int64_t Off;
     BaseIndexOffset WidePtr = BaseIndexOffset::match(Wide, DAG);
     int64_t WideBytes = WideVT.getStoreSize().getFixedValue();
     if (!LDPtr.equalBaseIndex(WidePtr, DAG, Off) || Off > 0 ||
         Off <= -WideBytes)
       continue;
-    int64_t ByteOff = -Off;
+
     // LD must be fully contained, not just start inside Wide.
-    if (ByteOff * 8 + LDVT.getFixedSizeInBits() > WideVT.getFixedSizeInBits())
+    uint64_t ShiftBits = static_cast<uint64_t>(-Off) * 8;
+    if (ShiftBits + LDBits > WideBits)
       continue;
 
-    // LD is bits [ByteOff*8, ByteOff*8 + LDbits) of Wide: shift them down
-    // (little-endian) then truncate.
+    // Narrowing must be free: a truncate, plus a shift for a high field, can
+    // cost more than re-reading memory (e.g. RISC-V, where only i64->i32 is
+    // free).
+    if (!TLI.isTruncateFree(WideVT, LDVT))
+      continue;
+    if (ShiftBits && !TLI.isOperationLegalOrCustom(ISD::SRL, WideVT))
+      continue;
+
+    // LD is bits [ShiftBits, ShiftBits + LDBits) of Wide.
     SDLoc DL(LD);
     SDValue Val(Wide, 0);
-    if (ByteOff != 0) {
-      if (!TLI.isOperationLegalOrCustom(ISD::SRL, WideVT))
-        continue;
+    if (ShiftBits)
       Val = DAG.getNode(ISD::SRL, DL, WideVT, Val,
-                        DAG.getShiftAmountConstant(ByteOff * 8, WideVT, DL));
-    }
-    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, LDVT, Val);
+                        DAG.getShiftAmountConstant(ShiftBits, WideVT, DL));
+
     // LD performs no write, so its chain successors can use LD's input chain.
-    return CombineTo(LD, Trunc, Chain);
+    return CombineTo(LD, DAG.getNode(ISD::TRUNCATE, DL, LDVT, Val), Chain);
   }
+
   return SDValue();
 }
 
@@ -22010,8 +22024,7 @@ SDValue DAGCombiner::visitLOAD(SDNode *N) {
   if (auto V = ForwardStoreValueToDirectLoad(LD))
     return V;
 
-  // If this load reads the low bits of a wider load from the same address,
-  // forward it from that load instead of re-reading memory.
+  // If this load overlaps a wider load, forward it from that load.
   if (SDValue V = ForwardLoadValueToDirectLoad(LD))
     return V;
 
