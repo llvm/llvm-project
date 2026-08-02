@@ -80,8 +80,6 @@ define x86_fp80 @testC() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    calll returns_long_double@PLT
 ; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4

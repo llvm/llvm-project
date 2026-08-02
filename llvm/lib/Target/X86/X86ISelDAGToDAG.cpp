@@ -1449,18 +1449,41 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       // FPStack has extload and truncstore.  SSE can fold direct loads into other
       // operations.  Based on this, decide what we want to do.
       MVT MemVT = (N->getOpcode() == ISD::FP_ROUND) ? DstVT : SrcVT;
-      SDValue MemTmp = CurDAG->CreateStackTemporary(MemVT);
-      int SPFI = cast<FrameIndexSDNode>(MemTmp)->getIndex();
-      MachinePointerInfo MPI =
-          MachinePointerInfo::getFixedStack(CurDAG->getMachineFunction(), SPFI);
       SDLoc dl(N);
 
       // FIXME: optimize the case where the src/dest is a load or store?
+      SDValue SrcVal = N->getOperand(0);
+      SDValue Store, MemTmp;
+      MachinePointerInfo MemMPI;
 
-      SDValue Store = CurDAG->getTruncStore(
-          CurDAG->getEntryNode(), dl, N->getOperand(0), MemTmp, MPI, MemVT);
+      if (auto *LD = dyn_cast<LoadSDNode>(SrcVal)) {
+        if (LD->getMemoryVT() == MemVT) {
+          Store = LD->getChain();
+          MemTmp = LD->getBasePtr();
+          MemMPI = LD->getPointerInfo();
+        }
+      } else if (N->getOpcode() == ISD::FP_EXTEND &&
+                 SrcVal.getOpcode() == ISD::FP_ROUND) {
+        MemTmp = CurDAG->CreateStackTemporary(MemVT);
+        int SPFI = cast<FrameIndexSDNode>(MemTmp)->getIndex();
+        MemMPI = MachinePointerInfo::getFixedStack(CurDAG->getMachineFunction(),
+                                                   SPFI);
+        Store =
+            CurDAG->getTruncStore(CurDAG->getEntryNode(), dl,
+                                  SrcVal.getOperand(0), MemTmp, MemMPI, MemVT);
+      }
+
+      if (!MemTmp) {
+        MemTmp = CurDAG->CreateStackTemporary(MemVT);
+        int SPFI = cast<FrameIndexSDNode>(MemTmp)->getIndex();
+        MemMPI = MachinePointerInfo::getFixedStack(CurDAG->getMachineFunction(),
+                                                   SPFI);
+        Store = CurDAG->getTruncStore(CurDAG->getEntryNode(), dl, SrcVal,
+                                      MemTmp, MemMPI, MemVT);
+      }
+
       SDValue Result = CurDAG->getExtLoad(ISD::EXTLOAD, dl, DstVT, Store,
-                                          MemTmp, MPI, MemVT);
+                                          MemTmp, MemMPI, MemVT);
 
       // We're about to replace all uses of the FP_ROUND/FP_EXTEND with the
       // extload we created.  This will cause general havok on the dag because
