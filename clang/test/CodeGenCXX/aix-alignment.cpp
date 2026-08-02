@@ -1,4 +1,4 @@
-// REQUIRES: powerpc-registered-target
+// powerpc-registered-target
 // RUN: %clang_cc1 -triple powerpc-unknown-aix \
 // RUN:     -emit-llvm -o - -x c++ %s | \
 // RUN:   FileCheck %s --check-prefixes=AIX,AIX32
@@ -29,7 +29,7 @@ typedef struct D {
   ~D(){};
 } D;
 
-// AIX: define void @_Z3foo1D(ptr dead_on_unwind noalias writable sret(%struct.D) align 4 %agg.result, ptr noundef align 4 %x)
+// AIX: define void @_Z3foo1D(ptr dead_on_unwind noalias writable sret(%struct.D) align 4 %agg.result, ptr nofree noundef align 4 dereferenceable(12) %x)
 // AIX32  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 %x, i32 16, i1 false)
 // AIX64: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.result, ptr align 4 %x, i64 16, i1 false)
 D foo(D x) { return x; }
