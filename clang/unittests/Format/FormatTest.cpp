@@ -5985,6 +5985,21 @@ TEST_F(FormatTest, HashInMacroDefinition) {
                Style);
   verifyFormat("#define A void # ## #", Style);
 
+  auto CommaPasteStyle = getLLVMStyleWithColumns(80);
+  CommaPasteStyle.IndentWidth = 4;
+  CommaPasteStyle.ContinuationIndentWidth = 8;
+  CommaPasteStyle.AlignEscapedNewlines = FormatStyle::ENAS_Right;
+  verifyFormat(
+      "#define M(f, ...)                                                      "
+      "        \\\n"
+      "    auto f = call("
+      "firstArgumentThatIsQuiteLongEnoughToForceAWrapHere11111111,  \\\n"
+      "                  ##__VA_ARGS__);",
+      "#define M(f, ...) \\\n"
+      "    auto f = call("
+      "firstArgumentThatIsQuiteLongEnoughToForceAWrapHere11111111, "
+      "##__VA_ARGS__);",
+      CommaPasteStyle);
   Style.ColumnLimit = 60;
   Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
   verifyFormat(

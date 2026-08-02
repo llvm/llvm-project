@@ -6511,8 +6511,12 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
             !(Right.Next &&
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
-  if (Left.is(tok::hashhash) || Right.is(tok::hashhash))
+  if (Left.is(tok::hashhash))
     return false;
+  // Keep pasted identifiers together, but allow a break before the GNU
+  // variadic-macro comma-swallowing extension: , ##__VA_ARGS__.
+  if (Right.is(tok::hashhash))
+    return Left.is(tok::comma);
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
                     TT_ClassHeadName, TT_QtProperty, tok::kw_operator)) {
     return true;
