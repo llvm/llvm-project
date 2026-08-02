@@ -134,14 +134,13 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
                                         7);                                    \
   }
 
-#if __riscv_xlen == 64
 #define __packed_narrow_even2(name, rty, ty, sty)                              \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 0, 2);              \
+    return __builtin_convertvector(__rs1, rty);                                \
   }
 #define __packed_narrow_even4(name, rty, ty, sty)                              \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 0, 2, 4, 6);        \
+    return __builtin_convertvector(__rs1, rty);                                \
   }
 #define __packed_narrow_odd2(name, rty, ty, sty, uty)                          \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
@@ -151,24 +150,6 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_shufflevector((sty)__rs1, (sty)__rs1, 1, 3, 5, 7);        \
   }
-#else
-#define __packed_narrow_even2(name, rty, ty, sty)                              \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(__rs1, rty);                                \
-  }
-#define __packed_narrow_even4(name, rty, ty, sty)                              \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(__rs1, rty);                                \
-  }
-#define __packed_narrow_odd2(name, rty, ty, sty, uty)                          \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(((uty)__rs1) >> 16, rty);                   \
-  }
-#define __packed_narrow_odd4(name, rty, ty, sty, uty)                          \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
-    return __builtin_convertvector(((uty)__rs1) >> 8, rty);                    \
-  }
-#endif
 
 /* Packed Reverse: reverse the order of the elements. Lowered to a single
  * rev8/rev16/ppairoe.* by the backend's packed reverse-shuffle handling. */
@@ -210,6 +191,62 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 #define __packed_unzipo4(name, rty, ty)                                        \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_shufflevector(__rs1, __rs1, 1, 3, 5, 7);                  \
+  }
+
+#define __packed_pair_ee4(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
+    return __builtin_shufflevector(__rs1, __rs2, 0, 4, 2, 6);                  \
+  }
+#define __packed_pair_eo4(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
+    return __builtin_shufflevector(__rs1, __rs2, 0, 5, 2, 7);                  \
+  }
+#define __packed_pair_oe4(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
+    return __builtin_shufflevector(__rs1, __rs2, 1, 4, 3, 6);                  \
+  }
+#define __packed_pair_oo4(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
+    return __builtin_shufflevector(__rs1, __rs2, 1, 5, 3, 7);                  \
+  }
+#define __packed_pair_ee8(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
+    return __builtin_shufflevector(__rs1, __rs2, 0, 8, 2, 10, 4, 12, 6, 14);   \
+  }
+#define __packed_pair_eo8(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
+    return __builtin_shufflevector(__rs1, __rs2, 0, 9, 2, 11, 4, 13, 6, 15);   \
+  }
+#define __packed_pair_oe8(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
+    return __builtin_shufflevector(__rs1, __rs2, 1, 8, 3, 10, 5, 12, 7, 14);   \
+  }
+#define __packed_pair_oo8(name, ty)                                            \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
+    return __builtin_shufflevector(__rs1, __rs2, 1, 9, 3, 11, 5, 13, 7, 15);   \
+  }
+
+#define __packed_nzip2(name, rty, ty)                                          \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return __builtin_shufflevector((rty)__rs1, (rty)__rs2, 0, 4, 2, 6);        \
+  }
+#define __packed_nzip4(name, rty, ty)                                          \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return __builtin_shufflevector((rty)__rs1, (rty)__rs2, 0, 8, 2, 10, 4, 12, \
+                                   6, 14);                                     \
+  }
+#define __packed_nziph2(name, rty, ty)                                         \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return __builtin_shufflevector((rty)__rs1, (rty)__rs2, 1, 5, 3, 7);        \
+  }
+#define __packed_nziph4(name, rty, ty)                                         \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return __builtin_shufflevector((rty)__rs1, (rty)__rs2, 1, 9, 3, 11, 5, 13, \
+                                   7, 15);                                     \
   }
 
 #define __packed_abdsum(name, rty, ty, builtin)                                \
@@ -561,6 +598,50 @@ __packed_unzipo2(punzipo_i16x2, int16x2_t, int16x4_t)
 __packed_unzipe2(punzipe_u16x2, uint16x2_t, uint16x4_t)
 __packed_unzipo2(punzipo_u16x2, uint16x2_t, uint16x4_t)
 
+/* Packed Pair (32-bit byte forms) */
+__packed_pair_ee4(ppaire_i8x4, int8x4_t)
+__packed_pair_ee4(ppaire_u8x4, uint8x4_t)
+__packed_pair_eo4(ppaireo_i8x4, int8x4_t)
+__packed_pair_eo4(ppaireo_u8x4, uint8x4_t)
+__packed_pair_oe4(ppairoe_i8x4, int8x4_t)
+__packed_pair_oe4(ppairoe_u8x4, uint8x4_t)
+__packed_pair_oo4(ppairo_i8x4, int8x4_t)
+__packed_pair_oo4(ppairo_u8x4, uint8x4_t)
+
+/* Packed Pair (64-bit byte and halfword forms) */
+__packed_pair_ee8(ppaire_i8x8, int8x8_t)
+__packed_pair_ee8(ppaire_u8x8, uint8x8_t)
+__packed_pair_eo8(ppaireo_i8x8, int8x8_t)
+__packed_pair_eo8(ppaireo_u8x8, uint8x8_t)
+__packed_pair_oe8(ppairoe_i8x8, int8x8_t)
+__packed_pair_oe8(ppairoe_u8x8, uint8x8_t)
+__packed_pair_oo8(ppairo_i8x8, int8x8_t)
+__packed_pair_oo8(ppairo_u8x8, uint8x8_t)
+__packed_pair_ee4(ppaire_i16x4, int16x4_t)
+__packed_pair_ee4(ppaire_u16x4, uint16x4_t)
+__packed_pair_eo4(ppaireo_i16x4, int16x4_t)
+__packed_pair_eo4(ppaireo_u16x4, uint16x4_t)
+__packed_pair_oe4(ppairoe_i16x4, int16x4_t)
+__packed_pair_oe4(ppairoe_u16x4, uint16x4_t)
+__packed_pair_oo4(ppairo_i16x4, int16x4_t)
+__packed_pair_oo4(ppairo_u16x4, uint16x4_t)
+
+/* Packed Narrowing Zip (32-bit) */
+__packed_nzip2(pnzip_i8x4, int8x4_t, int16x2_t)
+__packed_nzip2(pnzip_u8x4, uint8x4_t, uint16x2_t)
+__packed_nziph2(pnziph_i8x4, int8x4_t, int16x2_t)
+__packed_nziph2(pnziph_u8x4, uint8x4_t, uint16x2_t)
+
+/* Packed Narrowing Zip (64-bit) */
+__packed_nzip4(pnzip_i8x8, int8x8_t, int16x4_t)
+__packed_nzip4(pnzip_u8x8, uint8x8_t, uint16x4_t)
+__packed_nzip2(pnzip_i16x4, int16x4_t, int32x2_t)
+__packed_nzip2(pnzip_u16x4, uint16x4_t, uint32x2_t)
+__packed_nziph4(pnziph_i8x8, int8x8_t, int16x4_t)
+__packed_nziph4(pnziph_u8x8, uint8x8_t, uint16x4_t)
+__packed_nziph2(pnziph_i16x4, int16x4_t, int32x2_t)
+__packed_nziph2(pnziph_u16x4, uint16x4_t, uint32x2_t)
+
 /* Packed Averaging Addition and Subtraction (32-bit) */
 __packed_binary_builtin(paadd_i8x4, int8x4_t, __builtin_riscv_paadd_i8x4)
 __packed_binary_builtin(paadd_i16x2, int16x2_t, __builtin_riscv_paadd_i16x2)
@@ -650,6 +731,16 @@ __packed_psabs(psabs_i16x2, int16x2_t, __builtin_riscv_psabs_i16x2)
 /* Packed Saturating Absolute Value (64-bit) */
 __packed_psabs(psabs_i8x8, int8x8_t, __builtin_riscv_psabs_i8x8)
 __packed_psabs(psabs_i16x4, int16x4_t, __builtin_riscv_psabs_i16x4)
+
+/* Packed "Q-format" Multiplication (32-bit) */
+__packed_binary_builtin(pmulq_i16x2, int16x2_t, __builtin_riscv_pmulq_i16x2)
+__packed_binary_builtin(pmulqr_i16x2, int16x2_t, __builtin_riscv_pmulqr_i16x2)
+
+/* Packed "Q-format" Multiplication (64-bit) */
+__packed_binary_builtin(pmulq_i16x4, int16x4_t, __builtin_riscv_pmulq_i16x4)
+__packed_binary_builtin(pmulqr_i16x4, int16x4_t, __builtin_riscv_pmulqr_i16x4)
+__packed_binary_builtin(pmulq_i32x2, int32x2_t, __builtin_riscv_pmulq_i32x2)
+__packed_binary_builtin(pmulqr_i32x2, int32x2_t, __builtin_riscv_pmulqr_i32x2)
 
 /* Reinterpret Casts, Packed <-> Scalar (32-bit) */
 __packed_reinterpret(u8x4_u32, uint32_t, uint8x4_t)
@@ -779,6 +870,18 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_unzipe4
 #undef __packed_unzipo2
 #undef __packed_unzipo4
+#undef __packed_pair_ee4
+#undef __packed_pair_eo4
+#undef __packed_pair_oe4
+#undef __packed_pair_oo4
+#undef __packed_pair_ee8
+#undef __packed_pair_eo8
+#undef __packed_pair_oe8
+#undef __packed_pair_oo8
+#undef __packed_nzip2
+#undef __packed_nzip4
+#undef __packed_nziph2
+#undef __packed_nziph4
 #undef __packed_abdsum
 #undef __packed_abdsum_acc
 #undef __packed_reinterpret

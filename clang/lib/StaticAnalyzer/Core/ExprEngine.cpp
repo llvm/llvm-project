@@ -1196,7 +1196,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       }
 
       SVal InitVal;
-      if (Init->getType()->isArrayType()) {
+      if (Field->getType()->isArrayType()) {
         // Handle arrays of trivial type. We can represent this with a
         // primitive load/copy from the base array region.
         const ArraySubscriptExpr *ASE;
@@ -2390,11 +2390,7 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 }
 
 /// Block entrance.  (Update counters).
-/// FIXME: `BlockEdge &L` is only used for debug statistics, consider removing
-/// it and using `BlockEntrance &BE` (where `BlockEntrance` is a subtype of
-/// `ProgramPoint`) for statistical purposes.
-void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
-                                         const BlockEntrance &BE,
+void ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
                                          NodeBuilder &Builder,
                                          ExplodedNode *Pred) {
   // If we reach a loop which has a known bound (and meets
@@ -2472,7 +2468,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
       NumMaxBlockCountReached++;
 
     // Make sink nodes as exhausted(for stats) only if retry failed.
-    Engine.blocksExhausted.push_back(std::make_pair(L, Sink));
+    Engine.blocksExhausted.push_back(std::make_pair(BE, Sink));
   }
 }
 
@@ -2664,7 +2660,6 @@ assumeCondition(const Stmt *ConditionStmt, ExplodedNode *N) {
 
   DefinedSVal V = X.castAs<DefinedSVal>();
 
-  ProgramStateRef StTrue, StFalse;
   return State->assume(V);
 }
 
