@@ -56,6 +56,7 @@ add_flang_library(FIRBuilder
   FortranSupport
   HLFIRDialect
   MIFDialect
+  FortranEvaluate
 
   MLIR_DEPS
   ${dialect_libs}
