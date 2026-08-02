@@ -268,7 +268,7 @@ private:
       InfixOperatorStack.push_back(Op);
     }
 
-    int64_t execute() {
+    bool execute(int64_t &Result, StringRef &ErrMsg) {
       // Push any remaining operators onto the postfix stack.
       while (!InfixOperatorStack.empty()) {
         InfixCalculatorTok StackOp = InfixOperatorStack.pop_back_val();
@@ -276,8 +276,10 @@ private:
           PostfixStack.push_back(std::make_pair(StackOp, 0));
       }
 
-      if (PostfixStack.empty())
-        return 0;
+      if (PostfixStack.empty()) {
+        Result = 0;
+        return false;
+      }
 
       SmallVector<ICToken, 16> OperandStack;
       for (const ICToken &Op : PostfixStack) {
@@ -325,13 +327,20 @@ private:
           case IC_DIVIDE:
             assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
                     "Divide operation with an immediate and a register!");
-            assert (Op2.second != 0 && "Division by zero!");
+            if (Op2.second == 0) {
+              ErrMsg = "division by zero";
+              return true;
+            }
             Val = Op1.second / Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
           case IC_MOD:
             assert (Op1.first == IC_IMM && Op2.first == IC_IMM &&
                     "Modulo operation with an immediate and a register!");
+            if (Op2.second == 0) {
+              ErrMsg = "division by zero";
+              return true;
+            }
             Val = Op1.second % Op2.second;
             OperandStack.push_back(std::make_pair(IC_IMM, Val));
             break;
@@ -407,7 +416,8 @@ private:
         }
       }
       assert (OperandStack.size() == 1 && "Expected a single result.");
-      return OperandStack.pop_back_val().second;
+      Result = OperandStack.pop_back_val().second;
+      return false;
     }
   };
 
@@ -489,7 +499,13 @@ private:
     unsigned getSize() const { return CurType.Size; }
     unsigned getElementSize() const { return CurType.ElementSize; }
     unsigned getLength() const { return CurType.Length; }
-    int64_t getImm() { return Imm + IC.execute(); }
+    bool getImm(int64_t &Result, StringRef &ErrMsg) {
+      int64_t ICResult;
+      if (IC.execute(ICResult, ErrMsg))
+        return true;
+      Result = Imm + ICResult;
+      return false;
+    }
     bool isValidEndState() const {
       return State == IES_RBRAC || State == IES_RPAREN ||
              State == IES_INTEGER || State == IES_REGISTER ||
@@ -890,6 +906,29 @@ private:
       default:
         State = IES_ERROR;
         break;
+      case IES_DIVIDE:
+      case IES_MOD: {
+        auto HasError = [&ErrMsg](IntelExprState IES, int64_t TmpInt) {
+          if (TmpInt != 0)
+            return false;
+          switch (IES) {
+          case IES_DIVIDE:
+            ErrMsg = "division by zero in assembly expression";
+            break;
+          case IES_MOD:
+            ErrMsg = "modulo by zero in assembly expression";
+            break;
+          default:
+            llvm_unreachable("unreachable");
+          }
+          return true;
+        };
+        if (HasError(State, TmpInt)) {
+          State = IES_ERROR;
+          return true;
+        }
+        [[fallthrough]];
+      }
       case IES_PLUS:
       case IES_MINUS:
       case IES_NOT:
@@ -904,8 +943,6 @@ private:
       case IES_GE:
       case IES_LSHIFT:
       case IES_RSHIFT:
-      case IES_DIVIDE:
-      case IES_MOD:
       case IES_MULTIPLY:
       case IES_LPAREN:
       case IES_INIT:
@@ -1190,7 +1227,7 @@ private:
   bool ParseMasmNamedOperator(StringRef Name, IntelExprStateMachine &SM,
                               bool &ParseError, SMLoc &End);
   void RewriteIntelExpression(IntelExprStateMachine &SM, SMLoc Start,
-                              SMLoc End);
+                              SMLoc End, int64_t Imm);
   bool ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End);
   bool ParseIntelInlineAsmIdentifier(const MCExpr *&Val, StringRef &Identifier,
                                      InlineAsmIdentifierInfo &Info,
@@ -2246,7 +2283,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
 }
 
 void X86AsmParser::RewriteIntelExpression(IntelExprStateMachine &SM,
-                                          SMLoc Start, SMLoc End) {
+                                          SMLoc Start, SMLoc End,
+                                          int64_t Imm) {
   SMLoc Loc = Start;
   unsigned ExprLen = End.getPointer() - Start.getPointer();
   // Skip everything before a symbol displacement (if we have one)
@@ -2258,7 +2296,7 @@ void X86AsmParser::RewriteIntelExpression(IntelExprStateMachine &SM,
     ExprLen = End.getPointer() - (SymName.data() + SymName.size());
     // If we have only a symbol than there's no need for complex rewrite,
     // simply skip everything after it
-    if (!(SM.getBaseReg() || SM.getIndexReg() || SM.getImm())) {
+    if (!(SM.getBaseReg() || SM.getIndexReg() || Imm)) {
       if (ExprLen)
         InstInfo->AsmRewrites->emplace_back(AOK_Skip, Loc, ExprLen);
       return;
@@ -2276,7 +2314,7 @@ void X86AsmParser::RewriteIntelExpression(IntelExprStateMachine &SM,
     OffsetNameStr = SM.getSymName();
   // Emit it
   IntelExpr Expr(BaseRegStr, IndexRegStr, SM.getScale(), OffsetNameStr,
-                 SM.getImm(), SM.isMemExpr());
+                 Imm, SM.isMemExpr());
   InstInfo->AsmRewrites->emplace_back(Loc, ExprLen, Expr);
 }
 
@@ -2717,10 +2755,14 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
   if (ParseIntelExpression(SM, End))
     return true;
 
-  if (isParsingMSInlineAsm())
-    RewriteIntelExpression(SM, Start, Tok.getLoc());
+  StringRef ErrMsg;
+  int64_t Imm;
+  if (SM.getImm(Imm, ErrMsg))
+    return Error(Start, ErrMsg);
 
-  int64_t Imm = SM.getImm();
+  if (isParsingMSInlineAsm())
+    RewriteIntelExpression(SM, Start, Tok.getLoc(), Imm);
+
   const MCExpr *Disp = SM.getSym();
   const MCExpr *ImmDisp = MCConstantExpr::create(Imm, getContext());
   if (Disp && Imm)
@@ -2747,7 +2789,6 @@ bool X86AsmParser::parseIntelOperand(OperandVector &Operands, StringRef Name) {
     return false;
   }
 
-  StringRef ErrMsg;
   MCRegister BaseReg = SM.getBaseReg();
   MCRegister IndexReg = SM.getIndexReg();
   if (IndexReg && BaseReg == X86::RIP)
@@ -3647,10 +3688,6 @@ bool X86AsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
     Operands.push_back(X86Operand::CreateImm(ImmOp, NameLoc, NameLoc));
   }
 
-  // Parse condtional flags after mnemonic.
-  if ((Name.starts_with("ccmp") || Name.starts_with("ctest")) &&
-      parseCFlagsOp(Operands))
-    return true;
 
   // This does the actual operand parsing.  Don't parse any more if we have a
   // prefix juxtaposed with an operation like "lock incl 4(%rax)", because we
