@@ -53,3 +53,84 @@ define <vscale x 2 x i1> @test.scalable.vectorgep.ult.false(<vscale x 2 x ptr> %
   %t.1 = icmp ult <vscale x 2 x ptr> %gep.1, %vec
   ret <vscale x 2 x i1> %t.1
 }
+
+define <2 x i1> @test.vectorgep.variable.index(ptr %p, <2 x i64> %idx, <2 x ptr> %vec) {
+; CHECK-LABEL: @test.vectorgep.variable.index(
+; CHECK-NEXT:    [[P_5:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 5
+; CHECK-NEXT:    store i32 0, ptr [[P_5]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], <2 x i64> [[IDX:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge <2 x ptr> [[GEP]], [[VEC:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %p.5 = getelementptr inbounds i32, ptr %p, i64 5
+  store i32 0, ptr %p.5
+  %gep = getelementptr i32, ptr %p, <2 x i64> %idx
+  %c = icmp uge <2 x ptr> %gep, %vec
+  ret <2 x i1> %c
+}
+
+; Same as above, but with an index narrower than the index type size, which
+; would require a zext of a vector to a scalar integer type.
+define <2 x i1> @test.vectorgep.narrow.index(ptr %p, <2 x i32> %idx, <2 x ptr> %vec) {
+; CHECK-LABEL: @test.vectorgep.narrow.index(
+; CHECK-NEXT:    [[P_5:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 5
+; CHECK-NEXT:    store i32 0, ptr [[P_5]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], <2 x i32> [[IDX:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge <2 x ptr> [[GEP]], [[VEC:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %p.5 = getelementptr inbounds i32, ptr %p, i64 5
+  store i32 0, ptr %p.5
+  %gep = getelementptr i32, ptr %p, <2 x i32> %idx
+  %c = icmp uge <2 x ptr> %gep, %vec
+  ret <2 x i1> %c
+}
+
+; A constant vector index is not a ConstantInt with integer type, so it is
+; collected as a variable offset.
+define <2 x i1> @test.vectorgep.constant.index(ptr %p, <2 x ptr> %vec) {
+; CHECK-LABEL: @test.vectorgep.constant.index(
+; CHECK-NEXT:    [[P_5:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 5
+; CHECK-NEXT:    store i32 0, ptr [[P_5]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], <2 x i64> <i64 1, i64 2>
+; CHECK-NEXT:    [[C:%.*]] = icmp uge <2 x ptr> [[GEP]], [[VEC:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %p.5 = getelementptr inbounds i32, ptr %p, i64 5
+  store i32 0, ptr %p.5
+  %gep = getelementptr i32, ptr %p, <2 x i64> <i64 1, i64 2>
+  %c = icmp uge <2 x ptr> %gep, %vec
+  ret <2 x i1> %c
+}
+
+; Same as above, but with a splat index, which is a ConstantInt with vector
+; type.
+define <2 x i1> @test.vectorgep.splat.index(ptr %p, <2 x ptr> %vec) {
+; CHECK-LABEL: @test.vectorgep.splat.index(
+; CHECK-NEXT:    [[P_5:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 5
+; CHECK-NEXT:    store i32 0, ptr [[P_5]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], <2 x i64> splat (i64 3)
+; CHECK-NEXT:    [[C:%.*]] = icmp uge <2 x ptr> [[GEP]], [[VEC:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %p.5 = getelementptr inbounds i32, ptr %p, i64 5
+  store i32 0, ptr %p.5
+  %gep = getelementptr i32, ptr %p, <2 x i64> splat (i64 3)
+  %c = icmp uge <2 x ptr> %gep, %vec
+  ret <2 x i1> %c
+}
+
+define <vscale x 2 x i1> @test.scalable.vectorgep.variable.index(ptr %p, <vscale x 2 x i64> %idx, <vscale x 2 x ptr> %vec) {
+; CHECK-LABEL: @test.scalable.vectorgep.variable.index(
+; CHECK-NEXT:    [[P_5:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 5
+; CHECK-NEXT:    store i32 0, ptr [[P_5]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], <vscale x 2 x i64> [[IDX:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp uge <vscale x 2 x ptr> [[GEP]], [[VEC:%.*]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[C]]
+;
+  %p.5 = getelementptr inbounds i32, ptr %p, i64 5
+  store i32 0, ptr %p.5
+  %gep = getelementptr i32, ptr %p, <vscale x 2 x i64> %idx
+  %c = icmp uge <vscale x 2 x ptr> %gep, %vec
+  ret <vscale x 2 x i1> %c
+}

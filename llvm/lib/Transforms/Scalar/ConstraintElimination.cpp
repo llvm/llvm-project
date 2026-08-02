@@ -1108,7 +1108,10 @@ Value *State::createIndexExpression(
   if (VariableOffsets.size() == 0)
     return ConstOffsetValue;
   const auto &[Index, Scale] = *VariableOffsets.begin();
-  if (Index->getType()->getScalarSizeInBits() > BitWidth)
+  // The index expression is computed using scalar integer arithmetic. Bail out
+  // for GEPs with vector index operands, as their offsets are vectors.
+  Type *IdxTy = Index->getType();
+  if (!IdxTy->isIntegerTy() || IdxTy->getIntegerBitWidth() > BitWidth)
     return nullptr;
 
   // Compute offset as VariableOffset * Scale + ConstantOffset, in front of GEP,
