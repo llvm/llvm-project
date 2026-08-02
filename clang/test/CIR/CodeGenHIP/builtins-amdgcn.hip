@@ -223,3 +223,19 @@ __device__ void test_frexp_mant_f32(float* out, float a) {
 __device__ void test_frexp_mant_f64(double* out, double a) {
   *out = __builtin_amdgcn_frexp_mant(a);
 }
+
+// CIR-LABEL: @_Z14test_class_f32Pbfi
+// CIR: cir.call_llvm_intrinsic "amdgcn.class" {{.*}} : (!cir.float, !s32i) -> !cir.bool
+// LLVM: define{{.*}} void @_Z14test_class_f32Pbfi
+// LLVM: call{{.*}} i1 @llvm.amdgcn.class.f32(float %{{.*}}, i32 %{{.*}})
+__device__ void test_class_f32(bool* out, float a, int b) {
+  *out = __builtin_amdgcn_classf(a, b);
+}
+
+// CIR-LABEL: @_Z14test_class_f64Pbdi
+// CIR: cir.call_llvm_intrinsic "amdgcn.class" {{.*}} : (!cir.double, !s32i) -> !cir.bool
+// LLVM: define{{.*}} void @_Z14test_class_f64Pbdi
+// LLVM: call{{.*}} i1 @llvm.amdgcn.class.f64(double %{{.*}}, i32 %{{.*}})
+__device__ void test_class_f64(bool* out, double a, int b) {
+  *out = __builtin_amdgcn_class(a, b);
+}
