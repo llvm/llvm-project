@@ -47,6 +47,7 @@ SPARCV9::SPARCV9(Ctx &ctx) : TargetInfo(ctx) {
   pltRel = R_SPARC_JMP_SLOT;
   relativeRel = R_SPARC_RELATIVE;
   symbolicRel = R_SPARC_64;
+  tlsGotRel = R_SPARC_TLS_TPOFF64;
   gotHeaderEntriesNum = 1;
   pltEntrySize = 32;
   pltHeaderSize = 4 * pltEntrySize;
@@ -116,6 +117,7 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     RelExpr expr;
     switch (type) {
     case R_SPARC_NONE:
+    case R_SPARC_TLS_IE_ADD:
       continue;
 
     // Absolute relocations:
@@ -187,6 +189,19 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
         continue;
       expr = R_TPREL;
       break;
+
+    // TLS IE relocations. In an executable, a non-preemptible symbol is
+    // optimized to Local Exec: the add becomes an xor and the load becomes a
+    // register move.
+    case R_SPARC_TLS_IE_HI22:
+    case R_SPARC_TLS_IE_LO10:
+      rs.handleTlsIe(R_GOT_OFF, type, offset, addend, sym);
+      continue;
+    case R_SPARC_TLS_IE_LD:
+    case R_SPARC_TLS_IE_LDX:
+      if (!ctx.arg.shared && !sym.isPreemptible)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
 
     default:
       Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
@@ -354,6 +369,31 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     if (rel.expr == R_GOTREL)
       write32be(loc, (read32be(loc) & 0x3e07c01f) | 0x80000000);
     break;
+  case R_SPARC_TLS_IE_HI22: {
+    // T-imm22. Local Exec encodes the complement, as R_SPARC_TLS_LE_HIX22 does.
+    uint64_t v = rel.expr == R_TPREL ? ~val : val;
+    write32be(loc, (read32be(loc) & ~0x003fffff) | ((v >> 10) & 0x003fffff));
+    break;
+  }
+  case R_SPARC_TLS_IE_LO10:
+    if (rel.expr == R_TPREL)
+      // add %rs1, imm, %rd -> xor %rs1, imm, %rd, T-simm13.
+      write32be(loc, (read32be(loc) & ~0x00001fff) | 0x80182000 |
+                         (val & 0x000003ff) | 0x1c00);
+    else
+      // T-simm10
+      write32be(loc, (read32be(loc) & ~0x000003ff) | (val & 0x000003ff));
+    break;
+  case R_SPARC_TLS_IE_LD:
+  case R_SPARC_TLS_IE_LDX: {
+    // ld/ldx [%rs1 + %rs2], %rd -> mov %rs2, %rd, or nop if the move is
+    // redundant. Only reached when the sequence is optimized to Local Exec.
+    uint32_t insn = read32be(loc);
+    write32be(loc, ((insn >> 25) & 0x1f) == (insn & 0x1f)
+                       ? 0x01000000
+                       : 0x80100000 | (insn & 0x3e00001f));
+    break;
+  }
   default:
     llvm_unreachable("unknown relocation");
   }
