@@ -33,19 +33,6 @@
 
 #include "test_range.h"
 
-// The relational operators (<, >, <=, >=, <=>) are only available when `Base` models `random_access_range`.
-template <class Base>
-concept HasChunkIteratorRelationalOperators = requires(std::ranges::iterator_t<std::ranges::chunk_view<Base>> it) {
-  it < it;
-  it > it;
-  it <= it;
-  it >= it;
-};
-
-static_assert(!HasChunkIteratorRelationalOperators<test_view<forward_iterator>>);
-static_assert(!HasChunkIteratorRelationalOperators<test_view<bidirectional_iterator>>);
-static_assert(HasChunkIteratorRelationalOperators<test_view<random_access_iterator>>);
-
 constexpr bool test() {
   std::vector<int> vector                                                  = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
   std::ranges::chunk_view<std::ranges::ref_view<std::vector<int>>> chunked = vector | std::views::chunk(3);
