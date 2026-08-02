@@ -1228,7 +1228,7 @@ class VOP1_CVT_PK_F8_F16_Fake16_Profile<RegisterOperand RC> : VOPProfile_Fake16<
 }
 }
 
-let SubtargetPredicate = isGFX1250Plus in {
+let SubtargetPredicate = HasF16FP8ConversionInsts in {
 let ReadsModeReg = 0 in {
   defm V_CVT_PK_FP8_F16 : VOP1Inst_t16_with_profiles<"v_cvt_pk_fp8_f16",
                                                       VOP1_CVT_PK_F8_F16_Profile<VSrc_NoInline_v2f16>,

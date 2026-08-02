@@ -1300,6 +1300,14 @@ ScriptInterpreterPythonImpl::GetMaxPositionalArgumentsForCallable(
                                    callable_name.str().c_str());
   }
   llvm::Expected<PythonCallable::ArgInfo> arg_info = pfunc.GetArgInfo();
+  if (!arg_info) {
+    // `-f` may point at a builtin, unlike other GetArgInfo() callers.
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Script), arg_info.takeError(),
+                   "GetArgInfo failed for callable {1}, falling back to "
+                   "inspect.signature: {0}",
+                   callable_name);
+    arg_info = PythonCallable::GetArgInfoFromInspectSignature(pfunc);
+  }
   if (!arg_info)
     return arg_info.takeError();
   return arg_info.get().max_positional_args;

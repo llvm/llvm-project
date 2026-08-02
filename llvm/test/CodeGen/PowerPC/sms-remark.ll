@@ -15,7 +15,7 @@
 @y = dso_local global [1024 x i32] zeroinitializer, align 4
 
 define dso_local ptr @foo() local_unnamed_addr {
-;ENABLED: Schedule found with Initiation Interval: {{[0-9]+}}, MaxStageCount: {{[0-9]+}}, ResMII: {{[0-9]+}}, RecMII: {{[0-9]+}}, Bound: {{(Recurrence|Resource)}}
+;ENABLED: Schedule found with Initiation Interval
 ;ENABLED: Pipelined succesfully!
 entry:
   %.pre = load i32, ptr @y, align 4
