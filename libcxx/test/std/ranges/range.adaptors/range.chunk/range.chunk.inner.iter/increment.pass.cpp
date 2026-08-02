@@ -32,7 +32,7 @@ constexpr bool test() {
     assert(*++it == 2);
   }
 
-  // Test `constexpr inner_iterator& operator++();`
+  // Test `constexpr void operator++(int);`
   {
     /*chunk_view::__inner_iterator*/ std::input_iterator auto it = (*input_chunked.begin()).begin();
     static_assert(std::same_as<decltype(it++), void>);

@@ -13,7 +13,7 @@
 //   V models only input_range:
 //     constexpr default_sentinel_t end();
 
-//   V moduels forward_range:
+//   V models forward_range:
 //     constexpr auto end() requires (!__simple_view<V>);
 //     constexpr auto end() const requires forward_range<const V>;
 

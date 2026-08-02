@@ -31,13 +31,13 @@ constexpr bool test() {
 
   // Test `constexpr iterator& operator--();`
   {
-    /*chunk_view::__outer_iterator*/ std::bidirectional_iterator auto it = chunked.end();
+    /*chunk_view::__iterator*/ std::bidirectional_iterator auto it = chunked.end();
     assert(std::ranges::equal(*--it, std::vector{7, 8}));
   }
 
   // Test `constexpr iterator operator--(int)`
   {
-    /*chunk_view::__outer_iterator*/ std::bidirectional_iterator auto it = chunked.end();
+    /*chunk_view::__iterator*/ std::bidirectional_iterator auto it = chunked.end();
     it--;
     assert(std::ranges::equal(*it, std::vector{7, 8}));
   }
