@@ -1220,6 +1220,27 @@ void CodeGenModule::Release() {
       getModule().addModuleFlag(llvm::Module::Error, "amdgpu_printf_kind",
                                 MDStr);
     }
+
+    const TargetOptions &TargetOpts = getTarget().getTargetOpts();
+
+    if (TargetOpts.AMDGPUXnackState != TargetOptions::AMDGPUFeatureState::Any) {
+      // TODO: Avoid emitting the xnack flag on targets which do not support
+      // xnack configuration.
+      getModule().addModuleFlag(
+          llvm::Module::Error, "amdgpu.xnack",
+          llvm::ConstantInt::get(
+              Int32Ty, TargetOpts.AMDGPUXnackState ==
+                           TargetOptions::AMDGPUFeatureState::Enabled));
+    }
+
+    if (TargetOpts.AMDGPUSramEccState !=
+        TargetOptions::AMDGPUFeatureState::Any) {
+      getModule().addModuleFlag(
+          llvm::Module::Error, "amdgpu.sramecc",
+          llvm::ConstantInt::get(
+              Int32Ty, TargetOpts.AMDGPUSramEccState ==
+                           TargetOptions::AMDGPUFeatureState::Enabled));
+    }
   }
 
   // Emit a global array containing all external kernels or device variables
@@ -1359,6 +1380,21 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "wchar_size",
                               static_cast<uint32_t>(WCharWidth));
 
+  // Record the floating-point ABI as a module flag when it differs from the
+  // target default. softfp collapses to soft.
+  llvm::FloatABI::ABIType FloatABI =
+      llvm::StringSwitch<llvm::FloatABI::ABIType>(CodeGenOpts.FloatABI)
+          .Cases({"soft", "softfp"}, llvm::FloatABI::Soft)
+          .Case("hard", llvm::FloatABI::Hard)
+          .Default(llvm::FloatABI::Default);
+  if (FloatABI != llvm::FloatABI::Default &&
+      FloatABI != getTriple().getDefaultFloatABI()) {
+    getModule().addModuleFlag(
+        llvm::Module::Error, "float-abi",
+        llvm::MDString::get(getLLVMContext(),
+                            llvm::FloatABI::getABITypeName(FloatABI)));
+  }
+
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
                               "zos_product_major_version",
@@ -1496,24 +1532,6 @@ void CodeGenModule::Release() {
   if (CodeGenOpts.IndirectBranchCSPrefix)
     getModule().addModuleFlag(llvm::Module::Override, "indirect_branch_cs_prefix", 1);
 
-  // Add module metadata for return address signing (ignoring
-  // non-leaf/all) and stack tagging. These are actually turned on by function
-  // attributes, but we use module metadata to emit build attributes. This is
-  // needed for LTO, where the function attributes are inside bitcode
-  // serialised into a global variable by the time build attributes are
-  // emitted, so we can't access them. LTO objects could be compiled with
-  // different flags therefore module flags are set to "Min" behavior to achieve
-  // the same end result of the normal build where e.g BTI is off if any object
-  // doesn't support it.
-  if (Context.getTargetInfo().hasFeature("ptrauth") &&
-      LangOpts.getSignReturnAddressScope() !=
-          LangOptions::SignReturnAddressScopeKind::None)
-    getModule().addModuleFlag(llvm::Module::Override,
-                              "sign-return-address-buildattr", 1);
-  if (LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
-    getModule().addModuleFlag(llvm::Module::Override,
-                              "tag-stack-memory-buildattr", 1);
-
   if (T.isARM() || T.isThumb() || T.isAArch64()) {
     // Previously 1 is used and meant for the backed to derive the function
     // attribute form it. 2 now means function attributes already set for all
@@ -1540,7 +1558,33 @@ void CodeGenModule::Release() {
                                 "sign-return-address-with-bkey", 2);
   }
   if (T.isAArch64()) {
+    // Emit the following 4 module flags so LLVM can derive corresponding
+    // function attributes for synthetically generated functions (e.g.
+    // __llvm_gcov_writeout). It is safe to only emit the flags conditionally
+    // and set the Max behavior because of two reasons:
+    // 1) all 4 hardening features gated behind the attributes do not break ABI
+    //    compatibility, so we do not need to error on flag mismatch (thus,
+    //    conditional emission);
+    // 2) promoting an absent flag to a present flag enables the corresponding
+    //    hardening feature for newly emitted functions which does not affect
+    //    correctness and is guaranteed to have sufficient target features for
+    //    it, since the module we are merging with already has the flag set.
+    if (LangOpts.PointerAuthReturns)
+      getModule().addModuleFlag(llvm::Module::Max, "ptrauth-returns", 1);
+    if (LangOpts.PointerAuthAuthTraps)
+      getModule().addModuleFlag(llvm::Module::Max, "ptrauth-auth-traps", 1);
+    if (LangOpts.PointerAuthIndirectGotos)
+      getModule().addModuleFlag(llvm::Module::Max, "ptrauth-indirect-gotos", 1);
+    if (LangOpts.AArch64JumpTableHardening)
+      getModule().addModuleFlag(llvm::Module::Max,
+                                "aarch64-jump-table-hardening", 1);
+
     if (getTriple().isOSBinFormatELF()) {
+      // The following ptrauth-* flags are emitted unconditionally: value 1 if
+      // the corresponding feature is set and value 0 otherwise. It is required
+      // for Error behavior to properly detect value mismatch between modules -
+      // modules with different values of these flags are incompatible and merge
+      // is not allowed.
       getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got",
                                 LangOpts.PointerAuthELFGOT);
 
@@ -3700,13 +3744,16 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
   if (List.empty())
     return;
 
-  // Convert List to what ConstantArray needs.
-  SmallVector<llvm::Constant*, 8> UsedArray;
-  UsedArray.resize(List.size());
-  for (unsigned i = 0, e = List.size(); i != e; ++i) {
-    UsedArray[i] =
-        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
-            cast<llvm::Constant>(&*List[i]), CGM.Int8PtrTy);
+  // Convert List to what ConstantArray needs. A used global may have been
+  // deleted after it was added to the list (e.g. when its home module keeps
+  // accumulating declarations after an erroneous incremental parse), leaving
+  // a null value handle behind; skip those entries.
+  SmallVector<llvm::Constant *, 8> UsedArray;
+  UsedArray.reserve(List.size());
+  for (const llvm::WeakTrackingVH &VH : List) {
+    if (llvm::Value *V = VH)
+      UsedArray.push_back(llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(
+          cast<llvm::Constant>(V), CGM.Int8PtrTy));
   }
 
   if (UsedArray.empty())

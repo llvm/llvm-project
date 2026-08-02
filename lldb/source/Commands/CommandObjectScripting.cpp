@@ -320,7 +320,7 @@ private:
     const std::string separator(
         std::min<uint64_t>(GetDebugger().GetTerminalWidth(), 80), '-');
 
-    s.Printf("Available scripted extension templates:");
+    s.PutCString("Available scripted extension templates:");
 
     auto print_field = [&](llvm::StringRef key, llvm::StringRef value,
                            const std::string &value_color = std::string()) {
@@ -536,12 +536,22 @@ protected:
       return;
     }
 
-    if (m_options.m_open_editor != eLazyBoolNo) {
+    bool should_open_editor = false;
+    switch (m_options.m_open_editor) {
+    case eLazyBoolYes:
+      should_open_editor = true;
+      break;
+    case eLazyBoolNo:
+      should_open_editor = false;
+      break;
+    case eLazyBoolCalculate:
+      should_open_editor = result.GetInteractive();
+      break;
+    }
+
+    if (should_open_editor) {
       if (llvm::Error err = Host::OpenFileInExternalEditor(
               "", *generated_file_or_err, 1, true)) {
-        // The template is on disk; failing to launch an editor (e.g. no
-        // external editor available on this platform) shouldn't fail the
-        // whole command.
         LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(err),
                        "OpenFileInExternalEditor failed: {0}");
       }
