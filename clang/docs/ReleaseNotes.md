@@ -424,6 +424,12 @@ features cannot lower the translation-unit ABI level;
   copy so the union's object representation is copied, matching the defaulted
   union copy constructor.
 
+- Fixed a miscompile where C++20 parenthesized aggregate initialization generated
+  invalid LLVM IR. (GH#213284)
+
+- Fixed a crash when compiling C++20 parenthesized aggregate initialization in
+  template constructor member initializers. (GH#189005)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made

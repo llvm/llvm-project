@@ -4657,6 +4657,9 @@ Sema::BuildMemberInitializer(ValueDecl *Member, Expr *Init,
     Args = MultiExprArg(ParenList->getExprs(), ParenList->getNumExprs());
   } else if (InitListExpr *InitList = dyn_cast<InitListExpr>(Init)) {
     Args = MultiExprArg(InitList->getInits(), InitList->getNumInits());
+  } else if (CXXParenListInitExpr *CXXInitList =
+                 dyn_cast<CXXParenListInitExpr>(Init)) {
+    Args = CXXInitList->getInitExprs();
   } else {
     // Template instantiation doesn't reconstruct ParenListExprs for us.
     Args = Init;
