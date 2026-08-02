@@ -263,7 +263,7 @@ mlir::affine::createAffineScalarReplacementPass() {
 }
 
 void AffineScalarReplacement::runOnOperation() {
-  SmallVector<IfSinkPlan> plans;
+  SmallVector<IfSinkPlan, 2> plans;
   getOperation()->walk([&](AffineIfOp ifOp) {
     IfSinkPlan plan{/*ifOp=*/ifOp, /*pairs=*/{}};
     analyzeIfOp(ifOp, plan);
