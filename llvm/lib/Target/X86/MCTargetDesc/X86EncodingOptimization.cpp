@@ -278,6 +278,8 @@ bool X86::optimizeVPCMPWithImmediateOneOrSix(MCInst &MI) {
 #undef FROM_TO
   }
   MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1);
+  if (!LastOp.isImm())
+    return false;
   int64_t Imm = LastOp.getImm();
   unsigned NewOpc;
   if (Imm == 0)
