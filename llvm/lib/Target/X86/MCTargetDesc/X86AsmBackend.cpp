@@ -176,13 +176,6 @@ public:
     PrevInstPosition = {};
   }
 
-  void reset() override {
-    PrevInst = MCInst();
-    PrevInstOpcode = 0;
-    PendingBA = nullptr;
-    PrevInstPosition = {};
-  }
-
   void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst,
                             const MCSubtargetInfo &STI);
   void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst);
