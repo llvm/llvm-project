@@ -246,12 +246,20 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
 
         if (sc.function) {
           func_start_address = sc.function->GetAddress();
-          if (curr_addr == func_start_address.GetLoadAddress(&GetTarget()))
-            bytes_to_skip = sc.function->GetPrologueByteSize();
+          bytes_to_skip = sc.function->GetPrologueByteSize();
         } else if (sc.symbol) {
           func_start_address = sc.symbol->GetAddress();
-          if (curr_addr == func_start_address.GetLoadAddress(&GetTarget()))
-            bytes_to_skip = sc.symbol->GetPrologueByteSize();
+          bytes_to_skip = sc.symbol->GetPrologueByteSize();
+        }
+
+        // The prologue has yet to run only if the pc is inside it. A function's
+        // entry point need not be its first address, so a pc past that address
+        // does not mean the prologue has already run.
+        if (bytes_to_skip != 0) {
+          const lldb::addr_t func_start =
+              func_start_address.GetLoadAddress(&GetTarget());
+          if (curr_addr < func_start || curr_addr >= func_start + bytes_to_skip)
+            bytes_to_skip = 0;
         }
 
         if (bytes_to_skip == 0 && sc.symbol) {
