@@ -2374,24 +2374,12 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   case TargetOpcode::G_ROTR: {
     Register SrcReg = MI.getOperand(1).getReg();
     unsigned Tmp = computeNumSignBits(SrcReg, DemandedElts, Depth + 1);
-
-    // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
-    if (Tmp == TyBits)
-      return TyBits;
-
-    if (auto MaybeAmt =
-            isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI)) {
-      unsigned RotAmt = MaybeAmt->urem(TyBits);
-
-      // Handle rotate right by N like a rotate left by TyBits-N.
-      if (Opcode == TargetOpcode::G_ROTR)
-        RotAmt = (TyBits - RotAmt) % TyBits;
-
-      // If we aren't rotating out all of the known-in sign bits, return the
-      // number that are left. This handles rotl(sext(x), 1) for example.
-      if (Tmp > RotAmt + 1)
-        FirstAnswer = Tmp - RotAmt;
-    }
+    auto MaybeAmt =
+        isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
+    FirstAnswer = KnownBits::rotateNumSignBits(
+        Tmp, TyBits,
+        MaybeAmt ? std::optional(MaybeAmt->getZExtValue()) : std::nullopt,
+        Opcode == TargetOpcode::G_ROTR);
     break;
   }
   case TargetOpcode::G_SREM: {

@@ -485,6 +485,12 @@ public:
   /// Compute known bits for pdep(Val, Mask).
   LLVM_ABI static KnownBits pdep(const KnownBits &Val, const KnownBits &Mask);
 
+  /// Compute the number of sign bits after rotating a value.
+  LLVM_ABI static unsigned rotateNumSignBits(unsigned SrcSignBits,
+                                             unsigned BitWidth,
+                                             std::optional<uint64_t> RotAmt,
+                                             bool IsRotateRight);
+
   /// Determine if these known bits always give the same ICMP_EQ result.
   LLVM_ABI static std::optional<bool> eq(const KnownBits &LHS,
                                          const KnownBits &RHS);

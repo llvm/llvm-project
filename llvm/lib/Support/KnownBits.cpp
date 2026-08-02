@@ -713,6 +713,29 @@ KnownBits KnownBits::pdep(const KnownBits &Val, const KnownBits &Mask) {
   return Res;
 }
 
+unsigned KnownBits::rotateNumSignBits(unsigned SrcSignBits, unsigned BitWidth,
+                                      std::optional<uint64_t> RotAmt,
+                                      bool IsRotateRight) {
+  // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
+  if (SrcSignBits == BitWidth)
+    return BitWidth;
+
+  if (!RotAmt)
+    return 1;
+
+  unsigned Amt = *RotAmt % BitWidth;
+
+  // Handle rotate right by N like a rotate left by BitWidth-N.
+  if (IsRotateRight)
+    Amt = (BitWidth - Amt) % BitWidth;
+
+  // If we aren't rotating out all of the known-in sign bits, return the
+  // number that are left. This handles rotl(sext(x), 1) for example.
+  if (SrcSignBits > Amt + 1)
+    return SrcSignBits - Amt;
+  return 1;
+}
+
 std::optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
   if (LHS.isConstant() && RHS.isConstant())
     return LHS.getConstant() == RHS.getConstant();
