@@ -1243,6 +1243,27 @@ TEST(ParseArchString, RVYFeatureImplicationC) {
   EXPECT_FALSE((*MaybeISAInfo)->hasExtension("zcd"));
 }
 
+static StringRef GetABIFromFeatures(unsigned XLen,
+                                    std::vector<std::string> Features) {
+  auto ISAInfo = RISCVISAInfo::parseFeatures(XLen, Features);
+  EXPECT_THAT_EXPECTED(ISAInfo, Succeeded());
+  return (*ISAInfo)->computeDefaultABI();
+}
+
+TEST(ComputeDefaultABI, SelectsExpectedABI) {
+  EXPECT_EQ(GetABIFromFeatures(32, {}), "ilp32");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+f"}), "ilp32f");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+f", "+d"}), "ilp32d");
+  EXPECT_EQ(GetABIFromFeatures(32, {"+e"}), "ilp32e");
+  EXPECT_EQ(GetABIFromFeatures(64, {}), "lp64");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+f"}), "lp64f");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+f", "+d"}), "lp64d");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+e"}), "lp64e");
+
+  // CHERIoT always selects the cheriot ABI by default.
+  EXPECT_EQ(GetABIFromFeatures(32, {"+xcheriot"}), "cheriot");
+}
+
 TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
   // Test Zca+Zcb+Zcmp+Zcmt implies Zce behavior.
 
@@ -1597,6 +1618,7 @@ R"(All available -march extensions for RISC-V
     xsifivecdiscarddlone 1.0
     xsifivecflushdlone   1.0
     xsmtvdot             1.0
+    xsmtvdotii           1.0
     xtheadba             1.0
     xtheadbb             1.0
     xtheadbs             1.0
@@ -1617,6 +1639,7 @@ Experimental extensions
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
+    zilx                 0.1
     zvabd                0.7
     zvbc32e              0.7
     zvdot4a8i            0.1
@@ -1637,7 +1660,9 @@ Experimental extensions
     zvvmtls              0.1
     zvvmttls             0.1
     zvzip                0.1
+    smcsps               0.19
     smpmpmt              0.6
+    sscsps               0.19
     svukte               0.3
     xqccmt               0.1
     xsfmclic             0.1

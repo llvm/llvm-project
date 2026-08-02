@@ -240,8 +240,7 @@ bool llvm::applyDebugifyMetadata(
       auto LocalVar = DIB.createAutoVariable(SP, Name, File, Loc->getLine(),
                                              getCachedDIType(V->getType()),
                                              /*AlwaysPreserve=*/true);
-      DIB.insertDbgValueIntrinsic(V, LocalVar, DIB.createExpression(), Loc,
-                                  InsertPt);
+      DIB.insertDbgValue(V, LocalVar, DIB.createExpression(), Loc, InsertPt);
     };
 
     for (BasicBlock &BB : F) {
@@ -440,7 +439,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
     DebugInfoBeforePass.DIFunctions.insert({&F, SP});
     if (SP) {
       LLVM_DEBUG(dbgs() << "  Collecting subprogram: " << *SP << '\n');
-      for (const DINode *DN : SP->getRetainedNodes()) {
+      for (const MDNode *DN : SP->getRetainedNodes()) {
         if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
           DebugInfoBeforePass.DIVariables[DV] = 0;
         }
@@ -658,7 +657,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
     if (SP) {
       LLVM_DEBUG(dbgs() << "  Collecting subprogram: " << *SP << '\n');
-      for (const DINode *DN : SP->getRetainedNodes()) {
+      for (const MDNode *DN : SP->getRetainedNodes()) {
         if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
           DebugInfoAfterPass.DIVariables[DV] = 0;
         }

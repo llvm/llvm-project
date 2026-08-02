@@ -30,7 +30,7 @@ include "mlir/IR/CommonAttrConstraints.td"
 
 def OpenACC_ReductionInitOp
     : OpenACC_Op<"reduction_init",
-                 [SameOperandsAndResultType, RecursiveMemoryEffects,
+                 [AllTypesMatch<["var", "result"]>, RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                             ["getRegionInvocationBounds",
                                              "getSuccessorInputs"]>,
@@ -42,16 +42,33 @@ def OpenACC_ReductionInitOp
     contains the recipe's init code and must yield a single value (the private
     reduction storage) via `acc.yield`.
 
-    The var operand is the original/shared reduction variable. The
-    reduction_operator specifies the reduction kind (e.g. add, mul).
+    The `var` operand is the original/shared reduction variable. The
+    `reduction_operator` specifies the reduction kind (e.g. add, mul).
+
+    The optional `bounds` operands describe the element range of the reduction
+    variable (as `acc.bounds` ops) when it refers to an array section. They
+    carry the section's bound information.
   }];
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$var,
+                       Variadic<OpenACC_DataBoundsType>:$bounds,
                        OpenACC_ReductionOperatorAttr:$reductionOperator);
   let results = (outs OpenACC_AnyPointerOrMappableType:$result);
   let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
-    $var $reductionOperator `:` type($result) $region attr-dict
+    $var (`bounds` `(` $bounds^ `)`)? $reductionOperator `:` type($result)
+    $region attr-dict
   }];
+  let builders = [
+    // Convenience builder for reductions without array-section bounds.
+    OpBuilder<(ins "::mlir::Value":$var,
+                   "::mlir::acc::ReductionOperatorAttr":$reductionOperator), [{
+      build($_builder, $_state, var, ::mlir::ValueRange{}, reductionOperator);
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$var,
+                   "::mlir::acc::ReductionOperator":$reductionOperator), [{
+      build($_builder, $_state, var, ::mlir::ValueRange{}, reductionOperator);
+    }]>,
+  ];
   let hasVerifier = 1;
 }
 
@@ -74,8 +91,8 @@ def OpenACC_ReductionCombineRegionOp
     value(s) in the original/shared reduction variable. The region is
     terminated by `acc.yield` with no operands.
 
-    The destVar operand is the original/shared reduction variable.
-    The srcVar operand is typically the result of acc.reduction_init.
+    The `destVar` operand is the original/shared reduction variable.
+    The `srcVar` operand is typically the result of acc.reduction_init.
   }];
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$destVar,
                        OpenACC_AnyPointerOrMappableType:$srcVar);
@@ -113,11 +130,11 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
       memref.store %combine, %dest[] : memref<i32>
     ```
     
-    The $destMemref operand is a "pointer" to the original reduction 
-    variable (typically shared). The $srcMemref operand is a "pointer"
+    The `destMemref` operand is a "pointer" to the original reduction 
+    variable (typically shared). The `srcMemref` operand is a "pointer"
     to the partial sum of the reduction (typically private).
 
-    The $kind is the OpenACC reduction operator that determines how to 
+    The `kind` is the OpenACC reduction operator that determines how to 
     accumulate the two values.
   }];
 

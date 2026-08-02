@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -192,6 +193,16 @@ IsValidMatrixOpParams(VectorType dataTy, MemDescType mdescTy,
   if (subgroup_block_io && !blockShape.size())
     return emitError() << "mem_desc must have block attribute when "
                           "subgroup_block_io is set.";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_CreateMemDescOp
+//===----------------------------------------------------------------------===//
+LogicalResult CreateMemDescOp::verify() {
+  auto srcTy = getSource().getType();
+  if (!memref::isStaticShapeAndContiguousRowMajor(srcTy))
+    return emitOpError("source memref must be contiguous.");
   return success();
 }
 
@@ -843,12 +854,10 @@ LogicalResult DpasOp::verify() {
 // XeGPU_ConvertLayoutOp
 //===----------------------------------------------------------------------===//
 LogicalResult ConvertLayoutOp::verify() {
-  auto srcLayout = getInputLayout();
   auto resLayout = getTargetLayout();
-  if (!srcLayout)
-    return emitOpError("expected input layout.");
   if (!resLayout)
     return emitOpError("expected target layout.");
+  auto srcLayout = getEffectiveInputLayout();
 
   // both input and target layouts should be WgLayout or SgLayout at the same
   // time.
@@ -935,6 +944,29 @@ LogicalResult TruncfOp::verify() {
     return emitOpError("input type must be wider than result type.");
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_LaneShuffleOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult LaneShuffleOp::verify() {
+  // With a single element per lane there is nothing to re-distribute, so the
+  // operation would be a no-op.
+  if (getSourceType().getNumElements() < 2)
+    return emitOpError("requires a source vector with at least 2 elements.");
+
+  return success();
+}
+
+OpFoldResult LaneShuffleOp::fold(FoldAdaptor adaptor) {
+  // The two modes are exact inverses, so a pack feeding an unpack (or vice
+  // versa) restores the original fragments.
+  auto producer = getSource().getDefiningOp<LaneShuffleOp>();
+  if (producer && producer.getMode() != getMode())
+    return producer.getSource();
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

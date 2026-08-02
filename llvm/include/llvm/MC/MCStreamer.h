@@ -528,6 +528,8 @@ public:
                                                    unsigned Update,
                                                    VersionTuple SDKVersion) {}
 
+  virtual void emitTargetTriple(StringRef TargetTriple) {}
+
   void emitVersionForTarget(const Triple &Target,
                             const VersionTuple &SDKVersion,
                             const Triple *DarwinTargetVariantTriple,
@@ -1062,6 +1064,10 @@ public:
                                 int64_t MaskRegisterSizeInBits, SMLoc Loc = {});
 
   virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
+  virtual void emitCFILLVMSetRAState(unsigned State, MCSymbol *PACSym,
+                                     SMLoc Loc = {});
+  virtual void emitCFILLVMSetRAState(unsigned State, int64_t Offset,
+                                     SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
   virtual void emitCFIValOffset(int64_t Register, int64_t Offset,
                                 SMLoc Loc = {});

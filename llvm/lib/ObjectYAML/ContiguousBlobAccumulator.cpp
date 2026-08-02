@@ -21,7 +21,8 @@ using namespace llvm;
 using namespace llvm::yaml;
 
 bool ContiguousBlobAccumulator::checkLimit(uint64_t Size) {
-  if (!ReachedLimitErr && getOffset() + Size <= MaxSize)
+  uint64_t Off = getOffset();
+  if (!ReachedLimitErr && Off <= MaxSize && Size <= MaxSize - Off)
     return true;
   if (!ReachedLimitErr)
     ReachedLimitErr = createStringError(errc::invalid_argument,
@@ -45,7 +46,8 @@ uint64_t ContiguousBlobAccumulator::padToAlignment(unsigned Align) {
 
 void ContiguousBlobAccumulator::writeAsBinary(const BinaryRef &Bin,
                                               uint64_t N) {
-  if (!checkLimit(Bin.binary_size()))
+  // Only min(binary_size(), N) bytes are written.
+  if (!checkLimit(std::min<uint64_t>(Bin.binary_size(), N)))
     return;
   Bin.writeAsBinary(OS, N);
 }
@@ -62,7 +64,7 @@ unsigned ContiguousBlobAccumulator::writeSLEB128(int64_t Val) {
   return encodeSLEB128(Val, OS);
 }
 
-void ContiguousBlobAccumulator::updateDataAt(uint64_t Pos, void *Data,
+void ContiguousBlobAccumulator::updateDataAt(uint64_t Pos, const void *Data,
                                              size_t Size) {
   assert(Pos >= InitialOffset && Pos + Size <= getOffset());
   memcpy(&Buf[Pos - InitialOffset], Data, Size);

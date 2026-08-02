@@ -78,6 +78,14 @@ genInlinedStructureCtorLit(Fortran::lower::AbstractConverter &converter,
                            mlir::Location loc,
                            const Fortran::evaluate::StructureConstructor &ctor);
 
+/// Lower a constant expression from an initializer (semantics guarantees a
+/// folded Constant<T>, possibly parenthesized, or a constant
+/// StructureConstructor). Safe inside fir.global initializer regions: never
+/// allocates temporaries or outlines constants into memory.
+fir::ExtendedValue genConstantExprValue(AbstractConverter &converter,
+                                        mlir::Location loc,
+                                        const SomeExpr &expr);
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTCONSTANT_H

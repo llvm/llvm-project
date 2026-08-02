@@ -5545,6 +5545,12 @@ def HLSLInterlockedOr : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLInterlockedXor : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_xor"];
+  let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
 def HLSLWaveActiveBallot : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_ballot"];
   let Attributes = [NoThrow, Const];
@@ -5645,18 +5651,6 @@ def HLSLClamp : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_clamp"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
-}
-
-def HLSLCrossFloat: LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_crossf32"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "_ExtVector<3, float>(_ExtVector<3, float>, _ExtVector<3, float>)";
-}
-
-def HLSLCrossHalf: LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_crossf16"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "_ExtVector<3, __fp16>(_ExtVector<3, __fp16>, _ExtVector<3, __fp16>)";
 }
 
 def HLSLDegrees : LangBuiltin<"HLSL_LANG"> {
@@ -5916,6 +5910,25 @@ def MSVaCopy : Builtin {
   let Spellings = ["__builtin_ms_va_copy"];
   let Attributes = [NoThrow];
   let Prototype = "void(char*&, char*&)";
+}
+
+// z/OS-compatible va_list functions.
+def ZOSVaStart : Builtin {
+  let Spellings = ["__builtin_zos_va_start"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(char**, ...)";
+}
+
+def ZOSVaEnd : Builtin {
+  let Spellings = ["__builtin_zos_va_end"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(char**)";
+}
+
+def ZOSVaCopy : Builtin {
+  let Spellings = ["__builtin_zos_va_copy"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(char**, char**)";
 }
 
 // Arithmetic Fence: to prevent FP reordering and reassociation optimizations

@@ -21,6 +21,7 @@
 #include "src/__support/CPP/utility/integer_sequence.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 #include <stddef.h>
 
@@ -288,7 +289,8 @@ LIBC_INLINE constexpr static T hmax(simd<T, N> v) {
 
 // Accessor helpers.
 template <typename T>
-LIBC_INLINE T constexpr static load(const void *ptr, bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS
+    LIBC_INLINE T constexpr static load(const void *ptr, bool aligned = false) {
   if (aligned)
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   T tmp;
@@ -297,13 +299,14 @@ LIBC_INLINE T constexpr static load(const void *ptr, bool aligned = false) {
   return tmp;
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static void store(T v, void *ptr, bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static void
+store(T v, void *ptr, bool aligned = false) {
   if (aligned)
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   __builtin_memcpy_inline(ptr, &v, sizeof(T));
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static T
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static T
 load_masked(simd<bool, simd_size_v<T>> mask, const void *ptr,
             T passthru = internal::poison<T>(), bool aligned = false) {
   if (aligned)
@@ -312,33 +315,34 @@ load_masked(simd<bool, simd_size_v<T>> mask, const void *ptr,
       mask, reinterpret_cast<const simd_element_type_t<T> *>(ptr), passthru);
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static void store_masked(simd<bool, simd_size_v<T>> mask,
-                                               T v, void *ptr,
-                                               bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static void
+store_masked(simd<bool, simd_size_v<T>> mask, T v, void *ptr,
+             bool aligned = false) {
   if (aligned)
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   __builtin_masked_store(mask, v,
                          reinterpret_cast<simd_element_type_t<T> *>(ptr));
 }
 template <typename T, typename Idx, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static T gather(simd<bool, simd_size_v<T>> mask, Idx idx,
-                                      const void *base, bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static T
+gather(simd<bool, simd_size_v<T>> mask, Idx idx, const void *base,
+       bool aligned = false) {
   if (aligned)
     base = __builtin_assume_aligned(base, alignof(T));
   return __builtin_masked_gather(
       mask, idx, reinterpret_cast<const simd_element_type_t<T> *>(base));
 }
 template <typename T, typename Idx, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static void scatter(simd<bool, simd_size_v<T>> mask,
-                                          Idx idx, T v, void *base,
-                                          bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static void
+scatter(simd<bool, simd_size_v<T>> mask, Idx idx, T v, void *base,
+        bool aligned = false) {
   if (aligned)
     base = __builtin_assume_aligned(base, alignof(T));
   __builtin_masked_scatter(mask, idx, v,
                            reinterpret_cast<simd_element_type_t<T> *>(base));
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static T
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static T
 expand(simd<bool, simd_size_v<T>> mask, const void *ptr,
        T passthru = internal::poison<T>(), bool aligned = false) {
   if (aligned)
@@ -347,8 +351,9 @@ expand(simd<bool, simd_size_v<T>> mask, const void *ptr,
       mask, reinterpret_cast<const simd_element_type_t<T> *>(ptr), passthru);
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static void compress(simd<bool, simd_size_v<T>> mask, T v,
-                                           void *ptr, bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static void
+compress(simd<bool, simd_size_v<T>> mask, T v, void *ptr,
+         bool aligned = false) {
   if (aligned)
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   __builtin_masked_compress_store(
@@ -399,6 +404,16 @@ LIBC_INLINE constexpr static auto concat(cpp::simd<T, N> x, cpp::simd<T, M> y,
 template <size_t... Sizes, typename T, size_t N> auto split(cpp::simd<T, N> x) {
   static_assert((... + Sizes) == N, "split sizes must sum to vector size");
   return internal::split<T, N, 0, Sizes...>(x);
+}
+
+// Scalar to vector function helper.
+template <typename T, size_t N, typename F>
+LIBC_INLINE static cpp::simd<T, N> map(cpp::simd<T, N> v, F f) {
+  cpp::simd<T, N> r;
+  LIBC_LOOP_UNROLL
+  for (size_t i = 0; i < N; ++i)
+    r[i] = f(v[i]);
+  return r;
 }
 
 // TODO: where expressions, scalar overloads, ABI types.
