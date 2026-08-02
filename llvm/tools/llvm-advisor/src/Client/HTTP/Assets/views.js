@@ -1326,28 +1326,39 @@ const HeatmapView = {
       return { label: 'Low', color: '#5DB8A8' };
     };
 
-    const wrap = h('div', { style: { display: 'flex', gap: '16px' } });
+    const statusCounts = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+    allHotspots.forEach(h => { statusCounts[getStatus(h.max_hotness).label]++; });
 
-    const stats = h('div', { style: { width: '180px', minWidth: '180px', flexShrink: 0 } });
-    stats.appendChild(h('div', { style: { fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: 'var(--fg)' } }, 'Snapshot Stats'));
-    const statItems = [
-      { label: 'Total Hotspots', value: total },
-      { label: 'With Hotness', value: withHotness },
-      { label: 'Critical', value: allHotspots.filter(h => getStatus(h.max_hotness).label === 'Critical').length },
-    ];
-    statItems.forEach(s => {
-      stats.appendChild(h('div', { style: { marginBottom: '10px', padding: '8px 10px', background: 'var(--bg2)', borderRadius: '6px' } },
-        h('div', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--fg)' } }, String(s.value)),
-        h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '2px' } }, s.label)
+    container.appendChild(h('h2', { style: { margin: '0 0 12px' } }, 'Hotspots Analysis'));
+
+    const statsRow = h('div', { style: { display: 'flex', gap: '12px', marginBottom: '20px' } });
+    [
+      { label: 'Total Hotspots', value: total, color: 'var(--fg)' },
+      { label: 'With Hotness', value: withHotness, color: 'var(--fg)' },
+      { label: 'Critical', value: statusCounts.Critical, color: '#E06C75' },
+      { label: 'High', value: statusCounts.High, color: '#D4A574' },
+      { label: 'Medium', value: statusCounts.Medium, color: '#E5C07B' },
+      { label: 'Low', value: statusCounts.Low, color: '#5DB8A8' },
+    ].forEach(s => {
+      statsRow.appendChild(h('div', { style: { flex: 1, padding: '10px 14px', background: 'var(--bg2)', borderRadius: '8px', textAlign: 'center' } },
+        h('div', { style: { fontSize: '20px', fontWeight: '700', color: s.color } }, String(s.value)),
+        h('div', { style: { fontSize: '11px', color: 'var(--fg3)', marginTop: '4px', fontWeight: '500' } }, s.label)
       ));
     });
-    wrap.appendChild(stats);
+    container.appendChild(statsRow);
 
-    const main = h('div', { style: { flex: 1, minWidth: 0 } });
-    main.appendChild(h('h2', { style: { margin: '0 0 4px' } }, 'Hotspots Analysis'));
-    main.appendChild(h('div', { style: { fontSize: '12px', color: 'var(--fg3)', marginBottom: '16px' } }, `Performance-critical locations sorted by hotness (${total} total)`));
+    const tableWrap = h('div', { style: { background: 'var(--bg2)', borderRadius: '8px', overflow: 'hidden' } });
 
-    const rows = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } });
+    const header = h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', background: 'var(--bg3)', fontSize: '11px', fontWeight: '600', color: 'var(--fg3)', textTransform: 'uppercase', letterSpacing: '0.5px' } });
+    header.appendChild(h('div', { style: { width: '28px', textAlign: 'center' } }, ''));
+    header.appendChild(h('div', { style: { width: '200px', minWidth: '160px' } }, 'Function'));
+    header.appendChild(h('div', { style: { width: '160px', minWidth: '120px' } }, 'Location'));
+    header.appendChild(h('div', { style: { flex: 1 } }, 'Hotness'));
+    header.appendChild(h('div', { style: { width: '70px', textAlign: 'center' } }, 'Status'));
+    header.appendChild(h('div', { style: { width: '50px', textAlign: 'right' } }, 'Count'));
+    tableWrap.appendChild(header);
+
+    const rows = h('div', { style: { display: 'flex', flexDirection: 'column' } });
 
     allHotspots.forEach(hs => {
       const st = getStatus(hs.max_hotness);
@@ -1355,7 +1366,7 @@ const HeatmapView = {
       const file = (hs.file || '').split('/').pop() || 'unknown';
       const loc = hs.line > 0 ? `${file}:${hs.line}` : file;
 
-      const row = h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: 'var(--bg2)', borderRadius: '6px', fontSize: '12px' } });
+      const row = h('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', fontSize: '12px', borderBottom: '1px solid var(--border)' } });
 
       row.appendChild(h('div', { style: { width: '28px', textAlign: 'center' } },
         h('span', { style: { display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: st.color } })
@@ -1382,9 +1393,8 @@ const HeatmapView = {
       rows.appendChild(row);
     });
 
-    main.appendChild(rows);
-    wrap.appendChild(main);
-    container.appendChild(wrap);
+    tableWrap.appendChild(rows);
+    container.appendChild(tableWrap);
   },
 };
 
