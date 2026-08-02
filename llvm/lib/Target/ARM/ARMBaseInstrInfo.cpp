@@ -6737,8 +6737,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
 } // namespace
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-ARMBaseInstrInfo::analyzeLoopForPipelining(
-    MachineBasicBlock *LoopBB, MachineOptimizationRemarkEmitter *ORE) const {
+ARMBaseInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
   MachineBasicBlock *Preheader = *LoopBB->pred_begin();
   if (Preheader == LoopBB)
