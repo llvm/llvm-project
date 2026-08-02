@@ -9,7 +9,7 @@
 
 ## a0 is hidden, so its offset in the TLS block, 0x10010, is known and the
 ## dynamic relocation needs no symbol.
-# IE-REL:      [ 9] .got PROGBITS 00000000002003f8 {{[0-9a-f]+}} 000020
+# IE-REL:      .got PROGBITS 00000000002003f8 {{[0-9a-f]+}} 000020
 # IE-REL:      (FLAGS) STATIC_TLS
 # IE-REL:      Relocation section '.rela.dyn' {{.*}} contains 3 entries:
 # IE-REL:      0000000000200400 {{[0-9a-f]+}} R_SPARC_TLS_TPOFF64 10010
@@ -39,7 +39,7 @@
 # RUN: llvm-readelf -S -r a | FileCheck %s --check-prefix=LE-REL
 # RUN: llvm-objdump -d -j .text --no-show-raw-insn --no-print-imm-hex a | FileCheck %s --check-prefix=LE
 
-# LE-REL:      [ 9] .got PROGBITS 0000000000300378 {{[0-9a-f]+}} 000010
+# LE-REL:      .got PROGBITS 0000000000300378 {{[0-9a-f]+}} 000010
 # LE-REL:      Relocation section '.rela.dyn' {{.*}} contains 1 entries:
 # LE-REL:      0000000000300380 {{[0-9a-f]+}} R_SPARC_TLS_TPOFF64 {{.*}} b + 0
 

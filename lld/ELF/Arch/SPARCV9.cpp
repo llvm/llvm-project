@@ -117,6 +117,7 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     RelExpr expr;
     switch (type) {
     case R_SPARC_NONE:
+    case R_SPARC_TLS_IE_ADD:
       continue;
 
     // Absolute relocations:
@@ -200,8 +201,6 @@ void SPARCV9::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
     case R_SPARC_TLS_IE_LDX:
       if (!ctx.arg.shared && !sym.isPreemptible)
         sec.addReloc({R_TPREL, type, offset, addend, &sym});
-      continue;
-    case R_SPARC_TLS_IE_ADD:
       continue;
 
     default:
