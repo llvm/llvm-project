@@ -513,7 +513,7 @@ define double @trunc_signed_f64_no_fast_math(double %x) nounwind {
 ; X86-AVX1-NEXT:    subl $24, %esp
 ; X86-AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX1-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX1-NEXT:    fldl (%esp)
+; X86-AVX1-NEXT:    fldl 8(%ebp)
 ; X86-AVX1-NEXT:    fisttpll (%esp)
 ; X86-AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX1-NEXT:    vmovlps %xmm0, {{[0-9]+}}(%esp)
@@ -748,7 +748,7 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 ; X86-AVX1-NEXT:    subl $32, %esp
 ; X86-AVX1-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-AVX1-NEXT:    vmovsd %xmm0, (%esp)
-; X86-AVX1-NEXT:    fldl (%esp)
+; X86-AVX1-NEXT:    fldl 8(%ebp)
 ; X86-AVX1-NEXT:    fisttpll (%esp)
 ; X86-AVX1-NEXT:    xorl %eax, %eax
 ; X86-AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0

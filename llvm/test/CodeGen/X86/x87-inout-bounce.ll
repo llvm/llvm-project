@@ -28,11 +28,9 @@ define float @example_float() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    calll returns_float@PLT
 ; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss %xmm0, (%esp) # 4-byte Spill
 ; CHECK-NEXT:    calll returns_float@PLT
 ; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movss (%esp), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    addss {{[0-9]+}}(%esp), %xmm0
 ; CHECK-NEXT:    movss %xmm0, (%esp) # 4-byte Spill
@@ -80,8 +78,6 @@ define x86_fp80 @testC() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    calll returns_long_double@PLT
 ; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    addl $12, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
@@ -91,4 +87,29 @@ entry:
   %conv = fptrunc x86_fp80 %call to float
   %conv1 = fpext float %conv to x86_fp80
   ret x86_fp80 %conv1
+}
+
+declare float @returns_x87_float()
+
+define float @testA() {
+; CHECK-LABEL: testA:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subl $28, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    calll returns_x87_float@PLT
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    calll returns_x87_float@PLT
+; CHECK-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Reload
+; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    addss {{[0-9]+}}(%esp), %xmm0
+; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    addl $28, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 4
+; CHECK-NEXT:    retl
+  %1 = call float @returns_x87_float()
+  %2 = call float @returns_x87_float()
+  %3 = fadd float %1, %2
+  ret float %3
 }

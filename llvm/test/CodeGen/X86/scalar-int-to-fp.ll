@@ -112,9 +112,7 @@ define float @s32_to_f(i32 %a) nounwind {
 ; X87-LABEL: s32_to_f:
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %eax
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    fildl {{[0-9]+}}(%esp)
 ; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = sitofp i32 %a to float
@@ -232,18 +230,14 @@ define double @s32_to_d(i32 %a) nounwind {
 ; SSE1_32-LABEL: s32_to_d:
 ; SSE1_32:       # %bb.0:
 ; SSE1_32-NEXT:    pushl %eax
-; SSE1_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE1_32-NEXT:    movl %eax, (%esp)
-; SSE1_32-NEXT:    fildl (%esp)
+; SSE1_32-NEXT:    fildl {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    popl %eax
 ; SSE1_32-NEXT:    retl
 ;
 ; X87-LABEL: s32_to_d:
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %eax
-; X87-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    fildl (%esp)
+; X87-NEXT:    fildl {{[0-9]+}}(%esp)
 ; X87-NEXT:    popl %eax
 ; X87-NEXT:    retl
   %r = sitofp i32 %a to double
@@ -279,9 +273,7 @@ define x86_fp80 @s32_to_x(i32 %a) nounwind {
 ; CHECK32-LABEL: s32_to_x:
 ; CHECK32:       # %bb.0:
 ; CHECK32-NEXT:    pushl %eax
-; CHECK32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK32-NEXT:    movl %eax, (%esp)
-; CHECK32-NEXT:    fildl (%esp)
+; CHECK32-NEXT:    fildl {{[0-9]+}}(%esp)
 ; CHECK32-NEXT:    popl %eax
 ; CHECK32-NEXT:    retl
 ;
@@ -335,9 +327,7 @@ define float @u64_to_f(i64 %a) nounwind {
 ; AVX512F_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; AVX512F_32-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; AVX512F_32-NEXT:    fstps {{[0-9]+}}(%esp)
-; AVX512F_32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512F_32-NEXT:    vmovss %xmm0, (%esp)
-; AVX512F_32-NEXT:    flds (%esp)
+; AVX512F_32-NEXT:    flds {{[0-9]+}}(%esp)
 ; AVX512F_32-NEXT:    movl %ebp, %esp
 ; AVX512F_32-NEXT:    popl %ebp
 ; AVX512F_32-NEXT:    retl
@@ -355,9 +345,7 @@ define float @u64_to_f(i64 %a) nounwind {
 ; SSE2_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; SSE2_32-NEXT:    fstps {{[0-9]+}}(%esp)
-; SSE2_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2_32-NEXT:    movss %xmm0, (%esp)
-; SSE2_32-NEXT:    flds (%esp)
+; SSE2_32-NEXT:    flds {{[0-9]+}}(%esp)
 ; SSE2_32-NEXT:    movl %ebp, %esp
 ; SSE2_32-NEXT:    popl %ebp
 ; SSE2_32-NEXT:    retl
@@ -394,9 +382,7 @@ define float @u64_to_f(i64 %a) nounwind {
 ; SSE1_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; SSE1_32-NEXT:    fstps {{[0-9]+}}(%esp)
-; SSE1_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE1_32-NEXT:    movss %xmm0, (%esp)
-; SSE1_32-NEXT:    flds (%esp)
+; SSE1_32-NEXT:    flds {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    movl %ebp, %esp
 ; SSE1_32-NEXT:    popl %ebp
 ; SSE1_32-NEXT:    retl

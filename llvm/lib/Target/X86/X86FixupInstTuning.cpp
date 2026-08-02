@@ -23,13 +23,20 @@
 
 #include "X86.h"
 #include "X86InstrInfo.h"
-#include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/IR/Analysis.h"
 
 using namespace llvm;
@@ -46,6 +53,8 @@ public:
 private:
   bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator &I);
+
+  bool processSpills(MachineBasicBlock &MBB, MachineFunction &MF);
 
   const X86InstrInfo *TII = nullptr;
   const X86Subtarget *ST = nullptr;
@@ -86,6 +95,288 @@ static std::optional<bool> CmpOptionals(T NewVal, T CurVal) {
     return *NewVal < *CurVal;
 
   return std::nullopt;
+}
+
+bool X86FixupInstTuningImpl::processSpills(MachineBasicBlock &MBB,
+                                           MachineFunction &MF) {
+  bool Changed = false;
+
+  // Tracks a load->store chain: load from OrigFI into Reg, store Reg to
+  // SpillFI. We want to redirect later loads from SpillFI to OrigFI.
+  struct SpillEntry {
+    SmallVector<MachineOperand, X86::AddrNumOperands> OrigMOs;
+    MachineInstr *LoadMI = nullptr;  // The original load from OrigFI.
+    MachineInstr *StoreMI = nullptr; // The store to SpillFI.
+    MCRegister LoadReg;              // The register used as intermediary.
+    unsigned UseCount = 0;           // Number of loads from SpillFI seen.
+    unsigned RewriteCount = 0;       // Number successfully rewritten.
+    LocationSize Size = LocationSize::beforeOrAfterPointer();
+    int64_t Offset = 0;
+    int OrigFI = -1;
+    bool Invalid = false;
+  };
+
+  // Maps SpillFI -> SpillEntry (the redirect info for that slot).
+  DenseMap<int, SpillEntry> SpillMap;
+
+  // Maps physical register -> (OrigFI, address operands, LoadMI).
+  // Keyed by the canonical (largest) super-register to handle aliasing.
+  struct RegEntry {
+    SmallVector<MachineOperand, X86::AddrNumOperands> MOs;
+    MachineInstr *LoadMI = nullptr;
+    int FI = -1;
+    LocationSize Size = LocationSize::beforeOrAfterPointer();
+  };
+  DenseMap<MCRegister, RegEntry> RegToFI;
+
+  auto InvalidateReg = [&](MCRegister Reg) {
+    for (MCRegAliasIterator AI(Reg, TRI, /*IncludeSelf=*/true); AI.isValid();
+         ++AI)
+      RegToFI.erase(*AI);
+    for (auto &[FI, SE] : SpillMap) {
+      if (SE.Invalid)
+        continue;
+      bool UsesReg = false;
+      for (const MachineOperand &MO : SE.OrigMOs) {
+        if (MO.isReg() && MO.getReg() && TRI->regsOverlap(MO.getReg(), Reg)) {
+          UsesReg = true;
+          break;
+        }
+      }
+      if (UsesReg)
+        SE.Invalid = true;
+    }
+  };
+
+  auto IsSafeToEraseLoad = [&](MachineInstr *LoadMI, MachineInstr *StoreMI,
+                               MCRegister Reg) -> bool {
+    // Walk forward from LoadMI. The register must not be read by anything
+    // other than StoreMI, and must be redefined (or reach end-of-block
+    // without being live-out).
+    for (MachineBasicBlock::iterator I = std::next(LoadMI->getIterator()),
+                                     E = MBB.end();
+         I != E; ++I) {
+      if (&*I == StoreMI)
+        continue;
+      if (I->readsRegister(Reg, TRI))
+        return false;
+      if (I->definesRegister(Reg, TRI))
+        return true;
+    }
+    // Check if the register is live-out of the block.
+    for (MCRegAliasIterator AI(Reg, TRI, /*IncludeSelf=*/true); AI.isValid();
+         ++AI) {
+      for (MachineBasicBlock *Succ : MBB.successors()) {
+        if (Succ->isLiveIn(*AI))
+          return false;
+      }
+    }
+    return true;
+  };
+
+  for (MachineInstr &MI : MBB) {
+    if (MI.isCall()) {
+      // Calls clobber registers and may read/write memory; clear tracking
+      // state.
+      RegToFI.clear();
+      SpillMap.clear();
+      continue;
+    }
+
+    int LoadedFI = -1;
+    MCRegister LoadedReg(TII->isLoadFromStackSlotPostFE(MI, LoadedFI));
+    bool IsX87 = X86::isX87Instruction(MI);
+
+    if (LoadedReg && IsX87) {
+      auto It = SpillMap.find(LoadedFI);
+      if (It != SpillMap.end() && !MI.memoperands_empty()) {
+        // This load reads from a SpillFI we're tracking. Rewrite it to
+        // read directly from OrigFI.
+        SpillEntry &SE = It->second;
+        const MachineMemOperand *MMO = nullptr;
+        for (const MachineMemOperand *M : MI.memoperands()) {
+          if (M->isLoad()) {
+            MMO = M;
+            break;
+          }
+        }
+        if (MMO && MMO->getSize() == SE.Size && MMO->getOffset() == SE.Offset) {
+          MachineFrameInfo &MFI = MF.getFrameInfo();
+          int64_t OrigSize = MFI.getObjectSize(SE.OrigFI);
+          if (!SE.Size.hasValue() || OrigSize >= (int64_t)SE.Size.getValue()) {
+            SE.UseCount++;
+            if (!SE.Invalid) {
+              int MemIdx = X86::getFirstAddrOperandIdx(MI);
+              if (MemIdx >= 0) {
+                for (int i = 0; i < X86::AddrNumOperands; ++i)
+                  MI.getOperand(MemIdx + i) = SE.OrigMOs[i];
+                // Replace MMO with one describing OrigFI rather than SpillFI.
+                MachinePointerInfo PtrInfo =
+                    MachinePointerInfo::getFixedStack(MF, SE.OrigFI, SE.Offset);
+                MachineMemOperand *NewMMO =
+                    MF.getMachineMemOperand(MMO, PtrInfo, MMO->getSize());
+                MI.setMemRefs(MF, {NewMMO});
+                SE.RewriteCount++;
+                Changed = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // MMO-based fallback: handles x87 loads (LD_F32m, LD_F64m, etc.) that
+    // aren't recognized by isLoadFromStackSlotPostFE because they aren't
+    // in isFrameLoadOpcode, but do have valid FixedStackPseudoSourceValue
+    // MMOs. We can rewrite address operands but cannot delete the store
+    // (since we can't track all uses via this path reliably).
+    if (!LoadedReg && MI.mayLoad() && IsX87) {
+      int MemIdx = X86::getFirstAddrOperandIdx(MI);
+      if (MemIdx >= 0) {
+        for (const MachineMemOperand *MMO : MI.memoperands()) {
+          if (!MMO->isLoad())
+            continue;
+          const auto *FSPV = dyn_cast_or_null<FixedStackPseudoSourceValue>(
+              MMO->getPseudoValue());
+          if (!FSPV)
+            continue;
+          int FI = FSPV->getFrameIndex();
+          auto It = SpillMap.find(FI);
+          if (It != SpillMap.end()) {
+            SpillEntry &SE = It->second;
+            if (MMO->getSize() == SE.Size && MMO->getOffset() == SE.Offset) {
+              MachineFrameInfo &MFI = MF.getFrameInfo();
+              int64_t OrigSize = MFI.getObjectSize(SE.OrigFI);
+              if (!SE.Size.hasValue() ||
+                  OrigSize >= (int64_t)SE.Size.getValue()) {
+                SE.UseCount++;
+                if (!SE.Invalid) {
+                  for (int i = 0; i < X86::AddrNumOperands; ++i)
+                    MI.getOperand(MemIdx + i) = SE.OrigMOs[i];
+                  MachinePointerInfo PtrInfo =
+                      MachinePointerInfo::getFixedStack(MF, SE.OrigFI,
+                                                        SE.Offset);
+                  MachineMemOperand *NewMMO =
+                      MF.getMachineMemOperand(MMO, PtrInfo, MMO->getSize());
+                  MI.setMemRefs(MF, {NewMMO});
+                  SE.RewriteCount++;
+                  Changed = true;
+                }
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    int StoredFI = -1;
+    MCRegister StoredReg(TII->isStoreToStackSlotPostFE(MI, StoredFI));
+
+    if (StoredReg) {
+      // If the stored register was loaded from a known FI, record the chain.
+      auto It = RegToFI.find(StoredReg);
+      if (It != RegToFI.end() && !MI.memoperands_empty()) {
+        const MachineMemOperand *MMO = MI.memoperands().front();
+        if (MMO->getSize() == It->second.Size && MMO->getSize().hasValue()) {
+          SpillEntry SE;
+          SE.OrigMOs = It->second.MOs;
+          SE.LoadMI = It->second.LoadMI;
+          SE.LoadReg = StoredReg;
+          SE.StoreMI = &MI;
+          SE.Size = MMO->getSize();
+          SE.Offset = MMO->getOffset();
+          SE.OrigFI = It->second.FI;
+          SpillMap[StoredFI] = SE;
+        } else {
+          SpillMap.erase(StoredFI);
+        }
+      } else {
+        // The store overwrites SpillFI with unknown data — invalidate.
+        SpillMap.erase(StoredFI);
+      }
+    }
+
+    // If the instruction writes to memory but we couldn't identify it as a
+    // simple stack slot store, check MMOs for stores to tracked SpillFIs.
+    // Only invalidate what we can't identify.
+    if (MI.mayStore() && !StoredReg) {
+      bool HasUnknownStore = false;
+      for (const MachineMemOperand *MMO : MI.memoperands()) {
+        if (!MMO->isStore())
+          continue;
+        const auto *FSPV = dyn_cast_or_null<FixedStackPseudoSourceValue>(
+            MMO->getPseudoValue());
+        if (FSPV) {
+          // Known FI store — invalidate just that entry.
+          int FI = FSPV->getFrameIndex();
+          SpillMap.erase(FI);
+          SmallVector<int, 4> ToErase;
+          for (auto &[KeyFI, SE] : SpillMap) {
+            if (SE.OrigFI == FI)
+              ToErase.push_back(KeyFI);
+          }
+          for (int KeyFI : ToErase)
+            SpillMap.erase(KeyFI);
+        } else {
+          HasUnknownStore = true;
+        }
+      }
+      if (HasUnknownStore)
+        SpillMap.clear();
+    }
+
+    // Any register def (explicit or implicit) invalidates all aliases.
+    for (const MachineOperand &MO : MI.operands()) {
+      if (MO.isReg() && MO.isDef() && MO.getReg().isPhysical())
+        InvalidateReg(MO.getReg());
+    }
+
+    // --- Step 5: Track loads from stack slots ---
+    if (LoadedReg) {
+      int MemIdx = X86::getFirstAddrOperandIdx(MI);
+      if (MemIdx >= 0 && !MI.memoperands_empty()) {
+        bool ClobbersAddr = false;
+        for (int i = 0; i < X86::AddrNumOperands; ++i) {
+          const MachineOperand &MO = MI.getOperand(MemIdx + i);
+          if (MO.isReg() && MO.getReg() &&
+              MI.definesRegister(MO.getReg(), TRI)) {
+            ClobbersAddr = true;
+            break;
+          }
+        }
+        if (!ClobbersAddr) {
+          RegEntry RE;
+          for (int i = 0; i < X86::AddrNumOperands; ++i)
+            RE.MOs.push_back(MI.getOperand(MemIdx + i));
+          RE.LoadMI = &MI;
+          RE.FI = LoadedFI;
+          RE.Size = MI.memoperands().front()->getSize();
+          RegToFI[LoadedReg] = RE;
+        }
+      }
+    }
+  }
+
+  SmallPtrSet<MachineInstr *, 4> ToErase;
+  for (auto &[FI, SE] : SpillMap) {
+    // Only delete the store if ALL loads from SpillFI were rewritten.
+    if (SE.RewriteCount > 0 && SE.RewriteCount == SE.UseCount) {
+      if (SE.StoreMI)
+        ToErase.insert(SE.StoreMI);
+      // Only delete the load if its register is provably dead.
+      if (SE.LoadMI && SE.StoreMI &&
+          IsSafeToEraseLoad(SE.LoadMI, SE.StoreMI, SE.LoadReg))
+        ToErase.insert(SE.LoadMI);
+    }
+  }
+
+  for (MachineInstr *MI : ToErase) {
+    MI->eraseFromParent();
+    Changed = true;
+  }
+
+  return Changed;
 }
 
 bool X86FixupInstTuningImpl::processInstruction(
@@ -712,6 +1003,7 @@ bool X86FixupInstTuningImpl::runOnMachineFunction(MachineFunction &MF) {
   SM = &ST->getSchedModel();
 
   for (MachineBasicBlock &MBB : MF) {
+    Changed |= processSpills(MBB, MF);
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
       if (processInstruction(MF, MBB, I)) {
         ++NumInstChanges;

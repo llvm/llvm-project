@@ -737,9 +737,7 @@ define x86_fp80 @sint32_to_fp80(i32 %x) #0 {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    fildl (%esp)
+; X86-NEXT:    fildl {{[0-9]+}}(%esp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 4
@@ -866,10 +864,8 @@ define x86_fp80 @uint32_to_fp80(i32 %x) #0 {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    fildll (%esp)
+; X86-NEXT:    fildll 8(%ebp)
 ; X86-NEXT:    wait
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -899,12 +895,10 @@ define x86_fp80 @uint64_to_fp80(i64 %x) #0 {
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 12(%ebp), %ecx
 ; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    shrl $31, %ecx
-; X86-NEXT:    fildll (%esp)
+; X86-NEXT:    fildll 8(%ebp)
 ; X86-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%ecx,4)
 ; X86-NEXT:    wait
 ; X86-NEXT:    movl %ebp, %esp
