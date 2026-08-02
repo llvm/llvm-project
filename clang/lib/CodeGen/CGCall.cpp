@@ -3222,6 +3222,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         // reference to the underlying object. Mark it accordingly.
         Attrs.addAttribute(llvm::Attribute::NoAlias);
 
+      // TODO: We could add the byref attribute if not byval, but it would
+      // require updating many testcases.
+
       CharUnits Align = AI.getIndirectAlign();
 
       // In a byval argument, it is important that the required
