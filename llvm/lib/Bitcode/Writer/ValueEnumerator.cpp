@@ -236,28 +236,36 @@ static void predictValueUseListOrder(const Value *V, const Function *F,
                                      OrderMap &OM, UseListOrderStack &Stack) {
   if (!V->hasUseList())
     return;
+  SmallVector<const Value *, 32> WorkList;
+  WorkList.push_back(V);
 
-  auto &IDPair = OM[V];
-  assert(IDPair.first && "Unmapped value");
-  if (IDPair.second)
-    // Already predicted.
-    return;
+  while (!WorkList.empty()) {
+    const Value *TopValue = WorkList.pop_back_val();
 
-  // Do the actual prediction.
-  IDPair.second = true;
-  if (!V->use_empty() && std::next(V->use_begin()) != V->use_end())
-    predictValueUseListOrderImpl(V, F, IDPair.first, OM, Stack);
+    if (!TopValue->hasUseList())
+      continue;
 
-  // Recursive descent into constants.
-  if (const Constant *C = dyn_cast<Constant>(V)) {
-    if (C->getNumOperands()) { // Visit GlobalValues.
-      for (const Value *Op : C->operands())
-        if (isa<Constant>(Op)) // Visit GlobalValues.
-          predictValueUseListOrder(Op, F, OM, Stack);
-      if (auto *CE = dyn_cast<ConstantExpr>(C))
-        if (CE->getOpcode() == Instruction::ShuffleVector)
-          predictValueUseListOrder(CE->getShuffleMaskForBitcode(), F, OM,
-                                   Stack);
+    auto &IDPair = OM[TopValue];
+    assert(IDPair.first && "Unmapped value");
+    if (IDPair.second)
+      // Already predicted.
+      continue;
+
+    // Do the actual prediction.
+    IDPair.second = true;
+    if (!TopValue->use_empty()
+    && std::next(TopValue->use_begin()) != TopValue->use_end())
+      predictValueUseListOrderImpl(TopValue, F, IDPair.first, OM, Stack);
+
+    if (const Constant *C = dyn_cast<Constant>(TopValue)) {
+      if (C->getNumOperands()) { // Visit GlobalValues.
+        if (auto *CE = dyn_cast<ConstantExpr>(C))
+          if (CE->getOpcode() == Instruction::ShuffleVector)
+            WorkList.push_back(CE->getShuffleMaskForBitcode());
+        for (const Value *Op : llvm::reverse(C->operands()))
+          if (isa<Constant>(Op)) // Visit GlobalValues.
+            WorkList.push_back(Op);
+      }
     }
   }
 }
