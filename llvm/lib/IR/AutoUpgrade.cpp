@@ -7163,6 +7163,12 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
         Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
       if (!DL.contains("-p9") && !DL.starts_with("p9"))
         Res.append("-p9:192:256:256:32");
+
+      // Add the alignment of i128, which used to be inherited from the i64
+      // entry. Must come after the address space upgrades above, which rely on
+      // matching against the tail of the string.
+      if (!DL.contains("-i128") && !DL.starts_with("i128"))
+        Res.append("-i128:128");
     }
 
     // Upgrade the ELF mangling mode.
