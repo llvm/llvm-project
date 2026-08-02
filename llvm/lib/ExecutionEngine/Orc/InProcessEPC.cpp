@@ -134,17 +134,6 @@ Expected<int32_t> InProcessEPC::runAsMain(ExecutorAddr MainFnAddr,
   return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
 }
 
-Expected<int32_t> InProcessEPC::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
-  using VoidTy = int (*)();
-  return orc::runAsVoidFunction(VoidFnAddr.toPtr<VoidTy>());
-}
-
-Expected<int32_t> InProcessEPC::runAsIntFunction(ExecutorAddr IntFnAddr,
-                                                 int Arg) {
-  using IntTy = int (*)(int);
-  return orc::runAsIntFunction(IntFnAddr.toPtr<IntTy>(), Arg);
-}
-
 void InProcessEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                     IncomingWFRHandler OnComplete,
                                     ArrayRef<char> ArgBuffer) {

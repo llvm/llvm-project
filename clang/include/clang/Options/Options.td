@@ -4306,6 +4306,15 @@ def fopenmp_target_fast : Flag<["-"], "fopenmp-target-fast">,
 def fno_openmp_target_fast : Flag<["-"], "fno-openmp-target-fast">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
   Visibility<[ClangOption, FlangOption]>;
+def fopenmp_target_atomic_reduction : Flag<["-"], "fopenmp-target-atomic-reduction">,
+  Group<f_Group>, Flags<[NoArgumentUnused]>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use atomic operations for OpenMP GPU cross-team reductions where "
+           "supported">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetAtomicReduction">>;
+def fno_openmp_target_atomic_reduction : Flag<["-"], "fno-openmp-target-atomic-reduction">,
+  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
+  Visibility<[ClangOption, CC1Option]>;
 defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   LangOpts<"OpenMPOptimisticCollapse">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,

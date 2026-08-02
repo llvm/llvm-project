@@ -288,8 +288,7 @@ define i1 @tightened_bound_enables_srem_fact(i64 noundef %x, i64 noundef %n) {
 ; CHECK-NEXT:    [[B:%.*]] = icmp ne i64 [[N]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[B]])
 ; CHECK-NEXT:    [[R:%.*]] = srem i64 [[X]], [[N]]
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[R]], [[N]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a = icmp sge i64 %n, 0
   call void @llvm.assume(i1 %a)

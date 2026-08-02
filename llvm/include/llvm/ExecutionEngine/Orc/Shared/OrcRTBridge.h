@@ -61,10 +61,6 @@ LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
 LLVM_ABI extern const char *RegisterJITLoaderGDBAllocActionName;
 
-LLVM_ABI extern const char *RunAsMainWrapperName;
-LLVM_ABI extern const char *RunAsVoidFunctionWrapperName;
-LLVM_ABI extern const char *RunAsIntFunctionWrapperName;
-
 LLVM_ABI extern const char *const DispatchName;
 LLVM_ABI extern const char *const DispatchCtxName;
 
@@ -157,8 +153,6 @@ using SPSSimpleRemoteMemoryMapReleaseSignature = shared::SPSError(
 
 using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
                                       shared::SPSSequence<shared::SPSString>);
-using SPSRunAsVoidFunctionSignature = int32_t(shared::SPSExecutorAddr);
-using SPSRunAsIntFunctionSignature = int32_t(shared::SPSExecutorAddr, int32_t);
 } // end namespace rt
 
 namespace rt_alt {

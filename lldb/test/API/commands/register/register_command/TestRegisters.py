@@ -717,7 +717,6 @@ class RegisterCommandsTestCase(TestBase):
         self.expect("register write pc 0", substrs=[err_msg], error=True)
         self.expect("register info pc", substrs=[err_msg], error=True)
 
-    @expectedFailureDarwin(bugnumber="github.com/llvm/llvm-project/issues/213386")
     def test_case_insensitivity(self):
         """
         Register names, their aliases and any generic names like "sp" and "ra"

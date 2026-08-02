@@ -414,9 +414,8 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
 
-  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo> analyzeLoopForPipelining(
-      MachineBasicBlock *LoopBB,
-      MachineOptimizationRemarkEmitter *ORE = nullptr) const override;
+  std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
+  analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;

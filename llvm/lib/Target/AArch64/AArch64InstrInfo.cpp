@@ -25,7 +25,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -37,7 +36,6 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -12065,8 +12063,7 @@ static bool getIndVarInfo(Register Reg, const MachineBasicBlock *LoopBB,
 }
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-AArch64InstrInfo::analyzeLoopForPipelining(
-    MachineBasicBlock *LoopBB, MachineOptimizationRemarkEmitter *ORE) const {
+AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   // Accept loops that meet the following conditions
   // * The conditional branch is BCC
   // * The compare instruction is ADDS/SUBS/WHILEXX
@@ -12075,66 +12072,24 @@ AArch64InstrInfo::analyzeLoopForPipelining(
   // * The induction variable is incremented/decremented by a single instruction
   // * Does not contain CALL or instructions which have unmodeled side effects
 
-  for (MachineInstr &MI : *LoopBB) {
-    // This instruction may use NZCV, which interferes with the instruction to
-    // be inserted for loop control.
-    if (MI.isCall()) {
-      if (ORE)
-        ORE->emit([&]() {
-          return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                   &MI)
-                 << "loop contains a call and therefore cannot be pipelined";
-        });
+  for (MachineInstr &MI : *LoopBB)
+    if (MI.isCall() || MI.hasUnmodeledSideEffects())
+      // This instruction may use NZCV, which interferes with the instruction to
+      // be inserted for loop control.
       return nullptr;
-    }
-    if (MI.hasUnmodeledSideEffects()) {
-      if (ORE)
-        ORE->emit([&]() {
-          return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                   &MI)
-                 << "loop contains an instruction with unmodeled side effects, "
-                    "and therefore cannot be pipelined";
-        });
-      return nullptr;
-    }
-  }
 
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
-  if (analyzeBranch(*LoopBB, TBB, FBB, Cond)) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(
-                   "pipeliner", "analyzeLoop",
-                   LoopBB->findDebugLoc(LoopBB->getFirstTerminator()), LoopBB)
-               << "branch cannot be analyzed";
-      });
+  if (analyzeBranch(*LoopBB, TBB, FBB, Cond))
     return nullptr;
-  }
 
   // Infinite loops are not supported
-  if (TBB == LoopBB && FBB == LoopBB) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(
-                   "pipeliner", "analyzeLoop",
-                   LoopBB->findDebugLoc(LoopBB->getFirstTerminator()), LoopBB)
-               << "infinite loops are not supported";
-      });
+  if (TBB == LoopBB && FBB == LoopBB)
     return nullptr;
-  }
 
   // Must be conditional branch
-  if (TBB != LoopBB && FBB == nullptr) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(
-                   "pipeliner", "analyzeLoop",
-                   LoopBB->findDebugLoc(LoopBB->getFirstTerminator()), LoopBB)
-               << "loop is not terminated by a conditional branch";
-      });
+  if (TBB != LoopBB && FBB == nullptr)
     return nullptr;
-  }
 
   assert((TBB == LoopBB || FBB == LoopBB) &&
          "The Loop must be a single-basic-block loop");
@@ -12142,16 +12097,8 @@ AArch64InstrInfo::analyzeLoopForPipelining(
   MachineInstr *CondBranch = &*LoopBB->getFirstTerminator();
   const TargetRegisterInfo &TRI = getRegisterInfo();
 
-  if (CondBranch->getOpcode() != AArch64::Bcc) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                 CondBranch)
-               << "branch opcode not yet supported for pipelining: "
-               << ore::NV("Opcode", getName(CondBranch->getOpcode()));
-      });
+  if (CondBranch->getOpcode() != AArch64::Bcc)
     return nullptr;
-  }
 
   // Normalization for createTripCountGreaterCondition()
   if (TBB == LoopBB)
@@ -12183,13 +12130,6 @@ AArch64InstrInfo::analyzeLoopForPipelining(
           Comp = &MI;
           break;
         }
-        if (ORE)
-          ORE->emit([&]() {
-            return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                     &MI)
-                   << "compare instruction not recognized: "
-                   << ore::NV("Opcode", getName(MI.getOpcode()));
-          });
         return nullptr;
       }
 
@@ -12198,44 +12138,22 @@ AArch64InstrInfo::analyzeLoopForPipelining(
           CompCounterOprNum = 2;
         else if (isDefinedOutside(Comp->getOperand(2).getReg(), LoopBB))
           CompCounterOprNum = 1;
-        else {
-          if (ORE)
-            ORE->emit([&]() {
-              return MachineOptimizationRemarkAnalysis("pipeliner",
-                                                       "analyzeLoop", Comp)
-                     << "neither operand of the compare is loop invariant";
-            });
+        else
           return nullptr;
-        }
       }
       break;
     }
   }
-  if (!Comp) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis(
-                   "pipeliner", "analyzeLoop",
-                   LoopBB->findDebugLoc(LoopBB->getFirstTerminator()), LoopBB)
-               << "no NZCV-modifying compare instruction found";
-      });
+  if (!Comp)
     return nullptr;
-  }
 
   MachineInstr *Update = nullptr;
   Register Init;
   bool IsUpdatePriorComp;
   unsigned UpdateCounterOprNum;
   if (!getIndVarInfo(Comp->getOperand(CompCounterOprNum).getReg(), LoopBB,
-                     Update, UpdateCounterOprNum, Init, IsUpdatePriorComp)) {
-    if (ORE)
-      ORE->emit([&]() {
-        return MachineOptimizationRemarkAnalysis("pipeliner", "analyzeLoop",
-                                                 Comp)
-               << "loop induction variable pattern not recognized";
-      });
+                     Update, UpdateCounterOprNum, Init, IsUpdatePriorComp))
     return nullptr;
-  }
 
   return std::make_unique<AArch64PipelinerLoopInfo>(
       LoopBB, CondBranch, Comp, CompCounterOprNum, Update, UpdateCounterOprNum,

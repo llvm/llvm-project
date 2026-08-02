@@ -5790,8 +5790,7 @@ public:
 } // namespace
 
 std::unique_ptr<TargetInstrInfo::PipelinerLoopInfo>
-PPCInstrInfo::analyzeLoopForPipelining(
-    MachineBasicBlock *LoopBB, MachineOptimizationRemarkEmitter *ORE) const {
+PPCInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   // We really "analyze" only hardware loops right now.
   MachineBasicBlock::iterator I = LoopBB->getFirstTerminator();
   MachineBasicBlock *Preheader = *LoopBB->pred_begin();

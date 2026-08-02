@@ -4650,6 +4650,16 @@ checkReductionInfos(ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
   }
 }
 
+// The atomic cross-team reduction fast path applies when every reduction in the
+// set can be represented by an atomicrmw. Clang only populates it for scalar
+// reductions with a supported atomic operator.
+static bool isAtomicableReductionSet(
+    ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos) {
+  return all_of(ReductionInfos, [](const OpenMPIRBuilder::ReductionInfo &RI) {
+    return static_cast<bool>(RI.AtomicReductionGen);
+  });
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
@@ -4791,6 +4801,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // copied back. (Basically RL, appropriately casted if necessary.)
   Value *RLForCopyBack = RL;
 
+  bool IsAtomicReduction =
+      IsTeamsReduction && isAtomicableReductionSet(ReductionInfos);
+
   if (!IsTeamsReduction) {
     Value *SarFuncCast =
         Builder.CreatePointerBitCastOrAddrSpaceCast(*SarFunc, FuncPtrTy);
@@ -4801,6 +4814,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     Function *Pv2Ptr = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2);
     Res = createRuntimeFunctionCall(Pv2Ptr, Args);
+  } else if (IsAtomicReduction) {
+    // Atomic cross-team reduction fast path: determine the team's main thread
+    // that is later to fold its value atomically into the mapped variable.
+    Function *IsMainThreadFn = getOrCreateRuntimeFunctionPtr(
+        RuntimeFunction::OMPRTL___kmpc_is_team_main_thread);
+    Res = createRuntimeFunctionCall(IsMainThreadFn, {});
   } else {
     CodeGenIP = Builder.saveIP();
     StructType *ReductionsBufferTy = StructType::create(
@@ -4939,6 +4958,19 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // Add emission of __kmpc_end_reduce{_nowait}(<gtid>);
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
+
+    // Atomic cross-team fast path: each team's main thread folds its
+    // team-reduced value directly into the mapped reduction variable with a
+    // single atomicrmw.
+    if (IsAtomicReduction) {
+      InsertPointOrErrorTy AfterIP = RI.AtomicReductionGen(
+          Builder.saveIP(), RI.ElementType, RI.Variable, RI.PrivateVariable);
+      if (!AfterIP)
+        return AfterIP.takeError();
+      Builder.restoreIP(*AfterIP);
+      continue;
+    }
+
     Type *ValueType = RI.ElementType;
     Value *RedValue = RI.Variable;
 

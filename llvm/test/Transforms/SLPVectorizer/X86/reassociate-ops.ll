@@ -1198,3 +1198,73 @@ entry:
   store i32 %ext, ptr %Tarray, align 4
   ret void
 }
+
+; A copyable lane (A[3] used directly, not a chain link) stands in as a
+; subtract-with-zero leaf: it must stay exact while the chain leaves realign
+; into the consecutive A load column.
+;
+; S[0] = (A[0] + X[0]) - B[0]
+; S[1] = (X[1] + A[1]) - B[1]
+; S[2] = (A[2] + X[2]) - B[2]
+; S[3] = A[3]
+define void @test_reassoc_sub_copyable(ptr %Aarray, ptr %Barray, ptr %Xarray, ptr %Sarray) {
+; CHECK-LABEL: define void @test_reassoc_sub_copyable(
+; CHECK-SAME: ptr [[AARRAY:%.*]], ptr [[BARRAY:%.*]], ptr [[XARRAY:%.*]], ptr [[SARRAY:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IDXB2:%.*]] = getelementptr inbounds i32, ptr [[BARRAY]], i64 2
+; CHECK-NEXT:    [[IDXX2:%.*]] = getelementptr inbounds i32, ptr [[XARRAY]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = load i32, ptr [[IDXB2]], align 4
+; CHECK-NEXT:    [[X2:%.*]] = load i32, ptr [[IDXX2]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[AARRAY]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[BARRAY]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[XARRAY]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, i32 [[X2]], i64 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP0]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>, i32 [[B2]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = sub <4 x i32> [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[SARRAY]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %idxA1 = getelementptr inbounds i32, ptr %Aarray, i64 1
+  %idxA2 = getelementptr inbounds i32, ptr %Aarray, i64 2
+  %idxA3 = getelementptr inbounds i32, ptr %Aarray, i64 3
+  %idxB1 = getelementptr inbounds i32, ptr %Barray, i64 1
+  %idxB2 = getelementptr inbounds i32, ptr %Barray, i64 2
+  %idxX1 = getelementptr inbounds i32, ptr %Xarray, i64 1
+  %idxX2 = getelementptr inbounds i32, ptr %Xarray, i64 2
+  %idxS1 = getelementptr inbounds i32, ptr %Sarray, i64 1
+  %idxS2 = getelementptr inbounds i32, ptr %Sarray, i64 2
+  %idxS3 = getelementptr inbounds i32, ptr %Sarray, i64 3
+
+  %A0 = load i32, ptr %Aarray, align 4
+  %A1 = load i32, ptr %idxA1, align 4
+  %A2 = load i32, ptr %idxA2, align 4
+  %A3 = load i32, ptr %idxA3, align 4
+
+  %B0 = load i32, ptr %Barray, align 4
+  %B1 = load i32, ptr %idxB1, align 4
+  %B2 = load i32, ptr %idxB2, align 4
+
+  %X0 = load i32, ptr %Xarray, align 4
+  %X1 = load i32, ptr %idxX1, align 4
+  %X2 = load i32, ptr %idxX2, align 4
+
+  %ax0 = add i32 %A0, %X0
+  %xa1 = add i32 %X1, %A1
+  %ax2 = add i32 %A2, %X2
+
+  %s0 = sub i32 %ax0, %B0
+  %s1 = sub i32 %xa1, %B1
+  %s2 = sub i32 %ax2, %B2
+
+  store i32 %s0, ptr %Sarray, align 4
+  store i32 %s1, ptr %idxS1, align 4
+  store i32 %s2, ptr %idxS2, align 4
+  store i32 %A3, ptr %idxS3, align 4
+  ret void
+}
