@@ -4069,7 +4069,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       LLT Ty = MRI.getType(MI.getOperand(0).getReg());
       unsigned Size = Ty.getSizeInBits();
       // Packed add and sub are VALU only.
-      if (Subtarget.hasPackedU64Ops() && Ty.isVector() && Size == 128)
+      if (Subtarget.hasAnyPackedU64Ops() && Ty.isVector() && Size == 128)
         return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
     }
