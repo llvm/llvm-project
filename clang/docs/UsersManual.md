@@ -113,6 +113,98 @@ into depth on the ones that are covered by other sections. However, the
 first part introduces the language selection and other high level
 options like {option}`-c`, {option}`-g`, etc.
 
+### Language Selection and High-Level Options
+
+`clang` is a compiler driver: one command that runs a sequence of stages over
+its inputs and hands the results to the next tool. The options below select how
+far down that sequence to go, and how the driver should interpret what it was
+given. The {doc}`clang <CommandGuide/clang>` manual page is the complete
+reference for each of them.
+
+#### Selecting a stage
+
+With no stage selection option, `clang` runs every stage and then runs the
+linker, producing an executable or a shared library. Passing one of the
+following stops it earlier:
+
+| Option | Runs through | Produces |
+| ------ | ------------ | -------- |
+| {option}`-E` | Preprocessing | Preprocessed source, on standard output |
+| {option}`-fsyntax-only` | Semantic analysis | Nothing but diagnostics |
+| {option}`-S` | Code generation | An assembly file, `.s` by default |
+| {option}`-c` | Assembly | An object file, `.o` by default |
+| *(none)* | Linking | An executable or shared library |
+
+{option}`-o` names the output file. It applies to whichever stage is last, so
+`-E -o out.i`, `-S -o out.s` and `-c -o out.o` all write where you asked.
+
+#### Selecting the input language
+
+Clang infers a language for each input from its file extension:
+
+| Extension | Language |
+| --------- | -------- |
+| `.c` | C |
+| `.i` | Preprocessed C |
+| `.h` | C header |
+| `.C`, `.cc`, `.CC`, `.cp`, `.cpp`, `.CPP`, `.c++`, `.cxx`, `.CXX` | C++ |
+| `.ii` | Preprocessed C++ |
+| `.H`, `.hh`, `.hpp`, `.hxx` | C++ header |
+| `.ccm`, `.cppm`, `.cxxm`, `.c++m` | C++ module interface unit |
+| `.m` | Objective-C |
+| `.mi` | Preprocessed Objective-C |
+| `.M`, `.mm` | Objective-C++ |
+| `.mii` | Preprocessed Objective-C++ |
+| `.cu` | CUDA |
+| `.hip` | HIP |
+| `.cl` | OpenCL C |
+| `.clcpp` | C++ for OpenCL |
+| `.hlsl` | HLSL |
+| `.s` | Assembly |
+| `.S` | Assembly, preprocessed first |
+| `.ll` | LLVM IR |
+| `.bc` | LLVM bitcode |
+| `.o`, `.obj`, `.lib` | Passed straight to the linker |
+
+Use {option}`-x` to override that inference, most often to compile a file whose
+extension does not match its contents, or to compile from standard input:
+
+```console
+$ clang -x c++ header_only.h -fsyntax-only
+$ echo 'int main() {}' | clang -x c - -o a.out
+```
+
+{option}`-x` applies to every input **after** it on the command line, not to the
+whole invocation, and it persists until the next {option}`-x`. `-x none`
+restores extension-based inference for the inputs that follow:
+
+```console
+$ clang -x c++ a.h b.h -x none c.c
+```
+
+Here `a.h` and `b.h` are compiled as C++ and `c.c` as C. Naming a language
+clang does not recognise is an error.
+
+#### Selecting the language standard
+
+`-std=<standard>` selects the language standard, for example `-std=c23` or
+`-std=c++20`. Each standard also has a `gnu` variant that enables GNU
+extensions, such as `gnu23` and `gnu++20`. The default is `gnu17` for C
+(`gnu99` on PS4) and `gnu++17` for C++. The
+{doc}`clang <CommandGuide/clang>` manual page lists every accepted value.
+
+Note that the standard is a property of the input language, so `-std=` and
+{option}`-x` interact: `-std=c++20` has no effect on an input that clang is
+treating as C.
+
+#### Other high-level options
+
+{option}`-g` requests debug information, `-O0` through `-O3`, `-Os` and `-Oz`
+select an optimization level, and `-emit-llvm` makes {option}`-S` and
+{option}`-c` emit LLVM IR and LLVM bitcode instead of assembly and object code.
+`-###` prints the commands the driver would run, without running them, which is
+the fastest way to see what a given set of options actually does.
+
 ### Options to Control Error and Warning Messages
 
 :::{option} -Werror
