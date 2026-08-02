@@ -22,6 +22,7 @@
 #include "count_new.h"
 #include "test_macros.h"
 
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
 struct throwing_t {
   int* throw_after_n_ = nullptr;
   throwing_t() { throw 0; }
@@ -53,6 +54,7 @@ struct throwing_t {
     return lhs.throw_after_n_ != rhs.throw_after_n_;
   }
 };
+#endif // !defined(TEST_HAS_NO_EXCEPTIONS)
 
 #if TEST_STD_VER >= 11
 
@@ -109,6 +111,28 @@ struct move_only_throwing_t {
 };
 
 #endif
+
+// A type whose default constructor throws after a configurable number of
+// successful constructions. Useful for tests that need to value construct
+// objects and ensure exception safety when construction throws.
+//
+// Has a non-throwing (const T&) constructor for setting up the vector with
+// known content before the test starts.
+template <typename T>
+struct throwing_default_t {
+  T data_;
+  static int throw_after;
+
+  throwing_default_t() : data_() {
+    if (throw_after == 0)
+      throw 0;
+    --throw_after;
+  }
+
+  throwing_default_t(const T& data) : data_(data) {}
+};
+template <typename T>
+int throwing_default_t<T>::throw_after = 0;
 
 template <typename T>
 struct throwing_data {
