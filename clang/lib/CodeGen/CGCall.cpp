@@ -40,7 +40,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/IR/Assumptions.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
