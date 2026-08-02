@@ -156,3 +156,7 @@ struct A : B {
   void f() { int a = this->__super::a; }
 };
 }
+
+struct InvalidGlobalQualifier : Base1 {
+  ::__super::; // expected-error {{expected unqualified-id}}
+};

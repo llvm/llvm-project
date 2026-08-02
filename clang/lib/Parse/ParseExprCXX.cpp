@@ -153,7 +153,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     }
   }
 
-  if (Tok.is(tok::kw___super)) {
+  if (Tok.is(tok::kw___super) &&
+      (!HasScopeSpecifier || NextToken().isNot(tok::coloncolon))) {
     SourceLocation SuperLoc = ConsumeToken();
     if (!Tok.is(tok::coloncolon)) {
       Diag(Tok.getLocation(), diag::err_expected_coloncolon_after_super);
