@@ -2898,6 +2898,17 @@ TEST_F(FormatTest, ShortEnums) {
                Style);
 }
 
+TEST_F(FormatTest, WrapsEnumInitializers) {
+  verifyFormat("enum {\n"
+               "  MyEnum =\n"
+               "      aaaaaaaaaaaaaaa + bbbbbbbbbbbbbbb\n"
+               "};",
+               "enum {\n"
+               "  MyEnum = aaaaaaaaaaaaaaa + bbbbbbbbbbbbbbb\n"
+               "};",
+               getLLVMStyleWithColumns(40));
+}
+
 TEST_F(FormatTest, ShortCompoundRequirement) {
   constexpr StringRef Code("template <typename T>\n"
                            "concept c = requires(T x) {\n"
