@@ -119,8 +119,8 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   }
 
   if (argc == 1 && LIBC_NAMESPACE::cpp::string_view(argv[0]) == "") {
-    // Step 6: Executed with an empty (zero-length) argv. The kernel changes
-    // adds an empty string for argv[0].
+    // Step 6: Executed with an empty (zero-length) argv. The kernel adds an
+    // empty string for argv[0].
     ASSERT_STREQ(LIBC_NAMESPACE::program_invocation_name, "");
     ASSERT_STREQ(LIBC_NAMESPACE::program_invocation_short_name, "");
     return 0;
