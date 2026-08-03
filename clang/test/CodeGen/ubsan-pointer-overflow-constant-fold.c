@@ -1,4 +1,3 @@
-// REQUIRES: msp430-registered-target
 // RUN: %clang_cc1 -triple msp430 -emit-llvm -fsanitize=pointer-overflow -O0 %s -o - | FileCheck %s
 
 // Verify that pointer-overflow checks are emitted correctly when the GEP
