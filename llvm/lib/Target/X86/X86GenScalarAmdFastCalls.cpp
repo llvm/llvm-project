@@ -107,8 +107,8 @@ bool X86GenScalarAmdFastCalls::createScalarAOCLCall(MachineInstr *MI) const {
   MI->getOperand(0).ChangeToES(LibScalarFnName.data(),
                                MI->getOperand(0).getTargetFlags());
 
-  LLVM_DEBUG(dbgs() << "Successfully replaced with fastcall= " << LibScalarFnName
-                    << "\n";);
+  LLVM_DEBUG(dbgs() << "Successfully replaced with fastcall= "
+                    << LibScalarFnName << "\n";);
 
   ORE->emit([&]() {
     return MachineOptimizationRemark(DEBUG_TYPE, "Passed", MI->getDebugLoc(),
