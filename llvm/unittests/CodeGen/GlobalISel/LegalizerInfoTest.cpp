@@ -376,7 +376,9 @@ TEST(LegalizerInfoTest, MSVCDebugMiscompile) {
   (void)Builder.legalForCartesianProduct({S1}, {P0});
 }
 
-// We need a target machine for MRI
+// AArch64GISemMITest instead of LegalizerInfoTest
+// as we need a target machine for MRI.
+//
 // Check that immediates for the query are populated from the MI
 TEST_F(AArch64GISelMITest, ImmediatesFromMI) {
   setUp();
