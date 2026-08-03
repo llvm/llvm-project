@@ -1,0 +1,105 @@
+# RUN: llc -march=pisa -run-pass=pisa-scope-selector -verify-machineinstrs \
+# RUN:     -o - %s | FileCheck %s
+
+# Test 1: an atomic with scope already set to workgroup (value 2) must not be
+# overwritten by the pass.
+# CHECK-LABEL: name: scope_preset
+# CHECK: atomic_load_add_impl_i32_global_acq_rel_add_ri {{.*}}, 2, 0
+
+# Test 2: a non-atomic store has no $scope operand; the pass should skip it.
+# CHECK-LABEL: name: no_scope_operand
+# CHECK: st_global_i32_ri {{.*}}, 0
+
+# Test 3: monotonic ordering does not trigger a scope upgrade; scope stays at
+# 255 (NONE).
+# CHECK-LABEL: name: monotonic_no_change
+# CHECK: atomic_load_add_impl_i32_global_monotonic_add_ri {{.*}}, 255, 0
+
+--- |
+  define void @scope_preset(ptr addrspace(1) %ptr, i32 %a) {
+    %res = atomicrmw add ptr addrspace(1) %ptr, i32 %a acq_rel, align 4
+    ret void
+  }
+  define void @no_scope_operand(ptr addrspace(1) %ptr, i32 %a) {
+    store i32 %a, ptr addrspace(1) %ptr, align 4
+    ret void
+  }
+  define void @monotonic_no_change(ptr addrspace(1) %ptr, i32 %a) {
+    %res = atomicrmw add ptr addrspace(1) %ptr, i32 %a monotonic, align 4
+    ret void
+  }
+...
+---
+name:            scope_preset
+alignment:       1
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: reg64b }
+  - { id: 1, class: reg32b }
+  - { id: 2, class: reg32b }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.0):
+    %0:reg64b = functionParameter_i64 0
+    %1:reg32b = functionParameter_i32 1
+    %2:reg32b = atomic_load_add_impl_i32_global_acq_rel_add_ri %0, 0, %1, 2, 0 :: (load store acq_rel (i32) on %ir.ptr, addrspace 1)
+    ret
+...
+---
+name:            no_scope_operand
+alignment:       1
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: reg64b }
+  - { id: 1, class: reg32b }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.0):
+    %0:reg64b = functionParameter_i64 0
+    %1:reg32b = functionParameter_i32 1
+    st_global_i32_ri %0, 0, %1, 0 :: (store release (i32) into %ir.ptr, addrspace 1)
+    ret
+...
+---
+name:            monotonic_no_change
+alignment:       1
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+noPhis:          false
+isSSA:           true
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: reg64b }
+  - { id: 1, class: reg32b }
+  - { id: 2, class: reg32b }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.1 (%ir-block.0):
+    %0:reg64b = functionParameter_i64 0
+    %1:reg32b = functionParameter_i32 1
+    %2:reg32b = atomic_load_add_impl_i32_global_monotonic_add_ri %0, 0, %1, 255, 0 :: (load store monotonic (i32) on %ir.ptr, addrspace 1)
+    ret
+...
