@@ -147,7 +147,7 @@ public:
   /// When true, the checked offset may be in bounds.
   /// As an exceptional case, this is also true for idiomatic expressions that
   /// define a past-the-end pointer (and do not dereference it).
-  bool mayBeValid() const { return static_cast<bool>(ValidState); }
+  bool mayBeInBounds() const { return static_cast<bool>(InBoundsState); }
 
   /// When true, the checked offset may be negative.
   bool mayUnderflow() const { return MayUnderflow; }
@@ -169,11 +169,11 @@ public:
   }
 
   /// Returns the program state that should be used for continuing the analysis
-  /// after this bounds check. This returns null if mayBeValid() is false, in
+  /// after this bounds check. This returns null if mayBeInBounds() is false, in
   /// that case the state before the check should be used in the error node.
   /// Note that we also have a valid state in the exception case when the
   /// 'access' calculates the past-the-end pointer without dereferencing it.
-  ProgramStateRef getValidState() const { return ValidState; }
+  ProgramStateRef getInBoundsState() const { return InBoundsState; }
 
   friend CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB,
                                  NonLoc Offset, std::optional<NonLoc> Extent,
@@ -190,7 +190,7 @@ private:
   bool IsCorruptedState = false;
   bool MayUnderflow = false;
   std::optional<NonLoc> ExtentIfMayOverflow = std::nullopt;
-  ProgramStateRef ValidState = nullptr;
+  ProgramStateRef InBoundsState = nullptr;
 };
 
 } // namespace clang::ento::bounds
@@ -566,7 +566,7 @@ static BugDescription describeTaintBug(StringRef RegName, StringRef OffsetName,
                   AlsoMentionUnderflow ? "negative or " : "")};
 }
 
-/// When the access was ambiguous (that is, mayBeValid() && mayBeInvalid()),
+/// When the access was ambiguous (that is, mayBeInBounds() && mayBeInvalid()),
 /// returns the note "assuming in bounds" note that is relevant for the bug
 /// report \p BR. When the access wasn't ambiguous or the the assumption is
 /// irrelevant for \p BR, this returns the empty string (which signifies "do
@@ -685,7 +685,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
 
   const NoteTag *T = nullptr;
   if (Res.mayBeInvalid()) {
-    if (!Res.mayBeValid()) {
+    if (!Res.mayBeInBounds()) {
       SizeUnit SU = SizeUnit::forSVal(Location, C.getASTContext());
       BugDescription Desc = describeInvalidAccess(Res, RegName, SU);
       reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfMayOverflow());
@@ -717,7 +717,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         });
   }
 
-  C.addTransition(Res.getValidState(), T);
+  C.addTransition(Res.getInBoundsState(), T);
 }
 
 bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
@@ -801,7 +801,7 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
                                       /*CheckEquality=*/true);
           if (EqualsToThreshold && !NotEqualToThreshold) {
             Res.ExtentIfMayOverflow = std::nullopt;
-            Res.ValidState = EqualsToThreshold;
+            Res.InBoundsState = EqualsToThreshold;
           }
         }
         return Res;
@@ -811,7 +811,7 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
       State = WithinUpperBound;
   }
 
-  Res.ValidState = State;
+  Res.InBoundsState = State;
   return Res;
 }
 
