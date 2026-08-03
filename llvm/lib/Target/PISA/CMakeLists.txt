@@ -18,30 +18,51 @@ tablegen(LLVM PISAGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
 add_public_tablegen_target(PISACommonTableGen)
 
 add_llvm_target(PISACodeGen
+  PISACacheHintSelector.cpp
   PISACallLowering.cpp
+  PISAConstProp.cpp
+  PISAEmitIntrinsics.cpp
+  PISAExpandIntrinsics.cpp
   PISAISelLowering.cpp
+  PISAInsertLifetimeStart.cpp
   PISAInstrInfo.cpp
   PISAInstructionSelector.cpp
+  PISAKernelByValArgsLowering.cpp
+  PISALegalizeCalls.cpp
+  PISALegalizePredicates.cpp
+  PISALegalizeSubregAccess.cpp
   PISALegalizerInfo.cpp
   PISAMCInstLower.cpp
   PISAMachineFunctionInfo.cpp
+  PISAMarkConvergentNoMerge.cpp
+  PISAOptimizeRedundantCopies.cpp
+  PISAOptimizeSubregAccess.cpp
   PISAPostLegalizerCombiner.cpp
   PISAPreLegalizerCombiner.cpp
+  PISAPropagateNullPointers.cpp
   PISARegManager.cpp
   PISARegisterBankInfo.cpp
   PISARegisterInfo.cpp
+  PISAReplaceIntrinsics.cpp
+  PISAScopeSelector.cpp
   PISASubtarget.cpp
   PISATargetMachine.cpp
   PISAUtils.cpp
+  PISAVerifier.cpp
+  PISAVerifyTypes.cpp
+  PISALayout.cpp
 
   LINK_COMPONENTS
   Analysis
   AsmPrinter
+  BitReader
   CodeGen
   CodeGenTypes
   Core
   Demangle
   GlobalISel
+  IPO
+  Linker
   MC
   Passes
   Scalar
@@ -52,6 +73,7 @@ add_llvm_target(PISACodeGen
   TransformUtils
   PISADesc
   PISAInfo
+  Vectorize
 
   ADD_TO_COMPONENT
   PISA
