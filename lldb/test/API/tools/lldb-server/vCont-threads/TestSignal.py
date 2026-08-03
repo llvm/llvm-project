@@ -54,7 +54,11 @@ class TestSignal(gdbremote_testcase.GdbRemoteTestCaseBase):
         procinfo = self.parse_process_info_response(context)
         return int(procinfo["pid"], 16)
 
+<<<<<<< HEAD
     @requireSignals
+=======
+    @requireNotWindows
+>>>>>>> 6b88c82b0ac1 ([lldb] Convert all the tests to use require decorator (#213467))
     @skipIfDarwin
     @expectedFailureNetBSD
     @expectedFailureAll(
@@ -106,7 +110,11 @@ class TestSignal(gdbremote_testcase.GdbRemoteTestCaseBase):
             threads,
         )
 
+<<<<<<< HEAD
     @requireSignals
+=======
+    @requireNotWindows
+>>>>>>> 6b88c82b0ac1 ([lldb] Convert all the tests to use require decorator (#213467))
     @expectedFailureNetBSD
     @expectedFailureAll(
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56086"
@@ -126,7 +134,11 @@ class TestSignal(gdbremote_testcase.GdbRemoteTestCaseBase):
             threads,
         )
 
+<<<<<<< HEAD
     @requireSignals
+=======
+    @requireNotWindows
+>>>>>>> 6b88c82b0ac1 ([lldb] Convert all the tests to use require decorator (#213467))
     @expectedFailureNetBSD
     @expectedFailureAll(
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56086"
@@ -143,7 +155,11 @@ class TestSignal(gdbremote_testcase.GdbRemoteTestCaseBase):
             "C{0:x}:p-1".format(lldbutil.get_signal_number("SIGUSR1")), threads
         )
 
+<<<<<<< HEAD
     @requireSignals
+=======
+    @requireNotWindows
+>>>>>>> 6b88c82b0ac1 ([lldb] Convert all the tests to use require decorator (#213467))
     @expectedFailureNetBSD
     @expectedFailureAll(
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56086"
@@ -159,7 +175,11 @@ class TestSignal(gdbremote_testcase.GdbRemoteTestCaseBase):
             "C{0:x}:-1".format(lldbutil.get_signal_number("SIGUSR1")), threads
         )
 
+<<<<<<< HEAD
     @requireSignals
+=======
+    @requireNotWindows
+>>>>>>> 6b88c82b0ac1 ([lldb] Convert all the tests to use require decorator (#213467))
     @expectedFailureNetBSD
     @expectedFailureAll(
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56086"
@@ -180,7 +200,11 @@ class TestSignal(gdbremote_testcase.GdbRemoteTestCaseBase):
             threads,
         )
 
+<<<<<<< HEAD
     @requireSignals
+=======
+    @requireNotWindows
+>>>>>>> 6b88c82b0ac1 ([lldb] Convert all the tests to use require decorator (#213467))
     @expectedFailureNetBSD
     @expectedFailureAll(
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56086"
@@ -200,7 +224,11 @@ class TestSignal(gdbremote_testcase.GdbRemoteTestCaseBase):
             threads,
         )
 
+<<<<<<< HEAD
     @requireSignals
+=======
+    @requireNotWindows
+>>>>>>> 6b88c82b0ac1 ([lldb] Convert all the tests to use require decorator (#213467))
     @expectedFailureNetBSD
     @expectedFailureAll(
         oslist=["freebsd"], bugnumber="github.com/llvm/llvm-project/issues/56086"
