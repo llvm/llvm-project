@@ -71,6 +71,7 @@ static_library("Utils") {
     "LowerSwitch.cpp",
     "LowerVectorIntrinsics.cpp",
     "MatrixUtils.cpp",
+    "MaterializeKernelInfo.cpp",
     "Mem2Reg.cpp",
     "MemoryOpRemark.cpp",
     "MemoryTaggingSupport.cpp",
