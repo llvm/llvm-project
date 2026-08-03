@@ -91,6 +91,11 @@ flo@fhahn.com (email), [fhahn](https://github.com/fhahn) (GitHub) \
 David Sherwood \
 david.sherwood@arm.com (email), [david-arm](https://github.com/david-arm) (GitHub)
 
+#### LoopUnroll 
+
+Justin Fargnoli \
+justinfargnoli@gmail.com (email), [justinfargnoli](https://github.com/justinfargnoli) (GitHub)
+
 #### MemorySSA
 
 Alina Sbirlea \

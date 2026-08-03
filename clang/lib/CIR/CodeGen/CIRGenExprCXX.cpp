@@ -118,10 +118,10 @@ CIRGenFunction::emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
 
   // Build the call.
   CIRGenCallee callee(fpt, calleePtr.getDefiningOp());
-  assert(!cir::MissingFeatures::opCallMustTail());
   return emitCall(cgm.getTypes().arrangeCXXMethodCall(argsList, fpt, required,
                                                       /*PrefixSize=*/0),
-                  callee, returnValue, argsList, nullptr, loc);
+                  callee, returnValue, argsList, nullptr, ce == mustTailCall,
+                  loc);
 }
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
@@ -322,8 +322,8 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
       args, fpt, callInfo.reqArgs, callInfo.prefixSize);
   assert((ce || currSrcLoc) && "expected source location");
   mlir::Location loc = ce ? getLoc(ce->getExprLoc()) : *currSrcLoc;
-  assert(!cir::MissingFeatures::opCallMustTail());
-  return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
+  return emitCall(fnInfo, callee, returnValue, args, nullptr,
+                  ce && ce == mustTailCall, loc);
 }
 
 static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
@@ -756,9 +756,9 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   cir::FuncOp calleePtr = cgf.cgm.getAddrOfFunction(calleeDecl);
   CIRGenCallee callee =
       CIRGenCallee::forDirect(calleePtr, GlobalDecl(calleeDecl));
-  RValue rv =
-      cgf.emitCall(cgf.cgm.getTypes().arrangeFreeFunctionCall(args, calleeType),
-                   callee, ReturnValueSlot(), args, &callOrTryCall);
+  RValue rv = cgf.emitCall(
+      cgf.cgm.getTypes().arrangeFreeFunctionCall(args, calleeType), callee,
+      ReturnValueSlot(), args, /*isMustTail=*/false, &callOrTryCall);
 
   /// C++1y [expr.new]p10:
   ///   [In a new-expression,] an implementation is allowed to omit a call
@@ -1367,9 +1367,8 @@ RValue CIRGenFunction::emitCXXDestructorCall(
   commonBuildCXXMemberOrOperatorCall(*this, dtorDecl, thisVal, implicitParam,
                                      implicitParamTy, ce, args, nullptr);
   assert((ce || dtor.getDecl()) && "expected source location provider");
-  assert(!cir::MissingFeatures::opCallMustTail());
   return emitCall(cgm.getTypes().arrangeCXXStructorDeclaration(dtor), callee,
-                  ReturnValueSlot(), args, nullptr,
+                  ReturnValueSlot(), args, nullptr, ce && ce == mustTailCall,
                   ce ? getLoc(ce->getExprLoc())
                      : getLoc(dtor.getDecl()->getSourceRange()));
 }
@@ -1916,9 +1915,8 @@ mlir::Value CIRGenFunction::emitDynamicCast(Address thisAddr,
                                          destCirTy, isRefCast, thisAddr);
 }
 
-static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
-                                           mlir::Type typeInfoPtrTy,
-                                           bool hasNullCheck) {
+static Address emitCXXTypeidOperand(CIRGenFunction &cgf, const Expr *e,
+                                    bool hasNullCheck) {
   Address thisPtr = cgf.emitLValue(e).getAddress();
   QualType srcType = e->getType();
 
@@ -1940,7 +1938,7 @@ static mlir::Value emitCXXTypeidFromVTable(CIRGenFunction &cgf, const Expr *e,
         });
   }
 
-  return cgf.cgm.getCXXABI().emitTypeid(cgf, srcType, thisPtr, typeInfoPtrTy);
+  return thisPtr;
 }
 
 mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
@@ -1958,11 +1956,13 @@ mlir::Value CIRGenFunction::emitCXXTypeidExpr(const CXXTypeidExpr *e) {
   //   polymorphic class type, the result refers to a std::type_info object
   //   representing the type of the most derived object (that is, the dynamic
   //   type) to which the glvalue refers.
-  // If the operand is already most derived object, no need to look up vtable.
-  if (!e->isTypeOperand() && e->isPotentiallyEvaluated() &&
-      !e->isMostDerived(getContext()))
-    return emitCXXTypeidFromVTable(*this, e->getExprOperand(), resultType,
-                                   e->hasNullCheck());
+  if (!e->isTypeOperand() && e->isPotentiallyEvaluated()) {
+    Address thisPtr =
+        emitCXXTypeidOperand(*this, e->getExprOperand(), e->hasNullCheck());
+    if (!e->isMostDerived(getContext()))
+      return cgm.getCXXABI().emitTypeid(*this, ty, thisPtr, resultType);
+    // If the operand is already most derived object, no need to look up vtable.
+  }
 
   auto typeInfo =
       cast<cir::GlobalViewAttr>(cgm.getAddrOfRTTIDescriptor(loc, ty));

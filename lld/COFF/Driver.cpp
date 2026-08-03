@@ -356,7 +356,21 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
     break;
   case file_magic::pecoff_executable:
     if (ctx.config.mingw) {
-      addFile(make<DLLFile>(ctx.symtab, mbref));
+      std::unique_ptr<COFFObjectFile> obj =
+          ObjFile::createCOFFObject(ctx, mbref);
+      if (ctx.symtab.isEC()) {
+        // When importing an ARM64X image, add both the native and EC views.
+        if (std::unique_ptr<MemoryBuffer> hybridView =
+                obj->getHybridObjectView()) {
+          std::unique_ptr<COFFObjectFile> hybridObj =
+              ObjFile::createCOFFObject(ctx, takeBuffer(std::move(hybridView)));
+          addFile(make<DLLFile>(ctx.symtab, hybridObj));
+          addFile(make<DLLFile>(*ctx.hybridSymtab, obj));
+          break;
+        }
+      }
+      auto machine = static_cast<MachineTypes>(obj->getMachine());
+      addFile(make<DLLFile>(ctx.getSymtab(machine), obj));
       break;
     }
     if (filename.ends_with_insensitive(".dll")) {
@@ -2791,9 +2805,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ltoCompilationDone = true;
   ctx.forEachSymtab([](SymbolTable &symtab) { symtab.compileBitcodeFiles(); });
 
-  if (Defined *d =
-          dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used")))
-    config->gcroot.push_back(d);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (Defined *d =
+            dyn_cast_or_null<Defined>(symtab.findUnderscore("_tls_used")))
+      config->gcroot.push_back(d);
+  });
 
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
@@ -2822,6 +2838,25 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (errorCount())
     return;
+
+  if (ctx.hybridSymtab) {
+    // On ARM64X, merge tls chunks, there may be only one true _tls_start and
+    // _tls_end chunk. Additionally, both views use the same _tls_used and
+    // _tls_index.
+    auto maybeReplaceWithNative = [&](StringRef name) {
+      auto nativeSym = dyn_cast_or_null<DefinedRegular>(
+          ctx.hybridSymtab->findUnderscore(name));
+      if (!nativeSym)
+        return;
+      if (auto ecSym =
+              dyn_cast_or_null<DefinedRegular>(ctx.symtab.findUnderscore(name)))
+        nativeSym->getChunk()->replace(ecSym->getChunk());
+    };
+    maybeReplaceWithNative("_tls_used");
+    maybeReplaceWithNative("_tls_index");
+    maybeReplaceWithNative("_tls_start");
+    maybeReplaceWithNative("_tls_end");
+  }
 
   ctx.forEachActiveSymtab([](SymbolTable &symtab) {
     symtab.initializeECThunks();
@@ -2960,6 +2995,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Write the result.
   writeResult(ctx);
+  // LTO cleanup may create time trace events. Wait for it to complete before
+  // writing the time trace data.
+  ctx.forEachSymtab([](SymbolTable &symtab) { symtab.waitForLTOCleanup(); });
 
   // Stop early so we can print the results.
   rootTimer.stop();

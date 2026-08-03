@@ -570,6 +570,8 @@ public:
 
   virtual bool haveFastSqrt(Type *Ty) const { return false; }
 
+  virtual bool haveFastClmul(IntegerType *Ty) const { return false; }
+
   virtual bool isExpensiveToSpeculativelyExecute(const Instruction *I) const {
     return true;
   }

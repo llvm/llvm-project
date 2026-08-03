@@ -122,6 +122,13 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     return true;
   }
 
+  // The frame register is referenced through DW_OP_fbreg relative to
+  // DW_AT_frame_base, so it needs no DWARF register number of its own.
+  if (isFrameRegister(TRI, MachineReg)) {
+    DwarfRegs.push_back(Register::createRegister(-1, nullptr));
+    return true;
+  }
+
   // Walk up the super-register chain until we find a valid number.
   // For example, EAX on x86_64 is a 32-bit fragment of RAX with offset 0.
   for (MCPhysReg SR : TRI.superregs(MachineReg)) {
@@ -325,17 +332,15 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   // expression representing a value, rather than a location.
   if ((!isParameterValue() && !isMemoryLocation() && !HasComplexExpression) ||
       isEntryValue()) {
-    auto FragmentInfo = ExprCursor.getFragmentInfo();
     unsigned RegSize = 0;
     for (auto &Reg : DwarfRegs) {
       RegSize += Reg.SubRegSize;
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
-      if (FragmentInfo)
-        if (RegSize > FragmentInfo->SizeInBits)
-          // If the register is larger than the current fragment stop
-          // once the fragment is covered.
-          break;
+      if (Fragment && RegSize > Fragment->SizeInBits)
+        // If the register is larger than the current fragment stop
+        // once the fragment is covered.
+        break;
       addOpPiece(Reg.SubRegSize);
     }
 
@@ -378,7 +383,6 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   }
 
   auto Reg = DwarfRegs[0];
-  bool FBReg = isFrameRegister(TRI, MachineReg);
   int SignedOffset = 0;
   assert(!Reg.isSubRegister() && "full register expected");
 
@@ -410,7 +414,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     }
   }
 
-  if (FBReg)
+  if (isFrameRegister(TRI, MachineReg))
     addFBReg(SignedOffset);
   else
     addBReg(Reg.DwarfRegNo, SignedOffset);

@@ -97,6 +97,8 @@ public:
       SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionModeFromEnableMaximalReconvergenceAttr(
       const MCRegister &Reg, const SPIRVSubtarget &ST);
+  void emitSimpleExecutionMode(MCRegister Reg,
+                               SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
@@ -545,18 +547,21 @@ void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
   outputMCInst(Inst);
 }
 
+void SPIRVAsmPrinter::emitSimpleExecutionMode(
+    MCRegister Reg, SPIRV::ExecutionMode::ExecutionMode EM) {
+  MCInst Inst;
+  Inst.setOpcode(SPIRV::OpExecutionMode);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  Inst.addOperand(MCOperand::createImm(static_cast<unsigned>(EM)));
+  outputMCInst(Inst);
+}
+
 void SPIRVAsmPrinter::outputExecutionModeFromEnableMaximalReconvergenceAttr(
     const MCRegister &Reg, const SPIRVSubtarget &ST) {
   assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence) &&
          "Function called when SPV_KHR_maximal_reconvergence is not enabled.");
 
-  MCInst Inst;
-  Inst.setOpcode(SPIRV::OpExecutionMode);
-  Inst.addOperand(MCOperand::createReg(Reg));
-  unsigned EM =
-      static_cast<unsigned>(SPIRV::ExecutionMode::MaximallyReconvergesKHR);
-  Inst.addOperand(MCOperand::createImm(EM));
-  outputMCInst(Inst);
+  emitSimpleExecutionMode(Reg, SPIRV::ExecutionMode::MaximallyReconvergesKHR);
 }
 
 void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
@@ -603,13 +608,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       // VUID-StandaloneSpirv-OriginLowerLeft-04653: Fragment must declare
       // OriginUpperLeft.
       if (Attr.getValueAsString() == "pixel") {
-        MCInst Inst;
-        Inst.setOpcode(SPIRV::OpExecutionMode);
-        Inst.addOperand(MCOperand::createReg(FReg));
-        unsigned EM =
-            static_cast<unsigned>(SPIRV::ExecutionMode::OriginUpperLeft);
-        Inst.addOperand(MCOperand::createImm(EM));
-        outputMCInst(Inst);
+        emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::OriginUpperLeft);
       }
     }
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
@@ -650,13 +649,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     // all entry points must use the ArithmeticPoisonKHR execution mode".
     if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
                            SPIRV::Capability::PoisonFreezeKHR)) {
-      MCInst Inst;
-      Inst.setOpcode(SPIRV::OpExecutionMode);
-      Inst.addOperand(MCOperand::createReg(FReg));
-      unsigned EM =
-          static_cast<unsigned>(SPIRV::ExecutionMode::ArithmeticPoisonKHR);
-      Inst.addOperand(MCOperand::createImm(EM));
-      outputMCInst(Inst);
+      emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ArithmeticPoisonKHR);
     }
     // --spirv-fp-contract=off forces to emit ContractionOff for this kernel
     // entry point, --spirv-fp-contract=fast suppresses it.
@@ -737,13 +730,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
           outputMCInst(Inst);
         }
       } else {
-        MCInst Inst;
-        Inst.setOpcode(SPIRV::OpExecutionMode);
-        Inst.addOperand(MCOperand::createReg(FReg));
-        unsigned EM =
-            static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
-        Inst.addOperand(MCOperand::createImm(EM));
-        outputMCInst(Inst);
+        emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::ContractionOff);
       }
     }
   }
@@ -752,10 +739,7 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
 void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
   outputModuleSection(SPIRV::MB_Annotations);
   // Process llvm.global.annotations special global variable.
-  for (auto F = M.global_begin(), E = M.global_end(); F != E; ++F) {
-    if ((*F).getName() != "llvm.global.annotations")
-      continue;
-    const GlobalVariable *V = &(*F);
+  if (const GlobalVariable *V = M.getNamedGlobal("llvm.global.annotations")) {
     const ConstantArray *CA = cast<ConstantArray>(V->getOperand(0));
     for (Value *Op : CA->operands()) {
       ConstantStruct *CS = cast<ConstantStruct>(Op);

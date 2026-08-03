@@ -20,8 +20,10 @@
 #include "mlir/Dialect/Traits.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
@@ -1261,7 +1263,8 @@ struct CancellingBlockScaledCastsOptimization
           castOp, "inner input type must match outer output type");
 
     const Type innerOutputElemType = innerOutputTy.getElementType();
-    const bool isLosslessCast = isa<Float32Type>(innerOutputElemType);
+    const bool isLosslessCast =
+        isa<Float32Type, BFloat16Type>(innerOutputElemType);
     if (!isLosslessCast)
       return rewriter.notifyMatchFailure(
           castOp, "avoid cancelling casts that should be lossy");
@@ -1794,7 +1797,7 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   }
 
   if (rhsAttr && lhsAttr && rhsAttr.isSplat() && lhsAttr.isSplat() &&
-      llvm::isa<IntegerType>(resultETy)) {
+      llvm::isa<IntegerType>(resultETy) && resultTy.hasStaticShape()) {
     APInt l = lhsAttr.getSplatValue<APInt>();
     APInt r = rhsAttr.getSplatValue<APInt>();
     if (!r.isZero()) {
@@ -1839,6 +1842,9 @@ std::optional<APInt> mulInt(APInt lhs, APInt rhs, int32_t shift,
 
 DenseElementsAttr mulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
                                   RankedTensorType ty, int32_t shift) {
+  // A constant result can only be built for a statically-shaped type.
+  if (!ty.hasStaticShape())
+    return {};
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
     if (llvm::isa<IntegerType>(ty.getElementType())) {
       APInt l = lhs.getSplatValue<APInt>();
@@ -2324,6 +2330,82 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
   if (predicateValue == false && onFalseTy == resultTy && isBroadcastable)
     return onFalse;
   return {};
+}
+
+static LogicalResult verifyTileIsBroadcast(tosa::TileOp tileOp) {
+  const auto inputType =
+      dyn_cast<RankedTensorType>(tileOp.getInput1().getType());
+  const auto outputType = dyn_cast<RankedTensorType>(tileOp.getType());
+  if (!inputType || !outputType)
+    return failure();
+
+  SmallVector<int64_t> multiples;
+  if (failed(tileOp.getConstantMultiples(multiples)))
+    return failure();
+
+  for (const auto [index, multiple] : llvm::enumerate(multiples)) {
+    if (multiple == 1)
+      continue;
+    if (outputType.isDynamicDim(index))
+      return failure();
+    if (inputType.getDimSize(index) != 1)
+      return failure();
+  }
+
+  return success();
+}
+
+struct RemoveBroadcastTileFromBinaryElementwise
+    : public OpRewritePattern<tosa::TileOp> {
+  using OpRewritePattern<tosa::TileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::TileOp tileOp,
+                                PatternRewriter &rewriter) const override {
+    Value tileOutput = tileOp.getOutput();
+    if (!tileOutput.hasOneUse())
+      return rewriter.notifyMatchFailure(tileOp,
+                                         "tile output must have one use");
+
+    Operation *user = *tileOutput.user_begin();
+    const bool isBinaryElementwise =
+        user->getNumOperands() == 2 &&
+        user->hasTrait<OpTrait::tosa::TosaElementwiseOperator>();
+    if (!isBinaryElementwise && !isa<tosa::MulOp>(user))
+      return rewriter.notifyMatchFailure(
+          tileOp, "consumer must be binary broadcastable");
+
+    if (failed(verifyTileIsBroadcast(tileOp)))
+      return rewriter.notifyMatchFailure(
+          tileOp, "tile must only expand statically-known singleton dims");
+
+    Value lhsOperand = user->getOperand(0);
+    Value rhsOperand = user->getOperand(1);
+    Value otherOperand = lhsOperand == tileOutput ? rhsOperand : lhsOperand;
+    Value tileInput = tileOp.getInput1();
+
+    const ShapedType newOtherType = cast<ShapedType>(otherOperand.getType());
+    const ShapedType newTileType = cast<ShapedType>(tileInput.getType());
+    SmallVector<int64_t> broadcastedShape;
+    OpTrait::util::getBroadcastedShape(
+        newOtherType.getShape(), newTileType.getShape(), broadcastedShape);
+
+    const ShapedType outputType = cast<ShapedType>(user->getResultTypes()[0]);
+    if (!llvm::equal(broadcastedShape, outputType.getShape()))
+      return rewriter.notifyMatchFailure(
+          tileOp, "tile output must be broadcastable to consumer operands");
+
+    rewriter.setInsertionPoint(user);
+    IRMapping mapper;
+    mapper.map(tileOutput, tileOp.getInput1());
+    Operation *newUser = rewriter.clone(*user, mapper);
+    rewriter.replaceOp(user, newUser->getResults());
+    return success();
+  }
+};
+
+void TileOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<RemoveBroadcastTileFromBinaryElementwise>(context);
 }
 
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {

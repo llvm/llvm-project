@@ -612,8 +612,6 @@ def simm7s16 : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-def am_sve_fi : ComplexPattern<iPTR, 2, "SelectAddrModeFrameIndexSVE", []>;
-
 def am_indexed7s8   : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S8", []>;
 def am_indexed7s16  : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S16", []>;
 def am_indexed7s32  : ComplexPattern<iPTR, 2, "SelectAddrModeIndexed7S32", []>;
@@ -1533,6 +1531,8 @@ def fpimm16 : Operand<f16>,
     }], fpimm16XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimmbf16 : Operand<bf16>,
@@ -1546,6 +1546,8 @@ def fpimm32 : Operand<f32>,
     }], fpimm32XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimm32SIMDModImmType4 : FPImmLeaf<f32, [{
@@ -1560,12 +1562,15 @@ def fpimm64 : Operand<f64>,
     }], fpimm64XForm> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimm8 : Operand<i32> {
   let ParserMatchClass = FPImmOperand;
   let PrintMethod = "printFPImmOperand";
-  let OperandType = "OPERAND_IMMEDIATE";
+  let OperandType = "OPERAND_IMM_UINT8";
+  let OperandNamespace = "AArch64";
 }
 
 def fpimm0 : FPImmLeaf<fAny, [{

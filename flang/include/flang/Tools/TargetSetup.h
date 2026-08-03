@@ -46,7 +46,7 @@ namespace Fortran::tools {
   }
 
   switch (targetTriple.getArch()) {
-  case llvm::Triple::ArchType::amdgcn:
+  case llvm::Triple::ArchType::amdgpu:
   case llvm::Triple::ArchType::x86_64:
     break;
   default:

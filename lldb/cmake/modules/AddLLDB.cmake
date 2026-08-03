@@ -188,6 +188,22 @@ function(add_lldb_library name)
     "LINK_LIBS;CLANG_LIBS;ALLOWED_INTERNAL_DEPENDENCIES"
     ${ARGN})
 
+  foreach(link_lib ${PARAM_LINK_LIBS})
+    # May not be a target yet.
+    if (NOT TARGET ${link_lib})
+      continue()
+    endif()
+
+    if (link_lib MATCHES "^clang")
+      message(FATAL_ERROR "Library ${name} links against clang library ${link_lib} via LINK_LIBS but must be added via CLANG_LIBS")
+    endif()
+
+    get_target_property(_is_llvm_component ${link_lib} LLVM_COMPONENT)
+    if (link_lib MATCHES "^LLVM" AND ${_is_llvm_component})
+      message(FATAL_ERROR "Library ${name} links against LLVM library ${link_lib} via LINK_LIBS but must be added via LINK_COMPONENTS")
+    endif()
+  endforeach()
+
   set(_check_internal_deps FALSE)
   if(PARAM_NO_INTERNAL_DEPENDENCIES)
     set(_allowed_internal_deps "")

@@ -38,15 +38,19 @@ AMDGPU_HW_EVENT(EXP_POS_ACCESS,             15) /* write to export position */
 AMDGPU_HW_EVENT(EXP_PARAM_ACCESS,           16) /* write to export parameter */
 AMDGPU_HW_EVENT(VMW_GPR_LOCK,               17) /* vmem write holding on its data src */
 AMDGPU_HW_EVENT(EXP_LDS_ACCESS,             18) /* read by ldsdir counting as export */
-AMDGPU_HW_EVENT(VGPR_CSMACC_WRITE,          19) /* write VGPR dest in Core/Side-MACC VALU */
-AMDGPU_HW_EVENT(VGPR_DPMACC_WRITE,          20) /* write VGPR dest in DPMACC VALU */
-AMDGPU_HW_EVENT(VGPR_TRANS_WRITE,           21) /* write VGPR dest in TRANS VALU */
-AMDGPU_HW_EVENT(VGPR_XDL_WRITE,             22) /* write VGPR dest in XDL VALU */
-AMDGPU_HW_EVENT(VGPR_LDS_READ,              23) /* read VGPR source in LDS */
-AMDGPU_HW_EVENT(VGPR_FLAT_READ,             24) /* read VGPR source in FLAT */
-AMDGPU_HW_EVENT(VGPR_VMEM_READ,             25) /* read VGPR source in other VMEM */
-AMDGPU_HW_EVENT(ASYNC_ACCESS,               26) /* access that uses ASYNC_CNT */
-AMDGPU_HW_EVENT(TENSOR_ACCESS,              27) /* access that uses TENSOR_CNT */
+AMDGPU_HW_EVENT(VGPR_CSMACC_READ,           19) /* read VGPR source in Core/Side-MACC VALU */
+AMDGPU_HW_EVENT(VGPR_DPMACC_READ,           20) /* read VGPR source in DPMACC VALU */
+AMDGPU_HW_EVENT(VGPR_TRANS_READ,            21) /* read VGPR source in TRANS VALU */
+AMDGPU_HW_EVENT(VGPR_XDL_READ,              22) /* read VGPR source in XDL VALU */
+AMDGPU_HW_EVENT(VGPR_CSMACC_WRITE,          23) /* write VGPR dest in Core/Side-MACC VALU */
+AMDGPU_HW_EVENT(VGPR_DPMACC_WRITE,          24) /* write VGPR dest in DPMACC VALU */
+AMDGPU_HW_EVENT(VGPR_TRANS_WRITE,           25) /* write VGPR dest in TRANS VALU */
+AMDGPU_HW_EVENT(VGPR_XDL_WRITE,             26) /* write VGPR dest in XDL VALU */
+AMDGPU_HW_EVENT(VGPR_LDS_READ,              27) /* read VGPR source in LDS */
+AMDGPU_HW_EVENT(VGPR_FLAT_READ,             28) /* read VGPR source in FLAT */
+AMDGPU_HW_EVENT(VGPR_VMEM_READ,             29) /* read VGPR source in other VMEM */
+AMDGPU_HW_EVENT(ASYNC_ACCESS,               30) /* access that uses ASYNC_CNT */
+AMDGPU_HW_EVENT(TENSOR_ACCESS,              31) /* access that uses TENSOR_CNT */
 
 AMDGPU_LAST_HW_EVENT(TENSOR_ACCESS)
 

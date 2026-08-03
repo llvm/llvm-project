@@ -174,6 +174,23 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
   opts.DebugInfoForProfiling =
       args.hasArg(clang::options::OPT_fdebug_info_for_profiling);
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_compress_debug_sections_EQ)) {
+    auto type = llvm::StringSwitch<std::optional<llvm::DebugCompressionType>>(
+                    a->getValue())
+                    .Case("none", llvm::DebugCompressionType::None)
+                    .Case("zlib", llvm::DebugCompressionType::Zlib)
+                    .Case("zstd", llvm::DebugCompressionType::Zstd)
+                    .Default(std::nullopt);
+    if (type) {
+      opts.setCompressDebugSections(*type);
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << a->getValue();
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -298,6 +315,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::options::OPT_fsafe_trampoline,
                    clang::options::OPT_fno_safe_trampoline, false))
     opts.EnableSafeTrampoline = 1;
+
+  if (args.hasFlag(clang::options::OPT_freal_sum_reassociation,
+                   clang::options::OPT_fno_real_sum_reassociation, false))
+    opts.SplitSumExpressionTree = 1;
 
   if (args.getLastArg(clang::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
@@ -2002,6 +2023,7 @@ void CompilerInvocation::setLoweringOptions() {
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
                                     Fortran::common::LangOptions::SOB_Defined);
   loweringOpts.setProtectParens(codegenOpts.ProtectParens);
+  loweringOpts.setSplitSumExpressionTree(codegenOpts.SplitSumExpressionTree);
   Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
   // TODO: when LangOptions are finalized, we can represent
   //       the math related options using Fortran::commmon::MathOptionsBase,

@@ -2879,7 +2879,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   IRBuilder<> Builder(Context);
   Function *TheFn = Intrinsic::getOrInsertDeclaration(&M, Intrinsic::vscale,
                                                       {Builder.getInt32Ty()});
-  CallInst *CI = Builder.CreateCall(TheFn, {}, {}, "");
+  CallInst *CI = Builder.CreateCall(TheFn, {});
 
   KnownBits Known = computeKnownBits(CI, M.getDataLayout());
   // There is no parent function so we cannot look up the vscale_range

@@ -1869,6 +1869,10 @@ public:
     return getOperand(Index + 1);
   }
 
+  inline iterator_range<op_iterator> indices() {
+    return make_range(op_begin() + 1, op_begin() + 1 + getNumIndices());
+  }
+
   Type *getResultElementType() const {
     Type *CurrentType = getBaseType();
     for (unsigned I = 0; I < getNumIndices(); I++) {

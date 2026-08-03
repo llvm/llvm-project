@@ -126,8 +126,8 @@ static hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg,
 /// use this function directly but the specialized ones below instead.
 template <typename Elem1Ty, typename Elem2Ty, typename IterFuncTy,
           typename IterFuncArgTy, typename CallbackTy>
-static hsa_status_t iterate(IterFuncTy Func, IterFuncArgTy FuncArg,
-                            CallbackTy Cb) {
+[[maybe_unused]] static hsa_status_t
+iterate(IterFuncTy Func, IterFuncArgTy FuncArg, CallbackTy Cb) {
   auto L = [](Elem1Ty Elem1, Elem2Ty Elem2, void *Data) -> hsa_status_t {
     CallbackTy *Unwrapped = static_cast<CallbackTy *>(Data);
     return (*Unwrapped)(Elem1, Elem2);
@@ -586,7 +586,7 @@ private:
 /// generic kernel class.
 struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
-  AMDGPUKernelTy(const char *Name) : GenericKernelTy(Name) {}
+  AMDGPUKernelTy(StringRef Name) : GenericKernelTy(Name) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -2636,7 +2636,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Allocate and construct an AMDGPU kernel.
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
+  Expected<GenericKernelTy &> constructKernel(StringRef Name) override {
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy *AMDGPUKernel = Plugin.allocate<AMDGPUKernelTy>();
     if (!AMDGPUKernel)
@@ -3313,7 +3313,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WAVEFRONT_SIZE, TmpUInt2);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Wavefront Size", TmpUInt2);
+      Info.add("Number of Lanes", TmpUInt2, "", DeviceInfo::NUM_LANES);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)
@@ -3920,6 +3920,35 @@ struct AMDGPUGlobalHandlerTy final : public GenericGlobalHandlerTy {
 
     return Plugin::success();
   }
+
+protected:
+  /// Kernels are represented by a kernel descriptor, which is an object named
+  /// after the function it describes with a '.kd' suffix.
+  std::optional<StringRef> matchSymbol(const ELFSymbolRef &Symbol,
+                                       StringRef Name,
+                                       SymbolKindTy Kind) override {
+    if (Symbol.getELFType() != ELF::STT_OBJECT)
+      return std::nullopt;
+
+    StringRef Function = Name;
+    bool IsDescriptor =
+        Function.consume_back(".kd") && isFunction(Symbol, Function);
+    if (IsDescriptor != (Kind == SymbolKindTy::Kernel))
+      return std::nullopt;
+
+    return IsDescriptor ? Function : Name;
+  }
+
+private:
+  /// Returns whether \p Name is a function in the image containing \p Symbol.
+  static bool isFunction(const ELFSymbolRef &Symbol, StringRef Name) {
+    auto SymbolOrErr = utils::elf::getSymbol(*Symbol.getObject(), Name);
+    if (!SymbolOrErr) {
+      consumeError(SymbolOrErr.takeError());
+      return false;
+    }
+    return *SymbolOrErr && (*SymbolOrErr)->getELFType() == ELF::STT_FUNC;
+  }
 };
 
 /// Class implementing the AMDGPU-specific functionalities of the plugin.
@@ -4031,7 +4060,7 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return new AMDGPUGlobalHandlerTy();
   }
 
-  Triple::ArchType getTripleArch() const override { return Triple::amdgcn; }
+  Triple::ArchType getTripleArch() const override { return Triple::amdgpu; }
 
   const char *getName() const override { return GETNAME(TARGET_NAME); }
 
@@ -4368,6 +4397,32 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
+/// Map an HSA status code to the corresponding offload error code.
+static ErrorCode getOffloadErrorCode(hsa_status_t ResultCode) {
+  switch (ResultCode) {
+  case HSA_STATUS_ERROR_INVALID_SYMBOL_NAME:
+  case HSA_STATUS_ERROR_INVALID_ISA_NAME:
+    return ErrorCode::NOT_FOUND;
+  case HSA_STATUS_ERROR_INVALID_CODE_OBJECT:
+  case HSA_STATUS_ERROR_INVALID_ISA:
+  case HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS:
+    return ErrorCode::INVALID_BINARY;
+  case HSA_STATUS_ERROR_OUT_OF_RESOURCES:
+    return ErrorCode::OUT_OF_RESOURCES;
+  case HSA_STATUS_ERROR_NOT_INITIALIZED:
+    return ErrorCode::UNINITIALIZED;
+  case HSA_STATUS_ERROR_INVALID_ARGUMENT:
+  case HSA_STATUS_ERROR_INVALID_ALLOCATION:
+  case HSA_STATUS_ERROR_INVALID_AGENT:
+  case HSA_STATUS_ERROR_INVALID_REGION:
+  case HSA_STATUS_ERROR_INVALID_QUEUE:
+  case HSA_STATUS_ERROR_INVALID_INDEX:
+    return ErrorCode::INVALID_ARGUMENT;
+  default:
+    return ErrorCode::UNKNOWN;
+  }
+}
+
 template <typename... ArgsTy>
 static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   hsa_status_t ResultCode = static_cast<hsa_status_t>(Code);
@@ -4379,20 +4434,7 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   if (Ret != HSA_STATUS_SUCCESS)
     REPORT() << "Unrecognized " GETNAME(TARGET_NAME) " error code " << Code;
 
-  // TODO: Add more entries to this switch
-  ErrorCode OffloadErrCode;
-  switch (ResultCode) {
-  case HSA_STATUS_ERROR_INVALID_SYMBOL_NAME:
-    OffloadErrCode = ErrorCode::NOT_FOUND;
-    break;
-  case HSA_STATUS_ERROR_INVALID_CODE_OBJECT:
-    OffloadErrCode = ErrorCode::INVALID_BINARY;
-    break;
-  default:
-    OffloadErrCode = ErrorCode::UNKNOWN;
-  }
-
-  return Plugin::error(OffloadErrCode, ErrFmt, Args..., Desc);
+  return Plugin::error(getOffloadErrorCode(ResultCode), ErrFmt, Args..., Desc);
 }
 
 Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
