@@ -1999,6 +1999,24 @@ def ROCDL_RawPtrBufferLoadOp :
   }];
 }
 
+def ROCDL_PtrSBufferLoadOp :
+  ROCDL_IntrOp<"ptr.s.buffer.load", [0], [], [], 1, 0, 1, 0, [2], ["aux"]> {
+  dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,
+                  I32:$offset,
+                  ROCDL_DefaultCachePolicyAttr<ROCDL_NonAtomicBufferCachePolicyCompatAttr>:$aux);
+  let arguments = !con(args, baseArgs);
+  let assemblyFormat = "$rsrc `,` $offset `,` custom<CachePolicy>($aux) attr-dict `:` type($res)";
+  string llvmBuilder = baseLlvmBuilder # [{
+    llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+    inst->setMetadata(llvm::LLVMContext::MD_invariant_load, metadata);
+  }] # setAliasAnalysisMetadataCode # baseLlvmBuilderCoda;
+  let extraClassDefinition = [{
+    ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
+      return {getRsrc()};
+    }
+  }];
+}
+
 def ROCDL_RawPtrBufferLoadLdsOp :
   ROCDL_IntrOp<"raw.ptr.buffer.load.lds", [], [], [], 0, 0, 1, 0, [6], ["aux"]> {
   dag args = (ins Arg<ROCDLBufferRsrc, "", [MemRead]>:$rsrc,

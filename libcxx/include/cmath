@@ -136,21 +136,21 @@ long double    tanhl(long double x);
 
 //  C99
 
-bool signbit(arithmetic x);
+bool signbit(arithmetic x); // constexpr since C++23
 
 int fpclassify(arithmetic x); // constexpr since C++23
 
-bool isfinite(arithmetic x);
-bool isinf(arithmetic x);
-bool isnan(arithmetic x);
-bool isnormal(arithmetic x);
+bool isfinite(arithmetic x); // constexpr since C++23
+bool isinf(arithmetic x);    // constexpr since C++23
+bool isnan(arithmetic x);    // constexpr since C++23
+bool isnormal(arithmetic x); // constexpr since C++23
 
-bool isgreater(arithmetic x, arithmetic y);
-bool isgreaterequal(arithmetic x, arithmetic y);
-bool isless(arithmetic x, arithmetic y);
-bool islessequal(arithmetic x, arithmetic y);
-bool islessgreater(arithmetic x, arithmetic y);
-bool isunordered(arithmetic x, arithmetic y);
+bool isgreater(arithmetic x, arithmetic y);      // constexpr since C++23
+bool isgreaterequal(arithmetic x, arithmetic y); // constexpr since C++23
+bool isless(arithmetic x, arithmetic y);         // constexpr since C++23
+bool islessequal(arithmetic x, arithmetic y);    // constexpr since C++23
+bool islessgreater(arithmetic x, arithmetic y);  // constexpr since C++23
+bool isunordered(arithmetic x, arithmetic y);    // constexpr since C++23
 
 floating_point acosh (arithmetic x);
 float          acoshf(float x);
@@ -316,15 +316,11 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #  include <__cxx03/cmath>
 #else
 #  include <__config>
-#  include <__math/hypot.h>
 #  include <__type_traits/enable_if.h>
 #  include <__type_traits/is_arithmetic.h>
-#  include <__type_traits/is_constant_evaluated.h>
 #  include <__type_traits/is_floating_point.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/promote.h>
-#  include <__type_traits/remove_cv.h>
-#  include <limits>
 #  include <version>
 
 #  include <__math/special_functions.h>

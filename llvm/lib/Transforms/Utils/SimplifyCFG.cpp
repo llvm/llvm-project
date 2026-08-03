@@ -9037,18 +9037,27 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
           return true;
         } else if (CondBrInst *BI = dyn_cast<CondBrInst>(T)) {
           BB->removePredecessor(Predecessor);
-          // Preserve guarding condition in assume, because it might not be
-          // inferrable from any dominating condition.
-          Value *Cond = BI->getCondition();
-          CallInst *Assumption;
-          if (BI->getSuccessor(0) == BB)
-            Assumption = Builder.CreateAssumption(Builder.CreateNot(Cond));
-          else
-            Assumption = Builder.CreateAssumption(Cond);
-          if (AC)
-            AC->registerAssumption(cast<AssumeInst>(Assumption));
-          Builder.CreateBr(BI->getSuccessor(0) == BB ? BI->getSuccessor(1)
-                                                     : BI->getSuccessor(0));
+          // Handle degenerate conditional branches.
+          if (BI->getSuccessor(0) == BI->getSuccessor(1)) {
+            // The only difference from the UncondBrInst path above is that it
+            // has two edges in CFG.
+            BB->removePredecessor(Predecessor);
+            // Turn unconditional branches into unreachables.
+            Builder.CreateUnreachable();
+          } else {
+            // Preserve guarding condition in assume, because it might not be
+            // inferrable from any dominating condition.
+            Value *Cond = BI->getCondition();
+            CallInst *Assumption;
+            if (BI->getSuccessor(0) == BB)
+              Assumption = Builder.CreateAssumption(Builder.CreateNot(Cond));
+            else
+              Assumption = Builder.CreateAssumption(Cond);
+            if (AC)
+              AC->registerAssumption(cast<AssumeInst>(Assumption));
+            Builder.CreateBr(BI->getSuccessor(0) == BB ? BI->getSuccessor(1)
+                                                       : BI->getSuccessor(0));
+          }
           BI->eraseFromParent();
           if (DTU)
             DTU->applyUpdates({{DominatorTree::Delete, Predecessor, BB}});

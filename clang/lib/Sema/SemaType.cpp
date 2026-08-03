@@ -7313,7 +7313,10 @@ static bool handleMSPointerTypeQualifierAttr(TypeProcessingState &State,
   if (ASIdx != LangAS::Default)
     Pointee = S.Context.getAddrSpaceQualType(
         S.Context.removeAddrSpaceQualType(Pointee), ASIdx);
-  Type = State.getAttributedType(A, Type, S.Context.getPointerType(Pointee));
+
+  QualType Equivalent = S.Context.getQualifiedType(
+      S.Context.getPointerType(Pointee), Type.getQualifiers());
+  Type = State.getAttributedType(A, Type, Equivalent);
   return false;
 }
 
@@ -7352,7 +7355,10 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
   QualType Pointee = QT->getPointeeType();
   Pointee = S.Context.getAddrSpaceQualType(
       S.Context.removeAddrSpaceQualType(Pointee), ASIdx);
-  QT = State.getAttributedType(A, QT, S.Context.getPointerType(Pointee));
+
+  QualType Equivalent = S.Context.getQualifiedType(
+      S.Context.getPointerType(Pointee), QT.getQualifiers());
+  QT = State.getAttributedType(A, QT, Equivalent);
   return false;
 }
 
