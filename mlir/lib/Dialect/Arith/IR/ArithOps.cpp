@@ -2276,7 +2276,6 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
   APInt bits = llvm::isa<FloatAttr>(operand)
                    ? llvm::cast<FloatAttr>(operand).getValue().bitcastToAPInt()
                    : llvm::cast<IntegerAttr>(operand).getValue();
-
   assert(resType.getIntOrFloatBitWidth() == bits.getBitWidth() &&
          "trying to fold on broken IR: operands have incompatible types");
 
