@@ -110,6 +110,8 @@ public:
       // No TLS on DriverKit.
     } else if (Triple.isXROS())
       this->TLSSupported = true;
+    else if (Triple.isAppleFirmware())
+      this->TLSSupported = true;
 
     this->MCountName = "\01mcount";
   }

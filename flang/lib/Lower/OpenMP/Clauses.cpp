@@ -294,6 +294,7 @@ MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
+MAKE_EMPTY_CLASS(Update, Update);
 MAKE_EMPTY_CLASS(Weak, Weak);
 MAKE_EMPTY_CLASS(Write, Write);
 
@@ -649,13 +650,11 @@ Copyprivate make(const parser::OmpClause::Copyprivate &inp,
   return Copyprivate{/*List=*/makeObjects(inp.v, semaCtx)};
 }
 
-// The Default clause is overloaded in OpenMP 5.0 and 5.1: it can be either
-// a data-sharing clause, or a METADIRECTIVE clause. In the latter case, it
-// has been superseded by the OTHERWISE clause.
-// Disambiguate this in this representation: for the DSA case, create Default,
-// and in the other case create Otherwise.
-Default makeDefault(const parser::OmpClause::Default &inp,
-                    semantics::SemanticsContext &semaCtx) {
+// The DEFAULT clause is OpenMP 5.0 and 5.1 that represents the default
+// directive variant in METADIRECTIVE is represented by the DefaultVariant
+// class.
+Default make(const parser::OmpClause::Default &inp,
+             semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpDefaultClause
   using wrapped = parser::OmpDefaultClause;
 
@@ -669,11 +668,12 @@ Default makeDefault(const parser::OmpClause::Default &inp,
       // clang-format on
   );
 
-  auto dsa = std::get<wrapped::DataSharingAttribute>(inp.v.u);
-  return Default{/*DataSharingAttribute=*/convert(dsa)};
+  return Default{/*DataSharingAttribute=*/convert(inp.v.v)};
 }
 
-Otherwise makeOtherwise(const parser::OmpClause::Default &inp,
+// Lower the DefaultVariant (specific to OpenMP 5.0 and 5.1) directly to
+// OTHERWISE (which replaced it since 5.2).
+Otherwise makeOtherwise(const parser::OmpClause::DefaultVariant &inp,
                         semantics::SemanticsContext &semaCtx) {
   return Otherwise{};
 }
@@ -1756,16 +1756,14 @@ Uniform make(const parser::OmpClause::Uniform &inp,
 // Unknown: empty
 // Untied: empty
 
-Update make(const parser::OmpClause::Update &inp,
-            semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpUpdateClause
-  if (inp.v) {
-    return common::visit(
-        [](auto &&s) { return Update{/*DependenceType=*/makeDepType(s)}; },
-        inp.v->u);
-  } else {
-    return Update{/*DependenceType=*/std::nullopt};
-  }
+UpdateDependObjects make(const parser::OmpClause::UpdateDependObjects &inp,
+                         semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpUpdateDependObjectsClause
+  return common::visit(
+      [](auto &&s) {
+        return UpdateDependObjects{/*DependenceType=*/makeDepType(s)};
+      },
+      inp.v.u);
 }
 
 Use make(const parser::OmpClause::Use &inp,
@@ -1806,18 +1804,9 @@ Clause makeClause(const parser::OmpClause &cls,
                   semantics::SemanticsContext &semaCtx) {
   return Fortran::common::visit( //
       common::visitors{
-          [&](const parser::OmpClause::Default &s) {
-            using DSA = parser::OmpDefaultClause::DataSharingAttribute;
-            using ODS = common::Indirection<parser::OmpDirectiveSpecification>;
-            if (std::holds_alternative<DSA>(s.v.u)) {
-              return makeClause(llvm::omp::Clause::OMPC_default,
-                                clause::makeDefault(s, semaCtx), cls.source);
-            } else if (std::holds_alternative<ODS>(s.v.u)) {
-              return makeClause(llvm::omp::Clause::OMPC_otherwise,
-                                clause::makeOtherwise(s, semaCtx), cls.source);
-            } else {
-              llvm_unreachable("Unexpected alternative");
-            }
+          [&](const parser::OmpClause::DefaultVariant &s) {
+            return makeClause(llvm::omp::Clause::OMPC_default_variant,
+                              clause::makeOtherwise(s, semaCtx), cls.source);
           },
           [&](const parser::OmpClause::Depend &s) {
             using TaskDep = parser::OmpDependClause::TaskDep;

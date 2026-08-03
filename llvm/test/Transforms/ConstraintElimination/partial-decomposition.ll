@@ -12,8 +12,7 @@ define i1 @precondition_unknown_operand_used_as_is(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i16 [[ADD]], [[Z]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[T:%.*]] = icmp uge i16 [[ADD]], [[Z]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nsw i16 %x, %y
@@ -57,8 +56,7 @@ define void @constants_folded_for_opaque_operand(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i16 [[ADD]], 100
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i16 [[ADD]], 200
-; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i16 [[ADD]], 50
 ; CHECK-NEXT:    call void @use(i1 [[T_2]])
 ; CHECK-NEXT:    ret void
@@ -92,8 +90,7 @@ define i1 @outer_offset_retained(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i16 [[ADD]], 3
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i16 [[ADD]], [[Z]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ugt i16 [[ADD_3]], [[Z]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nsw i16 %x, %y
@@ -115,8 +112,7 @@ define i1 @outer_offset_retained_nested(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[ADD_8:%.*]] = add nuw i16 [[ADD_3]], 5
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i16 [[Z]], [[ADD_8]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ugt i16 [[Z]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nsw i16 %x, %y
@@ -138,8 +134,7 @@ define i1 @fact_partially_decomposed(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[ADD_10:%.*]] = add nuw i16 [[ADD]], 10
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i16 [[ADD_10]], [[Z]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ule i16 [[ADD]], [[Z]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nsw i16 %x, %y
@@ -160,8 +155,7 @@ define i1 @sext_operand_used_as_is(i16 %x, i32 %z) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[EXT]], 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[EXT]], [[Z]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ugt i32 [[ADD]], [[Z]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %ext = sext i16 %x to i32
@@ -181,8 +175,7 @@ define i1 @add_negative_constant_used_as_is(i16 %x, i16 %z) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i16 [[SUB]], 2
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i16 [[SUB]], [[Z]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ugt i16 [[ADD]], [[Z]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %sub = add i16 %x, -4
@@ -202,8 +195,7 @@ define i1 @trunc_nsw_used_as_is(i32 %x, i16 %z) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i16 [[TR]], 7
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i16 [[TR]], [[Z]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ugt i16 [[ADD]], [[Z]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %tr = trunc nsw i32 %x to i16
@@ -226,8 +218,7 @@ define i1 @gep_nuw_index_used_as_is(ptr %p, i64 %x, i64 %y) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[ADD]]
 ; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr nuw i8, ptr [[GEP]], i64 4
-; CHECK-NEXT:    [[T:%.*]] = icmp ugt ptr [[GEP_4]], [[GEP]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nsw i64 %x, %y
@@ -289,8 +280,7 @@ define i1 @only_one_side_used_as_is(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[Y_2:%.*]] = add nuw i16 [[Y]], 2
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i16 [[ADD]], [[Y_2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[T:%.*]] = icmp ugt i16 [[ADD]], [[Y]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nsw i16 %x, %x

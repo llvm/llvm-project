@@ -243,16 +243,15 @@ static SmallPtrSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
 // location.
 static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
                                uint64_t value, uint64_t size) {
-  Symbol old = sym;
+  uint16_t versionId = sym.versionId;
   Defined(ctx, sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
           size, &sec)
       .overwrite(sym);
 
-  sym.versionId = old.versionId;
+  sym.versionId = versionId;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
-  sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
-                  std::memory_order_relaxed);
+  sym.flags.fetch_and(NEEDS_GOT, std::memory_order_relaxed);
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.
@@ -724,8 +723,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   if (sym.isTagged())
     relrDyn = nullptr;
   if (relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
-    relrDyn->addRelativeReloc(isec, offsetInSec, sym, addend, type, expr,
-                              shard);
+    relrDyn->addRelativeReloc<concurrent>(isec, offsetInSec, sym, addend, type,
+                                          expr, shard);
     return;
   }
   RelType relativeType = ctx.target->relativeRel;
@@ -750,15 +749,16 @@ template <class PltSection, class GotPltSection>
 static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
                         RelocationBaseSection &rel, RelType type, Symbol &sym) {
   plt.addEntry(sym);
-  RelExpr expr = sym.isPreemptible ? R_ADDEND : R_ABS;
+  bool isPreemptible = sym.isPreemptible;
+  RelExpr expr = isPreemptible ? R_ADDEND : R_ABS;
   if (!ctx.target->usesGotPlt) {
     rel.addReloc(
-        {type, &plt, sym.getPltOffset(ctx), sym.isPreemptible, sym, 0, expr});
+        {type, &plt, sym.getPltOffset(ctx), isPreemptible, sym, 0, expr});
     return;
   }
   gotPlt.addEntry(sym);
-  rel.addReloc({type, &gotPlt, sym.getGotPltOffset(ctx), sym.isPreemptible, sym,
-                0, expr});
+  rel.addReloc(
+      {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
 }
 
 void elf::addGotEntry(Ctx &ctx, Symbol &sym) {
@@ -1967,8 +1967,12 @@ bool ThunkCreator::createThunks(uint32_t pass,
               rel.addend = -getPCBias(ctx, *isec, rel);
           }
 
-        for (auto &p : isd->thunkSections)
+        for (auto &p : isd->thunkSections) {
+          // Sort in pass 0, which creates most thunks.
+          if (pass == 0)
+            p.first->sortByDestination();
           addressesChanged |= p.first->assignOffsets();
+        }
       });
 
   for (auto &p : thunkedSections)

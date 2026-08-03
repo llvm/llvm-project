@@ -101,13 +101,6 @@ static inline mlir::Type getI8Type(mlir::MLIRContext *context) {
   return mlir::IntegerType::get(context, 8);
 }
 
-static mlir::Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
-                                mlir::Block *insertBefore) {
-  assert(insertBefore && "expected valid insertion block");
-  return rewriter.createBlock(insertBefore->getParent(),
-                              mlir::Region::iterator(insertBefore));
-}
-
 /// Extract constant from a value that must be the result of one of the
 /// ConstantOp operations.
 static int64_t getConstantIntValue(mlir::Value val) {
@@ -3075,17 +3068,28 @@ struct XArrayCoorOpConversion
         if (normalSlice)
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
+      // Wrap flags from the pre-cast step (keeps constants recognizable).
+      // Known positive: nsw|nuw. Else drop nuw (product may be < 0); keep nsw.
+      mlir::LLVM::IntegerOverflowFlags indexFlags = addMulFlags;
+      if (normalSlice) {
+        mlir::Value stepOperand = operands[sliceOffset + 2];
+        if (std::optional<llvm::APInt> stepCst =
+                fir::getIntIfConstant(stepOperand);
+            !stepCst || !stepCst->isStrictlyPositive()) {
+          indexFlags = nsw;
+        }
+      }
       auto idx =
           mlir::LLVM::SubOp::create(rewriter, loc, idxTy, index, lb, subFlags);
       mlir::Value diff = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, idx,
-                                                   step, addMulFlags);
+                                                   step, indexFlags);
       if (normalSlice) {
         mlir::Value sliceLb =
             integerCast(loc, rewriter, idxTy, operands[sliceOffset]);
         auto adj = mlir::LLVM::SubOp::create(rewriter, loc, idxTy, sliceLb, lb,
                                              subFlags);
         diff = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, diff, adj,
-                                         addMulFlags);
+                                         indexFlags);
       }
       // Update the offset given the stride and the zero based index `diff`
       // that was just computed.
@@ -3100,9 +3104,9 @@ struct XArrayCoorOpConversion
       } else {
         // Use stride computed at last iteration.
         auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, prevExt,
-                                            addMulFlags);
+                                            indexFlags);
         offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
-                                           addMulFlags);
+                                           indexFlags);
         // Compute next stride assuming contiguity of the base array
         // (in element number).
         auto nextExt = integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
@@ -3961,271 +3965,31 @@ struct ModuleDebugImportsOpConversion
   }
 };
 
-static void genCondBrOp(mlir::Location loc, mlir::Value cmp, mlir::Block *dest,
-                        std::optional<mlir::ValueRange> destOps,
-                        mlir::ConversionPatternRewriter &rewriter,
-                        mlir::Block *newBlock) {
-  if (destOps)
-    mlir::LLVM::CondBrOp::create(rewriter, loc, cmp, dest, *destOps, newBlock,
-                                 mlir::ValueRange());
-  else
-    mlir::LLVM::CondBrOp::create(rewriter, loc, cmp, dest, newBlock);
-}
-
-template <typename A, typename B>
-static void genBrOp(A caseOp, mlir::Block *dest, std::optional<B> destOps,
-                    mlir::ConversionPatternRewriter &rewriter) {
-  if (destOps)
-    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, *destOps, dest);
-  else
-    rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(caseOp, B{}, dest);
-}
-
-static void genCaseLadderStep(mlir::Location loc, mlir::Value cmp,
-                              mlir::Block *dest,
-                              std::optional<mlir::ValueRange> destOps,
-                              mlir::ConversionPatternRewriter &rewriter) {
-  auto *thisBlock = rewriter.getInsertionBlock();
-  auto *newBlock = createBlock(rewriter, dest);
-  rewriter.setInsertionPointToEnd(thisBlock);
-  genCondBrOp(loc, cmp, dest, destOps, rewriter, newBlock);
-  rewriter.setInsertionPointToEnd(newBlock);
-}
-
-/// Conversion of `fir.select_case`
-///
-/// The `fir.select_case` operation is converted to a if-then-else ladder.
-/// Depending on the case condition type, one or several comparison and
-/// conditional branching can be generated.
-///
-/// A point value case such as `case(4)`, a lower bound case such as
-/// `case(5:)` or an upper bound case such as `case(:3)` are converted to a
-/// simple comparison between the selector value and the constant value in the
-/// case. The block associated with the case condition is then executed if
-/// the comparison succeed otherwise it branch to the next block with the
-/// comparison for the next case conditon.
-///
-/// A closed interval case condition such as `case(7:10)` is converted with a
-/// first comparison and conditional branching for the lower bound. If
-/// successful, it branch to a second block with the comparison for the
-/// upper bound in the same case condition.
-///
-/// TODO: lowering of CHARACTER type cases is not handled yet.
-struct SelectCaseOpConversion : public fir::FIROpConversion<fir::SelectCaseOp> {
-  using FIROpConversion::FIROpConversion;
-
-  llvm::LogicalResult
-  matchAndRewrite(fir::SelectCaseOp caseOp, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    unsigned conds = caseOp.getNumConditions();
-    llvm::ArrayRef<mlir::Attribute> cases = caseOp.getCases().getValue();
-    // Type can be CHARACTER, INTEGER, or LOGICAL (C1145)
-    auto ty = caseOp.getSelector().getType();
-    if (mlir::isa<fir::CharacterType>(ty)) {
-      TODO(caseOp.getLoc(), "fir.select_case codegen with character type");
-      return mlir::failure();
-    }
-    mlir::Value selector = caseOp.getSelector(adaptor.getOperands());
-    auto loc = caseOp.getLoc();
-    for (unsigned t = 0; t != conds; ++t) {
-      mlir::Block *dest = caseOp.getSuccessor(t);
-      std::optional<mlir::ValueRange> destOps =
-          caseOp.getSuccessorOperands(adaptor.getOperands(), t);
-      // Convert block signature if needed
-      if (destOps && !destOps->empty())
-        if (auto conversion = getTypeConverter()->convertBlockSignature(dest))
-          dest = rewriter.applySignatureConversion(dest, *conversion,
-                                                   getTypeConverter());
-      std::optional<mlir::ValueRange> cmpOps =
-          *caseOp.getCompareOperands(adaptor.getOperands(), t);
-      mlir::Attribute attr = cases[t];
-      assert(mlir::isa<mlir::UnitAttr>(attr) || cmpOps.has_value());
-      if (mlir::isa<fir::PointIntervalAttr>(attr)) {
-        auto cmp = mlir::LLVM::ICmpOp::create(rewriter, loc,
-                                              mlir::LLVM::ICmpPredicate::eq,
-                                              selector, cmpOps->front());
-        genCaseLadderStep(loc, cmp, dest, destOps, rewriter);
-        continue;
-      }
-      if (mlir::isa<fir::LowerBoundAttr>(attr)) {
-        auto cmp = mlir::LLVM::ICmpOp::create(rewriter, loc,
-                                              mlir::LLVM::ICmpPredicate::sle,
-                                              cmpOps->front(), selector);
-        genCaseLadderStep(loc, cmp, dest, destOps, rewriter);
-        continue;
-      }
-      if (mlir::isa<fir::UpperBoundAttr>(attr)) {
-        auto cmp = mlir::LLVM::ICmpOp::create(rewriter, loc,
-                                              mlir::LLVM::ICmpPredicate::sle,
-                                              selector, cmpOps->front());
-        genCaseLadderStep(loc, cmp, dest, destOps, rewriter);
-        continue;
-      }
-      if (mlir::isa<fir::ClosedIntervalAttr>(attr)) {
-        mlir::Value caseArg0 = *cmpOps->begin();
-        auto cmp0 = mlir::LLVM::ICmpOp::create(
-            rewriter, loc, mlir::LLVM::ICmpPredicate::sle, caseArg0, selector);
-        auto *thisBlock = rewriter.getInsertionBlock();
-        auto *newBlock1 = createBlock(rewriter, dest);
-        auto *newBlock2 = createBlock(rewriter, dest);
-        rewriter.setInsertionPointToEnd(thisBlock);
-        mlir::LLVM::CondBrOp::create(rewriter, loc, cmp0, newBlock1, newBlock2);
-        rewriter.setInsertionPointToEnd(newBlock1);
-        mlir::Value caseArg1 = *(cmpOps->begin() + 1);
-        auto cmp1 = mlir::LLVM::ICmpOp::create(
-            rewriter, loc, mlir::LLVM::ICmpPredicate::sle, selector, caseArg1);
-        genCondBrOp(loc, cmp1, dest, destOps, rewriter, newBlock2);
-        rewriter.setInsertionPointToEnd(newBlock2);
-        continue;
-      }
-      assert(mlir::isa<mlir::UnitAttr>(attr));
-      assert((t + 1 == conds) && "unit must be last");
-      genBrOp(caseOp, dest, destOps, rewriter);
-    }
-    return mlir::success();
-  }
-};
-
-/// Base class for SelectOpConversion and SelectRankOpConversion.
+/// Defensive stub. `fir.select`, `fir.select_case`, and `fir.select_rank` are
+/// lowered to `cf.switch` / `cf.cond_br` by `--fir-select-ops-conversion`
+/// earlier in the pipeline; `fir.select_type` is lowered to a cf-based
+/// if-then-else ladder by `--fir-polymorphic-op`. If any of these ops
+/// reaches FIR-to-LLVM, we emit a clear diagnostic rather than an opaque
+/// "unable to legalize" error.
 template <typename OP>
-struct SelectOpConversionBase : public fir::FIROpConversion<OP> {
+struct SelectShouldHaveBeenConvertedStub : public fir::FIROpConversion<OP> {
   using fir::FIROpConversion<OP>::FIROpConversion;
 
-private:
-  /// Helper function for converting select ops. This function converts the
-  /// signature of the given block. If the new block signature is different from
-  /// `expectedTypes`, returns "failure".
-  llvm::FailureOr<mlir::Block *>
-  getConvertedBlock(mlir::ConversionPatternRewriter &rewriter,
-                    mlir::Operation *branchOp, mlir::Block *block,
-                    mlir::TypeRange expectedTypes) const {
-    const mlir::TypeConverter *converter = this->getTypeConverter();
-    assert(converter && "expected non-null type converter");
-    assert(!block->isEntryBlock() && "entry blocks have no predecessors");
-
-    // There is nothing to do if the types already match.
-    if (block->getArgumentTypes() == expectedTypes)
-      return block;
-
-    // Compute the new block argument types and convert the block.
-    std::optional<mlir::TypeConverter::SignatureConversion> conversion =
-        converter->convertBlockSignature(block);
-    if (!conversion)
-      return rewriter.notifyMatchFailure(branchOp,
-                                         "could not compute block signature");
-    if (expectedTypes != conversion->getConvertedTypes())
-      return rewriter.notifyMatchFailure(branchOp,
-                                         "mismatch between adaptor operand "
-                                         "types and computed block signature");
-    return rewriter.applySignatureConversion(block, *conversion, converter);
-  }
-
-protected:
-  llvm::LogicalResult
-  selectMatchAndRewrite(OP select, typename OP::Adaptor adaptor,
-                        mlir::ConversionPatternRewriter &rewriter) const {
-    unsigned conds = select.getNumConditions();
-    auto cases = select.getCases().getValue();
-    mlir::Value selector = adaptor.getSelector();
-    auto loc = select.getLoc();
-    assert(conds > 0 && "select must have cases");
-
-    llvm::SmallVector<mlir::Block *> destinations;
-    llvm::SmallVector<mlir::ValueRange> destinationsOperands;
-    mlir::Block *defaultDestination;
-    mlir::ValueRange defaultOperands;
-    // LLVM::SwitchOp selector type and the case values types
-    // must have the same bit width, so cast the selector to i64,
-    // and use i64 for the case values. It is hard to imagine
-    // a computed GO TO with the number of labels in the label-list
-    // bigger than INT_MAX, but let's use i64 to be on the safe side.
-    // Moreover, fir.select operation is more relaxed than
-    // a Fortran computed GO TO, so it may specify such a case value
-    // even if there is just a single label/case.
-    llvm::SmallVector<int64_t> caseValues;
-
-    for (unsigned t = 0; t != conds; ++t) {
-      mlir::Block *dest = select.getSuccessor(t);
-      auto destOps = select.getSuccessorOperands(adaptor.getOperands(), t);
-      const mlir::Attribute &attr = cases[t];
-      if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr)) {
-        destinationsOperands.push_back(destOps ? *destOps : mlir::ValueRange{});
-        auto convertedBlock =
-            getConvertedBlock(rewriter, select, dest,
-                              mlir::TypeRange(destinationsOperands.back()));
-        if (mlir::failed(convertedBlock))
-          return mlir::failure();
-        destinations.push_back(*convertedBlock);
-        caseValues.push_back(intAttr.getInt());
-        continue;
-      }
-      assert(mlir::dyn_cast_or_null<mlir::UnitAttr>(attr));
-      assert((t + 1 == conds) && "unit must be last");
-      defaultOperands = destOps ? *destOps : mlir::ValueRange{};
-      auto convertedBlock = getConvertedBlock(rewriter, select, dest,
-                                              mlir::TypeRange(defaultOperands));
-      if (mlir::failed(convertedBlock))
-        return mlir::failure();
-      defaultDestination = *convertedBlock;
-    }
-
-    // Deal with the case where there is only a default destination.  Handle it
-    // now because emitting empty case values is not legal.
-    if (caseValues.empty()) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::BrOp>(select, defaultOperands,
-                                                    defaultDestination);
-      return mlir::success();
-    }
-
-    selector =
-        this->integerCast(loc, rewriter, rewriter.getI64Type(), selector);
-
-    rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
-        select, selector,
-        /*defaultDestination=*/defaultDestination,
-        /*defaultOperands=*/defaultOperands,
-        /*caseValues=*/rewriter.getI64VectorAttr(caseValues),
-        /*caseDestinations=*/destinations,
-        /*caseOperands=*/destinationsOperands,
-        /*branchWeights=*/llvm::ArrayRef<std::int32_t>());
-    return mlir::success();
-  }
-};
-/// conversion of fir::SelectOp to an if-then-else ladder
-struct SelectOpConversion : public SelectOpConversionBase<fir::SelectOp> {
-  using SelectOpConversionBase::SelectOpConversionBase;
-
-  llvm::LogicalResult
-  matchAndRewrite(fir::SelectOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    return this->selectMatchAndRewrite(op, adaptor, rewriter);
-  }
-};
-
-/// conversion of fir::SelectRankOp to an if-then-else ladder
-struct SelectRankOpConversion
-    : public SelectOpConversionBase<fir::SelectRankOp> {
-  using SelectOpConversionBase::SelectOpConversionBase;
-
-  llvm::LogicalResult
-  matchAndRewrite(fir::SelectRankOp op, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    return this->selectMatchAndRewrite(op, adaptor, rewriter);
-  }
-};
-
-/// Lower `fir.select_type` to LLVM IR dialect.
-struct SelectTypeOpConversion : public fir::FIROpConversion<fir::SelectTypeOp> {
-  using FIROpConversion::FIROpConversion;
-
-  llvm::LogicalResult
-  matchAndRewrite(fir::SelectTypeOp select, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::emitError(select.getLoc(),
-                    "fir.select_type should have already been converted");
+  llvm::LogicalResult matchAndRewrite(
+      OP op, typename OP::Adaptor /*adaptor*/,
+      mlir::ConversionPatternRewriter & /*rewriter*/) const override {
+    op.emitOpError("should have already been converted");
     return mlir::failure();
   }
 };
+
+using SelectOpConversion = SelectShouldHaveBeenConvertedStub<fir::SelectOp>;
+using SelectCaseOpConversion =
+    SelectShouldHaveBeenConvertedStub<fir::SelectCaseOp>;
+using SelectRankOpConversion =
+    SelectShouldHaveBeenConvertedStub<fir::SelectRankOp>;
+using SelectTypeOpConversion =
+    SelectShouldHaveBeenConvertedStub<fir::SelectTypeOp>;
 
 /// `fir.store` --> `llvm.store`
 struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
