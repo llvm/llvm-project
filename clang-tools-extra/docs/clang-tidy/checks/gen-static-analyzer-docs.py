@@ -110,9 +110,7 @@ def generate_documentation(checker, has_documentation):
         f.write(textwrap.fill(help_text, 80))
         f.write("\n\n")
         if has_documentation:
-            f.write(
-                f"The `{full_package_name}` check is an alias, please see\n"
-            )
+            f.write(f"The `{full_package_name}` check is an alias, please see\n")
             f.write(
                 "[Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#"
                 f"{anchor_url})\n"
@@ -149,13 +147,9 @@ def update_documentation_list(checkers):
                     "(https://clang.llvm.org/docs/analyzer/checkers.html#"
                     f"{checker['AnchorUrl']})"
                 )
-                checks.append(
-                    f"| {doc_link} | {analyzer_link} |  |"
-                )
+                checks.append(f"| {doc_link} | {analyzer_link} |  |")
             else:
-                checks.append(
-                    f"| {doc_link} | Clang Static Analyzer {short_name} |  |"
-                )
+                checks.append(f"| {doc_link} | Clang Static Analyzer {short_name} |  |")
 
         checks.sort()
 
