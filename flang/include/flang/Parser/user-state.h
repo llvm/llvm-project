@@ -89,7 +89,7 @@ public:
     return oldStructureComponents_.find(name) != oldStructureComponents_.end();
   }
 
-  const common::LangOptions langOptions() const { return langOptions_; }
+  const common::LangOptions &langOptions() const { return langOptions_; }
   UserState &set_langOptions(const common::LangOptions &langOptions) {
     langOptions_ = langOptions;
     return *this;
