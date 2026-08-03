@@ -97,6 +97,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`llvm-mlir-use-after-erase
+  <clang-tidy/checks/llvm/mlir-use-after-erase>` check.
+
+  Detects uses of an ``mlir::Operation`` after it has been erased.
+
 - New :doc:`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 
