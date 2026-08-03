@@ -21496,14 +21496,15 @@ bool ARMTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
-unsigned ARMTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
-                                                    unsigned Index) const {
+ARMTargetLowering::ExtractSubvectorCost
+ARMTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                           unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return 2;
+    return ExtractSubvectorCost::Expensive;
 
   if (Index == 0 || Index == ResVT.getVectorNumElements())
-    return 0;
-  return 2;
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,

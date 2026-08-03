@@ -14217,7 +14217,8 @@ SelectionDAG::matchBinOpReduction(SDNode *Extract, ISD::NodeType &BinOp,
     EVT OpVT = Op.getValueType();
     EVT OpSVT = OpVT.getScalarType();
     EVT SubVT = EVT::getVectorVT(*getContext(), OpSVT, NumSubElts);
-    if (!(TLI->getExtractSubvectorCost(SubVT, OpVT, 0) < 2))
+    if (TLI->getExtractSubvectorCost(SubVT, OpVT, 0) >
+        TargetLowering::ExtractSubvectorCost::Cheap)
       return SDValue();
     BinOp = (ISD::NodeType)CandidateBinOp;
     return getExtractSubvector(SDLoc(Op), SubVT, Op, 0);

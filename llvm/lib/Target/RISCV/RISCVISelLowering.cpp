@@ -2865,35 +2865,36 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 }
 
 // TODO: This is very conservative.
-unsigned RISCVTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
-                                                      unsigned Index) const {
+RISCVTargetLowering::ExtractSubvectorCost
+RISCVTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                             unsigned Index) const {
   if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
       (ResVT == MVT::v4i8 || ResVT == MVT::v2i16)) {
     if ((Index % ResVT.getVectorNumElements()) == 0)
-      return 0;
-    return 2;
+      return ExtractSubvectorCost::Free;
+    return ExtractSubvectorCost::Expensive;
   }
 
   if (!Subtarget.hasVInstructions())
-    return 2;
+    return ExtractSubvectorCost::Expensive;
 
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return 2;
+    return ExtractSubvectorCost::Expensive;
 
   // Extracts from index 0 are just subreg extracts.
   if (Index == 0)
-    return 0;
+    return ExtractSubvectorCost::Free;
 
   // Only support extracting a fixed from a fixed vector for now.
   if (ResVT.isScalableVector() || SrcVT.isScalableVector())
-    return 2;
+    return ExtractSubvectorCost::Expensive;
 
   EVT EltVT = ResVT.getVectorElementType();
   assert(EltVT == SrcVT.getVectorElementType() && "Should hold for node");
 
   // The smallest type we can slide is i8.
   if (EltVT == MVT::i1)
-    return 2;
+    return ExtractSubvectorCost::Expensive;
 
   unsigned ResElts = ResVT.getVectorNumElements();
   unsigned SrcElts = SrcVT.getVectorNumElements();
@@ -2906,7 +2907,7 @@ unsigned RISCVTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
   // Index ensures we can use a vslidedown.vi.
   // TODO: We can generalize this when the exact VLEN is known.
   if (Index + ResElts <= MinVLMAX && Index < 31)
-    return 0;
+    return ExtractSubvectorCost::Free;
 
   // Convervatively only handle extracting half of a vector.
   // TODO: We can do arbitrary slidedowns, but for now only support extracting
@@ -2915,8 +2916,8 @@ unsigned RISCVTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
   // a cheap extract.  However, this case is important in practice for
   // shuffled extracts of longer vectors.  How resolve?
   if ((ResElts * 2) == SrcElts && Index == ResElts)
-    return 0;
-  return 2;
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
