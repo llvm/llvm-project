@@ -4,18 +4,22 @@
 #
 # Both cases capture the outer lit's %t as TESTDIR and match the inner temp path
 # against it exactly, so each check fully pins where the output landed.
+#
+# TESTDIR uses %/t rather than %t: %{lit} runs the inner lit with normalized
+# slashes, so the temp path it reports is always forward-slashed, while the
+# outer %t is native (backslashed on Windows).
 
 # With the option, the temp path is under <root>/<suite-name>, not the exec root.
 # RUN: rm -rf %t && mkdir -p %t/execroot %t/out
 # RUN: %{lit} -a --test-output-root %t/out -Dexec_root=%t/execroot \
 # RUN:     %{inputs}/test-output-root | \
-# RUN:   FileCheck --check-prefix=ROOTED %s -DTESTDIR=%t
+# RUN:   FileCheck --check-prefix=ROOTED %s -DTESTDIR=%/t
 
 # Without the option, the temp path stays under the exec root.
 # RUN: rm -rf %t && mkdir -p %t/execroot
 # RUN: %{lit} -a -Dexec_root=%t/execroot \
 # RUN:     %{inputs}/test-output-root | \
-# RUN:   FileCheck --check-prefix=DEFAULT %s -DTESTDIR=%t
+# RUN:   FileCheck --check-prefix=DEFAULT %s -DTESTDIR=%/t
 
 # ROOTED: TEMP_PATH=[[TESTDIR]]{{[\\/]}}out{{[\\/]}}output-root-suite{{[\\/]}}{{.*}}Output
 
