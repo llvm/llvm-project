@@ -42,6 +42,7 @@ class MCOperand {
     kInvalid,      ///< Uninitialized.
     kRegister,     ///< Register operand.
     kImmediate,    ///< Immediate operand.
+    kHFPImmediate, ///< Half-floating-point immediate operand.
     kSFPImmediate, ///< Single-floating-point immediate operand.
     kDFPImmediate, ///< Double-Floating-point immediate operand.
     kExpr,         ///< Relocatable immediate operand.
@@ -52,6 +53,7 @@ class MCOperand {
   union {
     unsigned RegVal;
     int64_t ImmVal;
+    uint16_t HFPImmVal;
     uint32_t SFPImmVal;
     uint64_t FPImmVal;
     const MCExpr *ExprVal;
@@ -64,6 +66,7 @@ public:
   bool isValid() const { return Kind != kInvalid; }
   bool isReg() const { return Kind == kRegister; }
   bool isImm() const { return Kind == kImmediate; }
+  bool isHFPImm() const { return Kind == kHFPImmediate; }
   bool isSFPImm() const { return Kind == kSFPImmediate; }
   bool isDFPImm() const { return Kind == kDFPImmediate; }
   bool isExpr() const { return Kind == kExpr; }
@@ -89,6 +92,16 @@ public:
   void setImm(int64_t Val) {
     assert(isImm() && "This is not an immediate");
     ImmVal = Val;
+  }
+
+  uint16_t getHFPImm() const {
+    assert(isHFPImm() && "This is not an HFP immediate");
+    return HFPImmVal;
+  }
+
+  void setHFPImm(uint16_t Val) {
+    assert(isHFPImm() && "This is not an HFP immediate");
+    HFPImmVal = Val;
   }
 
   uint32_t getSFPImm() const {
@@ -146,6 +159,13 @@ public:
     MCOperand Op;
     Op.Kind = kImmediate;
     Op.ImmVal = Val;
+    return Op;
+  }
+
+  static MCOperand createHFPImm(uint16_t Val) {
+    MCOperand Op;
+    Op.Kind = kHFPImmediate;
+    Op.HFPImmVal = Val;
     return Op;
   }
 

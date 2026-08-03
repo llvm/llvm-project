@@ -297,6 +297,9 @@ namespace CallingConv {
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
+    /// Used for PISA kernel functions.
+    PISA_KERNEL = 183,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };
@@ -323,6 +326,7 @@ constexpr bool isCallableCC(CallingConv::ID CC) {
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_VS:
   case CallingConv::SPIR_KERNEL:
+  case CallingConv::PISA_KERNEL:
   case CallingConv::PTX_Kernel:
     return false;
   default:
