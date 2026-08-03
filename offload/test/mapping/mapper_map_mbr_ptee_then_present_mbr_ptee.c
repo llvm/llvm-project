@@ -44,8 +44,8 @@ int main() {
   // This present check currently fails (explicit extension); once attach-style
   // maps are emitted for the pointee, it should pass.
   // clang-format off
-  // CHECK: omptarget message: explicit extension not allowed
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: message: explicit extension not allowed
+  // CHECK: fatal error 1: failure of target construct while offloading is mandatory
   // clang-format on
 #pragma omp target enter data map(present, alloc : s1)
 
