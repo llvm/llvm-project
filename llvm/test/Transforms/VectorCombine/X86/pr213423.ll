@@ -7,28 +7,32 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Issue #213423
 ; Check that we do not crash when multiple extracts share the same index instruction
 ; and it needs to be frozen.
-define i1 @test_shared_index(i32 %base) {
+define void @test_shared_index(ptr %p, i32 %idx.base) {
 ; CHECK-LABEL: @test_shared_index(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[V:%.*]] = load <2 x i16>, ptr null, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze i32 [[BASE:%.*]]
-; CHECK-NEXT:    [[IDX:%.*]] = and i32 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr null, i32 [[IDX]]
-; CHECK-NEXT:    [[E1:%.*]] = load i16, ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i16> [[V]], i32 [[IDX]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr null, i32 [[IDX]]
-; CHECK-NEXT:    [[E2:%.*]] = load i16, ptr [[TMP3]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[V]], i32 [[IDX]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i16 [[E1]], [[E2]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[IDX:%.*]] = and i32 [[IDX_BASE:%.*]], 1
+; CHECK-NEXT:    [[V:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <2 x i32> [[V]], i32 [[IDX]]
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <2 x i32> [[V]], i32 [[IDX]]
+; CHECK-NEXT:    ret void
 ;
-entry:
-  %v = load <2 x i16>, ptr null, align 4
-  %idx = and i32 %base, 0
-  %e1 = extractelement <2 x i16> %v, i32 %idx
-  %e2 = extractelement <2 x i16> %v, i32 %idx
-  %cmp = icmp ule i16 %e1, %e2
-  ret i1 %cmp
+  %idx = and i32 %idx.base, 1
+  %v = load <2 x i32>, ptr %p
+  %e1 = extractelement <2 x i32> %v, i32 %idx
+  %e2 = extractelement <2 x i32> %v, i32 %idx
+  ret void
+}
+
+; Check that we do not use an uninitialized pointer when the index doesn't match
+; and/urem but is naturally in bounds.
+define void @test_uninitialized_base(ptr %p, i1 %idx) {
+; CHECK-LABEL: @test_uninitialized_base(
+; CHECK-NEXT:    [[V:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[E:%.*]] = extractelement <2 x i32> [[V]], i1 [[IDX:%.*]]
+; CHECK-NEXT:    ret void
+;
+  %v = load <2 x i32>, ptr %p
+  %e = extractelement <2 x i32> %v, i1 %idx
+  ret void
 }
 
 

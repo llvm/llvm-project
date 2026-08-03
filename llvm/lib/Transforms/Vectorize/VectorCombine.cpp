@@ -1929,7 +1929,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
 
   // If the index may be poison, check if we can insert a freeze before the
   // range of the index is restricted.
-  Value *IdxBase;
+  Value *IdxBase = nullptr;
   ConstantInt *CI;
   if (match(Idx, m_And(m_Value(IdxBase), m_ConstantInt(CI)))) {
     IdxRange = IdxRange.binaryAnd(CI->getValue());
@@ -1937,7 +1937,7 @@ static ScalarizationResult canScalarizeAccess(VectorType *VecTy, Value *Idx,
     IdxRange = IdxRange.urem(CI->getValue());
   }
 
-  if (ValidIndices.contains(IdxRange))
+  if (IdxBase && ValidIndices.contains(IdxRange))
     return ScalarizationResult::safeWithFreeze(IdxBase);
   return ScalarizationResult::unsafe();
 }
@@ -2106,9 +2106,10 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     if (ScalarIdx.isUnsafe())
       return false;
     if (ScalarIdx.isSafeWithFreeze()) {
-      NeedFreeze.try_emplace(cast<Instruction>(UI->getIndexOperand()),
-                             ScalarIdx);
-      ScalarIdx.discard();
+      if (auto *IdxInst = dyn_cast<Instruction>(UI->getIndexOperand())) {
+        NeedFreeze.try_emplace(IdxInst, ScalarIdx);
+        ScalarIdx.discard();
+      }
     }
 
     auto *Index = dyn_cast<ConstantInt>(UI->getIndexOperand());
