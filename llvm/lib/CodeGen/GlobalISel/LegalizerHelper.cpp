@@ -4365,16 +4365,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
 
   LLT PtrTy = MRI.getType(PtrReg);
   unsigned AnyExtSize = PowerOf2Ceil(DstTy.getSizeInBits());
-
-  LLT AnyExtTy;
-  LLT OffsetCstRes;
-  if (EltTy.isPointer()) {
-    AnyExtTy = LLT::scalar(AnyExtSize);
-    OffsetCstRes = LLT::scalar(PtrTy.getSizeInBits());
-  } else {
-    AnyExtTy = DstTy.changeElementSize(AnyExtSize);
-    OffsetCstRes = DstTy.changeElementSize(PtrTy.getSizeInBits());
-  }
+  LLT AnyExtTy = LLT::integer(AnyExtSize);
+  LLT OffsetCstRes = LLT::integer(PtrTy.getSizeInBits());
 
   auto LargeLoad = MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, AnyExtTy,
                                              PtrReg, *LargeMMO);
@@ -4390,16 +4382,24 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
 
   if (AnyExtTy == DstTy)
     MIRBuilder.buildOr(DstReg, Shift, LargeLoad);
-  else if (AnyExtTy.getSizeInBits() != DstTy.getSizeInBits()) {
+  else {
     auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
-    MIRBuilder.buildTrunc(DstReg, {Or});
-  } else {
-    assert(DstTy.isPointer() && "expected pointer");
-    auto Or = MIRBuilder.buildOr(AnyExtTy, Shift, LargeLoad);
-
-    // FIXME: We currently consider this to be illegal for non-integral address
-    // spaces, but we need still need a way to reinterpret the bits.
-    MIRBuilder.buildIntToPtr(DstReg, Or);
+    // The destination is either narrower than the stitching type, or of a
+    // different kind (float or pointer), or both. Truncate in the integer
+    // domain first, then cast the kind only if it actually differs.
+    LLT NarrowTy = AnyExtTy.changeElementSize(DstTy.getSizeInBits());
+    Register Res = Or.getReg(0);
+    if (NarrowTy != AnyExtTy) {
+      Register TruncDst = NarrowTy == DstTy
+                              ? DstReg
+                              : MRI.createGenericVirtualRegister(NarrowTy);
+      Res = MIRBuilder.buildTrunc(TruncDst, Or).getReg(0);
+    }
+    // FIXME: For a pointer destination this reinterprets the bits with
+    // G_INTTOPTR, which we currently consider to be illegal for non-integral
+    // address spaces, but we still need a way to reinterpret the bits.
+    if (Res != DstReg)
+      MIRBuilder.buildCast(DstReg, Res);
   }
 
   LoadMI.eraseFromParent();
