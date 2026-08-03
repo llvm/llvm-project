@@ -1,13 +1,15 @@
-.. title:: clang-tidy - clang-analyzer-cplusplus.Move
+```{title} clang-tidy - clang-analyzer-cplusplus.Move
+```
+
+```{eval-rst}
 .. meta::
    :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-move
+```
 
-clang-analyzer-cplusplus.Move
-=============================
+# clang-analyzer-cplusplus.Move
 
 Find use-after-move bugs in C++.
 
 The `clang-analyzer-cplusplus.Move` check is an alias, please see
-`Clang Static Analyzer Available Checkers
-<https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-move>`_
+[Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-move)
 for more information.

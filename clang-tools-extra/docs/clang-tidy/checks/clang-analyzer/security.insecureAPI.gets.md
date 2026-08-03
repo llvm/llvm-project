@@ -1,13 +1,15 @@
-.. title:: clang-tidy - clang-analyzer-security.insecureAPI.gets
+```{title} clang-tidy - clang-analyzer-security.insecureAPI.gets
+```
+
+```{eval-rst}
 .. meta::
    :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-gets
+```
 
-clang-analyzer-security.insecureAPI.gets
-========================================
+# clang-analyzer-security.insecureAPI.gets
 
 Warn on uses of the 'gets' function.
 
 The `clang-analyzer-security.insecureAPI.gets` check is an alias, please see
-`Clang Static Analyzer Available Checkers
-<https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-gets>`_
+[Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#security-insecureapi-gets)
 for more information.
