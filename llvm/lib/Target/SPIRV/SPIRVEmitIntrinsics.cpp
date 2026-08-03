@@ -3058,8 +3058,7 @@ void SPIRVEmitIntrinsicsImpl::insertSpirvDecorations(Instruction *I,
     SmallVector<Metadata *> MDs;
     if (I->hasMetadata("amdgpu.no.fine.grained.memory"))
       MDs.push_back(MDNode::get(
-          Ctx,
-          {AuxMD, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
+          Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.no.fine.grained.memory")}));
     if (I->hasMetadata("amdgpu.no.remote.memory"))
       MDs.push_back(MDNode::get(
           Ctx, {AuxMD, MDString::get(Ctx, "amdgpu.no.remote.memory")}));
