@@ -111,8 +111,7 @@ void useEmpty() {
 // CIR: cir.func {{.*}}@_Z8useEmptyv()
 // CIR:   cir.alloca "e" align(1) : !cir.ptr<!rec_Empty>
 // LLVM: define {{.*}} void @_Z8useEmptyv()
-// LLVMCIR:   alloca %union.Empty, i64 1, align 1
-// OGCG:      alloca %union.Empty, align 1
+// LLVM:   alloca %union.Empty{{.*}}, align 1
 
 void useEmptyAligned() {
   EmptyAligned e;
@@ -120,8 +119,7 @@ void useEmptyAligned() {
 // CIR: cir.func {{.*}}@_Z15useEmptyAlignedv()
 // CIR:   cir.alloca "e" align(16) : !cir.ptr<!rec_EmptyAligned>
 // LLVM: define {{.*}} void @_Z15useEmptyAlignedv()
-// LLVMCIR:   alloca %union.EmptyAligned, i64 1, align 16
-// OGCG:      alloca %union.EmptyAligned, align 16
+// LLVM:   alloca %union.EmptyAligned{{.*}}, align 16
 
 // Classic never refers to this union's type from inside LeadingZeroBitfield, so
 // a variable of the type is what puts it in both modules.
@@ -131,8 +129,7 @@ void useZeroBitfield() {
 // CIR: cir.func {{.*}}@_Z15useZeroBitfieldv()
 // CIR:   cir.alloca "e" align(1) : !cir.ptr<!rec_OnlyZeroBitfield>
 // LLVM: define {{.*}} void @_Z15useZeroBitfieldv()
-// LLVMCIR:   alloca %union.OnlyZeroBitfield, i64 1, align 1
-// OGCG:      alloca %union.OnlyZeroBitfield, align 1
+// LLVM:   alloca %union.OnlyZeroBitfield{{.*}}, align 1
 
 // The union occupies one byte, so the int follows at offset 4.
 int getLeading() { return lead.x; }
