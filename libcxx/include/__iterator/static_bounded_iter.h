@@ -123,7 +123,7 @@ private:
         __current <= __end(), "__static_bounded_iter(current, begin): current and (begin + Size) are inconsistent");
   }
 
-  template <class _It, size_t _Sz>
+  template <size_t _Sz, class _It>
   friend _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __static_bounded_iter<_It, _Sz> __make_static_bounded_iter(_It, _It);
 
 public:
