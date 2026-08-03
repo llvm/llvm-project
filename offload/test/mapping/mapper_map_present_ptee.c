@@ -59,7 +59,7 @@ int main() {
   // EXPECTED (inbounds): 333 333
   fprintf(stderr, "%d %d\n", x[0], s.y);
   // clang-format off
-  // CHECK: omptarget message: device mapping required by 'present' motion modifier does not exist for host address
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: message: device mapping required by 'present' motion modifier does not exist for host address
+  // CHECK: fatal error 1: failure of target construct while offloading is mandatory
   // clang-format on
 }

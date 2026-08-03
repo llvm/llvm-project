@@ -268,6 +268,10 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
 
   // For the computations below, make sure they don't unsigned wrap.
+  // FIXME: for a negative step the lowest accessed address is not
+  // AR->getStart() but AR->evaluateAtIteration(MaxBTC, SE); the check below
+  // therefore compares StartPtr against the highest accessed address instead
+  // of the lowest.
   if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, AR->getStart(), StartPtr))
     return false;
   const SCEV *StartOffset = SE.getNoopOrZeroExtend(
@@ -277,45 +281,51 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     LoopGuards.emplace(ScalarEvolution::LoopGuards::collect(AR->getLoop(), SE));
   MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
 
-  const SCEV *OffsetAtLastIter =
-      mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
-  if (!OffsetAtLastIter) {
+  const SCEV *AbsStep = SE.getAbsExpr(Step, /*IsNSW=*/false);
+  // Total distance (in bytes) between the first and the last
+  // accessed pointer.
+  const SCEV *DistToLastIter = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
+  if (!DistToLastIter) {
     // Re-try with constant max backedge-taken count if using the symbolic one
     // failed.
     MaxBTC = SE.getConstantMaxBackedgeTakenCount(AR->getLoop());
     if (isa<SCEVCouldNotCompute>(MaxBTC))
       return false;
-    MaxBTC = SE.getNoopOrZeroExtend(
-        MaxBTC, WiderTy);
-    OffsetAtLastIter =
-        mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
-    if (!OffsetAtLastIter)
+    MaxBTC = SE.getNoopOrZeroExtend(MaxBTC, WiderTy);
+    DistToLastIter = mulSCEVNoOverflow(MaxBTC, AbsStep, SE);
+    if (!DistToLastIter)
       return false;
   }
 
-  const SCEV *OffsetEndBytes = addSCEVNoOverflow(
-      OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
-  if (!OffsetEndBytes)
+  // Total length in bytes of the accessed range (from the first accessed
+  // byte through the end of the last access).
+  const SCEV *AccessedBytes = addSCEVNoOverflow(
+      DistToLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
+  if (!AccessedBytes)
     return false;
 
+  // Compute MaxOffset per direction: exclusive upper offset of the
+  // accessed range.
+  const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
-    // For positive steps, check if
-    //  (AR->getStart() - StartPtr) + (MaxBTC  * Step) + EltSize <= DerefBytes,
-    // while making sure none of the computations unsigned wrap themselves.
-    const SCEV *EndBytes = addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE);
-    if (!EndBytes)
+    MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
+    if (!MaxOffset)
       return false;
-
     DerefBytesSCEV = SE.applyLoopGuards(DerefBytesSCEV, *LoopGuards);
-    return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes, DerefBytesSCEV);
+  } else {
+    // FIXME: two independent off-by-EltSize bugs on this branch:
+    //  1. StartOffset here is actually the HIGHEST offset, because it is
+    //     computed from AR->getStart() rather than
+    //     AR->evaluateAtIteration(MaxBTC, SE) (see FIXME above).
+    //  2. The lower check is over-strict by EltSize and the upper is
+    //     under-counted by EltSize.
+    assert(SE.isKnownNegative(Step) && "must be known negative");
+    if (!SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, AccessedBytes))
+      return false;
+    MaxOffset = StartOffset;
   }
-
-  // For negative steps check if
-  //  * StartOffset >= (MaxBTC * Step + EltSize)
-  //  * StartOffset <= DerefBytes.
-  assert(SE.isKnownNegative(Step) && "must be known negative");
-  return SE.isKnownPredicate(CmpInst::ICMP_SGE, StartOffset, OffsetEndBytes) &&
-         SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset, DerefBytesSCEV);
+  // MaxOffset must not exceed the deref-region end.
+  return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
 }
 
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
@@ -1713,29 +1723,28 @@ uint64_t llvm::getBoundForConsecutiveLoad(const SCEV *PtrSCEV, Type *AccessTy,
   if (AccessTy->isScalableTy())
     return 0;
 
-  // `A[i % 2^N]` is modeled as `Base + ElemSize * zext({0,+,1}<iN>)`by SCEV,
-  // with N being the bitwidth of the induction. For a byte element (ElemSize ==
-  // 1) the multiply folds away.
-  const SCEV *Base, *Start;
-  const APInt *Scale = nullptr;
-  auto Index = m_scev_ZExt(
-      m_scev_AffineAddRec(m_SCEV(Start), m_scev_One(), m_SpecificLoop(L)));
-  if (!match(
-          PtrSCEV,
-          m_scev_Add(m_CombineOr(Index, m_scev_Mul(m_scev_APInt(Scale), Index)),
-                     m_SCEV(Base))))
-    return 0;
-
+  // `A[i % 2^N]` is modeled as `Base + ElemSize * zext({0,+,1}<iN>)` by SCEV,
+  // with N being the bitwidth of the induction and ElemSize the access's
+  // allocation size. For a byte element SCEV folds the multiply away, hence the
+  // unscaled index is accepted only then. Base must be the add's operand and
+  // not SE.getPointerBase(PtrSCEV), which looks through add-recurrences and
+  // would report the invariant %A for a moving base like `{%A,+,4}<L>`.
   uint64_t AllocSize =
       SE.getDataLayout().getTypeAllocSize(AccessTy).getFixedValue();
-  if (!Start->isZero() || !SE.isLoopInvariant(Base, L) ||
-      (Scale ? *Scale != AllocSize : AllocSize != 1))
+  const SCEV *Base, *Start;
+  auto Index = m_scev_ZExt(
+      m_scev_AffineAddRec(m_SCEV(Start), m_scev_One(), m_SpecificLoop(L)));
+  if (!match(PtrSCEV,
+             m_scev_Add(m_scev_Mul(m_scev_SpecificInt(AllocSize), Index),
+                        m_SCEV(Base))) &&
+      !(AllocSize == 1 && match(PtrSCEV, m_scev_Add(Index, m_SCEV(Base)))))
+    return 0;
+
+  if (!Start->isZero() || !SE.isLoopInvariant(Base, L))
     return 0;
 
   unsigned NarrowWidth = SE.getTypeSizeInBits(Start->getType());
-  if (NarrowWidth >= 64)
-    return 0;
-  return uint64_t(1) << NarrowWidth;
+  return NarrowWidth < 64 ? uint64_t(1) << NarrowWidth : 0;
 }
 
 std::optional<int64_t> llvm::getPointersDiff(Type *ElemTyA, Value *PtrA,

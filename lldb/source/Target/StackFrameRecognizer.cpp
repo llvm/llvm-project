@@ -8,6 +8,7 @@
 
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Core/Architecture.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStackFrameRecognizerInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -16,6 +17,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/ScriptedMetadata.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -55,7 +57,14 @@ ScriptedStackFrameRecognizer::ScriptedStackFrameRecognizer(
   ScriptedMetadata scripted_metadata(m_python_class, nullptr);
   auto obj_or_err = m_interface_sp->CreatePluginObject(scripted_metadata);
   if (!obj_or_err) {
-    llvm::consumeError(obj_or_err.takeError());
+    // CreatePluginObject has no error-return channel back to the command
+    // handler that requested this recognizer, so report the detailed error
+    // (which may include a Python backtrace) via the diagnostic system.
+    Debugger::ReportError(
+        llvm::formatv("failed to create ScriptedStackFrameRecognizer: {0}",
+                      llvm::toString(obj_or_err.takeError()))
+            .str(),
+        interpreter->GetDebugger().GetID());
     m_interface_sp.reset();
   }
 }
