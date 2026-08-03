@@ -21,7 +21,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace Fortran::frontend;
@@ -55,7 +54,8 @@ static void printRemarkOption(llvm::raw_ostream &os,
 
 // For remarks only, if we are receiving a message of this format
 // [file location with line and column];;[path to file];;[the remark message]
-// then print the base file name, line and column number.
+// then print the file path (as given on the command line), line and column
+// number.
 void TextDiagnosticPrinter::printLocForRemarks(
     llvm::raw_svector_ostream &diagMessageStream, llvm::StringRef &diagMsg) {
   // split incoming string to get the location and filename in the
@@ -73,17 +73,20 @@ void TextDiagnosticPrinter::printLocForRemarks(
   // tokens will always be of size 2 in the case of optimization
   // remark message received
   if (tokens.size() == 2) {
-    // tokens[0] is of the form [file path]:[line]:[column]. Strip any leading
-    // directory so that only the base file name is shown, matching how errors
-    // and warnings are displayed.
-    llvm::StringRef loc = llvm::sys::path::filename(tokens[0]);
+    // tokens[0] has the form [base file name]:[line]:[column] and tokens[1] is
+    // the full path to the file. Display the full path (as presented on the
+    // command line) with the line and column, matching Clang: relative paths
+    // (e.g. ../vec.f90, dir/vec.f90) stay relative, and absolute paths are
+    // shown in full. The ":[line]:[column]" suffix is taken from tokens[0].
+    llvm::StringRef path = tokens[1];
+    llvm::StringRef lineAndColumn = tokens[0].substr(tokens[0].find(':'));
 
     // Used for changing only the bold attribute
     if (diagOpts.showColors(os.has_colors()))
       os.changeColor(llvm::raw_ostream::SAVEDCOLOR, true);
 
-    // Print base file name, line and column
-    os << loc << ": ";
+    // Print file path, line and column
+    os << path << lineAndColumn << ": ";
   }
 }
 
