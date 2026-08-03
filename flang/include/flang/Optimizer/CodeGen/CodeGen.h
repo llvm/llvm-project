@@ -77,6 +77,8 @@ struct FIRToLLVMPassOptions {
   // malloc -> malloc_unified. Lets a runtime name its entry points otherwise.
   std::string unifiedHeapAllocSuffix = "_unified";
   std::string managedHeapAllocSuffix = "_managed";
+
+  bool unsafeFPConversion = false;
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.
