@@ -454,11 +454,30 @@ HeaderIncludes::insert(llvm::StringRef Header, bool IsAngled,
   // FIXME: figure out if this is the best behavior.
   auto It = ExistingIncludes.find(Header);
   if (It != ExistingIncludes.end()) {
-    for (const auto &Inc : It->second)
-      if (Inc.Directive == Directive &&
-          ((IsAngled && StringRef(Inc.Name).starts_with("<")) ||
-           (!IsAngled && StringRef(Inc.Name).starts_with("\""))))
-        return std::nullopt;
+    for (const auto &Inc : It->second) {
+      bool SameQuotation = (IsAngled && StringRef(Inc.Name).starts_with("<")) ||
+                           (!IsAngled && StringRef(Inc.Name).starts_with("\""));
+      if (SameQuotation) {
+        // If the directive is the same, or if the directive is an include and
+        // the existing directive is an import, then we don't need to insert
+        // the header.
+        if ((Inc.Directive == Directive) ||
+            (Inc.Directive == IncludeDirective::Import &&
+             Directive == IncludeDirective::Include)) {
+          return std::nullopt;
+        }
+
+        // "import" outranks "include" with the assumption that includes are
+        // designed to handle multiple inclusions while import is not.
+        char Open = IsAngled ? '<' : '"';
+        char Close = IsAngled ? '>' : '"';
+        std::string NewInclude =
+            llvm::formatv("#import {0}{1}{2}\n", Open, Header, Close);
+
+        return tooling::Replacement(FileName, Inc.R.getOffset(),
+                                    Inc.R.getLength(), NewInclude);
+      }
+    }
   }
   std::string Quoted =
       std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", Header));
