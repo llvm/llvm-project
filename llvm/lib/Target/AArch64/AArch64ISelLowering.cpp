@@ -20290,12 +20290,14 @@ bool AArch64TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return Shift < 3;
 }
 
-bool AArch64TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                    unsigned Index) const {
+unsigned AArch64TargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                        unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return 2;
 
-  return (Index == 0 || Index == ResVT.getVectorMinNumElements());
+  if (Index == 0 || Index == ResVT.getVectorMinNumElements())
+    return 0;
+  return 2;
 }
 
 bool AArch64TargetLowering::shouldOptimizeMulOverflowWithZeroHighBits(

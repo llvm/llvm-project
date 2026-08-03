@@ -3604,19 +3604,23 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
          (1 - MulC).isPowerOf2() || (-(MulC + 1)).isPowerOf2();
 }
 
-bool X86TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                                unsigned Index) const {
+unsigned X86TargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                    unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return 2;
 
   // Mask vectors support all subregister combinations and operations that
   // extract half of vector.
-  if (ResVT.getVectorElementType() == MVT::i1)
-    return Index == 0 ||
-           ((ResVT.getSizeInBits() * 2 == SrcVT.getSizeInBits()) &&
-            (Index == ResVT.getVectorNumElements()));
+  if (ResVT.getVectorElementType() == MVT::i1) {
+    if (Index == 0 || ((ResVT.getSizeInBits() * 2 == SrcVT.getSizeInBits()) &&
+                       (Index == ResVT.getVectorNumElements())))
+      return 0;
+    return 2;
+  }
 
-  return (Index % ResVT.getVectorNumElements()) == 0;
+  if ((Index % ResVT.getVectorNumElements()) == 0)
+    return 0;
+  return 2;
 }
 
 bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {

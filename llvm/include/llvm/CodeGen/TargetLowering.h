@@ -3540,13 +3540,22 @@ public:
     return false;
   }
 
-  /// Return true if EXTRACT_SUBVECTOR is cheap for extracting this result type
-  /// from this source type with this index. This is needed because
-  /// EXTRACT_SUBVECTOR usually has custom lowering that depends on the index of
-  /// the first element, and only the target knows which lowering is cheap.
-  virtual bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                       unsigned Index) const {
-    return false;
+  /// Return the cost of extracting a subvector of type \p ResVT from a vector
+  /// of type \p SrcVT, starting at element \p Index:
+  ///
+  ///   0 - Free: lowers to no instruction at all, e.g. a subregister copy.
+  ///   1 - Cheap: lowers to at most one instruction, and may still be free if
+  ///       the target can fold the extract into the instruction consuming it
+  ///       (e.g. a widening op that reads the high half of a register).
+  ///   2 - Expensive: needs a shuffle sequence that cannot be folded away.
+  ///
+  /// Most callers only create a new EXTRACT_SUBVECTOR when the cost is below
+  /// 2. This hook exists because EXTRACT_SUBVECTOR usually has custom lowering
+  /// that depends on the index of the first element, so only the target knows
+  /// which lowering is cheap.
+  virtual unsigned getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                           unsigned Index) const {
+    return 2;
   }
 
   /// Try to convert an extract element of a vector binary operation into an

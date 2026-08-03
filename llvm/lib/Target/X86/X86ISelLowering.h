@@ -578,8 +578,8 @@ namespace llvm {
 
     /// Return true if EXTRACT_SUBVECTOR is cheap for this result type
     /// with this index.
-    bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                 unsigned Index) const override;
+    unsigned getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                     unsigned Index) const override;
 
     /// Scalar ops always have equal or better analysis/performance/power than
     /// the vector equivalent, so this always makes sense if the scalar op is

@@ -2404,13 +2404,15 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
-bool SITargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-                                               unsigned Index) const {
+unsigned SITargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                                   unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
-    return false;
+    return 2;
 
   // TODO: Add more cases that are cheap.
-  return Index == 0;
+  if (Index == 0)
+    return 0;
+  return 2;
 }
 
 bool SITargetLowering::isExtractVecEltCheap(EVT VT, unsigned Index) const {
