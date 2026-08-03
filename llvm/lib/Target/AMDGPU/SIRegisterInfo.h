@@ -286,16 +286,21 @@ public:
   /// \returns the VGPR register bank index (0-3)
   unsigned getVGPRBankIndex(MCRegister Reg) const;
 
-  /// \returns true if MI is a VALU instruction that may have
-  /// 3 VGPR operands.
-  bool canHave3VGPROperands(const MachineInstr &MI) const;
+  /// \returns a mask of VGPR Banks that wouldn't cause a conflict
+  /// with other vgpr source operands of the instruction.
+  unsigned getCoOpndsFreeVGPRBankMask(Register VirtReg,
+                                      const MachineFunction &MF,
+                                      const VirtRegMap *VRM) const;
 
-  /// Add register allocation hints to avoid VGPRs that would cause
-  /// bank conflicts
-  void addVGPRBankConflictHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                            SmallVectorImpl<MCPhysReg> &Hints,
-                            const MachineFunction &MF,
-                            const VirtRegMap *VRM) const;
+  /// \returns a mask of VGPR Banks with the least known overlap
+  /// that can hold vopd pairing.
+  unsigned getVGPRBankParityMask(Register VirtReg,
+                                 const MachineFunction &MF,
+                                 const VirtRegMap *VRM) const;
+
+  void appendRAHintsForConflictAndOverlapAvoidance(
+      ArrayRef<MCPhysReg> Order, SmallVectorImpl<MCPhysReg> &Hints,
+      unsigned LeastBankConflictMask, unsigned LeastBankOverlapMask) const;
 
   /// \returns true if this class contains any vector registers.
   static bool hasVectorRegisters(const TargetRegisterClass *RC) {
