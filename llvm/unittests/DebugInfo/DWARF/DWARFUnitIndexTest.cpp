@@ -15,8 +15,6 @@
 
 using namespace llvm;
 
-namespace {
-
 static void appendU32(std::vector<uint8_t> &B, uint32_t V) {
   uint8_t Tmp[4];
   support::endian::write32le(Tmp, V);
@@ -59,5 +57,3 @@ TEST(DWARFUnitIndexTest, RejectsRowIndexBeyondNumUnits) {
   // On failure parse() resets the header, so the index is falsy.
   EXPECT_FALSE(static_cast<bool>(Index));
 }
-
-} // end anonymous namespace
