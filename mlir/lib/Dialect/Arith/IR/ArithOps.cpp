@@ -2273,11 +2273,9 @@ OpFoldResult arith::BitcastOp::fold(FoldAdaptor adaptor) {
   if (!llvm::isa<FloatAttr, IntegerAttr>(operand))
     return {};
 
-  const APInt bits = [&]() {
-    if (auto floatAttr = dyn_cast<FloatAttr>(operand))
-      return floatAttr.getValue().bitcastToAPInt();
-    return cast<IntegerAttr>(operand).getValue();
-  }();
+  APInt bits = llvm::isa<FloatAttr>(operand)
+                   ? llvm::cast<FloatAttr>(operand).getValue().bitcastToAPInt()
+                   : llvm::cast<IntegerAttr>(operand).getValue();
 
   assert(resType.getIntOrFloatBitWidth() == bits.getBitWidth() &&
          "trying to fold on broken IR: operands have incompatible types");
