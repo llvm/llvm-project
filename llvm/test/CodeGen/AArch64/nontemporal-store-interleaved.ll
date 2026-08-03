@@ -2375,9 +2375,6 @@ entry:
   ret void
 }
 
-!0 = !{ i32 1 }
-
-
 define void @test_stnp_interleaved_store2_v2i32_intrinsic(<2 x i32> %v0, <2 x i32> %v1, ptr %ptr) {
 ; CHECK-LE-IAENABLED-LABEL: test_stnp_interleaved_store2_v2i32_intrinsic:
 ; CHECK-LE-IAENABLED:       // %bb.0: // %entry
@@ -3589,3 +3586,6 @@ entry:
   store <4 x i24> %interleave, ptr %ptr, align 4, !nontemporal !0
   ret void
 }
+
+!0 = !{ i32 1 }
+
