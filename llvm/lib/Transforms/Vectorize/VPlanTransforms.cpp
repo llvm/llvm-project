@@ -5547,7 +5547,6 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     VPlan &Plan, VPCostContext &CostCtx, VFRange &Range,
     SmallVectorImpl<VPInstruction *> &MemOps) {
   ScalarEvolution *SE = CostCtx.PSE.getSE();
-  PredicatedScalarEvolution StrideMVPSE(*SE, const_cast<Loop &>(*CostCtx.L));
   SCEVUnionPredicate StridePredicates({}, *SE);
 
   for (VPInstruction *VPI : MemOps) {
