@@ -43,16 +43,16 @@ define void @test(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; LOBUDGET-NEXT:    call void @unknown()
 ; LOBUDGET-NEXT:    call void @unknown()
 ; LOBUDGET-NEXT:    call void @unknown()
-; LOBUDGET-NEXT:    [[L00:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
+; LOBUDGET-NEXT:    [[L00:%.*]] = extractelement <4 x float> [[TMP1]], i64 0
 ; LOBUDGET-NEXT:    store float [[L00]], ptr [[B:%.*]], align 4
 ; LOBUDGET-NEXT:    [[B1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
-; LOBUDGET-NEXT:    [[L10:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
+; LOBUDGET-NEXT:    [[L10:%.*]] = extractelement <4 x float> [[TMP1]], i64 1
 ; LOBUDGET-NEXT:    store float [[L10]], ptr [[B1]], align 4
 ; LOBUDGET-NEXT:    [[B2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
-; LOBUDGET-NEXT:    [[L20:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
+; LOBUDGET-NEXT:    [[L20:%.*]] = extractelement <4 x float> [[TMP1]], i64 2
 ; LOBUDGET-NEXT:    store float [[L20]], ptr [[B2]], align 4
 ; LOBUDGET-NEXT:    [[B3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
-; LOBUDGET-NEXT:    [[L30:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
+; LOBUDGET-NEXT:    [[L30:%.*]] = extractelement <4 x float> [[TMP1]], i64 3
 ; LOBUDGET-NEXT:    store float [[L30]], ptr [[B3]], align 4
 ; LOBUDGET-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[C:%.*]], align 4
 ; LOBUDGET-NEXT:    store <4 x float> [[TMP0]], ptr [[D:%.*]], align 4

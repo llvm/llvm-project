@@ -82,6 +82,10 @@ class CIR_UIntOfWidths<list<int> widths>
     : CIR_ConfinedType<CIR_AnyUIntType, [CIR_IntOfWidthsPred<widths>],
         "unsigned integer type of widths " # !interleave(widths, "/")>;
 
+def CIR_UIntMultipleOf16
+    : CIR_ConfinedType<CIR_AnyUIntType, [CPred<"$_self.getWidth() % 16 == 0">],
+        "unsigned integer type with a width that is a multiple of 16 bits">;
+
 class CIR_UInt<int width>
     : CIR_ConfinedType<CIR_AnyUIntType, [CIR_HasWidthPred<width>],
         width # "-bit unsigned integer">,
@@ -119,6 +123,14 @@ def CIR_AnyFundamentalIntType
         [CIR_HasFundamentalIntWidthPred, CIR_IsNotBitIntPred],
         "fundamental integer type"> {
     let cppFunctionName = "isFundamentalIntType";
+}
+
+// An 8 bit character type of either signedness, since the signedness of plain
+// char follows the target. _BitInt types are excluded even at width 8.
+def CIR_AnyChar8Type
+    : CIR_ConfinedType<CIR_AnyIntType,
+        [CIR_HasWidthPred<8>, CIR_IsNotBitIntPred], "8-bit character type"> {
+    let cppFunctionName = "isChar8Type";
 }
 
 def CIR_AnyFundamentalUIntType
@@ -263,6 +275,10 @@ def CIR_PtrToVoidPtrType : CIR_PtrToPtrTo<CIR_AnyVoidType, "void type">;
 
 class CIR_PtrToType<Type type> : CIR_PtrToAnyOf<[type]>;
 
+def CIR_PtrToChar8Type : CIR_PtrToType<CIR_AnyChar8Type> {
+    let cppFunctionName = "isPtrToChar8Type";
+}
+
 // Pointer to type constraints
 def CIR_PtrToIntOrFloatType : CIR_PtrToType<CIR_AnyIntOrFloatType>;
 
@@ -342,13 +358,6 @@ def CIR_AnyFloatOrVecOfFloatType
     let cppFunctionName = "isFPOrVectorOfFPType";
 }
 
-// Types valid for arithmetic ops (add/sub/mul/div/rem):
-// scalar or vector of integer or floating-point. 
-def CIR_AnyArithType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType,
-                 CIR_VectorOfIntType, CIR_VectorOfFloatType],
-                "integer, floating-point, or vector of integer/float">;
-
 // Types valid for bitwise ops (and/or/xor):
 // integer, boolean, or vector of integer (no floating-point).
 def CIR_AnyBitwiseType
@@ -393,8 +402,8 @@ def CIR_AnyScalarType : AnyTypeOf<CIR_ScalarTypes, "cir scalar type"> {
 def CIR_AnyMethodType : CIR_TypeBase<"::cir::MethodType", "method type">;
 
 def CIR_ComparableType
-    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyFloatType, CIR_AnyPtrType,
-                 CIR_AnyComplexType, CIR_AnyVPtrType,
+    : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_AnyFloatType,
+                 CIR_AnyPtrType, CIR_AnyComplexType, CIR_AnyVPtrType,
                  CIR_AnyDataMemberType, CIR_AnyMethodType],
                 "comparable type"> {
   let cppFunctionName = "isComparableType";

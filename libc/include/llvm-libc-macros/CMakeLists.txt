@@ -73,6 +73,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  dirent_macros
+  HDR
+    dirent-macros.h
+)
+
+add_macro_header(
   fcntl_macros
   HDR
     fcntl-macros.h
@@ -226,6 +232,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_ptrace_macros
+  HDR
+    sys-ptrace-macros.h
+)
+
+add_macro_header(
   sys_epoll_macros
   HDR
     sys-epoll-macros.h
@@ -256,6 +268,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_statfs_macros
+  HDR
+    sys-statfs-macros.h
+)
+
+add_macro_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
@@ -265,6 +283,14 @@ add_macro_header(
   sys_personality_macros
   HDR
     sys-personality-macros.h
+)
+
+add_macro_header(
+  sys_param_macros
+  HDR
+    sys-param-macros.h
+  DEPENDS
+    .limits_macros
 )
 
 add_macro_header(
@@ -301,6 +327,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  net_if_macros
+  HDR
+    net-if-macros.h
+)
+
+add_macro_header(
   sys_time_macros
   HDR
     sys-time-macros.h
@@ -334,6 +366,12 @@ add_macro_header(
   wchar_macros
   HDR
     wchar-macros.h
+)
+
+add_macro_header(
+  inet_address_macros
+  HDR
+    inet-address-macros.h
 )
 
 add_macro_header(
@@ -378,6 +416,14 @@ add_macro_header(
   locale_macros
   HDR
     locale-macros.h
+)
+
+add_macro_header(
+  langinfo_macros
+  HDR
+    langinfo-macros.h
+  DEPENDS
+    .locale_macros
 )
 
 add_macro_header(
@@ -433,3 +479,9 @@ else()
       _LIBC_MODULAR_FORMAT_PRINTF.h
   )
 endif()
+
+add_macro_header(
+  alloca_macros
+  HDR
+    alloca-macros.h
+)

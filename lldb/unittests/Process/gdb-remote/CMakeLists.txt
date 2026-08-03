@@ -5,6 +5,7 @@ add_lldb_unittest(ProcessGdbRemoteTests
   GDBRemoteCommunicationServerTest.cpp
   GDBRemoteCommunicationTest.cpp
   GDBRemoteTestUtils.cpp
+  ProcessGDBRemoteTest.cpp
 
   LINK_COMPONENTS
     Support

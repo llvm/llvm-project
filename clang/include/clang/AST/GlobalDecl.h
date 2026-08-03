@@ -215,15 +215,6 @@ public:
 namespace llvm {
 
   template<> struct DenseMapInfo<clang::GlobalDecl> {
-    static inline clang::GlobalDecl getEmptyKey() {
-      return clang::GlobalDecl();
-    }
-
-    static inline clang::GlobalDecl getTombstoneKey() {
-      return clang::GlobalDecl::
-        getFromOpaquePtr(reinterpret_cast<void*>(-1));
-    }
-
     static unsigned getHashValue(clang::GlobalDecl GD) {
       return DenseMapInfo<void*>::getHashValue(GD.getAsOpaquePtr());
     }

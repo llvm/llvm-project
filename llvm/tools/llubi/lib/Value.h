@@ -30,11 +30,21 @@ class AnyValue;
 /// stores the concrete bit value. The tag mask bit indicates whether it is a
 /// pointer bit, and the tag value bit is used for provenance tracking of
 /// pointers.
+///
+/// Note that the idealized interpreter would store a full pointer tag for every
+/// single pointer bit, as well as the position of that bit in the pointer. The
+/// provenance is preserved as the bit is copied around, and when a sequence of
+/// bytes is eventually converted back to a pointer, all bits must be in the
+/// original order and have the same provenance. However, that would be
+/// prohibitively expensive. So instead, we rely on randomized ptr-sized tags.
+/// This means that if bits get reordered, or if bits from different pointers
+/// get mixed, then the result is unlikely to be a valid tag.
 struct Byte {
   uint8_t ConcreteMask;
   uint8_t Value;
   uint8_t TagMask;  // A mask to indicate which bits are pointer bits.
-  uint8_t TagValue; // Part of the tag for provenance tracking of pointers.
+  uint8_t TagValue; // For each pointer bit, the corresponding bit of the tag
+                    // for provenance tracking.
 
   static Byte poison() { return Byte{0, 0, 0, 0}; }
   static Byte undef() { return Byte{0, 255, 0, 0}; }
@@ -43,16 +53,19 @@ struct Byte {
   void zeroBits(uint8_t Mask) {
     ConcreteMask |= Mask;
     Value &= ~Mask;
+    TagMask &= ~Mask;
   }
 
   void poisonBits(uint8_t Mask) {
     ConcreteMask &= ~Mask;
     Value &= ~Mask;
+    TagMask &= ~Mask;
   }
 
   void undefBits(uint8_t Mask) {
     ConcreteMask &= ~Mask;
     Value |= Mask;
+    TagMask &= ~Mask;
   }
 
   void writeBits(uint8_t Mask, uint8_t Val) {
@@ -67,6 +80,13 @@ struct Byte {
         "Please ensure pointer bits are concrete before calling writeTagBits.");
     TagMask |= Mask;
     TagValue = (TagValue & ~Mask) | (Tag & Mask);
+  }
+
+  void writeByte(uint8_t Mask, const Byte &RHS) {
+    ConcreteMask = (ConcreteMask & ~Mask) | (RHS.ConcreteMask & Mask);
+    Value = (Value & ~Mask) | (RHS.Value & Mask);
+    TagMask = (TagMask & ~Mask) | (RHS.TagMask & Mask);
+    TagValue = (TagValue & ~Mask) | (RHS.TagValue & Mask);
   }
 
   /// Returns a logical byte that is part of two adjacent bytes.
@@ -89,13 +109,26 @@ struct Byte {
                 static_cast<uint8_t>(TagMask >> Shift),
                 static_cast<uint8_t>(TagValue >> Shift)};
   }
+
+  Byte shl(uint8_t Shift) const {
+    return Byte{static_cast<uint8_t>(ConcreteMask << Shift),
+                static_cast<uint8_t>(Value << Shift),
+                static_cast<uint8_t>(TagMask << Shift),
+                static_cast<uint8_t>(TagValue << Shift)};
+  }
+
+  bool areHighBitsZExtd(uint8_t BitsFrom) const {
+    uint8_t Mask = static_cast<uint8_t>((~0U) << BitsFrom);
+    return (ConcreteMask & Mask) == Mask && (Value & Mask) == 0 &&
+           (TagMask & Mask) == 0;
+  }
 };
 
-// TODO: Byte
 enum class StorageKind {
   Integer,
   Float,
   Pointer,
+  Byte,
   Poison,
   None,      // Placeholder for void type
   Aggregate, // Struct, Array or Vector
@@ -104,15 +137,56 @@ enum class StorageKind {
 /// Tri-state boolean value.
 enum class BooleanKind { False, True, Poison };
 
+/// A set of previously exposed provenances. It is originally yielded by
+/// inttoptr, and shared by pointers derived from the result.
+///
+/// Each capability check may invalidate some provenances. If we cannot
+/// pick one, it is UB. That is, from the angelic non-determinism view,
+/// we cannot pick a provenance to make the program reach this point.
+///
+/// For efficiency, this class has different forms in two stages:
+/// 1. Before any memory access is performed, ActiveMask is set to zero and
+/// Generation represents the global generation number of the snapshot.
+/// 2. After a memory access is performed, we can determine exactly one memory
+/// object to be accessed (address ranges are distinct). In this case,
+/// BaseAddress is set and ActiveMask is non-zero. ActiveMask represents the
+/// validity of the first N exposed provenances associated with the memory
+/// object. The bitwidth N is the number of provenances in the list with
+/// List[I].Generation <= WildcardProvenance::Generation (The generation field
+/// in the list is monotonically increasing). That is, we can only access
+/// through exposed provenances before inttoptr executes. Note that if
+/// ActiveMask becomes zero again, UB must be triggered.
+class WildcardProvenance : public RefCountedBase<WildcardProvenance> {
+  APInt ActiveMask;
+  union {
+    uint64_t Generation;
+    uint64_t BaseAddress;
+  };
+
+  friend class Context;
+
+public:
+  explicit WildcardProvenance(uint64_t Generation)
+      : ActiveMask(), Generation(Generation) {}
+};
+
 /// Components of a pointer excluding address. They are shared between pointer
 /// values, as most of operations don't change the provenance.
 /// Each node will be assigned a unique, pointer-sized tag, which is used to
 /// represent the pointer in the memory.
+/// The provenance can be either concrete or wildcard, as determined by the
+/// cases below:
+///  Obj        Wildcard      State
+///  Null       Null          Invalid
+///  Null       NonNull       Wildcard
+///  NonNull    Null          Concrete
+///  NonNull    NonNull       Wildcard (associated with a specific MO)
 class Provenance : public RefCountedBase<Provenance> {
   // TODO: store reference to the provenance of the pointer it is derived from
 
   // The underlying memory object. It can be null for invalid or dangling
-  // pointers.
+  // pointers. Besides, for pointers with wildcard provenance, it can be null
+  // until the memory object is resolved by gep inbounds.
   IntrusiveRefCntPtr<MemoryObject> Obj;
 
   // A tag is a randomly generated unique identifier to recover the provenance
@@ -120,9 +194,10 @@ class Provenance : public RefCountedBase<Provenance> {
   // type, in bits. It may produce false negatives in some corner cases. But in
   // real practice the false negative rate should be negligible.
   // A zero tag is invalid.
-  // TODO: we need a special tag for wildcard provenance, which is introduced by
-  // inttoptr.
   APInt Tag;
+
+  // Null if it is concrete.
+  IntrusiveRefCntPtr<WildcardProvenance> Wildcard;
 
   // TODO: modeling nofree
   // TODO: modeling captures
@@ -136,7 +211,9 @@ class Provenance : public RefCountedBase<Provenance> {
 public:
   Provenance(IntrusiveRefCntPtr<MemoryObject> Obj) : Obj(std::move(Obj)) {}
   static IntrusiveRefCntPtr<Provenance> nullary();
+  IntrusiveRefCntPtr<Provenance> getWithKnownMemoryObject(MemoryObject &Obj);
   MemoryObject *getMemoryObject() const { return Obj.get(); }
+  bool isWildcard() const { return Wildcard != nullptr; }
 };
 
 class Pointer {
@@ -156,12 +233,60 @@ public:
   Pointer getWithNewAddr(const APInt &NewAddr) const {
     return Pointer(Prov, NewAddr);
   }
+  Pointer getWithNewProvenance(IntrusiveRefCntPtr<Provenance> NewProv) const {
+    return Pointer(NewProv, Address);
+  }
   static AnyValue null(unsigned AS, const DataLayout &DL);
   bool isNullPtr(unsigned AS, const DataLayout &DL) const;
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
   Provenance &provenance() const { return *Prov; }
-  MemoryObject *getMemoryObject() const { return Prov->getMemoryObject(); }
+};
+
+/// Represents a scalar byte value. If the value is not byte-sized, the high
+/// bits are zero-padded.
+class ByteValue {
+  // The byte order is endianness-dependent.
+  std::vector<Byte> Val;
+  uint32_t BitWidth : 31;
+  uint32_t IsLittleEndian : 1;
+
+public:
+  ByteValue(const APInt &V, bool IsLittleEndian);
+  ByteValue(uint32_t BitWidth, ArrayRef<Byte> Val, bool IsLittleEndian,
+            bool ImplicitClearHighBits = false)
+      : ByteValue(BitWidth, std::vector<Byte>(Val), IsLittleEndian,
+                  ImplicitClearHighBits) {}
+  ByteValue(uint32_t BitWidth, std::vector<Byte> Val, bool IsLittleEndian,
+            bool ImplicitClearHighBits = false)
+      : Val(std::move(Val)), BitWidth(BitWidth),
+        IsLittleEndian(IsLittleEndian) {
+    if (ImplicitClearHighBits && (BitWidth & 7) != 0) {
+      uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+      if (IsLittleEndian)
+        this->Val.back().zeroBits(Mask);
+      else
+        this->Val.front().zeroBits(Mask);
+    }
+    assert(((BitWidth & 7) == 0 ||
+            ((IsLittleEndian ? this->Val.back() : this->Val.front())
+                 .areHighBitsZExtd(BitWidth & 7))) &&
+           "The caller is responsible to zero high bits for non-byte-sized "
+           "values.");
+  }
+  ByteValue(const ByteValue &) = default;
+  ByteValue(ByteValue &&) = default;
+  ByteValue &operator=(const ByteValue &) = default;
+  ByteValue &operator=(ByteValue &&) = default;
+  ~ByteValue() = default;
+
+  static ByteValue zero(uint32_t BitWidth, bool IsLittleEndian);
+  static ByteValue poison(uint32_t BitWidth, bool IsLittleEndian);
+
+  uint32_t getBitWidth() const { return BitWidth; }
+  ArrayRef<Byte> bytes() const { return Val; }
+  MutableArrayRef<Byte> mutableBytes() { return Val; }
+  void print(Context &Ctx, raw_ostream &OS) const;
 };
 
 // Value representation for actual values of LLVM values.
@@ -172,6 +297,7 @@ class [[nodiscard]] AnyValue {
     APInt IntVal;
     APFloat FloatVal;
     Pointer PtrVal;
+    ByteValue ByteVal;
     std::vector<AnyValue> AggVal;
   };
 
@@ -184,6 +310,7 @@ public:
   AnyValue(APInt Val) : Kind(StorageKind::Integer), IntVal(std::move(Val)) {}
   AnyValue(APFloat Val) : Kind(StorageKind::Float), FloatVal(std::move(Val)) {}
   AnyValue(Pointer Val) : Kind(StorageKind::Pointer), PtrVal(std::move(Val)) {}
+  AnyValue(ByteValue Val) : Kind(StorageKind::Byte), ByteVal(std::move(Val)) {}
   AnyValue(std::vector<AnyValue> Val)
       : Kind(StorageKind::Aggregate), AggVal(std::move(Val)) {}
   AnyValue(const AnyValue &Other);
@@ -192,7 +319,7 @@ public:
   AnyValue &operator=(AnyValue &&);
   ~AnyValue() { destroy(); }
 
-  void print(raw_ostream &OS) const;
+  void print(Context &Ctx, raw_ostream &OS) const;
 
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
   static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
@@ -205,7 +332,29 @@ public:
   bool isInteger() const { return Kind == StorageKind::Integer; }
   bool isFloat() const { return Kind == StorageKind::Float; }
   bool isPointer() const { return Kind == StorageKind::Pointer; }
+  bool isByte() const { return Kind == StorageKind::Byte; }
   bool isAggregate() const { return Kind == StorageKind::Aggregate; }
+
+  bool isCompatibleWith(Type *Ty) const {
+    switch (Kind) {
+    case StorageKind::None:
+      return Ty->isVoidTy();
+    case StorageKind::Poison:
+      return Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy();
+    case StorageKind::Integer:
+      return Ty->isIntegerTy();
+    case StorageKind::Float:
+      return Ty->isFloatingPointTy();
+    case StorageKind::Pointer:
+      return Ty->isPointerTy();
+    case StorageKind::Byte:
+      return Ty->isByteTy();
+    // We don't check elements recursively.
+    case StorageKind::Aggregate:
+      return Ty->isAggregateType() || Ty->isVectorTy();
+    }
+    llvm_unreachable("Unhandled storage kind.");
+  }
 
   const APInt &asInteger() const {
     assert(Kind == StorageKind::Integer && "Expect an integer value");
@@ -220,6 +369,16 @@ public:
   const Pointer &asPointer() const {
     assert(Kind == StorageKind::Pointer && "Expect a pointer value");
     return PtrVal;
+  }
+
+  const ByteValue &asByte() const {
+    assert(Kind == StorageKind::Byte && "Expect a byte value");
+    return ByteVal;
+  }
+
+  ByteValue &asMutableByte() {
+    assert(Kind == StorageKind::Byte && "Expect a byte value");
+    return ByteVal;
   }
 
   const std::vector<AnyValue> &asAggregate() const {
@@ -249,9 +408,62 @@ public:
   }
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const AnyValue &V) {
-  V.print(OS);
+class AnyValuePrinter {
+  Context &Ctx;
+  raw_ostream &OS;
+
+public:
+  AnyValuePrinter(Context &Ctx, raw_ostream &OS) : Ctx(Ctx), OS(OS) {}
+  AnyValuePrinter &operator<<(const AnyValue &V) {
+    V.print(Ctx, OS);
+    return *this;
+  }
+  template <typename T> AnyValuePrinter &operator<<(const T &Val) {
+    OS << Val;
+    return *this;
+  }
+  operator raw_ostream &() { return OS; }
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const Pointer &P) {
+  P.print(OS);
   return OS;
+}
+
+inline AnyValue addNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  APInt Res = LHS + RHS;
+  if (HasNUW && Res.ult(RHS))
+    return AnyValue::poison();
+  if (HasNSW && LHS.isNonNegative() == RHS.isNonNegative() &&
+      LHS.isNonNegative() != Res.isNonNegative())
+    return AnyValue::poison();
+  return Res;
+}
+
+inline AnyValue subNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  APInt Res = LHS - RHS;
+  if (HasNUW && Res.ugt(LHS))
+    return AnyValue::poison();
+  if (HasNSW && LHS.isNonNegative() != RHS.isNonNegative() &&
+      LHS.isNonNegative() != Res.isNonNegative())
+    return AnyValue::poison();
+  return Res;
+}
+
+inline AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  bool Overflow = false;
+  APInt Res = LHS.smul_ov(RHS, Overflow);
+  if (HasNSW && Overflow)
+    return AnyValue::poison();
+  if (HasNUW) {
+    (void)LHS.umul_ov(RHS, Overflow);
+    if (Overflow)
+      return AnyValue::poison();
+  }
+  return Res;
 }
 
 } // namespace llvm::ubi

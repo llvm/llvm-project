@@ -23,7 +23,7 @@ define <2 x i256> @fptoui_sat_v2i256(<2 x float> %x) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[FP_TO_I_CLEANUP1:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE2:%.*]]
 ; CHECK:       fp-to-i-if-check.saturate2:
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp uge i32 [[BIASED_EXP7]], 383
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp uge i32 [[BIASED_EXP7]], 255
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[FP_TO_I_IF_SATURATE3:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE4:%.*]]
 ; CHECK:       fp-to-i-if-saturate3:
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP1]]
@@ -58,7 +58,7 @@ define <2 x i256> @fptoui_sat_v2i256(<2 x float> %x) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = or i1 [[TMP23]], [[TMP24]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE:%.*]]
 ; CHECK:       fp-to-i-if-check.saturate:
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp uge i32 [[BIASED_EXP]], 383
+; CHECK-NEXT:    [[TMP26:%.*]] = icmp uge i32 [[BIASED_EXP]], 255
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[FP_TO_I_IF_SATURATE:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
 ; CHECK:       fp-to-i-if-saturate:
 ; CHECK-NEXT:    br label [[FP_TO_I_CLEANUP]]
@@ -102,7 +102,7 @@ define <2 x i256> @fptosi_sat_v2i256(<2 x float> %x) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[EXP_IS_NEGATIVE10]], [[IS_NAN11]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[FP_TO_I_CLEANUP1:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE2:%.*]]
 ; CHECK:       fp-to-i-if-check.saturate2:
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp uge i32 [[BIASED_EXP8]], 382
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp uge i32 [[BIASED_EXP8]], 255
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[FP_TO_I_IF_SATURATE3:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE4:%.*]]
 ; CHECK:       fp-to-i-if-saturate3:
 ; CHECK-NEXT:    [[SATURATED12:%.*]] = select i1 [[TMP3]], i256 57896044618658097711785492504343953926634992332820282019728792003956564819967, i256 -57896044618658097711785492504343953926634992332820282019728792003956564819968
@@ -140,7 +140,7 @@ define <2 x i256> @fptosi_sat_v2i256(<2 x float> %x) {
 ; CHECK-NEXT:    [[TMP25:%.*]] = or i1 [[EXP_IS_NEGATIVE]], [[IS_NAN]]
 ; CHECK-NEXT:    br i1 [[TMP25]], label [[FP_TO_I_CLEANUP:%.*]], label [[FP_TO_I_IF_CHECK_SATURATE:%.*]]
 ; CHECK:       fp-to-i-if-check.saturate:
-; CHECK-NEXT:    [[TMP26:%.*]] = icmp uge i32 [[BIASED_EXP]], 382
+; CHECK-NEXT:    [[TMP26:%.*]] = icmp uge i32 [[BIASED_EXP]], 255
 ; CHECK-NEXT:    br i1 [[TMP26]], label [[FP_TO_I_IF_SATURATE:%.*]], label [[FP_TO_I_IF_CHECK_EXP_SIZE:%.*]]
 ; CHECK:       fp-to-i-if-saturate:
 ; CHECK-NEXT:    [[SATURATED:%.*]] = select i1 [[TMP22]], i256 57896044618658097711785492504343953926634992332820282019728792003956564819967, i256 -57896044618658097711785492504343953926634992332820282019728792003956564819968

@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
@@ -53,30 +53,28 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:b9c8ea74685ea46c86594428c41a1ba95bc6d33b28183c0ddac64414344950fd'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
         include:
           - arch: aarch64
-            libc: libc6-dev-arm64-cross
-            libcpp: libstdc++6-arm64-cross
             target_triple: aarch64-linux-gnu
             gcc_arch: aarch64-linux-gnu
           - arch: riscv64
-            libc: libc6-dev-riscv64-cross
-            libcpp: libstdc++6-riscv64-cross
             target_triple: riscv64-linux-gnu
             gcc_arch: riscv64-linux-gnu
           - arch: ppc64le
-            libc: libc6-dev-ppc64el-cross
-            libcpp: libstdc++6-ppc64el-cross
             target_triple: powerpc64le-linux-gnu
             gcc_arch: powerpc64le-linux-gnu
+          - arch: armhf
+            target_triple: arm-linux-gnueabihf
+            gcc_arch: arm-linux-gnueabihf
+            gcc_ver: -12
 
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 
@@ -96,6 +94,7 @@ jobs:
             -DCMAKE_C_COMPILER=clang-23 \
             -DCMAKE_CXX_COMPILER=clang++-23 \
             -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_USE_LINKER=lld-23 \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
             -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
 
@@ -109,8 +108,8 @@ jobs:
         run: |
           cmake -B build/gcc -S runtimes -G Ninja \
             -DLLVM_ENABLE_RUNTIMES=libc \
-            -DCMAKE_C_COMPILER=${{ matrix.target_triple }}-gcc \
-            -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++ \
+            -DCMAKE_C_COMPILER=${{ matrix.target_triple }}-gcc${{ matrix.gcc_ver }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.target_triple }}-g++${{ matrix.gcc_ver }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple }} \
             -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
@@ -127,7 +126,7 @@ jobs:
     timeout-minutes: 20
     runs-on: ubuntu-24.04
     container:
-      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
+      image: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:b9c8ea74685ea46c86594428c41a1ba95bc6d33b28183c0ddac64414344950fd'
     strategy:
       fail-fast: false # If one arch fails, let the other finish
       matrix:
@@ -150,7 +149,7 @@ jobs:
 
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
 

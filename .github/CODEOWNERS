@@ -9,7 +9,7 @@
 #
 # This is independent of LLVM's own "maintainer" concept.
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
-# Maintainers.* files in the the respective subproject directories.
+# Maintainers.md files in the the respective subproject directories.
 
 /libc/ @llvm/reviewers-libc
 /libcxx/ @llvm/reviewers-libcxx
@@ -161,6 +161,9 @@
 /mlir/**/*shard* @fschlimb
 /mlir/**/*Shard* @fschlimb
 
+# MLIR WasmSSA Dialect
+/mlir/**/WasmSSA* @flemairen6 @lforg37
+
 # MLIR Python Bindings
 /mlir/test/python/ @ftynse @makslevental @stellaraccident @rolfmorel
 /mlir/python/ @ftynse @makslevental @stellaraccident @rolfmorel
@@ -178,7 +181,8 @@
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk
 
 # Bazel build system.
-/utils/bazel/ @rupprecht @keith @aaronmondal
+/utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
+/utils/bazel/llvm-project-overlay/libc/ @labath @kaladron
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida
@@ -210,3 +214,8 @@
 # AMDGPU Memory Model
 /llvm/lib/Target/AMDGPU/SIMemoryLegalizer* @Pierre-vh @ritter-x2a
 /llvm/lib/Target/AMDGPU/SIInsertWaitcnts* @Pierre-vh @ritter-x2a
+
+# Clang-Tidy tool
+/clang-tools-extra/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/test/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/docs/clang-tidy/ @vbvictor @zeyi2

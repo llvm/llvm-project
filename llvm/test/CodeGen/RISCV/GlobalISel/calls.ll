@@ -11,8 +11,6 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    sw a0, 0(sp)
-; CHECK-NEXT:    sw a0, 4(sp)
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    mv a3, a0
@@ -20,6 +18,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; CHECK-NEXT:    mv a5, a0
 ; CHECK-NEXT:    mv a6, a0
 ; CHECK-NEXT:    mv a7, a0
+; CHECK-NEXT:    sw a0, 0(sp)
+; CHECK-NEXT:    sw a0, 4(sp)
 ; CHECK-NEXT:    call external_many_args
 ; CHECK-NEXT:    mv a0, s0
 ; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -33,8 +33,6 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
-; RV64I-NEXT:    sd a0, 0(sp)
-; RV64I-NEXT:    sd a0, 8(sp)
 ; RV64I-NEXT:    mv a1, a0
 ; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    mv a3, a0
@@ -42,6 +40,8 @@ define i32 @test_call_external_many_args(i32 %a) nounwind {
 ; RV64I-NEXT:    mv a5, a0
 ; RV64I-NEXT:    mv a6, a0
 ; RV64I-NEXT:    mv a7, a0
+; RV64I-NEXT:    sd a0, 0(sp)
+; RV64I-NEXT:    sd a0, 8(sp)
 ; RV64I-NEXT:    call external_many_args
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload

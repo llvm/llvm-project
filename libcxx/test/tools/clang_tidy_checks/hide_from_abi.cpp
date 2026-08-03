@@ -7,7 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-tidy/ClangTidyCheck.h"
-#include "clang-tidy/ClangTidyModuleRegistry.h"
+// TODO(LLVM 25): Remove this compatibility check when LLVM 25 branches.
+#if CLANG_VERSION_MAJOR > 23
+#  include "clang-tidy/ClangTidyModule.h"
+#else
+#  include "clang-tidy/ClangTidyModuleRegistry.h"
+#endif
 
 #include "hide_from_abi.hpp"
 
@@ -78,9 +83,6 @@ void hide_from_abi::registerMatchers(clang::ast_matchers::MatchFinder* finder) {
           isDefinition())
           .bind("hide_from_abi_on_member_function"),
       this);
-
-  finder->addMatcher(
-      cxxMethodDecl(has_hide_from_abi_attr, on_trivial).bind("hide_from_abi_on_defaulted_smf_in_trivial_class"), this);
 }
 
 void hide_from_abi::check(const clang::ast_matchers::MatchFinder::MatchResult& result) {
@@ -98,13 +100,6 @@ void hide_from_abi::check(const clang::ast_matchers::MatchFinder::MatchResult& r
   if (const auto* call = result.Nodes.getNodeAs<clang::CXXMethodDecl>("hide_from_abi_on_member_function");
       call != nullptr) {
     diag(call->getLocation(), "_LIBCPP_HIDE_FROM_ABI or _LIBCPP_HIDE_FROM_ABI_VIRTUAL is missing");
-  }
-
-  if (const auto* call =
-          result.Nodes.getNodeAs<clang::CXXMethodDecl>("hide_from_abi_on_defaulted_smf_in_trivial_class");
-      call != nullptr) {
-    diag(call->getLocation(),
-         "_LIBCPP_HIDE_FROM_ABI should not be used for special member functions in trivial classes");
   }
 }
 } // namespace libcpp

@@ -456,3 +456,40 @@ bb1:
 !91885 = !{!91886, !91887}
 !91886 = !{i32 10000, i64 86427, i32 1}
 !91887 = !{i32 100000, i64 86427, i32 1}
+
+; // -----
+
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = distinct !{!"sp"}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @distinct_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = distinct !{!"sp"}
+
+; // -----
+
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = !{!{{[0-9]+}}}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @nested_distinct_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = !{!1}
+!1 = distinct !{!"sp"}
+
+; // -----
+
+; CHECK: error: unsupported metadata: !{{[0-9]+}} = distinct !{!{{[0-9]+}}}
+declare i32 @llvm.read_register.i32(metadata)
+
+define i32 @cyclic_metadata_as_value() {
+  %r = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r
+}
+
+!0 = distinct !{!0}

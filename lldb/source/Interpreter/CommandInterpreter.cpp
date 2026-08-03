@@ -51,6 +51,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Telemetry.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -59,6 +60,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include "lldb/Host/Config.h"
 #include "lldb/lldb-forward.h"
@@ -435,6 +437,10 @@ void CommandInterpreter::Initialize() {
   cmd_obj_sp = GetCommandSPExact("target modules");
   if (cmd_obj_sp)
     AddAlias("image", cmd_obj_sp);
+
+  cmd_obj_sp = GetCommandSPExact("diagnostics report");
+  if (cmd_obj_sp)
+    AddAlias("bugreport", cmd_obj_sp);
 
   alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 
@@ -1852,7 +1858,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
       (alias_name_str != cmd_args.GetArgumentAtIndex(0)))
     cmd_args.Unshift(alias_name_str);
 
-  result_str.Printf("%s", alias_cmd_obj->GetCommandName().str().c_str());
+  result_str.PutCString(alias_cmd_obj->GetCommandName());
 
   if (!option_arg_vector_sp.get()) {
     alias_result = std::string(result_str.GetString());
@@ -1875,10 +1881,10 @@ CommandObject *CommandInterpreter::BuildAliasResult(
       continue;
 
     if (value_type != OptionParser::eOptionalArgument)
-      result_str.Printf(" ");
+      result_str.PutCString(" ");
     int index = GetOptionArgumentPosition(value.c_str());
     if (index == 0)
-      result_str.Printf("%s", value.c_str());
+      result_str.PutCString(value);
     else if (static_cast<size_t>(index) >= cmd_args.GetArgumentCount()) {
 
       result.AppendErrorWithFormat("Not enough arguments provided; you "
@@ -1910,7 +1916,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
             strlen(cmd_args.GetArgumentAtIndex(index)) + len_fudge);
       }
       if (quote_char == '\0')
-        result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
+        result_str.PutCString(cmd_args.GetArgumentAtIndex(index));
       else
         result_str.Printf("%c%s%c", quote_char, entry.c_str(), quote_char);
     }
@@ -1997,7 +2003,22 @@ Status CommandInterpreter::PreprocessToken(std::string &expr_str) {
       expr_result_valobj_sp =
           expr_result_valobj_sp->GetQualifiedRepresentationIfAvailable(
               expr_result_valobj_sp->GetDynamicValueType(), true);
-    if (expr_result_valobj_sp->ResolveValue(scalar)) {
+    // For array-typed results, C decays the array to a pointer to its first
+    // element. ResolveValue() can't produce a scalar for an aggregate, and the
+    // expression evaluator materializes arrays into a temporary result buffer
+    // whose address is not the array's real location. So decay explicitly here:
+    // use the address of the array object instead of its (non-existent) scalar
+    // value.
+    if (expr_result_valobj_sp &&
+        expr_result_valobj_sp->GetCompilerType().IsArrayType()) {
+      lldb::addr_t addr =
+          expr_result_valobj_sp->GetAddressOf(/*scalar_is_load_address=*/true)
+              .address;
+      if (addr != LLDB_INVALID_ADDRESS)
+        scalar = addr;
+    }
+
+    if (scalar.IsValid() || expr_result_valobj_sp->ResolveValue(scalar)) {
 
       StreamString value_strm;
       const bool show_type = false;
@@ -2707,8 +2728,8 @@ void CommandInterpreter::SourceInitFileHome(CommandReturnObject &result,
     GetHomeInitFile(init_file);
 
   if (!m_skip_app_init_files) {
-    llvm::StringRef program_name =
-        HostInfo::GetProgramFileSpec().GetFilename().GetStringRef();
+    FileSpec program_file_spec = HostInfo::GetProgramFileSpec();
+    llvm::StringRef program_name = program_file_spec.GetFilename();
     FileSpec program_init_file;
     GetHomeInitFile(program_init_file, program_name);
     if (FileSystem::Instance().Exists(program_init_file))
@@ -2952,9 +2973,9 @@ void CommandInterpreter::HandleCommandsFromFile(
     FileSpec &cmd_file, const CommandInterpreterRunOptions &options,
     CommandReturnObject &result) {
   if (!FileSystem::Instance().Exists(cmd_file)) {
-    result.AppendErrorWithFormat(
-        "Error reading commands from file %s - file not found",
-        cmd_file.GetFilename().AsCString("<Unknown>"));
+    result.AppendErrorWithFormatv(
+        "Error reading commands from file {0} - file not found",
+        cmd_file.GetFilename().nonEmptyOr("<Unknown>"));
     return;
   }
 
@@ -2962,7 +2983,6 @@ void CommandInterpreter::HandleCommandsFromFile(
   auto input_file_up =
       FileSystem::Instance().Open(cmd_file, File::eOpenOptionReadOnly);
   if (!input_file_up) {
-    std::string error = llvm::toString(input_file_up.takeError());
     result.AppendErrorWithFormatv(
         "error: an error occurred read file '{0}': {1}\n", cmd_file_path,
         llvm::fmt_consume(input_file_up.takeError()));
@@ -3263,8 +3283,6 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                                                 bool search_user_commands,
                                                 bool search_alias_commands,
                                                 bool search_user_mw_commands) {
-  CommandObject::CommandMap::const_iterator pos;
-
   if (search_builtin_commands)
     FindCommandsForApropos(search_word, commands_found, commands_help,
                            m_command_dict);
@@ -3284,9 +3302,15 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
 
 ExecutionContext
 CommandInterpreter::GetExecutionContext(bool adopt_dummy_target) const {
-  return (m_overriden_exe_contexts.empty() || !adopt_dummy_target)
-             ? m_debugger.GetSelectedExecutionContext(adopt_dummy_target)
-             : m_overriden_exe_contexts.top();
+  if (m_overriden_exe_contexts.empty())
+    return m_debugger.GetSelectedExecutionContext(adopt_dummy_target);
+
+  ExecutionContext candidate_context = m_overriden_exe_contexts.top();
+  Target *candidate_target = candidate_context.GetTargetPtr();
+  if (!adopt_dummy_target && candidate_target &&
+      candidate_target->IsDummyTarget())
+    return ExecutionContext();
+  return candidate_context;
 }
 
 void CommandInterpreter::OverrideExecutionContext(
@@ -3361,7 +3385,7 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   LockedStreamFile stream_file = stream->Lock();
   if (had_output &&
       INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping command output"))
-    stream_file.Printf("\n... Interrupted.\n");
+    stream_file.PutCString("\n... Interrupted.\n");
   stream_file.Flush();
 }
 
@@ -3745,7 +3769,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
     std::string alias_result;
     cmd_obj =
         BuildAliasResult(full_name, scratch_command, alias_result, result);
-    revised_command_line.Printf("%s", alias_result.c_str());
+    revised_command_line.PutCString(alias_result);
     if (cmd_obj) {
       wants_raw_input = cmd_obj->WantsRawCommandString();
     }
@@ -3766,10 +3790,10 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       } else {
         if (cmd_obj) {
           llvm::StringRef cmd_name = cmd_obj->GetCommandName();
-          revised_command_line.Printf("%s", cmd_name.str().c_str());
+          revised_command_line.PutCString(cmd_name);
           wants_raw_input = cmd_obj->WantsRawCommandString();
         } else {
-          revised_command_line.Printf("%s", next_word.c_str());
+          revised_command_line.PutCString(next_word);
         }
       }
     } else {
@@ -3781,7 +3805,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
           // restart rather than append to the revised_command_line.
           llvm::StringRef sub_cmd_name = sub_cmd_obj->GetCommandName();
           revised_command_line.Clear();
-          revised_command_line.Printf("%s", sub_cmd_name.str().c_str());
+          revised_command_line.PutCString(sub_cmd_name);
           cmd_obj = sub_cmd_obj;
           wants_raw_input = cmd_obj->WantsRawCommandString();
         } else {

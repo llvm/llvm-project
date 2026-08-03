@@ -454,6 +454,34 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   if (DefMBB != CopyMI.getParent() || !SrcQ.isKill())
     return false;
 
+  MachineBasicBlock *MBB = DefMBB;
+  MachineBasicBlock::iterator MII;
+  if (SrcVNI->isPHIDef())
+    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
+  else {
+    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
+    assert(DefMI && "Defining instruction disappeared");
+    MII = DefMI;
+    ++MII;
+  }
+
+  // When the def is a PHI, the store may be inserted after the prologue
+  // instructions. In that case, the segment may need to be extended to the
+  // store (see below). Do not hoist if there is an interference between the end
+  // of the segment and the insertion point.
+  if (SrcVNI->isPHIDef() && Matrix && VRM.hasPhys(SrcReg)) {
+    // Here, MII points to the instruction before which the store will be
+    // inserted. Using that instruction's base index is a safe upper bound for
+    // the interference check.
+    SlotIndex InsertIdx = MII == MBB->end()
+                              ? LIS.getMBBEndIdx(MBB)
+                              : LIS.getInstructionIndex(*MII).getBaseIndex();
+    if (SrcQ.endPoint() < InsertIdx &&
+        Matrix->checkInterference(SrcQ.endPoint(), InsertIdx,
+                                  VRM.getPhys(SrcReg)))
+      return false;
+  }
+
   // Conservatively extend the stack slot range to the range of the original
   // value. We may be able to do better with stack slot coloring by being more
   // careful here.
@@ -468,16 +496,6 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   // any later spills of the same value.
   eliminateRedundantSpills(SrcLI, SrcVNI);
 
-  MachineBasicBlock *MBB = LIS.getMBBFromIndex(SrcVNI->def);
-  MachineBasicBlock::iterator MII;
-  if (SrcVNI->isPHIDef())
-    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
-  else {
-    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
-    assert(DefMI && "Defining instruction disappeared");
-    MII = DefMI;
-    ++MII;
-  }
   MachineInstrSpan MIS(MII, MBB);
   // Insert spill without kill flag immediately after def.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
@@ -1128,6 +1146,20 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
 
       if (NeedMatrixReassign)
         Matrix->assign(LI, PhysReg);
+
+      Register OrigReg = VRM.getOriginal(CopyDstReg);
+      if (OrigReg != CopyDstReg) {
+        // Extend the original LI to cover the same range so that the
+        // sub-interval invariant holds: the original must be live wherever
+        // any of its children are live.  Without this, reMaterializeFor()
+        // can query OrigLI at an early-clobber slot that falls inside
+        // [CopyIdx, FoldIdx) and get a null VNI, triggering an assertion.
+        assert(LIS.hasInterval(OrigReg) && "OrigReg should have live interval");
+        LiveInterval &OrigLI = LIS.getInterval(OrigReg);
+        if (VNInfo *OrigVNI = OrigLI.getVNInfoAt(FoldIdx.getRegSlot()))
+          OrigLI.addSegment(
+              LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), OrigVNI));
+      }
     }
   }
   // Update the call info.

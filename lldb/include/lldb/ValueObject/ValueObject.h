@@ -454,14 +454,14 @@ public:
   /// Update an existing integer ValueObject with a new integer value. If
   /// can_update_var is true, will allow updating objects associated with
   /// program variables; otherwise not.
-  void SetValueFromInteger(const llvm::APInt &value, Status &error,
-                           bool can_update_var = true);
+  llvm::Error SetValueFromInteger(const llvm::APInt &value,
+                                  bool can_update_var = true);
 
   /// Update an existing integer ValueObject with an integer value created
   /// frome 'new_val_sp'. If can_update_var is true, will allow updating objects
   /// associated with program variables; otherwise not.
-  void SetValueFromInteger(lldb::ValueObjectSP new_val_sp, Status &error,
-                           bool can_update_var = true);
+  llvm::Error SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
+                                  bool can_update_var = true);
 
   virtual bool SetValueFromCString(const char *value_str, Status &error);
 
@@ -851,6 +851,14 @@ public:
 
   virtual bool GetIsConstant() const { return m_update_point.IsConstant(); }
 
+  /// Returns false when this value cannot be modified through
+  /// SetValueFromCString() or SetData() because it exists in the
+  /// target but has no writable storage, e.g., a constant or a
+  /// computed variable value.  A true result does not guarantee a
+  /// write will succeed; other runtime conditions can still cause
+  /// SetValue* to fail.
+  virtual bool CanSetValue() { return !GetIsConstant(); }
+
   bool NeedsUpdating() {
     const bool accept_invalid_exe_ctx =
         (CanUpdateWithInvalidExecutionContext() == eLazyBoolYes);
@@ -904,9 +912,22 @@ public:
     m_synthetic_children_sp = synth_sp;
   }
 
+  void SetSyntheticChildrenOverride(const lldb::SyntheticChildrenSP &synth_sp) {
+    if (synth_sp.get() == m_synthetic_children_override_sp.get())
+      return;
+    ClearUserVisibleData(eClearUserVisibleDataItemsSyntheticChildren);
+    m_synthetic_children_override_sp = synth_sp;
+  }
+
   lldb::SyntheticChildrenSP GetSyntheticChildren() {
     UpdateFormatsIfNeeded();
+    if (m_synthetic_children_override_sp)
+      return m_synthetic_children_override_sp;
     return m_synthetic_children_sp;
+  }
+
+  virtual SyntheticChildrenFrontEnd *GetSyntheticChildrenFrontEnd() {
+    return nullptr;
   }
 
   // Use GetParent for display purposes, but if you want to tell the parent to
@@ -973,6 +994,8 @@ public:
   llvm::ArrayRef<uint8_t> GetLocalBuffer() const;
 
   lldb::ValueObjectSP CheckValueObjectOwnership(ValueObject *child);
+
+  virtual void *GetImplementation() { return nullptr; }
 
 protected:
   typedef ClusterManager<ValueObject> ValueObjectManager;
@@ -1108,7 +1131,13 @@ protected:
   uint32_t m_last_format_mgr_revision = 0;
   lldb::TypeSummaryImplSP m_type_summary_sp;
   lldb::TypeFormatImplSP m_type_format_sp;
+
+  /// As determined by `DataVisualization` - may be overridden
   lldb::SyntheticChildrenSP m_synthetic_children_sp;
+
+  /// Sticky override of `m_synthetic_children_sp`
+  lldb::SyntheticChildrenSP m_synthetic_children_override_sp;
+
   ProcessModID m_user_id_of_forced_summary;
   AddressType m_address_type_of_ptr_or_ref_children = eAddressTypeInvalid;
 

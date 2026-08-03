@@ -103,6 +103,15 @@ llvm.func @fabs_test(%arg0: f32, %arg1: vector<8xf32>) {
   llvm.return
 }
 
+// CHECK-LABEL: @arithmetic_fence_test
+llvm.func @arithmetic_fence_test(%arg0: f32, %arg1: vector<8xf32>) {
+  // CHECK: call float @llvm.arithmetic.fence.f32
+  "llvm.intr.arithmetic.fence"(%arg0) : (f32) -> f32
+  // CHECK: call <8 x float> @llvm.arithmetic.fence.v8f32
+  "llvm.intr.arithmetic.fence"(%arg1) : (vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @sqrt_test
 llvm.func @sqrt_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.sqrt.f32
@@ -566,6 +575,9 @@ llvm.func @masked_load_store_intrinsics(%A: !llvm.ptr, %mask: vector<7xi1>) {
   // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr align 1 %0, <7 x i1> %{{.*}})
   llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32} :
     vector<7xf32>, vector<7xi1> into !llvm.ptr
+  // CHECK: call void @llvm.masked.store.v7f32.p0(<7 x float> %{{.*}}, ptr align 1 %0, <7 x i1> %{{.*}}), !nontemporal !{{.*}}
+  llvm.intr.masked.store %b, %A, %mask { alignment = 1: i32, nontemporal} :
+    vector<7xf32>, vector<7xi1> into !llvm.ptr
   llvm.return
 }
 
@@ -584,22 +596,22 @@ llvm.func @masked_gather_scatter_intrinsics(%M: vector<7 x !llvm.ptr>, %mask: ve
 }
 
 // CHECK-LABEL: @masked_expand_compress_intrinsics
-llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthru: vector<7xf32>) {
-  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32(ptr %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
-  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthru)
+llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthrough: vector<7xf32>) {
+  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32.p0(ptr %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
+  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthrough)
     : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
-  // CHECK: call void @llvm.masked.compressstore.v7f32(<7 x float> %{{.*}}, ptr %{{.*}}, <7 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.compressstore.v7f32.p0(<7 x float> %{{.*}}, ptr %{{.*}}, <7 x i1> %{{.*}})
   "llvm.intr.masked.compressstore"(%0, %ptr, %mask)
     : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
   llvm.return
 }
 
 // CHECK-LABEL: @masked_expand_compress_intrinsics_with_alignment
-llvm.func @masked_expand_compress_intrinsics_with_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthru: vector<7xf32>) {
-  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32(ptr align 8 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
-  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthru) {arg_attrs = [{llvm.align = 8 : i32}, {}, {}]}
+llvm.func @masked_expand_compress_intrinsics_with_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthrough: vector<7xf32>) {
+  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32.p0(ptr align 8 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
+  %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthrough) {arg_attrs = [{llvm.align = 8 : i32}, {}, {}]}
     : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
-  // CHECK: call void @llvm.masked.compressstore.v7f32(<7 x float> %{{.*}}, ptr align 8 %{{.*}}, <7 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.compressstore.v7f32.p0(<7 x float> %{{.*}}, ptr align 8 %{{.*}}, <7 x i1> %{{.*}})
   "llvm.intr.masked.compressstore"(%0, %ptr, %mask) {arg_attrs = [{}, {llvm.align = 8 : i32}, {}]}
     : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
   llvm.return
@@ -816,7 +828,7 @@ llvm.func @coro_id() {
   %a = llvm.alloca %c x i8 : (i64) -> !llvm.ptr
   // CHECK: call token @llvm.coro.id
   %null = llvm.mlir.zero : !llvm.ptr
-  llvm.intr.coro.id %zero, %a, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
+  llvm.intr.coro.id %zero, %a, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   llvm.return
 }
 
@@ -824,9 +836,9 @@ llvm.func @coro_id() {
 llvm.func @coro_begin(%arg0: !llvm.ptr) {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
-  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
+  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   // CHECK: call ptr @llvm.coro.begin
-  llvm.intr.coro.begin %token, %arg0 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
+  llvm.intr.coro.begin %token, %arg0 : (token, !llvm.ptr) -> !llvm.ptr
   llvm.return
 }
 
@@ -851,7 +863,7 @@ llvm.func @coro_align() {
 // CHECK-LABEL: @coro_save
 llvm.func @coro_save(%arg0: !llvm.ptr) {
   // CHECK: call token @llvm.coro.save
-  %0 = llvm.intr.coro.save %arg0 : (!llvm.ptr) -> !llvm.token
+  %0 = llvm.intr.coro.save %arg0 : (!llvm.ptr) -> token
   llvm.return
 }
 
@@ -859,7 +871,7 @@ llvm.func @coro_save(%arg0: !llvm.ptr) {
 llvm.func @coro_suspend(%arg0 : i1) {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
-  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
+  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   // CHECK: call i8 @llvm.coro.suspend
   %0 = llvm.intr.coro.suspend %token, %arg0 : i8
   llvm.return
@@ -867,9 +879,9 @@ llvm.func @coro_suspend(%arg0 : i1) {
 
 // CHECK-LABEL: @coro_end
 llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
-  %none = llvm.mlir.none : !llvm.token
+  %none = llvm.mlir.none : token
   // CHECK: call void @llvm.coro.end
-  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> !llvm.void
+  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, token) -> !llvm.void
   llvm.return
 }
 
@@ -877,9 +889,9 @@ llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
 llvm.func @coro_free(%arg0 : !llvm.ptr) {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
-  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
+  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   // CHECK: call ptr @llvm.coro.free
-  %0 = llvm.intr.coro.free %token, %arg0 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
+  %0 = llvm.intr.coro.free %token, %arg0 : (token, !llvm.ptr) -> !llvm.ptr
   llvm.return
 }
 
@@ -1190,7 +1202,7 @@ llvm.func @vector_ptrmask(%p: vector<8 x !llvm.ptr>, %mask: vector<8 x i64>) -> 
 }
 
 // CHECK-LABEL: @experimental_constrained_fadd
-llvm.func @experimental_constrained_fadd(%s: f32, %v: vector<4 x f32>) {
+llvm.func @experimental_constrained_fadd(%s: f32, %v: vector<4 x f32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.fadd.f32(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1203,7 +1215,7 @@ llvm.func @experimental_constrained_fadd(%s: f32, %v: vector<4 x f32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_fsub
-llvm.func @experimental_constrained_fsub(%s: f32, %v: vector<4 x f32>) {
+llvm.func @experimental_constrained_fsub(%s: f32, %v: vector<4 x f32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.fsub.f32(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1216,7 +1228,7 @@ llvm.func @experimental_constrained_fsub(%s: f32, %v: vector<4 x f32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_fmul
-llvm.func @experimental_constrained_fmul(%s: f32, %v: vector<4 x f32>) {
+llvm.func @experimental_constrained_fmul(%s: f32, %v: vector<4 x f32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.fmul.f32(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1229,7 +1241,7 @@ llvm.func @experimental_constrained_fmul(%s: f32, %v: vector<4 x f32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_fdiv
-llvm.func @experimental_constrained_fdiv(%s: f32, %v: vector<4 x f32>) {
+llvm.func @experimental_constrained_fdiv(%s: f32, %v: vector<4 x f32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.fdiv.f32(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1242,7 +1254,7 @@ llvm.func @experimental_constrained_fdiv(%s: f32, %v: vector<4 x f32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_frem
-llvm.func @experimental_constrained_frem(%s: f32, %v: vector<4 x f32>) {
+llvm.func @experimental_constrained_frem(%s: f32, %v: vector<4 x f32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.frem.f32(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1255,7 +1267,7 @@ llvm.func @experimental_constrained_frem(%s: f32, %v: vector<4 x f32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_fma
-llvm.func @experimental_constrained_fma(%s: f32, %v: vector<4 x f32>) {
+llvm.func @experimental_constrained_fma(%s: f32, %v: vector<4 x f32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.fma.f32(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1268,7 +1280,7 @@ llvm.func @experimental_constrained_fma(%s: f32, %v: vector<4 x f32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_fmuladd
-llvm.func @experimental_constrained_fmuladd(%s: f32, %v: vector<4 x f32>) {
+llvm.func @experimental_constrained_fmuladd(%s: f32, %v: vector<4 x f32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.fmuladd.f32(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1281,7 +1293,7 @@ llvm.func @experimental_constrained_fmuladd(%s: f32, %v: vector<4 x f32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_uitofp
-llvm.func @experimental_constrained_uitofp(%s: i32, %v: vector<4 x i32>) {
+llvm.func @experimental_constrained_uitofp(%s: i32, %v: vector<4 x i32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.uitofp.f32.i32(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1310,7 +1322,7 @@ llvm.func @experimental_constrained_uitofp(%s: i32, %v: vector<4 x i32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_sitofp
-llvm.func @experimental_constrained_sitofp(%s: i32, %v: vector<4 x i32>) {
+llvm.func @experimental_constrained_sitofp(%s: i32, %v: vector<4 x i32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.sitofp.f32.i32(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1339,7 +1351,7 @@ llvm.func @experimental_constrained_sitofp(%s: i32, %v: vector<4 x i32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_fptrunc
-llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
+llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call float @llvm.experimental.constrained.fptrunc.f32.f64(
   // CHECK: metadata !"round.towardzero"
   // CHECK: metadata !"fpexcept.ignore"
@@ -1368,7 +1380,7 @@ llvm.func @experimental_constrained_fptrunc(%s: f64, %v: vector<4xf32>) {
 }
 
 // CHECK-LABEL: @experimental_constrained_fpext
-llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) {
+llvm.func @experimental_constrained_fpext(%s: f32, %v: vector<4xf32>) attributes { passthrough = ["strictfp"] } {
   // CHECK: call double @llvm.experimental.constrained.fpext.f64.f32(
   // CHECK: metadata !"fpexcept.ignore"
   %0 = llvm.intr.experimental.constrained.fpext %s ignore : f32 to f64
@@ -1414,13 +1426,13 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
-// CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
+// CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>)
 // CHECK-DAG: declare float @llvm.fmuladd.f32(float, float, float)
-// CHECK-DAG: declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
-// CHECK-DAG: declare void @llvm.prefetch.p0(ptr readonly captures(none), i32 immarg, i32 immarg, i32 immarg)
+// CHECK-DAG: declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>)
+// CHECK-DAG: declare void @llvm.prefetch.p0(ptr readonly captures(none), i32 immarg range(i32 0, 2), i32 immarg range(i32 0, 4), i32 immarg range(i32 0, 2))
 // CHECK-DAG: declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 // CHECK-DAG: declare float @llvm.exp.f32(float)
-// CHECK-DAG: declare <8 x float> @llvm.exp.v8f32(<8 x float>) #0
+// CHECK-DAG: declare <8 x float> @llvm.exp.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.exp2.f32(float)
 // CHECK-DAG: declare <8 x float> @llvm.exp2.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.exp10.f32(float)
@@ -1430,19 +1442,19 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare { float, i32 } @llvm.frexp.f32.i32(float)
 // CHECK-DAG: declare { <8 x float>, i32 } @llvm.frexp.v8f32.i32(<8 x float>)
 // CHECK-DAG: declare float @llvm.log.f32(float)
-// CHECK-DAG: declare <8 x float> @llvm.log.v8f32(<8 x float>) #0
+// CHECK-DAG: declare <8 x float> @llvm.log.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.log10.f32(float)
-// CHECK-DAG: declare <8 x float> @llvm.log10.v8f32(<8 x float>) #0
+// CHECK-DAG: declare <8 x float> @llvm.log10.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.log2.f32(float)
-// CHECK-DAG: declare <8 x float> @llvm.log2.v8f32(<8 x float>) #0
+// CHECK-DAG: declare <8 x float> @llvm.log2.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.fabs.f32(float)
-// CHECK-DAG: declare <8 x float> @llvm.fabs.v8f32(<8 x float>) #0
+// CHECK-DAG: declare <8 x float> @llvm.fabs.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.sqrt.f32(float)
-// CHECK-DAG: declare <8 x float> @llvm.sqrt.v8f32(<8 x float>) #0
+// CHECK-DAG: declare <8 x float> @llvm.sqrt.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.ceil.f32(float)
-// CHECK-DAG: declare <8 x float> @llvm.ceil.v8f32(<8 x float>) #0
+// CHECK-DAG: declare <8 x float> @llvm.ceil.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.cos.f32(float)
-// CHECK-DAG: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
+// CHECK-DAG: declare <8 x float> @llvm.cos.v8f32(<8 x float>)
 // CHECK-DAG: declare { float, float } @llvm.sincos.f32(float)
 // CHECK-DAG: declare { <8 x float>, <8 x float> } @llvm.sincos.v8f32(<8 x float>)
 // CHECK-DAG: declare float @llvm.copysign.f32(float, float)
@@ -1475,8 +1487,8 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare void @llvm.masked.store.v7f32.p0(<7 x float>, ptr captures(none), <7 x i1>)
 // CHECK-DAG: declare <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr>, <7 x i1>, <7 x float>)
 // CHECK-DAG: declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, <7 x i1>)
-// CHECK-DAG: declare <7 x float> @llvm.masked.expandload.v7f32(ptr captures(none), <7 x i1>, <7 x float>)
-// CHECK-DAG: declare void @llvm.masked.compressstore.v7f32(<7 x float>, ptr captures(none), <7 x i1>)
+// CHECK-DAG: declare <7 x float> @llvm.masked.expandload.v7f32.p0(ptr captures(none), <7 x i1>, <7 x float>)
+// CHECK-DAG: declare void @llvm.masked.compressstore.v7f32.p0(<7 x float>, ptr captures(none), <7 x i1>)
 // CHECK-DAG: declare void @llvm.var.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
 // CHECK-DAG: declare ptr @llvm.ptr.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
 // CHECK-DAG: declare i16 @llvm.annotation.i16.p0(i16, ptr, ptr, i32)

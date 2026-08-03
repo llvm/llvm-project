@@ -363,6 +363,8 @@ def err_opt_not_valid_without_opt : Error<
   "option '%0' cannot be specified without '%1'">;
 def err_opt_not_valid_on_target : Error<
   "option '%0' cannot be specified on this target">;
+def err_opt_unsupported_with_suggest : Error<
+  "option '%0' is unsupported; consider using '%1'">;
 def err_invalid_feature_combination : Error<
   "invalid feature combination: %0">;
 def warn_invalid_feature_combination : Warning<
@@ -453,6 +455,8 @@ def warn_omp_gpu_unsupported_clause: Warning<
 def warn_omp_gpu_unsupported_modifier_for_clause: Warning<
   "modifier '%0' is currently not supported on a GPU for the '%1' clause; modifier ignored">,
   InGroup<OpenMPClauses>;
+def err_omp_unified_shared_memory_unsupported : Error<
+  "target architecture '%0' does not support unified addressing">;
 
 // Static Analyzer Core
 def err_unknown_analyzer_checker_or_package : Error<

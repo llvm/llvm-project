@@ -50,8 +50,8 @@ IRExecutionUnit::IRExecutionUnit(std::unique_ptr<llvm::LLVMContext> &context_up,
                                  const lldb::TargetSP &target_sp,
                                  const SymbolContext &sym_ctx,
                                  std::vector<std::string> &cpu_features)
-    : IRMemoryMap(target_sp), m_context_up(context_up.release()),
-      m_module_up(module_up.release()), m_module(m_module_up.get()),
+    : IRMemoryMap(target_sp), m_context_up(std::move(context_up)),
+      m_module_up(std::move(module_up)), m_module(m_module_up.get()),
       m_cpu_features(cpu_features), m_name(name), m_sym_ctx(sym_ctx),
       m_did_jit(false), m_function_load_addr(LLDB_INVALID_ADDRESS),
       m_function_end_load_addr(LLDB_INVALID_ADDRESS),
@@ -777,6 +777,14 @@ IRExecutionUnit::FindInSymbols(const std::vector<ConstString> &names,
   non_local_images.Remove(sc.module_sp);
   for (size_t i = 0; i < m_preferred_modules.GetSize(); ++i)
     non_local_images.Remove(m_preferred_modules.GetModuleAtIndex(i));
+
+  // Drop modules the platform considers off-limits to unconstrained symbol
+  // searches.
+  for (size_t i = non_local_images.GetSize(); i > 0; --i) {
+    lldb::ModuleSP module_sp = non_local_images.GetModuleAtIndex(i - 1);
+    if (target->ModuleIsExcludedForUnconstrainedSearches(module_sp))
+      non_local_images.Remove(module_sp);
+  }
 
   LoadAddressResolver resolver(*target, symbol_was_missing_weak);
 

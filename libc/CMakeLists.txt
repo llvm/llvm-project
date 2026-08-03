@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "libc")
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -72,6 +80,13 @@ add_compile_definitions(LIBC_NAMESPACE=${LIBC_NAMESPACE})
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
 set(LIBC_TEST_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Common compile options for all the tests.")
+set(LIBC_TEST_FLOAT_RANGE_COUNT "1231" CACHE STRING
+  "Number of values sampled by libc floating-point range tests.")
+if(NOT "${LIBC_TEST_FLOAT_RANGE_COUNT}" MATCHES "^[1-9][0-9]*$")
+  message(FATAL_ERROR
+    "Invalid LIBC_TEST_FLOAT_RANGE_COUNT: ${LIBC_TEST_FLOAT_RANGE_COUNT}. "
+    "Expected a positive integer.")
+endif()
 
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
@@ -137,6 +152,11 @@ if(LIBC_TARGET_OS_IS_GPU)
 endif()
 
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
+if(LLVM_LIBC_FULL_BUILD)
+  set(LLVM_LIBC_OVERLAY OFF)
+else()
+  set(LLVM_LIBC_OVERLAY ON)
+endif()
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
@@ -146,7 +166,11 @@ option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
 if(LIBC_TARGET_OS_IS_LINUX)
-  set(kernel_headers "/usr/include")
+  if(LIBC_TARGET_TRIPLE AND EXISTS "/usr/${LIBC_TARGET_TRIPLE}/include")
+    set(kernel_headers "/usr/${LIBC_TARGET_TRIPLE}/include")
+  else()
+    set(kernel_headers "/usr/include")
+  endif()
 endif()
 set(LIBC_KERNEL_HEADERS "${kernel_headers}" CACHE STRING "Path to Linux kernel headers")
 
@@ -274,6 +298,10 @@ endif()
 if(LIBC_TARGET_OS_IS_GPU)
   include(prepare_libc_gpu_build)
   set(LIBC_ENABLE_UNITTESTS OFF)
+  find_program(LIBC_LLVM_LINK llvm-link HINTS ${LLVM_TOOLS_BINARY_DIR})
+  if(NOT LIBC_LLVM_LINK)
+    message(FATAL_ERROR "llvm-link not found in ${LLVM_TOOLS_BINARY_DIR} or system path")
+  endif()
 elseif(LIBC_TARGET_OS_IS_BAREMETAL)
   set(LIBC_ENABLE_UNITTESTS OFF)
 endif()

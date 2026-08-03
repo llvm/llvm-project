@@ -112,7 +112,7 @@ void BuildEmptyCacheDir(const FileSpec &test_dir) {
 FileSpec BuildCacheDir(const FileSpec &test_dir) {
   FileSpec uuid_view = GetUuidView(test_dir);
   std::error_code ec =
-      llvm::sys::fs::create_directories(uuid_view.GetDirectory().GetCString());
+      llvm::sys::fs::create_directories(uuid_view.GetDirectory());
   EXPECT_FALSE(ec);
   ec = llvm::sys::fs::copy_file(GetInputFilePath(k_module_file),
                                 uuid_view.GetPath().c_str());

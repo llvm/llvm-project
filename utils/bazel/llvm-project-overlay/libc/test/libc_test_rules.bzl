@@ -23,6 +23,8 @@ _FULL_BUILD_COPTS = [
     "-DLIBC_COPT_USE_C_ASSERT",
 ]
 
+_TEST_DEFINES = ["LIBC_TEST_SUBPROCESS_TESTS=1"]
+
 def libc_test(
         name,
         copts = [],
@@ -61,7 +63,7 @@ def libc_test(
         copts = copts + _FULL_BUILD_COPTS
     cc_test(
         name = name,
-        local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
+        local_defines = local_defines + _TEST_DEFINES + LIBC_CONFIGURE_OPTIONS,
         deps = deps,
         copts = copts + libc_common_copts(),
         linkstatic = 1,
@@ -81,7 +83,7 @@ def libc_test_library(name, copts = [], local_defines = [], **kwargs):
         name = name,
         testonly = True,
         copts = copts + libc_common_copts(),
-        local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
+        local_defines = local_defines + _TEST_DEFINES + LIBC_CONFIGURE_OPTIONS,
         linkstatic = 1,
         **kwargs
     )

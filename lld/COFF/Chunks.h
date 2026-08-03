@@ -394,11 +394,12 @@ public:
   // and this chunk is considered as dead.
   SectionChunk *repl;
 
+  void replace(SectionChunk *other);
+
 private:
   SectionChunk *assocChildren = nullptr;
 
   // Used for ICF (Identical COMDAT Folding)
-  void replace(SectionChunk *other);
   uint32_t eqClass[2] = {0, 0};
 
   // Relocations for this section. Size is stored below.
@@ -721,12 +722,6 @@ struct ChunkAndOffset {
   uint32_t offset;
 
   struct DenseMapInfo {
-    static ChunkAndOffset getEmptyKey() {
-      return {llvm::DenseMapInfo<Chunk *>::getEmptyKey(), 0};
-    }
-    static ChunkAndOffset getTombstoneKey() {
-      return {llvm::DenseMapInfo<Chunk *>::getTombstoneKey(), 0};
-    }
     static unsigned getHashValue(const ChunkAndOffset &co) {
       return llvm::DenseMapInfo<std::pair<Chunk *, uint32_t>>::getHashValue(
           {co.inputChunk, co.offset});

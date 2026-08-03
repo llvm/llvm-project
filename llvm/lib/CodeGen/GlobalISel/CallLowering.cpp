@@ -51,10 +51,24 @@ static void addFlagsFromAttrSet(ISD::ArgFlagsTy &Flags, AttributeSet Attrs) {
     Flags.setByVal();
   if (Attrs.hasAttribute(Attribute::ByRef))
     Flags.setByRef();
-  if (Attrs.hasAttribute(Attribute::Preallocated))
-    Flags.setPreallocated();
-  if (Attrs.hasAttribute(Attribute::InAlloca))
+  if (Attrs.hasAttribute(Attribute::InAlloca)) {
     Flags.setInAlloca();
+    // Set the byval flag for CCAssignFn callbacks that don't know about
+    // inalloca.  This way we can know how many bytes we should've allocated
+    // and how many bytes a callee cleanup function will pop.  If we port
+    // inalloca to more targets, we'll have to add custom inalloca handling
+    // in the various CC lowering callbacks.
+    Flags.setByVal();
+  }
+  if (Attrs.hasAttribute(Attribute::Preallocated)) {
+    Flags.setPreallocated();
+    // Set the byval flag for CCAssignFn callbacks that don't know about
+    // preallocated.  This way we can know how many bytes we should've
+    // allocated and how many bytes a callee cleanup function will pop.  If
+    // we port preallocated to more targets, we'll have to add custom
+    // preallocated handling in the various CC lowering callbacks.
+    Flags.setByVal();
+  }
   if (Attrs.hasAttribute(Attribute::Returned))
     Flags.setReturned();
   if (Attrs.hasAttribute(Attribute::SwiftSelf))
@@ -438,7 +452,7 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
     if (SrcSize == OrigTy.getSizeInBits())
       B.buildMergeValues(OrigRegs[0], Regs);
     else {
-      auto Widened = B.buildMergeLikeInstr(LLT::scalar(SrcSize), Regs);
+      auto Widened = B.buildMergeLikeInstr(LLT::integer(SrcSize), Regs);
       B.buildTrunc(OrigRegs[0], Widened);
     }
 
@@ -504,7 +518,7 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
     SmallVector<Register, 8> EltMerges;
     int PartsPerElt =
         divideCeil(DstEltTy.getSizeInBits(), PartLLT.getSizeInBits());
-    LLT ExtendedPartTy = LLT::scalar(PartLLT.getSizeInBits() * PartsPerElt);
+    LLT ExtendedPartTy = LLT::integer(PartLLT.getSizeInBits() * PartsPerElt);
 
     for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
       auto Merge =
@@ -614,8 +628,8 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
       SrcTy.getScalarSizeInBits() > PartTy.getSizeInBits()) {
     LLT ExtTy =
         LLT::vector(SrcTy.getElementCount(),
-                    LLT::scalar(PartTy.getScalarSizeInBits() * DstRegs.size() /
-                                SrcTy.getNumElements()));
+                    LLT::integer(PartTy.getScalarSizeInBits() * DstRegs.size() /
+                                 SrcTy.getNumElements()));
     auto Ext = B.buildAnyExt(ExtTy, SrcReg);
     B.buildUnmerge(DstRegs, Ext);
     return;
@@ -653,7 +667,7 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
     // For scalars, it's common to be able to use a simple extension.
     if (SrcTy.isScalar() && DstTy.isScalar()) {
       CoveringSize = alignTo(SrcSize, DstSize);
-      LLT CoverTy = LLT::scalar(CoveringSize);
+      LLT CoverTy = LLT::integer(CoveringSize);
       UnmergeSrc = B.buildInstr(ExtendOp, {CoverTy}, {SrcReg}).getReg(0);
     } else {
       // Widen to the common type.

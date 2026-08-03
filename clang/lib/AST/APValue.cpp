@@ -184,20 +184,6 @@ APValue::LValueBase::operator bool () const {
   return static_cast<bool>(Ptr);
 }
 
-clang::APValue::LValueBase
-llvm::DenseMapInfo<clang::APValue::LValueBase>::getEmptyKey() {
-  clang::APValue::LValueBase B;
-  B.Ptr = DenseMapInfo<const ValueDecl*>::getEmptyKey();
-  return B;
-}
-
-clang::APValue::LValueBase
-llvm::DenseMapInfo<clang::APValue::LValueBase>::getTombstoneKey() {
-  clang::APValue::LValueBase B;
-  B.Ptr = DenseMapInfo<const ValueDecl*>::getTombstoneKey();
-  return B;
-}
-
 namespace clang {
 llvm::hash_code hash_value(const APValue::LValueBase &Base) {
   if (Base.is<TypeInfoLValue>() || Base.is<DynamicAllocLValue>())
@@ -296,9 +282,12 @@ APValue::Arr::Arr(unsigned NumElts, unsigned Size) :
   NumElts(NumElts), ArrSize(Size) {}
 APValue::Arr::~Arr() { delete [] Elts; }
 
-APValue::StructData::StructData(unsigned NumBases, unsigned NumFields) :
-  Elts(new APValue[NumBases+NumFields]),
-  NumBases(NumBases), NumFields(NumFields) {}
+APValue::StructData::StructData(unsigned NumBases, unsigned NumFields,
+                                unsigned NumVirtualBases)
+    : Elts(new APValue[NumBases + NumFields + NumVirtualBases]),
+      NumBases(NumBases), NumFields(NumFields),
+      NumVirtualBases(NumVirtualBases) {}
+
 APValue::StructData::~StructData() {
   delete [] Elts;
 }
@@ -363,11 +352,14 @@ APValue::APValue(const APValue &RHS)
       getArrayFiller() = RHS.getArrayFiller();
     break;
   case Struct:
-    MakeStruct(RHS.getStructNumBases(), RHS.getStructNumFields());
+    MakeStruct(RHS.getStructNumBases(), RHS.getStructNumFields(),
+               RHS.getStructNumVirtualBases());
     for (unsigned I = 0, N = RHS.getStructNumBases(); I != N; ++I)
       getStructBase(I) = RHS.getStructBase(I);
     for (unsigned I = 0, N = RHS.getStructNumFields(); I != N; ++I)
       getStructField(I) = RHS.getStructField(I);
+    for (unsigned I = 0, N = RHS.getStructNumVirtualBases(); I != N; ++I)
+      getStructVirtualBase(I) = RHS.getStructVirtualBase(I);
     break;
   case Union:
     MakeUnion();
@@ -517,6 +509,8 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
       getStructBase(I).Profile(ID);
     for (unsigned I = 0, N = getStructNumFields(); I != N; ++I)
       getStructField(I).Profile(ID);
+    for (unsigned I = 0, N = getStructNumVirtualBases(); I != N; ++I)
+      getStructVirtualBase(I).Profile(ID);
     return;
 
   case Union:
@@ -956,6 +950,17 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
         printPretty(Out, Policy, FI->getType(), Ctx);
       First = false;
     }
+    if (unsigned N = getStructNumVirtualBases()) {
+      const CXXRecordDecl *CD = cast<CXXRecordDecl>(RD);
+      CXXRecordDecl::base_class_const_iterator BI = CD->vbases_begin();
+      for (unsigned I = 0; I != N; ++I, ++BI) {
+        assert(BI != CD->vbases_end());
+        if (!First)
+          Out << ", ";
+        getStructVirtualBase(I).printPretty(Out, Policy, BI->getType(), Ctx);
+        First = false;
+      }
+    }
     Out << '}';
     return;
   }
@@ -1185,6 +1190,9 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
         break;
     for (unsigned I = 0, N = V.getStructNumFields(); I != N; ++I)
       if (Merge(V.getStructField(I)))
+        break;
+    for (unsigned I = 0, N = V.getStructNumVirtualBases(); I != N; ++I)
+      if (Merge(V.getStructVirtualBase(I)))
         break;
     break;
   }

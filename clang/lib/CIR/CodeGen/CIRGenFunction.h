@@ -586,6 +586,10 @@ public:
     }
   };
 
+  // The CallExpr within the current statement that the musttail attribute
+  // applies to.  nullptr if there is no 'musttail' on the current statement.
+  const CallExpr *mustTailCall = nullptr;
+
   struct VlaSizePair {
     mlir::Value numElts;
     QualType type;
@@ -723,15 +727,6 @@ public:
       return Address::invalid();
     }
   };
-
-  /// IndirectBranch - The first time an indirect goto is seen we create a block
-  /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
-  /// is emitted at the end of the function, once all block destinations have
-  /// been resolved.
-  mlir::Block *indirectGotoBlock = nullptr;
-
-  void resolveBlockAddresses();
-  void finishIndirectBranch();
 
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
@@ -1088,6 +1083,13 @@ public:
                         ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock(bool forDeactivation = false);
 
+  /// Emit the cleanups captured for a loop's condition variable (those pushed
+  /// above \p depth while EHScopeStack was capturing condition cleanups) at
+  /// the current insertion point, which must be inside the loop op's cleanup
+  /// region, and pop them off the EH stack.
+  void emitLoopConditionCleanups(EHScopeStack::stable_iterator depth,
+                                 mlir::Location loc);
+
   void terminateStructuredRegionBody(mlir::Region &r, mlir::Location loc);
 
   /// Deactivates the given cleanup block. The block cannot be reactivated. Pops
@@ -1198,9 +1200,89 @@ public:
     void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
+
+      // forceDeactivate() can pop cleanup scopes that were pushed with
+      // deferred deactivation, which moves the insertion point out of the
+      // cleanup body region. Any caller value defined inside such a body
+      // would no longer dominate uses past the scope. The downstream
+      // popCleanupBlocks() handles the spill for any cleanups it pops
+      // itself, but it cannot help with cleanups that forceDeactivate has
+      // already popped. Spill those values here, while the insertion point
+      // is still inside the body, so we can reload them after all popping
+      // is done. We only spill values whose defining op lives inside a
+      // cir.cleanup.scope, since values defined outside any cleanup scope
+      // (e.g. allocas in the entry block) already dominate the post-scope
+      // insertion point.
+      const bool hasPendingDeactivations =
+          cgf.deferredDeactivationCleanupStack.size() >
+          deactivateCleanups.oldDeactivateCleanupStackSize;
+
+      llvm::SmallVector<Address> tempAllocas;
+      bool didSpillAny = false;
+      if (hasPendingDeactivations) {
+        tempAllocas.reserve(valuesToReload.size());
+        for (mlir::Value *valPtr : valuesToReload) {
+          mlir::Value val = *valPtr;
+          if (!val || !val.getDefiningOp() ||
+              !val.getDefiningOp()->getParentOfType<cir::CleanupScopeOp>()) {
+            tempAllocas.push_back(Address::invalid());
+            continue;
+          }
+          Address temp = cgf.createDefaultAlignTempAlloca(
+              val.getType(), val.getLoc(), "tmp.exprcleanup");
+          tempAllocas.push_back(temp);
+          cgf.builder.createStore(val.getLoc(), val, temp);
+          didSpillAny = true;
+        }
+      }
+
       deactivateCleanups.forceDeactivate();
-      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize,
-                           valuesToReload);
+      // If we already spilled some of the caller's values, don't ask
+      // popCleanupBlocks to spill them again. Values we did not pre-spill
+      // are not inside any cir.cleanup.scope, so they cannot be invalidated
+      // by either forceDeactivate's or popCleanupBlocks's pops (both only
+      // pop cir.cleanup.scope ops); they already dominate the post-scope
+      // insertion point on their own.
+      if (didSpillAny) {
+        cgf.popCleanupBlocks(cleanupStackDepth,
+                             lifetimeExtendedCleanupStackSize);
+
+        // Reload the spilled values now that all cleanup popping (and
+        // promotion of any lifetime-extended cleanups onto the EH stack) is
+        // done.
+        for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
+          if (!addr.isValid())
+            continue;
+          *valPtr = cgf.builder.createLoad(valPtr->getLoc(), addr);
+        }
+      } else {
+        cgf.popCleanupBlocks(cleanupStackDepth,
+                             lifetimeExtendedCleanupStackSize, valuesToReload);
+      }
+
+      performCleanup = false;
+      cgf.currentCleanupStackDepth = oldCleanupStackDepth;
+    }
+
+    /// Force the emission of EH cleanups now, but defer promoting any
+    /// lifetime-extended cleanup entries onto the EH scope stack. The caller
+    /// must subsequently call forceLifetimeExtendedCleanups() to finalize the
+    /// scope.
+    void forceCleanupExceptLifetimeExtended() {
+      assert(performCleanup && "Already forced cleanup");
+      cgf.didCallStackSave = oldDidCallStackSave;
+      deactivateCleanups.forceDeactivate();
+      cgf.popCleanupBlocks(cleanupStackDepth);
+    }
+
+    /// Promote any pending lifetime-extended cleanup entries onto the EH scope
+    /// stack at the current insertion point and finalize this scope. This must
+    /// be paired with a prior call to forceCleanupExceptLifetimeExtended().
+    void forceLifetimeExtendedCleanups() {
+      assert(performCleanup && "Already forced cleanup");
+      assert(deactivateCleanups.deactivated &&
+             "forceCleanupExceptLifetimeExtended() must be called first");
+      cgf.popCleanupBlocks(cleanupStackDepth, lifetimeExtendedCleanupStackSize);
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
@@ -1235,6 +1317,52 @@ public:
   private:
     FullExprCleanupScope(const FullExprCleanupScope &) = delete;
     void operator=(const FullExprCleanupScope &) = delete;
+  };
+
+  /// Captures the destructor cleanup for a loop's condition variable so that it
+  /// can be emitted into the loop op's per-iteration cleanup region.
+  class DeferredLoopConditionCleanup {
+    CIRGenFunction &cgf;
+    EHScopeStack::stable_iterator depth;
+    bool active;
+
+  public:
+    DeferredLoopConditionCleanup(CIRGenFunction &cgf, bool active)
+        : cgf(cgf), depth(cgf.ehStack.stable_begin()), active(active) {}
+
+    /// An RAII class that suppresses cir.cleanup.scope creation for cleanups
+    /// pushed onto the EH stack while a loop condition variable is being
+    /// emitted and instead captures these cleanups so that they can be emitted
+    /// into the loop op's cleanup region after the condition region is built.
+    class CaptureScope {
+      EHScopeStack &ehStack;
+
+    public:
+      explicit CaptureScope(DeferredLoopConditionCleanup &scope)
+          : ehStack(scope.cgf.ehStack) {
+        // Capturing wraps only the condition variable's own destructor push,
+        // which emits no nested code, so it can never already be active.
+        assert(!ehStack.isCapturingLoopConditionCleanups() &&
+               "loop condition cleanup capturing should not nest");
+        if (scope.active)
+          ehStack.setCapturingLoopConditionCleanups(true);
+      }
+      ~CaptureScope() { ehStack.setCapturingLoopConditionCleanups(false); }
+
+      CaptureScope(const CaptureScope &) = delete;
+      void operator=(const CaptureScope &) = delete;
+    };
+
+    /// Emit the captured condition-variable cleanups into the current insertion
+    /// point (the loop's cleanup region).
+    void emitIntoLoopCleanupRegion(mlir::Location loc) {
+      if (active)
+        cgf.emitLoopConditionCleanups(depth, loc);
+    }
+
+  private:
+    DeferredLoopConditionCleanup(const DeferredLoopConditionCleanup &) = delete;
+    void operator=(const DeferredLoopConditionCleanup &) = delete;
   };
 
 public:
@@ -1563,6 +1691,12 @@ public:
       const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
       llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
 
+  mlir::Value makeBinaryAtomicValue(
+      cir::AtomicFetchKind kind, const clang::CallExpr *expr,
+      mlir::Type *originalArgType = nullptr,
+      mlir::Value *emittedArgValue = nullptr,
+      cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent);
+
   mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
@@ -1578,6 +1712,12 @@ public:
   void emitAutoVarDecl(const clang::VarDecl &d);
 
   void emitAutoVarCleanups(const AutoVarEmission &emission);
+
+  /// Emit a loop's condition-variable declaration. This needs special handling
+  /// so that we can manage per-iteration cleanups for the loop condition.
+  void emitLoopConditionVariable(const clang::VarDecl &d,
+                                 DeferredLoopConditionCleanup &condCleanup);
+
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the
   /// emission is not directly an alloca), the allocatedSeparately parameter can
@@ -1623,18 +1763,21 @@ public:
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
-  void instantiateIndirectGotoBlock();
-
-  /// Emit a simple LLVM intrinsic that takes N scalar arguments and whose
-  /// return type matches the type of the first argument. The intrinsic name is
-  /// used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be baked
-  /// into \p intrinName by the caller.
+  /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
+  /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
+  /// baked into \p intrinName by the caller.  The result type defaults to the
+  /// type of the first argument; pass \p resultType for intrinsics whose result
+  /// differs from the operand, such as a vector reduction that returns the
+  /// element type.  Unlike classic CodeGen, CIR has no intrinsic registry to
+  /// derive the result type from the operand, so it must be supplied here.
   template <unsigned N>
   [[maybe_unused]] RValue
   emitBuiltinWithOneOverloadedType(const CallExpr *e,
-                                   llvm::StringRef intrinName) {
+                                   llvm::StringRef intrinName,
+                                   mlir::Type resultType = {}) {
     static_assert(N, "expect non-empty argument");
-    mlir::Type cirTy = convertType(e->getArg(0)->getType());
+    mlir::Type cirTy =
+        resultType ? resultType : convertType(e->getArg(0)->getType());
     SmallVector<mlir::Value, N> args;
     for (unsigned i = 0; i < N; ++i)
       args.push_back(emitScalarExpr(e->getArg(i)));
@@ -1647,14 +1790,14 @@ public:
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
-                  mlir::Location loc);
+                  bool isMustTail, mlir::Location loc);
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
-                  const CallArgList &args,
+                  const CallArgList &args, bool isMustTail,
                   cir::CIRCallOpInterface *callOrTryCall = nullptr) {
     assert(currSrcLoc && "source location must have been set");
     return emitCall(funcInfo, callee, returnValue, args, callOrTryCall,
-                    *currSrcLoc);
+                    isMustTail, *currSrcLoc);
   }
 
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
@@ -1673,6 +1816,9 @@ public:
   RValue emitCallExpr(const clang::CallExpr *e,
                       ReturnValueSlot returnValue = ReturnValueSlot());
   LValue emitCallExprLValue(const clang::CallExpr *e);
+
+  LValue emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e);
+  LValue emitCXXConstructLValue(const CXXConstructExpr *e);
   CIRGenCallee emitCallee(const clang::Expr *e);
 
   template <typename T>
@@ -2012,7 +2158,8 @@ public:
   /// l-value.
   mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
   mlir::Value emitLoadOfScalar(Address addr, bool isVolatile, QualType ty,
-                               SourceLocation loc, LValueBaseInfo baseInfo);
+                               SourceLocation loc, LValueBaseInfo baseInfo,
+                               bool isNontemporal = false);
 
   /// Emit code to compute a designator that specifies the location
   /// of the expression.
@@ -2168,7 +2315,16 @@ public:
 
   std::optional<mlir::Value> emitRISCVBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
-
+  cir::GetGlobalOp createGetCpuModel(mlir::Location loc);
+  cir::GetGlobalOp createGetCpuFeatures2(mlir::Location loc);
+  mlir::Value emitX86CpuIs(const CallExpr *expr);
+  mlir::Value emitX86CpuIs(mlir::Location loc, StringRef cpuStr);
+  mlir::Value emitX86CpuSupports(const CallExpr *expr);
+  mlir::Value emitX86CpuSupports(mlir::Location loc,
+                                 ArrayRef<StringRef> FeatureStrs);
+  mlir::Value emitX86CpuSupports(mlir::Location loc,
+                                 std::array<uint32_t, 4> FeatureMask);
+  mlir::Value emitX86CpuInit(mlir::Location loc);
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 
@@ -2222,6 +2378,7 @@ public:
       builder.restoreInsertionPoint(outermostConditional->getInsertPoint());
       builder.createStore(
           value.getLoc(), value, addr, /*isVolatile=*/false,
+          /*isNontemporal=*/false,
           mlir::IntegerAttr::get(
               mlir::IntegerType::get(value.getContext(), 64),
               (uint64_t)addr.getAlignment().getAsAlign().value()));
@@ -2475,10 +2632,6 @@ public:
   void emitOMPDeclareReduction(const OMPDeclareReductionDecl &d);
   void emitOMPDeclareMapper(const OMPDeclareMapperDecl &d);
   void emitOMPRequiresDecl(const OMPRequiresDecl &d);
-
-private:
-  template <typename Op>
-  void emitOpenMPClauses(Op &op, ArrayRef<const OMPClause *> clauses);
 
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission

@@ -697,7 +697,7 @@ PythonObject PythonDictionary::GetItemForKey(const PythonObject &key) const {
 
 Expected<PythonObject>
 PythonDictionary::GetItem(const PythonObject &key) const {
-  if (!IsValid())
+  if (!IsValid() || !key.IsValid())
     return nullDeref();
   PyObject *o = PyDict_GetItemWithError(m_py_obj, key.get());
   if (PyErr_Occurred())
@@ -840,22 +840,116 @@ def main(f):
     return ArgInfo(count, varargs)
 )";
 
-Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
-  ArgInfo result = {};
-  if (!IsValid())
-    return nullDeref();
-
+// inspect.signature() is deeply recursive and expensive in C-stack terms;
+// reentrant scripted callbacks dispatched through GetArgInfo() can turn
+// that into a fatal stack overflow instead of a catchable Python
+// RecursionError. GetArgInfo() never calls this itself; callers fall back
+// to it explicitly when they need to handle callables its cheaper,
+// attribute-only approach can't (e.g. builtins).
+Expected<PythonCallable::ArgInfo>
+PythonCallable::GetArgInfoFromInspectSignature(const PythonCallable &callable) {
+  PythonCallable::ArgInfo result = {};
   // no need to synchronize access to this global, we already have the GIL
   static PythonScript get_arg_info(get_arg_info_script);
-  Expected<PythonObject> pyarginfo = get_arg_info(*this);
+  Expected<PythonObject> pyarginfo = get_arg_info(callable);
   if (!pyarginfo)
     return pyarginfo.takeError();
   long long count =
       cantFail(As<long long>(pyarginfo.get().GetAttribute("count")));
   bool has_varargs =
       cantFail(As<bool>(pyarginfo.get().GetAttribute("has_varargs")));
-  result.max_positional_args = has_varargs ? ArgInfo::UNBOUNDED : count;
+  result.max_positional_args =
+      has_varargs ? PythonCallable::ArgInfo::UNBOUNDED : count;
+  return result;
+}
 
+// GetArgInfo()'s branches, top to bottom (`func` is what each branch ends up
+// introspecting; the final step is always func.__code__.co_argcount/co_flags):
+//
+//   callable
+//   |-- has __self__          -> func = __func__           (bound method;
+//   |                             fails for slot wrappers, e.g. (1).__add__)
+//   |-- has __code__ already  -> func = callable            (plain function)
+//   `-- neither
+//       |-- is a class
+//       |   |-- __init__ has __code__ -> func = __init__
+//       |   `-- else: check __new__ too (object.__init__ is lenient about
+//       |       extra args once __new__ is overridden)
+//       |       |-- __new__ has __code__ -> func = __new__
+//       |       `-- else                  -> ArgInfo{0} (object's defaults)
+//       `-- is an instance
+//           `-- func = __call__ (unwrap __func__ if bound)
+//               `-- no __code__ -> error (e.g. a builtin)
+Expected<PythonCallable::ArgInfo> PythonCallable::GetArgInfo() const {
+  if (!IsValid())
+    return nullDeref();
+
+  PythonObject func = *this;
+  bool implicit_first_arg = false;
+  if (HasAttribute("__self__")) {
+    implicit_first_arg = true;
+    Expected<PythonObject> func_or_err = GetAttribute("__func__");
+    if (!func_or_err)
+      return func_or_err.takeError();
+    func = *func_or_err;
+  } else if (!HasAttribute("__code__")) {
+    implicit_first_arg = true;
+    if (PyType_Check(m_py_obj)) {
+      Expected<PythonObject> init_or_err = GetAttribute("__init__");
+      if (!init_or_err)
+        return init_or_err.takeError();
+      func = *init_or_err;
+      if (!func.HasAttribute("__code__")) {
+        // __init__ is still object.__init__. A class may customize
+        // __new__ instead and leave __init__ untouched, which makes
+        // object.__init__ lenient about extra arguments -- so check
+        // __new__ too before concluding there are none.
+        Expected<PythonObject> new_or_err = GetAttribute("__new__");
+        if (!new_or_err)
+          return new_or_err.takeError();
+        func = *new_or_err;
+        if (!func.HasAttribute("__code__"))
+          return ArgInfo{0};
+      }
+    } else {
+      Expected<PythonObject> call_or_err = GetAttribute("__call__");
+      if (!call_or_err)
+        return call_or_err.takeError();
+      func = *call_or_err;
+      if (func.HasAttribute("__self__")) {
+        Expected<PythonObject> inner_or_err = func.GetAttribute("__func__");
+        if (!inner_or_err)
+          return inner_or_err.takeError();
+        func = *inner_or_err;
+      }
+      if (!func.HasAttribute("__code__"))
+        return llvm::createStringError("__call__ has no __code__");
+    }
+  }
+
+  Expected<PythonObject> code_or_err = func.GetAttribute("__code__");
+  if (!code_or_err)
+    return code_or_err.takeError();
+  PythonObject code = *code_or_err;
+
+  Expected<long long> argcount =
+      As<long long>(code.GetAttribute("co_argcount"));
+  if (!argcount)
+    return argcount.takeError();
+  Expected<long long> flags = As<long long>(code.GetAttribute("co_flags"));
+  if (!flags)
+    return flags.takeError();
+
+  ArgInfo result = {};
+  // Mirrors CPython's CO_VARARGS from <code.h>, which isn't reliably
+  // visible across the Python versions/platforms this file builds against.
+  constexpr long long kCoFlagVarArgs = 0x04;
+  if (*flags & kCoFlagVarArgs) {
+    result.max_positional_args = ArgInfo::UNBOUNDED;
+  } else {
+    long long count = *argcount - (implicit_first_arg ? 1 : 0);
+    result.max_positional_args = count > 0 ? static_cast<unsigned>(count) : 0;
+  }
   return result;
 }
 

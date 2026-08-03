@@ -9,10 +9,14 @@ set(LIBS
   CUFDialect
   FIRBuilder
   FIRAnalysis
+  FIRCodeGen
   FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
+  FIROpenACCAnalysis
+  FIROpenACCSupport
   FIRSupport
+  FIRTransforms
   HLFIRDialect
   MIFDialect
 )
@@ -30,10 +34,12 @@ add_flang_unittest(FlangOptimizerTests
   Builder/Runtime/DerivedTest.cpp
   Builder/Runtime/IntrinsicsTest.cpp
   Builder/Runtime/NumericTest.cpp
-  Builder/Runtime/RaggedTest.cpp
   Builder/Runtime/ReductionTest.cpp
   Builder/Runtime/StopTest.cpp
   Builder/Runtime/TransformationalTest.cpp
+  OpenACC/FIROpenACCPointerLikeTypeInterfaceTest.cpp
+  OpenACC/FIROpenACCSupportAnalysisTest.cpp
+  AliasAnalysisCacheTest.cpp
   FIRCallInterfaceTest.cpp
   FIRContextTest.cpp
   FIRTypesTest.cpp
@@ -60,4 +66,6 @@ mlir_target_link_libraries(FlangOptimizerTests
   PRIVATE
   ${dialect_libs}
   ${extension_libs}
+  MLIROpenACCDialect
+  MLIROpenACCUtils
   )

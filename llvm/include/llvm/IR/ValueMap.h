@@ -245,7 +245,7 @@ class ValueMapCallbackVH final : public CallbackVH {
       : CallbackVH(const_cast<Value *>(static_cast<const Value *>(Key))),
         Map(Map) {}
 
-  // Private constructor used to create empty/tombstone DenseMap keys.
+  // Private constructor used to create empty DenseMap keys.
   ValueMapCallbackVH(Value *V) : CallbackVH(V), Map(nullptr) {}
 
 public:
@@ -291,14 +291,6 @@ public:
 template <typename KeyT, typename ValueT, typename Config>
 struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
   using VH = ValueMapCallbackVH<KeyT, ValueT, Config>;
-
-  static inline VH getEmptyKey() {
-    return VH(DenseMapInfo<Value *>::getEmptyKey());
-  }
-
-  static inline VH getTombstoneKey() {
-    return VH(DenseMapInfo<Value *>::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const VH &Val) {
     return DenseMapInfo<KeyT>::getHashValue(Val.Unwrap());
