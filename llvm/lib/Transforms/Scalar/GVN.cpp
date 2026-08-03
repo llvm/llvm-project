@@ -3119,9 +3119,6 @@ bool GVNPass::propagateEquality(
     if (isa<Constant>(LHS) && isa<Constant>(RHS))
       continue;
 
-    if (!Visited.insert({LHS, RHS}).second)
-      continue;
-
     // Prefer a constant on the right-hand side, or an Argument if no constants.
     if (isa<Constant>(LHS) || (isa<Argument>(LHS) && !isa<Constant>(RHS)))
       std::swap(LHS, RHS);
@@ -3146,6 +3143,9 @@ bool GVNPass::propagateEquality(
         LVN = RVN;
       }
     }
+
+    if (!Visited.insert({LHS, RHS}).second)
+      continue;
 
     // If value numbering later sees that an instruction in the scope is equal
     // to 'LHS' then ensure it will be turned into 'RHS'.  In order to preserve
