@@ -1116,10 +1116,21 @@ void cl::tokenizeConfigFile(StringRef Source, StringSaver &Saver,
         ++Cur;
       continue;
     }
-    // Find end of the current line.
+    // Find end of the current line. As well as splicing backslash-newline
+    // continuations, this recognizes a trailing "# comment" (a '#' that
+    // begins a new, unquoted token) and, like the whole-line comment case
+    // above, extends it to the next literal newline without honoring
+    // escapes or continuations inside the comment text.
     const char *Start = Cur;
+    const char *LineEnd = nullptr;
+    bool InQuote = false;
+    char QuoteChar = 0;
+    // Start is known not to be whitespace or '#' (checked above), so we are
+    // logically at the start of the first token on this line.
+    bool AtTokenStart = true;
     for (const char *End = Source.end(); Cur != End; ++Cur) {
-      if (*Cur == '\\') {
+      char C = *Cur;
+      if (C == '\\') {
         if (Cur + 1 != End) {
           ++Cur;
           if (*Cur == '\n' ||
@@ -1128,13 +1139,39 @@ void cl::tokenizeConfigFile(StringRef Source, StringSaver &Saver,
             if (*Cur == '\r')
               ++Cur;
             Start = Cur + 1;
+            // AtTokenStart carries over unchanged: the spliced text abuts
+            // directly, introducing no new token boundary.
+            continue;
           }
         }
-      } else if (*Cur == '\n')
+        // An escaped literal character always extends the current token.
+        AtTokenStart = false;
+        continue;
+      }
+      if (InQuote) {
+        if (C == QuoteChar)
+          InQuote = false;
+        AtTokenStart = false;
+        continue;
+      }
+      if (isQuote(C)) {
+        InQuote = true;
+        QuoteChar = C;
+        AtTokenStart = false;
+        continue;
+      }
+      if (C == '\n')
         break;
+      if (C == '#' && AtTokenStart) {
+        LineEnd = Cur;
+        while (Cur != End && *Cur != '\n')
+          ++Cur;
+        break;
+      }
+      AtTokenStart = isWhitespace(C);
     }
     // Tokenize line.
-    Line.append(Start, Cur);
+    Line.append(Start, LineEnd ? LineEnd : Cur);
     cl::TokenizeGNUCommandLine(Line, Saver, NewArgv, MarkEOLs);
   }
 }
