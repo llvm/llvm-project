@@ -22,9 +22,12 @@ include "mlir/IR/OpBase.td"
 //===----------------------------------------------------------------------===//
 
 // A generic resource that can be attached to a general base side effect.
-class Resource<string resourceName> {
+class Resource<string resourceName, code resourceParameters = [{}]> {
   /// The resource that the associated effect is being applied to.
   string name = resourceName;
+
+  /// An optional C++ expression producing the effect parameters attribute.
+  code parameters = resourceParameters;
 }
 
 // An intrinsic resource that lives in the ::mlir::SideEffects namespace.
@@ -176,6 +179,9 @@ class SideEffect<EffectOpInterfaceBase interface, string effectName,
 
   /// The resource that the effect is being applied to.
   string resource = resourceReference.name;
+
+  /// An optional C++ expression producing the effect parameters attribute.
+  code parameters = resourceReference.parameters;
 
   /// The stage of side effects, we use it to describe the sequence in which
   /// effects occur.
