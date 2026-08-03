@@ -1018,11 +1018,14 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
     SetVectorType &DominatedUses, SetVectorType &NonDominatedReachableUses,
     SetVectorType &UnreachableUses) {
 
+  MachineBasicBlock *CurMBB = CurMI->getParent();
+
   std::set<MachineInstr *> Visited;
   for (MachineInstr &U : MRI->use_nodbg_instructions(CandidateReg)) {
     if (!Visited.insert(&U).second)
       continue;
 
+    MachineBasicBlock *UseMBB = U.getParent();
     if (U.isPHI()) {
       SmallVector<MachineBasicBlock *> PhiBlocks =
           getPhiBlocksOfSpillReg(&U, CandidateReg);
@@ -1034,9 +1037,11 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
       }
       int Inserts = 0;
       for (auto *PhiOpMBB : PhiBlocks) {
-        if (DT->dominates(SpillBlock, PhiOpMBB)) {
+        if (DT->dominates(CurMI, &U) && DT->dominates(SpillBlock, PhiOpMBB)) {
           Inserts += DominatedUses.insert(&U);
-        } else if (NUA->isReachable(SpillBlock, PhiOpMBB)) {
+        } else if (NUA->isReachable(CurMBB, UseMBB) &&
+                   (NUA->isReachable(SpillBlock, PhiOpMBB) ||
+                    (SpillBlock == PhiOpMBB))) {
           Inserts += NonDominatedReachableUses.insert(&U);
         } else {
           // The uses which are before the high register pressure point are
@@ -1047,10 +1052,9 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
       assert(Inserts == 1 &&
              "PHI has multiple uses with varying classifications");
     } else {
-      MachineBasicBlock *UseMBB = U.getParent();
       if (DT->dominates(CurMI, &U)) {
         DominatedUses.insert(&U);
-      } else if (NUA->isReachable(CurMI->getParent(), UseMBB)) {
+      } else if (NUA->isReachable(CurMBB, UseMBB)) {
         NonDominatedReachableUses.insert(&U);
       } else {
         // The uses which are before the high register pressure point are
