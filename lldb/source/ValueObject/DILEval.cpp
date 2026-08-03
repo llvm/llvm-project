@@ -1295,7 +1295,7 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
   // GetMaxU64Bitfield in the data layer only supports up to 64 bits (it asserts
   // bitfield_bit_size <= 64 and otherwise shifts out of bounds), so reject a
   // wider range here.
-  if (last_index - first_index + 1 > 64) {
+  if (last_index - first_index >= 64) {
     std::string message =
         llvm::formatv("bitfield range {0}:{1} is not valid (more than 64 bits)",
                       first_index, last_index);
