@@ -173,8 +173,6 @@ func.func @negative_scalable(%pad: f32) -> vector<[4]xf32> {
 
 // -----
 
-// -----
-
 // A dynamic-shape memref never yields a promotable slot (its extents are not
 // known statically, so it cannot map to a fixed-size vector): must NOT be
 // promoted.
@@ -283,6 +281,40 @@ func.func @subview_disjoint_writes_boundary_read(%vA: vector<4xf32>, %vB: vector
   vector.transfer_write %vA, %s0[%c0] {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1]>>
   vector.transfer_write %vB, %s4[%c0] {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: 4>>
   %r = vector.transfer_read %s2[%c0], %pad {in_bounds = [true]} : memref<4xf32, strided<[1], offset: 2>>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// A buffer allocated before an scf.for and accessed inside the loop body only
+// through a subview, with a cross-iteration dependence (each iteration reads the
+// value the previous iteration wrote). The subview aliaser composes with region
+// promotion: the whole buffer is carried across iterations as a vector iter_arg,
+// the in-body read/write become extract/insert_strided_slice on that value.
+
+// CHECK-LABEL: func.func @subview_in_scf_for_cross_iter
+//    CHECK-NOT:   memref.alloca
+//    CHECK-NOT:   memref.subview
+//    CHECK-NOT:   vector.transfer_write
+//    CHECK-NOT:   vector.transfer_read
+//        CHECK:   %[[R:.*]] = scf.for %{{.*}} iter_args(%[[IT:.*]] = %{{.*}}) -> (vector<8xf32>)
+//        CHECK:     %[[V:.*]] = vector.extract_strided_slice %[[IT]] {offsets = [0], sizes = [4], strides = [1]}
+//        CHECK:     %[[N:.*]] = arith.addf %[[V]], %[[V]]
+//        CHECK:     %[[INS:.*]] = vector.insert_strided_slice %[[N]], %[[IT]] {offsets = [0], strides = [1]}
+//        CHECK:     scf.yield %[[INS]] : vector<8xf32>
+//        CHECK:   vector.extract_strided_slice %[[R]] {offsets = [0], sizes = [4], strides = [1]}
+func.func @subview_in_scf_for_cross_iter(%lb: index, %ub: index, %step: index, %init: vector<8xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %init, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  scf.for %i = %lb to %ub step %step {
+    %sv = memref.subview %a[0] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1]>>
+    %v = vector.transfer_read %sv[%c0], %pad {in_bounds = [true]} : memref<4xf32, strided<[1]>>, vector<4xf32>
+    %n = arith.addf %v, %v : vector<4xf32>
+    vector.transfer_write %n, %sv[%c0] {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1]>>
+  }
+  %svr = memref.subview %a[0] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1]>>
+  %r = vector.transfer_read %svr[%c0], %pad {in_bounds = [true]} : memref<4xf32, strided<[1]>>, vector<4xf32>
   return %r : vector<4xf32>
 }
 
