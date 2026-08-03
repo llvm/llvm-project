@@ -27,6 +27,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include <queue>
 #include <vector>
 
@@ -448,18 +449,19 @@ SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   llvm_unreachable(nullptr);
 }
 
-SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
+SPIRV::Scope::Scope getMemScope(const Triple &TT, LLVMContext &Ctx,
+                                SyncScope::ID Id) {
   // Named by
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_scope_id.
   // We don't need aliases for Invocation and CrossDevice, as we already have
   // them covered by "singlethread" and "" strings respectively (see
   // implementation of LLVMContext::LLVMContext()).
-  static const llvm::SyncScope::ID SubGroup =
-      Ctx.getOrInsertSyncScopeID("subgroup");
-  static const llvm::SyncScope::ID WorkGroup =
-      Ctx.getOrInsertSyncScopeID("workgroup");
-  static const llvm::SyncScope::ID Device =
-      Ctx.getOrInsertSyncScopeID("device");
+  auto ScopeID = [&](AtomicScope Scope) {
+    return Ctx.getOrInsertSyncScopeID(*getAtomicScopeIRString(TT, Scope));
+  };
+  static const llvm::SyncScope::ID SubGroup = ScopeID(AtomicScope::Wavefront);
+  static const llvm::SyncScope::ID WorkGroup = ScopeID(AtomicScope::Workgroup);
+  static const llvm::SyncScope::ID Device = ScopeID(AtomicScope::Device);
 
   if (Id == llvm::SyncScope::SingleThread)
     return SPIRV::Scope::Invocation;
