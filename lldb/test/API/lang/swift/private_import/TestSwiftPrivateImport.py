@@ -5,6 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftPrivateImport(TestBase):
     @skipEmbeddedSwift
+    @skipIfLinux  # Fails on Amazon Linux (rdar://183725331)
     @swiftTest
     def test_private_import(self):
         """Test a library with a private import for which there is no debug info"""

@@ -21,7 +21,7 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
     @skipEmbeddedSwift
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
-    @skipUnlessDarwin
+    @skipIfLinux
     @swiftTest
     def test(self):
         """
