@@ -114,6 +114,7 @@ getFIRToLLVMPassOptions(const MLIRToLLVMPassPipelineConfig &config) {
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
   options.ComplexRange = config.ComplexRange;
+  options.unsafeFPConversion = config.UnsafeFPMath;
   return options;
 }
 
