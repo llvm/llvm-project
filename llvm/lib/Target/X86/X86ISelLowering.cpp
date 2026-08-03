@@ -48576,15 +48576,14 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 
   // For multi-use setcc, check that all users are vselects that benefit.
   if (!Cond.hasOneUse()) {
-    SDValue UserLHS, UserRHS;
-    for (SDNode *User : Cond->users()) {
-      if (!sd_match(User, m_VSelect(m_Specific(Cond), m_Value(UserLHS),
-                                    m_Value(UserRHS))))
-        return SDValue();
-      if (canCombineAsMaskOperation(UserLHS, Subtarget) ||
-          !canCombineAsMaskOperation(UserRHS, Subtarget))
-        return SDValue();
-    }
+    if (!llvm::all_of(Cond->users(), [&](SDNode *User) {
+          SDValue UserLHS, UserRHS;
+          return sd_match(User, m_VSelect(m_Specific(Cond), m_Value(UserLHS),
+                                          m_Value(UserRHS))) &&
+                 !canCombineAsMaskOperation(UserLHS, Subtarget) &&
+                 canCombineAsMaskOperation(UserRHS, Subtarget);
+        }))
+      return SDValue();
   }
 
   // Commute LHS and RHS to create opportunity to select mask instruction.

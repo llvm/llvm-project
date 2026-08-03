@@ -8,8 +8,8 @@
 define void @masked_min_max(ptr %pSrc, ptr %pMsk, i64 %n, ptr %pMin, ptr %pMax) {
 ; CHECK-LABEL: masked_min_max:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm1 = [-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf]
-; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm0 = [-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm1 = [+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf,+Inf]
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %loop
