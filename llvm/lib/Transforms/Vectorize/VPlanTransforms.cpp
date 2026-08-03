@@ -5682,20 +5682,7 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   assert(Pred && "Must be expandable!");
 
   auto *StridesCheckBB = Plan.createVPBasicBlock("strides.check");
-  VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
-  VPBlockUtils::insertBlockBefore(StridesCheckBB, Plan.getVectorPreheader());
-  VPBlockUtils::connectBlocks(StridesCheckBB, ScalarPH);
-  // SCEVExpander/VPSCEVExpander::expandCodeForPredicate negate the condition,
-  // so scalar preheader should be the first successor.
-  std::swap(StridesCheckBB->getSuccessors()[0],
-            StridesCheckBB->getSuccessors()[1]);
-  Builder.setInsertPoint(StridesCheckBB);
-  Builder.createNaryOp(VPInstruction::BranchOnCond, Pred);
-
-  for (VPRecipeBase &R : ScalarPH->phis()) {
-    auto &Phi = cast<VPPhi>(R);
-    Phi.addIncoming(Phi.getIncomingValueForBlock(Entry));
-  }
+  attachVPCheckBlock(Plan, Pred, StridesCheckBB, /*AddBranchWeights=*/false);
 
   for (auto &R : make_early_inc_range(*Entry)) {
     auto *ExpandSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
