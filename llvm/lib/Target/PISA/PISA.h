@@ -37,7 +37,7 @@ FunctionPass *createPISAPreLegalizerCombiner();
 FunctionPass *createPISAPostLegalizerCombiner();
 FunctionPass *createPISAReplaceIntrinsicsPass();
 MachineFunctionPass *createPISALegalizePredicatesPass();
-MachineFunctionPass *createCacheHintSelectorPass();
+MachineFunctionPass *createPISACacheHintSelectorPass();
 MachineFunctionPass *createPISAScopeSelectorPass();
 
 InstructionSelector *
@@ -45,20 +45,16 @@ createPISAInstructionSelector(const PISATargetMachine &TM,
                               const PISASubtarget &Subtarget,
                               const RegisterBankInfo &RBI);
 
-MachineFunctionPass *
-createPISAMachineFunctionPrinterPass(const std::string &Banner,
-                                     unsigned Counter);
 FunctionPass *createPISALayoutPass();
 MachineFunctionPass *createPISAVerifyTypesPass();
 
-void initializeCacheHintSelectorPass(PassRegistry &);
+void initializePISACacheHintSelectorPass(PassRegistry &);
 void initializePISAEmitIntrinsicsPass(PassRegistry &);
 void initializePISAExpandIntrinsicsPass(PassRegistry &);
 void initializePISAInsertLifetimeStartPass(PassRegistry &);
 void initializePISAKernelByValArgsLoweringLegacyPass(PassRegistry &);
 void initializePISALegalizeCallsPass(PassRegistry &);
 void initializePISALegalizeSubregAccessPass(PassRegistry &);
-void initializePISAMachineFunctionPrinterPass(PassRegistry &);
 void initializePISAMarkConvergentNoMergePass(PassRegistry &);
 void initializePISAOptimizeRedundantCopiesPass(PassRegistry &);
 void initializePISAOptimizeSubregAccessPass(PassRegistry &);
