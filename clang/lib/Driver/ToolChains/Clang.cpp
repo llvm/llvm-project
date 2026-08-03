@@ -7128,6 +7128,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
 
+      // Handle -fopenmp-target-atomic-reduction.
+      if (Args.hasFlag(options::OPT_fopenmp_target_atomic_reduction,
+                       options::OPT_fno_openmp_target_atomic_reduction,
+                       /*Default=*/false))
+        CmdArgs.push_back("-fopenmp-target-atomic-reduction");
+
       if (Args.hasArg(options::OPT_fopenmp_offload_mandatory))
         CmdArgs.push_back("-fopenmp-offload-mandatory");
       if (Args.hasArg(options::OPT_fopenmp_force_usm))
