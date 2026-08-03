@@ -624,13 +624,16 @@ def write_docs(module_path: str, module: str, check_name: str) -> None:
     )
     print(f"Creating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
-        f.write("""```{title} clang-tidy - %(check_name_dashes)s
+        f.write(
+            """```{title} clang-tidy - %(check_name_dashes)s
 ```
 
 # %(check_name_dashes)s
 
 FIXME: Describe what patterns does the check detect and why. Give examples.
-""" % {"check_name_dashes": check_name_dashes})
+"""
+            % {"check_name_dashes": check_name_dashes}
+        )
 
 
 def get_camel_name(check_name: str) -> str:
