@@ -1061,8 +1061,6 @@ Error write(DWPWriter &Out, ArrayRef<std::string> Inputs,
   }
 
   writeIndex(Out, DS_CUIndex, ContributionOffsets, IndexEntries, IndexVersion);
-  IndexEntries.clear();
-  TypeIndexEntries.clear();
 
   // Write ELF output while input data is still alive (zero-copy chunks
   // reference mmap'd input data held by the Objects vector above).
