@@ -967,7 +967,7 @@ void RTDEF(AssignSimple)(Descriptor &to, const Descriptor &from,
       from.GetLowerBounds(fromAt);
       char *tempAt{tempBuffer};
       for (std::size_t n{elements}; n-- > 0;
-           from.IncrementSubscripts(fromAt), tempAt += elementBytes) {
+          from.IncrementSubscripts(fromAt), tempAt += elementBytes) {
         runtime::memcpy(tempAt, from.Element<const char>(fromAt), elementBytes);
       }
     }
@@ -1037,7 +1037,7 @@ void RTDEF(AssignSimple)(Descriptor &to, const Descriptor &from,
       to.GetLowerBounds(toAt);
       const char *tempAt{tempBuffer};
       for (std::size_t n{elements}; n-- > 0;
-           to.IncrementSubscripts(toAt), tempAt += elementBytes) {
+          to.IncrementSubscripts(toAt), tempAt += elementBytes) {
         runtime::memcpy(to.Element<char>(toAt), tempAt, elementBytes);
       }
     }
@@ -1056,7 +1056,7 @@ void RTDEF(AssignSimple)(Descriptor &to, const Descriptor &from,
       SubscriptValue fromAt[maxRank];
       from.GetLowerBounds(fromAt);
       for (std::size_t n{elements}; n-- > 0;
-           to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
+          to.IncrementSubscripts(toAt), from.IncrementSubscripts(fromAt)) {
         runtime::memmove(to.Element<char>(toAt),
             from.Element<const char>(fromAt), elementBytes);
       }
