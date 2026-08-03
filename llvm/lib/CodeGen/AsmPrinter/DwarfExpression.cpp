@@ -308,7 +308,6 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     return false;
   }
 
-  auto Op = ExprCursor.peek();
   bool HasComplexExpression = isRemainingExpressionComplex(ExprCursor);
 
   // If the register can only be described by a complex expression (i.e.,
@@ -384,6 +383,17 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     return false;
   }
 
+  // Consume leading tag offsets before matching the register expression.
+  // Record the tag offset here because addExpression won't see a consumed
+  // operation.
+  while (auto Op = ExprCursor.peek()) {
+    if (Op->getOp() != dwarf::DW_OP_LLVM_tag_offset)
+      break;
+    TagOffset = Op->getArg(0);
+    ExprCursor.take();
+  }
+
+  auto Op = ExprCursor.peek();
   auto Reg = DwarfRegs[0];
   int SignedOffset = 0;
   assert(!Reg.isSubRegister() && "full register expected");

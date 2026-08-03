@@ -4,7 +4,7 @@
 ; register expression is complex.
 
 define void @registers(i64 %tag_only, i32 %simple_subreg,
-                       i32 %complex_subreg) !dbg !5 {
+                       i32 %complex_subreg, i32 %unfolded_subreg) !dbg !5 {
   #dbg_value(i64 %tag_only, !9,
              !DIExpression(DW_OP_LLVM_tag_offset, 7), !12)
   #dbg_value(i32 %simple_subreg, !10,
@@ -13,6 +13,9 @@ define void @registers(i64 %tag_only, i32 %simple_subreg,
   #dbg_value(i32 %complex_subreg, !14,
              !DIExpression(DW_OP_LLVM_tag_offset, 9,
                            DW_OP_plus_uconst, 1), !12)
+  #dbg_value(i32 %unfolded_subreg, !16,
+             !DIExpression(DW_OP_LLVM_tag_offset, 10,
+                           DW_OP_constu, 2, DW_OP_mul), !12)
   ret void, !dbg !12
 }
 
@@ -26,11 +29,16 @@ define void @registers(i64 %tag_only, i32 %simple_subreg,
 ; CHECK: DW_AT_LLVM_tag_offset (0x08)
 ; CHECK: DW_AT_name ("simple_subreg")
 
-; A real operation after the tag uses the complex register path and masks the
-; 32-bit value before applying the operation.
-; CHECK: DW_OP_breg1 RDX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_plus_uconst 0x1)
+; A tag doesn't prevent folding a register offset into DW_OP_breg.
+; CHECK: DW_OP_breg1 RDX+1)
 ; CHECK: DW_AT_LLVM_tag_offset (0x09)
 ; CHECK: DW_AT_name ("complex_subreg")
+
+; A non-foldable operation still uses the complex register path and masks the
+; subregister before applying the operation.
+; CHECK: DW_OP_breg2 RCX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_lit2, DW_OP_mul)
+; CHECK: DW_AT_LLVM_tag_offset (0x0a)
+; CHECK: DW_AT_name ("unfolded_subreg")
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}
@@ -49,3 +57,4 @@ define void @registers(i64 %tag_only, i32 %simple_subreg,
 !12 = !DILocation(line: 1, scope: !5)
 !14 = !DILocalVariable(name: "complex_subreg", scope: !5, type: !15)
 !15 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!16 = !DILocalVariable(name: "unfolded_subreg", scope: !5, type: !15)
