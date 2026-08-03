@@ -196,8 +196,14 @@ public:
     return false;
   }
 
-  // Instruction selection (addGlobalInstructionSelect) is added in a
-  // subsequent change together with the PISA instruction selector.
+  bool addGlobalInstructionSelect() override {
+    if (getOptLevel() != CodeGenOptLevel::None)
+      addPass(&MachineCSELegacyID);
+    addPass(new InstructionSelect());
+    if (getOptLevel() == CodeGenOptLevel::None)
+      addPass(&ProcessImplicitDefsID);
+    return false;
+  }
 
   // PISA does not allocate physical registers.
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
