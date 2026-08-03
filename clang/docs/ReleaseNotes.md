@@ -117,8 +117,6 @@ features cannot lower the translation-unit ABI level;
 
 #### C++23 Feature Support
 
-- Clang now allows indirect goto statements in `constexpr` functions in C++23 ([P2242R3](https://wg21.link/p2242r3)). (#213449)
-
 #### C++20 Feature Support
 
 #### C++17 Feature Support
@@ -159,6 +157,9 @@ features cannot lower the translation-unit ABI level;
 ### Objective-C Language Changes
 
 ### Non-comprehensive list of changes in this release
+
+- Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
+  `constexpr` function body rules introduced in C++23.
 
 ### New Compiler Flags
 
@@ -352,7 +353,6 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now attempts to print enumerator names rather than C-style cast expressions
   in more diagnostics.
-
 
 ### Improvements to Clang's time-trace
 
