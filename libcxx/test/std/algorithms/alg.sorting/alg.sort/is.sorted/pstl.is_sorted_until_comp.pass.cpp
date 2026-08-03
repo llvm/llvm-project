@@ -33,14 +33,13 @@ EXECUTION_POLICY_SFINAE_TEST(is_sorted_until);
 static_assert(sfinae_test_is_sorted_until<int, int*, int*, bool (*)(int, int)>);
 static_assert(!sfinae_test_is_sorted_until<std::execution::parallel_policy, int*, int*, bool (*)(int, int)>);
 
-// The type X is provided to test that the is_sorted_until algorithm can be used with custom non-movable/non-copyable types.
-struct X {
-  X() = delete;
-  explicit X(int i) : i_(i) {}
-  X(const X&)            = delete;
-  X(X&&)                 = delete;
-  X& operator=(const X&) = delete;
-  X& operator=(X&&)      = delete;
+struct NonCopyableNonAssignable {
+  NonCopyableNonAssignable() = delete;
+  explicit NonCopyableNonAssignable(int i) : i_(i) {}
+  NonCopyableNonAssignable(const NonCopyableNonAssignable&)            = delete;
+  NonCopyableNonAssignable(NonCopyableNonAssignable&&)                 = delete;
+  NonCopyableNonAssignable& operator=(const NonCopyableNonAssignable&) = delete;
+  NonCopyableNonAssignable& operator=(NonCopyableNonAssignable&&)      = delete;
   int value() const { return i_; }
 
 private:
@@ -49,7 +48,9 @@ private:
 
 struct Comp {
   bool operator()(int lhs, int rhs) const { return lhs > rhs; }
-  bool operator()(const X& lhs, const X& rhs) const { return lhs.value() > rhs.value(); }
+  bool operator()(const NonCopyableNonAssignable& lhs, const NonCopyableNonAssignable& rhs) const {
+    return lhs.value() > rhs.value();
+  }
 };
 
 template <class Iter>
@@ -235,11 +236,15 @@ struct Test {
 };
 
 template <class Iter>
-struct TestX {
+struct TestNonCopyableNonAssignable {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
     // Four elements, unsorted
-    X a[] = {X(2), X(2), X(1), X(3)};
+    NonCopyableNonAssignable a[] = {
+        NonCopyableNonAssignable(2),
+        NonCopyableNonAssignable(2),
+        NonCopyableNonAssignable(1),
+        NonCopyableNonAssignable(3)};
     assert(std::is_sorted_until(policy, Iter(std::begin(a)), Iter(std::end(a)), Comp{}) == Iter(std::begin(a) + 3));
     assert(std::is_sorted_until(policy, Iter(std::begin(a) + 1), Iter(std::end(a)), Comp{}) == Iter(std::begin(a) + 3));
     assert(std::is_sorted_until(policy, Iter(std::begin(a)), Iter(std::begin(a) + 3), Comp{}) ==
@@ -249,6 +254,7 @@ struct TestX {
 
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<int*>{}, TestIteratorWithPolicies<Test>{});
-  types::for_each(types::forward_iterator_list<const X*>{}, TestIteratorWithPolicies<TestX>{});
+  types::for_each(types::forward_iterator_list<const NonCopyableNonAssignable*>{},
+                  TestIteratorWithPolicies<TestNonCopyableNonAssignable>{});
   return 0;
 }

@@ -32,15 +32,14 @@ EXECUTION_POLICY_SFINAE_TEST(is_sorted_until);
 static_assert(sfinae_test_is_sorted_until<int, int*, int*>);
 static_assert(!sfinae_test_is_sorted_until<std::execution::parallel_policy, int*, int*>);
 
-// The type X is provided to test that the is_sorted_until algorithm can be used with custom non-movable/non-copyable types.
-struct X {
-  X() = delete;
-  explicit X(int i) : i_(i) {}
-  X(const X&)            = delete;
-  X(X&&)                 = delete;
-  X& operator=(const X&) = delete;
-  X& operator=(X&&)      = delete;
-  bool operator<(const X& other) const { return i_ < other.i_; }
+struct NonCopyableNonAssignable {
+  NonCopyableNonAssignable() = delete;
+  explicit NonCopyableNonAssignable(int i) : i_(i) {}
+  NonCopyableNonAssignable(const NonCopyableNonAssignable&)            = delete;
+  NonCopyableNonAssignable(NonCopyableNonAssignable&&)                 = delete;
+  NonCopyableNonAssignable& operator=(const NonCopyableNonAssignable&) = delete;
+  NonCopyableNonAssignable& operator=(NonCopyableNonAssignable&&)      = delete;
+  bool operator<(const NonCopyableNonAssignable& other) const { return i_ < other.i_; }
 
 private:
   int i_;
@@ -229,11 +228,15 @@ struct Test {
 };
 
 template <class Iter>
-struct TestX {
+struct TestNonCopyableNonAssignable {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
     // Four elements, unsorted
-    X a[] = {X(0), X(1), X(2), X(0)};
+    NonCopyableNonAssignable a[] = {
+        NonCopyableNonAssignable(0),
+        NonCopyableNonAssignable(1),
+        NonCopyableNonAssignable(2),
+        NonCopyableNonAssignable(0)};
     assert(std::is_sorted_until(policy, Iter(std::begin(a)), Iter(std::end(a))) == Iter(std::begin(a) + 3));
     assert(std::is_sorted_until(policy, Iter(std::begin(a) + 1), Iter(std::end(a))) == Iter(std::begin(a) + 3));
     assert(std::is_sorted_until(policy, Iter(std::begin(a)), Iter(std::begin(a) + 3)) == Iter(std::begin(a) + 3));
@@ -242,6 +245,7 @@ struct TestX {
 
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<int*>{}, TestIteratorWithPolicies<Test>{});
-  types::for_each(types::forward_iterator_list<const X*>{}, TestIteratorWithPolicies<TestX>{});
+  types::for_each(types::forward_iterator_list<const NonCopyableNonAssignable*>{},
+                  TestIteratorWithPolicies<TestNonCopyableNonAssignable>{});
   return 0;
 }
