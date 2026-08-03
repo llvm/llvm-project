@@ -134,7 +134,6 @@ LLVM_ABI void initializeGlobalsAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeHardwareLoopsLegacyPass(PassRegistry &);
 LLVM_ABI void initializeLibcallLoweringInfoWrapperPass(PassRegistry &);
 LLVM_ABI void initializeMIRProfileLoaderPassPass(PassRegistry &);
-LLVM_ABI void initializeIRSimilarityIdentifierWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeIRTranslatorPass(PassRegistry &);
 LLVM_ABI void initializeIVUsersWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeIfConverterPass(PassRegistry &);
@@ -220,6 +219,7 @@ LLVM_ABI void initializeStaticDataAnnotatorLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachinePipelinerPass(PassRegistry &);
 LLVM_ABI void initializeMachinePostDominatorTreeWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineRegionInfoPassPass(PassRegistry &);
+LLVM_ABI void initializeMachineRegisterClassInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void
 initializeMachineSanitizerBinaryMetadataLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMIR2VecVocabLegacyAnalysisPass(PassRegistry &);

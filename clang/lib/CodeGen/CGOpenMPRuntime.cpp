@@ -1856,6 +1856,9 @@ void CGOpenMPRuntime::emitAndRegisterVTable(CodeGenModule &CGM,
       CodeGenVTables VTables = CGM.getVTables();
       llvm::GlobalVariable *VTablesAddr = VTables.GetAddrOfVTable(CXXRecord);
       assert(VTablesAddr && "Expected non-null VTable address");
+      // Must set VTables to weak since we're emitting them in multiple TUs now
+      if (VTablesAddr->hasExternalLinkage())
+        VTablesAddr->setLinkage(llvm::GlobalValue::WeakODRLinkage);
       CGM.getOpenMPRuntime().registerVTableOffloadEntry(VTablesAddr, VD);
       // Emit VTable for all the fields containing dynamic CXXRecord
       for (const FieldDecl *Field : CXXRecord->fields()) {
@@ -4617,9 +4620,9 @@ void CGOpenMPRuntime::emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
                             Args);
 }
 
-void CGOpenMPRuntime::emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
-                                       OpenMPDependClauseKind NewDepKind,
-                                       SourceLocation Loc) {
+void CGOpenMPRuntime::emitUpdateDependObjectsClause(
+    CodeGenFunction &CGF, LValue DepobjLVal, OpenMPDependClauseKind NewDepKind,
+    SourceLocation Loc) {
   ASTContext &C = CGM.getContext();
   QualType FlagsTy;
   getDependTypes(C, KmpDependInfoTy, FlagsTy);

@@ -611,7 +611,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
                                : SubLoop->getParentLoop()
                          : SubLoop;
   assert(DT->verify());
-  LI->verify(*DT);
+  LI->verify();
   assert(OutestLoop->isRecursivelyLCSSAForm(*DT, *LI));
   if (!CompletelyUnroll)
     assert(L->isLoopSimplifyForm());

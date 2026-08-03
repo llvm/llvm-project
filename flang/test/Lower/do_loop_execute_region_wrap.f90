@@ -20,7 +20,6 @@ end subroutine
 ! CHECK:             fir.unreachable
 ! CHECK:             scf.yield
 ! CHECK:           }
-! CHECK:           fir.result
 
 ! Unstructured DO with a GOTO targeting a label outside the construct that
 ! is reachable on a path distinct from the loop's natural exit: not wrapped.
@@ -141,8 +140,6 @@ end subroutine
 ! CHECK:               fir.unreachable
 ! CHECK:               scf.yield
 ! CHECK:             }
-! CHECK:             fir.result
-! CHECK:           fir.result
 
 ! Structured outer DO containing an unstructured inner DO (the inner DO has
 ! an EXIT that targets its own construct exit). isUnstructured does not
@@ -168,4 +165,3 @@ end subroutine
 ! CHECK:             cf.cond_br
 ! CHECK:             scf.yield
 ! CHECK:           }
-! CHECK:           fir.result

@@ -515,9 +515,10 @@ protected:
   void addRegAllocPass(PassManagerWrapper &PMW, bool Optimized) const;
 
   /// Add core register allocator passes which do the actual register assignment
-  /// and rewriting.
-  Error addRegAssignmentFast(PassManagerWrapper &PMW) const;
-  Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
+  /// and rewriting. addRegAssignAndRewriteOptimized should return true if any
+  /// passes were added.
+  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) const;
+  Expected<bool> addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) const;
 
   /// Allow the target to disable a specific pass by default.
   /// Backend can declare unwanted passes in constructor.
@@ -1183,7 +1184,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
 }
 
 template <typename Derived, typename TargetMachineT>
-Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentFast(
+Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignAndRewriteFast(
     PassManagerWrapper &PMW) const {
   // TODO: Ensure allocator is default or fast.
   addRegAllocPass(PMW, false);
@@ -1191,7 +1192,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentFast(
 }
 
 template <typename Derived, typename TargetMachineT>
-Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentOptimized(
+Expected<bool>
+CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignAndRewriteOptimized(
     PassManagerWrapper &PMW) const {
   // Add the selected register allocation pass.
   addRegAllocPass(PMW, true);
@@ -1201,13 +1203,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addRegAssignmentOptimized(
 
   // Finally rewrite virtual registers.
   addMachineFunctionPass(VirtRegRewriterPass(), PMW);
-  // Perform stack slot coloring and post-ra machine LICM.
-  //
-  // FIXME: Re-enable coloring with register when it's capable of adding
-  // kill markers.
-  addMachineFunctionPass(StackSlotColoringPass(), PMW);
 
-  return Error::success();
+  return true;
 }
 
 /// Add the minimum set of target-independent passes that are required for
@@ -1217,7 +1214,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addFastRegAlloc(
     PassManagerWrapper &PMW) const {
   addMachineFunctionPass(PHIEliminationPass(), PMW);
   addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
-  return derived().addRegAssignmentFast(PMW);
+  return derived().addRegAssignAndRewriteFast(PMW);
 }
 
 /// Add standard target-independent passes that are tightly coupled with
@@ -1267,8 +1264,11 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   // PreRA instruction scheduling.
   addMachineFunctionPass(MachineSchedulerPass(&TM), PMW);
 
-  if (auto E = derived().addRegAssignmentOptimized(PMW))
-    return std::move(E);
+  Expected<bool> AddedPasses = derived().addRegAssignAndRewriteOptimized(PMW);
+  if (!AddedPasses)
+    return AddedPasses.takeError();
+  if (!AddedPasses.get())
+    return Error::success();
 
   addMachineFunctionPass(StackSlotColoringPass(), PMW);
 

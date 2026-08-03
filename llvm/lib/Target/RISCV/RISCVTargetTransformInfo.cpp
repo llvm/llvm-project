@@ -3638,10 +3638,6 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
 RISCVTTIImpl::TTI::MemCmpExpansionOptions
 RISCVTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;
-  // TODO: Enable expansion when unaligned access is not supported after we fix
-  // issues in ExpandMemcmp.
-  if (!ST->enableUnalignedScalarMem())
-    return Options;
 
   if (!ST->hasStdExtZbb() && !ST->hasStdExtZbkb() && !IsZeroCmp)
     return Options;

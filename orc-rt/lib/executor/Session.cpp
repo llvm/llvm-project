@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Session.h"
+#include "orc-rt-c/Session.h"
 
 namespace orc_rt {
 
@@ -120,6 +121,7 @@ void Session::doAttach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) {
     CurrentState = State::Attached;
   }
 
+  // Fall through to disconnect from case (3) above.
   CA->disconnect();
 }
 
@@ -358,16 +360,29 @@ void Session::completeShutdown() {
   CV.notify_all();
 }
 
-void Session::sendWrapperResult(uint64_t CallId,
-                                WrapperFunctionBuffer ResultBytes) {
+void Session::sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                                uint64_t CallId) {
   if (auto TmpCA = std::atomic_load(&CA))
-    TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
-  ManagedCodeTaskGroup->releaseToken();
+    TmpCA->sendWrapperResult(std::move(ResultBytes), CallId);
 }
 
-void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
-                            orc_rt_WrapperFunctionBuffer ResultBytes) {
-  unwrap(S)->sendWrapperResult(CallId, WrapperFunctionBuffer(ResultBytes));
+void Session::wrapperReturn(orc_rt_SessionRef S,
+                            orc_rt_WrapperFunctionBuffer ResultBytes,
+                            uint64_t CallId) {
+  unwrap(S)->sendWrapperResult(WrapperFunctionBuffer(ResultBytes), CallId);
+}
+
+// --- C API Implementation ---
+
+extern "C" void orc_rt_Session_callController(
+    orc_rt_SessionRef S, orc_rt_ControllerHandlerTag T,
+    orc_rt_WrapperFunctionBuffer ArgBytes,
+    orc_rt_Session_CallControllerReturn Return, void *ReturnCtx) {
+  unwrap(S)->callController(
+      [S, Return, ReturnCtx](WrapperFunctionBuffer ResultBytes) {
+        Return(S, ResultBytes.release(), ReturnCtx);
+      },
+      T, WrapperFunctionBuffer(ArgBytes));
 }
 
 } // namespace orc_rt

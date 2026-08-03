@@ -11,6 +11,7 @@
 
 #include "orc-rt/Error.h"
 #include "orc-rt/ExecutorProcessInfo.h"
+#include "orc-rt/Session.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
 
@@ -51,10 +52,13 @@ inline orc_rt::ExecutorProcessInfo mockExecutorProcessInfo() noexcept {
 /// awaiting a result unblocks (rather than hanging) and the managed-code token
 /// is released, even in -Asserts builds or when the dispatch arrives on a
 /// non-test thread.
-inline void noDispatch(orc_rt::move_only_function<void()> Task) {
+inline void noDispatch(orc_rt::Session::Task T) {
   ADD_FAILURE() << "unexpected dispatch in a no-dispatch session";
-  Task();
+  T();
 }
+
+/// DispatchFn that runs tasks on the current thread.
+inline void inlineDispatch(orc_rt::Session::Task T) { T(); }
 
 template <size_t Idx = 0> class OpCounter {
 public:

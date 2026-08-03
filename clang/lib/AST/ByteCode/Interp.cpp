@@ -476,7 +476,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
   // If we're evaluating the initializer for a constexpr variable in C23, we may
   // only read other contexpr variables. Abort here since this one isn't
   // constexpr.
-  if (const auto *VD = dyn_cast_if_present<VarDecl>(S.EvaluatingDecl);
+  if (const auto *VD = S.EvaluatingDecl;
       VD && VD->isConstexpr() && S.getLangOpts().C23)
     return Invalid(S, OpPC);
 
@@ -1572,10 +1572,7 @@ static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
       Ptr.asTypeidPointer().TypeInfoType->getAsRecordDecl());
   if (!R)
     return false;
-  const Record::Field *Field =
-      llvm::find_if(R->fields(), [=](const Record::Field &F) -> bool {
-        return F.Offset == Offset;
-      });
+  const Record::Field *Field = R->findField(Offset);
   if (!Field)
     return false;
 
@@ -1892,8 +1889,8 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return false;
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
+  auto *Memory = new char[InterpFrame::allocSize(Func)];
+  auto *NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
@@ -1985,8 +1982,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
+  auto *Memory = new char[InterpFrame::allocSize(Func)];
+  auto *NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
@@ -2064,6 +2061,7 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, PtrView TypePtr,
   return DynamicDecl != nullptr;
 }
 
+namespace {
 struct DynamicCastResult {
   UnsignedOrNone Offset = std::nullopt;
   bool Ambiguous = false;
@@ -2088,6 +2086,7 @@ struct DynamicCastResult {
     }
   }
 };
+} // namespace
 
 // Walk UP the type hierarchy, starting at the decl of R to find Needle.
 static DynamicCastResult findRecordBase(const ASTContext &Ctx, const Record *R,
@@ -2286,7 +2285,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     return false;
   assert(DynamicDecl);
 
-  const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
+  const auto *StaticDecl = Func->getParentDecl();
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 
@@ -3080,7 +3079,7 @@ static bool castBackMemberPointer(InterpState &S,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength - 1;
   bool IsDerivedMember = NewPathLength != 0;
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), NewPathLength, NewPath);
 
   S.Stk.push<MemberPointer>(MemberPtr.atInstanceBase(BaseOffset, NewPathLength,
@@ -3096,7 +3095,7 @@ static bool appendToMemberPointer(InterpState &S,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength + 1;
 
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
   NewPath[OldPathLength] = cast<CXXRecordDecl>(BaseDecl);
 
@@ -3180,7 +3179,7 @@ bool CopyMemberPtrPath(InterpState &S, const RecordDecl *Entry,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength + 1;
 
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
   NewPath[OldPathLength] = cast<CXXRecordDecl>(Entry);
 
@@ -3223,7 +3222,7 @@ bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
 }
 
 // FIXME: Would be nice to generate this instead of hardcoding it here.
-constexpr bool OpReturns(Opcode Op) {
+[[maybe_unused]] static constexpr bool OpReturns(Opcode Op) {
   return Op == OP_RetVoid || Op == OP_RetValue || Op == OP_NoRet ||
          Op == OP_RetSint8 || Op == OP_RetUint8 || Op == OP_RetSint16 ||
          Op == OP_RetUint16 || Op == OP_RetSint32 || Op == OP_RetUint32 ||

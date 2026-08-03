@@ -3480,6 +3480,16 @@ LogicalResult SimdOp::verify() {
   if (getLinearVars().size() &&
       getLinearVarTypes().value().size() != getLinearVars().size())
     return emitError() << "Ill-formed type attributes for linear variables";
+
+  llvm::DenseSet<Value> privateVars(llvm::from_range, getPrivateVars());
+  llvm::DenseSet<Value> reductionVars(llvm::from_range, getReductionVars());
+  // TODO Check lastprivate vars when their support is added to SimdOp.
+  for (Value var : getLinearVars()) {
+    if (privateVars.contains(var) || reductionVars.contains(var))
+      return emitOpError()
+             << "linear variables cannot appear in other data-sharing clauses";
+  }
+
   return success();
 }
 
@@ -4615,6 +4625,18 @@ LogicalResult CriticalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     }
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Spec 5.1: Error directive (2.5.4)
+//===----------------------------------------------------------------------===//
+
+LogicalResult ErrorOp::verify() {
+  if (getMessage() && getMessageExpr())
+    return emitOpError() << "the message must be provided either as a constant "
+                            "`message` attribute or as a `message_expr` "
+                            "operand, but not both";
   return success();
 }
 

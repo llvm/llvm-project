@@ -488,7 +488,11 @@ void UnionType::complete(ArrayRef<Type> members, bool packed,
 
 mlir::Type
 UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout) const {
-  llvm::ArrayRef<mlir::Type> members = getMembers();
+  return getUnionStorageType(dataLayout, getMembers());
+}
+
+mlir::Type UnionType::getUnionStorageType(const mlir::DataLayout &dataLayout,
+                                          llvm::ArrayRef<mlir::Type> members) {
   if (members.empty())
     return {};
   return *std::max_element(
@@ -603,20 +607,105 @@ void RecordType::removeABIConversionNamePrefix() {
 // Data Layout information for types
 //===----------------------------------------------------------------------===//
 
+// The cir.ptr data-layout entry holds a #cir.ptr_spec attribute (see
+// cir::setMLIRDataLayout).
+namespace {
+constexpr static uint64_t kBitsInByte = 8;
+
+// Defaults used when the module carries no cir.ptr data-layout entry.
+constexpr static uint64_t kDefaultPointerSizeBits = 64;
+constexpr static uint64_t kDefaultPointerAlignment = 8;
+
+/// Returns the default-address-space #cir.ptr_spec entry, or a synthesized
+/// 64-bit default when there is none. Per-AS entries are not modeled yet.
+cir::PtrSpecAttr getPointerSpec(mlir::DataLayoutEntryListRef params,
+                                cir::PointerType type) {
+  // FIXME: improve this in face of address spaces
+  assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key =
+        mlir::cast<cir::PointerType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (key.getAddrSpace())
+      continue;
+    if (auto spec = mlir::dyn_cast<cir::PtrSpecAttr>(entry.getValue()))
+      return spec;
+  }
+  return cir::PtrSpecAttr::get(type.getContext(), kDefaultPointerSizeBits,
+                               kDefaultPointerAlignment * kBitsInByte,
+                               kDefaultPointerAlignment * kBitsInByte,
+                               kDefaultPointerSizeBits);
+}
+} // namespace
+
 llvm::TypeSize
 PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                                ::mlir::DataLayoutEntryListRef params) const {
-  // FIXME: improve this in face of address spaces
-  assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
-  return llvm::TypeSize::getFixed(64);
+  return llvm::TypeSize::getFixed(getPointerSpec(params, *this).getSize());
 }
 
 uint64_t
 PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
-  // FIXME: improve this in face of address spaces
-  assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
-  return 8;
+  return getPointerSpec(params, *this).getAbi() / kBitsInByte;
+}
+
+uint64_t PointerType::getPreferredAlignment(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return getPointerSpec(params, *this).getPreferred() / kBitsInByte;
+}
+
+std::optional<uint64_t>
+PointerType::getIndexBitwidth(const ::mlir::DataLayout &dataLayout,
+                              ::mlir::DataLayoutEntryListRef params) const {
+  cir::PtrSpecAttr spec = getPointerSpec(params, *this);
+  if (spec.getIndex() == cir::PtrSpecAttr::kOptionalSpecValue)
+    return spec.getSize();
+  return spec.getIndex();
+}
+
+llvm::LogicalResult
+PointerType::verifyEntries(mlir::DataLayoutEntryListRef entries,
+                           mlir::Location loc) const {
+  for (mlir::DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key = mlir::cast<PointerType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (!mlir::isa<cir::PtrSpecAttr>(entry.getValue()))
+      return mlir::emitError(loc) << "expected layout attribute for " << key
+                                  << " to be a #cir.ptr_spec attribute";
+    if (!mlir::isa<cir::VoidType>(key.getPointee()))
+      return mlir::emitError(loc) << "expected !cir.ptr data layout entry for "
+                                  << key << " to use !cir.void as pointee";
+    // Per-address-space pointer layouts are not supported yet.
+    if (key.getAddrSpace())
+      return mlir::emitError(loc)
+             << "!cir.ptr data layout entries are currently limited to the "
+                "default address space";
+  }
+  return mlir::success();
+}
+
+bool PointerType::areCompatible(
+    mlir::DataLayoutEntryListRef oldLayout,
+    mlir::DataLayoutEntryListRef newLayout, mlir::DataLayoutSpecInterface,
+    const mlir::DataLayoutIdentifiedEntryMap &) const {
+  // A nested spec may only override with the same size and a compatible ABI
+  // alignment. TODO(cir): match by address space once per-AS specs exist.
+  cir::PtrSpecAttr oldSpec = getPointerSpec(oldLayout, *this);
+  uint64_t size = oldSpec.getSize();
+  uint64_t abi = oldSpec.getAbi();
+  for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+    auto newSpec = mlir::cast<cir::PtrSpecAttr>(newEntry.getValue());
+    if (size != newSpec.getSize() || abi < newSpec.getAbi() ||
+        abi % newSpec.getAbi() != 0)
+      return false;
+  }
+  return true;
 }
 
 llvm::TypeSize
@@ -1118,20 +1207,31 @@ BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 //  DataMemberType Definitions
 //===----------------------------------------------------------------------===//
 
+static mlir::Type getDataMemberLayoutType(const mlir::DataLayout &dataLayout,
+                                          mlir::MLIRContext *ctx) {
+  // Itanium ABI: a data member pointer is a ptrdiff_t, an integer of the
+  // pointer index width.
+  // TODO: consider data member pointer layout in other ABIs
+  auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(ctx));
+  uint64_t width = dataLayout.getTypeIndexBitwidth(voidPtrTy).value_or(
+      dataLayout.getTypeSizeInBits(voidPtrTy).getFixedValue());
+  return cir::IntType::get(ctx, width, /*is_signed=*/true);
+}
+
 llvm::TypeSize
 DataMemberType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                                   ::mlir::DataLayoutEntryListRef params) const {
-  // FIXME: consider size differences under different ABIs
   assert(!MissingFeatures::cxxABI());
-  return llvm::TypeSize::getFixed(64);
+  return dataLayout.getTypeSizeInBits(
+      getDataMemberLayoutType(dataLayout, getContext()));
 }
 
 uint64_t
 DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                 ::mlir::DataLayoutEntryListRef params) const {
-  // FIXME: consider alignment differences under different ABIs
   assert(!MissingFeatures::cxxABI());
-  return 8;
+  return dataLayout.getTypeABIAlignment(
+      getDataMemberLayoutType(dataLayout, getContext()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1141,14 +1241,15 @@ DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 llvm::TypeSize
 VPtrType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                             mlir::DataLayoutEntryListRef params) const {
-  // FIXME: consider size differences under different ABIs
-  return llvm::TypeSize::getFixed(64);
+  // A vtable pointer is an ordinary data pointer; size it as a cir.ptr.
+  return dataLayout.getTypeSizeInBits(
+      cir::PointerType::get(cir::VoidType::get(getContext())));
 }
 
 uint64_t VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                    mlir::DataLayoutEntryListRef params) const {
-  // FIXME: consider alignment differences under different ABIs
-  return 8;
+  return dataLayout.getTypeABIAlignment(
+      cir::PointerType::get(cir::VoidType::get(getContext())));
 }
 
 //===----------------------------------------------------------------------===//

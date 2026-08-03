@@ -598,6 +598,14 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #undef SPARC_DYNAMIC_TAG
     }
     break;
+
+  case ELF::EM_X86_64:
+    switch (Type) {
+#define X86_64_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef X86_64_DYNAMIC_TAG
+    }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {
@@ -609,6 +617,7 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #define PPC64_DYNAMIC_TAG(name, value)
 #define RISCV_DYNAMIC_TAG(name, value)
 #define SPARC_DYNAMIC_TAG(name, value)
+#define X86_64_DYNAMIC_TAG(name, value)
 // Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 #define DYNAMIC_TAG(name, value) case value: return #name;
@@ -621,6 +630,7 @@ std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #undef PPC64_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG
 #undef SPARC_DYNAMIC_TAG
+#undef X86_64_DYNAMIC_TAG
 #undef DYNAMIC_TAG_MARKER
 #undef DYNAMIC_STRINGIFY_ENUM
   default:
