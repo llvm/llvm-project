@@ -59,13 +59,10 @@ static bool isOnlyFirstEnumeratorInitialized(const EnumDecl &Node,
   return !IsFirst;
 }
 
-static bool areAllEnumeratorsInitialized(const EnumDecl &Node,
-                                         bool AllowSelfRefs) {
-  return llvm::all_of(Node.enumerators(),
-                      [AllowSelfRefs](const EnumConstantDecl *ECD) {
-                        return isAllowedSelfReference(ECD, AllowSelfRefs) ||
-                               ECD->getInitExpr() != nullptr;
-                      });
+static bool areAllEnumeratorsInitialized(const EnumDecl &Node) {
+  return llvm::all_of(Node.enumerators(), [](const EnumConstantDecl *ECD) {
+    return ECD->getInitExpr() != nullptr;
+  });
 }
 
 /// Check if \p Enumerator is initialized with a (potentially negated) \c
@@ -107,7 +104,7 @@ AST_MATCHER(EnumDecl, isMacro) {
 AST_MATCHER_P(EnumDecl, hasConsistentInitialValues, bool, AllowSelfRefs) {
   return isNoneEnumeratorsInitialized(Node, AllowSelfRefs) ||
          isOnlyFirstEnumeratorInitialized(Node, AllowSelfRefs) ||
-         areAllEnumeratorsInitialized(Node, AllowSelfRefs);
+         areAllEnumeratorsInitialized(Node);
 }
 
 AST_MATCHER_P(EnumDecl, hasZeroInitialValueForFirstEnumerator, bool,
