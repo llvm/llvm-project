@@ -119,8 +119,8 @@ private:
                                    bool DynAllocation) const;
 
   /// Emit target zero call-used regs.
-  void emitZeroCallUsedRegs(BitVector RegsToZero,
-                            MachineBasicBlock &MBB) const override;
+  void emitZeroCallUsedRegs(BitVector RegsToZero, MachineBasicBlock &MBB,
+                            RegScavenger *RS) const override;
 };
 } // namespace llvm
 #endif

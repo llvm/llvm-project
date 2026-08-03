@@ -108,8 +108,7 @@ define i32 @or_reduction_with_freeze(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[DST1]], [[SRC7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP7]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP8]], 3
+; CHECK-NEXT:    [[TMP9:%.*]] = and i64 [[TMP7]], -8
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 8
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[DST]], i64 8

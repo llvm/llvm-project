@@ -4350,7 +4350,7 @@ def warn_thread_attribute_decl_not_pointer : Warning<
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_not_on_scoped_lockable_param : Warning<
   "%0 attribute applies to function parameters only if their type is a "
-  "reference to a 'scoped_lockable'-annotated type">,
+  "function pointer or a reference to a 'scoped_lockable'-annotated type">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_requires_preceded : Warning<
   "%0 attribute on %1 must be preceded by %2 attribute">,
@@ -13852,6 +13852,11 @@ def warn_hlsl_assigning_local_resource_is_not_unique
 
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
+def err_hlsl_sample_double_element_type
+    : Error<"'%0' is not supported for resources containing %1">;
+def err_hlsl_sample_integer_element_type
+    : Error<"'%0' on resources containing %1 requires shader model 6.7 or "
+            "newer; the target shader model is %2">;
 def err_hlsl_samplecmp_requires_float
     : Error<"'SampleCmp' and 'SampleCmpLevelZero' require resource to contain "
             "a floating point type">;
@@ -14276,6 +14281,22 @@ def note_acc_reduction_recipe_noop_field
 def note_acc_reduction_combiner_forming
     : Note<"while forming %select{|binary operator '%1'|conditional "
            "operator|final assignment operator}0">;
+
+// AMDGCN type diagnostics
+def err_amdgpu_target_ext_type_unsupported : Error<
+  "AMDGPU built-in type %0 is not supported on target '%1'">;
+
+def err_amdgpu_invalid_field_not_a_wrapper : Error<
+  "field with barrier type %0 seen in a structure that is not a named barrier wrapper">;
+def note_amdgpu_not_a_named_barrier_wrapper_too_many_fields : Note<
+  "%0 is not a named barrier wrapper because it has more than one field">;
+
+def err_amdgpu_named_barrier_wrapper_non_standard_layout : Error<
+  "named barrier wrapper %0 must have a C++11 standard layout">;
+def note_amdgpu_named_barrier_reason_field : Note<
+  "%0 is a named barrier wrapper because it has a named barrier or named barrier wrapper field %1 found here">;
+def note_amdgpu_named_barrier_reason_inherited : Note<
+  "%0 is a named barrier wrapper because it inherits from named barrier wrapper %1">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

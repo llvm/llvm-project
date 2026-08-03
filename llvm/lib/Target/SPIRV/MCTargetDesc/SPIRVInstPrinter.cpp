@@ -87,17 +87,19 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
     APFloat FP = NumVarOps == 1 ? APFloat(APInt(32, Imm).bitsToFloat())
                                 : APFloat(APInt(64, Imm).bitsToDouble());
 
-    // Print infinity and NaN as hex floats.
+    // Print infinity and NaN as hex floats. The exponent depends on the
+    // actual width of FP (f32 vs f64), not a fixed constant.
     // TODO: Make sure subnormal numbers are handled correctly as they may also
     // require hex float notation.
-    if (FP.isInfinity()) {
-      if (FP.isNegative())
-        O << '-';
-      O << "0x1p+128";
-      return;
-    }
-    if (FP.isNaN()) {
-      O << "0x1.8p+128";
+    if (FP.isInfinity() || FP.isNaN()) {
+      unsigned MaxExp = APFloat::semanticsMaxExponent(FP.getSemantics()) + 1;
+      if (FP.isInfinity()) {
+        if (FP.isNegative())
+          O << '-';
+        O << "0x1p+" << MaxExp;
+      } else {
+        O << "0x1.8p+" << MaxExp;
+      }
       return;
     }
 
@@ -111,6 +113,31 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 
   // Print integer values directly.
   O << Imm;
+}
+
+unsigned SPIRVInstPrinter::printMemoryOperand(const MCInst *MI, unsigned OpNo,
+                                              raw_ostream &O) {
+  O << ' ';
+  if (OpNo >= MI->getNumOperands())
+    return OpNo;
+  const uint64_t Mask = MI->getOperand(OpNo).getImm();
+  printSymbolicOperand<OperandCategory::MemoryOperandOperand>(MI, OpNo, O);
+  unsigned NextOp = OpNo + 1;
+  static constexpr uint64_t ParameterizedMasks[] = {
+      SPIRV::MemoryOperand::Aligned,
+      SPIRV::MemoryOperand::MakePointerAvailableKHR,
+      SPIRV::MemoryOperand::MakePointerVisibleKHR,
+      SPIRV::MemoryOperand::AliasScopeINTELMask,
+      SPIRV::MemoryOperand::NoAliasINTELMask,
+  };
+  for (uint64_t ParamMask : ParameterizedMasks) {
+    if (!(Mask & ParamMask))
+      continue;
+    O << ' ';
+    printOperand(MI, NextOp, O);
+    ++NextOp;
+  }
+  return NextOp;
 }
 
 void SPIRVInstPrinter::recordIntType(const MCInst *MI) {
@@ -192,10 +219,7 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         switch (OpCode) {
         case SPIRV::OpLoad:
         case SPIRV::OpStore:
-          OS << ' ';
-          printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
-              MI, FirstVariableIndex, OS);
-          printRemainingVariableOps(MI, FirstVariableIndex + 1, OS);
+          printMemoryOperand(MI, FirstVariableIndex, OS);
           break;
         case SPIRV::OpSwitch:
           if (MI->getFlags() & SPIRV::INST_PRINTER_WIDTH64) {
@@ -253,17 +277,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         case SPIRV::OpCopyMemory:
         case SPIRV::OpCopyMemorySized: {
           const unsigned NumOps = MI->getNumOperands();
-          for (unsigned i = NumFixedOps; i < NumOps; ++i) {
-            OS << ' ';
-            printSymbolicOperand<OperandCategory::MemoryOperandOperand>(MI, i,
-                                                                        OS);
-            if (MI->getOperand(i).getImm() & MemoryOperand::Aligned) {
-              assert(i + 1 < NumOps && "Missing alignment operand");
-              OS << ' ';
-              printOperand(MI, i + 1, OS);
-              i += 1;
-            }
-          }
+          for (unsigned i = NumFixedOps; i < NumOps;)
+            i = printMemoryOperand(MI, i, OS);
           break;
         }
         case SPIRV::OpConstantI:
@@ -346,13 +361,8 @@ void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
         }
         case SPIRV::OpPredicatedLoadINTEL:
         case SPIRV::OpPredicatedStoreINTEL: {
-          const unsigned NumOps = MI->getNumOperands();
-          if (NumOps > NumFixedOps) {
-            OS << ' ';
-            printSymbolicOperand<OperandCategory::MemoryOperandOperand>(
-                MI, NumOps - 1, OS);
-            break;
-          }
+          if (MI->getNumOperands() > NumFixedOps)
+            printMemoryOperand(MI, NumFixedOps, OS);
           break;
         }
         default:

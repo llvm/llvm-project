@@ -803,6 +803,45 @@ HexagonTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   return AA;
 }
 
+SDValue HexagonTargetLowering::LowerFMINFMAX(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  EVT OpVT = Op.getValueType();
+  MVT SimpleVT = OpVT.getSimpleVT();
+  SDLoc DL(Op);
+
+  // Check if any of the inputs are NaN. If so, propagate the NaN
+  // to the output, otherwise return the maximum/minimum of the inputs.
+  // We can safely use ISD::FMINNUM/ISD::FMAXNUM to run
+  // Hexagon's F2_sfmin/F2_sfmax, when no operand is NaN.
+  // Note: We cannot directly compare nodes against NaN node to find NaNs,
+  // because comparing NaN with anything always returns False (except for !=0
+  // which always return True). To work around that, we compare input operands
+  // with themselves under ISD::SETUO, which only returns true if the operand is
+  // NaN.
+
+  SDValue Op1 = Op.getOperand(0);
+  SDValue Op2 = Op.getOperand(1);
+  SDValue isOp1NaN = DAG.getSetCC(DL, MVT::i1, Op1, Op1, ISD::SETUO);
+  SDValue isOp2NaN = DAG.getSetCC(DL, MVT::i1, Op2, Op2, ISD::SETUO);
+
+  switch (Op.getOpcode()) {
+  case ISD::FMAXIMUM: {
+    SDValue FmaxNode = DAG.getNode(ISD::FMAXNUM, DL, SimpleVT, Op1, Op2);
+    SDValue result =
+        DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp2NaN, Op2, FmaxNode);
+    return DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp1NaN, Op1, result);
+  }
+  case ISD::FMINIMUM: {
+    SDValue FminNode = DAG.getNode(ISD::FMINNUM, DL, SimpleVT, Op1, Op2);
+    SDValue result =
+        DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp2NaN, Op2, FminNode);
+    return DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp1NaN, Op1, result);
+  }
+  default:
+    llvm_unreachable("Invalid opcode for LowerFMINFMAX");
+  }
+}
+
 SDValue HexagonTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
@@ -1810,6 +1849,10 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FMAXIMUMNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMAXIMUM, MVT::f32, Custom);
+  setOperationAction(ISD::FMAXIMUM, MVT::f16, Custom);
+  setOperationAction(ISD::FMINIMUM, MVT::f32, Custom);
+  setOperationAction(ISD::FMINIMUM, MVT::f16, Custom);
 
   setOperationAction(ISD::FP_TO_UINT, MVT::i1,  Promote);
   setOperationAction(ISD::FP_TO_UINT, MVT::i8,  Promote);
@@ -3325,6 +3368,9 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::INTRINSIC_VOID:       return LowerINTRINSIC_VOID(Op, DAG);
     case ISD::PREFETCH:
       return LowerPREFETCH(Op, DAG);
+    case ISD::FMAXIMUM:
+    case ISD::FMINIMUM:
+      return LowerFMINFMAX(Op, DAG);
       break;
   }
 
