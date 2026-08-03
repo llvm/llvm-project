@@ -6966,23 +6966,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "llvm-sim",
-    testonly = True,
-    srcs = glob([
-        "tools/llvm-sim/*.cpp",
-    ]),
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":Analysis",
-        ":Core",
-        ":IRReader",
-        ":Support",
-        ":config",
-    ],
-)
-
-cc_binary(
     name = "llvm-ir2vec",
     testonly = True,
     srcs = glob(
