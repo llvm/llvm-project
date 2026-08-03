@@ -1,5 +1,5 @@
 # Building shared libraries requires PIC objects.
-if(LLVM_ENABLE_PIC)
+if(LLVM_ENABLE_PIC AND NOT LLVM_OMIT_SHARED_TARGETS)
 
   set(LLVM_LINK_COMPONENTS
     Remarks

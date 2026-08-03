@@ -336,7 +336,7 @@ set(LIBOMP_USE_CANCEL_THREADS "${LIBOMP_HAVE_PTHREAD_CANCEL}" CACHE BOOL
 set(LIBOMP_ENABLE_SHARED TRUE CACHE BOOL
   "Shared library instead of static library?")
 
-if(WASM)
+if(WASM OR LLVM_OMIT_SHARED_TARGETS)
   libomp_warning_say("The WebAssembly build currently only supports static libraries; forcing LIBOMP_ENABLE_SHARED to false")
   set(LIBOMP_ENABLE_SHARED FALSE)
 endif()
