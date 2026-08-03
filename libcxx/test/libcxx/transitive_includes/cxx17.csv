@@ -654,14 +654,12 @@ random string
 random string_view
 random tuple
 random version
-ranges atomic
 ranges cctype
 ranges compare
 ranges concepts
 ranges cstdint
 ranges cstdio
 ranges cstring
-ranges ctime
 ranges cwchar
 ranges cwctype
 ranges initializer_list
