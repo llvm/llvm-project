@@ -83,6 +83,34 @@ func.func @parallel_loop_auto_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 :
 
 // -----
 
+// CHECK-LABEL: func.func @parallel_loop_collapse
+func.func @parallel_loop_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 : index, %lb1 : index, %ub1 : index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  %dev = acc.copyin varPtr(%buf : memref<1xi32>) -> memref<1xi32>
+  // CHECK-NOT: acc.parallel
+  // CHECK: acc.kernel_environment
+  // CHECK-NOT: acc.par_width
+  // CHECK: acc.compute_region
+  // CHECK: scf.parallel (%{{.*}}, %{{.*}})
+  // CHECK-NOT: scf.for
+  // CHECK-NOT: scf.parallel
+  // CHECK: acc.collapse_count = 2 : i64
+  acc.parallel dataOperands(%dev : memref<1xi32>) {
+    acc.loop control(%i : index, %j : index) = (%lb0, %lb1 : index, index) to (%ub0, %ub1 : index, index) step (%c1, %c1 : index, index) {
+      %vi = arith.index_cast %i : index to i32
+      memref.store %vi, %dev[%c0] : memref<1xi32>
+      acc.yield
+    } attributes {independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func.func @serial_loop_normalized
 func.func @serial_loop_normalized(%buf: memref<1xi32>) {
   %c0 = arith.constant 0 : index

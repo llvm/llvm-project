@@ -279,15 +279,6 @@ public:
   using ConstBlockSet = SmallPtrSet<const BlockT *, 4>;
   using ModifiedPO = ModifiedPostOrder<ContextT>;
 
-  // * if BlockLabels[B] == C then C is the dominating definition at
-  //   block B
-  // * if BlockLabels[B] == nullptr then we haven't seen B yet
-  // * if BlockLabels[B] == B then:
-  //   - B is a join point of disjoint paths from X, or,
-  //   - B is an immediate successor of X (initial value), or,
-  //   - B is X
-  using BlockLabelMap = DenseMap<const BlockT *, const BlockT *>;
-
   /// Information discovered by the sync dependence analysis for each
   /// divergent branch.
   struct DivergenceDescriptor {
@@ -295,8 +286,6 @@ public:
     ConstBlockSet JoinDivBlocks;
     // Divergent cycle exits
     ConstBlockSet CycleDivBlocks;
-    // Labels assigned to blocks on diverged paths.
-    BlockLabelMap BlockLabels;
   };
 
   using DivergencePropagatorT = DivergencePropagator<ContextT>;
@@ -348,7 +337,6 @@ public:
   using SyncDependenceAnalysisT = GenericSyncDependenceAnalysis<ContextT>;
   using DivergenceDescriptorT =
       typename SyncDependenceAnalysisT::DivergenceDescriptor;
-  using BlockLabelMapT = typename SyncDependenceAnalysisT::BlockLabelMap;
 
   using TemporalDivergenceTuple =
       std::tuple<ConstValueRefT, InstructionT *, CycleRef>;
@@ -529,7 +517,6 @@ public:
   using SyncDependenceAnalysisT = GenericSyncDependenceAnalysis<ContextT>;
   using DivergenceDescriptorT =
       typename SyncDependenceAnalysisT::DivergenceDescriptor;
-  using BlockLabelMapT = typename SyncDependenceAnalysisT::BlockLabelMap;
 
   const ModifiedPO &CyclePOT;
   const DominatorTreeT &DT;
@@ -545,19 +532,33 @@ public:
 
   // divergent join and cycle exit descriptor.
   std::unique_ptr<DivergenceDescriptorT> DivDesc;
-  BlockLabelMapT &BlockLabels;
+
+  // Dominating definition at each block on diverged paths, indexed by block
+  // number. Transient to this propagation; not stored in the descriptor.
+  // * label(B) == C       : C is the dominating definition at B
+  // * label(B) == nullptr  : we haven't seen B yet
+  // * label(B) == B        : B is a join of disjoint paths, an immediate
+  //                          successor of the divergent term, or the term
+  //                          itself
+  SmallVector<const BlockT *> BlockLabels;
+
+  const BlockT *&label(const BlockT *BB) {
+    return BlockLabels[GraphTraits<const BlockT *>::getNumber(BB)];
+  }
 
   DivergencePropagator(const ModifiedPO &CyclePOT, const DominatorTreeT &DT,
                        const CycleInfoT &CI, const BlockT &DivTermBlock)
       : CyclePOT(CyclePOT), DT(DT), CI(CI), DivTermBlock(DivTermBlock),
         Context(CI.getSSAContext()), DivDesc(new DivergenceDescriptorT),
-        BlockLabels(DivDesc->BlockLabels) {}
+        BlockLabels(
+            GraphTraits<const FunctionT *>::getMaxNumber(CI.getFunction()),
+            nullptr) {}
 
   void printDefs(raw_ostream &Out) {
     Out << "Propagator::BlockLabels {\n";
     for (int BlockIdx = (int)CyclePOT.size() - 1; BlockIdx >= 0; --BlockIdx) {
       const auto *Block = CyclePOT[BlockIdx];
-      const auto *Label = BlockLabels[Block];
+      const auto *Label = label(Block);
       Out << Context.print(Block) << "(" << BlockIdx << ") : ";
       if (!Label) {
         Out << "<null>\n";
@@ -571,7 +572,7 @@ public:
   // Push a definition (\p PushedLabel) to \p SuccBlock and return whether this
   // causes a divergent join.
   bool computeJoin(const BlockT &SuccBlock, const BlockT &PushedLabel) {
-    const auto *OldLabel = BlockLabels[&SuccBlock];
+    const auto *OldLabel = label(&SuccBlock);
 
     LLVM_DEBUG(dbgs() << "labeling " << Context.print(&SuccBlock) << ":\n"
                       << "\tpushed label: " << Context.print(&PushedLabel)
@@ -593,14 +594,14 @@ public:
     if (!OldLabel) {
       LLVM_DEBUG(dbgs() << "\tnew label: " << Context.print(&PushedLabel)
                         << "\n");
-      BlockLabels[&SuccBlock] = &PushedLabel;
+      label(&SuccBlock) = &PushedLabel;
       return false;
     }
 
     // This is a new join. Label the join block as itself, and not as
     // the pushed label.
     LLVM_DEBUG(dbgs() << "\tnew label: " << Context.print(&SuccBlock) << "\n");
-    BlockLabels[&SuccBlock] = &SuccBlock;
+    label(&SuccBlock) = &SuccBlock;
 
     return true;
   }
@@ -698,7 +699,7 @@ public:
       LLVM_DEBUG(dbgs() << "visiting " << Context.print(Block) << " at index "
                         << BlockIdx << "\n");
 
-      const auto *Label = BlockLabels[Block];
+      const auto *Label = label(Block);
       assert(Label);
 
       // If the current block is the header of a reducible cycle, then the label
@@ -749,9 +750,9 @@ public:
       SmallVector<BlockT *> Exits;
       CI.getExitBlocks(C, Exits);
       auto *Header = CI.getHeader(C);
-      auto *HeaderLabel = BlockLabels[Header];
+      auto *HeaderLabel = label(Header);
       for (const auto *Exit : Exits) {
-        if (BlockLabels[Exit] != HeaderLabel) {
+        if (label(Exit) != HeaderLabel) {
           // Identified a divergent cycle exit
           DivDesc->CycleDivBlocks.insert(Exit);
           LLVM_DEBUG(dbgs() << "\tDivergent cycle exit: " << Context.print(Exit)

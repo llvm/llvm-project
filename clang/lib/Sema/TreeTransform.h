@@ -3416,7 +3416,8 @@ public:
 
     if (auto *PLE = dyn_cast<CXXParenListInitExpr>(Sub))
       return getSema().BuildCXXTypeConstructExpr(
-          TInfo, LParenLoc, PLE->getInitExprs(), RParenLoc, ListInitialization);
+          TInfo, LParenLoc, PLE->getUserSpecifiedInitExprs(), RParenLoc,
+          ListInitialization);
 
     return getSema().BuildCXXTypeConstructExpr(TInfo, LParenLoc,
                                                MultiExprArg(&Sub, 1), RParenLoc,
@@ -7773,6 +7774,26 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
 }
 
 template <typename Derived>
+QualType
+TreeTransform<Derived>::TransformLateParsedAttrType(TypeLocBuilder &TLB,
+                                                    LateParsedAttrTypeLoc TL) {
+  const LateParsedAttrType *OldTy = TL.getTypePtr();
+  QualType InnerTy = getDerived().TransformType(TLB, TL.getInnerLoc());
+  if (InnerTy.isNull())
+    return QualType();
+
+  QualType Result = TL.getType();
+  if (getDerived().AlwaysRebuild() || InnerTy != OldTy->getWrappedType()) {
+    Result = SemaRef.Context.getLateParsedAttrType(
+        InnerTy, OldTy->getLateParsedAttribute());
+  }
+
+  LateParsedAttrTypeLoc newTL = TLB.push<LateParsedAttrTypeLoc>(Result);
+  newTL.setAttrNameLoc(TL.getAttrNameLoc());
+  return Result;
+}
+
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
     TypeLocBuilder &TLB, BTFTagAttributedTypeLoc TL) {
   // The BTFTagAttributedType is available for C only.
@@ -11075,6 +11096,13 @@ OMPClause *TreeTransform<Derived>::TransformOMPWriteClause(OMPWriteClause *C) {
 template <typename Derived>
 OMPClause *
 TreeTransform<Derived>::TransformOMPUpdateClause(OMPUpdateClause *C) {
+  // No need to rebuild this clause, no template-dependent parameters.
+  return C;
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPUpdateDependObjectsClause(
+    OMPUpdateDependObjectsClause *C) {
   // No need to rebuild this clause, no template-dependent parameters.
   return C;
 }
@@ -16317,6 +16345,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     TRC.ConstraintExpr = E.get();
   }
 
+  LSI->BeforeCompoundStatement = false;
   getSema().CompleteLambdaCallOperator(
       NewCallOperator, E->getCallOperator()->getLocation(),
       E->getCallOperator()->getInnerLocStart(), TRC, NewCallOpTSI,

@@ -70,6 +70,7 @@
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      Machine Block Frequency Analysis
+; CHECK-NEXT:      Machine Register Class Info Analysis
 ; CHECK-NEXT:      Early Machine Loop Invariant Code Motion
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Block Frequency Analysis
