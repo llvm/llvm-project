@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "abort_message.h"
 #include "cxxabi.h"
+
+#if !defined(_LIBCXXABI_HAS_NO_THREADS) && defined(__linux__) || defined(__Fuchsia__) || defined(__wasm__)
+
 #include <__thread/support.h>
-#ifndef _LIBCXXABI_HAS_NO_THREADS
+#include <stdlib.h>
+
+#include "abort_message.h"
+
 #if defined(__ELF__) && defined(_LIBCXXABI_LINK_PTHREAD_LIB)
 #pragma comment(lib, "pthread")
 #endif
-#endif
-
-#include <stdlib.h>
 
 namespace __cxxabiv1 {
 
@@ -106,7 +108,6 @@ namespace {
 
 #endif // HAVE___CXA_THREAD_ATEXIT_IMPL
 
-#if defined(__linux__) || defined(__Fuchsia__) || defined(__wasm__)
 extern "C" {
 
   _LIBCXXABI_FUNC_VIS int __cxa_thread_atexit(Dtor dtor, void* obj, void* dso_symbol) throw() {
@@ -143,5 +144,7 @@ extern "C" {
   }
 
 } // extern "C"
-#endif // defined(__linux__) || defined(__Fuchsia__) || defined(__wasm__)
+
 } // namespace __cxxabiv1
+
+#endif // !defined(_LIBCXXABI_HAS_NO_THREADS) && defined(__linux__) || defined(__Fuchsia__) || defined(__wasm__)
