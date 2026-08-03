@@ -137,3 +137,20 @@ TEST(LlvmLibcFreeStore, IndexToMinSize) {
     prev_size = min_size;
   }
 }
+
+struct NoTrieConfig : public LIBC_NAMESPACE::DefaultFreeStoreConfig {
+  static constexpr bool USE_TRIE_FOR_OVERFLOW_BIN = false;
+};
+
+TEST(LlvmLibcFreeStore, NoTrieOverflow) {
+  LIBC_NAMESPACE::TLSFFreeStore<NoTrieConfig> store;
+  store.set_range({0, 4096});
+  byte mem[1024];
+  optional<BlockRef> maybeBlock = BlockRef::init(mem);
+  ASSERT_TRUE(maybeBlock.has_value());
+  BlockRef block = *maybeBlock;
+  store.insert(block);
+  BlockRef result = store.remove_best_fit(block.inner_size());
+  EXPECT_EQ(result.addr(), block.addr());
+}
+

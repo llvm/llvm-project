@@ -19,6 +19,7 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/block.h"
 #include "src/__support/freelist.h"
 #include "src/__support/freetrie.h"
@@ -108,6 +109,12 @@ protected:
       CONFIG::NUM_TABLE_ENTRIES * BITS_PER_ENTRY;
   static constexpr bool USE_TRIE = CONFIG::USE_TRIE_FOR_OVERFLOW_BIN;
 
+private:
+  LIBC_INLINE constexpr TLSFFreeStoreImpl(cpp::bool_constant<true>)
+      : trie() {}
+  LIBC_INLINE constexpr TLSFFreeStoreImpl(cpp::bool_constant<false>)
+      : overflow_list() {}
+
 public:
   static constexpr size_t MIN_OUTER_SIZE = align_up(
       BlockRef::HEADER_SIZE + sizeof(FreeList::Node), BlockRef::MIN_ALIGN);
@@ -117,7 +124,8 @@ public:
   // Number of bins grows linearly.
   static constexpr size_t LINEAR_BINS = EXP_BASE + 1;
 
-  LIBC_INLINE TLSFFreeStoreImpl() = default;
+  LIBC_INLINE constexpr TLSFFreeStoreImpl()
+      : TLSFFreeStoreImpl(cpp::bool_constant<USE_TRIE>{}) {}
   LIBC_INLINE TLSFFreeStoreImpl(const TLSFFreeStoreImpl &other) = delete;
   LIBC_INLINE TLSFFreeStoreImpl &
   operator=(const TLSFFreeStoreImpl &other) = delete;
@@ -139,8 +147,10 @@ protected:
 
   cpp::array<uintptr_t, CONFIG::NUM_TABLE_ENTRIES> lookup_table{};
   cpp::array<FreeList, TOTAL_BITS - 1> free_lists{};
-  FreeTrie trie{};
-  FreeList overflow_list{};
+  union {
+    FreeTrie trie;
+    FreeList overflow_list;
+  };
 
   LIBC_INLINE void set_bit(size_t bit_index);
   LIBC_INLINE void clear_bit(size_t bit_index);
