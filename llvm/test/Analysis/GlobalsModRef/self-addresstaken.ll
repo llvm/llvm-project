@@ -5,7 +5,7 @@
 @g = internal global ptr null
 
 ; CHECK-LABEL: self_addresstaken
-; CHECK:       NoAlias:	ptr* %p, ptr* @g
+; CHECK:       MayAlias:	ptr* %p, ptr* @g
 
 define ptr @self_addresstaken() {
   store ptr @g, ptr @g, align 8
