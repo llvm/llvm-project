@@ -22,9 +22,6 @@
 #include <__type_traits/is_object.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
-#include <__type_traits/is_object.h>
-#include <__utility/forward.h>
-#include <__utility/in_place.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
