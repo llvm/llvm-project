@@ -1188,6 +1188,11 @@ static bool ShouldTryAgainWithRedefinitionType(Sema &S, ExprResult &base) {
     return false;
   }
 
+  // Only retry with pointer redefinition types, since a non-pointer
+  // destination would produce an invalid CK_BitCast.
+  if (!redef->isAnyPointerType())
+    return false;
+
   // Do the substitution as long as the redefinition type isn't just a
   // possibly-qualified pointer to builtin-id or builtin-Class again.
   opty = redef->getAs<ObjCObjectPointerType>();
