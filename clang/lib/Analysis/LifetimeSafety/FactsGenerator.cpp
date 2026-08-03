@@ -119,7 +119,8 @@ static const Loan *createLoan(FactManager &FactMgr, const CXXNewExpr *NE) {
 /// annotated with `ownership_returns`, like `malloc`).
 /// \param CE The CallExpr that represents the allocation
 /// \return The new Loan on success, nullptr otherwise
-static const Loan *createLoan(FactManager &FactMgr, const CallExpr *CE) {
+static const Loan *createNewAllocLoan(FactManager &FactMgr,
+                                      const CallExpr *CE) {
   AccessPath Path(CE);
   return FactMgr.getLoanMgr().createLoan(Path, CE);
 }
@@ -1127,7 +1128,7 @@ void FactsGenerator::handleAllocatingCall(const Expr *Call,
   OriginList *CallList = getOriginsList(*Call);
   if (!CallList)
     return;
-  const Loan *L = createLoan(FactMgr, CE);
+  const Loan *L = createNewAllocLoan(FactMgr, CE);
   CurrentBlockFacts.push_back(
       FactMgr.createFact<IssueFact>(L->getID(), CallList->getOuterOriginID()));
 }
