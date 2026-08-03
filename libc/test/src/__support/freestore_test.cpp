@@ -153,4 +153,3 @@ TEST(LlvmLibcFreeStore, NoTrieOverflow) {
   BlockRef result = store.remove_best_fit(block.inner_size());
   EXPECT_EQ(result.addr(), block.addr());
 }
-
