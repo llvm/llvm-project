@@ -81,11 +81,14 @@ Args:
   has_documentation: Specify that there is other documentation to link to.
 """
 def generate_documentation(checker, has_documentation):
+    full_package_name = checker["FullPackageName"]
+    short_name = checker["ShortName"]
+    anchor_url = checker["AnchorUrl"]
 
     with open(
-        os.path.join(__location__, "clang-analyzer", checker["ShortName"] + ".md"), "w"
+        os.path.join(__location__, "clang-analyzer", short_name + ".md"), "w"
     ) as f:
-        f.write("```{title} clang-tidy - %s\n" % checker["FullPackageName"])
+        f.write(f"```{{title}} clang-tidy - {full_package_name}\n")
         f.write("```\n")
         if has_documentation:
             f.write("\n")
@@ -95,12 +98,12 @@ def generate_documentation(checker, has_documentation):
             f.write("```{eval-rst}\n")
             f.write(".. meta::\n")
             f.write(
-                "   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#%s\n"
-                % checker["AnchorUrl"]
+                "   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#"
+                f"{anchor_url}\n"
             )
             f.write("```\n")
         f.write("\n")
-        f.write("# %s\n\n" % checker["FullPackageName"])
+        f.write(f"# {full_package_name}\n\n")
         help_text = checker["HelpText"].strip()
         if not help_text.endswith("."):
             help_text += "."
@@ -108,15 +111,18 @@ def generate_documentation(checker, has_documentation):
         f.write("\n\n")
         if has_documentation:
             f.write(
-                "The `%s` check is an alias, please see\n" % checker["FullPackageName"]
+                f"The `{full_package_name}` check is an alias, please see\n"
             )
             f.write(
-                "[Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#%s)\n"
-                % checker["AnchorUrl"]
+                "[Clang Static Analyzer Available Checkers](https://clang.llvm.org/docs/analyzer/checkers.html#"
+                f"{anchor_url})\n"
             )
             f.write("for more information.\n")
         else:
-            f.write("The %s check is an alias of\nClang Static Analyzer %s.\n" % (checker["FullPackageName"], checker["ShortName"]));
+            f.write(
+                f"The {full_package_name} check is an alias of\n"
+                f"Clang Static Analyzer {short_name}.\n"
+            )
         f.close()
 
 
@@ -134,26 +140,21 @@ def update_documentation_list(checkers):
         old_check_text = "\n".join(checks)
         checks = [x for x in checks if "clang-analyzer-" not in x]
         for checker in checkers:
+            full_package_name = checker["FullPackageName"]
+            short_name = checker["ShortName"]
+            doc_link = f"{{doc}}`{full_package_name} <clang-analyzer/{short_name}>`"
             if checker["Documentation"]:
+                analyzer_link = (
+                    f"[Clang Static Analyzer {short_name}]"
+                    "(https://clang.llvm.org/docs/analyzer/checkers.html#"
+                    f"{checker['AnchorUrl']})"
+                )
                 checks.append(
-                    "| {doc}`%s <clang-analyzer/%s>` | "
-                    "[Clang Static Analyzer %s](https://clang.llvm.org/docs/analyzer/checkers.html#%s) |  |"
-                    % (
-                        checker["FullPackageName"],
-                        checker["ShortName"],
-                        checker["ShortName"],
-                        checker["AnchorUrl"],
-                    )
+                    f"| {doc_link} | {analyzer_link} |  |"
                 )
             else:
                 checks.append(
-                    "| {doc}`%s <clang-analyzer/%s>` | "
-                    "Clang Static Analyzer %s |  |"
-                    % (
-                        checker["FullPackageName"],
-                        checker["ShortName"],
-                        checker["ShortName"],
-                    )
+                    f"| {doc_link} | Clang Static Analyzer {short_name} |  |"
                 )
 
         checks.sort()

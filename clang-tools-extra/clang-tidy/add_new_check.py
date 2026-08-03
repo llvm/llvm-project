@@ -377,6 +377,7 @@ def update_checks_list(clang_tidy_path: str) -> None:
     for subdir in filter(
         lambda s: os.path.isdir(os.path.join(docs_dir, s)), os.listdir(docs_dir)
     ):
+        # Static analyzer checks are maintained by gen-static-analyzer-docs.py.
         if subdir == "clang-analyzer":
             continue
         for file in os.listdir(os.path.join(docs_dir, subdir)):
