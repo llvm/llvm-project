@@ -211,8 +211,7 @@ static size_t build_ifinfomsg_packet(uint8_t *buf, unsigned int index,
   ifm->ifi_family = AF_UNSPEC;
   ifm->ifi_index = static_cast<int>(index);
 
-  uint8_t *attr_ptr =
-      reinterpret_cast<uint8_t *>(ifm) + NLMSG_ALIGN(sizeof(struct ifinfomsg));
+  uint8_t *attr_ptr = reinterpret_cast<uint8_t *>(IFLA_RTA(ifm));
 
   auto write_attr = [&attr_ptr](const auto &attr) {
     size_t rta_len = RTA_LENGTH(attr.payload_len());

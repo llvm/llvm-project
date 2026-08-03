@@ -29,6 +29,7 @@
 #include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/string_utils.h"
 
+#include <linux/if_link.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
@@ -40,7 +41,7 @@ namespace detail {
 /// respond with one or more messages containing the list of network interfaces
 /// and their attributes.
 template <typename Policy>
-ErrorOr<ssize_t> send_netlink_dump_request(int sockfd) {
+LIBC_INLINE ErrorOr<ssize_t> send_netlink_dump_request(int sockfd) {
   // The message consists of a standard netlink header followed by the
   // RTM_GETLINK payload.
   struct {
@@ -61,7 +62,8 @@ ErrorOr<ssize_t> send_netlink_dump_request(int sockfd) {
 constexpr size_t NLMSG_BUFFER_SIZE = 8192;
 } // namespace detail
 
-template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
+template <typename Policy>
+LIBC_INLINE ErrorOr<struct if_nameindex *> if_nameindex() {
   ErrorOr<int> fd_or_err =
       Policy::socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE);
   if (!fd_or_err.has_value())
@@ -110,11 +112,7 @@ template <typename Policy> ErrorOr<struct if_nameindex *> if_nameindex() {
 
     auto *ifm = reinterpret_cast<struct ifinfomsg *>(NLMSG_DATA(nh));
     size_t attrlen = nh->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifinfomsg));
-
-    cpp::span<uint8_t> ifm_payload(reinterpret_cast<uint8_t *>(ifm),
-                                   nh->nlmsg_len - NLMSG_LENGTH(0));
-    auto *rta = reinterpret_cast<struct rtattr *>(
-        ifm_payload.subspan(NLMSG_ALIGN(sizeof(struct ifinfomsg))).data());
+    struct rtattr *rta = IFLA_RTA(ifm);
     for (; RTA_OK(rta, attrlen); rta = RTA_NEXT(rta, attrlen)) {
       if (rta->rta_type != IFLA_IFNAME)
         continue;
