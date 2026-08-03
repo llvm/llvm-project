@@ -2,7 +2,7 @@
 
 ; RUN: opt -S -passes=simplifycfg -mtriple=amdgpu9.0a-amd-amdhsa < %s | FileCheck %s --check-prefix=IR
 ; RUN: opt -S -passes=simplifycfg -mtriple=amdgpu9.0a-amd-amdhsa < %s \
-; RUN:   | llc -O3 -mtriple=amdgpu9.0a-amd-amdhsa | FileCheck %s --check-prefix=ASM
+; RUN:   | llc | FileCheck %s --check-prefix=ASM
 
 ; Regression test for SGPR spilling caused by commit 0967957d7a94
 ; "[CostModel] Handle all cost kinds in getCmpSelInstrCost".  That

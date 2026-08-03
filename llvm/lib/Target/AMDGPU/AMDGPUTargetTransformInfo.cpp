@@ -24,14 +24,11 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
-#include <llvm/CodeGen/ISDOpcodes.h>
 #include <optional>
 
 using namespace llvm;
@@ -987,45 +984,13 @@ InstructionCost GCNTTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
     TTI::OperandValueInfo Op2Info, const Instruction *I) const {
-  if (isa<ScalableVectorType>(ValTy))
-    return InstructionCost::getInvalid();
-
   // For size and latency cost kinds, return a low cost independent of vector
   // width to enable SimplifyCFG's speculativelyExecuteBB optimization.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
 
-  // Compute cost based on type legalization.
-  const TargetLoweringBase *TLI = getTLI();
-  if (TLI->getValueType(DL, ValTy, true) == MVT::Other)
-    return 1;
-
-  const int ISD = TLI->InstructionOpcodeToISD(Opcode);
-  assert(ISD && "Invalid opcode");
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
-
-  if (!ValTy->isVectorTy())
-    return TLI->isOperationExpand(ISD, LT.second) ? 1 : LT.first;
-
-  if (!TLI->isOperationExpand(ISD, LT.second) && !LT.second.isVector()) {
-    // The operation is legal. Assume it costs 1. Multiply
-    // by the type-legalization overhead.
-    return LT.first * 1;
-  }
-
-  // Return the cost of multiple scalar invocations plus the cost of
-  // inserting and extracting the values.
-  auto *ValVTy = cast<FixedVectorType>(ValTy);
-  unsigned Num = ValVTy->getNumElements();
-  InstructionCost ScalarCost = getCmpSelInstrCost(
-      Opcode, ValTy->getScalarType(), CondTy->getScalarType(), VecPred,
-      CostKind, Op1Info, Op2Info, I);
-
-  InstructionCost Overhead =
-      getScalarizationOverhead(ValVTy, /*Insert*/ true,
-                               /*Extract*/ true, CostKind);
-
-  return Overhead + Num * ScalarCost;
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                   Op1Info, Op2Info, I);
 }
 
 InstructionCost
