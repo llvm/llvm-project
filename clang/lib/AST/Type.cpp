@@ -413,15 +413,17 @@ MatrixType::MatrixType(TypeClass tc, QualType matrixType, QualType canonType,
       ElementType(matrixType) {}
 
 ConstantMatrixType::ConstantMatrixType(QualType matrixType, unsigned nRows,
-                                       unsigned nColumns, QualType canonType)
-    : ConstantMatrixType(ConstantMatrix, matrixType, nRows, nColumns,
-                         canonType) {}
+                                       unsigned nColumns, QualType canonType,
+                                       std::optional<LayoutKind> Layout)
+    : ConstantMatrixType(ConstantMatrix, matrixType, nRows, nColumns, canonType,
+                         Layout) {}
 
 ConstantMatrixType::ConstantMatrixType(TypeClass tc, QualType matrixType,
                                        unsigned nRows, unsigned nColumns,
-                                       QualType canonType)
+                                       QualType canonType,
+                                       std::optional<LayoutKind> Layout)
     : MatrixType(tc, matrixType, canonType), NumRows(nRows),
-      NumColumns(nColumns) {}
+      NumColumns(nColumns), Layout(Layout) {}
 
 DependentSizedMatrixType::DependentSizedMatrixType(QualType ElementType,
                                                    QualType CanonicalType,
@@ -1187,7 +1189,7 @@ public:
       return QualType(T, 0);
 
     return Ctx.getConstantMatrixType(elementType, T->getNumRows(),
-                                     T->getNumColumns());
+                                     T->getNumColumns(), T->getLayout());
   }
 
   QualType VisitOverflowBehaviorType(const OverflowBehaviorType *T) {

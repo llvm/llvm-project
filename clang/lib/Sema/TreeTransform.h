@@ -7721,6 +7721,17 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
         return QualType();
     }
 
+    if (SemaRef.getLangOpts().HLSL &&
+        (oldType->getAttrKind() == attr::HLSLRowMajor ||
+         oldType->getAttrKind() == attr::HLSLColumnMajor)) {
+      MatrixType::LayoutKind Layout =
+          oldType->getAttrKind() == attr::HLSLRowMajor
+              ? MatrixType::LayoutKind::RowMajor
+              : MatrixType::LayoutKind::ColumnMajor;
+      equivalentType =
+          SemaRef.Context.getMatrixTypeWithLayout(equivalentType, Layout);
+    }
+
     // Check whether we can add nullability; it is only represented as
     // type sugar, and therefore cannot be diagnosed in any other way.
     if (auto nullability = oldType->getImmediateNullability()) {

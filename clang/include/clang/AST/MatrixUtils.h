@@ -15,32 +15,18 @@
 #define LLVM_CLANG_AST_MATRIXUTILS_H
 
 #include "clang/AST/Type.h"
-#include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/LangOptions.h"
 
 namespace clang {
 /// Returns true if matrices of \p T should be laid out in row-major order.
 ///
-/// In HLSL mode, an `HLSLRowMajor` / `HLSLColumnMajor` AttributedType anywhere
-/// in the sugar chain of \p T (imprinted by Sema when a source decl carries
-/// `[[hlsl::row_major]]` / `[[hlsl::column_major]]`) takes precedence over the
-/// `-fmatrix-memory-layout=` default carried in \p LangOpts. Otherwise the
-/// LangOptions default is used.
+/// An explicit layout stored on the matrix type takes precedence over the
+/// `-fmatrix-memory-layout=` default carried in \p LangOpts.
 inline bool isMatrixRowMajor(const LangOptions &LangOpts, QualType T) {
-  if (LangOpts.HLSL && !T.isNull()) {
-    QualType Cur = T;
-    while (const auto *AT = Cur->getAs<AttributedType>()) {
-      switch (AT->getAttrKind()) {
-      case attr::HLSLRowMajor:
-        return true;
-      case attr::HLSLColumnMajor:
-        return false;
-      default:
-        break;
-      }
-      Cur = AT->getModifiedType();
-    }
-  }
+  if (LangOpts.HLSL && !T.isNull())
+    if (const auto *MT = T->getAs<ConstantMatrixType>())
+      if (auto Layout = MT->getLayout())
+        return *Layout == MatrixType::LayoutKind::RowMajor;
   return LangOpts.getDefaultMatrixMemoryLayout() ==
          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
 }

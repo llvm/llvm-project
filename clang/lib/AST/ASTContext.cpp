@@ -4874,10 +4874,11 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
   return QualType(New, 0);
 }
 
-QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
-                                           unsigned NumColumns) const {
+QualType ASTContext::getConstantMatrixType(
+    QualType ElementTy, unsigned NumRows, unsigned NumColumns,
+    std::optional<MatrixType::LayoutKind> Layout) const {
   llvm::FoldingSetNodeID ID;
-  ConstantMatrixType::Profile(ID, ElementTy, NumRows, NumColumns,
+  ConstantMatrixType::Profile(ID, ElementTy, NumRows, NumColumns, Layout,
                               Type::ConstantMatrix);
 
   assert(MatrixType::isValidElementType(ElementTy, getLangOpts()) &&
@@ -4891,8 +4892,8 @@ QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
 
   QualType Canonical;
   if (!ElementTy.isCanonical()) {
-    Canonical =
-        getConstantMatrixType(getCanonicalType(ElementTy), NumRows, NumColumns);
+    Canonical = getConstantMatrixType(getCanonicalType(ElementTy), NumRows,
+                                      NumColumns, Layout);
 
     ConstantMatrixType *NewIP = MatrixTypes.FindNodeOrInsertPos(ID, InsertPos);
     assert(!NewIP && "Matrix type shouldn't already exist in the map");
@@ -4900,7 +4901,7 @@ QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
   }
 
   auto *New = new (*this, alignof(ConstantMatrixType))
-      ConstantMatrixType(ElementTy, NumRows, NumColumns, Canonical);
+      ConstantMatrixType(ElementTy, NumRows, NumColumns, Canonical, Layout);
   MatrixTypes.InsertNode(New, InsertPos);
   Types.push_back(New);
   return QualType(New, 0);
@@ -4945,6 +4946,37 @@ QualType ASTContext::getDependentSizedMatrixType(QualType ElementTy,
                                ColumnExpr, AttrLoc);
   Types.push_back(New);
   return QualType(New, 0);
+}
+
+QualType
+ASTContext::getMatrixTypeWithLayout(QualType T,
+                                    MatrixType::LayoutKind Layout) const {
+  Qualifiers Quals = T.getQualifiers();
+  const Type *Ty = T->getUnqualifiedDesugaredType();
+
+  if (const auto *MT = dyn_cast<ConstantMatrixType>(Ty))
+    return getQualifiedType(getConstantMatrixType(MT->getElementType(),
+                                                  MT->getNumRows(),
+                                                  MT->getNumColumns(), Layout),
+                            Quals);
+
+  // `row_major`/`column_major` are HLSL-only and only ever applied to a
+  // non-dependent type, so a ConstantArrayType (or its HLSL parameter-decayed
+  // ArrayParameterType subclass) is the only array kind that can wrap a
+  // matrix here: HLSL has no VLAs or incomplete data arrays, and dependent
+  // array bounds imply a dependent type, which is rejected before this point.
+  const auto *CAT = dyn_cast<ConstantArrayType>(Ty);
+  if (!CAT)
+    return T;
+
+  QualType Result = getConstantArrayType(
+      getMatrixTypeWithLayout(CAT->getElementType(), Layout), CAT->getSize(),
+      CAT->getSizeExpr(), CAT->getSizeModifier(),
+      CAT->getIndexTypeCVRQualifiers());
+  if (isa<ArrayParameterType>(CAT))
+    Result = getArrayParameterType(Result);
+
+  return getQualifiedType(Result, Quals);
 }
 
 QualType ASTContext::getDependentAddressSpaceType(QualType PointeeType,

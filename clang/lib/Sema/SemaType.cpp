@@ -9136,8 +9136,15 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_HLSLRowMajor:
     case ParsedAttr::AT_HLSLColumnMajor:
       if (Attr *A =
-              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
-        type = state.getAttributedType(A, type, type);
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr)) {
+        MatrixType::LayoutKind Layout =
+            attr.getKind() == ParsedAttr::AT_HLSLRowMajor
+                ? MatrixType::LayoutKind::RowMajor
+                : MatrixType::LayoutKind::ColumnMajor;
+        QualType Equivalent =
+            state.getSema().Context.getMatrixTypeWithLayout(type, Layout);
+        type = state.getAttributedType(A, type, Equivalent);
+      }
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:

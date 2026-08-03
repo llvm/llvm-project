@@ -525,15 +525,8 @@ static const Type *createHostLayoutType(Sema &S, const Type *Ty) {
   return Ty;
 }
 
-// Returns the type to use for a host layout struct field. For most types this
-// is the unqualified desugared type. Matrix types, however, retain their sugar
-// so that the row_major/column_major orientation (carried as an AttributedType)
-// is preserved; the orientation determines the in-memory cbuffer layout.
 static const Type *getHostLayoutFieldType(QualType QT) {
-  const Type *Desugared = QT->getUnqualifiedDesugaredType();
-  if (Desugared->isConstantMatrixType())
-    return QT.getTypePtr();
-  return Desugared;
+  return QT->getUnqualifiedDesugaredType();
 }
 
 // Creates a field declaration of given name and type for HLSL buffer layout
@@ -2840,8 +2833,7 @@ void SemaHLSL::propagateContextualMatrixLayout(Expr *E, QualType DestType) {
   if (!CallMat || CallMat->getNumRows() != DestMat->getNumRows() ||
       CallMat->getNumColumns() != DestMat->getNumColumns())
     return;
-  // Re-type the call with the destination sugar so CodeGen lowers into that
-  // layout, not the TU default.
+  // Re-type the call with the destination layout.
   Call->setType(DestType.getUnqualifiedType());
 }
 
