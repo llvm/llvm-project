@@ -2532,6 +2532,13 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUNamedBarrierWrapper : InheritableAttr {
+  let Spellings = [];
+  let Args = [];
+  let Documentation = [InternalOnly];
+  let SemaHandler = 0;
+}
+
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
@@ -3180,6 +3187,17 @@ def Regparm : TypeAttr {
   // Represented as part of the enclosing function type.
   let ASTNode = 0;
 }
+
+// FIXME: The following Swift interop attributes currently only support
+// the GNU __attribute__ syntax and lack a CXX11/C23 [[]] spelling.
+//
+// A Clang vendor namespace spelling (e.g., [[clang::swift_name]]) or a
+// Swift vendor namespace spelling (e.g., [[swift::name]]) were both
+// considered, but it was decided not to commit to either prematurely.
+// Doing so deserves more attention -- among other things, one would
+// want to avoid name stuttering (e.g., [[swift::swift_name]]).
+//
+// See https://github.com/llvm/llvm-project/pull/183484
 
 def SwiftType : Attr {
   // This attribute has no spellings as it is only ever created implicitly
@@ -5195,6 +5213,12 @@ def HLSLIsArray : TypeAttr {
   let Documentation = [InternalOnly];
 }
 
+def HLSLIsMultiSampled : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_ms">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
   let LangOpts = [HLSL];
@@ -5316,7 +5340,7 @@ def HLSLVkLocation : HLSLAnnotationAttr {
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory
-// layout of a matrix-typed declaration. 
+// layout of a matrix-typed declaration.
 def HLSLRowMajor : TypeAttr {
   let Spellings = [CustomKeyword<"row_major">];
   let LangOpts = [HLSL];

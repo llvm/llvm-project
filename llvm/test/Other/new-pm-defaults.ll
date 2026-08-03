@@ -78,10 +78,6 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,CHECK-O23,%llvmcheckext,CHECK-MERGE-FUNCS
 
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
-; RUN:     -passes='default<O3>' -ir-outliner -S  %s 2>&1 \
-; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,CHECK-O23,%llvmcheckext,CHECK-IR-OUTLINER
-
-; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
 ; RUN:     -passes='default<O3>' -hot-cold-split -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-DEFAULT,CHECK-O3,CHECK-O23,%llvmcheckext,CHECK-HOT-COLD-SPLIT
 
@@ -157,6 +153,7 @@
 ; CHECK-O23-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: ReassociatePass
+; CHECK-O-NEXT: Running analysis: UniformityInfoAnalysis
 ; CHECK-O23-NEXT: Running pass: ConstraintEliminationPass
 ; CHECK-O23-NEXT: Running analysis: LoopAnalysis
 ; CHECK-O23-NEXT: Running analysis: ScalarEvolutionAnalysis
@@ -276,8 +273,6 @@
 ; CHECK-DEFAULT-NEXT: Running pass: AllocToken
 ; CHECK-EP-OPTIMIZER-LAST: Running pass: NoOpModulePass
 ; CHECK-HOT-COLD-SPLIT-NEXT: Running pass: HotColdSplittingPass
-; CHECK-IR-OUTLINER-NEXT: Running pass: IROutlinerPass
-; CHECK-IR-OUTLINER-NEXT: Running analysis: IRSimilarityAnalysis
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-MERGE-FUNCS-NEXT: Running pass: MergeFunctionsPass

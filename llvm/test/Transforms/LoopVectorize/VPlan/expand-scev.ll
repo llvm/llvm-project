@@ -262,8 +262,8 @@ define void @scev_ptrtoint_expanded(ptr %start, ptr %end) {
 ; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = ptrtoint ir<%end> to i64
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = ptrtoint ir<%start> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = ptrtoaddr ir<%end> to i64
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = ptrtoaddr ir<%start> to i64
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = sub vp<[[VP2]]>, vp<[[VP3]]>
 ; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP4]]>, ir<4>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
