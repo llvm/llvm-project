@@ -288,8 +288,11 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
     AddEdge(InVPBB, Phi->getParent(), InVal);
 
-  // Don't optimize any reduction chains for now.
-  if (any_of(Phi->incoming_values(), IsaPred<VPReductionPHIRecipe>))
+  // Don't optimize any phis used to mask tail values of reductions during tail
+  // folding until handleFindLastReductions can match the new form.
+  VPlan *Plan = Phi->getParent()->getPlan();
+  if (Phi->getParent() == Plan->getVectorLoopRegion()->getExiting() &&
+      any_of(Phi->incoming_values(), IsaPred<VPReductionPHIRecipe>))
     return Edges;
 
   SetVector<const VPBlockBase *> Worklist(from_range, Phi->incoming_blocks());
