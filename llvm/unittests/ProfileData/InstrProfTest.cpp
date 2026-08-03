@@ -639,7 +639,7 @@ TEST_F(InstrProfTest, test_irpgo_function_name) {
 
   for (auto &[Name, Linkage, ExpectedIRPGOFuncName] : Data) {
     auto *F = M->getFunction(Name);
-    auto IRPGOFuncName = getIRPGOFuncName(*F);
+    auto IRPGOFuncName = getIRPGOObjectName(*F);
     EXPECT_EQ(IRPGOFuncName, ExpectedIRPGOFuncName);
 
     auto [Filename, ParsedIRPGOFuncName] = getParsedIRPGOName(IRPGOFuncName);
@@ -690,8 +690,8 @@ TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
   auto *ExternalBarF =
       Function::Create(FTy, Function::ExternalLinkage, "ExternalBar", M.get());
 
-  Writer.addRecord({getIRPGOFuncName(*InternalFooF), 0x1234, {1}}, Err);
-  Writer.addRecord({getIRPGOFuncName(*ExternalFooF), 0x5678, {1}}, Err);
+  Writer.addRecord({getIRPGOObjectName(*InternalFooF), 0x1234, {1}}, Err);
+  Writer.addRecord({getIRPGOObjectName(*ExternalFooF), 0x5678, {1}}, Err);
   // Write a record with a deprecated name
   Writer.addRecord({getPGOFuncName(*InternalBarF), 0x1111, {2}}, Err);
   Writer.addRecord({getPGOFuncName(*ExternalBarF), 0x2222, {2}}, Err);
@@ -700,20 +700,20 @@ TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
   readProfile(std::move(Profile));
 
   EXPECT_THAT_EXPECTED(
-      Reader->getInstrProfRecord(getIRPGOFuncName(*InternalFooF), 0x1234,
+      Reader->getInstrProfRecord(getIRPGOObjectName(*InternalFooF), 0x1234,
                                  getPGOFuncName(*InternalFooF)),
       Succeeded());
   EXPECT_THAT_EXPECTED(
-      Reader->getInstrProfRecord(getIRPGOFuncName(*ExternalFooF), 0x5678,
+      Reader->getInstrProfRecord(getIRPGOObjectName(*ExternalFooF), 0x5678,
                                  getPGOFuncName(*ExternalFooF)),
       Succeeded());
   // Ensure we can still read this old record name
   EXPECT_THAT_EXPECTED(
-      Reader->getInstrProfRecord(getIRPGOFuncName(*InternalBarF), 0x1111,
+      Reader->getInstrProfRecord(getIRPGOObjectName(*InternalBarF), 0x1111,
                                  getPGOFuncName(*InternalBarF)),
       Succeeded());
   EXPECT_THAT_EXPECTED(
-      Reader->getInstrProfRecord(getIRPGOFuncName(*ExternalBarF), 0x2222,
+      Reader->getInstrProfRecord(getIRPGOObjectName(*ExternalBarF), 0x2222,
                                  getPGOFuncName(*ExternalBarF)),
       Succeeded());
 }
@@ -1758,7 +1758,7 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
   for (unsigned I = 0; I < std::size(Funcs); I++) {
     Function *F = M->getFunction(Funcs[I]);
 
-    std::string IRPGOName = getIRPGOFuncName(*F);
+    std::string IRPGOName = getIRPGOObjectName(*F);
     auto IRPGOFuncName =
         ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(IRPGOName));
     EXPECT_EQ(IRPGOName, IRPGOFuncName);
@@ -1777,7 +1777,7 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
         M->getGlobalVariable(VTableName, /* AllowInternal=*/true);
 
     // Test that ProfSymtab returns the expected name given a hash.
-    std::string IRPGOName = getPGOName(*GV);
+    std::string IRPGOName = getIRPGOObjectName(*GV);
     EXPECT_STREQ(IRPGOName.c_str(), PGOName);
     uint64_t GUID = IndexedInstrProf::ComputeHash(IRPGOName);
     EXPECT_EQ(IRPGOName, ProfSymtab.getFuncOrVarName(GUID));
