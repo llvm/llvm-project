@@ -416,8 +416,25 @@ void MipsABIInfo::computeInfo(CGFunctionInfo &FI) const {
   // Check if a pointer to an aggregate is passed as a hidden argument.
   uint64_t Offset = RetInfo.isIndirect() ? MinABIStackAlignInBytes : 0;
 
-  for (auto &I : FI.arguments())
+  // Ignored arguments are not passed, but do end the run of floats.
+  bool SawIgnoredArg = false;
+
+  for (auto &I : FI.arguments()) {
     I.info = classifyArgumentType(I.type, Offset);
+
+    // N32 and N64 always pass floating points in float registers.
+    if (!IsO32)
+      continue;
+
+    if (I.info.isIgnore())
+      SawIgnoredArg = true;
+    else if (SawIgnoredArg && I.type->isRealFloatingType())
+      // Cast to integer because we now drop the ignored arguments and otherwise
+      // later stages have no way of knowing the argument was there and later
+      // floats should be passed as integers.
+      I.info = ABIArgInfo::getDirect(llvm::IntegerType::get(
+          getVMContext(), getContext().getTypeSize(I.type)));
+  }
 }
 
 RValue MipsABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
