@@ -633,9 +633,16 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
                               /*relocVA=*/0);
         isec->data = copy;
       }
-    } else if (!isEhFrameSection(isec)) {
-      // EH frames are gathered as foldables from unwindEntry above; give a
-      // unique ID to everything else.
+    } else if (isEhFrameSection(isec)) {
+      // An __eh_frame isec that is not an FDE is a CIE, which is not gather via
+      // unwindEntry() above. Mark them as foldable to compute icfEqClass for
+      // them
+      auto *obj = dyn_cast_or_null<ObjFile>(isec->getFile());
+      if (!onlyCfStrings && obj && !obj->fdes.contains(isec) &&
+          !isec->shouldOmitFromOutput())
+        foldable.push_back(isec);
+    } else {
+      // give a unique ID to everything else
       isec->icfEqClass[0] = ++icfUniqueID;
     }
   }

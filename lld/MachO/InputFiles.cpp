@@ -1563,6 +1563,19 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
     fdes[isec] = {funcLength, cie.personalitySymbol, lsdaIsec};
     funcSym->originalUnwindEntry = isec;
     ehRelocator.commit();
+    if (config->icfLevel != ICFLevel::none) {
+      // Zero out "abs-ified" relocations so ICF can fold them
+      MutableArrayRef<uint8_t> copy = isec->data.copy(bAlloc());
+      assert(isec->getRelocAt(funcAddrOff));
+      memset(copy.data() + funcAddrOff, 0, cie.funcPtrSize);
+      assert(isec->getRelocAt(cieOffOff));
+      memset(copy.data() + cieOffOff, 0, sizeof(uint32_t));
+      if (lsdaIsec) {
+        assert(isec->getRelocAt(lsdaAddrOff));
+        memset(copy.data() + lsdaAddrOff, 0, cie.lsdaPtrSize);
+      }
+      isec->data = copy;
+    }
   }
 
   // __eh_frame is marked as S_ATTR_LIVE_SUPPORT in input files, because FDEs
