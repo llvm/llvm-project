@@ -1188,10 +1188,16 @@ static bool simplifyLogicalRecipe(VPSingleDefRecipe *Def, VPBuilder &Builder,
   }
 
   // x && (x && y) -> x && y
-  if (match(Def, m_c_LogicalAnd(m_VPValue(X),
-                                m_VPValue(Z, m_c_LogicalAnd(m_Deferred(X),
-                                                            m_VPValue()))))) {
-    Def->replaceAllUsesWith(Z);
+  if (match(Def, m_LogicalAnd(m_VPValue(X),
+                              m_LogicalAnd(m_Deferred(X), m_VPValue())))) {
+    Def->replaceAllUsesWith(Def->getOperand(1));
+    return true;
+  }
+
+  // x && (y && x) -> x && y
+  if (match(Def, m_LogicalAnd(m_VPValue(X),
+                              m_LogicalAnd(m_VPValue(Y), m_Deferred(X))))) {
+    Def->replaceAllUsesWith(Builder.createLogicalAnd(X, Y));
     return true;
   }
 
@@ -1298,8 +1304,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   bool CanCreateNewRecipe =
       !isa<VPInstruction>(Def) || !Def->getUnderlyingValue();
 
-  VPValue *A;
-  if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
+  VPValue *A, *Z;
+  if (match(Def, m_Trunc(m_VPValue(Z, m_ZExtOrSExt(m_VPValue(A)))))) {
     Type *TruncTy = Def->getScalarType();
     Type *ATy = A->getScalarType();
     if (TruncTy == ATy) {
@@ -1310,12 +1316,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
         return;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
 
-        unsigned ExtOpcode = match(Def->getOperand(0), m_SExt(m_VPValue()))
-                                 ? Instruction::SExt
-                                 : Instruction::ZExt;
+        unsigned ExtOpcode = match(Z, m_SExt(m_VPValue())) ? Instruction::SExt
+                                                           : Instruction::ZExt;
         auto *Ext = Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A,
                                             TruncTy);
-        if (auto *UnderlyingExt = Def->getOperand(0)->getUnderlyingValue()) {
+        if (auto *UnderlyingExt = Z->getUnderlyingValue()) {
           // UnderlyingExt has distinct return type, used to retain legacy cost.
           Ext->setUnderlyingValue(UnderlyingExt);
         }
@@ -1330,7 +1335,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   if (simplifyLogicalRecipe(Def, Builder, CanCreateNewRecipe))
     return;
 
-  VPValue *X, *Y, *C;
+  VPValue *X, *Y;
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(A);
 
@@ -1349,14 +1354,13 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   }
 
   if (CanCreateNewRecipe &&
-      match(Def, m_c_Add(m_VPValue(X), m_Sub(m_ZeroInt(), m_VPValue(Y))))) {
+      match(Def, m_c_Add(m_VPValue(X),
+                         m_VPValue(Z, m_Sub(m_ZeroInt(), m_VPValue(Y)))))) {
     // Preserve nsw from the Add and the Sub, if it's present on both, on the
     // new Sub.
     VPIRFlags::WrapFlagsTy NW = {
-        false,
-        cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap() &&
-            cast<VPRecipeWithIRFlags>(Def->getOperand(Def->getOperand(0) == X))
-                ->hasNoSignedWrap()};
+        false, cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap() &&
+                   cast<VPRecipeWithIRFlags>(Z)->hasNoSignedWrap()};
     return Def->replaceAllUsesWith(
         Builder.createSub(X, Y, Def->getDebugLoc(), "", NW));
   }
@@ -1458,9 +1462,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
 
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
   if ((match(Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A), m_One())) ||
-       match(Def, m_DerivedIV(m_ZeroInt(), m_ZeroInt(), m_VPValue()))) &&
-      Def->getOperand(1)->getScalarType() == Def->getScalarType())
-    return Def->replaceAllUsesWith(Def->getOperand(1));
+       match(Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A, m_ZeroInt()),
+                              m_VPValue()))) &&
+      A->getScalarType() == Def->getScalarType())
+    return Def->replaceAllUsesWith(A);
 
   if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
                                                             m_One()))) {
@@ -1477,7 +1482,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
                                                   m_VPValue(X), m_VPValue())) &&
       match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
       Def->getScalarType()->isIntegerTy(1)) {
-    Def->setOperand(1, Def->getOperand(0));
+    Def->setOperand(1, Plan->getTrue());
     Def->setOperand(0, Y);
     return;
   }
@@ -1538,10 +1543,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   // Look through broadcast of single-scalar when used as select conditions; in
   // that case the scalar condition can be used directly.
   if (match(Def,
-            m_Select(m_Broadcast(m_VPValue(C)), m_VPValue(), m_VPValue()))) {
-    assert(vputils::isSingleScalar(C) &&
+            m_Select(m_Broadcast(m_VPValue(Z)), m_VPValue(), m_VPValue()))) {
+    assert(vputils::isSingleScalar(Z) &&
            "broadcast operand must be single-scalar");
-    Def->setOperand(0, C);
+    Def->setOperand(0, Z);
     return;
   }
 
@@ -1598,11 +1603,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   //  Def = IVInc + Y
   // Fold the increment Y into the phi's start value, replace Def with IVInc,
   // and if Inc exists, replace it with X.
-  if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) &&
-      match(X, m_VPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
+  VPValue *IVInc;
+  if (match(Def, m_Add(m_VPValue(IVInc, m_Add(m_VPValue(X), m_VPValue())),
+                       m_VPValue(Y))) &&
+      isa<VPIRValue>(Y) && match(X, m_VPPhi(m_ZeroInt(), m_Specific(IVInc)))) {
     auto *Phi = cast<VPPhi>(X);
-    auto *IVInc = Def->getOperand(0);
     if (IVInc->getNumUsers() == 2) {
       // If Phi has a second user (besides IVInc's defining recipe), it must
       // be Inc = Phi + Y for the fold to apply.
@@ -3035,9 +3040,8 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 
   // If we couldn't match anything, don't return the condition. It may be
   // defined outside the loop.
-  if (Recipes.empty() || none_of(Recipes, [](VPInstruction *I) {
-        return match(I, m_VPInstruction<Instruction::GetElementPtr>());
-      }))
+  if (Recipes.empty() ||
+      none_of(Recipes, match_fn(m_VPInstruction<Instruction::GetElementPtr>())))
     return std::nullopt;
 
   return UncountableCondition;

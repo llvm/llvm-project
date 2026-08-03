@@ -22,6 +22,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/Statistic.h"
@@ -1041,6 +1042,17 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (Subtarget->hasBF16TransInsts()) {
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
+  }
+
+  if (Subtarget->hasOCPFP8ConversionInsts()) {
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f32, MVT::v2f32},
+                       Custom);
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, MVT::v2i8, Custom);
+  }
+
+  if (Subtarget->hasFP8F16ConversionInsts()) {
+    setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f16, MVT::v2f16},
+                       Custom);
   }
 
   if (Subtarget->hasCvtPkF16F32Inst()) {
@@ -7634,6 +7646,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerExternalSymbol(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::CONVERT_FROM_ARBITRARY_FP:
+    return LowerCONVERT_FROM_ARBITRARY_FP(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID:
@@ -10942,6 +10956,61 @@ SDValue SITargetLowering::lowerWorkitemID(SelectionDAG &DAG, SDValue Op,
   EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), llvm::bit_width(MaxID));
   return DAG.getNode(ISD::AssertZext, SL, MVT::i32, Val,
                      DAG.getValueType(SmallVT));
+}
+
+SDValue SITargetLowering::lowerFromFP8(SDValue Op, bool IsBF8,
+                                       SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+  EVT DstVT = Op.getValueType();
+  bool IsF16 = DstVT.getVectorElementType() == MVT::f16;
+  assert((!IsF16 || Subtarget->hasFP8F16ConversionInsts()) &&
+         "fp8/bf8 -> f16 conversion requires FP8F16ConversionInsts");
+
+  unsigned Opc;
+  if (IsF16)
+    Opc = IsBF8 ? AMDGPUISD::CVT_PK_F16_BF8 : AMDGPUISD::CVT_PK_F16_FP8;
+  else
+    Opc = IsBF8 ? AMDGPUISD::CVT_PK_F32_BF8 : AMDGPUISD::CVT_PK_F32_FP8;
+
+  // Pack the two i8 lanes into the integer type the packed HW node reads. The
+  // f16 form takes i16 and the f32 form takes i32. v2i8 bitcasts to i16
+  // directly and the f32 node reads the low half of an any-extended i32.
+  EVT PackedVT =
+      EVT::getIntegerVT(*DAG.getContext(), DstVT.getScalarSizeInBits());
+  SDValue AsI16 = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Src);
+  SDValue Packed = DAG.getAnyExtOrTrunc(AsI16, SL, PackedVT);
+  return DAG.getNode(Opc, SL, DstVT, Packed);
+}
+
+SDValue
+SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  // Only handle OCP FP8 formats (E4M3FN, E5M2). FNUZ formats that are supported
+  // by gfx942 fall through to the generic expansion.
+  APFloatBase::Semantics FPSemantic =
+      static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
+  if (FPSemantic != APFloatBase::S_Float8E4M3FN &&
+      FPSemantic != APFloatBase::S_Float8E5M2)
+    return SDValue();
+  const bool IsBF8 = FPSemantic == APFloatBase::S_Float8E5M2;
+
+  EVT DstVT = Op.getValueType();
+  if (!DstVT.isVector()) {
+    SDValue Src = Op.getOperand(0);
+    if (Src.getValueType() != MVT::i32) {
+      SDLoc SL(Op);
+      SDValue SrcI32 = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
+      return DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, SL, DstVT, SrcI32,
+                         Op.getOperand(1));
+    }
+    return Op;
+  }
+
+  EVT EltVT = DstVT.getVectorElementType();
+  if (EltVT == MVT::f16 || EltVT == MVT::f32)
+    return lowerFromFP8(Op, IsBF8, DAG);
+  return SDValue();
 }
 
 SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
@@ -15870,6 +15939,21 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
 bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
                                        SDNodeFlags UserFlags,
                                        unsigned MaxDepth) const {
+  EVT VT = Op.getValueType();
+  assert(VT.isFloatingPoint() &&
+         "expected a floating-point value to query canonicality of");
+  return isCanonicalized(DAG, Op, VT.getScalarType(), UserFlags, MaxDepth);
+}
+
+bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
+                                       EVT QueryVT, SDNodeFlags UserFlags,
+                                       unsigned MaxDepth) const {
+  assert(QueryVT.isFloatingPoint() && !QueryVT.isVector() &&
+         "QueryVT must be a floating-point scalar type");
+  EVT VT = Op.getValueType();
+  if (VT.isFloatingPoint() && VT.getScalarType() != QueryVT)
+    return false;
+
   unsigned Opcode = Op.getOpcode();
   if (Opcode == ISD::FCANONICALIZE)
     return true;
@@ -15938,7 +16022,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case ISD::FNEG:
   case ISD::FABS:
   case ISD::FCOPYSIGN:
-    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+    return isCanonicalized(DAG, Op.getOperand(0), QueryVT, UserFlags,
+                           MaxDepth - 1);
 
   case ISD::AND:
     if (Op.getValueType() == MVT::i32) {
@@ -15948,7 +16033,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
       // is valid to optimize for all types.
       if (auto *RHS = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
         if (RHS->getZExtValue() == 0xffff0000) {
-          return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+          return isCanonicalized(DAG, Op.getOperand(0), QueryVT, UserFlags,
+                                 MaxDepth - 1);
         }
       }
     }
@@ -15989,20 +16075,23 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
 
     // FIXME: Does this apply with clamp? It's implemented with max.
     for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I) {
-      if (!isCanonicalized(DAG, Op.getOperand(I), MaxDepth - 1))
+      if (!isCanonicalized(DAG, Op.getOperand(I), QueryVT, UserFlags,
+                           MaxDepth - 1))
         return false;
     }
 
     return true;
   }
   case ISD::SELECT: {
-    return isCanonicalized(DAG, Op.getOperand(1), MaxDepth - 1) &&
-           isCanonicalized(DAG, Op.getOperand(2), MaxDepth - 1);
+    return isCanonicalized(DAG, Op.getOperand(1), QueryVT, UserFlags,
+                           MaxDepth - 1) &&
+           isCanonicalized(DAG, Op.getOperand(2), QueryVT, UserFlags,
+                           MaxDepth - 1);
   }
   case ISD::BUILD_VECTOR: {
     for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
       SDValue SrcOp = Op.getOperand(i);
-      if (!isCanonicalized(DAG, SrcOp, MaxDepth - 1))
+      if (!isCanonicalized(DAG, SrcOp, QueryVT, UserFlags, MaxDepth - 1))
         return false;
     }
 
@@ -16010,11 +16099,14 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   }
   case ISD::EXTRACT_VECTOR_ELT:
   case ISD::EXTRACT_SUBVECTOR: {
-    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+    return isCanonicalized(DAG, Op.getOperand(0), QueryVT, UserFlags,
+                           MaxDepth - 1);
   }
   case ISD::INSERT_VECTOR_ELT: {
-    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1) &&
-           isCanonicalized(DAG, Op.getOperand(1), MaxDepth - 1);
+    return isCanonicalized(DAG, Op.getOperand(0), QueryVT, UserFlags,
+                           MaxDepth - 1) &&
+           isCanonicalized(DAG, Op.getOperand(1), QueryVT, UserFlags,
+                           MaxDepth - 1);
   }
   case ISD::POISON:
     return true;
@@ -16022,11 +16114,13 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     // Could be anything.
     return false;
 
-  case ISD::BITCAST:
-    // TODO: This is incorrect as it loses track of the operand's type. We may
-    // end up effectively bitcasting from f32 to v2f16 or vice versa, and the
-    // same bits that are canonicalized in one type need not be in the other.
-    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+  case ISD::BITCAST: {
+    // Carry QueryVT through the bitcast unchanged. The top-of-function guard
+    // rejects a source whose FP format differs from the consumed type, so a
+    // value canonical in one FP format is not assumed canonical in another.
+    SDValue Src = peekThroughBitcasts(Op.getOperand(0));
+    return isCanonicalized(DAG, Src, QueryVT, UserFlags, MaxDepth - 1);
+  }
   case ISD::TRUNCATE: {
     // Hack round the mess we make when legalizing extract_vector_elt
     if (Op.getValueType() == MVT::i16) {
@@ -16034,7 +16128,8 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
       if (TruncSrc.getValueType() == MVT::i32 &&
           TruncSrc.getOpcode() == ISD::BITCAST &&
           TruncSrc.getOperand(0).getValueType() == MVT::v2f16) {
-        return isCanonicalized(DAG, TruncSrc.getOperand(0), MaxDepth - 1);
+        return isCanonicalized(DAG, TruncSrc.getOperand(0), QueryVT, UserFlags,
+                               MaxDepth - 1);
       }
     }
     return false;
@@ -16280,14 +16375,13 @@ SITargetLowering::performFCanonicalizeCombine(SDNode *N,
         }
       }
 
-      // If one half is undef, and one is constant, prefer a splat vector rather
-      // than the normal qNaN. If it's a register, prefer 0.0 since that's
-      // cheaper to use and may be free with a packed operation.
+      // If one half is undef, and one is constant, prefer a splat vector.
+      // Otherwise, convert the undef to 0.0 since that's cheaper to use and may
+      // be free with a packed operation.
       if (NewElts[0].isUndef()) {
-        if (isa<ConstantFPSDNode>(NewElts[1]))
-          NewElts[0] = isa<ConstantFPSDNode>(NewElts[1])
-                           ? NewElts[1]
-                           : DAG.getConstantFP(0.0f, SL, EltVT);
+        NewElts[0] = isa<ConstantFPSDNode>(NewElts[1])
+                         ? NewElts[1]
+                         : DAG.getConstantFP(0.0f, SL, EltVT);
       }
 
       if (NewElts[1].isUndef()) {
