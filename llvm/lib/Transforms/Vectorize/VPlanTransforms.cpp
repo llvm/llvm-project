@@ -691,7 +691,7 @@ static void removeRedundantInductionCasts(VPlan &Plan) {
 /// reachable recipes of the dead cycle.
 static void tryToRemoveDeadCycle(VPRecipeBase *R) {
   auto *PhiR = dyn_cast<VPSingleDefRecipe>(R);
-  if (!PhiR || !isa<VPPhiAccessors>(R) || isa<VPCurrentIterationPHIRecipe>(R))
+  if (!PhiR || !isa<VPPhi, VPReductionPHIRecipe>(R))
     return;
 
   // The transitive users of PhiR are closed under users, so the cycle is dead
