@@ -433,3 +433,67 @@ bb5:
 exit:
   ret void
 }
+
+; bb4 will create the edge mask bb1->bb3 before bb3. Make sure bb4
+; inserts its blend after the already created edge mask.
+define i32 @look_thru_phi_blend_insert_pos(i1 %c0, i1 %c1) {
+; CHECK-LABEL: define i32 @look_thru_phi_blend_insert_pos(
+; CHECK-SAME: i1 [[C0:%.*]], i1 [[C1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i1> poison, i1 [[C0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT1]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP1]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> splat (i32 2), <4 x i32> splat (i32 1)
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 3
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[TMP4]]
+;
+;     bb0
+;    /  \
+;   bb1  \
+;  /  \   \
+; bb2 |   /
+;  \  /  /
+;  bb3  /
+;    \ /
+;    bb4
+entry:
+  br label %bb0
+
+bb0:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %bb4 ]
+  br i1 %c0, label %bb4, label %bb1
+
+bb1:
+  br i1 %c1, label %bb3, label %bb2
+
+bb2:
+  br label %bb3
+
+bb3:
+  %phi3 = phi i32 [ 1, %bb1 ], [ 2, %bb2 ]
+  br label %bb4
+
+bb4:
+  %phi4 = phi i32 [ 1, %bb0 ], [ %phi3, %bb3 ]
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret i32 %phi4
+}

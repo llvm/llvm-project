@@ -81,6 +81,19 @@ class VPPredicator {
     return VPBB->getFirstNonPhi();
   }
 
+  /// Returns where to insert new blends in \p VPBB.
+  VPBasicBlock::iterator getBlendInsertPoint(VPBasicBlock *VPBB) {
+    VPBasicBlock::iterator It = getMaskInsertPoint(VPBB);
+    // Insert after any incoming edge masks if they were already inserted.
+    for (VPBlockBase *Pred : VPBB->predecessors())
+      if (VPValue *EdgeMask = getEdgeMask(cast<VPBasicBlock>(Pred), VPBB))
+        if (VPRecipeBase *EdgeR = EdgeMask->getDefiningRecipe())
+          if (It != VPBB->end() && EdgeR->getParent() == VPBB &&
+              !VPDT.properlyDominates(EdgeR, &*It))
+            It = std::next(EdgeR->getIterator());
+    return It;
+  }
+
   using EdgeTy = std::pair<const VPBasicBlock *, const VPBasicBlock *>;
 
   /// Compute the set of edges that are "furthest up" in the CFG for each
@@ -361,7 +374,7 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
-  Builder.setInsertPoint(VPBB, getMaskInsertPoint(VPBB));
+  Builder.setInsertPoint(VPBB, getBlendInsertPoint(VPBB));
 
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
