@@ -59,7 +59,7 @@ Deprecations and Removals
 Potentially breaking changes
 ----------------------------
 
-- TODO: In LLVM 23, libc++ dropped a lot of transitive includes in all language modes. This improves compile time significantly,
+- In LLVM 23, libc++ dropped a lot of transitive includes in all language modes. This improves compile time significantly,
   but causes programs which rely on these includes to not compile anymore. The ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23``
   macro that was provided in LLVM 23 to ease the transition has been removed in this release.
 
@@ -79,4 +79,3 @@ ABI Affecting Changes
 
 Build System Changes
 --------------------
-

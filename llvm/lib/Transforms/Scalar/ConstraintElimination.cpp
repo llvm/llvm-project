@@ -552,6 +552,14 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
       return V;
     }
 
+    // `xor %x, -1` is equivalent to `sub nsw -1, %x`.
+    if (match(V, m_Not(m_Value(Op0)))) {
+      Decomposition Result(-1);
+      if (!Result.sub(decompose(Op0, Info, IsSigned, DL)))
+        return Result;
+      return V;
+    }
+
     if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
       auto ResA = decompose(Op0, Info, IsSigned, DL);
       auto ResB = decompose(Op1, Info, IsSigned, DL);
@@ -1287,14 +1295,18 @@ void State::addInfoFor(BasicBlock &BB) {
       break;
     }
 
-    // Add facts from unsigned division, remainder and logical shift right.
+    // Add facts from unsigned division, remainder and logical shift right, and
+    // from signed remainder.
     //   urem x, n: result < n  and  result <= x
     //   udiv x, n: result <= x
     //   lshr x, n: result <= x
+    //   srem x, n: result >= 0 and result <= x, if x >= 0
+    //              result < n,                  if n > 0
     if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
       if ((BO->getOpcode() == Instruction::URem ||
            BO->getOpcode() == Instruction::UDiv ||
-           BO->getOpcode() == Instruction::LShr) &&
+           BO->getOpcode() == Instruction::LShr ||
+           BO->getOpcode() == Instruction::SRem) &&
           isGuaranteedNotToBePoison(BO))
         WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
     }
@@ -1793,7 +1805,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 void ConstraintInfo::tightenBoundUsingNe(
     Value *A, Value *B, unsigned NumIn, unsigned NumOut,
     SmallVectorImpl<StackEntry> &DFSInStack) {
-  if (!isa<ConstantInt>(B) || !A->getType()->isIntegerTy())
+  if (!A->getType()->isIntegerTy())
     return;
 
   for (bool IsSigned : {false, true}) {
@@ -2174,6 +2186,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         if (BO->getOpcode() == Instruction::LShr) {
           // lshr x, n: result <= x (right shift cannot increase the value)
           AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
+        if (BO->getOpcode() == Instruction::SRem) {
+          Value *X = BO->getOperand(0);
+          Value *N = BO->getOperand(1);
+          Constant *Zero = Constant::getNullValue(BO->getType());
+          if (Info.doesHold(CmpInst::ICMP_SGE, X, Zero) ||
+              isKnownNonNegative(X, F.getDataLayout())) {
+            // srem x, n: result >= 0, if x >= 0 (result has the sign of x)
+            AddFact(CmpInst::ICMP_SGE, BO, Zero);
+            // srem x, n: result <= x, if x >= 0 (|result| <= |x| and both are
+            // non-negative)
+            AddFact(CmpInst::ICMP_SLE, BO, X);
+          }
+          if (Info.doesHold(CmpInst::ICMP_SGE, N, Zero) ||
+              isKnownPositive(N, F.getDataLayout())) {
+            // srem x, n: result <= n, if n >= 0 (|result| < n, so result <= n -
+            // 1
+            AddFact(CmpInst::ICMP_SLT, BO, N);
+          }
           continue;
         }
       }

@@ -3262,6 +3262,11 @@ class Commutable_REV <string revOp, bit isOrig> {
   bit IsOrig = isOrig;
 }
 
+class AGPRFormTable<string Kind, string Name = NAME> {
+  string AGPRFormOp = Name;
+  string AGPRFormKind = Kind;
+}
+
 //===----------------------------------------------------------------------===//
 // Interpolation opcodes
 //===----------------------------------------------------------------------===//
@@ -3512,11 +3517,11 @@ def getMFMAEarlyClobberOp : InstrMapping {
   let ValueCols = [["0"]];
 }
 
-// Map from an mfma using VGPRs to one using AGPRs.
-def getMFMASrcCVDstAGPROp : InstrMapping {
-  let FilterClass = "MFMATable";
-  let RowFields = ["AGPROp"];
-  let ColFields = ["MFMAKind"];
+// Map from an instruction using VGPRs to one using AGPRs.
+def getAGPRFormOp : InstrMapping {
+  let FilterClass = "AGPRFormTable";
+  let RowFields = ["AGPRFormOp"];
+  let ColFields = ["AGPRFormKind"];
   let KeyCol = ["VGPR"];
   let ValueCols = [["AGPR"]];
 }
