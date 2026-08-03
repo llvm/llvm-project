@@ -2223,11 +2223,12 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     return Dependence::Unknown;
   }
 
-  // TODO: Remove this.
-  bool HasSameSize = AStoreSz == BStoreSz;
+  // TODO: This is unnecessary, and the code in isDependent should only depend
+  // on the type alloc sizes.
+  bool HasSameStoreSz = AStoreSz == BStoreSz;
 
   return DepDistanceStrideAndSizeInfo(Dist, MaxStride, CommonStride,
-                                      TypeByteSize, HasSameSize, AIsWrite,
+                                      TypeByteSize, HasSameStoreSz, AIsWrite,
                                       BIsWrite);
 }
 
@@ -2260,7 +2261,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return std::get<Dependence::DepType>(Res);
   }
 
-  auto &[Dist, MaxStride, CommonStride, TypeByteSize, HasSameSize, AIsWrite,
+  auto &[Dist, MaxStride, CommonStride, TypeByteSize, HasSameStoreSz, AIsWrite,
          BIsWrite] = std::get<DepDistanceStrideAndSizeInfo>(Res);
 
   ScalarEvolution &SE = *PSE.getSE();
@@ -2271,7 +2272,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // upper bound of the number of iterations), the accesses are independet, i.e.
   // they are far enough appart that accesses won't access the same location
   // across all loop ierations.
-  if (HasSameSize &&
+  if (HasSameStoreSz &&
       isSafeDependenceDistance(
           DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
     return Dependence::NoDep;
@@ -2289,9 +2290,9 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   // Attempt to prove strided accesses independent.
   if (APDist) {
-    if (ConstDist && CommonStride && CommonStride > 1 && HasSameSize &&
+    if (ConstDist && CommonStride && CommonStride > 1 && HasSameStoreSz &&
         areStridedAccessesIndependent(ConstDist, *CommonStride,
-                                      TypeByteSize.first)) {
+                                      TypeByteSize.second)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
@@ -2305,7 +2306,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize) {
+      if (HasSameStoreSz) {
         // Write to the same location with the same size.
         return Dependence::Forward;
       }
@@ -2328,8 +2329,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
         return CheckCompletelyBeforeOrAfter() ? Dependence::NoDep
                                               : Dependence::Unknown;
       }
-      if (!HasSameSize ||
-          couldPreventStoreLoadForward(ConstDist, TypeByteSize.first)) {
+      if (!HasSameStoreSz ||
+          couldPreventStoreLoadForward(ConstDist, TypeByteSize.second)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
         return Dependence::ForwardButPreventsForwarding;
@@ -2353,7 +2354,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                                           : Dependence::Unknown;
   }
 
-  if (!HasSameSize) {
+  if (!HasSameStoreSz) {
     if (CheckCompletelyBeforeOrAfter())
       return Dependence::NoDep;
     LLVM_DEBUG(dbgs() << "LAA: ReadWrite-Write positive dependency with "
@@ -2402,7 +2403,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // minimum for computations below, as this ensures we compute the closest
   // possible dependence distance.
   uint64_t MinDistanceNeeded =
-      MaxStride * (MinNumIter - 1) + TypeByteSize.first;
+      MaxStride * (MinNumIter - 1) + TypeByteSize.second;
   if (MinDistanceNeeded > static_cast<uint64_t>(MinDistance)) {
     if (!ConstDist) {
       // For non-constant distances, we checked the lower bound of the
@@ -2430,7 +2431,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
   if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist &&
-      couldPreventStoreLoadForward(MinDistance, TypeByteSize.first,
+      couldPreventStoreLoadForward(MinDistance, TypeByteSize.second,
                                    *CommonStride))
     return Dependence::BackwardVectorizableButPreventsForwarding;
 
@@ -2438,7 +2439,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
 
-  uint64_t MaxVFInBits = MaxVF * TypeByteSize.first * 8;
+  uint64_t MaxVFInBits = MaxVF * TypeByteSize.second * 8;
   if (!ConstDist && MaxVFInBits < MaxTargetVectorWidthInBits) {
     // For non-constant distances, we checked the lower bound of the dependence
     // distance and the distance may be larger at runtime (and safe for
