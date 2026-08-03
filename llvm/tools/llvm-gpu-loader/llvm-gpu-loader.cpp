@@ -169,11 +169,6 @@ ol_device_handle_t getHostDevice() {
   return Device;
 }
 
-static bool hasKernel(ol_program_handle_t Program, const char *Name) {
-  ol_symbol_handle_t Kernel;
-  return !olGetSymbol(Program, Name, OL_SYMBOL_KIND_KERNEL, &Kernel);
-}
-
 template <typename... Args>
 void launchKernel(ol_queue_handle_t Queue, ol_device_handle_t Device,
                   ol_program_handle_t Program, const char *Name,
@@ -273,31 +268,29 @@ int main(int argc, const char **argv, const char **envp) {
   OFFLOAD_ERR(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, sizeof(int), &DevRet));
   OFFLOAD_ERR(olMemcpy(Queue, DevRet, Device, &Zero, Host, sizeof(int)));
 
-  // The '_begin' and '_end' kernels perform libc startup and teardown. Global
-  // constructors and destructors are handled automatically by the runtime.
-  ol_kernel_launch_size_args_t BeginLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
-  if (hasKernel(Program, "_begin"))
-    launchKernel(Queue, Device, Program, "_begin", BeginLaunch, DevArgc,
-                 DevArgv, DevEnvp);
-  OFFLOAD_ERR(olSyncQueue(Queue));
-
   uint32_t Dims = (BlocksZ > 1) ? 3 : (BlocksY > 1) ? 2 : 1;
   ol_kernel_launch_size_args_t StartLaunch{Dims,
                                            {BlocksX, BlocksY, BlocksZ},
                                            {ThreadsX, ThreadsY, ThreadsZ},
                                            /*SharedMemBytes=*/0};
-  if (Kernels.empty()) {
-    launchKernel(Queue, Device, Program, "_start", StartLaunch, DevArgc,
-                 DevArgv, DevEnvp, DevRet);
-  } else {
+  if (!Kernels.empty()) {
     // Launch the user-specified kernels in order. These must take no arguments.
     for (const std::string &Kernel : Kernels)
       launchKernel(Queue, Device, Program, Kernel.c_str(), StartLaunch);
-  }
+  } else {
+    // The '_begin' and '_end' kernels perform libc startup and teardown. Global
+    // constructors and destructors are handled automatically by the runtime.
+    ol_kernel_launch_size_args_t BeginLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
+    launchKernel(Queue, Device, Program, "_begin", BeginLaunch, DevArgc,
+                 DevArgv, DevEnvp);
+    OFFLOAD_ERR(olSyncQueue(Queue));
 
-  ol_kernel_launch_size_args_t EndLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
-  if (hasKernel(Program, "_end"))
+    launchKernel(Queue, Device, Program, "_start", StartLaunch, DevArgc,
+                 DevArgv, DevEnvp, DevRet);
+
+    ol_kernel_launch_size_args_t EndLaunch{1, {1, 1, 1}, {1, 1, 1}, 0};
     launchKernel(Queue, Device, Program, "_end", EndLaunch);
+  }
 
   int Ret;
   OFFLOAD_ERR(olMemcpy(Queue, &Ret, Host, DevRet, Device, sizeof(int)));
