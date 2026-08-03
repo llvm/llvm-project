@@ -565,8 +565,6 @@ public:
                              bool AllowUnknown = false) const override;
 
   bool shouldExpandGetActiveLaneMask(EVT VT, EVT OpVT) const override;
-  bool shouldExpandVectorMatch() const override;
-
   bool shouldExpandCttzElements(EVT VT) const override;
 
   /// If a change in streaming mode is required on entry to/return from a

@@ -4647,9 +4647,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Results.push_back(TLI.expandVPCTTZElements(Node, DAG));
     break;
-  case ISD::VECTOR_MATCH:
-    Results.push_back(TLI.expandVectorMatch(Node, DAG));
-    break;
   case ISD::CLEAR_CACHE:
     // The default expansion of llvm.clear_cache is simply a no-op for those
     // targets where it is not needed.

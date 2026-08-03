@@ -515,8 +515,6 @@ public:
     return true;
   }
 
-  virtual bool shouldExpandVectorMatch() const { return true; }
-
   virtual bool shouldExpandGetVectorLength(EVT CountVT, unsigned VF,
                                            bool IsScalable) const {
     return true;

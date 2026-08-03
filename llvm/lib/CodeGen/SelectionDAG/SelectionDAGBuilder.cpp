@@ -8533,13 +8533,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Op2 = getValue(I.getOperand(1));
     SDValue Mask = getValue(I.getOperand(2));
     EVT ResVT = Mask.getValueType();
-    if (!TLI.shouldExpandVectorMatch()) {
-      setValue(&I, DAG.getNode(ISD::VECTOR_MATCH, sdl, ResVT, Op1, Op2, Mask));
-      return;
-    }
-
-    SDValue Match = DAG.getNode(ISD::VECTOR_MATCH, sdl, ResVT, Op1, Op2, Mask);
-    setValue(&I, TLI.expandVectorMatch(Match.getNode(), DAG));
+    setValue(&I, DAG.getNode(ISD::VECTOR_MATCH, sdl, ResVT, Op1, Op2, Mask));
     return;
   }
   case Intrinsic::vector_reverse:
