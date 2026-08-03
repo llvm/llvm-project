@@ -89,4 +89,7 @@ struct Test {
   }
 };
 
-int main(int, char**) { types::for_each(types::bidirectional_iterator_list<int*>{}, TestIteratorWithPolicies<Test>{}); }
+int main(int, char**) {
+  types::for_each(types::bidirectional_iterator_list<int*>{}, TestIteratorWithPolicies<Test>{});
+  return 0;
+}

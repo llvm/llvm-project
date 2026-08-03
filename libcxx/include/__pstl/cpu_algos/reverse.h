@@ -36,20 +36,23 @@ namespace __pstl {
 
 template <class _Backend, class _RawExecutionPolicy>
 struct __cpu_parallel_reverse {
-  template <class _Policy, class _ForwardIterator>
+  template <class _Policy, class _BidirectionalIterator>
   _LIBCPP_HIDE_FROM_ABI optional<__empty>
-  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last) const noexcept {
+  operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
-                  __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
+                  __has_random_access_iterator_category_or_concept<_BidirectionalIterator>::value) {
       // Perform a chunked for_each on the first half of the range.
+      // Odd-sized ranges will leave the middle element untouched, which is correct for this algorithm:
+      // its reversed position is the same.
       auto __n = (__last - __first) / 2;
       return __cpu_traits<_Backend>::__for_each(
-          __first, __first + __n, [__first, __last](_ForwardIterator __i, _ForwardIterator __j) {
-            // Derive the last position of the mirrored range.
-            _ForwardIterator __mirror_last = __last - (__i - __first);
+          __first, __first + __n, [__first, __last](_BidirectionalIterator __i, _BidirectionalIterator __j) {
+            // Derive the last position of the mirrored range by counting from the end.
+            _BidirectionalIterator __mirror_last = __last - (__i - __first);
             // Swap the elements in the range of the first half with their mirrored counterparts in the second half.
-            std::swap_ranges(
-                std::move(__i), std::move(__j), std::reverse_iterator<_ForwardIterator>(std::move(__mirror_last)));
+            std::swap_ranges(std::move(__i),
+                             std::move(__j),
+                             std::reverse_iterator<_BidirectionalIterator>(std::move(__mirror_last)));
           });
     } else {
       // Non-random access iterators currently cannot be processed in parallel, use the sequential implementation.
