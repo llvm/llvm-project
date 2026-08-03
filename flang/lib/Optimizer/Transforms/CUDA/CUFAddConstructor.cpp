@@ -74,22 +74,32 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   return ptrGlobal;
 }
 
+/// Return true if the GPU-module counterpart of \p hostGlobal has no body, so
+/// the device side is an `.extern` reference rather than a device-resident
+/// definition. Such symbols must be registered with
+/// cuf.register_variable_static so the driver binds the device reference to the
+/// host pointer at module-load time and HMM/ATS handles migration. A
+/// device-resident definition instead needs a cuf.register_variable_static
+/// with the deviceResident attribute: registering it as host memory would
+/// override the device symbol and make cudaGetSymbolAddress fail.
+static bool isDeviceExternReference(fir::GlobalOp hostGlobal,
+                                    mlir::SymbolTable &gpuSymTable) {
+  auto gpuGlobal = gpuSymTable.lookup<fir::GlobalOp>(hostGlobal.getSymName());
+  if (!gpuGlobal)
+    return false;
+  return !gpuGlobal.isInitialized();
+}
+
 /// Return true if \p hostGlobal is a host module-scope global that has been
 /// mirrored in the GPU module as an external (no-body) declaration by the
-/// CUFDeviceGlobal pass under -gpu=mem:unified. Such globals must be
-/// registered with the CUDA driver via cuf.register_variable_static so the
-/// device-side `.extern` symbol resolves to the host pointer at module-load
-/// time and HMM/ATS handles migration.
+/// CUFDeviceGlobal pass under -gpu=mem:unified.
 static bool isCudaUnifiedExternalGlobal(fir::GlobalOp hostGlobal,
                                         mlir::SymbolTable &gpuSymTable) {
   if (hostGlobal.getDataAttrAttr())
     return false;
   if (hostGlobal.getConstant())
     return false;
-  auto gpuGlobal = gpuSymTable.lookup<fir::GlobalOp>(hostGlobal.getSymName());
-  if (!gpuGlobal)
-    return false;
-  return !gpuGlobal.isInitialized();
+  return isDeviceExternReference(hostGlobal, gpuSymTable);
 }
 
 /// Build a C-style name literal (`<symname>\0`) for use as the deviceName
@@ -372,6 +382,22 @@ struct CUFAddConstructor
                                       typeConverter, registeredMod, func,
                                       /*addrGlobal=*/ptrGlobal,
                                       /*nameGlobal=*/globalOp);
+            } else if (cudaUnified) {
+              // The registration must be deferred, but the runtime still needs
+              // to know which kind of symbol it is: a device-side definition
+              // has to stay registered as a device variable so
+              // cudaGetSymbolAddress can resolve it, whereas a device-side
+              // extern reference is bound to the host pointer instead. Mapping
+              // a symbol as host memory overrides a device-variable
+              // registration for the same symbol, so the two are exclusive.
+              bool isDeviceResident =
+                  !isDeviceExternReference(globalOp, gpuSymTable);
+              uint64_t szBytes = getGlobalSizeInBytes(loc, *dl, kindMap,
+                                                      typeConverter, globalOp);
+              cuf::RegisterVariableStaticOp::create(
+                  builder, loc,
+                  mlir::SymbolRefAttr::get(ctx, globalOp.getSymName()),
+                  globalOp.getSymName(), szBytes, isDeviceResident);
             } else {
               auto func =
                   fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
@@ -380,20 +406,6 @@ struct CUFAddConstructor
                                       typeConverter, registeredMod, func,
                                       /*addrGlobal=*/globalOp,
                                       /*nameGlobal=*/globalOp);
-              // Under -gpu=mem:unified, also register the global as
-              // device-resident so a matching host symbol from another
-              // translation unit is not treated as host memory.
-              if (cudaUnified &&
-                  attr.getValue() != cuf::DataAttribute::Constant &&
-                  attr.getValue() != cuf::DataAttribute::Device) {
-                uint64_t szBytes = getGlobalSizeInBytes(
-                    loc, *dl, kindMap, typeConverter, globalOp);
-                cuf::RegisterVariableStaticOp::create(
-                    builder, loc,
-                    mlir::SymbolRefAttr::get(ctx, globalOp.getSymName()),
-                    builder.getStringAttr(globalOp.getSymName()),
-                    builder.getI64IntegerAttr(szBytes));
-              }
             }
           } break;
           default:
@@ -445,7 +457,7 @@ struct CUFAddConstructor
         mlir::FlatSymbolRefAttr::get(mod.getContext(), func.getSymName()));
     llvm::SmallVector<int> priorities;
     llvm::SmallVector<mlir::Attribute> data;
-    priorities.push_back(0);
+    priorities.push_back(priority);
     data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
     mlir::LLVM::GlobalCtorsOp::create(
         builder, mod.getLoc(), builder.getArrayAttr(funcs),

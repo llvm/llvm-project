@@ -163,6 +163,13 @@ public:
         AllowAutoPadding && TargetPrefixMax != 0 && X86PadForBranchAlign;
   }
 
+  void reset() override {
+    PrevInst = MCInst();
+    PrevInstOpcode = 0;
+    PendingBA = nullptr;
+    PrevInstPosition = {};
+  }
+
   void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst,
                             const MCSubtargetInfo &STI);
   void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst);
