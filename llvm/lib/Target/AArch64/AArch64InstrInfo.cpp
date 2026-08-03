@@ -11374,10 +11374,10 @@ void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     BuildMI(MBB, Iter, DL, get(AArch64::MOVIv2d_ns), Reg)
       .addImm(0);
   } else {
-    // This is a streaming-compatible function without SVE. We don't have full
-    // Neon (just FPRs), so we can at most use the first 64-bit sub-register.
-    // So given `movi v..` would be illegal use `fmov d..` instead.
-    assert(STI.hasNEON() && "Expected to have NEON.");
+    // No Advanced SIMD (streaming-compatible without SVE, or +nosimd), so use
+    // `fmov d...` instead of `movi v...`; writing `d` also clears the upper
+    // 64 bits.
+    assert(STI.hasFPARMv8() && "Expected FP to be available.");
     Register Reg64 = TRI.getSubReg(Reg, AArch64::dsub);
     BuildMI(MBB, Iter, DL, get(AArch64::FMOVD0), Reg64);
   }

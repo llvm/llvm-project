@@ -32,6 +32,10 @@
 //    and emits `memref.reinterpret_cast` when dynamic layout is required
 //    (TODO: use memref.cast instead).
 //
+//  - Leaves volatile `fir.load` / `fir.store` alone. Memref dialect has no way
+//    to express volatility currently. These accesses are lowered straight
+//    to LLVM by the FIR code generation path.
+//
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
@@ -1673,6 +1677,12 @@ void FIRToMemRef::replaceFIRMemrefs(Value firMemref, Value converted,
 
 void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
                                 FIRToMemRefTypeConverter &typeConverter) {
+  if (fir::isa_volatile_type(load.getMemref().getType())) {
+    LLVM_DEBUG(llvm::dbgs() << "FIRToMemRef: keeping volatile load in FIR:\n";
+               load.dump());
+    return;
+  }
+
   Value firMemref = load.getMemref();
   if (!typeConverter.convertibleType(firMemref.getType()))
     return;
@@ -1716,6 +1726,13 @@ void FIRToMemRef::rewriteLoadOp(fir::LoadOp load, PatternRewriter &rewriter,
 
 void FIRToMemRef::rewriteStoreOp(fir::StoreOp store, PatternRewriter &rewriter,
                                  FIRToMemRefTypeConverter &typeConverter) {
+  if (fir::isa_volatile_type(store.getMemref().getType()) ||
+      fir::isa_volatile_type(store.getValue().getType())) {
+    LLVM_DEBUG(llvm::dbgs() << "FIRToMemRef: keeping volatile store in FIR:\n";
+               store.dump());
+    return;
+  }
+
   Value firMemref = store.getMemref();
 
   if (!typeConverter.convertibleType(firMemref.getType()))

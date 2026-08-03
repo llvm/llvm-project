@@ -14,8 +14,6 @@ namespace llvm {
 namespace orc {
 namespace rt {
 
-MainCaller::~MainCaller() = default;
-
 const char *SimpleExecutorDylibManagerInstanceName =
     "__llvm_orc_SimpleExecutorDylibManager_Instance";
 const char *SimpleExecutorDylibManagerOpenWrapperName =
@@ -80,12 +78,6 @@ const char *DeregisterEHFrameSectionAllocActionName =
 
 const char *RegisterJITLoaderGDBAllocActionName =
     "llvm_orc_registerJITLoaderGDBAllocAction";
-
-const char *RunAsMainWrapperName = "__llvm_orc_bootstrap_run_as_main_wrapper";
-const char *RunAsVoidFunctionWrapperName =
-    "__llvm_orc_bootstrap_run_as_void_function_wrapper";
-const char *RunAsIntFunctionWrapperName =
-    "__llvm_orc_bootstrap_run_as_int_function_wrapper";
 
 const char *const DispatchName = "__orc_rt_jit_dispatch";
 const char *const DispatchCtxName = "__orc_rt_jit_dispatch_ctx";
