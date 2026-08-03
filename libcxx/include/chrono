@@ -1149,29 +1149,6 @@ namespace std {
 #    pragma GCC system_header
 #  endif
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 17
-#    include <cstdint>
-#    include <stdexcept>
-#    include <string_view>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <bit>
-#    include <concepts>
-#    include <cstring>
-#    include <forward_list>
-#    include <string>
-#    include <tuple>
-#    include <vector>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER == 20
-#    include <charconv>
-#    if _LIBCPP_HAS_LOCALIZATION
-#      include <locale>
-#      include <ostream>
-#    endif
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_CHRONO

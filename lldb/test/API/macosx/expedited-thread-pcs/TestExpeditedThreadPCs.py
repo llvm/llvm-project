@@ -12,7 +12,7 @@ file_index = 0
 class TestExpeditedThreadPCs(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_expedited_thread_pcs(self):
         TestBase.setUp(self)
 

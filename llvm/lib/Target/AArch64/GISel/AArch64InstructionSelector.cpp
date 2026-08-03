@@ -2143,8 +2143,25 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
   case TargetOpcode::G_CONSTANT: {
     Register DefReg = I.getOperand(0).getReg();
     const LLT DefTy = MRI.getType(DefReg);
-    if (!DefTy.isPointer())
-      return false;
+    if (!DefTy.isPointer()) {
+      if (DefTy.getSizeInBits() >= 32 ||
+          RBI.getRegBank(DefReg, MRI, TRI)->getID() != AArch64::GPRRegBankID)
+        return false;
+      // Widen narrow GPR constants to s32 so imported patterns can match.
+      APInt Val = I.getOperand(1).getCImm()->getValue().zext(32);
+      I.getOperand(1).setCImm(
+          ConstantInt::get(MF.getFunction().getContext(), Val));
+
+      Register WideReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+      MRI.setRegBank(WideReg, RBI.getRegBank(AArch64::GPRRegBankID));
+      I.getOperand(0).setReg(WideReg);
+
+      MIB.setInsertPt(MBB, std::next(I.getIterator()));
+      auto Copy = MIB.buildCopy(DefReg, WideReg);
+      selectCopy(*Copy, TII, MRI, TRI, RBI);
+      MIB.setInstr(I);
+      return true;
+    }
     const unsigned PtrSize = DefTy.getSizeInBits();
     if (PtrSize != 32 && PtrSize != 64)
       return false;
