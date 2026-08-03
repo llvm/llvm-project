@@ -1,4 +1,4 @@
-// REQUIRES: arm-emulator
+// REQUIRES: target={{(aarch64|arm64).*}}
 
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule \
@@ -50,19 +50,15 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @tile_and_vectorize_matmul(%func
     : !transform.op<"func.func"> {transform.readonly}) {
 
-    // Step 0: Get a handle to the matmul op, if any.
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %func
       : (!transform.op<"func.func">) -> !transform.any_op
 
-    // Step 1: Tile. NEON has no scalable vectors, so sizes are static:
-    // N = 4 matches a full 128-bit NEON register of f32 elements.
+    // NEON has no scalable vectors: N = 4 matches a full 128-bit register.
     %tiled_matmul, %loops:3 = transform.structured.tile_using_for %matmul tile_sizes [2, 4, 1]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 
-    // Step 2: Vectorize directly to a named `vector.contract`.
     transform.structured.vectorize %tiled_matmul vector_sizes [2, 4, 1] : !transform.any_op
 
-    // Step 3: Lower `vector.multi_reduction` to `vector.contract` (+ some helpful patterns)
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.reduction_to_contract
       transform.apply_patterns.vector.transfer_permutation_patterns
@@ -70,7 +66,6 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.vector.sink_ops
     } : !transform.op<"func.func">
 
-    // Step 4: Lower `vector.contract` to `vector.fma`.
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
       transform.apply_patterns.vector.lower_outerproduct

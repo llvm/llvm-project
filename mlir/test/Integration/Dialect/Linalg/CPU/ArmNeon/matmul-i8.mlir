@@ -11,21 +11,9 @@
 
 // RUN: rm -f %t && %{compile} && FileCheck %s --input-file=%t -check-prefix CHECK-IR && %{run} | FileCheck %s
 
-//===----------------------------------------------------------------------===//
-// Tiles, vectorizes and lowers a `linalg.matmul` down to Arm's FEAT_I8MM
-// `smmla` instruction via `transform.apply_patterns.arm_neon.vector_contract_to_i8mm`
-// (LowerContractionToNeonI8MMPattern).
-//
-// That pattern expects a `vector.contract` with LHS vector<MxKxi8>, RHS
-// vector<NxKxi8> (RHS read "N-major", i.e. logically transposed relative to
-// what a plain `linalg.matmul` produces), and ACC/OUT vector<MxNxi32> -- see
-// #packed_maps in Vector/CPU/ArmNeon/vector-contract-i8mm.mlir. To get there,
-// this test gives `linalg.matmul` an explicit `indexing_maps` attribute that
-// reads the second operand "N-major" (== `MatmulTransposeBOp`'s default
-// maps, see LinalgOps.cpp), feeding it the second input pre-transposed
-// (NxK instead of KxN). This mirrors how ArmSME/matmul-transpose-a.mlir
-// transposes the *LHS* instead, for SME's own hardware constraints.
-//===----------------------------------------------------------------------===//
+// Lowers a vanilla `linalg.matmul` down to Arm's FEAT_I8MM `smmla`.
+// `LowerContractionToNeonI8MMPattern` expects the RHS transposed (N-major);
+// `transform.structured.transpose_matmul <rhs>` gets us there from a plain matmul.
 
 // CHECK-IR-LABEL: llvm.func @main
 // CHECK-IR-COUNT-4: arm_neon.intr.smmla
@@ -38,13 +26,17 @@ func.func @main() {
     [ 40,  27,  37,  43,  38,  -6,  37,  49]
   ]> : tensor<4x8xi8>
 
-  // B, transposed: NxK = 4x8 (row n holds column n of the logical KxN RHS).
-  %Bt = arith.constant dense<[
-    [-17, -50,  -1,  48, -13,  22,  39,  33],
-    [-35, -24,  37, -32,  33,  30, -11, -17],
-    [-28,  31,   3, -44, -15, -27,  22,  35],
-    [-23,  39,  48,  26, -23,  32, -39, -38]
-  ]> : tensor<4x8xi8>
+  // B: KxN = 8x4.
+  %B = arith.constant dense<[
+    [-17, -35, -28, -23],
+    [-50, -24,  31,  39],
+    [ -1,  37,   3,  48],
+    [ 48, -32, -44,  26],
+    [-13,  33, -15, -23],
+    [ 22,  30, -27,  32],
+    [ 39, -11,  22, -39],
+    [ 33, -17,  35, -38]
+  ]> : tensor<8x4xi8>
 
   // C: MxN = 4x4, non-zero to also exercise the "+ ACC" part of `smmla`.
   %C = arith.constant dense<[
@@ -54,18 +46,9 @@ func.func @main() {
     [-48, -31, -25, -21]
   ]> : tensor<4x4xi32>
 
-  %A_dyn = tensor.cast %A : tensor<4x8xi8> to tensor<?x?xi8>
-  %Bt_dyn = tensor.cast %Bt : tensor<4x8xi8> to tensor<?x?xi8>
-  %C_dyn = tensor.cast %C : tensor<4x4xi32> to tensor<?x?xi32>
-
   %res = linalg.matmul
-      indexing_maps = [
-        affine_map<(d0, d1, d2) -> (d0, d2)>,
-        affine_map<(d0, d1, d2) -> (d1, d2)>,
-        affine_map<(d0, d1, d2) -> (d0, d1)>
-      ]
-      ins(%A_dyn, %Bt_dyn : tensor<?x?xi8>, tensor<?x?xi8>)
-      outs(%C_dyn : tensor<?x?xi32>) -> tensor<?x?xi32>
+      ins(%A, %B : tensor<4x8xi8>, tensor<8x4xi8>)
+      outs(%C : tensor<4x4xi32>) -> tensor<4x4xi32>
 
   // Print and verify the output
   // CHECK-LABEL: NEON: START OF TEST OUTPUT
@@ -76,7 +59,7 @@ func.func @main() {
   // CHECK-NEXT: [-3705,    2952,     987,    -685]
   // CHECK-NEXT: [2565,     4157,   -1589,    -357]
   // CHECK-NEXT: [2383,    -2252,      32,   -1365]
-  %xf = tensor.cast %res : tensor<?x?xi32> to tensor<*xi32>
+  %xf = tensor.cast %res : tensor<4x4xi32> to tensor<*xi32>
   call @printMemrefI32(%xf) : (tensor<*xi32>) -> ()
 
   // CHECK-NEXT: NEON: END OF TEST OUTPUT
@@ -90,31 +73,28 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @tile_and_vectorize_matmul(%func
     : !transform.op<"func.func"> {transform.readonly}) {
 
-    // Step 0: Get a handle to the matmul op, if any.
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %func
       : (!transform.op<"func.func">) -> !transform.any_op
 
-    // Step 1: Tile to the FEAT_I8MM tile shape (M=N=4, K=8). This is the
-    // whole problem size here, so tiling produces a single tile, no tail.
-    %tiled_matmul, %loops:3 = transform.structured.tile_using_for %matmul
+    %transposed_matmul = transform.structured.transpose_matmul %matmul <rhs>
+      : (!transform.any_op) -> (!transform.any_op)
+
+    // M=N=4, K=8: FEAT_I8MM's native tile shape.
+    %tiled_matmul, %loops:3 = transform.structured.tile_using_for %transposed_matmul
       tile_sizes [4, 4, 8]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 
-    // Step 2: Vectorize directly to a named `vector.contract`.
     transform.structured.vectorize %tiled_matmul vector_sizes [4, 4, 8]
       {create_named_contraction} : !transform.any_op
 
-    // Step 3: M, N, K are static and match the tile/vector sizes, so
-    // vectorization masks are trivially full tile; clean them up.
     transform.apply_patterns to %func {
       transform.apply_patterns.vector.transfer_permutation_patterns
       transform.apply_patterns.vector.lower_masked_transfers
       transform.apply_patterns.vector.sink_ops
     } : !transform.op<"func.func">
 
-    // Step 4: Lower `vector.contract` straight to FEAT_I8MM ops, 
-    // instead of the generic outerproduct lowering, which would 
-    // exercise `smmla`.
+    // Lower straight to FEAT_I8MM ops instead of the generic outerproduct
+    // path, which would never emit `smmla`.
     transform.apply_patterns to %func {
       transform.apply_patterns.arm_neon.vector_contract_to_i8mm
     } : !transform.op<"func.func">
