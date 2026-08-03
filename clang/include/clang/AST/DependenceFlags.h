@@ -79,7 +79,9 @@ struct TypeDependenceScope {
 
     DependentInstantiation = Dependent | Instantiation,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/LateParsedAttr)
+    LargestValue = LateParsedAttr,
+
+    LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/LargestValue)
   };
 };
 using TypeDependence = TypeDependenceScope::TypeDependence;
