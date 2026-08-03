@@ -1196,6 +1196,18 @@ func.func @broadcast_size_1_extension_not_supported(
 
 // -----
 
+func.func @broadcast_duplicate_dims(
+    %input: tensor<i32>, %init: tensor<32x2xi32>) -> tensor<32x2xi32> {
+  // expected-error @+1 {{'linalg.broadcast' op dimensions should not contain duplicates}}
+  %bcast = linalg.broadcast
+      ins(%input:tensor<i32>)
+      outs(%init:tensor<32x2xi32>)
+      dimensions = [0, 0]
+  func.return %bcast : tensor<32x2xi32>
+}
+
+// -----
+
 func.func @broadcast_no_operands1() {
   // expected-error @+1 {{'linalg.broadcast' op expected 2 operands, but found 0}}
   linalg.broadcast dimensions = [1]

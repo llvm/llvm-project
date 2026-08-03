@@ -1323,7 +1323,7 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
   // operations that use a different counter (like SAMPLE_CNT).
   static constexpr AMDGPU::InstCounterType VmemCounters[] = {
       AMDGPU::LOAD_CNT, AMDGPU::STORE_CNT, AMDGPU::SAMPLE_CNT, AMDGPU::BVH_CNT,
-      AMDGPU::DS_CNT};
+      AMDGPU::DS_CNT,   AMDGPU::ASYNC_CNT};
   HWEvents VmemEvents = llvm::accumulate(
       VmemCounters, HWEvents(), [&](HWEvents Acc, AMDGPU::InstCounterType T) {
         return Acc | Context->getWaitEvents(T);
@@ -2796,21 +2796,28 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   });
 
   // Merge element-wise using the existing mergeScore function and the
-  // appropriate MergeInfo for each counter type. Iterate only while we have
-  // elements in both vectors.
-  unsigned OtherSize = OtherMarks.size();
-  unsigned OurSize = AsyncMarks.size();
-  unsigned MergeCount = std::min(OtherSize, OurSize);
-  // OtherMarks is empty -> OtherSize == 0 -> MergeCount == 0.
-  // Our existing marks are the conservative result; return early to avoid
-  // passing MergeCount == 0 to seq_inclusive which asserts Begin <= End.
-  if (MergeCount == 0)
-    return StrictDom;
-  for (auto Idx : seq_inclusive<unsigned>(1, MergeCount)) {
-    for (auto T : inst_counter_types(Context->MaxCounter)) {
-      StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
-                              OtherMarks[OtherSize - Idx][T]);
-    }
+  // appropriate MergeInfo for each counter type. Rebase and merge EVERY
+  // surviving mark into the new (widened) frame, aligned by recency from the
+  // back. A mark with no counterpart on the other side merges against the
+  // zero/identity mark: mergeScore still applies MyShift, so the mark is
+  // re-expressed in the new frame instead of being left with a stale
+  // (pre-merge) score.
+  const unsigned OtherSize = OtherMarks.size();
+  const unsigned OurSize = AsyncMarks.size();
+  // After the both-empty early-return above, max(AsyncMarks, OtherMarks) >= 1,
+  // and the erase/pad steps normalize AsyncMarks to exactly MaxSize. Hence
+  // OurSize == MaxSize >= 1 (as long as MaxAsyncMarks != 0), so the
+  // seq_inclusive(1, OurSize) below never trips its "Begin <= End" assertion
+  // the way seq_inclusive(1, MergeCount) could when OtherSize == 0.
+  assert(OurSize >= 1 &&
+         "AsyncMarks padded to MaxSize >= 1 (needs MaxAsyncMarks != 0)");
+
+  for (auto Idx : seq_inclusive<unsigned>(1, OurSize)) {
+    const CounterValueArray &OtherMark =
+        Idx <= OtherSize ? OtherMarks[OtherSize - Idx] : ZeroMark;
+    for (auto T : inst_counter_types(Context->MaxCounter))
+      StrictDom |=
+          mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T], OtherMark[T]);
   }
 
   LLVM_DEBUG({
@@ -3701,11 +3708,14 @@ bool SIInsertWaitcnts::run() {
 
   if (MFI->isEntryFunction() && ST.hasRequiresInitialUnclausedVmem()) {
     // Hardware entrypoints must begin with a specific sequence:
-    //   GLOBAL_WB SCOPE:SCOPE_CU
+    //   GLOBAL_PREFETCH_B8 V0, S[0:1] SCOPE:SCOPE_SE
     //   V_NOP
     MachineBasicBlock::iterator I = EntryBB.begin();
-    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_WB))
-        .addImm(AMDGPU::CPol::SCOPE_CU);
+    BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::GLOBAL_PREFETCH_B8_SADDR))
+        .addReg(AMDGPU::SGPR0_SGPR1, RegState::Undef)
+        .addReg(AMDGPU::VGPR0, RegState::Undef)
+        .addImm(0)
+        .addImm(AMDGPU::CPol::SCOPE_SE | AMDGPU::CPol::TH_RT);
     BuildMI(EntryBB, I, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
     Modified = true;
   }

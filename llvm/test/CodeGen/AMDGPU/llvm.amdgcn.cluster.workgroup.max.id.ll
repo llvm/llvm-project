@@ -11,7 +11,7 @@ declare i32 @llvm.amdgcn.cluster.workgroup.max.id.z() #0
 define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ; CHECK-UNKNOWN-LABEL: test_workgroup_max_id_x:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    global_wb
+; CHECK-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-UNKNOWN-NEXT:    v_nop
 ; CHECK-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -92,7 +92,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-MESA3D-NEXT:  ; %bb.0:
-; CHECK-MESA3D-NEXT:    global_wb
+; CHECK-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-MESA3D-NEXT:    v_nop
 ; CHECK-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -105,7 +105,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_workgroup_max_id_x:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    global_wb
+; CHECK-G-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-UNKNOWN-NEXT:    v_nop
 ; CHECK-G-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -186,7 +186,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-G-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-G-MESA3D-NEXT:  ; %bb.0:
-; CHECK-G-MESA3D-NEXT:    global_wb
+; CHECK-G-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-MESA3D-NEXT:    v_nop
 ; CHECK-G-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -204,7 +204,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x(ptr addrspace(1) %out) #1 {
 define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %out) "amdgpu-cluster-dims"="5,6,7" {
 ; CHECK-UNKNOWN-LABEL: test_workgroup_max_id_x_optimized:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    global_wb
+; CHECK-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-UNKNOWN-NEXT:    v_nop
 ; CHECK-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -283,7 +283,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 ; CHECK-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-MESA3D-NEXT:  ; %bb.0:
-; CHECK-MESA3D-NEXT:    global_wb
+; CHECK-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-MESA3D-NEXT:    v_nop
 ; CHECK-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -294,7 +294,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_workgroup_max_id_x_optimized:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    global_wb
+; CHECK-G-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-UNKNOWN-NEXT:    v_nop
 ; CHECK-G-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -373,7 +373,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 ; CHECK-G-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-G-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-G-MESA3D-NEXT:  ; %bb.0:
-; CHECK-G-MESA3D-NEXT:    global_wb
+; CHECK-G-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-MESA3D-NEXT:    v_nop
 ; CHECK-G-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -389,7 +389,7 @@ define amdgpu_kernel void @test_workgroup_max_id_x_optimized(ptr addrspace(1) %o
 define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-UNKNOWN-LABEL: test_workgroup_max_id_y:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    global_wb
+; CHECK-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-UNKNOWN-NEXT:    v_nop
 ; CHECK-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -470,7 +470,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-MESA3D-NEXT:  ; %bb.0:
-; CHECK-MESA3D-NEXT:    global_wb
+; CHECK-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-MESA3D-NEXT:    v_nop
 ; CHECK-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -483,7 +483,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_workgroup_max_id_y:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    global_wb
+; CHECK-G-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-UNKNOWN-NEXT:    v_nop
 ; CHECK-G-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -564,7 +564,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-G-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-G-MESA3D-NEXT:  ; %bb.0:
-; CHECK-G-MESA3D-NEXT:    global_wb
+; CHECK-G-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-MESA3D-NEXT:    v_nop
 ; CHECK-G-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -582,7 +582,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y(ptr addrspace(1) %out) #1 {
 define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %out) "amdgpu-cluster-dims"="5,6,7" {
 ; CHECK-UNKNOWN-LABEL: test_workgroup_max_id_y_optimized:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    global_wb
+; CHECK-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-UNKNOWN-NEXT:    v_nop
 ; CHECK-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -661,7 +661,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 ; CHECK-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-MESA3D-NEXT:  ; %bb.0:
-; CHECK-MESA3D-NEXT:    global_wb
+; CHECK-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-MESA3D-NEXT:    v_nop
 ; CHECK-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -672,7 +672,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_workgroup_max_id_y_optimized:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    global_wb
+; CHECK-G-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-UNKNOWN-NEXT:    v_nop
 ; CHECK-G-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -751,7 +751,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 ; CHECK-G-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-G-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-G-MESA3D-NEXT:  ; %bb.0:
-; CHECK-G-MESA3D-NEXT:    global_wb
+; CHECK-G-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-MESA3D-NEXT:    v_nop
 ; CHECK-G-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -767,7 +767,7 @@ define amdgpu_kernel void @test_workgroup_max_id_y_optimized(ptr addrspace(1) %o
 define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-UNKNOWN-LABEL: test_workgroup_max_id_z:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    global_wb
+; CHECK-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-UNKNOWN-NEXT:    v_nop
 ; CHECK-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -848,7 +848,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-MESA3D-NEXT:  ; %bb.0:
-; CHECK-MESA3D-NEXT:    global_wb
+; CHECK-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-MESA3D-NEXT:    v_nop
 ; CHECK-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -861,7 +861,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_workgroup_max_id_z:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    global_wb
+; CHECK-G-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-UNKNOWN-NEXT:    v_nop
 ; CHECK-G-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -942,7 +942,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 ; CHECK-G-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-G-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-G-MESA3D-NEXT:  ; %bb.0:
-; CHECK-G-MESA3D-NEXT:    global_wb
+; CHECK-G-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-MESA3D-NEXT:    v_nop
 ; CHECK-G-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -960,7 +960,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z(ptr addrspace(1) %out) #1 {
 define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %out) "amdgpu-cluster-dims"="5,6,7" {
 ; CHECK-UNKNOWN-LABEL: test_workgroup_max_id_z_optimized:
 ; CHECK-UNKNOWN:       ; %bb.0:
-; CHECK-UNKNOWN-NEXT:    global_wb
+; CHECK-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-UNKNOWN-NEXT:    v_nop
 ; CHECK-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -1039,7 +1039,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %o
 ; CHECK-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-MESA3D-NEXT:  ; %bb.0:
-; CHECK-MESA3D-NEXT:    global_wb
+; CHECK-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-MESA3D-NEXT:    v_nop
 ; CHECK-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
@@ -1050,7 +1050,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %o
 ;
 ; CHECK-G-UNKNOWN-LABEL: test_workgroup_max_id_z_optimized:
 ; CHECK-G-UNKNOWN:       ; %bb.0:
-; CHECK-G-UNKNOWN-NEXT:    global_wb
+; CHECK-G-UNKNOWN-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-UNKNOWN-NEXT:    v_nop
 ; CHECK-G-UNKNOWN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-UNKNOWN-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
@@ -1129,7 +1129,7 @@ define amdgpu_kernel void @test_workgroup_max_id_z_optimized(ptr addrspace(1) %o
 ; CHECK-G-MESA3D-NEXT:     runtime_loader_kernel_symbol = 0
 ; CHECK-G-MESA3D-NEXT:    .end_amd_kernel_code_t
 ; CHECK-G-MESA3D-NEXT:  ; %bb.0:
-; CHECK-G-MESA3D-NEXT:    global_wb
+; CHECK-G-MESA3D-NEXT:    global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
 ; CHECK-G-MESA3D-NEXT:    v_nop
 ; CHECK-G-MESA3D-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; CHECK-G-MESA3D-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv

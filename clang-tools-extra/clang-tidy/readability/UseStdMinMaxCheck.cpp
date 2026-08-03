@@ -167,7 +167,7 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinaryOp = Result.Nodes.getNodeAs<BinaryOperator>("binaryOp");
   const BinaryOperatorKind BinaryOpcode = BinaryOp->getOpcode();
   const SourceLocation IfLocation = If->getIfLoc();
-  const SourceLocation ThenLocation = If->getEndLoc();
+  SourceLocation ThenLocation = If->getEndLoc();
 
   auto ReplaceAndDiagnose = [&](const StringRef FunctionName) {
     const SourceManager &Source = *Result.SourceManager;
@@ -218,6 +218,12 @@ void UseStdMinMaxCheck::check(const MatchFinder::MatchResult &Result) {
       if (Semi != StringRef::npos && PostInner.take_front(Semi).trim().empty())
         PostInner = PostInner.drop_front(Semi + 1);
       AppendNormalized(PostInner);
+    } else if (const auto SemiTok =
+                   Lexer::findNextToken(ThenLocation, Source, LO);
+               SemiTok && SemiTok->is(tok::semi)) {
+      AppendNormalized(
+          GetSourceText(ThenLocation, SemiTok->getLocation()).rtrim());
+      ThenLocation = SemiTok->getLocation();
     }
 
     diag(IfLocation, "use `%0` instead of `%1`")
