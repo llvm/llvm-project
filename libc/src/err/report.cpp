@@ -38,6 +38,8 @@ namespace err_reporting {
 void report(bool show_err, int err_num, const char *fmt,
             internal::ArgList &args) {
   const char *progname = PROGRAM_INVOCATION_SHORT_NAME;
+  if (!progname)
+    progname = "";
   char buffer[1024];
   printf_core::FlushingBuffer wb(
       buffer, sizeof(buffer),

@@ -24,6 +24,7 @@ add_integration_test(
   SRCS
     invocation_name_test.cpp
   DEPENDS
+    libc.src.__support.CPP.string_view
     libc.src.errno.program_invocation_name
     libc.src.errno.program_invocation_short_name
     libc.src.unistd.execve
