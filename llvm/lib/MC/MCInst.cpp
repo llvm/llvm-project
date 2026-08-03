@@ -32,6 +32,8 @@ void MCOperand::print(raw_ostream &OS, const MCContext *Ctx) const {
       OS << getReg().id();
   } else if (isImm())
     OS << "Imm:" << getImm();
+  else if (isHFPImm())
+    OS << "HFPImm:" << getHFPImm();
   else if (isSFPImm())
     OS << "SFPImm:" << bit_cast<float>(getSFPImm());
   else if (isDFPImm())
