@@ -51,6 +51,9 @@ exports_files([
     "include/llvm/Frontend/OpenMP/OMP.td",
     "include/llvm/IR/Intrinsics.td",
     "include/llvm/Option/OptParser.td",
+    # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
+    "include/llvm/TargetParser/TripleName.def",
+    "utils/get_triple_system_name.py",
     # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
 ])
