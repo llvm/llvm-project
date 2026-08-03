@@ -1,0 +1,2 @@
+# Print the resolved per-test temp path so the outer test can inspect it.
+# RUN: echo "TEMP_PATH=%t"
