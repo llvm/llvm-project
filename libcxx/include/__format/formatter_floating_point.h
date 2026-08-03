@@ -32,6 +32,7 @@
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/concepts.h>
+#include <__locale_dir/num.h>
 #include <__math/traits.h>
 #include <__memory/allocator.h>
 #include <__system_error/errc.h>

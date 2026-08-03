@@ -518,7 +518,7 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
     SmallVector<Register, 8> EltMerges;
     int PartsPerElt =
         divideCeil(DstEltTy.getSizeInBits(), PartLLT.getSizeInBits());
-    LLT ExtendedPartTy = LLT::scalar(PartLLT.getSizeInBits() * PartsPerElt);
+    LLT ExtendedPartTy = LLT::integer(PartLLT.getSizeInBits() * PartsPerElt);
 
     for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
       auto Merge =
@@ -628,8 +628,8 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
       SrcTy.getScalarSizeInBits() > PartTy.getSizeInBits()) {
     LLT ExtTy =
         LLT::vector(SrcTy.getElementCount(),
-                    LLT::scalar(PartTy.getScalarSizeInBits() * DstRegs.size() /
-                                SrcTy.getNumElements()));
+                    LLT::integer(PartTy.getScalarSizeInBits() * DstRegs.size() /
+                                 SrcTy.getNumElements()));
     auto Ext = B.buildAnyExt(ExtTy, SrcReg);
     B.buildUnmerge(DstRegs, Ext);
     return;
@@ -667,7 +667,7 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
     // For scalars, it's common to be able to use a simple extension.
     if (SrcTy.isScalar() && DstTy.isScalar()) {
       CoveringSize = alignTo(SrcSize, DstSize);
-      LLT CoverTy = LLT::scalar(CoveringSize);
+      LLT CoverTy = LLT::integer(CoveringSize);
       UnmergeSrc = B.buildInstr(ExtendOp, {CoverTy}, {SrcReg}).getReg(0);
     } else {
       // Widen to the common type.

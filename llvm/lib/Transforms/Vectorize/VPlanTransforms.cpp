@@ -1304,8 +1304,8 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   bool CanCreateNewRecipe =
       !isa<VPInstruction>(Def) || !Def->getUnderlyingValue();
 
-  VPValue *A;
-  if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
+  VPValue *A, *Z;
+  if (match(Def, m_Trunc(m_VPValue(Z, m_ZExtOrSExt(m_VPValue(A)))))) {
     Type *TruncTy = Def->getScalarType();
     Type *ATy = A->getScalarType();
     if (TruncTy == ATy) {
@@ -1316,12 +1316,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
         return;
       if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
 
-        unsigned ExtOpcode = match(Def->getOperand(0), m_SExt(m_VPValue()))
-                                 ? Instruction::SExt
-                                 : Instruction::ZExt;
+        unsigned ExtOpcode = match(Z, m_SExt(m_VPValue())) ? Instruction::SExt
+                                                           : Instruction::ZExt;
         auto *Ext = Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A,
                                             TruncTy);
-        if (auto *UnderlyingExt = Def->getOperand(0)->getUnderlyingValue()) {
+        if (auto *UnderlyingExt = Z->getUnderlyingValue()) {
           // UnderlyingExt has distinct return type, used to retain legacy cost.
           Ext->setUnderlyingValue(UnderlyingExt);
         }
@@ -1336,7 +1335,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   if (simplifyLogicalRecipe(Def, Builder, CanCreateNewRecipe))
     return;
 
-  VPValue *X, *Y, *C;
+  VPValue *X, *Y;
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return Def->replaceAllUsesWith(A);
 
@@ -1355,14 +1354,13 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   }
 
   if (CanCreateNewRecipe &&
-      match(Def, m_c_Add(m_VPValue(X), m_Sub(m_ZeroInt(), m_VPValue(Y))))) {
+      match(Def, m_c_Add(m_VPValue(X),
+                         m_VPValue(Z, m_Sub(m_ZeroInt(), m_VPValue(Y)))))) {
     // Preserve nsw from the Add and the Sub, if it's present on both, on the
     // new Sub.
     VPIRFlags::WrapFlagsTy NW = {
-        false,
-        cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap() &&
-            cast<VPRecipeWithIRFlags>(Def->getOperand(Def->getOperand(0) == X))
-                ->hasNoSignedWrap()};
+        false, cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap() &&
+                   cast<VPRecipeWithIRFlags>(Z)->hasNoSignedWrap()};
     return Def->replaceAllUsesWith(
         Builder.createSub(X, Y, Def->getDebugLoc(), "", NW));
   }
@@ -1464,9 +1462,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
 
   // Remove redundant DerviedIVs, that is 0 + A * 1 -> A and 0 + 0 * x -> 0.
   if ((match(Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A), m_One())) ||
-       match(Def, m_DerivedIV(m_ZeroInt(), m_ZeroInt(), m_VPValue()))) &&
-      Def->getOperand(1)->getScalarType() == Def->getScalarType())
-    return Def->replaceAllUsesWith(Def->getOperand(1));
+       match(Def, m_DerivedIV(m_ZeroInt(), m_VPValue(A, m_ZeroInt()),
+                              m_VPValue()))) &&
+      A->getScalarType() == Def->getScalarType())
+    return Def->replaceAllUsesWith(A);
 
   if (match(Def, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
                                                             m_One()))) {
@@ -1483,7 +1482,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
                                                   m_VPValue(X), m_VPValue())) &&
       match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
       Def->getScalarType()->isIntegerTy(1)) {
-    Def->setOperand(1, Def->getOperand(0));
+    Def->setOperand(1, Plan->getTrue());
     Def->setOperand(0, Y);
     return;
   }
@@ -1544,10 +1543,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   // Look through broadcast of single-scalar when used as select conditions; in
   // that case the scalar condition can be used directly.
   if (match(Def,
-            m_Select(m_Broadcast(m_VPValue(C)), m_VPValue(), m_VPValue()))) {
-    assert(vputils::isSingleScalar(C) &&
+            m_Select(m_Broadcast(m_VPValue(Z)), m_VPValue(), m_VPValue()))) {
+    assert(vputils::isSingleScalar(Z) &&
            "broadcast operand must be single-scalar");
-    Def->setOperand(0, C);
+    Def->setOperand(0, Z);
     return;
   }
 
@@ -1604,11 +1603,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   //  Def = IVInc + Y
   // Fold the increment Y into the phi's start value, replace Def with IVInc,
   // and if Inc exists, replace it with X.
-  if (match(Def, m_Add(m_Add(m_VPValue(X), m_VPValue()), m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) &&
-      match(X, m_VPPhi(m_ZeroInt(), m_Specific(Def->getOperand(0))))) {
+  VPValue *IVInc;
+  if (match(Def, m_Add(m_VPValue(IVInc, m_Add(m_VPValue(X), m_VPValue())),
+                       m_VPValue(Y))) &&
+      isa<VPIRValue>(Y) && match(X, m_VPPhi(m_ZeroInt(), m_Specific(IVInc)))) {
     auto *Phi = cast<VPPhi>(X);
-    auto *IVInc = Def->getOperand(0);
     if (IVInc->getNumUsers() == 2) {
       // If Phi has a second user (besides IVInc's defining recipe), it must
       // be Inc = Phi + Y for the fold to apply.
@@ -2781,10 +2780,8 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
   // wrapped in a Reverse, which is just a permutation of the header mask, so
   // peel it off before checking. The header mask is still the abstract region
   // value at this point (materialization happens later).
-  auto IsNotHeaderMask = [](VPValue *Mask) {
-    return Mask &&
-           !match(Mask, m_CombineOr(m_HeaderMask(), m_Reverse(m_HeaderMask())));
-  };
+  auto m_UnlessHdrMask = m_Unless( // NOLINT
+      m_CombineOr(m_HeaderMask(), m_Reverse(m_HeaderMask())));
 
   // Traverse all the recipes in the VPlan and collect the poison-generating
   // recipes in the backward slice starting at the address of a VPWidenRecipe or
@@ -2795,12 +2792,13 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
     for (VPRecipeBase &Recipe : *VPBB) {
       if (auto *WidenRec = dyn_cast<VPWidenMemoryRecipe>(&Recipe)) {
         VPRecipeBase *AddrDef = WidenRec->getAddr()->getDefiningRecipe();
-        if (AddrDef && WidenRec->isConsecutive() &&
-            IsNotHeaderMask(WidenRec->getMask()))
+        if (AddrDef && WidenRec->isConsecutive() && WidenRec->getMask() &&
+            match(WidenRec->getMask(), m_UnlessHdrMask))
           CollectPoisonGeneratingInstrsInBackwardSlice(AddrDef);
       } else if (auto *InterleaveRec = dyn_cast<VPInterleaveRecipe>(&Recipe)) {
         VPRecipeBase *AddrDef = InterleaveRec->getAddr()->getDefiningRecipe();
-        if (AddrDef && IsNotHeaderMask(InterleaveRec->getMask()))
+        if (AddrDef && InterleaveRec->getMask() &&
+            match(InterleaveRec->getMask(), m_UnlessHdrMask))
           CollectPoisonGeneratingInstrsInBackwardSlice(AddrDef);
       }
     }
@@ -3042,9 +3040,8 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 
   // If we couldn't match anything, don't return the condition. It may be
   // defined outside the loop.
-  if (Recipes.empty() || none_of(Recipes, [](VPInstruction *I) {
-        return match(I, m_VPInstruction<Instruction::GetElementPtr>());
-      }))
+  if (Recipes.empty() ||
+      none_of(Recipes, match_fn(m_VPInstruction<Instruction::GetElementPtr>())))
     return std::nullopt;
 
   return UncountableCondition;
@@ -3892,8 +3889,10 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
              "all members in group must agree on IsSingleScalar");
       VPValue *Mask = Group[I]->getMask();
       VPValue *Value = Group[I]->getOperand(0);
-      SelectedValue = Builder.createSelect(Mask, Value, SelectedValue,
-                                           Group[I]->getDebugLoc());
+      SelectedValue = Builder.createSelect(
+          Mask, Value, SelectedValue, Group[I]->getDebugLoc(), "",
+          VPIRFlags::getDefaultFlags(Instruction::Select,
+                                     Value->getScalarType()));
     }
 
     // Find the store with minimum alignment to use.
@@ -4440,6 +4439,22 @@ static VPValue *cloneBinOpForScalarIV(VPWidenRecipe *BinOp, VPValue *ScalarIV,
   return ClonedOp;
 }
 
+/// If \p S is an affine AddRec, returns true if its step is known to be
+/// positive and false if it is known to be negative. Returns std::nullopt if
+/// \p S is not an affine AddRec, or if the sign of its step cannot be
+/// determined.
+static std::optional<bool> getStepDirection(const SCEV *S,
+                                            ScalarEvolution &SE) {
+  const SCEV *Step;
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
+    return std::nullopt;
+  if (SE.isKnownPositive(Step))
+    return true;
+  if (SE.isKnownNegative(Step))
+    return false;
+  return std::nullopt;
+}
+
 void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                                                PredicatedScalarEvolution &PSE,
                                                Loop &L) {
@@ -4503,8 +4518,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(
         IVOfExpressionToSink ? IVOfExpressionToSink : FindLastExpression, PSE,
         &L);
-    const SCEV *Step;
-    if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
+    if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV()))) {
       assert(!match(vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L),
                     m_scev_AffineAddRec(m_SCEV(), m_SCEV())) &&
              "IVOfExpressionToSink not being an AddRec must imply "
@@ -4512,13 +4526,12 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       continue;
     }
 
-    // Determine direction from SCEV step.
-    if (!SE.isKnownNonZero(Step))
+    // Determine direction from the step of IVSCEV, if possible.
+    std::optional<bool> StepDirection = getStepDirection(IVSCEV, SE);
+    if (!StepDirection)
       continue;
 
-    // Positive step means we need UMax/SMax to find the last IV value, and
-    // UMin/SMin otherwise.
-    bool UseMax = SE.isKnownPositive(Step);
+    bool UseMax = *StepDirection;
     std::optional<APSInt> SentinelVal = CheckSentinel(IVSCEV, UseMax);
     bool UseSigned = SentinelVal && SentinelVal->isSigned();
 
@@ -4530,16 +4543,15 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     if (IVOfExpressionToSink) {
       const SCEV *FindLastExpressionSCEV =
           vputils::getSCEVExprForVPValue(FindLastExpression, PSE, &L);
-      if (match(FindLastExpressionSCEV,
-                m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step)))) {
-        bool NewUseMax = SE.isKnownPositive(Step);
+      if (std::optional<bool> NewUseMax =
+              getStepDirection(FindLastExpressionSCEV, SE)) {
         if (auto NewSentinel =
-                CheckSentinel(FindLastExpressionSCEV, NewUseMax)) {
+                CheckSentinel(FindLastExpressionSCEV, *NewUseMax)) {
           // The original expression already has a sentinel, so prefer not
           // sinking to keep epilogue vectorization possible.
           SentinelVal = *NewSentinel;
           UseSigned = NewSentinel->isSigned();
-          UseMax = NewUseMax;
+          UseMax = *NewUseMax;
           IVSCEV = FindLastExpressionSCEV;
           IVOfExpressionToSink = nullptr;
         }
@@ -4570,7 +4582,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       // PhiR is the last operand and include the header mask if needed.
       DebugLoc DL = FindLastSelect->getDefiningRecipe()->getDebugLoc();
       VPBuilder LoopBuilder(FindLastSelect->getDefiningRecipe());
-      if (FindLastSelect->getDefiningRecipe()->getOperand(1) == PhiR)
+      if (match(FindLastSelect,
+                m_SelectLike(m_VPValue(Cond), m_Specific(PhiR), m_VPValue())))
         SelectCond = LoopBuilder.createNot(SelectCond);
 
       // When tail folding, mask the condition with the header mask to prevent

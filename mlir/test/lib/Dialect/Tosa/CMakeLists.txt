@@ -1,6 +1,5 @@
 add_mlir_dialect_library(MLIRTosaTestPasses
   TosaTestPasses.cpp
-  TestAvailability.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
