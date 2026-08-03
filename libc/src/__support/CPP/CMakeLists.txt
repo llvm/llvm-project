@@ -84,12 +84,15 @@ add_header_library(
   HDRS
     string.h
   DEPENDS
+    .algorithm
     .string_view
     libc.hdr.func.free
     libc.hdr.func.malloc
     libc.hdr.func.realloc
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.integer_to_string
+    libc.src.__support.libc_assert
     libc.src.__support.macros.null_check
     libc.src.string.memory_utils.inline_memcpy
     libc.src.string.memory_utils.inline_memmove
@@ -201,18 +204,6 @@ add_header_library(
   expected
   HDRS
     expected.h
-)
-
-add_header_library(
-  unique_ptr
-  HDRS
-    unique_ptr.h
-  DEPENDS
-    .new
-    .type_traits
-    .utility
-    libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
 )
 
 add_object_library(

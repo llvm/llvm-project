@@ -118,10 +118,10 @@ CIRGenFunction::emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
 
   // Build the call.
   CIRGenCallee callee(fpt, calleePtr.getDefiningOp());
-  assert(!cir::MissingFeatures::opCallMustTail());
   return emitCall(cgm.getTypes().arrangeCXXMethodCall(argsList, fpt, required,
                                                       /*PrefixSize=*/0),
-                  callee, returnValue, argsList, nullptr, loc);
+                  callee, returnValue, argsList, nullptr, ce == mustTailCall,
+                  loc);
 }
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
@@ -322,8 +322,8 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
       args, fpt, callInfo.reqArgs, callInfo.prefixSize);
   assert((ce || currSrcLoc) && "expected source location");
   mlir::Location loc = ce ? getLoc(ce->getExprLoc()) : *currSrcLoc;
-  assert(!cir::MissingFeatures::opCallMustTail());
-  return emitCall(fnInfo, callee, returnValue, args, nullptr, loc);
+  return emitCall(fnInfo, callee, returnValue, args, nullptr,
+                  ce && ce == mustTailCall, loc);
 }
 
 static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
@@ -756,9 +756,9 @@ static RValue emitNewDeleteCall(CIRGenFunction &cgf,
   cir::FuncOp calleePtr = cgf.cgm.getAddrOfFunction(calleeDecl);
   CIRGenCallee callee =
       CIRGenCallee::forDirect(calleePtr, GlobalDecl(calleeDecl));
-  RValue rv =
-      cgf.emitCall(cgf.cgm.getTypes().arrangeFreeFunctionCall(args, calleeType),
-                   callee, ReturnValueSlot(), args, &callOrTryCall);
+  RValue rv = cgf.emitCall(
+      cgf.cgm.getTypes().arrangeFreeFunctionCall(args, calleeType), callee,
+      ReturnValueSlot(), args, /*isMustTail=*/false, &callOrTryCall);
 
   /// C++1y [expr.new]p10:
   ///   [In a new-expression,] an implementation is allowed to omit a call
@@ -1367,9 +1367,8 @@ RValue CIRGenFunction::emitCXXDestructorCall(
   commonBuildCXXMemberOrOperatorCall(*this, dtorDecl, thisVal, implicitParam,
                                      implicitParamTy, ce, args, nullptr);
   assert((ce || dtor.getDecl()) && "expected source location provider");
-  assert(!cir::MissingFeatures::opCallMustTail());
   return emitCall(cgm.getTypes().arrangeCXXStructorDeclaration(dtor), callee,
-                  ReturnValueSlot(), args, nullptr,
+                  ReturnValueSlot(), args, nullptr, ce && ce == mustTailCall,
                   ce ? getLoc(ce->getExprLoc())
                      : getLoc(dtor.getDecl()->getSourceRange()));
 }

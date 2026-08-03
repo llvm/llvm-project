@@ -682,6 +682,12 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+FloatABI::ABIType Module::getFloatABI() const {
+  if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("float-abi")))
+    return FloatABI::parseABIType(Val->getString()).value_or(FloatABI::Default);
+  return FloatABI::Default;
+}
+
 std::optional<uint64_t> Module::getLargeDataThreshold() const {
   auto *Val =
       cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));

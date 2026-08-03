@@ -9,7 +9,7 @@
 // UNSUPPORTED: gcc
 
 // Older versions of Clang don't support __builtin_clear_padding
-// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, apple-clang-17, apple-clang-21
+// UNSUPPORTED: clang-21, clang-22, apple-clang-21
 
 // Older Clang doesn't handle __builtin_clear_padding correctly on Windows
 // (see https://github.com/llvm/llvm-project/issues/209787)
