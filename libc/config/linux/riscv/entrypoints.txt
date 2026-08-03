@@ -272,6 +272,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.stderr
     libc.src.stdio.stdin
     libc.src.stdio.stdout
+    libc.src.stdio.tmpfile
     libc.src.stdio.vsscanf
     libc.src.stdio.vfprintf
     libc.src.stdio.vprintf
