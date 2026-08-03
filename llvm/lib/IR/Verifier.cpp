@@ -1024,6 +1024,15 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
       Check(CurrentMD->getNumOperands() == 1,
             "Expecting only the metadata name", CurrentMD);
 
+    // Enforce the single-operand form of the vectorize predication metadata.
+    if (CurrentMD->getNumOperands() > 0 &&
+        (CurrentMD->getOperand(0).equalsStr(
+             "llvm.loop.vectorize.predicate.enable") ||
+         CurrentMD->getOperand(0).equalsStr(
+             "llvm.loop.vectorize.predicate.disable")))
+      Check(CurrentMD->getNumOperands() == 1,
+            "Expecting only the metadata name", CurrentMD);
+
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
           CurrentMD);

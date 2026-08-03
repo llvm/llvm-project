@@ -293,6 +293,10 @@ void LoopVectorizeHints::getHintsFromMetadata() {
         Force.Value = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.disable")
         Force.Value = FK_Disabled;
+      else if (Name == "llvm.loop.vectorize.predicate.enable")
+        Predicate.Value = FK_Enabled;
+      else if (Name == "llvm.loop.vectorize.predicate.disable")
+        Predicate.Value = FK_Disabled;
       continue;
     }
     if (Args.size() == 1)

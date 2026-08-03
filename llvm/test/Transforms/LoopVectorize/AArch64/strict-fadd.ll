@@ -1417,5 +1417,5 @@ for.cond.cleanup:
 !9 = !{!"llvm.loop.interleave.count", i32 1}
 !10 = !{!"llvm.loop.interleave.count", i32 4}
 !11 = !{!"llvm.loop.vectorize.enable"}
-!12 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!12 = !{!"llvm.loop.vectorize.predicate.enable"}
 !13 = distinct !{!13, !6, !9, !11}

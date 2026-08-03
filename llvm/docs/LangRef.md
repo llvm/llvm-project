@@ -8079,14 +8079,11 @@ node has a single operand containing the name string:
 
 This metadata selectively enables or disables creating predicated instructions
 for the loop, which can enable folding of the scalar epilogue loop into the
-main loop. The first operand is the string
-`llvm.loop.vectorize.predicate.enable` and the second operand is a bit. If
-the bit operand value is 1 predication is enabled. A value of 0 disables
-predication:
+main loop. Each node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.predicate.enable"}
+!1 = !{!"llvm.loop.vectorize.predicate.disable"}
 ```
 
 Additionally, enabling predication implicitly enables vectorization.

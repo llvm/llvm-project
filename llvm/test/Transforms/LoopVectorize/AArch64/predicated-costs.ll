@@ -370,7 +370,7 @@ attributes #1 = { "target-cpu"="neoverse-v2" }
 
 !0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.mustprogress"}
-!2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.predicate.enable"}
 !3 = !{!"llvm.loop.vectorize.enable"}
 
 ; BFI computes if is taken 20 times, and loop 32 times. Make sure we round the

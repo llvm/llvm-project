@@ -528,7 +528,7 @@ exit:
 
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.predicate.enable"}
 !2 = !{!"branch_weights", i32 10, i32 30}
 
 ;.
