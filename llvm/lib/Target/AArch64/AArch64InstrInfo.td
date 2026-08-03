@@ -3741,8 +3741,8 @@ def TLSDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
 // R_AARCH64_AUTH_TLSDESC_CALL relocation at the offset of the following instruction
 // (which in the usual case is a BLRAA).
 let hasSideEffects = 1 in
-def TLSDESCAUTHCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
-  let AsmString = ".tlsdescauthcall $sym";
+def TLSAUTHDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
+  let AsmString = ".tlsauthdesccall $sym";
 }
 
 // Pseudo instruction to tell the streamer to emit a 'B' character into the

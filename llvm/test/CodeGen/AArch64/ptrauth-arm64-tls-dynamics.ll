@@ -16,7 +16,7 @@ define i32 @test_generaldynamic() {
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc_auth:general_dynamic_var
 ; CHECK-NEXT: ldr x16, [x[[TLSDESC_HI]], :tlsdesc_auth_lo12:general_dynamic_var]
 ; CHECK-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_auth_lo12:general_dynamic_var
-; CHECK-NEXT: .tlsdescauthcall general_dynamic_var
+; CHECK-NEXT: .tlsauthdesccall general_dynamic_var
 ; CHECK-NEXT: blraa x16, x0
 ; CHECK-NEXT: mrs x[[TPIDR:[0-9]+]], TPIDR_EL0
 ; CHECK-NEXT: ldr w0, [x[[TPIDR]], x0]
@@ -37,7 +37,7 @@ define ptr @test_generaldynamic_addr() {
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc_auth:general_dynamic_var
 ; CHECK-NEXT: ldr x16, [x[[TLSDESC_HI]], :tlsdesc_auth_lo12:general_dynamic_var]
 ; CHECK-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_auth_lo12:general_dynamic_var
-; CHECK-NEXT: .tlsdescauthcall general_dynamic_var
+; CHECK-NEXT: .tlsauthdesccall general_dynamic_var
 ; CHECK-NEXT: blraa x16, x0
 ; CHECK-NEXT: mrs [[TP:x[0-9]+]], TPIDR_EL0
 ; CHECK-NEXT: add x0, [[TP]], x0
@@ -62,7 +62,7 @@ define i32 @test_localdynamic() {
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc_auth:local_dynamic_var
 ; CHECK-NEXT: ldr x16, [x[[TLSDESC_HI]], :tlsdesc_auth_lo12:local_dynamic_var]
 ; CHECK-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_auth_lo12:local_dynamic_var
-; CHECK-NEXT: .tlsdescauthcall local_dynamic_var
+; CHECK-NEXT: .tlsauthdesccall local_dynamic_var
 ; CHECK-NEXT: blraa x16, x0
 ; CHECK-NEXT: mrs x[[TPIDR:[0-9]+]], TPIDR_EL0
 ; CHECK-NEXT: ldr w0, [x[[TPIDR]], x0]
@@ -81,7 +81,7 @@ define ptr @test_localdynamic_addr() {
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc_auth:local_dynamic_var
 ; CHECK-NEXT: ldr x16, [x[[TLSDESC_HI]], :tlsdesc_auth_lo12:local_dynamic_var]
 ; CHECK-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_auth_lo12:local_dynamic_var
-; CHECK-NEXT: .tlsdescauthcall local_dynamic_var
+; CHECK-NEXT: .tlsauthdesccall local_dynamic_var
 ; CHECK-NEXT: blraa x16, x0
 ; CHECK-NEXT: mrs x[[TPIDR:[0-9]+]], TPIDR_EL0
 ; CHECK-NEXT: add x0, x[[TPIDR]], x0
@@ -103,7 +103,7 @@ define i32 @test_extern_weak() {
 ; CHECK: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc_auth:extern_weak_var
 ; CHECK-NEXT: ldr x16, [x[[TLSDESC_HI]], :tlsdesc_auth_lo12:extern_weak_var]
 ; CHECK-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_auth_lo12:extern_weak_var
-; CHECK-NEXT: .tlsdescauthcall extern_weak_var
+; CHECK-NEXT: .tlsauthdesccall extern_weak_var
 ; CHECK-NEXT: blraa x16, x0
 ; CHECK-NEXT: mrs x[[TPIDR:[0-9]+]], TPIDR_EL0
 ; CHECK-NEXT: ldr w0, [x[[TPIDR]], x0]

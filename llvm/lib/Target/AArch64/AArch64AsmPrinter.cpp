@@ -3597,7 +3597,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     ///    adrp  x0, :tlsdesc_auth:var
     ///    ldr   x16, [x0, #:tlsdesc_auth_lo12:var]
     ///    add   x0, x0, #:tlsdesc_auth_lo12:var
-    ///    .tlsdescauthcall var
+    ///    .tlsauthdesccall var
     ///    blraa x16, x0
     ///    (TPIDR_EL0 offset now in x0)
     const MachineOperand &MO_Sym = MI->getOperand(0);
@@ -3633,10 +3633,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     // Emit a relocation-annotation. This expands to no code, but requests
     // the following instruction gets an R_AARCH64_AUTH_TLSDESC_CALL.
-    MCInst TLSDescAuthCall;
-    TLSDescAuthCall.setOpcode(AArch64::TLSDESCAUTHCALL);
-    TLSDescAuthCall.addOperand(Sym);
-    EmitToStreamer(*OutStreamer, TLSDescAuthCall);
+    MCInst TLSAuthDescCall;
+    TLSAuthDescCall.setOpcode(AArch64::TLSAUTHDESCCALL);
+    TLSAuthDescCall.addOperand(Sym);
+    EmitToStreamer(*OutStreamer, TLSAuthDescCall);
 #ifndef NDEBUG
     --InstsEmitted; // no code emitted
 #endif
