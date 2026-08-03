@@ -422,10 +422,11 @@ private:
     /// TypeByteSize is a pair of alloc sizes of the source and sink.
     std::pair<uint64_t, uint64_t> TypeByteSize;
 
-    // HasSameSize is a boolean indicating whether the store sizes of the source
-    // and sink are equal.
-    // TODO: Remove this.
-    bool HasSameSize;
+    // HasSameStoreSz is a boolean indicating whether the store sizes of the
+    // source and sink are equal.
+    // TODO: This is unnecessary, and the code in isDependent should only depend
+    // on the type alloc sizes.
+    bool HasSameStoreSz;
 
     bool AIsWrite;
     bool BIsWrite;
@@ -433,9 +434,10 @@ private:
     DepDistanceStrideAndSizeInfo(const SCEV *Dist, uint64_t MaxStride,
                                  std::optional<uint64_t> CommonStride,
                                  std::pair<uint64_t, uint64_t> TypeByteSize,
-                                 bool HasSameSize, bool AIsWrite, bool BIsWrite)
+                                 bool HasSameStoreSz, bool AIsWrite,
+                                 bool BIsWrite)
         : Dist(Dist), MaxStride(MaxStride), CommonStride(CommonStride),
-          TypeByteSize(TypeByteSize), HasSameSize(HasSameSize),
+          TypeByteSize(TypeByteSize), HasSameStoreSz(HasSameStoreSz),
           AIsWrite(AIsWrite), BIsWrite(BIsWrite) {}
   };
 
