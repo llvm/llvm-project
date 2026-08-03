@@ -7,24 +7,58 @@ define void @test_3_consecutive_loads(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_3_consecutive_loads(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[TMP9]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[SUM2]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 1
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 2
-; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !noundef [[META0:![0-9]+]]
-; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !noundef [[META2:![0-9]+]]
+; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1_PEEL:%.*]] = add i8 [[A_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[SUM2_PEEL:%.*]] = add i8 [[SUM1_PEEL]], [[C_PEEL]]
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP11]]
 ; CHECK-NEXT:    store i8 [[SUM2_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -59,30 +93,70 @@ define void @test_5_consecutive_loads(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_5_consecutive_loads(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP16:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b64, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b64 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i8
+; CHECK-NEXT:    [[TMP10:%.*]] = lshr i64 [[TMP4]], 24
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i8
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP4]], 32
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP12]] to i8
+; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[TMP9]]
+; CHECK-NEXT:    [[SUM3:%.*]] = add i8 [[SUM2]], [[TMP11]]
+; CHECK-NEXT:    [[SUM4:%.*]] = add i8 [[SUM3]], [[TMP13]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[SUM4]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 5
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP14]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 1
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 2
 ; CHECK-NEXT:    [[P3_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 3
 ; CHECK-NEXT:    [[P4_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 4
-; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP16]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[D_PEEL:%.*]] = load i8, ptr [[P3_PEEL]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[E_PEEL:%.*]] = load i8, ptr [[P4_PEEL]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP16]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[D_PEEL:%.*]] = load i8, ptr [[P3_PEEL]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[E_PEEL:%.*]] = load i8, ptr [[P4_PEEL]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1_PEEL:%.*]] = add i8 [[A_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[SUM2_PEEL:%.*]] = add i8 [[SUM1_PEEL]], [[C_PEEL]]
 ; CHECK-NEXT:    [[SUM3_PEEL:%.*]] = add i8 [[SUM2_PEEL]], [[D_PEEL]]
 ; CHECK-NEXT:    [[SUM4_PEEL:%.*]] = add i8 [[SUM3_PEEL]], [[E_PEEL]]
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP15]]
 ; CHECK-NEXT:    store i8 [[SUM4_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP16]], i64 5
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP15]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i64 5
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP15]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -134,14 +208,14 @@ define void @test_8_consecutive_loads_no_peel(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 5
 ; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 6
 ; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 7
-; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[D:%.*]] = load i8, ptr [[P3]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[E:%.*]] = load i8, ptr [[P4]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[F:%.*]] = load i8, ptr [[P5]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[G:%.*]] = load i8, ptr [[P6]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[H:%.*]] = load i8, ptr [[P7]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[D:%.*]] = load i8, ptr [[P3]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[E:%.*]] = load i8, ptr [[P4]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[F:%.*]] = load i8, ptr [[P5]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[G:%.*]] = load i8, ptr [[P6]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[H:%.*]] = load i8, ptr [[P7]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[C]]
 ; CHECK-NEXT:    [[SUM3:%.*]] = add i8 [[SUM2]], [[D]]
@@ -211,10 +285,10 @@ define void @test_intervening_store(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    store i8 42, ptr [[P1]], align 1
-; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[C]]
 ; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
@@ -259,24 +333,58 @@ define void @test_3_consecutive_i16_loads(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_3_consecutive_i16_loads(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b64, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b64 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i16
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i16
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i64 [[TMP4]], 32
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP8]] to i16
+; CHECK-NEXT:    [[SUM1:%.*]] = add i16 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i16 [[SUM1]], [[TMP9]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i16 [[SUM2]], ptr [[DST_I]], align 2
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 6
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i16, ptr [[TMP12]], i64 1
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i16, ptr [[TMP12]], i64 2
-; CHECK-NEXT:    [[A_PEEL:%.*]] = load i16, ptr [[TMP12]], align 2, !noundef [[META0]]
-; CHECK-NEXT:    [[B_PEEL:%.*]] = load i16, ptr [[P1_PEEL]], align 2, !noundef [[META0]]
-; CHECK-NEXT:    [[C_PEEL:%.*]] = load i16, ptr [[P2_PEEL]], align 2, !noundef [[META0]]
+; CHECK-NEXT:    [[A_PEEL:%.*]] = load i16, ptr [[TMP12]], align 2, !noundef [[META2]]
+; CHECK-NEXT:    [[B_PEEL:%.*]] = load i16, ptr [[P1_PEEL]], align 2, !noundef [[META2]]
+; CHECK-NEXT:    [[C_PEEL:%.*]] = load i16, ptr [[P2_PEEL]], align 2, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1_PEEL:%.*]] = add i16 [[A_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[SUM2_PEEL:%.*]] = add i16 [[SUM1_PEEL]], [[C_PEEL]]
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP11]]
 ; CHECK-NEXT:    store i16 [[SUM2_PEEL]], ptr [[DST_I_PEEL]], align 2
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP12]], i64 6
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 6
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -311,24 +419,58 @@ define void @test_aa_metadata_preserved(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_aa_metadata_preserved(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[P]], align 1, !tbaa [[TBAA5:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[TMP9]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[SUM2]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 1
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 2
-; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !tbaa [[TBAA1:![0-9]+]], !noundef [[META0]]
-; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !tbaa [[TBAA1]], !noundef [[META0]]
-; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !tbaa [[TBAA1]], !noundef [[META0]]
+; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !tbaa [[TBAA5]], !noundef [[META2]]
+; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !tbaa [[TBAA5]], !noundef [[META2]]
+; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !tbaa [[TBAA5]], !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1_PEEL:%.*]] = add i8 [[A_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[SUM2_PEEL:%.*]] = add i8 [[SUM1_PEEL]], [[C_PEEL]]
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP11]]
 ; CHECK-NEXT:    store i8 [[SUM2_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -364,24 +506,58 @@ define void @test_aa_metadata_different(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_aa_metadata_different(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[TMP9]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[SUM2]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 1
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 2
-; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !tbaa [[TBAA1]], !noundef [[META0]]
-; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !tbaa [[TBAA4:![0-9]+]], !noundef [[META0]]
-; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !tbaa [[TBAA1]], !noundef [[META0]]
+; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !tbaa [[TBAA5]], !noundef [[META2]]
+; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !tbaa [[TBAA10:![0-9]+]], !noundef [[META2]]
+; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !tbaa [[TBAA5]], !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1_PEEL:%.*]] = add i8 [[A_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[SUM2_PEEL:%.*]] = add i8 [[SUM1_PEEL]], [[C_PEEL]]
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP11]]
 ; CHECK-NEXT:    store i8 [[SUM2_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -417,24 +593,59 @@ define void @test_negative_offsets(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SRC_OFFSET:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ [[SRC_OFFSET]], %[[ENTRY]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC_OFFSET]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 -2
+; CHECK-NEXT:    [[TMP3:%.*]] = load b32, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze b32 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP5]] to i8
+; CHECK-NEXT:    [[TMP7:%.*]] = lshr i32 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[TMP7]] to i8
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr i32 [[TMP5]], 16
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc i32 [[TMP9]] to i8
+; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[TMP6]], [[TMP8]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[TMP10]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[SUM2]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ [[SRC_OFFSET]], %[[ENTRY]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P_NEG2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 -2
 ; CHECK-NEXT:    [[P_NEG1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 -1
-; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[P_NEG2_PEEL]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P_NEG1_PEEL]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[TMP13]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[P_NEG2_PEEL]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P_NEG1_PEEL]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[TMP13]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1_PEEL:%.*]] = add i8 [[A_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[SUM2_PEEL:%.*]] = add i8 [[SUM1_PEEL]], [[C_PEEL]]
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP12]]
 ; CHECK-NEXT:    store i8 [[SUM2_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP13]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP12]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP12]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -476,9 +687,9 @@ define void @test_non_consecutive_loads(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[C]]
 ; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
@@ -528,9 +739,9 @@ define void @test_non_inbounds_geps(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[C]]
 ; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr i8, ptr [[DST]], i32 [[I]]
@@ -575,26 +786,62 @@ define void @test_mixed_size_loads(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_mixed_size_loads(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i16
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[A_EXT:%.*]] = zext i8 [[TMP5]] to i16
+; CHECK-NEXT:    [[SUM1:%.*]] = add i16 [[A_EXT]], [[TMP7]]
+; CHECK-NEXT:    [[C_EXT:%.*]] = zext i8 [[TMP9]] to i16
+; CHECK-NEXT:    [[SUM2:%.*]] = add i16 [[SUM1]], [[C_EXT]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i16 [[SUM2]], ptr [[DST_I]], align 2
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 1
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 2
-; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[B_PEEL:%.*]] = load i16, ptr [[P1_PEEL]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[B_PEEL:%.*]] = load i16, ptr [[P1_PEEL]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[A_EXT_PEEL:%.*]] = zext i8 [[A_PEEL]] to i16
 ; CHECK-NEXT:    [[SUM1_PEEL:%.*]] = add i16 [[A_EXT_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[C_EXT_PEEL:%.*]] = zext i8 [[C_PEEL]] to i16
 ; CHECK-NEXT:    [[SUM2_PEEL:%.*]] = add i16 [[SUM1_PEEL]], [[C_EXT_PEEL]]
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP11]]
 ; CHECK-NEXT:    store i16 [[SUM2_PEEL]], ptr [[DST_I_PEEL]], align 2
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -689,9 +936,9 @@ define void @test_step_mismatch(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[P]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[B:%.*]] = load i8, ptr [[P1]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C:%.*]] = load i8, ptr [[P2]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[C]]
 ; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
@@ -735,24 +982,58 @@ define void @test_alignment_inferred_from_group(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_alignment_inferred_from_group(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[TMP9]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[SUM2]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 1
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 2
-; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 4, !noundef [[META0]]
+; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[B_PEEL:%.*]] = load i8, ptr [[P1_PEEL]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 4, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM1_PEEL:%.*]] = add i8 [[A_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[SUM2_PEEL:%.*]] = add i8 [[SUM1_PEEL]], [[C_PEEL]]
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP11]]
 ; CHECK-NEXT:    store i8 [[SUM2_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -788,10 +1069,45 @@ define void @test_loads_nonpoison_via_address_use(ptr %in, ptr %weights, ptr %ou
 ; CHECK-LABEL: define void @test_loads_nonpoison_via_address_use(
 ; CHECK-SAME: ptr [[IN:%.*]], ptr [[WEIGHTS:%.*]], ptr [[OUT:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[IN]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[IN]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[R32:%.*]] = zext i8 [[TMP5]] to i32
+; CHECK-NEXT:    [[G32:%.*]] = zext i8 [[TMP7]] to i32
+; CHECK-NEXT:    [[B32:%.*]] = zext i8 [[TMP9]] to i32
+; CHECK-NEXT:    [[S1:%.*]] = add i32 [[R32]], [[G32]]
+; CHECK-NEXT:    [[IDX:%.*]] = add i32 [[S1]], [[B32]]
+; CHECK-NEXT:    [[W_PTR:%.*]] = getelementptr inbounds i8, ptr [[WEIGHTS]], i32 [[IDX]]
+; CHECK-NEXT:    [[W:%.*]] = load i8, ptr [[W_PTR]], align 1
+; CHECK-NEXT:    [[OUT_I:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[W]], ptr [[OUT_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[IN]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[G_PTR_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 1
 ; CHECK-NEXT:    [[B_PTR_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 2
 ; CHECK-NEXT:    [[R_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1
@@ -806,11 +1122,15 @@ define void @test_loads_nonpoison_via_address_use(ptr %in, ptr %weights, ptr %ou
 ; CHECK-NEXT:    [[W_PEEL:%.*]] = load i8, ptr [[W_PTR_PEEL]], align 1
 ; CHECK-NEXT:    [[OUT_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i32 [[TMP11]]
 ; CHECK-NEXT:    store i8 [[W_PEEL]], ptr [[OUT_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -953,10 +1273,41 @@ define void @test_call_willreturn(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_call_willreturn(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[TMP9]]
+; CHECK-NEXT:    call void @sink_willreturn(i8 [[SUM2]])
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[SUM2]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 1
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 2
 ; CHECK-NEXT:    [[A_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1
@@ -967,11 +1318,15 @@ define void @test_call_willreturn(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    call void @sink_willreturn(i8 [[SUM2_PEEL]])
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP11]]
 ; CHECK-NEXT:    store i8 [[SUM2_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1071,8 +1426,8 @@ define void @test_offset_exceeds_int64(ptr addrspace(2) %src, ptr %dst, i32 %n) 
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr addrspace(2) [ [[SRC]], %[[ENTRY]] ], [ [[P_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PBIG:%.*]] = getelementptr inbounds i8, ptr addrspace(2) [[P]], i128 100000000000000000000
-; CHECK-NEXT:    [[A:%.*]] = load i8, ptr addrspace(2) [[P]], align 1, !noundef [[META0]]
-; CHECK-NEXT:    [[B:%.*]] = load i8, ptr addrspace(2) [[PBIG]], align 1, !noundef [[META0]]
+; CHECK-NEXT:    [[A:%.*]] = load i8, ptr addrspace(2) [[P]], align 1, !noundef [[META2]]
+; CHECK-NEXT:    [[B:%.*]] = load i8, ptr addrspace(2) [[PBIG]], align 1, !noundef [[META2]]
 ; CHECK-NEXT:    [[SUM:%.*]] = add i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
 ; CHECK-NEXT:    store i8 [[SUM]], ptr [[DST_I]], align 1
@@ -1133,7 +1488,7 @@ define void @test_peel_last_for_compare_not_widened(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[N]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP17:![0-9]+]]
 ; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
 ; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[IV_NEXT]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP]] ]
@@ -1198,21 +1553,52 @@ define void @test_i24_loads(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_i24_loads(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b64, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b64 [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP4]] to i24
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i64 [[TMP4]], 24
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i24
+; CHECK-NEXT:    [[SUM:%.*]] = add i24 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i24, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i24 [[SUM]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 6
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP8]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP18:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i64 3
 ; CHECK-NEXT:    [[A_PEEL:%.*]] = load i24, ptr [[TMP10]], align 1
 ; CHECK-NEXT:    [[B_PEEL:%.*]] = load i24, ptr [[P1_PEEL]], align 1
 ; CHECK-NEXT:    [[SUM_PEEL:%.*]] = add i24 [[A_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i24, ptr [[DST]], i32 [[TMP9]]
 ; CHECK-NEXT:    store i24 [[SUM_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP10]], i64 6
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP9]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i64 6
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP9]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1241,11 +1627,41 @@ define void @test_base_plus_iv_pattern(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_base_plus_iv_pattern(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
 ; CHECK-NEXT:    [[I_EXT_PEEL:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[STRIDE_PEEL:%.*]] = mul i64 [[I_EXT_PEEL]], 3
+; CHECK-NEXT:    [[STRIDE:%.*]] = mul nuw nsw i64 [[I_EXT_PEEL]], 3
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[STRIDE]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[TMP9]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP11]]
+; CHECK-NEXT:    store i8 [[SUM2]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[TMP11]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
+; CHECK-NEXT:    [[I_EXT_PEEL1:%.*]] = zext i32 [[TMP12]] to i64
+; CHECK-NEXT:    [[STRIDE_PEEL:%.*]] = mul i64 [[I_EXT_PEEL1]], 3
 ; CHECK-NEXT:    [[P_PEEL:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[STRIDE_PEEL]]
 ; CHECK-NEXT:    [[P1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[P_PEEL]], i64 1
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[P_PEEL]], i64 2
@@ -1254,12 +1670,16 @@ define void @test_base_plus_iv_pattern(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1
 ; CHECK-NEXT:    [[SUM1_PEEL:%.*]] = add i8 [[A_PEEL]], [[B_PEEL]]
 ; CHECK-NEXT:    [[SUM2_PEEL:%.*]] = add i8 [[SUM1_PEEL]], [[C_PEEL]]
-; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP11]]
+; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP12]]
 ; CHECK-NEXT:    store i8 [[SUM2_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP12]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1292,11 +1712,28 @@ define void @test_conditional_group_not_widened(ptr %pa, ptr %pb, ptr %dst, i32 
 ; CHECK-LABEL: define void @test_conditional_group_not_widened(
 ; CHECK-SAME: ptr [[PA:%.*]], ptr [[PB:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]], i1 [[C0:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN1:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
 ; CHECK:       [[LOOP_PEEL1]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN1]] ], [ [[I_NEXT_PEEL:%.*]], %[[LATCH_PEEL:.*]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi ptr [ [[PA]], %[[EXIT_PEEL_BEGIN1]] ], [ [[A_NEXT_PEEL:%.*]], %[[LATCH_PEEL]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ [[PB]], %[[EXIT_PEEL_BEGIN1]] ], [ [[B_NEXT_PEEL:%.*]], %[[LATCH_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[PA]], %[[ENTRY_SPLIT]] ], [ [[A_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi ptr [ [[PB]], %[[ENTRY_SPLIT]] ], [ [[B_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[A]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[AS1:%.*]] = add i8 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[AS2:%.*]] = add i8 [[AS1]], [[TMP9]]
+; CHECK-NEXT:    store i8 [[AS2]], ptr [[DST]], align 1
+; CHECK-NEXT:    br i1 [[C0]], label %[[THEN:.*]], label %[[LATCH]]
+; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[A1_PEEL1:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 1
 ; CHECK-NEXT:    [[A2_PEEL1:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 2
 ; CHECK-NEXT:    [[AV0_PEEL1:%.*]] = load i8, ptr [[TMP14]], align 1
@@ -1304,8 +1741,36 @@ define void @test_conditional_group_not_widened(ptr %pa, ptr %pb, ptr %dst, i32 
 ; CHECK-NEXT:    [[AV2_PEEL1:%.*]] = load i8, ptr [[A2_PEEL1]], align 1
 ; CHECK-NEXT:    [[AS1_PEEL1:%.*]] = add i8 [[AV0_PEEL1]], [[AV1_PEEL1]]
 ; CHECK-NEXT:    [[AS2_PEEL1:%.*]] = add i8 [[AS1_PEEL1]], [[AV2_PEEL1]]
-; CHECK-NEXT:    store i8 [[AS2_PEEL1]], ptr [[DST]], align 1
-; CHECK-NEXT:    br i1 [[C0]], label %[[THEN_PEEL:.*]], label %[[LATCH_PEEL]]
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[AS2_PEEL1]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[A_NEXT]] = getelementptr inbounds i8, ptr [[A]], i64 3
+; CHECK-NEXT:    [[B_NEXT]] = getelementptr inbounds i8, ptr [[TMP14]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL1]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP20:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LATCH]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[A_NEXT]], %[[LATCH]] ]
+; CHECK-NEXT:    [[DOTPH2:%.*]] = phi ptr [ [[B_NEXT]], %[[LATCH]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN1]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[PA]], %[[EXIT_PEEL_BEGIN1]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ [[PB]], %[[EXIT_PEEL_BEGIN1]] ], [ [[DOTPH2]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
+; CHECK:       [[LOOP_PEEL]]:
+; CHECK-NEXT:    [[A1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 1
+; CHECK-NEXT:    [[A2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 2
+; CHECK-NEXT:    [[AV0_PEEL:%.*]] = load i8, ptr [[TMP12]], align 1
+; CHECK-NEXT:    [[AV1_PEEL:%.*]] = load i8, ptr [[A1_PEEL]], align 1
+; CHECK-NEXT:    [[AV2_PEEL:%.*]] = load i8, ptr [[A2_PEEL]], align 1
+; CHECK-NEXT:    [[AS1_PEEL:%.*]] = add i8 [[AV0_PEEL]], [[AV1_PEEL]]
+; CHECK-NEXT:    [[AS2_PEEL:%.*]] = add i8 [[AS1_PEEL]], [[AV2_PEEL]]
+; CHECK-NEXT:    store i8 [[AS2_PEEL]], ptr [[DST]], align 1
+; CHECK-NEXT:    br i1 [[C0]], label %[[THEN_PEEL:.*]], label %[[LATCH_PEEL:.*]]
 ; CHECK:       [[THEN_PEEL]]:
 ; CHECK-NEXT:    [[B1_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 1
 ; CHECK-NEXT:    [[B2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 2
@@ -1318,12 +1783,16 @@ define void @test_conditional_group_not_widened(ptr %pa, ptr %pb, ptr %dst, i32 
 ; CHECK-NEXT:    store i8 [[BS2_PEEL]], ptr [[DST_I_PEEL]], align 1
 ; CHECK-NEXT:    br label %[[LATCH_PEEL]]
 ; CHECK:       [[LATCH_PEEL]]:
-; CHECK-NEXT:    [[A_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP14]], i64 3
-; CHECK-NEXT:    [[B_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP13]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[A_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
+; CHECK-NEXT:    [[B_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL1]], label %[[EXIT1:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT1:.*]], label %[[EXIT1]]
 ; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1380,10 +1849,44 @@ define void @test_unordered_loads_use_between(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-LABEL: define void @test_unordered_loads_use_between(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[EXIT_PEEL_BEGIN:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[ENTRY_SPLIT:.*]], label %[[EXIT_PEEL_BEGIN1:.*]]
+; CHECK:       [[ENTRY_SPLIT]]:
 ; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
 ; CHECK:       [[LOOP_PEEL]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[I_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
-; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[P_NEXT_PEEL:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY_SPLIT]] ], [ [[I_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[SRC]], %[[ENTRY_SPLIT]] ], [ [[P_NEXT:%.*]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = load b32, ptr [[P]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze b32 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
+; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP4]], 8
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[TMP6]] to i8
+; CHECK-NEXT:    [[TMP8:%.*]] = lshr i32 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i8
+; CHECK-NEXT:    [[CZ:%.*]] = zext i8 [[TMP9]] to i32
+; CHECK-NEXT:    [[SUM1:%.*]] = add i8 [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[SUM2:%.*]] = add i8 [[SUM1]], [[TMP9]]
+; CHECK-NEXT:    [[SZ:%.*]] = zext i8 [[SUM2]] to i32
+; CHECK-NEXT:    [[TOT:%.*]] = add i32 [[CZ]], [[SZ]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i32 [[TOT]] to i8
+; CHECK-NEXT:    [[DST_I:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[I]]
+; CHECK-NEXT:    store i8 [[T]], ptr [[DST_I]], align 1
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr inbounds i8, ptr [[P]], i64 3
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[N]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[I_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_PEEL]], label %[[EXIT_PEEL_BEGIN_LOOPEXIT:.*]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN_LOOPEXIT]]:
+; CHECK-NEXT:    [[DOTPH:%.*]] = phi i32 [ [[I_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    [[DOTPH1:%.*]] = phi ptr [ [[P_NEXT]], %[[LOOP_PEEL]] ]
+; CHECK-NEXT:    br label %[[EXIT_PEEL_BEGIN1]]
+; CHECK:       [[EXIT_PEEL_BEGIN1]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ 0, %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[SRC]], %[[EXIT_PEEL_BEGIN]] ], [ [[DOTPH1]], %[[EXIT_PEEL_BEGIN_LOOPEXIT]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL1:.*]]
+; CHECK:       [[LOOP_PEEL1]]:
 ; CHECK-NEXT:    [[P2_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 2
 ; CHECK-NEXT:    [[C_PEEL:%.*]] = load i8, ptr [[P2_PEEL]], align 1
 ; CHECK-NEXT:    [[CZ_PEEL:%.*]] = zext i8 [[C_PEEL]] to i32
@@ -1397,11 +1900,15 @@ define void @test_unordered_loads_use_between(ptr %src, ptr %dst, i32 %n) {
 ; CHECK-NEXT:    [[T_PEEL:%.*]] = trunc i32 [[TOT_PEEL]] to i8
 ; CHECK-NEXT:    [[DST_I_PEEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i32 [[TMP11]]
 ; CHECK-NEXT:    store i8 [[T_PEEL]], ptr [[DST_I_PEEL]], align 1
-; CHECK-NEXT:    [[P_NEXT_PEEL]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
-; CHECK-NEXT:    [[I_NEXT_PEEL]] = add i32 [[TMP11]], 1
+; CHECK-NEXT:    [[P_NEXT_PEEL:%.*]] = getelementptr inbounds i8, ptr [[TMP12]], i64 3
+; CHECK-NEXT:    [[I_NEXT_PEEL:%.*]] = add i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[COND_PEEL:%.*]] = icmp ne i32 [[I_NEXT_PEEL]], [[N]]
-; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[LOOP_PEEL]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[COND_PEEL]], label %[[EXIT:.*]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1706,12 +2213,26 @@ exit:
 
 attributes #0 = { "target-features"="+strict-align" }
 ;.
-; CHECK: [[META0]] = !{}
-; CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-; CHECK: [[META2]] = !{!"char", [[META3:![0-9]+]], i64 0}
-; CHECK: [[META3]] = !{!"root"}
-; CHECK: [[TBAA4]] = !{[[META5:![0-9]+]], [[META5]], i64 0}
-; CHECK: [[META5]] = !{!"int", [[META3]], i64 0}
-; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META7:![0-9]+]]}
-; CHECK: [[META7]] = !{!"llvm.loop.peeled.count", i32 1}
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.peeled.count", i32 1}
+; CHECK: [[META2]] = !{}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
+; CHECK: [[TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
+; CHECK: [[META6]] = !{!"char", [[META7:![0-9]+]], i64 0}
+; CHECK: [[META7]] = !{!"root"}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
+; CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
+; CHECK: [[META11]] = !{!"int", [[META7]], i64 0}
+; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]]}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]]}
+; CHECK: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]]}
+; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]]}
+; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]]}
+; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]]}
+; CHECK: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]]}
+; CHECK: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]]}
+; CHECK: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]]}
+; CHECK: [[LOOP21]] = distinct !{[[LOOP21]], [[META1]]}
 ;.

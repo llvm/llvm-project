@@ -1380,6 +1380,10 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     MaxOrZero = SE.isBackedgeTakenCountMaxOrZero(L);
   }
 
+  // Only allow peeling the last iteration for load widening after
+  // vectorization, so that loops which could be vectorized instead are not
+  // peeled.
+  PP.AllowLoadWideningPeel = !OnlyFullUnroll;
   // computeUnrollCount() decides whether it is beneficial to use upper bound to
   // fully unroll the loop.
   unsigned Count =
@@ -1414,6 +1418,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     ValueToValueMapTy VMap;
     peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
              VMap);
+    if (PP.PeelLast && PP.AllowLoadWideningPeel)
+      widenLoadsAfterPeel(*L, SE, TTI, DT);
     simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, L->getBlocks(),
                             nullptr);
     // If the loop was peeled, we already "used up" the profile information
