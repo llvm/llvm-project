@@ -13,6 +13,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   BitwiseShiftChecker.cpp
   BlockInCriticalSectionChecker.cpp
   BoolAssignmentChecker.cpp
+  BoundsInformationChecker.cpp
   BuiltinFunctionChecker.cpp
   CStringChecker.cpp
   CStringSyntaxChecker.cpp
