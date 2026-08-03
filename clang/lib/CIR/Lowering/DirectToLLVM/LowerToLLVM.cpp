@@ -510,7 +510,7 @@ static llvm::StringRef getConstrainedRoundingMetadata(cir::FenvAttr fenv) {
 
 static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
   std::optional<cir::FPExceptionMode> exceptMode = fenv.getExceptMode();
-  if (exceptMode && *exceptMode == cir::FPExceptionMode::Masked)
+  if (exceptMode == cir::FPExceptionMode::Masked)
     return "fpexcept.ignore";
   mlir::BoolAttr strictExcept = fenv.getStrictExcept();
   if (!strictExcept)
