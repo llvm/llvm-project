@@ -1089,8 +1089,8 @@ void FactsGenerator::handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
   if (!isFreeingFunction(*FD))
     return;
   auto InvalidateArg = [&](unsigned ArgIndex) {
-    if (ArgIndex >= Args.size())
-      return;
+    assert(ArgIndex < Args.size() && "Arg index should be in bounds");
+
     OriginList *ArgList = getOriginsList(*Args[ArgIndex]);
     if (!ArgList)
       return;
@@ -1098,11 +1098,11 @@ void FactsGenerator::handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
         ArgList->getOuterOriginID(), Call));
   };
 
-  bool HasAttr = false;
+  bool HasOwnershipTakesAttr = false;
   for (const OwnershipAttr *Attr : FD->specific_attrs<OwnershipAttr>()) {
     if (Attr->getOwnKind() != OwnershipAttr::Takes)
       continue;
-    HasAttr = true;
+    HasOwnershipTakesAttr = true;
     for (const ParamIdx &Idx : Attr->args()) {
       // `getLLVMIndex` encodes zero-origin indices including any implicit
       // 'this' parameter, matching the layout of the Args array.
@@ -1111,7 +1111,7 @@ void FactsGenerator::handleFreeingCall(const Expr *Call, const FunctionDecl *FD,
   }
   // Allocating/freeing builtins (e.g. `free`, `realloc`) free their first
   // argument.
-  if (!HasAttr) {
+  if (!HasOwnershipTakesAttr) {
     assert(!Args.empty() && "freeing builtins take at least one argument");
     InvalidateArg(0);
   }
