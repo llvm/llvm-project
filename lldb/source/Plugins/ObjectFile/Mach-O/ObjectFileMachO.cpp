@@ -3378,7 +3378,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                       if (symbol_name_non_abi_mangled) {
                         sym[sym_idx].GetMangled().SetMangledName(
                             ConstString(symbol_name_non_abi_mangled));
-                        sym[sym_idx].GetMangled().SetDemangledName(ConstString(symbol_name));
+                        sym[sym_idx].GetMangled().SetDemangledName(
+                            ConstString(symbol_name));
                       } else if (symbol_name) {
                         ConstString const_symbol_name(symbol_name);
                         sym[sym_idx].GetMangled().SetValue(const_symbol_value);
