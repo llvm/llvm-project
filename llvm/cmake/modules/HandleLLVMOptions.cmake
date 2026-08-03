@@ -429,14 +429,20 @@ if( LLVM_ENABLE_LLD )
 endif()
 
 if( LLVM_USE_LINKER )
+  check_cxx_source_compiles("int main() { return 0; }" _CAN_LINK_EXECUTABLE)
+  mark_as_advanced(_CAN_LINK_EXECUTABLE)
   append("-fuse-ld=${LLVM_USE_LINKER}"
     CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
-  check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
-  if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
-    message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'. "
-                        "Please make sure that '${LLVM_USE_LINKER}' is installed and "
-                        "that your host compiler can compile a simple program when "
-                        "given the option '-fuse-ld=${LLVM_USE_LINKER}'.")
+  if(_CAN_LINK_EXECUTABLE)
+    check_cxx_source_compiles("int main() { return 0; }" CXX_SUPPORTS_CUSTOM_LINKER)
+    if ( NOT CXX_SUPPORTS_CUSTOM_LINKER )
+      message(FATAL_ERROR "Host compiler does not support '-fuse-ld=${LLVM_USE_LINKER}'. "
+                          "Please make sure that '${LLVM_USE_LINKER}' is installed and "
+                          "that your host compiler can compile a simple program when "
+                          "given the option '-fuse-ld=${LLVM_USE_LINKER}'.")
+    endif()
+  else()
+    message(STATUS "Skipping custom linker check: offload target cannot link executable")
   endif()
 endif()
 
@@ -564,14 +570,15 @@ if( MSVC_IDE )
 endif()
 
 # set stack reserved size to ~10MB
+set(_is_exe "$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>")
 if(MSVC)
   # CMake previously automatically set this value for MSVC builds, but the
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}/STACK:10000000")
+  add_link_options("$<${_is_exe}:LINKER:/STACK:10000000>")
 elseif(MINGW OR CYGWIN)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
+  add_link_options("$<${_is_exe}:LINKER:--stack,16777216>")
 
   # Pass -mbig-obj to mingw gas to avoid COFF 2**16 section limit.
   if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -693,7 +700,8 @@ if( MSVC )
     has_msvc_incremental_no_flag("${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_MODULE_LINKER_FLAGS}" NO_INCR_MODULE)
     has_msvc_incremental_no_flag("${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_SHARED_LINKER_FLAGS}" NO_INCR_SHARED)
     if (NO_INCR_EXE AND NO_INCR_MODULE AND NO_INCR_SHARED)
-      append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      # The /Brepro flag in `clang-cl` omits the timestamp for .obj files while the linker flag omits the timestamp for .exe and .dll files.
+      append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
     else()
       message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
     endif()
@@ -966,7 +974,7 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   endif()
 
   # Enable -Wctad-maybe-unsupported to catch unintended use of CTAD.
-  add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSPPORTED_FLAG)
+  add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSUPPORTED_FLAG)
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
@@ -1145,6 +1153,25 @@ if (LLVM_USE_SPLIT_DWARF AND
   endif()
 endif()
 
+# For PIC builds, enable RELR if supported by the linker and loader.
+# glibc supports RELR since 2.36. musl supports RELR since 1.2.4, but there's
+# no easy way to detect or feature-test this.
+if (LLVM_ENABLE_PIC AND LLVM_USING_GLIBC)
+  CHECK_CXX_SOURCE_COMPILES("
+  #include <cstdio>
+  #if __GLIBC__ < 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ < 36)
+  #error
+  #endif
+  int main() { return 0; }
+  " GLIBC_2_36_OR_NEWER)
+  if (GLIBC_2_36_OR_NEWER)
+    include(CheckLinkerFlag)
+    check_linker_flag(CXX "-Wl,-z,pack-relative-relocs" LINKER_SUPPORTS_RELR)
+    append_if(LINKER_SUPPORTS_RELR "-Wl,-z,pack-relative-relocs"
+      CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  endif()
+endif()
+
 add_compile_definitions(__STDC_CONSTANT_MACROS)
 add_compile_definitions(__STDC_FORMAT_MACROS)
 add_compile_definitions(__STDC_LIMIT_MACROS)
@@ -1159,7 +1186,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^nvptx64")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"

@@ -1,8 +1,8 @@
 if(LIBC_CONF_SCANF_DISABLE_FLOAT)
-  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_FLOAT")
+  libc_add_definition(scanf_config_copts "LIBC_COPT_SCANF_DISABLE_FLOAT")
 endif()
 if(LIBC_CONF_SCANF_DISABLE_INDEX_MODE)
-  list(APPEND scanf_config_copts "-DLIBC_COPT_SCANF_DISABLE_INDEX_MODE")
+  libc_add_definition(scanf_config_copts "LIBC_COPT_SCANF_DISABLE_INDEX_MODE")
 endif()
 if(scanf_config_copts)
   list(PREPEND scanf_config_copts "COMPILE_OPTIONS")
@@ -14,7 +14,6 @@ if(LIBC_TARGET_OS_IS_GPU)
   list(APPEND file_deps
     libc.src.stdio.getc
     libc.src.stdio.ungetc
-    libc.src.stdio.ferror
   )
 elseif(LLVM_LIBC_FULL_BUILD)
   list(APPEND file_deps

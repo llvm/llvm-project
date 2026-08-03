@@ -236,7 +236,9 @@ LoongArchMCExpr::Specifier LoongArch::parseSpecifier(StringRef name) {
 
 void LoongArchMCAsmInfo::anchor() {}
 
-LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT) {
+LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT,
+                                       const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   AlignmentIsInBytes = false;
   Data8bitsDirective = "\t.byte\t";

@@ -96,6 +96,12 @@ public:
   /// control-flow paths where an SSA-value is undefined.
   virtual Value getUndefValue(Location loc, OpBuilder &builder, Type type) = 0;
 
+  /// Returns true if this operation (which has >1 successors) can be
+  /// converted to structured control flow by `createStructuredBranchRegionOp`.
+  /// Called during precondition checking, before any IR modifications.
+  /// Default implementation accepts all ops.
+  virtual bool canConvertMultiSuccessorBranchOp(Operation *op) { return true; }
+
   /// Creates a return-like terminator indicating unreachable.
   /// This is required when the transformation encounters a statically known
   /// infinite loop. Since structured control flow ops are not terminators,
@@ -143,9 +149,10 @@ public:
 /// Otherwise a single control flow graph operation branching to one block
 /// per return-like operation kind remains.
 ///
-/// The transformation currently requires that all control flow graph operations
-/// have no side effects, implement the BranchOpInterface and does not have any
-/// operation produced successor operands.
+/// The transformation currently requires that the region has no unreachable
+/// blocks and that all control flow graph operations have no side effects,
+/// implement the BranchOpInterface and does not have any operation produced
+/// successor operands.
 /// Returns failure if any of the preconditions are violated or if any of the
 /// methods of `interface` failed. The IR is left in an unspecified state.
 ///

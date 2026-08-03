@@ -576,10 +576,13 @@ uint32_t SIPreEmitPeephole::mapToUnpackedOpcode(MachineInstr &I) {
   // e32 instructions don't allow source modifiers.
   switch (Opcode) {
   case AMDGPU::V_PK_ADD_F32:
+  case AMDGPU::V_PK_ADD_F32_gfx1250:
     return AMDGPU::V_ADD_F32_e64;
   case AMDGPU::V_PK_MUL_F32:
+  case AMDGPU::V_PK_MUL_F32_gfx1250:
     return AMDGPU::V_MUL_F32_e64;
   case AMDGPU::V_PK_FMA_F32:
+  case AMDGPU::V_PK_FMA_F32_gfx1250:
     return AMDGPU::V_FMA_F32_e64;
   default:
     return std::numeric_limits<uint32_t>::max();
@@ -766,8 +769,6 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
 PreservedAnalyses
 llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
-  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
   auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
   SIPreEmitPeephole Impl;
 
@@ -777,10 +778,6 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
     return PA;
   }
 
-  if (MDT)
-    MDT->updateBlockNumbers();
-  if (MPDT)
-    MPDT->updateBlockNumbers();
   return PreservedAnalyses::all();
 }
 

@@ -93,8 +93,8 @@ struct PrintingPolicy {
         PrintAsCanonical(false), PrintInjectedClassNameWithArguments(true),
         UsePreferredNames(true), AlwaysIncludeTypeForTemplateArgument(false),
         CleanUglifiedParameters(false), EntireContentsOfLargeArray(true),
-        UseEnumerators(true), UseHLSLTypes(LO.HLSL),
-        SuppressDeclAttributes(false) {}
+        PrettyEnums(true), UseEnumerators(true), UseHLSLTypes(LO.HLSL),
+        SuppressDeclAttributes(false), SuppressLambdaBody(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -357,6 +357,11 @@ struct PrintingPolicy {
   LLVM_PREFERRED_TYPE(bool)
   unsigned EntireContentsOfLargeArray : 1;
 
+  /// Whether to print enumerators with a matching enumerator name or via cast
+  //  of an integer.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned PrettyEnums : 1;
+
   /// Whether to print enumerator non-type template parameters with a matching
   /// enumerator name or via cast of an integer.
   LLVM_PREFERRED_TYPE(bool)
@@ -370,6 +375,10 @@ struct PrintingPolicy {
   /// Whether to suppress attributes in decl printing.
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressDeclAttributes : 1;
+
+  /// Whether to suppress printing the body of a lambda.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SuppressLambdaBody : 1;
 
   /// Callbacks to use to allow the behavior of printing to be customized.
   const PrintingCallbacks *Callbacks = nullptr;

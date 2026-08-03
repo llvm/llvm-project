@@ -1492,14 +1492,6 @@ bool Scop::isDominatedBy(const DominatorTree &DT, BasicBlock *BB) const {
   return DT.dominates(BB, getEntry());
 }
 
-void Scop::buildContext() {
-  isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
-  Context = isl::set::universe(Space);
-  InvalidContext = isl::set::empty(Space);
-  AssumedContext = isl::set::universe(Space);
-  DefinedBehaviorContext = isl::set::universe(Space);
-}
-
 void Scop::addParameterBounds() {
   unsigned PDim = 0;
   for (auto *Parameter : Parameters) {
@@ -1630,8 +1622,20 @@ Scop::Scop(Region &R, ScalarEvolution &ScalarEvolution, LoopInfo &LI,
                         IslParseFlags);
 
   if (IslOnErrorAbort)
-    isl_options_set_on_error(getIslCtx().get(), ISL_ON_ERROR_ABORT);
-  buildContext();
+    isl_options_set_on_error(IslCtx.get(), ISL_ON_ERROR_ABORT);
+
+  isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
+  Context = isl::set::universe(Space);
+  InvalidContext = isl::set::empty(Space);
+  AssumedContext = isl::set::universe(Space);
+  DefinedBehaviorContext = isl::set::universe(Space);
+}
+
+std::unique_ptr<Scop> Scop::makeScop(Region &R, ScalarEvolution &SE,
+                                     LoopInfo &LI, DominatorTree &DT,
+                                     ScopDetection::DetectionContext &DC,
+                                     OptimizationRemarkEmitter &ORE, int ID) {
+  return std::unique_ptr<Scop>{new Scop(R, SE, LI, DT, DC, ORE, ID)};
 }
 
 Scop::~Scop() = default;
@@ -2169,13 +2173,14 @@ isl::ctx Scop::getIslCtx() const { return IslCtx.get(); }
 
 __isl_give PWACtx Scop::getPwAff(const SCEV *E, BasicBlock *BB,
                                  bool NonNegative,
-                                 RecordedAssumptionsTy *RecordedAssumptions) {
+                                 RecordedAssumptionsTy *RecordedAssumptions,
+                                 bool IsInsideDomain) {
   // First try to use the SCEVAffinator to generate a piecewise defined
   // affine function from @p E in the context of @p BB. If that tasks becomes to
   // complex the affinator might return a nullptr. In such a case we invalidate
   // the SCoP and return a dummy value. This way we do not need to add error
   // handling code to all users of this function.
-  auto PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions);
+  PWACtx PWAC = Affinator.getPwAff(E, BB, RecordedAssumptions, IsInsideDomain);
   if (!PWAC.first.is_null()) {
     // TODO: We could use a heuristic and either use:
     //         SCEVAffinator::takeNonNegativeAssumption

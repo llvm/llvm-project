@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clc/workitem/clc_get_global_offset.h"
 #include <amdhsa_abi.h>
-#include <clc/workitem/clc_get_global_offset.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t __clc_get_global_offset(uint dim) {
   __constant amdhsa_implicit_kernarg_v5 *implicit_args =

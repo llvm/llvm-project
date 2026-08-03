@@ -9,6 +9,10 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 #define _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H
 
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
 #include <__algorithm/inplace_merge.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/max.h>
@@ -33,6 +37,7 @@
 #include <__pstl/cpu_algos/find_if.h>
 #include <__pstl/cpu_algos/for_each.h>
 #include <__pstl/cpu_algos/merge.h>
+#include <__pstl/cpu_algos/mismatch.h>
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
@@ -48,6 +53,7 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
 
 namespace __libdispatch {
@@ -236,7 +242,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
       auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
       auto __index           = __chunk == 0 ? 0
                                             : (__chunk * __partitions.__chunk_size_) +
-                                        (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+                                                  (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
       if (__this_chunk_size != 1) {
         std::__construct_at(
             __values.get() + __chunk,
@@ -364,6 +370,10 @@ struct __merge<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_merge<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
+struct __mismatch<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_mismatch<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
 struct __stable_sort<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_stable_sort<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
@@ -393,6 +403,7 @@ struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_fill<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 } // namespace __pstl
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

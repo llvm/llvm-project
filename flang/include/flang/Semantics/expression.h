@@ -23,11 +23,8 @@
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
-#include "flang/Support/Fortran.h"
 #include <map>
 #include <optional>
-#include <stack>
-#include <type_traits>
 #include <variant>
 
 using namespace Fortran::parser::literals;
@@ -169,6 +166,7 @@ public:
   MaybeExpr Analyze(const parser::DataStmtValue &);
   MaybeExpr Analyze(const parser::AllocateObject &);
   MaybeExpr Analyze(const parser::PointerObject &);
+  MaybeExpr Analyze(const parser::ConditionalExpr &);
 
   template <typename A> MaybeExpr Analyze(const common::Indirection<A> &x) {
     return Analyze(x.value());
@@ -251,6 +249,8 @@ public:
   MaybeExpr Analyze(const parser::InitialDataTarget &);
   MaybeExpr Analyze(const parser::NullInit &);
   MaybeExpr Analyze(const parser::StmtFunctionStmt &);
+  MaybeExpr Analyze(const parser::FunctionReference &,
+      std::optional<parser::StructureConstructor> * = nullptr);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -264,6 +264,11 @@ public:
   // the returned value.
   common::Restorer<bool> AllowWholeAssumedSizeArray(bool yes = true) {
     return common::ScopedSet(isWholeAssumedSizeArrayOk_, yes);
+  }
+  // Allows a TYPE(*) assumed-type dummy to appear as an expression for the
+  // lifetime of the returned restorer.
+  common::Restorer<bool> AllowAssumedTypeDummy(bool yes = true) {
+    return common::ScopedSet(isAssumedTypeDummyOk_, yes);
   }
 
 protected:
@@ -292,8 +297,6 @@ private:
   MaybeExpr Analyze(const parser::CharLiteralConstantSubstring &);
   MaybeExpr Analyze(const parser::SubstringInquiry &);
   MaybeExpr Analyze(const parser::ArrayConstructor &);
-  MaybeExpr Analyze(const parser::FunctionReference &,
-      std::optional<parser::StructureConstructor> * = nullptr);
   MaybeExpr Analyze(const parser::Expr::Parentheses &);
   MaybeExpr Analyze(const parser::Expr::UnaryPlus &);
   MaybeExpr Analyze(const parser::Expr::Negate &);
@@ -377,7 +380,7 @@ private:
       const AdjustActuals &, bool isSubroutine, SymbolVector &&tried,
       bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
-      bool isSubroutine, ActualArguments &, const SymbolVector &,
+      bool isSubroutine, const ActualArguments &, const SymbolVector &,
       const AdjustActuals &);
   const Symbol &AccessSpecific(
       const Symbol &originalGeneric, const Symbol &specific);
@@ -413,6 +416,9 @@ private:
   };
   MaybeExpr CheckStructureConstructor(parser::CharBlock typeName,
       const semantics::DerivedTypeSpec &, std::list<ComponentSpec> &&);
+  MaybeExpr AnalyzeEnumerationConstructor(parser::CharBlock typeName,
+      const semantics::DerivedTypeSpec &,
+      const std::list<parser::ComponentSpec> &);
 
   MaybeExpr IterativelyAnalyzeSubexpressions(const parser::Expr &);
 
@@ -424,6 +430,7 @@ private:
       implicitInterfaces_;
   bool isWholeAssumedSizeArrayOk_{false};
   bool isNullPointerOk_{false};
+  bool isAssumedTypeDummyOk_{false};
   bool useSavedTypedExprs_{true};
   bool inWhereBody_{false};
   bool inDataStmtObject_{false};
@@ -469,6 +476,9 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
 void NoteUsedSymbols(
     SemanticsContext &, const SomeExpr &, bool isDefinition = false);
 
+bool CheckMisparsedArrayElement(
+    SemanticsContext &, const parser::FunctionReference &);
+
 // Semantic analysis of all expressions in a parse tree, which becomes
 // decorated with typed representations for top-level expressions.
 class ExprChecker {
@@ -502,6 +512,11 @@ public:
   bool Pre(const parser::PointerObject &x) {
     AnalyzeAndNoteUses(x, /*isDefinition=*/true);
     return false;
+  }
+  bool Pre(const parser::Enumerator &x) {
+    const auto &init{
+        std::get<std::optional<parser::ScalarIntConstantExpr>>(x.t)};
+    return !init || !parser::IsBOZLiteral(*init);
   }
   bool Pre(const parser::DataStmtObject &);
   void Post(const parser::DataStmtObject &);

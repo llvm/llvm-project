@@ -9,12 +9,13 @@ static_library("performance") {
     "//clang/lib/Analysis",
     "//clang/lib/Basic",
     "//clang/lib/Lex",
+    "//clang/lib/Tooling",
     "//llvm/lib/Support",
   ]
   sources = [
     "AvoidEndlCheck.cpp",
     "EnumSizeCheck.cpp",
-    "FasterStringFindCheck.cpp",
+    "ExpensiveValueOrCheck.cpp",
     "ForRangeCopyCheck.cpp",
     "ImplicitConversionInLoopCheck.cpp",
     "InefficientAlgorithmCheck.cpp",
@@ -29,6 +30,7 @@ static_library("performance") {
     "NoexceptMoveConstructorCheck.cpp",
     "NoexceptSwapCheck.cpp",
     "PerformanceTidyModule.cpp",
+    "PreferSingleCharOverloadsCheck.cpp",
     "StringViewConversionsCheck.cpp",
     "TriviallyDestructibleCheck.cpp",
     "TypePromotionInMathFnCheck.cpp",

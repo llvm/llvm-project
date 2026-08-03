@@ -16,8 +16,14 @@ using namespace lldb;
 using namespace lldb_fuzzer;
 using namespace llvm;
 
+extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
+  SBDebugger::Initialize();
+  return 0;
+}
+
 extern "C" int LLVMFuzzerTestOneInput(uint8_t *data, size_t size) {
-  static SBDebuggerContextManager ctx_manager = SBDebuggerContextManager();
+  static thread_local SBDebuggerContextManager ctx_manager =
+      SBDebuggerContextManager();
 
   std::unique_ptr<TempFile> file = TempFile::Create(data, size);
   if (!file)

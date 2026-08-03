@@ -121,7 +121,7 @@ static OpFoldResult foldBinaryOpChecked(
 /// `x = op(v, c1); y = op(x, c2)` -> `tmp = op(c1, c2); y = op(v, tmp)`
 /// where c1 and c2 are constants. It is expected that `tmp` will be folded.
 template <typename BinaryOp>
-LogicalResult
+static LogicalResult
 canonicalizeAssociativeCommutativeBinaryOp(BinaryOp op,
                                            PatternRewriter &rewriter) {
   if (!mlir::matchPattern(op.getRhs(), mlir::m_Constant()))
@@ -583,8 +583,8 @@ OpFoldResult CastUOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 /// Compare two integers according to the comparison predicate.
-bool compareIndices(const APInt &lhs, const APInt &rhs,
-                    IndexCmpPredicate pred) {
+static bool compareIndices(const APInt &lhs, const APInt &rhs,
+                           IndexCmpPredicate pred) {
   switch (pred) {
   case IndexCmpPredicate::EQ:
     return lhs.eq(rhs);

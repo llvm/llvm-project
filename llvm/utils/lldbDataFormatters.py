@@ -6,7 +6,6 @@ Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 
 from __future__ import annotations
 
-import collections
 from typing import Literal, Optional
 import lldb
 
@@ -370,48 +369,85 @@ class PointerUnionSynthProvider:
 
         return self.pointer_valobj
 
+    @staticmethod
+    def _get_low_bits_for_type(ty: lldb.SBType) -> int:
+        """Return NumLowBitsAvailable for a pointer type (from pointee byte alignment)."""
+        pointee = ty.GetPointeeType()
+        if pointee.IsValid():
+            align = pointee.GetByteAlign()
+            return align.bit_length() - 1 if align > 0 else 0
+        return 0
+
+    def _make_pointer_value(self, name, pointer, ty):
+        """Create an SBValue for a pointer, using proper byte order and address size."""
+        data = lldb.SBData.CreateDataFromUInt64Array(
+            self.valobj.target.GetByteOrder(),
+            self.valobj.process.GetAddressByteSize(),
+            [pointer],
+        )
+        return self.valobj.CreateValueFromData(name, data, ty)
+
     def update(self):
-        pointer_int_pair: lldb.SBValue = self.valobj.GetChildMemberWithName(
-            "Val"
-        ).GetSyntheticValue()
+        self.pointer_valobj = None
 
-        if not pointer_int_pair:
+        valobj_type = self.valobj.GetType()
+        num_args = valobj_type.GetNumberOfTemplateArguments()
+        if num_args == 0:
             return
 
-        pointer: lldb.SBValue = pointer_int_pair.GetChildAtIndex(0)
-        if not pointer:
+        # Read the raw uintptr_t from PunnedPointer<void*>.
+        val: lldb.SBValue = self.valobj.GetChildMemberWithName("Val")
+        if not val:
             return
-
-        active_tag: lldb.SBValue = pointer_int_pair.GetChildAtIndex(1)
-        if not active_tag:
-            return
-
-        # Index into the parameter pack of llvm::PointerUnion to find the active type.
-        active_type: lldb.SBType = self.valobj.GetType().GetTemplateArgumentType(
-            active_tag.GetValueAsUnsigned()
+        byteorder = (
+            "big"
+            if self.valobj.target.GetByteOrder() == lldb.eByteOrderBig
+            else "little"
         )
+        raw_bytes = val.GetData().uint8s
+        if not raw_bytes:
+            return
+        raw_value = int.from_bytes(raw_bytes, byteorder)
+
+        # Compute tag from type alignments (fixed-width encoding).
+        tag_bits = (num_args - 1).bit_length()
+        min_low_bits = min(
+            self._get_low_bits_for_type(valobj_type.GetTemplateArgumentType(i))
+            for i in range(num_args)
+        )
+        if tag_bits > min_low_bits:
+            return self._set_raw_pointer(raw_value, min_low_bits)
+        tag_shift = min_low_bits - tag_bits
+        tag_mask = (1 << tag_bits) - 1
+        active_tag = (raw_value >> tag_shift) & tag_mask
+
+        if active_tag >= num_args:
+            return self._set_raw_pointer(raw_value, min_low_bits)
+
+        active_type: lldb.SBType = valobj_type.GetTemplateArgumentType(active_tag)
         if not active_type:
-            return
+            return self._set_raw_pointer(raw_value, min_low_bits)
 
-        data = lldb.SBData()
-        data.SetDataFromUInt64Array([pointer.GetValueAsUnsigned()])
+        # Clear the active type's low bits to recover the pointer.
+        low_bits = self._get_low_bits_for_type(active_type)
+        pointer = raw_value & ~((1 << low_bits) - 1)
 
-        self.pointer_valobj = self.valobj.CreateValueFromData(
-            "Pointer", data, active_type
-        )
+        self.pointer_valobj = self._make_pointer_value("Pointer", pointer, active_type)
+
+    def _set_raw_pointer(self, raw_value, min_low_bits):
+        """Fallback: strip tag bits and show as void* when active type is unknown."""
+        pointer = raw_value & ~((1 << min_low_bits) - 1)
+        void_ptr_ty = self.valobj.target.FindFirstType("void").GetPointerType()
+        if void_ptr_ty.IsValid():
+            self.pointer_valobj = self._make_pointer_value(
+                "Pointer", pointer, void_ptr_ty
+            )
 
 
 def DenseMapSummary(valobj: lldb.SBValue, _) -> str:
     raw_value = valobj.GetNonSyntheticValue()
     num_entries = raw_value.GetChildMemberWithName("NumEntries").unsigned
-    num_tombstones = raw_value.GetChildMemberWithName("NumTombstones").unsigned
-
-    summary = f"size={num_entries}"
-    if num_tombstones == 1:
-        # The heuristic to identify valid entries does not handle the case of a
-        # single tombstone. The summary calls attention to this.
-        summary = f"tombstones=1, {summary}"
-    return summary
+    return f"size={num_entries}"
 
 
 class DenseMapSynthetic:
@@ -448,31 +484,18 @@ class DenseMapSynthetic:
         if num_entries == 0:
             return
 
-        buckets = self.valobj.GetChildMemberWithName("Buckets")
         num_buckets = self.valobj.GetChildMemberWithName("NumBuckets").unsigned
+        used = self.valobj.GetChildMemberWithName("Used")
 
-        # Bucket entries contain one of the following:
-        #   1. Valid key-value
-        #   2. Empty key
-        #   3. Tombstone key (a deleted entry)
-        #
-        # NumBuckets is always greater than NumEntries. The empty key, and
-        # potentially the tombstone key, will occur multiple times. A key that
-        # is repeated is either the empty key or the tombstone key.
-
-        # For each key, collect a list of buckets it appears in.
-        key_buckets: dict[str, list[int]] = collections.defaultdict(list)
+        # Occupancy is tracked in a packed 1-bit-per-bucket "used" array of
+        # uint32_t words. A bucket holds a valid entry iff its bit is set;
+        # empty and erased buckets are clear. Read the whole array in one go
+        # rather than fetching each word with a separate expression path.
+        num_words = (num_buckets + 31) // 32
+        words = used.GetPointeeData(0, num_words).uint32s
         for index in range(num_buckets):
-            bucket = buckets.GetValueForExpressionPath(f"[{index}]")
-            key = bucket.GetChildAtIndex(0)
-            key_buckets[str(key.data)].append(index)
-
-        # Heuristic: This is not a multi-map, any repeated (non-unique) keys are
-        # either the the empty key or the tombstone key. Populate child_buckets
-        # with the indexes of entries containing unique keys.
-        for indexes in key_buckets.values():
-            if len(indexes) == 1:
-                self.child_buckets.append(indexes[0])
+            if (words[index >> 5] >> (index & 31)) & 1:
+                self.child_buckets.append(index)
 
 
 class DenseSetSynthetic:

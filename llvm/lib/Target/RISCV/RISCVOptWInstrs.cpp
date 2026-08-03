@@ -429,6 +429,14 @@ static bool isSignExtendingOpW(const MachineInstr &MI, unsigned OpNo) {
     unsigned Lsb = MI.getOperand(3).getImm();
     return Msb >= Lsb && (Msb - Lsb + 1) < 32;
   }
+  case RISCV::SATI_RV64:
+    // Saturates to signed range [-2^(imm-1), 2^(imm-1)-1].
+    // If imm <= 32, result fits in 32-bit signed range, thus sign-extended.
+    return MI.getOperand(2).getImm() <= 32;
+  case RISCV::USATI_RV64:
+    // Saturates to unsigned range [0, 2^imm-1].
+    // If imm < 32, result has bit 31 clear, thus sign-extended.
+    return MI.getOperand(2).getImm() < 32;
   }
 
   return false;
@@ -663,6 +671,16 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       return false;
     }
 
+    case RISCV::LD:
+    case RISCV::LXD: {
+      if (MI->hasOneMemOperand() && !(*MI->memoperands_begin())->isVolatile() &&
+          hasAllWUsers(*MI, ST, MRI)) {
+        FixableDef.insert(MI);
+        break;
+      }
+      return false;
+    }
+
     // With these opcode, we can "fix" them with the W-version
     // if we know all users of the result only rely on bits 31:0
     case RISCV::SLLI:
@@ -671,8 +689,8 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         return false;
       [[fallthrough]];
     case RISCV::ADD:
-    case RISCV::LD:
     case RISCV::LWU:
+    case RISCV::LXWU:
     case RISCV::MUL:
     case RISCV::SUB:
       if (hasAllWUsers(*MI, ST, MRI)) {
@@ -697,6 +715,9 @@ static unsigned getWOp(unsigned Opcode) {
   case RISCV::LD:
   case RISCV::LWU:
     return RISCV::LW;
+  case RISCV::LXD:
+  case RISCV::LXWU:
+    return RISCV::LXW;
   case RISCV::MUL:
     return RISCV::MULW;
   case RISCV::SLLI:
@@ -812,8 +833,20 @@ bool RISCVOptWInstrs::canonicalizeWSuffixes(MachineFunction &MF,
         WOpc = RISCV::SLLIW;
         break;
       case RISCV::LD:
+        if (!MI.hasOneMemOperand() || (*MI.memoperands_begin())->isVolatile())
+          continue;
+        WOpc = RISCV::LW;
+        break;
       case RISCV::LWU:
         WOpc = RISCV::LW;
+        break;
+      case RISCV::LXD:
+        if (!MI.hasOneMemOperand() || (*MI.memoperands_begin())->isVolatile())
+          continue;
+        WOpc = RISCV::LXW;
+        break;
+      case RISCV::LXWU:
+        WOpc = RISCV::LXW;
         break;
       }
 

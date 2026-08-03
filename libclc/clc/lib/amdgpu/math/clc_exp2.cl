@@ -10,6 +10,6 @@
 
 #define __CLC_FUNCTION __clc_exp2
 #define __CLC_IMPL_FUNCTION(x) __builtin_elementwise_exp2
-#define __CLC_BODY <clc/shared/unary_def.inc>
+#define __CLC_BODY "clc/shared/unary_def.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"

@@ -50,14 +50,6 @@ end subroutine
 ! CHECK:           return
 ! CHECK:         }
 
-! CHECK-LABEL:   fir.global @_QMm_bug_145151_2Ei : i64 {
-! CHECK:           %[[VAL_0:.*]] = fir.zero_bits i64
-! CHECK:           fir.has_value %[[VAL_0]] : i64
-! CHECK:         }
-
-
-
-
 module m_bug_145151_2
   integer(8) :: i
 end module
@@ -288,4 +280,9 @@ end subroutine
 ! CHECK:           hlfir.assign %[[VAL_14]] to %[[VAL_1]]#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:           hlfir.destroy %[[VAL_14]] : !hlfir.expr<?x!fir.char<1,?>>
 ! CHECK:           return
+! CHECK:         }
+
+! CHECK-LABEL:   fir.global @_QMm_bug_145151_2Ei : i64 {
+! CHECK:           %[[VAL_0:.*]] = fir.zero_bits i64
+! CHECK:           fir.has_value %[[VAL_0]] : i64
 ! CHECK:         }

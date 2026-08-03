@@ -1152,6 +1152,8 @@ void SourceCoverageViewHTML::renderBranchView(raw_ostream &OS, BranchView &BRV,
 
 void SourceCoverageViewHTML::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
                                             unsigned ViewDepth) {
+  const bool ShowNonExecutedVectors = getOptions().ShowMCDCNonExecutedVectors;
+
   for (auto &Record : MRV.Records) {
     OS << BeginExpansionDiv;
     OS << BeginPre;
@@ -1179,10 +1181,33 @@ void SourceCoverageViewHTML::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
       OS << "     " << Record.getConditionHeaderString(i);
     }
     OS << "\n";
-    OS << "  Executed MC/DC Test Vectors:\n\n     ";
-    OS << Record.getTestVectorHeaderString();
-    for (unsigned i = 0; i < Record.getNumTestVectors(); i++)
-      OS << Record.getTestVectorString(i);
+    OS << "  MC/DC Test Vectors\n\n";
+
+    const unsigned NumExecuted = Record.getNumTestVectors();
+    const unsigned NumNotExecuted = Record.getNumNotExecutedTestVectors();
+
+    const std::string HeaderStr = Record.getTestVectorHeaderString();
+
+    OS << "  Executed:\n\n     ";
+    if (NumExecuted == 0) {
+      OS << "None.\n";
+    } else {
+      OS << HeaderStr;
+      for (unsigned k = 0; k < NumExecuted; k++)
+        OS << Record.getTestVectorString(k);
+    }
+
+    if (ShowNonExecutedVectors) {
+      OS << "\n  Not executed:\n\n     ";
+      if (NumNotExecuted == 0) {
+        OS << "None.\n";
+      } else {
+        OS << HeaderStr;
+        for (unsigned k = 0; k < NumNotExecuted; k++)
+          OS << Record.getNotExecutedTestVectorString(k);
+      }
+    }
+
     OS << "\n";
     for (unsigned i = 0; i < Record.getNumConditions(); i++)
       OS << Record.getConditionCoverageString(i);

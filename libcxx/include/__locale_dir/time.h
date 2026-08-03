@@ -11,6 +11,7 @@
 
 #include <__algorithm/copy.h>
 #include <__config>
+#include <__locale>
 #include <__locale_dir/get_c_locale.h>
 #include <__locale_dir/scan_keyword.h>
 #include <ios>
@@ -22,6 +23,7 @@
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _CharT, class _InputIterator>
 _LIBCPP_HIDE_FROM_ABI int __get_up_to_n_digits(
@@ -755,6 +757,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION

@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -83,6 +84,15 @@ static SmallVector<Value> computeStrides(Location loc, RewriterBase &rewriter,
   return result;
 }
 
+/// Broadcast a scalar value to match the given type. If the type is already
+/// scalar, returns the value as-is. For vector types, uses vector.broadcast.
+static Value broadcastToMatchType(RewriterBase &rewriter, Location loc,
+                                  Value value, Type targetType) {
+  if (value.getType() == targetType)
+    return value;
+  return vector::BroadcastOp::create(rewriter, loc, targetType, value);
+}
+
 LogicalResult
 affine::lowerAffineDelinearizeIndexOp(RewriterBase &rewriter,
                                       AffineDelinearizeIndexOp op) {
@@ -104,7 +114,14 @@ affine::lowerAffineDelinearizeIndexOp(RewriterBase &rewriter,
       computeStrides(loc, rewriter, op.getDynamicBasis(), staticBasis,
                      /*knownNonNegative=*/true);
 
-  Value zero = rewriter.createOrFold<arith::ConstantIndexOp>(loc, 0);
+  // Broadcast strides and zero to match the linear index type (needed for
+  // vector types where the strides are scalar but the index is a vector).
+  Type indexType = linearIdx.getType();
+  for (Value &stride : strides)
+    stride = broadcastToMatchType(rewriter, loc, stride, indexType);
+
+  Value zero =
+      arith::ConstantOp::create(rewriter, loc, rewriter.getZeroAttr(indexType));
 
   Value initialPart =
       arith::FloorDivSIOp::create(rewriter, loc, linearIdx, strides.front());
@@ -146,12 +163,14 @@ LogicalResult affine::lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
                                                   AffineLinearizeIndexOp op) {
   // Should be folded away, included here for safety.
   if (op.getMultiIndex().empty()) {
-    rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+        op, rewriter.getZeroAttr(op.getLinearIndex().getType()));
     return success();
   }
 
   Location loc = op.getLoc();
   ValueRange multiIndex = op.getMultiIndex();
+  Type indexType = op.getLinearIndex().getType();
   size_t numIndexes = multiIndex.size();
   ArrayRef<int64_t> staticBasis = op.getStaticBasis();
   if (numIndexes == staticBasis.size())
@@ -160,6 +179,11 @@ LogicalResult affine::lowerAffineLinearizeIndexOp(RewriterBase &rewriter,
   SmallVector<Value> strides =
       computeStrides(loc, rewriter, op.getDynamicBasis(), staticBasis,
                      /*knownNonNegative=*/op.getDisjoint());
+
+  // Broadcast strides to match the index type (needed for vector types).
+  for (Value &stride : strides)
+    stride = broadcastToMatchType(rewriter, loc, stride, indexType);
+
   SmallVector<std::pair<Value, int64_t>> scaledValues;
   scaledValues.reserve(numIndexes);
 

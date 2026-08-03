@@ -7,27 +7,27 @@ declare double @llvm.amdgcn.sin.f64(double) #0
 
 define void @test_f16(ptr %p) {
 ; CHECK-LABEL: @test_f16(
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P:%.*]], align 2
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xH39A8, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xHB9A8, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xH3C00, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xHBC00, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]], align 2
-; CHECK-NEXT:    store volatile half 0xH0000, ptr [[P]], align 2
-; CHECK-NEXT:    [[P1000:%.*]] = call half @llvm.amdgcn.sin.f16(half 0xH63D0)
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half 7.070310e-01, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half -7.070310e-01, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half 1.000000e+00, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half -1.000000e+00, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]], align 2
+; CHECK-NEXT:    store volatile half 0.000000e+00, ptr [[P]], align 2
+; CHECK-NEXT:    [[P1000:%.*]] = call half @llvm.amdgcn.sin.f16(half 1.000000e+03)
 ; CHECK-NEXT:    store volatile half [[P1000]], ptr [[P]], align 2
-; CHECK-NEXT:    [[N1000:%.*]] = call half @llvm.amdgcn.sin.f16(half 0xHE3D0)
+; CHECK-NEXT:    [[N1000:%.*]] = call half @llvm.amdgcn.sin.f16(half -1.000000e+03)
 ; CHECK-NEXT:    store volatile half [[N1000]], ptr [[P]], align 2
-; CHECK-NEXT:    [[PINF:%.*]] = call half @llvm.amdgcn.sin.f16(half 0xH7C00)
+; CHECK-NEXT:    [[PINF:%.*]] = call half @llvm.amdgcn.sin.f16(half +inf)
 ; CHECK-NEXT:    store volatile half [[PINF]], ptr [[P]], align 2
-; CHECK-NEXT:    [[NINF:%.*]] = call half @llvm.amdgcn.sin.f16(half 0xHFC00)
+; CHECK-NEXT:    [[NINF:%.*]] = call half @llvm.amdgcn.sin.f16(half -inf)
 ; CHECK-NEXT:    store volatile half [[NINF]], ptr [[P]], align 2
-; CHECK-NEXT:    [[NAN:%.*]] = call half @llvm.amdgcn.sin.f16(half 0xH7E00)
+; CHECK-NEXT:    [[NAN:%.*]] = call half @llvm.amdgcn.sin.f16(half +qnan)
 ; CHECK-NEXT:    store volatile half [[NAN]], ptr [[P]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -72,8 +72,8 @@ define void @test_f32(ptr %p) {
 ; CHECK-LABEL: @test_f32(
 ; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[P]], align 4
-; CHECK-NEXT:    store volatile float 0x3FE6A09E60000000, ptr [[P]], align 4
-; CHECK-NEXT:    store volatile float 0xBFE6A09E60000000, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float f0x3F3504F3, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float f0xBF3504F3, ptr [[P]], align 4
 ; CHECK-NEXT:    store volatile float 1.000000e+00, ptr [[P]], align 4
 ; CHECK-NEXT:    store volatile float -1.000000e+00, ptr [[P]], align 4
 ; CHECK-NEXT:    store volatile float 0.000000e+00, ptr [[P]], align 4
@@ -86,11 +86,11 @@ define void @test_f32(ptr %p) {
 ; CHECK-NEXT:    store volatile float [[P1000]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[N1000:%.*]] = call float @llvm.amdgcn.sin.f32(float -1.000000e+03)
 ; CHECK-NEXT:    store volatile float [[N1000]], ptr [[P]], align 4
-; CHECK-NEXT:    [[PINF:%.*]] = call float @llvm.amdgcn.sin.f32(float 0x7FF0000000000000)
+; CHECK-NEXT:    [[PINF:%.*]] = call float @llvm.amdgcn.sin.f32(float +inf)
 ; CHECK-NEXT:    store volatile float [[PINF]], ptr [[P]], align 4
-; CHECK-NEXT:    [[NINF:%.*]] = call float @llvm.amdgcn.sin.f32(float 0xFFF0000000000000)
+; CHECK-NEXT:    [[NINF:%.*]] = call float @llvm.amdgcn.sin.f32(float -inf)
 ; CHECK-NEXT:    store volatile float [[NINF]], ptr [[P]], align 4
-; CHECK-NEXT:    [[NAN:%.*]] = call float @llvm.amdgcn.sin.f32(float 0x7FF8000000000000)
+; CHECK-NEXT:    [[NAN:%.*]] = call float @llvm.amdgcn.sin.f32(float +qnan)
 ; CHECK-NEXT:    store volatile float [[NAN]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -135,8 +135,8 @@ define void @test_f64(ptr %p) {
 ; CHECK-LABEL: @test_f64(
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr [[P]], align 8
-; CHECK-NEXT:    store volatile double 0x3FE6A09E667F3B{{.*}}, ptr [[P]], align 8
-; CHECK-NEXT:    store volatile double 0xBFE6A09E667F3B{{.*}}, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile double f0x3FE6A09E667F3B{{.*}}, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile double f0xBFE6A09E667F3B{{.*}}, ptr [[P]], align 8
 ; CHECK-NEXT:    store volatile double 1.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    store volatile double -1.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    store volatile double 0.000000e+00, ptr [[P]], align 8
@@ -149,11 +149,11 @@ define void @test_f64(ptr %p) {
 ; CHECK-NEXT:    store volatile double [[P1000]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[N1000:%.*]] = call double @llvm.amdgcn.sin.f64(double -1.000000e+03)
 ; CHECK-NEXT:    store volatile double [[N1000]], ptr [[P]], align 8
-; CHECK-NEXT:    [[PINF:%.*]] = call double @llvm.amdgcn.sin.f64(double 0x7FF0000000000000)
+; CHECK-NEXT:    [[PINF:%.*]] = call double @llvm.amdgcn.sin.f64(double +inf)
 ; CHECK-NEXT:    store volatile double [[PINF]], ptr [[P]], align 8
-; CHECK-NEXT:    [[NINF:%.*]] = call double @llvm.amdgcn.sin.f64(double 0xFFF0000000000000)
+; CHECK-NEXT:    [[NINF:%.*]] = call double @llvm.amdgcn.sin.f64(double -inf)
 ; CHECK-NEXT:    store volatile double [[NINF]], ptr [[P]], align 8
-; CHECK-NEXT:    [[NAN:%.*]] = call double @llvm.amdgcn.sin.f64(double 0x7FF8000000000000)
+; CHECK-NEXT:    [[NAN:%.*]] = call double @llvm.amdgcn.sin.f64(double +qnan)
 ; CHECK-NEXT:    store volatile double [[NAN]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -196,9 +196,9 @@ define void @test_f64(ptr %p) {
 
 define void @test_f16_strictfp (ptr %p) #1 {
 ; CHECK-LABEL: @test_f16_strictfp(
-; CHECK-NEXT:    [[P0:%.*]] = call half @llvm.amdgcn.sin.f16(half 0xH0000) #1
+; CHECK-NEXT:    [[P0:%.*]] = call half @llvm.amdgcn.sin.f16(half 0.000000e+00) #1
 ; CHECK-NEXT:    store volatile half [[P0]], ptr [[P:%.*]], align 2
-; CHECK-NEXT:    [[P025:%.*]] = call half @llvm.amdgcn.sin.f16(half 0xH3400) #1
+; CHECK-NEXT:    [[P025:%.*]] = call half @llvm.amdgcn.sin.f16(half 2.500000e-01) #1
 ; CHECK-NEXT:    store volatile half [[P025]], ptr [[P]], align 2
 ; CHECK-NEXT:    ret void
 ;

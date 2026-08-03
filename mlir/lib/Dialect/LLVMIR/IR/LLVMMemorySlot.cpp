@@ -87,7 +87,13 @@ DenseMap<Attribute, MemorySlot> LLVM::AllocaOp::destructure(
 
   auto destructurableType = cast<DestructurableTypeInterface>(getElemType());
   DenseMap<Attribute, MemorySlot> slotMap;
-  for (Attribute index : usedIndices) {
+  // Iterate subelements in their original type order to produce allocas in a
+  // deterministic, readable order (matching appearance in the source type).
+  Type i32 = IntegerType::get(getContext(), 32);
+  for (size_t i = 0; i < slot.subelementTypes.size(); i++) {
+    Attribute index = IntegerAttr::get(i32, i);
+    if (!usedIndices.contains(index))
+      continue;
     Type elemType = destructurableType.getTypeAtIndex(index);
     assert(elemType && "used index must exist");
     auto subAlloca = LLVM::AllocaOp::create(
@@ -250,6 +256,11 @@ static Value createExtractAndCast(OpBuilder &builder, Location loc,
                                  /*narrowingConversion=*/true) &&
          "expected that the compatibility was checked before");
 
+  // Nothing has to be done if the types are already the same. This also
+  // avoids querying the bit size of scalable vector types below.
+  if (srcType == targetType)
+    return srcValue;
+
   uint64_t srcTypeSize = dataLayout.getTypeSizeInBits(srcType);
   uint64_t targetTypeSize = dataLayout.getTypeSizeInBits(targetType);
   if (srcTypeSize == targetTypeSize)
@@ -285,6 +296,12 @@ static Value createInsertAndCast(OpBuilder &builder, Location loc,
                                  srcValue.getType(),
                                  /*narrowingConversion=*/false) &&
          "expected that the compatibility was checked before");
+
+  // Nothing has to be done if the types are already the same. This also
+  // avoids querying the bit size of scalable vector types below.
+  if (srcValue.getType() == reachingDef.getType())
+    return srcValue;
+
   uint64_t valueTypeSize = dataLayout.getTypeSizeInBits(srcValue.getType());
   uint64_t slotTypeSize = dataLayout.getTypeSizeInBits(reachingDef.getType());
   if (slotTypeSize == valueTypeSize)

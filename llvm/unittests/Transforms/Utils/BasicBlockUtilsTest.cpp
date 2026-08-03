@@ -20,6 +20,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -373,7 +374,7 @@ exit:
   LoopInfo LI(DT);
 
   EXPECT_TRUE(DT.verify());
-  LI.verify(DT);
+  LI.verify();
   auto *LoopBB = getBasicBlockByName(*F, "loop");
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   auto *New = splitBlockBefore(LoopBB, LoopBB->getFirstInsertionPt(), &DTU, &LI,
@@ -381,7 +382,7 @@ exit:
                                LoopBB->getName() + ".split");
 
   EXPECT_TRUE(DT.verify());
-  LI.verify(DT);
+  LI.verify();
   EXPECT_EQ(LI.getLoopFor(New)->getHeader(), New);
 }
 
@@ -454,6 +455,98 @@ bb1:
   // entry block.
   SplitBlockPredecessors(&F->getEntryBlock(), {}, "split.entry", &DT);
   EXPECT_TRUE(DT.verify());
+}
+
+TEST(BasicBlockUtils, SplitLandingPadPredecessors) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+declare void @foo()
+
+define void @split-lp-predecessors-test() personality ptr null {
+entry:
+  invoke void @foo()
+          to label %loop unwind label %catch_dest
+
+loop:
+  invoke void @foo()
+          to label %latch unwind label %catch_dest
+
+latch:
+  br label %loop
+
+catch_dest:
+  %lp = landingpad i32
+          cleanup
+  invoke void @foo()
+          to label %exit unwind label %catch_dest
+
+exit:
+  ret void
+}
+)IR");
+  Function *F = M->getFunction("split-lp-predecessors-test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify();
+  SplitBlockPredecessors(getBasicBlockByName(*F, "catch_dest"),
+                         {getBasicBlockByName(*F, "loop")}, "", &DT, &LI);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify();
+  EXPECT_EQ(LI.getLoopFor(getBasicBlockByName(*F, "catch_dest")), nullptr);
+}
+
+TEST(BasicBlockUtils, SplitLandingPadPredecessorsLoopStruct) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+declare void @foo()
+
+define void @split-lp-predecessors-test(i1 %flag) personality ptr null {
+entry:
+  br label %superloop
+
+superloop:
+  invoke void @foo()
+          to label %loop unwind label %catch_dest
+
+loop:
+  invoke void @foo()
+          to label %latch unwind label %catch_dest
+
+latch:
+  br label %loop
+
+catch_dest:
+  %lp = landingpad i32
+          cleanup
+  br label %loop2
+
+loop2:
+  br i1 %flag, label %loop2, label %loop2_exit
+
+loop2_exit:
+  invoke void @foo()
+          to label %exit unwind label %catch_dest
+
+exit:
+  br label %superloop
+}
+)IR");
+  Function *F = M->getFunction("split-lp-predecessors-test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify();
+  SplitBlockPredecessors(getBasicBlockByName(*F, "catch_dest"),
+                         {getBasicBlockByName(*F, "loop")}, "", &DT, &LI);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify();
+  EXPECT_EQ(LI.getLoopFor(getBasicBlockByName(*F, "catch_dest")),
+            LI.getLoopFor(getBasicBlockByName(*F, "superloop")));
 }
 
 TEST(BasicBlockUtils, SplitCriticalEdge) {
@@ -559,7 +652,9 @@ bb4:
   Function *F = M->getFunction("crit_edge");
   DominatorTree DT(*F);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*F, LI);
+  CycleInfo CI;
+  CI.compute(*F);
+  BranchProbabilityInfo BPI(*F, CI);
   BlockFrequencyInfo BFI(*F, BPI, LI);
 
   ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/true,
@@ -601,7 +696,9 @@ bb4:
   Function *F = M->getFunction("crit_edge");
   DominatorTree DT(*F);
   LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*F, LI);
+  CycleInfo CI;
+  CI.compute(*F);
+  BranchProbabilityInfo BPI(*F, CI);
   BlockFrequencyInfo BFI(*F, BPI, LI);
 
   ASSERT_TRUE(SplitIndirectBrCriticalEdges(*F, /*IgnoreBlocksWithoutPHI=*/false,
@@ -702,8 +799,9 @@ L19:
 )IR");
   Function *F = M->getFunction("edge_probability");
   DominatorTree DT(*F);
-  LoopInfo LI(DT);
-  BranchProbabilityInfo BPI(*F, LI);
+  CycleInfo CI;
+  CI.compute(*F);
+  BranchProbabilityInfo BPI(*F, CI);
 
   // Check that the unreachable block has the minimal probability.
   const BasicBlock *EntryBB = getBasicBlockByName(*F, "entry");

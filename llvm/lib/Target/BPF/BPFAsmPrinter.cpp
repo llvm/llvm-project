@@ -20,15 +20,23 @@
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -40,11 +48,17 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
+BPFAsmPrinter::BPFAsmPrinter(TargetMachine &TM,
+                             std::unique_ptr<MCStreamer> Streamer)
+    : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr), TM(TM) {}
+
+BPFAsmPrinter::~BPFAsmPrinter() = default;
+
 bool BPFAsmPrinter::doInitialization(Module &M) {
   AsmPrinter::doInitialization(M);
 
   // Only emit BTF when debuginfo available.
-  if (MAI->doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
+  if (MAI.doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
     BTF = new BTFDebug(this);
     Handlers.push_back(std::unique_ptr<BTFDebug>(BTF));
   }
@@ -74,10 +88,9 @@ bool BPFAsmPrinter::doFinalization(Module &M) {
       if (!CA)
         continue;
 
-      for (unsigned i = 1, e = CA->getNumOperands(); i != e; ++i) {
-        if (!dyn_cast<BlockAddress>(CA->getOperand(i)))
-          continue;
-      }
+      if (!all_of(CA->operands(),
+                  [](const Use &Op) { return isa<BlockAddress>(Op); }))
+        continue;
       Targets.push_back(&Global);
     }
 
@@ -192,6 +205,61 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
+void BPFAsmPrinter::emitFunctionBodyEnd() {
+  // Emit .bpf_cleanup section with a flat table of
+  // (call_site, landing_pad) pairs.
+  const std::vector<LandingPadInfo> &LandingPads = MF->getLandingPads();
+  if (LandingPads.empty())
+    return;
+
+  MCContext &Ctx = OutContext;
+  auto *CleanupSec =
+      Ctx.getELFSection(".bpf_cleanup", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+  OutStreamer->switchSection(CleanupSec);
+
+  const auto &TypeInfos = MF->getTypeInfos();
+  const Function &F = MF->getFunction();
+  LLVMContext &LLVMCtx = F.getContext();
+
+  // Each landing pad has BeginLabels/EndLabels marking the invoke
+  // call sites that unwind to it.
+  for (const LandingPadInfo &LP : LandingPads) {
+    // BPF treats all landing pads as catch-all: the kernel redirects to
+    // the landing pad regardless of exception type. Reject type-specific
+    // catches and filters which would silently misbehave.
+    for (int TId : LP.TypeIds) {
+      if (TId > 0 && TypeInfos[TId - 1] != nullptr) {
+        LLVMCtx.diagnose(DiagnosticInfoUnsupported(
+            F, "BPF does not support type-specific exception catches yet"));
+        return;
+      }
+      if (TId < 0) {
+        LLVMCtx.diagnose(DiagnosticInfoUnsupported(
+            F, "BPF does not support exception filters yet"));
+        return;
+      }
+    }
+
+    MCSymbol *LPLabel = LP.LandingPadLabel;
+    if (!LPLabel)
+      continue;
+    for (unsigned i = 0, e = LP.BeginLabels.size(); i != e; ++i) {
+      MCSymbol *Begin = LP.BeginLabels[i];
+      MCSymbol *End = LP.EndLabels[i];
+
+      // Each entry is 3 x 4 bytes: begin, end, landing_pad.
+      // The invoke region [begin, end) may include argument setup
+      // before the call. The runtime checks begin <= PC < end.
+      OutStreamer->emitSymbolValue(Begin, 4);
+      OutStreamer->emitSymbolValue(End, 4);
+      OutStreamer->emitSymbolValue(LPLabel, 4);
+    }
+  }
+
+  // Switch back to the function's section.
+  OutStreamer->switchSection(MF->getSection());
+}
+
 MCSymbol *BPFAsmPrinter::getJTPublicSymbol(unsigned JTI) {
   SmallString<60> Name;
   raw_svector_ostream(Name)
@@ -253,4 +321,33 @@ LLVMInitializeBPFAsmPrinter() {
   RegisterAsmPrinter<BPFAsmPrinter> X(getTheBPFleTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Y(getTheBPFbeTarget());
   RegisterAsmPrinter<BPFAsmPrinter> Z(getTheBPFTarget());
+}
+
+PreservedAnalyses BPFAsmPrinterBeginPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  BPFAsmPrinter &AsmPrinter = static_cast<BPFAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses BPFAsmPrinterPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  BPFAsmPrinter &AsmPrinter = static_cast<BPFAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses BPFAsmPrinterEndPass::run(Module &M,
+                                            ModuleAnalysisManager &MAM) {
+  BPFAsmPrinter &AsmPrinter = static_cast<BPFAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

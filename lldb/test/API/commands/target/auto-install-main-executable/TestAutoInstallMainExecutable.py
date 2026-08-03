@@ -2,7 +2,6 @@
 Test target commands: target.auto-install-main-executable.
 """
 
-import socket
 import time
 import lldbgdbserverutils
 
@@ -11,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no remote platform to auto-install onto
 class TestAutoInstallMainExecutable(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False
@@ -22,27 +22,9 @@ class TestAutoInstallMainExecutable(TestBase):
             self.skipTest("lldb-server not found")
         self.build()
 
-        hostname = socket.getaddrinfo("localhost", 0, proto=socket.IPPROTO_TCP)[0][4][0]
-        listen_url = "[%s]:0" % hostname
-
-        port_file = self.getBuildArtifact("port")
-        commandline_args = [
-            "platform",
-            "--listen",
-            listen_url,
-            "--socket-file",
-            port_file,
-        ]
-        self.spawnSubprocess(lldbgdbserverutils.get_lldb_server_exe(), commandline_args)
-
-        socket_id = lldbutil.wait_for_file_on_target(self, port_file)
-
-        new_platform = lldb.SBPlatform("remote-" + self.getPlatform())
-        self.dbg.SetSelectedPlatform(new_platform)
-
-        connect_url = "connect://[%s]:%s" % (hostname, socket_id)
-        connect_opts = lldb.SBPlatformConnectOptions(connect_url)
-        self.assertSuccess(new_platform.ConnectRemote(connect_opts))
+        new_platform = lldbutil.connect_to_new_remote_platform(
+            self, lldbgdbserverutils.get_lldb_server_exe()
+        )
 
         wd = self.getBuildArtifact("wd")
         os.mkdir(wd)

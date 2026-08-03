@@ -111,6 +111,10 @@ static unsigned getMinPTXVersionForSM(unsigned FullSmVersion) {
   case SMF(110):
   case SMA(110):
     return 90;
+  case SM(107):
+  case SMF(107):
+  case SMA(107):
+    return 94;
   default:
     llvm_unreachable("Unknown SM version");
   }
@@ -216,6 +220,7 @@ bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
   case ISD::SELECT_CC:
   case ISD::SETCC:
   case ISD::FEXP2:
+  case ISD::FTANH:
   case ISD::FCEIL:
   case ISD::FFLOOR:
   case ISD::FNEARBYINT:

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/PFTBuilder.h"
-#include "flang/Lower/IntervalSet.h"
 #include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
@@ -18,12 +17,18 @@
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <limits>
 
 #define DEBUG_TYPE "flang-pft"
 
 static llvm::cl::opt<bool> clDisableStructuredFir(
     "no-structured-fir", llvm::cl::desc("disable generation of structured FIR"),
     llvm::cl::init(false), llvm::cl::Hidden);
+
+llvm::cl::opt<bool> wrapUnstructuredConstructsInExecuteRegion(
+    "wrap-unstructured-constructs-in-execute-region", llvm::cl::init(false),
+    llvm::cl::desc("try to wrap unstructured constructs' CFGs in "
+                   "self-contained MLIR regions"));
 
 using namespace Fortran;
 
@@ -215,16 +220,27 @@ public:
 
   /// Process USE statements for debug info generation.
   /// Captures USE statement information and stores it in the current
-  /// FunctionLikeUnit for later use.
+  /// FunctionLikeUnit or ModuleLikeUnit for later use.
   void processUseStmt(const parser::UseStmt &useStmt) {
     if (!loweringOptions.getPreserveUseDebugInfo())
       return;
 
-    // Only process USE statements in specification part of function-like units
-    if (specificationPartLevel == 0 || !currentFunctionUnit)
+    if (!currentFunctionUnit && !currentModuleUnit)
+      return;
+
+    // For function-like units, only process USE statements in specification
+    // part.
+    if (currentFunctionUnit && specificationPartLevel == 0)
       return;
 
     std::string moduleName{useStmt.moduleName.source.ToString()};
+
+    auto addUseStmt = [&](Fortran::semantics::PreservedUseStmt &&stmt) {
+      if (currentFunctionUnit)
+        currentFunctionUnit->preservedUseStmts.push_back(std::move(stmt));
+      else if (currentModuleUnit)
+        currentModuleUnit->preservedUseStmts.push_back(std::move(stmt));
+    };
 
     if (const auto *onlyList{
             std::get_if<std::list<parser::Only>>(&useStmt.u)}) {
@@ -242,6 +258,7 @@ public:
                             std::string localName{
                                 std::get<0>(names.t).source.ToString()};
                             stmt.renames.push_back(localName);
+                            stmt.hasOnlyWithRenames = true;
                           },
                           [&](const parser::Rename::Operators &) {
                             // Operator renames - not commonly needed for debug
@@ -275,14 +292,14 @@ public:
             only.u);
       }
 
-      currentFunctionUnit->preservedUseStmts.push_back(std::move(stmt));
+      addUseStmt(std::move(stmt));
     } else if (const auto *renameList{
                    std::get_if<std::list<parser::Rename>>(&useStmt.u)}) {
       // USE mod with optional renames (not ONLY)
       if (renameList->empty()) {
         // USE mod (import all, no renames)
         Fortran::semantics::PreservedUseStmt stmt{moduleName};
-        currentFunctionUnit->preservedUseStmts.push_back(std::move(stmt));
+        addUseStmt(std::move(stmt));
       } else {
         // USE mod, renames (import all with some renames)
         Fortran::semantics::PreservedUseStmt stmt{moduleName};
@@ -302,7 +319,7 @@ public:
               rename.u);
         }
 
-        currentFunctionUnit->preservedUseStmts.push_back(std::move(stmt));
+        addUseStmt(std::move(stmt));
       }
     }
   }
@@ -322,6 +339,20 @@ public:
     return true;
   }
   void Post(const parser::SpecificationPart &) { --specificationPartLevel; }
+
+  bool Pre(const parser::InterfaceBody &) {
+    ++interfaceBodyLevel;
+    return true;
+  }
+  void Post(const parser::InterfaceBody &) { --interfaceBodyLevel; }
+
+  // An acc declare in an interface body describes the interface's procedure,
+  // not the enclosing unit; skip it so it is not hoisted and lowered there.
+  bool Pre(const parser::OpenACCDeclarativeConstruct &accDecl) {
+    if (interfaceBodyLevel > 0)
+      return false;
+    return enterConstructOrDirective(accDecl);
+  }
 
   bool Pre(const parser::ContainsStmt &) {
     if (!specificationPartLevel) {
@@ -411,11 +442,13 @@ private:
     containedUnitList = &unit.containedUnitList;
     pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
+    currentModuleUnit = &unit;
     LLVM_DEBUG(dumpScope(&unit.getScope()));
     return true;
   }
 
   void exitModule() {
+    currentModuleUnit = nullptr; // Clear when exiting module
     containsStmtStack.pop_back();
     if (!evaluationListStack.empty())
       popEvaluationList();
@@ -826,6 +859,11 @@ private:
     sourceEvaluation.isUnstructured = true;
     if (!sourceEvaluation.controlSuccessor)
       sourceEvaluation.controlSuccessor = &targetEvaluation;
+    else if (sourceEvaluation.controlSuccessor != &targetEvaluation &&
+             llvm::find(sourceEvaluation.extraControlSuccessors,
+                        &targetEvaluation) ==
+                 sourceEvaluation.extraControlSuccessors.end())
+      sourceEvaluation.extraControlSuccessors.push_back(&targetEvaluation);
     targetEvaluation.isNewBlock = true;
     // If this is a branch into the body of a construct (usually illegal,
     // but allowed in some legacy cases), then the targetEvaluation and its
@@ -1007,10 +1045,29 @@ private:
               iter->second.insert(label);
             }
           },
-          [&](const parser::AssignedGotoStmt &) {
-            // Although this statement is a branch, it doesn't have any
-            // explicit control successors. So the code at the end of the
-            // loop won't mark the successor. Do that here.
+          [&](const parser::AssignedGotoStmt &s) {
+            // Mark every possible target of the assigned GO TO so that
+            // wrappability analyses can see any escape from an enclosing
+            // construct.
+            const auto &labelList = std::get<std::list<parser::Label>>(s.t);
+            if (!labelList.empty()) {
+              // Explicit target list: `go to v, (l1, l2, ...)`.
+              for (const auto &label : labelList)
+                markBranchTarget(eval, label);
+            } else {
+              // No explicit list (`go to v`): fall back to the set of labels
+              // that have been previously ASSIGN'd to v.
+              // TODO: This may miss assignments that appear later in program
+              // order, but it matches the information available at this point
+              // in the walk.
+              const auto *sym = std::get<parser::Name>(s.t).symbol;
+              if (sym) {
+                auto iter = assignSymbolLabelMap->find(*sym);
+                if (iter != assignSymbolLabelMap->end())
+                  for (auto label : iter->second)
+                    markBranchTarget(eval, label);
+              }
+            }
             eval.isUnstructured = true;
             markSuccessorAsNewBlock(eval);
           },
@@ -1186,8 +1243,11 @@ private:
       if (eval.evaluationList)
         analyzeBranches(&eval, *eval.evaluationList);
 
-      // Propagate isUnstructured flag to enclosing construct.
-      if (parentConstruct && eval.isUnstructured)
+      // Propagate isUnstructured flag to enclosing construct -- unless the
+      // wrap pass will fold this construct into a self-contained
+      // scf.execute_region, in which case the parent sees only a single op.
+      if (parentConstruct && eval.isUnstructured &&
+          !lower::pft::isWrappableConstruct(eval))
         parentConstruct->isUnstructured = true;
 
       // The successor of a branch starts a new block.
@@ -1247,9 +1307,12 @@ private:
   lower::pft::SymbolLabelMap *assignSymbolLabelMap{};
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
   int specificationPartLevel{};
+  int interfaceBodyLevel{};
   lower::pft::Evaluation *lastLexicalEvaluation{};
   /// Current function-like unit being processed (for USE statement tracking)
   lower::pft::FunctionLikeUnit *currentFunctionUnit{nullptr};
+  /// Current module-like unit being processed (for USE statement tracking)
+  lower::pft::ModuleLikeUnit *currentModuleUnit{nullptr};
 };
 
 #ifndef NDEBUG
@@ -1346,12 +1409,19 @@ public:
       outputStream << newBlock << name << bang;
     if (eval.negateCondition)
       outputStream << " [negate]";
-    if (eval.constructExit)
+    if (eval.constructExit) {
       outputStream << " -> " << eval.constructExit->printIndex;
-    else if (eval.controlSuccessor)
+    } else if (eval.controlSuccessor) {
       outputStream << " -> " << eval.controlSuccessor->printIndex;
-    else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor)
+      // Multiway branches (computed GO TO, arithmetic IF) put additional
+      // targets in extraControlSuccessors; print them so PFT dumps expose
+      // every target rather than only the first.
+      for (const Fortran::lower::pft::Evaluation *extra :
+           eval.extraControlSuccessors)
+        outputStream << ", " << extra->printIndex;
+    } else if (eval.isA<parser::EntryStmt>() && eval.lexicalSuccessor) {
       outputStream << " -> " << eval.lexicalSuccessor->printIndex;
+    }
     bool extraNewline = false;
     if (!eval.position.empty())
       outputStream << ": " << eval.position.ToString();
@@ -1605,6 +1675,20 @@ struct SymbolDependenceAnalysis {
   explicit SymbolDependenceAnalysis(const semantics::Symbol &symbol) {
     analyzeEquivalenceSets(symbol.owner());
     analyze(symbol);
+    finalize();
+  }
+  /// Analyze the dependencies of a set of module variables that are host
+  /// associated (or use associated in host module scopes).
+  explicit SymbolDependenceAnalysis(
+      const llvm::SetVector<const semantics::Symbol *> &moduleVariables) {
+    for (const semantics::Symbol *sym : moduleVariables)
+      analyzeLocalEquivalenceSets(sym->owner());
+    // Add all aggregate stores to the front of the variable list.
+    adjustSize(1);
+    for (auto st : stores)
+      layeredVarList[0].emplace_back(std::move(st));
+    for (const semantics::Symbol *sym : moduleVariables)
+      analyze(*sym);
     finalize();
   }
   Fortran::lower::pft::VariableList getVariableList() {
@@ -2116,6 +2200,61 @@ lower::pft::getDependentVariableList(const semantics::Symbol &symbol) {
   return sda.getVariableList();
 }
 
+static bool
+isGenericHidingProcedurePointer(const Fortran::semantics::Symbol &sym) {
+  if (const auto *generic = sym.detailsIf<Fortran::semantics::GenericDetails>())
+    if (const Fortran::semantics::Symbol *specific = generic->specific())
+      return Fortran::semantics::IsProcedurePointer(*specific);
+  return false;
+}
+
+/// Collect the canonical list of host [sub]module variables referenced in \p
+/// funit. A symbol is considered a host module variable if it is an
+/// ObjectEntityDetails, a ProcedurePointer, or a NamelistDetails symbol whose
+/// ultimate owning scope is a [sub]module scope containing \p funit's scope.
+/// Namelist groups are expanded to the set of their objects.
+static void collectHostAssociatedModuleVariables(
+    const Fortran::lower::pft::FunctionLikeUnit &funit,
+    llvm::SetVector<const Fortran::semantics::Symbol *> &moduleVariables) {
+  auto addIfHostModuleVariable = [&](const Fortran::semantics::Symbol &sym) {
+    const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+    const auto *namelistDetails =
+        ultimate.detailsIf<Fortran::semantics::NamelistDetails>();
+    if (!ultimate.has<Fortran::semantics::ObjectEntityDetails>() &&
+        !Fortran::semantics::IsProcedurePointer(ultimate) &&
+        !isGenericHidingProcedurePointer(ultimate) && !namelistDetails)
+      return;
+    const Fortran::semantics::Scope &symbolScope =
+        Fortran::semantics::FollowHostAssoc(sym).owner();
+    if (symbolScope.kind() != Fortran::semantics::Scope::Kind::Module)
+      return;
+    if (namelistDetails) {
+      // Namelist symbols are processed on the fly in IO lowering, which
+      // needs to be able to access each of their objects. Capture the
+      // objects rather than the namelist symbol itself.
+      for (const auto &namelistObject : namelistDetails->objects())
+        moduleVariables.insert(&namelistObject->GetUltimate());
+    } else {
+      moduleVariables.insert(&ultimate);
+    }
+  };
+  Fortran::lower::pft::visitAllSymbols(funit, addIfHostModuleVariable);
+}
+
+/// Create an ordered list of equivalences and variables from host
+/// [sub]modules of \p funit that are referenced in \p funit. The result is
+/// not cached.
+lower::pft::VariableList
+lower::pft::getHostModuleVariableList(const FunctionLikeUnit &funit) {
+  LLVM_DEBUG(llvm::dbgs() << "\ngetHostModuleVariableList of funit scope <"
+                          << &funit.getScope() << "> "
+                          << funit.getScope().GetName() << "\n");
+  llvm::SetVector<const semantics::Symbol *> moduleVariables;
+  collectHostAssociatedModuleVariables(funit, moduleVariables);
+  SymbolDependenceAnalysis sda(moduleVariables);
+  return sda.getVariableList();
+}
+
 namespace {
 /// Helper class to find all the symbols referenced in a FunctionLikeUnit.
 /// It defines a parse tree visitor doing a deep visit in all nodes with
@@ -2135,6 +2274,25 @@ struct SymbolVisitor {
     if (const semantics::Symbol *symbol = name.symbol)
       visitSymbol(*symbol);
     return false;
+  }
+
+  bool Pre(const Fortran::parser::AccClause::UseDevice &useDevice) {
+    // For use_device, each symbol's parser Name has been given a local copy
+    // of the symbol with the DEVICE attribute. The original symbol will be
+    // needed in lowering and may not appear in the parse tree of the function
+    // anymore. Visit it now: it is not directly accessible from the construct
+    // symbol, so the parent scope must be searched to find it.
+    for (const auto &accObject : useDevice.v.v) {
+      if (const semantics::Symbol *deviceSym =
+              Fortran::parser::GetFirstName(accObject).symbol) {
+        if (const semantics::Symbol *hostSym =
+                deviceSym->owner().parent().FindSymbol(deviceSym->name()))
+          visitSymbol(*hostSym);
+      }
+    }
+    // Continue visiting the ACC construct symbol and any symbols used in
+    // designator index expressions.
+    return true;
   }
 
   template <typename T>
@@ -2215,4 +2373,218 @@ void Fortran::lower::pft::visitAllSymbols(
   eval.visit([&](const auto &functionParserNode) {
     parser::Walk(functionParserNode, visitor);
   });
+}
+
+/// True if \p target lies within \p construct. In `strict` mode, a null
+/// target and the construct's own exit block count as *outside*; in
+/// non-strict mode they count as *inside* (a natural fall-through that
+/// doesn't leave the construct).
+static bool isInsideConstruct(const Fortran::lower::pft::Evaluation *target,
+                              const Fortran::lower::pft::Evaluation &construct,
+                              bool strict) {
+  if (!target)
+    return !strict;
+
+  if (target == construct.constructExit)
+    return !strict;
+
+  for (const Fortran::lower::pft::Evaluation *p = target; p;
+       p = p->parentConstruct)
+    if (p == &construct)
+      return true;
+
+  return false;
+}
+
+/// Single walk of \p construct's nested evaluations that combines every
+/// wrappability check that inspects the construct's own body:
+///
+///   * branches whose target escapes \p construct — the wrap's
+///     scf.execute_region can't have out-of-region successors;
+///   * ReturnStmt — its lowering creates the function's final block in
+///     the current region, which would mis-parent the func.return;
+///   * infinite DoConstruct — its body can't reach the wrap's yield,
+///     RegionDCE would then drop the entire scf.execute_region;
+///   * listless assigned GO TO (`go to v`) — analyzeBranches only sees
+///     ASSIGNs earlier in program order, so later ASSIGNs whose labels
+///     escape \p construct would be invisible.
+///
+/// Multiway branches (computed GO TO, arithmetic IF) record only the
+/// first target in controlSuccessor; the remaining targets live in
+/// extraControlSuccessors and must be checked or an escaping branch
+/// would silently slip through.
+static bool
+hasUnwrappableInternals(const Fortran::lower::pft::Evaluation &construct) {
+  auto isInfiniteDo = [](const parser::DoConstruct *d) {
+    return d && !d->GetLoopControl().has_value();
+  };
+
+  // The construct itself must not be an infinite DO.
+  if (isInfiniteDo(construct.getIf<parser::DoConstruct>()))
+    return true;
+
+  // Preserve the prior branchesAreInternal semantics: a construct with no
+  // evaluationList is treated as not wrappable.
+  if (!construct.evaluationList)
+    return true;
+
+  auto targetIsInternal = [&](const Fortran::lower::pft::Evaluation *target) {
+    return isInsideConstruct(target, construct, /*strict=*/false);
+  };
+
+  std::function<bool(const Fortran::lower::pft::EvaluationList &)> walk =
+      [&](const Fortran::lower::pft::EvaluationList &list) -> bool {
+    for (const Fortran::lower::pft::Evaluation &e : list) {
+      if (e.isA<parser::ReturnStmt>())
+        return true;
+
+      if (isInfiniteDo(e.getIf<parser::DoConstruct>()))
+        return true;
+
+      if (const auto *s = e.getIf<parser::AssignedGotoStmt>())
+        if (std::get<std::list<parser::Label>>(s->t).empty())
+          return true;
+
+      if (e.controlSuccessor && !targetIsInternal(e.controlSuccessor))
+        return true;
+      for (const Fortran::lower::pft::Evaluation *extra :
+           e.extraControlSuccessors)
+        if (!targetIsInternal(extra))
+          return true;
+
+      if (e.evaluationList && walk(*e.evaluationList))
+        return true;
+    }
+    return false;
+  };
+
+  return walk(*construct.evaluationList);
+}
+
+/// True if any eval outside \p construct branches strictly inside it.
+/// Such branches would cross the scf.execute_region boundary at lowering.
+static bool
+hasIncomingBranch(const Fortran::lower::pft::Evaluation &construct) {
+  const Fortran::lower::pft::FunctionLikeUnit *funit =
+      construct.getOwningProcedure();
+  if (!funit)
+    return false;
+
+  auto targetIsStrictlyInside = [&](const Fortran::lower::pft::Evaluation *t) {
+    return isInsideConstruct(t, construct, /*strict=*/true);
+  };
+  std::function<bool(const Fortran::lower::pft::EvaluationList &)> walk =
+      [&](const Fortran::lower::pft::EvaluationList &list) -> bool {
+    for (const Fortran::lower::pft::Evaluation &e : list) {
+      if (!isInsideConstruct(&e, construct, /*strict=*/true)) {
+        if (e.controlSuccessor && targetIsStrictlyInside(e.controlSuccessor))
+          return true;
+        for (const Fortran::lower::pft::Evaluation *extra :
+             e.extraControlSuccessors)
+          if (targetIsStrictlyInside(extra))
+            return true;
+      }
+
+      if (e.evaluationList && walk(*e.evaluationList))
+        return true;
+    }
+
+    return false;
+  };
+
+  // TODO: This is potentially expensive and we might need to prevent running
+  // this walk more than once somehow.
+  return walk(funit->evaluationList);
+}
+
+/// True if \p eval is a DoConstruct driven directly into an enclosing acc.loop
+/// by the OpenACCLoopConstruct / OpenACCCombinedConstruct lowering — the
+/// immediate body DO, or one of the N collapsed iterator DOs reached by
+/// walking down from the body DO under a `collapse(N)` clause.
+static bool isAccLoopBody(const Fortran::lower::pft::Evaluation &eval) {
+  const auto *doConstruct = eval.getIf<parser::DoConstruct>();
+  if (!doConstruct)
+    return false;
+  // N from `collapse(N)`, or 1 if no clause. eval at depth d from the body
+  // (d == 0 means eval IS the body) is a collapsed iterator iff d < N. If the
+  // Collapse value isn't a compile-time constant, be conservative and treat
+  // every DO in the chain as collapsed (INT64_MAX) — wrapping is opt-in and
+  // a false "is collapsed" is safer than a false "is not".
+  auto collapseN = [](const parser::AccClauseList &cl) -> int64_t {
+    for (const parser::AccClause &c : cl.v)
+      if (const auto *cc = std::get_if<parser::AccClause::Collapse>(&c.u)) {
+        const auto &intExpr = std::get<parser::ScalarIntConstantExpr>(cc->v.t);
+        if (const auto *expr = semantics::GetExpr(intExpr))
+          if (auto v = evaluate::ToInt64(*expr))
+            return *v;
+        return std::numeric_limits<int64_t>::max();
+      }
+    return 1;
+  };
+
+  // candidates[k] is the DoConstruct at depth k above (and including) eval.
+  llvm::SmallVector<const parser::DoConstruct *, 4> candidates{doConstruct};
+
+  for (const Fortran::lower::pft::Evaluation *p = eval.parentConstruct; p;
+       p = p->parentConstruct) {
+    if (const auto *d = p->getIf<parser::DoConstruct>()) {
+      candidates.push_back(d);
+      continue;
+    }
+
+    if (const auto *acc = p->getIf<parser::OpenACCConstruct>()) {
+      const parser::DoConstruct *body = nullptr;
+      int64_t n = 1;
+      if (const auto *loop =
+              std::get_if<parser::OpenACCLoopConstruct>(&acc->u)) {
+        if (const auto &b =
+                std::get<std::optional<parser::DoConstruct>>(loop->t))
+          body = &b.value();
+        n = collapseN(std::get<parser::AccClauseList>(std::get<0>(loop->t).t));
+      } else if (const auto *comb =
+                     std::get_if<parser::OpenACCCombinedConstruct>(&acc->u)) {
+        if (const auto &b =
+                std::get<std::optional<parser::DoConstruct>>(comb->t))
+          body = &b.value();
+        n = collapseN(std::get<parser::AccClauseList>(std::get<0>(comb->t).t));
+      }
+
+      if (body) {
+        // body is at index `candidates.size()-1` (the outermost candidate);
+        // eval at depth (candidates.size()-1) from body. Collapsed iff < N.
+        auto it = llvm::find(candidates, body);
+        if (it != candidates.end()) {
+          int64_t depth = std::distance(candidates.begin(), it);
+          if (depth < n)
+            return true;
+        }
+      }
+    }
+
+    break;
+  }
+
+  return false;
+}
+
+bool Fortran::lower::pft::isWrappableConstruct(
+    const Fortran::lower::pft::Evaluation &eval) {
+  if (!wrapUnstructuredConstructsInExecuteRegion)
+    return false;
+
+  if (!eval.isUnstructured)
+    return false;
+
+  if (!(eval.isA<Fortran::parser::DoConstruct>() ||
+        eval.isA<Fortran::parser::IfConstruct>()))
+    return false;
+
+  // Wrapping requires self-contained CFG.
+  //
+  // Note: Loops attached to OpenACC constructs are not wrappable since
+  // genOpenACCLoopFromDoConstruct takes over code-gen when a DoConstruct is
+  // attached to an OpenACC directive. We might extend wrapping to such
+  // unstructured loops later on if needed.
+  return !hasUnwrappableInternals(eval) && !hasIncomingBranch(eval) &&
+         !isAccLoopBody(eval);
 }

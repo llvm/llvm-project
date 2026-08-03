@@ -189,10 +189,6 @@ void DynamicLoaderMacOS::ClearNotificationBreakpoint() {
   }
 }
 
-// Try and figure out where dyld is by first asking the Process if it knows
-// (which currently calls down in the lldb::Process to get the DYLD info
-// (available on SnowLeopard only). If that fails, then check in the default
-// addresses.
 void DynamicLoaderMacOS::DoInitialImageFetch() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
@@ -203,7 +199,8 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
   UnloadAllImages();
 
   StructuredData::ObjectSP all_image_info_json_sp(
-      m_process->GetLoadedDynamicLibrariesInfos());
+      m_process->GetLoadedDynamicLibrariesInfos(
+          eBinaryInformationLevelAddrOnly));
   ImageInfo::collection image_infos;
   if (all_image_info_json_sp.get() &&
       all_image_info_json_sp->GetAsDictionary() &&
@@ -211,14 +208,44 @@ void DynamicLoaderMacOS::DoInitialImageFetch() {
       all_image_info_json_sp->GetAsDictionary()
           ->GetValueForKey("images")
           ->GetAsArray()) {
-    if (JSONImageInformationIntoImageInfo(all_image_info_json_sp,
-                                          image_infos)) {
-      LLDB_LOGF(log, "Initial module fetch:  Adding %" PRId64 " modules.\n",
-                (uint64_t)image_infos.size());
 
-      auto images = PreloadModulesFromImageInfos(image_infos);
-      UpdateSpecialBinariesFromPreloadedModules(images);
-      AddModulesUsingPreloadedModules(images);
+    // Older debugserver (pre-2024-ish) will not recognize the
+    // eBinaryInformationLevelAddrOnly enum above, and
+    // will return the full binary information including mach
+    // header and segments/load commands.  The response includes
+    // the full information on all binaries.
+    StructuredData::Array *images = all_image_info_json_sp->GetAsDictionary()
+                                        ->GetValueForKey("images")
+                                        ->GetAsArray();
+    if (images->GetSize() > 0 && images->GetItemAtIndex(0)->GetAsDictionary() &&
+        images->GetItemAtIndex(0)->GetAsDictionary()->HasKey("mach_header")) {
+      if (JSONImageInformationIntoImageInfo(all_image_info_json_sp,
+                                            image_infos)) {
+        LLDB_LOGF(log, "Initial module fetch:  Adding %" PRIu64 " modules.\n",
+                  (uint64_t)image_infos.size());
+
+        auto new_images = PreloadModulesFromImageInfos(image_infos);
+        UpdateSpecialBinariesFromPreloadedModules(new_images);
+        AddModulesUsingPreloadedModules(new_images);
+      }
+    } else {
+      // This is a newer debugserver which only replied with
+      // `load_address` for all binaries loaded in the process.
+      // We can request detailed information in smaller chunks,
+      // instead of one gigantic packet.
+      size_t image_count = images->GetSize();
+      std::vector<addr_t> load_addresses;
+      for (size_t i = 0; i < image_count; i++) {
+        StructuredData::Dictionary *image =
+            images->GetItemAtIndex(i)->GetAsDictionary();
+        if (image && image->HasKey("load_address")) {
+          addr_t val = image->GetValueForKey("load_address")
+                           ->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+          if (val != LLDB_INVALID_ADDRESS)
+            load_addresses.push_back(val);
+        }
+      }
+      AddBinaries(load_addresses, /*expedited_binary_infos=*/{});
     }
   }
 
@@ -299,7 +326,8 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
     argument_values.PushValue(count_value);
     argument_values.PushValue(headers_value);
 
-    if (abi->GetArgumentValues(exe_ctx.GetThreadRef(), argument_values)) {
+    Thread &thread = exe_ctx.GetThreadRef();
+    if (abi->GetArgumentValues(thread, argument_values)) {
       uint32_t dyld_mode =
           argument_values.GetValueAtIndex(0)->GetScalar().UInt(-1);
       if (dyld_mode != static_cast<uint32_t>(-1)) {
@@ -322,21 +350,38 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
             //
             // and we only need the imageLoadAddress fields.
 
-            const int addrsize =
-                process->GetTarget().GetArchitecture().GetAddressByteSize();
-            for (uint64_t i = 0; i < image_infos_count; i++) {
-              Status error;
-              addr_t dyld_image_info = header_array + (addrsize * 3 * i);
-              addr_t addr =
-                  process->ReadPointerFromMemory(dyld_image_info, error);
-              if (error.Success()) {
-                image_load_addresses.push_back(addr);
-              } else {
+            // The remote stub may have provided the addresses in the
+            // stop packet already.
+            image_load_addresses = thread.FetchNewlyAddedBinaries();
+            // Or, read them from memory.
+            if (image_load_addresses.size() != image_infos_count) {
+              image_load_addresses.clear();
+              ArchSpec target_arch = process->GetTarget().GetArchitecture();
+              const int addrsize = target_arch.GetAddressByteSize();
+              // Read the entire block of memory that we'll need to
+              // iterate over in one large read, to minimize packets sent.
+              WritableDataBufferSP buffer_sp = std::make_shared<DataBufferHeap>(
+                  addrsize * 3 * image_infos_count, 0);
+              Status read_error;
+              if (process->ReadMemory(header_array, buffer_sp->GetBytes(),
+                                      buffer_sp->GetByteSize(),
+                                      read_error) == buffer_sp->GetByteSize() &&
+                  read_error.Success()) {
+                DataExtractor added_binaries(
+                    buffer_sp, target_arch.GetByteOrder(), addrsize);
+
+                offset_t offset = 0;
+                for (uint64_t i = 0; i < image_infos_count; i++) {
+                  addr_t addr = added_binaries.GetAddress(&offset);
+                  image_load_addresses.push_back(addr);
+                  offset += 2 * addrsize;
+                }
+              }
+              if (!read_error.Success())
                 Debugger::ReportWarning(
                     "DynamicLoaderMacOS::NotifyBreakpointHit unable "
                     "to read binary mach-o load address at 0x%" PRIx64,
-                    addr);
-              }
+                    header_array);
             }
             if (dyld_mode == 0) {
               // dyld_notify_adding
@@ -354,7 +399,8 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
                 dyld_instance->DoInitialImageFetch();
                 dyld_instance->SetNotificationBreakpoint();
               } else {
-                dyld_instance->AddBinaries(image_load_addresses);
+                dyld_instance->AddBinaries(image_load_addresses,
+                                           thread.FetchDetailedBinariesInfo());
               }
             } else if (dyld_mode == 1) {
               // dyld_notify_removing
@@ -408,31 +454,70 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
   return dyld_instance->GetStopWhenImagesChange();
 }
 
+static size_t LibraryInfosCount(StructuredData::ObjectSP binaries_info_sp) {
+  if (!binaries_info_sp)
+    return 0;
+  if (StructuredData::Dictionary *dict = binaries_info_sp->GetAsDictionary()) {
+    if (!dict->HasKey("images"))
+      return 0;
+    if (StructuredData::Array *images =
+            dict->GetValueForKey("images")->GetAsArray())
+      return images->GetSize();
+  }
+
+  return 0;
+}
+
 void DynamicLoaderMacOS::AddBinaries(
-    const std::vector<lldb::addr_t> &load_addresses) {
+    const std::vector<lldb::addr_t> &load_addresses,
+    StructuredData::ObjectSP expedited_binary_infos) {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   ImageInfo::collection image_infos;
+  if (load_addresses.empty())
+    return;
 
-  LLDB_LOGF(log, "Adding %" PRId64 " modules.",
-            (uint64_t)load_addresses.size());
-  StructuredData::ObjectSP binaries_info_sp =
-      m_process->GetLoadedDynamicLibrariesInfos(load_addresses);
-  if (binaries_info_sp.get() && binaries_info_sp->GetAsDictionary() &&
-      binaries_info_sp->GetAsDictionary()->HasKey("images") &&
-      binaries_info_sp->GetAsDictionary()
-          ->GetValueForKey("images")
-          ->GetAsArray() &&
-      binaries_info_sp->GetAsDictionary()
-              ->GetValueForKey("images")
-              ->GetAsArray()
-              ->GetSize() == load_addresses.size()) {
-    if (JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
-      auto images = PreloadModulesFromImageInfos(image_infos);
-      UpdateSpecialBinariesFromPreloadedModules(images);
-      AddModulesUsingPreloadedModules(images);
-    }
+  // If the expedited detailed binaries information covers
+  // all of the newly added binaries, use that info and
+  // return.
+  if (LibraryInfosCount(expedited_binary_infos) == load_addresses.size() &&
+      JSONImageInformationIntoImageInfo(expedited_binary_infos, image_infos)) {
+    auto new_images = PreloadModulesFromImageInfos(image_infos);
+    UpdateSpecialBinariesFromPreloadedModules(new_images);
+    AddModulesUsingPreloadedModules(new_images);
     m_dyld_image_infos_stop_id = m_process->GetStopID();
+    return;
   }
+
+  // For now, hardcode a limit of fetching 600 binaries at once.
+  // Fetching the full binary information for a large number of
+  // binaries can cause debugserver to use too much memory on
+  // memory-limited environments, and get killed.
+  const size_t image_fetch_max = 600;
+  size_t fetched = 0;
+  size_t total_image_size = load_addresses.size();
+  while (fetched < total_image_size) {
+    size_t this_fetch_amt =
+        std::min(image_fetch_max, total_image_size - fetched);
+    std::vector<addr_t> fetch_binaries(load_addresses.begin() + fetched,
+                                       load_addresses.begin() + fetched +
+                                           this_fetch_amt);
+
+    LLDB_LOGF(log, "Adding %" PRId64 " modules.",
+              (uint64_t)fetch_binaries.size());
+    image_infos.clear();
+    StructuredData::ObjectSP binaries_info_sp =
+        m_process->GetLoadedDynamicLibrariesInfos(eBinaryInformationLevelFull,
+                                                  fetch_binaries);
+    if (LibraryInfosCount(binaries_info_sp) == fetch_binaries.size()) {
+      if (JSONImageInformationIntoImageInfo(binaries_info_sp, image_infos)) {
+        auto new_images = PreloadModulesFromImageInfos(image_infos);
+        UpdateSpecialBinariesFromPreloadedModules(new_images);
+        AddModulesUsingPreloadedModules(new_images);
+      }
+    }
+    fetched += this_fetch_amt;
+  }
+  m_dyld_image_infos_stop_id = m_process->GetStopID();
 }
 
 // Dump the _dyld_all_image_infos members and all current image infos that we
@@ -691,11 +776,13 @@ Status DynamicLoaderMacOS::CanLoadImage() {
 
 bool DynamicLoaderMacOS::GetSharedCacheInformation(
     lldb::addr_t &base_address, UUID &uuid, LazyBool &using_shared_cache,
-    LazyBool &private_shared_cache, FileSpec &shared_cache_path) {
+    LazyBool &private_shared_cache, FileSpec &shared_cache_path,
+    std::optional<uint64_t> &size) {
   base_address = LLDB_INVALID_ADDRESS;
   uuid.Clear();
   using_shared_cache = eLazyBoolCalculate;
   private_shared_cache = eLazyBoolCalculate;
+  size.reset();
 
   if (m_process) {
     StructuredData::ObjectSP info = m_process->GetSharedCacheInfo();
@@ -704,9 +791,13 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
       info_dict = info->GetAsDictionary();
     }
 
-    // {"shared_cache_base_address":140735683125248,"shared_cache_uuid
-    // ":"DDB8D70C-
-    // C9A2-3561-B2C8-BE48A4F33F96","no_shared_cache":false,"shared_cache_private_cache":false}
+    // { "shared_cache_base_address":6580879360,
+    //   "shared_cache_uuid":"71E62C65-D8D9-32D0-9A0B-7F5154C8049F",
+    //   "no_shared_cache":false,
+    //   "shared_cache_private_cache":false,
+    //   "shared_cache_path":"/S/V/P/C/OS/Sm/L/dyld/dyld_shared_cache_arm64e",
+    //   "shared_cache_size":6012010496
+    // }
 
     if (info_dict && info_dict->HasKey("shared_cache_uuid") &&
         info_dict->HasKey("no_shared_cache") &&
@@ -731,6 +822,12 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
         llvm::StringRef filepath =
             info_dict->GetValueForKey("shared_cache_path")->GetStringValue();
         shared_cache_path.SetPath(filepath);
+      }
+      if (info_dict->HasKey("shared_cache_size")) {
+        uint64_t val = info_dict->GetValueForKey("shared_cache_size")
+                           ->GetUnsignedIntegerValue(LLDB_INVALID_ADDRESS);
+        if (val != LLDB_INVALID_ADDRESS)
+          size = val;
       }
       return true;
     }

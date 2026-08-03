@@ -24,10 +24,10 @@ namespace {
 // Validates whether the given operation is an x86 operation and has only
 // one consumer.
 static bool validateFMAOperands(Value op) {
-  if (auto cvt = op.getDefiningOp<x86::CvtPackedEvenIndexedToF32Op>())
+  if (auto cvt = op.getDefiningOp<x86::avx::CvtPackedEvenIndexedToF32Op>())
     return cvt.getResult().hasOneUse();
 
-  if (auto bcst = op.getDefiningOp<x86::BcstToPackedF32Op>())
+  if (auto bcst = op.getDefiningOp<x86::avx::BcstToPackedF32Op>())
     return bcst.getResult().hasOneUse();
 
   return false;
@@ -42,8 +42,8 @@ static bool validateVectorFMAOp(vector::FMAOp fmaOp) {
   Value lhs = fmaOp.getLhs();
   Value rhs = fmaOp.getRhs();
 
-  if (!isa<x86::CvtPackedEvenIndexedToF32Op>(lhs.getDefiningOp()) &&
-      !isa<x86::CvtPackedEvenIndexedToF32Op>(rhs.getDefiningOp()))
+  if (!isa<x86::avx::CvtPackedEvenIndexedToF32Op>(lhs.getDefiningOp()) &&
+      !isa<x86::avx::CvtPackedEvenIndexedToF32Op>(rhs.getDefiningOp()))
     return false;
 
   if (!validateFMAOperands(lhs) || !validateFMAOperands(rhs))
@@ -150,9 +150,10 @@ struct ShuffleVectorFMAOps : public OpRewritePattern<vector::FMAOp> {
       if (!fma)
         continue;
 
-      bool hasX86CvtOperand =
-          isa<x86::CvtPackedEvenIndexedToF32Op>(fma.getLhs().getDefiningOp()) ||
-          isa<x86::CvtPackedEvenIndexedToF32Op>(fma.getRhs().getDefiningOp());
+      bool hasX86CvtOperand = isa<x86::avx::CvtPackedEvenIndexedToF32Op>(
+                                  fma.getLhs().getDefiningOp()) ||
+                              isa<x86::avx::CvtPackedEvenIndexedToF32Op>(
+                                  fma.getRhs().getDefiningOp());
 
       if (hasX86CvtOperand && stopAtNextDependentFMA)
         break;

@@ -361,8 +361,8 @@ void MemoryOpRemark::visitPtr(Value *Ptr, bool IsRead, DiagnosticInfoIROptimizat
 
   if (VIs.empty()) {
     bool CanBeNull;
-    bool CanBeFreed;
-    uint64_t Size = Ptr->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+    uint64_t Size = Ptr->getPointerDereferenceableBytes(DL, CanBeNull,
+                                                        /*CanBeFreed=*/nullptr);
     if (!Size)
       return;
     VIs.push_back({std::nullopt, Size});

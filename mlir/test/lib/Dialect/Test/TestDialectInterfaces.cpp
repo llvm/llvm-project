@@ -8,8 +8,13 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "TestTypes.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 using namespace mlir;
@@ -343,6 +348,19 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   //===--------------------------------------------------------------------===//
 
   /// Handle the given inlined terminator by replacing it with a new operation
+  /// as necessary (multi-block inlining case: replace test.return with a
+  /// branch to the successor block that carries the inlined results).
+  void handleTerminator(Operation *op, Block *newDest) const final {
+    auto returnOp = dyn_cast<TestReturnOp>(op);
+    if (!returnOp)
+      return;
+    OpBuilder builder(op);
+    cf::BranchOp::create(builder, op->getLoc(), newDest,
+                         returnOp.getOperands());
+    op->erase();
+  }
+
+  /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
   void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only handle "test.return" here.
@@ -418,6 +436,20 @@ public:
   }
 };
 
+struct TestToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  explicit TestToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
+
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns,
+      ::std::optional<bool> lowerToCpp) const final {
+    typeConverter.addConversion([](test::TestMemRefElementTypeType type) {
+      return emitc::OpaqueType::get(type.getContext(), "TestElementT");
+    });
+  }
+};
+
 } // namespace
 
 void TestDialect::registerInterfaces() {
@@ -426,4 +458,5 @@ void TestDialect::registerInterfaces() {
 
   addInterfaces<TestDialectFoldInterface, TestInlinerInterface,
                 TestReductionPatternInterface, TestBytecodeDialectInterface>();
+  addInterface<TestToEmitCDialectInterface>();
 }

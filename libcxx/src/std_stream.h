@@ -24,6 +24,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 static const int __limit = 8;
 
@@ -56,7 +57,7 @@ private:
   bool __last_consumed_is_next_;
   bool __always_noconv_;
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   static constexpr bool __is_win32api_wide_char = !is_same_v<_CharT, char>;
 #else
   static constexpr bool __is_win32api_wide_char = false;
@@ -261,7 +262,7 @@ private:
   state_type* __st_;
   bool __always_noconv_;
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   static constexpr bool __is_win32api_wide_char = !is_same_v<_CharT, char>;
 #else
   static constexpr bool __is_win32api_wide_char = false;
@@ -380,6 +381,7 @@ void __stdoutbuf<_CharT>::imbue(const locale& __loc) {
   __always_noconv_ = __cv_->always_noconv();
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

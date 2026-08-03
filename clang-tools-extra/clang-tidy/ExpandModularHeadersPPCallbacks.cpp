@@ -164,7 +164,7 @@ void ExpandModularHeadersPPCallbacks::InclusionDirective(
   if (ModuleImported) {
     serialization::ModuleFile *MF =
         Compiler.getASTReader()->getModuleManager().lookup(
-            *SuggestedModule->getASTFile());
+            *SuggestedModule->getASTFileKey());
     handleModuleFile(MF);
   }
   parseToLocation(DirectiveLoc);

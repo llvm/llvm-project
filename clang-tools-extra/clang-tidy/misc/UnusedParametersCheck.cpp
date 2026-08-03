@@ -130,11 +130,13 @@ UnusedParametersCheck::UnusedParametersCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       StrictMode(Options.get("StrictMode", false)),
-      IgnoreVirtual(Options.get("IgnoreVirtual", false)) {}
+      IgnoreVirtual(Options.get("IgnoreVirtual", false)),
+      IgnoreMacroParameters(Options.get("IgnoreMacroParameters", false)) {}
 
 void UnusedParametersCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
   Options.store(Opts, "IgnoreVirtual", IgnoreVirtual);
+  Options.store(Opts, "IgnoreMacroParameters", IgnoreMacroParameters);
 }
 
 void UnusedParametersCheck::warnOnUnusedParameter(
@@ -198,6 +200,8 @@ void UnusedParametersCheck::check(const MatchFinder::MatchResult &Result) {
       // type if we remove the preceding parameter name.
       continue;
     }
+    if (IgnoreMacroParameters && Param->getLocation().isMacroID())
+      continue;
 
     // In non-strict mode ignore function definitions with empty bodies
     // (constructor initializer counts for non-empty body).

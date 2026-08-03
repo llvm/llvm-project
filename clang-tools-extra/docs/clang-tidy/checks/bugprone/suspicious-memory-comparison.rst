@@ -18,18 +18,18 @@ This may be caused by padding or floating-point types.
 
 See also:
 `EXP42-C. Do not compare padding data
-<https://wiki.sei.cmu.edu/confluence/display/c/EXP42-C.+Do+not+compare+padding+data>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/expressions-exp/exp42-c/>`_
 and
 `FLP37-C. Do not use object representations to compare floating-point values
-<https://wiki.sei.cmu.edu/confluence/display/c/FLP37-C.+Do+not+use+object+representations+to+compare+floating-point+values>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/floating-point-flp/flp37-c/>`_
 
 This check is also related to and partially overlaps the CERT C++ Coding Standard rules
 `OOP57-CPP. Prefer special member functions and overloaded operators to
 C Standard Library functions
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/OOP57-CPP.+Prefer+special+member+functions+and+overloaded+operators+to+C+Standard+Library+functions>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/object-oriented-programming-oop/oop57-cpp/>`_
 and
 `EXP62-CPP. Do not access the bits of an object representation that are not
 part of the object's value representation
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/EXP62-CPP.+Do+not+access+the+bits+of+an+object+representation+that+are+not+part+of+the+object%27s+value+representation>`_
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/expressions-exp/exp62-cpp/>`_
 
 `cert-exp42-c` redirects here as an alias of this check.
