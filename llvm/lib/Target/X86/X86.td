@@ -842,6 +842,13 @@ def TuningFastHorizontalOps
         "normal vector instructions with shuffles",
         [], InlineIgnore>;
 
+def TuningPreferUnpckOverCrossLaneExtract
+    : SubtargetFeature<"prefer-unpck-over-cross-lane-extract",
+                       "PreferUnpckOverCrossLaneExtract", "true",
+                       "Prefer unpck shuffles over cross-lane extracts, e.g. to "
+                       "share extracts across independent vector reductions",
+                       [], InlineIgnore>;
+
 def TuningFastScalarShiftMasks
     : SubtargetFeature<
         "fast-scalar-shift-masks", "HasFastScalarShiftMasks", "true",
@@ -1716,7 +1723,8 @@ def ProcessorFeatures {
 
   list<SubtargetFeature> ZN4AdditionalTuning = [TuningFastDPWSSD,
                                                 TuningCOMPRESSFalseDeps,
-                                                TuningEXPANDFalseDeps];
+                                                TuningEXPANDFalseDeps,
+                                                TuningPreferUnpckOverCrossLaneExtract];
   list<SubtargetFeature> ZN4Tuning =
     !listconcat(ZN3Tuning, ZN4AdditionalTuning);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
