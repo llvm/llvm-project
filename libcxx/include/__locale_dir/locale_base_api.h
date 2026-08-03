@@ -131,8 +131,8 @@
 #  elif defined(__MVS__)
 #    include <__locale_dir/support/mvs.h>
 #  else
-#    warning "No known way to provide the locale base API"
-#  endif // Compatibility definition of locale base APIs
+#    error "No known way to provide the locale base API on this platform"
+#  endif
 
 #endif // _LIBCPP_HAS_LOCALIZATION
 

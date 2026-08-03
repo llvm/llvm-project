@@ -93,8 +93,6 @@ struct __locale_guard {
 // Locale management
 //
 
-#define _LC_MAX LC_MESSAGES /* highest real category */
-#define _NCAT (_LC_MAX + 1) /* maximum + 1 */
 #define _CATMASK(n) (1 << (n))
 
 #define _LIBCPP_COLLATE_MASK _CATMASK(LC_COLLATE)
@@ -103,7 +101,7 @@ struct __locale_guard {
 #define _LIBCPP_NUMERIC_MASK _CATMASK(LC_NUMERIC)
 #define _LIBCPP_TIME_MASK _CATMASK(LC_TIME)
 #define _LIBCPP_MESSAGES_MASK _CATMASK(LC_MESSAGES)
-#define _LIBCPP_ALL_MASK (_CATMASK(_NCAT) - 1)
+#define _LIBCPP_ALL_MASK LC_ALL_MASK
 #define _LIBCPP_LC_ALL LC_ALL
 
 using __locale_t _LIBCPP_NODEBUG = locale_t;
