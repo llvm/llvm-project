@@ -34,7 +34,7 @@ static void appendU64(std::vector<uint8_t> &B, uint64_t V) {
 TEST(DWARFUnitIndexTest, RejectsRowIndexBeyondNumUnits) {
   std::vector<uint8_t> Buffer;
   // Header: Version=2, NumColumns=1, NumUnits=1, NumBuckets=1.
-  appendU32(Buffer, 2);
+  appendU32(Buffer, 2); // A version 2 'Version' field is 32b wide.
   appendU32(Buffer, 1);
   appendU32(Buffer, 1);
   appendU32(Buffer, 1);
