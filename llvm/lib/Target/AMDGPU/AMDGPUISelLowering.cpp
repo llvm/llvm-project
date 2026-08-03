@@ -21,7 +21,9 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/CommandLine.h"
@@ -939,6 +941,40 @@ SDValue AMDGPUTargetLowering::getNegatedExpression(
     if (!allUsesHaveSourceMods(Op.getNode()))
       return SDValue();
     break;
+  }
+  case ISD::FP16_TO_FP: {
+    // If the Users of the Op can handle the negation, defer it for that Op
+    // and do not handle the conversion
+    if (allUsesHaveSourceMods(Op.getNode()))
+      return SDValue();
+
+    SDValue Src = Op.getOperand(0);
+    EVT VT = Op.getValueType();
+    EVT SrcVT = Src.getValueType();
+    SDLoc SL(Op);
+    Cost = NegatibleCost::Neutral;
+    SDValue Negated = DAG.getNode(ISD::XOR, SL, SrcVT, Src,
+                                  DAG.getConstant(0x8000, SL, SrcVT));
+    return DAG.getNode(ISD::FP16_TO_FP, SL, VT, Negated);
+  }
+  case ISD::FP_TO_FP16: {
+    if (allUsesHaveSourceMods(Op.getNode()))
+      return SDValue();
+
+    SDValue Src = Op.getOperand(0);
+    EVT VT = Op.getValueType();
+    EVT SrcVT = Src.getValueType();
+    SDLoc SL(Op);
+
+    if (Src->getOpcode() == ISD::FNEG) {
+      Cost = NegatibleCost::Cheaper;
+      // Negative of Negative is the Source Operand itself
+      // -(FP_TO_FP16(FNEG(X)) = FP_TO_FP16(X)
+      return DAG.getNode(ISD::FP_TO_FP16, SL, VT, Src->getOperand(0));
+    }
+    Cost = NegatibleCost::Neutral;
+    SDValue Negated = DAG.getNode(ISD::FNEG, SL, SrcVT, Src);
+    return DAG.getNode(ISD::FP_TO_FP16, SL, VT, Negated);
   }
   case AMDGPUISD::RCP: {
     SDValue Src = Op.getOperand(0);

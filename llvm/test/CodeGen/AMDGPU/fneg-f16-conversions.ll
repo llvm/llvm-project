@@ -14,7 +14,7 @@ define amdgpu_kernel void @fneg_fdiv_fpext_half(ptr addrspace(1) %out, ptr addrs
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
 ; CHECK-NEXT:    flat_load_ushort v0, v[0:1]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_cvt_f32_f16_e32 v2, v0
+; CHECK-NEXT:    v_cvt_f32_f16_e64 v2, -v0
 ; CHECK-NEXT:    v_div_scale_f32 v0, s[2:3], v2, v2, s4
 ; CHECK-NEXT:    v_div_scale_f32 v1, vcc, s4, v2, s4
 ; CHECK-NEXT:    v_rcp_f32_e32 v3, v0
@@ -28,7 +28,6 @@ define amdgpu_kernel void @fneg_fdiv_fpext_half(ptr addrspace(1) %out, ptr addrs
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s1
 ; CHECK-NEXT:    v_div_fixup_f32 v2, v3, v2, s4
-; CHECK-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
 ; CHECK-NEXT:    flat_store_dword v[0:1], v2
 ; CHECK-NEXT:    s_endpgm
 entry:
