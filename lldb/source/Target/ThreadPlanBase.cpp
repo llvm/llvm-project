@@ -32,13 +32,24 @@ ThreadPlanBase::ThreadPlanBase(Thread &thread)
                  eVoteNoOpinion) {
 // Set the tracer to a default tracer.
 // FIXME: need to add a thread settings variable to pix various tracers...
-#define THREAD_PLAN_USE_ASSEMBLY_TRACER 1
+// #define THREAD_PLAN_USE_ASSEMBLY_TRACER 1
+//commented to add our macro 
+#define THREAD_PLAN_USE_REVERSE_TRACER 1
+// #define THREAD_PLAN_USE_ASSEMBLY_TRACER 1 
 
-#ifdef THREAD_PLAN_USE_ASSEMBLY_TRACER
+#if defined(THREAD_PLAN_USE_ASSEMBLY_TRACER)
   ThreadPlanTracerSP new_tracer_sp(new ThreadPlanAssemblyTracer(thread));
+
+// Notice the change on the line below!
+#elif defined(THREAD_PLAN_USE_REVERSE_TRACER)
+  // Call your new reverse tracer here!
+  ThreadPlanTracerSP new_tracer_sp(new ThreadPlanReverseTracer(thread)); 
+
 #else
+  // Default fallback if neither macro is defined (fixed m_thread to thread)
   ThreadPlanTracerSP new_tracer_sp(new ThreadPlanTracer(m_thread));
 #endif
+
   new_tracer_sp->EnableTracing(thread.GetTraceEnabledState());
   SetThreadPlanTracer(new_tracer_sp);
   SetIsControllingPlan(true);

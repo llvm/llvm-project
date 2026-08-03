@@ -89,6 +89,27 @@ private:
   lldb::DataBufferSP m_buffer_sp;
 };
 
-} // namespace lldb_private
+class ThreadPlanReverseTracer : public ThreadPlanTracer {
+
+public:
+  // Explicitly call the parent constructor that takes 2 arguments
+  ThreadPlanReverseTracer(Thread &thread, lldb::StreamSP &stream_sp) 
+      : ThreadPlanTracer(thread, stream_sp) {}
+
+  // Explicitly call the parent constructor that takes 1 argument
+  ThreadPlanReverseTracer(Thread &thread) 
+      : ThreadPlanTracer(thread) {}
+
+  ThreadPlanReverseTracer() = delete;
+  ~ThreadPlanReverseTracer() override = default; // Use = default instead of {}
+
+  // void TracingStarted() override;
+  // void TracingEnded() override;
+  void Log(){
+    printf("testttttt");
+  };
+};
+
+}; // namespace lldb_private
 
 #endif // LLDB_TARGET_THREADPLANTRACER_H
