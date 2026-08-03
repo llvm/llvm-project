@@ -1,5 +1,9 @@
 add_custom_target(libc_pwd_unittests)
 
+if(NOT TARGET libc.src.pwd.pwd_utils)
+  return()
+endif()
+
 add_libc_unittest(
   pwd_utils_test
   SUITE
@@ -28,4 +32,5 @@ add_libc_unittest(
     libc.src.pwd.pwd_utils
     libc.src.pwd.setpwent
     libc.src.stdio.remove
+    libc.src.string.string_utils
 )

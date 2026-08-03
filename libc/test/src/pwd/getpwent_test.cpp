@@ -19,7 +19,12 @@
 #include "src/pwd/pwd_utils.h"
 #include "src/pwd/setpwent.h"
 #include "src/stdio/remove.h"
+#include "src/string/string_utils.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 namespace {
 
@@ -30,17 +35,12 @@ class HermeticFile {
 
 public:
   HermeticFile(const char *file_path, const char *content) {
-    size_t i = 0;
-    for (; file_path[i] && i < sizeof(path) - 1; ++i)
-      path[i] = file_path[i];
-    path[i] = '\0';
+    LIBC_NAMESPACE::internal::strlcpy(path, file_path, sizeof(path));
 
     auto file_or = LIBC_NAMESPACE::openfile(path, "w");
     if (file_or.has_value()) {
       auto *f = file_or.value();
-      size_t len = 0;
-      for (const char *p = content; *p; ++p)
-        ++len;
+      size_t len = LIBC_NAMESPACE::internal::string_length(content);
       f->write(content, len);
       f->close();
     }
@@ -51,15 +51,17 @@ public:
   const char *get_path() const { return path; }
 };
 
+class LlvmLibcPwdTest : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {};
+
 } // namespace
 
-TEST(LlvmLibcPwdTest, GetPwentTestSuccess) {
+TEST_F(LlvmLibcPwdTest, GetPwentTestSuccess) {
   const char *content = "root:x:0:0:root:/root:/bin/bash\n"
                         "bin:x:1:1:bin:/bin:/sbin/nologin\n";
   HermeticFile test_file(libc_make_test_file_path("getpwent_success.test"),
                          content);
 
-  LIBC_NAMESPACE::internal::set_passwd_path(test_file.get_path());
+  LIBC_NAMESPACE::passwd::TESTONLY_set_passwd_path(test_file.get_path());
   LIBC_NAMESPACE::setpwent();
 
   struct passwd *pwd1 = LIBC_NAMESPACE::getpwent();
@@ -78,29 +80,28 @@ TEST(LlvmLibcPwdTest, GetPwentTestSuccess) {
   LIBC_NAMESPACE::endpwent();
 }
 
-TEST(LlvmLibcPwdTest, GetPwentTestFailure) {
+TEST_F(LlvmLibcPwdTest, GetPwentTestFailure) {
   const char *content = "invalid_line_without_enough_fields\n";
   HermeticFile test_file(libc_make_test_file_path("getpwent_fail.test"),
                          content);
 
-  LIBC_NAMESPACE::internal::set_passwd_path(test_file.get_path());
+  LIBC_NAMESPACE::passwd::TESTONLY_set_passwd_path(test_file.get_path());
   LIBC_NAMESPACE::setpwent();
 
-  libc_errno = 0;
   struct passwd *pwd = LIBC_NAMESPACE::getpwent();
   ASSERT_TRUE(pwd == nullptr);
-  ASSERT_EQ(static_cast<int>(libc_errno), EINVAL);
+  ASSERT_ERRNO_EQ(EINVAL);
 
   LIBC_NAMESPACE::endpwent();
 }
 
-TEST(LlvmLibcPwdTest, SetPwentTestHermetic) {
+TEST_F(LlvmLibcPwdTest, SetPwentTestHermetic) {
   const char *content = "user1:x:1000:1000:User One:/home/user1:/bin/bash\n"
                         "user2:x:1001:1001:User Two:/home/user2:/bin/bash\n";
   HermeticFile test_file(libc_make_test_file_path("setpwent_hermetic.test"),
                          content);
 
-  LIBC_NAMESPACE::internal::set_passwd_path(test_file.get_path());
+  LIBC_NAMESPACE::passwd::TESTONLY_set_passwd_path(test_file.get_path());
 
   struct passwd *pwd = LIBC_NAMESPACE::getpwent();
   ASSERT_TRUE(pwd != nullptr);
@@ -120,12 +121,12 @@ TEST(LlvmLibcPwdTest, SetPwentTestHermetic) {
   LIBC_NAMESPACE::endpwent();
 }
 
-TEST(LlvmLibcPwdTest, ReopenAfterEndpwent) {
+TEST_F(LlvmLibcPwdTest, ReopenAfterEndpwent) {
   const char *content = "root:x:0:0:root:/root:/bin/bash\n";
   HermeticFile test_file(libc_make_test_file_path("reopen_endpwent.test"),
                          content);
 
-  LIBC_NAMESPACE::internal::set_passwd_path(test_file.get_path());
+  LIBC_NAMESPACE::passwd::TESTONLY_set_passwd_path(test_file.get_path());
 
   struct passwd *pwd = LIBC_NAMESPACE::getpwent();
   ASSERT_TRUE(pwd != nullptr);
@@ -140,13 +141,12 @@ TEST(LlvmLibcPwdTest, ReopenAfterEndpwent) {
   LIBC_NAMESPACE::endpwent();
 }
 
-TEST(LlvmLibcPwdTest, FileOpenFailure) {
-  LIBC_NAMESPACE::internal::set_passwd_path(
+TEST_F(LlvmLibcPwdTest, FileOpenFailure) {
+  LIBC_NAMESPACE::passwd::TESTONLY_set_passwd_path(
       "/nonexistent_directory/nonexistent_file");
   LIBC_NAMESPACE::endpwent(); // Force close any existing file
 
-  libc_errno = 0;
   struct passwd *pwd = LIBC_NAMESPACE::getpwent();
   ASSERT_TRUE(pwd == nullptr);
-  ASSERT_EQ(static_cast<int>(libc_errno), ENOENT);
+  ASSERT_ERRNO_EQ(ENOENT);
 }
