@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -49,28 +50,36 @@ static bool isZeroConstant(Value val) {
       .Default(false);
 }
 
-static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,
-                                            Operation *op, VectorType vecTy,
-                                            MemRefType memTy) {
-  // Validate only vector as the basic vector store and load ops guarantee
-  // XeGPU-compatible memref source.
-  unsigned vecRank = vecTy.getRank();
-  if (!(vecRank == 1 || vecRank == 2))
-    return rewriter.notifyMatchFailure(op, "Expects 1D or 2D vector");
+// Return true if the transfer padding value is compatible with the implicit
+// padding of an nd block load. LoadNdOp fills out-of-bounds elements with zero,
+// so a zero constant matches its semantics exactly. A poison padding means the
+// out-of-bounds elements are "don't care", so any implicit padding (including
+// zero) is also acceptable.
+static bool isZeroOrPoisonPadding(Value val) {
+  return isZeroConstant(val) || val.getDefiningOp<ub::PoisonOp>();
+}
 
-  if (!vecTy.getElementType().isIntOrFloat())
-    return rewriter.notifyMatchFailure(
-        op, "Expected scalar type with known bitwidth");
-
-  // XeGPU requires the memref to have a scalar integer or float element type.
-  // Memrefs with vector element types (e.g. memref<?xvector<4xf32>>) are not
-  // supported because createNdDescriptor computes byte offsets using
-  // getElementTypeBitWidth(), which asserts on non-integer/float types.
-  if (!memTy.getElementType().isIntOrFloat())
-    return rewriter.notifyMatchFailure(
-        op, "Unsupported memref element type: expected integer or float");
-
-  return success();
+// Return true if the permutation map keeps every dimension in place except the
+// innermost two, which are swapped, e.g.:
+//   (d0, d1) -> (d1, d0)
+//   (d0, d1, d2) -> (d2, d1)
+//   (d0, d1, d2, d3) -> (d0, d1, d3, d2)
+// This is the only non-identity permutation an nd block load can realize (by
+// loading the untransposed block and applying a trailing vector.transpose).
+static bool isInnermostTwoDimsTransposed(AffineMap map) {
+  unsigned numResults = map.getNumResults();
+  if (numResults < 2)
+    return false;
+  MLIRContext *ctx = map.getContext();
+  unsigned numInputs = map.getNumInputs();
+  // All but the innermost two results must match the minor-identity map.
+  for (unsigned i = 0; i + 2 < numResults; ++i)
+    if (map.getResult(i) != getAffineDimExpr(numInputs - numResults + i, ctx))
+      return false;
+  // The innermost two results must be the last two input dims, swapped.
+  return map.getResult(numResults - 2) ==
+             getAffineDimExpr(numInputs - 1, ctx) &&
+         map.getResult(numResults - 1) == getAffineDimExpr(numInputs - 2, ctx);
 }
 
 static LogicalResult transferPreconditions(PatternRewriter &rewriter,
@@ -594,92 +603,77 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return success();
     }
 
-    // TODO:This check needs to be replaced with proper uArch capability check
+    // TODO: This check needs to be replaced with proper uArch capability check.
     auto chip = xegpu::getChipStr(readOp);
-    // Lower to scattered load Op if the target HW doesn't have 2d block load
-    // support and the load is not from shared memory.
-    if ((chip != "pvc" && chip != "bmg" && chip != "cri") ||
-        readOp.getVectorType().getRank() > 2) {
+    bool hasBlockLoadSupport =
+        (chip == "pvc" || chip == "bmg" || chip == "cri");
 
-      // TODO: add support for OutOfBound access
-      if (isOutOfBounds)
-        return failure();
-      return lowerToScatteredLoadOp(readOp, rewriter);
-    }
-
-    // Handle the 1D non-SLM case using load.gather.
-    if (loadedVecTy.getRank() == 1 && !isOutOfBounds)
-      return lowerToScatteredLoadOp(readOp, rewriter);
-
-    // Perform common data transfer checks.
-    // TODO: Maybe too strict for SLM case.
-    if (failed(
-            storeLoadPreconditions(rewriter, readOp, loadedVecTy, readMemTy)))
-      return failure();
-
-    if (isOutOfBounds && !isZeroConstant(readOp.getPadding()))
-      return rewriter.notifyMatchFailure(
-          readOp, "Unsupported non-zero padded out-of-bounds read");
-
+    // An nd block load can realize a minor-identity map directly, or an
+    // innermost-two-dims transpose via a trailing vector.transpose. Any other
+    // permutation (e.g. a mid-vector transpose of a high-dim load) is left to
+    // the scattered path, which permutes strides explicitly.
     AffineMap readMap = readOp.getPermutationMap();
-    // Check if this is a transpose: the map must have exactly 2 results,
-    // and those 2 results must be the last 2 input dimensions interchanged.
-    // Examples:
-    //   (d0, d1) -> (d1, d0)      // transpose
-    //   (d0, d1) -> (d0, d1)      // not a transpose
-    //   (d0, d1, d2) -> (d2, d1)  // transpose (last 2 dims swapped)
-    bool isTransposeLoad = false;
-    if (readMap.getNumResults() == 2) {
-      auto results = readMap.getResults();
-      unsigned numInputs = readMap.getNumInputs();
-      if (numInputs >= 2) {
-        auto lastDim = getAffineDimExpr(numInputs - 1, readMap.getContext());
-        auto secondLastDim =
-            getAffineDimExpr(numInputs - 2, readMap.getContext());
-        isTransposeLoad =
-            (results[0] == lastDim && results[1] == secondLastDim);
+    bool isTransposeLoad = isInnermostTwoDimsTransposed(readMap);
+
+    // Prefer an nd block load. It requires HW block-load support, a non-0D
+    // vector backed by a scalar-element memref, and a map the block load can
+    // realize. Out-of-bounds reads are allowed as long as the padding matches
+    // load_nd's implicit zero padding.
+    bool canLowerToLoadNd =
+        hasBlockLoadSupport && loadedVecTy.getRank() > 0 &&
+        (readMap.isMinorIdentity() || isTransposeLoad) &&
+        readMemTy.getElementType().isIntOrFloat() &&
+        (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding()));
+
+    if (canLowerToLoadNd) {
+      auto elementType = loadedVecTy.getElementType();
+
+      SmallVector<int64_t> descShape(loadedVecTy.getShape());
+      if (isTransposeLoad) {
+        // If load is transposed, simply swap the last two dimensions of the
+        // loaded vector type to get the descriptor shape.
+        size_t rank = descShape.size();
+        assert(rank >= 2 && "Transpose requires at least 2 dimensions");
+        std::swap(descShape[rank - 1], descShape[rank - 2]);
+        loadedVecTy = VectorType::get(descShape, elementType);
       }
-    }
-    auto elementType = loadedVecTy.getElementType();
+      auto descType = xegpu::TensorDescType::get(
+          descShape, elementType, /*array_length=*/1,
+          /*boundary_check=*/isOutOfBounds, xegpu::MemorySpace::Global);
+      auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
+          rewriter, loc, readOp.getBase(),
+          getAsOpFoldResult(readOp.getIndices()), loadedVecTy.getRank());
+      // By default, no specific caching policy is assigned.
+      xegpu::CachePolicyAttr hint = nullptr;
+      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+          rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
-    SmallVector<int64_t> descShape(loadedVecTy.getShape());
-    if (isTransposeLoad) {
-      // If load is transposed, simply swap the last two dimensions of the
-      // loaded vector type to get the descriptor shape.
-      size_t rank = descShape.size();
-      assert(rank >= 2 && "Transpose requires at least 2 dimensions");
-      std::swap(descShape[rank - 1], descShape[rank - 2]);
-      loadedVecTy = VectorType::get(descShape, elementType);
+      Operation *loadedOp =
+          xegpu::LoadNdOp::create(rewriter, loc, loadedVecTy, ndDesc, indices,
+                                  /*packed=*/nullptr, /*transpose=*/nullptr,
+                                  /*l1_hint=*/hint,
+                                  /*l2_hint=*/hint, /*l3_hint=*/hint,
+                                  /*layout=*/nullptr);
+      if (isTransposeLoad) {
+        // Undo the innermost-two-dims swap with a trailing vector.transpose:
+        // keep the leading dimensions in place and interchange only the last
+        // two.
+        int64_t rank = loadedVecTy.getRank();
+        SmallVector<int64_t> perm(llvm::to_vector(llvm::seq<int64_t>(0, rank)));
+        std::swap(perm[rank - 1], perm[rank - 2]);
+        loadedOp = vector::TransposeOp::create(rewriter, loc,
+                                               loadedOp->getResult(0), perm);
+      }
+      rewriter.replaceOp(readOp, loadedOp);
+      return success();
     }
-    auto descType = xegpu::TensorDescType::get(
-        descShape, elementType, /*array_length=*/1,
-        /*boundary_check=*/isOutOfBounds, xegpu::MemorySpace::Global);
-    auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
-        rewriter, loc, readOp.getBase(), getAsOpFoldResult(readOp.getIndices()),
-        loadedVecTy.getRank());
-    // By default, no specific caching policy is assigned.
-    xegpu::CachePolicyAttr hint = nullptr;
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-        rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
 
-    Operation *loadedOp =
-        xegpu::LoadNdOp::create(rewriter, loc, loadedVecTy, ndDesc, indices,
-                                /*packed=*/nullptr, /*transpose=*/nullptr,
-                                /*l1_hint=*/hint,
-                                /*l2_hint=*/hint, /*l3_hint=*/hint,
-                                /*layout=*/nullptr);
-    if (isTransposeLoad) {
-      // Transposing the loaded vector with a separate vector.transpose
-      // operation
-      auto range = llvm::seq<int64_t>(0, readMap.getResults().size());
-      SmallVector<int64_t> perm(
-          range.rbegin(), range.rend()); // reverse the range for transpose
-      loadedOp = vector::TransposeOp::create(rewriter, loc,
-                                             loadedOp->getResult(0), perm);
-    }
-    rewriter.replaceOp(readOp, loadedOp);
-
-    return success();
+    // Fall back to a scattered load. It supports arbitrary permutations and any
+    // rank, but cannot express out-of-bounds accesses.
+    // TODO: add support for OutOfBound access.
+    if (isOutOfBounds)
+      return failure();
+    return lowerToScatteredLoadOp(readOp, rewriter);
   }
 };
 
@@ -727,47 +721,49 @@ struct TransferWriteLowering
       return success();
     }
 
-    // TODO:This check needs to be replaced with proper uArch capability check
+    // TODO: This check needs to be replaced with proper uArch capability check.
     auto chip = xegpu::getChipStr(writeOp);
-    // Lower to scattered store Op if the target HW doesn't have 2d block
-    // store support and the memref is not SLM.
-    if ((chip != "pvc" && chip != "bmg" && chip != "cri") ||
-        writeOp.getVectorType().getRank() > 2) {
+    bool hasBlockStoreSupport =
+        (chip == "pvc" || chip == "bmg" || chip == "cri");
 
-      // TODO: add support for OutOfBound access
-      if (writeOp.hasOutOfBoundsDim())
-        return failure();
-      return lowerToScatteredStoreOp(writeOp, rewriter);
+    // Prefer an nd block store. It requires HW block-store support, a non-0D
+    // vector backed by a scalar-element memref, and a minor-identity map (block
+    // stores have no transpose support). Out-of-bounds writes are handled by
+    // the descriptor's boundary check.
+    AffineMap map = writeOp.getPermutationMap();
+    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 0 &&
+                             map.isMinorIdentity() &&
+                             writeMemTy.getElementType().isIntOrFloat();
+
+    if (canLowerToStoreNd) {
+      auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
+          rewriter, loc, writeOp.getBase(),
+          getAsOpFoldResult(writeOp.getIndices()), vecTy.getRank());
+
+      auto descType = xegpu::TensorDescType::get(
+          vecTy.getShape(), vecTy.getElementType(),
+          /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
+          xegpu::MemorySpace::Global);
+      // By default, no specific caching policy is assigned.
+      xegpu::CachePolicyAttr hint = nullptr;
+      xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
+          rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
+
+      auto storeOp = xegpu::StoreNdOp::create(
+          rewriter, loc, writeOp.getVector(), ndDesc, indices,
+          /*l1_hint=*/hint,
+          /*l2_hint=*/hint, /*l3_hint=*/hint,
+          /*layout=*/nullptr);
+      rewriter.replaceOp(writeOp, storeOp);
+      return success();
     }
 
-    if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy, writeMemTy)))
+    // Fall back to a scattered store. It supports arbitrary permutations and
+    // any rank, but cannot express out-of-bounds accesses.
+    // TODO: add support for OutOfBound access.
+    if (writeOp.hasOutOfBoundsDim())
       return failure();
-
-    AffineMap map = writeOp.getPermutationMap();
-    if (!map.isMinorIdentity())
-      return rewriter.notifyMatchFailure(writeOp, "Expects identity map");
-
-    auto [src, indices] = convertMemrefAndOffsetsToTargetRank(
-        rewriter, loc, writeOp.getBase(),
-        getAsOpFoldResult(writeOp.getIndices()), vecTy.getRank());
-
-    auto descType = xegpu::TensorDescType::get(
-        vecTy.getShape(), vecTy.getElementType(),
-        /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
-        xegpu::MemorySpace::Global);
-    // By default, no specific caching policy is assigned.
-    xegpu::CachePolicyAttr hint = nullptr;
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-        rewriter, loc, descType, dyn_cast<TypedValue<MemRefType>>(src));
-
-    auto storeOp = xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(),
-                                            ndDesc, indices,
-                                            /*l1_hint=*/hint,
-                                            /*l2_hint=*/hint, /*l3_hint=*/hint,
-                                            /*layout=*/nullptr);
-    rewriter.replaceOp(writeOp, storeOp);
-
-    return success();
+    return lowerToScatteredStoreOp(writeOp, rewriter);
   }
 };
 
@@ -848,8 +844,12 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
 
     VectorType vecTy = loadOp.getResult().getType();
     MemRefType memTy = loadOp.getBase().getType();
-    if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy, memTy)))
-      return failure();
+    // The plain vector.load lowering only supports 1D/2D block loads.
+    if (vecTy.getRank() != 1 && vecTy.getRank() != 2)
+      return rewriter.notifyMatchFailure(loadOp, "Expects 1D or 2D vector");
+    if (!memTy.getElementType().isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          loadOp, "Unsupported memref element type: expected integer or float");
 
     // Boundary check is available only for block instructions.
     bool boundaryCheck = vecTy.getRank() > 1;
@@ -888,8 +888,13 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     TypedValue<VectorType> vector = storeOp.getValueToStore();
     VectorType vecTy = vector.getType();
     MemRefType memTy = storeOp.getBase().getType();
-    if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy, memTy)))
-      return failure();
+    // The plain vector.store lowering only supports 1D/2D block stores.
+    if (vecTy.getRank() != 1 && vecTy.getRank() != 2)
+      return rewriter.notifyMatchFailure(storeOp, "Expects 1D or 2D vector");
+    if (!memTy.getElementType().isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          storeOp,
+          "Unsupported memref element type: expected integer or float");
 
     // Boundary check is available only for block instructions.
     bool boundaryCheck = vecTy.getRank() > 1;

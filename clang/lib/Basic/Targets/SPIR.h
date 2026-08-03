@@ -278,6 +278,7 @@ public:
   BaseSPIRVTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : BaseSPIRTargetInfo(Triple, Opts) {
     assert(Triple.isSPIRV() && "Invalid architecture for SPIR-V.");
+    HasAMDGPUTypes = (Triple.getVendor() == llvm::Triple::AMD);
   }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;

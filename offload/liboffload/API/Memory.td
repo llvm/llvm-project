@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 def ol_alloc_type_t : Enum {
-  let desc = "Represents the type of allocation made with olMemAlloc.";
+  let desc = "Represents the type of a memory allocation.";
   let etors = [
     Etor<"HOST", "Host allocation">,
     Etor<"DEVICE", "Device allocation">,
@@ -36,11 +36,32 @@ def ol_memory_register_flag_t : Enum {
 def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
-      "All allocations through olMemAlloc regardless of source share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory.",
+      "This function can only be used to create device or managed allocations. To create a host allocation use `olMemAllocHost`."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,
+    Param<"ol_alloc_type_t", "Type", "type of the allocation. Must be either `OL_ALLOC_TYPE_DEVICE` or `OL_ALLOC_TYPE_MANAGED`", PARAM_IN>,
+    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
+    Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`Size == 0`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ENUMERATION", [
+      "`Type == OL_ALLOC_TYPE_HOST`"
+    ]>
+  ];
+}
+
+def olMemAllocHost : Function {
+  let desc = "Creates a host memory allocation accessible from the specified device.";
+  let details = [
+      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+  ];
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
     Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
     Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
   ];
@@ -52,16 +73,17 @@ def olMemAlloc : Function {
 }
 
 def olMemAllocAligned : Function {
-  let desc = "Creates a memory allocation on the specified device with specified properties.";
+  let desc = "Creates a memory allocation on the specified device with the specified alignment.";
   let details = [
-      "All allocations through olMemAllocWithProp regardless of source share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory.",
+      "This function can only be used to create device or managed allocations. To create a host allocation use `olMemAllocAlignedHost`."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
-    Param<"ol_alloc_type_t", "Type", "type of the allocation", PARAM_IN>,
+    Param<"ol_alloc_type_t", "Type", "type of the allocation. Must be either `OL_ALLOC_TYPE_DEVICE` or `OL_ALLOC_TYPE_MANAGED`", PARAM_IN>,
     Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
     Param<"size_t", "Alignment",
-               "alignment of the allocation im bytes. Must be non-zero and a power of two",
+               "alignment of the allocation in bytes. Must be non-zero and a power of two",
                PARAM_IN>,
     Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
   ];
@@ -71,7 +93,36 @@ def olMemAllocAligned : Function {
     ]>,
     Return<"OL_ERRC_INVALID_ARGUMENT", [
       "`Alignment == 0`"
-    ]>, 
+    ]>,
+    Return<"OL_ERRC_INVALID_ARGUMENT", [
+      "`(Alignment & (Alignment - 1)) != 0`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ENUMERATION", [
+      "`Type == OL_ALLOC_TYPE_HOST`"
+    ]>,
+  ];
+}
+
+def olMemAllocAlignedHost : Function {
+  let desc = "Creates a host memory allocation with the specified alignment.";
+  let details = [
+      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+  ];
+  let params = [
+    Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
+    Param<"size_t", "Size", "size of the allocation in bytes", PARAM_IN>,
+    Param<"size_t", "Alignment",
+               "alignment of the allocation in bytes. Must be non-zero and a power of two",
+               PARAM_IN>,
+    Param<"void**", "AllocationOut", "output for the allocated pointer", PARAM_OUT>
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_SIZE", [
+      "`Size == 0`"
+    ]>,
+    Return<"OL_ERRC_INVALID_ARGUMENT", [
+      "`Alignment == 0`"
+    ]>,
     Return<"OL_ERRC_INVALID_ARGUMENT", [
       "`(Alignment & (Alignment - 1)) != 0`"
     ]>,
@@ -79,7 +130,7 @@ def olMemAllocAligned : Function {
 }
 
 def olMemFree : Function {
-  let desc = "Frees a memory allocation previously made by olMemAlloc.";
+  let desc = "Frees a memory allocation previously made by an olMemAlloc* function.";
   let params = [
     Param<"void*", "Address", "address of the allocation to free", PARAM_IN>,
   ];
@@ -98,7 +149,7 @@ def ol_mem_info_t : Enum {
 }
 
 def olGetMemInfo : Function {
-  let desc = "Queries the given property of a memory allocation allocated with olMemAlloc.";
+  let desc = "Queries the given property of a memory allocation allocated with an olMemAlloc* function.";
   let details = [
     "`olGetMemInfoSize` can be used to query the storage size required for the given query.",
     "The provided pointer can point to any location inside the allocation.",

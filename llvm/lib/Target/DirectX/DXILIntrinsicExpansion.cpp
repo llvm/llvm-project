@@ -213,7 +213,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::powi:
   case Intrinsic::dx_all:
   case Intrinsic::dx_any:
-  case Intrinsic::dx_cross:
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
@@ -228,8 +227,6 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
-  case Intrinsic::dx_interlocked_add:
-  case Intrinsic::dx_interlocked_or:
   case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
@@ -407,41 +404,6 @@ static Value *expandAbs(CallInst *Orig) {
   auto *V = Builder.CreateSub(Zero, X);
   return Builder.CreateIntrinsic(Ty, Intrinsic::smax, {X, V}, nullptr,
                                  "dx.max");
-}
-
-static Value *expandCrossIntrinsic(CallInst *Orig) {
-
-  VectorType *VT = cast<VectorType>(Orig->getType());
-  if (cast<FixedVectorType>(VT)->getNumElements() != 3)
-    reportFatalUsageError("return vector must have exactly 3 elements");
-
-  Value *op0 = Orig->getOperand(0);
-  Value *op1 = Orig->getOperand(1);
-  IRBuilder<> Builder(Orig);
-
-  Value *op0_x = Builder.CreateExtractElement(op0, (uint64_t)0, "x0");
-  Value *op0_y = Builder.CreateExtractElement(op0, 1, "x1");
-  Value *op0_z = Builder.CreateExtractElement(op0, 2, "x2");
-
-  Value *op1_x = Builder.CreateExtractElement(op1, (uint64_t)0, "y0");
-  Value *op1_y = Builder.CreateExtractElement(op1, 1, "y1");
-  Value *op1_z = Builder.CreateExtractElement(op1, 2, "y2");
-
-  auto MulSub = [&](Value *x0, Value *y0, Value *x1, Value *y1) -> Value * {
-    Value *xy = Builder.CreateFMul(x0, y1);
-    Value *yx = Builder.CreateFMul(y0, x1);
-    return Builder.CreateFSub(xy, yx, Orig->getName());
-  };
-
-  Value *yz_zy = MulSub(op0_y, op0_z, op1_y, op1_z);
-  Value *zx_xz = MulSub(op0_z, op0_x, op1_z, op1_x);
-  Value *xy_yx = MulSub(op0_x, op0_y, op1_x, op1_y);
-
-  Value *cross = PoisonValue::get(VT);
-  cross = Builder.CreateInsertElement(cross, yz_zy, (uint64_t)0);
-  cross = Builder.CreateInsertElement(cross, zx_xz, 1);
-  cross = Builder.CreateInsertElement(cross, xy_yx, 2);
-  return cross;
 }
 
 // Create appropriate DXIL float dot intrinsic for the given A and B operands
@@ -867,19 +829,6 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
-static Value *expandInterlockedIntrinsic(CallInst *Orig,
-                                         AtomicRMWInst::BinOp Op) {
-  // Lower @llvm.dx.interlocked.OP(ptr, val) to `atomicrmw OP ptr, val
-  // monotonic`. HLSL Interlocked operations imply no fence/barrier, which maps
-  // to monotonic ordering. The instruction's result is the old value, matching
-  // the intrinsic's return value.
-  Value *Ptr = Orig->getArgOperand(0);
-  Value *Val = Orig->getArgOperand(1);
-  IRBuilder<> Builder(Orig);
-  return Builder.CreateAtomicRMW(Op, Ptr, Val, MaybeAlign(),
-                                 AtomicOrdering::Monotonic);
-}
-
 static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
   IRBuilder<> Builder(Orig);
 
@@ -1302,9 +1251,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_any:
     Result = expandAnyOrAllIntrinsic(Orig, IntrinsicId);
     break;
-  case Intrinsic::dx_cross:
-    Result = expandCrossIntrinsic(Orig);
-    break;
   case Intrinsic::dx_uclamp:
   case Intrinsic::dx_sclamp:
   case Intrinsic::dx_nclamp:
@@ -1340,12 +1286,6 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
-    break;
-  case Intrinsic::dx_interlocked_add:
-    Result = expandInterlockedIntrinsic(Orig, AtomicRMWInst::Add);
-    break;
-  case Intrinsic::dx_interlocked_or:
-    Result = expandInterlockedIntrinsic(Orig, AtomicRMWInst::Or);
     break;
   case Intrinsic::dx_resource_load_rawbuffer:
     if (expandBufferLoadIntrinsic(Orig, /*IsRaw*/ true))

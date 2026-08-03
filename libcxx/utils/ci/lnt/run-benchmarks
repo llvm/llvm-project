@@ -167,6 +167,7 @@ def main(argv):
                             '--build-dir', artifacts / 'benchmarks',
                             '--test-suite-commit', args.test_suite_commit,
                             '--libcxx-installation', artifacts / 'libcxx-install',
+                            '--compiler', args.compiler,
                             '--',
                             '-j1', '--time-tests', '--test-output=failed',
                             '--param', f'compiler={args.compiler}',

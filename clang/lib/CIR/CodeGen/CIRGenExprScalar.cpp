@@ -208,11 +208,11 @@ public:
     auto func = cast<cir::FuncOp>(cgf.curFn);
     cir::BlockAddrInfoAttr blockInfoAttr = cir::BlockAddrInfoAttr::get(
         &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
-    cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
-        builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
-        blockInfoAttr);
-    cgf.indirectGotoTargets.push_back(blockInfoAttr);
-    return blockAddressOp;
+    // GotoSolver collects this cir.block_address op after FlattenCFG to keep
+    // the label and wire it as an indirect-branch successor.
+    return cir::BlockAddressOp::create(builder, cgf.getLoc(e->getSourceRange()),
+                                       cgf.convertType(e->getType()),
+                                       blockInfoAttr);
   }
 
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
