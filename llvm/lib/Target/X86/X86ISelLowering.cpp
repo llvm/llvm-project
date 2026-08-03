@@ -3619,8 +3619,10 @@ X86TargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
     return ExtractSubvectorCost::Expensive;
   }
 
-  if ((Index % ResVT.getVectorNumElements()) == 0)
+  if (Index == 0)
     return ExtractSubvectorCost::Free;
+  else if ((Index % ResVT.getVectorNumElements()) == 0)
+    return ExtractSubvectorCost::Cheap;
   return ExtractSubvectorCost::Expensive;
 }
 

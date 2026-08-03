@@ -20296,8 +20296,10 @@ AArch64TargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
     return ExtractSubvectorCost::Expensive;
 
-  if (Index == 0 || Index == ResVT.getVectorMinNumElements())
+  if (Index == 0)
     return ExtractSubvectorCost::Free;
+  else if (Index == ResVT.getVectorMinNumElements())
+    return ExtractSubvectorCost::Cheap;
   return ExtractSubvectorCost::Expensive;
 }
 
