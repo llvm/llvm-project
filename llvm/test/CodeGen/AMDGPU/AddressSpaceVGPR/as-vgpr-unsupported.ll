@@ -1,5 +1,5 @@
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck %s
-; RUN: not llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu12.00-- -filetype=null %s 2>&1 | FileCheck %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu12.00-- -filetype=null %s 2>&1 | FileCheck %s
 
 ; Sub-dword (8/16-bit) accesses of the VGPR "as memory" address space (13) are
 ; not yet implemented. They must be rejected with a clean diagnostic on both
