@@ -6311,21 +6311,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
 
-  bool RequiresScalarEpilogueCheck =
-      LoopVectorizationPlanner::getDecisionAndClampRange(
-          [&PlanCM](ElementCount VF) {
-            return !PlanCM.requiresScalarEpilogue(VF.isVector());
-          },
-          Range);
-  // Update the branch in the middle block if a scalar epilogue is required.
-  VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
-  if (!RequiresScalarEpilogueCheck && MiddleVPBB->getNumSuccessors() == 2) {
-    auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
-    assert(MiddleVPBB->getSuccessors()[1] == Plan->getScalarPreheader() &&
-           "second successor must be scalar preheader");
-    BranchOnCond->setOperand(0, Plan->getFalse());
-  }
-
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
   // it up into different VPlans.
@@ -6375,6 +6360,20 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
     if (!getDecisionAndClampRange(ApplyIG, Range))
       continue;
     InterleaveGroups.insert(IG);
+  }
+
+  bool RequiresScalarEpilogue =
+      PlanCM.isEpilogueAllowed() && any_of(InterleaveGroups, [](auto *IG) {
+        return isa<LoadInst>(IG->getInsertPos()) &&
+               IG->requiresScalarEpilogue();
+      });
+  // Update the branch in the middle block if a scalar epilogue is required.
+  VPBasicBlock *MiddleVPBB = Plan->getMiddleBlock();
+  if (RequiresScalarEpilogue && MiddleVPBB->getNumSuccessors() == 2) {
+    auto *BranchOnCond = cast<VPInstruction>(MiddleVPBB->getTerminator());
+    assert(MiddleVPBB->getSuccessors()[1] == Plan->getScalarPreheader() &&
+           "second successor must be scalar preheader");
+    BranchOnCond->setOperand(0, Plan->getFalse());
   }
 
   // ---------------------------------------------------------------------------
