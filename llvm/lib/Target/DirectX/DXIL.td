@@ -1351,7 +1351,8 @@ def QuadReadLaneAt : DXILOp<122, quadReadLaneAt> {
   let result = OverloadTy;
   let overloads = [Overloads<
       DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int1Ty, Int16Ty, Int32Ty, Int64Ty]>];
-  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let stages = [Stages<DXIL1_0, [compute, pixel, library, amplification, mesh, node]>];
+  let attributes = [Attributes<DXIL1_0, []>];
 }
 
 def QuadOp : DXILOp<123, quadOp> {
@@ -1376,7 +1377,7 @@ def QuadOp : DXILOp<123, quadOp> {
   let overloads = [
     Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
   ];
-  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let stages = [Stages<DXIL1_0, [compute, pixel, library, amplification, mesh, node]>];
   let attributes = [Attributes<DXIL1_0, []>];
 }
 
