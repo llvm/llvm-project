@@ -1,9 +1,5 @@
 add_flang_tool(fir-opt fir-opt.cpp)
-llvm_update_compile_flags(fir-opt)
 
-# Let plugins loaded with --load-dialect-plugin / --load-pass-plugin resolve
-# MLIR and LLVM symbols against fir-opt, as mlir-opt already does.
-export_executable_symbols_for_plugins(fir-opt)
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
@@ -55,3 +51,8 @@ mlir_target_link_libraries(fir-opt PRIVATE
   MLIRVectorToLLVM
   MLIROptLib
 )
+
+llvm_update_compile_flags(fir-opt)
+
+mlir_check_all_link_libraries(fir-opt)
+export_executable_symbols_for_plugins(fir-opt)
