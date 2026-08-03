@@ -27,7 +27,7 @@ for.end:
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
 
 define void @exp_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @exp_f64
@@ -54,7 +54,7 @@ for.end:
 
 !11 = distinct !{!11, !12, !13}
 !12 = !{!"llvm.loop.vectorize.width", i32 4}
-!13 = !{!"llvm.loop.vectorize.enable", i1 true}
+!13 = !{!"llvm.loop.vectorize.enable"}
 
 define void @log_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f32
@@ -81,7 +81,7 @@ for.end:
 
 !21 = distinct !{!21, !22, !23}
 !22 = !{!"llvm.loop.vectorize.width", i32 4}
-!23 = !{!"llvm.loop.vectorize.enable", i1 true}
+!23 = !{!"llvm.loop.vectorize.enable"}
 
 define void @log_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @log_f64
@@ -108,7 +108,7 @@ for.end:
 
 !31 = distinct !{!31, !32, !33}
 !32 = !{!"llvm.loop.vectorize.width", i32 4}
-!33 = !{!"llvm.loop.vectorize.enable", i1 true}
+!33 = !{!"llvm.loop.vectorize.enable"}
 
 define void @pow_f32(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f32
@@ -137,7 +137,7 @@ for.end:
 
 !41 = distinct !{!41, !42, !43}
 !42 = !{!"llvm.loop.vectorize.width", i32 4}
-!43 = !{!"llvm.loop.vectorize.enable", i1 true}
+!43 = !{!"llvm.loop.vectorize.enable"}
 
 define void @pow_f64(ptr nocapture %varray, ptr nocapture readonly %exp) {
 ; CHECK-LABEL: @pow_f64
@@ -166,7 +166,7 @@ for.end:
 
 !51 = distinct !{!51, !52, !53}
 !52 = !{!"llvm.loop.vectorize.width", i32 4}
-!53 = !{!"llvm.loop.vectorize.enable", i1 true}
+!53 = !{!"llvm.loop.vectorize.enable"}
 
 declare float @__expf_finite(float) #0
 declare double @__exp_finite(double) #0

@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfWasm  # no ABI plugin, so address masks are never applied
 class AddressMasksTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

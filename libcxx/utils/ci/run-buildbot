@@ -270,6 +270,37 @@ check-generated-output)
            --exclude 'underflow.pass.cpp' \
            || false
 ;;
+test-tools)
+    #
+    # This job tests libc++ tools that don't make sense to be tested inside the
+    # libc++ conformance test suite.
+    #
+    clean
+
+    step "Building and installing libc++ with build-at-commit"
+    "${MONOREPO_ROOT}/libcxx/utils/build-at-commit" \
+        --git-repo "${MONOREPO_ROOT}" \
+        --commit HEAD \
+        --install-dir "${INSTALL_DIR}" \
+        --tmp-build-dir "${BUILD_DIR}/build-at-commit" \
+        -- -DCMAKE_CXX_COMPILER="${CXX}" \
+           -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+    step "Running a benchmark through the benchmark tooling pipeline"
+    "${MONOREPO_ROOT}/libcxx/utils/test-at-commit" \
+        --git-repo "${MONOREPO_ROOT}" \
+        --libcxx-installation "${INSTALL_DIR}" \
+        --build-dir "${BUILD_DIR}/benchmarks" \
+        --compiler "${CXX}"                   \
+        -- -sv --param optimization=speed \
+        "${MONOREPO_ROOT}/libcxx/test/benchmarks/hash.bench.cpp"
+
+    step "Consolidate benchmark results"
+    "${MONOREPO_ROOT}/libcxx/utils/consolidate-benchmarks" "${BUILD_DIR}/benchmarks" > "${BUILD_DIR}/results.lnt"
+
+    step "Compare benchmark results" # perform a no-op comparison, just to run the tool
+    "${MONOREPO_ROOT}/libcxx/utils/compare-benchmarks" "${BUILD_DIR}/results.lnt" "${BUILD_DIR}/results.lnt"
+;;
 #
 # Various Standard modes
 #

@@ -1,9 +1,9 @@
+---
+tocdepth: 4
+---
+
 # LLVM Language Reference Manual
 
-```{contents}
-:local:
-:depth: 3
-```
 
 ## Abstract
 
@@ -1521,6 +1521,12 @@ Currently, only the following parameter attributes are defined:
     callee share the responsibility of ensuring that these requirements are
     met. For further details, please see the discussion of the NoAlias response
     in {ref}`alias analysis <Must, May,  or No>`.
+
+    `noalias` also applies to accesses from other threads, unless they
+    happen-before function entry, or function exit happens-before them. This
+    means that conflicting concurrent accesses from other threads either need
+    to be based on the noalias pointer, or else be appropriately synchronized
+    *outside* the function.
 
     Note that this definition of `noalias` is intentionally similar
     to the definition of `restrict` in C99 for function arguments.
@@ -4196,6 +4202,30 @@ Otherwise, an atomic operation that is not marked
 *synchronizes with* and is related in the `seq_cst` order and the
 monotonic modification order with other operations that are not marked
 `syncscope("singlethread")` or `syncscope("<target-scope>")`.
+
+(elementwise-atomics)=
+
+### Elementwise Atomic Operations
+
+Certain atomic instructions, such as {ref}`atomicrmw <i_atomicrmw>`,
+and {ref}`atomic load <i_load>`, may be marked `elementwise`. The access type
+must then be a fixed vector type whose total bit width is a power of two and
+whose element type is supported by the corresponding scalar atomic instruction.
+The {ref}`ordering <ordering>` of an `elementwise` instruction may not be
+`seq_cst`.
+
+An `elementwise` atomic instruction behaves as if it were expanded into one
+scalar version of that instruction for each vector element. Each resulting
+scalar operation has the same {ref}`ordering <ordering>` and `syncscope` as the
+original instruction. Each scalar operation occupies the original instruction's
+position in program order relative to other operations, but the scalar
+operations are not related in program order with respect to one another.
+Synchronizing with one scalar operation therefore does not, by itself,
+establish a happens-before relationship with any other scalar operation from
+the same `elementwise` instruction.
+
+Without `elementwise`, vector atomic instructions are performed atomically over
+the entire vector operation.
 
 (floatenv)=
 
@@ -7790,6 +7820,27 @@ sections that the user does not want removed after linking.
 !0 = !{}
 ```
 
+#### '`metadata_section_kind`' Metadata
+
+`metadata_section_kind` metadata may be attached to a global variable to signify
+that its section should be treated as "metadata" by LLVM, meaning the section
+will be generic by default without any flags, unless the section has a special
+name (e.g., `"llvm.metadata"`). Incompatible with `!exclude`; in practice, one
+may be ignored by LLVM. This option is only valid for global variables with an
+explicit section targeting ELF or COFF. Additionally, this metadata is only
+used as a flag, so the associated node must be empty.
+
+By default this uses `SHT_PROGBITS` with no flags for ELF, and for COFF the
+section is not marked as readable or writable and it uses the section flag
+`IMAGE_SCN_MEM_DISCARDABLE`.
+
+```text
+@object = private constant [1 x i8] c"\00", section ".foo" !metadata_section_kind !0
+
+...
+!0 = !{}
+```
+
 #### '`unpredictable`' Metadata
 
 `unpredictable` metadata may be attached to any branch, select, or switch
@@ -8008,14 +8059,12 @@ then the interleave count will be determined automatically.
 
 #### '`llvm.loop.vectorize.enable`' Metadata
 
-This metadata selectively enables or disables vectorization for the loop. The
-first operand is the string `llvm.loop.vectorize.enable` and the second operand
-is a bit. If the bit operand value is 1 vectorization is enabled. A value of
-0 disables vectorization:
+This metadata selectively enables or disables vectorization for the loop. Each
+node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.enable"}
+!1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
 #### '`llvm.loop.vectorize.predicate.enable`' Metadata
@@ -9354,6 +9403,75 @@ enum is the smallest type which can represent all of its values:
 !llvm.module.flags = !{!0, !1}
 !0 = !{i32 1, !"short_wchar", i32 1}
 !1 = !{i32 1, !"short_enum", i32 0}
+```
+
+### Float ABI Module Flags Metadata
+
+This module flag describes the floating-point ABI (the calling convention used
+to pass and return floating-point values) that the module was compiled for. The
+value is an `MDString` and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"soft"`
+  - The software floating-point calling convention is used: floating-point
+    values are passed in general-purpose (integer) registers. Note this is
+    independent of whether floating-point hardware is used to perform
+    operations; see the `use-soft-float` function attribute for that. For
+    instance, both ARM's soft and softfp modes would use this value, since
+    they share the same calling convention.
+
+* - `"hard"`
+  - The hardware floating-point calling convention is used: floating-point
+    values are passed in floating-point registers.
+```
+
+When the flag is absent, the target's default floating-point ABI is used. The
+flag must use the `error` merge behavior, so that linking modules with
+conflicting floating-point ABIs is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"float-abi", !"hard"}
+```
+
+### Long Double Type Module Flags Metadata
+
+Describe the floating-point format used by libm for `long double`. The
+value is an `MDString` naming the corresponding IR floating-point
+type, and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"float"`
+  - IEEE 754 single precision (32-bit).
+
+* - `"double"`
+  - IEEE 754 double precision (64-bit).
+
+* - `"fp128"`
+  - IEEE 754 quadruple precision (128-bit).
+
+* - `"x86_fp80"`
+  - x87 80-bit extended precision.
+
+* - `"ppc_fp128"`
+  - IBM `double-double` (a pair of IEEE doubles).
+
+```
+
+The flag must use the `error` merge behavior, so that linking modules with
+conflicting long double types is rejected. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"long-double-type", !"fp128"}
 ```
 
 ### Stack Alignment Metadata
@@ -11755,13 +11873,10 @@ multiple atomic stores. The type of the pointee must be an integer, pointer,
 floating-point, or vector type whose bit width is a power of two greater than or
 equal to eight.
 
-If the `elementwise` modifier is present, the loaded type must be a fixed
-vector type whose total bit width is a power of two greater than or equal to
-eight, and whose element type is supported by scalar atomic loads. The load has
-per-element atomic load semantics: it behaves as if it were expanded into
-one scalar atomic load per element, and the element loads are not ordered with
-respect to each other. Without `elementwise`, vector atomic loads keep
-whole-value atomic semantics. That is, the entire vector is loaded atomically.
+If the `load` is marked `elementwise`, the instruction has
+{ref}`elementwise atomic semantics <elementwise-atomics>`. The loaded type must
+be a fixed vector type whose total bit width is a power of two and whose
+element type is supported by scalar atomic loads.
 
 `align` must be explicitly specified on atomic loads, and is otherwise
 optional on non-atomic loads. Note: if the alignment is not greater than or equal
@@ -12139,7 +12254,7 @@ operation. The operation must be one of the following keywords:
 For all of these operations, the type of `<value>` must be a type whose bit width is a power of two greater than or equal to eight.
 For add/sub/and/nand/or/xor/max/min/umax/umin/uinc_wrap/udec_wrap/usub_cond/usub_sat, this must be an integer type or a fixed vector of integer type.
 For fadd/fsub/fmax/fmin/fmaximum/fminimum/fmaximumnum/fminimumnum, this must be a floating-point or fixed vector of floating-point type.
-For xchg, this must be an integer type, floating-point type, or pointer type, or, if the `elementwise` modifier is present, a fixed vector of integer type, floating-point type, or pointer type.
+For xchg, this must be an integer type, a floating-point type, a pointer type, or a fixed vector of any of these types.
 The type of the `<pointer>` operand must be a pointer to the type of `<value>`.
 If the `atomicrmw` is marked as `volatile`, then the optimizer is not allowed to modify the
 number or order of execution of this `atomicrmw` with other
@@ -12158,9 +12273,8 @@ isn't specified.
 An `atomicrmw` instruction can also take an optional
 "{ref}`syncscope <syncscope>`" argument.
 
-If the `elementwise` modifier is present, the instruction has per-element vector
-atomic semantics. It behaves as if it were expanded into one scalar `atomicrmw` per element, that are not ordered with respect to each other.
-Without `elementwise`, vector `atomicrmw` keeps whole-value atomic semantics.
+If `atomicrmw` is marked `elementwise`, the instruction has
+{ref}`elementwise atomic semantics <elementwise-atomics>`.
 
 ##### Semantics:
 
@@ -20655,18 +20769,19 @@ The result is a vector with the i1 element type.
 
 ##### Semantics:
 
-`%elementSize` is the size of the accessed elements in bytes.
-The intrinsic returns `poison` if the distance between `%addrA` and `%addrB`
-is smaller than `VF * %elementsize` and either `%addrA + VF * %elementSize`
-or `%addrB + VF * %elementSize` wrap.
+`%elementSize` is the size of the accessed elements in bytes. The intrinsic
+returns `poison` if the distance between `%addrA` and `%addrB` is not a multiple
+of `%elementsize`.
 
-The element of the result mask is active when loading from `%addrA` then
-storing to `%addrB` is safe and doesn't result in a write-after-read hazard,
-meaning that:
+Each lane of the mask `%m[i]` is defined as the `or` of:
 
-* (addrB - addrA) <= 0 (guarantees that all lanes are loaded before any stores), or
-* elementSize * lane < (addrB - addrA) (guarantees that this lane is loaded
-  before the store to the same address)
+* `icmp uge %addrA, %addrB`
+  * (guarantees that all lanes are loaded before any stores)
+* `icmp ult (%elementSize * i), (%addrB - %addrA)`
+  * (guarantees that this lane is loaded before the store to the same address)
+
+where `%m` is the vector mask of active/inactive lanes with its elements
+indexed by `i`.
 
 ##### Examples:
 
@@ -20743,18 +20858,20 @@ The result is a vector with the i1 element type.
 
 ##### Semantics:
 
-`%elementSize` is the size of the accessed elements in bytes.
-The intrinsic returns `poison` if the distance between `%addrA` and `%addrB`
-is smaller than `VF * %elementsize` and either `%addrA + VF * %elementSize`
-or `%addrB + VF * %elementSize` wrap.
+`%elementSize` is the size of the accessed elements in bytes. The intrinsic
+returns `poison` if the distance between `%addrA` and `%addrB` is not a multiple
+of `%elementsize`.
 
-The element of the result mask is active when storing to `%addrA` then
-loading from `%addrB` is safe and doesn't result in aliasing, meaning that:
+Each lane of the mask `%m[i]` is defined as the `or` of:
 
-* elementSize * lane < abs(addrB - addrA) (guarantees that the store of this lane
-  occurs before loading from this address), or
-* addrA == addrB (doesn't introduce any new hazards that weren't in the scalar
-  code)
+* `icmp eq %addrA, %addrB`
+  * (doesn't introduce any new hazards that weren't in the scalar code)
+* `icmp ult (%elementSize * i), uabs(%addrA,  %addrB)`
+  * (guarantees that this lane is loaded before the store to the same address)
+
+where `%m` is the vector mask of active/inactive lanes with its elements indexed
+by `i` and `uabs` is the unsigned absolute difference between `%addrA` and
+`%addrB`.
 
 ##### Examples:
 

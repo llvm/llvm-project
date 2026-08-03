@@ -87,17 +87,19 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
     APFloat FP = NumVarOps == 1 ? APFloat(APInt(32, Imm).bitsToFloat())
                                 : APFloat(APInt(64, Imm).bitsToDouble());
 
-    // Print infinity and NaN as hex floats.
+    // Print infinity and NaN as hex floats. The exponent depends on the
+    // actual width of FP (f32 vs f64), not a fixed constant.
     // TODO: Make sure subnormal numbers are handled correctly as they may also
     // require hex float notation.
-    if (FP.isInfinity()) {
-      if (FP.isNegative())
-        O << '-';
-      O << "0x1p+128";
-      return;
-    }
-    if (FP.isNaN()) {
-      O << "0x1.8p+128";
+    if (FP.isInfinity() || FP.isNaN()) {
+      unsigned MaxExp = APFloat::semanticsMaxExponent(FP.getSemantics()) + 1;
+      if (FP.isInfinity()) {
+        if (FP.isNegative())
+          O << '-';
+        O << "0x1p+" << MaxExp;
+      } else {
+        O << "0x1.8p+" << MaxExp;
+      }
       return;
     }
 

@@ -1898,6 +1898,12 @@ class AsmParser {
   //    Number of required features (least first)
   bit PreferSmallerInstructions = false;
 
+  // Set to true to emit specific Match_Invalid<token> diagnostic types for
+  // literal text tokens (i.e. not $ operand references). When enabled, a
+  // Match_Invalid<name> entry is generated for each such token; targets can
+  // map these codes to more accurate error messages than Match_InvalidOperand.
+  bit EmitTokenDiagnosticTypes = false;
+
   // Set to true to make the assembler matcher emitter produce a fatal error
   // for any pair of matchables that are indistinguishable to the asm parser.
   // The check relies on mutually exclusive assembler predicates declared using
@@ -2151,6 +2157,13 @@ class ProcessorModel<string n, SchedMachineModel m, list<SubtargetFeature> f,
                      list<SubtargetFeature> tunef = []>
   : Processor<n, NoItineraries, f, tunef> {
   let SchedModel = m;
+}
+
+// Defines an alternate name 'n' for the processor 'alias', resolving
+// to the same subtarget features and scheduling model.
+class ProcessorAlias<string n, string alias> {
+  string Name = n;
+  string Alias = alias;
 }
 
 //===----------------------------------------------------------------------===//

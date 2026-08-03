@@ -328,6 +328,11 @@ LLVM_ABI TransformationMode hasLICMVersioningTransformation(const Loop *L);
 LLVM_ABI void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                                       unsigned V = 0);
 
+/// Add a single-operand (name-only) node \p MDString to the loop metadata of
+/// \p TheLoop, keeping other values intact. If a name-only node with the same
+/// string is already present, this is a no-op.
+LLVM_ABI void addStringMetadataToLoop(Loop *TheLoop, StringRef MDString);
+
 /// Return either:
 /// - \c std::nullopt, if the implementation is unable to handle the loop form
 ///   of \p L (e.g., \p L must have a latch block that controls the loop exit).

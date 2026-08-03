@@ -213,6 +213,7 @@ OL_DEVICE_INFO_TEST_VALUE_GT(MaxClockFrequency, uint32_t,
                              OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY, 0);
 OL_DEVICE_INFO_TEST_VALUE_GT(MemoryClockRate, uint32_t,
                              OL_DEVICE_INFO_MEMORY_CLOCK_RATE, 0);
+OL_DEVICE_INFO_TEST_VALUE_GT(NumLanes, uint32_t, OL_DEVICE_INFO_NUM_LANES, 0);
 OL_DEVICE_INFO_TEST_VALUE_GT(AddressBits, uint32_t, OL_DEVICE_INFO_ADDRESS_BITS,
                              0);
 OL_DEVICE_INFO_TEST_DEVICE_VALUE_GT(MaxMemAllocSize, uint64_t,
