@@ -1,0 +1,56 @@
+# A convergent instruction without the NoMerge flag should have it set by the pass.
+# A function with no convergent instructions should pass through unchanged.
+# RUN: llc -march=pisa -run-pass=pisa-mark-convergent-no-merge \
+# RUN:     -verify-machineinstrs -o - %s | FileCheck %s
+
+# Test 1: A convergent ired instruction without NoMerge should get NoMerge set.
+# CHECK-LABEL: name: convergent_gets_nomerge
+# CHECK: %0:reg32b = nomerge ired_umax_32b_rir
+
+# Test 2: A function with no convergent instructions should pass through unchanged.
+# CHECK-LABEL: name: no_convergent_no_change
+# CHECK-NOT: nomerge
+# CHECK: ret
+
+---
+name:            convergent_gets_nomerge
+alignment:       1
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: reg32b }
+  - { id: 1, class: reg32b }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    %1:reg32b = functionParameter_i32 0
+    %0:reg32b = ired_umax_32b_rir %1, -1, undef %0
+    retValue_i32_r %0
+...
+---
+name:            no_convergent_no_change
+alignment:       1
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+registers:
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    ret
+...
