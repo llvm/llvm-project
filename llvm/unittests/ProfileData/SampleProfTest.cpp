@@ -488,6 +488,20 @@ TEST_F(SampleProfTest, roundtrip_eytzinger_ext_binary_profile) {
   cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
 }
 
+TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
+  const char *Args[] = {"SampleProfTest",
+                        "--sample-profile-write-eytzinger-name-tables=true"};
+  cl::ResetAllOptionOccurrences();
+  cl::ParseCommandLineOptions(2, Args, StringRef(), &llvm::nulls());
+
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
+
+  const char *ArgsFalse[] = {
+      "SampleProfTest", "--sample-profile-write-eytzinger-name-tables=false"};
+  cl::ResetAllOptionOccurrences();
+  cl::ParseCommandLineOptions(2, ArgsFalse, StringRef(), &llvm::nulls());
+}
+
 TEST_F(SampleProfTest, remap_text_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Text, true, false);
 }

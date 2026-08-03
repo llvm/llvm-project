@@ -115,6 +115,17 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::lexicographical_compare(
+        pol, it, it, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: lexicographical_compare}}
+    (void)std::lexicographical_compare(
+        pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: lexicographical_compare}}
+    (void)std::lexicographical_compare(
+        pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: lexicographical_compare}}
+    (void)std::lexicographical_compare(
+        pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: lexicographical_compare}}
+  }
+
+  {
     (void)std::reverse_copy(
         pol, non_bidir, non_bidir, it);            // expected-error@*:* {{static assertion failed: reverse_copy}}
     (void)std::reverse_copy(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: reverse_copy}}
@@ -133,6 +144,28 @@ void f(non_forward_iterator non_fwd,
     (void)std::merge(pol, non_fwd, non_fwd, it, it, out, pred); // expected-error@*:* {{static assertion failed: merge}}
     (void)std::merge(pol, it, it, non_fwd, non_fwd, out, pred); // expected-error@*:* {{static assertion failed: merge}}
     (void)std::merge(pol, it, it, it, it, non_output, pred);    // expected-error@*:* {{static assertion failed: merge}}
+  }
+
+  {
+    (void)std::mismatch(pol, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: mismatch}}
+    (void)std::mismatch(pol, it, it, non_fwd);      // expected-error@*:* {{static assertion failed: mismatch}}
+
+    (void)std::mismatch(pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: mismatch}}
+    (void)std::mismatch(pol, it, it, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: mismatch}}
+
+    (void)std::mismatch(pol, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: mismatch}}
+    (void)std::mismatch(pol, it, it, non_fwd, pred);      // expected-error@*:* {{static assertion failed: mismatch}}
+
+    (void)std::mismatch(
+        pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: mismatch}}
+    (void)std::mismatch(
+        pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: mismatch}}
+  }
+
+  {
+    (void)std::adjacent_find(pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: adjacent_find}}
+    (void)std::adjacent_find(
+        pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: adjacent_find}}
   }
 
   {

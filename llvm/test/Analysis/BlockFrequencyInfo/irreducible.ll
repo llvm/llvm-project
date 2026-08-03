@@ -416,3 +416,109 @@ exit:
 !21 = !{!"branch_weights", i32 2, i32 1}
 !22 = !{!"branch_weights", i32 1, i32 1}
 !23 = !{!"branch_weights", i32 8, i32 1, i32 3, i32 12}
+
+; All blocks share one successor distribution.  Exact lh:o1:o2 = 5:3:2.
+; CHECK-LABEL: block-frequency-info: equalrows
+define void @equalrows(i32 %x) {
+entry:
+; CHECK-NEXT: entry: float = 1.0, int = [[ENTRY:[0-9]+]]
+  switch i32 %x, label %lh [ i32 1, label %o1
+                             i32 2, label %o2 ], !prof !30
+
+lh:
+; CHECK-NEXT: lh: float = 3657.1,
+  switch i32 %x, label %lh [ i32 1, label %o1
+                             i32 2, label %o2 ], !prof !30
+
+o1:
+; CHECK-NEXT: o1: float = 1901.7,
+  switch i32 %x, label %lh [ i32 1, label %o1
+                             i32 2, label %o2 ], !prof !30
+
+o2:
+; CHECK-NEXT: o2: float = 1170.3,
+  switch i32 %x, label %lh [ i32 1, label %o1
+                             i32 2, label %o2 ], !prof !30
+}
+!30 = !{!"branch_weights", i32 5, i32 3, i32 2}
+
+; Self edges of differing probability; ignoring them, each block splits evenly
+; between the other two.  Exact a:b:c = 8:5:5.
+; CHECK-LABEL: block-frequency-info: selfloops
+define void @selfloops(i32 %x) {
+entry:
+; CHECK-NEXT: entry: float = 1.0, int = [[ENTRY:[0-9]+]]
+  switch i32 %x, label %a [ i32 1, label %b
+                            i32 2, label %c ]
+
+a:
+; CHECK-NEXT: a: float = 2730.7,
+  switch i32 %x, label %a [ i32 1, label %b
+                            i32 2, label %c ], !prof !31
+
+b:
+; CHECK-NEXT: b: float = 1706.7,
+  switch i32 %x, label %a [ i32 1, label %b
+                            i32 2, label %c ], !prof !32
+
+c:
+; CHECK-NEXT: c: float = 1706.7,
+  switch i32 %x, label %a [ i32 1, label %b
+                            i32 2, label %c ], !prof !33
+}
+!31 = !{!"branch_weights", i32 2, i32 1, i32 1}
+!32 = !{!"branch_weights", i32 2, i32 1, i32 2}
+!33 = !{!"branch_weights", i32 2, i32 2, i32 1}
+
+; o1 and o2 are symmetric but lh's row differs.  Exact lh:o1:o2 = 8:3:3; BFI
+; computes the values below instead.
+; CHECK-LABEL: block-frequency-info: unequalrows
+define void @unequalrows(i32 %x) {
+entry:
+; CHECK-NEXT: entry: float = 1.0, int = [[ENTRY:[0-9]+]]
+  switch i32 %x, label %lh [ i32 1, label %o1
+                             i32 2, label %o2 ]
+
+lh:
+; CHECK-NEXT: lh: float = 4045.4,
+  switch i32 %x, label %lh [ i32 1, label %o1
+                             i32 2, label %o2 ], !prof !34
+
+o1:
+; CHECK-NEXT: o1: float = 927.08,
+  switch i32 %x, label %lh [ i32 1, label %o1
+                             i32 2, label %o2 ], !prof !35
+
+o2:
+; CHECK-NEXT: o2: float = 927.08,
+  switch i32 %x, label %lh [ i32 1, label %o1
+                             i32 2, label %o2 ], !prof !35
+}
+!34 = !{!"branch_weights", i32 4, i32 3, i32 3}
+!35 = !{!"branch_weights", i32 8, i32 1, i32 1}
+
+; c belongs to the irreducible region but is not an entry, so only a and b get
+; their mass adjusted.  Exact a:b:c = 6:4:3; BFI computes the values below
+; instead.
+; CHECK-LABEL: block-frequency-info: nonentry
+define void @nonentry(i1 %x, i1 %y, i1 %z) {
+entry:
+; CHECK-NEXT: entry: float = 1.0, int = [[ENTRY:[0-9]+]]
+  br i1 %x, label %a, label %b
+
+a:
+; CHECK-NEXT: a: float = 1007.7,
+  br i1 %y, label %c, label %b
+
+c:
+; CHECK-NEXT: c: float = 976.25,
+  br label %a
+
+b:
+; CHECK-NEXT: b: float = 32.508,
+  br i1 %z, label %a, label %exit
+
+exit:
+; CHECK-NEXT: exit: float = 1.0, int = [[ENTRY]]
+  ret void
+}
