@@ -1232,10 +1232,9 @@ getSafeRepackAttrs(Fortran::lower::AbstractConverter &converter) {
 // of one or more flagsets (like -finit-* family of flags).
 // General purpose usage of this function outside the
 // scope detailed here is discouraged, and is probably wrong.
-static void emitForcedAssignment(Fortran::lower::AbstractConverter &converter,
-                                 mlir::Location loc,
-                                 const Fortran::semantics::Symbol &sym,
-                                 Fortran::lower::SymMap &symMap) {
+static void emitForcedInitialization(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, Fortran::lower::SymMap &symMap) {
   mlir::Type eleTy = hlfir::getFortranElementType(converter.genType(sym));
   auto *builder = &converter.getFirOpBuilder();
   if (mlir::isa<fir::CharacterType>(eleTy)) {
@@ -1352,7 +1351,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   ///   3) allocatable arrays
   ///   4) variables that appear in an EQUIVALENCE statement
 
-  auto isEligibleForForcedAssignment = [&var, &converter]() -> bool {
+  auto isEligibleForForcedInitialization = [&var, &converter]() -> bool {
     if (!var.hasSymbol())
       return false;
 
@@ -1376,9 +1375,9 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
   };
 
   if (converter.getLoweringOptions().getInitLocalZeroDef() &&
-      isEligibleForForcedAssignment()) {
-    emitForcedAssignment(converter, converter.getCurrentLocation(),
-                         var.getSymbol(), symMap);
+      isEligibleForForcedInitialization()) {
+    emitForcedInitialization(converter, converter.getCurrentLocation(),
+                             var.getSymbol(), symMap);
   }
 }
 
