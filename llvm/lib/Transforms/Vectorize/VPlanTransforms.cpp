@@ -5567,6 +5567,18 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
                          ? VPI->getScalarType()
                          : VPI->getOperand(0)->getScalarType();
 
+    if (VPI->getMask()) {
+      Instruction *I = VPI->getUnderlyingInstr();
+      bool IsLoad = VPI->getOpcode() == Instruction::Load;
+      // No reason to speculate unitstrideness if that won't improve vector code
+      // as we'd pay the price of not taking vector loop if the runtime
+      // condition is false for no benefits.
+      if (!CostCtx.Config.isLegalMaskedLoadOrStore(IsLoad, ScalarTy,
+                                                   getLoadStoreAlignment(I),
+                                                   getLoadStoreAddressSpace(I)))
+        continue;
+    }
+
     const auto *TypeSize = cast<SCEVConstant>(SE->getSizeOfExpr(
         Stride->getType(), SE->getDataLayout().getTypeAllocSize(ScalarTy)));
 
@@ -5631,26 +5643,6 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
             },
             Range))
       continue;
-
-    if (VPI->getMask()) {
-      Instruction *I = VPI->getUnderlyingInstr();
-      bool IsLoad = VPI->getOpcode() == Instruction::Load;
-      // No reason to speculate unitstrideness if that won't improve vector code
-      // as we'd pay the price of not taking vector loop if the runtime
-      // condition is false for no benefits.
-      //
-      // We perform this clamping here because we don't want to
-      // `getDecisionAndClampRange` too early - here is better because we have
-      // another clamping right above.
-      if (!LoopVectorizationPlanner::getDecisionAndClampRange(
-              [&](ElementCount VF) -> bool {
-                return CostCtx.Config.isLegalMaskedLoadOrStore(
-                    IsLoad, ScalarTy, getLoadStoreAlignment(I),
-                    getLoadStoreAddressSpace(I));
-              },
-              Range))
-        continue;
-    }
 
     StridePredicates = StridePredicates.getUnionWith(NewPred, *SE);
 
