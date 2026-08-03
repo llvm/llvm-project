@@ -3195,15 +3195,24 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   Value output = getOutput();
   dims.erase(dims.begin() + reductionDim);
   // Step 1: Compute max along dim.
+  //
+  // Use `maximumf` with the finite neutral element `-FLT_MAX` rather than
+  // `maxnumf` with its NaN neutral element. A NaN neutral element poisons
+  // consumers that combine partial maxima across tiles, as an online (a.k.a.
+  // flash) softmax does: the rescaling factor `exp(m_old - m_new)` is NaN on
+  // the first tile, and `0 * NaN` is NaN rather than 0, so the running sum is
+  // irrecoverably NaN. `-FLT_MAX` keeps that factor well defined, including
+  // for a fully masked tile (all `-inf` scores), where `-inf` would itself
+  // produce `exp(-inf - -inf) = NaN`.
   Value outputReduce = tensor::EmptyOp::create(b, loc, dims, elementType);
-  Value neutralForMaxF = arith::getIdentityValue(arith::AtomicRMWKind::maxnumf,
+  Value neutralForMaxF = arith::getIdentityValue(arith::AtomicRMWKind::maximumf,
                                                  elementType, b, loc,
                                                  /*useOnlyFiniteValue=*/true);
   Value neutralForMaxFInit =
       linalg::FillOp::create(b, loc, Value{neutralForMaxF}, outputReduce)
           .result();
-  Value max =
-      reduce<arith::MaxNumFOp>(b, loc, input, neutralForMaxFInit, reductionDim);
+  Value max = reduce<arith::MaximumFOp>(b, loc, input, neutralForMaxFInit,
+                                        reductionDim);
 
   // Step 2: Subtract max from input and exponentiate.
   Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);

@@ -116,6 +116,11 @@ def Linalg_SoftmaxOp : Linalg_Op<"softmax",
     This is an aggregate linalg operation that further reduces to a small DAG of
     structured operations.
 
+    The max in step 1 is a NaN-propagating maximum (`arith.maximumf`), with
+    `-FLT_MAX` as the neutral element. A finite neutral element keeps the
+    rescaling factor `exp(m_old - m_new)` well defined when a consumer combines
+    partial maxima across tiles, as an online (a.k.a. flash) softmax does.
+
     Warning: Regarding the tiling capabilities, the implementation doesn't
     check that the provided dimensions make sense. This is the responsability
     of the transformation calling the tiling to ensure that the provided
