@@ -459,6 +459,11 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
   if (AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
     return false;
 
+  // VGPR ("as memory") accesses are never plain-legal; they are custom-lowered
+  // to G_AMDGPU_REG_LOAD/STORE.
+  if (AS == AMDGPUAS::VGPR)
+    return false;
+
   // Do not handle extending vector loads.
   if (Ty.isVector() && MemSize != RegSize)
     return false;
@@ -551,10 +556,6 @@ static bool loadStoreBitcastWorkaround(const LLT Ty) {
 
 static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query) {
   const LLT Ty = Query.Types[0];
-  // VGPR ("as memory") accesses are never plain-legal; they are custom-lowered
-  // to G_AMDGPU_REG_LOAD/STORE.
-  if (Query.Types[1].getAddressSpace() == AMDGPUAS::VGPR)
-    return false;
   return isRegisterType(ST, Ty) && isLoadStoreSizeLegal(ST, Query) &&
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
 }
@@ -719,6 +720,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const LLT RegionPtr = LLT::pointer(AMDGPUAS::REGION_ADDRESS, 32);
   const LLT FlatPtr = LLT::pointer(AMDGPUAS::FLAT_ADDRESS, 64);
   const LLT PrivatePtr = LLT::pointer(AMDGPUAS::PRIVATE_ADDRESS, 32);
+  const LLT VGPRPtr = LLT::pointer(AMDGPUAS::VGPR, 32);
   const LLT BufferFatPtr = LLT::pointer(AMDGPUAS::BUFFER_FAT_POINTER, 160);
   const LLT RsrcPtr = LLT::pointer(AMDGPUAS::BUFFER_RESOURCE, 128);
   const LLT BufferStridedPtr =
@@ -1689,17 +1691,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
     // 64-bits.
     //
-    // TODO: Should generalize bitcast action into coerce, which will also cover
-    // inserting addrspacecasts.
-    Actions.customIf(typeIs(1, Constant32Ptr));
-
     // VGPR ("as memory") accesses are custom-lowered to the legal
     // G_AMDGPU_REG_LOAD/STORE target instructions. Always take the custom path
     // so an unsupported (e.g. sub-dword) access is diagnosed cleanly rather
     // than failing to legalize.
-    Actions.customIf([](const LegalityQuery &Query) -> bool {
-      return Query.Types[1].getAddressSpace() == AMDGPUAS::VGPR;
-    });
+    //
+    // TODO: Should generalize bitcast action into coerce, which will also cover
+    // inserting addrspacecasts.
+    Actions.customIf(typeInSet(1, {Constant32Ptr, VGPRPtr}));
 
     // Turn any illegal element vectors into something easier to deal
     // with. These will ultimately produce 32-bit scalar shifts to extract the
