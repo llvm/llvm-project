@@ -7109,11 +7109,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // thread and team counts in the device.
       if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
                        options::OPT_fno_openmp_assume_teams_oversubscription,
-                       /*Default=*/false))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
       if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
                        options::OPT_fno_openmp_assume_threads_oversubscription,
-                       /*Default=*/false))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
 
       // Handle -fopenmp-assume-no-thread-state (implied by target-fast)
@@ -7127,6 +7127,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        options::OPT_fno_openmp_assume_no_nested_parallelism,
                        /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+
+      // Handle -fopenmp-target-atomic-reduction.
+      if (Args.hasFlag(options::OPT_fopenmp_target_atomic_reduction,
+                       options::OPT_fno_openmp_target_atomic_reduction,
+                       /*Default=*/false))
+        CmdArgs.push_back("-fopenmp-target-atomic-reduction");
 
       if (Args.hasArg(options::OPT_fopenmp_offload_mandatory))
         CmdArgs.push_back("-fopenmp-offload-mandatory");
