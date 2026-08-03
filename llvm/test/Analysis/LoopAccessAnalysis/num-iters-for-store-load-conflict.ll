@@ -349,10 +349,10 @@ exit:
 }
 
 ; Same as above but with an unrelated store-to-load forwarding deps that do have
-; a safe VF. Make sure those aren't reported as ;
+; a safe VF. Make sure those aren't reported as
 ; `BackwardVectorizableButPreventsForwarding`. We provide two of those (%B and
 ; %C) becase the order of processing matters, so we have one lexically before %A
-; and another after ti.
+; and another after it.
 define void @fwd_conflict_dep_should_not_affect_another_dep(ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: 'fwd_conflict_dep_should_not_affect_another_dep'
 ; CHECK-NEXT:    loop:
