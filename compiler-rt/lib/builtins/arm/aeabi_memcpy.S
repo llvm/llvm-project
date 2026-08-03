@@ -16,7 +16,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_memcpy)
 #ifdef USE_THUMB_1
         push    {r7, lr}
         bl      memcpy
-        pop     {r7, pc}
+        POP_PC_WITH_REGS(r7)
 #else
 #if defined(__ARM_FEATURE_BTI_DEFAULT)
         bti

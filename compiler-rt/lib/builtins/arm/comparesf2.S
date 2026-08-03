@@ -159,7 +159,7 @@ LOCAL_LABEL(CHECK_NAN\@):
     bls     2f
     \handle_nan
 2:
-    pop     {r6, pc}
+    POP_PC_WITH_REGS(r6)
 #else
     cmp     r2,         #0xff000000
     ite ls

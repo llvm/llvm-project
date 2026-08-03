@@ -23,7 +23,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_memset)
 #ifdef USE_THUMB_1
         push    {r7, lr}
         bl      memset
-        pop     {r7, pc}
+        POP_PC_WITH_REGS(r7)
 #else
         b       memset
 #endif
@@ -42,7 +42,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_memclr)
 #ifdef USE_THUMB_1
         push    {r7, lr}
         bl      memset
-        pop     {r7, pc}
+        POP_PC_WITH_REGS(r7)
 #else
         b       memset
 #endif
