@@ -521,9 +521,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader() {
   BinaryIds.clear();
   Symtab = std::make_unique<InstrProfSymtab>();
 
-  // A value-profile target recorded by one image can name a function or
-  // vtable in a later concatenated raw profile. Build the address-to-name
-  // mappings for the entire buffer before deserializing the first record.
+  // A value-profile target recorded by one image can name a function in a
+  // later concatenated raw profile. Build the address-to-name mappings for the
+  // entire buffer before deserializing the first record.
   const RawInstrProf::Header *Header = FirstHeader;
   while (Header) {
     if (Error E = readHeader(*Header, Symtab.get(), true))

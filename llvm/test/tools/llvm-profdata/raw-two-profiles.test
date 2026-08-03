@@ -5,7 +5,7 @@
 // TODO: use a builtin version of printf
 UNSUPPORTED: system-windows, system-zos
 RUN: printf '\201rforpl\377' > %t-foo.profraw
-RUN: printf '\13\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\13\0\0\0\0\0\0\1' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
@@ -22,32 +22,28 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\2\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf '\2\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\254\275\030\333\114\302\370\134' >> %t-foo.profraw
-RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\377\377\377\177\201\134\137\2' >> %t-foo.profraw
 RUN: printf '\0\0\4\0\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\20\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\1\0\0\0' >> %t-foo.profraw
-RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-foo.profraw
 
-RUN: printf '\023\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\350\3\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\3\0foo\0\0\0' >> %t-foo.profraw
-RUN: printf '\110\0\0\0\2\0\0\0' >> %t-foo.profraw
+RUN: printf '\050\0\0\0\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\0\0\0\1\0\0\0' >> %t-foo.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
 RUN: printf '\0\40\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf '\7\0\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf '\2\0\0\0\1\0\0\0' >> %t-foo.profraw
-RUN: printf '\1\0\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf '\10\60\0\0\0\0\0\0' >> %t-foo.profraw
-RUN: printf '\11\0\0\0\0\0\0\0' >> %t-foo.profraw
+RUN: printf '\350\3\0\0\0\0\0\0' >> %t-foo.profraw
 
 RUN: printf '\201rforpl\377' > %t-bar.profraw
-RUN: printf '\13\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\13\0\0\0\0\0\0\1' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
@@ -62,9 +58,9 @@ RUN: printf '\10\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\1\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\0\0\6\0\2\0\0\0' >> %t-bar.profraw
-RUN: printf '\1\0\0\0\0\0\0\0' >> %t-bar.profraw
-RUN: printf '\10\0\0\0\0\0\0\0' >> %t-bar.profraw
-RUN: printf '\2\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 
 RUN: printf '\067\265\035\031\112\165\023\344' >> %t-bar.profraw
 RUN: printf '\02\0\0\0\0\0\0\0' >> %t-bar.profraw
@@ -79,37 +75,49 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\067\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\101\0\0\0\0\0\0\0' >> %t-bar.profraw
 RUN: printf '\3\0bar\0\0\0' >> %t-bar.profraw
-RUN: printf '\320\115\170\140\375\107\0\250' >> %t-bar.profraw
-RUN: printf '\0\60\0\0\0\0\0\0' >> %t-bar.profraw
-RUN: printf '\20\0\0\0\0\0\0\0' >> %t-bar.profraw
-RUN: printf '\6\0_ZTV1A' >> %t-bar.profraw
 
 RUN: cat %t-foo.profraw %t-bar.profraw > %t-pad.profraw
-RUN: llvm-profdata show %t-pad.profraw -all-functions -counts -ic-targets -show-vtables | FileCheck %s
+RUN: llvm-profdata show %t-pad.profraw -all-functions -counts -ic-targets | FileCheck %s
+RUN: llvm-profdata merge %t-pad.profraw -o %t.profdata
+// The target remains an external declaration in the profile-use module. ICP
+// rejects it by default, but its explicit declaration-promotion mode can emit
+// a guarded direct call without combining the linkage units.
+RUN: opt %S/Inputs/raw-two-profiles-use.ll -passes='pgo-instr-use,pgo-icall-prom' -pgo-test-profile-file=%t.profdata -icp-allow-decls=false -S | FileCheck %s --check-prefix=NO-ICP
+RUN: opt %S/Inputs/raw-two-profiles-use.ll -passes='pgo-instr-use,pgo-icall-prom' -pgo-test-profile-file=%t.profdata -icp-allow-decls=true -S | FileCheck %s --check-prefix=ICP
 RUN: cp %t-pad.profraw %t-bad-value-size.profraw
 RUN: printf '\1\0\0\0' | dd of=%t-bad-value-size.profraw bs=1 seek=240 conv=notrunc 2>/dev/null
 RUN: not llvm-profdata show %t-bad-value-size.profraw 2>&1 | FileCheck %s --check-prefix=BAD-VALUE-SIZE
 
 CHECK: Counters:
 CHECK:   foo:
-CHECK:     Hash: 0x0000000000000001
+CHECK:     Hash: 0x025f5c817fffffff
 CHECK:     Counters: 1
-CHECK:     Function count: 19
 CHECK:     Indirect Call Site Count: 1
-CHECK:     Number of instrumented vtables: 1
-CHECK:     Block counts: []
+CHECK:     Block counts: [1000]
 CHECK:     Indirect Target Results:
-CHECK:         [  0, bar,          7 ]
-CHECK:     VTable Results:
-CHECK:         [  0, _ZTV1A,          9 ]
+CHECK:         [  0, bar,       1000 ]
 CHECK:   bar:
 CHECK:     Hash: 0x0000000000000002
 CHECK:     Counters: 2
-CHECK:     Function count: 55
-CHECK:     Block counts: [65]
+CHECK:     Block counts: [55, 65]
 CHECK: Functions shown: 2
 CHECK: Total functions: 2
-CHECK: Maximum function count: 55
+CHECK: Maximum function count: 1000
 CHECK: Maximum internal block count: 65
 
 BAD-VALUE-SIZE: malformed instrumentation profile data: invalid total size for value profile data
+
+NO-ICP-LABEL: define i32 @foo
+NO-ICP: %[[TARGET:.*]] = load ptr, ptr @fp
+NO-ICP-NOT: icmp eq ptr %[[TARGET]], @bar
+NO-ICP: call i32 %[[TARGET]](i32 %x)
+
+ICP: declare i32 @bar(i32)
+ICP-LABEL: define i32 @foo
+ICP: %[[TARGET:.*]] = load ptr, ptr @fp
+ICP: %[[MATCH:.*]] = icmp eq ptr %[[TARGET]], @bar
+ICP: br i1 %[[MATCH]], label %if.true.direct_targ, label %if.false.orig_indirect
+ICP: if.true.direct_targ:
+ICP: call i32 @bar(i32 %x)
+ICP: if.false.orig_indirect:
+ICP: call i32 %[[TARGET]](i32 %x)
