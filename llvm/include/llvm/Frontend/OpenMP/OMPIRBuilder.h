@@ -1497,10 +1497,17 @@ public:
   /// \param Loc The location where the flush directive was encountered
   LLVM_ABI void createFlush(const LocationDescription &Loc);
 
-  /// Generator for '#omp taskwait'
+  /// Generate a call to the runtime to emit the diagnostic of an OpenMP
+  /// `error` directive with `at(execution)`.
   ///
-  /// \param Loc The location where the taskwait directive was encountered.
-  LLVM_ABI void createTaskwait(const LocationDescription &Loc);
+  /// \param Loc The location where the error directive was encountered; it is
+  ///        used to build the `ident_t` passed to the runtime.
+  /// \param IsFatal Selects `severity(fatal)` (true) or `severity(warning)`
+  ///        (false).
+  /// \param Message The message string (an `i8*`) to display, or null when no
+  ///        `message` clause is present.
+  LLVM_ABI void createError(const LocationDescription &Loc, bool IsFatal,
+                            Value *Message);
 
   /// Generator for '#omp taskyield'
   ///
@@ -1540,7 +1547,14 @@ public:
   LLVM_ABI void emitTaskDependency(IRBuilderBase &Builder, Value *Entry,
                                    const DependData &Dep);
 
-  /// Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
+  /// Generator for '#omp taskwait'
+  ///
+  /// \param Loc The location where the taskwait directive was encountered.
+  /// \param Dependencies dependencies as specified by the 'depend' clause.
+  LLVM_ABI void createTaskwait(const LocationDescription &Loc,
+                               DependenciesInfo Dependencies = {});
+
+  ///  Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
   LLVM_ABI llvm::StructType *getKmpTaskAffinityInfoTy();
 
@@ -3613,14 +3627,20 @@ public:
   ///   for (unsigned i = 0; i < size; i++) {
   ///     // For each component specified by this mapper:
   ///     for (auto c : begin[i]->all_components) {
+  ///       // Map-type-modifying bits (ALWAYS, DELETE, CLOSE) from the outer
+  ///       // map clause are propagated to each component, except ATTACH
+  ///       // entries (ATTACH|ALWAYS is reserved for attach(always), and other
+  ///       // modifier bits have no meaning for ATTACH).
+  ///       imported_modifier_bits = type & (ALWAYS | DELETE | CLOSE);
+  ///       effective_type = c.isAttach() ? c.arg_type
+  ///                                     : c.arg_type | imported_modifier_bits;
   ///       if (c.hasMapper())
   ///         (*c.Mapper())(rt_mapper_handle, c.arg_base, c.arg_begin,
-  ///         c.arg_size,
-  ///                       c.arg_type, c.arg_name);
+  ///                       c.arg_size, effective_type, c.arg_name);
   ///       else
   ///         __tgt_push_mapper_component(rt_mapper_handle, c.arg_base,
-  ///                                     c.arg_begin, c.arg_size, c.arg_type,
-  ///                                     c.arg_name);
+  ///                                     c.arg_begin, c.arg_size,
+  ///                                     effective_type, c.arg_name);
   ///     }
   ///   }
   ///   // Delete the array section.

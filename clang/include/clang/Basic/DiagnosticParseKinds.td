@@ -12,6 +12,9 @@
 
 let Component = "Parse" in {
 let CategoryName = "Parse Issue" in {
+// C2y compatibility with C89.
+defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
+
 // C++11 compatibility with C++98.
 defm enum_fixed_underlying_type : CXX11Compat<
   "enumeration types with a fixed underlying type are",
@@ -169,12 +172,6 @@ def ext_c2y_generic_with_type_arg : Extension<
 def warn_c2y_compat_generic_with_type_arg : Warning<
   "passing a type argument as the first operand to '_Generic' is incompatible "
   "with C standards before C2y">, InGroup<CPre2yCompat>, DefaultIgnore;
-def warn_c2y_compat_decl_statement : Warning<
-  "'%select{if|switch}0' declaration statements are incompatible with "
-  "C standards before C2y">, DefaultIgnore, InGroup<CPre2yCompat>;
-def ext_c2y_decl_statement : Extension<
-  "'%select{if|switch}0' declaration statements are a C2y extension">,
-  InGroup<C2y>;
 
 def ext_c99_feature : Extension<
   "'%0' is a C99 extension">, InGroup<C99>;
@@ -466,6 +463,12 @@ def err_expansion_stmt_requires_cxx2c : Error<
   "expansion statements are only supported in C++2c">;
 def err_for_template : Error<
   "'for template' is invalid; use 'template for' instead">;
+def ext_expansion_stmt_body_not_compound_stmt : Extension<
+  "ISO C++ requires the body of an expansion statement to be a compound statement">,
+  InGroup<ExpansionStmtBody>;
+def ext_expansion_stmt_body_attr : Extension<
+  "ISO C++ forbids attributes before the compound statement of an expansion statement">,
+  InGroup<ExpansionStmtBody>;
 
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;

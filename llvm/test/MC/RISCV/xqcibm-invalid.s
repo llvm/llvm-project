@@ -192,7 +192,7 @@ qc.insbi x6, -10, 12, 65
 qc.insbi x6, -10, 12, 15
 
 
-# CHECK-PLUS: :[[@LINE+2]]:14: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:14: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.insb x10, 7, 6, 31
 
@@ -216,7 +216,7 @@ qc.insb x10, x7, 6, 61
 qc.insb x10, x7, 6, 31
 
 
-# CHECK-PLUS: :[[@LINE+2]]:15: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:15: error: register must be a GPR
 # CHECK-MINUS: :[[@LINE+1]]:1: error: invalid instruction
 qc.insbh x20, 12, 8, 12
 

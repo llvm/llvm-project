@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SemaAPINotesInternal.h"
 #include "UsedDeclVisitor.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -69,7 +70,6 @@
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/SemaX86.h"
 #include "clang/Sema/TemplateDeduction.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -227,6 +227,10 @@ public:
   }
   void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
                         diag::Severity Mapping, StringRef Str) override {
+    // The pragma changed diagnostic severities; drop any cached analysis
+    // warning policies derived from the previous state.
+    S->AnalysisWarnings.clearPolicyCache();
+
     // If one of the analysis-based diagnostics was enabled while processing
     // a function, we want to note it in the analysis-based warnings so they
     // can be run at the end of the function body even if the analysis warnings
@@ -569,14 +573,9 @@ void Sema::Initialize() {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
-  if (Context.getTargetInfo().getTriple().isAMDGPU() ||
-      (Context.getTargetInfo().getTriple().isSPIRV() &&
-       Context.getTargetInfo().getTriple().getVendor() == llvm::Triple::AMD) ||
+  if (Context.getTargetInfo().hasAMDGPUTypes() ||
       (Context.getAuxTargetInfo() &&
-       (Context.getAuxTargetInfo()->getTriple().isAMDGPU() ||
-        (Context.getAuxTargetInfo()->getTriple().isSPIRV() &&
-         Context.getAuxTargetInfo()->getTriple().getVendor() ==
-             llvm::Triple::AMD)))) {
+       (Context.getAuxTargetInfo()->hasAMDGPUTypes()))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   addImplicitTypedef(Name, Context.SingletonId);
 #include "clang/Basic/AMDGPUTypes.def"
@@ -617,6 +616,10 @@ Sema::~Sema() {
   if (ExternalSemaSource *ExternalSema
         = dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
     ExternalSema->ForgetSema();
+  // FIXME: keep just a single ExternalSemaSource instead of 2 with a slightly
+  // different behavior.
+  if (ExternalSource)
+    ExternalSource->ForgetSema();
 
   // Delete cached satisfactions.
   std::vector<ConstraintSatisfaction *> Satisfactions;
@@ -1192,11 +1195,26 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
   return Complete;
 }
 
+void Sema::getSortedUnusedLocalTypedefNameCandidates(
+    SmallVectorImpl<const TypedefNameDecl *> &Sorted) const {
+  // The candidates are collected while iterating a Scope's SmallPtrSet, so sort
+  // by source location for a deterministic order.
+  Sorted.assign(UnusedLocalTypedefNameCandidates.begin(),
+                UnusedLocalTypedefNameCandidates.end());
+  llvm::sort(Sorted,
+             [](const TypedefNameDecl *LHS, const TypedefNameDecl *RHS) {
+               return LHS->getLocation().getRawEncoding() <
+                      RHS->getLocation().getRawEncoding();
+             });
+}
+
 void Sema::emitAndClearUnusedLocalTypedefWarnings() {
   if (ExternalSource)
     ExternalSource->ReadUnusedLocalTypedefNameCandidates(
         UnusedLocalTypedefNameCandidates);
-  for (const TypedefNameDecl *TD : UnusedLocalTypedefNameCandidates) {
+  SmallVector<const TypedefNameDecl *, 4> Sorted;
+  getSortedUnusedLocalTypedefNameCandidates(Sorted);
+  for (const TypedefNameDecl *TD : Sorted) {
     if (TD->isReferenced())
       continue;
     Diag(TD->getLocation(), diag::warn_unused_local_typedef)
@@ -1313,6 +1331,7 @@ void Sema::ActOnEndOfTranslationUnit() {
   DiagnoseUnterminatedPragmaAttribute();
   OpenMP().DiagnoseUnterminatedOpenMPDeclareTarget();
   DiagnosePrecisionLossInComplexDivision();
+  DiagnoseUnusedAPINotesSelectors();
 
   // All delayed member exception specs should be checked or we end up accepting
   // incompatible declarations.
@@ -2386,6 +2405,9 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
       ARM().checkSVETypeSupport(Ty, Loc, FD, CallerFeatureMap);
     }
+
+    if (TI.hasAMDGPUTypes())
+      AMDGPU().checkAMDGPUTypeSupport(Ty, Loc);
 
     if (auto *VT = Ty->getAs<VectorType>();
         VT && FD &&

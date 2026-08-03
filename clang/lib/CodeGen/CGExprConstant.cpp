@@ -600,7 +600,8 @@ private:
 
   bool Build(const InitListExpr *ILE, bool AllowOverwrite);
   bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
-             const CXXRecordDecl *VTableClass, CharUnits BaseOffset);
+             const CXXRecordDecl *VTableClass, CharUnits BaseOffset,
+             bool IsCompleteClass = true);
   bool DoZeroInitPadding(const ASTRecordLayout &Layout, unsigned FieldNo,
                          const FieldDecl &Field, bool AllowOverwrite,
                          CharUnits &SizeSoFar, bool &ZeroFieldSize);
@@ -841,44 +842,69 @@ struct BaseInfo {
 bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
                                bool IsPrimaryBase,
                                const CXXRecordDecl *VTableClass,
-                               CharUnits Offset) {
+                               CharUnits Offset, bool IsCompleteClass) {
+  assert(Val.isStruct() || Val.isUnion());
+
   const ASTRecordLayout &Layout = CGM.getContext().getASTRecordLayout(RD);
 
-  if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
-    // Add a vtable pointer, if we need one and it hasn't already been added.
-    if (Layout.hasOwnVFPtr()) {
-      llvm::Constant *VTableAddressPoint =
-          CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
-                                                VTableClass);
-      if (auto Authentication = CGM.getVTablePointerAuthentication(CD)) {
-        VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
-            VTableAddressPoint, *Authentication);
-        if (!VTableAddressPoint)
+  if (Val.isStruct()) {
+    if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
+      // Add a vtable pointer, if we need one and it hasn't already been added.
+      if (Layout.hasOwnVFPtr()) {
+        llvm::Constant *VTableAddressPoint =
+            CGM.getCXXABI().getVTableAddressPoint(BaseSubobject(CD, Offset),
+                                                  VTableClass);
+        if (auto Authentication = CGM.getVTablePointerAuthentication(CD)) {
+          VTableAddressPoint = Emitter.tryEmitConstantSignedPointer(
+              VTableAddressPoint, *Authentication);
+          if (!VTableAddressPoint)
+            return false;
+        }
+        if (!AppendBytes(Offset, VTableAddressPoint))
           return false;
       }
-      if (!AppendBytes(Offset, VTableAddressPoint))
-        return false;
-    }
 
-    // Accumulate and sort bases, in order to visit them in address order, which
-    // may not be the same as declaration order.
-    SmallVector<BaseInfo, 8> Bases;
-    Bases.reserve(CD->getNumBases());
-    unsigned BaseNo = 0;
-    for (CXXRecordDecl::base_class_const_iterator Base = CD->bases_begin(),
-         BaseEnd = CD->bases_end(); Base != BaseEnd; ++Base, ++BaseNo) {
-      assert(!Base->isVirtual() && "should not have virtual bases here");
-      const CXXRecordDecl *BD = Base->getType()->getAsCXXRecordDecl();
-      CharUnits BaseOffset = Layout.getBaseClassOffset(BD);
-      Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
-    }
-    llvm::stable_sort(Bases);
+      // Accumulate and sort bases, in order to visit them in address order,
+      // which may not be the same as declaration order.
+      SmallVector<BaseInfo, 8> Bases;
+      Bases.reserve(Val.getStructNumBases());
+      unsigned BaseNo = 0;
+      for (const CXXBaseSpecifier &Base : CD->bases()) {
+        if (Base.isVirtual())
+          continue;
+        const CXXRecordDecl *BD = Base.getType()->getAsCXXRecordDecl();
+        CharUnits BaseOffset = Layout.getBaseClassOffset(BD);
+        Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
+        ++BaseNo;
+      }
+      llvm::stable_sort(Bases);
 
-    for (const BaseInfo &Base : Bases) {
-      bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
-      if (!Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
-                 VTableClass, Offset + Base.Offset))
-        return false;
+      for (const BaseInfo &Base : Bases) {
+        bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
+        if (!Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
+                   VTableClass, Offset + Base.Offset, false))
+          return false;
+      }
+
+      if (IsCompleteClass) {
+        Bases.clear();
+        BaseNo = 0;
+        Bases.reserve(Val.getStructNumVirtualBases());
+        for (const CXXBaseSpecifier &Base : CD->vbases()) {
+          const CXXRecordDecl *BD = Base.getType()->getAsCXXRecordDecl();
+          CharUnits BaseOffset = Layout.getVBaseClassOffset(BD);
+          Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
+          ++BaseNo;
+        }
+        llvm::stable_sort(Bases);
+
+        for (const BaseInfo &Base : Bases) {
+          bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
+          if (!Build(Val.getStructVirtualBase(Base.Index), Base.Decl,
+                     IsPrimaryBase, VTableClass, Offset + Base.Offset, false))
+            return false;
+        }
+      }
     }
   }
 

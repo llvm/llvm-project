@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -amdgpu-s-branch-bits=4 -stop-after=branch-relaxation -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -verify-machineinstrs -amdgpu-s-branch-bits=4 -stop-after=branch-relaxation -verify-machineinstrs %s -o - | FileCheck %s
 
 ; Test that long branch reserved register is serialized through
 ; MIR.

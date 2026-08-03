@@ -5,14 +5,14 @@
 ; CHECK-DAG: %[[#float:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#bool:]] = OpTypeBool
 ; CHECK-DAG: %[[#zero:]] = OpConstantNull %[[#int_32]]
-; CHECK-DAG: %[[#one:]] = OpConstant %[[#int_32]] 1
+; CHECK-DAG: %[[#mone:]] = OpConstant %[[#int_32]] 4294967295
 ; CHECK-DAG: %[[#ptr:]] = OpTypePointer CrossWorkgroup %[[#float]]
 
 ; CHECK: OpFunction
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#ptr]]
 ; CHECK: %[[#B:]] = OpFunctionParameter %[[#]]
 ; CHECK: %[[#cmp_res:]] = OpSGreaterThan %[[#bool]] %[[#B]] %[[#zero]]
-; CHECK: %[[#select_res:]] = OpSelect %[[#int_32]] %[[#cmp_res]] %[[#one]] %[[#zero]]
+; CHECK: %[[#select_res:]] = OpSelect %[[#int_32]] %[[#cmp_res]] %[[#mone]] %[[#zero]]
 ; CHECK: %[[#stof_res:]] = OpConvertSToF %[[#]] %[[#select_res]]
 ; CHECK: OpStore %[[#A]] %[[#stof_res]]
 

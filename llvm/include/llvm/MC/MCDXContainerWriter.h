@@ -49,11 +49,7 @@ protected:
     llvm_unreachable("Unimplemented");
   }
 
-  virtual bool shouldSkipSection(StringRef SectionName, size_t SectionSize) {
-    // Skip empty and auxiliary sections.
-    return SectionSize == 0 || SectionName == PdbFileNameSectionName ||
-           SectionName == ModuleHashSectionName;
-  }
+  virtual bool shouldSkipSection(StringRef SectionName, size_t SectionSize);
 
 public:
   MCDXContainerBaseWriter() {}
