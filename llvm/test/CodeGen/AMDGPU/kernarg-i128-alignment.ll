@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa < %s | FileCheck %s
 
 ; The AMDGPU data layout has to give i128 an ABI alignment of 16, matching the
 ; ABI implemented by Clang, whose AMDGPUTargetInfo leaves Int128Align at its
