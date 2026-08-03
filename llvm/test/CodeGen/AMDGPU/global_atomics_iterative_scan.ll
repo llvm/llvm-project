@@ -22,15 +22,13 @@ define amdgpu_kernel void @uniform_value(ptr addrspace(1), ptr addrspace(1) %val
 ; IR-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP2]], i32 0)
 ; IR-NEXT:    [[TMP6:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP4]], i32 [[TMP5]])
-; IR-NEXT:    [[TMP7:%.*]] = call i64 @llvm.ctpop.i64(i64 [[TMP1]])
-; IR-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP7]] to i32
-; IR-NEXT:    [[TMP9:%.*]] = mul i32 [[VALUE]], [[TMP8]]
+; IR-NEXT:    [[TMP9:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 [[VALUE]], i32 1)
 ; IR-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP6]], 0
 ; IR-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP13:%.*]]
-; IR:       11:
+; IR:       9:
 ; IR-NEXT:    [[TMP12:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP9]] seq_cst, align 4
 ; IR-NEXT:    br label [[TMP13]]
-; IR:       13:
+; IR:       11:
 ; IR-NEXT:    ret void
 ;
 entry:
@@ -71,28 +69,14 @@ define amdgpu_kernel void @divergent_value(ptr addrspace(1) %out, ptr addrspace(
 ; IR-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; IR-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; IR-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; IR-NEXT:    [[TMP6:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; IR-NEXT:    br label [[COMPUTELOOP:%.*]]
-; IR:       7:
-; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP13:%.*]] seq_cst, align 4
-; IR-NEXT:    br label [[TMP9:%.*]]
-; IR:       9:
+; IR-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 [[VALUE]], i32 1)
+; IR-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
+; IR-NEXT:    br i1 [[TMP7]], label [[TMP10:%.*]], label [[TMP9:%.*]]
+; IR:       8:
+; IR-NEXT:    [[TMP8:%.*]] = atomicrmw volatile add ptr addrspace(1) [[GEP]], i32 [[TMP13]] seq_cst, align 4
+; IR-NEXT:    br label [[TMP9]]
+; IR:       10:
 ; IR-NEXT:    ret void
-; IR:       ComputeLoop:
-; IR-NEXT:    [[ACCUMULATOR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP13]], [[COMPUTELOOP]] ]
-; IR-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP6]], [[ENTRY]] ], [ [[TMP16:%.*]], [[COMPUTELOOP]] ]
-; IR-NEXT:    [[TMP10:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true)
-; IR-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-; IR-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[VALUE]], i32 [[TMP11]])
-; IR-NEXT:    [[TMP13]] = add i32 [[ACCUMULATOR]], [[TMP12]]
-; IR-NEXT:    [[TMP14:%.*]] = shl i64 1, [[TMP10]]
-; IR-NEXT:    [[TMP15:%.*]] = xor i64 [[TMP14]], -1
-; IR-NEXT:    [[TMP16]] = and i64 [[ACTIVEBITS]], [[TMP15]]
-; IR-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[TMP16]], 0
-; IR-NEXT:    br i1 [[TMP17]], label [[COMPUTEEND:%.*]], label [[COMPUTELOOP]]
-; IR:       ComputeEnd:
-; IR-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP5]], 0
-; IR-NEXT:    br i1 [[TMP18]], label [[TMP7:%.*]], label [[TMP9]]
 ;
 entry:
   %divergent_value.kernarg.segment = call nonnull align 16 dereferenceable(52) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
