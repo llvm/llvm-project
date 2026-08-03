@@ -417,11 +417,11 @@ public:
   }
 
   bool VisitObjCMessageExpr(ObjCMessageExpr *E) {
-    auto startLoc = E->getSelectorStartLoc();
+    auto StartLoc = E->getSelectorStartLoc();
     // Identify the selector and the method declaration
     if (auto *Method = E->getMethodDecl()) {
       // Report the method as a used symbol
-      report(startLoc, Method);
+      report(StartLoc, Method);
     }
 
     // If it's a class message, report the interface/class as used
@@ -429,19 +429,15 @@ public:
       if (auto *Interface = E->getReceiverInterface()) {
         report(E->getReceiverRange().getBegin(), Interface);
       }
-    } else {
-      if (auto *Interface = E->getReceiverInterface()) {
-        report(startLoc, Interface, RefType::Implicit);
-      }
-      QualType Type = E->getReceiverType();
-      if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
-        for (auto *Proto : ObjCPtr->quals()) {
-          report(startLoc, Proto, RefType::Implicit);
-        }
-      } else if (const auto *ObjCType = Type->getAs<ObjCObjectType>()) {
-        for (auto *Proto : ObjCType->quals()) {
-          report(startLoc, Proto, RefType::Implicit);
-        }
+      return true;
+    }
+    if (auto *Interface = E->getReceiverInterface()) {
+      report(StartLoc, Interface, RefType::Implicit);
+    }
+    QualType Type = E->getReceiverType();
+    if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
+      for (auto *Proto : ObjCPtr->quals()) {
+        report(StartLoc, Proto, RefType::Implicit);
       }
     }
     return true;
@@ -494,18 +490,6 @@ public:
       if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
         if (auto *Interface = ObjCPtr->getInterfaceDecl()) {
           report(E->getLocation(), Interface, RefType::Implicit);
-        }
-        for (auto *Proto : ObjCPtr->quals()) {
-          report(E->getLocation(), Proto, RefType::Implicit);
-        }
-      } else if (const auto *ObjCType = Type->getAs<ObjCObjectType>()) {
-        // This is for handling `super.foo` property references.
-        if (auto *Interface = ObjCType->getInterface()) {
-          report(E->getLocation(), Interface, RefType::Implicit);
-        }
-        // The foo declaration could be in a protocol on super.
-        for (auto *Proto : ObjCType->quals()) {
-          report(E->getLocation(), Proto, RefType::Implicit);
         }
       }
     }
