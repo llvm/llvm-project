@@ -5075,8 +5075,14 @@ private:
           if (!ScheduleCopyableDataMap.empty()) {
             SmallVector<ScheduleCopyableData *> CopyableData =
                 getScheduleCopyableData(User, OpIdx, I);
-            for (ScheduleCopyableData *CD : CopyableData)
+            for (ScheduleCopyableData *CD : CopyableData) {
+              // Copyable elements modeled on a copyable user lane depend on
+              // the user's copyable scheduling data, not on the user itself,
+              // and are released when that copyable data is scheduled.
+              if (CD->getEdgeInfo().UserTE->isCopyableElement(User))
+                continue;
               DecrUnsched(CD, /*IsControl=*/false);
+            }
             if (!CopyableData.empty())
               return;
           }
@@ -11212,6 +11218,9 @@ class InstructionsCompatibilityAnalysis {
   const TargetLibraryInfo &TLI;
   unsigned MainOpcode = 0;
   Instruction *MainOp = nullptr;
+  /// Whether every copyable in the current value list is an absorbable
+  /// single-use fmul. Computed once per buildInstructionsState call.
+  bool AbsorbCopyableFMuls = false;
 
   /// Checks if the opcode is supported as the main opcode for copyable
   /// elements.
@@ -11319,6 +11328,15 @@ class InstructionsCompatibilityAnalysis {
               MainBOOp1->getParent() == I->getParent())
             continue;
         }
+        // Keep fmuladd over fmul on a tie only when every copyable is an
+        // absorbed fmul.
+        if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp) &&
+            I->getOpcode() == Instruction::FMul && AbsorbCopyableFMuls)
+          continue;
+        // Same check when fmuladd replaces fmul on a tie.
+        if (MainOp->getOpcode() == Instruction::FMul &&
+            RecurrenceDescriptor::isFMulAddIntrinsic(I) && !AbsorbCopyableFMuls)
+          continue;
       }
       UsedOutside = PUsedOutside;
       for (Instruction *I : P.second) {
@@ -11354,6 +11372,24 @@ class InstructionsCompatibilityAnalysis {
                                      !MainOp->isCommutative());
   }
 
+  /// Checks if every copyable in \p VL is an absorbable fmul: the multiplies
+  /// die instead of being computed and gathered. Multiplicand order is
+  /// normalized when the operands are built.
+  static bool hasOnlyAbsorbableCopyableFMuls(ArrayRef<Value *> VL) {
+    bool HasFMul = false;
+    for (Value *V : VL) {
+      if (isa<PoisonValue>(V))
+        continue;
+      auto *I = dyn_cast<Instruction>(V);
+      if (I && RecurrenceDescriptor::isFMulAddIntrinsic(I))
+        continue;
+      if (!isAbsorbableFMul(VL, V))
+        return false;
+      HasFMul = true;
+    }
+    return HasFMul;
+  }
+
   /// Returns the value and operands for the \p V, considering if it is original
   /// instruction and its actual operands should be returned, or it is a
   /// copyable element and its should be represented as idempotent instruction.
@@ -11364,6 +11400,12 @@ class InstructionsCompatibilityAnalysis {
       return convertTo(cast<Instruction>(V), S).second;
     if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
       Type *Ty = MainOp->getType();
+      // fmuladd(a, b, -0.0) == fmul a, b.
+      if (S.hasAbsorbedCopyableFMul() && isAbsorbableCopyableFMul(S, V)) {
+        auto *I = cast<Instruction>(V);
+        return {I->getOperand(0), I->getOperand(1),
+                ConstantFP::getNegativeZero(Ty)};
+      }
       // fmuladd(V, 1.0, -0.0) == V.
       if (S.getCopyableOpIdx() == 0)
         return {V, ConstantFP::get(Ty, 1.0), ConstantFP::getNegativeZero(Ty)};
@@ -11814,6 +11856,7 @@ public:
     }
     if (!VectorizeCopyableElements)
       return S;
+    AbsorbCopyableFMuls = hasOnlyAbsorbableCopyableFMuls(VL);
     findAndSetMainInstruction(VL, R);
     if (!MainOp)
       return S;
@@ -11824,6 +11867,13 @@ public:
     if (!WithProfitabilityCheck)
       return S;
     // Check if it is profitable to vectorize the instruction.
+    unsigned CopyableNum =
+        count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
+    // Absorb copyable single-use fmuls as fmuladd(a, b, -0.0) when every
+    // copyable is such an fmul: the multiplies die instead of being computed
+    // and gathered.
+    if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp) && AbsorbCopyableFMuls)
+      S.setAbsorbCopyableFMul(true);
     SmallVector<BoUpSLP::ValueList> Operands = buildOperands(S, VL);
     auto BuildCandidates =
         [](SmallVectorImpl<std::pair<Value *, Value *>> &Candidates, Value *V1,
@@ -11895,8 +11945,6 @@ public:
             (Operands.size() == 3 &&
              RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
            "Unexpected number of operands!");
-    unsigned CopyableNum =
-        count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
     if (CopyableNum < VL.size() / 2)
       return S;
     // Too many phi copyables - exit.
@@ -12022,14 +12070,27 @@ public:
       // Operand-order normalization below swaps OpIdx 0 and OpIdx 1
       // of non-copyable lanes. That is only safe when the main op is
       // commutative (e.g. 0 - X is not X - 0, so `sub` must be
-      // excluded).
-      if (IsCommutative) {
+      // excluded). With absorbed fmul copyables the fmuladd
+      // multiplicands are commutative per lane and get normalized too;
+      // the addend column is never touched.
+      if (IsCommutative || S.hasAbsorbedCopyableFMul()) {
         // IsCommutative can hold for MainOp (e.g. a Sub/FSub feeding only
         // fabs/icmp-eq-0) without every lane sharing that property, so
-        // re-check the specific lane before swapping it.
+        // re-check the specific lane before swapping it. Absorbed fmul
+        // lanes are always commutative.
         auto CanSwap = [&](Value *V) {
+          if (S.hasAbsorbedCopyableFMul() && isAbsorbableCopyableFMul(S, V))
+            return true;
           return isCommutative(S.getMatchingMainOpOrAltOp(cast<Instruction>(V)),
                                V);
+        };
+        // Absorbed fmul copyables do not vote for the majority operand
+        // pattern (their multiplicand order is arbitrary) but take part
+        // in the swaps.
+        auto SwappableLane = [&](Value *V) {
+          return !isa<PoisonValue>(V) &&
+                 (!S.isCopyableElement(V) || (S.hasAbsorbedCopyableFMul() &&
+                                              isAbsorbableCopyableFMul(S, V)));
         };
         // Count (ID0, ID1) pair frequencies for operand normalization.
         // Pairs and their inverses are tracked under a canonical key
@@ -12076,16 +12137,16 @@ public:
             }
           }
         }
-        // Normalize non-copyable lanes in two steps:
+        // Normalize swappable lanes in two steps:
         // 1) Swap lanes whose operand types are the exact inverse of
         //    the majority pattern, making the non-copyable lanes
         //    consistent.
-        // 2) Independently, if a strict majority of non-copyable lanes
+        // 2) Independently, if a strict majority of swappable lanes
         //    have loads at OpIdx 1, swap those lanes to put loads at
         //    OpIdx 0 for better downstream vectorization.
         unsigned LAt0 = 0, LAt1 = 0, TotalNC = 0;
         for (auto [Idx, V] : enumerate(VL)) {
-          if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+          if (!SwappableLane(V))
             continue;
           // Step 1: swap exact-inverse lanes.
           if (BestCount > 0) {
@@ -12102,7 +12163,7 @@ public:
         // swap those lanes to put loads at OpIdx 0.
         if (TotalNC > 1 && LAt1 > LAt0 && LAt1 * 2 > TotalNC) {
           for (auto [Idx, V] : enumerate(VL)) {
-            if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+            if (!SwappableLane(V))
               continue;
             if (!isa<LoadInst>(Operands[0][Idx]) &&
                 isa<LoadInst>(Operands[1][Idx]) && CanSwap(V))
