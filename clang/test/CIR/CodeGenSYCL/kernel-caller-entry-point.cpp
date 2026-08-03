@@ -1,10 +1,15 @@
-// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown \
-// RUN:   -fclangir -emit-cir -verify %s
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -emit-llvm %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-// During device compilation, a SYCL kernel caller offload entry point is
-// emitted in place of each sycl_kernel_entry_point attributed function. That
-// lowering is not yet implemented in CIR, so it must be reported as a clean
-// "Not Yet Implemented" diagnostic rather than crashing.
+// During device compilation, an offload kernel caller entry point is emitted
+// in place of each sycl_kernel_entry_point attributed function. The entry
+// point is named after the kernel name type and its body is the transformed
+// body held by the OutlinedFunctionDecl (which invokes the kernel functor).
+// The sycl_kernel_entry_point attributed function itself is not emitted.
 
 // Required by sycl_kernel_entry_point semantics.
 template <typename KernelName, typename... Ts>
@@ -12,12 +17,51 @@ void sycl_kernel_launch(const char *, Ts...) {}
 
 template <typename KernelName, typename KernelType>
 [[clang::sycl_kernel_entry_point(KernelName)]]
-// expected-error@+1 {{ClangIR code gen Not Yet Implemented: SYCL kernel caller offload entry point}}
 void kernel_single_task(KernelType kf) { kf(); }
 
 struct KN;
+struct MemberKN;
 struct K {
   void operator()() const {}
 };
 
-void test() { kernel_single_task<KN>(K{}); }
+// A sycl_kernel_entry_point function may also be a non-static member function
+// (Sema only rejects explicit-object members, ctors and dtors). The offload
+// entry point is still a free function and must not run an instance-function
+// prologue.
+struct Invoker {
+  template <typename KernelName, typename KernelType>
+  [[clang::sycl_kernel_entry_point(KernelName)]]
+  void kernel_single_task(KernelType kf) { kf(); }
+};
+
+void test() {
+  kernel_single_task<KN>(K{});
+  Invoker{}.kernel_single_task<MemberKN>(K{});
+}
+
+// The kernel caller entry point is named after the kernel name type (KN), is
+// emitted with the spir_kernel calling convention, and its body calls the
+// kernel functor's operator(). The sycl_kernel_entry_point function and its
+// launch call are not emitted during device compilation.
+// CIR-LABEL: cir.func {{.*}}@_ZTS2KN{{.*}}cc(spir_kernel)
+// CIR:         cir.call @_ZNK1KclEv
+// CIR:         cir.return
+// CIR-NOT:   cir.func {{.*}}@_Z18kernel_single_task
+// CIR-NOT:   cir.call {{.*}}@_Z17sycl_kernel_launch
+
+// The member-function entry point is emitted the same way, as a free function
+// (no implicit `this` parameter).
+// CIR-LABEL: cir.func {{.*}}@_ZTS8MemberKN{{.*}}cc(spir_kernel)
+// CIR:         cir.call @_ZNK1KclEv
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}}spir_kernel void @_ZTS2KN
+// LLVM:         call {{.*}}void @_ZNK1KclEv
+// LLVM:         ret void
+// LLVM-NOT:   define {{.*}}@_Z18kernel_single_task
+
+// OGCG-LABEL: define {{.*}}spir_kernel void @_ZTS2KN
+// OGCG:         call {{.*}}spir_func void @_ZNK1KclEv
+// OGCG:         ret void
+// OGCG-NOT:   define {{.*}}@_Z18kernel_single_task
