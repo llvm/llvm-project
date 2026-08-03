@@ -286,6 +286,34 @@ func.func @subview_disjoint_writes_boundary_read(%vA: vector<4xf32>, %vB: vector
 
 // -----
 
+// Two overlapping subview writes: %vA covers [0, 4) and %vB covers [2, 6),
+// overlapping on [2, 4). Each write composes into the parent value in program
+// order, so the buffer holds %vA at [0, 2) and %vB at [2, 6). A subview read
+// spanning [1, 5) then extracts across the overlap, reading one lane of %vA
+// and three lanes of %vB from the composed value.
+
+// CHECK-LABEL: func.func @subview_overlapping_writes_overlap_read
+//   CHECK-SAME:   (%[[VA:.*]]: vector<4xf32>, %[[VB:.*]]: vector<4xf32>, %[[PAD:.*]]: f32)
+//    CHECK-NOT:   memref.alloca
+//    CHECK-NOT:   memref.subview
+//        CHECK:   %[[D0:.*]] = vector.insert_strided_slice %[[VA]], %{{.*}} {offsets = [0], strides = [1]}
+//        CHECK:   %[[D1:.*]] = vector.insert_strided_slice %[[VB]], %[[D0]] {offsets = [2], strides = [1]}
+//        CHECK:   %[[R:.*]] = vector.extract_strided_slice %[[D1]] {offsets = [1], sizes = [4], strides = [1]}
+//        CHECK:   return %[[R]] : vector<4xf32>
+func.func @subview_overlapping_writes_overlap_read(%vA: vector<4xf32>, %vB: vector<4xf32>, %pad: f32) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  %s0 = memref.subview %a[0] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1]>>
+  %s2 = memref.subview %a[2] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 2>>
+  %s1 = memref.subview %a[1] [4] [1] : memref<8xf32> to memref<4xf32, strided<[1], offset: 1>>
+  vector.transfer_write %vA, %s0[%c0] {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1]>>
+  vector.transfer_write %vB, %s2[%c0] {in_bounds = [true]} : vector<4xf32>, memref<4xf32, strided<[1], offset: 2>>
+  %r = vector.transfer_read %s1[%c0], %pad {in_bounds = [true]} : memref<4xf32, strided<[1], offset: 1>>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
 // A buffer allocated before an scf.for and accessed inside the loop body only
 // through a subview, with a cross-iteration dependence (each iteration reads the
 // value the previous iteration wrote). The subview aliaser composes with region
