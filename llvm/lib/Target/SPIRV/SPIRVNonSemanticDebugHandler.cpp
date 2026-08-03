@@ -196,8 +196,8 @@ static uint32_t mapCompositeTypeTag(unsigned Tag) {
 }
 
 static const MachineInstr *
-findLastEmittedFunctionOpVariable(const MachineFunction &MF,
-                                  SPIRV::ModuleAnalysisInfo &MAI) {
+findLastFunctionOpVariableDeclaration(const MachineFunction &MF,
+                                      SPIRV::ModuleAnalysisInfo &MAI) {
 
   // We iterate over the instructions to find the last OpVariable instruction if
   // any. The following SPIRV rule is used to terminate the traversal earlier:
@@ -1117,7 +1117,8 @@ void SPIRVNonSemanticDebugHandler::preparePerFunctionDebug(
 
   // DebugFunctionDefinition is emitted after the last function-level
   // OpVariable. If there are none, it is emitted after the entry OpLabel.
-  LastFunctionOpVariable = findLastEmittedFunctionOpVariable(*MF, *CurrentMAI);
+  LastFunctionOpVariable =
+      findLastFunctionOpVariableDeclaration(*MF, *CurrentMAI);
 }
 
 void SPIRVNonSemanticDebugHandler::tryEmitDebugFunctionDefinition(
