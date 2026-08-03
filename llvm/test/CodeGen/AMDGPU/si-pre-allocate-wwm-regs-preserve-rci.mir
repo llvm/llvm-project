@@ -14,10 +14,10 @@
 # MachineRegisterClassAnalysis result in place. The second require must reuse
 # the result computed by the first.
 
-# CHECK:      Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction> on test_wwm_reserved
+# CHECK:      Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction{{.*}}> on test_wwm_reserved
 # CHECK-NEXT: Running analysis: MachineRegisterClassAnalysis on test_wwm_reserved
 # CHECK-NEXT: Running pass: SIPreAllocateWWMRegsPass on test_wwm_reserved
-# CHECK:      Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction> on test_wwm_reserved
+# CHECK:      Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction{{.*}}> on test_wwm_reserved
 # CHECK-NEXT: Running pass: PrintMIRPreparePass on [module]
 
 # MIR: wwmReservedRegs:
