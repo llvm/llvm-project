@@ -5,7 +5,7 @@
         adrp x8, :tlsdesc_auth:var
         ldr x7, [x6, :tlsdesc_auth_lo12:var]
         add x5, x4, #:tlsdesc_auth_lo12:var
-        .tlsdescauthcall var
+        .tlsauthdesccall var
         blraa x3, x2
 
 // CHECK:      adrp   x8, :tlsdesc_auth:var            // encoding: [0x08'A',A,A,0x90'A']
@@ -14,7 +14,7 @@
 // CHECK-NEXT:                                         // fixup A - offset: 0, value: :tlsdesc_auth_lo12:var, kind: fixup_aarch64_ldst_imm12_scale8
 // CHECK:      add    x5, x4, :tlsdesc_auth_lo12:var   // encoding: [0x85,0bAAAAAA00,0b00AAAAAA,0x91]
 // CHECK-NEXT:                                         // fixup A - offset: 0, value: :tlsdesc_auth_lo12:var, kind: fixup_aarch64_add_imm12
-// CHECK:      .tlsdescauthcall var                    // encoding: []
+// CHECK:      .tlsauthdesccall var                    // encoding: []
 // CHECK-NEXT:                                         // fixup A - offset: 0, value: var, relocation type: 598
 // CHECK:      blraa  x3, x2                           // encoding: [0x62,0x08,0x3f,0xd7]
 

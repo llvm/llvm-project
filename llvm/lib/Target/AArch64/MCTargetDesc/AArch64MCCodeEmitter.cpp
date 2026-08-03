@@ -738,7 +738,7 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI,
     return;
   }
 
-  if (MI.getOpcode() == AArch64::TLSDESCAUTHCALL) {
+  if (MI.getOpcode() == AArch64::TLSAUTHDESCCALL) {
     // This is a directive which applies an R_AARCH64_AUTH_TLSDESC_CALL to the
     // following (BLRAA) instruction. It doesn't emit any code itself so it
     // doesn't go through the normal TableGenerated channels.
