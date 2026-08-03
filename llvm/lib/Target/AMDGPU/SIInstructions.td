@@ -1099,7 +1099,6 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
     (ins SReg_32:$idx, i32imm:$offset)>,
     VLdStIdxOpcodeInfo<rc.Size, 0> {
       let mayLoad = 1;
-      let VALU = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
       let Defs = [M0];
@@ -1109,7 +1108,6 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
     (ins rc:$data, SReg_32:$idx, i32imm:$offset)>,
     VLdStIdxOpcodeInfo<rc.Size, 1> {
       let mayStore = 1;
-      let VALU = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
       let Defs = [M0];
@@ -1123,7 +1121,7 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
 // instruction really touches. Here the storage is the whole register file,
 // which no operand can name, so these carry their own opcodes and leave those
 // rules to the tuple form. AMDGPUMCInstLower maps them back for encoding.
-let VALU = 1, VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
+let VOP1 = 1, Uses = [M0, EXEC], hasSideEffects = 0,
     Size = V_MOV_B32_e32.Size in {
   def V_MOVRELS_B32_as_mem
       : VPseudoInstSI<(outs VGPR_32:$vdst), (ins VRegSrc_32:$src0)>;

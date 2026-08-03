@@ -45,9 +45,10 @@ static bool assignIdxToM0(MachineFunction &MF) {
       if (!LdSt)
         continue;
 
+      // The operand class of the index is a register class, so it never holds
+      // an immediate that would have to be moved into M0 separately.
       MachineOperand &IdxOp = LdSt->getIdxOp();
-      if (!IdxOp.isReg())
-        continue;
+      assert(IdxOp.isReg() && "VGPR-memory index must be a register");
 
       assert(!MI.isBundled());
 

@@ -446,7 +446,8 @@ public:
                         MachineFunctionAnalysisManager &AM);
 };
 
-class AMDGPUAssignIdxToM0Pass : public PassInfoMixin<AMDGPUAssignIdxToM0Pass> {
+class AMDGPUAssignIdxToM0Pass
+    : public RequiredPassInfoMixin<AMDGPUAssignIdxToM0Pass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
