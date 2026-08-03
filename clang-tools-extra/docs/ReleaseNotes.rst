@@ -94,6 +94,9 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`clang-tidy` by resolving tool names without a path in
+  compilation databases through ``PATH``.
+
 New checks
 ^^^^^^^^^^
 
