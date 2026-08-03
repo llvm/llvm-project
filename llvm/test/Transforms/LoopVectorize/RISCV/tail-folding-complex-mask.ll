@@ -204,12 +204,11 @@ define void @nested_mask_two_reductions(ptr %p, ptr %q, i64 %n, ptr %out) {
 ; IF-EVL-NEXT:    [[VP_OP_LOAD2:%.*]] = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(ptr align 4 [[TMP5]], <vscale x 2 x i1> [[TMP4]], i32 [[TMP1]])
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = icmp sgt <vscale x 2 x i32> [[VP_OP_LOAD2]], zeroinitializer
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = select <vscale x 2 x i1> [[TMP4]], <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> zeroinitializer
-; IF-EVL-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i1> @llvm.vp.merge.nxv2i1(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i1> zeroinitializer, i32 [[TMP1]])
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = add <vscale x 2 x i64> [[VEC_PHI]], [[VEC_IND]]
 ; IF-EVL-NEXT:    [[TMP10:%.*]] = mul <vscale x 2 x i64> [[VEC_IND]], [[VEC_IND]]
 ; IF-EVL-NEXT:    [[TMP11:%.*]] = add <vscale x 2 x i64> [[VEC_PHI1]], [[TMP10]]
-; IF-EVL-NEXT:    [[TMP12]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP8]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP1]])
-; IF-EVL-NEXT:    [[TMP13]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP8]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP1]])
+; IF-EVL-NEXT:    [[TMP12]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP7]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> [[VEC_PHI]], i32 [[TMP1]])
+; IF-EVL-NEXT:    [[TMP13]] = call <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1> [[TMP7]], <vscale x 2 x i64> [[TMP11]], <vscale x 2 x i64> [[VEC_PHI1]], i32 [[TMP1]])
 ; IF-EVL-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP2]], [[INDEX]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP2]]
 ; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
@@ -234,11 +233,10 @@ define void @nested_mask_two_reductions(ptr %p, ptr %q, i64 %n, ptr %out) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP2]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
-; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
+; NO-VP-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP1]], i64 0
 ; NO-VP-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-VP-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; NO-VP:       [[VECTOR_BODY]]:
@@ -258,7 +256,7 @@ define void @nested_mask_two_reductions(ptr %p, ptr %q, i64 %n, ptr %out) {
 ; NO-VP-NEXT:    [[TMP12:%.*]] = add <vscale x 2 x i64> [[VEC_PHI1]], [[TMP11]]
 ; NO-VP-NEXT:    [[PREDPHI]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[VEC_PHI]]
 ; NO-VP-NEXT:    [[PREDPHI2]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> [[TMP12]], <vscale x 2 x i64> [[VEC_PHI1]]
-; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; NO-VP-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; NO-VP-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; NO-VP-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; NO-VP-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
