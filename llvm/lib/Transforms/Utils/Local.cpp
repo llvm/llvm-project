@@ -228,10 +228,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           unsigned Idx = It->getCaseIndex();
 
           // Check for and prevent uint64_t overflow by reducing branch weights.
-          if (Weights[0] > UINT64_MAX - Weights[Idx + 1]) {
-            SmallVector<uint32_t> Fitted = fitWeights(Weights);
-            Weights.assign(Fitted.begin(), Fitted.end());
-          }
+          if (Weights[0] > UINT64_MAX - Weights[Idx + 1])
+            fitWeights(Weights);
 
           Weights[0] += Weights[Idx + 1];
           // Remove weight for this case.
@@ -3069,9 +3067,8 @@ static void combineMetadata(Instruction *K, const Instruction *J,
                                            MDNode::toCaptureComponents(KMD)));
         break;
       case LLVMContext::MD_alloc_token:
-        // Preserve !alloc_token if both K and J have it, and they are equal.
-        if (KMD != JMD)
-          K->setMetadata(Kind, nullptr);
+        if (!AAOnly && KMD != JMD)
+          K->setMetadata(Kind, MDNode::getMergedAllocTokenMetadata(KMD, JMD));
         break;
       }
   }

@@ -154,6 +154,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_passwd
+  HDRS
+    struct_passwd.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_passwd
+)
+
+add_proxy_header_library(
   rsize_t
   HDRS
     rsize_t.h
@@ -175,6 +183,14 @@ add_proxy_header_library(
     struct_stat.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_stat
+)
+
+add_proxy_header_library(
+  struct_statfs
+  HDRS
+    struct_statfs.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_statfs
 )
 
 add_proxy_header_library(
@@ -580,6 +596,15 @@ add_proxy_header_library(
     struct_ifreq.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ifreq
+    libc.include.net_if
+)
+
+add_proxy_header_library(
+  struct_if_nameindex
+  HDRS
+    struct_if_nameindex.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_if_nameindex
     libc.include.net_if
 )
 

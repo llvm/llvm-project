@@ -54,7 +54,8 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   /// Has fast fma f32
   bool hasFastFMAF() const {
-    return !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
+    return getTriple().isAMDGCN() &&
+           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
   }
 
   /// Has fast fma f64
@@ -62,11 +63,12 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   bool hasFMAF() const {
     return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FMA);
+           !!(GPUFeatures & llvm::AMDGPU::R600_FEATURE_FMA);
   }
 
   bool hasFullRateDenormalsF32() const {
-    return !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
+    return getTriple().isAMDGCN() &&
+           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
   }
 
   bool hasLDEXPF() const { return getTriple().isAMDGCN(); }
@@ -265,8 +267,11 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    if (getTriple().isAMDGCN())
-      return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(), Name);
+    if (getTriple().isAMDGCN()) {
+      return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
+                                                Name) &&
+             !llvm::AMDGPU::isPseudoTarget(Name);
+    }
     return llvm::AMDGPU::parseArchR600(Name) != llvm::AMDGPU::GK_NONE;
   }
 
@@ -276,9 +281,9 @@ public:
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
       GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
-      // Reject a CPU whose subarch is incompatible with the triple's subarch.
       return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
-                                                GPUKind);
+                                                GPUKind) &&
+             !llvm::AMDGPU::isPseudoTarget(GPUKind);
     }
     GPUKind = llvm::AMDGPU::parseArchR600(Name);
     GPUFeatures = llvm::AMDGPU::getArchAttrR600(GPUKind);

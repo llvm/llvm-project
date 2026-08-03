@@ -14,6 +14,7 @@
 // (possibly cv-qualified) in_place_t is ill-formed.
 
 #include <optional>
+#include <utility>
 
 #include "test_macros.h"
 

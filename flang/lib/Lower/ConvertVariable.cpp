@@ -780,8 +780,21 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   }
 
   // Let the builder do all the heavy lifting.
-  if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol))
-    return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
+  if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol)) {
+    mlir::Value local =
+        builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
+    // An array function result returned via the "result as argument" ABI has
+    // its local storage replaced by the caller-provided buffer by the
+    // abstract-result pass. Pin it to the stack so that allocation passes do
+    // not first promote it to the heap, which the abstract-result pass would
+    // then have to clean up.
+    if (mlir::isa<fir::SequenceType>(ty) &&
+        Fortran::semantics::IsFunctionResult(ultimateSymbol))
+      if (auto alloca = local.getDefiningOp<fir::AllocaOp>())
+        alloca->setAttr(fir::MustBeStackAttr::getAttrName(),
+                        fir::MustBeStackAttr::get(builder.getContext(), true));
+    return local;
+  }
 
   // Local procedure pointer.
   auto res{builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg)};
