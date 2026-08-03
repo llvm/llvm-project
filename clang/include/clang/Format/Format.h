@@ -3827,13 +3827,12 @@ struct FormatStyle {
     LK_Json,
     /// Should be used for Objective-C, Objective-C++.
     LK_ObjC,
-    /// Should be used for Protocol Buffers
-    /// (https://developers.google.com/protocol-buffers/).
+    /// Should be used for [Protocol Buffers](https://protobuf.dev/)
     LK_Proto,
     /// Should be used for TableGen code.
     LK_TableGen,
-    /// Should be used for Protocol Buffer messages in text format
-    /// (https://developers.google.com/protocol-buffers/).
+    /// Should be used for [Protocol Buffer](https://protobuf.dev/) messages in
+    /// text format
     LK_TextProto,
     /// Should be used for Verilog and SystemVerilog.
     /// https://standards.ieee.org/ieee/1800/6700/

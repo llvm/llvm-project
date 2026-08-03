@@ -248,6 +248,8 @@ the configuration (without a prefix: `Auto`).
   - `AIAS_None` (in configuration: `None`)
     Don't align array initializer columns.
 
+
+
 (alignconsecutiveassignments)=
 
 **AlignConsecutiveAssignments** (`AlignConsecutiveStyle`) {versionbadge}`clang-format 3.8` {ref}`¶ <AlignConsecutiveAssignments>`
@@ -340,7 +342,7 @@ the configuration (without a prefix: `Auto`).
     double e = 4;
     ```
 
-  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`. Whether compound assignments
+  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`.  Whether compound assignments
     like `+=` are aligned along with `=`.
 
     ```c++
@@ -390,7 +392,7 @@ the configuration (without a prefix: `Auto`).
     setting this to `true` forces alignment for enum assignments only.
     If `Enabled` is `true`, enum assignments are always aligned.
 
-  - `bool PadOperators` Only for `AlignConsecutiveAssignments`. Whether short assignment
+  - `bool PadOperators` Only for `AlignConsecutiveAssignments`.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
 
@@ -409,6 +411,7 @@ the configuration (without a prefix: `Auto`).
     a     = 2;
     bbb >>= 2;
     ```
+
 
 (alignconsecutivebitfields)=
 
@@ -503,7 +506,7 @@ the configuration (without a prefix: `Auto`).
     double e = 4;
     ```
 
-  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`. Whether compound assignments
+  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`.  Whether compound assignments
     like `+=` are aligned along with `=`.
 
     ```c++
@@ -553,7 +556,7 @@ the configuration (without a prefix: `Auto`).
     setting this to `true` forces alignment for enum assignments only.
     If `Enabled` is `true`, enum assignments are always aligned.
 
-  - `bool PadOperators` Only for `AlignConsecutiveAssignments`. Whether short assignment
+  - `bool PadOperators` Only for `AlignConsecutiveAssignments`.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
 
@@ -572,6 +575,7 @@ the configuration (without a prefix: `Auto`).
     a     = 2;
     bbb >>= 2;
     ```
+
 
 (alignconsecutivedeclarations)=
 
@@ -666,7 +670,7 @@ the configuration (without a prefix: `Auto`).
     double e = 4;
     ```
 
-  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`. Whether compound assignments
+  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`.  Whether compound assignments
     like `+=` are aligned along with `=`.
 
     ```c++
@@ -716,7 +720,7 @@ the configuration (without a prefix: `Auto`).
     setting this to `true` forces alignment for enum assignments only.
     If `Enabled` is `true`, enum assignments are always aligned.
 
-  - `bool PadOperators` Only for `AlignConsecutiveAssignments`. Whether short assignment
+  - `bool PadOperators` Only for `AlignConsecutiveAssignments`.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
 
@@ -735,6 +739,7 @@ the configuration (without a prefix: `Auto`).
     a     = 2;
     bbb >>= 2;
     ```
+
 
 (alignconsecutivemacros)=
 
@@ -830,7 +835,7 @@ the configuration (without a prefix: `Auto`).
     double e = 4;
     ```
 
-  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`. Whether compound assignments
+  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`.  Whether compound assignments
     like `+=` are aligned along with `=`.
 
     ```c++
@@ -880,7 +885,7 @@ the configuration (without a prefix: `Auto`).
     setting this to `true` forces alignment for enum assignments only.
     If `Enabled` is `true`, enum assignments are always aligned.
 
-  - `bool PadOperators` Only for `AlignConsecutiveAssignments`. Whether short assignment
+  - `bool PadOperators` Only for `AlignConsecutiveAssignments`.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
 
@@ -899,6 +904,7 @@ the configuration (without a prefix: `Auto`).
     a     = 2;
     bbb >>= 2;
     ```
+
 
 (alignconsecutiveshortcasestatements)=
 
@@ -1016,6 +1022,7 @@ the configuration (without a prefix: `Auto`).
     }
     ```
 
+
 (alignconsecutivetablegenbreakingdagargcolons)=
 
 **AlignConsecutiveTableGenBreakingDAGArgColons** (`AlignConsecutiveStyle`) {versionbadge}`clang-format 19` {ref}`¶ <AlignConsecutiveTableGenBreakingDAGArgColons>`
@@ -1112,7 +1119,7 @@ the configuration (without a prefix: `Auto`).
     double e = 4;
     ```
 
-  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`. Whether compound assignments
+  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`.  Whether compound assignments
     like `+=` are aligned along with `=`.
 
     ```c++
@@ -1162,7 +1169,7 @@ the configuration (without a prefix: `Auto`).
     setting this to `true` forces alignment for enum assignments only.
     If `Enabled` is `true`, enum assignments are always aligned.
 
-  - `bool PadOperators` Only for `AlignConsecutiveAssignments`. Whether short assignment
+  - `bool PadOperators` Only for `AlignConsecutiveAssignments`.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
 
@@ -1181,6 +1188,7 @@ the configuration (without a prefix: `Auto`).
     a     = 2;
     bbb >>= 2;
     ```
+
 
 (alignconsecutivetablegencondoperatorcolons)=
 
@@ -1273,7 +1281,7 @@ the configuration (without a prefix: `Auto`).
     double e = 4;
     ```
 
-  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`. Whether compound assignments
+  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`.  Whether compound assignments
     like `+=` are aligned along with `=`.
 
     ```c++
@@ -1323,7 +1331,7 @@ the configuration (without a prefix: `Auto`).
     setting this to `true` forces alignment for enum assignments only.
     If `Enabled` is `true`, enum assignments are always aligned.
 
-  - `bool PadOperators` Only for `AlignConsecutiveAssignments`. Whether short assignment
+  - `bool PadOperators` Only for `AlignConsecutiveAssignments`.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
 
@@ -1342,6 +1350,7 @@ the configuration (without a prefix: `Auto`).
     a     = 2;
     bbb >>= 2;
     ```
+
 
 (alignconsecutivetablegendefinitioncolons)=
 
@@ -1434,7 +1443,7 @@ the configuration (without a prefix: `Auto`).
     double e = 4;
     ```
 
-  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`. Whether compound assignments
+  - `bool AlignCompound` Only for `AlignConsecutiveAssignments`.  Whether compound assignments
     like `+=` are aligned along with `=`.
 
     ```c++
@@ -1484,7 +1493,7 @@ the configuration (without a prefix: `Auto`).
     setting this to `true` forces alignment for enum assignments only.
     If `Enabled` is `true`, enum assignments are always aligned.
 
-  - `bool PadOperators` Only for `AlignConsecutiveAssignments`. Whether short assignment
+  - `bool PadOperators` Only for `AlignConsecutiveAssignments`.  Whether short assignment
     operators are left-padded to the same length as long ones in order to
     put all assignment operators to the right of the left hand side.
 
@@ -1503,6 +1512,7 @@ the configuration (without a prefix: `Auto`).
     a     = 2;
     bbb >>= 2;
     ```
+
 
 (alignescapednewlines)=
 
@@ -1553,6 +1563,8 @@ the configuration (without a prefix: `Auto`).
       int dddddddddd;
     ```
 
+
+
 (alignoperands)=
 
 **AlignOperands** (`OperandAlignmentStyle`) {versionbadge}`clang-format 3.5` {ref}`¶ <AlignOperands>`
@@ -1597,6 +1609,8 @@ the configuration (without a prefix: `Auto`).
     int aaa = bbbbbbbbbbbbbbb
             + ccccccccccccccc;
     ```
+
+
 
 (aligntrailingcomments)=
 
@@ -1662,6 +1676,7 @@ the configuration (without a prefix: `Auto`).
       int abcd; // comment
       ```
 
+
   - `unsigned OverEmptyLines` How many empty lines to apply alignment.
     When both `MaxEmptyLinesToKeep` and `OverEmptyLines` are set to 2,
     it formats like below.
@@ -1696,6 +1711,7 @@ the configuration (without a prefix: `Auto`).
     #define AB // Aligned               #define AB // Aligned
     int i;     // Aligned               int i; // Not aligned
     ```
+
 
 (allowallargumentsonnextline)=
 
@@ -1792,6 +1808,8 @@ the configuration (without a prefix: `Auto`).
                  noexcept(baz(arg2)));
     ```
 
+
+
 (allowbreakbeforeqtproperty)=
 
 **AllowBreakBeforeQtProperty** (`Boolean`) {versionbadge}`clang-format 22` {ref}`¶ <AllowBreakBeforeQtProperty>`
@@ -1837,6 +1855,8 @@ the configuration (without a prefix: `Auto`).
     while (true) {}
     while (true) { continue; }
     ```
+
+
 
 (allowshortcaseexpressiononasingleline)=
 
@@ -1979,7 +1999,7 @@ the configuration (without a prefix: `Auto`).
 
   Also can be specified as a nested configuration flag:
 
-  ```c++
+  ```yaml
   # Example of usage:
   AllowShortFunctionsOnASingleLine: InlineOnly
 
@@ -2023,6 +2043,7 @@ the configuration (without a prefix: `Auto`).
     };
     void f() { bar(); }
     ```
+
 
 (allowshortifstatementsonasingleline)=
 
@@ -2103,6 +2124,8 @@ the configuration (without a prefix: `Auto`).
     }
     ```
 
+
+
 (allowshortlambdasonasingleline)=
 
 **AllowShortLambdasOnASingleLine** (`ShortLambdaStyle`) {versionbadge}`clang-format 9` {ref}`¶ <AllowShortLambdasOnASingleLine>`
@@ -2142,6 +2165,8 @@ the configuration (without a prefix: `Auto`).
     auto lambda = [](int a) {};
     auto lambda2 = [](int a) { return a; };
     ```
+
+
 
 (allowshortloopsonasingleline)=
 
@@ -2191,11 +2216,13 @@ the configuration (without a prefix: `Auto`).
     struct bar { int i; };
     ```
 
+
+
 (alwaysbreakafterdefinitionreturntype)=
 
 **AlwaysBreakAfterDefinitionReturnType** (`DefinitionReturnTypeBreakingStyle`) {versionbadge}`clang-format 3.7` {ref}`¶ <AlwaysBreakAfterDefinitionReturnType>`
 
-: The function definition return type breaking style to use. This
+: The function definition return type breaking style to use.  This
   option is **deprecated** and is retained for backwards compatibility.
 
   Possible values:
@@ -2203,10 +2230,14 @@ the configuration (without a prefix: `Auto`).
   - `DRTBS_None` (in configuration: `None`)
     Break after return type automatically.
     `PenaltyReturnTypeOnItsOwnLine` is taken into account.
+
   - `DRTBS_All` (in configuration: `All`)
     Always break after the return type.
+
   - `DRTBS_TopLevel` (in configuration: `TopLevel`)
     Always break after the return types of top-level functions.
+
+
 
 (alwaysbreakafterreturntype)=
 
@@ -2326,6 +2357,8 @@ the configuration (without a prefix: `Auto`).
     Use the `BreakAfter` option to handle parameter packing instead.
     If the `BreakAfter` limit is not exceeded, behave like `BinPack`.
 
+
+
 (bitfieldcolonspacing)=
 
 **BitFieldColonSpacing** (`BitFieldColonSpacingStyle`) {versionbadge}`clang-format 12` {ref}`¶ <BitFieldColonSpacing>`
@@ -2364,6 +2397,8 @@ the configuration (without a prefix: `Auto`).
     unsigned bf: 2;
     ```
 
+
+
 (bracewrapping)=
 
 **BraceWrapping** (`BraceWrappingFlags`) {versionbadge}`clang-format 3.8` {ref}`¶ <BraceWrapping>`
@@ -2386,7 +2421,7 @@ the configuration (without a prefix: `Auto`).
 
   Precise control over the wrapping of braces.
 
-  ```c++
+  ```yaml
   # Should be declared this way:
   BreakBeforeBraces: Custom
   BraceWrapping:
@@ -2461,6 +2496,7 @@ the configuration (without a prefix: `Auto`).
       for (int i = 0; i < 10; ++i)
       {}
       ```
+
 
   - `bool AfterEnum` Wrap enum definitions.
 
@@ -2666,6 +2702,7 @@ the configuration (without a prefix: `Auto`).
                          }
     ```
 
+
 (bracedinitializerindentwidth)=
 
 **BracedInitializerIndentWidth** (`Integer`) {versionbadge}`clang-format 17` {ref}`¶ <BracedInitializerIndentWidth>`
@@ -2826,6 +2863,8 @@ the configuration (without a prefix: `Auto`).
       return;
     }
     ```
+
+
 
 (breakafterjavafieldannotations)=
 
@@ -3016,6 +3055,8 @@ the configuration (without a prefix: `Auto`).
     LongName::AnotherLongName();
     ```
 
+
+
 (breakarrays)=
 
 **BreakArrays** (`Boolean`) {versionbadge}`clang-format 16` {ref}`¶ <BreakArrays>`
@@ -3087,6 +3128,8 @@ the configuration (without a prefix: `Auto`).
                  && aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
                         > ccccccccccccccccccccccccccccccccccccccccc;
     ```
+
+
 
 (breakbeforebraces)=
 
@@ -3540,6 +3583,8 @@ the configuration (without a prefix: `Auto`).
   - `BS_Custom` (in configuration: `Custom`)
     Configure each individual brace in `BraceWrapping`.
 
+
+
 (breakbeforeclosebracketbracedlist)=
 
 **BreakBeforeCloseBracketBracedList** (`Boolean`) {versionbadge}`clang-format 22` {ref}`¶ <BreakBeforeCloseBracketBracedList>`
@@ -3647,6 +3692,8 @@ the configuration (without a prefix: `Auto`).
     concept C = ...;
     ```
 
+
+
 (breakbeforeinlineasmcolon)=
 
 **BreakBeforeInlineASMColon** (`BreakBeforeInlineASMColonStyle`) {versionbadge}`clang-format 16` {ref}`¶ <BreakBeforeInlineASMColon>`
@@ -3682,6 +3729,8 @@ the configuration (without a prefix: `Auto`).
                  : val);
     ```
 
+
+
 (breakbeforereturntype)=
 
 **BreakBeforeReturnType** (`BreakBeforeReturnTypeStyle`) {versionbadge}`clang-format 23` {ref}`¶ <BreakBeforeReturnType>`
@@ -3712,6 +3761,8 @@ the configuration (without a prefix: `Auto`).
 
   - `BBRTS_TopLevelDefinitions` (in configuration: `TopLevelDefinitions`)
     Break before the return type of top-level definitions only.
+
+
 
 (breakbeforetemplatecloser)=
 
@@ -3822,6 +3873,7 @@ the configuration (without a prefix: `Auto`).
       eeeeeeeeeeeeeeee;
       ```
 
+
   - `List of BinaryOperationBreakRules PerOperator` Per-operator override rules.
 
   - `List of Strings Operators` {versionbadge}`clang-format 23` The list of operators this rule applies to, e.g. `&&`, `||`, `|`.
@@ -3863,9 +3915,11 @@ the configuration (without a prefix: `Auto`).
       eeeeeeeeeeeeeeee;
       ```
 
+
   - `unsigned MinChainLength` Minimum number of operands in a chain before the rule triggers.
     For example, `a && b && c` is a chain of length 3.
     `0` means always break (when the line is too long).
+
 
 (breakconstructorinitializers)=
 
@@ -3911,6 +3965,8 @@ the configuration (without a prefix: `Auto`).
                     initializer2()
     ```
 
+
+
 (breakfunctiondeclarationparameters)=
 
 **BreakFunctionDeclarationParameters** (`Boolean`) {versionbadge}`clang-format 23` {ref}`¶ <BreakFunctionDeclarationParameters>`
@@ -3925,6 +3981,7 @@ the configuration (without a prefix: `Auto`).
 
   false:
   void functionDeclaration(int A, int B);
+
   ```
 
 (breakfunctiondefinitionparameters)=
@@ -3941,6 +3998,7 @@ the configuration (without a prefix: `Auto`).
 
   false:
   void functionDefinition(int A, int B) {}
+
   ```
 
 (breakinheritancelist)=
@@ -3990,6 +4048,8 @@ the configuration (without a prefix: `Auto`).
                 Base2
     {};
     ```
+
+
 
 (breakstringliterals)=
 
@@ -4095,6 +4155,8 @@ the configuration (without a prefix: `Auto`).
           int bbbbbbbbbbbbbbbbbbbbb) {
     }
     ```
+
+
 
 (columnlimit)=
 
@@ -4241,6 +4303,8 @@ the configuration (without a prefix: `Auto`).
               value};
     ```
 
+
+
 (derivelineending)=
 
 **DeriveLineEnding** (`Boolean`) {versionbadge}`clang-format 10` {ref}`¶ <DeriveLineEnding>`
@@ -4318,6 +4382,8 @@ the configuration (without a prefix: `Auto`).
     };
     ```
 
+
+
 (emptylinebeforeaccessmodifier)=
 
 **EmptyLineBeforeAccessModifier** (`EmptyLineBeforeAccessModifierStyle`) {versionbadge}`clang-format 12` {ref}`¶ <EmptyLineBeforeAccessModifier>`
@@ -4388,6 +4454,8 @@ the configuration (without a prefix: `Auto`).
     };
     ```
 
+
+
 (enumtrailingcomma)=
 
 **EnumTrailingComma** (`EnumTrailingCommaStyle`) {versionbadge}`clang-format 21` {ref}`¶ <EnumTrailingComma>`
@@ -4427,6 +4495,8 @@ the configuration (without a prefix: `Auto`).
     enum { a, b, c };
     enum Color { red, green, blue };
     ```
+
+
 
 (experimentalautodetectbinpacking)=
 
@@ -4508,7 +4578,8 @@ the configuration (without a prefix: `Auto`).
   IfMacros: [IF]
   ```
 
-  For example: [KJ_IF_MAYBE](https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes)
+  For example:
+  [KJ_IF_MAYBE](https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes)
 
 (includeblocks)=
 
@@ -4551,6 +4622,8 @@ the configuration (without a prefix: `Auto`).
     #include "a.h"                         #include <lib/main.h>
     ```
 
+
+
 (includecategories)=
 
 **IncludeCategories** (`List of IncludeCategories`) {versionbadge}`clang-format 3.8` {ref}`¶ <IncludeCategories>`
@@ -4558,11 +4631,12 @@ the configuration (without a prefix: `Auto`).
 : Regular expressions denoting the different `#include` categories
   used for ordering `#includes`.
 
-  [POSIX extended](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html)
+  [POSIX
+  extended](https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap09.html)
   regular expressions are supported.
 
   These regular expressions are matched against the filename of an include
-  (including the \<> or "") in order. The value belonging to the first
+  (including the <> or "") in order. The value belonging to the first
   matching regular expression is assigned and `#includes` are sorted first
   according to increasing category number and then alphabetically within
   each category.
@@ -4570,9 +4644,10 @@ the configuration (without a prefix: `Auto`).
   If none of the regular expressions match, INT_MAX is assigned as
   category. The main header for a source file automatically gets category 0.
   so that it is generally kept at the beginning of the `#includes`
-  (<https://llvm.org/docs/CodingStandards.html#include-style>). However, you
-  can also assign negative priorities if you have certain headers that
-  always need to be first.
+  (see [LLVM
+  style](https://llvm.org/docs/CodingStandards.html#include-style)).
+  However, you can also assign negative priorities if you have certain
+  headers that always need to be first.
 
   There is a third and optional field `SortPriority` which can used while
   `IncludeBlocks = IBS_Regroup` to define the priority in which
@@ -4611,8 +4686,8 @@ the configuration (without a prefix: `Auto`).
   When guessing whether a #include is the "main" include (to assign
   category 0, see above), use this regex of allowed suffixes to the header
   stem. A partial match is done, so that:
-  \* `""` means "arbitrary suffix"
-  \* `"$"` means "no suffix"
+  - `""` means "arbitrary suffix"
+  - `"$"` means "no suffix"
 
   For example, if configured to `"(_test)?$"`, then a header a.h would be
   seen as the "main" include in both a.cc and a_test.cc.
@@ -4780,6 +4855,8 @@ the configuration (without a prefix: `Auto`).
     }
     ```
 
+
+
 (indentgotolabels)=
 
 **IndentGotoLabels** (`IndentGotoLabelStyle`) {versionbadge}`clang-format 10` {ref}`¶ <IndentGotoLabels>`
@@ -4846,6 +4923,8 @@ the configuration (without a prefix: `Auto`).
     }
     ```
 
+
+
 (indentppdirectives)=
 
 **IndentPPDirectives** (`PPDirectiveIndentStyle`) {versionbadge}`clang-format 6` {ref}`¶ <IndentPPDirectives>`
@@ -4901,6 +4980,8 @@ the configuration (without a prefix: `Auto`).
       #endif
     #endif
     ```
+
+
 
 (indentrequiresclause)=
 
@@ -5029,12 +5110,15 @@ the configuration (without a prefix: `Auto`).
 
   - `TCS_None` (in configuration: `None`)
     Do not insert trailing commas.
+
   - `TCS_Wrapped` (in configuration: `Wrapped`)
     Insert trailing commas in container literals that were wrapped over
     multiple lines. Note that this is conceptually incompatible with
     bin-packing, because the trailing comma is used as an indicator
     that a container should be formatted one-per-line (i.e. not bin-packed).
     So inserting a trailing comma counteracts bin-packing.
+
+
 
 (integerliteralseparator)=
 
@@ -5047,7 +5131,7 @@ the configuration (without a prefix: `Auto`).
 
   Separator format of integer literals of different bases.
 
-  If negative, remove separators. If `0`, leave the literal as is. If
+  If negative, remove separators. If  `0`, leave the literal as is. If
   positive, insert separators between digits starting from the rightmost
   digit.
 
@@ -5171,6 +5255,7 @@ the configuration (without a prefix: `Auto`).
     h4 = 0xABCD'E; // Corrected to 0xA'BC'DE.
     ```
 
+
 (javaimportgroups)=
 
 **JavaImportGroups** (`List of Strings`) {versionbadge}`clang-format 8` {ref}`¶ <JavaImportGroups>`
@@ -5240,6 +5325,8 @@ the configuration (without a prefix: `Auto`).
     string2 = "bar";
     ```
 
+
+
 (javascriptwrapimports)=
 
 **JavaScriptWrapImports** (`Boolean`) {versionbadge}`clang-format 3.9` {ref}`¶ <JavaScriptWrapImports>`
@@ -5262,7 +5349,7 @@ the configuration (without a prefix: `Auto`).
 
 **KeepEmptyLines** (`KeepEmptyLinesStyle`) {versionbadge}`clang-format 19` {ref}`¶ <KeepEmptyLines>`
 
-: Which empty lines are kept. See `MaxEmptyLinesToKeep` for how many
+: Which empty lines are kept.  See `MaxEmptyLinesToKeep` for how many
   consecutive empty lines are kept.
 
   Nested configuration flags:
@@ -5292,6 +5379,7 @@ the configuration (without a prefix: `Auto`).
     ```
 
   - `bool AtStartOfFile` Keep empty lines at start of file.
+
 
 (keepemptylinesateof)=
 
@@ -5354,6 +5442,8 @@ the configuration (without a prefix: `Auto`).
     }));
     ```
 
+
+
 (language)=
 
 **Language** (`LanguageKind`) {versionbadge}`clang-format 3.5` {ref}`¶ <Language>`
@@ -5370,32 +5460,44 @@ the configuration (without a prefix: `Auto`).
 
   - `LK_None` (in configuration: `None`)
     Do not use.
+
   - `LK_C` (in configuration: `C`)
     Should be used for C.
+
   - `LK_Cpp` (in configuration: `Cpp`)
     Should be used for C++.
+
   - `LK_CSharp` (in configuration: `CSharp`)
     Should be used for C#.
+
   - `LK_Java` (in configuration: `Java`)
     Should be used for Java.
+
   - `LK_JavaScript` (in configuration: `JavaScript`)
     Should be used for JavaScript.
+
   - `LK_Json` (in configuration: `Json`)
     Should be used for JSON.
+
   - `LK_ObjC` (in configuration: `ObjC`)
     Should be used for Objective-C, Objective-C++.
+
   - `LK_Proto` (in configuration: `Proto`)
-    Should be used for Protocol Buffers
-    (<https://developers.google.com/protocol-buffers/>).
+    Should be used for [Protocol Buffers](https://protobuf.dev/)
+
   - `LK_TableGen` (in configuration: `TableGen`)
     Should be used for TableGen code.
+
   - `LK_TextProto` (in configuration: `TextProto`)
-    Should be used for Protocol Buffer messages in text format
-    (<https://developers.google.com/protocol-buffers/>).
+    Should be used for [Protocol Buffer](https://protobuf.dev/) messages in
+    text format
+
   - `LK_Verilog` (in configuration: `Verilog`)
     Should be used for Verilog and SystemVerilog.
-    <https://standards.ieee.org/ieee/1800/6700/>
-    <https://sci-hub.st/10.1109/IEEESTD.2018.8299595>
+    https://standards.ieee.org/ieee/1800/6700/
+    https://sci-hub.st/10.1109/IEEESTD.2018.8299595
+
+
 
 (lineending)=
 
@@ -5407,12 +5509,17 @@ the configuration (without a prefix: `Auto`).
 
   - `LE_LF` (in configuration: `LF`)
     Use `\n`.
+
   - `LE_CRLF` (in configuration: `CRLF`)
     Use `\r\n`.
+
   - `LE_DeriveLF` (in configuration: `DeriveLF`)
     Use `\n` unless the input has more lines ending in `\r\n`.
+
   - `LE_DeriveCRLF` (in configuration: `DeriveCRLF`)
     Use `\r\n` unless the input has more lines ending in `\n`.
+
+
 
 (macroblockbegin)=
 
@@ -5477,16 +5584,17 @@ the configuration (without a prefix: `Auto`).
   - A(x)=x
   ```
 
-  the code will now be parsed as a declaration of the variable b of type a\*,
+  the code will now be parsed as a declaration of the variable b of type a*,
   and formatted as `a* b` (depending on pointer-binding rules).
 
   Features and restrictions:
-  : - Both function-like macros and object-like macros are supported.
-    - Macro arguments must be used exactly once in the expansion.
-    - No recursive expansion; macros referencing other macros will be
-      ignored.
-    - Overloading by arity is supported: for example, given the macro
-      definitions A=x, A()=y, A(a)=a
+
+  - Both function-like macros and object-like macros are supported.
+  - Macro arguments must be used exactly once in the expansion.
+  - No recursive expansion; macros referencing other macros will be
+    ignored.
+  - Overloading by arity is supported: for example, given the macro
+    definitions A=x, A()=y, A(a)=a
 
   ```c++
   A; -> x;
@@ -5513,10 +5621,14 @@ the configuration (without a prefix: `Auto`).
 
   - `MICD_Quote` (in configuration: `Quote`)
     Main include uses quotes: `#include "foo.hpp"` (the default).
+
   - `MICD_AngleBracket` (in configuration: `AngleBracket`)
     Main include uses angle brackets: `#include <foo.hpp>`.
+
   - `MICD_Any` (in configuration: `Any`)
     Main include uses either quotes or angle brackets.
+
+
 
 (maxemptylinestokeep)=
 
@@ -5579,6 +5691,8 @@ the configuration (without a prefix: `Auto`).
     }
     ```
 
+
+
 (namespacemacros)=
 
 **NamespaceMacros** (`List of Strings`) {versionbadge}`clang-format 9` {ref}`¶ <NamespaceMacros>`
@@ -5630,10 +5744,13 @@ the configuration (without a prefix: `Auto`).
 
     - `NLCS_Leave` (in configuration: `Leave`)
       Leave this component of the literal as is.
+
     - `NLCS_Upper` (in configuration: `Upper`)
       Format this component with uppercase characters.
+
     - `NLCS_Lower` (in configuration: `Lower`)
       Format this component with lowercase characters.
+
 
   - `NumericLiteralComponentStyle HexDigit`
     Format hexadecimal digit case.
@@ -5648,10 +5765,13 @@ the configuration (without a prefix: `Auto`).
 
     - `NLCS_Leave` (in configuration: `Leave`)
       Leave this component of the literal as is.
+
     - `NLCS_Upper` (in configuration: `Upper`)
       Format this component with uppercase characters.
+
     - `NLCS_Lower` (in configuration: `Lower`)
       Format this component with lowercase characters.
+
 
   - `NumericLiteralComponentStyle Prefix`
     Format integer prefix case.
@@ -5666,10 +5786,13 @@ the configuration (without a prefix: `Auto`).
 
     - `NLCS_Leave` (in configuration: `Leave`)
       Leave this component of the literal as is.
+
     - `NLCS_Upper` (in configuration: `Upper`)
       Format this component with uppercase characters.
+
     - `NLCS_Lower` (in configuration: `Lower`)
       Format this component with lowercase characters.
+
 
   - `NumericLiteralComponentStyle Suffix`
     Format suffix case. This option excludes case-sensitive reserved
@@ -5685,10 +5808,14 @@ the configuration (without a prefix: `Auto`).
 
     - `NLCS_Leave` (in configuration: `Leave`)
       Leave this component of the literal as is.
+
     - `NLCS_Upper` (in configuration: `Upper`)
       Format this component with uppercase characters.
+
     - `NLCS_Lower` (in configuration: `Lower`)
       Format this component with lowercase characters.
+
+
 
 (objcbinpackprotocollist)=
 
@@ -5729,10 +5856,14 @@ the configuration (without a prefix: `Auto`).
 
   - `BPS_Auto` (in configuration: `Auto`)
     Automatically determine parameter bin-packing behavior.
+
   - `BPS_Always` (in configuration: `Always`)
     Always bin-pack parameters.
+
   - `BPS_Never` (in configuration: `Never`)
     Never bin-pack parameters.
+
+
 
 (objcblockindentwidth)=
 
@@ -5918,6 +6049,7 @@ the configuration (without a prefix: `Auto`).
       Use the `BreakAfter` option to handle argument packing instead.
       If the `BreakAfter` limit is not exceeded, behave like `BinPack`.
 
+
   - `unsigned BreakAfter` {versionbadge}`clang-format 23` An argument list with more arguments than the specified number will be
     formatted with one argument per line. This option must be used with
     `BinPack: UseBreakAfter`.
@@ -5938,6 +6070,7 @@ the configuration (without a prefix: `Auto`).
           4);
     }
     ```
+
 
 (packconstructorinitializers)=
 
@@ -6011,6 +6144,8 @@ the configuration (without a prefix: `Auto`).
           cccccccccccccccccccc()
     ```
 
+
+
 (packparameters)=
 
 **PackParameters** (`PackParametersStyle`) {versionbadge}`clang-format 23` {ref}`¶ <PackParameters>`
@@ -6062,6 +6197,7 @@ the configuration (without a prefix: `Auto`).
       Use the `BreakAfter` option to handle parameter packing instead.
       If the `BreakAfter` limit is not exceeded, behave like `BinPack`.
 
+
   - `unsigned BreakAfter` {versionbadge}`clang-format 23` A parameter list with more parameters than the specified number will be
     formatted with one parameter per line. This option must be used with
     `BinPack: UseBreakAfter`.
@@ -6080,6 +6216,7 @@ the configuration (without a prefix: `Auto`).
              int c,
              int d);
     ```
+
 
 (penaltybreakassignment)=
 
@@ -6183,6 +6320,8 @@ the configuration (without a prefix: `Auto`).
     int * a;
     ```
 
+
+
 (qualifieralignment)=
 
 **QualifierAlignment** (`QualifierAlignmentStyle`) {versionbadge}`clang-format 14` {ref}`¶ <QualifierAlignment>`
@@ -6190,7 +6329,7 @@ the configuration (without a prefix: `Auto`).
 : Different ways to arrange specifiers and qualifiers (e.g. const/volatile).
 
   :::{warning}
-  Setting `QualifierAlignment` to something other than `Leave`, COULD
+  Setting `QualifierAlignment`  to something other than `Leave`, COULD
   lead to incorrect code formatting due to incorrect decisions made due to
   clang-formats lack of complete semantic information.
   As such extra care should be taken to review code changes made by the use
@@ -6233,9 +6372,12 @@ the configuration (without a prefix: `Auto`).
     ```
 
     ```c++
+
     int const a;
     int const *a;
     ```
+
+
 
 (qualifierorder)=
 
@@ -6244,14 +6386,14 @@ the configuration (without a prefix: `Auto`).
 : The order in which the qualifiers appear.
   The order is an array that can contain any of the following:
 
-  > - `const`
-  > - `inline`
-  > - `static`
-  > - `friend`
-  > - `constexpr`
-  > - `volatile`
-  > - `restrict`
-  > - `type`
+    - `const`
+    - `inline`
+    - `static`
+    - `friend`
+    - `constexpr`
+    - `volatile`
+    - `restrict`
+    - `type`
 
   :::{note}
   It must contain `type`.
@@ -6338,6 +6480,8 @@ the configuration (without a prefix: `Auto`).
     int & a;
     ```
 
+
+
 (reflowcomments)=
 
 **ReflowComments** (`ReflowCommentsStyle`) {versionbadge}`clang-format 3.8` {ref}`¶ <ReflowComments>`
@@ -6353,7 +6497,7 @@ the configuration (without a prefix: `Auto`).
     // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
     /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
     /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
-         * and a misaligned second line */
+         - and a misaligned second line */
     ```
 
   - `RCS_IndentOnly` (in configuration: `IndentOnly`)
@@ -6364,7 +6508,7 @@ the configuration (without a prefix: `Auto`).
     // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
     /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information */
     /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
-     * and a misaligned second line */
+     - and a misaligned second line */
     ```
 
   - `RCS_Always` (in configuration: `Always`)
@@ -6375,10 +6519,12 @@ the configuration (without a prefix: `Auto`).
     // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
     // information
     /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-     * information */
+     - information */
     /* third veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
-     * information and a misaligned second line */
+     - information and a misaligned second line */
     ```
+
+
 
 (removebracesllvm)=
 
@@ -6508,6 +6654,8 @@ the configuration (without a prefix: `Auto`).
     return (a + b) - (c + d);
     ```
 
+
+
 (removesemicolon)=
 
 **RemoveSemicolon** (`Boolean`) {versionbadge}`clang-format 16` {ref}`¶ <RemoveSemicolon>`
@@ -6527,6 +6675,7 @@ the configuration (without a prefix: `Auto`).
   int max(int a, int b) {                    int max(int a, int b) {
     return a > b ? a : b;                      return a > b ? a : b;
   };                                         }
+
   ```
 
 (requiresclauseposition)=
@@ -6641,6 +6790,8 @@ the configuration (without a prefix: `Auto`).
         requires C<LongName> {
     ```
 
+
+
 (requiresexpressionindentation)=
 
 **RequiresExpressionIndentation** (`RequiresExpressionIndentationKind`) {versionbadge}`clang-format 16` {ref}`¶ <RequiresExpressionIndentation>`
@@ -6670,6 +6821,8 @@ the configuration (without a prefix: `Auto`).
                   ...
                 }
     ```
+
+
 
 (separatedefinitionblocks)=
 
@@ -6726,10 +6879,14 @@ the configuration (without a prefix: `Auto`).
 
   - `SDS_Leave` (in configuration: `Leave`)
     Leave definition blocks as they are.
+
   - `SDS_Always` (in configuration: `Always`)
     Insert an empty line between definition blocks.
+
   - `SDS_Never` (in configuration: `Never`)
     Remove any empty line between definition blocks.
+
+
 
 (shortnamespacelines)=
 
@@ -6808,6 +6965,7 @@ the configuration (without a prefix: `Auto`).
     #include "A10.h"           #include "A2.h"
     ```
 
+
 (sortjavastaticimport)=
 
 **SortJavaStaticImport** (`SortJavaStaticImportOptions`) {versionbadge}`clang-format 12` {ref}`¶ <SortJavaStaticImport>`
@@ -6835,6 +6993,8 @@ the configuration (without a prefix: `Auto`).
 
     import static org.example.function1;
     ```
+
+
 
 (sortusingdeclarations)=
 
@@ -6885,6 +7045,8 @@ the configuration (without a prefix: `Auto`).
     using std::string;
     using std::chrono::duration_cast;
     ```
+
+
 
 (spaceaftercstylecast)=
 
@@ -6970,6 +7132,8 @@ the configuration (without a prefix: `Auto`).
     PointerAlignment: Left                 PointerAlignment: Right
     void* const * x = NULL;         vs.     void * const *x = NULL;
     ```
+
+
 
 (spacebeforeassignmentoperators)=
 
@@ -7130,6 +7294,8 @@ the configuration (without a prefix: `Auto`).
     Configure each individual space before parentheses in
     `SpaceBeforeParensOptions`.
 
+
+
 (spacebeforeparensoptions)=
 
 **SpaceBeforeParensOptions** (`SpaceBeforeParensCustom`) {versionbadge}`clang-format 14` {ref}`¶ <SpaceBeforeParensOptions>`
@@ -7152,7 +7318,7 @@ the configuration (without a prefix: `Auto`).
 
   Precise control over the spacing before parentheses.
 
-  ```c++
+  ```yaml
   # Should be declared this way:
   SpaceBeforeParens: Custom
   SpaceBeforeParensOptions:
@@ -7256,6 +7422,7 @@ the configuration (without a prefix: `Auto`).
     f (a);                                 f();
     ```
 
+
 (spacebeforerangebasedforloopcolon)=
 
 **SpaceBeforeRangeBasedForLoopColon** (`Boolean`) {versionbadge}`clang-format 7` {ref}`¶ <SpaceBeforeRangeBasedForLoopColon>`
@@ -7272,7 +7439,7 @@ the configuration (without a prefix: `Auto`).
 
 **SpaceBeforeSquareBrackets** (`Boolean`) {versionbadge}`clang-format 10` {ref}`¶ <SpaceBeforeSquareBrackets>`
 
-: If `true`, spaces will be before `[`.
+: If `true`, spaces will be before  `[`.
   Lambdas will not be affected. Only the first `[` will get a space added.
 
   ```c++
@@ -7330,6 +7497,8 @@ the configuration (without a prefix: `Auto`).
     int x{};
     ```
 
+
+
 (spaceinemptyparentheses)=
 
 **SpaceInEmptyParentheses** (`Boolean`) {versionbadge}`clang-format 3.7` {ref}`¶ <SpaceInEmptyParentheses>`
@@ -7346,7 +7515,7 @@ the configuration (without a prefix: `Auto`).
   (`//` - comments).
 
   This does not affect trailing block comments (`/*` - comments) as those
-  commonly have different usage patterns and a number of special cases. In
+  commonly have different usage patterns and a number of special cases.  In
   the case of Verilog, it doesn't affect a comment right after the opening
   parenthesis in the port or parameter list in a module header, because it
   is probably for the port on the following line instead of the parenthesis
@@ -7389,6 +7558,8 @@ the configuration (without a prefix: `Auto`).
     Keep a single space after `<` and before `>` if any spaces were
     present. Option `Standard: Cpp03` takes precedence.
 
+
+
 (spacesinblockcomments)=
 
 **SpacesInBlockComments** (`SpacesInBlockCommentsStyle`) {versionbadge}`clang-format 24` {ref}`¶ <SpacesInBlockComments>`
@@ -7417,6 +7588,8 @@ the configuration (without a prefix: `Auto`).
   - `SIBCS_Leave` (in configuration: `Leave`)
     Leave existing spaces unchanged.
 
+
+
 (spacesincstylecastparentheses)=
 
 **SpacesInCStyleCastParentheses** (`Boolean`) {versionbadge}`clang-format 3.7` {ref}`¶ <SpacesInCStyleCastParentheses>`
@@ -7438,7 +7611,7 @@ the configuration (without a prefix: `Auto`).
 
 **SpacesInContainerLiterals** (`Boolean`) {versionbadge}`clang-format 3.7` {ref}`¶ <SpacesInContainerLiterals>`
 
-: If `true`, spaces are inserted inside container literals (e.g. ObjC and
+: If `true`, spaces are inserted inside container literals (e.g.  ObjC and
   Javascript array and dict literals). For JSON, use
   `SpaceBeforeJsonColon` instead.
 
@@ -7491,7 +7664,9 @@ the configuration (without a prefix: `Auto`).
   Control of spaces within a single line comment.
 
   - `unsigned Minimum` The minimum number of spaces at the start of the comment.
+
   - `unsigned Maximum` The maximum number of spaces at the start of the comment.
+
 
 (spacesinparens)=
 
@@ -7517,6 +7692,8 @@ the configuration (without a prefix: `Auto`).
     Configure each individual space in parentheses in
     `SpacesInParensOptions`.
 
+
+
 (spacesinparensoptions)=
 
 **SpacesInParensOptions** (`SpacesInParensCustom`) {versionbadge}`clang-format 17` {ref}`¶ <SpacesInParensOptions>`
@@ -7540,7 +7717,7 @@ the configuration (without a prefix: `Auto`).
 
   Precise control over the spacing in parentheses.
 
-  ```c++
+  ```yaml
   # Should be declared this way:
   SpacesInParens: Custom
   SpacesInParensOptions:
@@ -7553,13 +7730,14 @@ the configuration (without a prefix: `Auto`).
     when both opening and closing parentheses use multiple parentheses.
 
     ```c++
-     true:
-     __attribute__(( noreturn ))
-     __decltype__(( x ))
-     if (( a = b ))
-    false:
-      Uses the applicable option.
+    true:
+    __attribute__(( noreturn ))
+    __decltype__(( x ))
+    if (( a = b ))
+     false:
+       Uses the applicable option.
     ```
+
 
   - `bool InConditionalStatements` Put a space in parentheses only inside conditional statements
     (`for/if/while/switch...`).
@@ -7596,6 +7774,7 @@ the configuration (without a prefix: `Auto`).
     true:                                 false:
     t f( Deleted & ) & = delete;    vs.   t f(Deleted &) & = delete;
     ```
+
 
 (spacesinparentheses)=
 
@@ -7637,23 +7816,33 @@ the configuration (without a prefix: `Auto`).
   - `LS_Cpp03` (in configuration: `c++03`)
     Parse and format as C++03.
     `Cpp03` is a deprecated alias for `c++03`
+
   - `LS_Cpp11` (in configuration: `c++11`)
     Parse and format as C++11.
+
   - `LS_Cpp14` (in configuration: `c++14`)
     Parse and format as C++14.
+
   - `LS_Cpp17` (in configuration: `c++17`)
     Parse and format as C++17.
+
   - `LS_Cpp20` (in configuration: `c++20`)
     Parse and format as C++20.
+
   - `LS_Cpp23` (in configuration: `c++23`)
     Parse and format as C++23.
+
   - `LS_Cpp26` (in configuration: `c++26`)
     Parse and format as C++26.
+
   - `LS_Latest` (in configuration: `Latest`)
     Parse and format using the latest supported language version.
     `Cpp11` is a deprecated alias for `Latest`
+
   - `LS_Auto` (in configuration: `Auto`)
     Automatic detection based on the input.
+
+
 
 (statementattributelikemacros)=
 
@@ -7726,6 +7915,8 @@ the configuration (without a prefix: `Auto`).
         i32:$src2
     );
     ```
+
+
 
 (tablegenbreakingdagargoperators)=
 
@@ -7814,17 +8005,23 @@ the configuration (without a prefix: `Auto`).
 
   - `UT_Never` (in configuration: `Never`)
     Never use tab.
+
   - `UT_ForIndentation` (in configuration: `ForIndentation`)
     Use tabs only for indentation.
+
   - `UT_ForContinuationAndIndentation` (in configuration: `ForContinuationAndIndentation`)
     Fill all leading whitespace with tabs, and use spaces for alignment that
     appears within a line (e.g. consecutive assignments and declarations).
+
   - `UT_AlignWithSpaces` (in configuration: `AlignWithSpaces`)
     Use tabs for line continuation and indentation, and spaces for
     alignment.
+
   - `UT_Always` (in configuration: `Always`)
     Use tabs whenever we need to fill whitespace that spans at least from
     one tab stop to the next one.
+
+
 
 (variabletemplates)=
 
@@ -7911,6 +8108,8 @@ the configuration (without a prefix: `Auto`).
   - `WNBWELS_Leave` (in configuration: `Leave`)
     Keep existing newlines at the beginning and the end of namespace body.
     `MaxEmptyLinesToKeep` still applies.
+
+
 
 % END_FORMAT_STYLE_OPTIONS
 

@@ -105,7 +105,8 @@ def reindent_fenced_blocks(text):
         info = match.group("info")
         body = match.group("body")
         dedented_body = "".join(
-            indent + line for line in textwrap.dedent(body).splitlines(keepends=True)
+            (indent + line if line.strip() else line)
+            for line in textwrap.dedent(body).splitlines(keepends=True)
         )
         return (
             f"{indent}{fence}{info}\n"
@@ -161,6 +162,10 @@ def doxygen2md(text):
         text,
     )
     text = reindent_fenced_blocks(text)
+    # Ensure a blank line before opening fences for proper Markdown loose-list rendering.
+    # Opening ``` fences have a lang word; opening ::: fences have {. Closing fences
+    # have neither, so they are unaffected.
+    text = re.sub(r"([^\n])\n([ \t]*(?:```\w|:::\{))", r"\1\n\n\2", text)
     return text
 
 
