@@ -5241,7 +5241,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ROTR: {
     Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1), DemandedElts);
-    FirstAnswer = KnownBits::rotateNumSignBits(
+    FirstAnswer = rotateNumSignBits(
         Tmp, VTBits,
         C ? std::optional(C->getAPIntValue().getZExtValue()) : std::nullopt,
         Opcode == ISD::ROTR);
