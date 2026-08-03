@@ -7,6 +7,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <thread>
 using namespace llvm;
 
@@ -60,21 +61,23 @@ std::vector<DenseSet<const Function *>> SplitModuleCG::doPartitioning() {
   // care of updating the balancing queue.
   const auto AssignToPartition = [&](PartitionID PID,
                                      const FunctionWithDependencies &FWD) {
+    // Insert the root function and its dependencies into the partition,
+    // tracking the cost of newly inserted functions so the balancing queue
+    // can be updated.
     auto &FnsInPart = Partitions[PID];
-    FnsInPart.insert(FWD.F);
-    for (const Function *Dep : FWD.Dependencies) {
-      FnsInPart.insert(Dep);
-    }
+    CostType AddedCost = 0;
+    if (FnsInPart.insert(FWD.F).second)
+      AddedCost += FuncsCosts.at(FWD.F);
+    for (const Function *Dep : FWD.Dependencies)
+      if (FnsInPart.insert(Dep).second)
+        AddedCost += FuncsCosts.lookup(Dep);
 
-    // Update the balancing queue. we scan backwards because in the common case
-    // the partition is at the end.
+    // Update the balancing queue. We scan backwards because in the common
+    // case the target partition is at the end of the sorted queue.
     for (auto &[QueuePID, Cost] : reverse(BalancingQueue)) {
-      if (QueuePID == PID) {
-        CostType NewCost = 0;
-        for (auto *Fn : Partitions[PID])
-          NewCost += FuncsCosts.at(Fn);
-        Cost = NewCost;
-      }
+      if (QueuePID != PID)
+        continue;
+      Cost += AddedCost;
     }
 
     sort(BalancingQueue, ComparePartitions);
@@ -108,20 +111,25 @@ void SplitModuleCG::calculateFunctionCosts() {
 }
 
 void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I,
-                                  function_ref<bool(const GlobalValue *)> NeedsConservativeImport) {
-  // collect symbols to rename
+                                   function_ref<bool(const GlobalValue *)> NeedsConservativeImport) {
+  // Collect promoted symbols (those that were local but are now external due
+  // to externalize(), and therefore are not in the OriginalExternals set
+  // captured at construction time).
+  //
+  // Note: here we only *record* the rename in PromotedRenames; we do not
+  // perform the actual renaming immediately. The rename is applied after the
+  // opt pipeline has completed. This is intentional: deferring the rename
+  // minimizes the impact of renaming on subsequent optimizations.
   auto checkPromoted = [&](const GlobalValue &GV) {
     // now is external (not local), but not in external set.
     if (!GV.hasLocalLinkage() && !OriginalExternals.contains(GV.getName())) {
       if (PromotedRenames.count(GV.getName()))
         return;
-      MD5 Hash;
-      Hash.update(M.getModuleIdentifier());
-      MD5::MD5Result Result;
-      Hash.final(Result);
-      SmallString<32> HashStr;
-      MD5::stringifyResult(Result, HashStr);
-      std::string NewName = (GV.getName() + "." + HashStr.str().substr(0, 8)).str();
+      // Use the naming convention "name.llvm.<suffix>" so the
+      // promoted local cannot clash with an external that happens to share
+      // the same name in another module/partition.
+      std::string Suffix = getUniqueModuleId(&M);
+      std::string NewName = (GV.getName() + ".llvm" + Suffix).str();
       PromotedRenames[GV.getName()] = NewName;
     }
   };
@@ -230,18 +238,13 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
   for (GlobalIFunc &GI : M.ifuncs())
     externalize(&GI);
 
-  // TODO: Consider optimizing the alias, replacing the determined alias with
-  // the determined aliasee.
-
   // Assign callgraphs into N partitions.
   auto Partitions = doPartitioning();
   assert(Partitions.size() == N);
 
-  // local GVs need to be conservatively imported into [dependency] every module,
- 	// and then cleaned up afterwards.
   const auto NeedsConservativeImport = [&](const GlobalValue *GV) {
-    // We conservatively import private/internal GVs into every module and clean
-    // them up afterwards.
+    // Conservatively clone private/internal globals into every partition;
+    // unused copies are removed by dealWithMpart afterwards.
     const auto *Var = dyn_cast<GlobalVariable>(GV);
     return Var && Var->hasLocalLinkage();
   };
@@ -260,8 +263,13 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
     return I == 0;
   };
 
-  // TODO: In the future, it may be considered to also include clonemodule in
-  // parallel to reduce compilation time.
+  // TODO: Consider parallelizing the per-partition CloneModule call itself.
+  // Today the loop below serially clones M into N partitions in the main
+  // thread, then spawns N worker threads to run opt+codegen. If CloneModule
+  // becomes a bottleneck for large modules, the clones could be produced in
+  // parallel too — but that would require either per-thread LLVMContexts
+  // for the clone step or a thread-safe CloneModule, neither of which is
+  // straightforward.
   std::vector<std::thread> Threads;
   Threads.reserve(N);
   std::vector<std::unique_ptr<Module>> MPartInCtxs;
@@ -275,9 +283,13 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
 
     dealWithMpart(*MPart, I, NeedsConservativeImport);
 
-    // If not clone module in multi-thread, we also need to clone
-    // the module obtained through segmentation into a new context
-    // to avoid data races.
+    // Serialize the cloned partition to bitcode and re-parse it inside the
+    // worker thread's own LLVMContext. This round-trip is required because
+    // LLVM's Module / LLVMContext are not safe to share across threads:
+    // CloneModule above runs in the main thread's context, but the worker
+    // thread created below needs its own context to run opt + codegen
+    // concurrently without racing on shared internal state. So bitcode
+    // serialization is the supported way to move a Module between contexts.
     SmallString<0> BC;
     raw_svector_ostream BCOS(BC);
     WriteBitcodeToFile(*MPart, BCOS);
@@ -296,9 +308,7 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
     T.join();
 }
 
-SplitModuleCG::SplitModuleCG(Module &M,
-                             const ModuleSummaryIndex &CombinedIndex,
-                             unsigned LimitPartition)
+SplitModuleCG::SplitModuleCG(Module &M, unsigned LimitPartition)
     : N(LimitPartition), M(M), CG(M) {
   // Track existing non-local symbols. This ensures that when we promote
   // internal symbols to external for partitioning, we can handle renaming
@@ -310,9 +320,7 @@ SplitModuleCG::SplitModuleCG(Module &M,
   calculateFunctionCosts();
 
   // Construct a simplified call graph to facilitate worklist generation.
-  SCG = std::make_unique<SimplifyCallGraph>(CG, CombinedIndex, M);
-  // TODO: When the SCG is established, the special cases of comdat and
-  // initarray need to be considered.
+  SCG = std::make_unique<SimplifyCallGraph>(CG, M);
 
   // Populate the worklist with root functions and their transitive
   // dependencies. This worklist serves as the foundation for the
@@ -325,8 +333,7 @@ SplitModuleCG::SplitModuleCG(Module &M,
   N = N == 0 ? 1 : N;
 }
 
-void SimplifyCallGraph::createSimplifyCallGraph(
-    const ModuleSummaryIndex &CombinedIndex) {
+void SimplifyCallGraph::createSimplifyCallGraph() {
   for (auto &NodePair : CG) {
     CallGraphNode *CGNode = NodePair.second.get();
     Function *F = CGNode->getFunction();
@@ -335,16 +342,8 @@ void SimplifyCallGraph::createSimplifyCallGraph(
 
     SimplifyCallGraphNode *SCGNode = getOrInsertFunction(F);
 
-    //TODO: Trace indirect call usage for the current function.
-
     for (const auto &CGNodeItem : *CGNode) {
       Function *Called = CGNodeItem.second->getFunction();
-      if (!Called) {
-        //TODO: Deal with indirect call. 
-        // 1. Check if the instruction has a callees metadata.
-        // 2. Check if this is an indirect call with profile data.
-        // 3. Check if this is an alias to a function.
-      }
       if (!Called || Called->isDeclaration())
         continue;
       SCGNode->addCalledFunction(getOrInsertFunction(Called));

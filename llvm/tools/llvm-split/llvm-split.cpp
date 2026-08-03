@@ -18,7 +18,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/Config.h"
@@ -356,8 +355,7 @@ int main(int argc, char **argv) {
     };
 
     llvm::lto::Config Config;
-    ModuleSummaryIndex CombinedIndex(false);
-    SplitModuleCG SplitModuleCG(*M, CombinedIndex, NumOutputs);
+    SplitModuleCG SplitModuleCG(*M, NumOutputs);
     SplitModuleCG.SplitModule(HandleModulePartCG, Config);
     return 0;
   }
