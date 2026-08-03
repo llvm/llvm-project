@@ -7629,9 +7629,11 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         auto *VPI = dyn_cast<VPInstruction>(R);
         return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
       };
-      auto *RdxResult = cast<VPInstruction>(
-          vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
-      assert(RdxResult && "expected to find reduction result");
+      auto *RdxResult = cast_or_null<VPInstruction>(vputils::findRecipe(
+          ReductionPhi->getBackedgeValue(), IsReductionResult));
+      // If there's no ComputeReductionResult user, then the reduction is dead.
+      if (!RdxResult)
+        continue;
 
       VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
           cast<PHINode>(ReductionPhi->getUnderlyingInstr()));
