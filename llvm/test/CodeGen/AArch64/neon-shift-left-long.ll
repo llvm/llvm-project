@@ -12,6 +12,22 @@ define <8 x i16> @test_sshll_v8i8(<8 x i8> %a) {
   ret <8 x i16> %tmp
 }
 
+define <8 x i16> @test_sshll_v8i8_eltsize(<8 x i8> %a) {
+; CHECK-SD-LABEL: test_sshll_v8i8_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_sshll_v8i8_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    ret
+  %1 = sext <8 x i8> %a to <8 x i16>
+  %tmp = shl <8 x i16> %1, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  ret <8 x i16> %tmp
+}
+
 define <8 x i16> @test_sshll_v8i8_big(<8 x i8> %a) {
 ; CHECK-SD-LABEL: test_sshll_v8i8_big:
 ; CHECK-SD:       // %bb.0:
@@ -36,6 +52,22 @@ define <4 x i32> @test_sshll_v4i16(<4 x i16> %a) {
 ; CHECK-NEXT:    ret
   %1 = sext <4 x i16> %a to <4 x i32>
   %tmp = shl <4 x i32> %1, <i32 9, i32 9, i32 9, i32 9>
+  ret <4 x i32> %tmp
+}
+
+define <4 x i32> @test_sshll_v4i16_eltsize(<4 x i16> %a) {
+; CHECK-SD-LABEL: test_sshll_v4i16_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_sshll_v4i16_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #16
+; CHECK-GI-NEXT:    ret
+  %1 = sext <4 x i16> %a to <4 x i32>
+  %tmp = shl <4 x i32> %1, <i32 16, i32 16, i32 16, i32 16>
   ret <4 x i32> %tmp
 }
 
@@ -66,6 +98,23 @@ define <2 x i64> @test_sshll_v2i32(<2 x i32> %a) {
   ret <2 x i64> %tmp
 }
 
+define <2 x i64> @test_sshll_v2i32_eltsize(<2 x i32> %a) {
+; CHECK-SD-LABEL: test_sshll_v2i32_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll v0.2d, v0.2s, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_sshll_v2i32_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #32
+; CHECK-GI-NEXT:    ret
+  %1 = sext <2 x i32> %a to <2 x i64>
+  %tmp = shl <2 x i64> %1, <i64 32, i64 32>
+  ret <2 x i64> %tmp
+}
+
+
 define <2 x i64> @test_sshll_v2i32_big(<2 x i32> %a) {
 ; CHECK-SD-LABEL: test_sshll_v2i32_big:
 ; CHECK-SD:       // %bb.0:
@@ -93,6 +142,22 @@ define <8 x i16> @test_ushll_v8i8(<8 x i8> %a) {
   ret <8 x i16> %tmp
 }
 
+define <8 x i16> @test_ushll_v8i8_eltsize(<8 x i8> %a) {
+; CHECK-SD-LABEL: test_ushll_v8i8_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll v0.8h, v0.8b, #8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ushll_v8i8_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    ret
+  %1 = zext <8 x i8> %a to <8 x i16>
+  %tmp = shl <8 x i16> %1, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  ret <8 x i16> %tmp
+}
+
 define <8 x i16> @test_ushll_v8i8_big(<8 x i8> %a) {
 ; CHECK-LABEL: test_ushll_v8i8_big:
 ; CHECK:       // %bb.0:
@@ -114,6 +179,22 @@ define <4 x i32> @test_ushll_v4i16(<4 x i16> %a) {
   ret <4 x i32> %tmp
 }
 
+define <4 x i32> @test_ushll_v4i16_eltsize(<4 x i16> %a) {
+; CHECK-SD-LABEL: test_ushll_v4i16_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ushll_v4i16_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #16
+; CHECK-GI-NEXT:    ret
+  %1 = zext <4 x i16> %a to <4 x i32>
+  %tmp = shl <4 x i32> %1, <i32 16, i32 16, i32 16, i32 16>
+  ret <4 x i32> %tmp
+}
+
 define <4 x i32> @test_ushll_v4i16_big(<4 x i16> %a) {
 ; CHECK-LABEL: test_ushll_v4i16_big:
 ; CHECK:       // %bb.0:
@@ -132,6 +213,22 @@ define <2 x i64> @test_ushll_v2i32(<2 x i32> %a) {
 ; CHECK-NEXT:    ret
   %1 = zext <2 x i32> %a to <2 x i64>
   %tmp = shl <2 x i64> %1, <i64 19, i64 19>
+  ret <2 x i64> %tmp
+}
+
+define <2 x i64> @test_ushll_v2i32_eltsize(<2 x i32> %a) {
+; CHECK-SD-LABEL: test_ushll_v2i32_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll v0.2d, v0.2s, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ushll_v2i32_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #32
+; CHECK-GI-NEXT:    ret
+  %1 = zext <2 x i32> %a to <2 x i64>
+  %tmp = shl <2 x i64> %1, <i64 32, i64 32>
   ret <2 x i64> %tmp
 }
 
@@ -160,6 +257,23 @@ define <8 x i16> @test_sshll2_v16i8(<16 x i8> %a) {
   %1 = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %2 = sext <8 x i8> %1 to <8 x i16>
   %tmp = shl <8 x i16> %2, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  ret <8 x i16> %tmp
+}
+
+define <8 x i16> @test_sshll2_v16i8_eltsize(<16 x i8> %a) {
+; CHECK-SD-LABEL: test_sshll2_v16i8_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll2 v0.8h, v0.16b, #8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_sshll2_v16i8_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll2 v0.8h, v0.16b, #0
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    ret
+  %1 = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %2 = sext <8 x i8> %1 to <8 x i16>
+  %tmp = shl <8 x i16> %2, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   ret <8 x i16> %tmp
 }
 
@@ -198,6 +312,23 @@ define <4 x i32> @test_sshll2_v8i16(<8 x i16> %a) {
   ret <4 x i32> %tmp
 }
 
+define <4 x i32> @test_sshll2_v8i16_eltsize(<8 x i16> %a) {
+; CHECK-SD-LABEL: test_sshll2_v8i16_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll2 v0.4s, v0.8h, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_sshll2_v8i16_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
+; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #16
+; CHECK-GI-NEXT:    ret
+  %1 = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %2 = sext <4 x i16> %1 to <4 x i32>
+  %tmp = shl <4 x i32> %2, <i32 16, i32 16, i32 16, i32 16>
+  ret <4 x i32> %tmp
+}
+
 define <4 x i32> @test_sshll2_v8i16_big(<8 x i16> %a) {
 ; CHECK-SD-LABEL: test_sshll2_v8i16_big:
 ; CHECK-SD:       // %bb.0:
@@ -230,6 +361,23 @@ define <2 x i64> @test_sshll2_v4i32(<4 x i32> %a) {
   %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
   %2 = sext <2 x i32> %1 to <2 x i64>
   %tmp = shl <2 x i64> %2, <i64 19, i64 19>
+  ret <2 x i64> %tmp
+}
+
+define <2 x i64> @test_sshll2_v4i32_eltsize(<4 x i32> %a) {
+; CHECK-SD-LABEL: test_sshll2_v4i32_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll2 v0.2d, v0.4s, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_sshll2_v4i32_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll2 v0.2d, v0.4s, #0
+; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #32
+; CHECK-GI-NEXT:    ret
+  %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %2 = sext <2 x i32> %1 to <2 x i64>
+  %tmp = shl <2 x i64> %2, <i64 32, i64 32>
   ret <2 x i64> %tmp
 }
 
@@ -268,6 +416,24 @@ define <8 x i16> @test_ushll2_v16i8(<16 x i8> %a) {
   ret <8 x i16> %tmp
 }
 
+define <8 x i16> @test_ushll2_v16i8_eltsize(<16 x i8> %a) {
+; CHECK-SD-LABEL: test_ushll2_v16i8_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll2 v0.8h, v0.16b, #8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ushll2_v16i8_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll2 v0.8h, v0.16b, #0
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    ret
+  %1 = shufflevector <16 x i8> %a, <16 x i8> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %2 = zext <8 x i8> %1 to <8 x i16>
+  %tmp = shl <8 x i16> %2, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  ret <8 x i16> %tmp
+}
+
+
 define <8 x i16> @test_ushll2_v16i8_big(<16 x i8> %a) {
 ; CHECK-LABEL: test_ushll2_v16i8_big:
 ; CHECK:       // %bb.0:
@@ -297,6 +463,23 @@ define <4 x i32> @test_ushll2_v8i16(<8 x i16> %a) {
   ret <4 x i32> %tmp
 }
 
+define <4 x i32> @test_ushll2_v8i16_eltsize(<8 x i16> %a) {
+; CHECK-SD-LABEL: test_ushll2_v8i16_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll2 v0.4s, v0.8h, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ushll2_v8i16_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #0
+; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #16
+; CHECK-GI-NEXT:    ret
+  %1 = shufflevector <8 x i16> %a, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %2 = zext <4 x i16> %1 to <4 x i32>
+  %tmp = shl <4 x i32> %2, <i32 16, i32 16, i32 16, i32 16>
+  ret <4 x i32> %tmp
+}
+
 define <4 x i32> @test_ushll2_v8i16_big(<8 x i16> %a) {
 ; CHECK-LABEL: test_ushll2_v8i16_big:
 ; CHECK:       // %bb.0:
@@ -323,6 +506,23 @@ define <2 x i64> @test_ushll2_v4i32(<4 x i32> %a) {
   %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
   %2 = zext <2 x i32> %1 to <2 x i64>
   %tmp = shl <2 x i64> %2, <i64 19, i64 19>
+  ret <2 x i64> %tmp
+}
+
+define <2 x i64> @test_ushll2_v4i32_eltsize(<4 x i32> %a) {
+; CHECK-SD-LABEL: test_ushll2_v4i32_eltsize:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    shll2 v0.2d, v0.4s, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_ushll2_v4i32_eltsize:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ushll2 v0.2d, v0.4s, #0
+; CHECK-GI-NEXT:    shl v0.2d, v0.2d, #32
+; CHECK-GI-NEXT:    ret
+  %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
+  %2 = zext <2 x i32> %1 to <2 x i64>
+  %tmp = shl <2 x i64> %2, <i64 32, i64 32>
   ret <2 x i64> %tmp
 }
 
