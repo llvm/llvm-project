@@ -61,17 +61,33 @@
       __##name##_impl__ asm(c_alias);                                          \
   decltype(LIBC_NAMESPACE::name) name [[gnu::alias(c_alias)]];                 \
   type __##name##_impl__ arglist
+
+#define LLVM_LIBC_ADD_FUNCTION_C_ALIAS(name, c_alias)                          \
+  extern "C" decltype(LIBC_NAMESPACE::name) c_alias [[gnu::alias(#name)]]
+
 #else // LIBC_TARGET_USES_LEADING_UNDERSCORE
 #define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
   LLVM_LIBC_ATTR(name)                                                         \
   LLVM_LIBC_FUNCTION_ATTR decltype(LIBC_NAMESPACE::name) name asm(             \
       "_" c_alias);                                                            \
   type name arglist
+
+// clang-format off
+#define LLVM_LIBC_ADD_FUNCTION_C_ALIAS(name, c_alias)                          \
+  asm(".text\n"                                                                \
+      ".global " "_" #c_alias "\n"                                             \
+      ".type " "_" #c_alias ", @function\n"                                    \
+      "_" #c_alias " = " "_" #name "\n")
+// clang-format on
 #endif // LIBC_TARGET_USES_LEADING_UNDERSCORE
 
 #else  // LIBC_COPT_PUBLIC_PACKAGING
 #define LLVM_LIBC_FUNCTION_IMPL_4(type, name, arglist, c_alias)                \
   type name arglist
+
+#define LLVM_LIBC_ADD_FUNCTION_C_ALIAS(name, c_alias)                          \
+  static_assert(true, "Require semicolon.")
+
 #endif // LIBC_COPT_PUBLIC_PACKAGING
 
 #define LLVM_LIBC_FUNCTION_IMPL_3(type, name, arglist)                         \
