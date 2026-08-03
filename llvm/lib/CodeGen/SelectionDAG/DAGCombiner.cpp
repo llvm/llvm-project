@@ -21874,12 +21874,34 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
 /// Returns true if \p LD is a plain non-extending load of a whole fixed-width
 /// scalar integer.
 static bool isForwardableIntegerLoad(LoadSDNode *LD) {
-  if (!LD->isSimple() || LD->isIndexed() ||
-      LD->getExtensionType() != ISD::NON_EXTLOAD)
+  if (!LD->isSimple() || LD->isIndexed())
     return false;
-  EVT VT = LD->getValueType(0);
-  return VT == LD->getMemoryVT() && VT.isInteger() && !VT.isVector() &&
-         !VT.isScalableVT();
+  EVT MemVT = LD->getMemoryVT();
+  return MemVT.isInteger() && !MemVT.isVector() && !MemVT.isScalableVT();
+}
+
+/// Returns true if \p LD may act as the wider load: it must be non-extending,
+/// so its value is exactly the bytes it reads.
+static bool isForwardableWideLoad(LoadSDNode *LD) {
+  return isForwardableIntegerLoad(LD) &&
+         LD->getExtensionType() == ISD::NON_EXTLOAD &&
+         LD->getValueType(0) == LD->getMemoryVT();
+}
+
+/// Maps a load extension type to the node used to re-apply it to a forwarded
+/// value.
+static unsigned getExtendOpcodeForLoad(ISD::LoadExtType ExtType) {
+  switch (ExtType) {
+  case ISD::ZEXTLOAD:
+    return ISD::ZERO_EXTEND;
+  case ISD::SEXTLOAD:
+    return ISD::SIGN_EXTEND;
+  case ISD::EXTLOAD:
+    return ISD::ANY_EXTEND;
+  case ISD::NON_EXTLOAD:
+    break;
+  }
+  llvm_unreachable("not an extending load");
 }
 
 /// If LD reads bytes contained in a wider load from an overlapping address on
@@ -21892,8 +21914,11 @@ SDValue DAGCombiner::ForwardLoadValueToDirectLoad(LoadSDNode *LD) {
   if (!isForwardableIntegerLoad(LD) || LD->getBasePtr().isUndef())
     return SDValue();
 
+  // LDVT is the value LD produces; LDMemVT is the bytes it actually reads.
+  // They differ when LD is an extending load.
   EVT LDVT = LD->getValueType(0);
-  uint64_t LDBits = LDVT.getFixedSizeInBits();
+  EVT LDMemVT = LD->getMemoryVT();
+  uint64_t LDMemBits = LDMemVT.getFixedSizeInBits();
   SDValue Chain = LD->getChain();
   BaseIndexOffset LDPtr = BaseIndexOffset::match(LD, DAG);
 
@@ -21907,7 +21932,7 @@ SDValue DAGCombiner::ForwardLoadValueToDirectLoad(LoadSDNode *LD) {
     auto *Wide = dyn_cast<LoadSDNode>(U);
     if (!Wide || Wide == LD || Wide->getChain() != Chain ||
         Wide->getAddressSpace() != LD->getAddressSpace() ||
-        !isForwardableIntegerLoad(Wide))
+        !isForwardableWideLoad(Wide))
       continue;
 
     // Wide must already be needed elsewhere, or this just trades one load for
@@ -21917,7 +21942,7 @@ SDValue DAGCombiner::ForwardLoadValueToDirectLoad(LoadSDNode *LD) {
 
     EVT WideVT = Wide->getValueType(0);
     uint64_t WideBits = WideVT.getFixedSizeInBits();
-    if (WideBits <= LDBits)
+    if (WideBits <= LDMemBits)
       continue;
 
     // Off = Wide's address - LD's address, so LD sits -Off bytes into Wide.
@@ -21929,28 +21954,41 @@ SDValue DAGCombiner::ForwardLoadValueToDirectLoad(LoadSDNode *LD) {
         Off <= -WideBytes)
       continue;
 
-    // LD must be fully contained, not just start inside Wide.
+    // LD's access must be fully contained, not just start inside Wide.
     uint64_t ShiftBits = static_cast<uint64_t>(-Off) * 8;
-    if (ShiftBits + LDBits > WideBits)
+    if (ShiftBits + LDMemBits > WideBits)
       continue;
 
     // Narrowing must be free: a truncate, plus a shift for a high field, can
     // cost more than re-reading memory (e.g. RISC-V, where only i64->i32 is
     // free).
-    if (!TLI.isTruncateFree(WideVT, LDVT))
+    if (!TLI.isTruncateFree(WideVT, LDMemVT))
       continue;
     if (ShiftBits && !TLI.isOperationLegalOrCustom(ISD::SRL, WideVT))
       continue;
 
-    // LD is bits [ShiftBits, ShiftBits + LDBits) of Wide.
+    // An extending load also needs its extension re-applied to the forwarded
+    // value.
+    ISD::LoadExtType ExtType = LD->getExtensionType();
+    unsigned ExtOpc = 0;
+    if (ExtType != ISD::NON_EXTLOAD) {
+      ExtOpc = getExtendOpcodeForLoad(ExtType);
+      if (LegalOperations && !TLI.isOperationLegalOrCustom(ExtOpc, LDVT))
+        continue;
+    }
+
+    // LD reads bits [ShiftBits, ShiftBits + LDMemBits) of Wide.
     SDLoc DL(LD);
     SDValue Val(Wide, 0);
     if (ShiftBits)
       Val = DAG.getNode(ISD::SRL, DL, WideVT, Val,
                         DAG.getShiftAmountConstant(ShiftBits, WideVT, DL));
+    Val = DAG.getNode(ISD::TRUNCATE, DL, LDMemVT, Val);
+    if (ExtOpc)
+      Val = DAG.getNode(ExtOpc, DL, LDVT, Val);
 
     // LD performs no write, so its chain successors can use LD's input chain.
-    return CombineTo(LD, DAG.getNode(ISD::TRUNCATE, DL, LDVT, Val), Chain);
+    return CombineTo(LD, Val, Chain);
   }
 
   return SDValue();

@@ -116,3 +116,74 @@ entry:
   %n = load volatile i32, ptr @d
   ret i32 %n
 }
+
+@s3 = external global i64
+
+; The narrow load is zero-extended, so DAGCombine has already folded the zext
+; into a zextload by the time visitLOAD sees it. The forwarded value must have
+; the extension re-applied: (zext (trunc (srl %w, 32))).
+define void @high_field_zext() nounwind {
+; CHECK-LABEL: high_field_zext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq q@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    movq s1@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movq %rax, (%rcx)
+; CHECK-NEXT:    shrq $32, %rax
+; CHECK-NEXT:    movq s3@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movq %rax, (%rcx)
+; CHECK-NEXT:    retq
+entry:
+  %w = load i64, ptr @q
+  %hp = getelementptr inbounds i8, ptr @q, i64 4
+  %n = load i32, ptr %hp
+  store i64 %w, ptr @s1
+  %z = zext i32 %n to i64
+  store i64 %z, ptr @s3
+  ret void
+}
+
+; Same, sign-extended.
+define void @high_field_sext() nounwind {
+; CHECK-LABEL: high_field_sext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq q@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    movq s1@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movq %rax, (%rcx)
+; CHECK-NEXT:    sarq $32, %rax
+; CHECK-NEXT:    movq s3@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movq %rax, (%rcx)
+; CHECK-NEXT:    retq
+entry:
+  %w = load i64, ptr @q
+  %hp = getelementptr inbounds i8, ptr @q, i64 4
+  %n = load i32, ptr %hp
+  store i64 %w, ptr @s1
+  %z = sext i32 %n to i64
+  store i64 %z, ptr @s3
+  ret void
+}
+
+; A sub-word extending load (i8 out of the middle of an i64).
+define void @byte_field_zext() nounwind {
+; CHECK-LABEL: byte_field_zext:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq q@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    movq s1@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movq %rax, (%rcx)
+; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
+; CHECK-NEXT:    shrl $24, %eax
+; CHECK-NEXT:    movq s3@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    movq %rax, (%rcx)
+; CHECK-NEXT:    retq
+entry:
+  %w = load i64, ptr @q
+  %bp = getelementptr inbounds i8, ptr @q, i64 3
+  %n = load i8, ptr %bp
+  store i64 %w, ptr @s1
+  %z = zext i8 %n to i64
+  store i64 %z, ptr @s3
+  ret void
+}
