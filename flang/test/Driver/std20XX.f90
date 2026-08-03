@@ -1,10 +1,12 @@
-! Ensure argument -std=f2018 works as expected.
+! Ensure argument -std=f20XX works as expected.
 
 !-----------------------------------------
 ! FRONTEND FLANG DRIVER (flang -fc1)
 !-----------------------------------------
 ! RUN: %flang_fc1 -fsyntax-only %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
 ! RUN: %flang_fc1 -fsyntax-only -std=f2018 %s  2>&1 | FileCheck %s --check-prefix=GIVEN
+! RUN: %flang_fc1 -fsyntax-only -std=f2023 %s  2>&1 | FileCheck %s --check-prefix=GIVEN
+! RUN: %flang_fc1 -fsyntax-only -std=f202Y %s  2>&1 | FileCheck %s --check-prefix=GIVEN
 ! RUN: %flang_fc1 -fsyntax-only -pedantic %s  2>&1 | FileCheck %s --check-prefix=GIVEN
 
 ! WITHOUT-NOT: A DO loop should terminate with an END DO or CONTINUE

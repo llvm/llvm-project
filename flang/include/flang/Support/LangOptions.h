@@ -43,6 +43,13 @@ public:
     FPM_Fast,
   };
 
+  enum FortranStandardTy {
+    FortranUnspecified, // default
+    Fortran2018,
+    Fortran2023,
+    Fortran202Y,
+  };
+
 #define LANGOPT(Name, Bits, Default) unsigned Name : Bits;
 #define ENUM_LANGOPT(Name, Type, Bits, Default)
 #include "LangOptions.def"
