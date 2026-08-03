@@ -101,31 +101,22 @@ define <2 x i64> @sdiv_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m) {
 ;
 ; AVX512-LABEL: sdiv_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpabsq %xmm1, %xmm2
-; AVX512-NEXT:    vcvtuqq2pd {ru-sae}, %zmm2, %zmm3
-; AVX512-NEXT:    vbroadcastsd {{.*#+}} zmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX512-NEXT:    vdivpd {rd-sae}, %zmm3, %zmm4, %zmm3
-; AVX512-NEXT:    vpabsq %xmm0, %xmm4
-; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm5
-; AVX512-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm5, %zmm5
-; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm5, %zmm5
-; AVX512-NEXT:    vpmullq %xmm2, %xmm5, %xmm6
-; AVX512-NEXT:    vpsubq %xmm6, %xmm4, %xmm4
-; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm6
-; AVX512-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm6, %zmm3
-; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
-; AVX512-NEXT:    vpaddq %xmm3, %xmm5, %xmm5
-; AVX512-NEXT:    vpmullq %xmm2, %xmm3, %xmm3
-; AVX512-NEXT:    vpsubq %xmm3, %xmm4, %xmm3
-; AVX512-NEXT:    vpcmpnltuq %xmm2, %xmm3, %k0
-; AVX512-NEXT:    vpmovm2q %k0, %xmm2
-; AVX512-NEXT:    vpsubq %xmm2, %xmm5, %xmm2
-; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovq2m %xmm0, %k1
-; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpsubq %xmm2, %xmm0, %xmm2 {%k1}
-; AVX512-NEXT:    vmovdqa %xmm2, %xmm0
-; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    vpsllq $63, %xmm2, %xmm2
+; AVX512-NEXT:    vpmovq2m %xmm2, %k1
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [1,1]
+; AVX512-NEXT:    vmovdqa64 %xmm1, %xmm2 {%k1}
+; AVX512-NEXT:    vpextrq $1, %xmm2, %rcx
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    cqto
+; AVX512-NEXT:    idivq %rcx
+; AVX512-NEXT:    movq %rax, %rcx
+; AVX512-NEXT:    vmovq %xmm2, %rsi
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    cqto
+; AVX512-NEXT:    idivq %rsi
+; AVX512-NEXT:    vmovq %rcx, %xmm0
+; AVX512-NEXT:    vmovq %rax, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    retq
   %res = call <2 x i64> @llvm.masked.sdiv(<2 x i64> %x, <2 x i64> %y, <2 x i1> %m)
   ret <2 x i64> %res
@@ -253,30 +244,38 @@ define <4 x i64> @sdiv_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m) {
 ;
 ; AVX512-LABEL: sdiv_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpabsq %ymm1, %ymm2
-; AVX512-NEXT:    vcvtuqq2pd {ru-sae}, %zmm2, %zmm3
-; AVX512-NEXT:    vbroadcastsd {{.*#+}} zmm4 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX512-NEXT:    vdivpd {rd-sae}, %zmm3, %zmm4, %zmm3
-; AVX512-NEXT:    vpabsq %ymm0, %ymm4
-; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm5
-; AVX512-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm5, %zmm5
-; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm5, %zmm5
-; AVX512-NEXT:    vpmullq %ymm2, %ymm5, %ymm6
-; AVX512-NEXT:    vpsubq %ymm6, %ymm4, %ymm4
-; AVX512-NEXT:    vcvtuqq2pd {rd-sae}, %zmm4, %zmm6
-; AVX512-NEXT:    vmulpd {rd-sae}, %zmm3, %zmm6, %zmm3
-; AVX512-NEXT:    vcvtpd2uqq {rd-sae}, %zmm3, %zmm3
-; AVX512-NEXT:    vpaddq %ymm3, %ymm5, %ymm5
-; AVX512-NEXT:    vpmullq %ymm2, %ymm3, %ymm3
-; AVX512-NEXT:    vpsubq %ymm3, %ymm4, %ymm3
-; AVX512-NEXT:    vpcmpnltuq %ymm2, %ymm3, %k0
-; AVX512-NEXT:    vpmovm2q %k0, %ymm2
-; AVX512-NEXT:    vpsubq %ymm2, %ymm5, %ymm2
-; AVX512-NEXT:    vpxor %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vpmovq2m %ymm0, %k1
-; AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vpsubq %ymm2, %ymm0, %ymm2 {%k1}
-; AVX512-NEXT:    vmovdqa %ymm2, %ymm0
+; AVX512-NEXT:    vpslld $31, %xmm2, %xmm2
+; AVX512-NEXT:    vpmovd2m %xmm2, %k1
+; AVX512-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
+; AVX512-NEXT:    vmovdqa64 %ymm1, %ymm2 {%k1}
+; AVX512-NEXT:    vextracti128 $1, %ymm2, %xmm1
+; AVX512-NEXT:    vpextrq $1, %xmm1, %rcx
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; AVX512-NEXT:    vpextrq $1, %xmm3, %rax
+; AVX512-NEXT:    cqto
+; AVX512-NEXT:    idivq %rcx
+; AVX512-NEXT:    movq %rax, %rcx
+; AVX512-NEXT:    vmovq %xmm1, %rsi
+; AVX512-NEXT:    vmovq %xmm3, %rax
+; AVX512-NEXT:    cqto
+; AVX512-NEXT:    idivq %rsi
+; AVX512-NEXT:    movq %rax, %rsi
+; AVX512-NEXT:    vpextrq $1, %xmm2, %rdi
+; AVX512-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX512-NEXT:    cqto
+; AVX512-NEXT:    idivq %rdi
+; AVX512-NEXT:    movq %rax, %rdi
+; AVX512-NEXT:    vmovq %rcx, %xmm1
+; AVX512-NEXT:    vmovq %xmm2, %rcx
+; AVX512-NEXT:    vmovq %xmm0, %rax
+; AVX512-NEXT:    cqto
+; AVX512-NEXT:    idivq %rcx
+; AVX512-NEXT:    vmovq %rsi, %xmm0
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX512-NEXT:    vmovq %rdi, %xmm1
+; AVX512-NEXT:    vmovq %rax, %xmm2
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %res = call <4 x i64> @llvm.masked.sdiv(<4 x i64> %x, <4 x i64> %y, <4 x i1> %m)
   ret <4 x i64> %res
