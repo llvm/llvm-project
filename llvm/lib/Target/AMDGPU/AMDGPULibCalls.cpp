@@ -802,8 +802,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
   return false;
 }
 
-static Constant *getConstantFloatVector(const ArrayRef<APFloat> Values,
-                                        const Type *Ty) {
+static Constant *getConstantFloat(const ArrayRef<APFloat> Values,
+                                  const Type *Ty) {
   Type *ElemTy = Ty->getScalarType();
   const fltSemantics &FltSem = ElemTy->getFltSemantics();
 
@@ -814,6 +814,12 @@ static Constant *getConstantFloatVector(const ArrayRef<APFloat> Values,
     APF.convert(FltSem, APFloat::rmNearestTiesToEven, &Unused);
     ConstValues.push_back(ConstantFP::get(ElemTy, APF));
   }
+
+  if (!Ty->isVectorTy()) {
+    assert(Values.size() == 1 && "Expected exactly one constant value");
+    return ConstValues[0];
+  }
+
   return ConstantVector::get(ConstValues);
 }
 
@@ -843,7 +849,7 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
           return false;
         Values.push_back(APFloat(MatchingRow->result));
       }
-      Constant *NewValues = getConstantFloatVector(Values, CI->getType());
+      Constant *NewValues = getConstantFloat(Values, CI->getType());
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *NewValues << "\n");
       replaceCall(CI, NewValues);
       return true;
@@ -2017,16 +2023,10 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     }
   }
 
-  Constant *nval0 = nullptr, *nval1 = nullptr;
-  if (FuncVecSize == 1) {
-    nval0 = ConstantFP::get(aCI->getType(), Val0[0]);
-    if (hasTwoResults)
-      nval1 = ConstantFP::get(aCI->getType(), Val1[0]);
-  } else {
-    nval0 = getConstantFloatVector(Val0, aCI->getType());
-    if (hasTwoResults)
-      nval1 = getConstantFloatVector(Val1, aCI->getType());
-  }
+  Constant *nval0 = getConstantFloat(Val0, aCI->getType());
+  Constant *nval1 = nullptr;
+  if (hasTwoResults)
+    nval1 = getConstantFloat(Val1, aCI->getType());
 
   if (hasTwoResults) {
     // sincos
