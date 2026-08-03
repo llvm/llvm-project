@@ -347,11 +347,14 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-zicfilp``, ``experimental-zicfiss``
   LLVM implements the `1.0 release specification <https://github.com/riscv/riscv-cfi/releases/tag/v1.0>`__.
 
+``experimental-smcsps``, ``experimental-sscsps``
+  LLVM implements the `0.19 release specification <https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.19>`__.
+
 ``experimental-zvbc32e``, ``experimental-zvkgs``
   LLVM implements the `0.7 release specification <https://github.com/user-attachments/files/16450464/riscv-crypto-spec-vector-extra_v0.0.7.pdf>`__.
 
 ``experimental-svukte``
-  LLVM implements the `0.3 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
+  LLVM implements the `1.0 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
 
 ``experimental-zvdot4a8i``
   LLVM implements the `0.1 draft specification <https://github.com/riscv/riscv-isa-manual/pull/2576>`__.
@@ -382,6 +385,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-zvqwbdota8i``, ``experimental-zvqwbdota16i``, ``experimental-zvfqwbdota8f``, ``experimental-zvfwbdota16bf``, ``experimental-zvfbdota32f``
   LLVM implements the `0.2 draft specification <https://github.com/aswaterman/riscv-misc/blob/main/isa/ldot-bdot/ldot-bdot.adoc>`__.
+
+``experimental-zilx``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/riscv-zilx>`__.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 

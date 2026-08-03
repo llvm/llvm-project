@@ -3307,6 +3307,14 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STNT1W_2Z_STRIDED_IMM:
   case AArch64::STNT1D_2Z_IMM:
   case AArch64::STNT1D_2Z_STRIDED_IMM:
+  case AArch64::ST1B_2Z_IMM_PSEUDO:
+  case AArch64::ST1H_2Z_IMM_PSEUDO:
+  case AArch64::ST1W_2Z_IMM_PSEUDO:
+  case AArch64::ST1D_2Z_IMM_PSEUDO:
+  case AArch64::STNT1B_2Z_IMM_PSEUDO:
+  case AArch64::STNT1H_2Z_IMM_PSEUDO:
+  case AArch64::STNT1W_2Z_IMM_PSEUDO:
+  case AArch64::STNT1D_2Z_IMM_PSEUDO:
   case AArch64::ST1B_4Z_IMM:
   case AArch64::ST1B_4Z_STRIDED_IMM:
   case AArch64::ST1H_4Z_IMM:
@@ -3335,6 +3343,14 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STNT1W_4Z_STRIDED_IMM:
   case AArch64::STNT1D_4Z_IMM:
   case AArch64::STNT1D_4Z_STRIDED_IMM:
+  case AArch64::ST1B_4Z_IMM_PSEUDO:
+  case AArch64::ST1H_4Z_IMM_PSEUDO:
+  case AArch64::ST1W_4Z_IMM_PSEUDO:
+  case AArch64::ST1D_4Z_IMM_PSEUDO:
+  case AArch64::STNT1B_4Z_IMM_PSEUDO:
+  case AArch64::STNT1H_4Z_IMM_PSEUDO:
+  case AArch64::STNT1W_4Z_IMM_PSEUDO:
+  case AArch64::STNT1D_4Z_IMM_PSEUDO:
     return 3;
   case AArch64::LDPDpost:
   case AArch64::LDPDpre:
@@ -5053,6 +5069,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STNT1W_2Z_STRIDED_IMM:
   case AArch64::STNT1D_2Z_IMM:
   case AArch64::STNT1D_2Z_STRIDED_IMM:
+  case AArch64::ST1B_2Z_IMM_PSEUDO:
+  case AArch64::ST1H_2Z_IMM_PSEUDO:
+  case AArch64::ST1W_2Z_IMM_PSEUDO:
+  case AArch64::ST1D_2Z_IMM_PSEUDO:
+  case AArch64::STNT1B_2Z_IMM_PSEUDO:
+  case AArch64::STNT1H_2Z_IMM_PSEUDO:
+  case AArch64::STNT1W_2Z_IMM_PSEUDO:
+  case AArch64::STNT1D_2Z_IMM_PSEUDO:
     Scale = Width = TypeSize::getScalable(16 * 2);
     MinOffset = -8;
     MaxOffset = 7;
@@ -5117,6 +5141,14 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STNT1W_4Z_STRIDED_IMM:
   case AArch64::STNT1D_4Z_IMM:
   case AArch64::STNT1D_4Z_STRIDED_IMM:
+  case AArch64::ST1B_4Z_IMM_PSEUDO:
+  case AArch64::ST1H_4Z_IMM_PSEUDO:
+  case AArch64::ST1W_4Z_IMM_PSEUDO:
+  case AArch64::ST1D_4Z_IMM_PSEUDO:
+  case AArch64::STNT1B_4Z_IMM_PSEUDO:
+  case AArch64::STNT1H_4Z_IMM_PSEUDO:
+  case AArch64::STNT1W_4Z_IMM_PSEUDO:
+  case AArch64::STNT1D_4Z_IMM_PSEUDO:
     Scale = Width = TypeSize::getScalable(16 * 4);
     MinOffset = -8;
     MaxOffset = 7;
@@ -11342,10 +11374,10 @@ void AArch64InstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     BuildMI(MBB, Iter, DL, get(AArch64::MOVIv2d_ns), Reg)
       .addImm(0);
   } else {
-    // This is a streaming-compatible function without SVE. We don't have full
-    // Neon (just FPRs), so we can at most use the first 64-bit sub-register.
-    // So given `movi v..` would be illegal use `fmov d..` instead.
-    assert(STI.hasNEON() && "Expected to have NEON.");
+    // No Advanced SIMD (streaming-compatible without SVE, or +nosimd), so use
+    // `fmov d...` instead of `movi v...`; writing `d` also clears the upper
+    // 64 bits.
+    assert(STI.hasFPARMv8() && "Expected FP to be available.");
     Register Reg64 = TRI.getSubReg(Reg, AArch64::dsub);
     BuildMI(MBB, Iter, DL, get(AArch64::FMOVD0), Reg64);
   }

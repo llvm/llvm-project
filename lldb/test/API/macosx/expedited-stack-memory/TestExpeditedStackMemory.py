@@ -34,18 +34,18 @@ from lldbsuite.test.gdbclientutils import (
 class TestExpeditedStackMemory(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_no_packets_during_backtrace(self):
         """With the memory cache on, the backtrace sends no packets at all."""
         self.check_packets_during_backtrace(disable_memory_cache=False)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_memory_reads_during_backtrace_without_cache(self):
         """With the memory cache off, the backtrace reads the backchain from the
         stub, producing memory-read packets."""
         self.check_packets_during_backtrace(disable_memory_cache=True)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_memory_reads_when_examining_frame0_locals(self):
         """Model an IDE stop: walk the whole stack (a backtrace / debug
         navigator) but examine the locals of only the selected frame 0.
@@ -54,7 +54,7 @@ class TestExpeditedStackMemory(TestBase):
         heap memory."""
         self.check_memory_reads_when_examining_locals(examine_all_frames=False)
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_memory_reads_when_examining_all_frames_locals(self):
         """Model "view all frames": walk the whole stack and examine every
         frame's locals.  This reads the same variety of memory across several
