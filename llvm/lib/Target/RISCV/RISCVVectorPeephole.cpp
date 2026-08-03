@@ -105,7 +105,7 @@ RISCVVectorPeephole::getConstant(const MachineOperand &VL) const {
     return VL.getImm();
 
   MachineInstr *Def = MRI->getVRegDef(VL.getReg());
-  if (!Def || Def->getOpcode() != RISCV::ADDI ||
+  if (!Def || Def->getOpcode() != RISCV::ADDI || !Def->getOperand(1).isReg() ||
       Def->getOperand(1).getReg() != RISCV::X0)
     return std::nullopt;
   return Def->getOperand(2).getImm();

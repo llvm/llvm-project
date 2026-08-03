@@ -8,10 +8,6 @@
 
 // UNSUPPORTED: no-exceptions
 
-// ___cxa_throw_bad_array_new_length is re-exported from libc++ only starting
-// in LLVM 9.
-// XFAIL: using-built-library-before-llvm-9
-
 #include <cxxabi.h>
 #include <new>
 

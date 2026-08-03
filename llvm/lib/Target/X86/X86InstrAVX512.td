@@ -3914,6 +3914,15 @@ let Predicates = [HasAVX512] in {
             (VMOVPQI2QIZmr addr:$dst, VR128X:$src)>;
 }
 
+//===---------------------------------------------------------------------===//
+// If the upper 32 bits of v2i64 elements are zero, we can use (v)movd instead.
+let AddedComplexity = 10 in {
+  let Predicates = [HasAVX512] in {
+    def : Pat<(i64 (extractelt (X86upperzero<v2i64, VR128X>:$src), (iPTR 0))),
+              (SUBREG_TO_REG (VMOVPDI2DIZrr VR128:$src), sub_32bit)>;
+  }
+}
+
 // Move Scalar Single to Double Int
 //
 let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
@@ -5780,13 +5789,15 @@ defm VDIV : avx512_fp_binop_p<0x5E, "vdiv", any_fdiv, fdiv, HasAVX512,
                               SchedWriteFDivSizes>,
             avx512_fp_binop_ph<0x5E, "vdiv", any_fdiv, fdiv, SchedWriteFDivSizes>,
             avx512_fp_binop_p_round<0x5E, "vdiv", X86fdivRnd, SchedWriteFDivSizes>;
-defm VMIN : avx512_fp_binop_p<0x5D, "vmin", X86any_fmin, X86fmin, HasAVX512,
+defm VMIN : avx512_fp_binop_p<0x5D, "vmin", X86any_fmin, pseudo_fmin, HasAVX512,
                               SchedWriteFCmpSizes, 0>,
-            avx512_fp_binop_ph<0x5D, "vmin", X86any_fmin, X86fmin, SchedWriteFCmpSizes, 0>,
+            avx512_fp_binop_ph<0x5D, "vmin", X86any_fmin, pseudo_fmin,
+                               SchedWriteFCmpSizes, 0>,
             avx512_fp_binop_p_sae<0x5D, "vmin", X86fminSAE, SchedWriteFCmpSizes>;
-defm VMAX : avx512_fp_binop_p<0x5F, "vmax", X86any_fmax, X86fmax, HasAVX512,
+defm VMAX : avx512_fp_binop_p<0x5F, "vmax", X86any_fmax, pseudo_fmax, HasAVX512,
                               SchedWriteFCmpSizes, 0>,
-            avx512_fp_binop_ph<0x5F, "vmax", X86any_fmax, X86fmax, SchedWriteFCmpSizes, 0>,
+            avx512_fp_binop_ph<0x5F, "vmax", X86any_fmax, pseudo_fmax,
+                               SchedWriteFCmpSizes, 0>,
             avx512_fp_binop_p_sae<0x5F, "vmax", X86fmaxSAE, SchedWriteFCmpSizes>;
 let isCodeGenOnly = 1 in {
   defm VMINC : avx512_fp_binop_p<0x5D, "vmin", X86fminc, X86fminc, HasAVX512,
@@ -7371,6 +7382,15 @@ def : Pat<(f64 (any_sint_to_fp GR32:$src)),
 def : Pat<(f64 (any_sint_to_fp GR64:$src)),
           (VCVTSI642SDZrr (f64 (IMPLICIT_DEF)), GR64:$src)>;
 
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))))),
+          (VCVTSI2SSZrr_Int (v4f32 (AVX512_128_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))))),
+          (VCVTSI642SSZrr_Int (v4f32 (AVX512_128_SET0)), GR64:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR32:$src)))))),
+          (VCVTSI2SDZrr_Int (v2f64 (AVX512_128_SET0)), GR32:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR64:$src)))))),
+          (VCVTSI642SDZrr_Int (v2f64 (AVX512_128_SET0)), GR64:$src)>;
+
 defm VCVTUSI2SSZ   : avx512_vcvtsi_common<0x7B, X86UintToFp, X86UintToFpRnd,
                                   WriteCvtI2SS, GR32,
                                   v4f32x_info, i32mem, loadi32,
@@ -7409,6 +7429,15 @@ def : Pat<(f64 (any_uint_to_fp GR32:$src)),
           (VCVTUSI2SDZrr (f64 (IMPLICIT_DEF)), GR32:$src)>;
 def : Pat<(f64 (any_uint_to_fp GR64:$src)),
           (VCVTUSI642SDZrr (f64 (IMPLICIT_DEF)), GR64:$src)>;
+
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_uint_to_fp GR32:$src)))))),
+          (VCVTUSI2SSZrr_Int (v4f32 (AVX512_128_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_uint_to_fp GR64:$src)))))),
+          (VCVTUSI642SSZrr_Int (v4f32 (AVX512_128_SET0)), GR64:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_uint_to_fp GR32:$src)))))),
+          (VCVTUSI2SDZrr_Int (v2f64 (AVX512_128_SET0)), GR32:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_uint_to_fp GR64:$src)))))),
+          (VCVTUSI642SDZrr_Int (v2f64 (AVX512_128_SET0)), GR64:$src)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -11773,7 +11802,20 @@ def VPTERNLOG132_imm8 : SDNodeXForm<timm, [{
   return getI8Imm(NewImm, SDLoc(N));
 }]>;
 def VPTERNLOG231_imm8 : SDNodeXForm<timm, [{
-  // Convert a VPTERNLOG immediate by moving operand 1 to the end.
+  // Convert a VPTERNLOG immediate by moving operand 2 to the beginning.
+  uint8_t Imm = N->getZExtValue();
+  // Move bits 2->1, 4->2, 6->3, 1->4, 3->5, 5->6
+  uint8_t NewImm = Imm & 0x81;
+  if (Imm & 0x04) NewImm |= 0x02;
+  if (Imm & 0x10) NewImm |= 0x04;
+  if (Imm & 0x40) NewImm |= 0x08;
+  if (Imm & 0x02) NewImm |= 0x10;
+  if (Imm & 0x08) NewImm |= 0x20;
+  if (Imm & 0x20) NewImm |= 0x40;
+  return getI8Imm(NewImm, SDLoc(N));
+}]>;
+def VPTERNLOG312_imm8 : SDNodeXForm<timm, [{
+  // Convert a VPTERNLOG immediate by moving operand 0 to the end.
   uint8_t Imm = N->getZExtValue();
   // Move bits 1->2, 2->4, 3->6, 4->1, 5->3, 6->5
   uint8_t NewImm = Imm & 0x81;
@@ -11785,20 +11827,6 @@ def VPTERNLOG231_imm8 : SDNodeXForm<timm, [{
   if (Imm & 0x40) NewImm |= 0x20;
   return getI8Imm(NewImm, SDLoc(N));
 }]>;
-def VPTERNLOG312_imm8 : SDNodeXForm<timm, [{
-  // Convert a VPTERNLOG immediate by moving operand 2 to the beginning.
-  uint8_t Imm = N->getZExtValue();
-  // Move bits 1->4, 2->1, 3->5, 4->2, 5->6, 6->3
-  uint8_t NewImm = Imm & 0x81;
-  if (Imm & 0x02) NewImm |= 0x10;
-  if (Imm & 0x04) NewImm |= 0x02;
-  if (Imm & 0x08) NewImm |= 0x20;
-  if (Imm & 0x10) NewImm |= 0x04;
-  if (Imm & 0x20) NewImm |= 0x40;
-  if (Imm & 0x40) NewImm |= 0x08;
-  return getI8Imm(NewImm, SDLoc(N));
-}]>;
-
 multiclass avx512_ternlog<bits<8> opc, string OpcodeStr, SDNode OpNode,
                           X86FoldableSchedWrite sched, X86VectorVTInfo _,
                           string Name>{
@@ -13815,3 +13843,29 @@ let Uses = [MXCSR] in {
   defm VFCMULCSHZ : avx512_cfmbinop_sh_common<0xD7, "vfcmulcsh", x86vfcmulcSh, x86vfcmulcShRnd, 0>,
                                     T_MAP6, XD, EVEX_CD8<32, CD8VT1>, EVEX_V128, VEX_LIG, EVEX, VVVV;
 }
+
+// VPBITREVB - BMM bit reverse instructions
+// Basic instruction patterns for BMM (Bit Matrix Multiply)
+defm VPBITREVB : avx512_unary_rm_vl<0x81, "vbitrevb", bitreverse, SchedWriteVecALU,
+                                    avx512vl_i8_info, HasBMM>, T_MAP6, PS;
+
+defm : avx512_unary_lowering<"VPBITREVB", bitreverse, avx512vl_i8_info, HasBMM>;
+
+// VBMACOR, VBMACXOR - BMM matrix multiplication instructions
+// VBMACOR: EVEX.256.NP.MAP6.W0 80 /r, EVEX.512.NP.MAP6.W0 80 /r
+let Predicates = [HasBMM, HasVLX] in
+defm VBMACORZ256 : VNNI_rmb<0x80, "vbmacor16x16x16", x86vbmacor, SchedWriteVecIMul.YMM, v16i16x_info, 0>,
+                   EVEX_V256, T_MAP6;
+
+let Predicates = [HasBMM] in
+defm VBMACORZ : VNNI_rmb<0x80, "vbmacor16x16x16", x86vbmacor, SchedWriteVecIMul.ZMM, v32i16_info, 0>,
+                EVEX_V512, T_MAP6;
+
+// VBMACXOR: EVEX.256.NP.MAP6.W1 80 /r, EVEX.512.NP.MAP6.W1 80 /r
+let Predicates = [HasBMM, HasVLX] in
+defm VBMACXORZ256 : VNNI_rmb<0x80, "vbmacxor16x16x16", x86vbmacxor, SchedWriteVecIMul.YMM, v16i16x_info, 0>,
+                    EVEX_V256, T_MAP6, REX_W;
+
+let Predicates = [HasBMM] in
+defm VBMACXORZ : VNNI_rmb<0x80, "vbmacxor16x16x16", x86vbmacxor, SchedWriteVecIMul.ZMM, v32i16_info, 0>,
+                 EVEX_V512, T_MAP6, REX_W;

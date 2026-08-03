@@ -87,6 +87,11 @@ public:
 
   std::string_view getClobbers() const override { return ""; }
 
+  StringRef getConstraintRegister(StringRef Constraint,
+                                  StringRef Expression) const override {
+    return Expression;
+  }
+
   ArrayRef<const char *> getGCCRegNames() const override;
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
@@ -106,8 +111,6 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool hasBFloat16Type() const override { return true; }
-
-  bool useFP16ConversionIntrinsics() const override { return false; }
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;

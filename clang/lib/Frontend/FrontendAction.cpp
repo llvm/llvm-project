@@ -39,6 +39,7 @@
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -52,7 +53,7 @@
 #include <system_error>
 using namespace clang;
 
-LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, FrontendPluginRegistry)
 
 namespace {
 
@@ -521,18 +522,20 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
       return SourceLocation();
   }
 
-  RawLexer->LexFromRawLexer(T);
-  if (T.isAtStartOfLine() || T.getKind() != tok::string_literal)
+  RawLexer->LexIncludeFilename(T);
+  if (T.isAtStartOfLine() || T.getKind() != tok::header_name)
     return SourceLocation();
 
-  StringLiteralParser Literal(T, CI.getPreprocessor(),
-                              StringLiteralEvalMethod::Unevaluated);
-  if (Literal.hadError)
-    return SourceLocation();
+  Preprocessor &PP = CI.getPreprocessor();
+  SmallString<128> HeaderNameBuffer;
+  StringRef HeaderName = PP.getSpelling(T, HeaderNameBuffer);
+  PP.GetLineDirectiveFilenameSpelling(T.getLocation(), HeaderName);
+
   RawLexer->LexFromRawLexer(T);
   if (T.isNot(tok::eof) && !T.isAtStartOfLine())
     return SourceLocation();
-  InputFile = Literal.GetString().str();
+
+  InputFile = HeaderName.str();
 
   if (IsModuleMap)
     CI.getSourceManager().AddLineNote(

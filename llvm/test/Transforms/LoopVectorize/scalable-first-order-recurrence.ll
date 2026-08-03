@@ -27,9 +27,11 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF1-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
 ; CHECK-VF4UF1-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 4
+; CHECK-VF4UF1-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP7]], 1
 ; CHECK-VF4UF1-NEXT:    [[TMP8:%.*]] = add i64 [[B1]], -4
 ; CHECK-VF4UF1-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[A2]]
-; CHECK-VF4UF1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP9]], [[TMP7]]
+; CHECK-VF4UF1-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP9]], 1
+; CHECK-VF4UF1-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP12]], [[TMP13]]
 ; CHECK-VF4UF1-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_PH]]:
 ; CHECK-VF4UF1-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP3]], 2
@@ -89,9 +91,11 @@ define i32 @recurrence_1(ptr nocapture readonly %a, ptr nocapture %b, i32 %n) {
 ; CHECK-VF4UF2-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-VF4UF2-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
 ; CHECK-VF4UF2-NEXT:    [[TMP7:%.*]] = mul i64 [[TMP6]], 8
+; CHECK-VF4UF2-NEXT:    [[TMP19:%.*]] = sub i64 [[TMP7]], 1
 ; CHECK-VF4UF2-NEXT:    [[TMP8:%.*]] = add i64 [[B1]], -4
 ; CHECK-VF4UF2-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], [[A2]]
-; CHECK-VF4UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP9]], [[TMP7]]
+; CHECK-VF4UF2-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP9]], 1
+; CHECK-VF4UF2-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP13]], [[TMP19]]
 ; CHECK-VF4UF2-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_PH]]:
 ; CHECK-VF4UF2-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP3]], 2
@@ -372,7 +376,7 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF1:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4UF1-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 4 x i16> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[WIDE_LOAD:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4UF1-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-VF4UF1-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-VF4UF1-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-VF4UF1-NEXT:    [[WIDE_LOAD]] = load <vscale x 4 x i16>, ptr [[TMP19]], align 2, !alias.scope [[META6:![0-9]+]]
 ; CHECK-VF4UF1-NEXT:    [[TMP21:%.*]] = call <vscale x 4 x i16> @llvm.vector.splice.right.nxv4i16(<vscale x 4 x i16> [[VECTOR_RECUR]], <vscale x 4 x i16> [[WIDE_LOAD]], i32 1)
@@ -448,7 +452,7 @@ define void @recurrence_3(ptr nocapture readonly %a, ptr nocapture %b, i32 %n, f
 ; CHECK-VF4UF2:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4UF2-NEXT:    [[VECTOR_RECUR:%.*]] = phi <vscale x 4 x i16> [ [[VECTOR_RECUR_INIT]], %[[VECTOR_PH]] ], [ [[WIDE_LOAD4:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4UF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-VF4UF2-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-VF4UF2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-VF4UF2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i16, ptr [[TMP19]], i64 [[TMP13]]
 ; CHECK-VF4UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP19]], align 2, !alias.scope [[META6:![0-9]+]]

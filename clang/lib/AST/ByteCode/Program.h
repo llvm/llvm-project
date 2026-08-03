@@ -88,7 +88,7 @@ public:
                                    const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for unknown declarations.
-  unsigned getOrCreateDummy(const DeclTy &D, bool IsConstexprUnknown = false);
+  unsigned getOrCreateDummy(DeclTy D, bool IsConstexprUnknown = false);
 
   /// Creates a global and returns its index.
   UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init,

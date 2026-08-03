@@ -97,6 +97,28 @@ def FramePointerKindAttr : LLVM_Attr<"FramePointerKind", "framePointerKind"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FunctionEntryCountAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_FunctionEntryCountAttr
+    : LLVM_Attr<"FunctionEntryCount", "function_entry_count"> {
+  let summary = "LLVM function entry count profile metadata";
+  let description = [{
+    Models function-level `!prof` entry-count metadata. The `entry_count` field
+    stores the unsigned 64-bit counter bit pattern. The `count_type` field
+    defaults to real and selects whether the metadata is emitted as
+    `"function_entry_count"` or `"synthetic_function_entry_count"`. The optional
+    `imports` field stores the trailing import GUID operands used by ThinLTO
+    sample PGO.
+  }];
+  let parameters = (ins "uint64_t":$entry_count,
+                        DefaultValuedParameter<"ProfileCountType",
+                                               "ProfileCountType::Real">:$count_type,
+                        OptionalArrayRefParameter<"uint64_t">:$imports);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // Loop Attributes
 //===----------------------------------------------------------------------===//
 
@@ -710,36 +732,34 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
                                       [LLVM_DIRecursiveTypeAttrInterface],
                                       "DILocalScopeAttr"> {
   let parameters = (ins
-    // DIRecursiveTypeAttrInterface specific parameters.
-    OptionalParameter<"DistinctAttr">:$recId,
-    OptionalParameter<"bool">:$isRecSelf,
-    // DISubprogramAttr specific parameters.
-    OptionalParameter<"DistinctAttr">:$id,
-    OptionalParameter<"DICompileUnitAttr">:$compileUnit,
-    OptionalParameter<"DIScopeAttr">:$scope,
-    OptionalParameter<"StringAttr">:$name,
-    OptionalParameter<"StringAttr">:$linkageName,
-    OptionalParameter<"DIFileAttr">:$file,
-    OptionalParameter<"unsigned">:$line,
-    OptionalParameter<"unsigned">:$scopeLine,
-    OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
-    OptionalParameter<"DISubroutineTypeAttr">:$type,
-    OptionalArrayRefParameter<"DINodeAttr">:$retainedNodes,
-    OptionalArrayRefParameter<"DINodeAttr">:$annotations
-  );
-  let builders = [
-    AttrBuilder<(ins
-      "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
-      "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
-      "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
-      "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
-      "ArrayRef<DINodeAttr>":$retainedNodes, "ArrayRef<DINodeAttr>":$annotations
-    ), [{
+      // DIRecursiveTypeAttrInterface specific parameters.
+      OptionalParameter<"DistinctAttr">:$recId,
+      OptionalParameter<"bool">:$isRecSelf,
+      // DISubprogramAttr specific parameters.
+      OptionalParameter<"DistinctAttr">:$id,
+      OptionalParameter<"DICompileUnitAttr">:$compileUnit,
+      OptionalParameter<"DIScopeAttr">:$scope,
+      OptionalParameter<"StringAttr">:$name,
+      OptionalParameter<"StringAttr">:$linkageName,
+      OptionalParameter<"DIFileAttr">:$file,
+      OptionalParameter<"unsigned">:$line,
+      OptionalParameter<"unsigned">:$scopeLine,
+      OptionalParameter<"DISubprogramFlags">:$subprogramFlags,
+      OptionalParameter<"DISubroutineTypeAttr">:$type,
+      OptionalArrayRefParameter<"Attribute">:$retainedNodes,
+      OptionalArrayRefParameter<"DINodeAttr">:$annotations);
+  let builders = [AttrBuilder<
+      (ins "DistinctAttr":$id, "DICompileUnitAttr":$compileUnit,
+          "DIScopeAttr":$scope, "StringAttr":$name, "StringAttr":$linkageName,
+          "DIFileAttr":$file, "unsigned":$line, "unsigned":$scopeLine,
+          "DISubprogramFlags":$subprogramFlags, "DISubroutineTypeAttr":$type,
+          "ArrayRef<Attribute>":$retainedNodes,
+          "ArrayRef<DINodeAttr>":$annotations),
+      [{
       return $_get($_ctxt, /*recId=*/nullptr, /*isRecSelf=*/false, id, compileUnit,
                    scope, name, linkageName, file, line, scopeLine,
                    subprogramFlags, type, retainedNodes, annotations);
-    }]>
-  ];
+    }]>];
   let assemblyFormat = "`<` struct(params) `>`";
   let extraClassDeclaration = [{
     /// Requirements of DIRecursiveTypeAttrInterface.

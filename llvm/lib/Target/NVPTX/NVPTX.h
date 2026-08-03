@@ -53,7 +53,7 @@ MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
 ModulePass *createNVPTXLowerArgsPass();
-FunctionPass *createNVPTXSetByValParamAlignPass();
+ModulePass *createNVPTXPromoteParamAlignPass();
 FunctionPass *createNVPTXLowerAllocaPass();
 FunctionPass *createNVPTXLowerUnreachablePass(bool TrapUnreachable,
                                               bool NoTrapAfterNoreturn);
@@ -76,7 +76,7 @@ void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
 void initializeNVPTXLowerAllocaPass(PassRegistry &);
 void initializeNVPTXLowerUnreachablePass(PassRegistry &);
 void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
-void initializeNVPTXSetByValParamAlignLegacyPassPass(PassRegistry &);
+void initializeNVPTXPromoteParamAlignLegacyPassPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 void initializeNVPTXForwardParamsPassPass(PassRegistry &);
 void initializeNVPTXAddressFolderPassPass(PassRegistry &);
@@ -115,9 +115,9 @@ struct NVPTXCopyByValArgsPass : OptionalPassInfoMixin<NVPTXCopyByValArgsPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-struct NVPTXSetByValParamAlignPass
-    : OptionalPassInfoMixin<NVPTXSetByValParamAlignPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+struct NVPTXPromoteParamAlignPass
+    : OptionalPassInfoMixin<NVPTXPromoteParamAlignPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 struct NVPTXLowerArgsPass : OptionalPassInfoMixin<NVPTXLowerArgsPass> {

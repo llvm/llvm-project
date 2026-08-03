@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXRegisterInfo.h"
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "MCTargetDesc/NVPTXInstPrinter.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
@@ -18,65 +19,13 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Instructions.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-reg-info"
 
-namespace llvm {
-StringRef getNVPTXRegClassName(TargetRegisterClass const *RC) {
-  if (RC == &NVPTX::B128RegClass)
-    return ".b128";
-  if (RC == &NVPTX::B64RegClass)
-    // We use untyped (.b) integer registers here as NVCC does.
-    // Correctness of generated code does not depend on register type,
-    // but using .s/.u registers runs into ptxas bug that prevents
-    // assembly of otherwise valid PTX into SASS. Despite PTX ISA
-    // specifying only argument size for fp16 instructions, ptxas does
-    // not allow using .s16 or .u16 arguments for .fp16
-    // instructions. At the same time it allows using .s32/.u32
-    // arguments for .fp16v2 instructions:
-    //
-    //   .reg .b16 rb16
-    //   .reg .s16 rs16
-    //   add.f16 rb16,rb16,rb16; // OK
-    //   add.f16 rs16,rs16,rs16; // Arguments mismatch for instruction 'add'
-    // but:
-    //   .reg .b32 rb32
-    //   .reg .s32 rs32
-    //   add.f16v2 rb32,rb32,rb32; // OK
-    //   add.f16v2 rs32,rs32,rs32; // OK
-    return ".b64";
-  if (RC == &NVPTX::B32RegClass)
-    return ".b32";
-  if (RC == &NVPTX::B16RegClass)
-    return ".b16";
-  if (RC == &NVPTX::B1RegClass)
-    return ".pred";
-  if (RC == &NVPTX::SpecialRegsRegClass)
-    return "!Special!";
-  return "INTERNAL";
-}
-
-StringRef getNVPTXRegClassStr(TargetRegisterClass const *RC) {
-  if (RC == &NVPTX::B128RegClass)
-    return "%rq";
-  if (RC == &NVPTX::B64RegClass)
-    return "%rd";
-  if (RC == &NVPTX::B32RegClass)
-    return "%r";
-  if (RC == &NVPTX::B16RegClass)
-    return "%rs";
-  if (RC == &NVPTX::B1RegClass)
-    return "%p";
-  if (RC == &NVPTX::SpecialRegsRegClass)
-    return "!Special!";
-  return "INTERNAL";
-}
-} // namespace llvm
-
-NVPTXRegisterInfo::NVPTXRegisterInfo()
-    : NVPTXGenRegisterInfo(0), StrPool(StrAlloc) {}
+NVPTXRegisterInfo::NVPTXRegisterInfo() : NVPTXGenRegisterInfo(0) {}
 
 #define GET_REGINFO_TARGET_DESC
 #include "NVPTXGenRegisterInfo.inc"
@@ -115,11 +64,17 @@ bool NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   const MachineFunction &MF = *MI.getParent()->getParent();
-  const int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const int Offset = MFI.getObjectOffset(FrameIndex) +
                      MI.getOperand(FIOperandNum + 1).getImm();
 
-  // Using I0 as the frame pointer
-  MI.getOperand(FIOperandNum).ChangeToRegister(getFrameRegister(MF), false);
+  // Local (addrspace 5) allocas are addressed through the local frame pointer
+  // (%SPL); everything else uses the generic frame pointer (%SP).
+  const AllocaInst *AI = MFI.getObjectAllocation(FrameIndex);
+  const Register FrameReg = AI && AI->getAddressSpace() == ADDRESS_SPACE_LOCAL
+                                ? getFrameLocalRegister(MF)
+                                : getFrameRegister(MF);
+  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
   return false;
 }
@@ -132,13 +87,13 @@ Register NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 
 Register
 NVPTXRegisterInfo::getFrameLocalRegister(const MachineFunction &MF) const {
-  const NVPTXTargetMachine &TM =
-      static_cast<const NVPTXTargetMachine &>(MF.getTarget());
-  return TM.is64Bit() ? NVPTX::VRFrameLocal64 : NVPTX::VRFrameLocal32;
+  return MF.getDataLayout().getPointerSizeInBits(ADDRESS_SPACE_LOCAL) == 64
+             ? NVPTX::VRFrameLocal64
+             : NVPTX::VRFrameLocal32;
 }
 
 void NVPTXRegisterInfo::clearDebugRegisterMap() const {
-  debugRegisterMap.clear();
+  DebugRegisterMap.clear();
 }
 
 static uint64_t encodeRegisterForDwarf(StringRef RegisterName) {
@@ -152,18 +107,16 @@ static uint64_t encodeRegisterForDwarf(StringRef RegisterName) {
   // IE the bytes of the string are concatenated in reverse into a single
   // number, which is stored in ULEB128, but in practice must be no more than 8
   // bytes (excluding null terminator, which is not included).
-  uint64_t result = 0;
-  for (unsigned char c : RegisterName)
-    result = (result << 8) | c;
-  return result;
+  uint64_t Result = 0;
+  for (unsigned char C : RegisterName)
+    Result = (Result << 8) | C;
+  return Result;
 }
 
-void NVPTXRegisterInfo::addToDebugRegisterMap(
-    uint64_t preEncodedVirtualRegister, StringRef RegisterName) const {
-  uint64_t mapped = encodeRegisterForDwarf(RegisterName);
-  if (mapped == 0)
-    return;
-  debugRegisterMap.insert({preEncodedVirtualRegister, mapped});
+void NVPTXRegisterInfo::addToDebugRegisterMap(Register VirtReg,
+                                              StringRef RegisterName) const {
+  if (const uint64_t Encoded = encodeRegisterForDwarf(RegisterName))
+    DebugRegisterMap.insert({VirtReg, Encoded});
 }
 
 int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
@@ -179,8 +132,7 @@ int64_t NVPTXRegisterInfo::getDwarfRegNum(MCRegister RegNum, bool isEH) const {
 int64_t NVPTXRegisterInfo::getDwarfRegNumForVirtReg(Register RegNum,
                                                     bool isEH) const {
   assert(RegNum.isVirtual());
-  uint64_t lookup = debugRegisterMap.lookup(RegNum.id());
-  if (lookup)
-    return lookup;
+  if (const uint64_t Encoded = DebugRegisterMap.lookup(RegNum))
+    return Encoded;
   return -1;
 }

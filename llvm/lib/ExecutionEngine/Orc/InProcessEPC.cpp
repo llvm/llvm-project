@@ -109,7 +109,7 @@ InProcessEPC::Create(Connection *C, BootstrapInfoAccess *BIA,
           inconvertibleErrorCode());
   }
 
-  return IPEPC;
+  return std::move(IPEPC);
 }
 
 InProcessEPC::~InProcessEPC() {

@@ -15,6 +15,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/Testing/Support/Error.h"
 #include <thread>
 
 using namespace lldb;
@@ -38,31 +39,6 @@ static Log::Channel test_channel(test_categories, TestChannel::FOO);
 namespace lldb_private {
 template <> Log::Channel &LogChannelFor<TestChannel>() { return test_channel; }
 } // namespace lldb_private
-
-// Wrap enable, disable and list functions to make them easier to test.
-static bool EnableChannel(std::shared_ptr<LogHandler> log_handler_sp,
-                          uint32_t log_options, llvm::StringRef channel,
-                          llvm::ArrayRef<const char *> categories,
-                          std::string &error) {
-  error.clear();
-  llvm::raw_string_ostream error_stream(error);
-  return Log::EnableLogChannel(log_handler_sp, log_options, channel, categories,
-                               error_stream);
-}
-
-static bool DisableChannel(llvm::StringRef channel,
-                           llvm::ArrayRef<const char *> categories,
-                           std::string &error) {
-  error.clear();
-  llvm::raw_string_ostream error_stream(error);
-  return Log::DisableLogChannel(channel, categories, error_stream);
-}
-
-static bool ListCategories(llvm::StringRef channel, std::string &result) {
-  result.clear();
-  llvm::raw_string_ostream result_stream(result);
-  return Log::ListChannelCategories(channel, result_stream);
-}
 
 namespace {
 // A test fixture which provides tests with a pre-registered channel.
@@ -118,8 +94,8 @@ static std::string GetDumpAsString(const RotatingLogHandler &handler) {
 void LogChannelEnabledTest::SetUp() {
   LogChannelTest::SetUp();
 
-  std::string error;
-  ASSERT_TRUE(EnableChannel(m_log_handler_sp, 0, "chan", {}, error));
+  ASSERT_THAT_ERROR(Log::EnableLogChannel(m_log_handler_sp, 0, "chan", {}),
+                    llvm::Succeeded());
 
   m_log = GetLog(TestChannel::FOO);
   ASSERT_NE(nullptr, m_log);
@@ -162,8 +138,8 @@ TEST(LogTest, Unregister) {
   Log::Register("chan", test_channel);
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
   auto log_handler_sp = std::make_shared<TestLogHandler>();
-  EXPECT_TRUE(
-      Log::EnableLogChannel(log_handler_sp, 0, "chan", {"foo"}, llvm::nulls()));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(log_handler_sp, 0, "chan", {"foo"}),
+                    llvm::Succeeded());
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   Log::Unregister("chan");
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
@@ -215,36 +191,47 @@ TEST(LogHandlerTest, TeeLogHandler) {
 TEST_F(LogChannelTest, Enable) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
   auto log_handler_sp = std::make_shared<TestLogHandler>();
-  std::string error;
-  ASSERT_FALSE(EnableChannel(log_handler_sp, 0, "chanchan", {}, error));
-  EXPECT_EQ("Invalid log channel 'chanchan'.\n", error);
+  ASSERT_THAT_ERROR(
+      Log::EnableLogChannel(log_handler_sp, 0, "chanchan", {}),
+      llvm::FailedWithMessage("Invalid log channel 'chanchan'.\n"));
 
-  EXPECT_TRUE(EnableChannel(log_handler_sp, 0, "chan", {}, error));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(log_handler_sp, 0, "chan", {}),
+                    llvm::Succeeded());
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_EQ(nullptr, GetLog(TestChannel::BAR));
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO | TestChannel::BAR));
 
-  EXPECT_TRUE(EnableChannel(log_handler_sp, 0, "chan", {"bar"}, error));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(log_handler_sp, 0, "chan", {"bar"}),
+                    llvm::Succeeded());
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_NE(nullptr, GetLog(TestChannel::BAR));
 
-  EXPECT_FALSE(EnableChannel(log_handler_sp, 0, "chan", {"baz"}, error));
-  EXPECT_NE(std::string::npos, error.find("unrecognized log category 'baz'"))
-      << "error: " << error;
+  EXPECT_THAT_ERROR(
+      Log::EnableLogChannel(log_handler_sp, 0, "chan", {"baz"}),
+      llvm::FailedWithMessage("error: unrecognized log category 'baz'\n"
+                              "Logging categories for 'chan':\n"
+                              "  all - all available logging categories\n"
+                              "  default - default set of logging categories\n"
+                              "  foo - log foo\n"
+                              "  bar - log bar\n"));
 
-  EXPECT_FALSE(
-      EnableChannel(log_handler_sp, 0, "chan", {"baz", "bar", "abc"}, error));
-  EXPECT_NE(std::string::npos,
-            error.find("unrecognized log categories 'baz', 'abc'"))
-      << "error: " << error;
+  EXPECT_THAT_ERROR(
+      Log::EnableLogChannel(log_handler_sp, 0, "chan", {"baz", "bar", "abc"}),
+      llvm::FailedWithMessage(
+          "error: unrecognized log categories 'baz', 'abc'\n"
+          "Logging categories for 'chan':\n"
+          "  all - all available logging categories\n"
+          "  default - default set of logging categories\n"
+          "  foo - log foo\n"
+          "  bar - log bar\n"));
 }
 
 TEST_F(LogChannelTest, EnableOptions) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
   auto log_handler_sp = std::make_shared<TestLogHandler>();
-  std::string error;
-  EXPECT_TRUE(EnableChannel(log_handler_sp, LLDB_LOG_OPTION_VERBOSE, "chan", {},
-                            error));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(log_handler_sp,
+                                          LLDB_LOG_OPTION_VERBOSE, "chan", {}),
+                    llvm::Succeeded());
 
   Log *log = GetLog(TestChannel::FOO);
   ASSERT_NE(nullptr, log);
@@ -254,59 +241,69 @@ TEST_F(LogChannelTest, EnableOptions) {
 TEST_F(LogChannelTest, Disable) {
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO));
   auto log_handler_sp = std::make_shared<TestLogHandler>();
-  std::string error;
-  EXPECT_TRUE(EnableChannel(log_handler_sp, 0, "chan", {"foo", "bar"}, error));
+  EXPECT_THAT_ERROR(
+      Log::EnableLogChannel(log_handler_sp, 0, "chan", {"foo", "bar"}),
+      llvm::Succeeded());
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_NE(nullptr, GetLog(TestChannel::BAR));
 
-  EXPECT_TRUE(DisableChannel("chan", {"bar"}, error));
+  std::string error;
+  EXPECT_THAT_ERROR(Log::DisableLogChannel("chan", {"bar"}), llvm::Succeeded());
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_EQ(nullptr, GetLog(TestChannel::BAR));
 
-  EXPECT_FALSE(DisableChannel("chan", {"baz"}, error));
-  EXPECT_NE(std::string::npos, error.find("unrecognized log category 'baz'"))
-      << "error: " << error;
+  EXPECT_THAT_ERROR(
+      Log::DisableLogChannel("chan", {"baz"}),
+      llvm::FailedWithMessage("error: unrecognized log category 'baz'\n"
+                              "Logging categories for 'chan':\n"
+                              "  all - all available logging categories\n"
+                              "  default - default set of logging categories\n"
+                              "  foo - log foo\n"
+                              "  bar - log bar\n"));
   EXPECT_NE(nullptr, GetLog(TestChannel::FOO));
   EXPECT_EQ(nullptr, GetLog(TestChannel::BAR));
 
-  EXPECT_TRUE(DisableChannel("chan", {}, error));
+  EXPECT_THAT_ERROR(Log::DisableLogChannel("chan", {}), llvm::Succeeded());
   EXPECT_EQ(nullptr, GetLog(TestChannel::FOO | TestChannel::BAR));
 }
 
 TEST_F(LogChannelTest, List) {
   std::string list;
-  EXPECT_TRUE(ListCategories("chan", list));
-  std::string expected =
-      R"(Logging categories for 'chan':
+  EXPECT_THAT_EXPECTED(Log::ListChannelCategories("chan"),
+                       llvm::HasValue(
+                           R"(Logging categories for 'chan':
   all - all available logging categories
   default - default set of logging categories
   foo - log foo
   bar - log bar
-)";
-  EXPECT_EQ(expected, list);
+)"));
 
-  EXPECT_FALSE(ListCategories("chanchan", list));
-  EXPECT_EQ("Invalid log channel 'chanchan'.\n", list);
+  EXPECT_THAT_EXPECTED(
+      Log::ListChannelCategories("chanchan"),
+      llvm::FailedWithMessage("Invalid log channel 'chanchan'.\n"));
 }
 
 TEST_F(LogChannelEnabledTest, log_options) {
-  std::string Err;
   EXPECT_EQ("Hello World\n", logAndTakeOutput("Hello World"));
-  EXPECT_TRUE(EnableChannel(getLogHandler(), 0, "chan", {}, Err));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(getLogHandler(), 0, "chan", {}),
+                    llvm::Succeeded());
   EXPECT_EQ("Hello World\n", logAndTakeOutput("Hello World"));
 
   {
-    EXPECT_TRUE(EnableChannel(getLogHandler(), LLDB_LOG_OPTION_PREPEND_SEQUENCE,
-                              "chan", {}, Err));
+    EXPECT_THAT_ERROR(Log::EnableLogChannel(getLogHandler(),
+                                            LLDB_LOG_OPTION_PREPEND_SEQUENCE,
+                                            "chan", {}),
+                      llvm::Succeeded());
     llvm::StringRef Msg = logAndTakeOutput("Hello World");
     int seq_no;
     EXPECT_EQ(1, sscanf(Msg.str().c_str(), "%d Hello World", &seq_no));
   }
 
   {
-    EXPECT_TRUE(EnableChannel(getLogHandler(),
-                              LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION, "chan", {},
-                              Err));
+    EXPECT_THAT_ERROR(
+        Log::EnableLogChannel(
+            getLogHandler(), LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION, "chan", {}),
+        llvm::Succeeded());
     llvm::StringRef Msg = logAndTakeOutput("Hello World");
     char File[12];
     char Function[17];
@@ -319,9 +316,10 @@ TEST_F(LogChannelEnabledTest, log_options) {
   }
 
   {
-    EXPECT_TRUE(EnableChannel(getLogHandler(),
-                              LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION, "chan", {},
-                              Err));
+    EXPECT_THAT_ERROR(
+        Log::EnableLogChannel(
+            getLogHandler(), LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION, "chan", {}),
+        llvm::Succeeded());
     llvm::StringRef Msg = logAndTakeOutputf("Hello World");
     char File[12];
     char Function[18];
@@ -333,9 +331,10 @@ TEST_F(LogChannelEnabledTest, log_options) {
     EXPECT_STREQ("logAndTakeOutputf", Function);
   }
 
-  EXPECT_TRUE(EnableChannel(getLogHandler(),
-                            LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD, "chan", {},
-                            Err));
+  EXPECT_THAT_ERROR(
+      Log::EnableLogChannel(
+          getLogHandler(), LLDB_LOG_OPTION_PREPEND_PROC_AND_THREAD, "chan", {}),
+      llvm::Succeeded());
   EXPECT_EQ(llvm::formatv("[{0,0+4}/{1,0+4}] Hello World\n", ::getpid(),
                           llvm::get_threadid())
                 .str(),
@@ -343,12 +342,12 @@ TEST_F(LogChannelEnabledTest, log_options) {
 }
 
 TEST_F(LogChannelEnabledTest, JSONLOutput) {
-  std::string Err;
-
   // With JSON, every line must parse as JSON and contain exactly the message we
   // logged.
-  EXPECT_TRUE(EnableChannel(
-      getLogHandler(), /*log_options=*/LLDB_LOG_OPTION_JSON, "chan", {}, Err));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(getLogHandler(),
+                                          /*log_options=*/LLDB_LOG_OPTION_JSON,
+                                          "chan", {}),
+                    llvm::Succeeded());
   llvm::StringRef Msg = logAndTakeOutput("Hello \"World\"\nsecond line");
   ASSERT_TRUE(Msg.ends_with("\n"));
   ASSERT_EQ(Msg.count('\n'), 1u) << "expected one JSON object per line";
@@ -368,7 +367,8 @@ TEST_F(LogChannelEnabledTest, JSONLOutput) {
                   LLDB_LOG_OPTION_PREPEND_THREAD_NAME |
                   LLDB_LOG_OPTION_BACKTRACE |
                   LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
-  EXPECT_TRUE(EnableChannel(getLogHandler(), Opts, "chan", {}, Err));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(getLogHandler(), Opts, "chan", {}),
+                    llvm::Succeeded());
   Msg = logAndTakeOutput("payload");
   Parsed = llvm::json::parse(Msg);
   ASSERT_TRUE(static_cast<bool>(Parsed)) << llvm::toString(Parsed.takeError());
@@ -403,11 +403,9 @@ TEST_F(LogChannelEnabledTest, LLDB_LOG_ERROR) {
 TEST_F(LogChannelEnabledTest, LogThread) {
   // Test that we are able to concurrently write to a log channel and disable
   // it.
-  std::string err;
-
   // Start logging on one thread. Concurrently, try disabling the log channel.
   std::thread log_thread([this] { LLDB_LOG(getLog(), "Hello World"); });
-  EXPECT_TRUE(DisableChannel("chan", {}, err));
+  EXPECT_THAT_ERROR(Log::DisableLogChannel("chan", {}), llvm::Succeeded());
   log_thread.join();
 
   // The log thread either managed to write to the log in time, or it didn't. In
@@ -419,13 +417,13 @@ TEST_F(LogChannelEnabledTest, LogThread) {
 TEST_F(LogChannelEnabledTest, LogVerboseThread) {
   // Test that we are able to concurrently check the verbose flag of a log
   // channel and enable it.
-  std::string err;
 
   // Start logging on one thread. Concurrently, try enabling the log channel
   // (with different log options).
   std::thread log_thread([this] { LLDB_LOG_VERBOSE(getLog(), "Hello World"); });
-  EXPECT_TRUE(
-      EnableChannel(getLogHandler(), LLDB_LOG_OPTION_VERBOSE, "chan", {}, err));
+  EXPECT_THAT_ERROR(Log::EnableLogChannel(getLogHandler(),
+                                          LLDB_LOG_OPTION_VERBOSE, "chan", {}),
+                    llvm::Succeeded());
   log_thread.join();
 
   // The log thread either managed to write to the log, or it didn't. In either
@@ -437,13 +435,12 @@ TEST_F(LogChannelEnabledTest, LogVerboseThread) {
 TEST_F(LogChannelEnabledTest, LogGetLogThread) {
   // Test that we are able to concurrently get mask of a Log object and disable
   // it.
-  std::string err;
 
   // Try fetching the log mask on one thread. Concurrently, try disabling the
   // log channel.
   uint64_t mask;
   std::thread log_thread([this, &mask] { mask = getLog()->GetMask(); });
-  EXPECT_TRUE(DisableChannel("chan", {}, err));
+  EXPECT_THAT_ERROR(Log::DisableLogChannel("chan", {}), llvm::Succeeded());
   log_thread.join();
 
   // The mask should be either zero of "FOO". In either case, we should not trip

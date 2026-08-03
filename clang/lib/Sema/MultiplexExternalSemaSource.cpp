@@ -303,7 +303,7 @@ void MultiplexExternalSemaSource::ReadDeclsToCheckForDeferredDiags(
 }
 
 void MultiplexExternalSemaSource::ReadUnusedLocalTypedefNameCandidates(
-    llvm::SmallSetVector<const TypedefNameDecl *, 4> &Decls) {
+    llvm::SmallPtrSetImpl<const TypedefNameDecl *> &Decls) {
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->ReadUnusedLocalTypedefNameCandidates(Decls);
 }

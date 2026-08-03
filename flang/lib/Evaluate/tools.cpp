@@ -13,6 +13,8 @@
 #include "flang/Evaluate/traverse.h"
 #include "flang/Parser/message.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <algorithm>
 #include <variant>
@@ -965,8 +967,10 @@ std::optional<Expr<SomeType>> ConvertToType(
 }
 
 int GetCorank(const ActualArgument &arg) {
-  const auto *expr{arg.UnwrapExpr()};
-  return GetCorank(*expr);
+  if (const auto *expr{arg.GetArgExpr()}) {
+    return GetCorank(*expr);
+  }
+  return 0;
 }
 
 bool IsProcedureDesignator(const Expr<SomeType> &expr) {
@@ -1242,7 +1246,8 @@ int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
   return symbols.size();
 }
 
-bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
+std::pair<semantics::UnorderedSymbolSet, semantics::UnorderedSymbolSet>
+GetHostAndDeviceSymbols(const Expr<SomeType> &expr) {
   semantics::UnorderedSymbolSet hostSymbols;
   semantics::UnorderedSymbolSet deviceSymbols;
   semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
@@ -1268,8 +1273,27 @@ bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
       skipNext = false;
     }
   }
+  return std::make_pair(hostSymbols, deviceSymbols);
+}
+
+bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
+  auto [hostSymbols, deviceSymbols] = GetHostAndDeviceSymbols(expr);
   bool hasConstant{HasConstant(expr)};
   return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
+}
+
+bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr) {
+  auto [hostSymbols, deviceSymbols] = GetHostAndDeviceSymbols(expr);
+  for (const Symbol &sym : deviceSymbols) {
+    if (const auto *details =
+            sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+      if (details->cudaDataAttr() &&
+          (*details->cudaDataAttr() != common::CUDADataAttr::Constant)) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 bool IsCUDADeviceSymbol(const Symbol &sym) {
@@ -1319,6 +1343,124 @@ bool HasVectorSubscript(const Expr<SomeType> &expr) {
 bool HasVectorSubscript(const ActualArgument &actual) {
   auto expr{actual.UnwrapExpr()};
   return expr && HasVectorSubscript(*expr);
+}
+
+namespace {
+
+struct HasProcedureRefHelper : public AnyTraverse<HasProcedureRefHelper> {
+  using Base = AnyTraverse<HasProcedureRefHelper>;
+  HasProcedureRefHelper() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const ProcedureRef &) const { return true; }
+};
+
+struct HasVolatileOrAsynchronousSymbolHelper
+    : public AnyTraverse<HasVolatileOrAsynchronousSymbolHelper> {
+  using Base = AnyTraverse<HasVolatileOrAsynchronousSymbolHelper>;
+  HasVolatileOrAsynchronousSymbolHelper() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const Symbol &symbol) const {
+    const Symbol &ultimate{symbol.GetUltimate()};
+    if (ultimate.attrs().HasAny(
+            {semantics::Attr::VOLATILE, semantics::Attr::ASYNCHRONOUS}))
+      return true;
+    if (const auto *assoc{ultimate.detailsIf<semantics::AssocEntityDetails>()})
+      return (*this)(assoc->expr());
+    return false;
+  }
+};
+
+} // namespace
+
+bool HasProcedureRef(const Expr<SomeType> &expr) {
+  return HasProcedureRefHelper{}(expr);
+}
+
+bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr) {
+  return HasVolatileOrAsynchronousSymbolHelper{}(expr);
+}
+
+template <int KIND> using Real = Type<common::TypeCategory::Real, KIND>;
+
+template <int KIND> using RealExpr = Expr<Real<KIND>>;
+
+template <int KIND>
+static void flattenTopLevelAdds(
+    const RealExpr<KIND> &expr, llvm::SmallVectorImpl<RealExpr<KIND>> &terms) {
+  // Only flatten real Add nodes. Every other node, including Parentheses and
+  // Subtract, is one opaque term whose internal expression tree is preserved.
+  if (const auto *add = std::get_if<Add<Real<KIND>>>(&expr.u)) {
+    flattenTopLevelAdds(add->left(), terms);
+    flattenTopLevelAdds(add->right(), terms);
+    return;
+  }
+  terms.push_back(expr);
+}
+
+template <int KIND>
+static RealExpr<KIND> buildRightAssociatedAddFold(
+    llvm::ArrayRef<RealExpr<KIND>> terms) {
+  assert(!terms.empty() && "cannot build empty add fold");
+  if (terms.size() == 1)
+    return terms.front();
+  RealExpr<KIND> result{terms.back()};
+  for (const RealExpr<KIND> &term : llvm::reverse(terms.drop_back()))
+    result = RealExpr<KIND>{Add<Real<KIND>>{term, result}};
+  return result;
+}
+
+template <typename T>
+static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
+  return std::nullopt;
+}
+
+template <int KIND>
+static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
+    const RealExpr<KIND> &expr) {
+  if (!std::get_if<Add<Real<KIND>>>(&expr.u))
+    return std::nullopt;
+
+  llvm::SmallVector<RealExpr<KIND>, 8> terms;
+  flattenTopLevelAdds(expr, terms);
+  if (terms.size() <= 2)
+    return std::nullopt;
+
+  llvm::SmallVector<RealExpr<KIND>, 2> head{terms[0], terms[1]};
+  llvm::SmallVector<RealExpr<KIND>, 8> tail(terms.begin() + 2, terms.end());
+  RealExpr<KIND> headExpr = buildRightAssociatedAddFold<KIND>(head);
+  RealExpr<KIND> tailExpr = buildRightAssociatedAddFold<KIND>(tail);
+  return Expr<SomeType>{
+      RealExpr<KIND>{Add<Real<KIND>>{std::move(tailExpr), headExpr}}};
+}
+
+template <common::TypeCategory CAT>
+static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
+    const Expr<SomeKind<CAT>> &expr) {
+  if constexpr (CAT == common::TypeCategory::Real) {
+    return common::visit(
+        [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
+          return tryBuildSplitSumExpressionTree(typedExpr);
+        },
+        expr.u);
+  }
+  return std::nullopt;
+}
+
+bool CanBuildSplitSumExpressionTree(
+    const Expr<SomeType> &lhs, const Expr<SomeType> &rhs) {
+  return rhs.Rank() == 0 && lhs.Rank() == 0 && !HasVectorSubscript(rhs) &&
+      !HasVectorSubscript(lhs) && !HasProcedureRef(rhs) &&
+      !HasProcedureRef(lhs) && !HasVolatileOrAsynchronousSymbol(rhs) &&
+      !HasVolatileOrAsynchronousSymbol(lhs);
+}
+
+std::optional<Expr<SomeType>> TryBuildSplitSumExpressionTree(
+    const Expr<SomeType> &expr) {
+  return common::visit(
+      [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
+        return tryBuildSplitSumExpressionTree(typedExpr);
+      },
+      expr.u);
 }
 
 bool IsArraySection(const Expr<SomeType> &expr) {

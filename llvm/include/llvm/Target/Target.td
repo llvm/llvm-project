@@ -534,6 +534,9 @@ def InlineDefault : InlineBehavior;
 // A callee without this feature enabled cannot be inlined into a caller with
 // it enabled.
 def InlineInverse : InlineBehavior;
+// The feature must be either enabled in both caller and callee, or disabled in
+// both.
+def InlineMustMatch : InlineBehavior;
 
 //===----------------------------------------------------------------------===//
 // SubtargetFeature - A characteristic of the chip set.
@@ -2131,6 +2134,13 @@ class ProcessorModel<string n, SchedMachineModel m, list<SubtargetFeature> f,
                      list<SubtargetFeature> tunef = []>
   : Processor<n, NoItineraries, f, tunef> {
   let SchedModel = m;
+}
+
+// Defines an alternate name 'n' for the processor 'alias', resolving
+// to the same subtarget features and scheduling model.
+class ProcessorAlias<string n, string alias> {
+  string Name = n;
+  string Alias = alias;
 }
 
 //===----------------------------------------------------------------------===//

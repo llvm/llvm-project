@@ -399,6 +399,17 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
     killAndFlowOrigin(*UO, *SubExpr);
     return;
   }
+  case UO_Plus: {
+    // Unary plus on a pointer is the identity (`+p == p`), so the prvalue
+    // result carries the operand's loans. Flow the operand's rvalue origins
+    // (peeling storage only when the operand is itself a glvalue).
+    if (!UO->getType()->isPointerType())
+      return;
+    const Expr *SubExpr = UO->getSubExpr();
+    flow(getOriginsList(*UO),
+         getRValueOrigins(SubExpr, getOriginsList(*SubExpr)), /*Kill=*/true);
+    return;
+  }
   case UO_PreInc:
   case UO_PostInc:
   case UO_PreDec:
@@ -626,7 +637,7 @@ void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
     }
   }
 
-  ArrayRef Args = {OCE->getArgs(), OCE->getNumArgs()};
+  ArrayRef<const Expr *> Args(OCE->getArgs(), OCE->getNumArgs());
   // For `static operator()`, the first argument is the object argument,
   // remove it from the argument list to avoid off-by-one errors.
   if (OCE->getOperator() == OO_Call && OCE->getDirectCallee()->isStatic())
@@ -845,9 +856,12 @@ void FactsGenerator::handleFullExprCleanup(
 }
 
 void FactsGenerator::handleExitBlock() {
+  bool IsDestructor = isa_and_nonnull<CXXDestructorDecl>(AC.getDecl());
   for (const Origin &O : FactMgr.getOriginMgr().getOrigins())
-    if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl()))
-      // Create FieldEscapeFacts for all field origins that remain live at exit.
+    // Create FieldEscapeFacts for all field origins that remain live at exit.
+    // Fields in destructors do not escape since the object is being destroyed.
+    if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl());
+        FD && !IsDestructor)
       EscapesInCurrentBlock.push_back(
           FactMgr.createFact<FieldEscapeFact>(O.ID, FD));
     else if (auto *VD = dyn_cast_if_present<VarDecl>(O.getDecl())) {
@@ -1026,8 +1040,6 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
     if (!Attr)
       continue;
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
-    if (!CapturedOriginList)
-      continue;
     if (!CapturedOriginList)
       continue;
     for (int CapturingArgIdx : Attr->params()) {
@@ -1226,9 +1238,8 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
   if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins()) {
     OriginList *List = *ThisOrigins;
-    const Loan *L = FactMgr.getLoanMgr().createLoan(
-        AccessPath::Placeholder(cast<CXXMethodDecl>(FD)),
-        /*IssuingExpr=*/nullptr);
+    const Loan *L =
+        FactMgr.getLoanMgr().createPlaceholderLoan(cast<CXXMethodDecl>(FD));
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }
@@ -1236,8 +1247,7 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     OriginList *List = getOriginsList(*PVD);
     if (!List)
       continue;
-    const Loan *L = FactMgr.getLoanMgr().createLoan(
-        AccessPath::Placeholder(PVD), /*IssuingExpr=*/nullptr);
+    const Loan *L = FactMgr.getLoanMgr().createPlaceholderLoan(PVD);
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
   }

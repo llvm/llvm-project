@@ -414,8 +414,6 @@ public:
 
   bool isLittle() const { return IsLittle; }
 
-  unsigned getMispredictionPenalty() const;
-
   /// Returns true if machine scheduler should be enabled.
   bool enableMachineScheduler() const override;
 

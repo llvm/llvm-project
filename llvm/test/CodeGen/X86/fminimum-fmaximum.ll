@@ -1296,21 +1296,17 @@ define <4 x float> @test_fmaximum_vector_non_zero(<4 x float> %x) {
 define <2 x double> @test_fminimum_vector_nan(<2 x double> %x) {
 ; SSE2-LABEL: test_fminimum_vector_nan:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [NaN,0.0E+0]
 ; SSE2-NEXT:    xorpd %xmm1, %xmm1
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE2-NEXT:    minpd %xmm0, %xmm1
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; SSE2-NEXT:    movapd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: test_fminimum_vector_nan:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [NaN,0.0E+0]
-; AVX-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm2[0],xmm1[0]
-; AVX-NEXT:    vminpd %xmm0, %xmm2, %xmm0
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vminpd %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; AVX-NEXT:    retq
 ;
 ; AVX10_2-LABEL: test_fminimum_vector_nan:

@@ -8156,8 +8156,8 @@ TEST_F(OpenMPIRBuilderTest, registerTargetGlobalVariable) {
   OpenMPIRBuilderConfig Config(false, false, false, false, false, false, false);
   OMPBuilder.setConfig(Config);
 
-  std::vector<llvm::Triple> TargetTriple;
-  TargetTriple.emplace_back("amdgcn-amd-amdhsa");
+  std::vector<llvm::Triple> TargetTriple = {Triple(
+      Triple::amdgpu, Triple::AMDGPUSubArch700, Triple::AMD, Triple::AMDHSA)};
 
   TargetRegionEntryInfo EntryInfo("", 42, 4711, 17);
   std::vector<GlobalVariable *> RefsGathered;

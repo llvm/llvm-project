@@ -5,7 +5,7 @@ define void @intrapred_luma(ptr %0, i16 %1, i32 %conv593) {
 ; CHECK-LABEL: define void @intrapred_luma(
 ; CHECK-SAME: ptr [[TMP0:%.*]], i16 [[TMP1:%.*]], i32 [[CONV593:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> poison, i16 [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    [[DOTPRE:%.*]] = load ptr, ptr [[TMP0]], align 8
@@ -14,11 +14,11 @@ define void @intrapred_luma(ptr %0, i16 %1, i32 %conv593) {
 ; CHECK-NEXT:    [[ADD633:%.*]] = add i32 [[CONV635]], 1
 ; CHECK-NEXT:    [[ADD636:%.*]] = add i32 [[ADD633]], [[CONV593]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[ADD636]], i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[ADD636]], i64 3
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i32> <i32 1, i32 poison, i32 0, i32 1>, <4 x i32> [[TMP5]], <4 x i32> <i32 0, i32 4, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP17]], [[TMP18]]
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>, i32 [[CONV593]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>, i32 [[CONV593]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[TMP10]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <4 x i32> [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = lshr <4 x i32> [[TMP12]], <i32 1, i32 2, i32 1, i32 1>

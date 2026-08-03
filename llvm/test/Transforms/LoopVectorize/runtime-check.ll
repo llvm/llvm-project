@@ -22,8 +22,8 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4, !dbg [[DBG9]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]], !dbg [[DBG9]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B2]], !dbg [[DBG9]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16, !dbg [[DBG9]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[B2]], [[A1]], !dbg [[DBG9]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i64 [[TMP1]], -16, !dbg [[DBG9]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]], !dbg [[DBG9]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], 2147483644
@@ -502,8 +502,8 @@ define void @test_scev_check_mul_add_expansion(ptr %out, ptr %in, i32 %len, i32 
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[INDEX]], 6
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[OFFSET_IDX]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = add nuw i32 [[INDEX]], 6
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [2 x i8], ptr [[OUT]], i64 [[TMP6]]
 ; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP7]], align 2, !alias.scope [[META36:![0-9]+]], !noalias [[META39:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
