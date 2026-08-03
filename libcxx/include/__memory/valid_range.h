@@ -63,7 +63,7 @@ __assume_valid_range([[__maybe_unused__]] _Iter&& __first, [[__maybe_unused__]] 
                             "Valid range assumption does not hold");
     using __pointer_type = decltype(std::__to_address(__first));
     if constexpr (!is_volatile<__remove_pointer_t<__pointer_type>>::value) {
-      if (!__libcpp_is_constant_evaluated() && __first != __last) {
+      if (!__libcpp_is_constant_evaluated()) {
         using __value_type = typename iterator_traits<__remove_cvref_t<_Iter>>::value_type;
         __builtin_assume_dereferenceable(std::__to_address(__first), (__last - __first) * sizeof(__value_type));
         (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__first));
