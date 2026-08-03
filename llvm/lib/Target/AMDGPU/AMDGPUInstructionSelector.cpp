@@ -1729,15 +1729,8 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
   const unsigned BallotSize = MRI->getType(DstReg).getSizeInBits();
   const unsigned WaveSize = STI.getWavefrontSize();
 
-  if (BallotSize < WaveSize) {
-    const Function &Fn = MF->getFunction();
-    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "ballot return type is narrower than the wavefront size", DL));
-    BuildMI(*BB, &I, DL, TII.get(AMDGPU::IMPLICIT_DEF), DstReg);
-    I.eraseFromParent();
-    return true;
-  }
-
+  // In the common case, the return type matches the wave size.
+  // However we also support emitting i64 ballots in wave32 mode.
   if (BallotSize != WaveSize && (BallotSize != 64 || WaveSize != 32))
     return false;
 
