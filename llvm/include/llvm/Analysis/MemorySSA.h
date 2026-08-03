@@ -1054,7 +1054,7 @@ public:
   /// clobbering access (either a MemoryDef or a MemoryPhi). Unlike the above
   /// API, if given a MemoryDef that clobbers the pointer as the starting
   /// access, it will return that MemoryDef, whereas the above would return the
-  /// clobber starting from the use side of  the memory def.
+  /// clobber starting from the use side of the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                                   const MemoryLocation &,
                                                   BatchAAResults &AA) = 0;
