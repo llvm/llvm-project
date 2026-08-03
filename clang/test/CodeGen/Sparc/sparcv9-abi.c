@@ -54,6 +54,16 @@ long double f_longdouble(long a, struct align16_longdouble b) {
 	return b.x;
 }
 
+// CHECK-LABEL: define{{.*}} signext i32 @f_float_aligned(float noundef %a, i64 %0, i64 %b.coerce0, i64 %b.coerce1)
+int f_float_aligned(float a, struct align16_int b) {
+	return b.x;
+}
+
+// CHECK-LABEL: define{{.*}} signext i32 @f_float_pair_aligned(float noundef %a, float noundef %b, i64 %c.coerce0, i64 %c.coerce1)
+int f_float_pair_aligned(float a, float b, struct align16_int c) {
+	return c.x;
+}
+
 // CHECK-LABEL: define{{.*}} i64 @f_emptyvar(i32 noundef zeroext %count, ...)
 long f_emptyvar(unsigned count, ...) {
     long ret;

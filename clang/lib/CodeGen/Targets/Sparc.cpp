@@ -279,7 +279,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
 
   // Other non-aggregates go in registers.
   if (!isAggregateTypeForABI(Ty)) {
-    RegOffset += Size / 64;
+    RegOffset += llvm::divideCeil(Size, 64);
     return ABIArgInfo::getDirect();
   }
 
@@ -295,7 +295,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   // Build a coercion type from the LLVM struct type.
   llvm::StructType *StrTy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty));
   if (!StrTy) {
-    RegOffset += Size / 64;
+    RegOffset += llvm::divideCeil(Size, 64);
     return ABIArgInfo::getDirect();
   }
 
