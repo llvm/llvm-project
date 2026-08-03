@@ -8,7 +8,7 @@
 
 #include "cxxabi.h"
 
-#if !defined(_LIBCXXABI_HAS_NO_THREADS) && defined(__linux__) || defined(__Fuchsia__) || defined(__wasm__)
+#if !defined(_LIBCXXABI_HAS_NO_THREADS) && defined(_LIBCXXABI_DEFINE_THREAD_ATEXIT)
 
 #include <__thread/support.h>
 #include <stdlib.h>
@@ -147,4 +147,4 @@ extern "C" {
 
 } // namespace __cxxabiv1
 
-#endif // !defined(_LIBCXXABI_HAS_NO_THREADS) && defined(__linux__) || defined(__Fuchsia__) || defined(__wasm__)
+#endif // !defined(_LIBCXXABI_HAS_NO_THREADS) && defined(_LIBCXXABI_DEFINE_THREAD_ATEXIT)

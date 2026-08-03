@@ -134,4 +134,12 @@
 #  define _LIBCXXABI_DISABLE_POINTER_FIELD_PROTECTION
 #endif
 
+// On Apple, Clang generates calls to _tlv_atexit and __cxa_thread_atexit is defined
+// in libc instead.
+//
+// AIX uses a different mechanism for registering thread local destructors (__pt_atexit_np).
+#if !defined(__APPLE__) && !defined(_AIX)
+#  define _LIBCXXABI_DEFINE_THREAD_ATEXIT
+#endif
+
 #endif // ____CXXABI_CONFIG_H
