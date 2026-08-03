@@ -23,6 +23,9 @@ void test(__spirv_event_t e) {
 // CHECK: define spir_func void @_Z4testu15__spirv_event_t(target("spirv.Event") %e)
   __spirv_event_t events[4];
 // CHECK: %events = alloca [4 x target("spirv.Event")]
+  events[0] = getEvent();
+// CHECK: %[[GEP:.*]] = getelementptr inbounds [4 x target("spirv.Event")], ptr %events, i64 0, i64 0
+// CHECK: store target("spirv.Event") {{.*}}, ptr %[[GEP]]
   __spirv_event_t copyConstructed = e;
 // CHECK: %[[CC:.*]] = load target("spirv.Event"), ptr %e.addr
 // CHECK: store target("spirv.Event") %[[CC]], ptr %copyConstructed

@@ -54,11 +54,13 @@ static_assert(sizeof(__spirv_event_t) == 4, "");
 static_assert(alignof(__spirv_event_t) == 4, "");
 static_assert(sizeof(event_as7) == 4, "");
 static_assert(alignof(event_as7) == 4, "");
+static_assert(sizeof(__spirv_event_t[4]) == 16, "");
 #else
 static_assert(sizeof(__spirv_event_t) == 8, "");
 static_assert(alignof(__spirv_event_t) == 8, "");
 static_assert(sizeof(event_as7) == 8, "");
 static_assert(alignof(event_as7) == 8, "");
+static_assert(sizeof(__spirv_event_t[4]) == 32, "");
 #endif
 static_assert(__is_object(__spirv_event_t), "");
 static_assert(!__is_scalar(__spirv_event_t), "");
