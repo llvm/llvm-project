@@ -2295,7 +2295,8 @@ Value *llvm::addDiffRuntimeChecks(
   // Cache of (VF*IC*Stride-(Stride-AccessSize)) - 1, shared across checks with
   // matching type/IC/Stride to avoid emitting duplicate runtime computations.
   DenseMap<
-      std::tuple<Type *, unsigned /*IC*/, unsigned /*AbsCommonStrideInBytes*/>,
+      std::tuple<Type *, unsigned /*IC*/, unsigned /*AbsCommonStrideInBytes*/,
+                 unsigned /*AccessSize*/>,
       Value *>
       ThresholdCache;
   for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
@@ -2314,7 +2315,7 @@ Value *llvm::addDiffRuntimeChecks(
     }
 
     Value *&ThresholdMinusOne =
-        ThresholdCache[{Ty, IC, AbsCommonStrideInBytes}];
+        ThresholdCache[{Ty, IC, AbsCommonStrideInBytes, AccessSize}];
     if (!ThresholdMinusOne)
       ThresholdMinusOne = ChkBuilder.CreateSub(
           ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
