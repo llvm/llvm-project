@@ -94,7 +94,7 @@ Options
       g2 = 3,
     };
 
-.. option:: AllowExplicitReferencedInitialValues
+.. option:: AllowReferencedInitialValues
 
   If set to `true`, enumerators initialized by referencing another enumerator
   in the same enum are allowed, and the remaining enumerators are checked for
@@ -107,5 +107,5 @@ Options
     enum H {
       h0,
       h1,
-      h2 = h1, // Allowed if AllowExplicitReferencedInitialValues is true.
+      h2 = h1, // Allowed if AllowReferencedInitialValues is true.
     };

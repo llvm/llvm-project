@@ -2,7 +2,7 @@
 // RUN:     -config='{CheckOptions: { \
 // RUN:         readability-enum-initial-value.AllowExplicitZeroFirstInitialValue: false, \
 // RUN:         readability-enum-initial-value.AllowExplicitSequentialInitialValues: false, \
-// RUN:         readability-enum-initial-value.AllowExplicitReferencedInitialValues: true, \
+// RUN:         readability-enum-initial-value.AllowReferencedInitialValues: true, \
 // RUN:     }}'
 
 // Error: zero-first + self-ref, should still warn about the zero.

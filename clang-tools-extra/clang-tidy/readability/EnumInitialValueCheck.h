@@ -31,7 +31,7 @@ public:
 private:
   const bool AllowExplicitZeroFirstInitialValue;
   const bool AllowExplicitSequentialInitialValues;
-  const bool AllowExplicitReferencedInitialValues;
+  const bool AllowReferencedInitialValues;
 };
 
 } // namespace clang::tidy::readability

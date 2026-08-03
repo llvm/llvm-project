@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s readability-enum-initial-value %t -- \
 // RUN:     -config='{CheckOptions: { \
-// RUN:         readability-enum-initial-value.AllowExplicitReferencedInitialValues: true, \
+// RUN:         readability-enum-initial-value.AllowReferencedInitialValues: true, \
 // RUN:     }}'
 
 // OK: none + self-ref.

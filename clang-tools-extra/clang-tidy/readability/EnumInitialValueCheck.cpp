@@ -163,20 +163,20 @@ EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
           Options.get("AllowExplicitZeroFirstInitialValue", true)),
       AllowExplicitSequentialInitialValues(
           Options.get("AllowExplicitSequentialInitialValues", true)),
-      AllowExplicitReferencedInitialValues(
-          Options.get("AllowExplicitReferencedInitialValues", false)) {}
+      AllowReferencedInitialValues(
+          Options.get("AllowReferencedInitialValues", false)) {}
 
 void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowExplicitZeroFirstInitialValue",
                 AllowExplicitZeroFirstInitialValue);
   Options.store(Opts, "AllowExplicitSequentialInitialValues",
                 AllowExplicitSequentialInitialValues);
-  Options.store(Opts, "AllowExplicitReferencedInitialValues",
-                AllowExplicitReferencedInitialValues);
+  Options.store(Opts, "AllowReferencedInitialValues",
+                AllowReferencedInitialValues);
 }
 
 void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
-  const bool AllowSelfRefs = AllowExplicitReferencedInitialValues;
+  const bool AllowSelfRefs = AllowReferencedInitialValues;
   Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
                               unless(hasConsistentInitialValues(AllowSelfRefs)))
                          .bind("inconsistent"),
@@ -247,7 +247,7 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
              "sequential initial value in '%0' can be ignored")
         << getName(Enum);
     for (const EnumConstantDecl *ECD : llvm::drop_begin(Enum->enumerators()))
-      if (!isAllowedSelfReference(ECD, AllowExplicitReferencedInitialValues))
+      if (!isAllowedSelfReference(ECD, AllowReferencedInitialValues))
         cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
     return;
   }
