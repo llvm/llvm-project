@@ -856,7 +856,7 @@ def TMAReductionFlags : Operand<i32> {
   let PrintMethod = "printTmaReductionMode";
 }
 
-def tma_reduction_imm :
+def tma_tensor_reduction_imm :
     TImmLeaf<i32, [{ return Imm >= 0 && Imm < 8; }]>;
 
 // TMA Copy from Shared to Global memory with Reduction
@@ -880,13 +880,13 @@ multiclass CP_ASYNC_BULK_TENSOR_REDUCE_INTR<int dim, string mode> {
   defvar intr_dag = !con(
     (intr addr:$src, B64:$tmap),
     !setdagop(dims_dag, intr),
-    (intr (i64 srcvalue), tma_reduction_imm:$red_op, 0)
+    (intr (i64 srcvalue), tma_tensor_reduction_imm:$red_op, 0)
   );
 
   defvar intr_dag_with_ch = !con(
     (intr addr:$src, B64:$tmap),
     !setdagop(dims_dag, intr),
-    (intr B64:$ch, tma_reduction_imm:$red_op, -1)
+    (intr B64:$ch, tma_tensor_reduction_imm:$red_op, -1)
   );
 
   def "" : NVPTXInst<(outs),

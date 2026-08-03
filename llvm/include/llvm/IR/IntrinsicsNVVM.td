@@ -2842,8 +2842,8 @@ foreach dim = 1...5 in {
     def int_nvvm_cp_async_bulk_tensor_reduce_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[],
         reduce_params,
-        [llvm_i32_ty,   // reduction operation
-        llvm_i1_ty],    // Flag for cache_hint
+        [llvm_i32_ty,    // reduction operation
+         llvm_i1_ty],    // Flag for cache_hint
         [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
         // Allowed values for red_op are {0..7} i.e. [0, 8).
         Range<ArgIndex<red_op_idx>, 0, 8>,

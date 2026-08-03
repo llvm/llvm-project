@@ -2086,16 +2086,16 @@ memory, using `tile` mode. The dimension of the tensor data ranges from 1d to
 a compile-time constant in the half-open range `[0, 8)`, with the following
 encoding:
 
-| `red_op` | Reduction |
-|---------:|-----------|
-| 0 | add |
-| 1 | min |
-| 2 | max |
-| 3 | inc |
-| 4 | dec |
-| 5 | and |
-| 6 | or |
-| 7 | xor |
+| `red_op` | Reduction Operation |
+|:--------:|:--------------------|
+|    0     |   `add`             |
+|    1     |   `min`             |
+|    2     |   `max`             |
+|    3     |   `inc`             |
+|    4     |   `dec`             |
+|    5     |   `and`             |
+|    6     |   `or`              |
+|    7     |   `xor`             |
 
 The symbolic LLVM IR annotation for `red_op` and the PTX reduction suffix use
 the same canonical operator spelling.
