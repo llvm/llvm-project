@@ -22,6 +22,7 @@ add_llvm_target(PISACodeGen
   PISACallLowering.cpp
   PISAISelLowering.cpp
   PISAInstrInfo.cpp
+  PISAInstructionSelector.cpp
   PISALegalizerInfo.cpp
   PISAMCInstLower.cpp
   PISAMachineFunctionInfo.cpp

@@ -32,7 +32,8 @@ PISASubtarget::PISASubtarget(const Triple &TT, const std::string &CPU,
   Legalizer = std::make_unique<PISALegalizerInfo>(*this);
   RegBankInfo = std::make_unique<PISARegisterBankInfo>();
   LLT::setUseExtended(true); // enable bfloat support
-  // The instruction selector is created in a subsequent change.
+  InstSelector.reset(
+      createPISAInstructionSelector(TM, *this, *RegBankInfo.get()));
 }
 
 PISASubtarget &PISASubtarget::initSubtargetDependencies(StringRef CPU,
