@@ -7,186 +7,50 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/TargetID.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Path.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
-#include "llvm/TargetParser/Triple.h"
-#include <map>
-#include <optional>
-#include <string>
 
 namespace clang {
 
-static llvm::SmallVector<llvm::StringRef, 4>
-getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
-                                     llvm::StringRef Proc) {
-  // Entries in returned vector should be in alphabetical order.
-  llvm::SmallVector<llvm::StringRef, 4> Ret;
-  if (!T.isAMDGCN())
-    return Ret;
-  llvm::AMDGPU::GPUKind ProcKind = llvm::AMDGPU::parseArchAMDGCN(Proc);
-  if (ProcKind == llvm::AMDGPU::GK_NONE)
-    return Ret;
-  unsigned Features = llvm::AMDGPU::getArchAttrAMDGCN(ProcKind);
-  if (Features & llvm::AMDGPU::FEATURE_SRAMECC)
-    Ret.push_back("sramecc");
-  // Only allow xnack in target ID if the processor supports on/off modes.
-  if (Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES)
-    Ret.push_back("xnack");
-  return Ret;
-}
-
-llvm::SmallVector<llvm::StringRef, 4>
-getAllPossibleTargetIDFeatures(const llvm::Triple &T,
-                               llvm::StringRef Processor) {
-  llvm::SmallVector<llvm::StringRef, 4> Ret;
-  if (T.isAMDGPU())
-    return getAllPossibleAMDGPUTargetIDFeatures(T, Processor);
-  return Ret;
-}
-
-/// Returns canonical processor name or empty string if \p Processor is invalid.
-static llvm::StringRef getCanonicalProcessorName(const llvm::Triple &T,
-                                                 llvm::StringRef Processor) {
-  if (T.isAMDGPU())
-    return llvm::AMDGPU::getCanonicalArchName(T, Processor);
-  return Processor;
-}
-
 llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,
-                                         llvm::StringRef TargetID) {
-  auto Split = TargetID.split(':');
-  return getCanonicalProcessorName(T, Split.first);
-}
-
-// Parse a target ID with format checking only. Do not check whether processor
-// name or features are valid for the processor.
-//
-// A target ID is a processor name followed by a list of target features
-// delimited by colon. Each target feature is a string post-fixed by a plus
-// or minus sign, e.g. gfx908:sramecc+:xnack-.
-static std::optional<llvm::StringRef>
-parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
-                                    llvm::StringMap<bool> *FeatureMap) {
-  llvm::StringRef Processor;
-
-  if (TargetID.empty())
-    return llvm::StringRef();
-
-  auto Split = TargetID.split(':');
-  Processor = Split.first;
-  if (Processor.empty())
-    return std::nullopt;
-
-  auto Features = Split.second;
-  if (Features.empty())
-    return Processor;
-
-  llvm::StringMap<bool> LocalFeatureMap;
-  if (!FeatureMap)
-    FeatureMap = &LocalFeatureMap;
-
-  while (!Features.empty()) {
-    auto Splits = Features.split(':');
-    if (Splits.first.empty())
-      return std::nullopt;
-    auto Sign = Splits.first.back();
-    auto Feature = Splits.first.drop_back();
-    if (Sign != '+' && Sign != '-')
-      return std::nullopt;
-    bool IsOn = Sign == '+';
-    // Each feature can only show up at most once in target ID.
-    if (!FeatureMap->try_emplace(Feature, IsOn).second)
-      return std::nullopt;
-    Features = Splits.second;
-  }
-  return Processor;
-}
-
-std::optional<llvm::StringRef>
-parseTargetID(const llvm::Triple &T, llvm::StringRef TargetID,
-              llvm::StringMap<bool> *FeatureMap) {
-  auto OptionalProcessor =
-      parseTargetIDWithFormatCheckingOnly(TargetID, FeatureMap);
-
-  if (!OptionalProcessor)
-    return std::nullopt;
-
-  llvm::StringRef Processor = getCanonicalProcessorName(T, *OptionalProcessor);
-  if (Processor.empty())
-    return std::nullopt;
-
-  llvm::SmallSet<llvm::StringRef, 4> AllFeatures(
-      llvm::from_range, getAllPossibleTargetIDFeatures(T, Processor));
-
-  for (auto &&F : *FeatureMap)
-    if (!AllFeatures.count(F.first()))
-      return std::nullopt;
-
-  return Processor;
-}
-
-// A canonical target ID is a target ID containing a canonical processor name
-// and features in alphabetical order.
-std::string getCanonicalTargetID(llvm::StringRef Processor,
-                                 const llvm::StringMap<bool> &Features) {
-  std::string TargetID = Processor.str();
-  std::map<const llvm::StringRef, bool> OrderedMap;
-  for (const auto &F : Features)
-    OrderedMap[F.first()] = F.second;
-  for (const auto &F : OrderedMap)
-    TargetID = TargetID + ':' + F.first.str() + (F.second ? "+" : "-");
-  return TargetID;
+                                         llvm::StringRef OffloadArch) {
+  auto Split = OffloadArch.split(':');
+  if (T.isAMDGPU())
+    return llvm::AMDGPU::getCanonicalArchName(T, Split.first);
+  return Split.first;
 }
 
 // For a specific processor, a feature either shows up in all target IDs, or
-// does not show up in any target IDs. Otherwise the target ID combination
-// is invalid.
+// does not show up in any target IDs. Otherwise the target ID combination is
+// invalid.
 std::optional<std::pair<llvm::StringRef, llvm::StringRef>>
-getConflictTargetIDCombination(const std::set<llvm::StringRef> &TargetIDs) {
+getConflictTargetIDCombination(llvm::ArrayRef<TargetIDEntry> Entries) {
   struct Info {
     llvm::StringRef TargetID;
-    llvm::StringMap<bool> Features;
-    Info(llvm::StringRef TargetID, const llvm::StringMap<bool> &Features)
-        : TargetID(TargetID), Features(Features) {}
+    bool HasXnack;
+    bool HasSramEcc;
   };
-  llvm::StringMap<Info> FeatureMap;
-  for (auto &&ID : TargetIDs) {
-    llvm::StringMap<bool> Features;
-    llvm::StringRef Proc = *parseTargetIDWithFormatCheckingOnly(ID, &Features);
-    auto [Loc, Inserted] = FeatureMap.try_emplace(Proc, ID, Features);
-    if (!Inserted) {
-      auto &ExistingFeatures = Loc->second.Features;
-      if (llvm::any_of(Features, [&](auto &F) {
-            return ExistingFeatures.count(F.first()) == 0;
-          }))
-        return std::make_pair(Loc->second.TargetID, ID);
-    }
+
+  llvm::SmallDenseMap<llvm::AMDGPU::GPUKind, Info> Seen;
+  for (const auto &[T, ID] : Entries) {
+    std::optional<llvm::AMDGPU::TargetID> Parsed =
+        llvm::AMDGPU::TargetID::parse(T, ID);
+    if (!Parsed)
+      continue;
+
+    // A feature is present in a target ID only when an explicit '+'/'-'
+    // modifier is given, not when it is left unspecified.
+    Info Cur{ID, Parsed->isXnackOnOrOff(), Parsed->isSramEccOnOrOff()};
+    auto [Loc, Inserted] = Seen.try_emplace(Parsed->getGPUKind(), Cur);
+    if (Inserted)
+      continue;
+
+    const Info &Prev = Loc->second;
+    if (Cur.HasXnack != Prev.HasXnack || Cur.HasSramEcc != Prev.HasSramEcc)
+      return std::make_pair(Prev.TargetID, ID);
   }
   return std::nullopt;
-}
-
-bool isCompatibleTargetID(llvm::StringRef Provided, llvm::StringRef Requested) {
-  llvm::StringMap<bool> ProvidedFeatures, RequestedFeatures;
-  llvm::StringRef ProvidedProc =
-      *parseTargetIDWithFormatCheckingOnly(Provided, &ProvidedFeatures);
-  llvm::StringRef RequestedProc =
-      *parseTargetIDWithFormatCheckingOnly(Requested, &RequestedFeatures);
-  if (ProvidedProc != RequestedProc)
-    return false;
-  for (const auto &F : ProvidedFeatures) {
-    auto Loc = RequestedFeatures.find(F.first());
-    // The default (unspecified) value of a feature is 'All', which can match
-    // either 'On' or 'Off'.
-    if (Loc == RequestedFeatures.end())
-      return false;
-    // If a feature is specified, it must have exact match.
-    if (Loc->second != F.second)
-      return false;
-  }
-  return true;
 }
 
 std::string sanitizeTargetIDInFileName(llvm::StringRef TargetID) {

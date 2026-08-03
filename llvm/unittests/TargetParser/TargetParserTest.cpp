@@ -3120,12 +3120,12 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   }
 
   EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908:xnack+:sramecc-")
-                ->getCanonicalFeatureString(),
+                ->getCanonicalTargetIDString(),
             "gfx908:sramecc-:xnack+");
-  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908")->getCanonicalFeatureString(),
+  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908")->getCanonicalTargetIDString(),
             "gfx908");
   EXPECT_EQ(TargetID::parse(Triple("amdgcn-amd-amdpal"), "gfx908:xnack-")
-                ->getCanonicalFeatureString(),
+                ->getCanonicalTargetIDString(),
             "gfx908:xnack-");
   EXPECT_TRUE(TargetID::parse(AMDHSA, "").has_value());
   EXPECT_FALSE(TargetID::parse(AMDHSA, "gfxbogus").has_value());
