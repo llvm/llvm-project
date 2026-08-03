@@ -13,9 +13,12 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_CHARACTER_H
 #define FORTRAN_OPTIMIZER_BUILDER_CHARACTER_H
 
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
+#include "flang/Semantics/symbol.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 namespace fir {
 class FirOpBuilder;
@@ -239,6 +242,13 @@ fir::CharBoxValue convertCharacterKind(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
                                        fir::CharBoxValue srcBoxChar,
                                        int toKind);
+
+/// Given a symbol `sym` and a mlir::Value `val`, emit a memset to
+/// set `sym` to the value `val`.
+mlir::LLVM::MemsetOp emitMemset(fir::FirOpBuilder &builder, mlir::Location loc,
+                                Fortran::lower::AbstractConverter &converter,
+                                const Fortran::semantics::Symbol &sym,
+                                mlir::Value val);
 
 } // namespace fir::factory
 
