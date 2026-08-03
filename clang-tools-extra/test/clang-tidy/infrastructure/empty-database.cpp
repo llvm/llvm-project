@@ -1,3 +1,4 @@
+// REQUIRES: static-analyzer
 // UNSUPPORTED: system-windows
 
 // RUN: clang-tidy -checks='-*,clang-analyzer-*' -p %S/Inputs/empty-database %s 2>&1 | FileCheck %s

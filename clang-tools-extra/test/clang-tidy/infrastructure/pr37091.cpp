@@ -1,3 +1,4 @@
+// REQUIRES: static-analyzer
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 
