@@ -401,7 +401,7 @@ for.end:
 
 !134 = distinct !{!134, !135, !136}
 !135 = !{!"llvm.loop.vectorize.width", i32 4}
-!136 = !{!"llvm.loop.vectorize.enable", i1 true}
+!136 = !{!"llvm.loop.vectorize.enable"}
 
 define void @erfc_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @erfc_f32
@@ -427,7 +427,7 @@ for.end:
 
 !137 = distinct !{!137, !138, !139}
 !138 = !{!"llvm.loop.vectorize.width", i32 4}
-!139 = !{!"llvm.loop.vectorize.enable", i1 true}
+!139 = !{!"llvm.loop.vectorize.enable"}
 
 define void @cbrt_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @cbrt_f32
@@ -453,7 +453,7 @@ for.end:
 
 !140 = distinct !{!140, !141, !142}
 !141 = !{!"llvm.loop.vectorize.width", i32 4}
-!142 = !{!"llvm.loop.vectorize.enable", i1 true}
+!142 = !{!"llvm.loop.vectorize.enable"}
 
 define void @expm1_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @expm1_f32
@@ -479,7 +479,7 @@ for.end:
 
 !143 = distinct !{!143, !144, !145}
 !144 = !{!"llvm.loop.vectorize.width", i32 4}
-!145 = !{!"llvm.loop.vectorize.enable", i1 true}
+!145 = !{!"llvm.loop.vectorize.enable"}
 
 define void @log1p_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @log1p_f32
@@ -505,7 +505,7 @@ for.end:
 
 !146 = distinct !{!146, !147, !148}
 !147 = !{!"llvm.loop.vectorize.width", i32 4}
-!148 = !{!"llvm.loop.vectorize.enable", i1 true}
+!148 = !{!"llvm.loop.vectorize.enable"}
 
 define void @asinh_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @asinh_f32
@@ -531,7 +531,7 @@ for.end:
 
 !149 = distinct !{!149, !150, !151}
 !150 = !{!"llvm.loop.vectorize.width", i32 4}
-!151 = !{!"llvm.loop.vectorize.enable", i1 true}
+!151 = !{!"llvm.loop.vectorize.enable"}
 
 define void @acosh_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @acosh_f32
@@ -557,7 +557,7 @@ for.end:
 
 !152 = distinct !{!152, !153, !154}
 !153 = !{!"llvm.loop.vectorize.width", i32 4}
-!154 = !{!"llvm.loop.vectorize.enable", i1 true}
+!154 = !{!"llvm.loop.vectorize.enable"}
 
 define void @atanh_f32(ptr nocapture %varray) {
 ; CHECK-LABEL: @atanh_f32
@@ -583,7 +583,7 @@ for.end:
 
 !155 = distinct !{!155, !156, !157}
 !156 = !{!"llvm.loop.vectorize.width", i32 4}
-!157 = !{!"llvm.loop.vectorize.enable", i1 true}
+!157 = !{!"llvm.loop.vectorize.enable"}
 
 
 
@@ -621,7 +621,7 @@ for.end:
 
 !158 = distinct !{!158, !159, !160}
 !159 = !{!"llvm.loop.vectorize.width", i32 2}
-!160 = !{!"llvm.loop.vectorize.enable", i1 true}
+!160 = !{!"llvm.loop.vectorize.enable"}
 
 define void @erfc_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @erfc_f64
@@ -647,7 +647,7 @@ for.end:
 
 !161 = distinct !{!161, !162, !163}
 !162 = !{!"llvm.loop.vectorize.width", i32 2}
-!163 = !{!"llvm.loop.vectorize.enable", i1 true}
+!163 = !{!"llvm.loop.vectorize.enable"}
 
 define void @cbrt_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @cbrt_f64
@@ -673,7 +673,7 @@ for.end:
 
 !164 = distinct !{!164, !165, !166}
 !165 = !{!"llvm.loop.vectorize.width", i32 2}
-!166 = !{!"llvm.loop.vectorize.enable", i1 true}
+!166 = !{!"llvm.loop.vectorize.enable"}
 
 define void @expm1_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @expm1_f64
@@ -699,7 +699,7 @@ for.end:
 
 !167 = distinct !{!167, !168, !169}
 !168 = !{!"llvm.loop.vectorize.width", i32 2}
-!169 = !{!"llvm.loop.vectorize.enable", i1 true}
+!169 = !{!"llvm.loop.vectorize.enable"}
 
 define void @log1p_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @log1p_f64
@@ -725,7 +725,7 @@ for.end:
 
 !170 = distinct !{!170, !171, !172}
 !171 = !{!"llvm.loop.vectorize.width", i32 2}
-!172 = !{!"llvm.loop.vectorize.enable", i1 true}
+!172 = !{!"llvm.loop.vectorize.enable"}
 
 define void @asinh_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @asinh_f64
@@ -751,7 +751,7 @@ for.end:
 
 !173 = distinct !{!173, !174, !175}
 !174 = !{!"llvm.loop.vectorize.width", i32 2}
-!175 = !{!"llvm.loop.vectorize.enable", i1 true}
+!175 = !{!"llvm.loop.vectorize.enable"}
 
 define void @acosh_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @acosh_f64
@@ -777,7 +777,7 @@ for.end:
 
 !176 = distinct !{!176, !177, !178}
 !177 = !{!"llvm.loop.vectorize.width", i32 2}
-!178 = !{!"llvm.loop.vectorize.enable", i1 true}
+!178 = !{!"llvm.loop.vectorize.enable"}
 
 define void @atanh_f64(ptr nocapture %varray) {
 ; CHECK-LABEL: @atanh_f64
@@ -803,5 +803,5 @@ for.end:
 
 !179 = distinct !{!179, !180, !181}
 !180 = !{!"llvm.loop.vectorize.width", i32 2}
-!181 = !{!"llvm.loop.vectorize.enable", i1 true}
+!181 = !{!"llvm.loop.vectorize.enable"}
 
