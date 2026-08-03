@@ -26,42 +26,85 @@
 #include <cstdint>
 #include <future>
 #include <string>
+#include <type_traits>
 
 namespace llvm::orc::rt {
 
-/// Interface for running a main-like function (int(int argc, char *argv[])) in
-/// the executor.
+template <typename FnT> class Caller;
+
+/// Runtime-agnostic interface for invoking an executor-side operation with the
+/// signature RetT(ArgTs...).
 ///
-/// Given the address of the function to run and an argument vector, invokes the
-/// function in the executor and returns its integer result. Calls can be made
-/// asynchronously (delivering the result to an OnComplete continuation) or
-/// synchronously (blocking until the result is available). Concrete
-/// implementations (e.g. rt::sps::MainCaller) determine how the call reaches
-/// the executor.
-class MainCaller {
+/// Two call operators are provided: an asynchronous form that delivers the
+/// result to an OnComplete continuation, and a synchronous form that blocks
+/// until the result is available.
+///
+/// A Caller abstracts over how the operation is dispatched to the executor.
+/// Concrete implementations (e.g. rt::sps::Caller) supply the dispatch
+/// mechanism.
+template <typename RetT, typename... ArgTs> class Caller<RetT(ArgTs...)> {
 public:
-  virtual ~MainCaller();
+  using FnType = RetT(ArgTs...);
 
-  /// Asynchronously run the main-like function at MainFnAddr with the given
-  /// Args, delivering its result (or an error) to OnComplete.
-  virtual void operator()(unique_function<void(Expected<int64_t>)> OnComplete,
-                          ExecutorAddr MainFnAddr,
-                          ArrayRef<std::string> Args) = 0;
+  /// The result type produced by the executor-side function itself.
+  using CalleeRetT = RetT;
 
-  /// Run the main-like function at MainFnAddr with the given Args, blocking
-  /// until its result (or an error) is available.
-  Expected<int64_t> operator()(ExecutorAddr MainFnAddr,
-                               ArrayRef<std::string> Args) {
-    std::promise<MSVCPExpected<int64_t>> P;
+  /// The result type delivered to callers: Expected<RetT>, or Error when RetT
+  /// is void, so that dispatch failures can be reported alongside the result.
+  using ErrorRetT =
+      std::conditional_t<std::is_void_v<RetT>, Error, Expected<RetT>>;
+
+  virtual ~Caller() = default;
+
+  /// Asynchronously invoke the operation with the given Args, delivering its
+  /// result (or an error) to OnComplete.
+  virtual void operator()(unique_function<void(ErrorRetT)> OnComplete,
+                          ArgTs... Args) = 0;
+
+  /// Invoke the operation with the given Args, blocking until its result (or an
+  /// error) is available.
+  ErrorRetT operator()(ArgTs... Args) {
+    using PromiseValT = std::conditional_t<std::is_void_v<RetT>, MSVCPError,
+                                           MSVCPExpected<RetT>>;
+    std::promise<PromiseValT> P;
     auto F = P.get_future();
     this->operator()(
-        [P = std::move(P)](Expected<int64_t> R) mutable {
-          P.set_value(std::move(R));
-        },
-        MainFnAddr, Args);
+        [P = std::move(P)](ErrorRetT R) mutable { P.set_value(std::move(R)); },
+        std::move(Args)...);
     return F.get();
   }
 };
+
+/// Runtime-agnostic interface for running a main-like function
+/// (int(int argc, char *argv[])) in the executor.
+///
+/// The function to run is given by its ExecutorAddr, its arguments as an
+/// argument vector, and its int64_t result is returned.
+class MainCaller : public Caller<int64_t(ExecutorAddr, ArrayRef<std::string>)> {
+};
+
+/// Runtime-agnostic interface for running a void() function in the executor.
+///
+/// The function to run is given by its ExecutorAddr.
+///
+/// WARNING: This Caller is experimental and may be removed.
+class VoidVoidCaller : public Caller<void(ExecutorAddr)> {};
+
+/// Runtime-agnostic interface for running an int32_t() function in the
+/// executor.
+///
+/// The function to run is given by its ExecutorAddr.
+///
+/// WARNING: This Caller is experimental and may be removed.
+class Int32VoidCaller : public Caller<int32_t(ExecutorAddr)> {};
+
+/// Runtime-agnostic interface for running an int32_t(int32_t) function in the
+/// executor.
+///
+/// The function to run is given by its ExecutorAddr.
+///
+/// WARNING: This Caller is experimental and may be removed.
+class Int32Int32Caller : public Caller<int32_t(ExecutorAddr, int32_t)> {};
 
 } // namespace llvm::orc::rt
 

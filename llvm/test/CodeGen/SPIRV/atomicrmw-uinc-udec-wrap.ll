@@ -11,6 +11,7 @@
 ; CHECK-DAG: %[[#MemSem_SeqCst:]] = OpConstant %[[#Int]] 528
 ; CHECK-DAG: %[[#WrapVal:]] = OpConstant %[[#Int]] 42
 ; CHECK-DAG: %[[#Scope_CrossDevice:]] = OpConstantNull %[[#Int]]
+; CHECK-DAG: %[[#AllOnes:]] = OpConstant %[[#Int]] 4294967295
 
 ; CHECK-DAG: OpDecorate %[[#UIncWrapFn:]] LinkageAttributes "__spirv_AtomicUIncWrap" Import
 ; CHECK-DAG: OpDecorate %[[#UDecWrapFn:]] LinkageAttributes "__spirv_AtomicUDecWrap" Import
@@ -28,5 +29,24 @@ entry:
 define dso_local spir_func void @atomicrmw_udec_wrap() local_unnamed_addr {
 entry:
   %0 = atomicrmw udec_wrap ptr addrspace(1) @ui, i32 42 seq_cst
+  ret void
+}
+
+; CHECK:      %[[#Load:]] = OpLoad %[[#Int]] %[[#Pointer]] Aligned 4
+; CHECK:      OpBranch %[[#Loop:]]
+; CHECK:      %[[#Loop]] = OpLabel
+; CHECK:      %[[#Phi:]] = OpPhi %[[#Int]] %[[#Load]] %[[#Entry:]] %[[#PhiNext:]] %[[#Loop]]
+; CHECK:      %[[#And:]] = OpBitwiseAnd %[[#Int]] %[[#Phi]] %[[#Value]]
+; CHECK:      %[[#Select:]] = OpBitwiseXor %[[#Int]] %[[#And]] %[[#AllOnes]]
+; CHECK:      %[[#CmpXChg:]] = OpAtomicCompareExchange %[[#Int]] %[[#Ptr:]] %[[#Scope_CrossDevice]]
+; CHECK-SAME: %[[#MemSem_SequentiallyConsistent]] %[[#MemSem_SequentiallyConsistent]] %[[#Select]] %[[#Phi]]
+; CHECK:      %[[#Cond:]] = OpCompositeExtract %[[#Bool]] %[[#CmpXChgComposite:]] 1
+; CHECK:      %[[#PhiNext]] = OpCompositeExtract %[[#Int]] %[[#CmpXChgComposite]] 0
+; CHECK:      OpBranchConditional %[[#Cond]] %[[#Exit:]] %[[#Loop]]
+; CHECK:      %[[#Exit]] = OpLabel
+
+define dso_local spir_func void @atomicrmw_nand() local_unnamed_addr {
+entry:
+  %0 = atomicrmw nand ptr addrspace(1) @ui, i32 42 seq_cst
   ret void
 }

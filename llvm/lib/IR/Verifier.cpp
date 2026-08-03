@@ -117,6 +117,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1015,6 +1016,13 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
       Check(CurrentMD->getNumOperands() == 1,
             "Expected one operand for llvm.loop.distribute metadata",
             CurrentMD);
+
+    // Enforce the single-operand form of llvm.loop.vectorize.enable metadata.
+    if (CurrentMD->getNumOperands() > 0 &&
+        (CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.enable") ||
+         CurrentMD->getOperand(0).equalsStr("llvm.loop.vectorize.disable")))
+      Check(CurrentMD->getNumOperands() == 1,
+            "Expecting only the metadata name", CurrentMD);
 
     // Check these last, so we diagnose problems in operands first.
     Check(!CurrentMD->isTemporary(), "Expected no forward declarations!",
@@ -2006,10 +2014,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
     Check(Value, "long-double-type metadata requires a string argument");
     if (Value)
-      Check(Value->getString() == "ppc_fp128" ||
-                Value->getString() == "fp128" ||
-                Value->getString() == "x86_fp80" ||
-                Value->getString() == "double" || Value->getString() == "float",
+      Check(parseLongDoubleFormat(Value->getString()).has_value(),
             "invalid long-double-type metadata value", Op);
   }
 
