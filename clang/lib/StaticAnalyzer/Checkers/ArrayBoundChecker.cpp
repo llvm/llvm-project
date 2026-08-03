@@ -127,6 +127,10 @@ struct CheckFlags {
 
 class CheckResult;
 
+/// Checks the validity of accessing a memory region with extent \p Extent at
+/// offset \p Offset. The \p Flags influence the semantics of the check, in
+/// particular if `AcceptPastTheEnd` is true, then Offset == Extent is also
+/// accepted as valid.
 CheckResult checkBounds(ProgramStateRef State, SValBuilder &SVB, NonLoc Offset,
                         std::optional<NonLoc> Extent, CheckFlags Flags);
 
