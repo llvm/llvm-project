@@ -1155,6 +1155,15 @@ public:
     return nullptr;
   }
 
+  /// Retarget the reference used by the jump-table dispatch at the end of
+  /// \p InstrWindow from \p OldTarget to \p NewTarget. Targets that need
+  /// architecture-specific multi-instruction matching can override this hook.
+  virtual bool replaceJumpTableReference(
+      MutableArrayRef<MCInst> InstrWindow, const MCSymbol *OldTarget,
+      const MCSymbol *NewTarget, MCContext *Ctx) const {
+    return false;
+  }
+
   /// \brief Given a branch instruction try to get the address the branch
   /// targets. Return true on success, and the address in Target.
   virtual bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,

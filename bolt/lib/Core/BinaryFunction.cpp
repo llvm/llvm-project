@@ -4215,6 +4215,38 @@ void BinaryFunction::disambiguateJumpTables(
         continue;
       if (JumpTables.insert(JT).second)
         continue;
+
+      if (BC.isRISCV()) {
+        const uint64_t JTAddress = BC.MIB->getJumpTable(Inst);
+        const uint64_t JTOffset = JTAddress - JT->getAddress();
+        const auto LabelIt = JT->Labels.find(JTOffset);
+        if (LabelIt == JT->Labels.end()) {
+          BC.errs() << "BOLT-ERROR: failed to find RISC-V jump table label at "
+                    << "offset 0x" << Twine::utohexstr(JTOffset)
+                    << " in function " << *this << '\n';
+          exit(1);
+        }
+
+        const MCSymbol *OldJTLabel = LabelIt->second;
+        uint64_t NewJumpTableID = 0;
+        const MCSymbol *NewJTLabel;
+        std::tie(NewJumpTableID, NewJTLabel) =
+            BC.duplicateJumpTable(*this, JT, OldJTLabel);
+
+        MutableArrayRef<MCInst> InstrWindow(&*BB->begin(), &Inst + 1);
+        if (!BC.MIB->replaceJumpTableReference(
+                InstrWindow, OldJTLabel, NewJTLabel, BC.Ctx.get())) {
+          BC.errs() << "BOLT-ERROR: failed to retarget duplicated RISC-V jump "
+                       "table in function "
+                    << *this << '\n';
+          exit(1);
+        }
+
+        const uint16_t IndexReg = BC.MIB->getJumpTableIndexReg(Inst);
+        BC.MIB->setJumpTable(Inst, NewJumpTableID, IndexReg, AllocId);
+        continue;
+      }
+
       // This instruction is an indirect jump using a jump table, but it is
       // using the same jump table of another jump. Try all our tricks to
       // extract the jump table symbol and make it point to a new, duplicated JT

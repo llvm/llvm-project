@@ -17,6 +17,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -706,13 +707,16 @@ bool BinaryContext::analyzeJumpTable(
                       << " -> ");
     // Check if there's a proper relocation against the jump table entry.
     if (HasRelocations) {
+      const Relocation *Rel = getRelocationAt(EntryAddress);
+      const bool HasRISCVLabelDifference =
+          isRISCV() && Rel && Rel->Type == ELF::R_RISCV_ADD32;
       if (Type == JumpTable::JTT_PIC &&
-          !DataPCRelocations.count(EntryAddress)) {
+          !DataPCRelocations.count(EntryAddress) && !HasRISCVLabelDifference) {
         LLVM_DEBUG(
             dbgs() << "FAIL: JTT_PIC table, no relocation for this address\n");
         break;
       }
-      if (Type == JumpTable::JTT_NORMAL && !getRelocationAt(EntryAddress)) {
+      if (Type == JumpTable::JTT_NORMAL && !Rel) {
         LLVM_DEBUG(
             dbgs()
             << "FAIL: JTT_NORMAL table, no relocation for this address\n");
