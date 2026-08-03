@@ -222,22 +222,6 @@ class SPIRVLegalizePointerCastImpl {
     return std::make_pair(GEP, CurrentTy);
   }
 
-  // Returns the pointer operand of a load/store that uses a ptrcast.
-  static Value *getCastedPointerOperand(Instruction *MemI) {
-    if (auto *LI = dyn_cast<LoadInst>(MemI))
-      return LI->getPointerOperand();
-    if (auto *SI = dyn_cast<StoreInst>(MemI))
-      return SI->getPointerOperand();
-    if (auto *II = dyn_cast<IntrinsicInst>(MemI))
-      if (II->getIntrinsicID() == Intrinsic::spv_store)
-        return II->getArgOperand(1);
-    llvm_unreachable("Unexpected memory instruction being legalized.");
-  }
-
-  static bool isByteLayoutType(Type *Ty, LLVMContext &Ctx) {
-    return Ty == Type::getInt8Ty(Ctx);
-  }
-
   static IntrinsicInst *getResourceGetPointer(Value *Ptr) {
     if (auto *II = dyn_cast<IntrinsicInst>(Ptr))
       if (II->getIntrinsicID() == Intrinsic::spv_resource_getpointer)
@@ -245,8 +229,7 @@ class SPIRVLegalizePointerCastImpl {
     return nullptr;
   }
 
-  Value *gepByteOffset(IRBuilder<> &B, Value *BasePtr, Type *I8Ty,
-                       unsigned ByteOffset) {
+  Value *gepByteOffset(IRBuilder<> &B, Value *BasePtr, unsigned ByteOffset) {
     if (ByteOffset == 0)
       return BasePtr;
 
@@ -256,15 +239,13 @@ class SPIRVLegalizePointerCastImpl {
 
     Value *Handle = GetPtr->getOperand(0);
     Value *BaseOffset = GetPtr->getOperand(1);
-    Value *NewOffset = BaseOffset;
-    if (ByteOffset != 0) {
-      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
-        NewOffset = ConstantInt::get(CI->getType(),
-                                     CI->getZExtValue() + ByteOffset);
-      else
-        NewOffset = B.CreateAdd(
-            BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
-    }
+    Value *NewOffset;
+    if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
+      NewOffset =
+          ConstantInt::get(CI->getType(), CI->getZExtValue() + ByteOffset);
+    else
+      NewOffset = B.CreateAdd(
+          BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
     SmallVector<OperandBundleDef, 1> OpBundles;
     GetPtr->getOperandBundlesAsDefs(OpBundles);
     CallInst *NewPtr = B.CreateCall(GetPtr->getFunctionType(),
@@ -272,6 +253,7 @@ class SPIRVLegalizePointerCastImpl {
                                     {Handle, NewOffset}, OpBundles);
     NewPtr->setAttributes(GetPtr->getAttributes());
     NewPtr->setCallingConv(GetPtr->getCallingConv());
+    Type *I8Ty = Type::getInt8Ty(B.getContext());
     GR->buildAssignPtr(B, I8Ty, NewPtr);
     return NewPtr;
   }
@@ -302,38 +284,18 @@ class SPIRVLegalizePointerCastImpl {
     Type *I8Ty = Type::getInt8Ty(Ctx);
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
     Value *IntVal = bitcastScalarToInt(B, Src);
-    buildAssignType(B, IntVal->getType(), IntVal);
     unsigned NumBytes = DL.getTypeStoreSize(Src->getType());
 
     for (unsigned I = 0; I < NumBytes; ++I) {
       Value *Shifted =
           I == 0 ? IntVal
                  : B.CreateLShr(IntVal, ConstantInt::get(IntVal->getType(), 8 * I));
-      if (I != 0)
-        buildAssignType(B, IntVal->getType(), Shifted);
       Value *Byte = B.CreateTrunc(Shifted, I8Ty);
       buildAssignType(B, I8Ty, Byte);
-      Value *Ptr = gepByteOffset(B, Dst, I8Ty, I);
+      Value *Ptr = gepByteOffset(B, Dst, I);
       StoreInst *SI = B.CreateStore(Byte, Ptr);
       SI->setAlignment(commonAlignment(Alignment, I));
     }
-  }
-
-  void storeValueToByteLayout(IRBuilder<> &B, Value *Src, Value *Dst,
-                              Align Alignment) {
-    if (auto *VT = dyn_cast<FixedVectorType>(Src->getType())) {
-      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-      Type *I8Ty = Type::getInt8Ty(B.getContext());
-      unsigned ElemSize = DL.getTypeStoreSize(VT->getElementType());
-      for (unsigned I = 0; I < VT->getNumElements(); ++I) {
-        Value *Elem = extractScalarFromVector(B, Src, I);
-        Value *ElemPtr = gepByteOffset(B, Dst, I8Ty, I * ElemSize);
-        storeScalarToByteLayout(B, Elem, ElemPtr,
-                                commonAlignment(Alignment, I * ElemSize));
-      }
-      return;
-    }
-    storeScalarToByteLayout(B, Src, Dst, Alignment);
   }
 
   Value *loadScalarFromByteLayout(IRBuilder<> &B, Type *AccessTy, Value *Src,
@@ -346,7 +308,7 @@ class SPIRVLegalizePointerCastImpl {
     Value *IntVal = ConstantInt::get(IntTy, 0);
 
     for (unsigned I = 0; I < NumBytes; ++I) {
-      Value *Ptr = gepByteOffset(B, Src, I8Ty, I);
+      Value *Ptr = gepByteOffset(B, Src, I);
       LoadInst *LI = B.CreateLoad(I8Ty, Ptr);
       LI->setAlignment(commonAlignment(Alignment, I));
       buildAssignType(B, I8Ty, LI);
@@ -367,80 +329,105 @@ class SPIRVLegalizePointerCastImpl {
     return Result;
   }
 
-  Value *loadValueFromByteLayout(IRBuilder<> &B, Type *AccessTy, Value *Src,
-                                 Align Alignment) {
-    if (auto *VT = dyn_cast<FixedVectorType>(AccessTy)) {
-      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-      Type *I8Ty = Type::getInt8Ty(B.getContext());
-      unsigned ElemSize = DL.getTypeStoreSize(VT->getElementType());
-      SmallVector<Value *, 4> LoadedElements;
-      for (unsigned I = 0; I < VT->getNumElements(); ++I) {
-        Value *ElemPtr = gepByteOffset(B, Src, I8Ty, I * ElemSize);
-        Value *Elem = loadScalarFromByteLayout(
-            B, VT->getElementType(), ElemPtr,
-            commonAlignment(Alignment, I * ElemSize));
-        buildAssignType(B, VT->getElementType(), Elem);
-        LoadedElements.push_back(Elem);
-      }
-      return buildVectorFromLoadedElements(B, VT, LoadedElements);
-    }
-    return loadScalarFromByteLayout(B, AccessTy, Src, Alignment);
-  }
+  enum class ReinterpretKind { None, ByteWise, RetagDirect };
 
-  // Legalizes a reinterpretation ptrcast: the casted pointer's pointee type
-  // matches the access type but differs from the original pointer layout (e.g.
-  // byte-addressable i8 storage accessed as i32).
-  template <typename MemInstTy>
-  bool tryDirectReinterpretAccess(IRBuilder<> &B, Type *AccessTy,
-                                  Value *OriginalPtr, Value *CastedPtr,
-                                  Align Alignment, bool IsStore,
-                                  Value *StoreSrc, MemInstTy *BadMem) {
+  // Classifies a ptrcast reinterpretation: casted pointee matches the access
+  // type but differs from the original storage layout (e.g. i8 byte buffer as
+  // i32). ByteWise means multi-byte access must use per-byte i8 load/store.
+  ReinterpretKind classifyReinterpretAccess(IRBuilder<> &B, Type *AccessTy,
+                                            Value *OriginalPtr,
+                                            Value *CastedPtr) {
     Type *CastedElemTy = GR->findDeducedElementType(CastedPtr);
     if (!CastedElemTy || CastedElemTy != AccessTy)
-      return false;
+      return ReinterpretKind::None;
 
     Type *OriginalElemTy = GR->findDeducedElementType(OriginalPtr);
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-    if (OriginalElemTy && isByteLayoutType(OriginalElemTy, B.getContext()) &&
+    if (OriginalElemTy && OriginalElemTy == Type::getInt8Ty(B.getContext()) &&
         AccessTy->isSingleValueType() &&
-        DL.getTypeStoreSize(AccessTy) > 1) {
-      if (IsStore) {
-        storeValueToByteLayout(B, StoreSrc, OriginalPtr, Alignment);
+        DL.getTypeStoreSize(AccessTy) > 1)
+      return ReinterpretKind::ByteWise;
+
+    return ReinterpretKind::RetagDirect;
+  }
+
+  bool tryReinterpretLoad(IRBuilder<> &B, Type *AccessTy, Value *OriginalPtr,
+                          Value *CastedPtr, LoadInst *IllegalLoad) {
+    ReinterpretKind Kind =
+        classifyReinterpretAccess(B, AccessTy, OriginalPtr, CastedPtr);
+    if (Kind == ReinterpretKind::None)
+      return false;
+
+    Align Alignment = IllegalLoad->getAlign();
+    if (Kind == ReinterpretKind::ByteWise) {
+      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+      Value *Loaded;
+      if (auto *VT = dyn_cast<FixedVectorType>(AccessTy)) {
+        unsigned ElemSize = DL.getTypeStoreSize(VT->getElementType());
+        SmallVector<Value *, 4> LoadedElements;
+        for (unsigned I = 0; I < VT->getNumElements(); ++I) {
+          Value *ElemPtr = gepByteOffset(B, OriginalPtr, I * ElemSize);
+          LoadedElements.push_back(loadScalarFromByteLayout(
+              B, VT->getElementType(), ElemPtr,
+              commonAlignment(Alignment, I * ElemSize)));
+        }
+        Loaded = buildVectorFromLoadedElements(B, VT, LoadedElements);
       } else {
-        Value *Loaded =
-            loadValueFromByteLayout(B, AccessTy, OriginalPtr, Alignment);
+        Loaded = loadScalarFromByteLayout(B, AccessTy, OriginalPtr, Alignment);
         buildAssignType(B, AccessTy, Loaded);
-        GR->replaceAllUsesWith(BadMem, Loaded, /* DeleteOld= */ true);
-        DeadInstructions.push_back(BadMem);
+      }
+      GR->replaceAllUsesWith(IllegalLoad, Loaded, /* DeleteOld= */ true);
+      DeadInstructions.push_back(IllegalLoad);
+      return true;
+    }
+
+    GR->buildAssignPtr(B, AccessTy, OriginalPtr);
+    LoadInst *LI = B.CreateLoad(AccessTy, OriginalPtr);
+    LI->setAlignment(Alignment);
+    buildAssignType(B, AccessTy, LI);
+    GR->replaceAllUsesWith(IllegalLoad, LI, /* DeleteOld= */ true);
+    DeadInstructions.push_back(IllegalLoad);
+    return true;
+  }
+
+  bool tryReinterpretStore(IRBuilder<> &B, Type *AccessTy, Value *OriginalPtr,
+                           Value *CastedPtr, Value *StoreSrc, Align Alignment) {
+    ReinterpretKind Kind =
+        classifyReinterpretAccess(B, AccessTy, OriginalPtr, CastedPtr);
+    if (Kind == ReinterpretKind::None)
+      return false;
+
+    if (Kind == ReinterpretKind::ByteWise) {
+      const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
+      if (auto *VT = dyn_cast<FixedVectorType>(StoreSrc->getType())) {
+        unsigned ElemSize = DL.getTypeStoreSize(VT->getElementType());
+        for (unsigned I = 0; I < VT->getNumElements(); ++I) {
+          Value *Elem = extractScalarFromVector(B, StoreSrc, I);
+          Value *ElemPtr = gepByteOffset(B, OriginalPtr, I * ElemSize);
+          storeScalarToByteLayout(B, Elem, ElemPtr,
+                                  commonAlignment(Alignment, I * ElemSize));
+        }
+      } else {
+        storeScalarToByteLayout(B, StoreSrc, OriginalPtr, Alignment);
       }
       return true;
     }
 
-    GR->buildAssignPtr(B, CastedElemTy, OriginalPtr);
-    if (IsStore) {
-      StoreInst *SI = B.CreateStore(StoreSrc, OriginalPtr);
-      SI->setAlignment(Alignment);
-    } else {
-      LoadInst *LI = B.CreateLoad(AccessTy, OriginalPtr);
-      LI->setAlignment(Alignment);
-      buildAssignType(B, AccessTy, LI);
-      GR->replaceAllUsesWith(BadMem, LI, /* DeleteOld= */ true);
-      DeadInstructions.push_back(BadMem);
-    }
+    GR->buildAssignPtr(B, AccessTy, OriginalPtr);
+    StoreInst *SI = B.CreateStore(StoreSrc, OriginalPtr);
+    SI->setAlignment(Alignment);
     return true;
   }
 
   // Builds a legalized load from a pointer, drilling down through
   // memory layouts to find a compatible type. Load flags will be
-  // copied from |BadLoad|, which should be the load being legalized.
+  // copied from |IllegalLoad|, which should be the load being legalized.
   Value *buildLegalizedLoad(IRBuilder<> &B, Type *ElementType, Value *Source,
-                            LoadInst *BadLoad, Value *CastedPtr) {
+                            LoadInst *IllegalLoad, Value *CastedPtr) {
     auto ResultOpt = getPointerToFirstCompatibleType(
-        B, Source, BadLoad->getPointerOperandType(), ElementType, false);
+        B, Source, IllegalLoad->getPointerOperandType(), ElementType, false);
     if (!ResultOpt) {
-      if (tryDirectReinterpretAccess(
-              B, ElementType, Source, CastedPtr, BadLoad->getAlign(),
-              /*IsStore=*/false, /*StoreSrc=*/nullptr, BadLoad))
+      if (tryReinterpretLoad(B, ElementType, Source, CastedPtr, IllegalLoad))
         return nullptr;
       llvm_unreachable("Failed to load from aggregate: "
                        "Could not find compatible memory layout.");
@@ -455,19 +442,20 @@ class SPIRVLegalizePointerCastImpl {
 
     if (ElementType == CurrentTy) {
       LoadInst *LI = B.CreateLoad(ElementType, GEP);
-      LI->setAlignment(BadLoad->getAlign());
+      LI->setAlignment(IllegalLoad->getAlign());
       buildAssignType(B, ElementType, LI);
       return LI;
     }
     if (SVT && DVT)
-      return loadVectorFromVector(B, SVT, DVT, GEP, BadLoad->getAlign());
+      return loadVectorFromVector(B, SVT, DVT, GEP, IllegalLoad->getAlign());
     if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
-      return loadVectorFromArray(B, DVT, GEP, BadLoad->getAlign());
+      return loadVectorFromArray(B, DVT, GEP, IllegalLoad->getAlign());
     if (MAT && DVT && MAT->getElementType() == DVT->getElementType())
-      return loadVectorFromMatrixArray(B, DVT, GEP, MAT, BadLoad->getAlign());
+      return loadVectorFromMatrixArray(B, DVT, GEP, MAT, IllegalLoad->getAlign());
 
     llvm_unreachable("Failed to load from aggregate.");
   }
+
   Value *
   buildVectorFromLoadedElements(IRBuilder<> &B, FixedVectorType *TargetType,
                                 SmallVector<Value *, 4> &LoadedElements) {
@@ -527,6 +515,7 @@ class SPIRVLegalizePointerCastImpl {
     }
     return buildVectorFromLoadedElements(B, TargetType, LoadedElements);
   }
+
   // Loads elements from an array and constructs a vector.
   Value *loadVectorFromArray(IRBuilder<> &B, FixedVectorType *TargetType,
                              Value *Source, Align OriginalAlign) {
@@ -731,13 +720,11 @@ class SPIRVLegalizePointerCastImpl {
   // memory layouts to find a compatible type.
   void buildLegalizedStore(IRBuilder<> &B, Value *Src, Value *Dst,
                            Align Alignment, Value *CastedPtr,
-                           Instruction *BadStore) {
+                           Instruction *IllegalStore) {
     auto ResultOpt = getPointerToFirstCompatibleType(B, Dst, Dst->getType(),
                                                      Src->getType(), true);
     if (!ResultOpt) {
-      if (tryDirectReinterpretAccess(B, Src->getType(), Dst, CastedPtr,
-                                     Alignment,
-                                     /*IsStore=*/true, Src, BadStore))
+      if (tryReinterpretStore(B, Src->getType(), Dst, CastedPtr, Src, Alignment))
         return;
       llvm_unreachable("Failed to store to aggregate: "
                        "Could not find compatible memory layout.");
@@ -773,12 +760,11 @@ class SPIRVLegalizePointerCastImpl {
 
   // Transforms a store instruction (or SPV intrinsic) using a ptrcast as
   // operand into a valid logical SPIR-V store with no ptrcast.
-  void transformStore(IRBuilder<> &B, Instruction *BadStore, Value *Src,
-                      Value *Dst, Align Alignment) {
-    B.SetInsertPoint(BadStore);
-    buildLegalizedStore(B, Src, Dst, Alignment,
-                        getCastedPointerOperand(BadStore), BadStore);
-    DeadInstructions.push_back(BadStore);
+  void transformStore(IRBuilder<> &B, Instruction *IllegalStore, Value *Src,
+                      Value *Dst, Value *CastedOperand, Align Alignment) {
+    B.SetInsertPoint(IllegalStore);
+    buildLegalizedStore(B, Src, Dst, Alignment, CastedOperand, IllegalStore);
+    DeadInstructions.push_back(IllegalStore);
   }
 
   void legalizePointerCast(IntrinsicInst *II) {
@@ -798,7 +784,7 @@ class SPIRVLegalizePointerCastImpl {
 
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         transformStore(B, SI, SI->getValueOperand(), OriginalOperand,
-                       SI->getAlign());
+                       CastedOperand, SI->getAlign());
         continue;
       }
 
@@ -819,7 +805,7 @@ class SPIRVLegalizePointerCastImpl {
           if (ConstantInt *C = dyn_cast<ConstantInt>(Intrin->getOperand(3)))
             Alignment = Align(C->getZExtValue());
           transformStore(B, Intrin, Intrin->getArgOperand(0), OriginalOperand,
-                         Alignment);
+                         CastedOperand, Alignment);
           continue;
         }
       }
