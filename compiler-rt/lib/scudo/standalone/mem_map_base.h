@@ -110,9 +110,11 @@ public:
   constexpr ReservedMemory() = default;
 
   // Reserve a chunk of memory at a suggested address.
-  bool create(uptr Addr, uptr Size, const char *Name, uptr Flags = 0) {
+  bool create(uptr Addr, uptr Size, const char *Name, uptr Flags = 0,
+              uptr AlignmentPages = 1) {
     DCHECK(!isCreated());
-    return invokeImpl(&Derived::createImpl, Addr, Size, Name, Flags);
+    return invokeImpl(&Derived::createImpl, Addr, Size, Name, Flags,
+                      AlignmentPages);
   }
 
   // Release the entire reserved memory.
