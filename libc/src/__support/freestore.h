@@ -31,6 +31,28 @@ namespace LIBC_NAMESPACE_DECL {
 //
 // See TLSFTable in tlsf_table.h for the mathematical layout and bin mapping
 // logic.
+//
+// Generic memory workloads typically cluster around smaller allocation
+// requests, exhibiting an inverse relationship between request frequency
+// and block size. Furthermore, large allocations can suffer from severe
+// internal fragmentation if managed with overly coarse-grained binning.
+//
+// To accommodate these workload dynamics, this store organizes free blocks
+// into three specialized tiers, each employing a tailored management strategy:
+//
+// 1. Small Blocks (Exact-Fit Fast Path): Small blocks are maintained in linear,
+//    exact-size bins. When a matching block is available, fast-path allocations
+//    return an exact-fit block immediately in O(1) time without list traversal
+//    or block splitting.
+// 2. Medium Blocks (Two-Level Segregated Fit Table): Mid-sized blocks are
+//    managed across an exponential and linear bin grid. To preserve constant
+//    O(1) allocation time on the fast path, the allocator preferentially pops
+//    from an oversized bin first, accepting minor block splitting overhead to
+//    prevent memory waste while guaranteeing bounded search latency.
+// 3. Large Blocks (Best-Fit Trie): For the coldest, largest block sizes, blocks
+//    are stored in an ordered trie (when enabled). These allocations are
+//    serviced using logarithmic best-fit searches, prioritizing space
+//    efficiency and minimal fragmentation over immediate O(1) latency.
 template <typename CONFIG> class TLSFFreeStoreImpl {
 public:
   using Table = TLSFTable<CONFIG>;
