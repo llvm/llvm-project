@@ -1183,6 +1183,18 @@ public:
     if (!DiffChecks || DiffChecks->empty())
       return;
 
+    // From LangRef for @llvm.loop.dependence.[war|raw].mask:
+    //   > %elementSize is the size of the accessed elements in bytes. The
+    //   > %intrinsic %returns poison if the distance between %addrA and %addrB
+    //   > %is not a %multiple of %elementsize.
+    // There is no reason to expect the distance is a multiple of stride, so we
+    // shouldn't enable partial alias masking if there is a strided access
+    // pattern requiring run-time checks.
+    if (any_of(*DiffChecks, [](PointerDiffInfo Check) {
+          return Check.AccessSize != Check.AbsCommonStrideInBytes;
+        }))
+      return;
+
     [[maybe_unused]] auto HasPointerArgs = [](CallBase *CB) {
       return any_of(CB->args(), [](Value const *Arg) {
         return Arg->getType()->isPointerTy();
