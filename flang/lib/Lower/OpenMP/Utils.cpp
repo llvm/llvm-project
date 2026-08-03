@@ -707,7 +707,7 @@ static void processTileSizesFromOpenMPConstruct(
 // can happen when COLLAPSE counts loops that a transforming construct such as
 // TILE generates from the source DO loops. getNestedDoConstruct wraps this for
 // callers that require a DO construct and asserts when none is found.
-static pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval) {
   for (pft::Evaluation &nested : eval.getNestedEvaluations()) {
     // In an OpenMPConstruct there can be compiler directives:
     // 1 <<OpenMPConstruct>>
@@ -739,6 +739,23 @@ pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval) {
   if (!doConstruct)
     llvm_unreachable("Expected do loop to be in the nested evaluations");
   return doConstruct;
+}
+
+/// Return true if \p eval holds a metadirective.
+bool isMetadirectiveEval(lower::pft::Evaluation &eval) {
+  if (const auto *decl = eval.getIf<parser::OpenMPDeclarativeConstruct>())
+    return std::holds_alternative<parser::OmpMetadirectiveDirective>(decl->u);
+  if (const auto *ompConstruct = eval.getIf<parser::OpenMPConstruct>()) {
+    if (std::holds_alternative<parser::OmpDelimitedMetadirectiveDirective>(
+            ompConstruct->u))
+      return true;
+    if (const auto *standalone =
+            std::get_if<parser::OpenMPStandaloneConstruct>(&ompConstruct->u)) {
+      return std::holds_alternative<parser::OmpMetadirectiveDirective>(
+          standalone->u);
+    }
+  }
+  return false;
 }
 
 /// Populates the sizes vector with values if the given OpenMPConstruct

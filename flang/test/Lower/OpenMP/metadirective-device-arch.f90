@@ -95,7 +95,7 @@ end subroutine
 ! X86_64-NOT:     omp.parallel
 ! X86_64:         return
 subroutine test_begin_arch_multi_when()
-  integer :: x
+  integer, save :: x
   x = 0
   !$omp begin metadirective &
   !$omp & when(device={arch(aarch64)}: parallel) &
