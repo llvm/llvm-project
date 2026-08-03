@@ -550,7 +550,6 @@ set(files
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
   __locale_dir/support/llvm_libc.h
-  __locale_dir/support/mvs.h
   __locale_dir/support/netbsd.h
   __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
@@ -559,6 +558,7 @@ set(files
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/openbsd.h
   __locale_dir/support/windows.h
+  __locale_dir/support/zos.h
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
   __locale_dir/wstring_convert.h

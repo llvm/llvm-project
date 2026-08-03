@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___LOCALE_DIR_SUPPORT_MVS_H
-#define _LIBCPP___LOCALE_DIR_SUPPORT_MVS_H
+#ifndef _LIBCPP___LOCALE_DIR_SUPPORT_ZOS_H
+#define _LIBCPP___LOCALE_DIR_SUPPORT_ZOS_H
 
 #include <__config>
 #include <__cstddef/size_t.h>
@@ -317,4 +317,4 @@ _LIBCPP_DIAGNOSTIC_POP
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___LOCALE_DIR_SUPPORT_MVS_H
+#endif // _LIBCPP___LOCALE_DIR_SUPPORT_ZOS_H

@@ -1615,7 +1615,6 @@ module std {
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
       textual header "__locale_dir/support/llvm_libc.h"
-      textual header "__locale_dir/support/mvs.h"
       textual header "__locale_dir/support/netbsd.h"
       textual header "__locale_dir/support/no_locale/conversions.h"
       textual header "__locale_dir/support/no_locale/formatting.h"
@@ -1624,6 +1623,7 @@ module std {
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/openbsd.h"
       textual header "__locale_dir/support/windows.h"
+      textual header "__locale_dir/support/zos.h"
     }
     export *
   }

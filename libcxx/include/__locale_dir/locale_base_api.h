@@ -129,7 +129,7 @@
 #  elif defined(_AIX)
 #    include <__locale_dir/support/aix.h>
 #  elif defined(__MVS__)
-#    include <__locale_dir/support/mvs.h>
+#    include <__locale_dir/support/zos.h>
 #  else
 #    error "No known way to provide the locale base API on this platform"
 #  endif
