@@ -6756,8 +6756,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
 
 void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) const {
   llvm::errs() << "AnnotatedTokens(L=" << Line.Level << ", P=" << Line.PPLevel
-               << ", T=" << Line.Type << ", C=" << Line.IsContinuation
-               << "):\n";
+               << ", PS=" << Line.PPScopeLevel << ", T=" << Line.Type
+               << ", C=" << Line.IsContinuation << "):\n";
   const FormatToken *Tok = Line.First;
   while (Tok) {
     llvm::errs() << " I=" << Tok->IndentLevel << " M=" << Tok->MustBreakBefore

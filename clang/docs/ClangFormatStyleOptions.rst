@@ -5902,6 +5902,69 @@ the configuration (without a prefix: ``Auto``).
      # define BAR
      #endif
 
+.. _PPScopeIndent:
+
+**PPScopeIndent** (``PPDirectiveScopeIndentStyle``) :versionbadge:`clang-format 24` :ref:`¶ <PPScopeIndent>`
+  Whether preprocessor directives should follow the indentation of the scope
+  they appear in.
+
+  This is orthogonal to ``IndentPPDirectives``, which only indents
+  directives relative to each other; the offset selected here is added on
+  top of it, using ``IndentWidth`` rather than ``PPIndentWidth``. It has no
+  effect when ``IndentPPDirectives`` is ``AfterHash``, which keeps the hash
+  in the first column by design, or ``Leave``.
+
+  Only the directives themselves are moved: code guarded by a conditional is
+  not indented by that conditional. The closing ``#endif`` of a conditional
+  is always aligned with the ``#if`` that opened it, even when the braces in
+  between are unbalanced and the two are in different scopes.
+
+  Possible values:
+
+  * ``PPSIS_None`` (in configuration: ``None``)
+    Do not indent preprocessor directives to the scope of the surrounding
+    code.
+
+    .. code-block:: c++
+
+      void f() {
+        if (a) {
+      #pragma omp simd
+          for (int i = 0; i < 4; ++i) {
+          }
+        }
+      }
+
+  * ``PPSIS_Pragmas`` (in configuration: ``Pragmas``)
+    Indent only ``#pragma`` directives to the scope of the surrounding code.
+
+    .. code-block:: c++
+
+      void f() {
+        if (a) {
+          #pragma omp simd
+          for (int i = 0; i < 4; ++i) {
+          }
+        }
+      }
+
+  * ``PPSIS_All`` (in configuration: ``All``)
+    Indent all preprocessor directives to the scope of the surrounding code.
+
+    .. code-block:: c++
+
+      void f() {
+        if (a) {
+          #ifdef SIMD
+          #pragma omp simd
+          #endif
+          for (int i = 0; i < 4; ++i) {
+          }
+        }
+      }
+
+
+
 .. _PackArguments:
 
 **PackArguments** (``PackArgumentsStyle``) :versionbadge:`clang-format 23` :ref:`¶ <PackArguments>`

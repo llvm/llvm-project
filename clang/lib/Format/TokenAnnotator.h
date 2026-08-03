@@ -52,7 +52,7 @@ class AnnotatedLine {
 public:
   AnnotatedLine(const UnwrappedLine &Line)
       : First(Line.Tokens.front().Tok), Type(LT_Other), Level(Line.Level),
-        PPLevel(Line.PPLevel),
+        PPLevel(Line.PPLevel), PPScopeLevel(Line.PPScopeLevel),
         MatchingOpeningBlockLineIndex(Line.MatchingOpeningBlockLineIndex),
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
         InPPDirective(Line.InPPDirective),
@@ -180,6 +180,7 @@ public:
   LineType Type;
   unsigned Level;
   unsigned PPLevel;
+  unsigned PPScopeLevel;
   size_t MatchingOpeningBlockLineIndex;
   size_t MatchingClosingBlockLineIndex;
   bool InPPDirective;

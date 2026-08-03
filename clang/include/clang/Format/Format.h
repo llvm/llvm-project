@@ -4509,6 +4509,63 @@ struct FormatStyle {
   /// \version 13
   int PPIndentWidth;
 
+  /// Different ways to indent preprocessor directives relative to the scope of
+  /// the surrounding code.
+  enum PPDirectiveScopeIndentStyle : int8_t {
+    /// Do not indent preprocessor directives to the scope of the surrounding
+    /// code.
+    /// \code
+    ///   void f() {
+    ///     if (a) {
+    ///   #pragma omp simd
+    ///       for (int i = 0; i < 4; ++i) {
+    ///       }
+    ///     }
+    ///   }
+    /// \endcode
+    PPSIS_None,
+    /// Indent only ``#pragma`` directives to the scope of the surrounding code.
+    /// \code
+    ///   void f() {
+    ///     if (a) {
+    ///       #pragma omp simd
+    ///       for (int i = 0; i < 4; ++i) {
+    ///       }
+    ///     }
+    ///   }
+    /// \endcode
+    PPSIS_Pragmas,
+    /// Indent all preprocessor directives to the scope of the surrounding code.
+    /// \code
+    ///   void f() {
+    ///     if (a) {
+    ///       #ifdef SIMD
+    ///       #pragma omp simd
+    ///       #endif
+    ///       for (int i = 0; i < 4; ++i) {
+    ///       }
+    ///     }
+    ///   }
+    /// \endcode
+    PPSIS_All
+  };
+
+  /// Whether preprocessor directives should follow the indentation of the scope
+  /// they appear in.
+  ///
+  /// This is orthogonal to ``IndentPPDirectives``, which only indents
+  /// directives relative to each other; the offset selected here is added on
+  /// top of it, using ``IndentWidth`` rather than ``PPIndentWidth``. It has no
+  /// effect when ``IndentPPDirectives`` is ``AfterHash``, which keeps the hash
+  /// in the first column by design, or ``Leave``.
+  ///
+  /// Only the directives themselves are moved: code guarded by a conditional is
+  /// not indented by that conditional. The closing ``#endif`` of a conditional
+  /// is always aligned with the ``#if`` that opened it, even when the braces in
+  /// between are unbalanced and the two are in different scopes.
+  /// \version 24
+  PPDirectiveScopeIndentStyle PPScopeIndent;
+
   /// Different specifiers and qualifiers alignment styles.
   enum QualifierAlignmentStyle : int8_t {
     /// Don't change specifiers/qualifiers to either Left or Right alignment
@@ -6224,6 +6281,7 @@ struct FormatStyle {
            PackArguments == R.PackArguments &&
            PackConstructorInitializers == R.PackConstructorInitializers &&
            PackParameters == R.PackParameters &&
+           PPScopeIndent == R.PPScopeIndent &&
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&
