@@ -33,7 +33,6 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
-#include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -638,8 +637,6 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
   }
 
   Invalid = SemaRef.pushCodeSynthesisContext(Inst);
-  if (!Invalid)
-    atTemplateBegin(SemaRef.TemplateInstCallbacks, SemaRef, Inst);
 }
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
@@ -879,9 +876,6 @@ void Sema::popCodeSynthesisContext() {
 
 void Sema::InstantiatingTemplate::Clear() {
   if (!Invalid) {
-    atTemplateEnd(SemaRef.TemplateInstCallbacks, SemaRef,
-                  SemaRef.CodeSynthesisContexts.back());
-
     SemaRef.popCodeSynthesisContext();
     Invalid = true;
   }
@@ -2247,9 +2241,15 @@ TemplateInstantiator::TransformTemplateParmRefExpr(DeclRefExpr *E,
   auto [AssociatedDecl, Final] =
       TemplateArgs.getAssociatedDecl(NTTP->getDepth());
   UnsignedOrNone PackIndex = std::nullopt;
-  if (NTTP->isParameterPack()) {
-    assert(Arg.getKind() == TemplateArgument::Pack &&
-           "Missing argument pack");
+  if (NTTP->isParameterPack() ||
+      // In concept parameter mapping for fold expressions, packs that aren't
+      // expanded in place are treated as having non-pack dependency, so that
+      // a PackExpansionType won't prevent expanding the packs outside the
+      // TreeTransform. However, we still need to unpack the arguments during
+      // any template argument substitution, so we also check its FoundDecl.
+      (E->getFoundDecl() && E->getFoundDecl() != E->getDecl() &&
+       E->getFoundDecl()->isParameterPack())) {
+    assert(Arg.getKind() == TemplateArgument::Pack && "Missing argument pack");
 
     if (!getSema().ArgPackSubstIndex) {
       // We have an argument pack, but we can't select a particular argument

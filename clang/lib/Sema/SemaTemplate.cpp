@@ -1316,6 +1316,7 @@ bool Sema::AttachTypeConstraint(AutoTypeLoc TL,
         << NewConstrainedParm->getTypeSourceInfo()
                ->getTypeLoc()
                .getSourceRange();
+    NewConstrainedParm->setType(TL.getType());
     return true;
   }
   // FIXME: Concepts: This should be the type of the placeholder, but this is
@@ -2288,8 +2289,10 @@ DeclResult Sema::CheckClassTemplate(
 
   ProcessDeclAttributeList(S, NewClass, Attr);
 
-  if (PrevClassTemplate)
+  if (PrevClassTemplate) {
+    mergeDeclAttributes(NewTemplate, PrevClassTemplate);
     mergeDeclAttributes(NewClass, PrevClassTemplate->getTemplatedDecl());
+  }
 
   AddPushedVisibilityAttribute(NewClass);
   inferGslOwnerPointerAttribute(NewClass);

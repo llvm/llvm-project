@@ -344,9 +344,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // truncate the .debug_* sections to eight characters. PE/COFF doesn't allow
     // section names longer than eight bytes in executables - LLD uses the same
     // name length extension as in object files (where long names are allowed).
+    // Also 'lld-link' for hybrid object files if -marm64x is requested.
     if (Args.hasArg(options::OPT_gdwarf, options::OPT_gdwarf_2,
                     options::OPT_gdwarf_3, options::OPT_gdwarf_4,
-                    options::OPT_gdwarf_5, options::OPT_gdwarf_6))
+                    options::OPT_gdwarf_5, options::OPT_gdwarf_6,
+                    options::OPT_marm64x))
       Linker = "lld-link";
     else
       Linker = "link";
@@ -774,6 +776,37 @@ void MSVCToolChain::AddSystemIncludeWithSubfolder(
   addSystemInclude(DriverArgs, CC1Args, path);
 }
 
+void MSVCToolChain::AddMSVCStdlibMultilibIncludeArgs(
+    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    bool HonorNostdincxx) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc) ||
+      (HonorNostdincxx && DriverArgs.hasArg(options::OPT_nostdincxx)))
+    return;
+
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (getDriver().getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
+}
+
+void MSVCToolChain::AddMSVCStdlibIncludeArgs(const ArgList &DriverArgs,
+                                             ArgStringList &CC1Args) const {
+  AddMSVCStdlibMultilibIncludeArgs(DriverArgs, CC1Args,
+                                   /*HonorNostdincxx=*/true);
+
+  if (!DriverArgs.hasArg(options::OPT_nostdinc, options::OPT_nostdlibinc) &&
+      !DriverArgs.hasArg(options::OPT_nostdincxx) && !VCToolChainPath.empty())
+    addSystemInclude(DriverArgs, CC1Args,
+                     getSubDirectoryPath(llvm::SubDirectoryType::Include));
+}
+
 void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                               ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdinc))
@@ -822,17 +855,8 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
-  // Add multilib variant include paths in priority order.
-  for (const Multilib &M : getOrderedMultilibs()) {
-    if (M.isDefault())
-      continue;
-    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
-      SmallString<128> Dir(*StdlibIncDir);
-      llvm::sys::path::append(Dir, M.includeSuffix());
-      if (getDriver().getVFS().exists(Dir))
-        addSystemInclude(DriverArgs, CC1Args, Dir);
-    }
-  }
+  AddMSVCStdlibMultilibIncludeArgs(DriverArgs, CC1Args,
+                                   /*HonorNostdincxx=*/false);
 
   // Honor %INCLUDE% and %EXTERNAL_INCLUDE%. It should have essential search
   // paths set by vcvarsall.bat. Skip if the user expressly set any of the
@@ -927,7 +951,17 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void MSVCToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                  ArgStringList &CC1Args) const {
-  // FIXME: There should probably be logic here to find libc++ on Windows.
+  // MSVC STL paths are added from AddClangSystemIncludeArgs during normal
+  // compilation to preserve clang-cl header search order.
+  if (DriverArgs.hasArg(options::OPT_print_cxx_stdlib_include_dirs) &&
+      !DriverArgs.hasArg(options::OPT_stdlib_EQ))
+    AddMSVCStdlibIncludeArgs(DriverArgs, CC1Args);
+}
+
+StringRef MSVCToolChain::GetCXXStdlibName(const ArgList &DriverArgs) const {
+  if (!DriverArgs.hasArg(options::OPT_stdlib_EQ))
+    return "msvcstl";
+  return ToolChain::GetCXXStdlibName(DriverArgs);
 }
 
 VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,

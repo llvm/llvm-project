@@ -10,7 +10,6 @@ define void @test_wgmma_fence_sync_aligned() {
 ; CHECK-LABEL: test_wgmma_fence_sync_aligned(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    wgmma.fence.sync.aligned;
 ; CHECK-NEXT:    ret;
@@ -24,7 +23,6 @@ define void @test_wgmma_commit_group_sync_aligned() {
 ; CHECK-LABEL: test_wgmma_commit_group_sync_aligned(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    wgmma.commit_group.sync.aligned;
 ; CHECK-NEXT:    ret;
@@ -37,7 +35,6 @@ declare void @llvm.nvvm.wgmma.wait_group.sync.aligned(i64)
 define void @test_wgmma_wait_group_sync_aligned() {
 ; CHECK-LABEL: test_wgmma_wait_group_sync_aligned(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    wgmma.wait_group.sync.aligned 10;

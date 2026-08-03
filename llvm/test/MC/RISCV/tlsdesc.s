@@ -48,13 +48,13 @@ start:                                  # @start
 	lw   a0, t0, %tlsdesc_load_lo(a_symbol)(a4)
 # ERR: :[[#@LINE-1]]:2: error: invalid instruction, any one of the following would fix this:
 # ERR: :[[#@LINE-2]]:15: note: unexpected extra operand for instruction
-# ERR: :[[#@LINE-3]]:11: note: invalid operand for instruction
+# ERR: :[[#@LINE-3]]:11: note: expected '('
 # ERR: :[[#@LINE-4]]:11: note: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
 # ERR: :[[#@LINE-5]]:11: note: immediate must be an integer in the range [-2048, 2047]
 
 	addi a0, t0, %tlsdesc_add_lo(a_symbol)(a4) # ERR: :[[#@LINE]]:41: error: unexpected extra operand for instruction
-	addi a0, %tlsdesc_add_lo(a_symbol) # ERR: :[[#@LINE]]:11: error: invalid operand for instruction
-	addi x1, %tlsdesc_load_lo(a_symbol)(a0) # ERR: :[[#@LINE]]:11: error: invalid operand for instruction
+	addi a0, %tlsdesc_add_lo(a_symbol) # ERR: :[[#@LINE]]:11: error: register must be a GPR
+	addi x1, %tlsdesc_load_lo(a_symbol)(a0) # ERR: :[[#@LINE]]:11: error: register must be a GPR
 
 	jalr x5, 0(a1), %tlsdesc_hi(a_symbol)
 # ERR: :[[#@LINE-1]]:2: error: invalid instruction, any one of the following would fix this:

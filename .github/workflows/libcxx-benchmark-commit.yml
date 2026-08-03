@@ -2,19 +2,26 @@
 # This workflow is intended to be triggered manually or via the Github API. As such,
 # it requires several inputs that allow customizing its behavior.
 
-name: Benchmark libc++ commit
+name: "[libc++] Run benchmark suite against commit"
+run-name: "[libc++] Run benchmark suite against ${{ inputs.commit }} on ${{ inputs.lnt-machine }}"
 
 permissions:
   contents: read
 
 on:
-  # TODO: Support dispatching only to selected configurations.
   workflow_dispatch:
     inputs:
       commit:
         description: 'The libc++ commit to benchmark'
         required: true
         type: string
+      lnt-machine:
+        description: 'The LNT machine to run the benchmarks on'
+        required: true
+        type: choice
+        options:
+          - macos-26.5-arm64
+          - linux-x86_64
       benchmark-suite-version:
         description: 'The version of the benchmark suite to use (a LLVM monorepo SHA)'
         required: false
@@ -36,25 +43,58 @@ on:
         default: http://lnt.llvm.org
 
 jobs:
+  # Determine which configuration to run based on the `lnt-machine` input.
+  select-machine:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - name: Select the configuration to benchmark on
+        id: select
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          LNT_MACHINE: ${{ inputs.lnt-machine }}
+        with:
+          script: |
+            const MACHINES = [
+              {
+                'lnt-machine': 'macos-26.5-arm64',
+                runner: ['self-hosted', 'macOS', 'ARM64', '26', '26.5'],
+                cxx: 'clang++',
+                'running-on': 'macos',
+                'xcode-version': '26.5',
+              },
+              {
+                'lnt-machine': 'linux-x86_64',
+                runner: 'llvm-premerge-libcxx-runners',
+                cxx: 'clang++-22',
+                'running-on': 'linux',
+              },
+            ];
+
+            const requested = process.env.LNT_MACHINE;
+            const selected = MACHINES.filter(m => m['lnt-machine'] === requested);
+            if (selected.length === 0) {
+              const known = MACHINES.map(m => m['lnt-machine']).join(', ');
+              core.setFailed(`Unknown LNT machine '${requested}' (known machines: ${known})`);
+              return;
+            }
+
+            core.setOutput('matrix', JSON.stringify(selected));
+
   run-benchmarks:
+    needs:
+      - select-machine
     strategy:
       matrix:
-        include:
-          - lnt-machine: macos-26.5-arm64
-            runner: ["self-hosted", "macOS", "ARM64", "26", "26.5"]
-            cxx: clang++
-            install-python: false
-            install-macos-dependencies: true
-          - lnt-machine: linux-x86_64
-            runner: llvm-premerge-libcxx-runners
-            cxx: clang++-22
-            install-python: true
-            install-macos-dependencies: false
+        include: ${{ fromJSON(needs.select-machine.outputs.matrix) }}
       fail-fast: false
     runs-on: ${{ matrix.runner }}
+    env:
+      COMPILER: ${{ matrix.cxx }}
     steps:
       - name: Checkout the LLVM monorepo
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
           # We benchmark arbitrary historical commits, which requires the full history to be available.
@@ -62,27 +102,35 @@ jobs:
           fetch-tags: true
 
       - name: Install Python
-        if: ${{ matrix.install-python }}
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        if: ${{ matrix.running-on == 'linux' }} # installed via Homebrew on macOS
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: '3.14'
 
-      - name: Install Ninja and CMake
-        if: ${{ matrix.install-macos-dependencies }}
+      - name: Select Xcode
+        if: ${{ matrix.running-on == 'macos' }}
+        run: echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer" >> $GITHUB_ENV
+
+      - name: Install dependencies via Homebrew
+        if: ${{ matrix.running-on == 'macos' }}
         run: |
-          brew install ninja cmake
+          brew update
+          brew install ninja cmake python@3.14
+          echo "$(brew --prefix python@3.14)/bin" >> "$GITHUB_PATH"
 
       - name: Diagnose tools in use
         run: |
           cmake --version
           ninja --version
-          ${{ matrix.cxx }} --version
+          "${COMPILER}" --version
+          python3 --version
 
       - name: Run the benchmarks
         env:
           COMMIT: ${{ inputs.commit }}
           BENCHMARK_SUITE_VERSION: ${{ inputs.benchmark-suite-version }}
           FILTER: ${{ inputs.filter }}
+          LNT_MACHINE: ${{ matrix.lnt-machine }}
         run: |
           filter_arg=()
           if [ -n "${FILTER}" ]; then
@@ -90,8 +138,8 @@ jobs:
           fi
           libcxx/utils/ci/lnt/run-benchmarks                            \
             --test-suite-commit "${BENCHMARK_SUITE_VERSION}"            \
-            --machine ${{ matrix.lnt-machine }}                         \
-            --compiler ${{ matrix.cxx }}                                \
+            --machine "${LNT_MACHINE}"                                  \
+            --compiler "${COMPILER}"                                    \
             --benchmark-commit "${COMMIT}"                              \
             "${filter_arg[@]}"                                          \
             --output "${COMMIT}.json"
@@ -106,5 +154,5 @@ jobs:
         run: |
           libcxx/utils/ci/lnt/submit-benchmarks             \
             --lnt-url "${LNT_URL}"                          \
-            --test-suite libcxx2                            \
+            --test-suite libcxx                             \
             "${COMMIT}.json"

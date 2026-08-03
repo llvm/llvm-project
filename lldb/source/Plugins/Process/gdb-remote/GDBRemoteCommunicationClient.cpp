@@ -1179,7 +1179,7 @@ bool GDBRemoteCommunicationClient::GetGDBServerVersion() {
           } else if (name == "version") {
             llvm::StringRef major, minor;
             std::tie(major, minor) = value.split('.');
-            if (!major.getAsInteger(0, m_gdb_server_version))
+            if (!major.getAsInteger(BASE_10, m_gdb_server_version))
               success = true;
           }
         }
@@ -1347,11 +1347,11 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
         while (response.GetNameColonValue(name, value)) {
           if (name == "cputype") {
             // exception type in big endian hex
-            if (!value.getAsInteger(0, cpu))
+            if (!value.getAsInteger(BASE_10, cpu))
               ++num_keys_decoded;
           } else if (name == "cpusubtype") {
             // exception count in big endian hex
-            if (!value.getAsInteger(0, sub))
+            if (!value.getAsInteger(BASE_10, sub))
               ++num_keys_decoded;
           } else if (name == "arch") {
             arch_name = std::string(value);
@@ -1391,17 +1391,17 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
             if (byte_order != eByteOrderInvalid)
               ++num_keys_decoded;
           } else if (name == "ptrsize") {
-            if (!value.getAsInteger(0, pointer_byte_size))
+            if (!value.getAsInteger(BASE_10, pointer_byte_size))
               ++num_keys_decoded;
           } else if (name == "addressing_bits") {
-            if (!value.getAsInteger(0, m_low_mem_addressing_bits)) {
+            if (!value.getAsInteger(BASE_10, m_low_mem_addressing_bits)) {
               ++num_keys_decoded;
             }
           } else if (name == "high_mem_addressing_bits") {
-            if (!value.getAsInteger(0, m_high_mem_addressing_bits))
+            if (!value.getAsInteger(BASE_10, m_high_mem_addressing_bits))
               ++num_keys_decoded;
           } else if (name == "low_mem_addressing_bits") {
-            if (!value.getAsInteger(0, m_low_mem_addressing_bits))
+            if (!value.getAsInteger(BASE_10, m_low_mem_addressing_bits))
               ++num_keys_decoded;
           } else if (name == "os_version" ||
                      name == "version") // Older debugserver binaries used
@@ -1423,14 +1423,14 @@ bool GDBRemoteCommunicationClient::GetHostInfo(bool force) {
               ++num_keys_decoded;
           } else if (name == "default_packet_timeout") {
             uint32_t timeout_seconds;
-            if (!value.getAsInteger(0, timeout_seconds)) {
+            if (!value.getAsInteger(BASE_10, timeout_seconds)) {
               m_default_packet_timeout = seconds(timeout_seconds);
               SetPacketTimeout(m_default_packet_timeout);
               ++num_keys_decoded;
             }
           } else if (name == "vm-page-size") {
             int page_size;
-            if (!value.getAsInteger(0, page_size)) {
+            if (!value.getAsInteger(BASE_10, page_size)) {
               m_target_vm_page_size = page_size;
               ++num_keys_decoded;
             }
@@ -1687,10 +1687,10 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
       bool saw_permissions = false;
       while (success && response.GetNameColonValue(name, value)) {
         if (name == "start") {
-          if (!value.getAsInteger(16, addr_value))
+          if (!value.getAsInteger(BASE_16, addr_value))
             region_info.GetRange().SetRangeBase(addr_value);
         } else if (name == "size") {
-          if (!value.getAsInteger(16, addr_value)) {
+          if (!value.getAsInteger(BASE_16, addr_value)) {
             region_info.GetRange().SetByteSize(addr_value);
             if (region_info.GetRange().GetRangeEnd() <
                 region_info.GetRange().GetRangeBase()) {
@@ -1771,7 +1771,7 @@ Status GDBRemoteCommunicationClient::GetMemoryRegionInfo(
           region_info.SetDirtyPageList(dirty_page_list);
         } else if (name == "protection-key") {
           unsigned protection_key = 0;
-          if (!value.getAsInteger(10, protection_key))
+          if (!value.getAsInteger(BASE_10, protection_key))
             region_info.SetProtectionKey(protection_key);
         }
       }
@@ -1942,7 +1942,7 @@ std::optional<uint32_t> GDBRemoteCommunicationClient::GetWatchpointSlotCount() {
       llvm::StringRef value;
       while (response.GetNameColonValue(name, value)) {
         if (name == "num") {
-          value.getAsInteger(0, m_num_supported_hardware_watchpoints);
+          value.getAsInteger(BASE_10, m_num_supported_hardware_watchpoints);
           num = m_num_supported_hardware_watchpoints;
         }
       }
@@ -2144,27 +2144,27 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
     while (response.GetNameColonValue(name, value)) {
       if (name == "pid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        value.getAsInteger(0, pid);
+        value.getAsInteger(BASE_10, pid);
         process_info.SetProcessID(pid);
       } else if (name == "ppid") {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        value.getAsInteger(0, pid);
+        value.getAsInteger(BASE_10, pid);
         process_info.SetParentProcessID(pid);
       } else if (name == "uid") {
         uint32_t uid = UINT32_MAX;
-        value.getAsInteger(0, uid);
+        value.getAsInteger(BASE_10, uid);
         process_info.SetUserID(uid);
       } else if (name == "euid") {
         uint32_t uid = UINT32_MAX;
-        value.getAsInteger(0, uid);
+        value.getAsInteger(BASE_10, uid);
         process_info.SetEffectiveUserID(uid);
       } else if (name == "gid") {
         uint32_t gid = UINT32_MAX;
-        value.getAsInteger(0, gid);
+        value.getAsInteger(BASE_10, gid);
         process_info.SetGroupID(gid);
       } else if (name == "egid") {
         uint32_t gid = UINT32_MAX;
-        value.getAsInteger(0, gid);
+        value.getAsInteger(BASE_10, gid);
         process_info.SetEffectiveGroupID(gid);
       } else if (name == "triple") {
         StringExtractor extractor(value);
@@ -2199,9 +2199,9 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
           is_arg0 = false;
         }
       } else if (name == "cputype") {
-        value.getAsInteger(0, cpu);
+        value.getAsInteger(BASE_10, cpu);
       } else if (name == "cpusubtype") {
-        value.getAsInteger(0, sub);
+        value.getAsInteger(BASE_10, sub);
       } else if (name == "vendor") {
         vendor = std::string(value);
       } else if (name == "ostype") {
@@ -2280,10 +2280,10 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
       lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
       while (response.GetNameColonValue(name, value)) {
         if (name == "cputype") {
-          if (!value.getAsInteger(16, cpu))
+          if (!value.getAsInteger(BASE_16, cpu))
             ++num_keys_decoded;
         } else if (name == "cpusubtype") {
-          if (!value.getAsInteger(16, sub)) {
+          if (!value.getAsInteger(BASE_16, sub)) {
             ++num_keys_decoded;
             // Workaround for pre-2024 Apple debugserver, which always
             // returns arm64e on arm64e-capable hardware regardless of
@@ -2316,10 +2316,10 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           if (byte_order != eByteOrderInvalid)
             ++num_keys_decoded;
         } else if (name == "ptrsize") {
-          if (!value.getAsInteger(16, pointer_byte_size))
+          if (!value.getAsInteger(BASE_16, pointer_byte_size))
             ++num_keys_decoded;
         } else if (name == "pid") {
-          if (!value.getAsInteger(16, pid))
+          if (!value.getAsInteger(BASE_16, pid))
             ++num_keys_decoded;
         } else if (name == "elf_abi") {
           elf_abi = std::string(value);
@@ -2570,7 +2570,7 @@ bool GDBRemoteCommunicationClient::GetGroupName(uint32_t gid,
 static void MakeSpeedTestPacket(StreamString &packet, uint32_t send_size,
                                 uint32_t recv_size) {
   packet.Clear();
-  packet.Printf("qSpeedTest:response_size:%i;data:", recv_size);
+  packet.Printf("qSpeedTest:response_size:%x;data:", recv_size);
   uint32_t bytes_left = send_size;
   while (bytes_left > 0) {
     if (bytes_left >= 26) {
@@ -2772,9 +2772,9 @@ bool GDBRemoteCommunicationClient::LaunchGDBServer(
     llvm::StringRef value;
     while (response.GetNameColonValue(name, value)) {
       if (name == "port")
-        value.getAsInteger(0, port);
+        value.getAsInteger(BASE_10, port);
       else if (name == "pid")
-        value.getAsInteger(0, pid);
+        value.getAsInteger(BASE_10, pid);
       else if (name.compare("socket_name") == 0) {
         StringExtractor extractor(value);
         extractor.GetHexByteString(socket_name);
@@ -3589,7 +3589,7 @@ llvm::ErrorOr<llvm::MD5::MD5Result> GDBRemoteCommunicationClient::CalculateMD5(
     response.SetFilePos(response.GetFilePos() + part.size());
 
     uint64_t low;
-    if (part.getAsInteger(/*radix=*/16, low))
+    if (part.getAsInteger(BASE_16, low))
       return std::make_error_code(std::errc::illegal_byte_sequence);
 
     // Get high part
@@ -3600,7 +3600,7 @@ llvm::ErrorOr<llvm::MD5::MD5Result> GDBRemoteCommunicationClient::CalculateMD5(
     response.SetFilePos(response.GetFilePos() + part.size());
 
     uint64_t high;
-    if (part.getAsInteger(/*radix=*/16, high))
+    if (part.getAsInteger(BASE_16, high))
       return std::make_error_code(std::errc::illegal_byte_sequence);
 
     llvm::MD5::MD5Result result;
@@ -4004,11 +4004,11 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
       module_spec.GetArchitecture().SetTriple(triple.c_str());
     } else if (name == "file_offset") {
       uint64_t ival = 0;
-      if (!value.getAsInteger(16, ival))
+      if (!value.getAsInteger(BASE_16, ival))
         module_spec.SetObjectOffset(ival);
     } else if (name == "file_size") {
       uint64_t ival = 0;
-      if (!value.getAsInteger(16, ival))
+      if (!value.getAsInteger(BASE_16, ival))
         module_spec.SetObjectSize(ival);
     } else if (name == "file_path") {
       StringExtractor extractor(value);

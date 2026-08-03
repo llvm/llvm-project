@@ -30,6 +30,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   ConversionChecker.cpp
   CXXDeleteChecker.cpp
   CXXSelfAssignmentChecker.cpp
+  DanglingPtrDeref.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp
   DebugContainerModeling.cpp
@@ -143,6 +144,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   WebKit/RawPtrRefLambdaCapturesChecker.cpp
   WebKit/RawPtrRefLocalVarsChecker.cpp
   WebKit/RawPtrRefMemberChecker.cpp
+  WebKit/RawPtrRefSafetyModel.cpp
 
   LINK_LIBS
   clangAST

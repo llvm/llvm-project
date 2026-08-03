@@ -61,10 +61,9 @@ static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
   }
 }
 
-static MCCFIInstruction
-createScaledCFAInPrivateWave(const GCNSubtarget &ST,
-                             MCRegister DwarfStackPtrReg) {
-  assert(ST.enableFlatScratch());
+static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
+                                                     int64_t DwarfStackPtrReg) {
+  assert(ST.hasFlatScratchEnabled());
 
   // When flat scratch is enabled, the stack pointer is an address in the
   // private_lane DWARF address space (i.e. swizzled), but in order to
@@ -104,9 +103,9 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  MCRegister DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
+  int64_t DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
   MCCFIInstruction CFIInst =
-      ST.enableFlatScratch()
+      ST.hasFlatScratchEnabled()
           ? createScaledCFAInPrivateWave(ST, DwarfStackPtrReg)
           : (AspaceAlreadyDefined
                  ? MCCFIInstruction::createLLVMDefAspaceCfa(
