@@ -97,6 +97,28 @@ def FramePointerKindAttr : LLVM_Attr<"FramePointerKind", "framePointerKind"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FunctionEntryCountAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_FunctionEntryCountAttr
+    : LLVM_Attr<"FunctionEntryCount", "function_entry_count"> {
+  let summary = "LLVM function entry count profile metadata";
+  let description = [{
+    Models function-level `!prof` entry-count metadata. The `entry_count` field
+    stores the unsigned 64-bit counter bit pattern. The `count_type` field
+    defaults to real and selects whether the metadata is emitted as
+    `"function_entry_count"` or `"synthetic_function_entry_count"`. The optional
+    `imports` field stores the trailing import GUID operands used by ThinLTO
+    sample PGO.
+  }];
+  let parameters = (ins "uint64_t":$entry_count,
+                        DefaultValuedParameter<"ProfileCountType",
+                                               "ProfileCountType::Real">:$count_type,
+                        OptionalArrayRefParameter<"uint64_t">:$imports);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // Loop Attributes
 //===----------------------------------------------------------------------===//
 
@@ -1752,15 +1774,15 @@ def LLVM_MDConstantAttr : LLVM_Attr<"MDConstant", "md_const"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def LLVM_MDFuncAttr : LLVM_Attr<"MDFunc", "md_func"> {
-  let summary = "LLVM function-as-metadata";
+def LLVM_MDGlobalValueAttr : LLVM_Attr<"MDGlobalValue", "md_global_value"> {
+  let summary = "LLVM global value-as-metadata";
   let description = [{
-    References a function (or global) symbol as LLVM metadata, corresponding
-    to `llvm::ValueAsMetadata::get(function)` in LLVM IR.
+    References a symbol-backed global value as LLVM metadata, corresponding to
+    `llvm::ValueAsMetadata::get(value)` in LLVM IR.
 
     Example:
     ```mlir
-    #llvm.md_func<@my_kernel>
+    #llvm.md_global_value<@my_kernel>
     ```
   }];
   let parameters = (ins "FlatSymbolRefAttr":$name);
@@ -1772,7 +1794,7 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let description = [{
     Represents an LLVM metadata node. The operands
     can be any combination of metadata attributes: `#llvm.md_string`,
-    `#llvm.md_const`, `#llvm.md_func`, or nested `#llvm.md_node`.
+    `#llvm.md_const`, `#llvm.md_global_value`, or nested `#llvm.md_node`.
 
     Example:
     ```mlir
@@ -1784,8 +1806,13 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
 }
 
+def LLVM_MDNodeArrayAttr
+    : TypedArrayAttrBase<LLVM_MDNodeAttr,
+                         "array of #llvm.md_node attributes">;
+
 def LLVM_AnyMDAttr : AnyAttrOf<[
-    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDFuncAttr, LLVM_MDNodeAttr],
-    "LLVM metadata attribute (md_string, md_const, md_func, or md_node)">;
+    LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDGlobalValueAttr,
+    LLVM_MDNodeAttr],
+    "LLVM metadata attribute (md_string, md_const, md_global_value, or md_node)">;
 
 #endif // LLVMIR_ATTRDEFS

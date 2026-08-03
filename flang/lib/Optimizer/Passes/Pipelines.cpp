@@ -29,27 +29,6 @@ static llvm::cl::opt<bool> disableArgumentFakeUse("disable-argument-fake-use",
 
 namespace fir {
 
-template <typename F>
-void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
-  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareMapperOp,
-                     mlir::omp::DeclareReductionOp, mlir::omp::PrivateClauseOp,
-                     fir::GlobalOp>(pm, ctor);
-}
-
-template <typename F>
-void addPassToGPUModuleOperations(mlir::PassManager &pm, F ctor) {
-  mlir::OpPassManager &nestPM = pm.nest<mlir::gpu::GPUModuleOp>();
-  nestPM.addNestedPass<mlir::func::FuncOp>(ctor());
-  nestPM.addNestedPass<mlir::gpu::GPUFuncOp>(ctor());
-}
-
-template <typename F>
-void addNestedPassToAllTopLevelOperationsConditionally(
-    mlir::PassManager &pm, llvm::cl::opt<bool> &disabled, F ctor) {
-  if (!disabled)
-    addNestedPassToAllTopLevelOperations<F>(pm, ctor);
-}
-
 void addCanonicalizerPassWithoutRegionSimplification(mlir::OpPassManager &pm) {
   mlir::GreedyRewriteConfig config;
   config.setRegionSimplificationLevel(
@@ -66,18 +45,19 @@ void addCfgConversionPass(mlir::PassManager &pm,
       pm, disableCfgConversion, [&]() { return createCFGConversion(options); });
 }
 
-void addAVC(mlir::PassManager &pm, const llvm::OptimizationLevel &optLevel) {
-  ArrayValueCopyOptions options;
-  options.optimizeConflicts = optLevel.isOptimizingForSpeed();
-  addNestedPassConditionally<mlir::func::FuncOp>(
-      pm, disableFirAvc, [&]() { return createArrayValueCopyPass(options); });
-}
-
 void addMemoryAllocationOpt(mlir::PassManager &pm) {
   addNestedPassConditionally<mlir::func::FuncOp>(pm, disableFirMao, [&]() {
     return fir::createMemoryAllocationOpt(
         {dynamicArrayStackToHeapAllocation, arrayStackAllocationThreshold});
   });
+}
+
+void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays) {
+  fir::AllocationPlacementOptions options;
+  options.stackArrays = stackArrays;
+  options.smallArrayThresholdBytes = allocationPlacementSmallArraySize;
+  options.totalStackLimitBytes = allocationPlacementStackLimit;
+  pm.addPass(fir::createAllocationPlacement(options));
 }
 
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
@@ -205,12 +185,11 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   config.setRegionSimplificationLevel(
       mlir::GreedySimplifyRegionLevel::Disabled);
   pm.addPass(mlir::createCSEPass());
-  fir::addAVC(pm, pc.OptLevel);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createCharacterConversion);
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
-  if (pc.OptLevel.isOptimizingForSpeed()) {
+  if (pc.OptLevel != llvm::OptimizationLevel::O0) {
     // These passes may increase code size.
     pm.addPass(fir::createSimplifyIntrinsics());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
@@ -223,7 +202,9 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(mlir::createCSEPass());
 
-  if (pc.StackArrays)
+  if (enableAllocationPlacement)
+    fir::addAllocationPlacement(pm, pc.StackArrays);
+  else if (pc.StackArrays)
     pm.addPass(fir::createStackArrays());
   else
     fir::addMemoryAllocationOpt(pm);
@@ -235,22 +216,24 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(mlir::createCSEPass());
 
   // Run LICM after CSE, which may reduce the number of operations to hoist.
-  if (enableFirLICM && pc.OptLevel.isOptimizingForSpeed())
+  if (enableFirLICM && pc.OptLevel != llvm::OptimizationLevel::O0)
     pm.addPass(fir::createLoopInvariantCodeMotion());
 
   // Polymorphic types
   pm.addPass(fir::createPolymorphicOpConversion());
+  pm.addPass(fir::createSelectOpsConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
 
   // Optimize redundant array repacking operations,
   // if the source is known to be contiguous.
-  if (pc.OptLevel.isOptimizingForSpeed())
+  if (pc.OptLevel != llvm::OptimizationLevel::O0)
     pm.addPass(fir::createOptimizeArrayRepacking());
   pm.addPass(fir::createLowerRepackArraysPass());
   // Expand FIR operations that may use SCF dialect for their
   // implementation. This is a mandatory pass.
   pm.addPass(fir::createSimplifyFIROperations(
-      {/*preferInlineImplementation=*/pc.OptLevel.isOptimizingForSpeed()}));
+      {/*preferInlineImplementation=*/pc.OptLevel !=
+       llvm::OptimizationLevel::O0}));
 
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createStackReclaim);
@@ -264,7 +247,7 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
     pm.addPass(fir::createConvertComplexPow());
   pm.addPass(mlir::createCSEPass());
 
-  if (pc.OptLevel.isOptimizingForSpeed())
+  if (pc.OptLevel != llvm::OptimizationLevel::O0)
     pm.addPass(fir::createSetRuntimeCallAttributes());
 
   // Last Optimizer EP Callback
@@ -280,11 +263,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   EnableOpenMP enableOpenMP,
                                   const MLIRToLLVMPassPipelineConfig &config) {
   llvm::OptimizationLevel optLevel = config.OptLevel;
-  if (optLevel.getSpeedupLevel() > 0) {
+  if (optLevel != llvm::OptimizationLevel::O0) {
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createExpressionSimplification);
-  }
-  if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createSimplifyHLFIRIntrinsics(
@@ -295,7 +276,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
       pm, hlfir::createInlineElementals);
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createSeparateAllocatableAssign);
-  if (optLevel.isOptimizingForSpeed()) {
+  if (optLevel != llvm::OptimizationLevel::O0) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
     // Run SimplifyHLFIRIntrinsics pass late after CSE,
@@ -328,7 +309,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     });
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
-      {/*tryFusingAssignments=*/optLevel.isOptimizingForSpeed()}));
+      {/*tryFusingAssignments=*/optLevel != llvm::OptimizationLevel::O0}));
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
 
   hlfir::BufferizeHLFIROptions bufferizeOptions;
@@ -336,7 +317,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   // from hlfir.elemental lowering, if the result is an empty array.
   // This helps to avoid long running loops for elementals with
   // shapes like (0, HUGE).
-  if (optLevel.isOptimizingForSpeed())
+  if (optLevel != llvm::OptimizationLevel::O0)
     bufferizeOptions.optimizeEmptyElementals = true;
   pm.addPass(hlfir::createBufferizeHLFIR(bufferizeOptions));
   // Run hlfir.assign inlining again after BufferizeHLFIR,
@@ -346,7 +327,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   // TODO: we can remove the previous InlineHLFIRAssign, when
   // FIR AliasAnalysis is good enough to say that a temporary
   // array does not alias with any user object.
-  if (optLevel.isOptimizingForSpeed())
+  if (optLevel != llvm::OptimizationLevel::O0)
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createInlineHLFIRAssign);
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
@@ -406,7 +387,7 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          llvm::StringRef inputFilename) {
   pm.addPass(fir::createMIFOpConversion());
   fir::addBoxedProcedurePass(pm, config.EnableSafeTrampoline);
-  if (config.OptLevel.isOptimizingForSpeed() && config.AliasAnalysis &&
+  if (config.OptLevel != llvm::OptimizationLevel::O0 && config.AliasAnalysis &&
       !disableFirAliasTags && !useOldAliasTags)
     pm.addPass(fir::createAddAliasTags());
   addNestedPassToAllTopLevelOperations<PassConstructor>(
@@ -446,14 +427,15 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   // TODO: re-enable setNoAlias by default (when optimizing for speed) once
   // function specialization is fixed.
   bool setNoAlias = forceNoAlias;
-  bool setNoCapture = config.OptLevel.isOptimizingForSpeed();
+  bool setNoCapture = config.OptLevel != llvm::OptimizationLevel::O0;
+  bool setReadOnly = config.OptLevel != llvm::OptimizationLevel::O0;
 
   pm.addPass(fir::createFunctionAttr(
       {framePointerKind, config.InstrumentFunctionEntry,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
        config.Reciprocals, config.PreferVectorWidth, config.UseSampleProfile,
-       /*tuneCPU=*/"", setNoCapture, setNoAlias}));
+       /*tuneCPU=*/"", setNoCapture, setNoAlias, setReadOnly}));
 
   if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(
@@ -464,6 +446,11 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createEmitMIFGlobalCtors());
 
   if (config.EnableOpenMP && !config.EnableOpenMPSimd) {
+    // Since some math operations may be converted to function calls by the
+    // ConvertMathToFuncs pass, we need to mark them with the omp.declare_target
+    // attribute if they're called from a target region.
+    pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+
     // Remove all non target-related operations from host functions still
     // remaining at this point, if compiling for an OpenMP target device. This
     // is required before translating 'omp' dialect operations to LLVM IR.
@@ -484,6 +471,9 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
                                   MLIRToLLVMPassPipelineConfig &config,
                                   llvm::StringRef inputFilename) {
+  if (config.EnableOpenACC)
+    fir::acc::populateHLFIROpenACCPassPipeline(pm);
+
   fir::EnableOpenMP enableOpenMP = fir::EnableOpenMP::None;
   if (config.EnableOpenMP)
     enableOpenMP = fir::EnableOpenMP::Full;

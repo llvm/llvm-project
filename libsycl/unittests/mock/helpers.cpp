@@ -181,6 +181,33 @@ void mock::MockLiboffload::initDefault() {
         return OL_SUCCESS;
       });
 
+  ON_CALL(*this, olCreateContext)
+      .WillByDefault([this](size_t NumDevices, ol_device_handle_t *Devices,
+                            ol_context_handle_t *Context) -> ol_result_t {
+        if (!Devices || !Context)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
+        if (NumDevices == 0)
+          return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
+        for (size_t I = 0; I < NumDevices; ++I) {
+          if (!Devices[I])
+            return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        }
+
+        // Preserve the first device in payload for tests that may need to
+        // inspect what device set the context was created from.
+        *Context = mock::createDummyHandleWithData<ol_context_handle_t>(
+            reinterpret_cast<unsigned char *>(&Devices[0]), sizeof(Devices[0]));
+        return OL_SUCCESS;
+      });
+
+  ON_CALL(*this, olDestroyContext)
+      .WillByDefault([this](ol_context_handle_t Context) -> ol_result_t {
+        if (!Context)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        mock::releaseDummyHandle(Context);
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olCreateProgram)
       .WillByDefault([this](ol_device_handle_t Device, const void *ProgData,
                             size_t ProgDataSize,
@@ -300,12 +327,19 @@ void mock::MockLiboffload::initDefault() {
         return OL_SUCCESS;
       });
 
+  ON_CALL(*this, olSyncEvent)
+      .WillByDefault([this](ol_event_handle_t Event) -> ol_result_t {
+        if (!Event)
+          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        return OL_SUCCESS;
+      });
+
   ON_CALL(*this, olMemcpy)
       .WillByDefault([this](ol_queue_handle_t Queue, void *DstPtr,
                             ol_device_handle_t DstDevice, const void *SrcPtr,
                             ol_device_handle_t SrcDevice,
                             size_t Size) -> ol_result_t {
-        if (!Queue || !DstDevice || !DstDevice)
+        if (!Queue || !DstDevice || !SrcDevice)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
         if (!DstPtr || !SrcPtr)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);

@@ -354,6 +354,12 @@
 .attribute arch, "rv32i_smcntrpmf1p0"
 # CHECK: attribute      5, "rv32i2p1_smcntrpmf1p0"
 
+.attribute arch, "rv32i_smcsps0p19"
+# CHECK: attribute      5, "rv32i2p1_smcsps0p19"
+
+.attribute arch, "rv32i_sscsps0p19"
+# CHECK: attribute      5, "rv32i2p1_smcsps0p19_sscsps0p19"
+
 .attribute arch, "rv32i_smepmp1p0"
 # CHECK: attribute      5, "rv32i2p1_smepmp1p0"
 

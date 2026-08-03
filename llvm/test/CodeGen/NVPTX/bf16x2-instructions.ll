@@ -10,7 +10,6 @@ define <2 x bfloat> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 1073758080;
 ; CHECK-NEXT:    ret;

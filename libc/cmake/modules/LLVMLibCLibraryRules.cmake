@@ -80,43 +80,48 @@ function(get_all_object_file_deps result fq_deps_list)
   set(${result} ${all_deps} PARENT_SCOPE)
 endfunction()
 
+# Link bitcode inputs into a single LLVM IR module using llvm-link. Build
+# static archive library firstly and use this static archive library as
+# as llvm-link's input.
+# Usage:
+#     llvm_link_bitcode(
+#       target_name
+#       OUTPUT <output file path>
+#       INPUTS <input file path>
+#       DEPENDS <targets that must be built first>
+#     )
+function(llvm_link_bitcode target_name)
+  cmake_parse_arguments(
+    "ARG"
+    ""
+    "OUTPUT"
+    "INPUTS;DEPENDS"
+    ${ARGN}
+  )
+  add_custom_command(
+    OUTPUT ${ARG_OUTPUT}
+    COMMAND ${LIBC_LLVM_LINK} ${ARG_INPUTS} -o ${ARG_OUTPUT}
+    DEPENDS ${ARG_DEPENDS}
+    COMMENT "Linking bitcode ${ARG_OUTPUT}"
+  )
+  add_custom_target(${target_name} ALL DEPENDS ${ARG_OUTPUT})
+  set_target_properties(${target_name} PROPERTIES TARGET_FILE ${ARG_OUTPUT})
+endfunction(llvm_link_bitcode)
+
 # A rule to build a library from a collection of entrypoint objects and bundle
-# it in a single LLVM-IR bitcode file.
+# it in a single LLVM IR module.
 # Usage:
 #     add_bitcode_entrypoint_library(
+#       target_name
+#       base_target_name
 #       DEPENDS <list of add_entrypoint_object targets>
 #     )
 function(add_bitcode_entrypoint_library target_name base_target_name)
-  cmake_parse_arguments(
-    "ENTRYPOINT_LIBRARY"
-    "" # No optional arguments
-    "" # No single value arguments
-    "DEPENDS" # Multi-value arguments
-    ${ARGN}
+  llvm_link_bitcode(${target_name}
+    OUTPUT ${LIBC_LIBRARY_DIR}/${target_name}.bc
+    INPUTS $<TARGET_FILE:${base_target_name}>
+    DEPENDS ${base_target_name}
   )
-  if(NOT ENTRYPOINT_LIBRARY_DEPENDS)
-    message(FATAL_ERROR "'add_entrypoint_library' target requires a DEPENDS list "
-                        "of 'add_entrypoint_object' targets.")
-  endif()
-
-  get_fq_deps_list(fq_deps_list ${ENTRYPOINT_LIBRARY_DEPENDS})
-  get_all_object_file_deps(all_deps "${fq_deps_list}")
-
-  set(objects "")
-  foreach(dep IN LISTS all_deps)
-    set(object $<$<STREQUAL:$<TARGET_NAME_IF_EXISTS:${dep}>,${dep}>:$<TARGET_OBJECTS:${dep}>>)
-    list(APPEND objects ${object})
-  endforeach()
-
-  add_executable(${target_name} ${objects})
-  if(LIBC_TARGET_ARCHITECTURE_IS_SPIRV)
-      target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
-                      "-nostdlib" "-emit-llvm")
-  else()  
-      target_link_options(${target_name} PRIVATE "${LIBC_COMPILE_OPTIONS_DEFAULT}"
-                      "-r" "-nostdlib" "-flto" "-Wl,--lto-emit-llvm")
-  endif()
-  add_dependencies(${base_target_name} ${target_name})
 endfunction(add_bitcode_entrypoint_library)
 
 # A rule to build a library from a collection of entrypoint objects.

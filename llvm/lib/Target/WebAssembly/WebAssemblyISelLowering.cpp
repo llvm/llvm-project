@@ -152,7 +152,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
     setOperationAction(ISD::FMAXIMUM, T, Legal);
-    if (MVT(T).isVector()) {
+    if (Subtarget->hasSIMD128() && MVT(T).isVector()) {
       setOperationAction(ISD::PSEUDO_FMIN, T, Legal);
       setOperationAction(ISD::PSEUDO_FMAX, T, Legal);
     }
@@ -257,6 +257,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     if (Subtarget->hasFP16()) {
       setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::f16, Custom);
       setOperationAction(ISD::FP_ROUND, MVT::v4f16, Custom);
     }
 
@@ -2511,7 +2512,7 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                      SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   if (VT == MVT::v8f16) {
-    // BUILD_VECTOR can't handle FP16 operands since Wasm doesn't have a scaler
+    // BUILD_VECTOR can't handle FP16 operands since Wasm doesn't have a scalar
     // FP16 type, so cast them to I16s.
     MVT IVT = VT.changeVectorElementType(MVT::i16);
     SmallVector<SDValue, 8> NewOps;
@@ -2818,6 +2819,18 @@ SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,
 SDValue
 WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
                                                     SelectionDAG &DAG) const {
+  if (Op.getOpcode() == ISD::INSERT_VECTOR_ELT &&
+      Op.getValueType() == MVT::v8f16) {
+    // INSERT_VECTOR_ELT can't handle FP16 operands since Wasm doesn't have a
+    // scalar FP16 type, so cast them to I16s.
+    SDLoc DL(Op);
+    SDValue IntVector = DAG.getBitcast(MVT::v8i16, Op.getOperand(0));
+    SDValue IntElement = DAG.getBitcast(MVT::i16, Op.getOperand(1));
+    SDValue Inserted = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, MVT::v8i16,
+                                   IntVector, IntElement, Op.getOperand(2));
+    return DAG.getBitcast(MVT::v8f16, Inserted);
+  }
+
   // Allow constant lane indices, expand variable lane indices
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
   if (isa<ConstantSDNode>(IdxNode)) {

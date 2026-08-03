@@ -476,7 +476,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
   // If we're evaluating the initializer for a constexpr variable in C23, we may
   // only read other contexpr variables. Abort here since this one isn't
   // constexpr.
-  if (const auto *VD = dyn_cast_if_present<VarDecl>(S.EvaluatingDecl);
+  if (const auto *VD = S.EvaluatingDecl;
       VD && VD->isConstexpr() && S.getLangOpts().C23)
     return Invalid(S, OpPC);
 
@@ -731,15 +731,16 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK) {
   assert(Ptr.isLive());
   assert(!Ptr.isInitialized());
-  return DiagnoseUninitialized(S, OpPC, Ptr.isExtern(), Ptr.block(), AK);
+  return diagnoseUninitialized(S, OpPC, Ptr.isExtern(), Ptr.block(),
+                               Ptr.getLifetime(), AK);
 }
 
-bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
-                           const Block *B, AccessKinds AK) {
+bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
+                           const Block *B, Lifetime LT, AccessKinds AK) {
   if (S.checkingPotentialConstantExpression()) {
     // Extern and static member declarations might be initialized later.
     if (Extern)
@@ -762,11 +763,10 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
         // Diagnose as non-const read.
         diagnoseNonConstVariable(S, OpPC, VD);
       } else {
-        const SourceInfo &Loc = S.Current->getSource(OpPC);
         // Diagnose as "read of object outside its lifetime".
-        S.FFDiag(Loc, diag::note_constexpr_access_uninit)
+        S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
             << AK << /*IsIndeterminate=*/false;
-        S.Note(VD->getLocation(), diag::note_declared_at);
+        S.Note(VD->getFirstDecl()->getLocation(), diag::note_declared_at);
       }
       return false;
     }
@@ -783,7 +783,8 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
 
   if (!S.checkingPotentialConstantExpression()) {
     S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_uninit)
-        << AK << /*uninitialized=*/true << S.Current->getRange(OpPC);
+        << AK << /*uninitialized=*/(LT == Lifetime::Started)
+        << S.Current->getRange(OpPC);
     noteValueLocation(S, B);
   }
   return false;
@@ -836,7 +837,7 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   if (!CheckConstant(S, OpPC, B->getDescriptor()))
     return false;
   if (Desc.InitState != GlobalInitState::Initialized)
-    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B, AK_Read);
+    return diagnoseUninitialized(S, OpPC, B->isExtern(), B);
   if (!CheckTemporary(S, OpPC, B, AK_Read))
     return false;
   if (B->getDescriptor()->IsVolatile) {
@@ -858,10 +859,10 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   assert(!B->isExtern());
   const auto &Desc = *reinterpret_cast<const InlineDescriptor *>(B->rawData());
   const Descriptor *BlockDesc = B->getDescriptor();
+  if (!Desc.IsInitialized)
+    return diagnoseUninitialized(S, OpPC, /*Extern=*/false, B, Desc.LifeState);
   if (!CheckLifetime(S, OpPC, Desc.LifeState, B, AK_Read))
     return false;
-  if (!Desc.IsInitialized)
-    return DiagnoseUninitialized(S, OpPC, /*Extern=*/false, B, AK_Read);
   if (BlockDesc->IsVolatile) {
     if (!S.getLangOpts().CPlusPlus)
       return Invalid(S, OpPC);
@@ -917,7 +918,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!CheckActive(S, OpPC, Ptr, AK))
     return false;
   if (!Ptr.isInitialized())
-    return DiagnoseUninitialized(S, OpPC, Ptr, AK);
+    return diagnoseUninitialized(S, OpPC, Ptr, AK);
   if (!CheckLifetime(S, OpPC, Ptr, AK))
     return false;
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK))
@@ -985,7 +986,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!CheckLifetime(S, OpPC, Ptr, AK_Read))
     return false;
   if (!Ptr.isInitialized())
-    return DiagnoseUninitialized(S, OpPC, Ptr, AK_Read);
+    return diagnoseUninitialized(S, OpPC, Ptr, AK_Read);
   if (!CheckTemporary(S, OpPC, Ptr.block(), AK_Read))
     return false;
   if (!CheckMutable(S, OpPC, Ptr))
@@ -1571,10 +1572,7 @@ static bool diagnoseTypeIdField(InterpState &S, CodePtr OpPC,
       Ptr.asTypeidPointer().TypeInfoType->getAsRecordDecl());
   if (!R)
     return false;
-  const Record::Field *Field =
-      llvm::find_if(R->fields(), [=](const Record::Field &F) -> bool {
-        return F.Offset == Offset;
-      });
+  const Record::Field *Field = R->findField(Offset);
   if (!Field)
     return false;
 
@@ -1733,6 +1731,9 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!D->ElemRecord)
     return true;
 
+  if (S.getLangOpts().CPlusPlus26)
+    return true;
+
   if (D->ElemRecord->getNumVirtualBases() == 0)
     return true;
 
@@ -1888,8 +1889,8 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return false;
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
+  auto *Memory = new char[InterpFrame::allocSize(Func)];
+  auto *NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
@@ -1981,8 +1982,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
 
-  auto Memory = new char[InterpFrame::allocSize(Func)];
-  auto NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
+  auto *Memory = new char[InterpFrame::allocSize(Func)];
+  auto *NewFrame = new (Memory) InterpFrame(S, Func, S.PC, VarArgSize);
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
@@ -2060,6 +2061,7 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, PtrView TypePtr,
   return DynamicDecl != nullptr;
 }
 
+namespace {
 struct DynamicCastResult {
   UnsignedOrNone Offset = std::nullopt;
   bool Ambiguous = false;
@@ -2084,6 +2086,7 @@ struct DynamicCastResult {
     }
   }
 };
+} // namespace
 
 // Walk UP the type hierarchy, starting at the decl of R to find Needle.
 static DynamicCastResult findRecordBase(const ASTContext &Ctx, const Record *R,
@@ -2122,7 +2125,7 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
     return false;
 
   if (!Ptr.isInitialized())
-    return DiagnoseUninitialized(S, OpPC, Ptr, AK_Read);
+    return diagnoseUninitialized(S, OpPC, Ptr, AK_Read);
 
   // Our given pointer, limited by the base that's currently being initialized,
   // if any.
@@ -2282,7 +2285,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     return false;
   assert(DynamicDecl);
 
-  const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
+  const auto *StaticDecl = Func->getParentDecl();
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 
@@ -3076,7 +3079,7 @@ static bool castBackMemberPointer(InterpState &S,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength - 1;
   bool IsDerivedMember = NewPathLength != 0;
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), NewPathLength, NewPath);
 
   S.Stk.push<MemberPointer>(MemberPtr.atInstanceBase(BaseOffset, NewPathLength,
@@ -3092,7 +3095,7 @@ static bool appendToMemberPointer(InterpState &S,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength + 1;
 
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
   NewPath[OldPathLength] = cast<CXXRecordDecl>(BaseDecl);
 
@@ -3176,7 +3179,7 @@ bool CopyMemberPtrPath(InterpState &S, const RecordDecl *Entry,
   unsigned OldPathLength = MemberPtr.getPathLength();
   unsigned NewPathLength = OldPathLength + 1;
 
-  auto NewPath = S.allocMemberPointerPath(NewPathLength);
+  auto *NewPath = S.allocMemberPointerPath(NewPathLength);
   std::copy_n(MemberPtr.path(), OldPathLength, NewPath);
   NewPath[OldPathLength] = cast<CXXRecordDecl>(Entry);
 
@@ -3219,7 +3222,7 @@ bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
 }
 
 // FIXME: Would be nice to generate this instead of hardcoding it here.
-constexpr bool OpReturns(Opcode Op) {
+[[maybe_unused]] static constexpr bool OpReturns(Opcode Op) {
   return Op == OP_RetVoid || Op == OP_RetValue || Op == OP_NoRet ||
          Op == OP_RetSint8 || Op == OP_RetUint8 || Op == OP_RetSint16 ||
          Op == OP_RetUint16 || Op == OP_RetSint32 || Op == OP_RetUint32 ||

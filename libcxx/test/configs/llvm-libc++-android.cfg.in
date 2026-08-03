@@ -1,8 +1,6 @@
 # This testing configuration handles running the test suite against LLVM's
 # libc++ using adb on Android.
 
-lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
-
 import re
 import site
 

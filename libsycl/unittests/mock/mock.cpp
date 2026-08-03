@@ -50,6 +50,16 @@ ol_result_t olDestroyProgram(ol_program_handle_t Program) {
   return mock::getMockLiboffload().olDestroyProgram(Program);
 }
 
+ol_result_t olCreateContext(size_t NumDevices, ol_device_handle_t *Devices,
+                            ol_context_handle_t *Context) {
+  return mock::getMockLiboffload().olCreateContext(NumDevices, Devices,
+                                                   Context);
+}
+
+ol_result_t olDestroyContext(ol_context_handle_t Context) {
+  return mock::getMockLiboffload().olDestroyContext(Context);
+}
+
 ol_result_t olCreateQueue(ol_device_handle_t Device, ol_queue_handle_t *Queue) {
   return mock::getMockLiboffload().olCreateQueue(Device, Queue);
 }
@@ -93,6 +103,10 @@ ol_result_t olLaunchKernel(ol_queue_handle_t Queue, ol_device_handle_t Device,
   return mock::getMockLiboffload().olLaunchKernel(Queue, Device, Kernel,
                                                   LaunchSizeArgs, Properties,
                                                   NumArgs, ArgPtrs, ArgSizes);
+}
+
+ol_result_t olSyncEvent(ol_event_handle_t Event) {
+  return mock::getMockLiboffload().olSyncEvent(Event);
 }
 
 ol_result_t olMemcpy(ol_queue_handle_t Queue, void *DstPtr,
