@@ -12,6 +12,7 @@
 
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__format/buffer.h>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
