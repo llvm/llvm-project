@@ -5475,7 +5475,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
   if (EnableVPlanBasedStrideMV &&
       !CostCtx.L->getHeader()->getParent()->hasOptSize())
     RUN_VPLAN_PASS(VPlanTransforms::multiversionForUnitStridedMemOps, Plan,
-                   CostCtx, RecipeBuilder, Range, MemOps);
+                   CostCtx, Range, MemOps);
 
   // Widen unit-stride consecutive accesses, matching the legacy CM. Both
   // forward (stride +1) and reverse (stride -1) accesses are handled.
@@ -5545,8 +5545,8 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 }
 
 void VPlanTransforms::multiversionForUnitStridedMemOps(
-    VPlan &Plan, VPCostContext &CostCtx, VPRecipeBuilder &RecipeBuilder,
-    VFRange &Range, SmallVectorImpl<VPInstruction *> &MemOps) {
+    VPlan &Plan, VPCostContext &CostCtx, VFRange &Range,
+    SmallVectorImpl<VPInstruction *> &MemOps) {
   ScalarEvolution *SE = CostCtx.PSE.getSE();
   PredicatedScalarEvolution StrideMVPSE(*SE, const_cast<Loop &>(*CostCtx.L));
   SCEVUnionPredicate StridePredicates({}, *SE);

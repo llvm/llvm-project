@@ -591,9 +591,10 @@ struct VPlanTransforms {
 
   /// \p MemOps must be updated to contain ones that haven't been processed by
   /// the pass.
-  static void multiversionForUnitStridedMemOps(
-      VPlan &Plan, VPCostContext &CostCtx, VPRecipeBuilder &RecipeBuilder,
-      VFRange &Range, SmallVectorImpl<VPInstruction *> &MemOps);
+  static void
+  multiversionForUnitStridedMemOps(VPlan &Plan, VPCostContext &CostCtx,
+                                   VFRange &Range,
+                                   SmallVectorImpl<VPInstruction *> &MemOps);
 
   /// Make VPlan-based scalarization decision prior to delegating to the ones
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains
