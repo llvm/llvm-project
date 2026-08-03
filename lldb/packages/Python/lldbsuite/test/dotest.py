@@ -449,6 +449,8 @@ def parseOptionsAndInitTestdirs():
         configuration.lldb_platform_available_ports = args.lldb_platform_available_ports
     if platform_system == "Darwin" and args.apple_sdk:
         configuration.apple_sdk = args.apple_sdk
+    if args.timeout:
+        configuration.timeout = args.timeout
     if args.test_build_dir:
         configuration.test_build_dir = args.test_build_dir
     if args.lldb_module_cache_dir:
@@ -509,13 +511,16 @@ def registerFaulthandler():
 
     # lit kills a hung test with TerminateProcess on Windows, so the SIGTERM
     # handler above never runs and a timeout is reported with no indication of
-    # where it hung. Dump every thread's stack while the process is still alive.
-    try:
-        secs = float(os.environ.get("LLDB_TEST_STACK_DUMP_SECS", 300))
-    except ValueError:
-        secs = 300
-    if secs > 0:
-        faulthandler.dump_traceback_later(secs, exit=False)
+    # where it hung. Dump every thread's stack shortly before lit's own
+    # per-test timeout (--timeout, forwarded from lit's `maxIndividualTestTime`
+    # by lldbtest.py) would kill the process.
+    if configuration.timeout <= 0:
+        return
+
+    # Leave some headroom so the dump has time to reach lit's output before
+    # the process is terminated.
+    secs = max(1.0, configuration.timeout * 0.9)
+    faulthandler.dump_traceback_later(secs, exit=False)
 
 
 def setupSysPath():
