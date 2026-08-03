@@ -2696,8 +2696,7 @@ LogicalResult OperationLegalizer::legalizeWithFold(Operation *op) {
             "op '" + opName +
             "' folder rollback of IR modifications requested");
       }
-      rewriterImpl.resetState(
-          curState, std::string(op->getName().getStringRef()) + " folder");
+      rewriterImpl.resetState(curState, std::string(opName) + " folder");
       return failure();
     }
   }

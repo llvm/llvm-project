@@ -44,6 +44,22 @@ def FeatureAddressableLocalMemorySize65536 : SubtargetFeatureAddressableLocalMem
 def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMemorySize<163840>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
 
+// Whether each wavefront size mode is available on the hardware,
+// independent of the active mode.
+def FeatureSupportsWave32 : SubtargetFeature<"supports-wave32",
+  "SupportsWave32",
+  "true",
+  "Hardware supports wave32 mode",
+  [], InlineIgnore
+>;
+
+def FeatureSupportsWave64 : SubtargetFeature<"supports-wave64",
+  "SupportsWave64",
+  "true",
+  "Hardware supports wave64 mode",
+  [], InlineIgnore
+>;
+
 class SubtargetFeatureWavefrontSize <int ValueLog2> : SubtargetFeature<
   "wavefrontsize"#!shl(1, ValueLog2),
   "WavefrontSizeLog2",

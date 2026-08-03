@@ -14,7 +14,6 @@
 #include "NVPTXISelLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
-#include "NVPTXISelDAGToDAG.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
@@ -7779,7 +7778,7 @@ static void computeKnownBitsForLoadV(const SDValue Op, KnownBits &Known) {
     return;
 
   assert(Known.getBitWidth() == DestVT.getSizeInBits());
-  auto ElementBitWidth = NVPTXDAGToDAGISel::getFromTypeWidthForLoad(LD);
+  auto ElementBitWidth = getFromTypeWidthForLoad(LD);
   Known.Zero.setHighBits(Known.getBitWidth() - ElementBitWidth);
 }
 

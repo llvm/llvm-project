@@ -1051,7 +1051,7 @@ def __builtin_amdgcn_exp2_bf16 : AMDGPUBuiltin<"__bf16(__bf16)", [Const], "bf16-
 def __builtin_amdgcn_sin_bf16 : AMDGPUBuiltin<"__bf16(__bf16)", [Const], "bf16-trans-insts">;
 def __builtin_amdgcn_cos_bf16 : AMDGPUBuiltin<"__bf16(__bf16)", [Const], "bf16-trans-insts">;
 
-def __builtin_amdgcn_cvt_sr_pk_bf16_f32 : AMDGPUBuiltin<"_ExtVector<2, __bf16>(float, float, int)", [Const], "bf16-cvt-insts">;
+def __builtin_amdgcn_cvt_sr_pk_bf16_f32 : AMDGPUBuiltin<"_ExtVector<2, __bf16>(float, float, int)", [Const], "cvt-sr-pk-bf16-f32-inst">;
 def __builtin_amdgcn_cvt_sr_pk_f16_f32 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(float, float, int)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cvt_f16_fp8 : AMDGPUBuiltin<"_Float16(int, _Constant int)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cvt_f16_bf8 : AMDGPUBuiltin<"_Float16(int, _Constant int)", [Const], "gfx1250-insts">;

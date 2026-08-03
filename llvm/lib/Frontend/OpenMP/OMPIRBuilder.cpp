@@ -4650,6 +4650,16 @@ checkReductionInfos(ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
   }
 }
 
+// The atomic cross-team reduction fast path applies when every reduction in the
+// set can be represented by an atomicrmw. Clang only populates it for scalar
+// reductions with a supported atomic operator.
+static bool isAtomicableReductionSet(
+    ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos) {
+  return all_of(ReductionInfos, [](const OpenMPIRBuilder::ReductionInfo &RI) {
+    return static_cast<bool>(RI.AtomicReductionGen);
+  });
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
@@ -4791,6 +4801,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // copied back. (Basically RL, appropriately casted if necessary.)
   Value *RLForCopyBack = RL;
 
+  bool IsAtomicReduction =
+      IsTeamsReduction && isAtomicableReductionSet(ReductionInfos);
+
   if (!IsTeamsReduction) {
     Value *SarFuncCast =
         Builder.CreatePointerBitCastOrAddrSpaceCast(*SarFunc, FuncPtrTy);
@@ -4801,6 +4814,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     Function *Pv2Ptr = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2);
     Res = createRuntimeFunctionCall(Pv2Ptr, Args);
+  } else if (IsAtomicReduction) {
+    // Atomic cross-team reduction fast path: determine the team's main thread
+    // that is later to fold its value atomically into the mapped variable.
+    Function *IsMainThreadFn = getOrCreateRuntimeFunctionPtr(
+        RuntimeFunction::OMPRTL___kmpc_is_team_main_thread);
+    Res = createRuntimeFunctionCall(IsMainThreadFn, {});
   } else {
     CodeGenIP = Builder.saveIP();
     StructType *ReductionsBufferTy = StructType::create(
@@ -4939,6 +4958,19 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // Add emission of __kmpc_end_reduce{_nowait}(<gtid>);
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
+
+    // Atomic cross-team fast path: each team's main thread folds its
+    // team-reduced value directly into the mapped reduction variable with a
+    // single atomicrmw.
+    if (IsAtomicReduction) {
+      InsertPointOrErrorTy AfterIP = RI.AtomicReductionGen(
+          Builder.saveIP(), RI.ElementType, RI.Variable, RI.PrivateVariable);
+      if (!AfterIP)
+        return AfterIP.takeError();
+      Builder.restoreIP(*AfterIP);
+      continue;
+    }
+
     Type *ValueType = RI.ElementType;
     Value *RedValue = RI.Variable;
 
@@ -7487,10 +7519,8 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 
   // Use the above access group metadata to create loop level
   // metadata, which should be distinct for each loop.
-  ConstantAsMetadata *BoolConst =
-      ConstantAsMetadata::get(ConstantInt::getTrue(Type::getInt1Ty(Ctx)));
-  LoopMDList.push_back(MDNode::get(
-      Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"), BoolConst}));
+  LoopMDList.push_back(
+      MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable")}));
 
   if (Simdlen || Safelen) {
     // If both simdlen and safelen clauses are specified, the value of the
@@ -10583,8 +10613,44 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     CurMapType->addIncoming(FromMapType, FromBB);
     CurMapType->addIncoming(MemberMapType, ToElseBB);
 
-    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg, CurBeginArg,
-                               CurSizeArg,   CurMapType, CurNameArg};
+    // Propagate map-type-modifying bits from the outer map clause to each map
+    // inserted by the mapper.
+    //
+    // OpenMP 6.0:281:34: The effect of the mapper modifier is to remove the
+    // list item from the map clause and to apply the clauses specified in the
+    // declared mapper to the construct on which the map clause appears...
+    // If any modifier with the map-type-modifying property appears in the map
+    // clause then the effect is as if that modifier appears in each map clause
+    // specified in the declared mapper.
+    //
+    // Map-type-modifying bits: ALWAYS, DELETE, CLOSE, PRESENT.
+    // TODO: PRESENT is not propagated here yet. Doing so requires
+    // distinguishing pointee entries from the struct's own storage; it is
+    // handled in a follow-on.
+    Value *ImportedModifierBits = Builder.CreateAnd(
+        MapType,
+        Builder.getInt64(
+            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
+                OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
+                OpenMPOffloadMappingFlags::OMP_MAP_CLOSE)));
+    Value *CurMapTypeWithModifiers = Builder.CreateOr(
+        CurMapType, ImportedModifierBits, "omp.maptype.with.modifiers");
+
+    // ATTACH entries must not receive map-type-modifying bits: ATTACH|ALWAYS is
+    // reserved for the attach(always) map-type modifier, and other modifier
+    // bits (DELETE, CLOSE) have no meaning for an ATTACH entry.
+    auto RawType =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            Info->Types[I]);
+    constexpr uint64_t AttachBit =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    Value *FinalMapType =
+        (RawType & AttachBit) ? CurMapType : CurMapTypeWithModifiers;
+
+    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg,   CurBeginArg,
+                               CurSizeArg,   FinalMapType, CurNameArg};
 
     auto ChildMapperFn = CustomMapperCB(I);
     if (!ChildMapperFn)

@@ -684,6 +684,14 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         MIB.buildAnd(MaskedReg, SrcReg, MaskReg);
 
         if (NewSrcWidth == NewDstWidth) {
+          // Rekey OrigWidth from DstReg to MaskedReg so widenSignSensitiveOps
+          // still sees the narrow original width after replaceRegWith.
+          if (auto It = SignSensitiveInfo.OrigWidth.find(DstReg);
+              It != SignSensitiveInfo.OrigWidth.end()) {
+            unsigned W = It->second;
+            SignSensitiveInfo.OrigWidth.erase(It);
+            SignSensitiveInfo.OrigWidth.try_emplace(MaskedReg, W);
+          }
           MRI.replaceRegWith(DstReg, MaskedReg);
           TruncToRemove.push_back(&MI);
         } else {
