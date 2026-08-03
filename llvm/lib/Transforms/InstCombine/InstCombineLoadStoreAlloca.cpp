@@ -1294,6 +1294,9 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
   if (!SI.isUnordered())
     return false;
 
+  if (SI.isElementwise())
+    return false;
+
   // swifterror values can't be bitcasted.
   if (SI.getPointerOperand()->isSwiftError())
     return false;
