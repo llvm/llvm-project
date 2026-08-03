@@ -704,6 +704,13 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
   }];
 }
 
+def LifetimeSafetyNoescapeStrict
+    : DiagGroup<"lifetime-safety-noescape-strict", [LifetimeSafetyNoescape]> {
+  code Documentation = [{
+Enables stricter detection of [[clang::noescape]] annotation misuse (for example, through function calls).
+  }];
+}
+
 def LifetimeSafetyAnnotationPlacement
     : DiagGroup<"lifetime-safety-annotation-placement",
                 [LifetimeSafetyInapplicableLifetimebound,

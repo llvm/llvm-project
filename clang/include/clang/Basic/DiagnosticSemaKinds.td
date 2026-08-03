@@ -11102,6 +11102,7 @@ def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global st
 def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
+def note_lifetime_safety_escapes_through_call_here: Note<"escapes through this call">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
@@ -11144,6 +11145,11 @@ def note_lifetime_safety_suggestion_returned_here : Note<"param returned here">;
 def warn_lifetime_safety_noescape_escapes
     : Warning<"parameter is marked [[clang::noescape]] but escapes">,
       InGroup<LifetimeSafetyNoescape>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_noescape_escapes_through_call
+    : Warning<"parameter is marked [[clang::noescape]] but escapes">,
+      InGroup<LifetimeSafetyNoescapeStrict>,
       DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
