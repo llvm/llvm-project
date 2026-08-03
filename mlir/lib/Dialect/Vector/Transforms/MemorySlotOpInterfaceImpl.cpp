@@ -19,10 +19,10 @@
 //   * a static, same-rank `memref.subview` is exposed as a promotable sub-slice
 //     alias of the buffer's slot (via `PromotableAliaserInterface`): a read of
 //     the subview projects out of the vector value with
-//     `vector.extract_strided_slice`, and a write into it composes back into the
-//     value with `vector.insert_strided_slice`. This lets a buffer that is only
-//     ever accessed through static subviews promote as well, with partial and
-//     overlapping sub-writes composing in program order.
+//     `vector.extract_strided_slice`, and a write into it composes back into
+//     the value with `vector.insert_strided_slice`. This lets a buffer that is
+//     only ever accessed through static subviews promote as well, with partial
+//     and overlapping sub-writes composing in program order.
 //
 // Accesses that are not whole-(sub-)buffer -- dynamic offsets, rank-reducing or
 // non-unit-stride subviews, masked or partial transfers, non-zero transfer
@@ -256,7 +256,8 @@ struct SubViewOpAliasModel
                                      OpOperand & /*aliasedSlotPointerOperand*/,
                                      const MemorySlot & /*parentSlot*/,
                                      const MemorySlot &aliasSlot,
-                                     Value slotValue, OpBuilder &builder) const {
+                                     Value slotValue,
+                                     OpBuilder &builder) const {
     auto subView = cast<memref::SubViewOp>(op);
     SmallVector<int64_t> offsets = *getPromotableSubViewOffsets(subView);
     auto aliasVecType = cast<VectorType>(aliasSlot.elemType);
@@ -276,9 +277,8 @@ struct SubViewOpAliasModel
     auto subView = cast<memref::SubViewOp>(op);
     SmallVector<int64_t> offsets = *getPromotableSubViewOffsets(subView);
     SmallVector<int64_t> strides(offsets.size(), 1);
-    return vector::InsertStridedSliceOp::create(builder, op->getLoc(),
-                                                aliasValue, reachingDef, offsets,
-                                                strides)
+    return vector::InsertStridedSliceOp::create(
+               builder, op->getLoc(), aliasValue, reachingDef, offsets, strides)
         .getResult();
   }
 };
