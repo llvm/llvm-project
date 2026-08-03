@@ -360,6 +360,10 @@ public:
 
     // FIXME: 0 is a valid register unit.
     MCRegUnit LastSGPRFromVALU = static_cast<MCRegUnit>(0);
+
+    // Destination of the preceding XDL WMMA, for GFX1250 C-reuse detection.
+    Register PrevWMMAVDst;
+
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -390,6 +394,10 @@ public:
         State = DelayState();
       } else if (Type != OTHER) {
         DelayInfo Delay;
+        // GFX1250 C-reuse: back-to-back WMMAs into the same C register forward
+        // the accumulator in place, so the tied srcC read has no dependency.
+        bool IsWMMACReuse = ST->hasGFX1250Insts() && PrevWMMAVDst.isValid() &&
+                            SII->isXDLWMMA(MI);
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
@@ -397,6 +405,10 @@ public:
             // This creates the insertion of redundant delays. Hence, we have to
             // ignore this operand.
             if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 && Op.isTied())
+              continue;
+            // Skip the tied srcC of a GFX1250 C-reuse edge.
+            if (IsWMMACReuse && Op.isTied() &&
+                TRI->regsOverlap(Op.getReg(), PrevWMMAVDst))
               continue;
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               auto It = State.find(Unit);
@@ -443,6 +455,17 @@ public:
       // instructions on the assumption that they will usually have to be issued
       // twice?
       State.advance(Type, Cycles);
+
+      // Track the preceding XDL WMMA's dst for C-reuse; reset on anything else.
+      if (ST->hasGFX1250Insts()) {
+        if (SII->isXDLWMMA(MI)) {
+          const MachineOperand *VDst =
+              SII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+          PrevWMMAVDst = VDst ? VDst->getReg() : Register();
+        } else {
+          PrevWMMAVDst = Register();
+        }
+      }
 
       LLVM_DEBUG(dbgs() << "  State after " << MI; State.dump(TRI););
     }
