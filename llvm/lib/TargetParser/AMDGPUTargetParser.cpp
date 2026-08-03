@@ -529,11 +529,14 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["sad-insts"] = true;
     Features["qsad-insts"] = true;
     Features["mqsad-pk-insts"] = true;
+    Features["msad-insts"] = true;
+    Features["mqsad-insts"] = true;
     Features["cvt-pknorm-vop2-insts"] = true;
     Features["cvt-pknorm-vop3-insts"] = true;
     Features["image-insts"] = true;
     Features["extended-image-insts"] = true;
     Features["async-load-to-lds-insts"] = true;
+    Features["smem-prefetch-insts"] = true;
     break;
   case GK_GFX1251:
     Features["gfx1251-gemm-insts"] = true;
@@ -597,6 +600,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["async-load-to-lds-insts"] = true;
     Features["async-store-from-lds-insts"] = true;
     Features["asynccnt"] = true;
+    Features["smem-prefetch-insts"] = true;
     break;
   case GK_GFX1201:
   case GK_GFX1200:

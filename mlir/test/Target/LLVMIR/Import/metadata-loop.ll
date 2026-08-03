@@ -86,7 +86,7 @@ end:
 }
 
 !1 = distinct !{!1, !2, !3, !4, !5, !6, !7, !8}
-!2 = !{!"llvm.loop.vectorize.enable", i1 1}
+!2 = !{!"llvm.loop.vectorize.enable"}
 !3 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
 !4 = !{!"llvm.loop.vectorize.scalable.enable", i1 0}
 !5 = !{!"llvm.loop.vectorize.width", i32 16}

@@ -736,10 +736,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
-  const std::initializer_list<LLT> FPTypesPK16_64 = {S32, S64, S16, V2S16,
-                                                     V2S64};
+  const std::initializer_list<LLT> ExtendedFPTypesBase = {F32, F64};
+  const std::initializer_list<LLT> ExtendedFPTypes16 = {F32, F64, F16};
+  const std::initializer_list<LLT> ExtendedFPTypesPK16 = {F32, F64, F16, V2F16};
+  const std::initializer_list<LLT> ExtendedFPTypesPK16_64 = {F32, F64, F16,
+                                                             V2F16, V2F64};
 
-  const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
   const LLT MinExtendedFPTy = ST.has16BitInsts() ? F16 : F32;
   const LLT I1 = LLT::integer(1);
   const LLT I16 = LLT::integer(16);
@@ -989,10 +991,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       getActionDefinitionsBuilder({G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE,
                                    G_STRICT_FADD, G_STRICT_FMUL, G_STRICT_FMA})
           .legalFor({F32, F64});
-  auto &TrigActions = getActionDefinitionsBuilder({G_FSIN, G_FCOS})
-    .customFor({S32, S64});
-  auto &FDIVActions = getActionDefinitionsBuilder(G_FDIV)
-    .customFor({S32, S64});
+  auto &TrigActions =
+      getActionDefinitionsBuilder({G_FSIN, G_FCOS}).customFor({F32, F64});
+  auto &FDIVActions = getActionDefinitionsBuilder(G_FDIV).customFor({F32, F64});
 
   if (ST.has16BitInsts()) {
     if (ST.hasVOP3PInsts())
@@ -1000,8 +1001,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     else
       FPOpActions.legalFor({F16});
 
-    TrigActions.customFor({S16});
-    FDIVActions.customFor({S16});
+    TrigActions.customFor({F16});
+    FDIVActions.customFor({F16});
   }
 
   if (ST.hasAnyPackedFP32Ops()) {
@@ -1023,59 +1024,52 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
 
   if (ST.hasVOP3PInsts()) {
-    MinNumMaxNumIeee.legalFor(FPTypesPK16)
+    MinNumMaxNumIeee.legalFor(ExtendedFPTypesPK16)
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-        .clampMaxNumElements(0, S16, 2)
-        .clampScalar(0, S16, S64)
+        .clampMaxNumElements(0, F16, 2)
         .scalarize(0);
   } else if (ST.has16BitInsts()) {
-    MinNumMaxNumIeee.legalFor(FPTypes16).clampScalar(0, S16, S64).scalarize(0);
+    MinNumMaxNumIeee.legalFor(ExtendedFPTypes16).scalarize(0);
   } else {
-    MinNumMaxNumIeee.legalFor(FPTypesBase)
-        .clampScalar(0, S32, S64)
-        .scalarize(0);
+    MinNumMaxNumIeee.legalFor(ExtendedFPTypesBase).scalarize(0);
   }
 
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
   if (ST.hasAnyPackedFP64Ops()) {
-    MinNumMaxNum.customFor(FPTypesPK16_64)
+    MinNumMaxNum.customFor(ExtendedFPTypesPK16_64)
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-        .clampMaxNumElements(0, S16, 2)
-        .clampMaxNumElements(0, S64, 2)
-        .clampScalar(0, S16, S64)
+        .clampMaxNumElements(0, F16, 2)
+        .clampMaxNumElements(0, F64, 2)
         .scalarize(0);
   } else if (ST.hasVOP3PInsts()) {
-    MinNumMaxNum.customFor(FPTypesPK16)
-      .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-      .clampMaxNumElements(0, S16, 2)
-      .clampScalar(0, S16, S64)
-      .scalarize(0);
+    MinNumMaxNum.customFor(ExtendedFPTypesPK16)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, F16, 2)
+        .scalarize(0);
   } else if (ST.has16BitInsts()) {
-    MinNumMaxNum.customFor(FPTypes16)
-      .clampScalar(0, S16, S64)
-      .scalarize(0);
+    MinNumMaxNum.customFor(ExtendedFPTypes16).scalarize(0);
   } else {
-    MinNumMaxNum.customFor(FPTypesBase)
-      .clampScalar(0, S32, S64)
-      .scalarize(0);
+    MinNumMaxNum.customFor(ExtendedFPTypesBase).scalarize(0);
+  }
+
+  if (!ST.has16BitInsts()) {
+    MinNumMaxNumIeee.minScalar(0, F32);
+    MinNumMaxNum.minScalar(0, F32);
   }
 
   if (ST.hasVOP3PInsts())
     FPOpActions.clampMaxNumElementsStrict(0, F16, 2);
 
   FPOpActions.scalarize(0);
-  if (!ST.has16BitInsts())
+  TrigActions.scalarize(0);
+  FDIVActions.scalarize(0);
+  if (!ST.has16BitInsts()) {
     FPOpActions.minScalar(0, F32);
-
-  TrigActions
-    .scalarize(0)
-    .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
-
-  FDIVActions
-    .scalarize(0)
-    .clampScalar(0, ST.has16BitInsts() ? S16 : S32, S64);
+    TrigActions.minScalar(0, F32);
+    FDIVActions.minScalar(0, F32);
+  }
 
   auto &FNegAbs = getActionDefinitionsBuilder({G_FNEG, G_FABS});
   FNegAbs.legalFor(FPTypesPK16)
@@ -1104,12 +1098,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
     getActionDefinitionsBuilder(G_FFREXP)
-      .customFor({{S32, S32}, {S64, S32}, {S16, S16}, {S16, S32}})
-      .scalarize(0)
-      .lower();
+        .customFor({{F32, I32}, {F64, I32}, {F16, I16}, {F16, I32}})
+        .scalarize(0)
+        .lower();
 
     getActionDefinitionsBuilder(G_FMODF)
-        .lowerFor({S16, S32, S64})
+        .lowerFor({F16, F32, F64})
         .scalarize(0)
         .lower();
   } else {
@@ -1140,14 +1134,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
     getActionDefinitionsBuilder(G_FFREXP)
-      .customFor({{S32, S32}, {S64, S32}})
-      .scalarize(0)
-      .minScalar(0, S32)
-      .clampScalar(1, S32, S32)
-      .lower();
+        .customFor({{F32, I32}, {F64, I32}})
+        .scalarize(0)
+        .minScalar(0, F32)
+        .clampScalar(1, I32, I32)
+        .lower();
 
     getActionDefinitionsBuilder(G_FMODF)
-        .lowerFor({S32, S64})
+        .lowerFor({F32, F64})
         .scalarize(0)
         .lower();
   }
@@ -1191,20 +1185,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // Whether this is legal depends on the floating point mode for the function.
   auto &FMad = getActionDefinitionsBuilder(G_FMAD);
   if (ST.hasMadF16() && ST.hasMadMacF32Insts())
-    FMad.customFor({S32, S16});
+    FMad.customFor({F32, F16});
   else if (ST.hasMadMacF32Insts())
-    FMad.customFor({S32});
+    FMad.customFor({F32});
   else if (ST.hasMadF16())
-    FMad.customFor({S16});
+    FMad.customFor({F16});
   FMad.scalarize(0)
       .lower();
 
   auto &FRem = getActionDefinitionsBuilder(G_FREM);
   if (ST.has16BitInsts()) {
-    FRem.customFor({S16, S32, S64});
+    FRem.customFor({F16, F32, F64});
   } else {
-    FRem.minScalar(0, S32)
-        .customFor({S32, S64});
+    FRem.minScalar(0, F32).customFor({F32, F64});
   }
   FRem.scalarize(0);
 
@@ -1292,26 +1285,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .lower();
 
-  if (ST.has16BitInsts()) {
-    getActionDefinitionsBuilder(
-        {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
-        .legalFor({S16, S32, S64})
-        .clampScalar(0, S16, S64)
-        .scalarize(0);
-  } else if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS) {
-    getActionDefinitionsBuilder(
-        {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
-        .legalFor({S32, S64})
-        .clampScalar(0, S32, S64)
-        .scalarize(0);
-  } else {
-    getActionDefinitionsBuilder(
-        {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN})
-        .legalFor({S32})
-        .customFor({S64})
-        .clampScalar(0, S32, S64)
-        .scalarize(0);
-  }
+  auto &RoundingActions = getActionDefinitionsBuilder(
+      {G_INTRINSIC_TRUNC, G_FCEIL, G_INTRINSIC_ROUNDEVEN});
+  if (ST.has16BitInsts())
+    RoundingActions.legalFor({F16, F32, F64});
+  else if (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS)
+    RoundingActions.legalFor({F32, F64});
+  else
+    RoundingActions.legalFor({F32}).customFor({F64});
+
+  RoundingActions.scalarize(0);
+  if (!ST.has16BitInsts())
+    RoundingActions.minScalar(0, F32);
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .unsupportedFor({BufferFatPtr, BufferStridedPtr, RsrcPtr})
@@ -1375,22 +1360,24 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
-      .legalFor(ST.has16BitInsts(), {S16})
-      .customFor({S32, S16})
+      .legalFor(ST.has16BitInsts(), {F16})
+      .customFor({F32, F16})
       .scalarize(0)
       .lower();
 
   getActionDefinitionsBuilder(G_FEXP2)
-      .legalFor(ST.has16BitInsts(), {S16})
-      .customFor({S32, S64, S16})
+      .legalFor(ST.has16BitInsts(), {F16})
+      .customFor({F32, F64, F16})
       .scalarize(0)
       .lower();
 
-  auto &LogOps =
-      getActionDefinitionsBuilder({G_FLOG, G_FLOG10, G_FEXP, G_FEXP10});
-  LogOps.customFor({S32, S16, S64});
-  LogOps.clampScalar(0, MinScalarFPTy, S32)
-        .scalarize(0);
+  getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
+      .customFor({F16, F32})
+      .scalarize(0);
+
+  getActionDefinitionsBuilder({G_FEXP, G_FEXP10})
+      .customFor({F16, F32, F64})
+      .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder(G_CTPOP)
@@ -2270,19 +2257,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasIEEEMinimumMaximumInsts()) {
     getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
-        .legalFor(FPTypesPK16)
-        .clampMaxNumElements(0, S16, 2)
+        .legalFor(ExtendedFPTypesPK16)
+        .clampMaxNumElements(0, F16, 2)
         .scalarize(0);
   } else if (ST.hasVOP3PInsts()) {
     getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
-        .lowerFor({V2S16})
-        .clampMaxNumElementsStrict(0, S16, 2)
+        .lowerFor({V2F16})
+        .clampMaxNumElementsStrict(0, F16, 2)
         .scalarize(0)
         .lower();
   } else {
     getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
         .scalarize(0)
-        .clampScalar(0, S32, S64)
+        .clampScalar(0, F32, F64)
         .lower();
   }
 
@@ -3802,8 +3789,10 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
     auto CH = B.buildFConstant(Ty, IsLog10 ? ch_log10 : ch_log);
     auto CT = B.buildFConstant(Ty, IsLog10 ? ct_log10 : ct_log);
 
-    auto MaskConst = B.buildConstant(Ty, 0xfffff000);
-    auto YH = B.buildAnd(Ty, Y, MaskConst);
+    const LLT I32 = LLT::integer(32);
+    auto YInt = B.buildBitcast(I32, Y);
+    auto MaskConst = B.buildConstant(I32, 0xfffff000);
+    auto YH = B.buildBitcast(Ty, B.buildAnd(I32, YInt, MaskConst));
     auto YT = B.buildFSub(Ty, Y, YH, Flags);
     // This adds correction terms for which contraction may lead to an increase
     // in the error of the approximation, so disable it.
@@ -4236,8 +4225,10 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
     const float ch_exp10 = 0x1.a92000p+1f;
     const float cl_exp10 = 0x1.4f0978p-11f;
 
-    auto MaskConst = B.buildConstant(Ty, 0xfffff000);
-    auto XH = B.buildAnd(Ty, X, MaskConst);
+    const LLT I32 = LLT::integer(32);
+    auto XInt = B.buildBitcast(I32, X);
+    auto MaskConst = B.buildConstant(I32, 0xfffff000);
+    auto XH = B.buildBitcast(Ty, B.buildAnd(I32, XInt, MaskConst));
     auto XL = B.buildFSub(Ty, X, XH, Flags);
 
     auto CH = B.buildFConstant(Ty, IsExp10 ? ch_exp10 : ch_exp);

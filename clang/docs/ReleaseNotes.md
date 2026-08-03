@@ -418,6 +418,12 @@ features cannot lower the translation-unit ABI level;
   libstdc++15 has been extended to support preprocessed input. Previously, splitting the preprocessing and
   compilation step would result in the fix not being applied. (#GH160314)
 
+- A defaulted copy or move assignment operator for a union was left with an
+  empty body and copied nothing when the operator was actually called, for
+  example through a pointer to member. Clang now synthesizes a whole-object
+  copy so the union's object representation is copied, matching the defaulted
+  union copy constructor.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -540,6 +546,8 @@ features cannot lower the translation-unit ABI level;
 
 - Added parsing and semantic support for `dims` modifier in `num_teams` and
   `thread_limit` clauses for OpenMP 6.1 or later.
+- Map-type-modifying modifiers applied to a list item with a user-defined mapper
+  are now propagated onto the maps the mapper expands to.
 
 ### SYCL Support
 
