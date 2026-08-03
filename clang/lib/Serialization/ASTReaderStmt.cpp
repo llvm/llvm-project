@@ -547,7 +547,8 @@ void ASTStmtReader::VisitCXXReflectExpr(CXXReflectExpr *E) {
   E->Kind = static_cast<ReflectionKind>(Record.readInt());
   switch (E->Kind) {
   case ReflectionKind::Null:
-    assert(false && "null reflection can't be constructed from parsing a reflection operand");
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
     E->Operand = nullptr;
     break;
   case ReflectionKind::Type:

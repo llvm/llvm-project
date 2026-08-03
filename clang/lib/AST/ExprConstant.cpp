@@ -11251,16 +11251,17 @@ public:
 bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   switch (E->getKind()) {
   case ReflectionKind::Null: {
-    assert(false && "null reflection can't be constructed from parsing a reflection operand");
-    APValue ReflectionValue(ReflectionKind::Null, /*Operand=*/nullptr);
-    return Success(ReflectionValue, E);
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return false;
   }
   case ReflectionKind::Type: {
     APValue ReflectionValue(ReflectionKind::Type, E->getOpaqueValue());
     return Success(ReflectionValue, E);
   }
   }
-  llvm_unreachable("invalid reflection");
+  assert(false && "unknown or unimplemented reflection entities");
+  return false;
 }
 
 bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {

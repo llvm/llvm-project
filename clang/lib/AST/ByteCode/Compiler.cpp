@@ -4527,13 +4527,17 @@ bool Compiler<Emitter>::VisitCXXReflectExpr(const CXXReflectExpr *E) {
     return true;
 
   switch (E->getKind()) {
+  case ReflectionKind::Null: {
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
+    return false;
+  }
   case ReflectionKind::Type: {
     return this->emitReflectValue(E->getKind(), E->getOpaqueValue(), E);
   }
-  case ReflectionKind::Null:
-    llvm_unreachable("A null reflection should not reach here");
   }
 
+  assert(false && "unknown or unimplemented reflection entities");
   return false;
 }
 

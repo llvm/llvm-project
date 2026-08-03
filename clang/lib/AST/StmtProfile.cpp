@@ -2243,7 +2243,8 @@ void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   ID.AddInteger(static_cast<int>(E->getKind()));
   switch (E->getKind()) {
   case ReflectionKind::Null:
-    assert(false && "null reflection can't be constructed from parsing a reflection operand");
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
     return;
   case ReflectionKind::Type: {
     QualType QT = E->getTypeSourceInfo()->getType();

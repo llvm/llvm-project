@@ -482,7 +482,8 @@ void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
   Record.push_back(static_cast<uint64_t>(E->getKind()));
   switch (E->getKind()) {
   case ReflectionKind::Null:
-    assert(false && "null reflection can't be constructed from parsing a reflection operand");
+    assert(false && "null reflection can't be constructed from parsing a "
+                    "reflection operand");
     break;
   case ReflectionKind::Type:
     Record.AddTypeSourceInfo(E->getTypeSourceInfo());
