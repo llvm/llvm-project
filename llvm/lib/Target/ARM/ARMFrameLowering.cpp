@@ -2360,7 +2360,7 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     // Split stack prologue saves r4,r5; makes a copy of sp and loads
     // a literal; compares the two, and if sp < literal, pushes
     // further registers and calls __morestack.
-    FnSize += 0x24;
+    FnSize = SaturatingAdd(FnSize, 0x24U);
   }
 
   // Count the number of saved high registers, which take more effort
@@ -2382,7 +2382,7 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
   unsigned PrologueSize = 2 + 4 * SavedHighRegs + 6 + 12 + 2;
   if (RegInfo->hasStackRealignment(MF))
     PrologueSize += 8;
-  FnSize += PrologueSize;
+  FnSize = SaturatingAdd(FnSize, PrologueSize);
 
   // Size of a large epilogue:
   // restore sp from frame pointer (6 bytes if it's in r11)
@@ -2399,10 +2399,10 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
       // We might have to insert padding to align the start of this basic
       // block.
       unsigned Alignment = MBB.getMaxBytesForAlignment();
-      FnSize += Alignment;
+      FnSize = SaturatingAdd(FnSize, Alignment);
     }
 
-    unsigned SizeBeforeThisBB = FnSize;
+    unsigned BBSize = 0;
 
     bool seenBranch = false, seenConstantLoad = false;
     for (auto &MI : MBB) {
@@ -2505,7 +2505,7 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
         break;
       }
 
-      FnSize += InstSize;
+      BBSize = SaturatingAdd(BBSize, InstSize);
 
       // If the instruction loads a constant, score the size of the
       // constant, in case it can't be shared with other basic blocks.
@@ -2515,7 +2515,7 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
                 MO->getPointerInfo().V);
         if (PSV && PSV->kind() == PseudoSourceValue::ConstantPool) {
           unsigned ConstSize = MO->getType().getSizeInBytes();
-          FnSize += ConstSize;
+          BBSize = SaturatingAdd(BBSize, ConstSize);
           seenConstantLoad = true;
         }
       }
@@ -2524,14 +2524,14 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
       // of an epilogue. (We do this for each return, in case the
       // epilogue must be duplicated.)
       if (MI.isReturn() || TII.isTailCall(MI)) {
-        FnSize += EpilogueSize;
+        BBSize = SaturatingAdd(BBSize, EpilogueSize);
       }
 
       // If the instruction is a call, and KCFI is enabled, then count the
       // cost of a KCFI_CHECK_Thumb1 pseudo.
       if (KCFI && MI.isCall() && MI.getCFIType()) {
         const MCInstrDesc &MCID = TII.get(ARM::KCFI_CHECK_Thumb1);
-        FnSize += MCID.getSize();
+        BBSize = SaturatingAdd(BBSize, MCID.getSize());
       }
 
       if (MI.isUnconditionalBranch())
@@ -2542,7 +2542,7 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     // count a branch + realignment to 4 bytes, in case we have to branch round
     // it.
     if (seenConstantLoad && !seenBranch) {
-      FnSize += 4;
+      BBSize = SaturatingAdd(BBSize, 4U);
     }
 
     // Also, if the block is really, really big, then count an extra 4 bytes
@@ -2552,14 +2552,27 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
     // bytes; the splitting itself adds some cost, but since any function this
     // large is likely to have already gone over the "must stack LR" limit, we
     // can keep things simple by assuming we split at half that rate.
-    unsigned BBSize = FnSize - SizeBeforeThisBB;
-    FnSize += 4 * BBSize / 512;
+    BBSize = SaturatingAdd(BBSize, 4 * (BBSize / 512));
+
+    // Accumulate the size of this basic block into the function size.
+    FnSize = SaturatingAdd(FnSize, BBSize);
+
+    // Finally, if the block ends with an unconditional branch, multiply its
+    // entire size by the number of predecessors, because tail duplication
+    // might delete the whole block and copy its contents into each predecessor
+    // (e.g. to allow fallthrough from any of the predecessors without a branch
+    // overhead). It's hard to judge whether that will actually happen, because
+    // TailDuplicator.cpp and its client MachineBlockPlacement.cpp have so many
+    // local tuning options.
+    if (MBB.succ_size() != 1 && MBB.pred_size() > 1)
+      FnSize = SaturatingAdd(FnSize,
+                             SaturatingMultiply(MBB.pred_size() - 1, BBSize));
   }
   if (MF.getJumpTableInfo()) {
     for (auto &Table : MF.getJumpTableInfo()->getJumpTables()) {
       unsigned TableLen = Table.MBBs.size();
-      unsigned TableSizeBytes = TableLen * 4;
-      FnSize += TableSizeBytes;
+      unsigned TableSizeBytes = SaturatingMultiply(TableLen, 4U);
+      FnSize = SaturatingAdd(FnSize, TableSizeBytes);
     }
   }
   LLVM_DEBUG(dbgs() << "Estimated function size for " << MF.getName() << " = "
