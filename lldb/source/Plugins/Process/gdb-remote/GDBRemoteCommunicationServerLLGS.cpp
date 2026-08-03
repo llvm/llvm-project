@@ -43,6 +43,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/Utility/UriParser.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/JSON.h"
@@ -3313,13 +3314,17 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   response.IndentMore();
 
   response.Indent();
-  response.Printf("<architecture>%s</architecture>\n",
-                  m_current_process->GetArchitecture()
-                      .GetTriple()
-                      .getArchName()
-                      .str()
-                      .c_str());
-
+  const llvm::StringRef arch_name =
+      m_current_process->GetArchitecture().GetTriple().getArchName();
+  // Match gdbserver's expected architecture. We do the reverse when
+  // decoding the architecture when receiving the target.xml
+  // in ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess.
+  const llvm::StringRef new_arch_name = StringSwitch<llvm::StringRef>(arch_name)
+                                            .Case("x86_64", "i386:x86-64")
+                                            .Case("riscv64", "riscv:rv64")
+                                            .Case("riscv32", "riscv:rv32")
+                                            .Default(arch_name);
+  response.Format("<architecture>{}</architecture>\n", new_arch_name);
   response.Indent("<feature>\n");
 
   const int registers_count = reg_context.GetUserRegisterCount();
