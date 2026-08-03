@@ -61,6 +61,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   MultipleNewInOneExpressionCheck.cpp
   MultipleStatementMacroCheck.cpp
   NarrowingConversionsCheck.cpp
+  NestedSwitchLabelCheck.cpp
   NoEscapeCheck.cpp
   NonZeroEnumToBoolConversionCheck.cpp
   NondeterministicPointerIterationOrderCheck.cpp

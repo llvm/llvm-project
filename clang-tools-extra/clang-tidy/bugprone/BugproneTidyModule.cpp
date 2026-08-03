@@ -58,6 +58,7 @@
 #include "MultipleNewInOneExpressionCheck.h"
 #include "MultipleStatementMacroCheck.h"
 #include "NarrowingConversionsCheck.h"
+#include "NestedSwitchLabelCheck.h"
 #include "NoEscapeCheck.h"
 #include "NonZeroEnumToBoolConversionCheck.h"
 #include "NondeterministicPointerIterationOrderCheck.h"
@@ -235,6 +236,8 @@ public:
         "bugprone-redundant-branch-condition");
     CheckFactories.registerCheck<NarrowingConversionsCheck>(
         "bugprone-narrowing-conversions");
+    CheckFactories.registerCheck<NestedSwitchLabelCheck>(
+        "bugprone-nested-switch-label");
     CheckFactories.registerCheck<NoEscapeCheck>("bugprone-no-escape");
     CheckFactories.registerCheck<NonZeroEnumToBoolConversionCheck>(
         "bugprone-non-zero-enum-to-bool-conversion");
