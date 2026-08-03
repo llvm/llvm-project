@@ -82,7 +82,7 @@ struct DefaultFreeStoreConfig {
 // T |(Base 4K)| [4096 - 5119] | [5120 - 6143] | [6144 - 7167] | [7168 - 8191] |
 // I +---------+---------------+---------------+---------------+---------------+
 // A | Row = 3 |    8192 B     |   10240 B     |   12288 B     |   14336 B     |
-// L |(Base 8K)|[8192 - 10239]|[10240 - 12287]|[12288 - 14335]|[14336 - 16383]|
+// L |(Base 8K)|[8192 - 10239] |[10240 - 12287]|[12288 - 14335]|[14336 - 16383]|
 //   +---------+---------------+---------------+---------------+---------------+
 //
 // Note: For the real implementation, we don't actually store the lists in a
@@ -110,8 +110,7 @@ protected:
   static constexpr bool USE_TRIE = CONFIG::USE_TRIE_FOR_OVERFLOW_BIN;
 
 private:
-  LIBC_INLINE constexpr TLSFFreeStoreImpl(cpp::bool_constant<true>)
-      : trie() {}
+  LIBC_INLINE constexpr TLSFFreeStoreImpl(cpp::bool_constant<true>) : trie() {}
   LIBC_INLINE constexpr TLSFFreeStoreImpl(cpp::bool_constant<false>)
       : overflow_list() {}
 
@@ -145,8 +144,8 @@ protected:
     return block.outer_size() < MIN_OUTER_SIZE;
   }
 
-  cpp::array<uintptr_t, CONFIG::NUM_TABLE_ENTRIES> lookup_table{};
-  cpp::array<FreeList, TOTAL_BITS - 1> free_lists{};
+  cpp::array<uintptr_t, CONFIG::NUM_TABLE_ENTRIES> lookup_table;
+  cpp::array<FreeList, TOTAL_BITS - 1> free_lists;
   union {
     FreeTrie trie;
     FreeList overflow_list;
