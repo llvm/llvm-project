@@ -1,0 +1,35 @@
+# The verify-types pass iterates pre-ISel instructions and checks for scalar
+# types when -pisa-verify-extended-types is enabled. A fully-selected function
+# with no pre-ISel instructions skips the inner loop and passes cleanly.
+
+# RUN: llc -march=pisa -run-pass=pisa-verify-types \
+# RUN:     -pisa-verify-extended-types -verify-machineinstrs -o - %s \
+# RUN:     | FileCheck %s
+
+# CHECK-LABEL: name: no_preisel
+# CHECK: ret
+
+--- |
+  define void @no_preisel() {
+    ret void
+  }
+...
+---
+name:            no_preisel
+alignment:       1
+legalized:       true
+regBankSelected: true
+selected:        true
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+registers:
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    ret
+...
