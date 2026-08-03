@@ -142,6 +142,19 @@ static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
   return FileName;
 }
 
+/// Populate the scalar math library mappings on \p TLII according to the
+/// -fsclrlib= selection.
+static void addScalarMathLibrary(TargetLibraryInfoImpl &TLII,
+                                 const CodeGenOptions &CodeGenOpts) {
+  switch (CodeGenOpts.getScalarLib()) {
+  case CodeGenOptions::SCALAR_AMDLIBM:
+    TLII.addScalarFunctionsFromMathLib(TargetLibraryInfoImpl::SCALAR_AMDLIBM);
+    break;
+  case CodeGenOptions::Default_Scalar_Library:
+    break;
+  }
+}
+
 namespace {
 
 class EmitAssemblyHelper {
@@ -1002,6 +1015,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // preset TLI.
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
+  addScalarMathLibrary(*TLII, CodeGenOpts);
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
   // Register all the basic analyses with the managers.
@@ -1271,6 +1285,7 @@ void EmitAssemblyHelper::RunCodegenPipelineLegacy(
   // Add LibraryInfo.
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       llvm::driver::createTLII(TargetTriple, CodeGenOpts.getVecLib()));
+  addScalarMathLibrary(*TLII, CodeGenOpts);
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
 
   const llvm::TargetOptions &Options = TM->Options;

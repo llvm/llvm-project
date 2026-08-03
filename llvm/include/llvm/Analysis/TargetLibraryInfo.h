@@ -109,12 +109,25 @@ class TargetLibraryInfoImpl {
   /// on VectorFnName rather than ScalarFnName.
   std::vector<VecDesc> ScalarDescs;
 
+  /// Mapping from a standard scalar math function name to its AMD scalar math
+  /// library fast-call equivalent (e.g. "tan" -> "amd_fasttan"). Populated when
+  /// an AMD scalar math library is selected.
+  DenseMap<StringRef, StringRef> LibScalarFunctions;
+
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
   LLVM_ABI bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
                                        const Module &M) const;
 
 public:
+  /// Scalar math library selection used for lowering standard scalar math
+  /// calls to faster, library-specific entry points.
+  enum ScalarLibrary {
+    Default_Scalar_Library, // Use default library.
+    SCALAR_AMDLIBM          // AMD scalar math library.
+  };
+  ScalarLibrary ScalarMathLib = Default_Scalar_Library;
+
   TargetLibraryInfoImpl() = delete;
   LLVM_ABI explicit TargetLibraryInfoImpl(
       const Triple &T, VectorLibrary VecLib = VectorLibrary::NoLibrary);
@@ -181,6 +194,20 @@ public:
   LLVM_ABI void
   addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
                                      const llvm::Triple &TargetTriple);
+
+  /// Populate the scalar math function mappings for the given scalar library
+  /// and record it as the selected scalar math library.
+  LLVM_ABI void addScalarFunctionsFromMathLib(enum ScalarLibrary ScalarLib);
+
+  /// Return the library-specific scalar function name for \p F, or an empty
+  /// StringRef if no mapping exists.
+  LLVM_ABI StringRef getScalarFunctionFromMathLib(StringRef F) const;
+
+  /// Return the currently selected scalar math library.
+  LLVM_ABI ScalarLibrary getScalarMathLib() const;
+
+  /// Set the selected scalar math library.
+  LLVM_ABI void setScalarMathLib(enum ScalarLibrary ScalarLib);
 
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
@@ -386,6 +413,12 @@ public:
   const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
                                       bool Masked) const {
     return Impl->getVectorMappingInfo(F, VF, Masked);
+  }
+  StringRef getScalarFunctionFromMathLib(StringRef F) const {
+    return Impl->getScalarFunctionFromMathLib(F);
+  }
+  TargetLibraryInfoImpl::ScalarLibrary getScalarMathLib() const {
+    return Impl->getScalarMathLib();
   }
 
   /// Tests if the function is both available and a candidate for optimized code

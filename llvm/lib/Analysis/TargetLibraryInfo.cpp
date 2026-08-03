@@ -18,8 +18,17 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace llvm;
+
+static cl::opt<TargetLibraryInfoImpl::ScalarLibrary> ClScalarLibrary(
+    "scalar-library", cl::Hidden, cl::desc("Scalar functions library"),
+    cl::init(TargetLibraryInfoImpl::Default_Scalar_Library),
+    cl::values(clEnumValN(TargetLibraryInfoImpl::Default_Scalar_Library, "none",
+                          "Use default library"),
+               clEnumValN(TargetLibraryInfoImpl::SCALAR_AMDLIBM, "AMDLIBM",
+                          "AMD scalar math library")));
 
 #define GET_TARGET_LIBRARY_INFO_STRING_TABLE
 #include "llvm/Analysis/TargetLibraryInfo.inc"
@@ -902,6 +911,7 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const Triple &T,
   memset(AvailableArray, -1, sizeof(AvailableArray));
 
   initialize(*this, T, StandardNamesStrTable, VecLib);
+  addScalarFunctionsFromMathLib(ClScalarLibrary);
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
@@ -913,6 +923,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI)
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
+  LibScalarFunctions = TLI.LibScalarFunctions;
+  ScalarMathLib = TLI.ScalarMathLib;
 }
 
 TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
@@ -926,6 +938,8 @@ TargetLibraryInfoImpl::TargetLibraryInfoImpl(TargetLibraryInfoImpl &&TLI)
             AvailableArray);
   VectorDescs = TLI.VectorDescs;
   ScalarDescs = TLI.ScalarDescs;
+  LibScalarFunctions = TLI.LibScalarFunctions;
+  ScalarMathLib = TLI.ScalarMathLib;
 }
 
 TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoImpl &TLI) {
@@ -936,6 +950,8 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(const TargetLibraryInfoI
   ShouldSignExtI32Return = TLI.ShouldSignExtI32Return;
   SizeOfInt = TLI.SizeOfInt;
   memcpy(AvailableArray, TLI.AvailableArray, sizeof(AvailableArray));
+  LibScalarFunctions = TLI.LibScalarFunctions;
+  ScalarMathLib = TLI.ScalarMathLib;
   return *this;
 }
 
@@ -948,6 +964,8 @@ TargetLibraryInfoImpl &TargetLibraryInfoImpl::operator=(TargetLibraryInfoImpl &&
   SizeOfInt = TLI.SizeOfInt;
   std::move(std::begin(TLI.AvailableArray), std::end(TLI.AvailableArray),
             AvailableArray);
+  LibScalarFunctions = TLI.LibScalarFunctions;
+  ScalarMathLib = TLI.ScalarMathLib;
   return *this;
 }
 
@@ -1395,6 +1413,40 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
   case VectorLibrary::NoLibrary:
     break;
   }
+}
+
+void TargetLibraryInfoImpl::addScalarFunctionsFromMathLib(
+    enum ScalarLibrary ScalarLib) {
+  setScalarMathLib(ScalarLib);
+  switch (ScalarLib) {
+  case ScalarLibrary::SCALAR_AMDLIBM: {
+    const DenseMap<StringRef, StringRef> ScalarAOCLFuncs = {
+#define TLI_DEFINE_SCALAR_AOCL_FUNCS
+#include "llvm/Analysis/ScalarAOCLFuncs.def"
+    };
+    LibScalarFunctions.insert(ScalarAOCLFuncs.begin(), ScalarAOCLFuncs.end());
+    break;
+  }
+  case ScalarLibrary::Default_Scalar_Library:
+    break;
+  }
+}
+
+void TargetLibraryInfoImpl::setScalarMathLib(enum ScalarLibrary ScalarLib) {
+  ScalarMathLib = ScalarLib;
+}
+
+StringRef TargetLibraryInfoImpl::getScalarFunctionFromMathLib(
+    StringRef ScalarFnName) const {
+  auto Iter = LibScalarFunctions.find(ScalarFnName);
+  if (Iter == LibScalarFunctions.end())
+    return StringRef();
+  return Iter->second;
+}
+
+TargetLibraryInfoImpl::ScalarLibrary
+TargetLibraryInfoImpl::getScalarMathLib() const {
+  return ScalarMathLib;
 }
 
 bool TargetLibraryInfoImpl::isFunctionVectorizable(StringRef funcName) const {

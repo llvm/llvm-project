@@ -110,6 +110,12 @@ public:
     OnlyAlwaysInlining  // Only run the always inlining pass.
   };
 
+  /// Scalar math functions library to use with -fsclrlib=.
+  enum ScalarLibrary {
+    Default_Scalar_Library, // Use default library.
+    SCALAR_AMDLIBM          // AMD scalar math library.
+  };
+
   enum ObjCDispatchMethodKind {
     Legacy = 0,
     NonLegacy = 1,
