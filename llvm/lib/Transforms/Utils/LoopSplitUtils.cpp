@@ -508,15 +508,14 @@ static void rewriteLatch(Loop *PL, Value *IndOp, Value *SelEnd,
   Value *NewCmp = B.CreateICmp(Pred, IndOp, Bound, "itr.chk");
   B.SetInsertPoint(Term);
   auto *NewBr = B.CreateCondBr(NewCmp, PL->getHeader(), Exit);
-  // Carry the original latch's branch weights onto the clamped latch, matching
-  // by which original successor stayed in the loop (the "keep iterating" edge).
-  SmallVector<uint32_t, 2> Weights;
-  if (extractBranchWeights(*Term, Weights)) {
+  // Carry the original latch's weights over, mapping by which successor stayed
+  // in the loop.
+  uint64_t TrueW, FalseW;
+  if (extractBranchWeights(*Term, TrueW, FalseW)) {
     bool Succ0InLoop = PL->contains(Term->getSuccessor(0));
-    setBranchWeights(*NewBr,
-                     {Succ0InLoop ? Weights[0] : Weights[1],
-                      Succ0InLoop ? Weights[1] : Weights[0]},
-                     /*IsExpected=*/false);
+    setFittedBranchWeights(
+        *NewBr, {Succ0InLoop ? TrueW : FalseW, Succ0InLoop ? FalseW : TrueW},
+        /*IsExpected=*/false);
   }
   Term->eraseFromParent();
   if (Cmp->use_empty())
