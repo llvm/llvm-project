@@ -3253,37 +3253,23 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
                     if (add_nlist) {
                       uint64_t symbol_value = nlist.n_value;
-                      if (symbol_name_non_abi_mangled) {
-                        sym[sym_idx].GetMangled().SetMangledName(
-                            ConstString(symbol_name_non_abi_mangled));
-                        sym[sym_idx].GetMangled().SetDemangledName(
-                            ConstString(symbol_name));
-                      } else {
-                        if (symbol_name && symbol_name[0] == '_') {
-                          symbol_name++; // Skip the leading underscore
-                        }
 
-                        if (symbol_name) {
-                          ConstString const_symbol_name(symbol_name);
-                          sym[sym_idx].GetMangled().SetValue(const_symbol_name);
-                          if (is_gsym && is_debug) {
-                            const char *gsym_name =
-                                sym[sym_idx]
-                                    .GetMangled()
-                                    .GetName(Mangled::ePreferMangled)
-                                    .GetCString();
-                            if (gsym_name)
-                              N_GSYM_name_to_sym_idx[gsym_name] = sym_idx;
-                          }
-                        }
-                      }
                       if (symbol_section) {
                         const addr_t section_file_addr =
                             symbol_section->GetFileAddress();
                         symbol_value -= section_file_addr;
                       }
 
+                      if (!symbol_name_non_abi_mangled && symbol_name &&
+                          symbol_name[0] == '_') {
+                        symbol_name++; // SKip the leading underscore
+                      }
+
                       if (is_debug == false) {
+                        const char *name_to_compare =
+                            symbol_name_non_abi_mangled
+                                ? symbol_name_non_abi_mangled
+                                : symbol_name;
                         if (type == eSymbolTypeCode) {
                           // See if we can find a N_FUN entry for any code
                           // symbols. If we do find a match, and the name
@@ -3296,8 +3282,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             bool found_it = false;
                             for (auto pos = range.first; pos != range.second;
                                  ++pos) {
-                              if (sym[sym_idx].GetMangled().GetName(
-                                      Mangled::ePreferMangled) ==
+                              if (llvm::StringRef(name_to_compare) ==
                                   sym[pos->second].GetMangled().GetName(
                                       Mangled::ePreferMangled)) {
                                 m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
@@ -3339,8 +3324,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             bool found_it = false;
                             for (auto pos = range.first; pos != range.second;
                                  ++pos) {
-                              if (sym[sym_idx].GetMangled().GetName(
-                                      Mangled::ePreferMangled) ==
+                              if (llvm::StringRef(name_to_compare) ==
                                   sym[pos->second].GetMangled().GetName(
                                       Mangled::ePreferMangled)) {
                                 m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
@@ -3360,16 +3344,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             if (found_it)
                               continue;
                           } else {
-                            const char *gsym_name =
-                                sym[sym_idx]
-                                    .GetMangled()
-                                    .GetName(Mangled::ePreferMangled)
-                                    .GetCString();
-                            if (gsym_name) {
+                            if (name_to_compare) {
                               // Combine N_GSYM stab entries with the non
                               // stab symbol
                               ConstNameToSymbolIndexMap::const_iterator pos =
-                                  N_GSYM_name_to_sym_idx.find(gsym_name);
+                                  N_GSYM_name_to_sym_idx.find(name_to_compare);
                               if (pos != N_GSYM_name_to_sym_idx.end()) {
                                 const uint32_t GSYM_sym_idx = pos->second;
                                 m_nlist_idx_to_sym_idx[nlist_idx] =
@@ -3394,6 +3373,25 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                             }
                           }
                         }
+                      }
+
+                      if (symbol_name_non_abi_mangled) {
+                        sym[sym_idx].GetMangled().SetMangledName(
+                            ConstString(symbol_name_non_abi_mangled));
+                        sym[sym_idx].GetMangled().SetDemangledName(ConstString(symbol_name));
+                      } else if (symbol_name) {
+                        ConstString const_symbol_name(symbol_name);
+                        sym[sym_idx].GetMangled().SetValue(const_symbol_value);
+                      }
+
+                      if (is_gsym) {
+                        const char *gsym_name =
+                            sym[sym_idx]
+                                .GetMangled()
+                                .GetName(Mangled::ePreferMangled)
+                                .GetCString();
+                        if (gsym_name)
+                          N_GSYM_name_to_sym_idx[gsym_name] = sym_idx;
                       }
 
                       sym[sym_idx].SetID(nlist_idx);
