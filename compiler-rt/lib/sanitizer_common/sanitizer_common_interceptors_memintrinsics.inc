@@ -110,11 +110,18 @@
 //     to the tools which do not intercept these at all (e.g. lsan and ubsan).
 //     Die() would instead exit silently, and only under some of the tools.
 // A stack trace is still available for the resulting abort via handle_abort=1.
+//
+// REAL() is not resolved yet while nothing is initialized, so the bound is
+// enforced with CHECK_LE there instead, and the plain implementation's own
+// early startup path performs the access.
 #ifndef COMMON_INTERCEPTOR_MEMSET_CHK_IMPL
 #  define COMMON_INTERCEPTOR_MEMSET_CHK_IMPL(ctx, dst, v, size, dst_size) \
     {                                                                     \
-      if (UNLIKELY(size > dst_size))                                      \
+      if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                    \
+        CHECK_LE(size, dst_size);                                         \
+      } else if (UNLIKELY(size > dst_size)) {                             \
         return REAL(__memset_chk)(dst, v, size, dst_size);                \
+      }                                                                   \
       COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size);                  \
     }
 #endif
@@ -122,8 +129,11 @@
 #ifndef COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL
 #  define COMMON_INTERCEPTOR_MEMMOVE_CHK_IMPL(ctx, dst, src, size, dst_size) \
     {                                                                        \
-      if (UNLIKELY(size > dst_size))                                         \
+      if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                       \
+        CHECK_LE(size, dst_size);                                            \
+      } else if (UNLIKELY(size > dst_size)) {                                \
         return REAL(__memmove_chk)(dst, src, size, dst_size);                \
+      }                                                                      \
       COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);                  \
     }
 #endif
@@ -131,8 +141,11 @@
 #ifndef COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL
 #  define COMMON_INTERCEPTOR_MEMCPY_CHK_IMPL(ctx, dst, src, size, dst_size) \
     {                                                                       \
-      if (UNLIKELY(size > dst_size))                                        \
+      if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED) {                      \
+        CHECK_LE(size, dst_size);                                           \
+      } else if (UNLIKELY(size > dst_size)) {                               \
         return REAL(__memcpy_chk)(dst, src, size, dst_size);                \
+      }                                                                     \
       COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);                  \
     }
 #endif
