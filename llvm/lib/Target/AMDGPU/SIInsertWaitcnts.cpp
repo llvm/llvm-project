@@ -1094,7 +1094,6 @@ void WaitcntBrackets::recordAsyncMark(MachineInstr &Inst) {
   // in practical cases. We do separately truncate the array when processing a
   // loop, which should be sufficient.
   AsyncMarks.push_back(AsyncScore);
-  AsyncScore = {};
   LLVM_DEBUG({
     dbgs() << "recordAsyncMark:\n" << Inst;
     for (const auto &Mark : AsyncMarks) {

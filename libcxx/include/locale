@@ -210,17 +210,6 @@ template <class charT> class messages_byname;
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <concepts>
-#    include <cstdarg>
-#    include <iterator>
-#    include <mutex>
-#    include <optional>
-#    include <stdexcept>
-#    include <type_traits>
-#    include <typeinfo>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_LOCALE

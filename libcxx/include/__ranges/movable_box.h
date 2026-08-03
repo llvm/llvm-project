@@ -16,7 +16,11 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_object.h>
+#include <__utility/forward.h>
+#include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <optional>
 

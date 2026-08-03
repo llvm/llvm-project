@@ -1229,7 +1229,6 @@ Map make(const parser::OmpClause::Map &inp,
       // clang-format off
       MS(Always,    Always)
       MS(Close,     Close)
-      MS(Ompx_Hold, OmpxHold)
       MS(Present,   Present)
       // clang-format on
   );

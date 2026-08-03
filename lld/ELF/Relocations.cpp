@@ -243,16 +243,15 @@ static SmallPtrSet<SharedSymbol *, 4> getSymbolsAt(Ctx &ctx, SharedSymbol &ss) {
 // location.
 static void replaceWithDefined(Ctx &ctx, Symbol &sym, SectionBase &sec,
                                uint64_t value, uint64_t size) {
-  Symbol old = sym;
+  uint16_t versionId = sym.versionId;
   Defined(ctx, sym.file, StringRef(), sym.binding, sym.stOther, sym.type, value,
           size, &sec)
       .overwrite(sym);
 
-  sym.versionId = old.versionId;
+  sym.versionId = versionId;
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
-  sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
-                  std::memory_order_relaxed);
+  sym.flags.fetch_and(NEEDS_GOT, std::memory_order_relaxed);
 }
 
 // Reserve space in .bss or .bss.rel.ro for copy relocation.

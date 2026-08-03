@@ -354,7 +354,7 @@ The primary goal of experimental support is to assist in the process of ratifica
   LLVM implements the `0.7 release specification <https://github.com/user-attachments/files/16450464/riscv-crypto-spec-vector-extra_v0.0.7.pdf>`__.
 
 ``experimental-svukte``
-  LLVM implements the `0.3 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
+  LLVM implements the `1.0 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
 
 ``experimental-zvdot4a8i``
   LLVM implements the `0.1 draft specification <https://github.com/riscv/riscv-isa-manual/pull/2576>`__.

@@ -7,37 +7,37 @@
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:13: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:19: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:13: error: invalid operand for instruction
+# CHECK-DISABLED: :[[@LINE+1]]:13: error: expected '('
 qc.e.lb a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:13: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:19: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:13: error: invalid operand for instruction
+# CHECK-DISABLED: :[[@LINE+1]]:13: error: expected '('
 qc.e.lb a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:14: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:20: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-DISABLED: :[[@LINE+1]]:14: error: expected '('
 qc.e.lbu a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:13: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:19: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:13: error: invalid operand for instruction
+# CHECK-DISABLED: :[[@LINE+1]]:13: error: expected '('
 qc.e.lh a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:14: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:20: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:14: error: invalid operand for instruction
+# CHECK-DISABLED: :[[@LINE+1]]:14: error: expected '('
 qc.e.lhu a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+4]]:1: error: invalid instruction, any one of the following would fix this:
 # CHECK-ENABLED: [[@LINE+3]]:13: note: operand must be a bare symbol name
 # CHECK-ENABLED: [[@LINE+2]]:19: note: too few operands for instruction
-# CHECK-DISABLED: :[[@LINE+1]]:13: error: invalid operand for instruction
+# CHECK-DISABLED: :[[@LINE+1]]:13: error: expected '('
 qc.e.lw a0, 0xf000
 
 # CHECK-ENABLED: [[@LINE+2]]:13: error: operand must be a bare symbol name

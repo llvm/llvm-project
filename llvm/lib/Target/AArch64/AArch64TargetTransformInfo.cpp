@@ -3366,6 +3366,32 @@ instCombineInStreamingMode(InstCombiner &IC, IntrinsicInst &II) {
   return std::nullopt;
 }
 
+static std::optional<Instruction *> instCombineSVEUMin(InstCombiner &IC,
+                                                       IntrinsicInst &II) {
+  // umin(umin(A, 1), umin(B, 1)) -> umin(umin(A,B), 1)
+  constexpr Intrinsic::ID UMinID = Intrinsic::aarch64_sve_umin_u;
+  Value *A, *B;
+  Value *Pg = II.getOperand(0);
+  if (match(II.getOperand(1), m_OneUse(m_Intrinsic<UMinID>(
+                                  m_Specific(Pg), m_Value(A), m_One()))) &&
+      match(II.getOperand(2), m_OneUse(m_Intrinsic<UMinID>(
+                                  m_Specific(Pg), m_Value(B), m_One())))) {
+    Value *NewUMin =
+        IC.Builder.CreateIntrinsic(UMinID, II.getType(), {Pg, A, B});
+    Value *NewLogicalUMin = IC.Builder.CreateIntrinsic(
+        UMinID, II.getType(), {Pg, NewUMin, ConstantInt::get(II.getType(), 1)});
+    return IC.replaceInstUsesWith(II, NewLogicalUMin);
+  }
+
+  // umin(umin(A, 1), 1) -> umin(A, 1)
+  if (match(II.getOperand(1),
+            m_Intrinsic<UMinID>(m_Specific(Pg), m_Value(), m_One())) &&
+      match(II.getOperand(2), m_One()))
+    return IC.replaceInstUsesWith(II, II.getOperand(1));
+
+  return std::nullopt;
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -3485,6 +3511,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEUxt(IC, II, 32);
   case Intrinsic::aarch64_sme_in_streaming_mode:
     return instCombineInStreamingMode(IC, II);
+  case Intrinsic::aarch64_sve_umin_u:
+    return instCombineSVEUMin(IC, II);
   }
 
   return std::nullopt;

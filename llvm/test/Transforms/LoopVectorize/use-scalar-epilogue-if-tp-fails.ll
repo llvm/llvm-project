@@ -245,4 +245,4 @@ end:
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}

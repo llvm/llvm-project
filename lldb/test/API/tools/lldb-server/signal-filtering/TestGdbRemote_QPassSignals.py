@@ -87,7 +87,7 @@ class TestGdbRemote_QPassSignals(gdbremote_testcase.GdbRemoteTestCaseBase):
                 self.ignore_signals(signals_to_ignore)
         self.expect_exit_code(len(signals_to_ignore))
 
-    @skipIfWindows  # no signal support
+    @requireNotWindows  # no signal support
     @expectedFailureNetBSD
     def test_default_signals_behavior(self):
         self.build()

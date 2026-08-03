@@ -1331,6 +1331,10 @@ endif()
 if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   if(LLVM_LIBC_FULL_BUILD)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # net/if.h entrypoints
+      libc.src.net.if_freenameindex
+      libc.src.net.if_nameindex
+
       # regex.h entrypoints
       libc.src.regex.regcomp
       libc.src.regex.regexec

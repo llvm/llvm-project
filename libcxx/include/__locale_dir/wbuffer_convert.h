@@ -11,6 +11,7 @@
 
 #include <__algorithm/reverse.h>
 #include <__config>
+#include <__locale>
 #include <__string/char_traits.h>
 #include <ios>
 #include <streambuf>

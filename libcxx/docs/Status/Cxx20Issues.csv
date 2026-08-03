@@ -112,7 +112,7 @@
 "`LWG3054 <https://wg21.link/LWG3054>`__","``uninitialized_copy``\  appears to not be able to meet its exception-safety guarantee","2018-11 (San Diego)","|Nothing To Do|","","`#103820 <https://github.com/llvm/llvm-project/issues/103820>`__",""
 "`LWG3065 <https://wg21.link/LWG3065>`__","LWG 2989 missed that all ``path``\ 's other operators should be hidden friends as well","2018-11 (San Diego)","|Complete|","","`#103821 <https://github.com/llvm/llvm-project/issues/103821>`__",""
 "`LWG3096 <https://wg21.link/LWG3096>`__","``path::lexically_relative``\  is confused by trailing slashes","2018-11 (San Diego)","|Complete|","","`#103822 <https://github.com/llvm/llvm-project/issues/103822>`__",""
-"`LWG3116 <https://wg21.link/LWG3116>`__","``OUTERMOST_ALLOC_TRAITS``\  needs ``remove_reference_t``\ ","2018-11 (San Diego)","","","`#100244 <https://github.com/llvm/llvm-project/issues/100244>`__",""
+"`LWG3116 <https://wg21.link/LWG3116>`__","``OUTERMOST_ALLOC_TRAITS``\  needs ``remove_reference_t``\ ","2018-11 (San Diego)","|Complete|","","`#100244 <https://github.com/llvm/llvm-project/issues/100244>`__",""
 "`LWG3122 <https://wg21.link/LWG3122>`__","``__cpp_lib_chrono_udls``\  was accidentally dropped","2018-11 (San Diego)","|Complete|","","`#103823 <https://github.com/llvm/llvm-project/issues/103823>`__",""
 "`LWG3127 <https://wg21.link/LWG3127>`__","``basic_osyncstream::rdbuf``\  needs a ``const_cast``\ ","2018-11 (San Diego)","|Complete|","18","`#103824 <https://github.com/llvm/llvm-project/issues/103824>`__",""
 "`LWG3128 <https://wg21.link/LWG3128>`__","``strstream::rdbuf``\  needs a ``const_cast``\ ","2018-11 (San Diego)","|Nothing To Do|","","`#103825 <https://github.com/llvm/llvm-project/issues/103825>`__",""

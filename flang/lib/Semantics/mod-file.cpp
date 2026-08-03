@@ -1720,7 +1720,7 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     return nullptr;
   }
   llvm::raw_null_ostream NullStream;
-  parsing.Parse(NullStream);
+  parsing.Parse(NullStream, context_.langOptions());
   std::optional<parser::Program> &parsedProgram{parsing.parseTree()};
   if (!parsing.messages().empty() || !parsing.consumedWholeFile() ||
       !parsedProgram) {

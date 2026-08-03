@@ -1897,6 +1897,12 @@ class AsmParser {
   //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details),
   //    Number of required features (least first)
   bit PreferSmallerInstructions = false;
+
+  // Set to true to emit specific Match_Invalid<token> diagnostic types for
+  // literal text tokens (i.e. not $ operand references). When enabled, a
+  // Match_Invalid<name> entry is generated for each such token; targets can
+  // map these codes to more accurate error messages than Match_InvalidOperand.
+  bit EmitTokenDiagnosticTypes = false;
 }
 def DefaultAsmParser : AsmParser;
 

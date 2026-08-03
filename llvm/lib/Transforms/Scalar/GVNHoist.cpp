@@ -43,7 +43,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -243,8 +242,8 @@ public:
 class GVNHoist {
 public:
   GVNHoist(DominatorTree *DT, PostDominatorTree *PDT, AliasAnalysis *AA,
-           MemoryDependenceResults *MD, MemorySSA *MSSA)
-      : DT(DT), PDT(PDT), AA(AA), MD(MD), MSSA(MSSA),
+           MemorySSA *MSSA)
+      : DT(DT), PDT(PDT), AA(AA), MSSA(MSSA),
         MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
     MSSA->ensureOptimizedUses();
   }
@@ -264,7 +263,6 @@ private:
   DominatorTree *DT;
   PostDominatorTree *PDT;
   AliasAnalysis *AA;
-  MemoryDependenceResults *MD;
   MemorySSA *MSSA;
   std::unique_ptr<MemorySSAUpdater> MSSAUpdater;
   DenseMap<const Value *, unsigned> DFSNumber;
@@ -507,7 +505,8 @@ bool GVNHoist::run(Function &F) {
   NumFuncArgs = F.arg_size();
   VN.setDomTree(DT);
   VN.setAliasAnalysis(AA);
-  VN.setMemDep(MD);
+  // TODO: Is this actually needed?
+  VN.setMemorySSA(MSSA, true);
   bool Res = false;
   // Perform DFS Numbering of instructions.
   unsigned BBI = 0;
@@ -980,13 +979,13 @@ unsigned GVNHoist::rauw(const SmallVecInsn &Candidates, Instruction *Repl,
         MemoryAccess *OldMA = MSSA->getMemoryAccess(I);
         OldMA->replaceAllUsesWith(NewMemAcc);
         MSSAUpdater->removeMemoryAccess(OldMA);
+      } else if (MemoryAccess *OldMA = MSSA->getMemoryAccess(I)) {
+        MSSAUpdater->removeMemoryAccess(OldMA);
       }
 
       combineMetadataForCSE(Repl, I, true);
       Repl->andIRFlags(I);
       I->replaceAllUsesWith(Repl);
-      // Also invalidate the Alias Analysis cache.
-      MD->removeInstruction(I);
       I->eraseFromParent();
     }
   }
@@ -1106,7 +1105,8 @@ std::pair<unsigned, unsigned> GVNHoist::hoist(HoistingPointList &HPL) {
 
       // Move the instruction at the end of HoistPt.
       Instruction *Last = DestBB->getTerminator();
-      MD->removeInstruction(Repl);
+      if (auto *MUD = MSSA->getMemoryAccess(Repl))
+        MSSAUpdater->moveToPlace(MUD, DestBB, MemorySSA::BeforeTerminator);
       Repl->moveBefore(Last->getIterator());
 
       DFSNumber[Repl] = DFSNumber[Last]++;
@@ -1202,9 +1202,8 @@ PreservedAnalyses GVNHoistPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   AliasAnalysis &AA = AM.getResult<AAManager>(F);
-  MemoryDependenceResults &MD = AM.getResult<MemoryDependenceAnalysis>(F);
   MemorySSA &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  GVNHoist G(&DT, &PDT, &AA, &MD, &MSSA);
+  GVNHoist G(&DT, &PDT, &AA, &MSSA);
   if (!G.run(F))
     return PreservedAnalyses::all();
 

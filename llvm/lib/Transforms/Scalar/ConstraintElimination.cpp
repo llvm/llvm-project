@@ -552,6 +552,14 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
       return V;
     }
 
+    // `xor %x, -1` is equivalent to `sub nsw -1, %x`.
+    if (match(V, m_Not(m_Value(Op0)))) {
+      Decomposition Result(-1);
+      if (!Result.sub(decompose(Op0, Info, IsSigned, DL)))
+        return Result;
+      return V;
+    }
+
     if (match(V, m_NSWSub(m_Value(Op0), m_Value(Op1)))) {
       auto ResA = decompose(Op0, Info, IsSigned, DL);
       auto ResB = decompose(Op1, Info, IsSigned, DL);
@@ -1905,7 +1913,7 @@ static bool replaceSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
   for (User *U : make_early_inc_range(II->users())) {
     if (match(U, m_ExtractValue<0>(m_Value()))) {
       if (!Sub)
-        Sub = Builder.CreateSub(A, B);
+        Sub = Builder.CreateNSWSub(A, B);
       U->replaceAllUsesWith(Sub);
       Changed = true;
     } else if (match(U, m_ExtractValue<1>(m_Value()))) {

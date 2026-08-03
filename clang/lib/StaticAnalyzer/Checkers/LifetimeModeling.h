@@ -16,6 +16,9 @@ getDanglingRegionsAfterReturn(SVal Source, ProgramStateRef State,
 /// Returns true if the underlying MemRegion is deallocated.
 bool isDeallocated(ProgramStateRef State, const MemRegion *Region);
 
+/// Returns true if \p Val is a key in the LifetimeBoundMap.
+bool isBoundToLifetimeSource(ProgramStateRef State, SVal Val);
+
 /// Returns the descriptive name of the memory region or a placeholder if a
 /// descriptive name cannot be constructed for it.
 std::string getRegionName(const MemRegion *Reg);

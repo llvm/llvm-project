@@ -29,7 +29,7 @@ namespace clang::lifetimes::internal {
 // referenced in more than one basic block.
 static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
                                                 const CFG &C) {
-  llvm::TimeTraceScope("ComputePersistentOrigins");
+  llvm::TimeTraceScope TimeProfile("ComputePersistentOrigins");
   unsigned NumOrigins = FactMgr.getOriginMgr().getNumOrigins();
   llvm::BitVector PersistentOrigins(NumOrigins);
 

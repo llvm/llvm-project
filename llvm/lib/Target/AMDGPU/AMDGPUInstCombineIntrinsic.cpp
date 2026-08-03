@@ -2395,6 +2395,9 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     if (DMaskVal == 0)
       return nullptr;
 
+    if (!IsLoad && !isMask_32(DMaskVal))
+      return nullptr;
+
     // Mask off values that are undefined because the dmask doesn't cover them
     DemandedElts &= (1 << llvm::popcount(DMaskVal)) - 1;
 

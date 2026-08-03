@@ -161,22 +161,6 @@ end:
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.enable to hold a boolean value
-; CHECK:      <unknown>
-; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
-define void @unsupported_loop_annotation(i64 %n, ptr %A) {
-entry:
-  br label %end, !llvm.loop !0
-end:
-  ret void
-}
-
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable"}
-
-; // -----
-
-; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.width to hold an i32 value
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}

@@ -1018,22 +1018,6 @@ template<class Pointer = void, class Smart, class... Args>
 #    pragma GCC system_header
 #  endif
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <concepts>
-#    include <cstddef>
-#    include <cstdint>
-#    include <cstdlib>
-#    include <cstring>
-#    include <iosfwd>
-#    include <iterator>
-#    include <new>
-#    include <stdexcept>
-#    include <tuple>
-#    include <type_traits>
-#    include <typeinfo>
-#    include <utility>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_MEMORY

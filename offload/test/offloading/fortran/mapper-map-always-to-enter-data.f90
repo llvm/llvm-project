@@ -1,20 +1,15 @@
-! Show that the ALWAYS map-type modifier on the outer map clause should be
-! propagated to the entries pushed by a user-defined mapper. The test uses no
-! target region at all: the device data is inspected with omp_get_mapped_ptr()
-! and omp_target_memcpy(), so what is checked is purely the data-motion done by
+! Show that the ALWAYS map-type modifier on the outer map clause is propagated
+! to the entries pushed by a user-defined mapper. The test uses no target
+! region at all: the device data is inspected with omp_get_mapped_ptr() and
+! omp_target_memcpy(), so what is checked is purely the data-motion done by
 ! `target enter data`.
 !
 ! The mapper transfers s%y. We pre-map s%y so that it already has a device copy
 ! with a nonzero reference count, and set that copy to a known value. Without
-! ALWAYS, the `to` of the second `enter data` is suppressed (a present,
-! ref-counted entry is not copied), so the host's 111 does not reach the device.
-! ALWAYS must force the copy -- but only if ALWAYS is propagated from the outer
-! clause to the mapper's s%y entry.
-!
-! FIXME: ALWAYS is not propagated to the mapper's entries yet, so the transfer
-! is currently suppressed and the device copy still reads as 0 (its pre-set
-! value). Once ALWAYS is propagated:
-!   EXPECTED: device s%y = 111
+! ALWAYS, the `to` of the second `enter data` would be suppressed (a present,
+! ref-counted entry is not copied), so the host's 111 would not reach the
+! device. ALWAYS forces the copy, which only happens if ALWAYS is propagated
+! from the outer clause to the mapper's s%y entry.
 
 ! REQUIRES: flang
 
@@ -56,16 +51,15 @@ program main
 
   !$omp target enter data map(always, to: s)
 
-  ! ALWAYS should force s%y to the device even though it is already mapped
-  ! (ref count > 0), but the modifier is not propagated yet, so the transfer
-  ! does not happen.
+  ! ALWAYS forces s%y to the device even though it is already mapped
+  ! (ref count > 0).
   dev_y_val = -1
   rc = omp_target_memcpy(c_loc(dev_y_val), dev_y, &
                          int(c_sizeof(dev_y_val), c_size_t), &
                          0_c_size_t, 0_c_size_t, host, dev)
 
   print *, "device s%y =", dev_y_val
-  ! CHECK: device s%y = 0
+  ! CHECK: device s%y = 111
 
   !$omp target exit data map(delete: s%y)
 end program main

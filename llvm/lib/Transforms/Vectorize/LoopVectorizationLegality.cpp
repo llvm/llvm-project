@@ -287,6 +287,14 @@ void LoopVectorizeHints::getHintsFromMetadata() {
 
     // Check if the hint starts with the loop metadata prefix.
     StringRef Name = S->getString();
+    // The single-operand enable/disable pair carries no argument.
+    if (Args.empty()) {
+      if (Name == "llvm.loop.vectorize.enable")
+        Force.Value = FK_Enabled;
+      else if (Name == "llvm.loop.vectorize.disable")
+        Force.Value = FK_Disabled;
+      continue;
+    }
     if (Args.size() == 1)
       setHint(Name, Args[0]);
   }

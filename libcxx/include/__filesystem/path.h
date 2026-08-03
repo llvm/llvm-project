@@ -29,7 +29,8 @@
 #include <string_view>
 
 #if _LIBCPP_HAS_LOCALIZATION
-#  include <iomanip> // for quoted
+#  include <__locale> // for __narrow_to_utf8 and __widen_from_utf8
+#  include <iomanip>  // for quoted
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

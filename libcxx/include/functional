@@ -586,35 +586,6 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #    pragma GCC system_header
 #  endif
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && defined(_LIBCPP_CXX03_LANG)
-#    include <limits>
-#    include <new>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 14
-#    include <array>
-#    include <initializer_list>
-#    include <unordered_map>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <concepts>
-#    include <cstdlib>
-#    include <exception>
-#    include <iosfwd>
-#    include <memory>
-#    include <stdexcept>
-#    include <tuple>
-#    include <type_traits>
-#    include <typeinfo>
-#    include <utility>
-#    include <vector>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER == 23
-#    include <__vector/vector.h>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_FUNCTIONAL

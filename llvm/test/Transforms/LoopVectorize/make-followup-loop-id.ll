@@ -108,7 +108,7 @@ exit:
   ret void
 }
 !0 = distinct !{!0, !1, !2}
-!1 = !{!"llvm.loop.vectorize.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.enable"}
 !2 = !{!"llvm.loop.vectorize.followup_all", !3, !4}
 !3 = !{!"llvm.loop.isvectorized"}
 !4 = !{!"llvm.loop.unroll.count", i32 8}

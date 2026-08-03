@@ -8,12 +8,12 @@
 qc.outw x5, 2048(10)
 
 # CHECK-PLUS: :[[@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-PLUS: :[[@LINE+2]]:13: note: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:13: note: expected '('
 # CHECK-PLUS: :[[@LINE+1]]:13: note: immediate must be a multiple of 4 bytes in the range [0, 16380]
 qc.outw x5, x10
 
 # CHECK-MINUS: :[[@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-MINUS: :[[@LINE+2]]:13: note: invalid operand for instruction
+# CHECK-MINUS: :[[@LINE+2]]:13: note: expected '('
 # CHECK-MINUS: :[[@LINE+1]]:13: note: immediate must be a multiple of 4 bytes in the range [0, 16380]
 qc.outw x5, x10
 
@@ -28,12 +28,12 @@ qc.outw x5, 2048(x10)
 qc.inw x23, 16380(17)
 
 # CHECK-PLUS: :[[@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-PLUS: :[[@LINE+2]]:13: note: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:13: note: expected '('
 # CHECK-PLUS: :[[@LINE+1]]:13: note: immediate must be a multiple of 4 bytes in the range [0, 16380]
 qc.inw x23, x17
 
 # CHECK-MINUS: :[[@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK-MINUS: :[[@LINE+2]]:13: note: invalid operand for instruction
+# CHECK-MINUS: :[[@LINE+2]]:13: note: expected '('
 # CHECK-MINUS: :[[@LINE+1]]:13: note: immediate must be a multiple of 4 bytes in the range [0, 16380]
 qc.inw x23, x17
 

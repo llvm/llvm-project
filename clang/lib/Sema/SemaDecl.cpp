@@ -9240,6 +9240,13 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
                                 CallerFeatureMap);
   }
 
+  if (Context.getTargetInfo().hasAMDGPUTypes()) {
+    if (!AMDGPU().checkAMDGPUTypeSupport(T, NewVD->getLocation())) {
+      NewVD->setInvalidDecl();
+      return;
+    }
+  }
+
   if (T.hasAddressSpace() &&
       !CheckVarDeclSizeAddressSpace(NewVD, T.getAddressSpace())) {
     NewVD->setInvalidDecl();
@@ -19661,6 +19668,11 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
       PPC().CheckPPCMMAType(T, NewFD->getLocation()))
     NewFD->setInvalidDecl();
 
+  if (Context.getTargetInfo().hasAMDGPUTypes()) {
+    if (!AMDGPU().checkAMDGPUTypeSupport(T, NewFD->getLocation()))
+      NewFD->setInvalidDecl();
+  }
+
   NewFD->setAccess(AS);
   return NewFD;
 }
@@ -20508,6 +20520,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       CDecl->setIvarRBraceLoc(RBrac);
     }
   }
+
+  if (Record)
+    AMDGPU().checkNamedBarrierWrapper(Record);
+
   if (Record && !isa<ClassTemplateSpecializationDecl>(Record))
     ProcessAPINotes(Record);
 }

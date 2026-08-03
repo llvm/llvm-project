@@ -677,6 +677,41 @@ for.end:
   ret i32 %inc.2
 }
 
+define ptr @postinc_not_iv_backedge_value_ptr_induction(ptr %p.init)  {
+; CHECK-LABEL: define ptr @postinc_not_iv_backedge_value_ptr_induction(
+; CHECK-SAME: ptr [[P_INIT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P_END:%.*]] = getelementptr nusw nuw i8, ptr [[P_INIT]], i64 1024
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P_INIT]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 1023
+; CHECK-NEXT:    br label %[[END:.*]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret ptr [[TMP2]]
+;
+entry:
+  %p.end = getelementptr nuw nusw i8, ptr %p.init, i64 1024
+  br label %loop
+
+loop:
+  %p.iv = phi ptr [ %p.init, %entry ], [ %p.next, %loop ]
+  %p.next = getelementptr nuw i8, ptr %p.iv, i64 1
+  %ret = getelementptr i8, ptr %p.iv, i64 2
+  %ec = icmp eq ptr %p.next, %p.end
+  br i1 %ec, label %end, label %loop
+
+end:
+  ret ptr %ret
+}
+
 define float @fp_postinc_use_fadd(float %init, ptr noalias nocapture %A, i64 %N, float %fpinc) {
 ; VEC-LABEL: define float @fp_postinc_use_fadd(
 ; VEC-SAME: float [[INIT:%.*]], ptr noalias captures(none) [[A:%.*]], i64 [[N:%.*]], float [[FPINC:%.*]]) {

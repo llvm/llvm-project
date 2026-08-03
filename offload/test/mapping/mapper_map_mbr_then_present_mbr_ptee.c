@@ -54,8 +54,8 @@ int main() {
   // completes past this point; at 6.0 the present check on the absent pointee
   // s1.p[0:10] fails here.
   // clang-format off
-  // CHECK: omptarget message: explicit extension not allowed
-  // CHECK: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK: message: explicit extension not allowed
+  // CHECK: fatal error 1: failure of target construct while offloading is mandatory
   // clang-format on
 
   fprintf(stderr, "done\n");

@@ -40,6 +40,7 @@ template <class T, class E> class expected {
   bool is_expected;
 
 public:
+  LIBC_INLINE constexpr expected() : exp(), is_expected(true) {}
   LIBC_INLINE constexpr expected(T exp) : exp(exp), is_expected(true) {}
   LIBC_INLINE constexpr expected(unexpected<E> unexp)
       : unexp(unexp.error()), is_expected(false) {}

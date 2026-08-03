@@ -109,6 +109,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
+  ``std::array`` the same as built-in arrays when `IgnoreArrays` option is enabled.
+
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and

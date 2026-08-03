@@ -54,6 +54,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   ProcessInfo.cpp
   RealpathPrefixes.cpp
   RegisterFlags.cpp
+  RegisterType.cpp
   RegisterValue.cpp
   RegularExpression.cpp
   Instrumentation.cpp

@@ -7352,7 +7352,7 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (all_of(Args, IsaPred<Constant>))
     if (Constant *C = ConstantFoldIntrinsic(
             IID, ArrayRef((Constant *const *)Args.data(), Args.size()),
-            ReturnType, CxtF))
+            ReturnType, Q.DL, CxtF))
       return C;
 
   // Most of the intrinsics with no operands have some kind of side effect.
