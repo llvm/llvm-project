@@ -1,4 +1,4 @@
-# RUN: not --crash llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=amdgpu12.00-- -run-pass=none -verify-machineinstrs -filetype=null %s 2>&1 | FileCheck %s
 
 # Operand invariants of the VGPR "as memory" (address space 13) indexed
 # accesses, as enforced by SIInstrInfo::verifyInstruction.

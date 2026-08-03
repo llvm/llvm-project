@@ -1183,7 +1183,6 @@ def V_LOAD_IDX_BITS : VPseudoInstSI<(outs VGPR_32:$data),
                                          i32imm:$bitsize, VSrc_b32:$bitoffset,
                                          i32imm:$is_sext_load)> {
   let mayLoad = 1;
-  let VALU = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
   let Defs = [M0];
@@ -1197,7 +1196,6 @@ def V_STORE_IDX_BITS : VPseudoInstSI<(outs),
                                      (ins VGPR_32:$data, SReg_32:$idx,
                                           i32imm:$offset, VSrc_b32:$mask)> {
   let mayStore = 1;
-  let VALU = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
   let Defs = [M0];
