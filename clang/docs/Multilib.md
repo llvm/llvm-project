@@ -1,94 +1,86 @@
-========
-Multilib
-========
+# Multilib
 
-Introduction
-============
+## Introduction
 
 This document describes how multilib is implemented in Clang.
 
 What is multilib and why might you care?
-If you're :doc:`cross compiling<CrossCompilation>` then you can't use native
+If you're {doc}`cross compiling<CrossCompilation>` then you can't use native
 system headers and libraries. To address this, you can use a combination of
-``--sysroot``, ``-isystem`` and ``-L`` options to point Clang at suitable
+`--sysroot`, `-isystem` and `-L` options to point Clang at suitable
 directories for your target.
 However, when there are many possible directories to choose from, it's not
 necessarily obvious which one to pick.
 Multilib allows a toolchain designer to imbue the toolchain with the ability to
 pick a suitable directory automatically, based on the options the user provides
 to Clang. For example, if the user specifies
-``--target=arm-none-eabi -mcpu=cortex-m4`` the toolchain can choose a directory
+`--target=arm-none-eabi -mcpu=cortex-m4` the toolchain can choose a directory
 containing headers and libraries suitable for Armv7E-M, because it knows that's
 a suitable architecture for Arm Cortex-M4.
 Multilib can also choose between libraries for the same architecture based on
-other options. For example if the user specifies ``-fno-exceptions`` then a
+other options. For example if the user specifies `-fno-exceptions` then a
 toolchain could select libraries built without exception support, thereby
 reducing the size of the resulting binary.
 
-Design
-======
+## Design
 
-Clang supports GCC's ``-print-multi-lib`` and ``-print-multi-directory``
+Clang supports GCC's `-print-multi-lib` and `-print-multi-directory`
 options. These are described in
-`GCC Developer Options <https://gcc.gnu.org/onlinedocs/gcc-12.2.0/gcc/Developer-Options.html>`_.
+[GCC Developer Options](https://gcc.gnu.org/onlinedocs/gcc-12.2.0/gcc/Developer-Options.html).
 
 There are two ways to configure multilib in Clang: hard-coded or via a
 configuration file.
 
-Hard-coded Multilib
-===================
+## Hard-coded Multilib
 
 The available libraries can be hard-coded in Clang. Typically this is done
-using the ``MultilibBuilder`` interface in
-``clang/include/clang/Driver/MultilibBuilder.h``.
-There are many examples of this in ``lib/Driver/ToolChains/Gnu.cpp``.
+using the `MultilibBuilder` interface in
+`clang/include/clang/Driver/MultilibBuilder.h`.
+There are many examples of this in `lib/Driver/ToolChains/Gnu.cpp`.
 The remainder of this document will not focus on this type of multilib.
 
-EXPERIMENTAL Multilib via configuration file
-============================================
+## EXPERIMENTAL Multilib via configuration file
 
 Some Clang toolchains support loading multilib configuration from a
-``multilib.yaml`` configuration file. This is currently supported on Linux,
+`multilib.yaml` configuration file. This is currently supported on Linux,
 Windows, and Baremetal toolchains.
 
-A ``multilib.yaml`` configuration file specifies which multilib variants are
+A `multilib.yaml` configuration file specifies which multilib variants are
 available, their relative location, what compilation options were used to build
 them, and the criteria by which they are selected.
 
-Multilib processing
-===================
+## Multilib processing
 
 Clang goes through the following steps to use multilib from a configuration
 file:
 
-#. Normalize command line options. Clang can accept the same
+1. Normalize command line options. Clang can accept the same
    information via different options - for example,
-   ``--target=arm-none-eabi -march=armv7-m`` and
-   ``--target=armv7m-none-eabi`` are equivalent.
+   `--target=arm-none-eabi -march=armv7-m` and
+   `--target=armv7m-none-eabi` are equivalent.
    Clang normalizes the command line before passing them to the multilib system.
    To see what flags are emitted for a given set of command line options, use
-   the ``-print-multi-flags-experimental`` command line option
+   the `-print-multi-flags-experimental` command line option
    along with the rest of the options you want to use.
-#. Load ``multilib.yaml`` from sysroot.
-#. Generate additional flags. ``multilib.yaml`` contains a ``Mappings`` section,
+2. Load `multilib.yaml` from sysroot.
+3. Generate additional flags. `multilib.yaml` contains a `Mappings` section,
    which specifies how to generate additional flags based on the flags derived
    from command line options. Flags are matched using regular expressions.
    These regular expressions shall use the POSIX extended regular expression
    syntax.
-#. Match flags against multilib variants. If the generated flags are a superset
+4. Match flags against multilib variants. If the generated flags are a superset
    of the flags specified for a multilib variant then the variant is considered
    a match.
    If more than one variant matches then a toolchain may opt to either use only
    the *last* matching multilib variant, or may use all matching variants,
-   thereby :ref:`layering<multilib-layering>` them.
-#. Generate ``-isystem`` and ``-L`` options. Iterate in reverse order over
-   the matching multilib variants, and generate ``-isystem`` and ``-L``
+   thereby {ref}`layering<multilib-layering>` them.
+5. Generate `-isystem` and `-L` options. Iterate in reverse order over
+   the matching multilib variants, and generate `-isystem` and `-L`
    options based on the multilib variant's directory.
 
-.. _multilib-layering:
+(multilib-layering)=
 
-Multilib layering
-=================
+## Multilib layering
 
 When Clang selects multilib variants, it may find that more than one variant
 matches.
@@ -96,15 +88,15 @@ matches.
 It is up to the ToolChain subclass to decide what to do in this case.
 There are two options permitted:
 
-#. Use only the *last* matching multilib variant. This option exists primarily
+1. Use only the *last* matching multilib variant. This option exists primarily
    for compatibility with the previous multilib design.
-#. Use all matching variants, thereby layering them.
+2. Use all matching variants, thereby layering them.
 
 This decision is hard-coded per ToolChain subclass. The latter option is
 preferred for ToolChain subclasses without backwards compatibility
 requirements.
 
-If the latter option is chosen then ``-isystem`` and ``-L`` options will be
+If the latter option is chosen then `-isystem` and `-L` options will be
 generated for each matching multilib variant, in reverse order.
 
 This means that the compiler or linker will find files in the last matching
@@ -114,24 +106,22 @@ This means a toolchain can be distributed with one base multilib variant
 containing all system headers and includes, and more specialised multilib
 variants containing only files that are different to those in the base variant.
 
-For example, a multilib variant could be compiled with ``-fno-exceptions``.
+For example, a multilib variant could be compiled with `-fno-exceptions`.
 This option doesn't affect the content of header files, nor does it affect the
 C libraries. Therefore if multilib layering is supported by the ToolChain
 subclass and a suitable base multilib variant is present then the
-``-fno-exceptions`` multilib variant need only contain C++ libraries.
+`-fno-exceptions` multilib variant need only contain C++ libraries.
 
 It is the responsibility of layered multilib authors to ensure that headers and
 libraries in each layer are complete enough to mask any incompatibilities.
 
-Multilib custom flags
-=====================
+## Multilib custom flags
 
-Introduction
-------------
+### Introduction
 
 The multilib mechanism supports library variants that correspond to target,
-code generation or language command-line flags. Examples include ``--target``,
-``-mcpu``, ``-mfpu``, ``-mbranch-protection``, ``-fno-rtti``. However, some library
+code generation or language command-line flags. Examples include `--target`,
+`-mcpu`, `-mfpu`, `-mbranch-protection`, `-fno-rtti`. However, some library
 variants are particular to features that do not correspond to any command-line
 option. Multithreading and semihosting, for instance, have no associated
 compiler option.
@@ -143,194 +133,186 @@ processing.
 
 Multilib custom flags follow this format in the driver invocation:
 
-::
-
-  -fmultilib-flag=<value>
+```
+-fmultilib-flag=<value>
+```
 
 They are fed into the multilib system alongside the remaining flags.
 
-Custom flag declarations
-------------------------
+### Custom flag declarations
 
 Custom flags can be declared in the YAML file under the *Flags* section.
 
-.. code-block:: yaml
-
-  Flags:
+```yaml
+Flags:
+- Name: multithreaded
+  Values:
+  - Name: no-multithreaded
+    MacroDefines: [__SINGLE_THREAD__]
   - Name: multithreaded
-    Values:
-    - Name: no-multithreaded
-      MacroDefines: [__SINGLE_THREAD__]
-    - Name: multithreaded
-    Default: no-multithreaded
+  Default: no-multithreaded
+```
 
-* Name: the name to categorize a flag.
-* Values: a list of flag Values (defined below).
-* Default: it specifies the name of the value this flag should take if not
+- Name: the name to categorize a flag.
+- Values: a list of flag Values (defined below).
+- Default: it specifies the name of the value this flag should take if not
   specified in the command-line invocation. It must be one value from the Values
   field.
 
 Each flag *Value* is defined as:
 
-* Name: name of the value. This is the string to be used in
-  ``-fmultilib-flag=<string>``.
-* MacroDefines: a list of strings to be used as macro definitions. Each string
-  is fed into the driver as ``-D<string>``.
+- Name: name of the value. This is the string to be used in
+  `-fmultilib-flag=<string>`.
+- MacroDefines: a list of strings to be used as macro definitions. Each string
+  is fed into the driver as `-D<string>`.
 
 The namespace of flag values is common across all flags. This means that flag
 value names must be unique.
 
-Usage of custom flags in the *Variants* specifications
-------------------------------------------------------
+### Usage of custom flags in the *Variants* specifications
 
 Library variants should list their requirement on one or more custom flags like
 they do for any other flag. Each requirement must be listed as
-``-fmultilib-flag=<value>``.
+`-fmultilib-flag=<value>`.
 
 A variant that does not specify a requirement on one particular flag can be
 matched against any value of that flag.
 
-Stability
-=========
+## Stability
 
 Multilib via configuration file shall be considered an experimental feature
-until LLVM 18, at which point ``-print-multi-flags-experimental``
-should be renamed to ``-print-multi-flags``.
-A toolchain can opt in to using this feature by including a ``multilib.yaml``
+until LLVM 18, at which point `-print-multi-flags-experimental`
+should be renamed to `-print-multi-flags`.
+A toolchain can opt in to using this feature by including a `multilib.yaml`
 file in its distribution, once support for it is added in relevant ToolChain
 subclasses.
-Once stability is reached, flags emitted by ``-print-multi-flags``
+Once stability is reached, flags emitted by `-print-multi-flags`
 should not be removed or changed, although new flags may be added.
 
-Restrictions
-============
+## Restrictions
 
-Despite the name, multilib is used to locate both ``include`` and ``lib``
+Despite the name, multilib is used to locate both `include` and `lib`
 directories. Therefore it is important that consistent options are passed to
 the Clang driver when both compiling and linking. Otherwise inconsistent
-``include`` and ``lib`` directories may be used, and the results will be
+`include` and `lib` directories may be used, and the results will be
 undefined.
 
-EXPERIMENTAL multilib.yaml
-==========================
+## EXPERIMENTAL multilib.yaml
 
 The below example serves as a small of a possible multilib, and documents
 the available options.
 
 For a more comprehensive example see
-``clang/test/Driver/baremetal-multilib.yaml`` in the ``llvm-project`` sources.
+`clang/test/Driver/baremetal-multilib.yaml` in the `llvm-project` sources.
 
-.. code-block:: yaml
+```yaml
+# multilib.yaml
 
-  # multilib.yaml
+# This format is experimental and is likely to change!
 
-  # This format is experimental and is likely to change!
+# Syntax is YAML 1.2
 
-  # Syntax is YAML 1.2
+# This required field defines the version of the multilib.yaml format.
+# Clang will emit an error if this number is greater than its current multilib
+# version or if its major version differs, but will accept lesser minor
+# versions.
+MultilibVersion: 1.0
 
-  # This required field defines the version of the multilib.yaml format.
-  # Clang will emit an error if this number is greater than its current multilib
-  # version or if its major version differs, but will accept lesser minor
-  # versions.
-  MultilibVersion: 1.0
+# The rest of this file is in two parts:
+# 1. A list of multilib variants.
+# 2. A list of regular expressions that may match flags generated from
+#    command line options, and further flags that shall be added if the
+#    regular expression matches.
+# It is acceptable for the file to contain properties not documented here,
+# and these will be ignored by Clang.
 
-  # The rest of this file is in two parts:
-  # 1. A list of multilib variants.
-  # 2. A list of regular expressions that may match flags generated from
-  #    command line options, and further flags that shall be added if the
-  #    regular expression matches.
-  # It is acceptable for the file to contain properties not documented here,
-  # and these will be ignored by Clang.
+# List of multilib variants. Required.
+# The ordering of items in the variants list is important if more than one
+# variant can match the same set of flags. See the docs on multilib layering
+# for more info.
+Variants:
 
-  # List of multilib variants. Required.
-  # The ordering of items in the variants list is important if more than one
-  # variant can match the same set of flags. See the docs on multilib layering
-  # for more info.
-  Variants:
+# Example of a multilib variant targeting Arm v6-M.
+# Dir is the relative location of the directory containing the headers
+# and/or libraries.
+# Exactly how Dir is used is left up to the ToolChain subclass to define, but
+# typically it will be joined to the sysroot.
+- Dir: thumb/v6-m
+  # List of one or more normalized command line options, as generated by Clang
+  # from the command line options or from Mappings below.
+  # Here, if the flags are a superset of {target=thumbv6m-unknown-none-eabi}
+  # then this multilib variant will be considered a match.
+  Flags: [--target=thumbv6m-unknown-none-eabi]
 
-  # Example of a multilib variant targeting Arm v6-M.
-  # Dir is the relative location of the directory containing the headers
-  # and/or libraries.
-  # Exactly how Dir is used is left up to the ToolChain subclass to define, but
-  # typically it will be joined to the sysroot.
-  - Dir: thumb/v6-m
-    # List of one or more normalized command line options, as generated by Clang
-    # from the command line options or from Mappings below.
-    # Here, if the flags are a superset of {target=thumbv6m-unknown-none-eabi}
-    # then this multilib variant will be considered a match.
-    Flags: [--target=thumbv6m-unknown-none-eabi]
+# Similarly, a multilib variant targeting Arm v7-M with an FPU (floating
+# point unit).
+- Dir: thumb/v7-m
+  # Here, the flags generated by Clang must be a superset of
+  # {--target=thumbv7m-none-eabi, -mfpu=fpv4-sp-d16} for this multilib variant
+  # to be a match.
+  Flags: [--target=thumbv7m-none-eabi, -mfpu=fpv4-sp-d16]
 
-  # Similarly, a multilib variant targeting Arm v7-M with an FPU (floating
-  # point unit).
-  - Dir: thumb/v7-m
-    # Here, the flags generated by Clang must be a superset of
-    # {--target=thumbv7m-none-eabi, -mfpu=fpv4-sp-d16} for this multilib variant
-    # to be a match.
-    Flags: [--target=thumbv7m-none-eabi, -mfpu=fpv4-sp-d16]
-
-  # If there is no multilib available for a particular set of flags, and the
-  # other multilibs are not adequate fallbacks, then you can define a variant
-  # record with an Error key in place of the Dir key.
-  - Error: this multilib collection has no hard-float ABI support
-    Flags: [--target=thumbv7m-none-eabi, -mfloat-abi=hard]
+# If there is no multilib available for a particular set of flags, and the
+# other multilibs are not adequate fallbacks, then you can define a variant
+# record with an Error key in place of the Dir key.
+- Error: this multilib collection has no hard-float ABI support
+  Flags: [--target=thumbv7m-none-eabi, -mfloat-abi=hard]
 
 
-  # The second section of the file is a list of regular expressions that are
-  # used to map from flags generated from command line options to custom flags.
-  # This is optional.
-  # Each regular expression must match a whole flag string.
-  # Flags in the "Flags" list will be added if any flag generated from command
-  # line options matches the regular expression.
-  Mappings:
+# The second section of the file is a list of regular expressions that are
+# used to map from flags generated from command line options to custom flags.
+# This is optional.
+# Each regular expression must match a whole flag string.
+# Flags in the "Flags" list will be added if any flag generated from command
+# line options matches the regular expression.
+Mappings:
 
-  # Set a "--target=thumbv7m-none-eabi" flag if the regular expression matches
-  # any of the flags generated from the command line options.
-  # Match is a POSIX extended regular expression string.
-  - Match: --target=thumbv([7-9]|[1-9][0-9]+).*
-    # Flags is a list of one or more strings.
-    Flags: [--target=thumbv7m-none-eabi]
+# Set a "--target=thumbv7m-none-eabi" flag if the regular expression matches
+# any of the flags generated from the command line options.
+# Match is a POSIX extended regular expression string.
+- Match: --target=thumbv([7-9]|[1-9][0-9]+).*
+  # Flags is a list of one or more strings.
+  Flags: [--target=thumbv7m-none-eabi]
 
-  # Custom flag declarations. Each item is a different declaration.
-  Flags:
-    # Name of the flag
+# Custom flag declarations. Each item is a different declaration.
+Flags:
+  # Name of the flag
+- Name: multithreaded
+  # List of custom flag values
+  Values:
+    # Name of the custom flag value. To be used in -fmultilib-flag=<string>.
+  - Name: no-multithreaded
+    # Macro definitions. Useful for defining extra macros for building the
+    # associated library variant(s).
+    MacroDefines: [__SINGLE_THREAD__]
   - Name: multithreaded
-    # List of custom flag values
-    Values:
-      # Name of the custom flag value. To be used in -fmultilib-flag=<string>.
-    - Name: no-multithreaded
-      # Macro definitions. Useful for defining extra macros for building the
-      # associated library variant(s).
-      MacroDefines: [__SINGLE_THREAD__]
-    - Name: multithreaded
-    # Default flag value. If no value for this flag declaration is used in the
-    # command-line, the multilib system will use this one. Must be equal to one
-    # of the flag value names from this flag declaration.
-    Default: no-multithreaded
+  # Default flag value. If no value for this flag declaration is used in the
+  # command-line, the multilib system will use this one. Must be equal to one
+  # of the flag value names from this flag declaration.
+  Default: no-multithreaded
+```
 
-Design principles
-=================
+## Design principles
 
-Stable interface
-----------------
+### Stable interface
 
-``multilib.yaml`` and ``-print-multi-flags-experimental`` are new
+`multilib.yaml` and `-print-multi-flags-experimental` are new
 interfaces to Clang. In order for them to be usable over time and across LLVM
 versions their interfaces should be stable.
 The new multilib system will be considered experimental in LLVM 17, but in
 LLVM 18 it will be stable. In particular this is important to which multilib
 selection flags Clang generates from command line options. Once a flag is
-generated by a released version of Clang it may be used in ``multilib.yaml``
+generated by a released version of Clang it may be used in `multilib.yaml`
 files that exist independently of the LLVM release cycle, and therefore
 ceasing to generate the flag would be a breaking change and should be
 avoided.
 
-However, an exception is the normalization of ``-march``.
-``-march`` for Arm architectures contains a list of enabled and disabled
-extensions and this list is likely to grow. Therefore ``-march`` flags are
+However, an exception is the normalization of `-march`.
+`-march` for Arm architectures contains a list of enabled and disabled
+extensions and this list is likely to grow. Therefore `-march` flags are
 unstable.
 
-Incomplete interface
---------------------
+### Incomplete interface
 
 The new multilib system does multilib selection based on only a limited set of
 command line options, and limits which flags can be used for multilib
@@ -338,24 +320,21 @@ selection. This is in order to avoid committing to too large an interface.
 Later LLVM versions can add support for multilib selection from more command
 line options as needed.
 
-Extensible
-----------
+### Extensible
 
 It is likely that the configuration format will need to evolve in future to
 adapt to new requirements.
 Using a format like YAML that supports key-value pairs helps here as it's
 trivial to add new keys alongside existing ones.
 
-Backwards compatibility
------------------------
+### Backwards compatibility
 
 New versions of Clang should be able to use configuration written for earlier
 Clang versions.
 To avoid behaving in a way that may be subtly incorrect, Clang should be able
 to detect if the configuration is too new and emit an error.
 
-Forwards compatibility
-----------------------
+### Forwards compatibility
 
 As an author of a multilib configuration, it should be possible to design the
 configuration in such a way that it is likely to work well with future Clang
@@ -364,8 +343,7 @@ for newer versions of an architecture and the architecture is known to be
 designed for backwards compatibility then it should be possible to express
 compatibility for such architecture versions in the multilib configuration.
 
-Not GNU spec files
-------------------
+### Not GNU spec files
 
 The GNU spec files standard is large and complex and there's little desire to
 import that complexity to LLVM. It's also heavily oriented towards processing
@@ -373,8 +351,7 @@ command line argument strings which is hard to do correctly, hence the large
 amount of logic dedicated to that task in the Clang driver. While compatibility
 with GNU would bring benefits, the cost in this case is deemed too high.
 
-Avoid re-inventing feature detection in the configuration
----------------------------------------------------------
+### Avoid re-inventing feature detection in the configuration
 
 A large amount of logic in the Clang driver is dedicated to inferring which
 architectural features are available based on the given command line options.
@@ -382,15 +359,13 @@ It is neither desirable nor practical to repeat such logic in each multilib
 configuration. Instead the configuration should be able to benefit from the
 heavy lifting Clang already does to detect features.
 
-Low maintenance
----------------
+### Low maintenance
 
 Multilib is a relatively small feature in the scheme of things so supporting it
 should accordingly take little time. Where possible this should be achieved by
 implementing it in terms of existing features in the LLVM codebase.
 
-Minimal additional API surface
-------------------------------
+### Minimal additional API surface
 
 The greater the API surface, the greater the difficulty of keeping it stable.
 Where possible the additional API surface should be kept small by defining it
@@ -399,8 +374,7 @@ relationship between flag names and command line options where possible.
 Since the command line options are part of a stable API they are unlikely
 to change, and therefore the flag names get the same stability.
 
-Low compile-time overhead
--------------------------
+### Low compile-time overhead
 
 If the process of selecting multilib directories must be done on every
 invocation of the Clang driver then it must have a negligible impact on
