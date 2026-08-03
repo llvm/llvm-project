@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace flangomp {
@@ -49,8 +48,7 @@ checkDeviceImplementationStatus(omp::OffloadModuleInterface offloadModule) {
     if (!redOp.getByrefElementType())
       return WalkResult::advance();
 
-    auto seqTy =
-        mlir::dyn_cast<fir::SequenceType>(*redOp.getByrefElementType());
+    auto seqTy = dyn_cast<fir::SequenceType>(*redOp.getByrefElementType());
 
     bool isByRefReductionSupported =
         !seqTy || !fir::sequenceWithNonConstantShape(seqTy);
@@ -105,7 +103,7 @@ public:
         SymbolTable::UseRange funcUses = *funcOp.getSymbolUses(op);
         for (SymbolTable::SymbolUse use : funcUses) {
           Operation *callOp = use.getUser();
-          if (auto internalFunc = mlir::dyn_cast<func::FuncOp>(callOp)) {
+          if (auto internalFunc = dyn_cast<func::FuncOp>(callOp)) {
             // Do not delete internal procedures holding the symbol of their
             // Fortran host procedure as attribute.
             internalFunc->removeAttr(fir::getHostSymbolAttrName());
@@ -115,6 +113,15 @@ public:
             internalFunc.setVisibility(mlir::SymbolTable::Visibility::Public);
             continue;
           }
+          // Prevent dispatch table entries pointing to deleted functions
+          // from being removed. This prevents the lowering of any
+          // corresponding fir.dispatch ops from triggering errors. These
+          // fir.dt_entry ops will point to an undefined symbol as a result,
+          // which currently doesn't cause an issue, as fir.dispatch-related ops
+          // are later removed by the host op filtering pass.
+          if (isa<fir::DTEntryOp>(callOp))
+            continue;
+
           // If the callOp has users then replace them with Undef values.
           if (!callOp->use_empty()) {
             SmallVector<Value> undefResults;

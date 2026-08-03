@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   OwnershipBasedBufferDeallocation.cpp
   TensorCopyInsertion.cpp
   OptimizeAllocationLiveness.cpp
+  StaticMemoryPlanning.cpp
   StaticMemoryPlannerAnalysis.cpp
 
   ADDITIONAL_HEADER_DIRS

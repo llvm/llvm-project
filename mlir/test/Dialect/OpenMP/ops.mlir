@@ -60,6 +60,31 @@ func.func @omp_flush(%arg0 : memref<i32>) -> () {
   return
 }
 
+// CHECK-LABEL: func @omp_error
+func.func @omp_error(%msg : !llvm.ptr) -> () {
+  // Warning severity with a message.
+  // CHECK: omp.error severity(warning) message("a warning")
+  omp.error severity(warning) message("a warning")
+
+  // Fatal severity with a message.
+  // CHECK: omp.error severity(fatal) message("fatal error")
+  omp.error severity(fatal) message("fatal error")
+
+  // Fatal severity without a message.
+  // CHECK: omp.error severity(fatal)
+  omp.error severity(fatal)
+
+  // Warning severity without a message.
+  // CHECK: omp.error severity(warning)
+  omp.error severity(warning)
+
+  // Warning severity with a runtime message operand.
+  // CHECK: omp.error severity(warning) message_expr(%{{.*}} : !llvm.ptr)
+  omp.error severity(warning) message_expr(%msg : !llvm.ptr)
+
+  return
+}
+
 func.func @omp_terminator() -> () {
   // CHECK: omp.terminator
   omp.terminator
@@ -4232,5 +4257,59 @@ func.func @omp_target_map_iterated(%lb : index, %ub : index, %step : index,
   omp.target kernel_type(generic) map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
     omp.terminator
   }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_interop_init
+func.func @omp_interop_init(%obj : !llvm.ptr, %device : i32) -> () {
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(target)>])
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(target)>])
+
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>])
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>])
+
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>, #omp<interop_type(target)>]) prefer_type([1, 6]) device(%{{.*}} : i32) nowait
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>, #omp<interop_type(target)>]) prefer_type([1, 6]) device(%device : i32) nowait
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_interop_use
+func.func @omp_interop_use(%obj : !llvm.ptr, %device : i32) -> () {
+  // CHECK: omp.interop.use %{{.*}} : !llvm.ptr
+  omp.interop.use %obj : !llvm.ptr
+
+  // CHECK: omp.interop.use %{{.*}} : !llvm.ptr device(%{{.*}} : i32) nowait
+  omp.interop.use %obj : !llvm.ptr device(%device : i32) nowait
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_interop_destroy
+func.func @omp_interop_destroy(%obj : !llvm.ptr, %device : i32) -> () {
+  // CHECK: omp.interop.destroy %{{.*}} : !llvm.ptr
+  omp.interop.destroy %obj : !llvm.ptr
+
+  // CHECK: omp.interop.destroy %{{.*}} : !llvm.ptr device(%{{.*}} : i32) nowait
+  omp.interop.destroy %obj : !llvm.ptr device(%device : i32) nowait
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @omp_interop_depend
+func.func @omp_interop_depend(%obj : !llvm.ptr, %dep : !llvm.ptr) -> () {
+  // CHECK: omp.interop.init %{{.*}} : !llvm.ptr interop_types([#omp<interop_type(targetsync)>]) depend(taskdependinout -> %{{.*}} : !llvm.ptr)
+  omp.interop.init %obj : !llvm.ptr interop_types([#omp<interop_type(targetsync)>]) depend(taskdependinout -> %dep : !llvm.ptr)
+
+  // CHECK: omp.interop.use %{{.*}} : !llvm.ptr depend(taskdependin -> %{{.*}} : !llvm.ptr)
+  omp.interop.use %obj : !llvm.ptr depend(taskdependin -> %dep : !llvm.ptr)
+
+  // CHECK: omp.interop.destroy %{{.*}} : !llvm.ptr depend(taskdependout -> %{{.*}} : !llvm.ptr)
+  omp.interop.destroy %obj : !llvm.ptr depend(taskdependout -> %dep : !llvm.ptr)
   return
 }

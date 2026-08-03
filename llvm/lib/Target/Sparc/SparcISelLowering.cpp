@@ -223,6 +223,7 @@ static bool RetCC_Sparc64_Half(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
                                  State);
 }
 
+#define GET_CALLING_CONV_IMPL
 #include "SparcGenCallingConv.inc"
 
 // The calling conventions in SparcCallingConv.td are described in terms of the
@@ -1203,16 +1204,43 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 // this table could be generated automatically from RegInfo.
 Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                                 const MachineFunction &MF) const {
-  Register Reg = StringSwitch<Register>(RegName)
-    .Case("i0", SP::I0).Case("i1", SP::I1).Case("i2", SP::I2).Case("i3", SP::I3)
-    .Case("i4", SP::I4).Case("i5", SP::I5).Case("i6", SP::I6).Case("i7", SP::I7)
-    .Case("o0", SP::O0).Case("o1", SP::O1).Case("o2", SP::O2).Case("o3", SP::O3)
-    .Case("o4", SP::O4).Case("o5", SP::O5).Case("o6", SP::O6).Case("o7", SP::O7)
-    .Case("l0", SP::L0).Case("l1", SP::L1).Case("l2", SP::L2).Case("l3", SP::L3)
-    .Case("l4", SP::L4).Case("l5", SP::L5).Case("l6", SP::L6).Case("l7", SP::L7)
-    .Case("g0", SP::G0).Case("g1", SP::G1).Case("g2", SP::G2).Case("g3", SP::G3)
-    .Case("g4", SP::G4).Case("g5", SP::G5).Case("g6", SP::G6).Case("g7", SP::G7)
-    .Default(0);
+  StringRef Name(RegName);
+  Name.consume_front("%");
+
+  Register Reg = StringSwitch<Register>(Name)
+                     .Cases({"r24", "i0"}, SP::I0)
+                     .Cases({"r25", "i1"}, SP::I1)
+                     .Cases({"r26", "i2"}, SP::I2)
+                     .Cases({"r27", "i3"}, SP::I3)
+                     .Cases({"r28", "i4"}, SP::I4)
+                     .Cases({"r29", "i5"}, SP::I5)
+                     .Cases({"r30", "i6", "fp"}, SP::I6)
+                     .Cases({"r31", "i7"}, SP::I7)
+                     .Cases({"r8", "o0"}, SP::O0)
+                     .Cases({"r9", "o1"}, SP::O1)
+                     .Cases({"r10", "o2"}, SP::O2)
+                     .Cases({"r11", "o3"}, SP::O3)
+                     .Cases({"r12", "o4"}, SP::O4)
+                     .Cases({"r13", "o5"}, SP::O5)
+                     .Cases({"r14", "o6", "sp"}, SP::O6)
+                     .Cases({"r15", "o7"}, SP::O7)
+                     .Cases({"r16", "l0"}, SP::L0)
+                     .Cases({"r17", "l1"}, SP::L1)
+                     .Cases({"r18", "l2"}, SP::L2)
+                     .Cases({"r19", "l3"}, SP::L3)
+                     .Cases({"r20", "l4"}, SP::L4)
+                     .Cases({"r21", "l5"}, SP::L5)
+                     .Cases({"r22", "l6"}, SP::L6)
+                     .Cases({"r23", "l7"}, SP::L7)
+                     .Cases({"r0", "g0"}, SP::G0)
+                     .Cases({"r1", "g1"}, SP::G1)
+                     .Cases({"r2", "g2"}, SP::G2)
+                     .Cases({"r3", "g3"}, SP::G3)
+                     .Cases({"r4", "g4"}, SP::G4)
+                     .Cases({"r5", "g5"}, SP::G5)
+                     .Cases({"r6", "g6"}, SP::G6)
+                     .Cases({"r7", "g7"}, SP::G7)
+                     .Default(0);
 
   // If we're directly referencing register names
   // (e.g in GCC C extension `register int r asm("g1");`),
@@ -3033,7 +3061,8 @@ SDValue SparcTargetLowering::LowerBSWAP(SDValue Op, SelectionDAG &DAG) const {
   SDValue ST = DAG.getMemIntrinsicNode(
       IsLittleEndian ? SPISD::STORE_BIG : SPISD::STORE_LITTLE, DL,
       DAG.getVTList(MVT::Other), Ops, VT,
-      MachinePointerInfo::getFixedStack(MF, TmpFI));
+      MachinePointerInfo::getFixedStack(MF, TmpFI), std::nullopt,
+      MachineMemOperand::MOStore);
   return DAG.getLoad(VT, DL, ST, TmpPtr,
                      MachinePointerInfo::getFixedStack(MF, TmpFI));
 }
@@ -3264,11 +3293,14 @@ SDValue SparcTargetLowering::PerformBSWAPCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op = N->getOperand(0);
   EVT VT = N->getValueType(0);
-  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+  auto *LN = dyn_cast<LoadSDNode>(Op.getNode());
 
-  // Turn BSWAP (LOAD) -> ld*a #ASI_P(_L) on V9.
-  if (Subtarget->isV9() && ISD::isNormalLoad(Op.getNode()) &&
-      Op.getNode()->hasOneUse() &&
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+  bool IsAlignedLoad = LN && ISD::isNormalLoad(Op.getNode()) &&
+                       LN->getAlign() >= VT.getScalarStoreSize();
+
+  // Turn BSWAP (aligned-LOAD) -> ld*a #ASI_P(_L) on V9.
+  if (Subtarget->isV9() && IsAlignedLoad && Op.getNode()->hasOneUse() &&
       (VT == MVT::i16 || VT == MVT::i32 ||
        (Subtarget->is64Bit() && VT == MVT::i64))) {
     SDValue Load = Op;
@@ -3299,17 +3331,21 @@ SDValue SparcTargetLowering::PerformSTORECombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDValue Op = N->getOperand(1);
   EVT VT = Op.getValueType();
+  EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
   unsigned Opcode = Op.getOpcode();
-  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+  auto *SN = dyn_cast<StoreSDNode>(N);
 
-  // Turn STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
+  bool IsLittleEndian = DAG.getDataLayout().isLittleEndian();
+  bool IsAlignedStore = SN && SN->getAlign() >= MemVT.getScalarStoreSize();
+
+  // Turn aligned-STORE (BSWAP) -> st*a #ASI_P(_L) on V9.
   if (Subtarget->isV9() && Opcode == ISD::BSWAP && Op.getNode()->hasOneUse() &&
+      IsAlignedStore &&
       (VT == MVT::i16 || VT == MVT::i32 ||
        (Subtarget->is64Bit() && VT == MVT::i64))) {
 
     // st*a can only handle simple types and it makes no sense to store less
     // than two bytes in byte-reversed order.
-    EVT MemVT = cast<StoreSDNode>(N)->getMemoryVT();
     if (MemVT.getSizeInBits() < 16)
       return SDValue();
 

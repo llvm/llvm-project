@@ -3,6 +3,12 @@ set(PLUGINS_TEST_INCLUDE ${LIBOMPTARGET_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}
 
 add_subdirectory(device_code)
 
+add_offload_unittest("context"
+    context/olCreateContext.cpp
+    context/olDestroyContext.cpp
+    context/olGetContextInfo.cpp
+    context/olGetContextInfoSize.cpp)
+
 add_offload_unittest("device"
     device/olIterateDevices.cpp
     device/olGetDeviceInfo.cpp
@@ -32,6 +38,7 @@ add_offload_unittest("memory"
     memory/olMemFill.cpp
     memory/olMemFree.cpp
     memory/olMemcpy.cpp
+    memory/olMemPrefetch.cpp
     memory/olGetMemInfo.cpp
     memory/olGetMemInfoSize.cpp
     memory/olMemRegister.cpp)
@@ -58,4 +65,5 @@ add_offload_unittest("queue"
 add_offload_unittest("symbol"
     symbol/olGetSymbol.cpp
     symbol/olGetSymbolInfo.cpp
-    symbol/olGetSymbolInfoSize.cpp)
+    symbol/olGetSymbolInfoSize.cpp
+    symbol/olIterateSymbols.cpp)

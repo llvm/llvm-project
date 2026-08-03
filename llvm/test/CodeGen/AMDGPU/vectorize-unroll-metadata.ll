@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -mcpu=gfx90a -passes=loop-vectorize %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=amdgpu9.0a-- -passes=loop-vectorize %s -S -o - | FileCheck %s
 
 ; CHECK-LABEL: @test
 ; CHECK-LABEL: vector.body:

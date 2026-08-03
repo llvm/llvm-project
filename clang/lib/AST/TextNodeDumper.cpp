@@ -19,10 +19,10 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLocVisitor.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 
@@ -372,7 +372,10 @@ void TextNodeDumper::Visit(const OMPClause *C) {
   }
   {
     ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);
-    StringRef ClauseName(llvm::omp::getOpenMPClauseName(C->getClauseKind()));
+    OpenMPClauseKind CKind = C->getClauseKind();
+    StringRef ClauseName(CKind == llvm::omp::Clause::OMPC_update_depend_objects
+                             ? StringRef("UpdateDependObjects")
+                             : llvm::omp::getOpenMPClauseName(CKind));
     OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
        << ClauseName.drop_front() << "Clause";
   }
@@ -811,6 +814,12 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
         },
         Value.getStructNumFields(), "field", "fields");
 
+    dumpAPValueChildren(
+        Value, Ty,
+        [](const APValue &Value, unsigned Index) -> const APValue & {
+          return Value.getStructVirtualBase(Index);
+        },
+        Value.getStructNumVirtualBases(), "vbase", "vbases");
     return;
   }
   case APValue::Matrix: {
@@ -1537,6 +1546,32 @@ void clang::TextNodeDumper::VisitCoreturnStmt(const CoreturnStmt *Node) {
     OS << " implicit";
 }
 
+void TextNodeDumper::VisitCXXExpansionStmtPattern(
+    const CXXExpansionStmtPattern *Node) {
+  switch (Node->getKind()) {
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating:
+    OS << " enumerating";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating:
+    OS << " iterating";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring:
+    OS << " destructuring";
+    return;
+  case CXXExpansionStmtPattern::ExpansionStmtKind::Dependent:
+    OS << " dependent";
+    return;
+  }
+
+  llvm_unreachable("invalid expansion statement kind");
+}
+
+void TextNodeDumper::VisitCXXExpansionStmtInstantiation(
+    const CXXExpansionStmtInstantiation *Node) {
+  if (Node->shouldApplyLifetimeExtensionToPreamble())
+    OS << " applies_lifetime_extension";
+}
+
 void TextNodeDumper::VisitConstantExpr(const ConstantExpr *Node) {
   if (Node->hasAPValueResult())
     AddChild("value",
@@ -2212,7 +2247,7 @@ void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   case UnaryTransformType::Enum:                                               \
     OS << " " #Trait;                                                          \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 

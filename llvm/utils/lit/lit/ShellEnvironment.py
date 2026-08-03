@@ -190,6 +190,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
+            redir_filename = lit.util.get_windows_extended_path(redir_filename)
             fd = open(redir_filename, mode, encoding="utf-8")
         # Workaround a Win32 and/or subprocess bug when appending.
         #

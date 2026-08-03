@@ -11,9 +11,17 @@
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Utility/WasmVirtualRegisters.h"
+#include "lldb/Core/Address.h"
+#include "lldb/Core/AddressRange.h"
+#include "lldb/Core/Mangled.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/Symtab.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "llvm/ADT/DenseMap.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -26,12 +34,41 @@ SymbolFileWasm::SymbolFileWasm(ObjectFileSP objfile_sp,
 
 SymbolFileWasm::~SymbolFileWasm() = default;
 
+/// Index the code symbols that carry no mangled name by their demangled name.
+/// The value is a symbol table index rather than a Symbol pointer because
+/// pointers do not survive symbols being appended to the table.
+static llvm::DenseMap<ConstString, uint32_t>
+BuildDemangledCodeSymbolIndex(Symtab &symtab) {
+  llvm::DenseMap<ConstString, uint32_t> index;
+  for (size_t i = 0, n = symtab.GetNumSymbols(); i < n; ++i) {
+    Symbol *symbol = symtab.SymbolAtIndex(i);
+    if (!symbol || symbol->GetType() != eSymbolTypeCode)
+      continue;
+    Mangled &mangled = symbol->GetMangled();
+    if (mangled.GetMangledName())
+      continue;
+    if (ConstString demangled = mangled.GetDemangledName())
+      index.try_emplace(demangled, static_cast<uint32_t>(i));
+  }
+  return index;
+}
+
 void SymbolFileWasm::AddSymbols(Symtab &symtab) {
   SymbolFileDWARF::AddSymbols(symtab);
 
-  // Copy each function's mangled name from its DWARF DW_AT_linkage_name onto
-  // the matching symbol. The match is by file address: a subprogram's
-  // DW_AT_low_pc resolves to the same code-section file address as its symbol.
+  // The Wasm "name" section names functions but not data, so data symbols are
+  // absent from the symbol table. Recover them from the DWARF. A subprogram's
+  // mangled name goes onto its existing code symbol. A global variable at a
+  // static DW_OP_addr gets a synthesized data symbol so that its address
+  // resolves back to the variable's name. This is how the Itanium C++ runtime
+  // recovers a dynamic type from a vtable ("vtable for X"), and it also lets a
+  // plain C global resolve back to its name.
+  ModuleSP module_sp = GetObjectFile()->GetModule();
+  SectionList *section_list = module_sp ? module_sp->GetSectionList() : nullptr;
+
+  // Built on demand to recover a mangled name from a declaration-only DIE.
+  std::optional<llvm::DenseMap<ConstString, uint32_t>> demangled_index;
+
   DWARFDebugInfo &debug_info = DebugInfo();
   const size_t num_units = debug_info.GetNumUnits();
   for (size_t i = 0; i < num_units; ++i) {
@@ -40,23 +77,88 @@ void SymbolFileWasm::AddSymbols(Symtab &symtab) {
       continue;
 
     for (const DWARFDebugInfoEntry &entry : unit->dies()) {
-      if (entry.Tag() != DW_TAG_subprogram)
+      const dw_tag_t tag = entry.Tag();
+      if (tag != DW_TAG_subprogram && tag != DW_TAG_variable)
         continue;
 
       DWARFDIE die(unit, &entry);
-      const char *mangled =
-          die.GetMangledName(/*substitute_name_allowed=*/false);
-      if (!mangled)
+
+      if (tag == DW_TAG_subprogram) {
+        // Only a mangled (linkage) name is worth putting onto a code symbol.
+        // The source name is already carried by the Wasm name section.
+        const char *mangled =
+            die.GetMangledName(/*substitute_name_allowed=*/false);
+        if (!mangled)
+          continue;
+
+        // A defining DIE names its symbol by address. A function defined in a
+        // translation unit compiled without debug info has only a declaration
+        // DIE with no address, so match its symbol by the demangled name that
+        // the Wasm name section carries.
+        const addr_t file_addr =
+            die.GetAttributeValueAsAddress(DW_AT_low_pc, LLDB_INVALID_ADDRESS);
+        Symbol *symbol = nullptr;
+        if (file_addr != LLDB_INVALID_ADDRESS) {
+          symbol = symtab.FindSymbolAtFileAddress(file_addr);
+        } else if (ConstString demangled =
+                       Mangled(ConstString(mangled)).GetDemangledName()) {
+          if (!demangled_index)
+            demangled_index = BuildDemangledCodeSymbolIndex(symtab);
+          auto it = demangled_index->find(demangled);
+          if (it != demangled_index->end())
+            symbol = symtab.SymbolAtIndex(it->second);
+        }
+        if (symbol && !symbol->GetMangled().GetMangledName())
+          symbol->GetMangled().SetMangledName(ConstString(mangled));
+        continue;
+      }
+
+      // A global variable has no symbol at all. Use its linkage name, or the
+      // source name when there is none (plain C globals have only a
+      // DW_AT_name).
+      const char *name = die.GetMangledName(/*substitute_name_allowed=*/true);
+      if (!name)
         continue;
 
-      const addr_t file_addr =
-          die.GetAttributeValueAsAddress(DW_AT_low_pc, LLDB_INVALID_ADDRESS);
-      if (file_addr == LLDB_INVALID_ADDRESS)
+      // A global's location is a plain DW_OP_addr.
+      if (!section_list)
+        continue;
+      DWARFAttributes attributes = die.GetAttributes();
+      DWARFFormValue location;
+      bool has_location = false;
+      for (size_t attr_idx = 0; attr_idx < attributes.Size(); ++attr_idx) {
+        if (attributes.AttributeAtIndex(attr_idx) == DW_AT_location) {
+          has_location = attributes.ExtractFormValueAtIndex(attr_idx, location);
+          break;
+        }
+      }
+      if (!has_location || !DWARFFormValue::IsBlockForm(location.Form()))
         continue;
 
-      Symbol *symbol = symtab.FindSymbolAtFileAddress(file_addr);
-      if (symbol && !symbol->GetMangled().GetMangledName())
-        symbol->GetMangled().SetMangledName(ConstString(mangled));
+      const DWARFDataExtractor &data = die.GetData();
+      DWARFExpression expr(
+          DataExtractor(data, location.BlockData() - data.GetDataStart(),
+                        location.Unsigned()));
+      llvm::Expected<addr_t> file_addr = expr.GetLocation_DW_OP_addr(unit);
+      if (!file_addr) {
+        llvm::consumeError(file_addr.takeError());
+        continue;
+      }
+
+      Address addr(*file_addr, section_list);
+      if (!addr.IsSectionOffset())
+        continue;
+
+      // Leave the size unset for Symtab to compute from the gap to the next
+      // symbol. Don't look the address up in the symtab here. That would build
+      // the address index before the remaining vtables are added, mis-sizing
+      // them.
+      symtab.AddSymbol(Symbol(
+          /*symID=*/0, Mangled(ConstString(name)), eSymbolTypeData,
+          /*external=*/true, /*is_debug=*/false, /*is_trampoline=*/false,
+          /*is_artificial=*/false, AddressRange(addr, 0),
+          /*size_is_valid=*/false, /*contains_linker_annotations=*/false,
+          /*flags=*/0));
     }
   }
 }

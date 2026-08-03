@@ -43,9 +43,6 @@
 namespace Fortran::parser {
 using namespace Fortran::parser::omp;
 
-using DirectiveSet =
-    llvm::Bitset<llvm::NextPowerOf2(llvm::omp::Directive_enumSize)>;
-
 // Helper function to print the buffer contents starting at the current point.
 [[maybe_unused]] static std::string ahead(const ParseState &state) {
   return std::string(
@@ -1133,6 +1130,20 @@ TYPE_PARSER(construct<OmpAdjustArgsClause::OmpAdjustOp>(
     "NEED_DEVICE_PTR" >>
         pure(OmpAdjustArgsClause::OmpAdjustOp::Value::Need_Device_Ptr)))
 
+TYPE_PARSER(construct<OmpApplyClause::Modifier>(Parser<OmpLoopModifier>{}))
+
+TYPE_PARSER(sourced(construct<OmpLoopModifier>(
+    "FUSED" >> pure(llvm::omp::LoopModifier::OMPLM_fused) ||
+        "GRID" >> pure(llvm::omp::LoopModifier::OMPLM_grid) ||
+        "IDENTITY" >> pure(llvm::omp::LoopModifier::OMPLM_identity) ||
+        "INTERCHANGED" >> pure(llvm::omp::LoopModifier::OMPLM_interchanged) ||
+        "INTRATILE" >> pure(llvm::omp::LoopModifier::OMPLM_intratile) ||
+        "OFFSETS" >> pure(llvm::omp::LoopModifier::OMPLM_offsets) ||
+        "REVERSED" >> pure(llvm::omp::LoopModifier::OMPLM_reversed) ||
+        "SPLIT" >> pure(llvm::omp::LoopModifier::OMPLM_split) ||
+        "UNROLLED" >> pure(llvm::omp::LoopModifier::OMPLM_unrolled),
+    maybe(parenthesized(nonemptyList(scalarIntConstantExpr))))))
+
 // --- Parsers for clauses --------------------------------------------
 
 // Declaration of the ODS parser. This type must be complete for some of
@@ -1175,6 +1186,10 @@ TYPE_PARSER(construct<OmpAffinityClause>(
     maybe(nonemptyList(Parser<OmpAffinityClause::Modifier>{}) / ":"),
     Parser<OmpObjectList>{}))
 
+TYPE_PARSER(construct<OmpApplyClause>(
+    maybe(nonemptyList(Parser<OmpApplyClause::Modifier>{} / ":")),
+    nonemptyList(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
+
 // 2.4 Requires construct [OpenMP 5.0]
 //        atomic-default-mem-order-clause ->
 //                               acq_rel
@@ -1200,10 +1215,10 @@ TYPE_PARSER(construct<OmpDefaultClause::DataSharingAttribute>(
     "NONE" >> pure(OmpDefaultClause::DataSharingAttribute::None)))
 
 TYPE_PARSER(construct<OmpDefaultClause>(
-    construct<OmpDefaultClause>(
-        Parser<OmpDefaultClause::DataSharingAttribute>{}) ||
-    construct<OmpDefaultClause>(
-        indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false)))))
+    Parser<OmpDefaultClause::DataSharingAttribute>{}))
+
+TYPE_PARSER(construct<OmpDefaultVariantClause>(
+    indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
 
 TYPE_PARSER(construct<OmpDynGroupprivateClause>(
     maybe(nonemptyList(Parser<OmpDynGroupprivateClause::Modifier>{}) / ":"),
@@ -1401,8 +1416,10 @@ TYPE_PARSER(construct<OmpAlignedClause>(Parser<OmpObjectList>{},
     maybe(":" >> nonemptyList(Parser<OmpAlignedClause::Modifier>{}))))
 
 TYPE_PARSER( //
-    construct<OmpUpdateClause>(parenthesized(Parser<OmpDependenceType>{})) ||
-    construct<OmpUpdateClause>(parenthesized(Parser<OmpTaskDependenceType>{})))
+    construct<OmpUpdateDependObjectsClause>(
+        parenthesized(Parser<OmpDependenceType>{})) ||
+    construct<OmpUpdateDependObjectsClause>(
+        parenthesized(Parser<OmpTaskDependenceType>{})))
 
 TYPE_PARSER(construct<OmpOrderClause>(
     maybe(nonemptyList(Parser<OmpOrderClause::Modifier>{}) / ":"),
@@ -1483,6 +1500,8 @@ TYPE_PARSER( //
                       parenthesized(Parser<OmpAllocateClause>{}))) ||
     "APPEND_ARGS" >> construct<OmpClause>(construct<OmpClause::AppendArgs>(
                          parenthesized(Parser<OmpAppendArgsClause>{}))) ||
+    "APPLY" >> construct<OmpClause>(construct<OmpClause::Apply>(
+                   parenthesized(Parser<OmpApplyClause>{}))) ||
     "ALLOCATOR" >> construct<OmpClause>(construct<OmpClause::Allocator>(
                        parenthesized(scalarIntExpr))) ||
     "AT" >> construct<OmpClause>(construct<OmpClause::At>(
@@ -1504,8 +1523,12 @@ TYPE_PARSER( //
                     parenthesized(Parser<OmpObjectList>{}))) ||
     "COPYPRIVATE" >> construct<OmpClause>(construct<OmpClause::Copyprivate>(
                          (parenthesized(Parser<OmpObjectList>{})))) ||
-    "DEFAULT"_id >> construct<OmpClause>(construct<OmpClause::Default>(
-                        parenthesized(Parser<OmpDefaultClause>{}))) ||
+    "DEFAULT"_id >>
+        // Default or DefaultVariant depending on the argument.
+        (construct<OmpClause>(construct<OmpClause::Default>(
+             parenthesized(Parser<OmpDefaultClause>{}))) ||
+            construct<OmpClause>(construct<OmpClause::DefaultVariant>(
+                parenthesized(Parser<OmpDefaultVariantClause>{})))) ||
     "DEFAULTMAP" >> construct<OmpClause>(construct<OmpClause::Defaultmap>(
                         parenthesized(Parser<OmpDefaultmapClause>{}))) ||
     "DEPEND" >> construct<OmpClause>(construct<OmpClause::Depend>(
@@ -1687,8 +1710,9 @@ TYPE_PARSER( //
     "UNIFORM" >> construct<OmpClause>(construct<OmpClause::Uniform>(
                      parenthesized(nonemptyList(name)))) ||
     "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
-    "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
-                    maybe(Parser<OmpUpdateClause>{}))) ||
+    "UPDATE" >> (construct<OmpClause>(construct<OmpClause::UpdateDependObjects>(
+                     Parser<OmpUpdateDependObjectsClause>{})) ||
+                    construct<OmpClause>(construct<OmpClause::Update>())) ||
     "WEAK" >> construct<OmpClause>(construct<OmpClause::Weak>()) ||
     "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
                   parenthesized(Parser<OmpWhenClause>{}))) ||
@@ -1730,9 +1754,9 @@ static inline constexpr auto IsDirective(llvm::omp::Directive dir) {
   return [dir](const OmpDirectiveName &name) -> bool { return dir == name.v; };
 }
 
-static inline constexpr auto IsMemberOf(const DirectiveSet &dirs) {
+static inline constexpr auto IsMemberOf(const llvm::omp::DirectiveSet &dirs) {
   return [&dirs](const OmpDirectiveName &name) -> bool {
-    return dirs.test(llvm::to_underlying(name.v));
+    return dirs.test(name.v);
   };
 }
 
@@ -1954,9 +1978,8 @@ TYPE_PARSER(construct<OmpMetadirectiveDirective>(
 struct OmpDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpDirectiveParser(DirectiveSet dirs) : dirs_(dirs) {}
-  constexpr OmpDirectiveParser(llvm::omp::Directive dir)
-      : dirs_({static_cast<unsigned>(llvm::to_underlying(dir))}) {}
+  constexpr OmpDirectiveParser(llvm::omp::DirectiveSet dirs) : dirs_(dirs) {}
+  constexpr OmpDirectiveParser(llvm::omp::Directive dir) : dirs_({dir}) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
     auto p{predicated(Parser<OmpDirectiveName>{}, IsMemberOf(dirs_)) >=
@@ -1965,7 +1988,7 @@ struct OmpDirectiveParser {
   }
 
 private:
-  DirectiveSet dirs_;
+  llvm::omp::DirectiveSet dirs_;
 };
 
 // Parse the directive that begins a construct. In some cases the directive
@@ -1977,7 +2000,8 @@ private:
 struct OmpBeginDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpBeginDirectiveParser(DirectiveSet dirs, bool implicit = true)
+  constexpr OmpBeginDirectiveParser(
+      llvm::omp::DirectiveSet dirs, bool implicit = true)
       : dparser_(dirs), implicit_(implicit) {}
   constexpr OmpBeginDirectiveParser(
       llvm::omp::Directive dir, bool implicit = true)
@@ -2016,7 +2040,8 @@ private:
 struct OmpEndDirectiveParser {
   using resultType = OmpDirectiveSpecification;
 
-  constexpr OmpEndDirectiveParser(DirectiveSet dirs) : dparser_(dirs) {}
+  constexpr OmpEndDirectiveParser(llvm::omp::DirectiveSet dirs)
+      : dparser_(dirs) {}
   constexpr OmpEndDirectiveParser(llvm::omp::Directive dir) : dparser_(dir) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
@@ -2110,7 +2135,8 @@ private:
 struct OmpLoopConstructParser {
   using resultType = OpenMPLoopConstruct;
 
-  constexpr OmpLoopConstructParser(DirectiveSet dirs, bool implicit = true)
+  constexpr OmpLoopConstructParser(
+      llvm::omp::DirectiveSet dirs, bool implicit = true)
       : dirs_(dirs), implicit_(implicit) {}
 
   std::optional<resultType> Parse(ParseState &state) const {
@@ -2153,7 +2179,7 @@ struct OmpLoopConstructParser {
   }
 
 private:
-  DirectiveSet dirs_;
+  llvm::omp::DirectiveSet dirs_;
   bool implicit_;
 };
 
@@ -2539,11 +2565,10 @@ TYPE_PARSER(sourced(
         llvm::omp::Directive::OMPD_metadirective, /*implicit=*/false})))
 
 // OMP SECTIONS Directive
-static constexpr DirectiveSet GetSectionsDirectives() {
-  using Directive = llvm::omp::Directive;
-  constexpr DirectiveSet sectionsDirectives{
-      unsigned(Directive::OMPD_sections),
-      unsigned(Directive::OMPD_parallel_sections),
+static constexpr llvm::omp::DirectiveSet GetSectionsDirectives() {
+  constexpr llvm::omp::DirectiveSet sectionsDirectives{
+      llvm::omp::Directive::OMPD_sections,
+      llvm::omp::Directive::OMPD_parallel_sections,
   };
   return sectionsDirectives;
 }
@@ -2601,20 +2626,17 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(
                     Parser<OmpDelimitedMetadirectiveDirective>{}))))
 
-static constexpr DirectiveSet GetLoopDirectives() {
-  using Directive = llvm::omp::Directive;
+static constexpr llvm::omp::DirectiveSet GetLoopDirectives() {
   using SourceLanguage = llvm::omp::SourceLanguage;
-  DirectiveSet loopDirectives;
+  llvm::omp::DirectiveSet loopDirectives;
 
-  for (auto dirVal{llvm::to_underlying(Directive::First_)};
-      dirVal != llvm::to_underlying(Directive::Last_) + 1; ++dirVal) {
-    auto dirId{static_cast<Directive>(dirVal)};
+  for (auto dirId : llvm::omp::directives()) {
     auto assoc{getDirectiveAssociation(dirId)};
     if (assoc == llvm::omp::Association::LoopNest ||
         assoc == llvm::omp::Association::LoopSeq) {
       auto langs{getDirectiveLanguages(dirId)};
       if (llvm::to_underlying(langs & SourceLanguage::Fortran) != 0) {
-        loopDirectives.set(dirVal);
+        loopDirectives.set(dirId);
       }
     }
   }
@@ -2624,8 +2646,8 @@ static constexpr DirectiveSet GetLoopDirectives() {
 TYPE_PARSER(sourced(construct<OpenMPLoopConstruct>(
     OmpLoopConstructParser(GetLoopDirectives()))))
 
-static constexpr DirectiveSet GetAllDirectives() { //
-  return ~DirectiveSet{};
+static constexpr llvm::omp::DirectiveSet GetAllDirectives() {
+  return ~llvm::omp::DirectiveSet();
 }
 
 TYPE_PARSER(construct<OpenMPMisplacedEndDirective>(
