@@ -23710,7 +23710,7 @@ static SDValue tryShiftTruncateCombine(SDNode *N, SelectionDAG &DAG,
                                      DAG.getVTList(DstVT, DstVT), {Lo, Hi});
 
   // After bitcasting, the byte containing the shifted result is in the odd
-  // deinterleave result on little-endian targets, and the in the even result
+  // deinterleave result on little-endian targets, and in the even result
   // on big-endian targets.
   unsigned Res = DAG.getDataLayout().isLittleEndian() ? 1 : 0;
   return Deinterleave.getValue(Res);
