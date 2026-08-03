@@ -47,12 +47,12 @@ entry:
   br label %loop
 
 loop:
-  %i = phi i64 [ 0, %entry ], [ %i.next, %loop ]
-  %p = getelementptr i64, ptr %a, i64 %i
-  store i64 %i, ptr %p
-  %i.next = add i64 %i, 1
-  %c = icmp slt i64 %i.next, %n
-  br i1 %c, label %loop, label %exit, !prof !1
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p = getelementptr i64, ptr %a, i64 %iv
+  store i64 %iv, ptr %p
+  %iv.next = add i64 %iv, 1
+  %ec = icmp slt i64 %iv.next, %n
+  br i1 %ec, label %loop, label %exit, !prof !1
 
 exit:
   ret void
