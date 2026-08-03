@@ -415,11 +415,12 @@ void AMDGPULowerVGPREncoding::lowerLoadStoreIdx(MachineInstr &MI) {
          "out of bounds VGPR 'as memory' (address space 13) access");
 #endif
 
-  // Subtargets with movrel take the index from M0, which AMDGPUAssignIdxToM0
-  // has already copied it into. The rest have no movrel and index with the VGPR
-  // indexing mode instead: s_set_gpr_idx_on enables it for one operand of the
-  // moves that follow, reading the index straight out of the SGPR holding it,
-  // so no copy is needed there.
+  // Subtargets with movrel take the index from M0, which
+  // SITargetLowering::finalizeLowering has already copied it into. The rest
+  // have no movrel and index with the VGPR indexing mode instead:
+  // s_set_gpr_idx_on enables it for one operand of the moves that follow,
+  // reading the index straight out of the SGPR holding it, so no copy is needed
+  // there.
   const bool UseGPRIdxMode = ST->useVGPRIndexMode();
 
   MachineInstr *SetOn = nullptr;
