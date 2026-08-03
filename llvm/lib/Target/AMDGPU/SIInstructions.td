@@ -1090,10 +1090,15 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
   // The units of $idx and $offset are in dwords.
   //
   // The index reaches the hardware through M0, so these define it: either by
-  // writing M0 for v_movrel[sd], or through s_set_gpr_idx_on where the subtarget
-  // indexes with the VGPR indexing mode. Declaring that here also keeps a
+  // writing M0 for v_movrel[sd], which SITargetLowering::finalizeLowering
+  // rewrites $idx to, or through s_set_gpr_idx_on where the subtarget indexes
+  // with the VGPR indexing mode. Declaring that here also keeps a
   // divergent-index access pinned inside its waterfall loop, since an
   // instruction defining a physical register is not hoisted or sunk.
+  //
+  // Unlike SI_INDIRECT_SRC/DST and the V_INDIRECT_REG_* pseudos, the storage
+  // indexed here is the whole register file rather than a tuple an operand can
+  // name, so these are memory accesses carrying an MMO instead.
   def V_LOAD_IDX_B#rc.Size : VPseudoInstSI <
     (outs rc:$data),
     (ins SReg_32:$idx, i32imm:$offset)>,

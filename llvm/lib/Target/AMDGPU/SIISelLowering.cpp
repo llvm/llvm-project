@@ -20201,6 +20201,40 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
 
   Info->limitOccupancy(MF);
 
+  // A VGPR "as memory" indexed access takes its index from M0 on subtargets
+  // with movrel, so copy it there and rewrite the access to read M0, which lets
+  // the index computation coalesce into it. Doing this here rather than while
+  // selecting the access is what makes a divergent index correct: both
+  // selectors make such an index uniform with a waterfall loop - the register
+  // bank legalizer before selection, SIFixSGPRCopies after it - and this runs
+  // after both, so the copy lands inside the loop, next to the per-iteration
+  // index it has to carry. Subtargets without movrel index with the VGPR
+  // indexing mode instead, reading the index straight out of its SGPR.
+  //
+  // TODO: This is only needed because M0 is reserved. Once it is not, the index
+  // can be an ordinary virtual register copy that the coalescer folds away, and
+  // this can go.
+  if (ST.hasMovrel()) {
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : MBB) {
+        auto *LdSt = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI);
+        if (!LdSt)
+          continue;
+
+        MachineOperand &IdxOp = LdSt->getIdxOp();
+        assert(IdxOp.isReg() && "VGPR-memory index must be a register");
+        // With GlobalISel this runs twice, once from InstructionSelect and
+        // again from FinalizeISel; the rewrite makes the second run a no-op.
+        if (IdxOp.getReg() == AMDGPU::M0)
+          continue;
+
+        BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY), AMDGPU::M0)
+            .addReg(IdxOp.getReg());
+        IdxOp.setReg(AMDGPU::M0);
+      }
+    }
+  }
+
   if (ST.isWave32() && !MF.empty()) {
     for (auto &MBB : MF) {
       for (auto &MI : MBB) {
