@@ -78,6 +78,22 @@ LogicalResult EXTAtomicFAddOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.EXT.AtomicFMinOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult EXTAtomicFMinOp::verify() {
+  return verifyAtomicUpdateOp<EXTAtomicFMinOp, FloatType>(getOperation());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.EXT.AtomicFMaxOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult EXTAtomicFMaxOp::verify() {
+  return verifyAtomicUpdateOp<EXTAtomicFMaxOp, FloatType>(getOperation());
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.AtomicIDecrementOp
 //===----------------------------------------------------------------------===//
 
