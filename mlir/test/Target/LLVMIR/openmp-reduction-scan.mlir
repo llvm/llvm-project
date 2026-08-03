@@ -99,7 +99,7 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK:   %[[OELEMPTR:.+]] = getelementptr inbounds i32, ptr %[[OBUFF]], i32 1
 //CHECK:   %[[OORIG:.+]] = load i32, ptr %{{.*}}, align 4
 //CHECK:   %[[OELEM:.+]] = load i32, ptr %[[OELEMPTR]], align 4
-//CHECK:   %[[OCOMB:.+]] = add i32 %[[OELEM]], %[[OORIG]]
+//CHECK:   %[[OCOMB:.+]] = add i32 %[[OORIG]], %[[OELEM]]
 //CHECK:   store i32 %[[OCOMB]], ptr %[[OELEMPTR]], align 4
 //CHECK:   br i1 {{.*}}, label %omp.outer.log.scan.body, label %omp.outer.log.scan.exit
 //CHECK: omp.outer.log.scan.body:
@@ -121,7 +121,7 @@ llvm.mlir.global internal @_QFEb() {addr_space = 0 : i32} : !llvm.array<100 x i3
 //CHECK:   %[[IND2PTR:.+]] = getelementptr inbounds i32, ptr %[[BUFF]], i32 %[[IND2]]
 //CHECK:   %[[IND1VAL:.+]] = load i32, ptr %[[IND1PTR]], align 4
 //CHECK:   %[[IND2VAL:.+]] = load i32, ptr %[[IND2PTR]], align 4
-//CHECK:   %[[REDVAL:.+]] = add i32 %[[IND1VAL]], %[[IND2VAL]]
+//CHECK:   %[[REDVAL:.+]] = add i32 %[[IND2VAL]], %[[IND1VAL]]
 //CHECK:   store i32 %[[REDVAL]], ptr %[[IND1PTR]], align 4
 //CHECK:   %[[CNTNXT]] = sub nuw i32 %[[CNT]], 1
 //CHECK:   %[[CMP3:.+]] = icmp uge i32 %[[CNTNXT]], %[[I]]

@@ -5555,8 +5555,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
       Value *OrigVal = Builder.CreateLoad(DestTy, RedInfo.Variable);
       Value *Elem = Builder.CreateLoad(DestTy, ElemPtr);
       llvm::Value *Combined;
+      // orig-val is the leftmost/earliest element of the prefix, so it must be
+      // the accumulator (`omp_out`, the combiner's first/lhs operand) while the
+      // first buffer element is the incoming value (`omp_in`). The combiner is
+      // associative but not necessarily commutative, so this order matters.
       InsertPointOrErrorTy AfterIP =
-          RedInfo.ReductionGen(Builder.saveIP(), Elem, OrigVal, Combined);
+          RedInfo.ReductionGen(Builder.saveIP(), OrigVal, Elem, Combined);
       if (!AfterIP)
         return AfterIP.takeError();
       Builder.restoreIP(*AfterIP);
@@ -5608,8 +5612,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
       Value *LHS = Builder.CreateLoad(DestTy, LHSPtr);
       Value *RHS = Builder.CreateLoad(DestTy, RHSPtr);
       llvm::Value *Result;
+      // buffer[IV-pow2k] holds the earlier partial prefix and buffer[IV] the
+      // later one. The earlier element must be the accumulator (`omp_out`, the
+      // combiner's first/lhs operand) and the later element the incoming value
+      // (`omp_in`); the combiner is associative but not necessarily
+      // commutative, so passing them in prefix order is required. The result
+      // is written back into the later slot (LHSPtr = buffer[IV]).
       InsertPointOrErrorTy AfterIP =
-          RedInfo.ReductionGen(Builder.saveIP(), LHS, RHS, Result);
+          RedInfo.ReductionGen(Builder.saveIP(), RHS, LHS, Result);
       if (!AfterIP)
         return AfterIP.takeError();
       Builder.CreateStore(Result, LHSPtr);
