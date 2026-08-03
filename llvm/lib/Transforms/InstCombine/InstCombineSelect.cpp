@@ -2301,7 +2301,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
     return IsIntrinsic
-               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType())
+               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType(), DL)
                : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
   };
 
@@ -4514,22 +4514,22 @@ static Instruction *foldSelectNegNot(SelectInst &SI,
 // Return true if no use can observe the sign of zero of the select result,
 // looking through phis, selects and the loop back edge to the select itself.
 static bool isSelectZeroSignInsignificant(SelectInst &SI) {
-  // Bound the number of instructions to look through to keep the compile time
-  // in check.
-  constexpr unsigned MaxLookThroughNodes = 6;
+  // Bound the number of uses to look through to keep the compile time in
+  // check.
+  constexpr unsigned MaxUsesToLookThrough = 16;
+  unsigned NumUses = 0;
   SmallPtrSet<Instruction *, 4> Visited;
   SmallVector<Instruction *> Worklist(1, &SI);
   while (!Worklist.empty()) {
     for (Use &U : Worklist.pop_back_val()->uses()) {
+      if (++NumUses > MaxUsesToLookThrough)
+        return false;
       auto *User = cast<Instruction>(U.getUser());
       if (User == &SI)
         continue;
       if (isa<PHINode, SelectInst>(User)) {
-        if (Visited.insert(User).second) {
-          if (Visited.size() > MaxLookThroughNodes)
-            return false;
+        if (Visited.insert(User).second)
           Worklist.push_back(User);
-        }
         continue;
       }
       if (!canIgnoreSignBitOfZero(U))

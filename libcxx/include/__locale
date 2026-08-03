@@ -12,9 +12,11 @@
 
 #include <__config>
 #include <__configuration/availability.h>
+#include <__configuration/platform.h>
 
 #if _LIBCPP_HAS_LOCALIZATION
 
+#  include <__fwd/ios.h>
 #  include <__locale_dir/locale_base_api.h>
 #  include <__memory/addressof.h>
 #  include <__memory/shared_count.h>
@@ -26,6 +28,7 @@
 #  include <clocale>
 #  include <cstdint>
 #  include <cstdlib>
+#  include <stdexcept>
 #  include <string>
 #  include <text_encoding>
 
@@ -345,7 +348,7 @@ public:
   static const mask xdigit = _ISxdigit;
   static const mask blank  = _ISblank;
   _LIBCPP_DIAGNOSTIC_POP
-#    if defined(__mips__) || (BYTE_ORDER == BIG_ENDIAN)
+#    if defined(__mips__) || defined(_LIBCPP_BIG_ENDIAN)
   static const mask __regex_word = static_cast<mask>(_ISbit(15));
 #    else
   static const mask __regex_word = 0x80;
