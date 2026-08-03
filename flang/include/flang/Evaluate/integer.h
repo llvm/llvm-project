@@ -1022,7 +1022,8 @@ public:
 
   /// De-serializes an integer from \p raw. \p expectedSize must match the the
   /// number of bytes to be read.
-  static Integer FromRawBytes(const void *raw, std::size_t expectedSize) {
+  static Integer FromRawBytes(
+      const void *raw, [[maybe_unused]] std::size_t expectedSize) {
     CHECK(expectedSize == bytesStored());
     Integer result;
     std::memcpy(&result, raw, bytesStored());
@@ -1032,8 +1033,8 @@ public:
   /// Serializes this integer to \p dst. \p expectedSize must match the the
   /// number of bytes to be written. If \p changed points to a boolean, it will
   /// be set to true if any bytes at \p dst have changed.
-  void StoreRawBytes(
-      void *dst, size_t expectedSize, bool *changed = nullptr) const {
+  void StoreRawBytes(void *dst, [[maybe_unused]] size_t expectedSize,
+      bool *changed = nullptr) const {
     CHECK(expectedSize == bytesStored());
     if (changed) {
       if (std::memcmp(dst, this, bytesStored()) == 0) {

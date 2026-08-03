@@ -459,15 +459,16 @@ public:
 
   /// De-serializes a real from \p raw. \p expectedSize must match the the
   /// number of bytes to be read.
-  static Real FromRawBytes(const void *raw, std::size_t expectedSize) {
+  static Real FromRawBytes(
+      const void *raw, [[maybe_unused]] std::size_t expectedSize) {
     return Real{Word::FromRawBytes(raw, expectedSize)};
   }
 
   /// Serializes this real to \p dst. \p expectedSize must match the the number
   /// of bytes to be written. If \p changed points to a boolean, it will be set
   /// to true if any bytes at \p dst have changed.
-  void StoreRawBytes(
-      void *dst, size_t expectedSize, bool *changed = nullptr) const {
+  void StoreRawBytes(void *dst, [[maybe_unused]] size_t expectedSize,
+      bool *changed = nullptr) const {
     word_.StoreRawBytes(dst, expectedSize, changed);
   }
 
