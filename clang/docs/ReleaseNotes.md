@@ -179,6 +179,11 @@ features cannot lower the translation-unit ABI level;
   the C++ standard library selected by the driver and the include directories
   added for it.
 
+- Added `-mscs-reg=<reg>` on Hexagon to select which callee-saved register
+  (`r16`-`r27`, default `r18`) holds the shadow call stack pointer under
+  `-fsanitize=shadow-call-stack`. The selected register must also be reserved
+  with the matching `-ffixed-<reg>`.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
