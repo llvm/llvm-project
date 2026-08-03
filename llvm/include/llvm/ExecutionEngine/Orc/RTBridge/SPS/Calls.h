@@ -64,13 +64,12 @@ public:
       return CallerSym.takeError();
   }
 
-  /// Asynchronously call the SPS wrapper at CallerFnAddr to invoke the
-  /// executor-side function at FnAddr with the given Args, delivering the
-  /// result (or an error) to OnComplete. Serialization failures are reported
-  /// through OnComplete's error channel.
+  /// Asynchronously call the SPS wrapper at CallerFnAddr with the given Args,
+  /// delivering the result (or an error) to OnComplete. Serialization failures
+  /// are reported through OnComplete's error channel.
   static void callAsync(unique_function<void(ErrorRetT)> OnComplete,
                         ExecutionSession &ES, ExecutorAddr CallerFnAddr,
-                        ExecutorAddr FnAddr, const ArgTs &...Args) {
+                        const ArgTs &...Args) {
     using namespace llvm::orc::shared;
     if constexpr (std::is_void_v<CalleeRetT>) {
       // Void result: the executor-side function produces no value, so the only
@@ -80,7 +79,7 @@ public:
           [OnComplete = std::move(OnComplete)](Error SerErr) mutable {
             OnComplete(std::move(SerErr));
           },
-          FnAddr, Args...);
+          Args...);
     } else {
       ES.callSPSWrapperAsync<SPSSigT>(
           CallerFnAddr,
@@ -91,13 +90,13 @@ public:
             else
               return OnComplete(std::move(Result));
           },
-          FnAddr, Args...);
+          Args...);
     }
   }
 
   void operator()(unique_function<void(ErrorRetT)> OnComplete,
-                  ExecutorAddr FnAddr, ArgTs... Args) override {
-    callAsync(std::move(OnComplete), ES, CallerFnAddr, FnAddr, Args...);
+                  ArgTs... Args) override {
+    callAsync(std::move(OnComplete), ES, CallerFnAddr, Args...);
   }
 
   using BaseT::operator();

@@ -585,7 +585,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
 
   LI.LoopInductionVar = nullptr;
   LI.LoopCompare = nullptr;
-  LI.LoopPipelinerInfo = TII->analyzeLoopForPipelining(L.getTopBlock(), ORE);
+  LI.LoopPipelinerInfo = TII->analyzeLoopForPipelining(L.getTopBlock());
   if (!LI.LoopPipelinerInfo) {
     LLVM_DEBUG(dbgs() << "Unable to analyzeLoop, can NOT pipeline Loop\n");
     NumFailLoop++;
@@ -716,23 +716,7 @@ bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
   Context.RegClassInfo =
       &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   WindowScheduler WS(&Context, L);
-  bool Scheduled = WS.run();
-  if (Scheduled) {
-    unsigned II = WS.getBestII();
-    ORE->emit([&]() {
-      return MachineOptimizationRemark(DEBUG_TYPE, "window-schedule",
-                                       L.getStartLoc(), L.getHeader())
-             << "Window scheduled with Initiation Interval: "
-             << ore::NV("II", II);
-    });
-  } else {
-    ORE->emit([&]() {
-      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "window-schedule",
-                                             L.getStartLoc(), L.getHeader())
-             << "Failed to find a valid window schedule";
-    });
-  }
-  return Scheduled;
+  return WS.run();
 }
 
 bool MachinePipeliner::useSwingModuloScheduler() {
@@ -2913,10 +2897,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
              << "Schedule found with Initiation Interval: "
              << ore::NV("II", Schedule.getInitiationInterval())
              << ", MaxStageCount: "
-             << ore::NV("MaxStageCount", Schedule.getMaxStageCount())
-             << ", ResMII: " << ore::NV("ResMII", ResMII)
-             << ", RecMII: " << ore::NV("RecMII", RecMII) << ", Bound: "
-             << ore::NV("Bound", ResMII >= RecMII ? "Resource" : "Recurrence");
+             << ore::NV("MaxStageCount", Schedule.getMaxStageCount());
     });
   } else
     Schedule.reset();
