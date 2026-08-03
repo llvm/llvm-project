@@ -3511,6 +3511,64 @@ void ownership_returns_member_realloc() {
   *p = 1;       // expected-note {{later used here}}
 }
 
+struct UserDefinedNewDeleteOps {
+  int x;
+  static void *operator new(std::size_t)
+      __attribute__((ownership_returns(malloc)));
+  static void operator delete(void *)
+      __attribute__((ownership_takes(malloc, 1)));
+  // Inverse case: a placement `new` (returns memory) annotated to take/free
+  // its placement argument.
+  static void *operator new(std::size_t, void *p)
+      __attribute__((ownership_takes(malloc, 2)));
+};
+
+void user_defined_new_delete_use_after_free() {
+  UserDefinedNewDeleteOps *p = new UserDefinedNewDeleteOps; // expected-warning {{allocated object does not live long enough}}
+  delete p;                                                 // expected-note {{allocated object is freed here}}
+  p->x = 1;                                                 // expected-note {{later used here}}
+}
+
+void user_defined_new_delete_explicit_call_use_after_free() {
+  UserDefinedNewDeleteOps *p = new UserDefinedNewDeleteOps; // expected-warning {{allocated object does not live long enough}}
+  UserDefinedNewDeleteOps::operator delete(p);              // expected-note {{allocated object is freed here}}
+  p->x = 1;                                                 // expected-note {{later used here}}
+}
+
+void user_defined_new_delete_explicit_allocator_use_after_free() {
+  auto *p = static_cast<UserDefinedNewDeleteOps *>(
+      UserDefinedNewDeleteOps::operator new(sizeof(UserDefinedNewDeleteOps))); // expected-warning {{expression does not live long enough}}
+  UserDefinedNewDeleteOps::operator delete(p);                                 // expected-note {{expression is freed here}}
+  p->x = 1;                                                                    // expected-note {{later used here}}
+}
+
+// FIXME: The ownership attribute is only honored here because the operator is
+// called explicitly (a CallExpr). In
+// `user_defined_new_delete_placement_expr_inert` the same annotated operator
+// is invoked by a `new` expression, which skips the attribute handling.
+void user_defined_new_delete_placement_explicit_call_use_after_free() {
+  int local = 42;
+  int *p = &local;                                                           // expected-warning {{local variable 'local' does not live long enough}}
+  UserDefinedNewDeleteOps::operator new(sizeof(UserDefinedNewDeleteOps), p); // expected-note {{local variable 'local' is freed here}}
+  *p = 1;                                                                    // expected-note {{later used here}}
+}
+
+void user_defined_new_delete_placement_expr_inert() {
+  char buf[sizeof(UserDefinedNewDeleteOps)];
+  // The class's annotated placement `operator new` is used here, but the
+  // `new` expression path does not consult the ownership attributes.
+  auto *p = new (buf) UserDefinedNewDeleteOps;
+  p->x = 1;
+}
+
+void user_defined_new_delete_free_then_reassign() {
+  auto *p = static_cast<UserDefinedNewDeleteOps *>(
+      UserDefinedNewDeleteOps::operator new(sizeof(UserDefinedNewDeleteOps)));
+  UserDefinedNewDeleteOps::operator delete(p);
+  p = new UserDefinedNewDeleteOps;
+  delete p;
+}
+
 } // namespace ownership_functions
 
 namespace placement_new {
