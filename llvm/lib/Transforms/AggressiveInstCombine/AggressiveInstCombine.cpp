@@ -29,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
@@ -57,6 +58,7 @@ STATISTIC(NumSelectCTTZFolded,
           "Number of select-based split cttz patterns folded");
 STATISTIC(NumSelectCTLZFolded,
           "Number of select-based split ctlz patterns folded");
+STATISTIC(NumMemSetsGuarded, "Number of memsets guarded for a zero length");
 
 static cl::opt<unsigned> MaxInstrsToScan(
     "aggressive-instcombine-max-scan-instrs", cl::init(64), cl::Hidden,
@@ -2462,6 +2464,33 @@ static bool foldMulHigh(Instruction &I) {
   return false;
 }
 
+/// Guard a memset whose nonconstant length is known to be in [0, 1].
+/// Inserts a conditional branch around the memset and specialises the
+/// executed path to a constant length of one.
+static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
+                                      DominatorTree &DT, bool &MadeCFGChange) {
+  auto *MI = dyn_cast<MemSetInst>(&I);
+  if (!MI || isa<ConstantInt>(MI->getLength()))
+    return false;
+
+  KnownBits KnownLen = computeKnownBits(MI->getLength(), DL);
+  if (!KnownLen.getMaxValue().isOne())
+    return false;
+
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  IRBuilder<> B(MI);
+  B.SetCurrentDebugLocation(MI->getDebugLoc());
+  Value *IsNonZero = B.CreateIsNotNull(MI->getLength(), "memset.notzero");
+  Instruction *ThenTerm = SplitBlockAndInsertIfThen(
+      IsNonZero, MI->getIterator(), /*Unreachable=*/false,
+      /*BranchWeights=*/nullptr, &DTU);
+  MI->moveBefore(ThenTerm->getIterator());
+  MI->setLength((uint64_t)1);
+  ++NumMemSetsGuarded;
+  MadeCFGChange = true;
+  return true;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
@@ -2495,6 +2524,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);
       MadeChange |= foldMulHigh(I);
+      MadeChange |= foldMemSetZeroOrOneLength(I, DL, DT, MadeCFGChange);
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
