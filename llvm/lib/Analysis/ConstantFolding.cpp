@@ -4300,7 +4300,7 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
 static Constant *ConstantFoldFixedVectorCall(
     StringRef Name, Intrinsic::ID IntrinsicID, FixedVectorType *FVTy,
     ArrayRef<Constant *> Operands, const DataLayout &DL,
-    const TargetLibraryInfo *TLI, const CallBase *Call) {
+    const TargetLibraryInfo *TLI = nullptr, const CallBase *Call = nullptr) {
   SmallVector<Constant *, 4> Result(FVTy->getNumElements());
   SmallVector<Constant *, 4> Lane(Operands.size());
   Type *Ty = FVTy->getElementType();
@@ -4466,9 +4466,12 @@ static Constant *ConstantFoldFixedVectorCall(
 
     for (unsigned I = 0; I < NumElements; ++I) {
       ConstantInt *Elt0 =
-          cast<ConstantInt>(Operands[0]->getAggregateElement(I));
+          dyn_cast<ConstantInt>(Operands[0]->getAggregateElement(I));
       ConstantInt *Elt1 =
-          cast<ConstantInt>(Operands[1]->getAggregateElement(I));
+          dyn_cast<ConstantInt>(Operands[1]->getAggregateElement(I));
+
+      if (!Elt0 || !Elt1)
+        return nullptr;
 
       MulVector[I] = Elt0->getSExtValue() * Elt1->getSExtValue();
     }
@@ -4713,13 +4716,15 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 
 Constant *llvm::ConstantFoldIntrinsic(Intrinsic::ID ID,
                                       ArrayRef<Constant *> Ops, Type *Ty,
-                                      Function *CxtF) {
+                                      const DataLayout &DL, Function *CxtF) {
   // In the absence of CxtF, assume strictfp conservatively.
   if (!canConstantFoldIntrinsic(ID, CxtF ? CxtF->isStrictFP() : true) ||
       (DisableFPCallFolding &&
        anyTypeContainsFP(
            Ty, ArrayRef<Value *>((Value *const *)Ops.data(), Ops.size()))))
     return nullptr;
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return ConstantFoldFixedVectorCall("", ID, FVTy, Ops, DL);
   return ConstantFoldScalarCall("", ID, Ty, Ops);
 }
 

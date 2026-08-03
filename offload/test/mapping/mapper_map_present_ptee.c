@@ -51,7 +51,7 @@ int main() {
 
   printf("%d %d\n", x[0], s.y); // CHECK: 333 333
   // clang-format off
-  // CHECK-OOB: omptarget message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
-  // CHECK-OOB: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK-OOB: message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
+  // CHECK-OOB: fatal error 1: failure of target construct while offloading is mandatory
   // clang-format on
 }
