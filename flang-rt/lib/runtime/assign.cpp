@@ -866,9 +866,8 @@ void RTDEF(AssignSimple)(Descriptor &to, const Descriptor &from,
         to.rank(), from.rank());
   }
   if (to.ElementBytes() != from.ElementBytes()) {
-    terminator.Crash(
-        "AssignSimple: ElementBytes mismatch (to.ElementBytes=%d, "
-        "from.ElementBytes=%d)",
+    terminator.Crash("AssignSimple: ElementBytes mismatch (to.ElementBytes=%d, "
+                     "from.ElementBytes=%d)",
         to.ElementBytes(), from.ElementBytes());
   }
   if (to.type().IsDerived()) {
