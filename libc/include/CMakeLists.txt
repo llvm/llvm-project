@@ -955,6 +955,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.net_if_macros
+    .llvm-libc-types.struct_if_nameindex
     .llvm-libc-types.struct_ifreq
 )
 
