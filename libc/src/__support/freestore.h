@@ -24,6 +24,7 @@
 #include "src/__support/freetrie.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
+#include "src/__support/math_extras.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -110,14 +111,11 @@ protected:
 public:
   static constexpr size_t MIN_OUTER_SIZE = align_up(
       BlockRef::HEADER_SIZE + sizeof(FreeList::Node), BlockRef::MIN_ALIGN);
+  // Minimal available size for allocation.
   static constexpr size_t MIN_INNER_SIZE =
       MIN_OUTER_SIZE - BlockRef::HEADER_SIZE + BlockRef::PREV_FIELD_SIZE;
-  static constexpr size_t LINEAR_BINS =
-      (CONFIG::UNIT_SIZE == BlockRef::MIN_ALIGN)
-          ? ((EXP_BASE << UNIT_SIZE_LOG2) - MIN_INNER_SIZE) /
-                    CONFIG::UNIT_SIZE +
-                1
-          : EXP_BASE;
+  // Number of bins grows linearly.
+  static constexpr size_t LINEAR_BINS = EXP_BASE + 1;
 
   LIBC_INLINE TLSFFreeStoreImpl() = default;
   LIBC_INLINE TLSFFreeStoreImpl(const TLSFFreeStoreImpl &other) = delete;
@@ -155,14 +153,12 @@ protected:
 template <typename CONFIG>
 LIBC_INLINE constexpr size_t
 TLSFFreeStoreImpl<CONFIG>::size_to_bit_index(size_t size) {
-  if (size <= (EXP_BASE << UNIT_SIZE_LOG2)) {
-    if constexpr (CONFIG::UNIT_SIZE == BlockRef::MIN_ALIGN) {
-      if (size <= MIN_INNER_SIZE)
-        return 0;
-      return ((size - MIN_INNER_SIZE - 1) >> UNIT_SIZE_LOG2) + 1;
-    }
-    return size >> UNIT_SIZE_LOG2;
-  }
+  // Compute bin as delta on top of min_inner_size
+  if (sub_overflow(size, MIN_INNER_SIZE + 1, size))
+    return 0;
+
+  if (size < (EXP_BASE << UNIT_SIZE_LOG2))
+    return (size >> UNIT_SIZE_LOG2) + 1;
 
   size_t size_ilog2 = static_cast<size_t>(cpp::bit_width(size) - 1);
   size_t exp_offset = (size_ilog2 - UNIT_SIZE_LOG2 - EXP_BASE_LOG2 - 1)
@@ -220,14 +216,10 @@ TLSFFreeStoreImpl<CONFIG>::find_first_bit_set_after(size_t bit_index) const {
 template <typename CONFIG>
 LIBC_INLINE constexpr size_t
 TLSFFreeStoreImpl<CONFIG>::index_to_min_size(size_t index) {
-  if (index < LINEAR_BINS) {
-    if constexpr (CONFIG::UNIT_SIZE == BlockRef::MIN_ALIGN) {
-      if (index == 0)
-        return 0;
-      return MIN_INNER_SIZE + (index - 1) * CONFIG::UNIT_SIZE + 1;
-    }
-    return index << UNIT_SIZE_LOG2;
-  }
+  if (index == 0)
+    return 0;
+  if (index < LINEAR_BINS)
+    return MIN_INNER_SIZE + 1 + ((index - 1) << UNIT_SIZE_LOG2);
 
   size_t local_index = index - LINEAR_BINS;
   size_t exp_index = local_index >> CONFIG::NUM_STEP_BITS;
@@ -235,7 +227,7 @@ TLSFFreeStoreImpl<CONFIG>::index_to_min_size(size_t index) {
 
   size_t row_base = (EXP_BASE << exp_index) << UNIT_SIZE_LOG2;
   size_t step_size = (STEP_SIZE << exp_index) << UNIT_SIZE_LOG2;
-  return row_base + linear_index * step_size;
+  return MIN_INNER_SIZE + 1 + row_base + linear_index * step_size;
 }
 
 template <typename CONFIG>
