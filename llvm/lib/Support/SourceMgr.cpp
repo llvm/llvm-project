@@ -246,14 +246,12 @@ std::string SourceMgr::getFormattedLocationNoOffset(SMLoc Loc,
   assert(BufferID && "Invalid location!");
   auto FileSpec = getBufferInfo(BufferID).Buffer->getBufferIdentifier();
 
-  if (IncludePath) {
+  if (IncludePath)
     return FileSpec.str() + ":" + std::to_string(FindLineNumber(Loc, BufferID));
-  } else {
-    auto I = FileSpec.find_last_of("/\\");
-    I = (I == FileSpec.size()) ? 0 : (I + 1);
-    return FileSpec.substr(I).str() + ":" +
-           std::to_string(FindLineNumber(Loc, BufferID));
-  }
+  auto I = FileSpec.find_last_of("/\\");
+  I = (I == FileSpec.size()) ? 0 : (I + 1);
+  return FileSpec.substr(I).str() + ":" +
+         std::to_string(FindLineNumber(Loc, BufferID));
 }
 
 /// Given a line and column number in a mapped buffer, turn it into an SMLoc.
