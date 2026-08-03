@@ -3014,8 +3014,7 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 /// split up into scalar instructions during legalization, and the vector
 /// extending instructions are selected in performVectorExtendCombine below.
 static SDValue
-performVectorExtendToFPCombine(SDNode *N,
-                               TargetLowering::DAGCombinerInfo &DCI,
+performVectorExtendToFPCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const WebAssemblySubtarget *Subtarget) {
   auto &DAG = DCI.DAG;
   assert(N->getOpcode() == ISD::UINT_TO_FP ||
@@ -3028,8 +3027,7 @@ performVectorExtendToFPCombine(SDNode *N,
     ExtVT = MVT::v4i32;
   else if (ResVT == MVT::v2f64 && (InVT == MVT::v2i16 || InVT == MVT::v2i8))
     ExtVT = MVT::v2i32;
-  else if (Subtarget->hasFP16() && ResVT == MVT::v8f16 &&
-           InVT == MVT::v8i8)
+  else if (Subtarget->hasFP16() && ResVT == MVT::v8f16 && InVT == MVT::v8i8)
     ExtVT = MVT::v8i16;
   else
     return SDValue();
