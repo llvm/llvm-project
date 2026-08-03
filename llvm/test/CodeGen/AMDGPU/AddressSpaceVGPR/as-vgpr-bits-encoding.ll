@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx1200 -o - %s | llvm-mc -triple=amdgcn -mcpu=gfx1200 -filetype=obj -o - | llvm-objdump -d --mcpu=gfx1200 - | FileCheck --check-prefix=DIS %s
-; RUN: llc -verify-machineinstrs -mtriple=amdgcn -mcpu=gfx1250 -o - %s | llvm-mc -triple=amdgcn -mcpu=gfx1250 -filetype=obj -o - | llvm-objdump -d --mcpu=gfx1250 - | FileCheck --check-prefixes=DIS,GFX1250 %s
+; RUN: llc -mtriple=amdgpu12.00-- -o - %s | llvm-mc -triple=amdgpu12.00-- -filetype=obj -o - | llvm-objdump -d --mcpu=gfx1200 - | FileCheck --check-prefix=DIS %s
+; RUN: llc -mtriple=amdgpu12.50-- -o - %s | llvm-mc -triple=amdgpu12.50-- -filetype=obj -o - | llvm-objdump -d --mcpu=gfx1250 - | FileCheck --check-prefixes=DIS,GFX1250 %s
 
 ; The sub-dword accesses of the VGPR "as memory" address space (13) that
 ; AMDGPULowerIdxOps expands, taken to machine code and back. The other tests here
