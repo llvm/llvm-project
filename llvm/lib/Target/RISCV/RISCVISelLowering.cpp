@@ -9572,6 +9572,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       // The op needs to be performed in a vector register.
       assert(Subtarget.hasStdExtZvbc() && Subtarget.is64Bit() && VT == XLenVT &&
              "Unexpected custom legalisation");
+      // We can't implicitly use vector registers with noimplicitfloat.
+      if (DAG.getMachineFunction().getFunction().hasFnAttribute(Attribute::NoImplicitFloat))
+        return SDValue();
       MVT VecVT = MVT::getScalableVectorVT(VT, 1);
       SDValue VL = DAG.getConstant(1, DL, XLenVT);
       SDValue Op0 =
