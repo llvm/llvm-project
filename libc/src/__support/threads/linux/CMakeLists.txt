@@ -34,6 +34,7 @@ add_object_library(
     libc.include.sys_syscall
     libc.hdr.fcntl_macros
     libc.hdr.errno_macros
+    libc.hdr.sched_macros
     libc.hdr.sys_mman_macros
     libc.src.errno.errno
     libc.src.__support.CPP.atomic
