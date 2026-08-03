@@ -196,6 +196,10 @@ function(_get_compile_options_from_config output_var)
   if(LIBC_COPT_HARDENING_MODE)
     libc_add_definition(config_options "LIBC_COPT_HARDENING_MODE=${LIBC_COPT_HARDENING_MODE}")
   endif()
+  
+  if(LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES)
+    list(APPEND config_options "-DLIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES")
+  endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
@@ -227,8 +231,6 @@ function(_get_common_compile_options output_var flags)
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${compile_flags} ${config_flags} ${arch_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
-    list(APPEND compile_options "-fpie")
-
     if(LLVM_LIBC_FULL_BUILD)
       # Only add -ffreestanding flag in non-GPU full build mode.
       if(NOT LIBC_TARGET_OS_IS_GPU)
@@ -249,11 +251,13 @@ function(_get_common_compile_options output_var flags)
          (LIBC_CC_SUPPORTS_NOSTDLIBINC OR COMPILER_RESOURCE_DIR))
         # We use -idirafter to avoid preempting libc's own headers in case the
         # directory (e.g. /usr/include) contains other headers.
-        if(CMAKE_CROSSCOMPILING)
-          list(APPEND compile_options "-idirafter=${LIBC_KERNEL_HEADERS}")
-        else()
-          list(APPEND compile_options "-idirafter${LIBC_KERNEL_HEADERS}")
-        endif()
+        foreach(path IN LISTS LIBC_KERNEL_HEADERS)
+          if(CMAKE_CROSSCOMPILING)
+            list(APPEND compile_options "-idirafter=${path}")
+          else()
+            list(APPEND compile_options "-idirafter${path}")
+          endif()
+        endforeach()
       endif()
     endif()
 

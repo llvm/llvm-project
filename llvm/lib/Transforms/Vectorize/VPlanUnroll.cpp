@@ -137,8 +137,8 @@ static void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
         Instruction::Mul,
         {StartIndex, Plan.getConstantInt(StartIndex->getScalarType(), Part)});
   }
-  StartIndex = Builder.createScalarSExtOrTrunc(
-      StartIndex, IntStepTy, StartIndex->getScalarType(), Steps->getDebugLoc());
+  StartIndex = Builder.createScalarSExtOrTrunc(StartIndex, IntStepTy,
+                                               Steps->getDebugLoc());
 
   if (BaseIVTy->isFloatingPointTy())
     StartIndex = Builder.createScalarCast(Instruction::SIToFP, StartIndex,
@@ -339,9 +339,8 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
           isa<VPWidenCanonicalIVRecipe>(R)
               ? Plan.getVectorLoopRegion()->getCanonicalIVType()
               : DL.getIndexType(R.getVPSingleValue()->getScalarType());
-      Type *VFTy = Plan.getVF().getScalarType();
-      VPValue *VF = Builder.createScalarZExtOrTrunc(
-          &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
+      VPValue *VF = Builder.createScalarZExtOrTrunc(&Plan.getVF(), IndexTy,
+                                                    DebugLoc::getUnknown());
       // VFxUF does not wrap, so VF * Part also cannot wrap.
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
@@ -935,12 +934,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!isa<VPInstruction, VPReplicateRecipe, VPScalarIVStepsRecipe>(&R) ||
-          (isa<VPReplicateRecipe>(&R) &&
-           cast<VPReplicateRecipe>(&R)->isSingleScalar()) ||
-          (isa<VPInstruction>(&R) &&
-           !cast<VPInstruction>(&R)->doesGeneratePerAllLanes() &&
-           cast<VPInstruction>(&R)->getOpcode() != VPInstruction::Unpack))
+      if (!vputils::doesGeneratePerAllLanes(&R))
         continue;
 
       auto *DefR = cast<VPSingleDefRecipe>(&R);

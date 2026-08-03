@@ -66,7 +66,6 @@
 ; HOTNESS-NEXT: Executing Pass 'Machine Optimization Remark Emitter'
 ; HOTNESS-NEXT: Building MachineBlockFrequencyInfo on the fly
 ; HOTNESS-NEXT: Building LoopInfo on the fly
-; HOTNESS-NEXT: Building DominatorTree on the fly
 ; HOTNESS-NOT: Executing Pass
 ; HOTNESS: block-frequency: empty_func
 ; HOTNESS-NOT: Executing Pass

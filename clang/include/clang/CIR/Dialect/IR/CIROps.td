@@ -73,8 +73,20 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 //
 // If you want fully customized LLVM IR lowering logic, simply exclude the
 // `llvmOp` field from your CIR operation definition.
+//
+// The `constrainedLLVMIntrinsic` field enables a specialized variant of this
+// generated lowering for floating-point operations that carry an optional
+// `fenv` attribute. When it is set and the operation has an `fenv` attribute
+// the operation is lowering to a call to the corresponding constrained fp
+// intrinsic. If `constrainedLLVMIntrinsic` is set `llvmOp` must be set as well.
+//
+// `constrainedLLVMIntrinsicHasRoundingMode` indicates whether the constrained
+// intrinsic takes a rounding-mode metadata argument in addition to the
+// exception-behavior metadata argument.
 class LLVMLoweringInfo {
   string llvmOp = "";
+  string constrainedLLVMIntrinsic = "";
+  bit constrainedLLVMIntrinsicHasRoundingMode = true;
 }
 
 class LoweringBuilders<dag p> {
@@ -121,6 +133,37 @@ class HasAtMostOneOfAttrs<list<string> names> : PredOpTrait<
   "has only one of the optional attributes: " # !interleave(names, ", "),
   HasAtMostOneOfAttrsPred<!foreach(name, names, "$" # name)>
 >;
+
+// Like `SameTypeOperands`, but the operands are pointers that are only required
+// to share the same pointee type; they may still differ in address space (e.g.
+// a `cir.copy` that assigns through an address-space-qualified pointer).
+def SameOperandsPointeeType : PredOpTrait<
+  "all operands have the same pointee type (address spaces may differ)",
+  CPred<[{
+    llvm::all_equal(llvm::map_range($_op.getOperands(), [](mlir::Value v) {
+      return mlir::cast<cir::PointerType>(v.getType()).getPointee();
+    }))
+  }]>
+>;
+
+//===----------------------------------------------------------------------===//
+// Floating-Point Environment Traits
+//===----------------------------------------------------------------------===//
+
+def CIR_FenvOpTrait : NativeOpTrait<"FenvOpTrait"> {
+  let cppNamespace = "::cir";
+}
+
+defvar CIR_FenvOpTraits = [
+  CIR_FPEnvConstrainedOpInterface,
+  ConditionallySpeculatable,
+  MemoryEffectsOpInterface,
+  CIR_FenvOpTrait
+];
+
+// Passed as CIR_BinaryOp's hasNoMemoryEffect: fenv ops compute effects
+// dynamically via FenvOpTrait, so they must not inherit NoMemoryEffect.
+defvar CIR_DynamicMemoryEffects = 0;
 
 //===----------------------------------------------------------------------===//
 // CastOp
@@ -201,9 +244,9 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   I32EnumAttrCase<"bool_to_float", 1000>,
 ]>;
 
-def CIR_CastOp : CIR_Op<"cast", [
-  Pure, DeclareOpInterfaceMethods<PromotableOpInterface>
-]> {
+def CIR_CastOp : CIR_Op<"cast", !listconcat([
+  DeclareOpInterfaceMethods<PromotableOpInterface>
+], CIR_FenvOpTraits)> {
   let summary = "Conversion between values of different types";
   let description = [{
     Apply the usual C/C++ conversion rules between values. This operation models
@@ -239,6 +282,13 @@ def CIR_CastOp : CIR_Op<"cast", [
 
     - `bool_to_float`
 
+    The optional `fenv` attribute describes constraints on the floating-point
+    handling of the operation. It is only valid for floating-point cast kinds:
+    `floating`, `int_to_float`, `float_to_int`, `float_to_bool`,
+    `bool_to_float`, `float_to_complex`, `float_complex_to_real`,
+    `float_complex_to_bool`, `float_complex`, `float_complex_to_int_complex`,
+    and `int_complex_to_float_complex`.
+
     Example:
 
     ```
@@ -246,15 +296,26 @@ def CIR_CastOp : CIR_Op<"cast", [
     ...
     %x = cir.cast array_to_ptrdecay %0 
        : !cir.ptr<!cir.array<i32 x 10>> -> !cir.ptr<i32>
+    %y = cir.cast floating %f : !cir.double -> !cir.float {
+      fenv = #cir.fenv<>
+    }
     ```
   }];
 
-  let arguments = (ins CIR_CastKind:$kind, CIR_AnyType:$src);
+  let arguments = (ins CIR_CastKind:$kind, CIR_AnyType:$src,
+                       OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
     $kind $src `:` type($src) `->` type($result) attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "cir::CastKind":$kind,
+                   "mlir::Value":$src), [{
+      build($_builder, $_state, result, kind, src, cir::FenvAttr{});
+    }]>
+  ];
 
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
@@ -1853,6 +1914,35 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
+// IndirectGotoOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IndirectGotoOp : CIR_Op<"indirect_goto", [Terminator]> {
+  let summary = "Symbolic indirect goto";
+  let description = [{
+    Transfers control to the block whose address is held in `$addr`, the
+    void-pointer value of a `goto *expr;` (the GNU computed-goto extension).
+    Like `cir.goto`, it is symbolic: it references no successor block, so it is
+    valid inside any region even before `FlattenCFG` merges nested scopes.
+    `GotoSolver` runs after `FlattenCFG` and rewrites each `cir.indirect_goto`
+    into a `cir.br` to a shared block holding a `cir.indirect_br` over every
+    address-taken label.
+
+    Example:
+
+    ```mlir
+      %0 = cir.load %p : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+      cir.indirect_goto %0 : !cir.ptr<!void>
+    ```
+  }];
+
+  let arguments = (ins CIR_VoidPtrType:$addr);
+  let assemblyFormat = [{ $addr `:` qualified(type($addr)) attr-dict }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // LabelOp
 //===----------------------------------------------------------------------===//
 
@@ -1882,7 +1972,9 @@ class CIR_UnaryOp<string mnemonic, Type type, list<Trait> traits = []>
         DeclareOpInterfaceMethods<CIR_UnaryOpInterface>
       ], traits)>
 {
-  let arguments = (ins type:$input);
+  dag commonArgs = (ins type:$input);
+
+  let arguments = commonArgs;
 
   let results = (outs type:$result);
 
@@ -2200,15 +2292,25 @@ class CIR_WhileOpBase<string mnemonic> : CIR_LoopOpBase<mnemonic> {
 }
 
 def CIR_WhileOp : CIR_WhileOpBase<"while"> {
-  let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body);
-  let assemblyFormat = "$cond `do` $body attr-dict";
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
+  let regions = (region MinSizedRegion<1>:$cond, MinSizedRegion<1>:$body,
+                        MaxSizedRegion<1>:$cleanup);
+  let assemblyFormat = [{
+    $cond `do` $body (`cleanup` $cleanupKind $cleanup^)? attr-dict
+  }];
 
   let description = [{
-    Represents a C/C++ while loop. It consists of two regions:
+    Represents a C/C++ while loop. It consists of two or three regions:
 
      - `cond`: single block region with the loop's condition. Should be
      terminated with a `cir.condition` operation.
      - `body`: contains the loop body and an arbitrary number of blocks.
+     - `cleanup`: optional region that runs on every per-iteration exit edge
+     (condition-false exit, end-of-iteration, break/continue, and EH unwinding
+     when the cleanup kind includes EH). This is used to destroy a condition
+     variable whose lifetime is a single iteration. When present, it carries a
+     cleanup kind matching `cir.cleanup.scope` (`normal` or `all`). Note that
+     a `DoWhileOp` cannot contain a `cleanup` region.
 
     Example:
 
@@ -2223,6 +2325,43 @@ def CIR_WhileOp : CIR_WhileOpBase<"while"> {
     ```
   }];
 
+  let builders = [
+    OpBuilder<(ins "BuilderCallbackRef":$condBuilder,
+                   "BuilderCallbackRef":$bodyBuilder,
+                   CArg<"BuilderCallbackRef", "nullptr">:$cleanupBuilder,
+                   CArg<"cir::CleanupKind", "cir::CleanupKind::All">:$cleanupKind), [{
+        mlir::OpBuilder::InsertionGuard guard($_builder);
+        $_builder.createBlock($_state.addRegion());
+        condBuilder($_builder, $_state.location);
+        $_builder.createBlock($_state.addRegion());
+        bodyBuilder($_builder, $_state.location);
+        mlir::Region *cleanupRegion = $_state.addRegion();
+        if (cleanupBuilder) {
+          $_state.addAttribute(
+              getCleanupKindAttrName($_state.name),
+              cir::CleanupKindAttr::get($_builder.getContext(), cleanupKind));
+          $_builder.createBlock(cleanupRegion);
+          cleanupBuilder($_builder, $_state.location);
+        }
+      }]>
+  ];
+
+  let extraClassDeclaration = [{
+    mlir::Region *maybeGetCleanup() {
+      return getCleanup().empty() ? nullptr : &getCleanup();
+    }
+    cir::CleanupKindAttr maybeGetCleanupKind() {
+      return getCleanupKindAttr();
+    }
+    llvm::SmallVector<mlir::Region *> getRegionsInExecutionOrder() {
+      llvm::SmallVector<mlir::Region *> regions{&getCond(), &getBody()};
+      if (mlir::Region *cleanup = maybeGetCleanup())
+        regions.push_back(cleanup);
+      return regions;
+    }
+  }];
+
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -2236,7 +2375,10 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
 
   let description = [{
     Represents a C/C++ do-while loop. Identical to `cir.while` but the
-    condition is evaluated after the body.
+    condition is evaluated after the body. Because a variable cannot be
+    declared in the condition of a do-while loop, this operation cannot
+    have a `cleanup` region. A cleanup scope should be created within the
+    body region for any variables within the loop that require cleanup.
 
     Example:
 
@@ -2261,12 +2403,18 @@ def CIR_DoWhileOp : CIR_WhileOpBase<"do"> {
 def CIR_ForOp : CIR_LoopOpBase<"for"> {
   let summary = "C/C++ for loop counterpart";
   let description = [{
-    Represents a C/C++ for loop. It consists of three regions:
+    Represents a C/C++ for loop. It consists of three or four regions:
 
      - `cond`: single block region with the loop's condition. Should be
      terminated with a `cir.condition` operation.
      - `body`: contains the loop body and an arbitrary number of blocks.
      - `step`: single block region with the loop's step.
+     - `cleanup`: optional region that runs on every per-iteration exit edge
+     (condition-false exit, end-of-iteration after the step, break/continue,
+     and EH unwinding when the cleanup kind includes EH). This is used to
+     destroy a condition variable whose lifetime is a single iteration. When
+     present, it carries a cleanup kind matching `cir.cleanup.scope` (`normal`
+     or `all`).
 
     Example:
 
@@ -2283,20 +2431,25 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
     ```
   }];
 
+  let arguments = (ins OptionalAttr<CIR_CleanupKindAttr>:$cleanupKind);
   let regions = (region MinSizedRegion<1>:$cond,
                         MinSizedRegion<1>:$body,
-                        MinSizedRegion<1>:$step);
+                        MinSizedRegion<1>:$step,
+                        MaxSizedRegion<1>:$cleanup);
   let assemblyFormat = [{
     `:` `cond` $cond
     `body` $body
     `step` $step
+    (`cleanup` $cleanupKind $cleanup^)?
     attr-dict
   }];
 
   let builders = [
     OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$condBuilder,
                    "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
-                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$stepBuilder), [{
+                   "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$stepBuilder,
+                   CArg<"llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>", "nullptr">:$cleanupBuilder,
+                   CArg<"cir::CleanupKind", "cir::CleanupKind::All">:$cleanupKind), [{
         mlir::OpBuilder::InsertionGuard guard($_builder);
 
         // Build condition region.
@@ -2310,16 +2463,37 @@ def CIR_ForOp : CIR_LoopOpBase<"for"> {
         // Build step region.
         $_builder.createBlock($_state.addRegion());
         stepBuilder($_builder, $_state.location);
+
+        // Build optional cleanup region.
+        mlir::Region *cleanupRegion = $_state.addRegion();
+        if (cleanupBuilder) {
+          $_state.addAttribute(
+              getCleanupKindAttrName($_state.name),
+              cir::CleanupKindAttr::get($_builder.getContext(), cleanupKind));
+          $_builder.createBlock(cleanupRegion);
+          cleanupBuilder($_builder, $_state.location);
+        }
       }]>
   ];
 
   let extraClassDeclaration = [{
     mlir::Region *maybeGetStep() { return &getStep(); }
+    mlir::Region *maybeGetCleanup() {
+      return getCleanup().empty() ? nullptr : &getCleanup();
+    }
+    cir::CleanupKindAttr maybeGetCleanupKind() {
+      return getCleanupKindAttr();
+    }
     llvm::SmallVector<mlir::Region *> getRegionsInExecutionOrder() {
-      return llvm::SmallVector<mlir::Region *, 3>{&getCond(), &getBody(), &getStep()};
+      llvm::SmallVector<mlir::Region *> regions{&getCond(), &getBody(),
+                                                &getStep()};
+      if (mlir::Region *cleanup = maybeGetCleanup())
+        regions.push_back(cleanup);
+      return regions;
     }
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 
@@ -2338,12 +2512,14 @@ def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
   I32EnumAttrCase<"uno", 7>
 ]>;
 
-def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
+def CIR_CmpOp : CIR_Op<"cmp",
+    !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
   let summary = "Compare two values and produce a boolean result";
   let description = [{
     The `cir.cmp` operation compares two operands of the same type and produces
-    a `!cir.bool` result. It supports integral, floating-point, and pointer
-    types.
+    a `!cir.bool` result. It supports integral, boolean, floating-point, and
+    pointer types.  Booleans (including enums with a boolean underlying type)
+    are compared as unsigned integers.
 
     The following comparison predicates are available:
 
@@ -2361,16 +2537,22 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
     The `one` and `uno` predicates are floating-point specific: `one` is
     ordered not-equal (false for NaN), `uno` tests if either operand is NaN.
 
+    The optional `fenv` attribute describes constraints on the floating-point
+    handling of the operation. It is only valid for floating-point
+    comparisons.
+
     ```
     %0 = cir.cmp gt %1, %2 : !s32i
     %1 = cir.cmp eq %a, %b : !cir.ptr<!u8i>
+    %2 = cir.cmp lt %x, %y : !cir.float {fenv = #cir.fenv<>}
     ```
   }];
 
   let arguments = (ins
     CIR_CmpOpKind:$kind,
     CIR_ComparableType:$lhs,
-    CIR_ComparableType:$rhs
+    CIR_ComparableType:$rhs,
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs CIR_BoolType:$result);
@@ -2379,6 +2561,18 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
     $kind $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins "cir::CmpOpKind":$kind, "mlir::Value":$lhs,
+                   "mlir::Value":$rhs), [{
+      build($_builder, $_state, kind, lhs, rhs, cir::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "mlir::Type":$result, "cir::CmpOpKind":$kind,
+                   "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
+
+  let hasVerifier = 1;
   let isLLVMLoweringRecursive = true;
   let hasCXXABILowering = true;
 }
@@ -2481,16 +2675,20 @@ def CIR_MulOverflowOp : CIR_BinOpOverflow<"mul.overflow", [Commutative]> {
 
 // Base class for all CIR binary arithmetic/logic operations.
 // `type` constrains the lhs/rhs/result type.
-class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = []>
-    : CIR_Op<mnemonic, !listconcat([
-        NoMemoryEffect, SameOperandsAndResultType,
+class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = [],
+                   bit hasNoMemoryEffect = 1>
+    : CIR_Op<mnemonic, !listconcat(
+      !if(hasNoMemoryEffect, [NoMemoryEffect], []), [
+        SameOperandsAndResultType,
         DeclareOpInterfaceMethods<CIR_BinaryOpInterface>
       ], traits)>
 {
-  let arguments = (ins
+  dag commonArgs = (ins
     type:$lhs,
     type:$rhs
   );
+
+  let arguments = commonArgs;
 
   let results = (outs type:$result);
 
@@ -2667,9 +2865,23 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 
 // Base class for floating-point binary arithmetic operations. The lhs, rhs,
 // and result must all be the same floating-point scalar or vector type.
+//
+// The optional `fenv` attribute describes constraints on the floating-point
+// handling of the operation.
 class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
     : CIR_BinaryOp<mnemonic, CIR_AnyFloatOrVecOfFloatType,
-                   !listconcat([Pure], traits)>;
+                   !listconcat(CIR_FenvOpTraits, traits),
+                   CIR_DynamicMemoryEffects> {
+  let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
+
+  let constrainedLLVMIntrinsic = mnemonic;
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
+}
 
 //===----------------------------------------------------------------------===//
 // FAddOp
@@ -4556,6 +4768,7 @@ def CIR_AwaitOp : CIR_Op<"await",[
   ];
 
   let hasVerifier = 1;
+  let hasLLVMLowering = false;
 }
 //===----------------------------------------------------------------------===//
 // CoroBody
@@ -4625,7 +4838,7 @@ def CIR_CoReturnOp : CIR_Op<"co_return", [
 //===----------------------------------------------------------------------===//
 
 def CIR_CopyOp : CIR_Op<"copy",[
-  SameTypeOperands,
+  SameOperandsPointeeType,
   DeclareOpInterfaceMethods<PromotableMemOpInterface>
 ]> {
   let summary = "Copies contents from a CIR pointer to another";
@@ -4635,7 +4848,9 @@ def CIR_CopyOp : CIR_Op<"copy",[
 
     The number of bytes copied is inferred from the pointee type. The pointee
     type of `src` and `dst` must match and both must implement the
-    `DataLayoutTypeInterface`.
+    `DataLayoutTypeInterface`. The pointers may differ in address space (e.g.
+    when assigning through an address-space-qualified pointer); when the two
+    pointer types differ, both are printed, `src` first.
 
     The `volatile` keyword indicates that the operation is volatile.
 
@@ -4671,7 +4886,7 @@ def CIR_CopyOp : CIR_Op<"copy",[
     $dst (`align` `(` $dst_alignment^ `)`)?
     (`volatile` $is_volatile^)?
     (`skip_tail_padding` $skip_tail_padding^)?
-    attr-dict `:` qualified(type($dst))
+    attr-dict `:` custom<CopyTypes>(type($src), type($dst))
   }];
   let hasVerifier = 1;
 
@@ -5534,7 +5749,8 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 
-def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
+def CIR_VecCmpOp : CIR_Op<"vec.cmp",
+    !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
   let summary = "Compare two vectors";
   let description = [{
     The `cir.vec.cmp` operation does an element-wise comparison of two vectors
@@ -5542,16 +5758,24 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
     whose element type is the signed integral type that is the same size as the
     element type of the operands. The values in the result are 0 or -1.
 
+    The optional `fenv` attribute describes constraints on the floating-point
+    handling of the operation. It is only valid for floating-point vector
+    comparisons.
+
     ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
     %lt = cir.vec.cmp(lt, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    %gt = cir.vec.cmp(gt, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {
+      fenv = #cir.fenv<>
+    }
     ```
   }];
 
   let arguments = (ins
     CIR_CmpOpKind:$kind,
     CIR_VectorType:$lhs,
-    CIR_VectorType:$rhs
+    CIR_VectorType:$rhs,
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs CIR_VectorType:$result);
@@ -5561,6 +5785,14 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
     qualified(type($result)) attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "cir::CmpOpKind":$kind,
+                   "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, result, kind, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
+
+  let hasVerifier = 1;
   let hasFolder = 1;
 }
 
@@ -6822,15 +7054,26 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
 // Floating Point Ops
 //===----------------------------------------------------------------------===//
 
+// The optional `fenv` attribute describes constraints on the floating-point
+// handling of the operation.
 class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
+    : CIR_Op<mnemonic,
+             !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
 {
-  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src);
+  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src,
+                       OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = "$src `:` type($src) attr-dict";
 
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$src), [{
+      build($_builder, $_state, src, cir::FenvAttr{});
+    }]>
+  ];
+
   let llvmOp = llvmOpName;
+  let constrainedLLVMIntrinsic = mnemonic;
 }
 
 def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
@@ -6892,6 +7135,8 @@ def CIR_CeilOp : CIR_UnaryFPToFPBuiltinOp<"ceil", "FCeilOp"> {
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
+
+  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_CosOp : CIR_UnaryFPToFPBuiltinOp<"cos", "CosOp"> {
@@ -6904,11 +7149,31 @@ def CIR_CosOp : CIR_UnaryFPToFPBuiltinOp<"cos", "CosOp"> {
   }];
 }
 
+def CIR_CoshOp : CIR_UnaryFPToFPBuiltinOp<"cosh", "CoshOp"> {
+  let summary = "Computes the floating-point hyperbolic cosine value";
+  let description = [{
+    `cir.cosh` computes the hyperbolic cosine of a floating-point operand and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_ExpOp : CIR_UnaryFPToFPBuiltinOp<"exp", "ExpOp"> {
   let summary = "Computes the floating-point base-e exponential value";
   let description = [{
     `cir.exp` computes the exponential of a floating-point operand and returns
     a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_Exp10Op : CIR_UnaryFPToFPBuiltinOp<"exp10", "Exp10Op"> {
+  let summary = "Computes the floating-point base-10 exponential value";
+  let description = [{
+    `cir.exp10` computes the base-10 exponential of a floating-point operand and
+    returns a result of the same type.
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
@@ -6984,6 +7249,8 @@ def CIR_RoundOp : CIR_UnaryFPToFPBuiltinOp<"round", "RoundOp"> {
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
+
+  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_RoundEvenOp : CIR_UnaryFPToFPBuiltinOp<"roundeven", "RoundEvenOp"> {
@@ -6994,6 +7261,8 @@ def CIR_RoundEvenOp : CIR_UnaryFPToFPBuiltinOp<"roundeven", "RoundEvenOp"> {
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
+
+  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_SinOp : CIR_UnaryFPToFPBuiltinOp<"sin", "SinOp"> {
@@ -7001,6 +7270,16 @@ def CIR_SinOp : CIR_UnaryFPToFPBuiltinOp<"sin", "SinOp"> {
   let description = [{
     `cir.sin` computes the sine of a floating-point operand and returns
     a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
+def CIR_SinhOp : CIR_UnaryFPToFPBuiltinOp<"sinh", "SinhOp"> {
+  let summary = "Computes the floating-point hyperbolic sine";
+  let description = [{
+    `cir.sinh` computes the hyperbolic sine of a floating-point operand and
+    returns a result of the same type.
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
@@ -7016,6 +7295,16 @@ def CIR_TanOp : CIR_UnaryFPToFPBuiltinOp<"tan", "TanOp"> {
   }];
 }
 
+def CIR_TanhOp : CIR_UnaryFPToFPBuiltinOp<"tanh", "TanhOp"> {
+  let summary = "Computes the floating-point hyperbolic tangent";
+  let description = [{
+    `cir.tanh` computes the hyperbolic tangent of a floating-point operand and
+    returns a result of the same type.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "FTruncOp"> {
   let summary = "Truncates floating-point value to integer";
   let description = [{
@@ -7024,6 +7313,8 @@ def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "FTruncOp"> {
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
+
+  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
@@ -7034,6 +7325,10 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
+
+  // fabs is exact and does not raise exceptions, so it is always lowered to
+  // the plain llvm.fabs intrinsic.
+  let constrainedLLVMIntrinsic = "";
 }
 
 def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
@@ -7080,12 +7375,15 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
     %y = cir.floor %x : !cir.double
     ```
   }];
+
+  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic, [Pure]>
+    : CIR_Op<mnemonic, CIR_FenvOpTraits>
 {
-  let arguments = (ins CIR_AnyFloatType:$src);
+  let arguments = (ins CIR_AnyFloatType:$src,
+                       OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_IntType:$result);
 
   let summary = [{
@@ -7097,7 +7395,14 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
     $src `:` type($src) `->` type($result) attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$src), [{
+      build($_builder, $_state, result, src, cir::FenvAttr{});
+    }]>
+  ];
+
   let llvmOp = llvmOpName;
+  let constrainedLLVMIntrinsic = mnemonic;
 }
 
 def CIR_LroundOp : CIR_UnaryFPToIntBuiltinOp<"lround", "LroundOp"> {
@@ -7106,6 +7411,8 @@ def CIR_LroundOp : CIR_UnaryFPToIntBuiltinOp<"lround", "LroundOp"> {
     `cir.lround` rounds a floating-point value to the nearest integer value,
     rounding halfway cases away from zero, and returns the result as a `long`.
   }];
+
+  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_LlroundOp : CIR_UnaryFPToIntBuiltinOp<"llround", "LlroundOp"> {
@@ -7115,6 +7422,8 @@ def CIR_LlroundOp : CIR_UnaryFPToIntBuiltinOp<"llround", "LlroundOp"> {
     rounding halfway cases away from zero, and returns the result as a
     `long long`.
   }];
+
+  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_LrintOp : CIR_UnaryFPToIntBuiltinOp<"lrint", "LrintOp"> {
@@ -7134,14 +7443,16 @@ def CIR_LlrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp"> {
 }
 
 class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+    : CIR_Op<mnemonic,
+             !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)> {
   let summary = [{
     libc builtin equivalent ignoring floating-point exceptions and errno.
   }];
 
   let arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$lhs,
-    CIR_AnyFloatOrVecOfFloatType:$rhs
+    CIR_AnyFloatOrVecOfFloatType:$rhs,
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
@@ -7149,6 +7460,13 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
+                   "mlir::Value":$rhs), [{
+      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
 
   let llvmOp = llvmOpName;
 }
@@ -7159,6 +7477,9 @@ def CIR_CopysignOp : CIR_BinaryFPToFPBuiltinOp<"copysign", "CopySignOp"> {
     `cir.copysign` returns a value with the magnitude of the first operand
     and the sign of the second operand.
   }];
+
+  // copysign is exact and does not raise exceptions, so it is always lowered
+  // to the plain llvm.copysign intrinsic.
 }
 
 def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp"> {
@@ -7177,6 +7498,9 @@ def CIR_FMaximumOp : CIR_BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp"> {
     `cir.fmaximum` returns the larger of its two operands according to
     IEEE 754-2019 semantics. If either operand is NaN, NaN is returned.
   }];
+
+  let constrainedLLVMIntrinsic = "maximum";
+  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp"> {
@@ -7195,6 +7519,9 @@ def CIR_FMinimumOp : CIR_BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp"> {
     `cir.fminimum` returns the smaller of its two operands according to
     IEEE 754-2019 semantics. If either operand is NaN, NaN is returned.
   }];
+
+  let constrainedLLVMIntrinsic = "minimum";
+  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_FModOp : CIR_BinaryFPToFPBuiltinOp<"fmod", "FRemOp"> {
@@ -7203,6 +7530,9 @@ def CIR_FModOp : CIR_BinaryFPToFPBuiltinOp<"fmod", "FRemOp"> {
     `cir.fmod` computes the floating-point remainder of dividing the first
     operand by the second operand.
   }];
+
+  // fmod maps to the constrained frem intrinsic.
+  let constrainedLLVMIntrinsic = "frem";
 }
 
 def CIR_PowOp : CIR_BinaryFPToFPBuiltinOp<"pow", "PowOp"> {
@@ -7211,6 +7541,8 @@ def CIR_PowOp : CIR_BinaryFPToFPBuiltinOp<"pow", "PowOp"> {
     `cir.pow` computes the first operand raised to the power of the second
     operand.
   }];
+
+  let constrainedLLVMIntrinsic = "pow";
 }
 
 def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
@@ -7219,6 +7551,8 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
     `cir.atan2` computes the arc tangent of the first operand divided by the
     second operand, using the signs of both to determine the quadrant.
   }];
+
+  let constrainedLLVMIntrinsic = "atan2";
 }
 
 def CIR_FrexpOp : CIR_Op<"frexp", [Pure]> {
@@ -7259,6 +7593,52 @@ def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
 
   let assemblyFormat = [{
     $src `:` type($src) `->` type($fractional) `,` type($integral) attr-dict
+  }];
+}
+
+class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic,
+             !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
+{
+  let arguments = (ins
+    CIR_AnyFloatOrVecOfFloatType:$a,
+    CIR_AnyFloatOrVecOfFloatType:$b,
+    CIR_AnyFloatOrVecOfFloatType:$c,
+    OptionalAttr<CIR_FenvAttr>:$fenv
+  );
+
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$a, "mlir::Value":$b,
+                   "mlir::Value":$c), [{
+      build($_builder, $_state, result, a, b, c, cir::FenvAttr{});
+    }]>
+  ];
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_FMAOp : CIR_TernaryFPToFPBuiltinOp<"fma", "FMAOp"> {
+  let summary = "Fused Multiply-Add operation";
+  
+  let description = [{
+    Computes the fused multiply-add of three floating-point values or vector.
+
+    The inputs must be either:
+      • floating-point scalar types, or
+      • vectors whose element type is floating-point.
+
+    The result type must match the input type exactly.
+
+    Examples:
+      // scalar
+      %r = cir.fma %a, %b, %c : !cir.float
+
+      // vector
+      %v = cir.fma %a, %b, %c : !cir.vector<4 x !cir.float>
   }];
 }
 
@@ -8255,7 +8635,14 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Max", 6, "max">,
     I32EnumAttrCase<"Min", 7, "min">,
     I32EnumAttrCase<"UIncWrap", 8, "uinc_wrap">,
-    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">
+    I32EnumAttrCase<"UDecWrap", 9, "udec_wrap">,
+    // The primary difference between Max, Maximum, and MaximumNum is primarily
+    // about how they handle floating-point inputs. See the description of the
+    // CIR_AtomicFetchOp for more information.
+    I32EnumAttrCase<"Maximum", 10, "maximum">,
+    I32EnumAttrCase<"Minimum", 11, "minimum">,
+    I32EnumAttrCase<"MaximumNum", 12, "maximum_num">,
+    I32EnumAttrCase<"MinimumNum", 13, "minimum_num">
 ]>;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
@@ -8269,7 +8656,8 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     builtin functions `__atomic_<binop>_fetch`, `__atomic_fetch_<binop>`, and
     `__c11_atomic_fetch_<binop>`, where `<binop>` is one of the following binary
     opcodes: `add`, `sub`, `and`, `xor`, `or`, `nand`, `max`, `min`,
-    `uinc_wrap`, and `udec_wrap`.
+    `uinc_wrap`, `udec_wrap`, `maximum`, `minimum`, `maximum_num`, and
+    `minimum_num`.
 
     This operation takes 2 arguments: a pointer `ptr` and a value `val`. The
     type of `val` must match the pointee type of `ptr`. If the binary operation
@@ -8282,6 +8670,20 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
     of this operation is the old value loaded from `ptr` before the binary
     operation. Otherwise, the result of this operation is the result of the
     binary operation.
+
+    The primary difference between `max`, `maximum`, and `maximum_num` is how
+    they handle floating-point inputs:
+
+    - `max` on floating-point inputs corresponds to the `atomicrmw fmax` LLVM
+      instruction.
+    - `maximum` corresponds to the `atomicrmw fmaximum` LLVM instruction.
+    - `maximum_num` corresponds to the `atomicrmw fmaximumnum` LLVM instruction.
+
+    Similar rules apply to `min`, `minimum`, and `minimum_num`. See the
+    reference for the LLVM instruction `atomicrmw` for more information.
+
+    The operation `maximum`, `minimum`, `maximum_num`, and `minimum_num` only
+    accept floating-point inputs.
 
     Example:
     %res = cir.atomic.fetch add seq_cst %ptr, %val

@@ -53,6 +53,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h" // for CloneModule
 
 #define DEBUG_TYPE "clang-repl"
@@ -228,8 +229,13 @@ IncrementalCompilerBuilder::create(std::string TT,
   // host symbol may be out of range when the JIT memory is mapped more than
   // 2GB away (as on FreeBSD), breaking tests such as
   // Interpreter/simple-exception.cpp. Insert before user arguments so it can
-  // still be overridden.
-  ClangArgv.insert(ClangArgv.begin() + 1, "-fPIC");
+  // still be overridden. On Windows (excluding Cygwin/MinGW) an explicit
+  // -fPIC is an unsupported driver option that would drop non-x86_64 targets
+  // to PIC level 0; PIC is already the forced default there where relevant,
+  // so don't inject it.
+  llvm::Triple TargetTriple(TT);
+  if (!TargetTriple.isOSWindows() || TargetTriple.isOSCygMing())
+    ClangArgv.insert(ClangArgv.begin() + 1, "-fPIC");
 
   // Prepending -c to force the driver to do something if no action was
   // specified. By prepending we allow users to override the default

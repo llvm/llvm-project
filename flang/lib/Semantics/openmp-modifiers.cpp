@@ -281,7 +281,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpDependenceType>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_depend}},
-          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}},
           {52, {Clause::OMPC_doacross}},
       },
   };
@@ -731,7 +731,7 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
       /*clauses=*/
       {
           {45, {Clause::OMPC_depend}},
-          {51, {Clause::OMPC_depend, Clause::OMPC_update}},
+          {51, {Clause::OMPC_depend, Clause::OMPC_update_depend_objects}},
       },
   };
   return desc;

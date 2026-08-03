@@ -2,9 +2,6 @@
 
 # LLVM GitHub User Guide
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

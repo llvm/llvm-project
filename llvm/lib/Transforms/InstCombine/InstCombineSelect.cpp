@@ -2301,7 +2301,7 @@ Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
 
   auto FoldBinaryOpOrIntrinsic = [&](Constant *LHS, Constant *RHS) {
     return IsIntrinsic
-               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType())
+               ? ConstantFoldIntrinsic(Opcode, {LHS, RHS}, LHS->getType(), DL)
                : ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
   };
 
@@ -5306,12 +5306,14 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   Value *MaskedLoadPtr;
   if (match(TrueVal, m_OneUse(m_MaskedLoad(m_Value(MaskedLoadPtr),
-                                           m_Specific(CondVal), m_Value()))))
-    return replaceInstUsesWith(
-        SI, Builder.CreateMaskedLoad(
-                TrueVal->getType(), MaskedLoadPtr,
-                cast<IntrinsicInst>(TrueVal)->getParamAlign(0).valueOrOne(),
-                CondVal, FalseVal));
+                                           m_Specific(CondVal), m_Value())))) {
+    auto *LoadInst = cast<IntrinsicInst>(TrueVal);
+    Instruction *In = Builder.CreateMaskedLoad(
+        TrueVal->getType(), MaskedLoadPtr,
+        LoadInst->getParamAlign(0).valueOrOne(), CondVal, FalseVal);
+    In->setAAMetadata(LoadInst->getAAMetadata());
+    return replaceInstUsesWith(SI, In);
+  }
 
   // Canonicalize sign function ashr pattern: select (icmp slt X, 1), ashr X,
   // bitwidth-1, 1 -> scmp(X, 0)
