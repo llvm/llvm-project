@@ -13,9 +13,7 @@
 define i1 @lowbit_eq_zero_i2(i2 %x) {
 ; CHECK-LABEL: define i1 @lowbit_eq_zero_i2(
 ; CHECK-SAME: i2 [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub i2 0, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and i2 [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[LOWBIT]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i2 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i2 0, %x
@@ -28,9 +26,7 @@ define i1 @lowbit_eq_zero_i2(i2 %x) {
 define i1 @lowbit_ne_zero_i8(i8 %x) {
 ; CHECK-LABEL: define i1 @lowbit_ne_zero_i8(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and i8 [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[LOWBIT]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i8 0, %x
@@ -43,9 +39,7 @@ define i1 @lowbit_ne_zero_i8(i8 %x) {
 define i1 @lowbit_eq_one_i32(i32 %x) {
 ; CHECK-LABEL: define i1 @lowbit_eq_one_i32(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and i32 [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[LOWBIT]], 1
+; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[X]] to i1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i32 0, %x
@@ -58,9 +52,8 @@ define i1 @lowbit_eq_one_i32(i32 %x) {
 define i1 @lowbit_ne_one_i64(i64 %x) {
 ; CHECK-LABEL: define i1 @lowbit_ne_one_i64(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and i64 [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[LOWBIT]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[X]] to i1
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i64 0, %x
@@ -75,9 +68,7 @@ define i1 @lowbit_ne_one_i64(i64 %x) {
 define <2 x i1> @lowbit_eq_zero_v2i8(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i1> @lowbit_eq_zero_v2i8(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and <2 x i8> [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[LOWBIT]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %neg = sub <2 x i8> zeroinitializer, %x
@@ -90,9 +81,7 @@ define <2 x i1> @lowbit_eq_zero_v2i8(<2 x i8> %x) {
 define <2 x i1> @lowbit_ne_zero_v2i8(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i1> @lowbit_ne_zero_v2i8(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and <2 x i8> [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[LOWBIT]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %neg = sub <2 x i8> zeroinitializer, %x
@@ -105,9 +94,7 @@ define <2 x i1> @lowbit_ne_zero_v2i8(<2 x i8> %x) {
 define <2 x i1> @lowbit_eq_one_v2i8(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i1> @lowbit_eq_one_v2i8(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and <2 x i8> [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[LOWBIT]], splat (i8 1)
+; CHECK-NEXT:    [[R:%.*]] = trunc <2 x i8> [[X]] to <2 x i1>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %neg = sub <2 x i8> zeroinitializer, %x
@@ -120,9 +107,8 @@ define <2 x i1> @lowbit_eq_one_v2i8(<2 x i8> %x) {
 define <2 x i1> @lowbit_ne_one_v2i8(<2 x i8> %x) {
 ; CHECK-LABEL: define <2 x i1> @lowbit_ne_one_v2i8(
 ; CHECK-SAME: <2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub <2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and <2 x i8> [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[LOWBIT]], splat (i8 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i8> [[X]] to <2 x i1>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %neg = sub <2 x i8> zeroinitializer, %x
@@ -137,9 +123,7 @@ define <2 x i1> @lowbit_ne_one_v2i8(<2 x i8> %x) {
 define <vscale x 2 x i1> @lowbit_eq_zero_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: define <vscale x 2 x i1> @lowbit_eq_zero_nxv2i8(
 ; CHECK-SAME: <vscale x 2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub <vscale x 2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and <vscale x 2 x i8> [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <vscale x 2 x i8> [[LOWBIT]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <vscale x 2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
 ;
   %neg = sub <vscale x 2 x i8> zeroinitializer, %x
@@ -152,9 +136,7 @@ define <vscale x 2 x i1> @lowbit_eq_zero_nxv2i8(<vscale x 2 x i8> %x) {
 define <vscale x 2 x i1> @lowbit_ne_zero_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: define <vscale x 2 x i1> @lowbit_ne_zero_nxv2i8(
 ; CHECK-SAME: <vscale x 2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub <vscale x 2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and <vscale x 2 x i8> [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <vscale x 2 x i8> [[LOWBIT]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <vscale x 2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
 ;
   %neg = sub <vscale x 2 x i8> zeroinitializer, %x
@@ -167,9 +149,7 @@ define <vscale x 2 x i1> @lowbit_ne_zero_nxv2i8(<vscale x 2 x i8> %x) {
 define <vscale x 2 x i1> @lowbit_eq_one_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: define <vscale x 2 x i1> @lowbit_eq_one_nxv2i8(
 ; CHECK-SAME: <vscale x 2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub <vscale x 2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and <vscale x 2 x i8> [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <vscale x 2 x i8> [[LOWBIT]], splat (i8 1)
+; CHECK-NEXT:    [[R:%.*]] = trunc <vscale x 2 x i8> [[X]] to <vscale x 2 x i1>
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
 ;
   %neg = sub <vscale x 2 x i8> zeroinitializer, %x
@@ -182,9 +162,8 @@ define <vscale x 2 x i1> @lowbit_eq_one_nxv2i8(<vscale x 2 x i8> %x) {
 define <vscale x 2 x i1> @lowbit_ne_one_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: define <vscale x 2 x i1> @lowbit_ne_one_nxv2i8(
 ; CHECK-SAME: <vscale x 2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub <vscale x 2 x i8> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and <vscale x 2 x i8> [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <vscale x 2 x i8> [[LOWBIT]], splat (i8 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <vscale x 2 x i8> [[X]] to <vscale x 2 x i1>
+; CHECK-NEXT:    [[R:%.*]] = xor <vscale x 2 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    ret <vscale x 2 x i1> [[R]]
 ;
   %neg = sub <vscale x 2 x i8> zeroinitializer, %x
@@ -198,9 +177,8 @@ define <vscale x 2 x i1> @lowbit_ne_one_nxv2i8(<vscale x 2 x i8> %x) {
 define i1 @lowbit_ne_one_commuted_i8(i8 %x) {
 ; CHECK-LABEL: define i1 @lowbit_ne_one_commuted_i8(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[LOWBIT:%.*]] = and i8 [[X]], [[NEG]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[LOWBIT]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i8 0, %x
@@ -220,7 +198,7 @@ define i1 @lowbit_eq_zero_extra_uses_i8(i8 %x) {
 ; CHECK-NEXT:    call void @use_i8(i8 [[NEG]])
 ; CHECK-NEXT:    [[LOWBIT:%.*]] = and i8 [[X]], [[NEG]]
 ; CHECK-NEXT:    call void @use_i8(i8 [[LOWBIT]])
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[LOWBIT]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i8 0, %x
@@ -231,7 +209,8 @@ define i1 @lowbit_eq_zero_extra_uses_i8(i8 %x) {
   ret i1 %r
 }
 
-; Do not fold != 1 when lowbit has another use, as that would increase the instruction count.
+; Do not fold != 1 when lowbit has another use, as that would increase the
+; instruction count.
 
 define i1 @lowbit_ne_one_extra_use_i8(i8 %x) {
 ; CHECK-LABEL: define i1 @lowbit_ne_one_extra_use_i8(
@@ -249,7 +228,8 @@ define i1 @lowbit_ne_one_extra_use_i8(i8 %x) {
   ret i1 %r
 }
 
-; Negative test: the negated operand must be the negation of the other and operand.
+; Negative test: the negated operand must be the negation of the other and
+; operand.
 
 define i1 @not_lowbit_eq_zero_different_operands_i8(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @not_lowbit_eq_zero_different_operands_i8(
