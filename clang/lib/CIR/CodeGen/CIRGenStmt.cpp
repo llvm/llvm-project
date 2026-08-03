@@ -20,6 +20,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/SaveAndRestore.h"
 
@@ -210,6 +211,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitIndirectGotoStmt(cast<IndirectGotoStmt>(*s));
   case Stmt::CoreturnStmtClass:
     return emitCoreturnStmt(cast<CoreturnStmt>(*s));
+  case Stmt::SYCLKernelCallStmtClass:
+    return emitSYCLKernelCallStmt(cast<SYCLKernelCallStmt>(*s));
   case Stmt::OpenACCComputeConstructClass:
     return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
   case Stmt::OpenACCLoopConstructClass:
@@ -431,7 +434,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
-  case Stmt::SYCLKernelCallStmtClass:
   case Stmt::ObjCAtTryStmtClass:
   case Stmt::ObjCAtThrowStmtClass:
   case Stmt::ObjCAtSynchronizedStmtClass:
