@@ -3,7 +3,6 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/ModuleSummaryAnalysis.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -15,19 +14,31 @@ class SimplifyCallGraphNode;
 
 using CostType = InstructionCost::CostType;
 
+/// A simplified view of the LLVM CallGraph used by SplitModuleCG to drive
+/// callgraph-based module partitioning.
+///
+/// SimplifyCallGraph drops the function-instruction-level details that the
+/// full CallGraph carries and keeps only the information needed for
+/// partitioning decisions:
+///   - The set of functions in the module (one SimplifyCallGraphNode each).
+///   - The static call edges between them.
+///   - A reference count (NumReferences) recording how many other functions
+///     call a given function. Functions with a reference count of zero are
+///     treated as call-graph roots during partitioning.
+///
+/// The simplified graph is built once (in createSimplifyCallGraph) and is
+/// consumed by SplitModuleCG::createWorkList to discover roots and their
+/// transitive dependencies.
 class SimplifyCallGraph {
   using FunctionMapTy =
-      std::map<const Function *, std::unique_ptr<SimplifyCallGraphNode>>;
+      DenseMap<const Function *, std::unique_ptr<SimplifyCallGraphNode>>;
 
   /// A map from \c Function* to \c SimplifyCallGraphNode*.
   FunctionMapTy FunctionMap;
 
 public:
-  explicit SimplifyCallGraph(CallGraph &CG,
-                             const ModuleSummaryIndex &CombinedIndex,
-                             Module &M)
-      : CG(CG) {
-    createSimplifyCallGraph(CombinedIndex);
+  explicit SimplifyCallGraph(CallGraph &CG, Module &M) : CG(CG) {
+    createSimplifyCallGraph();
   }
   ~SimplifyCallGraph() {};
 
@@ -68,7 +79,7 @@ public:
     return I->second.get();
   }
 
-  void createSimplifyCallGraph(const ModuleSummaryIndex &CombinedIndex);
+  void createSimplifyCallGraph();
   void print();
   SimplifyCallGraphNode *getOrInsertFunction(const Function *F);
 
@@ -76,6 +87,9 @@ private:
   CallGraph &CG;
 };
 
+/// A node in SimplifyCallGraph representing a single function, plus the set
+/// of functions it calls. Provides reference counting so the caller
+/// can identify roots (in-degree 0) during partitioning.
 class SimplifyCallGraphNode {
 public:
   using CalledFunctionsSet = DenseSet<SimplifyCallGraphNode *>;
@@ -135,19 +149,17 @@ static void addAllDependencies(SimplifyCallGraph &SCG, const Function &F,
     const auto &CurFn = *WorkList.pop_back_val();
     assert(!CurFn.isDeclaration());
 
-    // Scan for an indirect call. If such a call is found, we have to
-    // conservatively assume this can call all non-entrypoint functions in 
-    // the module.
+    // Walk the callees of CurFn recorded in SimplifyCallGraph and
+    // add them to Fns, recursing transitively via the WorkList.
     for (auto &SCGNode : *SCG.at(&CurFn)) {
       auto *Callee = SCGNode->getFunction();
       if (!Callee || Callee->isDeclaration())
         continue;
-      if (Callee != &F)
-      {
-        auto [It, Inserted] = Fns.insert(Callee);
-        if (Inserted)
-          WorkList.push_back(Callee);
-      }
+      // Don't recurse into the starting function itself (would re-add F).
+      if (Callee == &F)
+        continue;
+      if (Fns.insert(Callee).second)
+        WorkList.push_back(Callee);
     }
   }
 }
@@ -170,15 +182,44 @@ struct FunctionWithDependencies {
   CostType TotalCost = 0;
 };
 
-/// Splits the module M into N linkable partitions. The function ModuleCallback
-/// is called N times passing each individual partition as the MPart argument.
+/// Splits a module into N linkable partitions by traversing its call graph,
+/// so that each partition carries a self-consistent subset of functions
+/// (a root + its callees) and is balanced by IR-instruction cost. The
+/// resulting partitions can be optimized and codegen'd in parallel by the
+/// LTO backend and merged back into a single object.
+///
+/// Workflow (driven by SplitModule):
+///   1. externalize(): promote local symbols to external+hidden so they are
+///      visible across partitions. Unnamed entities get a stable name.
+///   2. calculateFunctionCosts(): compute per-function IR instruction counts.
+///   3. createWorkList(): walk SimplifyCallGraph to discover call-graph roots
+///      and their transitive dependencies.
+///   4. doPartitioning(): greedily assign each root + dependencies to the
+///      least-loaded partition, balancing by accumulated cost.
+///   5. For each partition: CloneModule the original module filtered by
+///      ShouldCloneDefinition, then dealWithMpart cleans up unused locals,
+///      marks available-externally-defined functions, and records (in
+///      PromotedRenames) the renaming for promoted locals so the caller can
+///      apply it later.
+///   6. Each partition bitcode is serialized to its own LLVMContext (via
+///      write+read) so partitions can be processed on concurrent threads
+///      without sharing LLVMContext state.
 class SplitModuleCG {
 public:
   using ModuleCreationCallback =
       function_ref<void(std::unique_ptr<Module> MPart, unsigned PartitionId)>;
-  SplitModuleCG(Module &M,
-                const ModuleSummaryIndex &CombinedIndex,
-                unsigned LimitPartition = 0);
+
+  /// Construct a SplitModuleCG over module \p M.
+  ///
+  /// \param M The module to partition. Must outlive the SplitModuleCG
+  ///          instance and any partitions emitted via SplitModule().
+  /// \param LimitPartition Upper bound on the number of partitions to
+  ///          produce. Pass 0 (the default) to derive the partition count
+  ///          from the number of call-graph roots discovered in
+  ///          createWorkList (one root per partition at most). The actual
+  ///          partition count is finalized in the constructor and can be
+  ///          queried via getPartitionNum().
+  SplitModuleCG(Module &M, unsigned LimitPartition = 0);
   void SplitModule(ModuleCreationCallback ModuleCallback,
                    const llvm::lto::Config &C);
 
@@ -199,11 +240,35 @@ private:
   DenseMap<const Function *, CostType> FuncsCosts;
   SmallVector<FunctionWithDependencies> FWDWorkList;
 
+  /// Compute the IR-instruction cost of every non-declaration function in M
+  /// and populate FuncsCosts / ModuleCost.
   void calculateFunctionCosts();
+
+  /// Walk FWDWorkList in cost-sorted order and greedily assign each root and
+  /// its dependencies to the partition with the lowest accumulated cost
+  /// (load-balanced bin-packing). Returns N partition sets, one per partition.
   std::vector<DenseSet<const Function *>> doPartitioning();
+
+  /// Post-process a cloned partition \p MPart (partition index \p I):
+  ///   - Record promoted names for symbols that were local but
+  ///     are now external (not in OriginalExternals) into PromotedRenames.
+  ///   - Erase conservatively-cloned local globals that ended up with no users.
+  ///   - For functions that were already external in the source module and
+  ///     are being defined in this partition, downgrade their duplicate
+  ///     definitions in other partitions to available_externally via the
+  ///     externalFunction map.
+  /// \p NeedsConservativeImport is the predicate (captured by SplitModule)
+  /// that identifies local globals that must be cloned into every partition.
   void dealWithMpart(
       Module &MPart, unsigned I,
       function_ref<bool(const GlobalValue *)> NeedsConservativeImport);
+
+  /// Discover call-graph roots (functions with in-degree 0 in SCG) and
+  /// build FWDWorkList, where each entry is a root + its transitive
+  /// dependency closure + the total cost. Functions in cycles that no
+  /// root reaches are treated as standalone roots themselves. The list
+  /// is sorted by (TotalCost desc, Name asc) so the most expensive roots
+  /// are assigned first during partitioning.
   void createWorkList();
 };
 
