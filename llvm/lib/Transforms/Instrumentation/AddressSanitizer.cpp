@@ -479,6 +479,11 @@ static cl::opt<unsigned> ClAsanPreserveTopBits(
     "asan-preserve-top-bits",
     cl::desc("Number of address top bits to preserve during shadow mapping"),
     cl::Hidden, cl::init(0));
+static cl::opt<uint64_t> ClAsanMemoryPivot(
+    "asan-memory-pivot",
+    cl::desc("Memory pivot boundary between lower (negative delta) and upper "
+             "positive delta memory regions"),
+    cl::Hidden, cl::init(0));
 
 namespace {
 
@@ -493,6 +498,7 @@ struct ShadowMapping {
   bool OrShadowOffset;
   bool InGlobal;
   unsigned PreserveTopBits;
+  uint64_t MemoryPivot;
 };
 
 } // end anonymous namespace
@@ -629,6 +635,23 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
                            Mapping.Offset != kDynamicShadowSentinel;
   Mapping.InGlobal = ClWithIfunc && IsAndroid && IsArmOrThumb;
   Mapping.PreserveTopBits = ClAsanPreserveTopBits;
+  if (Mapping.PreserveTopBits >= (unsigned)LongSize) {
+    report_fatal_error(
+        "-asan-preserve-topbits must be strictly smaller than the target "
+        "pointer bit width.");
+  }
+
+  Mapping.MemoryPivot = ClAsanMemoryPivot;
+  if (Mapping.MemoryPivot > 0) {
+    if (ClForceDynamicShadow || Mapping.Offset == kDynamicShadowSentinel ||
+        ClMappingOffset.getNumOccurrences() == 0 || Mapping.Offset == 0) {
+      report_fatal_error(
+          "ASan memory pivoting (-asan-memory-pivot) requires an explicit "
+          "static shadow base (-asan-mapping-offset) and is incompatible with "
+          "zero or dynamic shadow mapping.");
+    }
+    Mapping.OrShadowOffset = false;
+  }
 
   return Mapping;
 }
@@ -1447,6 +1470,25 @@ Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
     ShadowBase = LocalDynamicShadow;
   else
     ShadowBase = ConstantInt::get(IntptrTy, Mapping.Offset & PtrMask);
+
+  if (Mapping.MemoryPivot > 0) {
+    unsigned BitWidth = IntptrTy->getIntegerBitWidth();
+    uint64_t OffsetMask = PtrMask;
+    if (Mapping.PreserveTopBits > 0 && Mapping.PreserveTopBits < BitWidth) {
+      uint64_t PreservedMask =
+          (~0ULL << (BitWidth - Mapping.PreserveTopBits)) & PtrMask;
+      OffsetMask = ~PreservedMask & PtrMask;
+    }
+    Value *MaskedAddr = Shadow;
+    if (Mapping.PreserveTopBits > 0)
+      MaskedAddr =
+          IRB.CreateAnd(Shadow, ConstantInt::get(IntptrTy, OffsetMask));
+    Value *MaskedPivot =
+        ConstantInt::get(IntptrTy, Mapping.MemoryPivot & OffsetMask);
+    Value *Delta = IRB.CreateSub(MaskedAddr, MaskedPivot);
+    Value *ShiftedDelta = IRB.CreateAShr(Delta, Mapping.Scale);
+    return IRB.CreateAdd(ShadowBase, ShiftedDelta);
+  }
 
   if (Mapping.PreserveTopBits > 0) {
     unsigned BitWidth = IntptrTy->getIntegerBitWidth();
