@@ -1165,6 +1165,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDataObjCCFStrings:
         case eSectionTypeGoSymtab:
         case eSectionTypeWasmName:
+        case eSectionTypeWasmGlobal:
           return AddressClass::eData;
 
         case eSectionTypeDebug:
@@ -1808,11 +1809,11 @@ void ObjectFileMachO::ProcessSegmentCommand(
 
       lldb::SectionType sect_type = GetSectionType(sect64.flags, section_name);
 
-      SectionSP section_sp(new Section(
+      SectionSP section_sp = std::make_shared<Section>(
           segment_sp, module_sp, this, ++context.NextSectionIdx, section_name,
           sect_type, sect64.addr - segment_sp->GetFileAddress(), sect64.size,
           section_file_offset, section_file_offset == 0 ? 0 : sect64.size,
-          sect64.align, sect64.flags));
+          sect64.align, sect64.flags);
       // Set the section to be encrypted to match the segment
 
       bool section_is_encrypted = false;
@@ -2338,7 +2339,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     }
   } else {
-    if (is_local_shared_cache_image) {
+    if (is_local_shared_cache_image && linkedit_section_sp) {
       // The load commands in shared cache images are relative to the
       // beginning of the shared cache, not the library image. The
       // data we get handed when creating the ObjectFileMachO starts

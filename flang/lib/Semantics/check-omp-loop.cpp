@@ -160,7 +160,7 @@ void OmpStructureChecker::HasInvalidLoopBinding(
         "strictly nested inside a `TEAMS` region."_err_en_US);
   }
 
-  if (OmpDirectiveSet{
+  if (llvm::omp::DirectiveSet{
           llvm::omp::OMPD_teams_loop, llvm::omp::OMPD_target_teams_loop}
           .test(beginName.v)) {
     teamsBindingChecker(

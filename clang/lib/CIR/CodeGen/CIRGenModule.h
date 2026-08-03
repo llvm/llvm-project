@@ -191,12 +191,6 @@ public:
   /// the pointers are supposed to be uniqued, should be fine. Revisit this if
   /// it ends up taking too much memory.
   llvm::DenseMap<const clang::FieldDecl *, llvm::StringRef> lambdaFieldToName;
-  /// Map BlockAddrInfoAttr (function name, label name) to the corresponding CIR
-  /// LabelOp. This provides the main lookup table used to resolve block
-  /// addresses into their label operations.
-  llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
-  cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
-  void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
 
   /// Add a global value to the llvmUsed list.
   void addUsedGlobal(cir::CIRGlobalValueInterface gv);
@@ -725,6 +719,13 @@ public:
   /// Returns std::nullopt and emits errorNYI for virtual-base paths.
   std::optional<llvm::SmallVector<int32_t>>
   buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
+
+  /// Returns true if \p field is an empty field that isn't laid out in the CIR
+  /// record (e.g. a [[no_unique_address]] empty member). Such fields have no
+  /// CIR field index, so a pointer-to-data-member to them is represented by an
+  /// explicit byte offset (#cir.data_member_offset) rather than a field-index
+  /// path.
+  bool isEmptyFieldForMemberPointer(const FieldDecl *field);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an

@@ -209,17 +209,17 @@ elemental integer function test7_inner(i)
 end function
 end subroutine
 
-subroutine issue990()
+subroutine captured_stmt_function()
   implicit none
   integer :: captured
   call bar()
 contains
-! CHECK-LABEL: func.func private @_QFissue990Pbar(
+! CHECK-LABEL: func.func private @_QFcaptured_stmt_functionPbar(
 ! CHECK-SAME: %[[tup:.*]]: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc})
 subroutine bar()
   integer :: stmt_func, i
   stmt_func(i) = i + captured
-  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFissue990Ecaptured"
+  ! CHECK: hlfir.declare %{{.*}}uniq_name = "_QFcaptured_stmt_functionEcaptured"
   print *, stmt_func(10)
 end subroutine
 end subroutine
