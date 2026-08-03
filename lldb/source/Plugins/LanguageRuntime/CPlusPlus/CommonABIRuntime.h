@@ -24,23 +24,27 @@ public:
 
   virtual llvm::StringRef GetName() const = 0;
 
-  virtual bool IsVTableSymbol(Mangled &mangled) const;
+  virtual bool IsVTableSymbol(Mangled &mangled) const { return false; }
 
   virtual bool GetDynamicTypeAndAddress(
       ValueObject &in_value, lldb::DynamicValueType use_dynamic,
       const LanguageRuntime::VTableInfo &vtable_info,
-      TypeAndOrName &class_type_or_name, Address &dynamic_address);
+      TypeAndOrName &class_type_or_name, Address &dynamic_address) {
+    return false;
+  }
 
   virtual void
   AppendExceptionBreakpointFunctions(std::vector<const char *> &names,
                                      bool catch_bp, bool throw_bp,
-                                     bool for_expressions);
+                                     bool for_expressions) {}
 
   virtual void AppendExceptionBreakpointFilterModules(FileSpecList &list,
-                                                      const Target &target);
+                                                      const Target &target) {}
 
   virtual lldb::ValueObjectSP
-  GetExceptionObjectForThread(lldb::ThreadSP thread_sp);
+  GetExceptionObjectForThread(lldb::ThreadSP thread_sp) {
+    return {};
+  }
 
 protected:
   CommonABIRuntime(Process *process);
