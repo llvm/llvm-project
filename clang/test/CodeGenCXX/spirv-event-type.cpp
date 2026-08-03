@@ -16,8 +16,13 @@ const std::type_info &ti = typeid(__spirv_event_t);
 // CHECK: @_ZTIu15__spirv_event_t = {{.*}}constant { {{.*}} } { {{.*}}@_ZTVN10__cxxabiv123__fundamental_type_infoE{{.*}}, {{.*}}@_ZTSu15__spirv_event_t {{.*}}}
 // CHECK: @_ZTSu15__spirv_event_t = {{.*}}constant [19 x i8] c"u15__spirv_event_t\00"
 
+__spirv_event_t __attribute__((address_space(7))) as_event;
+// CHECK: @as_event = addrspace(7) global target("spirv.Event") zeroinitializer
+
 void test(__spirv_event_t e) {
 // CHECK: define spir_func void @_Z4testu15__spirv_event_t(target("spirv.Event") %e)
+  __spirv_event_t events[4];
+// CHECK: %events = alloca [4 x target("spirv.Event")]
   __spirv_event_t copyConstructed = e;
 // CHECK: %[[CC:.*]] = load target("spirv.Event"), ptr %e.addr
 // CHECK: store target("spirv.Event") %[[CC]], ptr %copyConstructed

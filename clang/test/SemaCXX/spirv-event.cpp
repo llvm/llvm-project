@@ -48,12 +48,17 @@ void copy_and_move(__spirv_event_t a) {
 // __spirv_event_t is an opaque, pointer-sized object type. It is not a scalar,
 // class, union, enum, or fundamental type, and it is neither trivially copyable
 // nor a literal type. These characteristics match OpenCL's event_t.
+typedef __spirv_event_t __attribute__((address_space(7))) event_as7;
 #ifdef SPIRV32
 static_assert(sizeof(__spirv_event_t) == 4, "");
 static_assert(alignof(__spirv_event_t) == 4, "");
+static_assert(sizeof(event_as7) == 4, "");
+static_assert(alignof(event_as7) == 4, "");
 #else
 static_assert(sizeof(__spirv_event_t) == 8, "");
 static_assert(alignof(__spirv_event_t) == 8, "");
+static_assert(sizeof(event_as7) == 8, "");
+static_assert(alignof(event_as7) == 8, "");
 #endif
 static_assert(__is_object(__spirv_event_t), "");
 static_assert(!__is_scalar(__spirv_event_t), "");
