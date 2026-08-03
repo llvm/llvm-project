@@ -103,6 +103,14 @@ New checks
   Finds calls to ``value_or`` (and alternative spellings ``valueOr``,
   ``ValueOr``) on optional types where the return type is expensive to copy.
 
+- New :doc:`portability-avoid-platform-specific-fundamental-types
+  <clang-tidy/checks/portability/avoid-platform-specific-fundamental-types>` 
+  check.
+
+  Detects fundamental types (``int``, ``short``, ``long``, ``long long``,
+  ``char``, ``float``, etc) and warns against their use due to 
+  platform-dependent behavior.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
