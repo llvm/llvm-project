@@ -7528,32 +7528,19 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
   SmallVector<Instruction *> InstsToMove;
   // Ensure that the start values for all header phi recipes are updated before
   // vectorizing the epilogue loop.
-  for (VPRecipeBase &R : make_early_inc_range(Header->phis())) {
+  for (VPRecipeBase &R : Header->phis()) {
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
       // Find the reduction result by searching users of the phi or its backedge
-      // value, looking through intermediate recipes.
+      // value.
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
         return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
       };
-      VPValue *BackedgeVal = ReductionPhi->getBackedgeValue();
-      auto *RdxResult = cast_or_null<VPInstruction>(
-          vputils::findRecipe(BackedgeVal, IsReductionResult));
-      // If the ComputeReductionResult was optimized away (e.g., the exit value
-      // was simplified to the start value), the reduction does not contribute
-      // to the exit value. Get rid of the dead reduction cycle.
-      if (!RdxResult) {
-        ReductionPhi->replaceAllUsesWith(ReductionPhi->getStartValue());
-        // The backedge value may be the phi itself (if the backedge chain was
-        // simplified away), or a separate recipe forming a cycle with the phi.
-        bool BackedgeIsPhi = (BackedgeVal == ReductionPhi);
-        ReductionPhi->eraseFromParent();
-        if (!BackedgeIsPhi)
-          vputils::recursivelyDeleteDeadRecipes(BackedgeVal);
-        continue;
-      }
+      auto *RdxResult = cast<VPInstruction>(
+          vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
+      assert(RdxResult && "expected to find reduction result");
 
       VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
           cast<PHINode>(ReductionPhi->getUnderlyingInstr()));
