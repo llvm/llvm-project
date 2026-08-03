@@ -565,22 +565,25 @@ static void populateDialectTransformSubmodule(nb::module_ &m) {
   PyPatternDescriptorOpInterface::bind(m);
 
   m.def("only_reads_handle", onlyReadsHandle,
-        "Returns effects marking operands as only reading handles.",
+        "Returns `OnlyReadsHandle` effects corresponding to operands which "
+        "have been marked as having those effects.",
         nb::arg("operands"));
 
   m.def("consumes_handle", consumesHandle,
-        "Returns effects marking operands as consuming handles.",
+        "Returns `ConsumesHandle` effects corresponding to operands which "
+        "have been marked as having those effects.",
         nb::arg("operands"));
 
   m.def("produces_handle", producesHandle,
-        "Returns effects marking results as producing handles.",
+        "Returns `ProducesHandle` effects corresponding to results which have "
+        "been marked as having those effects.",
         nb::arg("results"));
 
   m.def("modifies_payload", modifiesPayload,
-        "Returns effects marking potential payload modifications.");
+        "Returns `ModifiesPayload` effects.");
 
   m.def("only_reads_payload", onlyReadsPayload,
-        "Returns effects marking payload reads.");
+        "Returns `OnlyReadsPayload` effects.");
 }
 } // namespace transform
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
