@@ -3092,7 +3092,7 @@ bool GVNPass::propagateEquality(
     Value *LHS, Value *RHS,
     const std::variant<BasicBlockEdge, Instruction *> &Root) {
   SmallVector<std::pair<Value*, Value*>, 4> Worklist;
-  llvm::DenseSet<std::pair<Value *, Value *>> Visited;
+  DenseSet<std::pair<Value *, Value *>> Visited;
   Worklist.push_back(std::make_pair(LHS, RHS));
   bool Changed = false;
   SmallVector<const BasicBlock *> DominatedBlocks;
@@ -3119,7 +3119,7 @@ bool GVNPass::propagateEquality(
     if (isa<Constant>(LHS) && isa<Constant>(RHS))
       continue;
 
-    if (!Visited.insert(std::make_pair(LHS, RHS)).second)
+    if (!Visited.insert({LHS, RHS}).second)
       continue;
 
     // Prefer a constant on the right-hand side, or an Argument if no constants.
