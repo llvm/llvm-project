@@ -71,6 +71,11 @@ std::vector<const MemRegion *> lifetime_modeling::getDanglingRegionsAfterReturn(
   return Regions;
 }
 
+bool lifetime_modeling::isBoundToLifetimeSource(ProgramStateRef State,
+                                                SVal Val) {
+  return State->get<LifetimeBoundMap>(Val) != nullptr;
+}
+
 bool lifetime_modeling::isDeallocated(ProgramStateRef State,
                                       const MemRegion *Region) {
   return State->contains<DeallocatedSourceSet>(Region->getBaseRegion());
@@ -250,8 +255,9 @@ void DebugLifetimeModeling::analyzerDumpLifetimeOriginsOf(
 
     llvm::SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
-    OS << " Origin " << ArgSVal << " bound to ";
-    llvm::interleaveComma(RegionNames, OS);
+    OS << " Origin '" << ArgSVal << "' bound to ";
+    llvm::interleaveComma(RegionNames, OS,
+                          [&](StringRef Name) { OS << "'" << Name << "'"; });
     C.emitReport(std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N));
   }
 }
