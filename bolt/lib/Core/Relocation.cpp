@@ -1012,6 +1012,20 @@ uint32_t Relocation::getPC64() {
   }
 }
 
+uint32_t Relocation::getAbs32() {
+  switch (Arch) {
+  default:
+    llvm_unreachable("Unsupported architecture");
+  case Triple::aarch64:
+    return ELF::R_AARCH64_ABS32;
+  case Triple::riscv64:
+  case Triple::riscv32:
+    return ELF::R_RISCV_32;
+  case Triple::x86_64:
+    return ELF::R_X86_64_32;
+  }
+}
+
 uint32_t Relocation::getType(const object::RelocationRef &Rel) {
   uint64_t RelType = Rel.getType();
   assert(isUInt<32>(RelType) && "BOLT relocation types are 32 bits");

@@ -66,6 +66,9 @@ public:
   /// The type of this jump table.
   JumpTableType Type;
 
+  /// Whether entries are sign-extended when loaded by the dispatch sequence.
+  bool EntriesAreSigned;
+
   /// Whether this jump table has entries pointing to multiple functions.
   bool IsSplit{false};
 
@@ -95,7 +98,8 @@ public:
 private:
   /// Constructor should only be called by a BinaryContext.
   JumpTable(MCSymbol &Symbol, uint64_t Address, size_t EntrySize,
-            JumpTableType Type, LabelMapType &&Labels, BinarySection &Section);
+            bool EntriesAreSigned, JumpTableType Type, LabelMapType &&Labels,
+            BinarySection &Section);
 
 public:
   /// Return the size of the jump table.

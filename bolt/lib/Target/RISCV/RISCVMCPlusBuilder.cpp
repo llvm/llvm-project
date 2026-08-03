@@ -257,12 +257,15 @@ public:
       MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
       const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
       unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
-      MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const override {
+      uint64_t &EntrySize, bool &EntrySigned, MCInst *&PCRelBaseOut,
+      MCInst *&FixedEntryLoadInst) const override {
     MemLocInstr = nullptr;
     BaseRegNum = 0;
     IndexRegNum = 0;
     DispValue = 0;
     DispExpr = nullptr;
+    EntrySize = 0;
+    EntrySigned = false;
     PCRelBaseOut = nullptr;
     FixedEntryLoadInst = nullptr;
 

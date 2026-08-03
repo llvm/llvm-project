@@ -1774,11 +1774,15 @@ public:
   /// will be set to the different components of the branch.  \p MemLocInstr
   /// is the instruction that loads up the indirect function pointer.  It may
   /// or may not be same as \p Instruction.
+  /// \p EntrySize and \p EntrySigned describe the jump-table entry loaded by
+  /// the matched instruction sequence. A zero entry size requests the target's
+  /// default for the detected jump-table type.
   virtual IndirectBranchType analyzeIndirectBranch(
       MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
       const unsigned PtrSize, MCInst *&MemLocInstr, unsigned &BaseRegNum,
       unsigned &IndexRegNum, int64_t &DispValue, const MCExpr *&DispExpr,
-      MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const {
+      uint64_t &EntrySize, bool &EntrySigned, MCInst *&PCRelBaseOut,
+      MCInst *&FixedEntryLoadInst) const {
     llvm_unreachable("not implemented");
     return IndirectBranchType::UNKNOWN;
   }

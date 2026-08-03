@@ -642,7 +642,9 @@ public:
   /// element of the pair.
   const MCSymbol *getOrCreateJumpTable(BinaryFunction &Function,
                                        uint64_t Address,
-                                       JumpTable::JumpTableType Type);
+                                       JumpTable::JumpTableType Type,
+                                       uint64_t EntrySize = 0,
+                                       bool EntriesAreSigned = false);
 
   /// Analyze a possible jump table of type \p Type at a given \p Address.
   /// \p BF is a function referencing the jump table.
@@ -654,12 +656,12 @@ public:
   ///
   /// Optionally, populate \p Address from jump table entries. The entries
   /// could be partially populated if the jump table detection fails.
-  bool analyzeJumpTable(const uint64_t Address,
-                        const JumpTable::JumpTableType Type,
-                        const BinaryFunction &BF,
-                        const uint64_t NextJTAddress = 0,
-                        JumpTable::AddressesType *EntriesAsAddress = nullptr,
-                        bool *HasEntryInFragment = nullptr) const;
+  bool
+  analyzeJumpTable(const uint64_t Address, const JumpTable::JumpTableType Type,
+                   const BinaryFunction &BF, const uint64_t NextJTAddress = 0,
+                   JumpTable::AddressesType *EntriesAsAddress = nullptr,
+                   bool *HasEntryInFragment = nullptr, uint64_t EntrySize = 0,
+                   bool EntriesAreSigned = false) const;
 
   /// After jump table locations are established, this function will populate
   /// their EntriesAsAddress based on memory contents.

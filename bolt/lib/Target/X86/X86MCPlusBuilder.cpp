@@ -2008,13 +2008,12 @@ public:
                            SecondInstr, nullptr);
   }
 
-  IndirectBranchType
-  analyzeIndirectBranch(MCInst &Instruction, InstructionIterator Begin,
-                        InstructionIterator End, const unsigned PtrSize,
-                        MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
-                        unsigned &IndexRegNumOut, int64_t &DispValueOut,
-                        const MCExpr *&DispExprOut, MCInst *&PCRelBaseOut,
-                        MCInst *&FixedEntryLoadInst) const override {
+  IndirectBranchType analyzeIndirectBranch(
+      MCInst &Instruction, InstructionIterator Begin, InstructionIterator End,
+      const unsigned PtrSize, MCInst *&MemLocInstrOut, unsigned &BaseRegNumOut,
+      unsigned &IndexRegNumOut, int64_t &DispValueOut,
+      const MCExpr *&DispExprOut, uint64_t &EntrySizeOut, bool &EntrySignedOut,
+      MCInst *&PCRelBaseOut, MCInst *&FixedEntryLoadInst) const override {
     // Try to find a (base) memory location from where the address for
     // the indirect branch is loaded. For X86-64 the memory will be specified
     // in the following format:
@@ -2041,6 +2040,8 @@ public:
     IndexRegNumOut = X86::NoRegister;
     DispValueOut = 0;
     DispExprOut = nullptr;
+    EntrySizeOut = 0;
+    EntrySignedOut = false;
     FixedEntryLoadInst = nullptr;
 
     std::reverse_iterator<InstructionIterator> II(End);

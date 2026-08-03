@@ -825,6 +825,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   unsigned BaseRegNum, IndexRegNum;
   int64_t DispValue;
   const MCExpr *DispExpr;
+  uint64_t EntrySize;
+  bool EntrySigned;
 
   // In AArch, identify the instruction adding the PC-relative offset to
   // jump table entries to correctly decode it.
@@ -848,12 +850,13 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
 
   IndirectBranchType BranchType = BC.MIB->analyzeIndirectBranch(
       Instruction, Begin, Instructions.end(), PtrSize, MemLocInstr, BaseRegNum,
-      IndexRegNum, DispValue, DispExpr, PCRelBaseInstr, FixedEntryLoadInstr);
+      IndexRegNum, DispValue, DispExpr, EntrySize, EntrySigned, PCRelBaseInstr,
+      FixedEntryLoadInstr);
 
   if (BranchType == IndirectBranchType::UNKNOWN && !MemLocInstr)
     return BranchType;
 
-  if (MemLocInstr != &Instruction)
+  if (MemLocInstr && MemLocInstr != &Instruction)
     IndexRegNum = BC.MIB->getNoRegister();
 
   if (BC.isAArch64()) {
@@ -911,7 +914,8 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
     ArrayStart = static_cast<uint64_t>(DispValue);
   }
 
-  if (BaseRegNum == BC.MRI->getProgramCounter())
+  if (BaseRegNum != BC.MIB->getNoRegister() &&
+      BaseRegNum == BC.MRI->getProgramCounter())
     ArrayStart += getAddress() + Offset + Size;
 
   if (FixedEntryLoadInstr) {
@@ -992,6 +996,16 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   // Check if there's already a jump table registered at this address.
   MemoryContentsType MemType;
   if (JumpTable *JT = BC.getJumpTableContainingAddress(ArrayStart)) {
+    if (BC.isRISCV()) {
+      const bool IsRelated = llvm::all_of(JT->Parents, [&](BinaryFunction *BF) {
+        return BC.areRelatedFragments(this, BF);
+      });
+      if (!IsRelated)
+        return IndirectBranchType::UNKNOWN;
+    }
+
+    EntrySize = JT->EntrySize;
+    EntrySigned = JT->EntriesAreSigned;
     switch (JT->Type) {
     case JumpTable::JTT_NORMAL:
       MemType = MemoryContentsType::POSSIBLE_JUMP_TABLE;
@@ -1000,6 +1014,18 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
       MemType = MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE;
       break;
     }
+  } else if (EntrySize) {
+    const JumpTable::JumpTableType ExpectedType =
+        BranchType == IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE
+            ? JumpTable::JTT_PIC
+            : JumpTable::JTT_NORMAL;
+    const bool IsJumpTable =
+        BC.analyzeJumpTable(ArrayStart, ExpectedType, *this, 0, nullptr,
+                            nullptr, EntrySize, EntrySigned);
+    MemType = IsJumpTable ? ExpectedType == JumpTable::JTT_PIC
+                                ? MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE
+                                : MemoryContentsType::POSSIBLE_JUMP_TABLE
+                          : MemoryContentsType::UNKNOWN;
   } else {
     MemType = BC.analyzeMemoryAt(ArrayStart, *this);
   }
@@ -1022,8 +1048,10 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   }
 
   // Convert the instruction into jump table branch.
-  const MCSymbol *JTLabel = BC.getOrCreateJumpTable(*this, ArrayStart, JTType);
-  BC.MIB->replaceMemOperandDisp(*MemLocInstr, JTLabel, BC.Ctx.get());
+  const MCSymbol *JTLabel = BC.getOrCreateJumpTable(*this, ArrayStart, JTType,
+                                                    EntrySize, EntrySigned);
+  if (MemLocInstr)
+    BC.MIB->replaceMemOperandDisp(*MemLocInstr, JTLabel, BC.Ctx.get());
   BC.MIB->setJumpTable(Instruction, ArrayStart, IndexRegNum);
 
   JTSites.emplace_back(Offset, ArrayStart);
@@ -2165,12 +2193,14 @@ bool BinaryFunction::postProcessIndirectBranches(
         unsigned BaseRegNum, IndexRegNum;
         int64_t DispValue;
         const MCExpr *DispExpr;
+        uint64_t EntrySize;
+        bool EntrySigned;
         MCInst *PCRelBaseInstr;
         MCInst *FixedEntryLoadInstr;
         IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
             Instr, BB.begin(), II, PtrSize, MemLocInstr, BaseRegNum,
-            IndexRegNum, DispValue, DispExpr, PCRelBaseInstr,
-            FixedEntryLoadInstr);
+            IndexRegNum, DispValue, DispExpr, EntrySize, EntrySigned,
+            PCRelBaseInstr, FixedEntryLoadInstr);
         if (Type != IndirectBranchType::UNKNOWN || MemLocInstr != nullptr)
           continue;
 
