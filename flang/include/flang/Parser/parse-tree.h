@@ -4212,9 +4212,8 @@ struct OmpMapType {
 //    CLOSE |                                       // since 5.0, until 5.2
 //    PRESENT                                       // since 5.1, until 5.2
 // Since 6.0 the map-type-modifier has been split into individual modifiers.
-//
 struct OmpMapTypeModifier {
-  ENUM_CLASS(Value, Always, Close, Present, Ompx_Hold)
+  ENUM_CLASS(Value, Always, Close, Present)
   WRAPPER_CLASS_BOILERPLATE(OmpMapTypeModifier, Value);
 };
 
