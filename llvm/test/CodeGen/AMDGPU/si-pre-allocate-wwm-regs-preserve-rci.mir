@@ -1,12 +1,12 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
 # RUN:   -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" \
-# RUN:   -debug-pass-manager -o /dev/null %s 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN:   -debug-pass-manager -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
 # RUN:   -passes=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=MIR
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
 # RUN:   -passes="si-pre-allocate-wwm-regs,greedy<vgpr>,virt-reg-rewriter" \
 # RUN:   -o - %s | FileCheck %s --check-prefix=ALIAS
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
 # RUN:   -passes="greedy<vgpr>,virt-reg-rewriter" \
 # RUN:   -o - %s | FileCheck %s --check-prefix=NO-WWM
 
