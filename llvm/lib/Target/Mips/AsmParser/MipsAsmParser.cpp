@@ -2020,6 +2020,8 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case Mips::UDivIMacro:
   case Mips::DSDivIMacro:
   case Mips::DUDivIMacro:
+    if (!Inst.getOperand(2).isImm())
+      return Error(IDLoc, "expected immediate operand kind");
     if (Inst.getOperand(2).getImm() == 0) {
       if (Inst.getOperand(1).getReg() == Mips::ZERO ||
           Inst.getOperand(1).getReg() == Mips::ZERO_64)

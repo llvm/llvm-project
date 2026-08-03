@@ -263,26 +263,37 @@ LogicalResult AddOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// AssignOp
+// Assignment operations
 //===----------------------------------------------------------------------===//
 
-/// The assign op requires that the assigned value's type matches the
-/// assigned-to variable type.
-LogicalResult emitc::AssignOp::verify() {
-  TypedValue<emitc::LValueType> variable = getVar();
+template <typename AssignmentOp>
+static LogicalResult verifyAssignmentOp(AssignmentOp op) {
+  TypedValue<emitc::LValueType> variable = op.getVar();
 
   if (!variable.getDefiningOp())
-    return emitOpError() << "cannot assign to block argument";
+    return op.emitOpError() << "cannot assign to block argument";
 
-  Type valueType = getValue().getType();
+  Type valueType = op.getValue().getType();
   Type variableType = variable.getType().getValueType();
   if (variableType != valueType)
-    return emitOpError() << "requires value's type (" << valueType
-                         << ") to match variable's type (" << variableType
-                         << ")\n  variable: " << variable
-                         << "\n  value: " << getValue() << "\n";
+    return op.emitOpError() << "requires value's type (" << valueType
+                            << ") to match variable's type (" << variableType
+                            << ")\n  variable: " << variable
+                            << "\n  value: " << op.getValue() << "\n";
   return success();
 }
+
+LogicalResult emitc::AssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::AddAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::SubAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::MulAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::DivAssignOp::verify() { return verifyAssignmentOp(*this); }
+
+LogicalResult emitc::RemAssignOp::verify() { return verifyAssignmentOp(*this); }
 
 //===----------------------------------------------------------------------===//
 // CastOp

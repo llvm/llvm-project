@@ -3244,12 +3244,22 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       LpadLabel = PreferredLandingPadLabel;
     }
 
-    SmallVector<SDValue, 4> Ops;
+    // Preserve the argument-register and register-mask operands, between
+    // Callee and the optional glue, so the pseudo call still reports its
+    // call-preserved mask to the register allocator.
+    SmallVector<SDValue, 8> Ops;
     Ops.push_back(Node->getOperand(1));
     Ops.push_back(CurDAG->getTargetConstant(LpadLabel, DL, XLenVT));
+
+    unsigned NumOps = Node->getNumOperands();
+    bool HasGlue = Node->getGluedNode() != nullptr;
+    unsigned RegOperandsEnd = HasGlue ? NumOps - 1 : NumOps;
+    for (unsigned I = 2; I != RegOperandsEnd; ++I)
+      Ops.push_back(Node->getOperand(I));
+
     Ops.push_back(Node->getOperand(0));
-    if (Node->getGluedNode())
-      Ops.push_back(Node->getOperand(Node->getNumOperands() - 1));
+    if (HasGlue)
+      Ops.push_back(Node->getOperand(NumOps - 1));
 
     ReplaceNode(Node,
                 CurDAG->getMachineNode(PseudoOpc, DL, Node->getVTList(), Ops));
@@ -3746,17 +3756,21 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
 /// Return true if this a load/store that we have a RegRegScale instruction for.
 static bool isRegRegScaleLoadOrStore(SDNode *User, SDValue Add,
                                      const RISCVSubtarget &Subtarget) {
-  if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE)
+  unsigned UserOpc = User->getOpcode();
+  if (UserOpc != ISD::LOAD && UserOpc != ISD::STORE)
     return false;
   EVT VT = cast<MemSDNode>(User)->getMemoryVT();
-  if (!(VT.isScalarInteger() &&
-        (Subtarget.hasVendorXTHeadMemIdx() || Subtarget.hasVendorXqcisls())) &&
+  // Zilx only provides indexed loads, so it must not enable reg+reg-scale
+  // address folding for stores. XTheadMemIdx and Xqcisls have scaled stores.
+  bool HasScalarIntegerMemIdx =
+      Subtarget.hasVendorXTHeadMemIdx() || Subtarget.hasVendorXqcisls() ||
+      (Subtarget.hasStdExtZilx() && UserOpc == ISD::LOAD);
+  if (!(VT.isScalarInteger() && HasScalarIntegerMemIdx) &&
       !((VT == MVT::f32 || VT == MVT::f64) &&
         Subtarget.hasVendorXTHeadFMemIdx()))
     return false;
   // Don't allow stores of the value. It must be used as the address.
-  if (User->getOpcode() == ISD::STORE &&
-      cast<StoreSDNode>(User)->getValue() == Add)
+  if (UserOpc == ISD::STORE && cast<StoreSDNode>(User)->getValue() == Add)
     return false;
 
   return true;
@@ -3799,7 +3813,7 @@ static bool isWorthFoldingIntoRegRegScale(const RISCVSubtarget &Subtarget,
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
-                                              unsigned MaxShiftAmount,
+                                              ArrayRef<unsigned> Amounts,
                                               SDValue &Base, SDValue &Index,
                                               SDValue &Scale) {
   if (Addr.getOpcode() != ISD::ADD)
@@ -3808,14 +3822,14 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
   SDValue RHS = Addr.getOperand(1);
 
   EVT VT = Addr.getSimpleValueType();
-  auto SelectShl = [this, VT, MaxShiftAmount](SDValue N, SDValue &Index,
-                                              SDValue &Shift) {
+  auto SelectShl = [this, VT, Amounts](SDValue N, SDValue &Index,
+                                       SDValue &Shift) {
     if (N.getOpcode() != ISD::SHL || !isa<ConstantSDNode>(N.getOperand(1)))
       return false;
 
     // Only match shifts by a value in range [0, MaxShiftAmount].
     unsigned ShiftAmt = N.getConstantOperandVal(1);
-    if (ShiftAmt > MaxShiftAmount)
+    if (!llvm::is_contained(Amounts, ShiftAmt))
       return false;
 
     Index = N.getOperand(0);
@@ -3875,6 +3889,10 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
   if (!isWorthFoldingIntoRegRegScale(*Subtarget, Addr))
     return false;
 
+  // Bail out if 0 is not in candidate shift amounts.
+  if (!llvm::is_contained(Amounts, 0))
+    return false;
+
   Base = LHS;
   Index = RHS;
   Scale = CurDAG->getTargetConstant(0, SDLoc(Addr), VT);
@@ -3882,11 +3900,11 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
 }
 
 bool RISCVDAGToDAGISel::SelectAddrRegZextRegScale(SDValue Addr,
-                                                  unsigned MaxShiftAmount,
+                                                  ArrayRef<unsigned> Amounts,
                                                   unsigned Bits, SDValue &Base,
                                                   SDValue &Index,
                                                   SDValue &Scale) {
-  if (!SelectAddrRegRegScale(Addr, MaxShiftAmount, Base, Index, Scale))
+  if (!SelectAddrRegRegScale(Addr, Amounts, Base, Index, Scale))
     return false;
 
   if (Index.getOpcode() == ISD::AND) {

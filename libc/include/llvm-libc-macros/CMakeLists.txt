@@ -73,6 +73,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  dirent_macros
+  HDR
+    dirent-macros.h
+)
+
+add_macro_header(
   fcntl_macros
   HDR
     fcntl-macros.h
@@ -262,6 +268,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_statfs_macros
+  HDR
+    sys-statfs-macros.h
+)
+
+add_macro_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
@@ -404,6 +416,14 @@ add_macro_header(
   locale_macros
   HDR
     locale-macros.h
+)
+
+add_macro_header(
+  langinfo_macros
+  HDR
+    langinfo-macros.h
+  DEPENDS
+    .locale_macros
 )
 
 add_macro_header(
