@@ -15,6 +15,7 @@ def _is_header_file(file):
     """Returns whether the given file is a header file, i.e. not a directory or the modulemap file."""
     return not file.is_dir() and not file.name in [
         "module.modulemap.in",
+        "target.modulemap.in",
         "CMakeLists.txt",
         "libcxx.imp",
         "__config_site.in",
