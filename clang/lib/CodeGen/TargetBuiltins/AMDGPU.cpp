@@ -286,7 +286,8 @@ static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
   CodeGen::CodeGenModule &CGM = CGF.CGM;
 
   unsigned WaveSize = CGF.getTarget().getGridValue().GV_Warp_Size;
-  llvm::Type *BallotType = Builder.getIntNTy(WaveSize);
+  unsigned BallotSize = std::max(WaveSize, RegisterType->getIntegerBitWidth());
+  llvm::Type *BallotType = Builder.getIntNTy(BallotSize);
 
   Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {BallotType});
   llvm::Value *Call = Builder.CreateCall(F, {Builder.getInt1(true)});
