@@ -164,17 +164,36 @@ GenericKernelTy::getKernelLaunchEnvironment(
         *AllocOrErr, TargetAllocTy::TARGET_ALLOC_DEVICE);
   }
 
+  // Copy into a pinned buffer if the plugin transfers those faster: dataAlloc
+  // registers TARGET_ALLOC_HOST memory in PinnedAllocs, so the dataSubmit
+  // below can take the one-step copy path.
+  const void *LaunchEnvSrc = &LocalKLE;
+  auto *PinnedKLE = GenericDevice.getPinnedLaunchEnvBuffer();
+  if (PinnedKLE) {
+    *PinnedKLE = LocalKLE;
+    LaunchEnvSrc = PinnedKLE;
+  }
+
   INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
        "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
        ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
-       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
+       DPxPTR(LaunchEnvSrc), DPxPTR(*AllocOrErr),
        sizeof(KernelLaunchEnvironmentTy));
 
-  auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
+  auto Err = GenericDevice.dataSubmit(*AllocOrErr, LaunchEnvSrc,
                                       sizeof(KernelLaunchEnvironmentTy),
                                       AsyncInfoWrapper);
   if (Err)
     return Err;
+
+  // Register the staging buffer only now that the transfer reading it has
+  // been issued. Registering it earlier would let a concurrent finalization
+  // that observes the queue as complete release it while the transfer is
+  // still in flight.
+  if (PinnedKLE)
+    AsyncInfoWrapper.freeAllocationAfterSynchronization(
+        PinnedKLE, TargetAllocTy::TARGET_ALLOC_HOST);
+
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
@@ -987,6 +1006,32 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
     *IsQueueWorkCompleted = WorkCompleted;
 
   return Plugin::success();
+}
+
+KernelLaunchEnvironmentTy *GenericDeviceTy::getPinnedLaunchEnvBuffer() {
+  if (!hasFastSubmitFromPinnedMemory())
+    return nullptr;
+
+  // While recording or replaying, dataAlloc serves every allocation kind from
+  // the record-replay device memory pool, so it cannot give us host memory.
+  if (RecordReplay && RecordReplay->isRecordingOrReplaying())
+    return nullptr;
+
+  auto AllocOrErr =
+      dataAlloc(sizeof(KernelLaunchEnvironmentTy), /*HostPtr=*/nullptr,
+                TargetAllocTy::TARGET_ALLOC_HOST, /*Alignment=*/0);
+  if (!AllocOrErr) {
+    // Staging is optional, so fall back to unpinned memory. Consume the
+    // error unconditionally: ODBG does not evaluate its operands unless
+    // debugging is enabled.
+    std::string ErrStr = toString(AllocOrErr.takeError());
+    ODBG(OLDT_Alloc) << "Failed to allocate a pinned buffer for the kernel "
+                        "launch environment, submitting it unstaged: "
+                     << ErrStr;
+    return nullptr;
+  }
+
+  return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {

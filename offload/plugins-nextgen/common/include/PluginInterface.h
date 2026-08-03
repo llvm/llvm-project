@@ -1027,6 +1027,20 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                bool *IsQueueWorkCompleted) = 0;
 
+  /// Indicate whether dataSubmitImpl has a faster path for host buffers that
+  /// are registered as pinned memory. If a plugin returns true, the kernel
+  /// launch environment is copied into a pinned host buffer before it is
+  /// submitted, so that its transfer takes that path.
+  virtual bool hasFastSubmitFromPinnedMemory() const { return false; }
+
+  /// Allocate a pinned host buffer to stage a kernel launch environment. The
+  /// caller owns it until it registers it with
+  /// AsyncInfoWrapperTy::freeAllocationAfterSynchronization, which releases it
+  /// once the transfer reading it has completed. Returns nullptr if staging is
+  /// unavailable, in which case the caller must submit the launch environment
+  /// from ordinary host memory.
+  KernelLaunchEnvironmentTy *getPinnedLaunchEnvBuffer();
+
   /// Check whether the architecture supports VA management
   virtual bool supportVAManagement() const { return false; }
 
