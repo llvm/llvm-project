@@ -28,8 +28,10 @@ enum class ERefAll {
 enum class ERefErr {
   // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'ERefErr' are not consistent
   ERefErr_a,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'ERefErr_a' defined here
   // CHECK-FIXES: ERefErr_a = 0,
   ERefErr_b,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'ERefErr_b' defined here
   // CHECK-FIXES: ERefErr_b = 1,
   ERef_last = 1,
 };

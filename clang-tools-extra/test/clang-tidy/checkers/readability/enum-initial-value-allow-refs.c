@@ -32,8 +32,10 @@ enum ERefOther {
 enum ERefCross {
   // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: initial values in enum 'ERefCross' are not consistent
   ERefCross_a,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'ERefCross_a' defined here
   // CHECK-FIXES: ERefCross_a = 0,
   ERefCross_b,
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'ERefCross_b' defined here
   // CHECK-FIXES: ERefCross_b = 1,
   ERefCross_last = ERefOther_b,
 };
