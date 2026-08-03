@@ -11251,6 +11251,7 @@ public:
 bool ReflectionEvaluator::VisitCXXReflectExpr(const CXXReflectExpr *E) {
   switch (E->getKind()) {
   case ReflectionKind::Null: {
+    assert(false && "null reflection can't be constructed from parsing a reflection operand");
     APValue ReflectionValue(ReflectionKind::Null, /*Operand=*/nullptr);
     return Success(ReflectionValue, E);
   }

@@ -2639,6 +2639,7 @@ void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
   OS << "^^";
   switch (S->getKind()) {
   case ReflectionKind::Null:
+    assert(false && "null reflection can't be constructed from parsing a reflection operand");
     break;
   case ReflectionKind::Type:
     S->getTypeSourceInfo()->getType().print(OS, Policy);
