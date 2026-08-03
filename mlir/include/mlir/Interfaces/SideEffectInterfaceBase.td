@@ -26,7 +26,7 @@ class Resource<string resourceName, code resourceParameters = [{}]> {
   /// The resource that the associated effect is being applied to.
   string name = resourceName;
 
-  /// An optional C++ expression producing the effect parameters attribute.
+  /// The optional effect parameters attribute.
   code parameters = resourceParameters;
 }
 
@@ -180,7 +180,7 @@ class SideEffect<EffectOpInterfaceBase interface, string effectName,
   /// The resource that the effect is being applied to.
   string resource = resourceReference.name;
 
-  /// An optional C++ expression producing the effect parameters attribute.
+  /// The optional effect parameters attribute.
   code parameters = resourceReference.parameters;
 
   /// The stage of side effects, we use it to describe the sequence in which

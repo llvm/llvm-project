@@ -86,22 +86,9 @@ effects on it can alias pointer-based memory; non-addressable resources (e.g.
 runtime state) do not alias with any value-based memory location. The
 canonical definition and API live in `mlir/Interfaces/SideEffectInterfaces.h`.
 
-Resources can also attach an attribute to their effect instances without
-changing which resource an operation accesses. For example, different access
-modes for the same memory resource can be modeled as follows:
-
-```tablegen
-def AsyncSharedMemory : Resource<"SharedMemory", [{
-  ::mlir::StringAttr::get(getContext(), "async")
-}]>;
-
-def AsyncLoadOp : MyDialect_Op<"async_load"> {
-  let arguments = (ins Arg<AnyMemRef, "", [MemRead<AsyncSharedMemory>]>:$src);
-}
-```
-
-The generated effect accesses `SharedMemory` and carries the `"async"`
-attribute, which consumers can retrieve with `EffectInstance::getParameters()`.
+Resources can attach arbitrary attributes to their effect instances. These
+attributes provide additional metadata about memory effects and can be used,
+for example, to distinguish how a resource is accessed.
 
 **Scope and limitations.** This mechanism is deliberately *not* intended for
 fine-grained regions with specific addresses or sizes, or for alias classes /

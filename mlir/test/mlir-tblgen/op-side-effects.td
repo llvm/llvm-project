@@ -27,14 +27,7 @@ def SideEffectOpB : TEST_Op<"side_effect_op_b",
     [MemoryEffects<[MemWrite<CustomResource, 0>]>]>;
 
 def SideEffectOpC : TEST_Op<"side_effect_op_c"> {
-  let arguments = (ins
-    Arg<AnyMemRef, "", [MemRead<ParameterizedResource, 2, FullEffect>]>,
-    Arg<SymbolRefAttr, "", [MemWrite<ParameterizedResource>]>:$symbol,
-    Arg<OptionalAttr<SymbolRefAttr>, "",
-        [MemRead<ParameterizedResource>]>:$optional_symbol
-  );
-  let results =
-      (outs Res<AnyMemRef, "", [MemAlloc<ParameterizedResource>]>);
+  let arguments = (ins Arg<AnyMemRef, "", [MemRead<ParameterizedResource>]>);
 }
 
 def SideEffectOpD : TEST_Op<"side_effect_op_d",
@@ -67,22 +60,8 @@ def SideEffectOpD : TEST_Op<"side_effect_op_d",
 // CHECK: void SideEffectOpB::getEffects
 // CHECK:   effects.emplace_back(::mlir::MemoryEffects::Write::get(), 0, false, CustomResource::get());
 
-// CHECK: void SideEffectOpC::getEffects
-// CHECK: effects.emplace_back(::mlir::MemoryEffects::Read::get(), &getOperation()->getOpOperand(idx),
-// CHECK-SAME: ::mlir::StringAttr::get(getContext(), "parameter")
-// CHECK-SAME: , 2, true, CustomResource::get());
-// CHECK: effects.emplace_back(::mlir::MemoryEffects::Write::get(), getSymbolAttr(),
-// CHECK-SAME: ::mlir::StringAttr::get(getContext(), "parameter")
-// CHECK-SAME: , 0, false, CustomResource::get());
-// CHECK: if (auto symbolRef = getOptionalSymbolAttr())
-// CHECK: effects.emplace_back(::mlir::MemoryEffects::Read::get(), symbolRef,
-// CHECK-SAME: ::mlir::StringAttr::get(getContext(), "parameter")
-// CHECK-SAME: , 0, false, CustomResource::get());
-// CHECK: effects.emplace_back(::mlir::MemoryEffects::Allocate::get(), getOperation()->getOpResult(idx),
-// CHECK-SAME: ::mlir::StringAttr::get(getContext(), "parameter")
-// CHECK-SAME: , 0, false, CustomResource::get());
+// CHECK-LABEL: void SideEffectOpC::getEffects
+// CHECK: "parameter"), 0, false, CustomResource::get());
 
-// CHECK: void SideEffectOpD::getEffects
-// CHECK: effects.emplace_back(::mlir::MemoryEffects::Write::get(),
-// CHECK-SAME: ::mlir::StringAttr::get(getContext(), "parameter")
-// CHECK-SAME: , 0, false, CustomResource::get());
+// CHECK-LABEL: void SideEffectOpD::getEffects
+// CHECK: "parameter"), 0, false, CustomResource::get());

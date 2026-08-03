@@ -35,7 +35,7 @@ public:
   // Return the name of the resource class.
   StringRef getResource() const;
 
-  // Return the C++ expression producing the effect parameters attribute.
+  // Return the effect parameters attribute.
   StringRef getParameters() const;
 
   // Return the stage of the effect happen.
