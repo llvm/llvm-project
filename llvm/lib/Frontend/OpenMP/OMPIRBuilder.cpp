@@ -10536,6 +10536,8 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     // start).
     //
     // Example 1:
+    //   struct S { int x; int *p; };
+    //
     //   mapper:  #pragma omp declare mapper(id: S s) map(s.x, s.p[0:10])
     //   use:     S arr[2]; ... map(arr)
     //   entries per element:
@@ -10545,6 +10547,9 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     //     &arr[i].p,    &arr[i].p[0], sizeof(int*),   ATTACH         (**)
     //
     // Example 2:
+    //   struct S1 { int x; int y; };
+    //   struct S2 { int z; S1 *s1p; };
+    //
     //   mapper:  #pragma omp declare mapper(S2 s2) map(s2.z, s2.s1p->x,
     //                                                  s2.s1p->y)
     //   use:     S2 arr[2]; ... map(arr)
@@ -10552,19 +10557,26 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     //
     //     &arr[i],        &arr[i].z,      sizeof(int), MEMBER_OF(N)|TO|FROM
     //     &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y), ALLOC (*)
-    //     &arr[i].s1p[0], &arr[i].s1p->x, 4, MEMBER_OF(N+2)|TO|FROM (***)
-    //     &arr[i].s1p[0], &arr[i].s1p->y, 4, MEMBER_OF(N+2)|TO|FROM (***)
+    //     &arr[i].s1p[0], &arr[i].s1p->x, 4, MEMBER_OF(N+2)|TO|FROM (*)(***)
+    //     &arr[i].s1p[0], &arr[i].s1p->y, 4, MEMBER_OF(N+2)|TO|FROM (*)(***)
     //     &arr[i].s1p,    &arr[i].s1p->x, sizeof(ptr), ATTACH (**)
     //
     //     x/y carry inner MEMBER_OF(2)
     //          which is shifted by N to become MEMBER_OF(N+2).
+    //
+    //     HasAttachPtr is set on all of the s1p entries except the ATTACH one:
+    //     the combined ALLOC entry for the s1p->x..y block, and the individual
+    //     x/y entries that are MEMBER_OF that block, all describe storage
+    //     reached through the attach ptr arr[i].s1p.
     //
     // Entries of the following kinds do NOT receive a new outer MEMBER_OF
     // linking them to the parent struct:
     //
     //   * (*) Entries with HasAttachPtr: they represent pointee data that
     //     occupies a different storage block than the struct being mapped, so
-    //     they are not a member of it.
+    //     they are not a member of it. They may still be MEMBER_OF an entry
+    //     within that pointee block, in which case those pre-existing bits are
+    //     shifted -- see (***).
     //   * (**) ATTACH entries: they are not a member of anything — they just
     //     link a ptr to its ptee.
     //   * All entries when PreserveMemberOfFlags is set (the Flang/MLIR path):
