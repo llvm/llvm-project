@@ -158,6 +158,9 @@ class InstructionsState {
   /// Index of the operand modeling the copyable values: the addend for
   /// fmuladd (retried with a multiplicand), the first operand otherwise.
   unsigned CopyableOpIdx = 0;
+  /// Whether copyable single-use fmuls are modeled as fmuladd(a, b, -0.0),
+  /// absorbing the multiply instead of computing and gathering its result.
+  bool AbsorbCopyableFMul = false;
 
 public:
   Instruction *getMainOp() const {
@@ -259,7 +262,23 @@ public:
     assert((Idx == 0 || Idx == 2) && "Unexpected copyable operand index.");
     CopyableOpIdx = Idx;
   }
+
+  /// Checks if copyable fmuls are absorbed as fmuladd(a, b, -0.0).
+  bool hasAbsorbedCopyableFMul() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return AbsorbCopyableFMul;
+  }
+
+  /// Sets the absorbed-fmul modeling for copyable fmuls.
+  void setAbsorbCopyableFMul(bool Absorb) { AbsorbCopyableFMul = Absorb; }
 };
+
+/// Checks if \p V is a single-use fmul with operands outside \p VL.
+bool isAbsorbableFMul(ArrayRef<Value *> VL, Value *V);
+
+/// Checks if \p V is a copyable single-use fmul, absorbable as
+/// fmuladd(a, b, -0.0).
+bool isAbsorbableCopyableFMul(const InstructionsState &S, Value *V);
 
 } // namespace llvm::slpvectorizer
 

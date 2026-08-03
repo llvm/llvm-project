@@ -162,16 +162,31 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
 }
 #endif
 
-/// This is wrapper over IRBuilderBase::restoreIP that also restores the current
-/// debug location to the last instruction in the specified basic block if the
-/// insert point points to the end of the block.
+/// This is a wrapper over IRBuilderBase::restoreIP that also restores a current
+/// debug location when the insert point is at the end of a block. It picks a
+/// location scoped to the current function: the block's last instruction
+/// location if the block is non-empty, otherwise a location synthesized from
+///  the function's subprogram (when the function has debug info).
 static void restoreIPandDebugLoc(llvm::IRBuilderBase &Builder,
                                  llvm::IRBuilderBase::InsertPoint IP) {
   Builder.restoreIP(IP);
+  // When IP points at a real instruction, restoreIP (SetInsertPoint) already
+  // set the debug location from that instruction, so leave it alone.
   llvm::BasicBlock *BB = Builder.GetInsertBlock();
-  llvm::BasicBlock::iterator I = Builder.GetInsertPoint();
-  if (!BB->empty() && I == BB->end())
+  if (Builder.GetInsertPoint() != BB->end())
+    return;
+
+  // At the end of a block, pick a location guaranteed to belong to the current
+  // insertion function's subprogram. Prefer the block's own last instruction;
+  // otherwise synthesize a location from the function's subprogram.
+  if (!BB->empty())
     Builder.SetCurrentDebugLocation(BB->back().getStableDebugLoc());
+  else if (llvm::DISubprogram *FSP =
+               BB->getParent() ? BB->getParent()->getSubprogram() : nullptr) {
+    unsigned Line = FSP->getScopeLine() ? FSP->getScopeLine() : FSP->getLine();
+    Builder.SetCurrentDebugLocation(
+        llvm::DILocation::get(FSP->getContext(), Line, /*Column=*/0, FSP));
+  }
 }
 
 static bool hasGridValue(const Triple &T) {
@@ -1040,6 +1055,11 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   if (!OffloadInfoManager.empty())
     createOffloadEntriesAndInfoMetadata(ErrorReportFn);
 
+  // Rewrite uses of globals to their replacement declare target globals if
+  // we are processing a device module.
+  if (Config.isTargetDevice())
+    applyDeclareTargetGlobalReplacements();
+
   if (Config.EmitLLVMUsedMetaInfo.value_or(false)) {
     std::vector<WeakTrackingVH> LLVMCompilerUsed = {
         M.getGlobalVariable("__openmp_nvptx_data_transfer_temporary_storage")};
@@ -1050,6 +1070,104 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 }
 
 bool OpenMPIRBuilder::isFinalized() { return IsFinalized; }
+
+void OpenMPIRBuilder::registerDeclareTargetGlobalReplacement(
+    GlobalValue *Original, GlobalValue *Replacement) {
+  assert(Original && Replacement &&
+         "Null values provided to registerDeclareTargetGlobalReplacement");
+  DeclareTargetGlobalReplacements.push_back({Original, Replacement});
+}
+
+void OpenMPIRBuilder::applyDeclareTargetGlobalReplacements() {
+  for (DeclareTargetGlobalReplacement &R : DeclareTargetGlobalReplacements) {
+    GlobalValue *OldGV = R.Original;
+    GlobalValue *NewGV = R.Replacement;
+
+    assert(OldGV && NewGV &&
+           "A null value was inserted into DeclareTargetGlobalReplacements");
+
+    // The assert above should catch this case, but this is kept to attempt
+    // to proceed without issue when asserts are off.
+    if (!OldGV || !NewGV)
+      continue;
+
+    // The replacement global is a reference pointer that holds the
+    // address of the device-resident storage. Every use must load the
+    // reference pointer first and use the loaded address.
+    //
+    // Constant expression users (e.g. a constant GEP embedded in another
+    // global's initializer or in an instruction) cannot have a load inserted
+    // in place, so first expand any constant-expression users that live inside
+    // functions into instructions. Any remaining constant users are handled
+    // via a direct constant rewrite below as we cannot materialize a load
+    // there.
+    //
+    // NOTE: We extend the constant rewrite to module scope, as we replace all
+    // usages.
+    if (auto *OldConst = dyn_cast<Constant>(OldGV))
+      convertUsersOfConstantsToInstructions(OldConst,
+                                            /*RestrictToFunc=*/nullptr,
+                                            /*RemoveDeadConstants=*/false);
+
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    SmallVector<User *, 16> Users(OldGV->users());
+    for (User *U : Users) {
+      auto *Insn = dyn_cast<Instruction>(U);
+      if (!Insn)
+        continue;
+
+      // A PHI node cannot have a load inserted immediately before it, as PHIs
+      // must remain grouped at the top of their basic block. So we need to
+      // make sure any loads we emit are generated in the preceding edge, a
+      // PHI may reference the global on more than one edge, so every matching
+      // slot must be handled.
+      if (auto *PHI = dyn_cast<PHINode>(Insn)) {
+        for (unsigned I = 0, E = PHI->getNumIncomingValues(); I < E; ++I) {
+          if (PHI->getIncomingValue(I) != OldGV)
+            continue;
+
+          BasicBlock *IncomingBB = PHI->getIncomingBlock(I);
+          Builder.SetInsertPoint(IncomingBB->getTerminator());
+          Builder.SetCurrentDebugLocation(PHI->getDebugLoc());
+          LoadInst *EdgeLoad = Builder.CreateLoad(NewGV->getType(), NewGV);
+          PHI->setIncomingValue(I, EdgeLoad);
+        }
+        continue;
+      }
+
+      Builder.SetInsertPoint(Insn);
+      Builder.SetCurrentDebugLocation(Insn->getDebugLoc());
+      LoadInst *Load = Builder.CreateLoad(NewGV->getType(), NewGV);
+
+      // The replacement declare target global lives in the default address
+      // space, whereas the original global may reside in a non-default
+      // address space. In that case the initial lowering may have
+      // emitted an addrspacecast that is no longer valid.  Replace the
+      // whole addrspacecast with the load and erase it rather than
+      // feeding the load back into the (now pointless) cast.
+      // NOTE: If we end up with replacement declare target globals in
+      // non-zero AS's the below will need some minor extensions to have the
+      // option to alter the address space cast to the new address space where
+      // required rather than just replacing it.
+      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(Insn)) {
+        unsigned NewGVAS = NewGV->getType()->getPointerAddressSpace();
+        assert(NewGVAS == 0 &&
+               "Non-default address space declare target global");
+        unsigned OldGVAS = OldGV->getType()->getPointerAddressSpace();
+        unsigned DestAS = ASC->getType()->getPointerAddressSpace();
+        if (DestAS == 0 && NewGVAS != OldGVAS) {
+          ASC->replaceAllUsesWith(Load);
+          ASC->eraseFromParent();
+          continue;
+        }
+      }
+
+      Insn->replaceUsesOfWith(OldGV, Load);
+    }
+  }
+
+  DeclareTargetGlobalReplacements.clear();
+}
 
 OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
@@ -4650,6 +4768,16 @@ checkReductionInfos(ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos,
   }
 }
 
+// The atomic cross-team reduction fast path applies when every reduction in the
+// set can be represented by an atomicrmw. Clang only populates it for scalar
+// reductions with a supported atomic operator.
+static bool isAtomicableReductionSet(
+    ArrayRef<OpenMPIRBuilder::ReductionInfo> ReductionInfos) {
+  return all_of(ReductionInfos, [](const OpenMPIRBuilder::ReductionInfo &RI) {
+    return static_cast<bool>(RI.AtomicReductionGen);
+  });
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
@@ -4791,6 +4919,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // copied back. (Basically RL, appropriately casted if necessary.)
   Value *RLForCopyBack = RL;
 
+  bool IsAtomicReduction =
+      IsTeamsReduction && isAtomicableReductionSet(ReductionInfos);
+
   if (!IsTeamsReduction) {
     Value *SarFuncCast =
         Builder.CreatePointerBitCastOrAddrSpaceCast(*SarFunc, FuncPtrTy);
@@ -4801,6 +4932,12 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
     Function *Pv2Ptr = getOrCreateRuntimeFunctionPtr(
         RuntimeFunction::OMPRTL___kmpc_nvptx_parallel_reduce_nowait_v2);
     Res = createRuntimeFunctionCall(Pv2Ptr, Args);
+  } else if (IsAtomicReduction) {
+    // Atomic cross-team reduction fast path: determine the team's main thread
+    // that is later to fold its value atomically into the mapped variable.
+    Function *IsMainThreadFn = getOrCreateRuntimeFunctionPtr(
+        RuntimeFunction::OMPRTL___kmpc_is_team_main_thread);
+    Res = createRuntimeFunctionCall(IsMainThreadFn, {});
   } else {
     CodeGenIP = Builder.saveIP();
     StructType *ReductionsBufferTy = StructType::create(
@@ -4939,6 +5076,19 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductionsGPU(
   // Add emission of __kmpc_end_reduce{_nowait}(<gtid>);
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
+
+    // Atomic cross-team fast path: each team's main thread folds its
+    // team-reduced value directly into the mapped reduction variable with a
+    // single atomicrmw.
+    if (IsAtomicReduction) {
+      InsertPointOrErrorTy AfterIP = RI.AtomicReductionGen(
+          Builder.saveIP(), RI.ElementType, RI.Variable, RI.PrivateVariable);
+      if (!AfterIP)
+        return AfterIP.takeError();
+      Builder.restoreIP(*AfterIP);
+      continue;
+    }
+
     Type *ValueType = RI.ElementType;
     Value *RedValue = RI.Variable;
 
@@ -7487,10 +7637,8 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
 
   // Use the above access group metadata to create loop level
   // metadata, which should be distinct for each loop.
-  ConstantAsMetadata *BoolConst =
-      ConstantAsMetadata::get(ConstantInt::getTrue(Type::getInt1Ty(Ctx)));
-  LoopMDList.push_back(MDNode::get(
-      Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable"), BoolConst}));
+  LoopMDList.push_back(
+      MDNode::get(Ctx, {MDString::get(Ctx, "llvm.loop.vectorize.enable")}));
 
   if (Simdlen || Safelen) {
     // If both simdlen and safelen clauses are specified, the value of the
@@ -10583,8 +10731,44 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     CurMapType->addIncoming(FromMapType, FromBB);
     CurMapType->addIncoming(MemberMapType, ToElseBB);
 
-    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg, CurBeginArg,
-                               CurSizeArg,   CurMapType, CurNameArg};
+    // Propagate map-type-modifying bits from the outer map clause to each map
+    // inserted by the mapper.
+    //
+    // OpenMP 6.0:281:34: The effect of the mapper modifier is to remove the
+    // list item from the map clause and to apply the clauses specified in the
+    // declared mapper to the construct on which the map clause appears...
+    // If any modifier with the map-type-modifying property appears in the map
+    // clause then the effect is as if that modifier appears in each map clause
+    // specified in the declared mapper.
+    //
+    // Map-type-modifying bits: ALWAYS, DELETE, CLOSE, PRESENT.
+    // TODO: PRESENT is not propagated here yet. Doing so requires
+    // distinguishing pointee entries from the struct's own storage; it is
+    // handled in a follow-on.
+    Value *ImportedModifierBits = Builder.CreateAnd(
+        MapType,
+        Builder.getInt64(
+            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+                OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
+                OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
+                OpenMPOffloadMappingFlags::OMP_MAP_CLOSE)));
+    Value *CurMapTypeWithModifiers = Builder.CreateOr(
+        CurMapType, ImportedModifierBits, "omp.maptype.with.modifiers");
+
+    // ATTACH entries must not receive map-type-modifying bits: ATTACH|ALWAYS is
+    // reserved for the attach(always) map-type modifier, and other modifier
+    // bits (DELETE, CLOSE) have no meaning for an ATTACH entry.
+    auto RawType =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            Info->Types[I]);
+    constexpr uint64_t AttachBit =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_ATTACH);
+    Value *FinalMapType =
+        (RawType & AttachBit) ? CurMapType : CurMapTypeWithModifiers;
+
+    Value *OffloadingArgs[] = {MapperHandle, CurBaseArg,   CurBeginArg,
+                               CurSizeArg,   FinalMapType, CurNameArg};
 
     auto ChildMapperFn = CustomMapperCB(I);
     if (!ChildMapperFn)
@@ -10777,7 +10961,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
         CodeGenIP = Builder.saveIP();
         Builder.restoreIP(AllocaIP);
         Info.DevicePtrInfoMap[BPVal] = {BP, Builder.CreateAlloca(PtrTy)};
-        Builder.restoreIP(CodeGenIP);
+        restoreIPandDebugLoc(Builder, CodeGenIP);
         if (DeviceAddrCB)
           DeviceAddrCB(I, Info.DevicePtrInfoMap[BPVal].second);
       } else if (CombinedInfo.DevicePointers[I] == DeviceInfoTy::Address) {

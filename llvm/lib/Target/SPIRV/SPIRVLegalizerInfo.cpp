@@ -541,10 +541,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_INTRINSIC_ROUNDEVEN})
       .legalFor(allFloatScalars)
       .legalFor(allowedFloatVectorTypes)
-      .moreElementsToNextPow2(0)
       .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
-                           0, ElementCount::getFixed(MaxVectorSize)));
+                   0, ElementCount::getFixed(MaxVectorSize)))
+        .moreElementsToNextPow2(0);
   // clang-format on
 
   getActionDefinitionsBuilder(G_FCOPYSIGN)
