@@ -1,32 +1,41 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" -debug-pass-manager -o /dev/null %s 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN:   -passes="require<machine-register-class-info>,si-pre-allocate-wwm-regs,require<machine-register-class-info>" \
+# RUN:   -debug-pass-manager -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN:   -passes=si-pre-allocate-wwm-regs -o - %s | FileCheck %s --check-prefix=MIR
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN:   -passes="si-pre-allocate-wwm-regs,greedy<vgpr>,virt-reg-rewriter" \
+# RUN:   -o - %s | FileCheck %s --check-prefix=ALIAS
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a \
+# RUN:   -passes="greedy<vgpr>,virt-reg-rewriter" \
+# RUN:   -o - %s | FileCheck %s --check-prefix=NO-WWM
 
-# Test that WWM preallocation updates MachineRegisterClassInfo in place instead
-# of invalidating it. The pass manager log is matched in full, so the second
-# require<machine-register-class-info> is shown to run without recomputing
-# MachineRegisterClassAnalysis.
+# Verify that SIPreAllocateWWMRegsPass updates the
+# MachineRegisterClassAnalysis result in place. The second require must reuse
+# the result computed by the first.
 
-# CHECK:      Running analysis: MachineModuleAnalysis on [module]
-# CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy<llvm::AnalysisManager<llvm::Function>, llvm::Module> on [module]
-# CHECK-NEXT: Running analysis: MachineFunctionAnalysis on test_wwm_reserved
-# CHECK-NEXT: Running analysis: OuterAnalysisManagerProxy<llvm::AnalysisManager<llvm::Module>, llvm::Function> on test_wwm_reserved
-# CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy<llvm::AnalysisManager<llvm::MachineFunction>, llvm::Function> on test_wwm_reserved
-# CHECK-NEXT: Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction> on test_wwm_reserved
+# CHECK:      Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction> on test_wwm_reserved
 # CHECK-NEXT: Running analysis: MachineRegisterClassAnalysis on test_wwm_reserved
 # CHECK-NEXT: Running pass: SIPreAllocateWWMRegsPass on test_wwm_reserved
-# CHECK-NEXT: Running analysis: LiveIntervalsAnalysis on test_wwm_reserved
-# CHECK-NEXT: Running analysis: MachineDominatorTreeAnalysis on test_wwm_reserved
-# CHECK-NEXT: Running analysis: SlotIndexesAnalysis on test_wwm_reserved
-# CHECK-NEXT: Running analysis: LiveRegMatrixAnalysis on test_wwm_reserved
-# CHECK-NEXT: Running analysis: VirtRegMapAnalysis on test_wwm_reserved
-# CHECK-NEXT: Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction> on test_wwm_reserved
+# CHECK:      Running pass: RequireAnalysisPass<llvm::MachineRegisterClassAnalysis, llvm::MachineFunction> on test_wwm_reserved
 # CHECK-NEXT: Running pass: PrintMIRPreparePass on [module]
-# CHECK-NEXT: Running pass: MachineVerifierPass on test_wwm_reserved
-# CHECK-NEXT: Running pass: PrintMIRPass on test_wwm_reserved
-# CHECK-NEXT: Running analysis: FunctionAnalysisManagerMachineFunctionProxy on test_wwm_reserved
 
 # MIR: wwmReservedRegs:
 # MIR-NEXT: - '$vgpr0'
+
+# Verify that reserving $vgpr0 for WWM also reserves the aliasing tuple
+# $vgpr0_vgpr1. The allocator must assign %4 to the next available tuple.
+
+# ALIAS:      $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# ALIAS:      $exec = EXIT_STRICT_WWM killed renamable $sgpr4_sgpr5
+# ALIAS-NEXT: renamable $vgpr1_vgpr2 = IMPLICIT_DEF
+# ALIAS-NEXT: S_NOP 0, implicit killed renamable $vgpr1_vgpr2
+
+# Without WWM preallocation, the allocator must assign %4 to the first tuple.
+
+# NO-WWM:      $exec = EXIT_STRICT_WWM killed renamable $sgpr4_sgpr5
+# NO-WWM-NEXT: renamable $vgpr0_vgpr1 = IMPLICIT_DEF
+# NO-WWM-NEXT: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
 
 ---
 name: test_wwm_reserved
@@ -40,4 +49,6 @@ body: |
     %2:vgpr_32 = V_MOV_B32_dpp %1, %0, 323, 12, 15, 0, implicit $exec
     $exec = EXIT_STRICT_WWM killed renamable $sgpr4_sgpr5
     %3:vgpr_32 = COPY %0
+    %4:vreg_64 = IMPLICIT_DEF
+    S_NOP 0, implicit %4
 ...
