@@ -478,7 +478,8 @@ int FunctionComparator::cmpConstants(const Constant *L,
   case Value::BlockAddressVal: {
     const BlockAddress *LBA = cast<BlockAddress>(L);
     const BlockAddress *RBA = cast<BlockAddress>(R);
-    if (int Res = cmpValues(LBA->getFunction(), RBA->getFunction()))
+    if (int Res = cmpValues(LBA->getFunction(), RBA->getFunction(),
+                            ValueComparisonKind::BlockAddress))
       return Res;
     if (LBA->getFunction() == RBA->getFunction()) {
       // They are BBs in the same function. Order by which comes first in the
@@ -892,17 +893,21 @@ int FunctionComparator::cmpInlineAsm(const InlineAsm *L,
 /// this is the first time the values are seen, they're added to the mapping so
 /// that we will detect mismatches on next use.
 /// See comments in declaration for more details.
-int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
-  // Catch self-reference case.
-  if (L == FnL) {
-    if (R == FnR)
-      return 0;
-    return -1;
-  }
-  if (R == FnR) {
-    if (L == FnL)
-      return 0;
-    return 1;
+int FunctionComparator::cmpValues(const Value *L, const Value *R,
+                                  ValueComparisonKind Kind) const {
+  // A self-reference is equivalent only in structural contexts where the
+  // reference remains valid after forwarding-thunk merging. Otherwise,
+  // merging the functions can change the observable function pointer value.
+  if (Kind != ValueComparisonKind::Normal) {
+    const Value *StrippedL = L->stripPointerCasts();
+    const Value *StrippedR = R->stripPointerCasts();
+    if (StrippedL == FnL) {
+      if (StrippedR == FnR)
+        return 0;
+      return -1;
+    }
+    if (StrippedR == FnR)
+      return 1;
   }
 
   const Constant *ConstL = dyn_cast<Constant>(L);
@@ -961,11 +966,17 @@ int FunctionComparator::cmpBasicBlocks(const BasicBlock *BBL,
       return Res;
     if (needToCmpOperands) {
       assert(InstL->getNumOperands() == InstR->getNumOperands());
+      const auto *CBL = dyn_cast<CallBase>(InstL);
+      const auto *CBR = dyn_cast<CallBase>(InstR);
 
       for (unsigned i = 0, e = InstL->getNumOperands(); i != e; ++i) {
         Value *OpL = InstL->getOperand(i);
         Value *OpR = InstR->getOperand(i);
-        if (int Res = cmpValues(OpL, OpR))
+        ValueComparisonKind Kind = ValueComparisonKind::Normal;
+        if (CBL && CBR && CBL->isCallee(&InstL->getOperandUse(i)) &&
+            CBR->isCallee(&InstR->getOperandUse(i)))
+          Kind = ValueComparisonKind::CallTarget;
+        if (int Res = cmpValues(OpL, OpR, Kind))
           return Res;
         // cmpValues should ensure this is true.
         assert(cmpTypes(OpL->getType(), OpR->getType()) == 0);

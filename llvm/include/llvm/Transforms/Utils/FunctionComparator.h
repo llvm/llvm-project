@@ -101,6 +101,8 @@ public:
   LLVM_ABI int compare();
 
 protected:
+  enum class ValueComparisonKind { Normal, CallTarget, BlockAddress };
+
   /// Start the comparison.
   void beginCompare() {
     sn_mapL.clear();
@@ -226,9 +228,9 @@ protected:
   /// return whether the numbers are equal. Numbers are assigned in the order
   /// visited.
   /// Comparison order:
-  /// Stage 0: Value that is function itself is always greater then others.
-  ///          If left and right values are references to their functions, then
-  ///          they are equal.
+  /// Stage 0: In CallTarget or BlockAddress comparison mode, references to the
+  ///          functions being compared are equal. In Normal comparison mode,
+  ///          function values are compared like other global values.
   /// Stage 1: Constants are greater than non-constants.
   ///          If both left and right are constants, then the result of
   ///          cmpConstants is used as cmpValues result.
@@ -240,7 +242,9 @@ protected:
   ///          then left value is greater.
   ///          In another words, we compare serial numbers, for more details
   ///          see comments for sn_mapL and sn_mapR.
-  LLVM_ABI int cmpValues(const Value *L, const Value *R) const;
+  LLVM_ABI int cmpValues(
+      const Value *L, const Value *R,
+      ValueComparisonKind Kind = ValueComparisonKind::Normal) const;
 
   /// Compare two Instructions for equivalence, similar to
   /// Instruction::isSameOperationAs.
