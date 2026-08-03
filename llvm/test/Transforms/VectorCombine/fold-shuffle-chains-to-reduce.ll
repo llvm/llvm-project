@@ -459,7 +459,7 @@ define i32 @test_reduce_equivalent_bitcast_sources(<2 x i64> %a) {
 
 ; Equivalent sources demand lane 0 through two different paths. Add is not
 ; idempotent, so merging the lane sets would lose one contribution.
-define i32 @test_no_reduce_equivalent_bitcast_sources_overlap(
+define i32 @test_no_reduce_equivalent_bitcast_sources_overlap(<2 x i64> %a) {
 ; CHECK-LABEL: define i32 @test_no_reduce_equivalent_bitcast_sources_overlap(
 ; CHECK-SAME: <2 x i64> [[A:%.*]]) {
 ; CHECK-NEXT:    [[BC0:%.*]] = bitcast <2 x i64> [[A]] to <4 x i32>
@@ -472,7 +472,6 @@ define i32 @test_no_reduce_equivalent_bitcast_sources_overlap(
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[SUM1]], i64 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  <2 x i64> %a) {
   %bc0 = bitcast <2 x i64> %a to <4 x i32>
   %lhs = shufflevector <4 x i32> %bc0, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 
@@ -489,7 +488,7 @@ define i32 @test_no_reduce_equivalent_bitcast_sources_overlap(
 ; The second equivalent source has an internally duplicated demanded lane.
 ; Its lane set does not overlap the first source, so this specifically checks
 ; the per-source Duplicates field rather than cross-source overlap.
-define i32 @test_no_reduce_later_equivalent_source_has_duplicates(
+define i32 @test_no_reduce_later_equivalent_source_has_duplicates(<2 x i64> %a) {
 ; CHECK-LABEL: define i32 @test_no_reduce_later_equivalent_source_has_duplicates(
 ; CHECK-SAME: <2 x i64> [[A:%.*]]) {
 ; CHECK-NEXT:    [[BC0:%.*]] = bitcast <2 x i64> [[A]] to <4 x i32>
@@ -502,7 +501,6 @@ define i32 @test_no_reduce_later_equivalent_source_has_duplicates(
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[SUM1]], i64 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  <2 x i64> %a) {
   %bc0 = bitcast <2 x i64> %a to <4 x i32>
   %lhs = shufflevector <4 x i32> %bc0, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 
@@ -518,7 +516,7 @@ define i32 @test_no_reduce_later_equivalent_source_has_duplicates(
 
 ; Bitcasts with the same result type but different underlying values are
 ; different logical sources and cannot be merged.
-define i32 @test_no_reduce_different_bitcast_sources(
+define i32 @test_no_reduce_different_bitcast_sources(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: define i32 @test_no_reduce_different_bitcast_sources(
 ; CHECK-SAME: <2 x i64> [[A:%.*]], <2 x i64> [[B:%.*]]) {
 ; CHECK-NEXT:    [[BC0:%.*]] = bitcast <2 x i64> [[A]] to <4 x i32>
@@ -530,7 +528,6 @@ define i32 @test_no_reduce_different_bitcast_sources(
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i32> [[SUM1]], i64 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  <2 x i64> %a, <2 x i64> %b) {
   %bc0 = bitcast <2 x i64> %a to <4 x i32>
   %hi = shufflevector <4 x i32> %bc0, <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 2, i32 3>
 
@@ -544,7 +541,7 @@ define i32 @test_no_reduce_different_bitcast_sources(
 }
 
 ; Overlapping lanes are safe for an idempotent operation.
-define i32 @test_reduce_idempotent_equivalent_bitcast_sources_overlap(
+define i32 @test_reduce_idempotent_equivalent_bitcast_sources_overlap(<2 x i64> %a) {
 ; CHECK-LABEL: define i32 @test_reduce_idempotent_equivalent_bitcast_sources_overlap(
 ; CHECK-SAME: <2 x i64> [[A:%.*]]) {
 ; CHECK-NEXT:    [[BC0:%.*]] = bitcast <2 x i64> [[A]] to <4 x i32>
@@ -552,7 +549,6 @@ define i32 @test_reduce_idempotent_equivalent_bitcast_sources_overlap(
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.or.v3i32(<3 x i32> [[PARTIAL]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  <2 x i64> %a) {
   %bc0 = bitcast <2 x i64> %a to <4 x i32>
   %lhs = shufflevector <4 x i32> %bc0, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 
