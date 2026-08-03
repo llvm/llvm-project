@@ -139,9 +139,13 @@ body:             |
     %16:gpr64common = ADDXri %stack.0, 0, 0
     CBZX killed %16, %bb.1
     B %bb.4
-
-  ; CHECK: %16:gpr64common = ADDSXri %stack.0, 0, 0, implicit-def $nzcv
-  ; CHECK: Bcc 0, %bb.1, implicit $nzcv
+  
+  ; We check here that the last three instructions of that basic block
+  ; are completely unchanged, and haven't been modified into an
+  ; ADDSXri + Bcc.
+  ;
+  ; CHECK: %16:gpr64common = ADDXri %stack.0, 0, 0
+  ; CHECK: CBZX killed %16, %bb.1
   ; CHECK: B %bb.4
   
   bb.4 (%ir-block.11):
