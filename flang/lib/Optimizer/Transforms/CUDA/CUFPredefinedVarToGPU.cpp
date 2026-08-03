@@ -11,6 +11,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace fir {
 #define GEN_PASS_DEF_CUFPREDEFINEDVARTOGPU
@@ -80,7 +81,8 @@ static void
 processDeclareOp(mlir::OpBuilder &builder, mlir::Location loc,
                  fir::DeclareOp declareOp, llvm::StringRef builtinVar,
                  llvm::SmallVectorImpl<mlir::Value> &gpuValues,
-                 llvm::SmallVectorImpl<mlir::Operation *> &opsToDelete) {
+                 llvm::SmallVectorImpl<mlir::Operation *> &opsToDelete,
+                 llvm::SmallPtrSetImpl<mlir::Operation *> &memrefDefiningOps) {
   if (declareOp.getUniqName().str().compare(builtinVar) == 0) {
     for (mlir::OpOperand &use : declareOp.getResult().getUses()) {
       fir::CoordinateOp coordOp =
@@ -94,8 +96,11 @@ processDeclareOp(mlir::OpBuilder &builder, mlir::Location loc,
       opsToDelete.push_back(coordOp);
     }
     opsToDelete.push_back(declareOp.getOperation());
-    if (declareOp.getMemref().getDefiningOp())
-      opsToDelete.push_back(declareOp.getMemref().getDefiningOp());
+    // The backing fir.address_of may be shared by several declares (e.g. after
+    // CSE coalesces them when a device routine is inlined into a kernel).
+    // Collect it de-duplicated and erase it only once all declares are gone.
+    if (mlir::Operation *memrefOp = declareOp.getMemref().getDefiningOp())
+      memrefDefiningOps.insert(memrefOp);
   }
 }
 
@@ -135,19 +140,25 @@ struct CUFPredefinedVarToGPU
                                                     blockdims);
 
     llvm::SmallVector<mlir::Operation *> opsToDelete;
+    llvm::SmallPtrSet<mlir::Operation *, 4> memrefDefiningOps;
     region.walk([&](fir::DeclareOp declareOp) {
       processDeclareOp(builder, loc, declareOp, mangleBuiltin(threadidx),
-                       threadids, opsToDelete);
+                       threadids, opsToDelete, memrefDefiningOps);
       processDeclareOp(builder, loc, declareOp, mangleBuiltin(blockidx),
-                       blockids, opsToDelete);
+                       blockids, opsToDelete, memrefDefiningOps);
       processDeclareOp(builder, loc, declareOp, mangleBuiltin(blockdim),
-                       blockdims, opsToDelete);
+                       blockdims, opsToDelete, memrefDefiningOps);
       processDeclareOp(builder, loc, declareOp, mangleBuiltin(griddim),
-                       griddims, opsToDelete);
+                       griddims, opsToDelete, memrefDefiningOps);
     });
 
     for (auto *op : opsToDelete)
       op->erase();
+    // Erase each backing fir.address_of once, and only if no other user (e.g. a
+    // non-predefined declare) still references it.
+    for (auto *op : memrefDefiningOps)
+      if (op->use_empty())
+        op->erase();
   }
 
   void runOnOperation() override {

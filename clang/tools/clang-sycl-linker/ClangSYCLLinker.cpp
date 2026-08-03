@@ -725,8 +725,11 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Arch);
 
-  StringRef ExtraArgs = Args.getLastArgValue(OPT_ocloc_options_EQ);
-  ExtraArgs.split(CmdArgs, " ", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  // getAllArgValues returns a temporary vector; retain it so the StringRefs
+  // remain valid through the executeCommands call below.
+  std::vector<std::string> ExtraArgsStorage =
+      Args.getAllArgValues(OPT_ocloc_options_EQ);
+  llvm::append_range(CmdArgs, ExtraArgsStorage);
 
   CmdArgs.push_back("-output");
   CmdArgs.push_back(OutputFile);
