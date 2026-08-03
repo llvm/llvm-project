@@ -2372,6 +2372,29 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
 
 /// Lower calls to intrinsic procedures with actual arguments that have been
 /// pre-lowered but have not yet been prepared according to the interface.
+static bool
+isPackWithScalarTrueMask(const Fortran::evaluate::ProcedureRef &procRef,
+                         Fortran::lower::AbstractConverter &converter) {
+  if (procRef.arguments().size() < 2 || !procRef.arguments()[1])
+    return false;
+  if (procRef.arguments().size() >= 3 && procRef.arguments()[2])
+    return false;
+  const auto *maskExpr = procRef.UnwrapArgExpr(1);
+  if (!maskExpr)
+    return false;
+  const auto *logExpr = Fortran::evaluate::UnwrapExpr<
+      Fortran::evaluate::Expr<Fortran::evaluate::SomeLogical>>(*maskExpr);
+  if (!logExpr || logExpr->Rank() != 0)
+    return false;
+  auto &ctx = converter.getFoldingContext();
+  auto asDefault = Fortran::evaluate::Fold(
+      ctx, Fortran::evaluate::ConvertToType<Fortran::evaluate::LogicalResult>(
+               Fortran::evaluate::Fold(
+                   ctx, Fortran::evaluate::Expr<Fortran::evaluate::SomeLogical>(
+                            *logExpr))));
+  return Fortran::evaluate::ToLogical(asDefault).value_or(false);
+}
+
 static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
     Fortran::lower::PreparedActualArguments &loweredActuals,
     const Fortran::evaluate::SpecificIntrinsic *intrinsic,
@@ -2397,6 +2420,14 @@ static std::optional<hlfir::EntityWithAttributes> genHLFIRIntrinsicRefCore(
         callContext.isElementalProcWithArrayArgs()
             ? hlfir::getFortranElementType(*callContext.resultType)
             : *callContext.resultType;
+
+    if (intrinsicName == "pack" &&
+        isPackWithScalarTrueMask(callContext.procRef, callContext.converter)) {
+      if (std::optional<hlfir::EntityWithAttributes> res =
+              Fortran::lower::lowerPackAsReshape(builder, loc, loweredActuals,
+                                                 argLowering, resultType))
+        return res;
+    }
 
     std::optional<hlfir::EntityWithAttributes> res =
         Fortran::lower::lowerHlfirIntrinsic(builder, loc, intrinsicName,
