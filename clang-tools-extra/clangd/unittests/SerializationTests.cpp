@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FindSymbols.h"
 #include "Headers.h"
 #include "RIFF.h"
 #include "index/Serialization.h"
@@ -163,8 +164,8 @@ TEST(SerializationTest, YAMLConversions) {
   EXPECT_FALSE(Sym1.Flags & Symbol::Deprecated);
   // Tags: Deprecated (1<<1=2) | Static (1<<8=256) = 258
   EXPECT_EQ(Sym1.Tags, 258u);
-  EXPECT_TRUE(Sym1.Tags & (1u << static_cast<unsigned>(SymbolTag::Deprecated)));
-  EXPECT_TRUE(Sym1.Tags & (1u << static_cast<unsigned>(SymbolTag::Static)));
+  EXPECT_TRUE(Sym1.Tags & toSymbolTagBitmask(SymbolTag::Deprecated));
+  EXPECT_TRUE(Sym1.Tags & toSymbolTagBitmask(SymbolTag::Static));
   EXPECT_THAT(
       Sym1.IncludeHeaders,
       UnorderedElementsAre(
@@ -327,10 +328,11 @@ Tags:    258
 ...
 )";
   const SymbolID TaggedID = cantFail(SymbolID::fromStr("AABBCCDDEEFF0011"));
-  constexpr SymbolTags ExpectedTags =
-      (1u << static_cast<unsigned>(SymbolTag::Deprecated)) | // bit 1  = 2
-      (1u << static_cast<unsigned>(SymbolTag::Static));      // bit 8  = 256
-  static_assert(ExpectedTags == 258u, "bitmask sanity check");
+  const SymbolTags ExpectedTags =
+      toSymbolTagBitmask(SymbolTag::Deprecated) | // bit 1  = 2
+      toSymbolTagBitmask(SymbolTag::Static);      // bit 8  = 256
+  constexpr unsigned ExpectedTagMask = 258u;
+  EXPECT_EQ(ExpectedTags, ExpectedTagMask); // bitmask sanity check
 
   // ── Step 1: YAML deserialization ────────────────────────────────────────
   auto FromYAML = readIndexFile(TaggedYAML);
@@ -358,10 +360,9 @@ Tags:    258
         << "symbol not found after RIFF roundtrip";
     EXPECT_EQ(It->Tags, ExpectedTags) << "Tags lost during RIFF serialization";
     // Spot-check individual bits
-    EXPECT_TRUE(It->Tags &
-                (1u << static_cast<unsigned>(SymbolTag::Deprecated)));
-    EXPECT_TRUE(It->Tags & (1u << static_cast<unsigned>(SymbolTag::Static)));
-    EXPECT_FALSE(It->Tags & (1u << static_cast<unsigned>(SymbolTag::Abstract)));
+    EXPECT_TRUE(It->Tags & toSymbolTagBitmask(SymbolTag::Deprecated));
+    EXPECT_TRUE(It->Tags & toSymbolTagBitmask(SymbolTag::Static));
+    EXPECT_FALSE(It->Tags & toSymbolTagBitmask(SymbolTag::Abstract));
   }
 
   // ── Step 3: Symbol with Tags=0 must survive too ─────────────────────────

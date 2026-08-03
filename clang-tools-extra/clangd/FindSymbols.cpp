@@ -144,7 +144,7 @@ bool isFinal(const Decl *D) {
 // virtual)
 bool isOverrides(const NamedDecl *ND) {
   if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
-    if (MD->size_overridden_methods() == 0)
+    if (!MD->isVirtual())
       return false;
 
     for (const auto *Overridden : MD->overridden_methods()) {
@@ -203,15 +203,15 @@ SymbolTags filterSymbolTags(SymbolTags ST) {
   const SymbolTags AbstractMask = toSymbolTagBitmask(SymbolTag::Abstract);
   const SymbolTags FinalMask = toSymbolTagBitmask(SymbolTag::Final);
 
-  const SymbolTags RemoveVirtualAndOverrides = VirtualMask | OverridesMask;
+  const SymbolTags VirtualAndOverridesMask = VirtualMask | OverridesMask;
 
   // Implements implies both Overrides and Virtual.
   if (ST & ImplementsMask)
-    ST &= ~RemoveVirtualAndOverrides;
+    ST &= ~VirtualAndOverridesMask;
 
   // Final also suppresses both Virtual and Overrides in this model.
   if (ST & FinalMask)
-    ST &= ~RemoveVirtualAndOverrides;
+    ST &= ~VirtualAndOverridesMask;
 
   // Overrides or Abstract each imply Virtual.
   if (ST & (OverridesMask | AbstractMask))
