@@ -26,12 +26,9 @@
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallVectorExtras.h>
 #include <llvm/ADT/iterator_range.h>
-#include <llvm/Support/ErrorHandling.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
-#include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/Dialect/OpenMP/OpenMPClauseOperands.h>
 #include <mlir/Dialect/OpenMP/OpenMPDialect.h>
-#include <mlir/Dialect/SCF/IR/SCF.h>
 #include <mlir/IR/BuiltinOps.h>
 #include <mlir/IR/IRMapping.h>
 #include <mlir/IR/OpDefinition.h>
@@ -612,6 +609,13 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
     term->erase();
     newOp->erase();
     wsOp->erase();
+
+    // If this was part of a combined construct (e.g. 'parallel workshare'), the
+    // changes we just made to the region can be incompatible with a combined
+    // construct, such as containing multiple block-associated constructs in it.
+    if (auto parentOp =
+            dyn_cast<omp::ComposableOpInterface>(parentBlock->getParentOp()))
+      parentOp.setCombined(false);
   } else {
     // Otherwise just change the operation to an omp.single.
 

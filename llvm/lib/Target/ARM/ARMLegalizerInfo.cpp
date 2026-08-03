@@ -40,16 +40,17 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
-  auto &LegacyInfo = getLegacyLegalizerInfo();
   if (ST.isThumb1Only()) {
     // Thumb1 is not supported yet.
-    LegacyInfo.computeTables();
     verify(*ST.getInstrInfo());
     return;
   }
 
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
       .legalForCartesianProduct({s8, s16, s32}, {s1, s8, s16});
+
+  getActionDefinitionsBuilder(G_TRUNC).legalForCartesianProduct({s1, s8, s16},
+                                                                {s8, s16, s32});
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
@@ -133,6 +134,7 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
       .legalFor({{p0, s32}})
       .minScalar(1, s32);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
   if (!ST.useSoftFloat() && ST.hasVFP2Base()) {
@@ -211,12 +213,12 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
         .legalFor({s32, s32})
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
         .lowerFor({s32, s32})
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   } else {
-    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON)
         .libcallFor({s32, s32})
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
@@ -226,7 +228,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) : ST(ST) {
         .clampScalar(0, s32, s32);
   }
 
-  LegacyInfo.computeTables();
   verify(*ST.getInstrInfo());
 }
 
@@ -249,7 +250,8 @@ void ARMLegalizerInfo::setFCmpLibcallsAEABI() {
   FCmp32Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F32, CmpInst::ICMP_EQ}};
   FCmp32Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F32, CmpInst::ICMP_EQ}};
   FCmp32Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F32, CmpInst::ICMP_EQ}};
-  FCmp32Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F32, CmpInst::ICMP_EQ}};
+  // AEABI only provides ordered-equal; not-equal is the same call, inverted.
+  FCmp32Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::OEQ_F32, CmpInst::ICMP_EQ}};
   FCmp32Libcalls[CmpInst::FCMP_UNO] = {
       {RTLIB::UO_F32, CmpInst::BAD_ICMP_PREDICATE}};
   FCmp32Libcalls[CmpInst::FCMP_ONE] = {
@@ -275,7 +277,8 @@ void ARMLegalizerInfo::setFCmpLibcallsAEABI() {
   FCmp64Libcalls[CmpInst::FCMP_UGT] = {{RTLIB::OLE_F64, CmpInst::ICMP_EQ}};
   FCmp64Libcalls[CmpInst::FCMP_ULE] = {{RTLIB::OGT_F64, CmpInst::ICMP_EQ}};
   FCmp64Libcalls[CmpInst::FCMP_ULT] = {{RTLIB::OGE_F64, CmpInst::ICMP_EQ}};
-  FCmp64Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::UNE_F64, CmpInst::ICMP_EQ}};
+  // AEABI only provides ordered-equal; not-equal is the same call, inverted.
+  FCmp64Libcalls[CmpInst::FCMP_UNE] = {{RTLIB::OEQ_F64, CmpInst::ICMP_EQ}};
   FCmp64Libcalls[CmpInst::FCMP_UNO] = {
       {RTLIB::UO_F64, CmpInst::BAD_ICMP_PREDICATE}};
   FCmp64Libcalls[CmpInst::FCMP_ONE] = {

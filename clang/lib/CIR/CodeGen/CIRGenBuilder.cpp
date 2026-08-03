@@ -21,7 +21,8 @@ mlir::Value CIRGenBuilderTy::maybeBuildArrayDecay(mlir::Location loc,
   const auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
 
   if (arrayTy) {
-    const cir::PointerType flatPtrTy = getPointerTo(arrayTy.getElementType());
+    const cir::PointerType flatPtrTy =
+        getPointerTo(arrayTy.getElementType(), arrayPtrTy.getAddrSpace());
     return cir::CastOp::create(*this, loc, flatPtrTy,
                                cir::CastKind::array_to_ptrdecay, arrayPtr);
   }
@@ -40,6 +41,10 @@ mlir::Value CIRGenBuilderTy::getArrayElement(mlir::Location arrayLocBegin,
   assert(arrayPtrTy && "expected pointer type");
   // If the array pointer is not decayed, emit a GetElementOp.
   auto arrayTy = mlir::dyn_cast<cir::ArrayType>(arrayPtrTy.getPointee());
+
+  assert(mlir::isa<cir::IntType>(idx.getType()) &&
+         cir::isValidFundamentalIntWidth(
+             mlir::cast<cir::IntType>(idx.getType()).getWidth()));
 
   if (shouldDecay && arrayTy && arrayTy == eltTy) {
     auto eltPtrTy =
@@ -90,12 +95,19 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
   if (!offset)
     return;
 
+  // Compute floor-division and a non-negative remainder. A negative flat
+  // offset (e.g. from a pointer one element before the start of an array)
+  // must translate to a negative array index with a non-negative remainder
+  // so that the recursive call can descend into the element type without
+  // a negative offset flowing into the record case below.
   auto getIndexAndNewOffset =
       [](int64_t offset, int64_t eltSize) -> std::pair<int64_t, int64_t> {
     int64_t divRet = offset / eltSize;
-    if (divRet < 0)
-      divRet -= 1; // make sure offset is positive
-    int64_t modRet = offset - (divRet * eltSize);
+    int64_t modRet = offset % eltSize;
+    if (modRet < 0) {
+      divRet -= 1;
+      modRet += eltSize;
+    }
     return {divRet, modRet};
   };
 
@@ -136,11 +148,22 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
             }
             llvm_unreachable("offset was not found within the record");
           })
-          .Default([](mlir::Type otherTy) {
+          .Case<cir::IntType>([&](cir::IntType intTy) -> mlir::Type {
+            // Integer element type: the offset is a flat element count.
+            // This covers pointer arithmetic through a plain integer base,
+            // e.g. a char* GlobalViewAttr whose pointee type is !s8i rather
+            // than an array — the GEP is getelementptr i8, ptr @sym, i64 N.
+            int64_t eltSize =
+                (int64_t)layout.getTypeAllocSize(intTy).getFixedValue();
+            assert(eltSize > 0 && "element size must be positive");
+            const auto [index, newOffset] =
+                getIndexAndNewOffset(offset, eltSize);
+            indices.push_back(index);
+            offset = newOffset;
+            return intTy;
+          })
+          .Default([](mlir::Type) -> mlir::Type {
             llvm_unreachable("unexpected type");
-            return otherTy; // Even though this is unreachable, we need to
-                            // return a type to satisfy the return type of the
-                            // lambda.
           });
 
   assert(subType);
@@ -162,6 +185,9 @@ uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
     } else if (auto arrayTy = dyn_cast<cir::ArrayType>(ty)) {
       ty = arrayTy.getElementType();
       offset += layout.getTypeAllocSize(ty) * idx;
+    } else if (mlir::isa<cir::IntType>(ty)) {
+      // Integer element type: the index is a flat element count.
+      offset += (int64_t)layout.getTypeAllocSize(ty).getFixedValue() * idx;
     } else {
       llvm_unreachable("unexpected type");
     }

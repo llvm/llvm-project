@@ -10,11 +10,20 @@ link_flags = []
 if @LIBUNWIND_ENABLE_THREADS@:
     link_flags.append('-lpthread')
 
+if @HAVE_GETAUXVAL@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_GETAUXVAL')
+
+if @HAVE_ELF_AUX_INFO@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_ELF_AUX_INFO')
+
 if @LIBUNWIND_ENABLE_CET@:
     compile_flags.append('-fcf-protection=full')
 
 if @LIBUNWIND_ENABLE_GCS@:
     compile_flags.append('-mbranch-protection=standard')
+
+if @HAVE_CFI_SET_RA_STATE@:
+    compile_flags.append('-DHAVE_CFI_SET_RA_STATE')
 
 # On ELF platforms, link tests with -Wl,--export-dynamic if supported by the linker.
 if len('@CMAKE_EXE_EXPORTS_CXX_FLAG@'):

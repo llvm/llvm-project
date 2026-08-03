@@ -299,7 +299,8 @@ bool CachingVPExpander::expandPredicationToFPCall(
   case Intrinsic::rint:
   case Intrinsic::nearbyint:
   case Intrinsic::lrint:
-  case Intrinsic::llrint: {
+  case Intrinsic::llrint:
+  case Intrinsic::is_fpclass: {
     SmallVector<Value *, 2> Argument;
     for (unsigned i = 0; i < VPI.getNumOperands() - 3; i++) {
       Argument.push_back(VPI.getOperand(i));
@@ -334,10 +335,7 @@ bool CachingVPExpander::expandPredicationToFPCall(
 static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                                          Type *EltTy) {
   Intrinsic::ID RdxID = *VPI.getFunctionalIntrinsicID();
-  FastMathFlags FMF;
-  if (isa<FPMathOperator>(VPI))
-    FMF = VPI.getFastMathFlags();
-  return getReductionIdentity(RdxID, EltTy, FMF);
+  return getReductionIdentity(RdxID, EltTy, VPI.getFastMathFlagsOrNone());
 }
 
 bool CachingVPExpander::expandPredicationInReduction(
@@ -637,6 +635,7 @@ bool CachingVPExpander::expandPredication(VPIntrinsic &VPI) {
   case Intrinsic::vp_llrint:
   case Intrinsic::vp_fma:
   case Intrinsic::vp_fmuladd:
+  case Intrinsic::vp_is_fpclass:
     return expandPredicationToFPCall(Builder, VPI,
                                      VPI.getFunctionalIntrinsicID().value());
   case Intrinsic::vp_load:

@@ -224,7 +224,7 @@ define <4 x i32> @var_funnnel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %amt) 
 ; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,3],xmm1[0,3]
 ; SSE2-NEXT:    pandn %xmm4, %xmm2
 ; SSE2-NEXT:    pslld $23, %xmm2
-; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; SSE2-NEXT:    cvttps2dq %xmm2, %xmm1
 ; SSE2-NEXT:    paddd %xmm0, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
@@ -259,7 +259,7 @@ define <4 x i32> @var_funnnel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %amt) 
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm6 = xmm6[0,1],xmm8[2,3],xmm6[4,5],xmm8[6,7]
 ; SSE41-NEXT:    pandn %xmm3, %xmm2
 ; SSE41-NEXT:    pslld $23, %xmm2
-; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; SSE41-NEXT:    cvttps2dq %xmm2, %xmm1
 ; SSE41-NEXT:    paddd %xmm0, %xmm0
 ; SSE41-NEXT:    pmulld %xmm1, %xmm0
@@ -284,7 +284,7 @@ define <4 x i32> @var_funnnel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %amt) 
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm5[2,3],xmm1[4,5],xmm5[6,7]
 ; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpslld $23, %xmm2, %xmm2
-; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vcvttps2dq %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
@@ -408,7 +408,7 @@ define <4 x i32> @var_funnnel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %amt) 
 ; X86-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,3],xmm1[0,3]
 ; X86-SSE2-NEXT:    pandn %xmm4, %xmm2
 ; X86-SSE2-NEXT:    pslld $23, %xmm2
-; X86-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
+; X86-SSE2-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2 # [1065353216,1065353216,1065353216,1065353216]
 ; X86-SSE2-NEXT:    cvttps2dq %xmm2, %xmm1
 ; X86-SSE2-NEXT:    paddd %xmm0, %xmm0
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
@@ -796,110 +796,114 @@ define <16 x i8> @var_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %amt) 
 ;
 ; SSE41-LABEL: var_funnnel_v16i8:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    paddb %xmm0, %xmm3
-; SSE41-NEXT:    movdqa %xmm3, %xmm5
+; SSE41-NEXT:    movdqa %xmm2, %xmm3
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    movdqa {{.*#+}} xmm5 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; SSE41-NEXT:    movdqa %xmm3, %xmm0
+; SSE41-NEXT:    pand %xmm5, %xmm0
+; SSE41-NEXT:    psllw $5, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm4
+; SSE41-NEXT:    paddb %xmm0, %xmm4
+; SSE41-NEXT:    movdqa %xmm1, %xmm6
+; SSE41-NEXT:    psrlw $4, %xmm6
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
+; SSE41-NEXT:    pblendvb %xmm0, %xmm6, %xmm1
+; SSE41-NEXT:    movdqa %xmm1, %xmm6
+; SSE41-NEXT:    psrlw $2, %xmm6
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
+; SSE41-NEXT:    movdqa %xmm4, %xmm0
+; SSE41-NEXT:    pblendvb %xmm0, %xmm6, %xmm1
+; SSE41-NEXT:    movdqa %xmm1, %xmm6
+; SSE41-NEXT:    psrlw $1, %xmm6
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6
+; SSE41-NEXT:    paddb %xmm4, %xmm4
+; SSE41-NEXT:    movdqa %xmm4, %xmm0
+; SSE41-NEXT:    pblendvb %xmm0, %xmm6, %xmm1
+; SSE41-NEXT:    pandn %xmm5, %xmm3
+; SSE41-NEXT:    psllw $5, %xmm3
+; SSE41-NEXT:    movdqa %xmm3, %xmm4
+; SSE41-NEXT:    paddb %xmm3, %xmm4
+; SSE41-NEXT:    paddb %xmm2, %xmm2
+; SSE41-NEXT:    movdqa %xmm2, %xmm5
 ; SSE41-NEXT:    psllw $4, %xmm5
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5
-; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
-; SSE41-NEXT:    pandn %xmm4, %xmm0
-; SSE41-NEXT:    psllw $5, %xmm0
-; SSE41-NEXT:    pblendvb %xmm0, %xmm5, %xmm3
-; SSE41-NEXT:    movdqa %xmm3, %xmm5
-; SSE41-NEXT:    paddb %xmm3, %xmm5
-; SSE41-NEXT:    paddb %xmm5, %xmm5
-; SSE41-NEXT:    paddb %xmm0, %xmm0
-; SSE41-NEXT:    pblendvb %xmm0, %xmm5, %xmm3
-; SSE41-NEXT:    movdqa %xmm3, %xmm5
-; SSE41-NEXT:    paddb %xmm3, %xmm5
-; SSE41-NEXT:    paddb %xmm0, %xmm0
-; SSE41-NEXT:    pblendvb %xmm0, %xmm5, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm4
-; SSE41-NEXT:    psllw $5, %xmm4
-; SSE41-NEXT:    movdqa %xmm4, %xmm2
-; SSE41-NEXT:    paddb %xmm4, %xmm2
-; SSE41-NEXT:    movdqa %xmm1, %xmm5
-; SSE41-NEXT:    psrlw $4, %xmm5
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm5
-; SSE41-NEXT:    movdqa %xmm4, %xmm0
-; SSE41-NEXT:    pblendvb %xmm0, %xmm5, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    psrlw $2, %xmm4
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
-; SSE41-NEXT:    pblendvb %xmm0, %xmm4, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, %xmm4
-; SSE41-NEXT:    psrlw $1, %xmm4
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
-; SSE41-NEXT:    paddb %xmm2, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
-; SSE41-NEXT:    pblendvb %xmm0, %xmm4, %xmm1
-; SSE41-NEXT:    por %xmm1, %xmm3
 ; SSE41-NEXT:    movdqa %xmm3, %xmm0
+; SSE41-NEXT:    pblendvb %xmm0, %xmm5, %xmm2
+; SSE41-NEXT:    movdqa %xmm2, %xmm3
+; SSE41-NEXT:    paddb %xmm2, %xmm3
+; SSE41-NEXT:    paddb %xmm3, %xmm3
+; SSE41-NEXT:    movdqa %xmm4, %xmm0
+; SSE41-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
+; SSE41-NEXT:    movdqa %xmm2, %xmm3
+; SSE41-NEXT:    paddb %xmm2, %xmm3
+; SSE41-NEXT:    paddb %xmm4, %xmm4
+; SSE41-NEXT:    movdqa %xmm4, %xmm0
+; SSE41-NEXT:    pblendvb %xmm0, %xmm3, %xmm2
+; SSE41-NEXT:    por %xmm1, %xmm2
+; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: var_funnnel_v16i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpsllw $4, %xmm0, %xmm3
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; AVX1-NEXT:    vpandn %xmm4, %xmm2, %xmm5
-; AVX1-NEXT:    vpsllw $5, %xmm5, %xmm5
-; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm4
+; AVX1-NEXT:    vpsllw $5, %xmm4, %xmm4
+; AVX1-NEXT:    vpaddb %xmm4, %xmm4, %xmm5
+; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm6
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6, %xmm6
+; AVX1-NEXT:    vpblendvb %xmm4, %xmm6, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $2, %xmm1, %xmm4
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
+; AVX1-NEXT:    vpblendvb %xmm5, %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm4
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
 ; AVX1-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
-; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
-; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm2
+; AVX1-NEXT:    vpblendvb %xmm5, %xmm4, %xmm1, %xmm1
+; AVX1-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsllw $5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
-; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm4
+; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllw $4, %xmm0, %xmm4
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $2, %xmm1, %xmm2
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $1, %xmm1, %xmm2
-; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
+; AVX1-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
 ; AVX1-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: var_funnnel_v16i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpsllw $4, %xmm0, %xmm3
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
-; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm4 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; AVX2-NEXT:    vpandn %xmm4, %xmm2, %xmm5
-; AVX2-NEXT:    vpsllw $5, %xmm5, %xmm5
-; AVX2-NEXT:    vpblendvb %xmm5, %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpaddb %xmm0, %xmm0, %xmm3
-; AVX2-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
+; AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm3 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
+; AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm4
+; AVX2-NEXT:    vpsllw $5, %xmm4, %xmm4
+; AVX2-NEXT:    vpaddb %xmm4, %xmm4, %xmm5
+; AVX2-NEXT:    vpsrlw $4, %xmm1, %xmm6
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm6, %xmm6
+; AVX2-NEXT:    vpblendvb %xmm4, %xmm6, %xmm1, %xmm1
+; AVX2-NEXT:    vpsrlw $2, %xmm1, %xmm4
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
+; AVX2-NEXT:    vpblendvb %xmm5, %xmm4, %xmm1, %xmm1
+; AVX2-NEXT:    vpsrlw $1, %xmm1, %xmm4
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
 ; AVX2-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
-; AVX2-NEXT:    vpblendvb %xmm5, %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpaddb %xmm0, %xmm0, %xmm3
-; AVX2-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
-; AVX2-NEXT:    vpblendvb %xmm5, %xmm3, %xmm0, %xmm0
-; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendvb %xmm5, %xmm4, %xmm1, %xmm1
+; AVX2-NEXT:    vpandn %xmm3, %xmm2, %xmm2
 ; AVX2-NEXT:    vpsllw $5, %xmm2, %xmm2
 ; AVX2-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
-; AVX2-NEXT:    vpsrlw $4, %xmm1, %xmm4
+; AVX2-NEXT:    vpaddb %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $4, %xmm0, %xmm4
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4
-; AVX2-NEXT:    vpblendvb %xmm2, %xmm4, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrlw $2, %xmm1, %xmm2
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX2-NEXT:    vpblendvb %xmm3, %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vpsrlw $1, %xmm1, %xmm2
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX2-NEXT:    vpblendvb %xmm2, %xmm4, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
+; AVX2-NEXT:    vpaddb %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddb %xmm0, %xmm0, %xmm2
 ; AVX2-NEXT:    vpaddb %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpblendvb %xmm3, %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpblendvb %xmm3, %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
@@ -1542,14 +1546,14 @@ define <16 x i8> @splatvar_funnnel_v16i8(<16 x i8> %x, <16 x i8> %y, <16 x i8> %
 ;
 ; AVX512VBMI2-LABEL: splatvar_funnnel_v16i8:
 ; AVX512VBMI2:       # %bb.0:
-; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} xmm3 = [0,2,4,6,8,10,12,14,64,66,68,70,72,74,76,78]
-; AVX512VBMI2-NEXT:    vpunpckhbw {{.*#+}} xmm4 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
-; AVX512VBMI2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512VBMI2-NEXT:    vpsrlw %xmm2, %xmm4, %xmm4
-; AVX512VBMI2-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; AVX512VBMI2-NEXT:    vpsrlw %xmm2, %xmm0, %xmm0
-; AVX512VBMI2-NEXT:    vpermt2b %zmm4, %zmm3, %zmm0
-; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512VBMI2-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512VBMI2-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,64,1,65,2,66,3,67,4,68,5,69,6,70,7,71,8,72,9,73,10,74,11,75,12,76,13,77,14,78,15,79]
+; AVX512VBMI2-NEXT:    vpermi2b %zmm0, %zmm1, %zmm3
+; AVX512VBMI2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
+; AVX512VBMI2-NEXT:    vpsrlw %xmm0, %ymm3, %ymm0
+; AVX512VBMI2-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VBMI2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512VBMI2-NEXT:    vzeroupper
 ; AVX512VBMI2-NEXT:    retq
 ;

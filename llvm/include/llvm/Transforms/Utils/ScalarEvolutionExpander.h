@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -311,6 +312,18 @@ public:
   LLVM_ABI bool isSafeToExpandAt(const SCEV *S,
                                  const Instruction *InsertionPoint) const;
 
+  /// Drop poison-generating flags from \p I, then try re-infer via SCEV.
+  LLVM_ABI static void
+  dropPoisonGeneratingAnnotationsAndReinfer(ScalarEvolution &SE,
+                                            Instruction *I);
+
+  /// Find an existing cast among \p PtrOp's users that computes the same value
+  /// as a `ptrtoaddr` of \p PtrOp to \p Ty and can be reused when expanding
+  /// ptrtoaddr.
+  LLVM_ABI static CastInst *
+  findReusableCastForPtrToAddr(Value *PtrOp, Type *Ty, const DataLayout &DL,
+                               function_ref<bool(const CastInst *)> Dominates);
+
   /// Insert code to directly compute the specified SCEV expression into the
   /// program.  The code is inserted into the specified block.
   LLVM_ABI Value *expandCodeFor(SCEVUse SH, Type *Ty, BasicBlock::iterator I);
@@ -434,7 +447,7 @@ public:
 
   /// Remove inserted instructions that are dead, e.g. due to InstSimplifyFolder
   /// simplifications. \p Root is assumed to be used and won't be removed.
-  void eraseDeadInstructions(Value *Root);
+  LLVM_ABI void eraseDeadInstructions(Value *Root);
 
 private:
   LLVMContext &getContext() const { return SE.getContext(); }
@@ -501,8 +514,6 @@ private:
   Value *visitVScale(SCEVUseT<const SCEVVScale *> S);
 
   Value *visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S);
-
-  Value *visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S);
 
   Value *visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S);
 

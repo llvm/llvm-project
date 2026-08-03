@@ -25,7 +25,7 @@ define i8 @monotonic_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB0_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -69,7 +69,7 @@ define i8 @monotonic_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB1_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -115,7 +115,7 @@ define i8 @monotonic_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB2_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -160,7 +160,7 @@ define i8 @acquire_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB3_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -205,7 +205,7 @@ define i8 @acquire_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -251,7 +251,7 @@ define i8 @acquire_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB5_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -297,7 +297,7 @@ define i8 @release_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB6_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -342,7 +342,7 @@ define i8 @release_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB7_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -388,7 +388,7 @@ define i8 @release_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB8_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -434,7 +434,7 @@ define i8 @acq_rel_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB9_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -480,7 +480,7 @@ define i8 @acq_rel_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB10_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -526,7 +526,7 @@ define i8 @acq_rel_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB11_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -572,7 +572,7 @@ define i8 @seq_cst_monotonic_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB12_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -618,7 +618,7 @@ define i8 @seq_cst_acquire_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB13_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -664,7 +664,7 @@ define i8 @seq_cst_seq_cst_i8_global_cta(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB14_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -709,7 +709,7 @@ define i16 @monotonic_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp,
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB15_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -753,7 +753,7 @@ define i16 @monotonic_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB16_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -799,7 +799,7 @@ define i16 @monotonic_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB17_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -844,7 +844,7 @@ define i16 @acquire_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB18_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -889,7 +889,7 @@ define i16 @acquire_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB19_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -935,7 +935,7 @@ define i16 @acquire_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB20_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -981,7 +981,7 @@ define i16 @release_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB21_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1026,7 +1026,7 @@ define i16 @release_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB22_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1072,7 +1072,7 @@ define i16 @release_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB23_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1118,7 +1118,7 @@ define i16 @acq_rel_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB24_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1164,7 +1164,7 @@ define i16 @acq_rel_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB25_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1210,7 +1210,7 @@ define i16 @acq_rel_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB26_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1256,7 +1256,7 @@ define i16 @seq_cst_monotonic_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB27_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1302,7 +1302,7 @@ define i16 @seq_cst_acquire_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB28_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1348,7 +1348,7 @@ define i16 @seq_cst_seq_cst_i16_global_cta(ptr addrspace(1) %addr, i16 %cmp, i16
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB29_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -1903,7 +1903,7 @@ define i8 @acq_rel_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.global.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.sys.global.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB60_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2017,7 +2017,7 @@ define i8 @acq_rel_acquire_i8_generic_cta(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB65_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -2063,7 +2063,7 @@ define i8 @acq_rel_acquire_i8_shared_cta(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM90-NEXT:    cvt.u32.u16 %r12, %rs1;
 ; SM90-NEXT:    shl.b32 %r3, %r12, %r1;
 ; SM90-NEXT:    shl.b32 %r4, %r7, %r1;
-; SM90-NEXT:    ld.shared.b32 %r13, [%rd1];
+; SM90-NEXT:    ld.relaxed.cta.shared.b32 %r13, [%rd1];
 ; SM90-NEXT:    and.b32 %r16, %r13, %r2;
 ; SM90-NEXT:  $L__BB66_1: // %partword.cmpxchg.loop
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1

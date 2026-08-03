@@ -1052,23 +1052,24 @@ multiclass VNCLP_IV_V_X_I<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VSLD_IV_X_I<string opcodestr, bits<6> funct6, bit slidesUp> {
-  // Note: In the future, if VISlideI is also split into VSlideUpI and
-  // VSlideDownI, it'll probably better to use two separate multiclasses.
   defvar WriteSlideX = !if(slidesUp, "WriteVSlideUpX", "WriteVSlideDownX");
+  defvar WriteSlideI = !if(slidesUp, "WriteVSlideUpI", "WriteVSlideDownI");
   def X  : VALUVX<funct6, OPIVX, opcodestr # ".vx">,
            SchedBinaryMC<WriteSlideX, "ReadVISlideV", "ReadVISlideX">;
   def I  : VALUVI<funct6, opcodestr # ".vi", uimm5>,
-           SchedUnaryMC<"WriteVSlideI", "ReadVISlideV">;
+           SchedUnaryMC<WriteSlideI, "ReadVISlideV">;
 }
 
-multiclass VSLD1_MV_X<string opcodestr, bits<6> funct6> {
+multiclass VSLD1_MV_X<string opcodestr, bits<6> funct6, bit slidesUp> {
+  defvar WriteSlide1X = !if(slidesUp, "WriteVISlide1Up", "WriteVISlide1Down");
   def X  : VALUVX<funct6, OPMVX, opcodestr # ".vx">,
-           SchedBinaryMC<"WriteVISlide1X", "ReadVISlideV", "ReadVISlideX">;
+           SchedBinaryMC<WriteSlide1X, "ReadVISlideV", "ReadVISlideX">;
 }
 
-multiclass VSLD1_FV_F<string opcodestr, bits<6> funct6> {
+multiclass VSLD1_FV_F<string opcodestr, bits<6> funct6, bit slidesUp> {
+  defvar WriteSlide1F = !if(slidesUp, "WriteVFSlide1Up", "WriteVFSlide1Down");
   def F : VALUVF<funct6, OPFVF, opcodestr # ".vf">,
-          SchedBinaryMC<"WriteVFSlide1F", "ReadVFSlideV", "ReadVFSlideF">;
+          SchedBinaryMC<WriteSlide1F, "ReadVFSlideV", "ReadVFSlideF">;
 }
 
 multiclass VGTR_IV_V_X_I<string opcodestr, bits<6> funct6> {
@@ -1293,7 +1294,7 @@ def : InstAlias<"vmsge.vv $vd, $va, $vb$vm",
 
 let ElementsDependOn = EltDepsNone in {
 
-let isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 0,
+let isCodeGenOnly = 0, hasSideEffects = 0, mayLoad = 0,
     mayStore = 0, DestEEW = EEW1 in {
 // For unsigned comparisons we need to special case 0 immediate to maintain
 // the always true/false semantics we would invert if we just decremented the
@@ -1316,18 +1317,12 @@ def PseudoVMSLT_VI : Pseudo<(outs VR:$vd),
                             [], "vmslt.vi", "$vd, $vs2, $imm$vm">;
 }
 
-let isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0, mayLoad = 0,
+let isCodeGenOnly = 0, hasSideEffects = 0, mayLoad = 0,
     mayStore = 0, DestEEW = EEW1 in {
-def PseudoVMSGEU_VX : Pseudo<(outs VR:$vd),
-                             (ins VR:$vs2, GPR:$rs1),
-                             [], "vmsgeu.vx", "$vd, $vs2, $rs1">;
-def PseudoVMSGE_VX : Pseudo<(outs VR:$vd),
-                            (ins VR:$vs2, GPR:$rs1),
-                            [], "vmsge.vx", "$vd, $vs2, $rs1">;
-def PseudoVMSGEU_VX_M : Pseudo<(outs VRNoV0:$vd),
+def PseudoVMSGEU_VX_M : Pseudo<(outs VR:$vd),
                                (ins VR:$vs2, GPR:$rs1, VMaskOp:$vm),
                                [], "vmsgeu.vx", "$vd, $vs2, $rs1$vm">;
-def PseudoVMSGE_VX_M : Pseudo<(outs VRNoV0:$vd),
+def PseudoVMSGE_VX_M : Pseudo<(outs VR:$vd),
                               (ins VR:$vs2, GPR:$rs1, VMaskOp:$vm),
                               [], "vmsge.vx", "$vd, $vs2, $rs1$vm">;
 def PseudoVMSGEU_VX_M_T : Pseudo<(outs VR:$vd, VRNoV0:$scratch),
@@ -1771,21 +1766,21 @@ let Predicates = [HasVInstructions] in {
 let Constraints = "@earlyclobber $vd", VS1VS2Constraint = SlideUp,
     ElementsDependOn = EltDepsNone in {
 defm VSLIDEUP_V : VSLD_IV_X_I<"vslideup", 0b001110, /*slidesUp=*/true>;
-defm VSLIDE1UP_V : VSLD1_MV_X<"vslide1up", 0b001110>;
+defm VSLIDE1UP_V : VSLD1_MV_X<"vslide1up", 0b001110, /*slidesUp=*/true>;
 } // Constraints = "@earlyclobber $vd", VS1VS2Constraint = SlideUp, ElementsDependOn = EltDepsNone
 let ElementsDependOn = EltDepsNone, ReadsPastVL = 1 in
 defm VSLIDEDOWN_V : VSLD_IV_X_I<"vslidedown", 0b001111, /*slidesUp=*/false>;
 let ElementsDependOn = EltDepsVL, ReadsPastVL = 1 in
-defm VSLIDE1DOWN_V : VSLD1_MV_X<"vslide1down", 0b001111>;
+defm VSLIDE1DOWN_V : VSLD1_MV_X<"vslide1down", 0b001111, /*slidesUp=*/false>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
 let Constraints = "@earlyclobber $vd", VS1VS2Constraint = SlideUp,
     ElementsDependOn = EltDepsNone in {
-defm VFSLIDE1UP_V : VSLD1_FV_F<"vfslide1up", 0b001110>;
+defm VFSLIDE1UP_V : VSLD1_FV_F<"vfslide1up", 0b001110, /*slidesUp=*/true>;
 } // Constraints = "@earlyclobber $vd", VS1VS2Constraint = SlideUp
 let ElementsDependOn = EltDepsVL, ReadsPastVL = 1 in
-defm VFSLIDE1DOWN_V : VSLD1_FV_F<"vfslide1down", 0b001111>;
+defm VFSLIDE1DOWN_V : VSLD1_FV_F<"vfslide1down", 0b001111, /*slidesUp=*/false>;
 } // Predicates = [HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {

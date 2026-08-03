@@ -145,6 +145,12 @@ let cppNamespace = "::cir" in {
       }]
       >,
       InterfaceMethod<"",
+      "void", "setGlobalVisibility", (ins "cir::VisibilityKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setGlobalVisibility(val);
+      }]
+      >,
+      InterfaceMethod<"",
       "bool", "isDSOLocal", (ins), [{}],
       /*defaultImplementation=*/[{
         return $_op.getDsoLocal();
@@ -171,12 +177,79 @@ let cppNamespace = "::cir" in {
         return mlir::dyn_cast_if_present<mlir::StringAttr>(
             $_op->getAttr("section"));
       }]
+      >,
+      // Added for readability.
+      InterfaceMethod<"",
+      "bool", "isDefinition", (ins), [{}],
+      /*defaultImplementation=*/[{
+        return !$_op.isDeclaration();
+      }]
+      >,
+      // TODO(cir): Make GlobalAlias a separate op.
+      InterfaceMethod<"",
+      "void", "setAliasee", (ins "::std::optional<::llvm::StringRef>":$val), [{}],
+      /*defaultImplementation=*/[{
+        if (val) {
+          auto aliaseeRef =
+              ::mlir::FlatSymbolRefAttr::get($_op->getContext(), *val);
+          $_op->setAttr("aliasee", aliaseeRef);
+        } else {
+          $_op->removeAttr("aliasee");
+        }
+      }]
+      >,
+      InterfaceMethod<"",
+      "void", "setLinkage", (ins "::cir::GlobalLinkageKind":$val), [{}],
+      /*defaultImplementation=*/[{
+        $_op.setLinkage(val);
+      }]
       >
     ];
     let extraClassDeclaration = [{
       bool hasDefaultVisibility();
       bool canBenefitFromLocalAlias();
     }];
+  }
+
+  def CIR_FPEnvConstrainedOpInterface
+      : OpInterface<"FPEnvConstrainedOpInterface"> {
+    let description = [{
+      Interface for floating-point operations that carry an optional
+      `#cir.fenv` attribute. It provides effective values for each field,
+      substituting the floating-point environment defaults for absent fields.
+    }];
+
+    let methods = [
+      InterfaceMethod<
+        "Return the `#cir.fenv` attribute, or a null attribute if absent.",
+        "cir::FenvAttr", "getFenvAttr", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getFenvAttr();
+        }]>,
+      InterfaceMethod<
+        "Return the effective dynamic rounding mode.",
+        "cir::FPDynamicRoundingMode", "getFenvDynamicRoundingMode", (ins),
+        [{}], /*defaultImplementation=*/[{
+          cir::FenvAttr fenv = $_op.getFenvAttr();
+          return fenv ? fenv.getDynamicRoundingModeOrDefault()
+                      : cir::FenvAttr::getDefaultDynamicRoundingMode();
+        }]>,
+      InterfaceMethod<
+        "Return the effective floating-point exception mode.",
+        "cir::FPExceptionMode", "getFenvExceptionMode", (ins), [{}],
+        /*defaultImplementation=*/[{
+          cir::FenvAttr fenv = $_op.getFenvAttr();
+          return fenv ? fenv.getExceptionModeOrDefault()
+                      : cir::FenvAttr::getDefaultExceptionMode();
+        }]>,
+      InterfaceMethod<
+        "Return the effective strict-exception flag.",
+        "bool", "getFenvStrictExcept", (ins), [{}],
+        /*defaultImplementation=*/[{
+          cir::FenvAttr fenv = $_op.getFenvAttr();
+          return fenv ? fenv.getStrictExceptOrDefault() : false;
+        }]>,
+    ];
   }
 
   def CIR_BinaryOpInterface : OpInterface<"BinaryOpInterface"> {
@@ -222,6 +295,26 @@ let cppNamespace = "::cir" in {
         "mlir::Value", "getResult", (ins), [{}],
         /*defaultImplementation=*/[{
           return $_op.getResult();
+        }]>,
+    ];
+  }
+
+  def CIR_StdOpInterface : OpInterface<"StdOpInterface"> {
+    let description = [{
+      Interface for raised standard library ops, exposing the original callee
+      so LoweringPrepare can rebuild the call generically.
+    }];
+
+    let methods = [
+      InterfaceMethod<"Return the original callee symbol reference.",
+        "mlir::FlatSymbolRefAttr", "getOriginalFnAttr", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getOriginalFnAttr();
+        }]>,
+      InterfaceMethod<"Return the name of the original_fn attribute.",
+        "mlir::StringAttr", "getOriginalFnAttrName", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getOriginalFnAttrName();
         }]>,
     ];
   }

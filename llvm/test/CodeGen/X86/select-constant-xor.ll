@@ -172,8 +172,10 @@ define i32 @selecti8i32(i8 %a) {
 define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; X86-LABEL: icmpasreq:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    js .LBB8_1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    cmpl $-1, %eax
+; X86-NEXT:    je .LBB8_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax
@@ -198,8 +200,10 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; X86-LABEL: icmpasrne:
 ; X86:       # %bb.0:
-; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-NEXT:    jns .LBB9_1
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    cmpl $-1, %eax
+; X86-NEXT:    jne .LBB9_1
 ; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %eax

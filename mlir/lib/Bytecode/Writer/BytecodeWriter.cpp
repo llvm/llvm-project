@@ -44,6 +44,9 @@ struct BytecodeWriterConfig::Impl {
   /// file.
   bool shouldElideResourceData = false;
 
+  /// A flag specifying whether to elide emission of locations.
+  bool shouldElideLocations = false;
+
   /// A map containing dialect version information for each dialect to emit.
   llvm::StringMap<std::unique_ptr<DialectVersion>> dialectVersionMap;
 
@@ -100,6 +103,14 @@ void BytecodeWriterConfig::attachResourcePrinter(
 void BytecodeWriterConfig::setElideResourceDataFlag(
     bool shouldElideResourceData) {
   impl->shouldElideResourceData = shouldElideResourceData;
+}
+
+void BytecodeWriterConfig::setElideLocations(bool shouldElideLocations) {
+  impl->shouldElideLocations = shouldElideLocations;
+}
+
+bool BytecodeWriterConfig::shouldElideLocations() const {
+  return impl->shouldElideLocations;
 }
 
 void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {

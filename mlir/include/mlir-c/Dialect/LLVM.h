@@ -307,7 +307,8 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMDICompositeTypeAttrGet(
     MlirAttribute baseType, int64_t flags, uint64_t sizeInBits,
     uint64_t alignInBits, intptr_t nElements, MlirAttribute const *elements,
     MlirAttribute dataLocation, MlirAttribute rank, MlirAttribute allocated,
-    MlirAttribute associated);
+    MlirAttribute associated, MlirAttribute identifier,
+    MlirAttribute discriminator);
 
 MLIR_CAPI_EXPORTED MlirStringRef mlirLLVMDICompositeTypeAttrGetName(void);
 
@@ -509,18 +510,19 @@ MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDConstantAttrGetTypeID(void);
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirLLVMMDConstantAttrGetValue(MlirAttribute attr);
 
-/// Creates an LLVM MDFuncAttr referencing a function symbol.
-MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGet(MlirContext ctx,
-                                                       MlirAttribute name);
+/// Creates an LLVM MDGlobalValueAttr referencing a symbol-backed global value.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDGlobalValueAttrGet(MlirContext ctx, MlirAttribute name);
 
-/// Returns `true` if the attribute is an LLVM MDFuncAttr.
-MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDFuncAttr(MlirAttribute attr);
+/// Returns `true` if the attribute is an LLVM MDGlobalValueAttr.
+MLIR_CAPI_EXPORTED bool mlirLLVMAttrIsAMDGlobalValueAttr(MlirAttribute attr);
 
-/// Returns the TypeID of MDFuncAttr.
-MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDFuncAttrGetTypeID(void);
+/// Returns the TypeID of MDGlobalValueAttr.
+MLIR_CAPI_EXPORTED MlirTypeID mlirLLVMMDGlobalValueAttrGetTypeID(void);
 
-/// Returns the symbol name of an LLVM MDFuncAttr.
-MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDFuncAttrGetName(MlirAttribute attr);
+/// Returns the symbol name of an LLVM MDGlobalValueAttr.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLLVMMDGlobalValueAttrGetName(MlirAttribute attr);
 
 /// Creates an LLVM MDNodeAttr.
 MLIR_CAPI_EXPORTED MlirAttribute mlirLLVMMDNodeAttrGet(

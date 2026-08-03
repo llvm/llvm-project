@@ -74,6 +74,19 @@ void VirtRegMap::init(MachineFunction &mf) {
   Virt2ShapeMap.clear();
 
   grow();
+
+  // Drain any VirtRegMap state stashed by MIRParser on MRI. Must run after
+  // grow() so that Virt2*Map have capacity for every vreg referenced by the
+  // stash.
+  for (const auto &P : MRI->getPendingVirtRegMapEntries()) {
+    if (P.AssignedPhys.isValid())
+      assignVirt2Phys(P.VReg, P.AssignedPhys);
+    // Guard against self-reference; the parser also rejects this, but a
+    // belt-and-braces check keeps Virt2SplitMap meaningful.
+    if (P.SplitFrom.isValid() && P.SplitFrom != P.VReg)
+      setIsSplitFromReg(P.VReg, P.SplitFrom);
+  }
+  MRI->clearPendingVirtRegMapEntries();
 }
 
 void VirtRegMap::grow() {
@@ -102,7 +115,8 @@ unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
   if (Alignment > CurrentAlign && !TRI->canRealignStack(*MF)) {
     Alignment = CurrentAlign;
   }
-  int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Alignment);
+  int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Alignment,
+                                                     TRI->getSpillStackID(*RC));
   ++NumSpillSlots;
   return SS;
 }

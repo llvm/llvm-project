@@ -32,8 +32,7 @@ public:
   DependencyScanningAction(
       DependencyScanningService &Service, StringRef WorkingDirectory,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
-      IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      std::optional<StringRef> ModuleName = std::nullopt)
+      IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS)
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)) {}
   bool runInvocation(std::string Executable,
@@ -68,20 +67,6 @@ struct DiagnosticsEngineWithDiagOpts {
   DiagnosticsEngineWithDiagOpts(ArrayRef<std::string> CommandLine,
                                 IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                                 DiagnosticConsumer &DC);
-};
-
-struct TextDiagnosticsPrinterWithOutput {
-  // We need to bound the lifetime of the data that supports the DiagPrinter
-  // with it together so they have the same lifetime.
-  std::string DiagnosticOutput;
-  llvm::raw_string_ostream DiagnosticsOS;
-  std::unique_ptr<DiagnosticOptions> DiagOpts;
-  TextDiagnosticPrinter DiagPrinter;
-
-  TextDiagnosticsPrinterWithOutput(ArrayRef<std::string> CommandLine)
-      : DiagnosticsOS(DiagnosticOutput),
-        DiagOpts(createDiagOptions(CommandLine)),
-        DiagPrinter(DiagnosticsOS, *DiagOpts) {}
 };
 
 std::unique_ptr<CompilerInvocation>
@@ -121,11 +106,10 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
 std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    StringRef WorkingDirectory, DependencyConsumer &Consumer,
     DependencyScanningService &Service, CompilerInvocation &Inv,
     DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    llvm::SmallVector<StringRef> &StableDirs);
+    SmallVector<StringRef> &StableDirs);
 } // namespace dependencies
 } // namespace clang
 

@@ -19,6 +19,7 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/LowerFunctionDiscardablesToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
@@ -75,65 +76,6 @@ static void filterFuncAttributes(FunctionOpInterface func,
       continue;
     result.push_back(attr);
   }
-}
-
-/// Add custom lowered funcOp to llvm.func attributes here.
-struct LoweredFuncAttrs {
-  LLVM::LLVMFuncOp::Properties properties;
-  NamedAttrList discardableAttrs;
-};
-
-/// Lower discardable function attributes on `func.func` to attributes expected
-/// by `llvm.func`.
-static FailureOr<LoweredFuncAttrs>
-lowerFuncAttributes(FunctionOpInterface func) {
-  MLIRContext *ctx = func->getContext();
-  LoweredFuncAttrs lowered;
-
-  llvm::SmallDenseSet<StringRef> odsAttrNames(
-      LLVM::LLVMFuncOp::getAttributeNames().begin(),
-      LLVM::LLVMFuncOp::getAttributeNames().end());
-
-  NamedAttrList inherentAttrs;
-
-  for (const NamedAttribute &attr : func->getDiscardableAttrs()) {
-    StringRef attrName = attr.getName().strref();
-
-    if (odsAttrNames.contains(attrName)) {
-      LDBG() << "LLVM specific attributes: " << attrName
-             << "should use llvm.* prefix, discarding it";
-      continue;
-    }
-
-    StringRef inherent = attrName;
-    if (inherent.consume_front("llvm.") && odsAttrNames.contains(inherent))
-      inherentAttrs.set(inherent, attr.getValue()); // collect inherent attrs
-    else
-      lowered.discardableAttrs.push_back(attr);
-  }
-
-  // Convert collected inherent attrs into typed properties.
-  if (!inherentAttrs.empty()) {
-    DictionaryAttr dict = inherentAttrs.getDictionary(ctx);
-    auto emitError = [&] {
-      return func.emitOpError("invalid llvm.func property");
-    };
-    if (failed(LLVM::LLVMFuncOp::setPropertiesFromAttr(lowered.properties, dict,
-                                                       emitError))) {
-      return failure();
-    }
-  }
-  return lowered;
-}
-
-static void buildLLVMFuncProperties(PatternRewriter &rewriter,
-                                    FunctionOpInterface srcFunc,
-                                    Type llvmFuncType,
-                                    LLVM::LLVMFuncOp::Properties &props) {
-  MLIRContext *ctx = rewriter.getContext();
-  props.sym_name = rewriter.getStringAttr(srcFunc.getName());
-  props.function_type = TypeAttr::get(llvmFuncType);
-  props.setCConv(LLVM::CConvAttr::get(ctx, LLVM::CConv::C));
 }
 
 /// Propagate argument/results attributes.
@@ -369,14 +311,15 @@ static FailureOr<LLVM::LLVMFunctionType> convertFuncSignature(
 static LLVM::LLVMFuncOp createLLVMFuncOp(FunctionOpInterface funcOp,
                                          ConversionPatternRewriter &rewriter,
                                          LLVM::LLVMFunctionType llvmType,
-                                         LoweredFuncAttrs &loweredAttrs,
+                                         LoweredLLVMFuncAttrs &loweredAttrs,
                                          SymbolTableCollection *symbolTables) {
   Operation *symbolTableOp = funcOp->getParentWithTrait<OpTrait::SymbolTable>();
   if (symbolTables && symbolTableOp) {
     SymbolTable &symbolTable = symbolTables->getSymbolTable(symbolTableOp);
     symbolTable.remove(funcOp);
   }
-  buildLLVMFuncProperties(rewriter, funcOp, llvmType, loweredAttrs.properties);
+  loweredAttrs.properties.setCConv(
+      LLVM::CConvAttr::get(rewriter.getContext(), LLVM::CConv::C));
   auto newFuncOp = LLVM::LLVMFuncOp::create(rewriter, funcOp.getLoc(),
                                             loweredAttrs.properties,
                                             loweredAttrs.discardableAttrs);
@@ -491,27 +434,25 @@ static void wrapWithCInterface(FunctionOpInterface funcOp,
                            newFuncOp);
 }
 
-// Conversion steps
-// 1. Validate function type
-// 2. Convert signature
-// 3. Validate C wrapper varargs constraint
-// 4. Lower function attrs
-// 5. Create llvm.func
-// 6. Propagate arg/result attrs
-// 7. Inline body + signature conversion
-// 8. Restore byval/byref pointee types
-// 9. C-wrapper handling
+/// Conversion steps
+/// - Validate function type
+/// - Convert signature
+/// - Validate C wrapper varargs constraint
+/// - Lower function attrs
+/// - Create llvm.func
+/// - Propagate arg/result attrs
+/// - Inline body + signature conversion
+/// - Restore byval/byref pointee types
+/// - C-wrapper handling
 FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
     FunctionOpInterface funcOp, ConversionPatternRewriter &rewriter,
     const LLVMTypeConverter &converter, SymbolTableCollection *symbolTables) {
-  // 1. Validate function type
   // Check the funcOp has `FunctionType`.
   auto funcTy = dyn_cast<FunctionType>(funcOp.getFunctionType());
   if (!funcTy)
     return rewriter.notifyMatchFailure(
         funcOp, "Only support FunctionOpInterface with FunctionType");
 
-  // 2. Convert signature
   bool useBarePtrCallConv = shouldUseBarePtrCallConv(funcOp, &converter);
   // Convert the original function arguments. They are converted using the
   // LLVMTypeConverter provided to this legalization pattern.
@@ -524,28 +465,29 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
   if (failed(llvmType))
     return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
 
-  // 3. Validate C wrapper varargs constraint
+  // Validate C wrapper varargs constraint
   bool emitCWrapper = funcOp->hasAttrOfType<UnitAttr>(
       LLVM::LLVMDialect::getEmitCWrapperAttrName());
   if (!useBarePtrCallConv && emitCWrapper && llvmType->isVarArg())
     return funcOp.emitError("C interface for variadic functions is not "
                             "supported yet.");
 
-  // 4. Lower function attrs
-  FailureOr<LoweredFuncAttrs> loweredAttrs = lowerFuncAttributes(funcOp);
+  // Lower function attrs
+  FailureOr<LoweredLLVMFuncAttrs> loweredAttrs =
+      lowerDiscardableAttrsForLLVMFunc(funcOp, *llvmType);
   if (failed(loweredAttrs))
     return rewriter.notifyMatchFailure(funcOp,
                                        "failed to lower func attributes");
 
-  // 5. Create llvm.func
+  // Create llvm.func
   auto newFuncOp = createLLVMFuncOp(funcOp, rewriter, *llvmType, *loweredAttrs,
                                     symbolTables);
 
-  // 6. Propagate arg/result attrs
+  // Propagate arg/result attrs
   propagateFunctionArgResAttrs(funcOp, rewriter, converter, result, *llvmType,
                                newFuncOp);
 
-  // 7. Inline body + signature conversion
+  // Inline body + signature conversion
   rewriter.inlineRegionBefore(funcOp.getFunctionBody(), newFuncOp.getBody(),
                               newFuncOp.end());
   // Convert just the entry block. The remaining unstructured control flow is
@@ -554,14 +496,14 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
     rewriter.applySignatureConversion(&newFuncOp.getBody().front(), result,
                                       &converter);
 
-  // 8. Restore byval/byref pointee types
+  // Restore byval/byref pointee types
   // Fix the type mismatch between the materialized `llvm.ptr` and the expected
   // pointee type in the function body when converting `llvm.byval`/`llvm.byref`
   // function arguments.
   restoreByValRefArgumentType(rewriter, converter, byValRefNonPtrAttrs,
                               newFuncOp);
 
-  // 9. C-wrapper handling
+  // C-wrapper handling
   if (!useBarePtrCallConv && emitCWrapper)
     wrapWithCInterface(funcOp, rewriter, converter, newFuncOp);
 

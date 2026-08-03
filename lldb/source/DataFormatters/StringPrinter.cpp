@@ -263,9 +263,9 @@ static bool DumpEncodedBufferToStream(
   assert(dump_options.GetStream() && "need a Stream to print the string to");
   Stream &stream(*dump_options.GetStream());
   if (dump_options.GetPrefixToken() != nullptr)
-    stream.Printf("%s", dump_options.GetPrefixToken());
+    stream.PutCString(dump_options.GetPrefixToken());
   if (dump_options.GetQuote() != 0)
-    stream.Printf("%c", dump_options.GetQuote());
+    stream.PutChar(dump_options.GetQuote());
   auto data(dump_options.GetData());
   auto source_size(dump_options.GetSourceSize());
   if (data.GetByteSize() && data.GetDataStart() && data.GetDataEnd()) {
@@ -279,9 +279,11 @@ static bool DumpEncodedBufferToStream(
         (const SourceDataType *)data.GetDataStart();
     const SourceDataType *data_end_ptr = data_ptr + source_size;
 
-    const bool zero_is_terminator = dump_options.GetBinaryZeroIsTerminator();
+    switch (dump_options.GetZeroTermination()) {
+    case StringPrinter::ZeroTermination::Ignore:
+      break;
 
-    if (zero_is_terminator) {
+    case StringPrinter::ZeroTermination::ZeroTerminate: {
       while (data_ptr < data_end_ptr) {
         if (!*data_ptr) {
           data_end_ptr = data_ptr;
@@ -291,7 +293,19 @@ static bool DumpEncodedBufferToStream(
       }
 
       data_ptr = (const SourceDataType *)data.GetDataStart();
+    } break;
+
+    case StringPrinter::ZeroTermination::TrimTrailingZeros: {
+      while (data_end_ptr != data_ptr) {
+        if (*(data_end_ptr - 1))
+          break;
+        data_end_ptr--;
+      }
+    } break;
     }
+    const bool zero_is_terminator =
+        dump_options.GetZeroTermination() ==
+        StringPrinter::ZeroTermination::ZeroTerminate;
 
     lldb::WritableDataBufferSP utf8_data_buffer_sp;
     llvm::UTF8 *utf8_data_ptr = nullptr;
@@ -344,20 +358,20 @@ static bool DumpEncodedBufferToStream(
           return false;
 
         for (unsigned c = 0; c < printable_size; c++)
-          stream.Printf("%c", *(printable_bytes + c));
+          stream.PutChar(*(printable_bytes + c));
         utf8_data_ptr = (uint8_t *)next_data;
       } else {
-        stream.Printf("%c", *utf8_data_ptr);
+        stream.PutChar(*utf8_data_ptr);
         utf8_data_ptr++;
       }
     }
   }
   if (dump_options.GetQuote() != 0)
-    stream.Printf("%c", dump_options.GetQuote());
+    stream.PutChar(dump_options.GetQuote());
   if (dump_options.GetSuffixToken() != nullptr)
-    stream.Printf("%s", dump_options.GetSuffixToken());
+    stream.PutCString(dump_options.GetSuffixToken());
   if (dump_options.GetIsTruncated())
-    stream.Printf("...");
+    stream.PutCString("...");
   return true;
 }
 
@@ -384,7 +398,7 @@ lldb_private::formatters::StringPrinter::ReadBufferAndDumpToStreamOptions::
   SetSuffixToken(options.GetSuffixToken());
   SetQuote(options.GetQuote());
   SetEscapeNonPrintables(options.GetEscapeNonPrintables());
-  SetBinaryZeroIsTerminator(options.GetBinaryZeroIsTerminator());
+  SetZeroTermination(options.GetZeroTermination());
   SetEscapeStyle(options.GetEscapeStyle());
 }
 
@@ -419,7 +433,8 @@ static bool ReadEncodedBufferAndDumpToStream(
   if (origin_encoding != 8 && !ConvertFunction)
     return false;
 
-  bool needs_zero_terminator = options.GetNeedsZeroTermination();
+  bool needs_zero_terminator = options.GetZeroTermination() ==
+                               StringPrinter::ZeroTermination::ZeroTerminate;
 
   bool is_truncated = false;
   const auto max_size = target_sp->GetMaximumSizeOfStringSummary();
@@ -427,8 +442,8 @@ static bool ReadEncodedBufferAndDumpToStream(
   uint32_t sourceSize;
   if (elem_type == StringElementType::ASCII && !options.GetSourceSize()) {
     // FIXME: The NSString formatter sets HasSourceSize(true) when the size is
-    // actually unknown, as well as SetBinaryZeroIsTerminator(false). IIUC the
-    // C++ formatter also sets SetBinaryZeroIsTerminator(false) when it doesn't
+    // actually unknown, as well as SetZeroTermination(Ignore). IIUC the
+    // C++ formatter also sets SetZeroTermination(Ignore) when it doesn't
     // mean to. I don't see how this makes sense: we should fix the formatters.
     //
     // Until then, the behavior that's expected for ASCII strings with unknown
@@ -479,9 +494,10 @@ static bool ReadEncodedBufferAndDumpToStream(
                     target_sp->GetArchitecture().GetAddressByteSize()));
   dump_options.SetSourceSize(sourceSize);
   dump_options.SetIsTruncated(is_truncated);
-  dump_options.SetNeedsZeroTermination(needs_zero_terminator);
-  if (needs_zero_terminator)
-    dump_options.SetBinaryZeroIsTerminator(true);
+  if (needs_zero_terminator) {
+    dump_options.SetZeroTermination(
+        StringPrinter::ZeroTermination::ZeroTerminate);
+  }
 
   GetPrintableElementType print_style = (elem_type == StringElementType::ASCII)
                                             ? GetPrintableElementType::ASCII

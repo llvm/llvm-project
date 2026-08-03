@@ -11,6 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_RECORDREPLAY_H
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -56,7 +57,8 @@ public:
     EpilogueSnapshot,
     Descriptor,
     Globals,
-    Program
+    Program,
+    IRImage
   };
 
   struct HandleTy {
@@ -79,8 +81,11 @@ protected:
   /// Whether a memory snapshot should be recorded a kernel execution.
   bool SaveOutput;
 
-  /// Whether a report should be emitted afther the recording.
+  /// Whether a report should be emitted after the recording.
   bool EmitReport;
+
+  /// The name of the file where to emit the record report.
+  std::string ReportFilename;
 
   /// Reference to the corresponding device.
   GenericDeviceTy &Device;
@@ -116,6 +121,10 @@ protected:
     /// information about the the kernel's replay, such as the snapshot file.
     KernelReplayOutcomeTy *ReplayOutcome = nullptr;
 
+    /// The begin and end time points of the kernel execution.
+    using ClockTy = std::chrono::steady_clock;
+    mutable std::chrono::time_point<ClockTy> BeginTime, EndTime;
+
     /// The number of occurrences during the execution.
     mutable size_t Occurrences = 0;
 
@@ -129,6 +138,17 @@ protected:
               NumTeams == Other.NumTeams && NumThreads == Other.NumThreads &&
               SharedMemorySize == Other.SharedMemorySize);
     }
+
+    /// Record the begin and ending of the kernel execution.
+    void recordBeginTime() const { BeginTime = ClockTy::now(); }
+    void recordEndTime() const { EndTime = ClockTy::now(); }
+
+    /// Get the kernel execution time in nanoseconds.
+    uint64_t getRecordedTimeNs() const {
+      using DurationNsTy = std::chrono::duration<uint64_t, std::nano>;
+      return std::chrono::duration_cast<DurationNsTy>(EndTime - BeginTime)
+          .count();
+    }
   };
 
   struct InstanceHasher {
@@ -141,13 +161,15 @@ protected:
 
   /// Tracker of record replay instances.
   std::unordered_set<InstanceTy, InstanceHasher> Instances;
+  SmallVector<const InstanceTy *> OrderedInstances;
   std::mutex InstancesLock;
 
 public:
   RecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr, bool SaveOutput,
-                 bool EmitReport, GenericDeviceTy &Device)
+                 bool EmitReport, StringRef ReportFilename,
+                 GenericDeviceTy &Device)
       : Status(Status), SaveOutput(SaveOutput), EmitReport(EmitReport),
-        Device(Device) {
+        ReportFilename(ReportFilename.str()), Device(Device) {
     if (OutputDirectoryStr == "")
       OutputDirectory = std::filesystem::current_path();
     else
@@ -210,6 +232,15 @@ private:
                    uint32_t NumThreads, uint32_t SharedMemorySize,
                    KernelReplayOutcomeTy *ReplayOutcome);
 
+  /// Unregister an instance once it has been replayed. Instances during
+  /// recording cannot be unregistered. Accessing the instance beyond this point
+  /// is invalid.
+  Error unregisterInstance(const InstanceTy &Instance);
+
+  /// Populate the replay outcome struct to forward some replay information.
+  void populateReplayOutcome(const InstanceTy &Instance,
+                             KernelReplayOutcomeTy &Outcome);
+
   /// Record the prologue data.
   virtual Error
   recordPrologueImpl(const GenericKernelTy &Kernel, const InstanceTy &Instance,
@@ -236,9 +267,9 @@ private:
 struct NativeRecordReplayTy : public RecordReplayTy {
   NativeRecordReplayTy(StatusTy Status, StringRef OutputDirectoryStr,
                        bool SaveOutput, bool EmitReport,
-                       GenericDeviceTy &Device)
+                       StringRef ReportFilename, GenericDeviceTy &Device)
       : RecordReplayTy(Status, OutputDirectoryStr, SaveOutput, EmitReport,
-                       Device) {}
+                       ReportFilename, Device) {}
 
 private:
   Error recordPrologueImpl(const GenericKernelTy &Kernel,
@@ -266,7 +297,8 @@ private:
   Error recordGlobals(StringRef Filename);
 
   /// Record the device image to a file.
-  Error recordImage(const GenericKernelTy &Kernel, StringRef Filename);
+  Error recordImage(const GenericKernelTy &Kernel, StringRef Filename,
+                    StringRef IRImageFilename);
 };
 
 } // namespace plugin

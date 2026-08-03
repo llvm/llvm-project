@@ -67,6 +67,8 @@ namespace {
 /// This is a simple analysis that implements a transfer function for constant
 /// operations.
 struct ConstantAnalysis : public DataFlowAnalysis {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ConstantAnalysis)
+
   using DataFlowAnalysis::DataFlowAnalysis;
 
   LogicalResult initialize(Operation *top) override {

@@ -156,7 +156,7 @@ public:
         ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
     if (!scratch_ts_sp)
       return lldb::ChildCacheState::eRefetch;
-    m_child_sp = CreateValueObjectFromData(
+    m_child_sp = CreateChildValueObjectFromData(
         "_userInfo", isw.GetAsData(process_sp->GetByteOrder()),
         m_backend.GetExecutionContextRef(),
         scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID));
@@ -164,7 +164,7 @@ public:
   }
 
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    static ConstString g_userInfo("_userInfo");
+    static constexpr llvm::StringLiteral g_userInfo("_userInfo");
     if (name == g_userInfo)
       return 0;
     return llvm::createStringErrorV("type has no child named '{0}'", name);

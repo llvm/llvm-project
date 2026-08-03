@@ -10,10 +10,10 @@ target triple = "x86_64-unknown-linux"
 !cfi.functions = !{!0, !2, !3, !4}
 !aliases = !{!5, !6}
 
-!0 = !{!"external_addrtaken", i8 0, !1}
+!0 = !{!"external_addrtaken", i8 0, i64 16594175687743574550, !1}
 !1 = !{i64 0, !"typeid1"}
-!2 = !{!"alias1", i8 0, !1}
-!3 = !{!"alias2", i8 0, !1}
-!4 = !{!"alias3", i8 0, !1}
+!2 = !{!"alias1", i8 0, i64 1062103744896965210, !1}
+!3 = !{!"alias2", i8 0, i64 2510616090736846890, !1}
+!4 = !{!"alias3", i8 0, i64 9766217518394409673, !1}
 !5 = !{!"external_addrtaken", !"alias1", !"alias2"}
 !6 = !{!"not_present", !"alias3"}

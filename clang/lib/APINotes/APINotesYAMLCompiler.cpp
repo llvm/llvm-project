@@ -18,11 +18,16 @@
 #include "clang/APINotes/Types.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
 #include <type_traits>
 #include <vector>
 
@@ -338,8 +343,15 @@ template <> struct MappingTraits<Class> {
 } // namespace llvm
 
 namespace {
+typedef std::vector<StringRef> WhereParamsSeq;
+
+struct FunctionWhere {
+  std::optional<WhereParamsSeq> Parameters;
+};
+
 struct Function {
   StringRef Name;
+  std::optional<FunctionWhere> Where;
   ParamsSeq Params;
   NullabilitySeq Nullability;
   std::optional<NullabilityKind> NullabilityOfRet;
@@ -351,6 +363,7 @@ struct Function {
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
   SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
+  bool UnsafeBufferUsage = false;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -360,9 +373,16 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
 
 namespace llvm {
 namespace yaml {
+template <> struct MappingTraits<FunctionWhere> {
+  static void mapping(IO &IO, FunctionWhere &W) {
+    IO.mapOptional("Parameters", W.Parameters);
+  }
+};
+
 template <> struct MappingTraits<Function> {
   static void mapping(IO &IO, Function &F) {
     IO.mapRequired("Name", F.Name);
+    IO.mapOptional("Where", F.Where);
     IO.mapOptional("Parameters", F.Params);
     IO.mapOptional("Nullability", F.Nullability);
     IO.mapOptional("NullabilityOfRet", F.NullabilityOfRet, std::nullopt);
@@ -376,6 +396,7 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
                    StringRef(""));
     IO.mapOptional("SwiftSafety", F.SafetyKind, SwiftSafetyKind::None);
+    IO.mapOptional("UnsafeBufferUsage", F.UnsafeBufferUsage, false);
   }
 };
 } // namespace yaml
@@ -772,6 +793,22 @@ bool clang::api_notes::parseAndDumpAPINotes(StringRef YI,
 namespace {
 using namespace api_notes;
 
+static std::string
+getFunctionSelectorKey(llvm::StringRef Name,
+                       llvm::ArrayRef<llvm::StringRef> Parameters) {
+  llvm::SmallString<64> Key;
+  llvm::raw_svector_ostream OS(Key);
+  auto AppendKeyPart = [&OS](llvm::StringRef Part) {
+    OS << Part.size() << ':' << Part;
+  };
+
+  AppendKeyPart(Name);
+  OS << ';';
+  for (llvm::StringRef Parameter : Parameters)
+    AppendKeyPart(Parameter);
+  return Key.str().str();
+}
+
 class YAMLConverter {
   const Module &M;
   APINotesWriter Writer;
@@ -1027,6 +1064,18 @@ public:
                          TheNamespace.Items, SwiftVersion);
   }
 
+  std::pair<bool, std::optional<llvm::ArrayRef<llvm::StringRef>>>
+  getWhereParameters(const Function &Function) {
+    if (!Function.Where)
+      return {true, std::nullopt};
+
+    if (!Function.Where->Parameters) {
+      emitError("'Where' requires 'Parameters'");
+      return {false, std::nullopt};
+    }
+    return {true, llvm::ArrayRef<llvm::StringRef>(*Function.Where->Parameters)};
+  }
+
   template <typename FuncOrMethodInfo>
   void convertFunction(const Function &Function, FuncOrMethodInfo &FI) {
     convertAvailability(Function.Availability, FI, Function.Name);
@@ -1046,6 +1095,7 @@ public:
     FI.ResultType = std::string(Function.ResultType);
     FI.SwiftReturnOwnership = std::string(Function.SwiftReturnOwnership);
     FI.setRetainCountConvention(Function.RetainCountConvention);
+    FI.UnsafeBufferUsage = Function.UnsafeBufferUsage;
   }
 
   void convertTagContext(std::optional<Context> ParentContext, const Tag &T,
@@ -1133,10 +1183,31 @@ public:
       Writer.addField(TagCtxID, Field.Name, FI, SwiftVersion);
     }
 
+    llvm::StringSet<> KnownMethodSelectors;
     for (const auto &CXXMethod : T.Methods) {
+      auto WhereParameters = getWhereParameters(CXXMethod);
+      if (!WhereParameters.first)
+        continue;
+
+      if (WhereParameters.second) {
+        if (!KnownMethodSelectors
+                 .insert(getFunctionSelectorKey(CXXMethod.Name,
+                                                *WhereParameters.second))
+                 .second) {
+          emitError(llvm::Twine("multiple API notes entries for C++ method '") +
+                    CXXMethod.Name + "' with Where.Parameters " +
+                    formatAPINotesParameterSelector(*WhereParameters.second));
+          continue;
+        }
+      }
+
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
-      Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereParameters.second,
+                            MI, SwiftVersion);
+      else
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
     }
 
     // Convert nested tags.
@@ -1205,10 +1276,29 @@ public:
     }
 
     // Write all global functions.
-    llvm::StringSet<> KnownFunctions;
+    llvm::StringSet<> KnownNameOnlyFunctions;
+    llvm::StringSet<> KnownFunctionSelectors;
     for (const auto &Function : TLItems.Functions) {
-      // Check for duplicate global functions.
-      if (!KnownFunctions.insert(Function.Name).second) {
+      auto WhereParameters = getWhereParameters(Function);
+      if (!WhereParameters.first)
+        continue;
+
+      if (WhereParameters.second) {
+        if (!KnownFunctionSelectors
+                 .insert(getFunctionSelectorKey(Function.Name,
+                                                *WhereParameters.second))
+                 .second) {
+          emitError(
+              llvm::Twine("multiple API notes entries for global function '") +
+              Function.Name + "' with Where.Parameters " +
+              formatAPINotesParameterSelector(*WhereParameters.second));
+          continue;
+        }
+      }
+
+      // Check for duplicate name-only global functions.
+      if (!WhereParameters.second &&
+          !KnownNameOnlyFunctions.insert(Function.Name).second) {
         emitError(llvm::Twine("multiple definitions of global function '") +
                   Function.Name + "'");
         continue;
@@ -1216,7 +1306,11 @@ public:
 
       GlobalFunctionInfo GFI;
       convertFunction(Function, GFI);
-      Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addGlobalFunction(Ctx, Function.Name, *WhereParameters.second,
+                                 GFI, SwiftVersion);
+      else
+        Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
     }
 
     // Write all enumerators.

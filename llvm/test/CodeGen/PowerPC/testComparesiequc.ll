@@ -100,16 +100,14 @@ define dso_local signext i32 @test_iequc_sext_z(i8 zeroext %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_iequc_sext_z:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    cntlzw r3, r3
-; CHECK-BE-NEXT:    srwi r3, r3, 5
-; CHECK-BE-NEXT:    neg r3, r3
+; CHECK-BE-NEXT:    addic r3, r3, -1
+; CHECK-BE-NEXT:    subfe r3, r3, r3
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_iequc_sext_z:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    cntlzw r3, r3
-; CHECK-LE-NEXT:    srwi r3, r3, 5
-; CHECK-LE-NEXT:    neg r3, r3
+; CHECK-LE-NEXT:    addic r3, r3, -1
+; CHECK-LE-NEXT:    subfe r3, r3, r3
 ; CHECK-LE-NEXT:    blr
 entry:
   %cmp = icmp eq i8 %a, 0
@@ -231,19 +229,17 @@ define dso_local void @test_iequc_sext_z_store(i8 zeroext %a) {
 ; CHECK-NEXT:    blr
 ; CHECK-BE-LABEL: test_iequc_sext_z_store:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    cntlzw r3, r3
+; CHECK-BE-NEXT:    addic r3, r3, -1
 ; CHECK-BE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-BE-NEXT:    srwi r3, r3, 5
-; CHECK-BE-NEXT:    neg r3, r3
+; CHECK-BE-NEXT:    subfe r3, r3, r3
 ; CHECK-BE-NEXT:    stb r3, glob@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-LE-LABEL: test_iequc_sext_z_store:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    cntlzw r3, r3
+; CHECK-LE-NEXT:    addic r3, r3, -1
 ; CHECK-LE-NEXT:    addis r4, r2, glob@toc@ha
-; CHECK-LE-NEXT:    srwi r3, r3, 5
-; CHECK-LE-NEXT:    neg r3, r3
+; CHECK-LE-NEXT:    subfe r3, r3, r3
 ; CHECK-LE-NEXT:    stb r3, glob@toc@l(r4)
 ; CHECK-LE-NEXT:    blr
 entry:

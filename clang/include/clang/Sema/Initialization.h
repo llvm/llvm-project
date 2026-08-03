@@ -979,7 +979,9 @@ public:
 
     /// Initialize an aggreagate with parenthesized list of values.
     /// This is a C++20 feature.
-    SK_ParenthesizedListInit
+    SK_ParenthesizedListInit,
+
+    SK_HLSLBufferConversion
   };
 
   /// A single step in the initialization sequence.
@@ -1163,7 +1165,7 @@ public:
     // A designated initializer was provided for a non-aggregate type.
     FK_DesignatedInitForNonAggregate,
 
-    /// HLSL intialization list flattening failed.
+    /// HLSL initialization list flattening failed.
     FK_HLSLInitListFlatteningFailed,
   };
 
@@ -1433,6 +1435,8 @@ public:
   /// Add steps to unwrap a initializer list for a reference around a
   /// single element and rewrap it at the end.
   void RewrapReferenceInitList(QualType T, InitListExpr *Syntactic);
+
+  void AddHLSLBufferConversionStep(QualType T);
 
   /// Note that this initialization sequence failed.
   void SetFailed(FailureKind Failure) {

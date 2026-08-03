@@ -26,7 +26,7 @@ define void @foo(ptr %h) !dbg !4 {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> splat (i32 3), <4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true)), !dbg [[DBG24]]
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1), !dbg [[DBG27:![0-9]+]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP5]], splat (i64 5), !dbg [[DBG28:![0-9]+]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0, !dbg [[DBG29:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i64 0, !dbg [[DBG29:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[VECTOR_LATCH]], label %[[FOR_COND5_PREHEADER1]], !dbg [[DBG29]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4, !dbg [[DBG22]]
@@ -131,7 +131,7 @@ exit:
 !30 = !DILocation(line: 10, column: 24, scope: !16)
 !31 = distinct !{!31, !21, !32, !33}
 !32 = !DILocation(line: 13, column: 13, scope: !12)
-!33 = !{!"llvm.loop.vectorize.enable", i1 true}
+!33 = !{!"llvm.loop.vectorize.enable"}
 !34 = !DILocation(line: 10, column: 5, scope: !12)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)

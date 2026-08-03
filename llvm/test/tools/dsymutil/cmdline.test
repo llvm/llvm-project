@@ -9,6 +9,7 @@ CHECK: -accelerator
 CHECK: -allow <path>
 CHECK: -arch <arch>
 CHECK: -build-variant-suffix <suffix=buildvariant>
+CHECK: -codesign <identity>
 CHECK: -disallow <path>
 CHECK: -dump-debug-map
 CHECK: -D <path>

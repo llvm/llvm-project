@@ -28,6 +28,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
@@ -160,6 +161,13 @@ public:
         AlignBoundary != Align(1) && AlignBranchType != X86::AlignBranchNone;
     AllowEnhancedRelaxation =
         AllowAutoPadding && TargetPrefixMax != 0 && X86PadForBranchAlign;
+  }
+
+  void reset() override {
+    PrevInst = MCInst();
+    PrevInstOpcode = 0;
+    PendingBA = nullptr;
+    PrevInstPosition = {};
   }
 
   void emitInstructionBegin(MCObjectStreamer &OS, const MCInst &Inst,
@@ -1306,6 +1314,9 @@ public:
   /// for the CFI instructions.
   uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
+    if (Ctxt->emitDwarfUnwindInfo() == EmitDwarfUnwindType::DwarfOnly)
+      return CU::UNWIND_MODE_DWARF;
+
     // Signal frames cannot be encoded in compact unwind.
     if (FI->IsSignalFrame)
       return CU::UNWIND_MODE_DWARF;

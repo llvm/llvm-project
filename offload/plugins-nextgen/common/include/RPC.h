@@ -69,6 +69,9 @@ public:
   /// memory associated with the k
   llvm::Error deinitDevice(plugin::GenericDeviceTy &Device);
 
+  /// Drain any pending requests the device pushed without freeing the server.
+  void flushDevice(plugin::GenericDeviceTy &Device);
+
   /// Register a custom callback for the RPC server to manage.
   void registerCallback(RPCServerCallbackTy FnPtr);
 

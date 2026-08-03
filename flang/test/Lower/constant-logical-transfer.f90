@@ -5,7 +5,7 @@ subroutine test_transfer_constant(l4, l8)
   logical(4) :: l4
   logical(8) :: l8
   l4 = transfer(3, .true._4)
-  l8 = transfer(7, .true._8)
+  l8 = transfer(7_8, .true._8)
 end subroutine
 
 module constant_logical
@@ -20,4 +20,4 @@ end module
 ! CHECK:          %[[BITCAST_1:.*]] = fir.bitcast %[[CONSTANT_1]] : (i64) -> !fir.logical<8>
 ! CHECK:          hlfir.assign %[[BITCAST_1]] to %{{.*}} : !fir.logical<8>, !fir.ref<!fir.logical<8>>
 
-! CHECK:        fir.global @_QMconstant_logicalEvar(dense<[1, 3, 0]> : tensor<3xi32>) : !fir.array<3x!fir.logical<4>>
+! CHECK:        fir.global @_QMconstant_logicalEvar(dense<[1, 3, 0]> : tensor<3xi32>) {alignment = 64 : i64} : !fir.array<3x!fir.logical<4>>

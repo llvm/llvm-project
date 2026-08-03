@@ -36,7 +36,8 @@ define void @foo(i32 %n) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_LATCH]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [8 x i32], ptr @arr2, i64 0, <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i64> [[VEC_IND]] to <4 x i32>
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP1]], <4 x ptr> align 4 [[TMP0]], <4 x i1> splat (i1 true))
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label %[[FOR_BODY31:.*]]
 ; CHECK:       [[FOR_BODY31]]:
@@ -45,7 +46,7 @@ define void @foo(i32 %n) {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP2]], <4 x ptr> align 4 [[TMP3]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i64> [[TMP4]], splat (i64 8)
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[FOR_BODY31]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -66,7 +67,7 @@ define void @foo(i32 %n) {
 ; AVX-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; AVX-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; AVX:       [[VECTOR_BODY]]:
-; AVX-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, <8 x ptr> align 4 getelementptr inbounds ([8 x i32], ptr @arr2, <8 x i64> zeroinitializer, <8 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>), <8 x i1> splat (i1 true))
+; AVX-NEXT:    store <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, ptr @arr2, align 4
 ; AVX-NEXT:    [[TMP2:%.*]] = add nsw <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, [[BROADCAST_SPLAT]]
 ; AVX-NEXT:    br label %[[FOR_BODY31:.*]]
 ; AVX:       [[FOR_BODY31]]:
@@ -75,7 +76,7 @@ define void @foo(i32 %n) {
 ; AVX-NEXT:    call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> [[TMP2]], <8 x ptr> align 4 [[TMP3]], <8 x i1> splat (i1 true))
 ; AVX-NEXT:    [[TMP4]] = add nuw nsw <8 x i64> [[VEC_PHI]], splat (i64 1)
 ; AVX-NEXT:    [[TMP5:%.*]] = icmp eq <8 x i64> [[TMP4]], splat (i64 8)
-; AVX-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP5]], i32 0
+; AVX-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP5]], i64 0
 ; AVX-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH:.*]], label %[[FOR_BODY31]], !llvm.loop [[LOOP0:![0-9]+]]
 ; AVX:       [[VECTOR_LATCH]]:
 ; AVX-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -114,4 +115,4 @@ exit:
 }
 
 !1 = distinct !{!1, !2}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}

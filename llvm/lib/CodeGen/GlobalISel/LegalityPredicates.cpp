@@ -43,7 +43,7 @@ LegalityPredicate LegalityPredicates::typePairInSet(
     unsigned TypeIdx0, unsigned TypeIdx1,
     std::initializer_list<std::pair<LLT, LLT>> TypesInit) {
   SmallVector<std::pair<LLT, LLT>, 4> Types = TypesInit;
-  return [=](const LegalityQuery &Query) {
+  return [=, Types = std::move(Types)](const LegalityQuery &Query) {
     std::pair<LLT, LLT> Match = {Query.Types[TypeIdx0], Query.Types[TypeIdx1]};
     return llvm::is_contained(Types, Match);
   };
@@ -53,7 +53,7 @@ LegalityPredicate LegalityPredicates::typeTupleInSet(
     unsigned TypeIdx0, unsigned TypeIdx1, unsigned TypeIdx2,
     std::initializer_list<std::tuple<LLT, LLT, LLT>> TypesInit) {
   SmallVector<std::tuple<LLT, LLT, LLT>, 4> Types = TypesInit;
-  return [=](const LegalityQuery &Query) {
+  return [=, Types = std::move(Types)](const LegalityQuery &Query) {
     std::tuple<LLT, LLT, LLT> Match = {
         Query.Types[TypeIdx0], Query.Types[TypeIdx1], Query.Types[TypeIdx2]};
     return llvm::is_contained(Types, Match);
@@ -247,5 +247,26 @@ LegalityPredicate LegalityPredicates::atomicOrderingAtLeastOrStrongerThan(
     unsigned MMOIdx, AtomicOrdering Ordering) {
   return [=](const LegalityQuery &Query) {
     return isAtLeastOrStrongerThan(Query.MMODescrs[MMOIdx].Ordering, Ordering);
+  };
+}
+
+LegalityPredicate LegalityPredicates::immIs(unsigned ImmIdx, int64_t Imm) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Immediates[ImmIdx] == Imm;
+  };
+}
+
+LegalityPredicate
+LegalityPredicates::immInSet(unsigned ImmIdx,
+                             std::initializer_list<int64_t> ImmsInit) {
+  SmallVector<int64_t, 4> Imms = ImmsInit;
+  return [=](const LegalityQuery &Query) {
+    return llvm::is_contained(Imms, Query.Immediates[ImmIdx]);
+  };
+}
+
+LegalityPredicate LegalityPredicates::immIsNot(unsigned ImmIdx, int64_t Imm) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Immediates[ImmIdx] != Imm;
   };
 }

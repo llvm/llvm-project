@@ -124,10 +124,6 @@ template <>
 struct DenseMapInfo<std::pair<const MCSymbol *, PPCMCExpr::Specifier>> {
   using TOCKey = std::pair<const MCSymbol *, PPCMCExpr::Specifier>;
 
-  static inline TOCKey getEmptyKey() { return {nullptr, PPC::S_None}; }
-  static inline TOCKey getTombstoneKey() {
-    return {(const MCSymbol *)1, PPC::S_None};
-  }
   static unsigned getHashValue(const TOCKey &PairVal) {
     return detail::combineHashValue(
         DenseMapInfo<const MCSymbol *>::getHashValue(PairVal.first),
@@ -283,7 +279,7 @@ public:
 
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : PPCAsmPrinter(TM, std::move(Streamer), ID) {
-    if (MAI->isLittleEndian())
+    if (MAI.isLittleEndian())
       report_fatal_error(
           "cannot create AIX PPC Assembly Printer for a little-endian target");
   }
@@ -952,10 +948,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(!Subtarget->isAIXABI() &&
            "AIX does not support patchable function entry!");
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     if (!Num)
       return;
     emitNops(Num);
@@ -1775,25 +1768,32 @@ PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
 }
 
 void PPCLinuxAsmPrinter::emitGNUAttributes(Module &M) {
-  // Emit float ABI into GNU attribute
-  Metadata *MD = M.getModuleFlag("float-abi");
-  MDString *FloatABI = dyn_cast_or_null<MDString>(MD);
-  if (!FloatABI)
+  // Emit long double format into GNU attribute
+  MDString *LongDoubleType =
+      cast_or_null<MDString>(M.getModuleFlag("long-double-type"));
+  if (!LongDoubleType)
     return;
-  StringRef flt = FloatABI->getString();
+
   // TODO: Support emitting soft-fp and hard double/single attributes.
-  if (flt == "doubledouble")
+  switch (*parseLongDoubleFormat(LongDoubleType->getString())) {
+  case LongDoubleFormat::PPCDoubleDouble:
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_IBM128);
-  else if (flt == "ieeequad")
+    break;
+  case LongDoubleFormat::IEEEquad:
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_IEEE128);
-  else if (flt == "ieeedouble")
+    break;
+  case LongDoubleFormat::IEEEdouble:
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_64);
+    break;
+  default:
+    break;
+  }
 }
 
 void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -1817,12 +1817,9 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // of instructions change.
     // XRAY is only supported on PPC Linux little endian.
     const Function &F = MF->getFunction();
-    unsigned Num = 0;
-    (void)F.getFnAttribute("patchable-function-entry")
-        .getValueAsString()
-        .getAsInteger(10, Num);
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
 
-    if (!MAI->isLittleEndian() || Num)
+    if (!MAI.isLittleEndian() || Num)
       break;
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     MCSymbol *EndOfSled = OutContext.createTempSymbol();
@@ -1911,7 +1908,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     //
     // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
     // of instructions change.
-    OutStreamer->emitCodeAlignment(Align(8), &getSubtargetInfo());
+    OutStreamer->emitCodeAlignment(Align(8), getSubtargetInfo());
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     OutStreamer->emitLabel(BeginOfSled);
     EmitToStreamer(*OutStreamer, RetInst);
@@ -2064,7 +2061,7 @@ void PPCLinuxAsmPrinter::emitEndOfAsmFile(Module &M) {
   if (static_cast<const PPCTargetMachine &>(TM).hasGlibcHWCAPAccess())
     OutStreamer->emitSymbolValue(
         GetExternalSymbolSymbol("__parse_hwcap_and_convert_at_platform"),
-        MAI->getCodePointerSize());
+        MAI.getCodePointerSize());
   emitGNUAttributes(M);
 
   if (!TOC.empty()) {
@@ -2286,13 +2283,13 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
     // TODO: "internal" Visibility needs to go here.
     case GlobalValue::DefaultVisibility:
       if (GV->hasDLLExportStorageClass())
-        VisibilityAttr = MAI->getExportedVisibilityAttr();
+        VisibilityAttr = MAI.getExportedVisibilityAttr();
       break;
     case GlobalValue::HiddenVisibility:
-      VisibilityAttr = MAI->getHiddenVisibilityAttr();
+      VisibilityAttr = MAI.getHiddenVisibilityAttr();
       break;
     case GlobalValue::ProtectedVisibility:
-      VisibilityAttr = MAI->getProtectedVisibilityAttr();
+      VisibilityAttr = MAI.getProtectedVisibilityAttr();
       break;
     }
   }
@@ -3241,7 +3238,11 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::BL8:
   case PPC::BL:
   case PPC::BL8_NOP:
-  case PPC::BL_NOP: {
+  case PPC::BL_NOP:
+  case PPC::BL_LWZinto_toc:
+  case PPC::BL_LWZinto_toc_RM:
+  case PPC::BL8_LDinto_toc:
+  case PPC::BL8_LDinto_toc_RM: {
     const MachineOperand &MO = MI->getOperand(0);
     if (MO.isSymbol()) {
       auto *S = static_cast<MCSymbolXCOFF *>(

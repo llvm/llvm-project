@@ -13,6 +13,7 @@ from lldbsuite.test import lldbtest
 import dummy_scripted_process
 
 
+@skipIfTargetDoesNotSupportThreads()
 class ScriptedProcesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -157,7 +158,11 @@ class ScriptedProcesTestCase(TestBase):
         buff = process.ReadMemory(addr, 4, error)
         self.assertEqual(buff, None)
         self.assertTrue(error.Fail())
-        self.assertEqual(error.GetCString(), "This is an invalid scripted process!")
+        self.assertEqual(
+            error.GetCString(),
+            "Failed to read memory from scripted process at 0x500000000: "
+            "This is an invalid scripted process!",
+        )
 
         with open(log_file, "r") as f:
             log = f.read()

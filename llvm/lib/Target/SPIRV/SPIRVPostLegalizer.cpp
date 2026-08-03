@@ -49,7 +49,12 @@ static SPIRVTypeInst deduceIntTypeFromResult(Register ResVReg,
                                              MachineIRBuilder &MIB,
                                              SPIRVGlobalRegistry *GR) {
   const LLT &Ty = MIB.getMRI()->getType(ResVReg);
-  return GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
+  SPIRVTypeInst ScalarType =
+      GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
+  if (Ty.isVector())
+    return GR->getOrCreateSPIRVVectorType(ScalarType, Ty.getNumElements(), MIB,
+                                          false);
+  return ScalarType;
 }
 
 static SPIRVTypeInst deduceTypeFromSingleOperand(MachineInstr *I,
@@ -277,6 +282,7 @@ static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_TRUNC:
     return deduceIntTypeFromResult(ResVReg, MIB, GR);
   case TargetOpcode::G_BUILD_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, I->getNumOperands());
@@ -317,7 +323,7 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
   SPIRVTypeInst ScalarType = nullptr;
   if (SPIRVTypeInst DefType = GR->getSPIRVTypeForVReg(SrcReg)) {
     assert(DefType->getOpcode() == SPIRV::OpTypeVector);
-    ScalarType = GR->getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
+    ScalarType = GR->getScalarOrVectorComponentType(DefType);
   }
 
   if (!ScalarType) {

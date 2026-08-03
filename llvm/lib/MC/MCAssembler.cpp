@@ -714,6 +714,19 @@ void MCAssembler::layout() {
   // helps check whether a PC-relative fixup is fully resolved.
   this->HasFinalLayout = true;
 
+  // Stores the current .reloc group for each fragment.
+  //
+  // A .reloc group is a consecutive sequence of .reloc relocations that have
+  // an offset <= the first relocation's offset. A relocation with offset > the
+  // first relocation's offset starts a new group. Relocation groups are
+  // inserted in offset order using the offset of the first relocation, but the
+  // source ordering of relocations within the group is preserved.
+  DenseMap<MCFragment *, std::vector<MCFixup>> RelocGroups;
+  auto DrainRelocGroup = [](MCFragment *F, std::vector<MCFixup> &Group) {
+    F->insertRelocFixups(Group);
+    Group.clear();
+  };
+
   // Resolve .reloc offsets and add fixups.
   for (auto &PF : relocDirectives) {
     MCValue Res;
@@ -732,8 +745,15 @@ void MCAssembler::layout() {
     }
 
     uint64_t Offset = Sym ? Sym->getOffset() + Res.getConstant() : 0;
-    F->addFixup(MCFixup::create(Offset, PF.Expr, PF.Kind));
+    auto Fixup = MCFixup::create(Offset, PF.Expr, PF.Kind);
+    auto &Group = RelocGroups[F];
+    if (!Group.empty() && Group[0].getOffset() < Offset)
+      DrainRelocGroup(F, Group);
+    Group.push_back(Fixup);
   }
+
+  for (auto &[F, Group] : RelocGroups)
+    DrainRelocGroup(F, Group);
 
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {

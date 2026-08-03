@@ -255,10 +255,12 @@ lldb_private::Status PlatformPOSIX::GetFile(
         offset += n_read;
       }
     }
-    // Ignore the close error of src.
-    if (fd_src != UINT64_MAX)
-      CloseFile(fd_src, error);
-    // And close the dst file descriptot.
+    if (fd_src != UINT64_MAX) {
+      // Ignore the close error of src.
+      Status close_error;
+      CloseFile(fd_src, close_error);
+    }
+    // And close the dst file descriptor.
     if (fd_dst != UINT64_MAX &&
         !FileCache::GetInstance().CloseFile(fd_dst, error)) {
       if (!error.Fail())
@@ -962,7 +964,7 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
 Status PlatformPOSIX::UnloadImage(lldb_private::Process *process,
                                   uint32_t image_token) {
   const addr_t image_addr = process->GetImagePtrFromToken(image_token);
-  if (image_addr == LLDB_INVALID_IMAGE_TOKEN)
+  if (image_addr == LLDB_INVALID_ADDRESS)
     return Status::FromErrorString("Invalid image token");
 
   StreamString expr;

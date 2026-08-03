@@ -5,7 +5,7 @@
 ! device constructs, such as declare target with 'to' clause and no device_type.
 
 subroutine f
-  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopen-mp-usage]
+  !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to(f)
   !$omp declare target enter(f)
 end subroutine f
@@ -13,6 +13,7 @@ end subroutine f
 subroutine g
   !ERROR: REQUIRES directive with 'DYNAMIC_ALLOCATORS' clause found lexically after device construct
   !$omp requires dynamic_allocators
+  !WARNING: REVERSE_OFFLOAD clause is not supported and will be ignored
   !ERROR: REQUIRES directive with 'REVERSE_OFFLOAD' clause found lexically after device construct
   !$omp requires reverse_offload
   !ERROR: REQUIRES directive with 'UNIFIED_ADDRESS' clause found lexically after device construct

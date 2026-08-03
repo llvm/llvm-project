@@ -1,9 +1,13 @@
+import datetime
 import http.server
+import ipaddress
 import os
 import shutil
 import socketserver
+import ssl
 import sys
 import threading
+import time
 from functools import partial
 
 import lldb
@@ -118,6 +122,107 @@ class HTTPServer:
             self._thread.join()
 
 
+class HTTPSServer:
+    """
+    Context Manager to serve a local directory tree via HTTPS.
+    """
+
+    class ErrorAwareTCPServer(socketserver.ThreadingTCPServer):
+        """TCP layer that will suppress errors of the given type."""
+
+        def __init__(self, address, handler, err):
+            self.err = err
+            super().__init__(address, handler)
+
+        def handle_error(self, request, client_address):
+            if isinstance(sys.exc_info()[1], self.err):
+                return
+            super().handle_error(request, client_address)
+
+    def __init__(self, dir=None, handler=None, cert=None):
+        if handler is None:
+            handler = partial(http.server.SimpleHTTPRequestHandler, directory=dir)
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(cert.file, cert.key_file)
+        address = ("localhost", 0)  # auto-select free port
+        self._server = self.ErrorAwareTCPServer(address, handler, ssl.SSLError)
+        self._server.socket = ctx.wrap_socket(self._server.socket, server_side=True)
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+
+    def __enter__(self):
+        self._thread.start()
+        host, port = self._server.server_address
+        return f"https://{host}:{port}"
+
+    def __exit__(self, *exc_info):
+        if self._server:
+            self._server.shutdown()
+            self._server.server_close()
+        if self._thread:
+            self._thread.join()
+
+
+class SelfSignedCert:
+    """
+    Self-signed cert/key pair for localhost.
+    """
+
+    def __init__(self, tmpdir):
+        from cryptography import x509
+        from cryptography.x509.oid import NameOID
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "localhost")])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now)
+            .not_valid_after(now + datetime.timedelta(days=1))
+            .add_extension(
+                x509.SubjectAlternativeName(
+                    [
+                        x509.DNSName("localhost"),
+                        x509.IPAddress(ipaddress.IPv4Address("127.0.0.1")),
+                    ]
+                ),
+                critical=False,
+            )
+            .sign(key, hashes.SHA256())
+        )
+        os.makedirs(tmpdir, exist_ok=False)
+        self.key_file = os.path.join(tmpdir, "server.key")
+        self.file = os.path.join(tmpdir, "server.crt")
+        with open(self.key_file, "wb") as f:
+            f.write(
+                key.private_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PrivateFormat.TraditionalOpenSSL,
+                    serialization.NoEncryption(),
+                )
+            )
+        with open(self.file, "wb") as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+        self.fingerprint = cert.fingerprint(hashes.SHA256()).hex()
+
+
+class RedirectHandler(http.server.BaseHTTPRequestHandler):
+    base_url = None
+
+    def do_GET(self):
+        self.send_response(301)
+        self.send_header("Location", self.base_url + self.path)
+        self.end_headers()
+
+    def log_message(self, *args):
+        pass  # suppress request logs
+
+
 class RequestCounter(http.server.SimpleHTTPRequestHandler):
     requests = 0  # class-level so all instances share one counter
 
@@ -127,6 +232,23 @@ class RequestCounter(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         RequestCounter.requests += 1
         super().do_GET()
+
+
+class SlowHTTPHandler(http.server.BaseHTTPRequestHandler):
+    """HTTP request handler that delays responses to simulate a slow server."""
+
+    delay = 2  # seconds to sleep before responding; set per test
+
+    def do_GET(self):
+        try:
+            time.sleep(self.delay)
+            self.send_response(200)
+            self.end_headers()
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # client disconnected after timeout, as expected
+
+    def log_message(self, *args):
+        pass  # suppress server-side output
 
 
 class SymStoreTests(TestBase):
@@ -200,8 +322,6 @@ class SymStoreTests(TestBase):
                     warnings = err_file.read().decode()
                 self.assertEqual(warnings, "")
 
-    # TODO: Add test coverage for common HTTPS security scenarios, e.g. self-signed
-    # certs, non-HTTPS redirects, etc.
     def test_http(self):
         """
         Check that breakpoint resolves with remote SymStore.
@@ -323,3 +443,81 @@ class SymStoreTests(TestBase):
                 with NtSymbolPath(dir):
                     self.try_breakpoint(exe, should_have_loc=True)
             self.assertEqual(RequestCounter.requests, 0)
+
+    def test_http_timeout(self):
+        """
+        Check that a warning is emitted and no symbol is found when the server
+        takes longer to respond than the configured timeout.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as dir:
+            SlowHTTPHandler.delay = 5  # seconds; exceeds the 1s timeout below
+            self.runCmd("settings set plugin.symbol-locator.symstore.timeout 1")
+            with HTTPServer(dir, SlowHTTPHandler) as url:
+                self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {url}")
+                warnings = ""
+                with open(self.getBuildArtifact("stderr.txt"), "w+b") as err_file:
+                    self.dbg.SetErrorFileHandle(err_file, False)
+                    self.try_breakpoint(exe, should_have_loc=False)
+                    self.dbg.SetErrorFileHandle(sys.stderr, False)
+                    err_file.seek(0)
+                    warnings = err_file.read().decode()
+                self.assertIn("failed to download", warnings)
+
+    @skipUnlessPackageAvailable("cryptography")
+    def test_https(self):
+        """
+        Check that breakpoint resolves with remote SymStore via HTTPS.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as symstore_dir:
+            cert = SelfSignedCert(self.getBuildArtifact("cert"))
+            with HTTPSServer(dir=symstore_dir, cert=cert) as https_url:
+                # We accept only the self-signed certificate with this fingerprint
+                self.runCmd(
+                    f"settings set plugin.symbol-locator.symstore.tls-cert-fingerprint {cert.fingerprint}"
+                )
+                self.runCmd(
+                    f"settings set plugin.symbol-locator.symstore.urls {https_url}"
+                )
+                self.try_breakpoint(exe, should_have_loc=True)
+
+    @skipUnlessPackageAvailable("cryptography")
+    def test_https_reject_selfsigned_cert(self):
+        """
+        Check that LLDB rejects an HTTPS server with an untrusted self-signed cert.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as symstore_dir:
+            cert = SelfSignedCert(self.getBuildArtifact("cert"))
+            with HTTPSServer(dir=symstore_dir, cert=cert) as https_url:
+                # No fingerprint set
+                self.runCmd(
+                    f"settings set plugin.symbol-locator.symstore.urls {https_url}"
+                )
+                self.try_breakpoint(exe, should_have_loc=False)
+                # Incorrect fingerprint set
+                bogus = "DEADBEEFCAFEBABE"
+                self.runCmd(
+                    f"settings set plugin.symbol-locator.symstore.tls-cert-fingerprint {bogus}{bogus}{bogus}{bogus}"
+                )
+                self.try_breakpoint(exe, should_have_loc=False)
+
+    @skipUnlessPackageAvailable("cryptography")
+    def test_https_reject_redirect_http(self):
+        """
+        Check that LLDB does not retrieve symbols from servers that redirect with security downgrades.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as symstore_dir:
+            with HTTPServer(symstore_dir) as http_url:
+                RedirectHandler.base_url = http_url
+                cert = SelfSignedCert(self.getBuildArtifact("cert"))
+                with HTTPSServer(handler=RedirectHandler, cert=cert) as https_url:
+                    self.runCmd(
+                        f"settings set plugin.symbol-locator.symstore.urls {https_url}"
+                    )
+                    self.runCmd(
+                        f"settings set plugin.symbol-locator.symstore.tls-cert-fingerprint {cert.fingerprint}"
+                    )
+                    self.try_breakpoint(exe, should_have_loc=False)
