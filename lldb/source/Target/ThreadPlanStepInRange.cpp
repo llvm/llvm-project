@@ -252,13 +252,13 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
           bytes_to_skip = sc.symbol->GetPrologueByteSize();
         }
 
-        // The prologue has yet to run only if the pc is inside it. A function's
-        // entry point need not be its first address, so a pc past that address
-        // does not mean the prologue has already run.
+        // A function's entry point need not be its first address, so a pc past
+        // the entry point can still be inside the prologue. What says the
+        // prologue has yet to run is the pc being below its end.
         if (bytes_to_skip != 0) {
-          const lldb::addr_t func_start =
-              func_start_address.GetLoadAddress(&GetTarget());
-          if (curr_addr < func_start || curr_addr >= func_start + bytes_to_skip)
+          const lldb::addr_t prologue_end =
+              func_start_address.GetLoadAddress(&GetTarget()) + bytes_to_skip;
+          if (curr_addr >= prologue_end)
             bytes_to_skip = 0;
         }
 
