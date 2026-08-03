@@ -1894,10 +1894,10 @@ namespace AMDGPU {
   LLVM_READONLY
   int32_t getMFMAEarlyClobberOp(uint32_t Opcode);
 
-  /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
-  /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
+  /// \returns Version of an instruction which uses AGPRs for coupled operands
+  /// given an \p Opcode which uses VGPRs for coupled operands.
   LLVM_READONLY
-  int32_t getMFMASrcCVDstAGPROp(uint32_t Opcode);
+  int32_t getAGPRFormOp(uint32_t Opcode);
 
   /// \returns the VGPR (vgprcd) form of an MFMA that uses AGPRs for srcC/vdst,
   /// or -1. Lets an accumulator be pinned into VGPRs with AGPR inputs.

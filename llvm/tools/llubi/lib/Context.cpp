@@ -1054,7 +1054,8 @@ Context::computeGEP(GEPOperator &GEP,
       unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       // Element offset is in bytes.
-      ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx)),
+      ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx),
+                              /*isSigned=*/false, /*implicitTrunc=*/true),
                         APInt(IndexBitWidth, 1));
       continue;
     }
