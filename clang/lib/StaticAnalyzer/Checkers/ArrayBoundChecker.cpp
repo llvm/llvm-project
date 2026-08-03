@@ -262,8 +262,8 @@ public:
 /// then the byte offsets are `arg * 4` and `(arg + 10) * 4`, which are not
 /// sub-expressions of each other (but `getSimplifiedOffsets` is smart enough
 /// to detect this out of bounds access).
-static bool providesInformationAboutInteresting(SVal SV,
-                                                PathSensitiveBugReport &BR) {
+static bool isDeterminedByInterestingSymbol(SVal SV,
+                                            PathSensitiveBugReport &BR) {
   SymbolRef Sym = SV.getAsSymbol();
   if (!Sym)
     return false;
@@ -575,9 +575,9 @@ static std::string getAssumptionNote(bounds::CheckResult Res,
                                      PathSensitiveBugReport &BR,
                                      StringRef RegName, SizeUnit SU) {
   bool ShouldReportNonNegative = Res.mayUnderflow();
-  if (!providesInformationAboutInteresting(Res.getOffset(), BR)) {
+  if (!isDeterminedByInterestingSymbol(Res.getOffset(), BR)) {
     std::optional<NonLoc> E = Res.getExtentIfMayOverflow();
-    if (E && providesInformationAboutInteresting(*E, BR)) {
+    if (E && isDeterminedByInterestingSymbol(*E, BR)) {
       // Even if the byte offset isn't interesting (e.g. it's a constant value),
       // the assumption can still be interesting if it provides information
       // about an interesting symbolic upper bound.
