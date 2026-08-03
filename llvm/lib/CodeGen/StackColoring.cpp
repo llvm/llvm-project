@@ -38,7 +38,6 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
@@ -526,7 +525,6 @@ INITIALIZE_PASS_END(StackColoringLegacy, DEBUG_TYPE,
 
 void StackColoringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<SlotIndexesWrapperPass>();
-  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -1196,11 +1194,8 @@ bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
   StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
-  if (SC.run(MF)) {
-    auto PA = getMachineFunctionPassPreservedAnalyses();
-    PA.preserve<MachineRegisterClassAnalysis>();
-    return PA;
-  }
+  if (SC.run(MF))
+    return getMachineFunctionPassPreservedAnalyses();
   return PreservedAnalyses::all();
 }
 

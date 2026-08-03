@@ -31,7 +31,6 @@
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -57,12 +56,6 @@ public:
 
   StringRef getPassName() const override {
     return "RISC-V Vector Peephole Optimization";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
   }
 
 private:

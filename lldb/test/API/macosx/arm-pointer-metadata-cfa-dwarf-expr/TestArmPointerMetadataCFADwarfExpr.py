@@ -4,7 +4,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessDarwin
+@requireDarwin
 @skipIf(archs=no_match(["arm64"]))
 class TestArmPointerMetadataStripping(TestBase):
     def test(self):
