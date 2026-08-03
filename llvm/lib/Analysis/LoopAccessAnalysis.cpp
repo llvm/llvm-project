@@ -1938,8 +1938,9 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // cause any slowdowns.
   const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
   // Maximum vector factor.
+  // TODO: This "8" doesn't make any sense:
   uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 = std::min<uint64_t>(
-      VectorizerParams::MaxVectorWidth, MaxStoreLoadForwardSafeNumElements);
+      VectorizerParams::MaxVectorWidth, MaxStoreLoadForwardSafeNumElements * 8);
 
   // Compute the smallest VF at which the store and load would be misaligned.
   for (uint64_t VF = 2; VF <= MaxVFWithoutSLForwardIssuesPowerOf2; VF *= 2) {
@@ -1961,7 +1962,7 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
 
   if (CommonStride &&
       MaxVFWithoutSLForwardIssuesPowerOf2 <
-          MaxStoreLoadForwardSafeNumElements &&
+          MaxStoreLoadForwardSafeNumElements * 8 &&
       MaxVFWithoutSLForwardIssuesPowerOf2 != VectorizerParams::MaxVectorWidth) {
     uint64_t MaxVF = bit_floor(MaxVFWithoutSLForwardIssuesPowerOf2 *
                                TypeByteSize / CommonStride);

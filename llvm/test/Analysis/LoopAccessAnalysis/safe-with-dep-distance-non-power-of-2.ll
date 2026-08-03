@@ -269,7 +269,7 @@ define void @two_store_load_forward_deps(ptr %A, ptr %B) {
 ; CHECK-NEXT:            %vb = load i32, ptr %b.ld, align 4 ->
 ; CHECK-NEXT:            store i32 %vb, ptr %b.st, align 4
 ; CHECK-EMPTY:
-; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
+; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %va = load i32, ptr %a.ld, align 4 ->
 ; CHECK-NEXT:            store i32 %va, ptr %a.st, align 4
 ; CHECK-EMPTY:
