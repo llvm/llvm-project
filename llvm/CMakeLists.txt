@@ -1231,13 +1231,13 @@ set(LLVM_MLGO_MODELS "" CACHE STRING "List of MLGO models")
 set(LLVM_MLGO_MLIR_OPT "mlir-opt" CACHE STRING "Path or system binary name for mlir-opt")
 set(LLVM_MLGO_MLIR_TRANSLATE "mlir-translate" CACHE STRING "Path or system binary name for mlir-translate")
 
-set(LLVM_HAVE_EMITC_COMPILE OFF CACHE BOOL "MLGO models to be compiled with EmitC are available")
+set(LLVM_HAVE_EMITC_LOWERING OFF)
 if (NOT LLVM_MLGO_MODELS STREQUAL "")
-  set(LLVM_HAVE_EMITC_COMPILE ON CACHE BOOL "MLGO models to be compiled with EmitC are available" FORCE)
+  set(LLVM_HAVE_EMITC_LOWERING ON)
 endif()
 
-if (LLVM_HAVE_EMITC_COMPILE AND LLVM_HAVE_TFLITE)
-  message(FATAL_ERROR "Only one of LLVM_HAVE_TFLITE and LLVM_HAVE_EMITC_COMPILE can be enabled.")
+if (LLVM_HAVE_EMITC_LOWERING AND LLVM_HAVE_TFLITE)
+  message(FATAL_ERROR "Only one of LLVM_HAVE_TFLITE and LLVM_HAVE_EMITC_LOWERING can be enabled.")
 endif()
 
 if (LLVM_HAVE_TFLITE)
@@ -1268,8 +1268,8 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
     ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT tf_xla_runtime)
   set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS tf_xla_runtime)
 
-  if (LLVM_HAVE_TF_AOT AND LLVM_HAVE_EMITC_COMPILE)
-    message(FATAL_ERROR "Only one of LLVM_HAVE_TF_AOT and LLVM_HAVE_EMITC_COMPILE can be enabled.")
+  if (LLVM_HAVE_TF_AOT AND LLVM_HAVE_EMITC_LOWERING)
+    message(FATAL_ERROR "Only one of LLVM_HAVE_TF_AOT and LLVM_HAVE_EMITC_LOWERING can be enabled.")
   endif()
   # Once we add more modules, we should handle this more automatically.
   if (DEFINED LLVM_OVERRIDE_MODEL_HEADER_INLINERSIZEMODEL)
