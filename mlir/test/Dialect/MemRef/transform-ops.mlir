@@ -33,6 +33,72 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// CHECK-DAG: memref.global "private" @[[ALLOC0:alloc.*]] : memref<2xf32>
+// CHECK-DAG: memref.global "private" @[[ALLOC1:alloc.*]] : memref<2xf32>
+
+// CHECK-DAG: func.func @func_alloc()
+func.func @func_alloc() {
+  // CHECK-DAG: %[[MR0:.*]] = memref.get_global @[[ALLOC0]] : memref<2xf32>
+  // CHECK-DAG: %[[MR1:.*]] = memref.get_global @[[ALLOC1]] : memref<2xf32>
+  // CHECK-NOT: memref.dealloc
+  %mr0 = memref.alloc() : memref<2xf32>
+  %mr1 = memref.alloc() : memref<2xf32>
+  memref.dealloc %mr0 : memref<2xf32>
+  memref.dealloc %mr1 : memref<2xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @alloc_to_global_dynamic_shape(%arg0: index) {
+  // expected-error @below {{global ops require statically shaped memrefs, but got 'memref<?xf32>'}}
+  %alloc = memref.alloc(%arg0) : memref<?xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloc = transform.structured.match ops{["memref.alloc"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloc">
+    %get_global, %global = transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @alloca_to_global_dynamic_shape(%arg0: index) {
+  // expected-error @below {{global ops require statically shaped memrefs, but got 'memref<?xf32>'}}
+  %alloca = memref.alloca(%arg0) : memref<?xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %alloca = transform.structured.match ops{["memref.alloca"]} in %arg0
+        : (!transform.any_op) -> !transform.op<"memref.alloca">
+    %get_global, %global = transform.memref.alloca_to_global %alloca
+          : (!transform.op<"memref.alloca">)
+            -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 
