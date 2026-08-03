@@ -5717,7 +5717,7 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     const SCEV *NewS =
         SE->rewriteUsingPredicate(S, CostCtx.L, StridePredicates);
     if (NewS == S)
-      return;
+      continue;
     auto *NewR = Builder.createExpandSCEV(NewS);
     ExpandSCEV->replaceAllUsesWith(NewR);
 
