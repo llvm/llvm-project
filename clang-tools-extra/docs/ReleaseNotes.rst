@@ -97,6 +97,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`readability-redundant-tag
+  <clang-tidy/checks/readability/redundant-tag>` check.
+
+  Finds redundant uses of the ``class``, ``struct``, ``union``, and ``enum``
+  keywords in C++ declarations.
 - New :doc:`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
 

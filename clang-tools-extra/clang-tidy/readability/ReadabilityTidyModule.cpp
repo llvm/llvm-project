@@ -55,6 +55,7 @@
 #include "RedundantSmartptrGetCheck.h"
 #include "RedundantStringCStrCheck.h"
 #include "RedundantStringInitCheck.h"
+#include "RedundantTagCheck.h"
 #include "RedundantTypenameCheck.h"
 #include "ReferenceToConstructedTemporaryCheck.h"
 #include "SimplifyBooleanExprCheck.h"
@@ -118,16 +119,14 @@ public:
         "readability-identifier-naming");
     CheckFactories.registerCheck<ImplicitBoolConversionCheck>(
         "readability-implicit-bool-conversion");
-    CheckFactories.registerCheck<InconsistentIfElseBracesCheck>(
-        "readability-inconsistent-ifelse-braces");
-    CheckFactories.registerCheck<MathMissingParenthesesCheck>(
-        "readability-math-missing-parentheses");
-    CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(
-        "readability-redundant-inline-specifier");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(
         "readability-inconsistent-declaration-parameter-name");
+    CheckFactories.registerCheck<InconsistentIfElseBracesCheck>(
+        "readability-inconsistent-ifelse-braces");
     CheckFactories.registerCheck<IsolateDeclarationCheck>(
         "readability-isolate-declaration");
+    CheckFactories.registerCheck<MathMissingParenthesesCheck>(
+        "readability-math-missing-parentheses");
     CheckFactories.registerCheck<MagicNumbersCheck>(
         "readability-magic-numbers");
     CheckFactories.registerCheck<MakeMemberFunctionConstCheck>(
@@ -136,6 +135,10 @@ public:
         "readability-misleading-indentation");
     CheckFactories.registerCheck<MisplacedArrayIndexCheck>(
         "readability-misplaced-array-index");
+    CheckFactories.registerCheck<readability::NamedParameterCheck>(
+        "readability-named-parameter");
+    CheckFactories.registerCheck<NonConstParameterCheck>(
+        "readability-non-const-parameter");
     CheckFactories.registerCheck<OperatorsRepresentationCheck>(
         "readability-operators-representation");
     CheckFactories.registerCheck<QualifiedAutoCheck>(
@@ -146,6 +149,8 @@ public:
         "readability-redundant-casting");
     CheckFactories.registerCheck<RedundantFunctionPtrDereferenceCheck>(
         "readability-redundant-function-ptr-dereference");
+    CheckFactories.registerCheck<RedundantInlineSpecifierCheck>(
+        "readability-redundant-inline-specifier");
     CheckFactories.registerCheck<RedundantLambdaParameterListCheck>(
         "readability-redundant-lambda-parameter-list");
     CheckFactories.registerCheck<RedundantMemberInitCheck>(
@@ -158,22 +163,12 @@ public:
         "readability-redundant-preprocessor");
     CheckFactories.registerCheck<RedundantQualifiedAliasCheck>(
         "readability-redundant-qualified-alias");
+    CheckFactories.registerCheck<RedundantTagCheck>(
+        "readability-redundant-tag");
     CheckFactories.registerCheck<RedundantTypenameCheck>(
         "readability-redundant-typename");
     CheckFactories.registerCheck<ReferenceToConstructedTemporaryCheck>(
         "readability-reference-to-constructed-temporary");
-    CheckFactories.registerCheck<SimplifySubscriptExprCheck>(
-        "readability-simplify-subscript-expr");
-    CheckFactories.registerCheck<StaticAccessedThroughInstanceCheck>(
-        "readability-static-accessed-through-instance");
-    CheckFactories.registerCheck<StaticDefinitionInAnonymousNamespaceCheck>(
-        "readability-static-definition-in-anonymous-namespace");
-    CheckFactories.registerCheck<StringCompareCheck>(
-        "readability-string-compare");
-    CheckFactories.registerCheck<readability::NamedParameterCheck>(
-        "readability-named-parameter");
-    CheckFactories.registerCheck<NonConstParameterCheck>(
-        "readability-non-const-parameter");
     CheckFactories.registerCheck<RedundantControlFlowCheck>(
         "readability-redundant-control-flow");
     CheckFactories.registerCheck<RedundantDeclarationCheck>(
@@ -186,6 +181,14 @@ public:
         "readability-redundant-string-init");
     CheckFactories.registerCheck<SimplifyBooleanExprCheck>(
         "readability-simplify-boolean-expr");
+    CheckFactories.registerCheck<SimplifySubscriptExprCheck>(
+        "readability-simplify-subscript-expr");
+    CheckFactories.registerCheck<StaticAccessedThroughInstanceCheck>(
+        "readability-static-accessed-through-instance");
+    CheckFactories.registerCheck<StaticDefinitionInAnonymousNamespaceCheck>(
+        "readability-static-definition-in-anonymous-namespace");
+    CheckFactories.registerCheck<StringCompareCheck>(
+        "readability-string-compare");
     CheckFactories.registerCheck<SuspiciousCallArgumentCheck>(
         "readability-suspicious-call-argument");
     CheckFactories.registerCheck<TrailingCommaCheck>(
