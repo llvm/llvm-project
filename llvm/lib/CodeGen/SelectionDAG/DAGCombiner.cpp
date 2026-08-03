@@ -21947,6 +21947,13 @@ SDValue DAGCombiner::ForwardLoadValueToDirectLoad(LoadSDNode *LD) {
 
     // Off = Wide's address - LD's address, so LD sits -Off bytes into Wide.
     // Bounding Off to (-WideBytes, 0] keeps the bit math below in range.
+    //
+    // Matching here is also what makes the rewrite acyclic. Forwarding makes
+    // LD's users depend on Wide, so Wide must not depend on LD. Its chain
+    // operand is LD's chain rather than LD itself, and equalBaseIndex only
+    // succeeds when Wide's base and index are the same nodes as LD's, which
+    // LD's own address cannot reference. So Wide's address cannot reference
+    // LD either.
     int64_t Off;
     BaseIndexOffset WidePtr = BaseIndexOffset::match(Wide, DAG);
     int64_t WideBytes = WideVT.getStoreSize().getFixedValue();

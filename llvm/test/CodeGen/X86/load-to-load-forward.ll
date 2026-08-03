@@ -5,6 +5,14 @@
 ; SLP vectorizer can produce). The narrow load must be forwarded from the wide
 ; load instead of re-reading memory (no second access of d+24), so the cmov
 ; takes a register operand.
+;
+; Note that the combine ignores vector loads, so it does not act on the
+; <2 x i32> below directly: it fires only after type legalization has turned
+; that into a scalar i64 load. This is the end-to-end case; the scalar tests
+; further down exercise the combine without relying on that. If the checks
+; here ever need regenerating, confirm d+24 is still accessed exactly once
+; rather than just accepting the new output
+; (llc -combiner-load-forward-max-chain-users=0 shows the unforwarded form).
 
 @d = external global [0 x i8]
 
@@ -186,4 +194,34 @@ entry:
   %z = zext i8 %n to i64
   store i64 %z, ptr @s3
   ret void
+}
+
+; The scalar equivalent of @overlap: same shape, but the wide load is already
+; an i64 so the combine applies without depending on type legalization.
+define { i64, i32 } @overlap_scalar(i64 %x) nounwind {
+; CHECK-LABEL: overlap_scalar:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq d@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq 16(%rax), %rcx
+; CHECK-NEXT:    movq 24(%rax), %rsi
+; CHECK-NEXT:    movq %rcx, (%rax)
+; CHECK-NEXT:    movq %rsi, 8(%rax)
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    movl $3, %eax
+; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    movl $9, %edx
+; CHECK-NEXT:    cmovnel %esi, %edx
+; CHECK-NEXT:    retq
+entry:
+  %b = load i64, ptr getelementptr inbounds (i8, ptr @d, i64 16)
+  store i64 %b, ptr @d
+  %wide = load i64, ptr getelementptr inbounds (i8, ptr @d, i64 24)
+  %c = load i32, ptr getelementptr inbounds (i8, ptr @d, i64 24)
+  store i64 %wide, ptr getelementptr inbounds (i8, ptr @d, i64 8)
+  %cmp = icmp eq i64 %b, 0
+  %rb = select i1 %cmp, i64 3, i64 %b
+  %rc = select i1 %cmp, i32 9, i32 %c
+  %r0 = insertvalue { i64, i32 } poison, i64 %rb, 0
+  %r1 = insertvalue { i64, i32 } %r0, i32 %rc, 1
+  ret { i64, i32 } %r1
 }
