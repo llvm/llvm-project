@@ -199,13 +199,27 @@ struct ol_program_impl_t {
 };
 
 struct ol_symbol_impl_t {
-  ol_symbol_impl_t(const char *Name, GenericKernelTy *Kernel)
-      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL), Name(Name) {}
-  ol_symbol_impl_t(const char *Name, GlobalTy &&Global)
-      : PluginImpl(Global), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE), Name(Name) {}
+  ol_symbol_impl_t(GenericKernelTy *Kernel)
+      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL),
+        Name(Kernel->getName()) {}
+  ol_symbol_impl_t(GlobalTy &&Global)
+      : PluginImpl(std::move(Global)), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE),
+        Name(std::get<GlobalTy>(PluginImpl).getName()) {}
   std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
   llvm::StringRef Name;
+};
+
+struct ol_context_impl_t {
+  ol_context_impl_t(ol_platform_impl_t *Platform,
+                    llvm::SmallVector<ol_device_handle_t> Devices,
+                    std::unique_ptr<plugin::PluginContextTy> PluginCtx)
+      : Platform(Platform), Devices(std::move(Devices)),
+        PluginCtx(std::move(PluginCtx)) {}
+
+  ol_platform_impl_t *Platform;
+  llvm::SmallVector<ol_device_handle_t> Devices;
+  std::unique_ptr<plugin::PluginContextTy> PluginCtx;
 };
 
 namespace llvm {
@@ -585,6 +599,75 @@ Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   return Error::success();
 }
 
+Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
+                           ol_context_handle_t *Context) {
+  ol_platform_impl_t *Platform = &Devices[0]->Platform;
+  llvm::SmallVector<ol_device_handle_t> DeviceList;
+  llvm::SmallVector<plugin::GenericDeviceTy *> PluginDevices;
+  DeviceList.reserve(DevicesCount);
+  PluginDevices.reserve(DevicesCount);
+  for (size_t I = 0; I < DevicesCount; I++) {
+    if (&Devices[I]->Platform != Platform)
+      return createOffloadError(
+          ErrorCode::INVALID_DEVICE,
+          "all devices in a context must belong to the same platform");
+    DeviceList.push_back(Devices[I]);
+    PluginDevices.push_back(Devices[I]->Device);
+  }
+
+  // The host plugin has no GenericPluginTy instance; skip the plugin-side
+  // context in that case and just record the device set.
+  std::unique_ptr<plugin::PluginContextTy> PluginCtx;
+  if (Platform->Plugin) {
+    auto PluginCtxOrErr = Platform->Plugin->createPluginContext(PluginDevices);
+    if (!PluginCtxOrErr)
+      return PluginCtxOrErr.takeError();
+    PluginCtx = std::move(*PluginCtxOrErr);
+  }
+
+  *Context = new ol_context_impl_t(Platform, std::move(DeviceList),
+                                   std::move(PluginCtx));
+  return Error::success();
+}
+
+Error olDestroyContext_impl(ol_context_handle_t Context) {
+  return olDestroy(Context);
+}
+
+Error olGetContextInfoImplDetail(ol_context_handle_t Context,
+                                 ol_context_info_t PropName, size_t PropSize,
+                                 void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_CONTEXT_INFO_NUM_DEVICES:
+    return Info.write<size_t>(Context->Devices.size());
+  case OL_CONTEXT_INFO_DEVICES:
+    return Info.writeArray(Context->Devices.data(), Context->Devices.size());
+  case OL_CONTEXT_INFO_PLATFORM:
+    return Info.write<ol_platform_handle_t>(Context->Platform);
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetContextInfo enum '%i' is invalid",
+                              PropName);
+  }
+
+  return Error::success();
+}
+
+Error olGetContextInfo_impl(ol_context_handle_t Context,
+                            ol_context_info_t PropName, size_t PropSize,
+                            void *PropValue) {
+  return olGetContextInfoImplDetail(Context, PropName, PropSize, PropValue,
+                                    nullptr);
+}
+
+Error olGetContextInfoSize_impl(ol_context_handle_t Context,
+                                ol_context_info_t PropName,
+                                size_t *PropSizeRet) {
+  return olGetContextInfoImplDetail(Context, PropName, 0, nullptr, PropSizeRet);
+}
+
 TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
   switch (Type) {
   case OL_ALLOC_TYPE_DEVICE:
@@ -657,14 +740,32 @@ Error olMemAllocImplHelper(ol_device_handle_t Device, ol_alloc_type_t Type,
 
 Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                       size_t Size, void **AllocationOut) {
+  if (Type == OL_ALLOC_TYPE_HOST)
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "use olMemAllocHost for host allocations");
   return olMemAllocImplHelper(Device, Type, Size, /*Alignment=*/0,
                               AllocationOut);
+}
+
+Error olMemAllocHost_impl(ol_device_handle_t Device, size_t Size,
+                          void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_HOST, Size,
+                              /*Alignment=*/0, AllocationOut);
 }
 
 Error olMemAllocAligned_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
                              size_t Size, size_t Alignment,
                              void **AllocationOut) {
+  if (Type == OL_ALLOC_TYPE_HOST)
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "use olMemAllocAlignedHost for host allocations");
   return olMemAllocImplHelper(Device, Type, Size, Alignment, AllocationOut);
+}
+
+Error olMemAllocAlignedHost_impl(ol_device_handle_t Device, size_t Size,
+                                 size_t Alignment, void **AllocationOut) {
+  return olMemAllocImplHelper(Device, OL_ALLOC_TYPE_HOST, Size, Alignment,
+                              AllocationOut);
 }
 
 Error olMemFree_impl(void *Address) {
@@ -1182,11 +1283,10 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   return Error::success();
 }
 
-Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
-                       ol_symbol_kind_t Kind, ol_symbol_handle_t *Symbol) {
+Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
+                                                 StringRef Name,
+                                                 ol_symbol_kind_t Kind) {
   auto &Device = Program->Image->getDevice();
-
-  std::lock_guard<std::mutex> Lock(Program->SymbolListMutex);
 
   switch (Kind) {
   case OL_SYMBOL_KIND_KERNEL: {
@@ -1199,12 +1299,10 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
       if (auto Err = KernelImpl->init(Device, *Program->Image))
         return Err;
 
-      Kernel = std::make_unique<ol_symbol_impl_t>(KernelImpl->getName(),
-                                                  &*KernelImpl);
+      Kernel = std::make_unique<ol_symbol_impl_t>(&*KernelImpl);
     }
 
-    *Symbol = Kernel.get();
-    return Error::success();
+    return Kernel.get();
   }
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
     auto &Global = Program->GlobalSymbols[Name];
@@ -1215,17 +1313,59 @@ Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
                   Device, *Program->Image, GlobalObj))
         return Res;
 
-      Global = std::make_unique<ol_symbol_impl_t>(GlobalObj.getName().c_str(),
-                                                  std::move(GlobalObj));
+      Global = std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj));
     }
 
-    *Symbol = Global.get();
-    return Error::success();
+    return Global.get();
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getSymbol kind enum '%i' is invalid", Kind);
   }
+}
+
+Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
+                       ol_symbol_kind_t Kind, ol_symbol_handle_t *Symbol) {
+  std::lock_guard<std::mutex> Lock(Program->SymbolListMutex);
+
+  auto SymbolOrErr = getSymbolImplDetail(Program, Name, Kind);
+  if (!SymbolOrErr)
+    return SymbolOrErr.takeError();
+
+  *Symbol = *SymbolOrErr;
+  return Error::success();
+}
+
+Error olIterateSymbols_impl(ol_program_handle_t Program, ol_symbol_kind_t Kind,
+                            ol_symbol_iterate_cb_t Callback, void *UserData) {
+  SymbolKindTy PluginKind;
+  switch (Kind) {
+  case OL_SYMBOL_KIND_KERNEL:
+    PluginKind = SymbolKindTy::Kernel;
+    break;
+  case OL_SYMBOL_KIND_GLOBAL_VARIABLE:
+    PluginKind = SymbolKindTy::GlobalVariable;
+    break;
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "iterateSymbols kind enum '%i' is invalid", Kind);
+  }
+
+  auto &Device = Program->Image->getDevice();
+  std::lock_guard<std::mutex> Lock(Program->SymbolListMutex);
+
+  Error SymbolErr = Error::success();
+  Error IterateErr = Device.Plugin.getGlobalHandler().iterateSymbols(
+      *Program->Image, PluginKind, [&](StringRef Name) {
+        auto SymbolOrErr = getSymbolImplDetail(Program, Name, Kind);
+        if (!SymbolOrErr) {
+          SymbolErr = SymbolOrErr.takeError();
+          return false;
+        }
+        return Callback(*SymbolOrErr, UserData);
+      });
+
+  return joinErrors(std::move(IterateErr), std::move(SymbolErr));
 }
 
 Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
@@ -1247,6 +1387,8 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
   switch (PropName) {
   case OL_SYMBOL_INFO_KIND:
     return Info.write<ol_symbol_kind_t>(Symbol->Kind);
+  case OL_SYMBOL_INFO_NAME:
+    return Info.writeString(Symbol->Name);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
     if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
       return Err;

@@ -1147,36 +1147,6 @@ fir::factory::getNonDefaultLowerBounds(fir::FirOpBuilder &builder,
       [&](const auto &) -> llvm::SmallVector<mlir::Value> { return {}; });
 }
 
-// If valTy is a box type, then we need to extract the type parameters from
-// the box value.
-static llvm::SmallVector<mlir::Value> getFromBox(mlir::Location loc,
-                                                 fir::FirOpBuilder &builder,
-                                                 mlir::Type valTy,
-                                                 mlir::Value boxVal) {
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(valTy)) {
-    auto eleTy = fir::unwrapAllRefAndSeqType(boxTy.getEleTy());
-    if (auto recTy = mlir::dyn_cast<fir::RecordType>(eleTy)) {
-      if (recTy.getNumLenParams() > 0) {
-        // Walk each type parameter in the record and get the value.
-        TODO(loc, "generate code to get LEN type parameters");
-      }
-    } else if (auto charTy = mlir::dyn_cast<fir::CharacterType>(eleTy)) {
-      if (charTy.hasDynamicLen()) {
-        auto idxTy = builder.getIndexType();
-        auto eleSz = fir::BoxEleSizeOp::create(builder, loc, idxTy, boxVal);
-        auto kindBytes =
-            builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
-        mlir::Value charSz =
-            builder.createIntegerConstant(loc, idxTy, kindBytes);
-        mlir::Value len =
-            mlir::arith::DivSIOp::create(builder, loc, eleSz, charSz);
-        return {len};
-      }
-    }
-  }
-  return {};
-}
-
 // fir::getTypeParams() will get the type parameters from the extended value.
 // When the extended value is a BoxValue or MutableBoxValue, it may be necessary
 // to generate code, so this factory function handles those cases.
@@ -1201,15 +1171,6 @@ fir::factory::getTypeParams(mlir::Location loc, fir::FirOpBuilder &builder,
       [&](const fir::BoxValue &box) { return handleBoxed(box); },
       [&](const fir::MutableBoxValue &box) { return handleBoxed(box); },
       [&](const auto &) { return fir::getTypeParams(exv); });
-}
-
-llvm::SmallVector<mlir::Value>
-fir::factory::getTypeParams(mlir::Location loc, fir::FirOpBuilder &builder,
-                            fir::ArrayLoadOp load) {
-  mlir::Type memTy = load.getMemref().getType();
-  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(memTy))
-    return getFromBox(loc, builder, boxTy, load.getMemref());
-  return load.getTypeparams();
 }
 
 std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
@@ -1593,16 +1554,6 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
   // asserts at some point). Since there is no good size boundary, just always
   // use component by component assignment here.
   genComponentByComponentAssignment(builder, loc, lhs, rhs, isTemporaryLHS);
-}
-
-mlir::TupleType
-fir::factory::getRaggedArrayHeaderType(fir::FirOpBuilder &builder) {
-  mlir::IntegerType i64Ty = builder.getIntegerType(64);
-  auto arrTy = fir::SequenceType::get(builder.getIntegerType(8), 1);
-  auto buffTy = fir::HeapType::get(arrTy);
-  auto extTy = fir::SequenceType::get(i64Ty, 1);
-  auto shTy = fir::HeapType::get(extTy);
-  return mlir::TupleType::get(builder.getContext(), {i64Ty, buffTy, shTy});
 }
 
 mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,

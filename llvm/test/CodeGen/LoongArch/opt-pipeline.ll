@@ -101,13 +101,13 @@
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Machine Natural Loop Construction
 ; LAXX-NEXT:       Machine Block Frequency Analysis
+; LAXX-NEXT:       Machine Register Class Info Analysis
 ; LAXX-NEXT:       Early Machine Loop Invariant Code Motion
 ; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Machine Block Frequency Analysis
 ; LAXX-NEXT:       Machine Common Subexpression Elimination
 ; LAXX-NEXT:       MachinePostDominator Tree Construction
 ; LAXX-NEXT:       Machine Cycle Info Analysis
-; LAXX-NEXT:       Machine Register Class Info Analysis
 ; LAXX-NEXT:       Machine code sinking
 ; LAXX-NEXT:       Peephole Optimizations
 ; LAXX-NEXT:       Remove dead machine instructions

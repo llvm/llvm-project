@@ -246,51 +246,8 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       break;
     }
     break;
-  case Triple::amdgpu: {
-    if (SubArch < Triple::FirstAMDGPUSubArch ||
-        SubArch > Triple::LastAMDGPUSubArch)
-      break;
-
-    static const StringLiteral AMDGPUSubArchNames[Triple::LastAMDGPUSubArch -
-                                                  Triple::FirstAMDGPUSubArch +
-                                                  1] = {
-        "amdgpu6",     "amdgpu6.00",  "amdgpu6.01",  "amdgpu6.02",
-
-        "amdgpu7",     "amdgpu7.00",  "amdgpu7.01",  "amdgpu7.02",
-        "amdgpu7.03",  "amdgpu7.04",  "amdgpu7.05",
-
-        "amdgpu8",     "amdgpu8.01",  "amdgpu8.02",  "amdgpu8.03",
-        "amdgpu8.05",
-
-        "amdgpu8.10",
-
-        "amdgpu9",     "amdgpu9.00",  "amdgpu9.02",  "amdgpu9.04",
-        "amdgpu9.06",  "amdgpu9.09",  "amdgpu9.0c",
-
-        "amdgpu9.08",  "amdgpu9.0a",
-
-        "amdgpu9.4",   "amdgpu9.42",  "amdgpu9.50",
-
-        "amdgpu10.1",  "amdgpu10.10", "amdgpu10.11", "amdgpu10.12",
-        "amdgpu10.13",
-
-        "amdgpu10.3",  "amdgpu10.30", "amdgpu10.31", "amdgpu10.32",
-        "amdgpu10.33", "amdgpu10.34", "amdgpu10.35", "amdgpu10.36",
-
-        "amdgpu11",    "amdgpu11.00", "amdgpu11.01", "amdgpu11.02",
-        "amdgpu11.03", "amdgpu11.50", "amdgpu11.51", "amdgpu11.52",
-        "amdgpu11.53", "amdgpu11.54",
-
-        "amdgpu11.7",  "amdgpu11.70", "amdgpu11.71", "amdgpu11.72",
-
-        "amdgpu12",    "amdgpu12.00", "amdgpu12.01",
-
-        "amdgpu12.5",  "amdgpu12.50", "amdgpu12.51",
-
-        "amdgpu13",    "amdgpu13.10"};
-
-    return AMDGPUSubArchNames[SubArch - Triple::FirstAMDGPUSubArch];
-  }
+  case Triple::amdgpu:
+    return AMDGPU::getSubArchName(SubArch);
   default:
     break;
   }
@@ -435,7 +392,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   switch (Kind) {
   case UnknownOS:
     return "unknown";
-#define TRIPLE_OS(Enum, Name)                                                  \
+#define TRIPLE_OS(Enum, Name, CMakeName)                                       \
   case Enum:                                                                   \
     return Name;
 #include "llvm/TargetParser/TripleName.def"
@@ -448,7 +405,7 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   switch (Kind) {
   case UnknownEnvironment:
     return "unknown";
-#define TRIPLE_ENV(Enum, Name)                                                 \
+#define TRIPLE_ENV(Enum, Name, CMakeOverride)                                  \
   case Enum:                                                                   \
     return Name;
 #include "llvm/TargetParser/TripleName.def"
@@ -746,7 +703,7 @@ static Triple::VendorType parseVendor(StringRef VendorName) {
 
 static Triple::OSType parseOS(StringRef OSName) {
   return StringSwitch<Triple::OSType>(OSName)
-#define TRIPLE_OS(Enum, Name) .StartsWith(Name, Triple::Enum)
+#define TRIPLE_OS(Enum, Name, CMakeName) .StartsWith(Name, Triple::Enum)
 #define TRIPLE_OS_ALIAS(Enum, AliasName) .StartsWith(AliasName, Triple::Enum)
 #include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownOS);
@@ -754,7 +711,7 @@ static Triple::OSType parseOS(StringRef OSName) {
 
 static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
   return StringSwitch<Triple::EnvironmentType>(EnvironmentName)
-#define TRIPLE_ENV(Enum, Name) .StartsWith(Name, Triple::Enum)
+#define TRIPLE_ENV(Enum, Name, CMakeOverride) .StartsWith(Name, Triple::Enum)
 #include "llvm/TargetParser/TripleName.def"
       .Default(Triple::UnknownEnvironment);
 }
@@ -2579,6 +2536,64 @@ FloatABI::ABIType Triple::getDefaultFloatABI() const {
 
   // Most targets use hard float unless soft float is explicitly requested.
   return FloatABI::Hard;
+}
+
+LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
+  switch (getArch()) {
+  case loongarch64:
+  case riscv32:
+  case riscv64:
+  case riscv32be:
+  case riscv64be:
+  case sparc:
+  case sparcel:
+  case sparcv9:
+  case systemz:
+  case ve:
+  case wasm32:
+  case wasm64:
+    return LongDoubleFormat::IEEEquad;
+  case ppc:
+  case ppcle:
+  case ppc64:
+  case ppc64le:
+    // PowerPC uses IBM double-double, except on a handful of OSes that use
+    // plain IEEE double. NetBSD only switches to IEEE double on 32-bit PowerPC.
+    if (isOSAIX() || isOSFreeBSD() || isOSOpenBSD() || isMusl() ||
+        (isOSNetBSD() && isPPC32()))
+      return LongDoubleFormat::IEEEdouble;
+    return LongDoubleFormat::PPCDoubleDouble;
+  case x86:
+  case x86_64:
+    // Android and OHOS use IEEE double on 32-bit and IEEE quad on 64-bit.
+    if (isAndroid() || isOHOSFamily())
+      return isX86_64() ? LongDoubleFormat::IEEEquad
+                        : LongDoubleFormat::IEEEdouble;
+    // Windows-MSVC and UEFI use IEEE double. MinGW and Cygwin keep x87.
+    if (isWindowsMSVCEnvironment() || isUEFI())
+      return LongDoubleFormat::IEEEdouble;
+    return LongDoubleFormat::X87DoubleExtended;
+  case aarch64:
+  case aarch64_be:
+  case aarch64_32:
+    // AArch64 uses IEEE quad, except on Windows, Darwin, and Android.
+    if (isOSWindows() || isOSDarwin() || isAndroid())
+      return LongDoubleFormat::IEEEdouble;
+    return LongDoubleFormat::IEEEquad;
+  case mips64:
+  case mips64el:
+    return LongDoubleFormat::IEEEquad;
+  case avr:
+  case tce:
+  case tcele:
+    // AVR and 32-bit OpenASIP use IEEE single precision.
+    return LongDoubleFormat::IEEEsingle;
+  case tcele64:
+    // 64-bit OpenASIP uses IEEE double, unlike its 32-bit variants.
+    return LongDoubleFormat::IEEEdouble;
+  default:
+    return LongDoubleFormat::IEEEdouble;
+  }
 }
 
 // HLSL triple environment orders are relied on in the front end

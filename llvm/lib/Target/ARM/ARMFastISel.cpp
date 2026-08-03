@@ -1906,8 +1906,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
     if (TM.isAAPCS_ABI()) {
-      if (Subtarget->hasFPRegs() &&
-          TM.Options.FloatABIType == FloatABI::Hard && !isVarArg)
+      if (Subtarget->hasFPRegs() && Subtarget->isTargetHardFloat() && !isVarArg)
         return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);
       else
         return (Return ? RetCC_ARM_AAPCS: CC_ARM_AAPCS);

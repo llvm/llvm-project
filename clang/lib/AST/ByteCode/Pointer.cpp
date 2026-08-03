@@ -1149,13 +1149,7 @@ std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
   if (!R)
     return *this;
 
-  const Record::Field *F = nullptr;
-  for (auto &It : R->fields()) {
-    if (It.Offset == Offset) {
-      F = &It;
-      break;
-    }
-  }
+  const Record::Field *F = R->findField(Offset);
   if (!F)
     return *this;
 
@@ -1183,18 +1177,14 @@ IntPointer IntPointer::baseCast(const interp::Context &Ctx,
     return *this;
 
   const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());
-  const Descriptor *BaseDesc = nullptr;
 
   // This iterates over bases and checks for the proper offset. That's
   // potentially slow but this case really shouldn't happen a lot.
-  for (const Record::Base &B : R->bases()) {
-    if (B.Offset == BaseOffset) {
-      BaseDesc = B.Desc;
-      break;
-    }
-  }
-  assert(BaseDesc);
+  const Record::Base *B = R->findBase(BaseOffset);
+  if (!B)
+    return *this;
 
+  const Descriptor *BaseDesc = B->Desc;
   // Adjust the offset value based on the information from the record layout.
   const ASTContext &ASTCtx = Ctx.getASTContext();
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());

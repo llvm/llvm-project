@@ -3916,16 +3916,12 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
 
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
-      case SPNB_RETURNS_NAN: break;
+      case SPNB_RETURNS_ANY:
+      case SPNB_RETURNS_NAN:
+        break;
       case SPNB_RETURNS_OTHER:
         Opc = ISD::FMINIMUMNUM;
         Flags.setNoSignedZeros(true);
-        break;
-      case SPNB_RETURNS_ANY:
-        if (TLI.isOperationLegalOrCustom(ISD::FMINNUM, VT) ||
-            (UseScalarMinMax &&
-             TLI.isOperationLegalOrCustom(ISD::FMINNUM, VT.getScalarType())))
-          Opc = ISD::FMINNUM;
         break;
       }
       break;
@@ -3935,16 +3931,12 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
 
       switch (SPR.NaNBehavior) {
       case SPNB_NA: llvm_unreachable("No NaN behavior for FP op?");
-      case SPNB_RETURNS_NAN: break;
+      case SPNB_RETURNS_NAN:
+      case SPNB_RETURNS_ANY:
+        break;
       case SPNB_RETURNS_OTHER:
         Opc = ISD::FMAXIMUMNUM;
         Flags.setNoSignedZeros(true);
-        break;
-      case SPNB_RETURNS_ANY:
-        if (TLI.isOperationLegalOrCustom(ISD::FMAXNUM, VT) ||
-            (UseScalarMinMax &&
-             TLI.isOperationLegalOrCustom(ISD::FMAXNUM, VT.getScalarType())))
-          Opc = ISD::FMAXNUM;
         break;
       }
       break;
@@ -5001,7 +4993,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   SDValue Ptr = getValue(PtrOperand);
   SDValue Src0 = getValue(Src0Operand);
   SDValue Mask = getValue(MaskOperand);
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
 
   EVT VT = Src0.getValueType();
 
@@ -5151,7 +5143,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   SDValue Ptr = getValue(PtrOperand);
   SDValue Src0 = getValue(Src0Operand);
   SDValue Mask = getValue(MaskOperand);
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
 
   EVT VT = Src0.getValueType();
   AAMDNodes AAInfo = I.getAAMetadata();
@@ -8923,7 +8915,7 @@ void SelectionDAGBuilder::visitVPStore(
   if (!Alignment)
     Alignment = DAG.getEVTAlign(VT);
   SDValue Ptr = OpValues[1];
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   MachineMemOperand::Flags MMOFlags =
       TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
@@ -9027,7 +9019,7 @@ void SelectionDAGBuilder::visitVPStridedStore(
 
   SDValue ST = DAG.getStridedStoreVP(
       getMemoryRoot(), DL, OpValues[0], OpValues[1],
-      DAG.getUNDEF(OpValues[1].getValueType()), OpValues[2], OpValues[3],
+      DAG.getPOISON(OpValues[1].getValueType()), OpValues[2], OpValues[3],
       OpValues[4], VT, MMO, ISD::UNINDEXED, /*IsTruncating*/ false,
       /*IsCompressing*/ false);
 

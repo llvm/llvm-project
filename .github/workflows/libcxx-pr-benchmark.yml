@@ -7,7 +7,7 @@
 # That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
 # their results to be compared.
 
-name: Benchmark libc++ PR
+name: "[libc++] Benchmark PR"
 
 permissions:
   contents: read
