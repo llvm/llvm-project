@@ -14,11 +14,10 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTXUTILITIES_H
 
 #include "NVPTX.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -28,8 +27,13 @@
 namespace llvm {
 
 class DataLayout;
+class MemSDNode;
 
 Function *getMaybeBitcastedCallee(const CallBase *CB);
+
+/// The bit-width of a single element loaded by \p Mem, i.e. the width used for
+/// the ".fromtype" part of the emitted PTX load.
+unsigned getFromTypeWidthForLoad(const MemSDNode *Mem);
 
 /// ABI alignment of \p ArgTy in .param space, capped at the PTX maximum of 128.
 Align getPTXParamTypeAlign(Type *ArgTy, const DataLayout &DL);

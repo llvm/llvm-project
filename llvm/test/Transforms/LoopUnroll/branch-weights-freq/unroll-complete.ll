@@ -58,12 +58,14 @@
 ; Check 1 max iteration:
 ; - Unroll count of >=1 should always produce complete unrolling.
 ; - That produces 0 unrolled iteration latches, so there are no branch weights
-;   to compute.
+;   to compute.  Thus, -unroll-uniform-weights has no effect.
 ;
 ; Original loop body frequency is 2 (loop weight 1), which is impossibly high.
 ;
 ;   RUN: sed -e s/@MAX@/1/ -e s/@W@/1/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;   RUN: %{bf-fc} ORIG1210
+;   RUN: %{ur-bf} -unroll-count=1 -unroll-uniform-weights | %{fc} UR1210
+;   RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} UR1210
 ;   RUN: %{ur-bf} -unroll-count=1 | %{fc} UR1210
 ;   RUN: %{ur-bf} -unroll-count=2 | %{fc} UR1210
 ;
@@ -77,6 +79,8 @@
 ;
 ;   RUN: sed -e s/@MAX@/1/ -e s/@W@/0/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;   RUN: %{bf-fc} ORIG1110
+;   RUN: %{ur-bf} -unroll-count=1 -unroll-uniform-weights | %{fc} UR1110
+;   RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} UR1110
 ;   RUN: %{ur-bf} -unroll-count=1 | %{fc} UR1110
 ;   RUN: %{ur-bf} -unroll-count=2 | %{fc} UR1110
 ;
@@ -90,7 +94,8 @@
 ; Check 2 max iterations:
 ; - Unroll count of >=2 should always produce complete unrolling.
 ; - That produces <=1 unrolled iteration latch, so the implementation can
-;   compute uniform weights by solving, at worst, a linear equation.
+;   compute uniform weights by solving, at worst, a linear equation.  Thus,
+;   -unroll-uniform-weights has no effect.
 ;
 ; Original loop body frequency is 3 (loop weight 2), which is impossibly high.
 ;
@@ -99,6 +104,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/2/ -e s/@W@/2/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG2310
+;     RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} UR2310
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR2310
 ;     RUN: %{ur-bf} -unroll-count=2 | %{fc} UR2310
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR2310
 ;
@@ -120,6 +127,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/2/ -e s/@W@/2/ -e s/@MIN@/2/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG2320
+;     RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} UR2320
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR2320
 ;     RUN: %{ur-bf} -unroll-count=2 | %{fc} UR2320
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR2320
 ;
@@ -140,6 +149,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/2/ -e s/@W@/1/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG2210
+;     RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} UR2210
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR2210
 ;     RUN: %{ur-bf} -unroll-count=2 | %{fc} UR2210
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR2210
 ;
@@ -159,6 +170,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/2/ -e s/@W@/1/ -e s/@MIN@/2/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG2220
+;     RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} UR2220
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR2220
 ;     RUN: %{ur-bf} -unroll-count=2 | %{fc} UR2220
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR2220
 ;
@@ -179,6 +192,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/2/ -e s/@W@/0/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG2110
+;     RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} UR2110
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR2110
 ;     RUN: %{ur-bf} -unroll-count=2 | %{fc} UR2110
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR2110
 ;
@@ -198,6 +213,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/2/ -e s/@W@/0/ -e s/@MIN@/2/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG2120
+;     RUN: %{ur-bf} -unroll-count=2 -unroll-uniform-weights | %{fc} UR2120
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR2120
 ;     RUN: %{ur-bf} -unroll-count=2 | %{fc} UR2120
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR2120
 ;
@@ -215,7 +232,8 @@
 ; Check 3 max iterations:
 ; - Unroll count of >=3 should always produce complete unrolling.
 ; - That produces <=2 unrolled iteration latches, so the implementation can
-;   compute uniform weights solving, at worst, a quadratic equation.
+;   compute uniform weights solving, at worst, a quadratic equation.  Thus,
+;   -unroll-uniform-weights has no effect.
 ;
 ; Original loop body frequency is 4 (loop weight 3), which is impossibly high.
 ;
@@ -224,6 +242,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/3/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG3410
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR3410
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR3410
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR3410
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR3410
 ;
@@ -248,6 +268,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/3/ -e s/@MIN@/3/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG3430
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR3430
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR3430
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR3430
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR3430
 ;
@@ -269,6 +291,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/3/ -e s/@MIN@/3/ -e s/@I_0@/%x/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG343x
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR343x
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR343x
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR343x
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR343x
 ;
@@ -295,6 +319,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/2/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG3310
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR3310
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR3310
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR3310
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR3310
 ;
@@ -317,6 +343,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/2/ -e s/@MIN@/3/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG3330
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR3330
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR3330
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR3330
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR3330
 ;
@@ -338,6 +366,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/2/ -e s/@MIN@/3/ -e s/@I_0@/%x/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG333x
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR333x
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR333x
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR333x
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR333x
 ;
@@ -363,6 +393,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/1/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG3210
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR3210
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR3210
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR3210
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR3210
 ;
@@ -385,6 +417,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/1/ -e s/@MIN@/3/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG3230
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR3230
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR3230
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR3230
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR3230
 ;
@@ -406,6 +440,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/1/ -e s/@MIN@/3/ -e s/@I_0@/%x/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG323x
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR323x
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR323x
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR323x
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR323x
 ;
@@ -430,6 +466,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/0/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG3110
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR3110
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR3110
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR3110
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR3110
 ;
@@ -452,6 +490,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/0/ -e s/@MIN@/3/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG3130
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR3130
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR3130
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR3130
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR3130
 ;
@@ -473,6 +513,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/3/ -e s/@W@/0/ -e s/@MIN@/3/ -e s/@I_0@/%x/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG313x
+;     RUN: %{ur-bf} -unroll-count=3 -unroll-uniform-weights | %{fc} UR313x
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR313x
 ;     RUN: %{ur-bf} -unroll-count=3 | %{fc} UR313x
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR313x
 ;
@@ -496,6 +538,7 @@
 ; - Unroll count of >=4 should always produce complete unrolling.
 ; - That produces <=3 unrolled iteration latches.  3 is the lowest number where
 ;   the implementation cannot compute uniform weights using a simple formula.
+;   Thus, this is our first case where -unroll-uniform-weights matters.
 ;
 ; Original loop body frequency is 5 (loop weight 4), which is impossibly high.
 ;
@@ -504,6 +547,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/4/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4510
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4510
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4510
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4510
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4510
 ;
@@ -531,6 +576,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/4/ -e s/@MIN@/4/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4540
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4540
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4540
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4540
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4540
 ;
@@ -554,6 +601,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/4/ -e s/@MIN@/4/ -e s/@I_0@/%x/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG454x
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR454x
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR454x
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR454x
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR454x
 ;
@@ -582,6 +631,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/3/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4410
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4410
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4410
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4410
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4410
 ;
@@ -607,6 +658,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/3/ -e s/@MIN@/4/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4440
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4440
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4440
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4440
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4440
 ;
@@ -630,6 +683,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/3/ -e s/@MIN@/4/ -e s/@I_0@/%x/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG444x
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR444x
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR444x
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR444x
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR444x
 ;
@@ -650,39 +705,52 @@
 ;     UR444x:     !0 = !{!"branch_weights", i32 0, i32 -2147483648}
 ;
 ; Original loop body frequency is 3 (loop weight 2).  This is our first case
-; where the new probabilities vary.
+; where the new probabilities vary (unless -unroll-uniform-weights).
 ;
 ;   First use a variable iteration count so that all non-final unrolled
 ;   iterations' latches remain conditional.
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/2/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4310
-;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4310
-;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4310
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4310,UNIF4310
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4310,UNIF4310
+;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4310,FAST4310
+;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4310,FAST4310
 ;
 ;     The sum of the new do.body* is always approximately the old do.body.
 ;     ORIG4310: - do.body: float = 3.0,
-;     UR4310: - do.body: float = 1.0,
-;     UR4310: - do.body.1: float = 0.94737,
-;     UR4310: - do.body.2: float = 0.63158,
-;     UR4310: - do.body.3: float = 0.42105,
+;     UNIF4310: - do.body: float = 1.0,
+;     UNIF4310: - do.body.1: float = 0.81054,
+;     UNIF4310: - do.body.2: float = 0.65697,
+;     UNIF4310: - do.body.3: float = 0.5325,
+;     FAST4310: - do.body: float = 1.0,
+;     FAST4310: - do.body.1: float = 0.94737,
+;     FAST4310: - do.body.2: float = 0.63158,
+;     FAST4310: - do.body.3: float = 0.42105,
 ;
-;     UR4310:  call void @f
-;     UR4310:  br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
-;     UR4310:  call void @f
-;     UR4310:  br i1 %{{.*}}, label %do.end, label %do.body.2, !prof !1
-;     UR4310:  call void @f
-;     UR4310:  br i1 %{{.*}}, label %do.end, label %do.body.3, !prof !1
-;     UR4310:  call void @f
-;     UR4310:  br label %do.end
-;     UR4310:  !0 = !{!"branch_weights", i32 113025456, i32 2034458192}
-;     UR4310:  !1 = !{!"branch_weights", i32 1, i32 2}
+;     UR4310:        call void @f
+;     UR4310:        br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
+;     UR4310:        call void @f
+;     UR4310:        br i1 %{{.*}}, label %do.end, label %do.body.2,
+;     UNIF4310-SAME:   !prof !0
+;     FAST4310-SAME:   !prof !1
+;     UR4310:        call void @f
+;     UR4310:        br i1 %{{.*}}, label %do.end, label %do.body.3,
+;     UNIF4310-SAME:   !prof !0
+;     FAST4310-SAME:   !prof !1
+;     UR4310:        call void @f
+;     UR4310:        br label %do.end
+;     UNIF4310:      !0 = !{!"branch_weights", i32 406871040, i32 1740612608}
+;     FAST4310:      !0 = !{!"branch_weights", i32 113025456, i32 2034458192}
+;     FAST4310:      !1 = !{!"branch_weights", i32 1, i32 2}
 ;
 ;   Now use a constant iteration count so that all non-final unrolled
 ;   iterations' latches unconditionally continue.
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/2/ -e s/@MIN@/4/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4340
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4340
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4340
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4340
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4340
 ;
@@ -706,6 +774,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/2/ -e s/@MIN@/4/ -e s/@I_0@/%x/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG434x
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR434x
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR434x
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR434x
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR434x
 ;
@@ -732,32 +802,45 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/1/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4210
-;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4210
-;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4210
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4210,UNIF4210
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4210,UNIF4210
+;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4210,FAST4210
+;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4210,FAST4210
 ;
 ;     The sum of the new do.body* is always the old do.body.
 ;     ORIG4210: - do.body: float = 2.0,
-;     UR4210: - do.body: float = 1.0,
-;     UR4210: - do.body.1: float = 0.57143,
-;     UR4210: - do.body.2: float = 0.28571,
-;     UR4210: - do.body.3: float = 0.14286,
+;     UNIF4210: - do.body: float = 1.0,
+;     UNIF4210: - do.body.1: float = 0.54369,
+;     UNIF4210: - do.body.2: float = 0.2956,
+;     UNIF4210: - do.body.3: float = 0.16071,
+;     FAST4210: - do.body: float = 1.0,
+;     FAST4210: - do.body.1: float = 0.57143,
+;     FAST4210: - do.body.2: float = 0.28571,
+;     FAST4210: - do.body.3: float = 0.14286,
 ;
-;     UR4210: call void @f
-;     UR4210: br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
-;     UR4210: call void @f
-;     UR4210: br i1 %{{.*}}, label %do.end, label %do.body.2, !prof !1
-;     UR4210: call void @f
-;     UR4210: br i1 %{{.*}}, label %do.end, label %do.body.3, !prof !1
-;     UR4210: call void @f
-;     UR4210: br label %do.end
-;     UR4210: !0 = !{!"branch_weights", i32 920350135, i32 1227133513}
-;     UR4210: !1 = !{!"branch_weights", i32 1, i32 1}
+;     UR4210:        call void @f
+;     UR4210:        br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
+;     UR4210:        call void @f
+;     UR4210:        br i1 %{{.*}}, label %do.end, label %do.body.2,
+;     UNIF4210-SAME:   !prof !0
+;     FAST4210-SAME:   !prof !1
+;     UR4210:        call void @f
+;     UR4210:        br i1 %{{.*}}, label %do.end, label %do.body.3,
+;     UNIF4210-SAME:   !prof !0
+;     FAST4210-SAME:   !prof !1
+;     UR4210:        call void @f
+;     UR4210:        br label %do.end
+;     UNIF4210:      !0 = !{!"branch_weights", i32 979920896, i32 1167562752}
+;     FAST4210:      !0 = !{!"branch_weights", i32 920350135, i32 1227133513}
+;     FAST4210:      !1 = !{!"branch_weights", i32 1, i32 1}
 ;
 ;   Now use a constant iteration count so that all non-final unrolled
 ;   iterations' latches unconditionally continue.
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/1/ -e s/@MIN@/4/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4240
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4240
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4240
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4240
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4240
 ;
@@ -781,6 +864,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/1/ -e s/@MIN@/4/ -e s/@I_0@/%x/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG424x
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR424x
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR424x
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR424x
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR424x
 ;
@@ -807,6 +892,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/0/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4110
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4110
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4110
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4110
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4110
 ;
@@ -832,6 +919,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/0/ -e s/@MIN@/4/ -e s/@I_0@/0/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG4140
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR4140
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR4140
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR4140
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR4140
 ;
@@ -855,6 +944,8 @@
 ;
 ;     RUN: sed -e s/@MAX@/4/ -e s/@W@/0/ -e s/@MIN@/4/ -e s/@I_0@/%x/ %s > %t.ll
 ;     RUN: %{bf-fc} ORIG414x
+;     RUN: %{ur-bf} -unroll-count=4 -unroll-uniform-weights | %{fc} UR414x
+;     RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR414x
 ;     RUN: %{ur-bf} -unroll-count=4 | %{fc} UR414x
 ;     RUN: %{ur-bf} -unroll-count=5 | %{fc} UR414x
 ;
@@ -880,14 +971,16 @@
 ; - Unroll count of >=5 should always produce complete unrolling.
 ; - That produces <=4 unrolled iteration latches.  When at least 3 remain
 ;   conditional, the implementation cannot compute uniform weights using a
-;   simple formula.
+;   simple formula, so -unroll-uniform-weights matters.
 ;
 ; Original loop body frequency is 5 (loop weight 4).
 ;
 ;   RUN: sed -e s/@MAX@/5/ -e s/@W@/4/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;   RUN: %{bf-fc} ORIG5510
-;   RUN: %{ur-bf} -unroll-count=5 | %{fc} UR5510
-;   RUN: %{ur-bf} -unroll-count=6 | %{fc} UR5510
+;   RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR5510,UNIF5510
+;   RUN: %{ur-bf} -unroll-count=6 -unroll-uniform-weights | %{fc} UR5510,UNIF5510
+;   RUN: %{ur-bf} -unroll-count=5 | %{fc} UR5510,FAST5510
+;   RUN: %{ur-bf} -unroll-count=6 | %{fc} UR5510,FAST5510
 ;
 ;   The sum of the new do.body* is the old do.body.
 ;   ORIG5510: - do.body: float = 5.0,
@@ -899,55 +992,75 @@
 ;
 ;   All continue probabilities are approximately 1, but somehow there is less
 ;   precision in the calculation of the last case.
-;   UR5510: call void @f
-;   UR5510: br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
-;   UR5510: call void @f
-;   UR5510: br i1 %{{.*}}, label %do.end, label %do.body.2, !prof !0
-;   UR5510: call void @f
-;   UR5510: br i1 %{{.*}}, label %do.end, label %do.body.3, !prof !0
-;   UR5510: call void @f
-;   UR5510: br i1 %{{.*}}, label %do.end, label %do.body.4, !prof !1
-;   UR5510: call void @f
-;   UR5510: br label %do.end
-;   UR5510: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
-;   UR5510: !1 = !{!"branch_weights", i32 10, i32 2147483638}
+;   UR5510:        call void @f
+;   UR5510:        br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
+;   UR5510:        call void @f
+;   UR5510:        br i1 %{{.*}}, label %do.end, label %do.body.2, !prof !0
+;   UR5510:        call void @f
+;   UR5510:        br i1 %{{.*}}, label %do.end, label %do.body.3, !prof !0
+;   UR5510:        call void @f
+;   UR5510:        br i1 %{{.*}}, label %do.end, label %do.body.4,
+;   UNIF5510-SAME:   !prof !0
+;   FAST5510-SAME:   !prof !1
+;   UR5510:        call void @f
+;   UR5510:        br label %do.end
+;   UNIF5510: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
+;   FAST5510: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
+;   FAST5510: !1 = !{!"branch_weights", i32 10, i32 2147483638}
 ;
 ; Original loop body frequency is 4 (loop weight 3).
 ;
 ;   RUN: sed -e s/@MAX@/5/ -e s/@W@/3/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;   RUN: %{bf-fc} ORIG5410
-;   RUN: %{ur-bf} -unroll-count=5 | %{fc} UR5410
-;   RUN: %{ur-bf} -unroll-count=6 | %{fc} UR5410
+;   RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR5410,UNIF5410
+;   RUN: %{ur-bf} -unroll-count=6 -unroll-uniform-weights | %{fc} UR5410,UNIF5410
+;   RUN: %{ur-bf} -unroll-count=5 | %{fc} UR5410,FAST5410
+;   RUN: %{ur-bf} -unroll-count=6 | %{fc} UR5410,FAST5410
 ;
 ;   The sum of the new do.body* is always the old do.body.
 ;   ORIG5410: - do.body: float = 4.0,
-;   UR5410: - do.body: float = 1.0,
-;   UR5410: - do.body.1: float = 1.0,
-;   UR5410: - do.body.2: float = 0.86486,
-;   UR5410: - do.body.3: float = 0.64865,
-;   UR5410: - do.body.4: float = 0.48649,
+;   UNIF5410: - do.body: float = 1.0,
+;   UNIF5410: - do.body.1: float = 0.88818,
+;   UNIF5410: - do.body.2: float = 0.78886,
+;   UNIF5410: - do.body.3: float = 0.70065,
+;   UNIF5410: - do.body.4: float = 0.62231,
+;   FAST5410: - do.body: float = 1.0,
+;   FAST5410: - do.body.1: float = 1.0,
+;   FAST5410: - do.body.2: float = 0.86486,
+;   FAST5410: - do.body.3: float = 0.64865,
+;   FAST5410: - do.body.4: float = 0.48649,
 ;
-;   This is our first case where the implementation must adjust multiple
-;   probabilities to something other than the original latch probability but
-;   does not just set all probabilities to the limit of 1 or 0.
-;   UR5410: call void @f
-;   UR5410: br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
-;   UR5410: call void @f
-;   UR5410: br i1 %{{.*}}, label %do.end, label %do.body.2, !prof !1
-;   UR5410: call void @f
-;   UR5410: br i1 %{{.*}}, label %do.end, label %do.body.3, !prof !2
-;   UR5410: call void @f
-;   UR5410: br i1 %{{.*}}, label %do.end, label %do.body.4, !prof !2
-;   UR5410: call void @f
-;   UR5410: br label %do.end
-;   UR5410: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
-;   UR5410: !1 = !{!"branch_weights", i32 290200493, i32 1857283155}
-;   UR5410: !2 = !{!"branch_weights", i32 1, i32 3}
+;   This is our first case where, when not using -unroll-uniform-weights, the
+;   implementation must adjust multiple probabilities to something other than
+;   the original latch probability but does not just set all probabilities to
+;   the limit of 1 or 0.
+;   UR5410:        call void @f
+;   UR5410:        br i1 %{{.*}}, label %do.end, label %do.body.1, !prof !0
+;   UR5410:        call void @f
+;   UR5410:        br i1 %{{.*}}, label %do.end, label %do.body.2,
+;   UNIF5410-SAME:   !prof !0
+;   FAST5410-SAME:   !prof !1
+;   UR5410:        call void @f
+;   UR5410:        br i1 %{{.*}}, label %do.end, label %do.body.3,
+;   UNIF5410-SAME:   !prof !0
+;   FAST5410-SAME:   !prof !2
+;   UR5410:        call void @f
+;   UR5410:        br i1 %{{.*}}, label %do.end, label %do.body.4,
+;   UNIF5410-SAME:   !prof !0
+;   FAST5410-SAME:   !prof !2
+;   UR5410:        call void @f
+;   UR5410:        br label %do.end
+;   UNIF5410: !0 = !{!"branch_weights", i32 240132096, i32 1907351552}
+;   FAST5410: !0 = !{!"branch_weights", i32 0, i32 -2147483648}
+;   FAST5410: !1 = !{!"branch_weights", i32 290200493, i32 1857283155}
+;   FAST5410: !2 = !{!"branch_weights", i32 1, i32 3}
 ;
 ; Original loop body frequency is 1 (loop weight 0).
 ;
 ;   RUN: sed -e s/@MAX@/5/ -e s/@W@/0/ -e s/@MIN@/1/ -e s/@I_0@/0/ %s > %t.ll
 ;   RUN: %{bf-fc} ORIG5110
+;   RUN: %{ur-bf} -unroll-count=5 -unroll-uniform-weights | %{fc} UR5110
+;   RUN: %{ur-bf} -unroll-count=6 -unroll-uniform-weights | %{fc} UR5110
 ;   RUN: %{ur-bf} -unroll-count=5 | %{fc} UR5110
 ;   RUN: %{ur-bf} -unroll-count=6 | %{fc} UR5110
 ;

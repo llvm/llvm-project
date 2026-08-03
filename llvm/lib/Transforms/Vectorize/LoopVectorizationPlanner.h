@@ -97,13 +97,44 @@ void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
 
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
-  VPBasicBlock *BB = nullptr;
-  VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
+private:
+  class VPInsertPoint {
+    VPBasicBlock *Block = nullptr;
+    VPBasicBlock::iterator Point;
+
+  public:
+    /// Creates a new insertion point which doesn't point to anything.
+    VPInsertPoint() = default;
+
+    /// Creates a new insertion point to insert at \p Point in \p Block.
+    VPInsertPoint(VPBasicBlock *Block, VPBasicBlock::iterator Point)
+        : Block(Block), Point(Point) {}
+
+    /// Creates a new insertion point to insert before \p R.
+    VPInsertPoint(VPRecipeBase *R)
+        : Block(R->getParent()), Point(R->getIterator()) {}
+
+    /// Creates a new insertion point to insert at the end of \p Block.
+    VPInsertPoint(VPBasicBlock *Block) : Block(Block), Point(Block->end()) {}
+
+    /// Returns true if this insert point is set.
+    operator bool() const { return Block; }
+
+    VPBasicBlock *getBlock() const { return Block; }
+
+    operator VPRecipeBase *() const {
+      return Point == Block->end() ? nullptr : &*Point;
+    }
+
+    template <typename T> void insert(T &R) { return Block->insert(R, Point); }
+  };
+
+  VPInsertPoint InsertPt;
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
-    if (BB)
-      BB->insert(R, InsertPt);
+    if (InsertPt)
+      InsertPt.insert(R);
     return R;
   }
 
@@ -117,87 +148,40 @@ class VPBuilder {
 
 public:
   VPlan &getPlan() const {
-    assert(getInsertBlock() && "Insert block must be set");
-    return *getInsertBlock()->getPlan();
+    assert(InsertPt && "Insert block must be set");
+    return *InsertPt.getBlock()->getPlan();
   }
 
   VPBuilder() = default;
-  VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
-  VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
-  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
-    setInsertPoint(TheBB, IP);
-  }
+  VPBuilder(const VPInsertPoint &IP) : InsertPt(IP) {}
+  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP)
+      : InsertPt(TheBB, IP) {}
 
-  /// Clear the insertion point: created instructions will not be inserted into
-  /// a block.
-  void clearInsertionPoint() {
-    BB = nullptr;
-    InsertPt = VPBasicBlock::iterator();
-  }
-
-  VPBasicBlock *getInsertBlock() const { return BB; }
-  VPBasicBlock::iterator getInsertPoint() const { return InsertPt; }
+  /// Get the recipe at the current insert point or nullptr if the insert point
+  /// is the end of the block.
+  VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
   /// Create a VPBuilder to insert after \p R.
   static VPBuilder getToInsertAfter(VPRecipeBase *R) {
-    VPBuilder B;
-    B.setInsertPoint(R->getParent(), std::next(R->getIterator()));
-    return B;
+    return {R->getParent(), std::next(R->getIterator())};
   }
-
-  /// InsertPoint - A saved insertion point.
-  class VPInsertPoint {
-    VPBasicBlock *Block = nullptr;
-    VPBasicBlock::iterator Point;
-
-  public:
-    /// Creates a new insertion point which doesn't point to anything.
-    VPInsertPoint() = default;
-
-    /// Creates a new insertion point at the given location.
-    VPInsertPoint(VPBasicBlock *InsertBlock, VPBasicBlock::iterator InsertPoint)
-        : Block(InsertBlock), Point(InsertPoint) {}
-
-    /// Returns true if this insert point is set.
-    bool isSet() const { return Block != nullptr; }
-
-    VPBasicBlock *getBlock() const { return Block; }
-    VPBasicBlock::iterator getPoint() const { return Point; }
-  };
 
   /// Sets the current insert point to a previously-saved location.
-  void restoreIP(VPInsertPoint IP) {
-    if (IP.isSet())
-      setInsertPoint(IP.getBlock(), IP.getPoint());
-    else
-      clearInsertionPoint();
-  }
+  void restoreIP(VPInsertPoint IP) { InsertPt = IP; }
 
-  /// This specifies that created VPInstructions should be appended to the end
-  /// of the specified block.
-  void setInsertPoint(VPBasicBlock *TheBB) {
-    assert(TheBB && "Attempting to set a null insert point");
-    BB = TheBB;
-    InsertPt = BB->end();
-  }
-
-  /// This specifies that created instructions should be inserted at the
-  /// specified point.
-  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
-    BB = TheBB;
+  /// Set the current insert point.
+  void setInsertPoint(const VPInsertPoint &IP) {
+    assert(IP && "Attempting to set a null insert point");
     InsertPt = IP;
   }
-
-  /// This specifies that created instructions should be inserted at the
-  /// specified point.
-  void setInsertPoint(VPRecipeBase *IP) {
-    BB = IP->getParent();
-    InsertPt = IP->getIterator();
+  void setInsertPoint(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
+    assert(TheBB && "Attempting to set a null insert point");
+    InsertPt = VPInsertPoint(TheBB, IP);
   }
 
   /// Insert \p R at the current insertion point. Returns \p R unchanged.
   template <typename T> [[maybe_unused]] T *insert(T *R) {
-    BB->insert(R, InsertPt);
+    InsertPt.insert(R);
     return R;
   }
 
@@ -390,7 +374,7 @@ public:
   }
 
   VPValue *createElementCount(Type *Ty, ElementCount EC) {
-    VPlan &Plan = *getInsertBlock()->getPlan();
+    VPlan &Plan = getPlan();
     VPValue *RuntimeEC = Plan.getConstantInt(Ty, EC.getKnownMinValue());
     if (EC.isScalable()) {
       VPValue *VScale = createVScale(Ty);
@@ -564,17 +548,15 @@ public:
   /// the object is destroyed.
   class InsertPointGuard {
     VPBuilder &Builder;
-    VPBasicBlock *Block;
-    VPBasicBlock::iterator Point;
+    VPInsertPoint InsertPt;
 
   public:
-    InsertPointGuard(VPBuilder &B)
-        : Builder(B), Block(B.getInsertBlock()), Point(B.getInsertPoint()) {}
+    InsertPointGuard(VPBuilder &B) : Builder(B), InsertPt(B.InsertPt) {}
 
     InsertPointGuard(const InsertPointGuard &) = delete;
     InsertPointGuard &operator=(const InsertPointGuard &) = delete;
 
-    ~InsertPointGuard() { Builder.restoreIP(VPInsertPoint(Block, Point)); }
+    ~InsertPointGuard() { Builder.restoreIP(InsertPt); }
   };
 };
 
