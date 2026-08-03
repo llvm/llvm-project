@@ -2116,11 +2116,11 @@ loop_latch:
 ; CHECK-NEXT:    %[[V:.*]] = load i1, ptr %ptr
 ; CHECK-NEXT:    br i1 %[[V]], label %loop_b_inner_latch.us, label %loop_b_inner_exit.us
 ;
-; CHECK:       loop_b_inner_exit.us:
-; CHECK-NEXT:    br label %loop_latch.us
-;
 ; CHECK:       loop_b_inner_latch.us:
 ; CHECK-NEXT:    br label %loop_b_inner_header.us
+;
+; CHECK:       loop_b_inner_exit.us:
+; CHECK-NEXT:    br label %loop_latch.us
 ;
 ; CHECK:       loop_a.us:
 ; CHECK-NEXT:    %[[V:.*]] = load i1, ptr %ptr

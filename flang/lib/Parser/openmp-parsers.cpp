@@ -937,14 +937,55 @@ TYPE_PARSER(construct<OmpMapper>( //
     "MAPPER"_tok >> parenthesized(Parser<ObjectName>{})))
 
 // map-type -> ALLOC | DELETE | FROM | RELEASE | STORAGE | TO | TOFROM
-TYPE_PARSER(construct<OmpMapType>( //
-    "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
-    // Parse "DELETE" as OmpDeleteModifier
-    "FROM" >> pure(OmpMapType::Value::From) ||
-    "RELEASE" >> pure(OmpMapType::Value::Release) ||
-    "STORAGE" >> pure(OmpMapType::Value::Storage) ||
-    "TO"_id >> pure(OmpMapType::Value::To) ||
-    "TOFROM" >> pure(OmpMapType::Value::Tofrom)))
+struct OmpMapTypeParser {
+  using resultType = OmpMapType::Value;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    if (version < 60) {
+      auto parser{//
+          "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
+          "DELETE" >> pure(OmpMapType::Value::Delete) ||
+          "FROM" >> pure(OmpMapType::Value::From) ||
+          "RELEASE" >> pure(OmpMapType::Value::Release) ||
+          "STORAGE" >> pure(OmpMapType::Value::Storage) ||
+          "TO"_id >> pure(OmpMapType::Value::To) ||
+          "TOFROM" >> pure(OmpMapType::Value::Tofrom)};
+      return parser.Parse(state);
+    } else {
+      auto parser{//
+          "ALLOC" >> pure(OmpMapType::Value::Alloc) ||
+          "FROM" >> pure(OmpMapType::Value::From) ||
+          "RELEASE" >> pure(OmpMapType::Value::Release) ||
+          "STORAGE" >> pure(OmpMapType::Value::Storage) ||
+          "TO"_id >> pure(OmpMapType::Value::To) ||
+          "TOFROM" >> pure(OmpMapType::Value::Tofrom)};
+      return parser.Parse(state);
+    }
+  }
+};
+
+TYPE_PARSER(OmpMapTypeParser{})
+
+struct OmpMapTypeModifierParser {
+  using resultType = OmpMapTypeModifier::Value;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    unsigned version{state.userState()->langOptions().OpenMPVersion};
+    if (version < 60) {
+      auto parser{//
+          "ALWAYS" >> pure(OmpMapTypeModifier::Value::Always) ||
+          "CLOSE" >> pure(OmpMapTypeModifier::Value::Close) ||
+          "PRESENT" >> pure(OmpMapTypeModifier::Value::Present)};
+      return parser.Parse(state);
+    } else {
+      // No longer in 6.0.
+      return std::nullopt;
+    }
+  }
+};
+
+TYPE_PARSER(OmpMapTypeModifierParser{})
 
 TYPE_PARSER(construct<OmpOrderModifier>(
     "REPRODUCIBLE" >> pure(OmpOrderModifier::Value::Reproducible) ||
@@ -1074,17 +1115,19 @@ TYPE_PARSER(sourced(
     construct<OmpLinearClause::Modifier>(Parser<OmpStepSimpleModifier>{})))
 
 TYPE_PARSER(sourced(construct<OmpMapClause::Modifier>(
-    sourced(construct<OmpMapClause::Modifier>(Parser<OmpAlwaysModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpAttachModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpCloseModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpDeleteModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpPresentModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpRefModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpSelfModifier>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpMapper>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpIterator>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpMapType>{}) ||
-        construct<OmpMapClause::Modifier>(Parser<OmpxHoldModifier>{})))))
+    // Try the two custom parsers first.
+    construct<OmpMapClause::Modifier>(OmpMapTypeParser{}) ||
+    construct<OmpMapClause::Modifier>(OmpMapTypeModifierParser{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpAlwaysModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpAttachModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpCloseModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpDeleteModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpIterator>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpMapper>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpPresentModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpRefModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpSelfModifier>{}) ||
+    construct<OmpMapClause::Modifier>(Parser<OmpxHoldModifier>{}))))
 
 TYPE_PARSER(
     sourced(construct<OmpOrderClause::Modifier>(Parser<OmpOrderModifier>{})))
@@ -1215,10 +1258,10 @@ TYPE_PARSER(construct<OmpDefaultClause::DataSharingAttribute>(
     "NONE" >> pure(OmpDefaultClause::DataSharingAttribute::None)))
 
 TYPE_PARSER(construct<OmpDefaultClause>(
-    construct<OmpDefaultClause>(
-        Parser<OmpDefaultClause::DataSharingAttribute>{}) ||
-    construct<OmpDefaultClause>(
-        indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false)))))
+    Parser<OmpDefaultClause::DataSharingAttribute>{}))
+
+TYPE_PARSER(construct<OmpDefaultVariantClause>(
+    indirect(OmpDirectiveSpecificationParser(/*allowCommas=*/false))))
 
 TYPE_PARSER(construct<OmpDynGroupprivateClause>(
     maybe(nonemptyList(Parser<OmpDynGroupprivateClause::Modifier>{}) / ":"),
@@ -1416,8 +1459,10 @@ TYPE_PARSER(construct<OmpAlignedClause>(Parser<OmpObjectList>{},
     maybe(":" >> nonemptyList(Parser<OmpAlignedClause::Modifier>{}))))
 
 TYPE_PARSER( //
-    construct<OmpUpdateClause>(parenthesized(Parser<OmpDependenceType>{})) ||
-    construct<OmpUpdateClause>(parenthesized(Parser<OmpTaskDependenceType>{})))
+    construct<OmpUpdateDependObjectsClause>(
+        parenthesized(Parser<OmpDependenceType>{})) ||
+    construct<OmpUpdateDependObjectsClause>(
+        parenthesized(Parser<OmpTaskDependenceType>{})))
 
 TYPE_PARSER(construct<OmpOrderClause>(
     maybe(nonemptyList(Parser<OmpOrderClause::Modifier>{}) / ":"),
@@ -1521,8 +1566,12 @@ TYPE_PARSER( //
                     parenthesized(Parser<OmpObjectList>{}))) ||
     "COPYPRIVATE" >> construct<OmpClause>(construct<OmpClause::Copyprivate>(
                          (parenthesized(Parser<OmpObjectList>{})))) ||
-    "DEFAULT"_id >> construct<OmpClause>(construct<OmpClause::Default>(
-                        parenthesized(Parser<OmpDefaultClause>{}))) ||
+    "DEFAULT"_id >>
+        // Default or DefaultVariant depending on the argument.
+        (construct<OmpClause>(construct<OmpClause::Default>(
+             parenthesized(Parser<OmpDefaultClause>{}))) ||
+            construct<OmpClause>(construct<OmpClause::DefaultVariant>(
+                parenthesized(Parser<OmpDefaultVariantClause>{})))) ||
     "DEFAULTMAP" >> construct<OmpClause>(construct<OmpClause::Defaultmap>(
                         parenthesized(Parser<OmpDefaultmapClause>{}))) ||
     "DEPEND" >> construct<OmpClause>(construct<OmpClause::Depend>(
@@ -1704,8 +1753,9 @@ TYPE_PARSER( //
     "UNIFORM" >> construct<OmpClause>(construct<OmpClause::Uniform>(
                      parenthesized(nonemptyList(name)))) ||
     "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
-    "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
-                    maybe(Parser<OmpUpdateClause>{}))) ||
+    "UPDATE" >> (construct<OmpClause>(construct<OmpClause::UpdateDependObjects>(
+                     Parser<OmpUpdateDependObjectsClause>{})) ||
+                    construct<OmpClause>(construct<OmpClause::Update>())) ||
     "WEAK" >> construct<OmpClause>(construct<OmpClause::Weak>()) ||
     "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
                   parenthesized(Parser<OmpWhenClause>{}))) ||
