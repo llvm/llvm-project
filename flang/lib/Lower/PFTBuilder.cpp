@@ -26,7 +26,7 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
     llvm::cl::init(false), llvm::cl::Hidden);
 
 llvm::cl::opt<bool> wrapUnstructuredConstructsInExecuteRegion(
-    "wrap-unstructured-constructs-in-execute-region", llvm::cl::init(true),
+    "wrap-unstructured-constructs-in-execute-region", llvm::cl::init(false),
     llvm::cl::desc("try to wrap unstructured constructs' CFGs in "
                    "self-contained MLIR regions"));
 
