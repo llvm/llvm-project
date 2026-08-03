@@ -163,13 +163,12 @@ void mock::MockLiboffload::initDefault() {
   ON_CALL(*this, olCreateContext)
       .WillByDefault([this](size_t NumDevices, ol_device_handle_t *Devices,
                             ol_context_handle_t *Context) -> ol_result_t {
-        if (!Devices || !Context)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
-        if (NumDevices == 0)
-          return makeEmptyStrError(OL_ERRC_INVALID_SIZE);
+        EXPECT_GT(NumDevices, 0);
+        EXPECT_NE(Devices, nullptr);
+        EXPECT_NE(Context, nullptr);
+
         for (size_t I = 0; I < NumDevices; ++I) {
-          if (!Devices[I])
-            return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+          EXPECT_NE(Devices[I], nullptr);
         }
 
         // Preserve the first device in payload for tests that may need to
@@ -181,8 +180,7 @@ void mock::MockLiboffload::initDefault() {
 
   ON_CALL(*this, olDestroyContext)
       .WillByDefault([this](ol_context_handle_t Context) -> ol_result_t {
-        if (!Context)
-          return makeEmptyStrError(OL_ERRC_INVALID_NULL_HANDLE);
+        EXPECT_NE(Context, nullptr);
         mock::releaseDummyHandle(Context);
         return OL_SUCCESS;
       });
