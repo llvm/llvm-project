@@ -1210,6 +1210,7 @@ public:
     ScalarsInSplitNodes.clear();
     MustGather.clear();
     ReassocScalarToTreeEntries.clear();
+    KeptReassocScalars.clear();
     NonScheduledFirst.clear();
     EntryToLastInstruction.clear();
     LastInstructionToPos.clear();
@@ -3934,6 +3935,11 @@ private:
   /// treated as vectorized while an owner is live.
   SmallDenseMap<const Value *, SmallVector<const TreeEntry *>>
       ReassocScalarToTreeEntries;
+
+  /// Peeled reassociated scalars that must survive erasure: claimed by a
+  /// gather node, listed in some tree entry's scalars, or feeding another
+  /// kept scalar.
+  SmallPtrSet<const Value *, 8> KeptReassocScalars;
 
   /// A set of first non-schedulable values.
   ValueSet NonScheduledFirst;
@@ -8889,6 +8895,22 @@ void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
+  // Peeled scalars still claimed by the tree (gathered or listed in some
+  // entry's scalars) survive as plain code, along with the peeled scalars
+  // in their operand chains, which no vector node can rematerialize.
+  KeptReassocScalars.clear();
+  SmallVector<const Value *, 8> KeptWorklist;
+  for (const Value *V : ReassocScalarToTreeEntries.keys())
+    if ((isGathered(V) || !getTreeEntries(V).empty()) &&
+        KeptReassocScalars.insert(V).second)
+      KeptWorklist.push_back(V);
+  while (!KeptWorklist.empty()) {
+    const Value *V = KeptWorklist.pop_back_val();
+    for (const Value *Op : cast<Instruction>(V)->operand_values())
+      if (ReassocScalarToTreeEntries.contains(Op) &&
+          KeptReassocScalars.insert(Op).second)
+        KeptWorklist.push_back(Op);
+  }
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
@@ -8943,8 +8965,10 @@ void BoUpSLP::buildExternalUses(
           continue;
 
         // Peeled reassociated scalars are subsumed by the flattened node and
-        // erased during vectorization, not external users.
-        if (isReassocScalarVectorized(UserInst)) {
+        // erased during vectorization, not external users. Kept ones survive
+        // and their uses of erased scalars become extracts like any other.
+        if (isReassocScalarVectorized(UserInst) &&
+            !KeptReassocScalars.contains(UserInst)) {
           LLVM_DEBUG(dbgs() << "SLP: \tInternal (reassociated) user will be "
                                "removed:"
                             << *U << ".\n");
@@ -25660,8 +25684,11 @@ Value *BoUpSLP::vectorizeTree(
       RemovedInsts.push_back(I);
     }
 
-    // Erase peeled intermediates (not listed in Scalars).
+    // Erase peeled intermediates (not listed in Scalars), except the ones
+    // kept because the tree still claims them.
     for (Value *V : Entry->getReassocScalars()) {
+      if (KeptReassocScalars.contains(V))
+        continue;
 #ifndef NDEBUG
       for (User *U : V->users()) {
         LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
