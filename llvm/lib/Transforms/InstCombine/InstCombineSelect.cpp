@@ -2100,9 +2100,9 @@ static Value *foldSelectInstWithICmpConst(SelectInst &SI, ICmpInst *ICI,
   return nullptr;
 }
 
-// a > -1 ? 1 : ( a | (+ve)value) --> smin(1, a | (+ve)value)
-// a < -1 ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
-// a < 0  ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
+/// a > -1 ? 1 : ( a | (+ve)value) --> smin(1, a | (+ve)value)
+/// a < -1 ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
+/// a < 0  ? ( a | (+ve)value) : 1 --> smin(1, a | (+ve)value)
 static Value *foldSelectInstWithICmpOr(SelectInst &SI, ICmpInst *ICI,
                                        InstCombiner::BuilderTy &Builder,
                                        const SimplifyQuery &SQ) {
@@ -2111,23 +2111,28 @@ static Value *foldSelectInstWithICmpOr(SelectInst &SI, ICmpInst *ICI,
   Value *B = ICI->getOperand(1);
   Value *TVal = SI.getTrueValue();
   Value *FVal = SI.getFalseValue();
-  ICmpInst::Predicate Pred = ICI->getPredicate();
 
-  if ((Pred == ICmpInst::ICMP_SLT && match(B, m_Zero())) ||
-      (Pred == ICmpInst::ICMP_SLE && match(B, m_AllOnes()))) {
+  const APInt *CmpC;
+  if (!match(B, m_APInt(CmpC)))
+    return nullptr;
+
+  bool TrueIfSigned;
+  if (!isSignBitCheck(ICI->getPredicate(), *CmpC, TrueIfSigned))
+    return nullptr;
+
+  if (TrueIfSigned) {
     OrVal = TVal;
     ConstVal = FVal;
-  } else if ((Pred == ICmpInst::ICMP_SGT &&
-              match(B, m_AllOnes())) ||
-             (Pred == ICmpInst::ICMP_SGE && match(B, m_Zero()))) {
+  } else {
     OrVal = FVal;
     ConstVal = TVal;
-  } else {
-    return nullptr;
   }
 
-  if (!match(ConstVal, m_AllOnes()) && !match(ConstVal, m_Zero()) &&
-      !match(ConstVal, m_One()))
+  const APInt *C;
+  if (!match(ConstVal, m_APInt(C)))
+    return nullptr;
+
+  if (!(C->isZero() || C->isOne() || C->isAllOnes()))
     return nullptr;
 
   if (!match(OrVal, m_c_Or(m_Specific(A), m_Value(Mask))))

@@ -1082,6 +1082,150 @@ define i8 @icmp_pos_sgt_select_or_neg1(i8 %inl) {
   ret i8 %s
 }
 
+define <4 x i8> @icmp_pos_sgt_select_or1_vec(<4 x i8> %inl) {
+; CHECK-LABEL: @icmp_pos_sgt_select_or1_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[INL:%.*]], splat (i8 25)
+; CHECK-NEXT:    [[S:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[OR]], <4 x i8> zeroinitializer)
+; CHECK-NEXT:    ret <4 x i8> [[S]]
+;
+  %or = or <4 x i8> %inl, <i8 25, i8 25, i8 25, i8 25>
+  %cmp = icmp sgt <4 x i8> %inl, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %s = select <4 x i1> %cmp,
+  <4 x i8> <i8 0, i8 0, i8 0, i8 0>,
+  <4 x i8> %or
+  ret <4 x i8> %s
+}
+
+define <4 x i8> @icmp_pos_sge_select_or_vec(<4 x i8> %inl) {
+; CHECK-LABEL: @icmp_pos_sge_select_or_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[INL:%.*]], splat (i8 2)
+; CHECK-NEXT:    [[S:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[OR]], <4 x i8> splat (i8 1))
+; CHECK-NEXT:    ret <4 x i8> [[S]]
+;
+  %or = or <4 x i8> %inl, <i8 2, i8 2, i8 2, i8 2>
+  %cmp = icmp sge <4 x i8> %inl, <i8 0, i8 0, i8 0, i8 0>
+  %s = select <4 x i1> %cmp,
+  <4 x i8> <i8 1, i8 1, i8 1, i8 1>,
+  <4 x i8> %or
+  ret <4 x i8> %s
+}
+
+define <4 x i8> @icmp_pos_sgt_select_or_commuted_op_vec(<4 x i8> %inl) {
+; CHECK-LABEL: @icmp_pos_sgt_select_or_commuted_op_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[INL:%.*]], splat (i8 8)
+; CHECK-NEXT:    [[S:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[OR]], <4 x i8> splat (i8 1))
+; CHECK-NEXT:    ret <4 x i8> [[S]]
+;
+  %or = or <4 x i8> <i8 8, i8 8, i8 8, i8 8>, %inl
+  %cmp = icmp sgt <4 x i8> %inl, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %s = select <4 x i1> %cmp,
+  <4 x i8> <i8 1, i8 1, i8 1, i8 1>,
+  <4 x i8> %or
+  ret <4 x i8> %s
+}
+
+define <4 x i8> @icmp_pos_sgt_select_or_commuted_select_vec(<4 x i8> %inl) {
+; CHECK-LABEL: @icmp_pos_sgt_select_or_commuted_select_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[INL:%.*]], splat (i8 8)
+; CHECK-NEXT:    [[S:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[OR]], <4 x i8> splat (i8 1))
+; CHECK-NEXT:    ret <4 x i8> [[S]]
+;
+  %or = or <4 x i8> %inl, <i8 8, i8 8, i8 8, i8 8>
+  %cmp = icmp sle <4 x i8> %inl, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %s = select <4 x i1> %cmp,
+  <4 x i8> %or,
+  <4 x i8> <i8 1, i8 1, i8 1, i8 1>
+  ret <4 x i8> %s
+}
+
+define <4 x i8> @icmp_slt_select_or_vec(<4 x i8> %inl) {
+; CHECK-LABEL: @icmp_slt_select_or_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[INL:%.*]], splat (i8 8)
+; CHECK-NEXT:    [[S:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[OR]], <4 x i8> splat (i8 1))
+; CHECK-NEXT:    ret <4 x i8> [[S]]
+;
+  %or = or <4 x i8> %inl, <i8 8, i8 8, i8 8, i8 8>
+  %cmp = icmp slt <4 x i8> %inl, <i8 0, i8 0, i8 0, i8 0>
+  %s = select <4 x i1> %cmp,
+  <4 x i8> %or,
+  <4 x i8> <i8 1, i8 1, i8 1, i8 1>
+  ret <4 x i8> %s
+}
+
+define <4 x i8> @icmp_sle_select_or_vec(<4 x i8> %inl) {
+; CHECK-LABEL: @icmp_sle_select_or_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[INL:%.*]], splat (i8 15)
+; CHECK-NEXT:    [[S:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[OR]], <4 x i8> zeroinitializer)
+; CHECK-NEXT:    ret <4 x i8> [[S]]
+;
+  %or = or <4 x i8> %inl, <i8 15, i8 15, i8 15, i8 15>
+  %cmp = icmp sle <4 x i8> %inl, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %s = select <4 x i1> %cmp,
+  <4 x i8> %or,
+  <4 x i8> <i8 0, i8 0, i8 0, i8 0>
+  ret <4 x i8> %s
+}
+
+define <4 x i8> @icmp_neg_slt_select_or_vec(<4 x i8> %inl) {
+; CHECK-LABEL: @icmp_neg_slt_select_or_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[INL:%.*]], splat (i8 8)
+; CHECK-NEXT:    [[S:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[OR]], <4 x i8> splat (i8 1))
+; CHECK-NEXT:    ret <4 x i8> [[S]]
+;
+  %or = or <4 x i8> %inl, <i8 8, i8 8, i8 8, i8 8>
+  %cmp = icmp slt <4 x i8> %inl, <i8 0, i8 0, i8 0, i8 0>
+  %s = select <4 x i1> %cmp,
+  <4 x i8> %or,
+  <4 x i8> <i8 1, i8 1, i8 1, i8 1>
+  ret <4 x i8> %s
+}
+
+define <4 x i8> @icmp_pos_sgt_diff_const_vec(<4 x i8> %inl) {
+; CHECK-LABEL: @icmp_pos_sgt_diff_const_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[INL:%.*]], splat (i8 8)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i8> [[INL]], splat (i8 1)
+; CHECK-NEXT:    [[S:%.*]] = select <4 x i1> [[CMP]], <4 x i8> splat (i8 1), <4 x i8> [[OR]]
+; CHECK-NEXT:    ret <4 x i8> [[S]]
+;
+  %or = or <4 x i8> %inl, <i8 8, i8 8, i8 8, i8 8>
+  %cmp = icmp sgt <4 x i8> %inl, <i8 1, i8 1, i8 1, i8 1>
+  %s = select <4 x i1> %cmp,
+  <4 x i8> <i8 1, i8 1, i8 1, i8 1>,
+  <4 x i8> %or
+  ret <4 x i8> %s
+}
+
+define <4 x i8> @icmp_pos_sgt_select_or_neg1_vec(<4 x i8> %inl) {
+; CHECK-LABEL: @icmp_pos_sgt_select_or_neg1_vec(
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[INL:%.*]], splat (i8 8)
+; CHECK-NEXT:    [[S:%.*]] = call <4 x i8> @llvm.smin.v4i8(<4 x i8> [[OR]], <4 x i8> splat (i8 -1))
+; CHECK-NEXT:    ret <4 x i8> [[S]]
+;
+  %or = or <4 x i8> %inl, <i8 8, i8 8, i8 8, i8 8>
+  %cmp = icmp sgt <4 x i8> %inl, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %s = select <4 x i1> %cmp,
+  <4 x i8> <i8 -1, i8 -1, i8 -1, i8 -1>,
+  <4 x i8> %or
+  ret <4 x i8> %s
+}
+
+define <4 x i8> @zext_maybe_zero_vec(<4 x i8> %a, <4 x i1> %x) {
+; CHECK-LABEL: @zext_maybe_zero_vec(
+; CHECK-NEXT:    [[MASK:%.*]] = zext <4 x i1> [[X:%.*]] to <4 x i8>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i8> [[A:%.*]], [[MASK]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i8> [[A]], splat (i8 -1)
+; CHECK-NEXT:    [[SEL:%.*]] = select <4 x i1> [[CMP]], <4 x i8> splat (i8 1), <4 x i8> [[OR]]
+; CHECK-NEXT:    ret <4 x i8> [[SEL]]
+;
+  %mask = zext <4 x i1> %x to <4 x i8>
+  %or = or <4 x i8> %a, %mask
+  %cmp = icmp sgt <4 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1>
+  %sel = select <4 x i1> %cmp,
+  <4 x i8> <i8 1, i8 1, i8 1, i8 1>,
+  <4 x i8> %or
+  ret <4 x i8> %sel
+}
+
 define i8 @known_positive_range(i8 %a, i8 range(i8 1, 128) %y) {
 ; CHECK-LABEL: @known_positive_range(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[A:%.*]], [[Y:%.*]]
