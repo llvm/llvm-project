@@ -1663,7 +1663,7 @@ Experimental extensions
     smcsps               0.19
     smpmpmt              0.6
     sscsps               0.19
-    svukte               0.3
+    svukte               1.0
     xqccmt               0.1
     xsfmclic             0.1
     xsfsclic             0.1

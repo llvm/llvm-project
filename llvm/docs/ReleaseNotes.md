@@ -98,6 +98,8 @@ Makes programs 10x faster by doing Special New Thing.
 * Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
   Load) extension.
 
+* Bump Svukte extension to 1.0.
+
 ### Changes to the WebAssembly Backend
 
 ### Changes to the Windows Target

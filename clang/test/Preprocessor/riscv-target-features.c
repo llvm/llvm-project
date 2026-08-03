@@ -1841,12 +1841,12 @@
 // CHECK-SSCTR-EXT: __riscv_ssctr 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_svukte0p3 -E -dM %s \
+// RUN:   -march=rv32i_svukte1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SVUKTE-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_svukte0p3 -E -dM %s \
+// RUN:   -march=rv64i_svukte1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-SVUKTE-EXT %s
-// CHECK-SVUKTE-EXT: __riscv_svukte 3000{{$}}
+// CHECK-SVUKTE-EXT: __riscv_svukte 1000000{{$}}
 
 // Misaligned
 
