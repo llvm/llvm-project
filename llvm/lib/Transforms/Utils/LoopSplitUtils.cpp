@@ -60,6 +60,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -506,7 +507,17 @@ static void rewriteLatch(Loop *PL, Value *IndOp, Value *SelEnd,
                                                /*Inclusive=*/!LatchComparesPHI);
   Value *NewCmp = B.CreateICmp(Pred, IndOp, Bound, "itr.chk");
   B.SetInsertPoint(Term);
-  B.CreateCondBr(NewCmp, PL->getHeader(), Exit);
+  auto *NewBr = B.CreateCondBr(NewCmp, PL->getHeader(), Exit);
+  // Carry the original latch's branch weights onto the clamped latch, matching
+  // by which original successor stayed in the loop (the "keep iterating" edge).
+  SmallVector<uint32_t, 2> Weights;
+  if (extractBranchWeights(*Term, Weights)) {
+    bool Succ0InLoop = PL->contains(Term->getSuccessor(0));
+    setBranchWeights(*NewBr,
+                     {Succ0InLoop ? Weights[0] : Weights[1],
+                      Succ0InLoop ? Weights[1] : Weights[0]},
+                     /*IsExpected=*/false);
+  }
   Term->eraseFromParent();
   if (Cmp->use_empty())
     Cmp->eraseFromParent();
@@ -551,7 +562,10 @@ void LoopSplitUtils::chainPartitions(SplitState &S) {
       B.CreateBr(P.Preheader);
     } else {
       Value *Enter = B.CreateICmp(GuardPred, P.StartVal, P.SelEnd, "itr.chk");
-      B.CreateCondBr(Enter, P.Preheader, MergeAfter);
+      auto *GuardBr = B.CreateCondBr(Enter, P.Preheader, MergeAfter);
+      // New control flow with no source profile; record the weights as unknown
+      // so profile-tracking passes are not misled.
+      setExplicitlyUnknownBranchWeightsIfProfiled(*GuardBr, DEBUG_TYPE);
     }
     GuardTerm->eraseFromParent();
 
