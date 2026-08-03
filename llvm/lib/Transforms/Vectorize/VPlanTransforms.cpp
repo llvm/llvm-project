@@ -5472,8 +5472,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         });
   }
 
-  if (EnableVPlanBasedStrideMV &&
-      !CostCtx.L->getHeader()->getParent()->hasOptSize())
+  if (EnableVPlanBasedStrideMV && !CostCtx.Config.OptForSize)
     RUN_VPLAN_PASS(VPlanTransforms::multiversionForUnitStridedMemOps, Plan,
                    CostCtx, Range, MemOps);
 
