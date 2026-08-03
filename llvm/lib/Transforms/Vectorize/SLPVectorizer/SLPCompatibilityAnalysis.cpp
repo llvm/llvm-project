@@ -399,6 +399,19 @@ bool InstructionsState::isCopyableElement(Value *V) const {
          !Converter.hasCandidateOpcode(getOpcode());
 }
 
+bool isAbsorbableFMul(ArrayRef<Value *> VL, Value *V) {
+  auto *I = dyn_cast<Instruction>(V);
+  return I && I->getOpcode() == Instruction::FMul && I->hasOneUse() &&
+         none_of(I->operands(),
+                 [&](Value *Op) { return is_contained(VL, Op); });
+}
+
+bool isAbsorbableCopyableFMul(const InstructionsState &S, Value *V) {
+  auto *I = dyn_cast<Instruction>(V);
+  return I && S.isCopyableElement(I) && I->getOpcode() == Instruction::FMul &&
+         I->hasOneUse();
+}
+
 bool InstructionsState::isExpandedBinOp(Value *V) const {
   assert(valid() && "InstructionsState is invalid.");
   if (isCopyableElement(V))

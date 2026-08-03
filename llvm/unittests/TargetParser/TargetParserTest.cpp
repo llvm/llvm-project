@@ -2746,6 +2746,47 @@ TEST(TargetParserTest, testAMDGPUparseArchR600) {
     EXPECT_TRUE(llvm::is_contained(Values, A.Alias)) << A.Alias;
 }
 
+TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
+  auto HasFeature = [](StringRef GPU, StringRef Feature) {
+    StringMap<bool> Features;
+    AMDGPU::fillAMDGPUFeatureMap(GPU, Triple("amdgcn-amd-amdhsa"), Features);
+    auto It = Features.find(Feature);
+    return It != Features.end() && It->second;
+  };
+
+  // Features are the transitive SubtargetFeature closure, so gfx900 gets the
+  // gfx8/gfx9 instruction sets it implies.
+  EXPECT_TRUE(HasFeature("gfx900", "gfx9-insts"));
+  EXPECT_TRUE(HasFeature("gfx900", "gfx8-insts"));
+  EXPECT_TRUE(HasFeature("gfx900", "ci-insts"));
+  EXPECT_TRUE(HasFeature("gfx900", "dpp"));
+  EXPECT_TRUE(HasFeature("gfx900", "cvt-pknorm-vop2-insts"));
+  EXPECT_TRUE(HasFeature("gfx900", "extended-image-insts"));
+  EXPECT_TRUE(HasFeature("gfx1100", "extended-image-insts"));
+
+  // Only frontend-visible features appear, so backend-only ones are dropped
+  // even when in the closure.
+  EXPECT_FALSE(HasFeature("gfx900", "cvt-pknorm-vop3-insts"));
+  EXPECT_FALSE(HasFeature("gfx900", "flat-scratch-insts"));
+  EXPECT_FALSE(HasFeature("gfx900", "sdwa"));
+
+  // Single-mode GPUs pin their native wavesize; dual-mode GPUs default to
+  // wavefrontsize32.
+  EXPECT_TRUE(HasFeature("gfx900", "wavefrontsize64"));
+  EXPECT_FALSE(HasFeature("gfx900", "wavefrontsize32"));
+  EXPECT_TRUE(HasFeature("gfx1250", "wavefrontsize32"));
+  EXPECT_FALSE(HasFeature("gfx1250", "wavefrontsize64"));
+  EXPECT_TRUE(HasFeature("gfx1010", "wavefrontsize32"));
+  EXPECT_FALSE(HasFeature("gfx1010", "wavefrontsize64"));
+
+  // gfx1250 dropped bvh-ray-tracing-insts for the newer bvh-dual-and-bvh8.
+  EXPECT_TRUE(HasFeature("gfx1200", "bvh-ray-tracing-insts"));
+  EXPECT_FALSE(HasFeature("gfx1250", "bvh-ray-tracing-insts"));
+
+  EXPECT_TRUE(HasFeature("gfx1250", "smem-prefetch-insts"));
+  EXPECT_TRUE(HasFeature("gfx950", "bf16-cvt-insts"));
+}
+
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
   SmallVector<StringRef, 0> All;
   AMDGPU::fillValidArchListAMDGCN(All, Triple::NoSubArch);
