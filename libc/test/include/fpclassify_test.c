@@ -17,7 +17,7 @@ TEST(fpclassify) {
   EXPECT_TRUE(fpclassify(-1.726) == FP_NORMAL);
   EXPECT_TRUE(fpclassify(1.426L) == FP_NORMAL);
   EXPECT_TRUE(fpclassify(-0.0f) == FP_ZERO);
-  EXPECT_TRUE(fpclassify(0.0) == FP_ZERO); 
+  EXPECT_TRUE(fpclassify(0.0) == FP_ZERO);
   EXPECT_TRUE(fpclassify(-0.0L) == FP_ZERO);
 }
 #endif

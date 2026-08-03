@@ -28,7 +28,7 @@ static CTest c_test_instance;
 extern "C" void libc_c_test_anchor() {}
 
 extern "C" void libc_c_test_fail(const char *cond, int expected,
-                                   const char *file, int line) {
+                                 const char *file, int line) {
   LIBC_NAMESPACE::testing::internal::test(
       LIBC_NAMESPACE::testing::TestCond::EQ, !expected,
       static_cast<bool>(expected), cond, expected ? "true" : "false",

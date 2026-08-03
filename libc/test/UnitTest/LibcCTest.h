@@ -46,8 +46,8 @@ __END_C_DECLS
     }                                                                          \
   } while (0)
 
-#define EXPECT_TRUE(cond)  LIBC_C_TEST_SCAFFOLDING_(cond, 1, )
-#define ASSERT_TRUE(cond)  LIBC_C_TEST_SCAFFOLDING_(cond, 1, return)
+#define EXPECT_TRUE(cond) LIBC_C_TEST_SCAFFOLDING_(cond, 1, )
+#define ASSERT_TRUE(cond) LIBC_C_TEST_SCAFFOLDING_(cond, 1, return)
 
 #define EXPECT_FALSE(cond) LIBC_C_TEST_SCAFFOLDING_(cond, 0, )
 #define ASSERT_FALSE(cond) LIBC_C_TEST_SCAFFOLDING_(cond, 0, return)
