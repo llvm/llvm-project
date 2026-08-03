@@ -30,13 +30,9 @@ namespace {
 /// to be deferred via pushFullExprCleanup.
 class ConditionalEvaluationFinder
     : public RecursiveASTVisitor<ConditionalEvaluationFinder> {
-  const ASTContext &astContext;
   bool foundConditional = false;
 
 public:
-  ConditionalEvaluationFinder(const ASTContext &astContext)
-      : astContext(astContext) {}
-
   bool found() const { return foundConditional; }
 
   bool VisitAbstractConditionalOperator(AbstractConditionalOperator *) {
@@ -45,11 +41,10 @@ public:
   }
 
   bool VisitCXXNewExpr(CXXNewExpr *e) {
-    // If the new expression requires a null check, its initializer may be
-    // skipped. In that case, the cleanup for any temporaries created in the
-    // initializer must be conditional.
-    if (e->shouldNullCheckAllocation() &&
-        (!e->getAllocatedType().isPODType(astContext) || e->hasInitializer())) {
+    // If the new expression has an initializer, the initializer may contain a
+    // a temporary expression that requires deferred cleanup. If we're emitting
+    // a null check, we need to make this cleanup conditional.
+    if (e->hasInitializer() && e->shouldNullCheckAllocation()) {
       foundConditional = true;
       return false;
     }
@@ -118,7 +113,7 @@ CIRGenFunction::FullExprCleanupScope::FullExprCleanupScope(CIRGenFunction &cgf,
       deferredCleanupStackSize(cgf.deferredConditionalCleanupStack.size()) {
 
   assert(subExpr && "ExprWithCleanups always has a sub-expression");
-  ConditionalEvaluationFinder finder(cgf.getContext());
+  ConditionalEvaluationFinder finder;
   finder.TraverseStmt(const_cast<Expr *>(subExpr));
   if (finder.found()) {
     mlir::Location loc = cgf.builder.getUnknownLoc();
