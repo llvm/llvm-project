@@ -84,13 +84,18 @@ class VPPredicator {
   /// Returns where to insert new blends in \p VPBB.
   VPBasicBlock::iterator getBlendInsertPoint(VPBasicBlock *VPBB) {
     VPBasicBlock::iterator It = getMaskInsertPoint(VPBB);
+    if (It == VPBB->end())
+      return It;
     // Insert after any incoming edge masks if they were already inserted.
     for (VPBlockBase *Pred : VPBB->predecessors())
       if (VPValue *EdgeMask = getEdgeMask(cast<VPBasicBlock>(Pred), VPBB))
         if (VPRecipeBase *EdgeR = EdgeMask->getDefiningRecipe())
-          if (It != VPBB->end() && EdgeR->getParent() == VPBB &&
-              !VPDT.properlyDominates(EdgeR, &*It))
+          if (EdgeR->getParent() == VPBB &&
+              !VPDT.properlyDominates(EdgeR, &*It)) {
             It = std::next(EdgeR->getIterator());
+            if (It == VPBB->end())
+              return It;
+          }
     return It;
   }
 
