@@ -88,12 +88,21 @@ jobs:
             cpp_compiler: clang++-23
             target: armv7em-none-eabi
             testing: SKIP
-          - name: baremetal-armv8m
+          - name: baremetal-armv8m-softfp
             os: ubuntu-24.04
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
             target: armv8m.main-none-eabi
+            cache_file: armv8m.main-none-eabi-softfp
+            testing: SKIP
+          - name: baremetal-armv8m-hard
+            os: ubuntu-24.04
+            build_type: MinSizeRel
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
+            target: armv8m.main-none-eabi
+            cache_file: armv8m.main-none-eabi-hard
             testing: SKIP
           - name: baremetal-armv8.1m
             os: ubuntu-24.04
@@ -134,7 +143,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         max-size: 1G
-        key: libc_fullbuild_v3_${{ matrix.target }}_${{ matrix.build_type }}_${{ matrix.c_compiler }}
+        key: libc_fullbuild_v3_${{ matrix.name }}_${{ matrix.build_type }}_${{ matrix.c_compiler }}
         variant: sccache
 
     # Configure libc fullbuild with scudo.
@@ -179,7 +188,7 @@ jobs:
         case "${{ matrix.name }}" in
           baremetal-* )
             cmake $CMAKE_FLAGS \
-              -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.target }}.cmake
+              -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.cache_file || matrix.target }}.cmake
             ;;
           *-gpu | uefi-* )
             cmake \
