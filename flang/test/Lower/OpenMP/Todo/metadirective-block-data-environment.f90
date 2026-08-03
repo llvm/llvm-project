@@ -1,6 +1,7 @@
-! A metadirective block replacement cannot yet reconstruct implicit
-! data-sharing attributes. Reject regions that would otherwise lose a
-! sequential loop IV or an implicit task capture.
+! Metadirective block replacements cannot yet reconstruct every implicit or
+! explicit data-sharing relationship. Reject unsupported data environments and
+! clauses requiring variant-local host associations in both delayed and eager
+! privatization modes.
 
 ! RUN: split-file %s %t
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
@@ -21,8 +22,31 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
 ! RUN:   -o - %t/task-selected-shared.f90 \
 ! RUN:   | FileCheck --check-prefix=SHARED %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   -o - %t/firstprivate.f90 2>&1 \
+! RUN:   | FileCheck --check-prefix=HOST-ASSOC %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   -mmlir --enable-delayed-privatization=false \
+! RUN:   -o - %t/firstprivate.f90 2>&1 \
+! RUN:   | FileCheck --check-prefix=HOST-ASSOC %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   -o - %t/copyin.f90 2>&1 \
+! RUN:   | FileCheck --check-prefix=HOST-ASSOC %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   -mmlir --enable-delayed-privatization=false \
+! RUN:   -o - %t/copyin.f90 2>&1 \
+! RUN:   | FileCheck --check-prefix=HOST-ASSOC %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   -mmlir --enable-delayed-privatization=false \
+! RUN:   -o - %t/eager-default-private.f90 2>&1 \
+! RUN:   | FileCheck --check-prefix=HOST-ASSOC %s
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 \
+! RUN:   -mmlir --enable-delayed-privatization=false \
+! RUN:   -o - %t/eager-private.f90 2>&1 \
+! RUN:   | FileCheck --check-prefix=HOST-ASSOC %s
 
 ! TODO: not yet implemented: data-environment construct in METADIRECTIVE variant
+! HOST-ASSOC: not yet implemented: METADIRECTIVE block variant with a clause requiring variant-local host association
 
 ! LOCAL-LABEL: func.func @_QPtask_block_variant_with_local_storage
 ! LOCAL:         omp.task {
@@ -128,5 +152,46 @@ subroutine task_block_variant_with_default_shared(x)
   !$omp& when(implementation={vendor(llvm)}: task default(shared)) &
   !$omp& otherwise(nothing)
   x = x + 1
+  !$omp end metadirective
+end subroutine
+
+!--- firstprivate.f90
+subroutine firstprivate_block_variant(x)
+  integer :: x
+  !$omp begin metadirective &
+  !$omp& when(implementation={vendor(llvm)}: parallel firstprivate(x)) &
+  !$omp& otherwise(nothing)
+  x = x + 1
+  !$omp end metadirective
+end subroutine
+
+!--- copyin.f90
+subroutine copyin_block_variant()
+  integer, save :: x
+  !$omp threadprivate(x)
+  !$omp begin metadirective &
+  !$omp& when(implementation={vendor(llvm)}: parallel copyin(x)) &
+  !$omp& otherwise(nothing)
+  x = x + 1
+  !$omp end metadirective
+end subroutine
+
+!--- eager-default-private.f90
+subroutine test_block_eager_default_private(x)
+  integer :: x
+  !$omp begin metadirective &
+  !$omp & when(implementation={vendor(llvm)}: parallel default(private)) &
+  !$omp & otherwise(nothing)
+  x = 1
+  !$omp end metadirective
+end subroutine
+
+!--- eager-private.f90
+subroutine test_block_eager_privatization(x)
+  integer :: x
+  !$omp begin metadirective &
+  !$omp & when(implementation={vendor(llvm)}: parallel private(x)) &
+  !$omp & otherwise(nothing)
+  x = 1
   !$omp end metadirective
 end subroutine
