@@ -2703,9 +2703,12 @@ static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
   return RM;
 }
 
-/// Check if the given evaluation result is allowed for constant evaluation.
-static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
-                                     APFloat::opStatus St) {
+/// Check if the given floating-point evaluation result is allowed for
+/// opportunistic compile-time constant folding during translation (as opposed
+/// to mandatory constant expression evaluation).
+static bool
+checkFloatingPointResultForOpportunisticFolding(EvalInfo &Info, const Expr *E,
+                                                APFloat::opStatus St) {
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.
   if (Info.InConstantContext)
@@ -2757,7 +2760,7 @@ static bool HandleFloatToFloatCast(EvalInfo &Info, const Expr *E,
   APFloat Value = Result;
   bool ignored;
   St = Result.convert(Info.Ctx.getFloatTypeSemantics(DestType), RM, &ignored);
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForOpportunisticFolding(Info, E, St);
 }
 
 static APSInt HandleIntToIntCast(EvalInfo &Info, const Expr *E,
@@ -2780,7 +2783,7 @@ static bool HandleIntToFloatCast(EvalInfo &Info, const Expr *E,
   Result = APFloat(Info.Ctx.getFloatTypeSemantics(DestType), 1);
   llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
   APFloat::opStatus St = Result.convertFromAPInt(Value, Value.isSigned(), RM);
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForOpportunisticFolding(Info, E, St);
 }
 
 static bool truncateBitfieldValue(EvalInfo &Info, const Expr *E,
@@ -2987,7 +2990,7 @@ static bool handleFloatFloatBinOp(EvalInfo &Info, const BinaryOperator *E,
     return Info.noteUndefinedBehavior();
   }
 
-  return checkFloatingPointResult(Info, E, St);
+  return checkFloatingPointResultForOpportunisticFolding(Info, E, St);
 }
 
 static bool handleLogicalOpForVector(const APInt &LHSValue,
@@ -5295,7 +5298,7 @@ struct IncDecSubobjectHandler {
       St = Value.add(One, RM);
     else
       St = Value.subtract(One, RM);
-    return checkFloatingPointResult(Info, E, St);
+    return checkFloatingPointResultForOpportunisticFolding(Info, E, St);
   }
   bool foundPointer(APValue &Subobj, QualType SubobjType) {
     if (!checkConst(SubobjType))

@@ -1188,19 +1188,8 @@ bool CheckThis(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
-                      APFloat::opStatus Status, FPOptions FPO) {
-  // [expr.pre]p4:
-  //   If during the evaluation of an expression, the result is not
-  //   mathematically defined [...], the behavior is undefined.
-  // FIXME: C++ rules require us to not conform to IEEE 754 here.
-  if (Result.isNan()) {
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
-        << /*NaN=*/true << S.Current->getRange(OpPC);
-    return S.noteUndefinedBehavior();
-  }
-
+bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
+                      FPOptions FPO) {
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.
   if (S.inConstantContext())
@@ -1233,6 +1222,22 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
   }
 
   return true;
+}
+
+bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
+                      APFloat::opStatus Status, FPOptions FPO) {
+  // [expr.pre]p4:
+  //   If during the evaluation of an expression, the result is not
+  //   mathematically defined [...], the behavior is undefined.
+  // FIXME: C++ rules require us to not conform to IEEE 754 here.
+  if (Result.isNan()) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
+        << /*NaN=*/true << S.Current->getRange(OpPC);
+    return S.noteUndefinedBehavior();
+  }
+
+  return CheckFloatStatus(S, OpPC, Status, FPO);
 }
 
 bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC) {
