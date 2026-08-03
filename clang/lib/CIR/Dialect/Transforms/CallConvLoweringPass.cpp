@@ -533,29 +533,16 @@ cir::FuncOp lookupCallee(Operation *callOp, SymbolTable &symbolTable) {
   return symbolTable.lookup<cir::FuncOp>(callee.getValue());
 }
 
-/// The callee pointer of an indirect cir.call / cir.try_call, or nullptr for a
-/// direct call.  Both ops spell this the same way, but they inherit it from a
-/// shared TableGen base rather than a common C++ type, so reaching it needs
-/// this dispatch.
-mlir::Value indirectCallee(Operation *callOp) {
-  if (auto call = dyn_cast<cir::CallOp>(callOp))
-    return call.isIndirect() ? call.getIndirectCall() : nullptr;
-  if (auto tryCall = dyn_cast<cir::TryCallOp>(callOp))
-    return tryCall.isIndirect() ? tryCall.getIndirectCall() : nullptr;
-  return nullptr;
-}
-
 /// The signature an indirect call reaches its callee through, or a null type
 /// for a direct call.  The callee's pointer-to-function shape is asserted
 /// rather than verified: the dialect checks operand types against the callee
 /// only for a direct call, so IR that breaks it fails here instead of in the
 /// verifier.
-cir::FuncType indirectCalleeType(Operation *callOp) {
-  mlir::Value callee = indirectCallee(callOp);
-  if (!callee)
+cir::FuncType indirectCalleeType(cir::CIRCallOpInterface call) {
+  if (!call.isIndirect())
     return {};
   return cast<cir::FuncType>(
-      cast<cir::PointerType>(callee.getType()).getPointee());
+      cast<cir::PointerType>(call.getIndirectCall().getType()).getPointee());
 }
 
 void CallConvLoweringPass::runOnOperation() {
@@ -711,7 +698,7 @@ void CallConvLoweringPass::runOnOperation() {
   // cached as the next one to visit.
   SmallVector<cir::CIRCallOpInterface> indirectCalls;
   moduleOp.walk([&](cir::CIRCallOpInterface c) {
-    cir::FuncType calleeTy = indirectCalleeType(c.getOperation());
+    cir::FuncType calleeTy = indirectCalleeType(c);
     if (!calleeTy)
       return;
     // A cir.try_call is in this walk so that a variadic one reaches the
@@ -733,7 +720,7 @@ void CallConvLoweringPass::runOnOperation() {
       signalPassFailure();
       return;
     }
-    cir::FuncType funcTy = indirectCalleeType(c.getOperation());
+    cir::FuncType funcTy = indirectCalleeType(c);
     auto classifySignature =
         [&](mlir::TypeRange argTypes) -> std::optional<FunctionClassification> {
       if (x86Target)

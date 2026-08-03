@@ -4482,9 +4482,6 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
                        mlir::cast<mlir::SymbolRefAttr>(callee));
     }
 
-    bool isIndirect() { return !getCallee(); }
-    mlir::Value getIndirectCall();
-
     /// Returns the `cir.func` being called or null if the call is indirect or
     /// cannot be resolved.
     cir::FuncOp resolveCalleeInTable(mlir::SymbolTableCollection &symbolTable);
@@ -4501,6 +4498,8 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   }];
 
   let extraClassDefinition = [{
+    bool $cppClass::isIndirect() { return !getCallee(); }
+
     cir::FuncOp $cppClass::resolveCalleeInTable(
         mlir::SymbolTableCollection &symbolTable) {
       mlir::FlatSymbolRefAttr callee = getCalleeAttr();
