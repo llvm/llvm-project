@@ -81,3 +81,20 @@ class TestFrameVarDILAssignment(TestBase):
                 "frame variable 'p = (int *)10'", substrs=["p = 0x000000000000000a"]
             )
             self.expect("frame variable 'p -= 2'", substrs=["p = 0x0000000000000002"])
+
+        # Check that there can be only one assignment and only at top level
+        self.expect(
+            "frame variable 'i = i += 1'",
+            error=True,
+            substrs=["expected 'eof', got: <'+='"],
+        )
+        self.expect(
+            "frame variable 'i += 1 + (i -= 1)'",
+            error=True,
+            substrs=["expected 'r_paren', got: <'-='"],
+        )
+        self.expect(
+            "frame variable '*(arr + 1) = arr[1] += 1'",
+            error=True,
+            substrs=["expected 'eof', got: <'+='"],
+        )

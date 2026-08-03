@@ -129,41 +129,13 @@ ASTNodeUP DILParser::Run() {
 //  expression:
 //    assignment_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseConditionalExpression(); }
-
-// Parse a conditional_expression.
-//
-//  conditional_expression:
-//    assignment_expression
-//    assignment_expression "?" expression ":" expression
-//
-ASTNodeUP DILParser::ParseConditionalExpression() {
-  auto lhs = ParseAssignmentExpression();
-  assert(lhs && "ASTNodeUP must not contain a nullptr");
-
-  // Check if it's a ternary operator.
-  if (CurToken().Is(Token::question)) {
-    Token token = CurToken();
-    m_dil_lexer.Advance();
-    auto true_op = ParseExpression();
-    assert(true_op && "ASTNodeUP must not contain a nullptr");
-    Expect(Token::colon);
-    m_dil_lexer.Advance();
-    auto false_op = ParseExpression();
-    assert(false_op && "ASTNodeUP must not contain a nullptr");
-    lhs = std::make_unique<ConditionalNode>(token.GetLocation(), std::move(lhs),
-                                            std::move(true_op),
-                                            std::move(false_op));
-  }
-
-  return lhs;
-}
+ASTNodeUP DILParser::ParseExpression() { return ParseAssignmentExpression(); }
 
 // Parse an assignment_expression
 //
 //  assignment_expression
-//    logical_or_expression
-//    logical_or_expression assignment_operator assignment_expression
+//    pure_expression
+//    pure_expression assignment_operator pure_expression
 //
 //  assignment_operator:
 //    "="
@@ -171,7 +143,7 @@ ASTNodeUP DILParser::ParseConditionalExpression() {
 //    "-="
 //
 ASTNodeUP DILParser::ParseAssignmentExpression() {
-  auto lhs = ParseLogicalOrExpression();
+  auto lhs = ParsePureExpression();
   assert(lhs && "ASTNodeUP must not contain a nullptr");
 
   // Check if it's an assignment expression.
@@ -179,12 +151,49 @@ ASTNodeUP DILParser::ParseAssignmentExpression() {
     // That's an assignment!
     Token token = CurToken();
     m_dil_lexer.Advance();
-    auto rhs = ParseAssignmentExpression();
+    auto rhs = ParsePureExpression();
     assert(rhs && "ASTNodeUP must not contain a nullptr");
     lhs = std::make_unique<BinaryOpNode>(
         token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
         std::move(lhs), std::move(rhs));
   }
+  return lhs;
+}
+
+// Parse a pure expression without side effects.
+//
+//  pure_expression:
+//    conditional_expression
+//
+ASTNodeUP DILParser::ParsePureExpression() {
+  return ParseConditionalExpression();
+}
+
+// Parse a conditional_expression.
+//
+//  conditional_expression:
+//    logical_or_expression
+//    logical_or_expression "?" pure_expression ":" pure_expression
+//
+ASTNodeUP DILParser::ParseConditionalExpression() {
+  auto lhs = ParseLogicalOrExpression();
+  assert(lhs && "ASTNodeUP must not contain a nullptr");
+
+  // Check if it's a ternary operator.
+  if (CurToken().Is(Token::question)) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto true_op = ParsePureExpression();
+    assert(true_op && "ASTNodeUP must not contain a nullptr");
+    Expect(Token::colon);
+    m_dil_lexer.Advance();
+    auto false_op = ParsePureExpression();
+    assert(false_op && "ASTNodeUP must not contain a nullptr");
+    lhs = std::make_unique<ConditionalNode>(token.GetLocation(), std::move(lhs),
+                                            std::move(true_op),
+                                            std::move(false_op));
+  }
+
   return lhs;
 }
 
@@ -526,8 +535,8 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
 //
 //  postfix_expression:
 //    primary_expression
-//    postfix_expression "[" expression "]"
-//    postfix_expression "[" expression ":" expression "]"
+//    postfix_expression "[" pure_expression "]"
+//    postfix_expression "[" pure_expression ":" pure_expression "]"
 //    postfix_expression "." id_expression
 //    postfix_expression "->" id_expression
 //
@@ -540,11 +549,11 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
     switch (token.GetKind()) {
     case Token::l_square: {
       m_dil_lexer.Advance();
-      ASTNodeUP index = ParseExpression();
+      ASTNodeUP index = ParsePureExpression();
       assert(index && "ASTNodeUP must not contain a nullptr");
       if (CurToken().GetKind() == Token::colon) {
         m_dil_lexer.Advance();
-        ASTNodeUP last_index = ParseExpression();
+        ASTNodeUP last_index = ParsePureExpression();
         assert(last_index && "ASTNodeUP must not contain a nullptr");
         lhs = std::make_unique<BitFieldExtractionNode>(
             loc, std::move(lhs), std::move(index), std::move(last_index));
@@ -584,7 +593,7 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 //    numeric_literal
 //    boolean_literal
 //    id_expression
-//    "(" expression ")"
+//    "(" pure_expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
   if (CurToken().IsOneOf({Token::integer_constant, Token::float_constant}))
@@ -608,7 +617,7 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
           return std::make_unique<SizeOfNode>(loc, *type_id);
         }
         TentativeParsingRollback(save_token_idx);
-        ASTNodeUP expr = ParseExpression();
+        ASTNodeUP expr = ParsePureExpression();
         Expect(Token::r_paren);
         m_dil_lexer.Advance();
         return std::make_unique<SizeOfNode>(loc, std::move(expr));
@@ -619,7 +628,7 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
 
   if (CurToken().Is(Token::l_paren)) {
     m_dil_lexer.Advance();
-    auto expr = ParseExpression();
+    auto expr = ParsePureExpression();
     Expect(Token::r_paren);
     m_dil_lexer.Advance();
     return expr;

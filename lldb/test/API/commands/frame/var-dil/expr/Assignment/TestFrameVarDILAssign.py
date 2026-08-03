@@ -206,3 +206,26 @@ class TestFrameVarDILAssignment(TestBase):
             error=True,
             substrs=["new value is too big"],
         )
+
+        # Check that there can be only one assignment and only at top level
+        self.expect(
+            "frame variable 'i = i = 1'",
+            error=True,
+            substrs=["expected 'eof', got: <'='"],
+        )
+        self.expect(
+            "frame variable 'i = 1 - (i = 1)'",
+            error=True,
+            substrs=["expected 'r_paren', got: <'='"],
+        )
+        self.expect(
+            "frame variable '1 + (i = 1)'",
+            error=True,
+            substrs=["expected 'r_paren', got: <'='"],
+        )
+        self.expect(
+            "frame variable '(i = 1) + 1'",
+            error=True,
+            substrs=["expected 'r_paren', got: <'='"],
+        )
+        self.expect("frame variable '*(arr + 1) = 5'", substrs=["= 5"])
