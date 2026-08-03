@@ -11,7 +11,7 @@ define double @powi_f64(double %a, i32 %b) nounwind #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
 ; CHECK-NEXT:    aghi %r15, -160
-; CHECK-NEXT:    llgfr %r3, %r3
+; CHECK-NEXT:    lgfr %r3, %r3
 ; CHECK-NEXT:    brasl %r14, __powidf2@PLT
 ; CHECK-NEXT:    lmg %r14, %r15, 272(%r15)
 ; CHECK-NEXT:    br %r14
