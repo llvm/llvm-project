@@ -3166,7 +3166,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
       if (VF.isScalar())
         continue;
 
-      VPCostContext CostCtx(*TLI, *Plan, CM, Config);
+      VPCostContext CostCtx(*TLI, *Plan, CM, Config,
+                            /*ReusePrintingSlotTracker=*/true);
       precomputeCosts(*Plan, VF, CostCtx);
       auto Iter = vp_depth_first_deep(Plan->getVectorLoopRegion()->getEntry());
       for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -5601,10 +5602,16 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 
 VPCostContext::VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
                              LoopVectorizationCostModel &CM,
-                             VFSelectionContext &Config)
+                             VFSelectionContext &Config,
+                             bool ReusePrintingSlotTracker)
     : TTI(Config.getTTI()), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
       Config(Config), CostKind(Config.CostKind), PSE(Config.getPSE()),
-      L(Config.getLoop()) {}
+      L(Config.getLoop()) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  if (ReusePrintingSlotTracker)
+    PlanForSlotTracker = &Plan;
+#endif
+}
 
 InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
                                              ElementCount VF) const {
@@ -5656,7 +5663,36 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // former case) later on, if they exist, to avoid counting them twice.
   // Similarly we pre-compute the cost of any optimized truncates.
   // TODO: Switch to more accurate costing based on VPlan.
+
+  // If the vector loop gets executed exactly once with the given VF, ignore the
+  // costs of comparison and induction instructions, as they'll get simplified
+  // away.
+  // TODO: Remove this code after stepping away from the legacy cost model and
+  // adding code to simplify VPlans before calculating their costs.
+  auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
+  bool IsFullyUnrolled = TC == VF && !Plan.hasTailFolded();
+  SmallPtrSet<const Value *, 4> WidenedIVs;
+  bool HasTruncatedIV = false;
+  if (IsFullyUnrolled) {
+    addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
+                                         CostCtx.SkipCostComputation);
+  } else {
+    // Inductions represented by a VPWidenIntOrFpInductionRecipe have their cost
+    // computed by the recipe, so collect their phis to skip the legacy
+    // increment cost below. If any induction is truncated the VPlan-based cost
+    // will diverge. Still fall back to the legacy cost model for now.
+    VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+    for (VPRecipeBase &R : *LoopRegion->getEntryBasicBlock())
+      if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
+        HasTruncatedIV |= WideIV->getTruncInst() != nullptr;
+        if (PHINode *IVPhi = WideIV->getPHINode())
+          WidenedIVs.insert(IVPhi);
+      }
+  }
+
   for (const auto &[IV, IndDesc] : Legal->getInductionVars()) {
+    if (!HasTruncatedIV && WidenedIVs.contains(IV))
+      continue;
     Instruction *IVInc = cast<Instruction>(
         IV->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
     SmallVector<Instruction *> IVInsts = {IVInc};
@@ -5675,16 +5711,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
         continue;
       IVInsts.push_back(CI);
     }
-
-    // If the vector loop gets executed exactly once with the given VF, ignore
-    // the costs of comparison and induction instructions, as they'll get
-    // simplified away.
-    // TODO: Remove this code after stepping away from the legacy cost model and
-    // adding code to simplify VPlans before calculating their costs.
-    auto TC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
-    if (TC == VF && !Plan.hasTailFolded())
-      addFullyUnrolledInstructionsToIgnore(OrigLoop, Legal->getInductionVars(),
-                                           CostCtx.SkipCostComputation);
 
     for (Instruction *IVInst : IVInsts) {
       if (CostCtx.skipCostComputation(IVInst, VF.isVector()))
@@ -5724,7 +5750,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
   // accounted for here using the legacy cost model. However, some opcodes
   // are excluded from these precomputed scalarization costs and are instead
   // modeled later by the VPlan cost model (see UseVPlanCostModel below).
-  for (Instruction *ForcedScalar : CM.ForcedScalars[VF]) {
+  for (Instruction *ForcedScalar : CostCtx.CM.ForcedScalars[VF]) {
     if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(ForcedScalar);
@@ -5735,6 +5761,11 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     });
     Cost += ForcedCost;
   }
+
+  // Don't apply legacy scalarization costs if nothing remains scalar &
+  // predicated.
+  if (!hasReplicatorRegion(Plan))
+    return Cost;
 
   auto UseVPlanCostModel = [](Instruction *I) -> bool {
     switch (I->getOpcode()) {
@@ -5747,7 +5778,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       return false;
     }
   };
-  for (const auto &[Scalarized, ScalarCost] : CM.InstsToScalarize[VF]) {
+  for (const auto &[Scalarized, ScalarCost] : CostCtx.CM.InstsToScalarize[VF]) {
     if (UseVPlanCostModel(Scalarized) ||
         CostCtx.skipCostComputation(Scalarized, VF.isVector()))
       continue;
@@ -5764,7 +5795,8 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
 InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
                                                VPRegisterUsage *RU) const {
-  VPCostContext CostCtx(*TLI, Plan, CM, Config);
+  VPCostContext CostCtx(*TLI, Plan, CM, Config,
+                        /*ReusePrintingSlotTracker=*/true);
   InstructionCost Cost = precomputeCosts(Plan, VF, CostCtx);
 
   // Now compute and add the VPlan-based cost.
@@ -8115,7 +8147,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
-    VPCostContext CostCtx(*TLI, *BestPlanPtr, CM, Config);
+    VPCostContext CostCtx(*TLI, *BestPlanPtr, CM, Config,
+                          /*ReusePrintingSlotTracker=*/true);
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx, *BestPlanPtr,
                                      SEL, Config.getVScaleForTuning())) {

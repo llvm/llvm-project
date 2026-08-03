@@ -515,8 +515,6 @@ private:
 
   Value *visitPtrToAddrExpr(SCEVUseT<const SCEVPtrToAddrExpr *> S);
 
-  Value *visitPtrToIntExpr(SCEVUseT<const SCEVPtrToIntExpr *> S);
-
   Value *visitTruncateExpr(SCEVUseT<const SCEVTruncateExpr *> S);
 
   Value *visitZeroExtendExpr(SCEVUseT<const SCEVZeroExtendExpr *> S);

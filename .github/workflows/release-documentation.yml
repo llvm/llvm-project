@@ -77,7 +77,7 @@ jobs:
     needs:
       - release-man-pages-validate-input
     outputs:
-      man-page-digest: ${{ steps.man-page-digest.outputs.digest }}
+      man-page-digest: ${{ steps.man-page-digest.outputs.man-page-digest }}
       man-page-artifact-id: ${{ steps.man-page-artifact-upload.outputs.artifact-id }}
 
       man-page-release-version: ${{ steps.vars.outputs.man-page-release-version }}
