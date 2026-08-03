@@ -3627,14 +3627,20 @@ public:
   ///   for (unsigned i = 0; i < size; i++) {
   ///     // For each component specified by this mapper:
   ///     for (auto c : begin[i]->all_components) {
+  ///       // Map-type-modifying bits (ALWAYS, DELETE, CLOSE) from the outer
+  ///       // map clause are propagated to each component, except ATTACH
+  ///       // entries (ATTACH|ALWAYS is reserved for attach(always), and other
+  ///       // modifier bits have no meaning for ATTACH).
+  ///       imported_modifier_bits = type & (ALWAYS | DELETE | CLOSE);
+  ///       effective_type = c.isAttach() ? c.arg_type
+  ///                                     : c.arg_type | imported_modifier_bits;
   ///       if (c.hasMapper())
   ///         (*c.Mapper())(rt_mapper_handle, c.arg_base, c.arg_begin,
-  ///         c.arg_size,
-  ///                       c.arg_type, c.arg_name);
+  ///                       c.arg_size, effective_type, c.arg_name);
   ///       else
   ///         __tgt_push_mapper_component(rt_mapper_handle, c.arg_base,
-  ///                                     c.arg_begin, c.arg_size, c.arg_type,
-  ///                                     c.arg_name);
+  ///                                     c.arg_begin, c.arg_size,
+  ///                                     effective_type, c.arg_name);
   ///     }
   ///   }
   ///   // Delete the array section.

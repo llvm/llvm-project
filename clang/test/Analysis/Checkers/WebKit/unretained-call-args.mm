@@ -216,7 +216,7 @@ namespace param_formarding_lambda {
       consume_more_cf(param);
     }
   }
-  
+
   namespace os_obj {
     void foo(dispatch_queue_t param) {
       consume_more_dispatch(param);
@@ -281,7 +281,7 @@ namespace cxx_member_func {
 
   void foo() {
     [provide() doWork];
-    // expected-warning@-1{{Receiver 'provide()' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+    // expected-warning@-1{{Receiver 'provide()' (to '-[SomeObj doWork]') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
     [protectedProvide().get() doWork];
 
     CFArrayAppendValue(provide_cf(), nullptr);
@@ -291,7 +291,7 @@ namespace cxx_member_func {
 
   void bar() {
     [downcast<OtherObj>(protectedProvide().get()) doMoreWork:downcast<OtherObj>(provide())];
-    // expected-warning@-1{{Function argument 'downcast<OtherObj>(provide())' (parameter 'other' to 'OtherObj::doMoreWork:') is a raw pointer to RetainPtr-capable type 'OtherObj'}}
+    // expected-warning@-1{{Function argument 'downcast<OtherObj>(provide())' (parameter 'other' to '-[OtherObj doMoreWork:]') is a raw pointer to RetainPtr-capable type 'OtherObj'}}
     [protectedProvide().get() doWork];
   };
 
@@ -541,7 +541,7 @@ typedef Class (Bar::*SomeObjectSingleton)();
 
 bool bar(NSObject *obj, Bar *bar, SomeObjectSingleton someObjSingleton) {
   return [obj isKindOfClass:(bar->*someObjSingleton)()];
-  // expected-warning@-1{{Function argument '(bar ->* someObjSingleton)()' (parameter 'aClass' to 'NSObject::isKindOfClass:') is a RetainPtr-capable type 'Class'}}
+  // expected-warning@-1{{Function argument '(bar ->* someObjSingleton)()' (parameter 'aClass' to '-[NSObject isKindOfClass:]') is a RetainPtr-capable type 'Class'}}
 }
 
 bool baz(NSObject *obj) {
@@ -656,9 +656,9 @@ SomeObj *allocObj();
 - (void)doWorkOnSelf {
   [self doWork:nil];
   [self doWork:@"hello", provide(), provide_cf(), provide_dispatch()];
-  // expected-warning@-1{{Function argument 'provide()' (to 'TestObject::doWork:') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
-  // expected-warning@-2{{Function argument 'provide_cf()' (to 'TestObject::doWork:') is a RetainPtr-capable type 'CFMutableArrayRef'}}
-  // expected-warning@-3{{Function argument 'provide_dispatch()' (to 'TestObject::doWork:') is a RetainPtr-capable type 'dispatch_queue_t'}}
+  // expected-warning@-1{{Function argument 'provide()' (to '-[TestObject doWork:]') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+  // expected-warning@-2{{Function argument 'provide_cf()' (to '-[TestObject doWork:]') is a RetainPtr-capable type 'CFMutableArrayRef'}}
+  // expected-warning@-3{{Function argument 'provide_dispatch()' (to '-[TestObject doWork:]') is a RetainPtr-capable type 'dispatch_queue_t'}}
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get(), OSObjectPtr { provide_dispatch() }.get()];
   [self doWork:__null];
   [self doWork:nil];
@@ -681,7 +681,7 @@ SomeObj *allocObj();
 
 - (void)doWorkOnSomeObj {
     [[self getSomeObj] doWork];
-    // expected-warning@-1{{Receiver '[self getSomeObj]' (to 'SomeObj::doWork') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
+    // expected-warning@-1{{Receiver '[self getSomeObj]' (to '-[SomeObj doWork]') is a raw pointer to RetainPtr-capable type 'SomeObj'}}
     [[TestObject sharedObj] doWork];
 }
 
