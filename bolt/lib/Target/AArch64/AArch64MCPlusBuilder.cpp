@@ -22,7 +22,6 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCInstUtils.h"
 #include "bolt/Core/MCPlusBuilder.h"
-#include "bolt/Passes/DataflowInfoManager.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -2191,30 +2190,9 @@ public:
     }
   }
 
-  BranchLivenessInfo
-  createBranchLivenessInfo(BinaryFunction &BF,
-                           DataflowInfoManager &DIM) const override {
-    SmallVector<MCInst *> CompAndBranchInsts;
-    for (BinaryBasicBlock &BB : BF)
-      for (MCInst &Inst : BB)
-        if (isCompAndBranch(Inst))
-          CompAndBranchInsts.push_back(&Inst);
-    if (CompAndBranchInsts.empty())
-      return {};
-
-    BranchLivenessInfo Info;
-    LivenessAnalysis &LA = DIM.getLivenessAnalysis();
-    for (MCInst *Inst : CompAndBranchInsts)
-      if (!LA.getLiveIn(*Inst).test(getFlagsReg()))
-        Info.FlagsDead.insert(Inst);
-    return Info;
-  }
-
-  bool
-  isReversibleBranch(const MCInst &Inst,
-                     const BranchLivenessInfo *BLI = nullptr) const override {
+  bool isReversibleBranch(const MCInst &Inst,
+                          bool MustPreserveFlags = true) const override {
     if (isCompAndBranch(Inst)) {
-      bool MustPreserveFlags = BLI ? BLI->mustPreserveFlags(Inst) : true;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
       if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0 &&
           MustPreserveFlags)
@@ -2226,10 +2204,11 @@ public:
     return MCPlusBuilder::isReversibleBranch(Inst);
   }
 
-  void reverseBranchCondition(
-      BinaryBasicBlock *Parent, MCInst &Inst, const MCSymbol *TBB,
-      MCContext *Ctx, const BranchLivenessInfo *BLI = nullptr) const override {
-    assert(isReversibleBranch(Inst, BLI) && "Irreversible branch");
+  void reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
+                              const MCSymbol *TBB, MCContext *Ctx,
+                              bool MustPreserveFlags = true) const override {
+    assert(isReversibleBranch(Inst, MustPreserveFlags) &&
+           "Irreversible branch");
 
     if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
       bool ImmediateOutOfBounds = false;

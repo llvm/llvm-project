@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/LongJmp.h"
-#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Passes/DataflowInfoManager.h"
+#include "bolt/Passes/BranchLivenessUtils.h"
+#include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MathExtras.h"
 
 #define DEBUG_TYPE "longjmp"
@@ -664,8 +666,8 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   return Error::success();
 }
 
-void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
-                                     const BranchLivenessInfo *BLI) {
+void LongJmpPass::relaxLocalBranches(
+    BinaryFunction &BF, const DenseSet<const MCInst *> *DeadFlagBranches) {
   BinaryContext &BC = BF.getBinaryContext();
   auto &MIB = BC.MIB;
 
@@ -792,7 +794,6 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
 
       const MCSymbol *TargetSymbol = MIB->getTargetSymbol(*Inst);
       BB->eraseInstruction(BB->findInstruction(Inst));
-      BB->setOutputEndAddress(BB->getOutputEndAddress() - TrampolineSize);
 
       BinaryBasicBlock::BinaryBranchInfo BI;
       BinaryBasicBlock *TargetBB = BB->getSuccessor(TargetSymbol, BI);
@@ -842,7 +843,10 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       // If the other successor is a fall-through, invert the condition code.
       BinaryBasicBlock *NextBB =
           BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
-      bool IsReversibleBranch = MIB->isReversibleBranch(Inst, BLI);
+      bool MustPreserveFlags =
+          !DeadFlagBranches || !DeadFlagBranches->count(&Inst);
+      bool IsReversibleBranch =
+          MIB->isReversibleBranch(Inst, MustPreserveFlags);
       bool ShouldReverseBranch = BB->getConditionalSuccessor(false) == NextBB;
 
       // Create a trampoline basic block for the fall-through target of the
@@ -860,7 +864,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
         {
           auto L = BC.scopeLock();
           MIB->reverseBranchCondition(BB, Inst, NextBB->getLabel(),
-                                      BC.Ctx.get(), BLI);
+                                      BC.Ctx.get(), MustPreserveFlags);
         }
         const uint64_t NewBBSize = BB->estimateSize();
 
@@ -956,22 +960,25 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
           opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
          "LongJmp cannot work with functions split in more than two fragments");
 
-  DenseMap<BinaryFunction *, BranchLivenessInfo> BranchLiveness;
-  if (opts::LivenessAnalysis) {
-    BinaryFunctionCallGraph CG = buildCallGraph(BC);
-    RegAnalysis RA(BC, &BC.getBinaryFunctions(), &CG);
+  DenseMap<BinaryFunction *, DenseSet<const MCInst *>> DeadFlagBranches;
+  if (opts::FixBranchesWithLiveness) {
+    SmallVector<BinaryFunction *> Candidates;
     for (auto &It : BC.getBinaryFunctions()) {
       BinaryFunction &BF = It.second;
       if (!BC.shouldEmit(BF) || !BF.isSimple())
         continue;
-      DataflowInfoManager DIM(BF, &RA, nullptr);
-      BranchLiveness[&BF] = BC.MIB->createBranchLivenessInfo(BF, DIM);
+      if (hasShortRangeBranch(BF))
+        Candidates.push_back(&BF);
+    }
+    if (!Candidates.empty()) {
+      RegAnalysis RA(BC, nullptr, nullptr);
+      for (BinaryFunction *BF : Candidates)
+        DeadFlagBranches[BF] = computeDeadFlagBranches(*BF, RA);
     }
   }
-  auto getBranchLiveness =
-      [&](BinaryFunction &BF) -> const BranchLivenessInfo * {
-    auto It = BranchLiveness.find(&BF);
-    return It == BranchLiveness.end() ? nullptr : &It->second;
+  auto getDeadFlagBranches = [&](BinaryFunction &BF) {
+    auto It = DeadFlagBranches.find(&BF);
+    return It == DeadFlagBranches.end() ? nullptr : &It->second;
   };
 
   if (opts::CompactCodeModel) {
@@ -984,7 +991,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
         };
 
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-      relaxLocalBranches(BF, getBranchLiveness(BF));
+      relaxLocalBranches(BF, getDeadFlagBranches(BF));
     };
 
     ParallelUtilities::runOnEachFunction(
@@ -1009,7 +1016,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
       // Don't ruin non-simple functions, they can't afford to have the layout
       // changed.
       if (Modified && Func->isSimple())
-        Func->fixBranches(getBranchLiveness(*Func));
+        Func->fixBranches(getDeadFlagBranches(*Func));
     }
   } while (Modified);
   BC.outs() << "BOLT-INFO: Inserted " << NumHotStubs

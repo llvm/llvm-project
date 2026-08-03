@@ -11,18 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/BinaryPasses.h"
-#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Passes/DataflowInfoManager.h"
+#include "bolt/Passes/BranchLivenessUtils.h"
+#include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
 #include <cmath>
 #include <mutex>
 #include <numeric>
+#include <optional>
 #include <vector>
 
 #define DEBUG_TYPE "bolt-opts"
@@ -555,25 +558,26 @@ bool ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
 }
 
 Error FixupBranches::runOnFunctions(BinaryContext &BC) {
-  auto forEachFunction = [&](auto &&Apply) {
-    for (auto &It : BC.getBinaryFunctions()) {
-      BinaryFunction &Function = It.second;
-      if (!BC.shouldEmit(Function) || !Function.isSimple())
-        continue;
-      Apply(Function);
-    }
-  };
+  const bool ShouldRunRegisterAnalysis =
+      opts::FixBranchesWithLiveness &&
+      llvm::any_of(BC.getBinaryFunctions(), [&](auto &It) {
+        BinaryFunction &BF = It.second;
+        return BC.shouldEmit(BF) && BF.isSimple() && hasShortRangeBranch(BF);
+      });
 
-  if (opts::LivenessAnalysis) {
-    BinaryFunctionCallGraph CG = buildCallGraph(BC);
-    RegAnalysis RA(BC, &BC.getBinaryFunctions(), &CG);
-    forEachFunction([&](BinaryFunction &BF) {
-      DataflowInfoManager DIM(BF, &RA, nullptr);
-      BranchLivenessInfo Info = BC.MIB->createBranchLivenessInfo(BF, DIM);
-      BF.fixBranches(&Info);
-    });
-  } else
-    forEachFunction([&](BinaryFunction &BF) { BF.fixBranches(nullptr); });
+  std::optional<RegAnalysis> RA;
+  if (ShouldRunRegisterAnalysis)
+    RA.emplace(BC, nullptr, nullptr);
+
+  for (auto &It : BC.getBinaryFunctions()) {
+    BinaryFunction &BF = It.second;
+    if (!BC.shouldEmit(BF) || !BF.isSimple())
+      continue;
+
+    DenseSet<const MCInst *> DeadFlagBranches =
+        RA ? computeDeadFlagBranches(BF, *RA) : DenseSet<const MCInst *>();
+    BF.fixBranches(&DeadFlagBranches);
+  }
   return Error::success();
 }
 

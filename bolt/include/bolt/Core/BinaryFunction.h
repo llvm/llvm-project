@@ -36,6 +36,7 @@
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -65,8 +66,6 @@ namespace llvm {
 class DWARFUnit;
 
 namespace bolt {
-
-struct BranchLivenessInfo;
 
 using InputOffsetToAddressMapTy = std::unordered_multimap<uint64_t, uint64_t>;
 
@@ -2506,7 +2505,7 @@ public:
   /// while the second successor - false/fall-through branch.
   ///
   /// When we reverse the branch condition, the CFG is updated accordingly.
-  void fixBranches(const BranchLivenessInfo *BLI = nullptr);
+  void fixBranches(const DenseSet<const MCInst *> *DeadFlagBranches = nullptr);
 
   /// Mark function as finalized. No further optimizations are permitted.
   void setFinalized() { CurrentState = State::CFG_Finalized; }

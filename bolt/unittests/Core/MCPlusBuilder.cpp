@@ -18,9 +18,6 @@
 
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
-#include "bolt/Core/BinaryFunctionCallGraph.h"
-#include "bolt/Passes/BinaryPasses.h"
-#include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -342,15 +339,9 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch_Underflows) {
                                   .addImm(0)
                                   .addExpr(MCSymbolRefExpr::create(
                                       TargetBB->getLabel(), *BC->Ctx.get())));
-  BinaryFunctionCallGraph CG(buildCallGraph(*BC.get()));
-  RegAnalysis RA(*BC.get(), &BC->getBinaryFunctions(), &CG);
-  DataflowInfoManager DIM(*BF, &RA, nullptr);
-  BranchLivenessInfo BranchLiveness =
-      BC->MIB->createBranchLivenessInfo(*BF, DIM);
-
-  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &BranchLiveness));
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, /*PreserveFlags=*/false));
   BC->MIB->reverseBranchCondition(EntryBB, *I, TargetBB->getLabel(),
-                                  BC->Ctx.get(), &BranchLiveness);
+                                  BC->Ctx.get(), /*PreserveFlags=*/false);
   I = EntryBB->begin();
   ASSERT_EQ(I->getOpcode(), AArch64::SUBSXri);
   ASSERT_EQ(I->getOperand(0).getReg(), AArch64::XZR);
@@ -383,15 +374,9 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch_Overflows) {
                                   .addImm(63)
                                   .addExpr(MCSymbolRefExpr::create(
                                       TargetBB->getLabel(), *BC->Ctx.get())));
-  BinaryFunctionCallGraph CG(buildCallGraph(*BC.get()));
-  RegAnalysis RA(*BC.get(), &BC->getBinaryFunctions(), &CG);
-  DataflowInfoManager DIM(*BF, &RA, nullptr);
-  BranchLivenessInfo BranchLiveness =
-      BC->MIB->createBranchLivenessInfo(*BF, DIM);
-
-  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, &BranchLiveness));
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(*I, /*PreserveFlags=*/false));
   BC->MIB->reverseBranchCondition(EntryBB, *I, TargetBB->getLabel(),
-                                  BC->Ctx.get(), &BranchLiveness);
+                                  BC->Ctx.get(), /*PreserveFlags=*/false);
   I = EntryBB->begin();
   ASSERT_EQ(I->getOpcode(), AArch64::SUBSWri);
   ASSERT_EQ(I->getOperand(0).getReg(), AArch64::WZR);
@@ -435,13 +420,7 @@ TEST_P(MCPlusBuilderTester, AArch64_IsReversibleBranch_LiveCondFlags) {
                                     .addReg(AArch64::X2)
                                     .addImm(13));
 
-  BinaryFunctionCallGraph CG(buildCallGraph(*BC.get()));
-  RegAnalysis RA(*BC.get(), &BC->getBinaryFunctions(), &CG);
-  DataflowInfoManager DIM(*BF, &RA, nullptr);
-  BranchLivenessInfo BranchLiveness =
-      BC->MIB->createBranchLivenessInfo(*BF, DIM);
-
-  ASSERT_FALSE(BC->MIB->isReversibleBranch(*I, &BranchLiveness));
+  ASSERT_FALSE(BC->MIB->isReversibleBranch(*I, /*PreserveFlags=*/true));
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
