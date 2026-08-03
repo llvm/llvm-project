@@ -267,32 +267,48 @@ static bool loadLevelZero() {
     const char *Sym = dlwrap::symbol(I);
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
-    void *Fallback = nullptr;
     if (P)
       ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
                       << ") -> " << P;
-    else {
-      Fallback = findZeFallback(Sym);
-      if (Fallback) {
-        ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
-                        << "'. Using fallback implementation -> " << Fallback;
-        P = Fallback;
-      } else {
-        ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
-                        << "' and no fallback is available!";
-        EmitCheckVersion();
-        return false;
-      }
-    }
-
     *dlwrap::pointer(I) = P;
   }
 
   return true;
 }
 
+static void addLevelZeroFallbacks() {
+  std::string L0Library{LEVEL_ZERO_LIBRARY};
+
+  for (size_t I = 0; I < dlwrap::size(); I++) {
+    if (*dlwrap::pointer(I) != nullptr)
+      continue;
+
+    // Sym is missing, try to find fallback
+    const char *Sym = dlwrap::symbol(I);
+    void *Fallback = nullptr;
+
+    Fallback = findZeFallback(Sym);
+    if (Fallback == nullptr) {
+      ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
+                      << "' and no fallback is available!";
+      continue;
+    }
+
+    ODBG(OLDT_Init) << "Symbol '" << Sym << "' not found in '" << L0Library
+                    << "'. Using fallback implementation -> " << Fallback;
+    *dlwrap::pointer(I) = Fallback;
+  }
+}
+
 ze_result_t ZE_APICALL zeInit(ze_init_flags_t flags) {
   if (!loadLevelZero())
     return ZE_RESULT_ERROR_UNKNOWN;
-  return dlwrap_zeInit(flags);
+
+  auto InitResult = dlwrap_zeInit(flags);
+
+  // Add fallbacks after calling zeInit, so we can
+  // use level_zero APIs to check if they work
+  addLevelZeroFallbacks();
+
+  return InitResult;
 }
