@@ -483,6 +483,12 @@ public:
 
 FunctionPass *createX86ArgumentStackSlotLegacyPass();
 
+/// This pass rewrites scalar math library calls (e.g. tan) to their AMD AOCL
+/// fast-call equivalents (e.g. amd_fasttan) under fast-math semantics.
+FunctionPass *createX86GenScalarAmdFastCallsPass();
+void initializeX86GenScalarAmdFastCallsPass(PassRegistry &);
+extern char &X86GenScalarAmdFastCallsID;
+
 void initializeCompressEVEXLegacyPass(PassRegistry &);
 void initializeX86FixupBWInstLegacyPass(PassRegistry &);
 void initializeFixupLEAsLegacyPass(PassRegistry &);
