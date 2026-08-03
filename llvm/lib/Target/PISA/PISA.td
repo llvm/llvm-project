@@ -6,28 +6,36 @@
 //
 //===----------------------------------------------------------------------===//
 
+include "llvm/TableGen/SearchableTable.td"
 include "llvm/Target/Target.td"
+
+// Global setting
+def Global {
+  string NS = "PISA";
+}
+
+#define PISA
 
 include "PISAFeatures.td"
 include "PISARegisterInfo.td"
+include "PISARegisterBanks.td"
 include "PISAInstrInfo.td"
+include "PISACombine.td"
 
-// Map the pointer-like operands of the target-independent pseudo instructions
-// (STACKMAP, PATCHPOINT, ...) onto a concrete PISA register class.
 defm : RemapAllTargetPseudoPointerOperands<Reg64b>;
-
 def PISAInstrInfo : InstrInfo;
 
 class Proc<string Name, list<SubtargetFeature> Features>
-    : Processor<Name, NoItineraries, Features>;
+ : Processor<Name, NoItineraries, Features>;
 
-// Valid -mcpu values.
-def : Proc<"100", [Feature100]>;
+// valid -mcpu values
+def : Proc<"100",   [Feature100]>;
 
 def PISAInstPrinter : AsmWriter {
-  string AsmWriterClassName = "InstPrinter";
+  string AsmWriterClassName  = "InstPrinter";
   bit isMCAsmWriter = 1;
 }
+
 
 def PISA : Target {
   let InstructionSet = PISAInstrInfo;

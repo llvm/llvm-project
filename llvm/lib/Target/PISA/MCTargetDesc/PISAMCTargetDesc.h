@@ -14,13 +14,37 @@
 #include <memory>
 
 namespace llvm {
+class MCAsmBackend;
+class MCCodeEmitter;
+class MCContext;
+class MCInstPrinter;
 class MCInstrInfo;
+class MCObjectTargetWriter;
 class MCRegisterInfo;
+class MCStreamer;
 class MCSubtargetInfo;
+class MCTargetOptions;
+class MCTargetStreamer;
 class Target;
+class formatted_raw_ostream;
+
+namespace PISA {
+enum OperandType : unsigned {
+  OPERAND_NEGATE = MCOI::OPERAND_FIRST_TARGET,
+  OPERAND_SWIZZLE,
+};
+} // namespace PISA
+
+MCTargetStreamer *createPISAAsmTargetStreamer(MCStreamer &S,
+                                              formatted_raw_ostream &OS,
+                                              MCInstPrinter *InstPrint);
+MCTargetStreamer *createPISAObjectTargetStreamer(MCStreamer &S,
+                                                 const MCSubtargetInfo &STI);
+MCTargetStreamer *createPISANullTargetStreamer(MCStreamer &S);
+
 } // namespace llvm
 
-// Defines symbolic names for PISA registers. This defines a mapping from
+// Defines symbolic names for PISA registers.  This defines a mapping from
 // register name to register number.
 #define GET_REGINFO_ENUM
 #include "PISAGenRegisterInfo.inc"

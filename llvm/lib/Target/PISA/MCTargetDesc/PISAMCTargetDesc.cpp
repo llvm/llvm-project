@@ -9,14 +9,19 @@
 #include "PISAMCTargetDesc.h"
 #include "PISAInstPrinter.h"
 #include "PISAMCAsmInfo.h"
+#include "PISATargetStreamer.h"
 #include "TargetInfo/PISATargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 #define GET_INSTRINFO_MC_DESC
 #define ENABLE_INSTR_PREDICATE_VERIFIER
+#define GET_INSTRINFO_OPERAND_ENUM
+#define GET_INSTRINFO_NAMED_OPS
 #include "PISAGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -41,7 +46,7 @@ static MCRegisterInfo *createPISAMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *createPISAMCSubtargetInfo(const Triple &TT,
                                                   StringRef CPU, StringRef FS) {
-  return createPISAMCSubtargetInfoImpl(TT, CPU, /*TuneCPU=*/CPU, FS);
+  return createPISAMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCInstPrinter *createPISAMCInstPrinter(const Triple &T,
@@ -55,10 +60,18 @@ static MCInstPrinter *createPISAMCInstPrinter(const Triple &T,
 
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePISATargetMC() {
-  Target *T = &getThePISATarget();
-  RegisterMCAsmInfo<PISAMCAsmInfo> X(*T);
-  TargetRegistry::RegisterMCInstrInfo(*T, createPISAMCInstrInfo);
-  TargetRegistry::RegisterMCRegInfo(*T, createPISAMCRegisterInfo);
-  TargetRegistry::RegisterMCSubtargetInfo(*T, createPISAMCSubtargetInfo);
-  TargetRegistry::RegisterMCInstPrinter(*T, createPISAMCInstPrinter);
+  [[maybe_unused]] static bool Initialized = []() {
+    Target *T = &getThePISATarget();
+    RegisterMCAsmInfo<PISAMCAsmInfo> X(*T);
+    TargetRegistry::RegisterMCInstrInfo(*T, createPISAMCInstrInfo);
+    TargetRegistry::RegisterMCRegInfo(*T, createPISAMCRegisterInfo);
+    TargetRegistry::RegisterMCSubtargetInfo(*T, createPISAMCSubtargetInfo);
+    TargetRegistry::RegisterMCInstPrinter(*T, createPISAMCInstPrinter);
+    TargetRegistry::RegisterAsmTargetStreamer(*T, createPISAAsmTargetStreamer);
+    TargetRegistry::RegisterObjectTargetStreamer(
+        *T, createPISAObjectTargetStreamer);
+    TargetRegistry::RegisterNullTargetStreamer(*T,
+                                               createPISANullTargetStreamer);
+    return true;
+  }();
 }
