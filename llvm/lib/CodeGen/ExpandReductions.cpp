@@ -23,10 +23,26 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <numeric>
 
 using namespace llvm;
 
 namespace {
+
+Value *expandScalarizedReduction(IRBuilderBase &Builder, Value *Vec,
+                                 unsigned RdxOpcode, RecurKind RK) {
+  auto *VecTy = cast<FixedVectorType>(Vec->getType());
+  Value *Res = Builder.CreateExtractElement(Vec, uint64_t(0));
+  for (unsigned I = 1, E = VecTy->getNumElements(); I != E; ++I) {
+    Value *Ext = Builder.CreateExtractElement(Vec, I);
+    if (RdxOpcode == Instruction::ICmp || RdxOpcode == Instruction::FCmp)
+      Res = createMinMaxOp(Builder, RK, Res, Ext);
+    else
+      Res = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, Res, Ext,
+                                "bin.rdx");
+  }
+  return Res;
+}
 
 bool expandReductions(Function &F, const TargetTransformInfo *TTI,
                       DominatorTree *DT, LoopInfo *LI) {
@@ -86,12 +102,11 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
         Rdx = expandReductionViaLoop(Builder, Vec, RdxOpcode, Acc, DT, LI);
         break;
       }
-      if (!FMF.allowReassoc())
+      if (!FMF.allowReassoc() ||
+          !isPowerOf2_32(
+              cast<FixedVectorType>(Vec->getType())->getNumElements()))
         Rdx = getOrderedReduction(Builder, Acc, Vec, RdxOpcode, RK);
       else {
-        if (!isPowerOf2_32(
-                cast<FixedVectorType>(Vec->getType())->getNumElements()))
-          continue;
         Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
         Rdx = Builder.CreateBinOp((Instruction::BinaryOps)RdxOpcode, Acc, Rdx,
                                   "bin.rdx");
@@ -110,11 +125,18 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
       Value *Vec = II->getArgOperand(0);
       auto *FTy = cast<FixedVectorType>(Vec->getType());
       unsigned NumElts = FTy->getNumElements();
-      if (!isPowerOf2_32(NumElts))
-        continue;
 
       if (FTy->getElementType() == Builder.getInt1Ty()) {
-        Rdx = Builder.CreateBitCast(Vec, Builder.getIntNTy(NumElts));
+        unsigned Width = PowerOf2Ceil(NumElts);
+        if (Width != NumElts) {
+          Constant *Identity = ID == Intrinsic::vector_reduce_and
+                                   ? Constant::getAllOnesValue(FTy)
+                                   : Constant::getNullValue(FTy);
+          SmallVector<int, 16> Mask(Width);
+          std::iota(Mask.begin(), Mask.end(), 0);
+          Vec = Builder.CreateShuffleVector(Vec, Identity, Mask);
+        }
+        Rdx = Builder.CreateBitCast(Vec, Builder.getIntNTy(Width));
         if (ID == Intrinsic::vector_reduce_and) {
           Rdx = Builder.CreateICmpEQ(
               Rdx, ConstantInt::getAllOnesValue(Rdx->getType()));
@@ -125,6 +147,10 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
         break;
       }
       unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      if (!isPowerOf2_32(NumElts)) {
+        Rdx = expandScalarizedReduction(Builder, Vec, RdxOpcode, RK);
+        break;
+      }
       Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
@@ -144,8 +170,10 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
         break;
       }
       if (!isPowerOf2_32(
-              cast<FixedVectorType>(Vec->getType())->getNumElements()))
-        continue;
+              cast<FixedVectorType>(Vec->getType())->getNumElements())) {
+        Rdx = expandScalarizedReduction(Builder, Vec, RdxOpcode, RK);
+        break;
+      }
       Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
@@ -154,11 +182,14 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI,
       // We require "nnan" to use a shuffle reduction; "nsz" is implied by the
       // semantics of the reduction.
       Value *Vec = II->getArgOperand(0);
-      if (!isPowerOf2_32(
-              cast<FixedVectorType>(Vec->getType())->getNumElements()) ||
-          !FMF.noNaNs())
+      if (!FMF.noNaNs())
         continue;
       unsigned RdxOpcode = getArithmeticReductionInstruction(ID);
+      if (!isPowerOf2_32(
+              cast<FixedVectorType>(Vec->getType())->getNumElements())) {
+        Rdx = expandScalarizedReduction(Builder, Vec, RdxOpcode, RK);
+        break;
+      }
       Rdx = getShuffleReduction(Builder, Vec, RdxOpcode, RS, RK);
       break;
     }
