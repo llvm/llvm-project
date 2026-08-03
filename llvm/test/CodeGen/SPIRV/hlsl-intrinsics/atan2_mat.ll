@@ -52,6 +52,7 @@
 @wide_f16_12 = internal addrspace(10) global [12 x half] zeroinitializer
 @wide_f32_16 = internal addrspace(10) global [16 x float] zeroinitializer
 @wide_f16_16 = internal addrspace(10) global [16 x half] zeroinitializer
+@shuffle_f32_4 = internal addrspace(10) global <4 x float> zeroinitializer
 @mat_f32_4x4 = internal addrspace(10) global [4 x <4 x float>] zeroinitializer
 @mat_f16_4x4 = internal addrspace(10) global [4 x <4 x half>] zeroinitializer
 @mat_f32_3x3 = internal addrspace(10) global [3 x <3 x float>] zeroinitializer
@@ -572,11 +573,14 @@ entry:
 define internal void @atan2_float6() {
 entry:
   ; CHECK: OpFunction %[[#void]] None
+  ; CHECK: %[[#shuffle_f32:]] = OpLoad %[[#vec4_float_32]]
+  ; CHECK: OpCompositeExtract %[[#float_32]] %[[#shuffle_f32]] 0
   ; CHECK-COUNT-2: OpExtInst {{%[0-9]+}} %[[#op_ext_glsl]] Atan2
   ; CHECK: OpFunctionEnd
-  %va = load <6 x float>, ptr addrspace(10) @wide_f32_6
-  %vb = load <6 x float>, ptr addrspace(10) @wide_f32_6
-  %r = call <6 x float> @llvm.atan2.v6f32(<6 x float> %va, <6 x float> %vb)
+  %vec = load <4 x float>, ptr addrspace(10) @shuffle_f32_4
+  %va = shufflevector <4 x float> %vec, <4 x float> %vec,
+            <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  %r = call <6 x float> @llvm.atan2.v6f32(<6 x float> %va, <6 x float> %va)
   store <6 x float> %r, ptr addrspace(10) @wide_f32_6
   ret void
 }
