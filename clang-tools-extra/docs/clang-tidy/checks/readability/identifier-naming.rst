@@ -85,6 +85,7 @@ The available options are summarized below:
  - :option:`CheckAnonFieldInParent`
  - :option:`GetConfigPerFile`
  - :option:`IgnoreMainLikeFunctions`
+ - :option:`TypedefInheritAnonTagConfig`
 
 **Specific options**
 
@@ -2731,6 +2732,40 @@ After:
 .. code-block:: c++
 
     typedef int pre_myint_post;
+
+.. option:: TypedefInheritAnonTagConfig
+
+    When set to `true`, a typedef or type alias that provides the only name of
+    an otherwise unnamed tag, as in ``typedef enum {} MyEnum;``, is checked
+    against the naming style configured for the kind of that tag
+    (``AbstractClass``, ``Class``, ``Enum``, ``Struct`` or ``Union``, i.e.
+    :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix` and
+    :option:`EnumIgnoredRegexp` for an enum) rather than against the typedef
+    or type alias style. If no style is configured for that kind, the typedef
+    or type alias style still applies. Typedefs of named tags, of other
+    typedefs and of non-tag types are not affected. Default is `false`.
+
+For example using values of:
+
+   - TypedefInheritAnonTagConfig of `true`
+   - EnumCase of ``CamelCase``
+   - TypedefCase of ``lower_case``
+
+Identifies and/or transforms names as follows:
+
+Before:
+
+.. code-block:: c++
+
+    typedef enum { VAL } my_enum;        // The typedef names the enum.
+    typedef enum Kind { VAL2 } my_kind;  // Kind names the enum.
+
+After:
+
+.. code-block:: c++
+
+    typedef enum { VAL } MyEnum;
+    typedef enum Kind { VAL2 } my_kind;
 
 .. option:: TypeTemplateParameterCase
 

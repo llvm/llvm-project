@@ -200,6 +200,11 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
+  - Added the {option}`TypedefInheritAnonTagConfig` option, which checks a
+    typedef or type alias that provides the only name of an otherwise unnamed
+    tag, such as `typedef enum {} MyEnum;`, against the style configured for
+    that tag kind instead of the typedef or type alias style.
+
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
   standard tag types (e.g. `std::in_place_t`, `std::allocator_arg_t`,

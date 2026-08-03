@@ -125,13 +125,16 @@ public:
   };
 
   struct FileStyle {
-    FileStyle() : IsActive(false), IgnoreMainLikeFunctions(false) {}
+    FileStyle()
+        : IsActive(false), IgnoreMainLikeFunctions(false),
+          TypedefInheritAnonTagConfig(false) {}
     FileStyle(SmallVectorImpl<std::optional<NamingStyle>> &&Styles,
               HungarianNotationOption HNOption, bool IgnoreMainLike,
-              bool CheckAnonFieldInParent)
+              bool CheckAnonFieldInParent, bool TypedefInheritAnonTag)
         : Styles(std::move(Styles)), HNOption(std::move(HNOption)),
           IsActive(true), IgnoreMainLikeFunctions(IgnoreMainLike),
-          CheckAnonFieldInParentScope(CheckAnonFieldInParent) {}
+          CheckAnonFieldInParentScope(CheckAnonFieldInParent),
+          TypedefInheritAnonTagConfig(TypedefInheritAnonTag) {}
 
     ArrayRef<std::optional<NamingStyle>> getStyles() const {
       assert(IsActive);
@@ -150,12 +153,17 @@ public:
       return CheckAnonFieldInParentScope;
     }
 
+    bool isTypedefInheritingAnonTagConfig() const {
+      return TypedefInheritAnonTagConfig;
+    }
+
   private:
     SmallVector<std::optional<NamingStyle>, 0> Styles;
     HungarianNotationOption HNOption;
     bool IsActive;
     bool IgnoreMainLikeFunctions;
     bool CheckAnonFieldInParentScope;
+    bool TypedefInheritAnonTagConfig;
   };
 
   IdentifierNamingCheck::FileStyle
@@ -182,7 +190,8 @@ public:
   StyleKind findStyleKind(
       const NamedDecl *D,
       ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
-      bool IgnoreMainLikeFunctions, bool CheckAnonFieldInParentScope) const;
+      bool IgnoreMainLikeFunctions, bool CheckAnonFieldInParentScope,
+      bool TypedefInheritAnonTagConfig) const;
 
   std::optional<RenamerClangTidyCheck::FailureInfo> getFailureInfo(
       StringRef Type, StringRef Name, const NamedDecl *ND,
@@ -215,6 +224,12 @@ private:
   StyleKind findStyleKindForField(
       const FieldDecl *Field, QualType Type,
       ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+
+  /// Find the style kind configured for the kind of \p Tag, or \c SK_Invalid if
+  /// none is configured.
+  StyleKind
+  findStyleKindForTag(const TagDecl *Tag,
+                      ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
 
   StyleKind
   findStyleKindForVar(const VarDecl *Var, QualType Type,
