@@ -1,0 +1,24 @@
+# RUN: llc -march=pisa -run-pass=instruction-select %s -o - | FileCheck %s
+
+# Selecting a G_BUILD_VECTOR whose destination class (RegV64_32b) has no
+# per-element sub-registers must use the large-vector insert path, not
+# INSERT_SUBREG.
+
+---
+name:            build_vector_v64i32_undef
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: build_vector_v64i32_undef
+    ; CHECK: [[ELT:%[0-9]+]]:reg32b = functionParameter_i32 0
+    ; CHECK-NEXT: [[UNDEF:%[0-9]+]]:regv64_32b = IMPLICIT_DEF
+    ; CHECK-NEXT: [[RES:%[0-9]+]]:regv64_32b = insert_0_v64i32_i32_r [[UNDEF]], [[ELT]]
+    ; CHECK-NEXT: retValue_v64i32_r [[RES]]
+    %0:reg32b(i32) = functionParameter_i32 0
+    %5:registers(i32) = G_IMPLICIT_DEF
+    %1:registers(<64 x i32>) = G_BUILD_VECTOR %0(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32), %5(i32)
+    %4:regv64_32b(<64 x i32>) = COPY %1(<64 x i32>)
+    retValue_v64i32_r %4(<64 x i32>)
+...
