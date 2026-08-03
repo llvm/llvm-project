@@ -595,7 +595,7 @@ struct VPlanTransforms {
   static void makeScalarizationDecisions(VPlan &Plan, VFRange &Range);
 
   /// Drop the branch weights from all recipes that cannot preserve them.
-  /// Currently that are all recipes, except VPReplicateRecipes.
+  /// Currently that is all recipes, except VPReplicateRecipes.
   static void dropBranchWeightsFromUnguardedRecipes(VPlan &Plan);
 
   /// Convert call VPInstructions in \p Plan into widened call, vector
