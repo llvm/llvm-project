@@ -156,3 +156,73 @@ Pattern RangeExpr {
 // CHECK: %[[TYPE:.*]] = type : i32
 // CHECK: operation({{.*}}) -> (%[[TYPE]] : !pdl.type)
 Pattern TypeExpr => erase op<> -> (type<"i32">);
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// OperationExpr with attached Region
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @OperationWithRegion
+// CHECK: %[[OUTER:.*]] = operation "my_dialect.outer"
+// CHECK: %[[REGION:.*]] = region_of %[[OUTER]] at 0
+// CHECK: %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+// CHECK: %[[INNER:.*]] = operation "my_dialect.inner"
+// CHECK-SAME: in %[[BLOCK]]
+Pattern OperationWithRegion {
+  erase op<my_dialect.outer> {
+    op<my_dialect.inner>;
+  };
+}
+
+// -----
+
+// CHECK: pdl.pattern @OperationWithBlockArgs
+// CHECK: %[[LOOP:.*]] = operation "my_dialect.loop"
+// CHECK: %[[REGION:.*]] = region_of %[[LOOP]] at 0
+// CHECK: %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+// CHECK: %[[IV:.*]] = block_arg %[[BLOCK]] at 0
+// CHECK: %[[BODY:.*]] = operation "my_dialect.body"
+// CHECK-SAME: in %[[BLOCK]]
+Pattern OperationWithBlockArgs {
+  erase op<my_dialect.loop> {
+    ^(iv: Value): {
+      op<my_dialect.body>;
+    }
+  };
+}
+
+// -----
+
+// CHECK: pdl.pattern @OperationWithVariadicBlockArgs
+// CHECK: %[[LOOP:.*]] = operation "my_dialect.loop"
+// CHECK: %[[REGION:.*]] = region_of %[[LOOP]] at 0
+// CHECK: %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+// CHECK: %[[IV:.*]] = block_arg %[[BLOCK]] at 0
+// CHECK: %[[REST:.*]] = block_args %[[BLOCK]] at 1 -> !pdl.range<value>
+// CHECK: %[[BODY:.*]] = operation "my_dialect.body"
+// CHECK-SAME: in %[[BLOCK]]
+Pattern OperationWithVariadicBlockArgs {
+  erase op<my_dialect.loop> {
+    ^(iv: Value, rest: ValueRange): {
+      op<my_dialect.body>;
+    }
+  };
+}
+
+// -----
+
+// CHECK: pdl.pattern @OperationWithAllBlockArgs
+// CHECK: %[[LOOP:.*]] = operation "my_dialect.loop"
+// CHECK: %[[REGION:.*]] = region_of %[[LOOP]] at 0
+// CHECK: %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+// CHECK: %[[ALL:.*]] = block_args %[[BLOCK]] at 0 -> !pdl.range<value>
+// CHECK: %[[BODY:.*]] = operation "my_dialect.body"
+// CHECK-SAME: in %[[BLOCK]]
+Pattern OperationWithAllBlockArgs {
+  erase op<my_dialect.loop> {
+    ^(allArgs: ValueRange): {
+      op<my_dialect.body>;
+    }
+  };
+}

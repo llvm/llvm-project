@@ -96,6 +96,31 @@ def PDL_Value : PDL_Type<"Value", "value"> {
 }
 
 //===----------------------------------------------------------------------===//
+// pdl::RegionType
+//===----------------------------------------------------------------------===//
+
+def PDL_Region : PDL_Type<"Region", "region"> {
+  let summary = "PDL handle to an `mlir::Region *`";
+  let description = [{
+    This type represents a handle to an instance of an `mlir::Region *`,
+    bound to a value that is usable within a PDL pattern or rewrite.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::BlockType
+//===----------------------------------------------------------------------===//
+
+def PDL_Block : PDL_Type<"Block", "block"> {
+  let summary = "PDL handle to an `mlir::Block *`";
+  let description = [{
+    This type represents a handle to an instance of an `mlir::Block *`,
+    bound to a value that is usable within a PDL pattern or rewrite.
+    Blocks are always accessed through a parent region.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Additional Type Constraints
 //===----------------------------------------------------------------------===//
 

@@ -211,6 +211,8 @@ Token Lexer::lexToken() {
       return formToken(Token::equal, tokStart);
     case ';':
       return formToken(Token::semicolon, tokStart);
+    case '^':
+      return formToken(Token::caret, tokStart);
     case '[':
       if (*curPtr == '{') {
         ++curPtr;
@@ -311,14 +313,18 @@ Token Lexer::lexIdentifier(const char *tokStart) {
   Token::Kind kind = StringSwitch<Token::Kind>(str)
                          .Case("attr", Token::kw_attr)
                          .Case("Attr", Token::kw_Attr)
+                         .Case("Block", Token::kw_Block)
                          .Case("erase", Token::kw_erase)
                          .Case("let", Token::kw_let)
+                         .Case("move_block", Token::kw_move_block)
+                         .Case("take_region", Token::kw_take_region)
                          .Case("Constraint", Token::kw_Constraint)
                          .Case("not", Token::kw_not)
                          .Case("op", Token::kw_op)
                          .Case("Op", Token::kw_Op)
                          .Case("OpName", Token::kw_OpName)
                          .Case("Pattern", Token::kw_Pattern)
+                         .Case("Region", Token::kw_Region)
                          .Case("replace", Token::kw_replace)
                          .Case("return", Token::kw_return)
                          .Case("rewrite", Token::kw_rewrite)

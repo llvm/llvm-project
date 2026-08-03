@@ -52,13 +52,17 @@ public:
 
     /// General keywords.
     kw_Attr,
+    kw_Block,
     kw_erase,
     kw_let,
+    kw_move_block,
+    kw_take_region,
     kw_Constraint,
     kw_not,
     kw_Op,
     kw_OpName,
     kw_Pattern,
+    kw_Region,
     kw_replace,
     kw_return,
     kw_rewrite,
@@ -88,6 +92,7 @@ public:
     l_square,
     r_square,
     underscore,
+    caret,
 
     /// Tokens.
     directive,

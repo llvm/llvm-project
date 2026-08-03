@@ -341,6 +341,68 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// TakeRegionStmt
+//===----------------------------------------------------------------------===//
+
+/// This statement represents the `take_region` statement in PDLL. This
+/// statement moves a region from one operation to another, corresponding
+/// roughly to the Region::takeBody or PatternRewriter::inlineRegionBefore API.
+///
+/// Syntax: `take_region <source_region> before <dest_region>;`
+class TakeRegionStmt final : public Node::NodeBase<TakeRegionStmt, Stmt> {
+public:
+  static TakeRegionStmt *create(Context &ctx, SMRange loc, Expr *region,
+                                Expr *destOp);
+
+  /// Return the region being moved.
+  Expr *getRegion() const { return region; }
+
+  /// Return the destination operation.
+  Expr *getDestOp() const { return destOp; }
+
+private:
+  TakeRegionStmt(SMRange loc, Expr *region, Expr *destOp)
+      : Base(loc), region(region), destOp(destOp) {}
+
+  /// The region to move.
+  Expr *region;
+
+  /// The destination operation to move the region to.
+  Expr *destOp;
+};
+
+//===----------------------------------------------------------------------===//
+// MoveBlockStmt
+//===----------------------------------------------------------------------===//
+
+/// This statement represents the `move_block` statement in PDLL. This
+/// statement moves a block before another block, corresponding
+/// to the Block::moveBefore API.
+///
+/// Syntax: `move_block <source_block> before <dest_block>;`
+class MoveBlockStmt final : public Node::NodeBase<MoveBlockStmt, Stmt> {
+public:
+  static MoveBlockStmt *create(Context &ctx, SMRange loc, Expr *block,
+                               Expr *destBlock);
+
+  /// Return the block being moved.
+  Expr *getBlock() const { return block; }
+
+  /// Return the destination block to move before.
+  Expr *getDestBlock() const { return destBlock; }
+
+private:
+  MoveBlockStmt(SMRange loc, Expr *block, Expr *destBlock)
+      : Base(loc), block(block), destBlock(destBlock) {}
+
+  /// The block to move.
+  Expr *block;
+
+  /// The destination block to move before.
+  Expr *destBlock;
+};
+
+//===----------------------------------------------------------------------===//
 // Expr
 //===----------------------------------------------------------------------===//
 
@@ -365,8 +427,7 @@ private:
 // AttributeExpr
 //===----------------------------------------------------------------------===//
 
-/// This expression represents a literal MLIR Attribute, and contains the
-/// textual assembly format of that attribute.
+/// This expression represents an MLIR Attribute value.
 class AttributeExpr : public Node::NodeBase<AttributeExpr, Expr> {
 public:
   static AttributeExpr *create(Context &ctx, SMRange loc, StringRef value);
@@ -379,8 +440,58 @@ private:
   AttributeExpr(Context &ctx, SMRange loc, StringRef value)
       : Base(loc, AttributeType::get(ctx)), value(value) {}
 
-  /// The value referenced by this expression.
+  /// The value of this attribute expression.
   StringRef value;
+};
+
+//===----------------------------------------------------------------------===//
+// BlockExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression represents a structural match of an MLIR Block. It contains
+/// block argument variable declarations and operation match expressions that
+/// describe the expected contents of the block. Block arguments enable binding
+/// names to block parameters, e.g. `(iv: Type<"index">) { op<inner>; }`.
+class BlockExpr final
+    : public Node::NodeBase<BlockExpr, Expr>,
+      private llvm::TrailingObjects<BlockExpr, VariableDecl *, Expr *> {
+public:
+  static BlockExpr *create(Context &ctx, SMRange loc,
+                           ArrayRef<VariableDecl *> args,
+                           ArrayRef<Expr *> children);
+
+  /// Return the block argument declarations.
+  MutableArrayRef<VariableDecl *> getArgs() {
+    return getTrailingObjects<VariableDecl *>(numArgs);
+  }
+  ArrayRef<VariableDecl *> getArgs() const {
+    return getTrailingObjects<VariableDecl *>(numArgs);
+  }
+
+  /// Return the child operation expressions of this block.
+  MutableArrayRef<Expr *> getChildren() {
+    return getTrailingObjects<Expr *>(numChildren);
+  }
+  ArrayRef<Expr *> getChildren() const {
+    return getTrailingObjects<Expr *>(numChildren);
+  }
+
+private:
+  BlockExpr(Context &ctx, SMRange loc, unsigned numArgs, unsigned numChildren)
+      : Base(loc, BlockType::get(ctx)), numArgs(numArgs),
+        numChildren(numChildren) {}
+
+  /// The number of block arguments.
+  unsigned numArgs;
+
+  /// The number of children (operation match expressions) in this block.
+  unsigned numChildren;
+
+  /// TrailingObject utilities.
+  friend class llvm::TrailingObjects<BlockExpr, VariableDecl *, Expr *>;
+  size_t numTrailingObjects(OverloadToken<VariableDecl *>) const {
+    return numArgs;
+  }
 };
 
 //===----------------------------------------------------------------------===//
@@ -516,7 +627,8 @@ public:
                                const OpNameDecl *nameDecl,
                                ArrayRef<Expr *> operands,
                                ArrayRef<Expr *> resultTypes,
-                               ArrayRef<NamedAttributeDecl *> attributes);
+                               ArrayRef<NamedAttributeDecl *> attributes,
+                               ArrayRef<Expr *> regions = {});
 
   /// Return the name of the operation, or std::nullopt if there isn't one.
   std::optional<StringRef> getName() const;
@@ -544,6 +656,15 @@ public:
     return const_cast<OperationExpr *>(this)->getResultTypes();
   }
 
+  /// Return the region expressions of this operation.
+  MutableArrayRef<Expr *> getRegions() {
+    return {getTrailingObjects<Expr *>() + numOperands + numResultTypes,
+            numRegions};
+  }
+  ArrayRef<Expr *> getRegions() const {
+    return const_cast<OperationExpr *>(this)->getRegions();
+  }
+
   /// Return the attributes of this operation.
   MutableArrayRef<NamedAttributeDecl *> getAttributes() {
     return getTrailingObjects<NamedAttributeDecl *>(numAttributes);
@@ -555,16 +676,17 @@ public:
 private:
   OperationExpr(SMRange loc, Type type, const OpNameDecl *nameDecl,
                 unsigned numOperands, unsigned numResultTypes,
-                unsigned numAttributes, SMRange nameLoc)
+                unsigned numAttributes, unsigned numRegions, SMRange nameLoc)
       : Base(loc, type), nameDecl(nameDecl), numOperands(numOperands),
         numResultTypes(numResultTypes), numAttributes(numAttributes),
-        nameLoc(nameLoc) {}
+        numRegions(numRegions), nameLoc(nameLoc) {}
 
   /// The name decl of this expression.
   const OpNameDecl *nameDecl;
 
-  /// The number of operands, result types, and attributes of the operation.
-  unsigned numOperands, numResultTypes, numAttributes;
+  /// The number of operands, result types, attributes, and regions of the
+  /// operation.
+  unsigned numOperands, numResultTypes, numAttributes, numRegions;
 
   /// The location of the operation name in the expression if it has a name.
   SMRange nameLoc;
@@ -572,7 +694,7 @@ private:
   /// TrailingObject utilities.
   friend llvm::TrailingObjects<OperationExpr, Expr *, NamedAttributeDecl *>;
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
-    return numOperands + numResultTypes;
+    return numOperands + numResultTypes + numRegions;
   }
 };
 
@@ -608,6 +730,33 @@ private:
 
   /// TrailingObject utilities.
   friend class llvm::TrailingObjects<RangeExpr, Expr *>;
+};
+
+//===----------------------------------------------------------------------===//
+// RegionExpr
+//===----------------------------------------------------------------------===//
+
+/// This expression represents a structural match of an MLIR Region. It
+/// contains block match expressions that describe the expected contents of
+/// the region.
+class RegionExpr final : public Node::NodeBase<RegionExpr, Expr>,
+                         private llvm::TrailingObjects<RegionExpr, Expr *> {
+public:
+  static RegionExpr *create(Context &ctx, SMRange loc, ArrayRef<Expr *> blocks);
+
+  /// Return the block expressions of this region.
+  MutableArrayRef<Expr *> getBlocks() { return getTrailingObjects(numBlocks); }
+  ArrayRef<Expr *> getBlocks() const { return getTrailingObjects(numBlocks); }
+
+private:
+  RegionExpr(Context &ctx, SMRange loc, unsigned numBlocks)
+      : Base(loc, RegionType::get(ctx)), numBlocks(numBlocks) {}
+
+  /// The number of block expressions in this region.
+  unsigned numBlocks;
+
+  /// TrailingObject utilities.
+  friend class llvm::TrailingObjects<RegionExpr, Expr *>;
 };
 
 //===----------------------------------------------------------------------===//
@@ -788,6 +937,36 @@ protected:
 
   /// The operation name of this constraint.
   const OpNameDecl *nameDecl;
+};
+
+//===----------------------------------------------------------------------===//
+// BlockConstraintDecl
+//===----------------------------------------------------------------------===//
+
+/// The class represents a Block constraint, and constrains a variable to be a
+/// Block.
+class BlockConstraintDecl
+    : public Node::NodeBase<BlockConstraintDecl, CoreConstraintDecl> {
+public:
+  static BlockConstraintDecl *create(Context &ctx, SMRange loc);
+
+protected:
+  using Base::Base;
+};
+
+//===----------------------------------------------------------------------===//
+// RegionConstraintDecl
+//===----------------------------------------------------------------------===//
+
+/// The class represents a Region constraint, and constrains a variable to be a
+/// Region.
+class RegionConstraintDecl
+    : public Node::NodeBase<RegionConstraintDecl, CoreConstraintDecl> {
+public:
+  static RegionConstraintDecl *create(Context &ctx, SMRange loc);
+
+protected:
+  using Base::Base;
 };
 
 //===----------------------------------------------------------------------===//
@@ -1331,14 +1510,14 @@ inline bool ConstraintDecl::classof(const Node *node) {
 }
 
 inline bool CoreConstraintDecl::classof(const Node *node) {
-  return isa<AttrConstraintDecl, OpConstraintDecl, TypeConstraintDecl,
-             TypeRangeConstraintDecl, ValueConstraintDecl,
+  return isa<AttrConstraintDecl, OpConstraintDecl, RegionConstraintDecl,
+             TypeConstraintDecl, TypeRangeConstraintDecl, ValueConstraintDecl,
              ValueRangeConstraintDecl>(node);
 }
 
 inline bool Expr::classof(const Node *node) {
-  return isa<AttributeExpr, CallExpr, DeclRefExpr, MemberAccessExpr,
-             OperationExpr, RangeExpr, TupleExpr, TypeExpr>(node);
+  return isa<AttributeExpr, BlockExpr, CallExpr, DeclRefExpr, MemberAccessExpr,
+             OperationExpr, RangeExpr, RegionExpr, TupleExpr, TypeExpr>(node);
 }
 
 inline bool OpRewriteStmt::classof(const Node *node) {
@@ -1346,7 +1525,8 @@ inline bool OpRewriteStmt::classof(const Node *node) {
 }
 
 inline bool Stmt::classof(const Node *node) {
-  return isa<CompoundStmt, LetStmt, OpRewriteStmt, Expr>(node);
+  return isa<CompoundStmt, LetStmt, OpRewriteStmt, ReturnStmt, TakeRegionStmt,
+             MoveBlockStmt, Expr>(node);
 }
 
 } // namespace ast

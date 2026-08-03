@@ -50,6 +50,11 @@ enum Kind : unsigned {
   ConstraintResultPos,
   ResultPos,
   ResultGroupPos,
+  RegionPos,
+  BlockPos,
+  BlockArgPos,
+  BlockArgRangePos,
+  BlockOpsPos,
   TypePos,
   AttributeLiteralPos,
   TypeLiteralPos,
@@ -65,6 +70,11 @@ enum Kind : unsigned {
   OperandCountQuestion,
   ResultCountAtLeastQuestion,
   ResultCountQuestion,
+  RegionCountQuestion,
+  BlockCountQuestion,
+  BlockArgCountQuestion,
+  BlockArgCountAtLeastQuestion,
+  CheckParentBlockQuestion,
   EqualToQuestion,
   ConstraintQuestion,
 
@@ -355,6 +365,84 @@ struct ResultGroupPosition
 };
 
 //===----------------------------------------------------------------------===//
+// RegionPosition
+//===----------------------------------------------------------------------===//
+
+/// A position describing a region of an operation.
+struct RegionPosition
+    : public PredicateBase<RegionPosition, Position,
+                           std::pair<OperationPosition *, unsigned>,
+                           Predicates::RegionPos> {
+  explicit RegionPosition(const KeyTy &key) : Base(key) { parent = key.first; }
+
+  /// Returns the region number of this position.
+  unsigned getRegionNumber() const { return key.second; }
+};
+
+//===----------------------------------------------------------------------===//
+// BlockPosition
+//===----------------------------------------------------------------------===//
+
+/// A position describing a block within a region.
+struct BlockPosition
+    : public PredicateBase<BlockPosition, Position,
+                           std::pair<RegionPosition *, unsigned>,
+                           Predicates::BlockPos> {
+  explicit BlockPosition(const KeyTy &key) : Base(key) { parent = key.first; }
+
+  /// Returns the block number of this position.
+  unsigned getBlockNumber() const { return key.second; }
+};
+
+//===----------------------------------------------------------------------===//
+// BlockArgPosition
+//===----------------------------------------------------------------------===//
+
+/// A position describing a block argument.
+struct BlockArgPosition
+    : public PredicateBase<BlockArgPosition, Position,
+                           std::pair<BlockPosition *, unsigned>,
+                           Predicates::BlockArgPos> {
+  explicit BlockArgPosition(const KeyTy &key) : Base(key) {
+    parent = key.first;
+  }
+
+  /// Returns the argument number of this position.
+  unsigned getArgNumber() const { return key.second; }
+};
+
+//===----------------------------------------------------------------------===//
+// BlockArgRangePosition
+//===----------------------------------------------------------------------===//
+
+/// A position describing a range of block arguments starting from a given
+/// index. This is used for variadic block argument capture (e.g.,
+/// `^(iv: Value, rest: ValueRange):` where `rest` starts at index 1).
+struct BlockArgRangePosition
+    : public PredicateBase<BlockArgRangePosition, Position,
+                           std::pair<BlockPosition *, unsigned>,
+                           Predicates::BlockArgRangePos> {
+  explicit BlockArgRangePosition(const KeyTy &key) : Base(key) {
+    parent = key.first;
+  }
+
+  /// Returns the starting argument index for this range.
+  unsigned getStartIndex() const { return key.second; }
+};
+
+//===----------------------------------------------------------------------===//
+// BlockOpsPosition
+//===----------------------------------------------------------------------===//
+
+/// A position describing the range of all operations within a block.
+/// Used for inner operation matching: get_block_ops → foreach.
+struct BlockOpsPosition
+    : public PredicateBase<BlockOpsPosition, Position, BlockPosition *,
+                           Predicates::BlockOpsPos> {
+  explicit BlockOpsPosition(const KeyTy &key) : Base(key) { parent = key; }
+};
+
+//===----------------------------------------------------------------------===//
 // TypePosition
 //===----------------------------------------------------------------------===//
 
@@ -545,6 +633,34 @@ struct OperationNameQuestion
     : public PredicateBase<OperationNameQuestion, Qualifier, void,
                            Predicates::OperationNameQuestion> {};
 
+/// Compare the number of regions of an operation with a known value.
+struct RegionCountQuestion
+    : public PredicateBase<RegionCountQuestion, Qualifier, void,
+                           Predicates::RegionCountQuestion> {};
+
+/// Compare the number of blocks in a region with a known value.
+struct BlockCountQuestion
+    : public PredicateBase<BlockCountQuestion, Qualifier, void,
+                           Predicates::BlockCountQuestion> {};
+
+/// Compare the number of block arguments with a known value.
+struct BlockArgCountQuestion
+    : public PredicateBase<BlockArgCountQuestion, Qualifier, void,
+                           Predicates::BlockArgCountQuestion> {};
+struct BlockArgCountAtLeastQuestion
+    : public PredicateBase<BlockArgCountAtLeastQuestion, Qualifier, void,
+                           Predicates::BlockArgCountAtLeastQuestion> {};
+
+/// Check the parent block of an operation matches a known block.
+struct CheckParentBlockQuestion
+    : public PredicateBase<CheckParentBlockQuestion, Qualifier, Position *,
+                           Predicates::CheckParentBlockQuestion> {
+  using Base::Base;
+
+  /// Return the expected block position.
+  Position *getBlockPosition() const { return key; }
+};
+
 /// Compare the number of results of an operation with a known value.
 struct ResultCountQuestion
     : public PredicateBase<ResultCountQuestion, Qualifier, void,
@@ -569,11 +685,16 @@ public:
     // Register the types of Positions with the uniquer.
     registerParametricStorageType<AttributePosition>();
     registerParametricStorageType<AttributeLiteralPosition>();
+    registerParametricStorageType<BlockArgPosition>();
+    registerParametricStorageType<BlockArgRangePosition>();
+    registerParametricStorageType<BlockOpsPosition>();
+    registerParametricStorageType<BlockPosition>();
     registerParametricStorageType<ConstraintPosition>();
     registerParametricStorageType<ForEachPosition>();
     registerParametricStorageType<OperandPosition>();
     registerParametricStorageType<OperandGroupPosition>();
     registerParametricStorageType<OperationPosition>();
+    registerParametricStorageType<RegionPosition>();
     registerParametricStorageType<ResultPosition>();
     registerParametricStorageType<ResultGroupPosition>();
     registerParametricStorageType<TypePosition>();
@@ -592,10 +713,15 @@ public:
     registerParametricStorageType<ConstraintQuestion>();
     registerParametricStorageType<EqualToQuestion>();
     registerSingletonStorageType<AttributeQuestion>();
+    registerSingletonStorageType<BlockArgCountQuestion>();
+    registerSingletonStorageType<BlockArgCountAtLeastQuestion>();
+    registerParametricStorageType<CheckParentBlockQuestion>();
+    registerSingletonStorageType<BlockCountQuestion>();
     registerSingletonStorageType<IsNotNullQuestion>();
     registerSingletonStorageType<OperandCountQuestion>();
     registerSingletonStorageType<OperandCountAtLeastQuestion>();
     registerSingletonStorageType<OperationNameQuestion>();
+    registerSingletonStorageType<RegionCountQuestion>();
     registerSingletonStorageType<ResultCountQuestion>();
     registerSingletonStorageType<ResultCountAtLeastQuestion>();
     registerSingletonStorageType<TypeQuestion>();
@@ -689,6 +815,33 @@ public:
     return TypeLiteralPosition::get(uniquer, attr);
   }
 
+  /// Returns a region position for a region of the given operation.
+  RegionPosition *getRegion(OperationPosition *p, unsigned region) {
+    return RegionPosition::get(uniquer, p, region);
+  }
+
+  /// Returns a block position for a block of the given region.
+  BlockPosition *getBlock(RegionPosition *p, unsigned block) {
+    return BlockPosition::get(uniquer, p, block);
+  }
+
+  /// Returns a block argument position for an argument of the given block.
+  BlockArgPosition *getBlockArg(BlockPosition *p, unsigned arg) {
+    return BlockArgPosition::get(uniquer, p, arg);
+  }
+
+  /// Returns a position for a range of block arguments starting at the given
+  /// index.
+  BlockArgRangePosition *getBlockArgRange(BlockPosition *p,
+                                          unsigned startIndex) {
+    return BlockArgRangePosition::get(uniquer, p, startIndex);
+  }
+
+  /// Returns a position for the range of all operations in the given block.
+  BlockOpsPosition *getBlockOps(BlockPosition *p) {
+    return BlockOpsPosition::get(uniquer, p);
+  }
+
   /// Returns the users of a position using the value at the given operand.
   UsersPosition *getUsers(Position *p, bool useRepresentative) {
     assert((isa<OperandPosition, OperandGroupPosition, ResultPosition,
@@ -750,6 +903,38 @@ public:
   Predicate getOperationName(StringRef name) {
     return {OperationNameQuestion::get(uniquer),
             OperationNameAnswer::get(uniquer, OperationName(name, ctx))};
+  }
+
+  /// Create a predicate comparing the number of regions of an operation to a
+  /// known value.
+  Predicate getRegionCount(unsigned count) {
+    return {RegionCountQuestion::get(uniquer),
+            UnsignedAnswer::get(uniquer, count)};
+  }
+
+  /// Create a predicate comparing the number of blocks in a region to a
+  /// known value.
+  Predicate getBlockCount(unsigned count) {
+    return {BlockCountQuestion::get(uniquer),
+            UnsignedAnswer::get(uniquer, count)};
+  }
+
+  /// Create a predicate comparing the number of block arguments to a known
+  /// value.
+  Predicate getBlockArgCount(unsigned count) {
+    return {BlockArgCountQuestion::get(uniquer),
+            UnsignedAnswer::get(uniquer, count)};
+  }
+  Predicate getBlockArgCountAtLeast(unsigned count) {
+    return {BlockArgCountAtLeastQuestion::get(uniquer),
+            UnsignedAnswer::get(uniquer, count)};
+  }
+
+  /// Create a predicate checking that an operation's parent block matches
+  /// the given block position.
+  Predicate getCheckParentBlock(Position *blockPos) {
+    return {CheckParentBlockQuestion::get(uniquer, blockPos),
+            TrueAnswer::get(uniquer)};
   }
 
   /// Create a predicate comparing the number of results of an operation to a

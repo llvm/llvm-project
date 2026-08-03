@@ -204,3 +204,78 @@ Pattern {
     replace root with op<my_dialect.foo>;
   };
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// MoveRegionStmt
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-TakeRegionStmt
+// CHECK:   |-DeclRefExpr {{.*}} Type<Region>
+// CHECK:   | `-VariableDecl {{.*}} Name<region> Type<Region>
+// CHECK:   `-DeclRefExpr {{.*}} Type<Op>
+// CHECK:     `-VariableDecl {{.*}} Name<root> Type<Op>
+Pattern {
+  let root: Op;
+  let region: Region;
+  rewrite root with {
+    take_region region before root;
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// MoveBlockStmt
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-MoveBlockStmt
+// CHECK:   |-DeclRefExpr {{.*}} Type<Block>
+// CHECK:   | `-VariableDecl {{.*}} Name<block> Type<Block>
+// CHECK:   `-DeclRefExpr {{.*}} Type<Region>
+// CHECK:     `-VariableDecl {{.*}} Name<region> Type<Region>
+Pattern {
+  let root: Op;
+  let block: Block;
+  let region: Region;
+  rewrite root with {
+    move_block block before region;
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// TakeRegionStmt
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-TakeRegionStmt
+// CHECK:   |-DeclRefExpr {{.*}} Type<Op>
+// CHECK:   `-DeclRefExpr {{.*}} Type<Op>
+Pattern {
+  rewrite root: Op with {
+    let dest: Op;
+    take_region root before dest;
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// MoveBlockStmt
+//===----------------------------------------------------------------------===//
+
+// CHECK: Module
+// CHECK: `-MoveBlockStmt
+// CHECK:   |-DeclRefExpr {{.*}} Type<Op>
+// CHECK:   `-DeclRefExpr {{.*}} Type<Op>
+Pattern {
+  rewrite root: Op with {
+    let dest: Op;
+    move_block root before dest;
+  };
+}

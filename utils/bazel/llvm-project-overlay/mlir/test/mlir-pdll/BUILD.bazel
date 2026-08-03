@@ -14,12 +14,16 @@ package(default_visibility = ["//visibility:public"])
             "CodeGen/CPP/include/**",
         ]) + [
             "//mlir:OpBaseTdFiles",
+            "//mlir:mlir-opt",
             "//mlir:mlir-pdll",
             "//mlir/test:lit_data",
         ],
     )
     for src in glob(
-        include = ["**/*.pdll"],
+        include = [
+            "**/*.pdll",
+            "**/*.mlir",
+        ],
         exclude = ["Parser/include/included.pdll"],
     )
 ]

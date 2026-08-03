@@ -173,3 +173,119 @@ pdl.pattern @attribute_with_loc : benefit(1) {
   %root = operation {"attribute" = %attr}
   rewrite %root with "rewriter"
 }
+
+// -----
+
+// CHECK-LABEL: pdl.pattern @region_of
+// CHECK: %[[OP:.*]] = operation "test.op_with_region"
+// CHECK: %[[REGION:.*]] = region_of %[[OP]] at 0
+pdl.pattern @region_of : benefit(1) {
+  %root = operation "test.op_with_region"
+  %region = pdl.region_of %root at 0
+  rewrite %root with "rewriter"
+}
+
+// -----
+
+// CHECK-LABEL: pdl.pattern @block_of
+// CHECK: %[[OP:.*]] = operation "test.op_with_region"
+// CHECK: %[[REGION:.*]] = region_of %[[OP]] at 0
+// CHECK: %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+pdl.pattern @block_of : benefit(1) {
+  %root = operation "test.op_with_region"
+  %region = pdl.region_of %root at 0
+  %block = pdl.block_of %region at 0
+  rewrite %root with "rewriter"
+}
+
+// -----
+
+// CHECK-LABEL: pdl.pattern @block_arg
+// CHECK: %[[OP:.*]] = operation "test.op_with_region"
+// CHECK: %[[REGION:.*]] = region_of %[[OP]] at 0
+// CHECK: %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+// CHECK: %[[ARG:.*]] = block_arg %[[BLOCK]] at 0
+pdl.pattern @block_arg : benefit(1) {
+  %root = operation "test.op_with_region"
+  %region = pdl.region_of %root at 0
+  %block = pdl.block_of %region at 0
+  %arg0 = pdl.block_arg %block at 0
+  rewrite %root with "rewriter"
+}
+
+// -----
+
+// CHECK-LABEL: pdl.pattern @multi_region
+// CHECK: %[[OP:.*]] = operation "test.op_with_two_regions"
+// CHECK: %[[R0:.*]] = region_of %[[OP]] at 0
+// CHECK: %[[R1:.*]] = region_of %[[OP]] at 1
+pdl.pattern @multi_region : benefit(1) {
+  %root = operation "test.op_with_two_regions"
+  %region0 = pdl.region_of %root at 0
+  %region1 = pdl.region_of %root at 1
+  rewrite %root with "rewriter"
+}
+
+// -----
+
+// CHECK-LABEL: pdl.pattern @deep_navigation
+// CHECK: %[[OP:.*]] = operation "test.op_with_region"
+// CHECK: %[[R:.*]] = region_of %[[OP]] at 0
+// CHECK: %[[B:.*]] = block_of %[[R]] at 0
+// CHECK: %[[A0:.*]] = block_arg %[[B]] at 0
+// CHECK: %[[A1:.*]] = block_arg %[[B]] at 1
+pdl.pattern @deep_navigation : benefit(1) {
+  %root = operation "test.op_with_region"
+  %region = pdl.region_of %root at 0
+  %block = pdl.block_of %region at 0
+  %arg0 = pdl.block_arg %block at 0
+  %arg1 = pdl.block_arg %block at 1
+  rewrite %root with "rewriter"
+}
+
+// -----
+
+// CHECK-LABEL: pdl.pattern @block_args_range
+// CHECK: %[[OP:.*]] = operation "test.op_with_region"
+// CHECK: %[[REGION:.*]] = region_of %[[OP]] at 0
+// CHECK: %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+// CHECK: %[[ARGS:.*]] = block_args %[[BLOCK]] at 1 -> !pdl.range<value>
+pdl.pattern @block_args_range : benefit(1) {
+  %root = operation "test.op_with_region"
+  %region = pdl.region_of %root at 0
+  %block = pdl.block_of %region at 0
+  %rest = pdl.block_args %block at 1 -> !pdl.range<value>
+  rewrite %root with "rewriter"
+}
+
+// -----
+
+// CHECK-LABEL: pdl.pattern @block_args_all
+// CHECK: %[[OP:.*]] = operation "test.op_with_region"
+// CHECK: %[[REGION:.*]] = region_of %[[OP]] at 0
+// CHECK: %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+// CHECK: %[[ARGS:.*]] = block_args %[[BLOCK]]
+pdl.pattern @block_args_all : benefit(1) {
+  %root = operation "test.op_with_region"
+  %region = pdl.region_of %root at 0
+  %block = pdl.block_of %region at 0
+  %allArgs = pdl.block_args %block
+  rewrite %root with "rewriter"
+}
+
+// -----
+
+// CHECK-LABEL: pdl.pattern @mixed_block_arg_and_args
+// CHECK: %[[OP:.*]] = operation "test.op_with_region"
+// CHECK: %[[REGION:.*]] = region_of %[[OP]] at 0
+// CHECK: %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+// CHECK: %[[FIRST:.*]] = block_arg %[[BLOCK]] at 0
+// CHECK: %[[REST:.*]] = block_args %[[BLOCK]] at 1 -> !pdl.range<value>
+pdl.pattern @mixed_block_arg_and_args : benefit(1) {
+  %root = operation "test.op_with_region"
+  %region = pdl.region_of %root at 0
+  %block = pdl.block_of %region at 0
+  %first = pdl.block_arg %block at 0
+  %rest = pdl.block_args %block at 1 -> !pdl.range<value>
+  rewrite %root with "rewriter"
+}

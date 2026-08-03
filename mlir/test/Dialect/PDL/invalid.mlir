@@ -334,3 +334,20 @@ pdl.pattern : benefit(1) {
   %op = operation "foo.op"
   rewrite %op with "rewriter"
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl::BlockArgsOp
+//===----------------------------------------------------------------------===//
+
+pdl.pattern : benefit(1) {
+  %root = operation "test.op"
+  %region = pdl.region_of %root at 0
+  %block = pdl.block_of %region at 0
+  // expected-error@below {{expected `pdl.range<value>` result type when no index is specified, but got: '!pdl.value'}}
+  %arg = "pdl.block_args"(%block) : (!pdl.block) -> !pdl.value
+  %op = operation "foo.op"(%arg : !pdl.value)
+  rewrite %op with "rewriter"
+}
+

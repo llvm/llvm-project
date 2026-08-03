@@ -65,6 +65,8 @@ private:
   void genImpl(const ast::ReplaceStmt *stmt);
   void genImpl(const ast::RewriteStmt *stmt);
   void genImpl(const ast::ReturnStmt *stmt);
+  void genImpl(const ast::TakeRegionStmt *stmt);
+  void genImpl(const ast::MoveBlockStmt *stmt);
 
   //===--------------------------------------------------------------------===//
   // Decls
@@ -87,6 +89,12 @@ private:
   /// to the MLIR values of the variable.
   void applyVarConstraints(const ast::VariableDecl *varDecl, ValueRange values);
 
+  /// Coerce a value to the target PDL type by inserting structural navigation
+  /// ops. For example, coercing !pdl.operation to !pdl.region inserts a
+  /// pdl::RegionOp (region_of at 0), and to !pdl.block inserts region_of +
+  /// block_of.
+  Value coerceToType(Value val, Type targetType, Location loc);
+
   //===--------------------------------------------------------------------===//
   // Expressions
   //===--------------------------------------------------------------------===//
@@ -94,11 +102,13 @@ private:
   Value genSingleExpr(const ast::Expr *expr);
   SmallVector<Value> genExpr(const ast::Expr *expr);
   Value genExprImpl(const ast::AttributeExpr *expr);
+  Value genExprImpl(const ast::BlockExpr *expr);
   SmallVector<Value> genExprImpl(const ast::CallExpr *expr);
   SmallVector<Value> genExprImpl(const ast::DeclRefExpr *expr);
   Value genExprImpl(const ast::MemberAccessExpr *expr);
   Value genExprImpl(const ast::OperationExpr *expr);
   Value genExprImpl(const ast::RangeExpr *expr);
+  Value genExprImpl(const ast::RegionExpr *expr);
   SmallVector<Value> genExprImpl(const ast::TupleExpr *expr);
   Value genExprImpl(const ast::TypeExpr *expr);
 
@@ -123,6 +133,13 @@ private:
   using VariableMapTy =
       llvm::ScopedHashTable<const ast::VariableDecl *, SmallVector<Value>>;
   VariableMapTy variables;
+
+  /// A map from BlockExpr AST nodes to the pdl::BlockOp values created during
+  /// OperationExpr processing. This enables cross-context block references:
+  /// when a named block (^entry) is matched, the real pdl::BlockOp value is
+  /// stored here so that genExprImpl(BlockExpr) can return it instead of a
+  /// placeholder UnrealizedConversionCastOp.
+  llvm::DenseMap<const ast::BlockExpr *, Value> blockExprValues;
 
   /// A reference to the ODS context.
   const ods::Context &odsContext;
@@ -159,8 +176,14 @@ Type CodeGen::genType(ast::Type type) {
       .Case([&](ast::AttributeType astType) -> Type {
         return builder.getType<pdl::AttributeType>();
       })
+      .Case([&](ast::BlockType astType) -> Type {
+        return builder.getType<pdl::BlockType>();
+      })
       .Case([&](ast::OperationType astType) -> Type {
         return builder.getType<pdl::OperationType>();
+      })
+      .Case([&](ast::RegionType astType) -> Type {
+        return builder.getType<pdl::RegionType>();
       })
       .Case([&](ast::TypeType astType) -> Type {
         return builder.getType<pdl::TypeType>();
@@ -177,7 +200,8 @@ void CodeGen::gen(const ast::Node *node) {
   TypeSwitch<const ast::Node *>(node)
       .Case<const ast::CompoundStmt, const ast::EraseStmt, const ast::LetStmt,
             const ast::ReplaceStmt, const ast::RewriteStmt,
-            const ast::ReturnStmt, const ast::UserConstraintDecl,
+            const ast::ReturnStmt, const ast::TakeRegionStmt,
+            const ast::MoveBlockStmt, const ast::UserConstraintDecl,
             const ast::UserRewriteDecl, const ast::PatternDecl>(
           [&](auto derivedNode) { this->genImpl(derivedNode); })
       .Case([&](const ast::Expr *expr) { genExpr(expr); });
@@ -255,6 +279,69 @@ void CodeGen::genImpl(const ast::RewriteStmt *stmt) {
 void CodeGen::genImpl(const ast::ReturnStmt *stmt) {
   // ReturnStmt generation is handled by the respective constraint or rewrite
   // parent node.
+}
+
+Value CodeGen::coerceToType(Value val, Type targetType, Location loc) {
+  if (val.getType() == targetType)
+    return val;
+
+  // Operation -> Region: insert pdl::RegionOp (region_of at index 0).
+  if (isa<pdl::OperationType>(val.getType()) &&
+      isa<pdl::RegionType>(targetType))
+    return pdl::RegionOp::create(builder, loc, targetType, val,
+                                 builder.getI32IntegerAttr(0));
+
+  // Operation -> Block: insert region_of + block_of (both at index 0).
+  if (isa<pdl::OperationType>(val.getType()) &&
+      isa<pdl::BlockType>(targetType)) {
+    auto regionType = builder.getType<pdl::RegionType>();
+    Value region = pdl::RegionOp::create(builder, loc, regionType, val,
+                                         builder.getI32IntegerAttr(0));
+    return pdl::BlockOp::create(builder, loc, targetType, region,
+                                builder.getI32IntegerAttr(0));
+  }
+
+  // Region -> Block: insert pdl::BlockOp (block_of at index 0).
+  if (isa<pdl::RegionType>(val.getType()) && isa<pdl::BlockType>(targetType))
+    return pdl::BlockOp::create(builder, loc, targetType, val,
+                                builder.getI32IntegerAttr(0));
+
+  return val;
+}
+
+void CodeGen::genImpl(const ast::TakeRegionStmt *stmt) {
+  OpBuilder::InsertionGuard insertGuard(builder);
+  Value regionExpr = genSingleExpr(stmt->getRegion());
+  Value destOpExpr = genSingleExpr(stmt->getDestOp());
+  Location loc = genLoc(stmt->getLoc());
+
+  // Coerce operands to !pdl.region if they are !pdl.operation-typed.
+  auto regionType = builder.getType<pdl::RegionType>();
+  regionExpr = coerceToType(regionExpr, regionType, loc);
+  destOpExpr = coerceToType(destOpExpr, regionType, loc);
+
+  // Make sure we are nested in a RewriteOp.
+  checkAndNestUnderRewriteOp(builder, destOpExpr, loc);
+
+  pdl::TakeRegionOp::create(builder, loc, regionExpr, destOpExpr);
+}
+
+void CodeGen::genImpl(const ast::MoveBlockStmt *stmt) {
+  OpBuilder::InsertionGuard insertGuard(builder);
+  Value blockExpr = genSingleExpr(stmt->getBlock());
+  Value destBlockExpr = genSingleExpr(stmt->getDestBlock());
+  Location loc = genLoc(stmt->getLoc());
+
+  // Coerce operands to !pdl.block if they are !pdl.operation or
+  // !pdl.region-typed. Both source and dest are blocks (Block::moveBefore).
+  auto blockType = builder.getType<pdl::BlockType>();
+  blockExpr = coerceToType(blockExpr, blockType, loc);
+  destBlockExpr = coerceToType(destBlockExpr, blockType, loc);
+
+  // Make sure we are nested in a RewriteOp.
+  checkAndNestUnderRewriteOp(builder, blockExpr, loc);
+
+  pdl::MoveBlockOp::create(builder, loc, blockExpr, destBlockExpr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -378,9 +465,9 @@ void CodeGen::applyVarConstraints(const ast::VariableDecl *varDecl,
 
 Value CodeGen::genSingleExpr(const ast::Expr *expr) {
   return TypeSwitch<const ast::Expr *, Value>(expr)
-      .Case<const ast::AttributeExpr, const ast::MemberAccessExpr,
-            const ast::OperationExpr, const ast::RangeExpr,
-            const ast::TypeExpr>(
+      .Case<const ast::AttributeExpr, const ast::BlockExpr,
+            const ast::MemberAccessExpr, const ast::OperationExpr,
+            const ast::RangeExpr, const ast::RegionExpr, const ast::TypeExpr>(
           [&](auto derivedNode) { return this->genExprImpl(derivedNode); })
       .Case<const ast::CallExpr, const ast::DeclRefExpr, const ast::TupleExpr>(
           [&](auto derivedNode) {
@@ -401,6 +488,54 @@ Value CodeGen::genExprImpl(const ast::AttributeExpr *expr) {
   Attribute attr = parseAttribute(expr->getValue(), builder.getContext());
   assert(attr && "invalid MLIR attribute data");
   return pdl::AttributeOp::create(builder, genLoc(expr->getLoc()), attr);
+}
+
+Value CodeGen::genExprImpl(const ast::BlockExpr *expr) {
+  // If this BlockExpr was already processed by genExprImpl(OperationExpr),
+  // return the real pdl::BlockOp value. This enables cross-context block
+  // references (e.g., ^entry matched in match, referenced in rewrite).
+  auto it = blockExprValues.find(expr);
+  if (it != blockExprValues.end())
+    return it->second;
+
+  Location loc = genLoc(expr->getLoc());
+
+  // Generate block argument variable declarations. Each block argument
+  // becomes a pdl.Value variable that will be constrained to the corresponding
+  // block argument index via a native constraint during structural navigation.
+  for (const ast::VariableDecl *arg : expr->getArgs())
+    genVar(arg);
+
+  // Generate each child operation expression within this block.
+  // Children are operation constraints/declarations that need to be created
+  // first, establishing the structural nesting via PDL's declarative pattern.
+  for (const ast::Expr *child : expr->getChildren())
+    genSingleExpr(child);
+
+  // Create a placeholder block-typed value. In the match context, the
+  // enclosing RegionExpr and OperationExpr will establish the structural
+  // navigation (pdl.region_of/pdl.block_of). The PDL-to-PDLInterp lowering
+  // handles wiring block constraints from the predicate tree.
+  return mlir::UnrealizedConversionCastOp::create(
+             builder, loc, genType(expr->getType()), ValueRange{})
+      .getResult(0);
+}
+
+Value CodeGen::genExprImpl(const ast::RegionExpr *expr) {
+  Location loc = genLoc(expr->getLoc());
+
+  // Generate each block expression within this region.
+  SmallVector<Value> blockValues;
+  for (const ast::Expr *block : expr->getBlocks())
+    blockValues.push_back(genSingleExpr(block));
+
+  // Create a placeholder region-typed value. Similar to BlockExpr, the
+  // structural navigation is established by the PDL-to-PDLInterp lowering
+  // which generates pdl_interp.get_region/get_block/check_* from the
+  // predicate tree built during pattern analysis.
+  return mlir::UnrealizedConversionCastOp::create(
+             builder, loc, genType(expr->getType()), blockValues)
+      .getResult(0);
 }
 
 SmallVector<Value> CodeGen::genExprImpl(const ast::CallExpr *expr) {
@@ -514,8 +649,73 @@ Value CodeGen::genExprImpl(const ast::OperationExpr *expr) {
   for (const ast::Expr *result : expr->getResultTypes())
     results.push_back(genSingleExpr(result));
 
-  return pdl::OperationOp::create(builder, loc, opName, operands, attrNames,
-                                  attrValues, results);
+  Value opVal = pdl::OperationOp::create(builder, loc, opName, operands,
+                                         attrNames, attrValues, results);
+
+  // Generate structural navigation for attached regions.
+  // For each attached RegionExpr, generate pdl.region_of from the parent
+  // operation and pdl.block_of from each region, connecting the structural
+  // constraints.
+  for (auto [regionIdx, regionExpr] : llvm::enumerate(expr->getRegions())) {
+    const auto *rgnExpr = cast<ast::RegionExpr>(regionExpr);
+
+    // Navigate to the region from the parent operation.
+    auto regionType = builder.getType<pdl::RegionType>();
+    auto regionIdxAttr = builder.getI32IntegerAttr(regionIdx);
+    Value regionVal =
+        pdl::RegionOp::create(builder, loc, regionType, opVal, regionIdxAttr);
+
+    // Navigate to each block within the region.
+    auto blockType = builder.getType<pdl::BlockType>();
+    for (auto [blockIdx, blockExpr] : llvm::enumerate(rgnExpr->getBlocks())) {
+      const auto *blkExpr = cast<ast::BlockExpr>(blockExpr);
+      auto blockIdxAttr = builder.getI32IntegerAttr(blockIdx);
+      Value blockVal = pdl::BlockOp::create(builder, loc, blockType, regionVal,
+                                            blockIdxAttr);
+
+      // Bind each block argument to its index within the block using
+      // pdl.block_arg or pdl.block_args. Scalar args use pdl.block_arg,
+      // while variadic args (ValueRange) use pdl.block_args for range
+      // capture.
+      for (auto [argIdx, argDecl] : llvm::enumerate(blkExpr->getArgs())) {
+        Value blockArgVal;
+        if (isa<ast::ValueRangeType>(argDecl->getType())) {
+          // ValueRange arg — emit pdl.block_args with the starting index.
+          auto rangeType =
+              pdl::RangeType::get(builder.getType<pdl::ValueType>());
+          auto argIdxAttr = builder.getI32IntegerAttr(argIdx);
+          blockArgVal = pdl::BlockArgsOp::create(builder, loc, rangeType,
+                                                 blockVal, argIdxAttr);
+        } else {
+          // Scalar Value arg — emit pdl.block_arg.
+          auto valueType = builder.getType<pdl::ValueType>();
+          auto argIdxAttr = builder.getI32IntegerAttr(argIdx);
+          blockArgVal = pdl::BlockArgOp::create(builder, loc, valueType,
+                                                blockVal, argIdxAttr);
+        }
+        // Register the block arg value as the variable for this decl.
+        variables.insert(argDecl, {blockArgVal});
+        // Apply any constraints declared on the block argument.
+        applyVarConstraints(argDecl, {blockArgVal});
+      }
+
+      // Generate each child operation within this block and scope it to
+      // the parent block via the parentBlock operand.
+      for (const ast::Expr *child : blkExpr->getChildren()) {
+        Value innerOp = genSingleExpr(child);
+        // Set the parentBlock operand on the inner pdl.operation.
+        if (auto opOp = innerOp.getDefiningOp<pdl::OperationOp>())
+          opOp.getParentBlockMutable().assign(blockVal);
+      }
+
+      // Register this block value for the BlockExpr so that named block
+      // variables (e.g., ^entry) can resolve to the real pdl::BlockOp
+      // value when referenced in the rewrite context.
+      blockExprValues[blkExpr] = blockVal;
+    }
+  }
+
+  return opVal;
 }
 
 Value CodeGen::genExprImpl(const ast::RangeExpr *expr) {

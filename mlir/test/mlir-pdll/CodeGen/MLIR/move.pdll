@@ -1,0 +1,134 @@
+// RUN: mlir-pdll %s -I %S -split-input-file -x mlir | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// TestTakeRegion: Region-to-Region transfer via native constraint extraction
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @TestTakeRegion
+// CHECK: %[[SRC_OP:.*]] = operation "test.src_op"
+// CHECK: %[[SRC_R:.*]] = apply_native_constraint "GetRegion"(%[[SRC_OP]]
+// CHECK: %[[DEST_OP:.*]] = operation "test.dest_op"
+// CHECK: %[[DEST_R:.*]] = apply_native_constraint "GetRegion"(%[[DEST_OP]]
+// CHECK: %[[ROOT:.*]] = operation "test.root"
+// CHECK: rewrite %[[ROOT]]
+// CHECK:   take_region %[[SRC_R]] before %[[DEST_R]]
+
+Constraint GetRegion(op: Op) -> Region;
+
+Pattern TestTakeRegion {
+  let srcOp = op<test.src_op>;
+  let srcR = GetRegion(srcOp);
+  let destOp = op<test.dest_op>;
+  let destR = GetRegion(destOp);
+  let root = op<test.root>;
+  rewrite root with {
+    take_region srcR before destR;
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// TestMoveBlock: Block-to-Block move via native constraint extraction
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @TestMoveBlock
+// CHECK: %[[SRC_OP:.*]] = operation "test.src_op"
+// CHECK: %[[SRC_B:.*]] = apply_native_constraint "GetBlock"(%[[SRC_OP]]
+// CHECK: %[[DEST_OP:.*]] = operation "test.dest_op"
+// CHECK: %[[DEST_B:.*]] = apply_native_constraint "GetBlock"(%[[DEST_OP]]
+// CHECK: rewrite %[[SRC_OP]]
+// CHECK:   move_block %[[SRC_B]] before %[[DEST_B]]
+
+Constraint GetBlock(op: Op) -> Block;
+
+Pattern TestMoveBlock {
+  let srcOp = op<test.src_op>;
+  let srcB = GetBlock(srcOp);
+  let destOp = op<test.dest_op>;
+  let destB = GetBlock(destOp);
+  rewrite srcOp with {
+    move_block srcB before destB;
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// TakeRegionStmt - Auto-coercion from Op to Region
+//
+// When take_region operands are Op-typed, the codegen auto-inserts
+// pdl.region_of ops to coerce them to !pdl.region.
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @TakeRegionStmt
+// CHECK:   %[[ROOT:.*]] = operation "test.root"
+// CHECK:   %[[DEST:.*]] = operation "test.dest"
+// CHECK:   rewrite %[[ROOT]]
+// CHECK:     %[[SRC_R:.*]] = region_of %[[ROOT]] at 0
+// CHECK:     %[[DST_R:.*]] = region_of %[[DEST]] at 0
+// CHECK:     take_region %[[SRC_R]] before %[[DST_R]]
+Pattern TakeRegionStmt {
+  let root = op<test.root> -> (type<"i32">);
+  let dest = op<test.dest>(root.0);
+  rewrite root with {
+    take_region root before dest;
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// MoveBlockStmt - Auto-coercion from Op to Block
+//
+// When move_block operands are Op-typed, the codegen auto-inserts
+// pdl.region_of + pdl.block_of ops to coerce them to !pdl.block.
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @MoveBlockStmt
+// CHECK:   %[[SRC:.*]] = operation "test.src"
+// CHECK:   %[[DEST:.*]] = operation "test.dest"
+// CHECK:   rewrite %[[SRC]]
+// CHECK:     %[[SRC_R:.*]] = region_of %[[SRC]] at 0
+// CHECK:     %[[SRC_B:.*]] = block_of %[[SRC_R]] at 0
+// CHECK:     %[[DST_R:.*]] = region_of %[[DEST]] at 0
+// CHECK:     %[[DST_B:.*]] = block_of %[[DST_R]] at 0
+// CHECK:     move_block %[[SRC_B]] before %[[DST_B]]
+Pattern MoveBlockStmt {
+  let src = op<test.src> -> (type<"i32">);
+  let dest = op<test.dest>(src.0);
+  rewrite src with {
+    move_block src before dest;
+  };
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// CrossContextBlockRef - Named block from match used in rewrite
+//
+// A named block (^body) matched in the match section can be referenced
+// in the rewrite section. The codegen should use the real pdl::BlockOp
+// value from the match context rather than creating a placeholder.
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @CrossContextBlockRef
+// CHECK:   %[[OUTER:.*]] = operation "test.outer"
+// CHECK:   %[[REGION:.*]] = region_of %[[OUTER]] at 0
+// CHECK:   %[[BLOCK:.*]] = block_of %[[REGION]] at 0
+// CHECK:   %[[DEST:.*]] = operation "test.dest"
+// CHECK:   rewrite %[[OUTER]]
+// CHECK:     %[[DST_R:.*]] = region_of %[[DEST]] at 0
+// CHECK:     %[[DST_B:.*]] = block_of %[[DST_R]] at 0
+// CHECK:     move_block %[[BLOCK]] before %[[DST_B]]
+Pattern CrossContextBlockRef {
+  let outer = op<test.outer> -> (type<"i32">) {
+    ^body: {
+      op<test.inner>;
+    }
+  };
+  let dest = op<test.dest>(outer.0);
+  rewrite outer with {
+    move_block ^body before dest;
+  };
+}

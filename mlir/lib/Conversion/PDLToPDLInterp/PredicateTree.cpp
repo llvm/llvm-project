@@ -365,7 +365,82 @@ static void getNonTreePredicates(pdl::PatternOp pattern,
           getTypePredicates(
               typeOp, [&] { return typeOp.getConstantTypesAttr(); }, builder,
               inputs);
+        })
+        .Case([&](pdl::RegionOp regionOp) {
+          Position *&regionPos = inputs[regionOp];
+          if (regionPos)
+            return;
+          auto *parentPos =
+              cast<OperationPosition>(inputs.lookup(regionOp.getParent()));
+          regionPos = builder.getRegion(parentPos, regionOp.getIndex());
+        })
+        .Case([&](pdl::BlockOp blockOp) {
+          Position *&blockPos = inputs[blockOp];
+          if (blockPos)
+            return;
+          auto *parentPos =
+              cast<RegionPosition>(inputs.lookup(blockOp.getParent()));
+          blockPos = builder.getBlock(parentPos, blockOp.getIndex());
+        })
+        .Case([&](pdl::BlockArgOp blockArgOp) {
+          Position *&argPos = inputs[blockArgOp];
+          if (argPos)
+            return;
+          auto *parentPos =
+              cast<BlockPosition>(inputs.lookup(blockArgOp.getParent()));
+          argPos = builder.getBlockArg(parentPos, blockArgOp.getIndex());
+        })
+        .Case([&](pdl::BlockArgsOp blockArgsOp) {
+          Position *&argPos = inputs[blockArgsOp];
+          if (argPos)
+            return;
+          auto *parentPos =
+              cast<BlockPosition>(inputs.lookup(blockArgsOp.getParent()));
+          unsigned startIndex = blockArgsOp.getIndex().value_or(0);
+          argPos = builder.getBlockArgRange(parentPos, startIndex);
+        })
+        .Case([&](pdl::OperationOp operationOp) {
+          // If this operation has a parentBlock, add a predicate to check
+          // that the matched operation is contained within the expected block.
+          Value parentBlock = operationOp.getParentBlock();
+          if (!parentBlock)
+            return;
+          Position *opPos = inputs.lookup(operationOp);
+          Position *blockPos = inputs.lookup(parentBlock);
+          if (!opPos || !blockPos)
+            return;
+          predList.emplace_back(opPos, builder.getCheckParentBlock(blockPos));
         });
+  }
+
+  // Emit block arg count predicates. For each block, count how many
+  // block_arg (scalar) and block_args (range) ops reference it.
+  DenseMap<Value, std::pair<unsigned, bool>> blockArgInfo;
+  for (Operation &op : pattern.getBodyRegion().getOps()) {
+    if (auto blockArgOp = dyn_cast<pdl::BlockArgOp>(op)) {
+      auto &info = blockArgInfo[blockArgOp.getParent()];
+      info.first = std::max(info.first, blockArgOp.getIndex() + 1);
+    } else if (auto blockArgsOp = dyn_cast<pdl::BlockArgsOp>(op)) {
+      auto &info = blockArgInfo[blockArgsOp.getParent()];
+      info.second = true; // has variadic
+      if (blockArgsOp.getIndex()) {
+        unsigned minCount = *blockArgsOp.getIndex();
+        info.first = std::max(info.first, minCount);
+      }
+    }
+  }
+  for (auto &[blockVal, info] : blockArgInfo) {
+    Position *blockPos = inputs.lookup(blockVal);
+    if (!blockPos)
+      continue;
+    auto [minArgs, hasVariadic] = info;
+    if (hasVariadic) {
+      if (minArgs)
+        predList.emplace_back(blockPos,
+                              builder.getBlockArgCountAtLeast(minArgs));
+    } else {
+      predList.emplace_back(blockPos, builder.getBlockArgCount(minArgs));
+    }
   }
 }
 
@@ -460,6 +535,7 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
     while (!toVisit.empty()) {
       Entry entry = toVisit.front();
       toVisit.pop();
+
       // Skip if already visited.
       if (!parentMap.insert({entry.value, {entry.parent, entry.index}}).second)
         continue;
@@ -479,18 +555,50 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
                 isa<pdl::RangeType>(operands[0].getType())) {
               toVisit.emplace(operands[0], entry.value, std::nullopt,
                               entry.depth + 1);
-              return;
+            } else {
+              // Default case: visit all the operands.
+              for (const auto &p :
+                   llvm::enumerate(operationOp.getOperandValues()))
+                toVisit.emplace(p.value(), entry.value, p.index(),
+                                entry.depth + 1);
             }
 
-            // Default case: visit all the operands.
-            for (const auto &p :
-                 llvm::enumerate(operationOp.getOperandValues()))
-              toVisit.emplace(p.value(), entry.value, p.index(),
+            // Follow structural edges: traverse into regions via
+            // region_of ops that reference this operation.
+            for (Operation *user : operationOp->getUsers()) {
+              if (auto regionOp = dyn_cast<pdl::RegionOp>(user))
+                toVisit.emplace(regionOp.getResult(), entry.value,
+                                static_cast<unsigned>(regionOp.getIndex()),
+                                entry.depth + 1);
+            }
+
+            // Follow parentBlock edge upward: if this operation has a
+            // parentBlock, the block value is a connector to the outer
+            // root.
+            if (Value parentBlock = operationOp.getParentBlock()) {
+              toVisit.emplace(parentBlock, entry.value, std::nullopt,
                               entry.depth + 1);
+            }
           })
           .Case<pdl::ResultOp, pdl::ResultsOp>([&](auto resultOp) {
             toVisit.emplace(resultOp.getParent(), entry.value,
                             resultOp.getIndex(), entry.depth);
+          })
+          // Follow structural navigation: region → blocks.
+          .Case([&](pdl::RegionOp regionOp) {
+            // Traverse from a region into its blocks via block_of ops.
+            for (Operation *user : regionOp->getUsers()) {
+              if (auto blockOp = dyn_cast<pdl::BlockOp>(user))
+                toVisit.emplace(blockOp.getResult(), entry.value,
+                                static_cast<unsigned>(blockOp.getIndex()),
+                                entry.depth + 1);
+            }
+          })
+          .Case([&](pdl::BlockOp blockOp) {
+            // A block can connect to inner ops via their parentBlock.
+            // No explicit traversal needed here -- the parentBlock
+            // traversal on OperationOp handles the reverse direction.
+            // But we do need to register the block value as visited.
           });
     }
   }
@@ -521,7 +629,6 @@ static void buildCostGraph(ArrayRef<Value> roots, RootOrderingGraph &graph,
       }
     }
   }
-
   assert((llvm::hasSingleElement(roots) || graph.size() == roots.size()) &&
          "the pattern contains a candidate root disconnected from the others");
 }
@@ -607,6 +714,30 @@ static void visitUpward(std::vector<PositionalPredicate> &predList,
       });
 }
 
+/// Visit a node during downward structural traversal. This is the analog of
+/// visitUpward for structural edges: instead of traversing from operand users
+/// to reach a secondary root, we traverse from a block (via get_block_ops +
+/// forEach) to reach an inner operation root.
+static void visitDownward(std::vector<PositionalPredicate> &predList,
+                          Value target, PredicateBuilder &builder,
+                          DenseMap<Value, Position *> &valueToPosition,
+                          Position *blockPos, unsigned rootID) {
+  // Emit: getBlockOps(block) → forEach(ops) → op candidate
+  auto *typedBlockPos = cast<BlockPosition>(blockPos);
+  Position *blockOpsPos = builder.getBlockOps(typedBlockPos);
+  Position *foreachPos = builder.getForEach(blockOpsPos, rootID);
+  OperationPosition *opPos = builder.getPassthroughOp(foreachPos);
+
+  // Ensure the operation is not null.
+  predList.emplace_back(opPos, builder.getIsNotNull());
+
+  // Register the inner op's position.
+  valueToPosition[target] = opPos;
+
+  // Get the tree predicates for the inner op.
+  getTreePredicates(predList, target, builder, valueToPosition, opPos);
+}
+
 /// Given a pattern operation, build the set of matcher predicates necessary to
 /// match this pattern.
 static Value buildPredicateList(pdl::PatternOp pattern,
@@ -687,15 +818,45 @@ static Value buildPredicateList(pdl::PatternOp pattern,
     assert(connector && "invalid edge");
     LDBG() << "  * Connector: " << connector.getLoc();
     DenseMap<Value, OpIndex> parentMap = parentMaps.lookup(target);
-    Position *pos = valueToPosition.lookup(connector);
-    assert(pos && "connector has not been traversed yet");
 
-    // Traverse from the connector upwards towards the target root.
-    for (Value value = connector; value != target;) {
-      OpIndex opIndex = parentMap.lookup(value);
-      assert(opIndex.parent && "missing parent");
-      visitUpward(predList, opIndex, builder, valueToPosition, pos, it.index());
-      value = opIndex.parent;
+    // Traverse from the connector towards the target root.
+    // Detect whether this is a structural edge (connector is a block value
+    // reached via region_of/block_of) or an operand-result edge.
+    if (auto blockOp =
+            dyn_cast_or_null<pdl::BlockOp>(connector.getDefiningOp())) {
+      // Structural traversal: the connector is a block, and the target
+      // is an inner operation with parentBlock = that block.
+
+      // Materialize the structural chain positions (region → block)
+      // since getNonTreePredicates hasn't run yet.
+      auto regionOp = cast<pdl::RegionOp>(blockOp.getParent().getDefiningOp());
+      auto *outerOpPos =
+          cast<OperationPosition>(valueToPosition.lookup(regionOp.getParent()));
+
+      // Build region position.
+      RegionPosition *regionPos =
+          builder.getRegion(outerOpPos, regionOp.getIndex());
+      valueToPosition.try_emplace(regionOp, regionPos);
+
+      // Build block position.
+      BlockPosition *blockPos = builder.getBlock(regionPos, blockOp.getIndex());
+      valueToPosition.try_emplace(connector, blockPos);
+
+      // Use visitDownward to emit get_block_ops + forEach.
+      visitDownward(predList, target, builder, valueToPosition, blockPos,
+                    it.index());
+    } else {
+      Position *pos = valueToPosition.lookup(connector);
+      assert(pos && "connector has not been traversed yet");
+
+      // Standard upward traversal via operand-result edges.
+      for (Value value = connector; value != target;) {
+        OpIndex opIndex = parentMap.lookup(value);
+        assert(opIndex.parent && "missing parent");
+        visitUpward(predList, opIndex, builder, valueToPosition, pos,
+                    it.index());
+        value = opIndex.parent;
+      }
     }
   }
 

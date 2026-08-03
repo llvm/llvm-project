@@ -26,3 +26,95 @@ Pattern {
   TestConstraintWithNamedOpOperand(op);
   replace op with op<test.success>;
 }
+
+// Match an operation with a specific inner op (shorthand and explicit)
+Pattern MatchInnerOp {
+  erase op<test.outer> {
+    op<test.inner>;
+  };
+}
+Pattern MatchInnerOpExplicit {
+  erase op<test.outer_explicit> { ^(): { op<test.inner_explicit>; } };
+}
+
+// Match multiple regions
+Pattern MatchIfElse {
+  erase op<test.if>
+    { op<test.then_op>; }
+    { op<test.else_op>; };
+}
+
+// Match multiple blocks in a region
+Pattern MatchMultiBlock {
+  erase op<test.branch> {
+    ^: { op<test.entry>; }
+    ^: { op<test.exit>; }
+  };
+}
+
+// Named blocks (and move_block)
+Pattern MatchAndMoveBlock {
+  let wrapper = op<test.wrapper> {
+    op<test.source_move> {
+      ^entry(iv: Value): {
+        op<test.body>;
+      }
+    };
+    op<test.dest_move> {
+      ^target(): { op<test.placeholder>; }
+    };
+  };
+  rewrite wrapper with {
+    move_block ^entry before ^target;
+  };
+}
+
+// Block arguments
+Pattern MatchInductionVar {
+  let forOp = op<test.for> {
+    ^(iv: Value, iterArg: Value): {
+      op<test.addi>(iv, iterArg);
+    }
+  };
+  rewrite forOp with { erase forOp; };
+}
+
+
+// Variadic block argument capture
+Pattern MatchForWithVarArgs {
+  let forOp = op<test.for_var_args> {
+    ^(iv: Value, rest: ValueRange): {
+      op<test.custom_op>(iv, rest);
+    }
+  };
+  rewrite forOp with { erase forOp; };
+}
+
+// Nested regions
+Pattern MatchNested {
+  erase op<test.pipeline> {
+    op<test.stage> {
+      op<test.compute>;
+    };
+  };
+}
+
+// Inline with terminator rewriting
+Pattern InlineWithTerminatorRewrite {
+  let wrapper = op<test.wrapper> {
+    op<test.source_inline> {
+      ^body(iv: Value): {
+        op<test.work>;
+        term: Op<test.old_terminator>;
+      }
+    };
+    op<test.dest_inline> {
+      ^target(): {}
+    };
+  };
+  rewrite wrapper with {
+    move_block ^body before ^target;
+    replace term with op<test.new_terminator>;
+  };
+}
+
