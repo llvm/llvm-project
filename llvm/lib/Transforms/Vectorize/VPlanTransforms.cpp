@@ -953,10 +953,10 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
 
 /// Attempts to optimize the induction variable exit values for users in the
 /// exit block coming from the latch in the original scalar loop.
-template <typename EndValueFn>
-static VPValue *optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
-                                               EndValueFn GetEndValue,
-                                               PredicatedScalarEvolution &PSE) {
+static VPValue *optimizeLatchExitInductionUser(
+    VPlan &Plan, VPValue *Op,
+    function_ref<VPValue *(VPWidenInductionRecipe *)> GetEndValue,
+    PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
   if (!match(Op, m_CombineOr(m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)),
                              m_ExtractLane(m_LastActiveLane(m_HeaderMask()),
@@ -1041,10 +1041,10 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
     VPlan &Plan, PredicatedScalarEvolution &PSE, const Loop *L) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
-  auto GetEndValue =
-      [VectorPHBuilder = VPBuilder(VectorPH, VectorPH->begin()),
-       EndValues = DenseMap<std::pair<VPValue *, VPValue *>, VPValue *>()](
-          VPWidenInductionRecipe *WideIV, VPValue *IVEnd) mutable -> VPValue * {
+  VPBuilder VectorPHBuilder(VectorPH, VectorPH->begin());
+  DenseMap<std::pair<VPValue *, VPValue *>, VPValue *> EndValues;
+  auto GetEndValue = [&](VPWidenInductionRecipe *WideIV,
+                         VPValue *IVEnd) -> VPValue * {
     auto [It, Inserted] = EndValues.try_emplace({WideIV, IVEnd});
     if (Inserted)
       It->second =
@@ -1084,6 +1084,8 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
       if (VPValue *EndValue = GetEndValue(WideIV, EndIV))
         UR->replaceUsesOfWith(R.getVPSingleValue(), EndValue);
     }
+    if (R.getVPSingleValue()->getNumUsers() == 0)
+      R.eraseFromParent();
   }
 
   // Then, optimize exit block users.
