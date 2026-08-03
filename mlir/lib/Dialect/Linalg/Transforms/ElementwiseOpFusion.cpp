@@ -1809,11 +1809,48 @@ GenericOp cloneToCollapsedOp<GenericOp>(RewriterBase &rewriter,
   return collapsedOp;
 }
 
+/// Collapse a `BroadcastOp`, recomputing its `dimensions` for the collapsed
+/// iteration space. Returns null if the collapse is not expressible as a
+/// broadcast.
+template <>
+BroadcastOp
+cloneToCollapsedOp<BroadcastOp>(RewriterBase &rewriter, BroadcastOp origOp,
+                                const CollapsingInfo &collapsingInfo) {
+  ArrayRef<int64_t> broadcastDims = origOp.getDimensions();
+  SmallVector<int64_t> newDimensions;
+  for (auto [collapsedDim, foldedDims] :
+       llvm::enumerate(collapsingInfo.getCollapsedOpToOrigOpMapping())) {
+    size_t numBroadcast = llvm::count_if(foldedDims, [&](int64_t d) {
+      return llvm::is_contained(broadcastDims, d);
+    });
+    // A collapsed dimension is a broadcast dimension iff all the dimensions it
+    // folds are; a mix of the two cannot be represented as a broadcast.
+    if (numBroadcast != 0 && numBroadcast != foldedDims.size())
+      return nullptr;
+    if (numBroadcast != 0)
+      newDimensions.push_back(collapsedDim);
+  }
+
+  SmallVector<Value> inputOperands, outputOperands;
+  SmallVector<Type> resultTypes;
+  collapseOperandsAndResults(origOp, collapsingInfo, rewriter, inputOperands,
+                             outputOperands, resultTypes);
+
+  return BroadcastOp::create(rewriter, origOp.getLoc(), inputOperands[0],
+                             outputOperands[0], newDimensions);
+}
+
 static LinalgOp createCollapsedOp(LinalgOp op,
                                   const CollapsingInfo &collapsingInfo,
                                   RewriterBase &rewriter) {
   if (GenericOp genericOp = dyn_cast<GenericOp>(op.getOperation())) {
     return cloneToCollapsedOp(rewriter, genericOp, collapsingInfo);
+  }
+  if (BroadcastOp broadcastOp = dyn_cast<BroadcastOp>(op.getOperation())) {
+    BroadcastOp collapsedOp =
+        cloneToCollapsedOp(rewriter, broadcastOp, collapsingInfo);
+    return collapsedOp ? cast<LinalgOp>(collapsedOp.getOperation())
+                       : LinalgOp();
   }
   return cloneToCollapsedOp(rewriter, op, collapsingInfo);
 }
@@ -1871,6 +1908,9 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
   }
 
   LinalgOp collapsedOp = createCollapsedOp(op, collapsingInfo, rewriter);
+  if (!collapsedOp)
+    return rewriter.notifyMatchFailure(
+        op, "failed to create collapsed op for the specified dimensions");
 
   Location loc = op->getLoc();
   SmallVector<OpFoldResult> loopBound =
