@@ -1143,7 +1143,7 @@ UUID ObjectFileWasm::GetUUID() {
   // A Wasm module carries the identifier a linker gave it in a custom section,
   // as a vector of bytes. It is the only thing that tells one build of a module
   // from another, so a module linked without one cannot be identified at all.
-  static ConstString g_sect_name_build_id("build_id");
+  static constexpr llvm::StringLiteral g_sect_name_build_id("build_id");
   for (const section_info &sect_info : m_sect_infos) {
     if (g_sect_name_build_id != sect_info.name)
       continue;
