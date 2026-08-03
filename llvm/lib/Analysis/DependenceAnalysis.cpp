@@ -2013,20 +2013,32 @@ static BanerjeeInterval variableInterval(const SCEV *Coeff, const SCEV *Upper,
   return signedRangeInterval(Coeff, Zero, Upper, SE);
 }
 
-/// Compute any finite one-sided bound available when the iteration index is
-/// unbounded for a strict (< or >) direction.
+/// Compute any finite one-sided bound on
+///
+///   A * SrcIndex - B * DstIndex
+///
+/// for a strict direction when no upper bound is known for the nonnegative
+/// normalized indices.
 ///
 /// For SrcIndex < DstIndex, write DstIndex = SrcIndex + D, where D >= 1:
 ///
-///   A * SrcIndex - B * DstIndex = (A - B) * SrcIndex - B * D.
+///   A * SrcIndex - B * DstIndex
+///     = (A - B) * SrcIndex + (-B) * D.
 ///
-/// If both coefficients on the right are nonnegative, the expression is
-/// bounded below by -B. If both are nonpositive, it is bounded above by -B.
-/// The SrcIndex > DstIndex case is symmetric: writing
-/// SrcIndex = DstIndex + D gives a boundary value of A.
-static BanerjeeInterval
-unboundedStrictDirectionInterval(const SCEV *ACoeff, const SCEV *BCoeff,
-                                 unsigned char Direction, ScalarEvolution &SE) {
+/// If A - B >= 0 and B <= 0, both terms increase with their nonnegative
+/// variables (SrcIndex and D), so the expression is bounded below by -B.
+/// If A - B <= 0 and B >= 0, it is bounded above by -B.
+///
+/// For SrcIndex > DstIndex, write SrcIndex = DstIndex + D:
+///
+///   A * SrcIndex - B * DstIndex
+///     = (A - B) * DstIndex + A * D.
+///
+/// If A - B >= 0 and A >= 0, the expression is bounded below by A.
+/// If A - B <= 0 and A <= 0, it is bounded above by A.
+static BanerjeeInterval strictDirectionIntervalWithUnknownUpperBound(
+    const SCEV *ACoeff, const SCEV *BCoeff, unsigned char Direction,
+    ScalarEvolution &SE) {
   const SCEV *DeltaCoeff = SE.getMinusSCEV(ACoeff, BCoeff);
 
   switch (Direction) {
@@ -2369,7 +2381,7 @@ void DependenceInfo::findBoundsLT(ArrayRef<CoefficientInfo> CI,
   const SCEV *BCoeff = CI[K].DstCoeff;
   const SCEV *MaxIterIndex = CI[K].MaxIterIndex;
 
-  BanerjeeInterval Interval = unboundedStrictDirectionInterval(
+  BanerjeeInterval Interval = strictDirectionIntervalWithUnknownUpperBound(
       ACoeff, BCoeff, Dependence::DVEntry::LT, *SE);
   if (MaxIterIndex && MaxIterIndex->isZero()) {
     Interval = emptyInterval(ACoeff->getType(), *SE);
@@ -2411,7 +2423,7 @@ void DependenceInfo::findBoundsGT(ArrayRef<CoefficientInfo> CI,
   const SCEV *BCoeff = CI[K].DstCoeff;
   const SCEV *MaxIterIndex = CI[K].MaxIterIndex;
 
-  BanerjeeInterval Interval = unboundedStrictDirectionInterval(
+  BanerjeeInterval Interval = strictDirectionIntervalWithUnknownUpperBound(
       ACoeff, BCoeff, Dependence::DVEntry::GT, *SE);
   if (MaxIterIndex && MaxIterIndex->isZero()) {
     Interval = emptyInterval(ACoeff->getType(), *SE);
