@@ -145,7 +145,9 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 
 ; CHECK-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr nofree readonly swiftasync captures(none) %0, ptr %1, ptr nofree readnone captures(none) %2)
 ; CHECK-O0-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr swiftasync %0, ptr %1, ptr %2)
+; BEGIN SWIFT
 ; CHECK-SAME: #[[ATTRS:[0-9]+]]
+; END SWIFT
 ; CHECK-SAME: !dbg ![[SP2:[0-9]+]] {
 ; CHECK: entryresume.0:
 ; CHECK:   [[CALLER_CONTEXT:%.*]] = load ptr, ptr %0
@@ -544,7 +546,9 @@ declare ptr @hide(ptr)
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!0}
 
+; BEGIN SWIFT
 ; CHECK: #[[ATTRS]] = {{.*}}async_ret
+; END SWIFT
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: ![[SP1]] = distinct !DISubprogram(name: "my_async_function",

@@ -939,6 +939,26 @@ static void eraseIntrinsicRetPoplessBefore(ReturnInst *Return) {
   Intr->eraseFromParent();
 }
 
+// BEGIN SWIFT
+/// Identify which async funclets push or pop async frames, and those that are
+/// continuation funclets, updating `NewAttrs` accordingly.
+static void
+appendSwiftAsyncAttributes(AttributeList &NewAttrs, Function &OrigF,
+                           CoroSuspendAsyncInst &ActiveAsyncSuspend) {
+  const bool HasAsyncEntryAttribute = OrigF.hasFnAttribute("async_entry");
+  const StringRef ProjectionFunctionName =
+      ActiveAsyncSuspend.getAsyncContextProjectionFunction()->getName();
+  const bool IsAsyncFramePop =
+      ProjectionFunctionName == "__swift_async_resume_project_context";
+  if (HasAsyncEntryAttribute) {
+    auto &Ctx = OrigF.getContext();
+    NewAttrs = NewAttrs.removeFnAttribute(Ctx, "async_entry");
+    NewAttrs = NewAttrs.addFnAttribute(
+        Ctx, IsAsyncFramePop ? "async_ret" : "async_continuation");
+  }
+}
+// END SWIFT
+
 /// Clone the body of the original function into a resume function of
 /// some sort.
 void coro::BaseCloner::create() {
@@ -1033,21 +1053,9 @@ void coro::BaseCloner::create() {
     // Transfer the original function's attributes.
     auto FnAttrs = OrigF.getAttributes().getFnAttrs();
     NewAttrs = NewAttrs.addFnAttributes(Context, AttrBuilder(Context, FnAttrs));
-
-    // Mark async funclets that "pop the frame" if the async function is marked
-    // with the `async_entry` function attribute. Remove the `async_entry`
-    // attribute from clones.
-    bool HasAsyncEntryAttribute = OrigF.hasFnAttribute("async_entry");
-    auto ProjectionFunctionName =
-        ActiveAsyncSuspend->getAsyncContextProjectionFunction()->getName();
-    bool IsAsyncFramePop =
-      ProjectionFunctionName == "__swift_async_resume_project_context";
-    if (HasAsyncEntryAttribute) {
-      NewAttrs = NewAttrs.removeFnAttribute(Context, "async_entry");
-      if (IsAsyncFramePop) {
-        NewAttrs = NewAttrs.addFnAttribute(Context, "async_ret");
-      }
-    }
+    // BEGIN SWIFT
+    appendSwiftAsyncAttributes(NewAttrs, OrigF, *ActiveAsyncSuspend);
+    // END SWIFT
     break;
   }
   case coro::ABI::Retcon:

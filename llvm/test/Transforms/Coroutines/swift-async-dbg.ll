@@ -14,7 +14,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 ;                          with it at the coroutine entry.
 ; We check that, for each funclet, the debug intrinsics are propagated properly AND that
 ; an `entry_value` operation is created.
-define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
+define swifttailcc void @coroutineA(ptr swiftasync %arg) "async_entry" !dbg !48 {
   %var_with_dbg_value = alloca ptr, align 8
   %var_with_dbg_declare = alloca ptr, align 8
   call void @llvm.dbg.declare(metadata ptr %var_with_dbg_declare, metadata !500, metadata !DIExpression()), !dbg !54
@@ -23,6 +23,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
   %i3 = call ptr @llvm.coro.begin(token %i2, ptr null)
 ; CHECK-LABEL: define {{.*}} @coroutineA(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
+; CHECK-SAME: #[[ATTR_ENTRY:[0-9]+]]
 ; CHECK:      %[[frame_ptr_alloca:.*]] = alloca ptr
 ; CHECK:      #dbg_declare(ptr %[[frame_ptr_alloca]], {{.*}} !DIExpression(
 ; CHECK-SAME:                   DW_OP_deref, DW_OP_plus_uconst, 24)
@@ -43,7 +44,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
   %i19 = call swiftcc ptr @swift_task_alloc(i64 %i18), !dbg !54
 ; CHECK-NOT: define
 ; CHECK-LABEL: define {{.*}} @coroutineATY0_(
-; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]]) !dbg ![[ATY0:[0-9]*]]
+; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]]) #[[ATTR_CONTINUATION:[0-9]+]] !dbg ![[ATY0:[0-9]*]]
 ; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 24)
 ; CHECK:      #dbg_value(ptr %[[frame_ptr]], {{.*}} !DIExpression(
@@ -64,6 +65,7 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-NOT: define
 ; CHECK-LABEL: define {{.*}} @coroutineATQ1_(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
+; CHECK-SAME: #[[ATTR_RET:[0-9]+]]
 ; Note the extra level of indirection that shows up here!
 ; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_deref, DW_OP_plus_uconst, 24)
@@ -80,10 +82,14 @@ define swifttailcc void @coroutineA(ptr swiftasync %arg) !dbg !48 {
 ; CHECK-NOT: define
 ; CHECK-LABEL: define {{.*}} @coroutineATY2_(
 ; CHECK-SAME:    ptr swiftasync %[[frame_ptr:.*]])
+; CHECK-SAME: #[[ATTR_CONTINUATION]]
 ; CHECK:      #dbg_declare(ptr %[[frame_ptr]], {{.*}} !DIExpression(
 ; CHECK-SAME:                   DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 24)
 }
 
+; CHECK: #[[ATTR_ENTRY]] = {{.*}}async_entry
+; CHECK: #[[ATTR_CONTINUATION]] = {{.*}}async_continuation
+; CHECK: #[[ATTR_RET]] = {{.*}}async_ret
 ; CHECK: ![[ATY0]] = {{.*}}DISubprogram(linkageName: "coroutineATY0_", {{.*}} scopeLine: 42
 
 ; Everything from here on is just support code for the coroutines.
