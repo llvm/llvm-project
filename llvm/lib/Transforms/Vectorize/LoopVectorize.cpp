@@ -7533,14 +7533,19 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
       // Find the reduction result by searching users of the phi or its backedge
-      // value.
+      // value, looking through intermediate recipes.
       auto IsReductionResult = [](VPRecipeBase *R) {
         auto *VPI = dyn_cast<VPInstruction>(R);
         return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
       };
-      auto *RdxResult = cast<VPInstruction>(
-          vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
-      assert(RdxResult && "expected to find reduction result");
+      auto *RdxResult = dyn_cast_or_null<VPInstruction>(vputils::findRecipe(
+          ReductionPhi->getBackedgeValue(), IsReductionResult));
+      // If the ComputeReductionResult was optimized away (e.g., the exit value
+      // was simplified to the start value), the reduction does not contribute
+      // to the exit value. Skip updating the start value for the epilogue,
+      // keeping it as the identity value.
+      if (!RdxResult)
+        continue;
 
       VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
           cast<PHINode>(ReductionPhi->getUnderlyingInstr()));
