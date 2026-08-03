@@ -50,7 +50,9 @@ __is_valid_range(const _Tp* __first, const _Tp* __last) {
 // This function allows the compiler to assume that [__first, __last) is a valid range as defined above.
 //
 // In practice, we only add explicit assumptions for bullets (1) and (3). These assumptions allow (currently only
-// clang-based compilers) to auto-vectorize algorithms that contain early returns.
+// clang-based compilers) to auto-vectorize algorithms that contain early returns. Note that we don't enforce
+// alignment assumptions for empty ranges since it is a common occurence to use unaligned sentinel values to
+// implement iterators of empty ranges.
 template <class _Iter, class _Sent>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __assume_valid_range([[__maybe_unused__]] _Iter&& __first, [[__maybe_unused__]] _Sent&& __last) {
@@ -60,10 +62,12 @@ __assume_valid_range([[__maybe_unused__]] _Iter&& __first, [[__maybe_unused__]] 
     _LIBCPP_ASSERT_INTERNAL(std::__is_valid_range(std::__to_address(__first), std::__to_address(__last)),
                             "Valid range assumption does not hold");
     if (!__libcpp_is_constant_evaluated()) {
-      using __value_type = typename iterator_traits<__remove_cvref_t<_Iter>>::value_type;
-      __builtin_assume_dereferenceable(std::__to_address(__first), (__last - __first) * sizeof(__value_type));
-      (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__first));
-      (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__last));
+      if (__first != __last) {
+        using __value_type = typename iterator_traits<__remove_cvref_t<_Iter>>::value_type;
+        __builtin_assume_dereferenceable(std::__to_address(__first), (__last - __first) * sizeof(__value_type));
+        (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__first));
+        (void)std::__assume_aligned<_LIBCPP_ALIGNOF(__value_type)>(std::__to_address(__last));
+      }
     }
   }
 #endif
