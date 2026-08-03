@@ -321,37 +321,69 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   return ArgClassification::getIgnore();
 }
 
-/// The number of leading arguments the classifier must treat as declared
-/// parameters, which is meaningful only for a variadic signature: an argument
-/// past the ellipsis is unnamed, and the x86_64 rules pass some unnamed types
-/// differently.  std::nullopt for a non-variadic signature, where every
-/// argument is declared.
+/// Whether a signature accepts arguments beyond its declared parameters, and
+/// where the declared ones end when it does.  An argument past the ellipsis is
+/// unnamed, and the x86_64 rules pass some unnamed types differently.
+///
+/// llvm::abi::FunctionInfo::create takes this boundary as an optional count,
+/// where an absent value means the signature accepts no optional arguments.
+/// Any value there makes FunctionInfo::isVariadic() answer true, so the
+/// non-variadic case has to be spelled as an absent one.  That encoding is
+/// applied where classifyX86_64Signature builds the FunctionInfo.
+///
+/// Mirrors classic CodeGen's `RequiredArgs` in `CGFunctionInfo.h`, and CIRGen's
+/// copy in `CIRGenFunctionInfo.h`.
+class RequiredArgs {
+  /// The number of leading arguments that are declared parameters, or ~0U if
+  /// the signature accepts no optional arguments.
+  unsigned numRequired;
+
+public:
+  enum All_t { All };
+
+  /// A signature with no ellipsis, where every argument is declared.
+  RequiredArgs(All_t) : numRequired(~0U) {}
+
+  /// A signature whose leading \p n arguments are declared and whose remaining
+  /// arguments pass through an ellipsis.
+  explicit RequiredArgs(unsigned n) : numRequired(n) { assert(n != ~0U); }
+
+  bool allowsOptionalArgs() const { return numRequired != ~0U; }
+
+  unsigned getNumRequiredArgs() const {
+    assert(allowsOptionalArgs() && "signature accepts no optional arguments");
+    return numRequired;
+  }
+};
+
+/// Where \p fnTy's declared parameters end and its ellipsis arguments begin.
 ///
 /// The only x86_64 rule that reads this boundary today sends an unnamed vector
 /// wider than 128 bits to memory, and isSupportedType rejects every vector, so
 /// no input that currently reaches classification can observe the difference.
-static std::optional<unsigned> requiredArgCount(cir::FuncType fnTy) {
+static RequiredArgs requiredArgs(cir::FuncType fnTy) {
   if (!fnTy.isVarArg())
-    return std::nullopt;
-  return fnTy.getNumInputs();
+    return RequiredArgs::All;
+  return RequiredArgs(fnTy.getNumInputs());
 }
 
 /// Classify an x86_64 SysV signature (return type + argument types) using the
 /// LLVM ABI library.  Shared by the cir.func path, the variadic-call path and
 /// the indirect-call path (the latter classifies from the callee function
-/// pointer's pointee FuncType).  \p numRequired is the number of leading
-/// entries in \p inputs that are declared parameters, set only for a variadic
-/// signature: the classifier treats the rest as arguments passed through the
-/// ellipsis.  Returns std::nullopt and emits an NYI error via \p emitError if
-/// the signature uses a type the bridge does not handle yet.
+/// pointer's pointee FuncType).  \p required marks how many leading entries in
+/// \p inputs are declared parameters, the classifier treating the rest as
+/// arguments passed through an ellipsis.  Returns std::nullopt and emits an NYI
+/// error via \p emitError if the signature uses a type the bridge does not
+/// handle yet.
 static std::optional<FunctionClassification> classifyX86_64Signature(
-    mlir::Type retCIR, mlir::TypeRange inputs,
-    std::optional<unsigned> numRequired, MLIRContext *ctx, const DataLayout &dl,
+    mlir::Type retCIR, mlir::TypeRange inputs, RequiredArgs required,
+    MLIRContext *ctx, const DataLayout &dl,
     mlir::abi::ABITypeMapper &typeMapper,
     const llvm::abi::TargetInfo &targetInfo, ModuleOp modOp,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
   assert(retCIR && "signature return type must be non-null");
-  assert((!numRequired || *numRequired <= inputs.size()) &&
+  assert((!required.allowsOptionalArgs() ||
+          required.getNumRequiredArgs() <= inputs.size()) &&
          "declared parameters cannot outnumber the classified arguments");
   bool voidRet = isa<cir::VoidType>(retCIR);
 
@@ -375,6 +407,10 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   SmallVector<const llvm::abi::Type *> argAbi;
   for (mlir::Type a : inputs)
     argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
+
+  std::optional<unsigned> numRequired;
+  if (required.allowsOptionalArgs())
+    numRequired = required.getNumRequiredArgs();
 
   std::unique_ptr<llvm::abi::FunctionInfo> fi = llvm::abi::FunctionInfo::create(
       llvm::CallingConv::C, retAbi, argAbi, numRequired);
@@ -422,7 +458,7 @@ classifyX86_64Function(cir::FuncOp func, const DataLayout &dl,
                        ModuleOp modOp) {
   cir::FuncType fnTy = func.getFunctionType();
   return classifyX86_64Signature(fnTy.getReturnType(), fnTy.getInputs(),
-                                 requiredArgCount(fnTy), func->getContext(), dl,
+                                 requiredArgs(fnTy), func->getContext(), dl,
                                  typeMapper, targetInfo, modOp,
                                  [&]() { return func.emitOpError(); });
 }
@@ -443,7 +479,7 @@ static std::optional<FunctionClassification> classifyX86_64VariadicCall(
   Operation *op = call.getOperation();
   return classifyX86_64Signature(
       calleeTy.getReturnType(), call.getArgOperands().getTypes(),
-      requiredArgCount(calleeTy), op->getContext(), dl, typeMapper, targetInfo,
+      requiredArgs(calleeTy), op->getContext(), dl, typeMapper, targetInfo,
       modOp, [&]() { return op->emitOpError(); });
 }
 
@@ -725,7 +761,7 @@ void CallConvLoweringPass::runOnOperation() {
         [&](mlir::TypeRange argTypes) -> std::optional<FunctionClassification> {
       if (x86Target)
         return classifyX86_64Signature(funcTy.getReturnType(), argTypes,
-                                       requiredArgCount(funcTy), ctx, dl,
+                                       requiredArgs(funcTy), ctx, dl,
                                        *x86TypeMapper, *x86Target, moduleOp,
                                        [&]() { return c->emitOpError(); });
       return withReturnVoidness(
