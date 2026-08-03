@@ -13,6 +13,7 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 
+#  include <__configuration/platform.h>
 #  include <__type_traits/make_unsigned.h>
 #  include <cctype>
 #  include <cstdint>
