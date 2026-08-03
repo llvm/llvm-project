@@ -14278,19 +14278,19 @@ def note_acc_reduction_combiner_forming
            "operator|final assignment operator}0">;
 
 // AMDGCN type diagnostics
-def err_amdgcn_target_ext_type_unsupported : Error<
+def err_amdgpu_target_ext_type_unsupported : Error<
   "AMDGPU built-in type %0 is not supported on target '%1'">;
 
-def err_amdgcn_invalid_field_not_a_wrapper : Error<
+def err_amdgpu_invalid_field_not_a_wrapper : Error<
   "field with barrier type %0 seen in a structure that is not a named barrier wrapper">;
-def note_amdgcn_not_a_named_barrier_wrapper_too_many_fields : Note<
+def note_amdgpu_not_a_named_barrier_wrapper_too_many_fields : Note<
   "%0 is not a named barrier wrapper because it has more than one field">;
 
-def err_amdgcn_named_barrier_wrapper_non_standard_layout : Error<
+def err_amdgpu_named_barrier_wrapper_non_standard_layout : Error<
   "named barrier wrapper %0 must have a C++11 standard layout">;
-def note_amdgcn_named_barrier_reason_field : Note<
+def note_amdgpu_named_barrier_reason_field : Note<
   "%0 is a named barrier wrapper because it has a named barrier or named barrier wrapper field %1 found here">;
-def note_amdgcn_named_barrier_reason_inherited : Note<
+def note_amdgpu_named_barrier_reason_inherited : Note<
   "%0 is a named barrier wrapper because it inherits from named barrier wrapper %1">;
 
 // AMDGCN builtins diagnostics

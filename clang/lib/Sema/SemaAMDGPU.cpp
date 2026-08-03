@@ -1089,7 +1089,7 @@ bool SemaAMDGPU::checkAMDGPUTypeSupport(QualType Ty, SourceLocation Loc) {
     // The AMDGPU named barrier type requires special handling in the back-end
     // and is not supported for SPIR-V
     if (BaseTy->isAMDGPUNamedBarrierType()) {
-      SemaRef.Diag(Loc, diag::err_amdgcn_target_ext_type_unsupported)
+      SemaRef.Diag(Loc, diag::err_amdgpu_target_ext_type_unsupported)
           << Ty << TT.str();
       return false;
     }
@@ -1128,11 +1128,11 @@ void SemaAMDGPU::checkNamedBarrierWrapper(RecordDecl *R) {
     // field.
     if (R->getNumFields() > 1) {
       SemaRef.Diag(NamedBarrField->getLocation(),
-                   diag::err_amdgcn_invalid_field_not_a_wrapper)
+                   diag::err_amdgpu_invalid_field_not_a_wrapper)
           << NamedBarrField->getType();
       SemaRef.Diag(
           R->getLocation(),
-          diag::note_amdgcn_not_a_named_barrier_wrapper_too_many_fields)
+          diag::note_amdgpu_not_a_named_barrier_wrapper_too_many_fields)
           << R->getDeclName();
       return;
     }
@@ -1140,7 +1140,7 @@ void SemaAMDGPU::checkNamedBarrierWrapper(RecordDecl *R) {
     IsWrapper = true;
     DiagWrapperNote = [this, R, NamedBarrField]() {
       SemaRef.Diag(NamedBarrField->getLocation(),
-                   diag::note_amdgcn_named_barrier_reason_field)
+                   diag::note_amdgpu_named_barrier_reason_field)
           << R->getDeclName() << NamedBarrField->getDeclName();
     };
   }
@@ -1159,7 +1159,7 @@ void SemaAMDGPU::checkNamedBarrierWrapper(RecordDecl *R) {
         // Print using the CXXBaseSpecifier type as it includes the template
         // parameters.
         SemaRef.Diag(BS.getBeginLoc(),
-                     diag::note_amdgcn_named_barrier_reason_inherited)
+                     diag::note_amdgpu_named_barrier_reason_inherited)
             << R->getDeclName() << BS.getType();
       };
     }
@@ -1175,7 +1175,7 @@ void SemaAMDGPU::checkNamedBarrierWrapper(RecordDecl *R) {
   // This is a wrapper CXXRecordDecl, it must have a C++11 standard layout.
   if (CxxR && !CxxR->isCXX11StandardLayout()) {
     SemaRef.Diag(R->getLocation(),
-                 diag::err_amdgcn_named_barrier_wrapper_non_standard_layout)
+                 diag::err_amdgpu_named_barrier_wrapper_non_standard_layout)
         << R->getDeclName();
     assert(DiagWrapperNote &&
            "IsWrapper is set but no context diagnostic provided");
