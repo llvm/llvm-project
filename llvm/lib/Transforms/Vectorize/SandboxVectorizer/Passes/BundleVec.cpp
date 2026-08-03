@@ -1,4 +1,4 @@
-//===- BottomUpVec.cpp - A bottom-up vectorizer pass ----------------------===//
+//===- BundleVec.cpp - A bundle-forming SLP-style vectorizer pass ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BundleVec.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
@@ -65,8 +65,8 @@ static BasicBlock::iterator getInsertPointAfterInstrs(ArrayRef<Value *> Vals,
   return std::next(BotI->getIterator());
 }
 
-Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
-                                      ArrayRef<Value *> Operands) {
+Value *BundleVec::createVectorInstr(ArrayRef<Value *> Bndl,
+                                    ArrayRef<Value *> Operands) {
   auto CreateVectorInstr = [](ArrayRef<Value *> Bndl,
                               ArrayRef<Value *> Operands) -> Value * {
     assert(all_of(Bndl, [](auto *V) { return isa<Instruction>(V); }) &&
@@ -176,7 +176,7 @@ Value *BottomUpVec::createVectorInstr(ArrayRef<Value *> Bndl,
   return NewI;
 }
 
-void BottomUpVec::tryEraseDeadInstrs() {
+void BundleVec::tryEraseDeadInstrs() {
   DenseMap<BasicBlock *, SmallVector<Instruction *>> SortedDeadInstrCandidates;
   // The dead instrs could span BBs, so we need to collect and sort them per BB.
   for (auto *DeadI : DeadInstrCandidates)
@@ -196,14 +196,14 @@ void BottomUpVec::tryEraseDeadInstrs() {
   DeadInstrCandidates.clear();
 }
 
-Value *BottomUpVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
-                                  BasicBlock *UserBB) {
+Value *BundleVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
+                                BasicBlock *UserBB) {
   BasicBlock::iterator WhereIt = getInsertPointAfterInstrs({VecOp}, UserBB);
   return ShuffleVectorInst::create(VecOp, VecOp, Mask, WhereIt,
                                    VecOp->getContext(), "VShuf");
 }
 
-Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
+Value *BundleVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
   BasicBlock::iterator WhereIt = getInsertPointAfterInstrs(ToPack, UserBB);
 
   Type *ScalarTy = VecUtils::getCommonScalarType(ToPack);
@@ -254,7 +254,7 @@ Value *BottomUpVec::createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB) {
   return LastInsert;
 }
 
-void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
+void BundleVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
   for (Value *V : Bndl)
     DeadInstrCandidates.insert(cast<Instruction>(V));
   // Also collect the GEPs of vectorized loads and stores.
@@ -279,9 +279,9 @@ void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
   }
 }
 
-Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
-                                  ArrayRef<Value *> UserBndl, unsigned Depth,
-                                  LegalityAnalysis &Legality) {
+Action *BundleVec::vectorizeRec(ArrayRef<Value *> Bndl,
+                                ArrayRef<Value *> UserBndl, unsigned Depth,
+                                LegalityAnalysis &Legality) {
   bool StopForDebug =
       DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
@@ -358,17 +358,17 @@ Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
 }
 
 #ifndef NDEBUG
-void BottomUpVec::ActionsVector::print(raw_ostream &OS) const {
+void BundleVec::ActionsVector::print(raw_ostream &OS) const {
   for (auto [Idx, Action] : enumerate(Actions)) {
     Action->print(OS);
     OS << "\n";
   }
 }
-void BottomUpVec::ActionsVector::dump() const { print(dbgs()); }
+void BundleVec::ActionsVector::dump() const { print(dbgs()); }
 #endif // NDEBUG
 
-void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
-                                             Value *Vec) {
+void BundleVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
+                                           Value *Vec) {
   // Find where we should emit the unpacks.
   BasicBlock::iterator WhereIt;
   if (auto *VecI = dyn_cast<Instruction>(Vec)) {
@@ -405,7 +405,7 @@ void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
   }
 }
 
-Value *BottomUpVec::emitVectors() {
+Value *BundleVec::emitVectors() {
   Value *NewVec = nullptr;
   for (const auto &ActionPtr : Actions) {
     ArrayRef<Value *> Bndl = ActionPtr->Bndl;
@@ -570,11 +570,10 @@ Value *BottomUpVec::emitVectors() {
   return NewVec;
 }
 
-bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl,
-                               LegalityAnalysis &Legality) {
+bool BundleVec::tryVectorize(ArrayRef<Value *> Bndl,
+                             LegalityAnalysis &Legality) {
   Change = false;
-  if (LLVM_UNLIKELY(BottomUpInvocationCnt++ >= StopAt &&
-                    StopAt != StopAtDisabled))
+  if (LLVM_UNLIKELY(InvocationCnt++ >= StopAt && StopAt != StopAtDisabled))
     return false;
   DeadInstrCandidates.clear();
   Legality.clear();
@@ -589,7 +588,7 @@ bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl,
   return Change;
 }
 
-bool BottomUpVec::runOnRegion(Region &Rgn, const Analyses &A) {
+bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
   const auto &SeedSlice = Rgn.getAux();
   assert(SeedSlice.size() >= 2 && "Bad slice!");
   Function &F = *SeedSlice[0]->getParent()->getParent();
