@@ -107,7 +107,7 @@ public:
   static Complex FromRawBytes(const void *raw, std::size_t expectedSize) {
     CHECK(bytesStored() == expectedSize);
     const char *data{static_cast<const char *>(raw)};
-    Part realPart{Part ::FromRawBytes(data, Part::bytesStored())};
+    Part realPart{Part::FromRawBytes(data, Part::bytesStored())};
     Part imagPart{
         Part::FromRawBytes(data + Part::bytesStored(), Part::bytesStored())};
     return {realPart, imagPart};

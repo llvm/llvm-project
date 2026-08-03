@@ -160,48 +160,51 @@ public:
           Const{derived, std::move(typedValue), std::move(extents_)});
     } else if constexpr (T::category == TypeCategory::Character) {
       auto length{static_cast<ConstantSubscript>(stride) / T::kind};
+      llvm::SmallVector<char, 256> buffer;
+      const char *data{GetTailPaddedData(offset_, elements * stride, buffer)};
       for (std::size_t j{0}; j < elements; ++j) {
-        using Char = typename Scalar::value_type;
-        auto at{static_cast<std::size_t>(offset_ + j * stride)};
-        auto chunk{length};
-        // FIXME: chunk is a number of characters, data_.size() is a number of
-        // bytes
-        if (at + chunk > image_.data_.size()) {
-          CHECK(padWithZero_);
-          if (at >= image_.data_.size()) {
-            chunk = 0;
-          } else {
-            chunk = image_.data_.size() - at;
-          }
-        }
         typedValue[j] = CharacterValue<T::kind>::FromRawBytes(
-            &image_.data_[at], chunk * T::kind);
-        if (chunk < length && padWithZero_) {
-          typedValue[j].append(length - chunk, Char{});
-        }
+            data + j * stride, length * T::kind);
       }
       return AsGenericExpr(
           Const{length, std::move(typedValue), std::move(extents_)});
     } else {
       // Lengthless intrinsic type
-      // There is a test (Evaluate/folding10.f90) where this
-      // wants wants to read 2 elements of kind 8 out of an image_.data_ of
-      // size 12. Fortunately, the second element seems to be unused.
-      size_t scalarSize{evaluate::Scalar<T>::bytesStored()};
-      size_t length{std::min(elements,
-          (image_.data_.size() - offset_ - scalarSize + stride) / stride)};
-      CHECK(length == elements || padWithZero_);
+      llvm::SmallVector<char, 256> buffer;
+      const char *data{GetTailPaddedData(offset_,
+          elements == 0
+              ? 0
+              : (elements - 1) * stride + evaluate::Scalar<T>::bytesStored(),
+          buffer)};
       // TODO endianness
-      LoadSerialValues(image_.data_.data() + offset_,
-          llvm::MutableArrayRef<evaluate::Scalar<T>>(typedValue)
-              .slice(0, length),
-          stride);
-
+      LoadSerialValues(
+          data, llvm::MutableArrayRef<evaluate::Scalar<T>>(typedValue), stride);
       return AsGenericExpr(Const{std::move(typedValue), std::move(extents_)});
     }
   }
 
 private:
+  /// Returns the image's bytes, extended with zero bytes when a value is being
+  /// built whose representation reaches past the end of the image.  That
+  /// happens when TRANSFER() is folded with a MOLD= whose representation is
+  /// longer than SOURCE=, and when deserializing a scalar accesses more bytes
+  /// than its element size because its host representation is padded (e.g.,
+  /// REAL(10)).  F2023 16.9.212 leaves the bytes beyond SOURCE= processor
+  /// dependent; flang zero-fills them, as the runtime does.
+  const char *GetTailPaddedData(std::size_t offset, std::size_t bytes,
+      llvm::SmallVectorImpl<char> &buffer) const {
+    if (bytes + offset <= image_.data_.size()) {
+      // If no padding is needed, use original data without copy
+      return image_.data_.data() + offset;
+    }
+    buffer.assign(bytes, 0);
+    if (offset < image_.data_.size()) {
+      std::memcpy(buffer.data(), image_.data_.data() + offset,
+          image_.data_.size() - offset);
+    }
+    return buffer.data();
+  }
+
   FoldingContext &context_;
   const DynamicType &type_;
   std::optional<std::int64_t> charLength_;
