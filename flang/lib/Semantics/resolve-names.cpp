@@ -5632,7 +5632,7 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
   }
   if (hasModulePrefix && inInterfaceBlock() && isAbstract()) { // C1547
     Say(name,
-        "'%s' has MODULE prefix, which is not allowed in an ABSTRACT interface body"_err_en_US);
+        "'%s' may not have a MODULE prefix in an ABSTRACT interface body"_err_en_US);
     isValid = false;
   }
   Symbol *moduleInterface{nullptr};
