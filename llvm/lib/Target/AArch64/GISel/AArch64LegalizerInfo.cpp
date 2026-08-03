@@ -232,13 +232,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_SHL, G_ASHR, G_LSHR})
-      .customIf([=](const LegalityQuery &Query) {
-        const auto &SrcTy = Query.Types[0];
-        const auto &AmtTy = Query.Types[1];
-        return !SrcTy.isVector() && SrcTy.getSizeInBits() == 32 &&
-               AmtTy.getSizeInBits() == 32;
-      })
       .legalFor({
+          {i8, i8},
+          {i16, i16},
           {i32, i32},
           {i32, i64},
           {i64, i64},
@@ -250,19 +246,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
           {v4i32, v4i32},
           {v2i64, v2i64},
       })
-      .widenScalarToNextPow2(1)
       .widenScalarToNextPow2(0)
-      .clampScalar(1, s32, s64)
-      .clampScalar(0, s32, s64)
+      .widenScalarToNextPow2(1)
+      .clampScalar(0, s8, s64)
+      .clampScalar(1, s8, s64)
+      .minScalarSameAs(1, 0)
       .clampNumElements(0, v8s8, v16s8)
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0)
-      .minScalarSameAs(1, 0)
-      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
-      .minScalarEltSameAsIf(isVector(0), 1, 0)
-      .maxScalarEltSameAsIf(isVector(0), 1, 0);
+      .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, i64}, {v2p0, v2i64}})
