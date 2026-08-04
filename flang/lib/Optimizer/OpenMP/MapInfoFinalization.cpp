@@ -722,21 +722,6 @@ class MapInfoFinalizationPass
 
       if (auto mapUser = llvm::dyn_cast<mlir::omp::MapInfoOp>(user))
         return getFirstTargetUser(mapUser);
-
-      // MapInfoOp inside an omp.iterator body is yielded back to the iterator,
-      // whose result is used by the target op.
-      if (llvm::isa<mlir::omp::YieldOp>(user)) {
-        if (auto iterOp = user->getParentOfType<mlir::omp::IteratorOp>()) {
-          for (auto *iterUser : iterOp->getUsers()) {
-            if (llvm::isa<mlir::omp::TargetOp, mlir::omp::TargetDataOp,
-                          mlir::omp::TargetUpdateOp,
-                          mlir::omp::TargetExitDataOp,
-                          mlir::omp::TargetEnterDataOp,
-                          mlir::omp::DeclareMapperInfoOp>(iterUser))
-              return iterUser;
-          }
-        }
-      }
     }
 
     return nullptr;
@@ -1416,6 +1401,9 @@ class MapInfoFinalizationPass
       // Next, walk `omp.map.info` ops to see if any record members should be
       // implicitly mapped.
       func->walk([&](mlir::omp::MapInfoOp op) {
+        if (isNestedInIterator(op))
+          return mlir::WalkResult::advance();
+
         mlir::Type underlyingType =
             fir::unwrapRefType(op.getVarPtr().getType());
 
