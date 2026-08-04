@@ -3476,15 +3476,19 @@ bool X86TargetLowering::shouldReduceLoadWidth(
     if (const auto *GA = dyn_cast<GlobalAddressSDNode>(BasePtr.getOperand(0)))
       return GA->getTargetFlags() != X86II::MO_GOTTPOFF;
 
-  // If this is an (1) AVX vector load with (2) multiple uses and (3) all of
-  // those uses are extracted directly into a store, then the extract + store
-  // can be store-folded, or (4) any use will be used by legal full width
-  // instruction. Then, it's probably not worth splitting the load.
+  // If this is a (1) 128-bit or wider vector load, and any use will be used by
+  // a legal full width instruction, then the load can typically be memory
+  // folded into that instruction, so it's probably not worth splitting the
+  // load. Additionally, for (2) AVX vector loads with (3) multiple uses where
+  // (4) all of those uses are extracted directly into a store, the extract +
+  // store can be store-folded, so it's again not worth splitting.
   EVT VT = Load->getValueType(0);
-  if ((VT.is256BitVector() || VT.is512BitVector()) &&
-      !SDValue(Load, 0).hasOneUse()) {
+  if (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) {
     bool FullWidthUse = false;
-    bool AllExtractStores = true;
+    // The extract + store folding only helps the AVX split case, which requires
+    // multiple uses of the load.
+    bool AllExtractStores = (VT.is256BitVector() || VT.is512BitVector()) &&
+                            !SDValue(Load, 0).hasOneUse();
     for (SDUse &Use : Load->uses()) {
       // Skip uses of the chain value. Result 0 of the node is the load value.
       if (Use.getResNo() != 0)
@@ -3493,7 +3497,7 @@ bool X86TargetLowering::shouldReduceLoadWidth(
       const SDNode *User = PeekThroughOneUserBitcasts(Use.getUser());
 
       // If this use is an extract + store, it's probably not worth splitting.
-      if (User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      if (AllExtractStores && User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           all_of(User->uses(), [&](const SDUse &U) {
             const SDNode *Inner = PeekThroughOneUserBitcasts(U.getUser());
             return Inner->getOpcode() == ISD::STORE;
@@ -18457,6 +18461,8 @@ static bool canCombineAsMaskOperation(SDValue V,
     case ISD::SRL:
     case ISD::SRA:
     case ISD::MUL:
+    case ISD::PSEUDO_FMIN:
+    case ISD::PSEUDO_FMAX:
       break;
     }
     if (!V->hasOneUse())
@@ -33646,8 +33652,7 @@ static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
   MVT VT = Op.getSimpleValueType();
 
   // Special case. If the input fits in 8-bits we can use a single 8-bit TEST.
-  if (VT == MVT::i8 ||
-      DAG.MaskedValueIsZero(X, APInt::getBitsSetFrom(VT.getSizeInBits(), 8))) {
+  if (VT == MVT::i8 || DAG.computeKnownBits(X).countMaxActiveBits() <= 8) {
     X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, X);
     SDValue Flags = DAG.getNode(X86ISD::CMP, DL, MVT::i32, X,
                                 DAG.getConstant(0, DL, MVT::i8));
@@ -33662,7 +33667,7 @@ static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
     return SDValue();
 
   if (VT == MVT::i64) {
-    // Xor the high and low 16-bits together using a 32-bit operation.
+    // Xor the high and low 32-bits together using a 32-bit operation.
     SDValue Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32,
                              DAG.getNode(ISD::SRL, DL, MVT::i64, X,
                                          DAG.getConstant(32, DL, MVT::i8)));
@@ -48558,21 +48563,44 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 
   ISD::CondCode CC;
   SDValue Cond, X, Y, LHS, RHS;
-  if (!sd_match(N, m_VSelect(m_AllOf(m_Value(Cond),
-                                     m_OneUse(m_SetCC(m_Value(X), m_Value(Y),
-                                                      m_CondCode(CC)))),
-                             m_Value(LHS), m_Value(RHS))))
+  if (!sd_match(
+          N, m_VSelect(m_AllOf(m_Value(Cond),
+                               m_SetCC(m_Value(X), m_Value(Y), m_CondCode(CC))),
+                       m_Value(LHS), m_Value(RHS))))
     return SDValue();
 
   if (canCombineAsMaskOperation(LHS, Subtarget) ||
       !canCombineAsMaskOperation(RHS, Subtarget))
     return SDValue();
 
+  // For multi-use setcc, check that all users are vselects that benefit.
+  bool CondHasOneUse = Cond.hasOneUse();
+  if (!CondHasOneUse) {
+    if (!llvm::all_of(Cond->users(), [&](SDNode *User) {
+          SDValue UserLHS, UserRHS;
+          return sd_match(User, m_VSelect(m_Specific(Cond), m_Value(UserLHS),
+                                          m_Value(UserRHS))) &&
+                 !canCombineAsMaskOperation(UserLHS, Subtarget) &&
+                 canCombineAsMaskOperation(UserRHS, Subtarget);
+        }))
+      return SDValue();
+  }
+
   // Commute LHS and RHS to create opportunity to select mask instruction.
   // (vselect M, L, R) -> (vselect ~M, R, L)
   ISD::CondCode NewCC = ISD::getSetCCInverse(CC, X.getValueType());
-  Cond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), X, Y, NewCC);
-  return DAG.getSelect(DL, LHS.getValueType(), Cond, RHS, LHS);
+  SDValue NewCond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), X, Y, NewCC);
+  if (CondHasOneUse)
+    return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
+
+  // Invert the setcc for all users and commute all vselects.
+  DAG.ReplaceAllUsesOfValueWith(Cond, NewCond);
+  for (SDNode *User : NewCond->users()) {
+    SDValue UserLHS = User->getOperand(1);
+    SDValue UserRHS = User->getOperand(2);
+    DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
+  }
+  return SDValue(N, 0);
 }
 
 /// Do target-specific dag combines on SELECT and VSELECT nodes.

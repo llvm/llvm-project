@@ -73,12 +73,12 @@ Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
     return createStringError(
         "64-bit ABIs are not supported for 32-bit targets");
   }
-  if (ABIName.ends_with("f") && !FeatureBits[RISCV::FeatureStdExtF]) {
+  if (ABIName.ends_with('f') && !FeatureBits[RISCV::FeatureStdExtF]) {
     return createStringError(
         "hard-float 'f' ABI can't be used for a target that doesn't "
         "support the F instruction set extension");
   }
-  if (ABIName.ends_with("d") && !FeatureBits[RISCV::FeatureStdExtD]) {
+  if (ABIName.ends_with('d') && !FeatureBits[RISCV::FeatureStdExtD]) {
     return createStringError(
         "hard-float 'd' ABI can't be used for a target that doesn't "
         "support the D instruction set extension");
