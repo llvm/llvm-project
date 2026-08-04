@@ -289,7 +289,8 @@ class SPIRVLegalizePointerCastImpl {
     for (unsigned I = 0; I < NumBytes; ++I) {
       Value *Shifted =
           I == 0 ? IntVal
-                 : B.CreateLShr(IntVal, ConstantInt::get(IntVal->getType(), 8 * I));
+                 : B.CreateLShr(IntVal,
+                                ConstantInt::get(IntVal->getType(), 8 * I));
       Value *Byte = B.CreateTrunc(Shifted, I8Ty);
       buildAssignType(B, I8Ty, Byte);
       Value *Ptr = gepByteOffset(B, Dst, I);
@@ -344,8 +345,7 @@ class SPIRVLegalizePointerCastImpl {
     Type *OriginalElemTy = GR->findDeducedElementType(OriginalPtr);
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
     if (OriginalElemTy && OriginalElemTy == Type::getInt8Ty(B.getContext()) &&
-        AccessTy->isSingleValueType() &&
-        DL.getTypeStoreSize(AccessTy) > 1)
+        AccessTy->isSingleValueType() && DL.getTypeStoreSize(AccessTy) > 1)
       return ReinterpretKind::ByteWise;
 
     return ReinterpretKind::RetagDirect;
@@ -451,7 +451,8 @@ class SPIRVLegalizePointerCastImpl {
     if (SAT && DVT && SAT->getElementType() == DVT->getElementType())
       return loadVectorFromArray(B, DVT, GEP, IllegalLoad->getAlign());
     if (MAT && DVT && MAT->getElementType() == DVT->getElementType())
-      return loadVectorFromMatrixArray(B, DVT, GEP, MAT, IllegalLoad->getAlign());
+      return loadVectorFromMatrixArray(B, DVT, GEP, MAT,
+                                       IllegalLoad->getAlign());
 
     llvm_unreachable("Failed to load from aggregate.");
   }
@@ -724,7 +725,8 @@ class SPIRVLegalizePointerCastImpl {
     auto ResultOpt = getPointerToFirstCompatibleType(B, Dst, Dst->getType(),
                                                      Src->getType(), true);
     if (!ResultOpt) {
-      if (tryReinterpretStore(B, Src->getType(), Dst, CastedPtr, Src, Alignment))
+      if (tryReinterpretStore(B, Src->getType(), Dst, CastedPtr, Src,
+                              Alignment))
         return;
       llvm_unreachable("Failed to store to aggregate: "
                        "Could not find compatible memory layout.");
