@@ -16818,6 +16818,21 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       return SCC;
   }
 
+  // ty1 aext(ty2 build_vector()) -> ty1 build_vector().
+  // If a build vector is implicitly truncating its elements we can do the build
+  // vector in a wider type and get rid of the any extend. Since a build vector
+  // cannot be implicitly extending, the final type size must be <= size of the
+  // build vector's operands.
+  if (N0.getOpcode() == ISD::BUILD_VECTOR && N0.hasOneUse() &&
+      VT.getScalarSizeInBits() <= N0.getOperand(0).getScalarValueSizeInBits() &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT))) {
+    // First try to see if the build vector can be optimized to something else.
+    if (SDValue SD = visitBUILD_VECTOR(N0.getNode()))
+      return DAG.getAnyExtOrTrunc(SD, DL, VT);
+
+    return DAG.getBuildVector(VT, DL, N0->ops());
+  }
+
   if (SDValue NewCtPop = widenCtPop(N, DAG, DL))
     return NewCtPop;
 

@@ -1020,14 +1020,12 @@ define void @masked_store_v8f32(ptr %dst, <8 x i1> %mask) {
 ; CHECK-NEXT:    mov z6.b, z0.b[2]
 ; CHECK-NEXT:    mov z7.b, z0.b[1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z2.h, z4.h, z3.h
-; CHECK-NEXT:    zip1 z3.h, z6.h, z5.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z7.h
 ; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
-; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    zip1 z2.s, z4.s, z3.s
+; CHECK-NEXT:    zip1 z3.s, z6.s, z5.s
+; CHECK-NEXT:    zip1 z0.s, z0.s, z7.s
+; CHECK-NEXT:    zip1 z1.d, z2.d, z1.d
+; CHECK-NEXT:    zip1 z0.d, z0.d, z3.d
 ; CHECK-NEXT:    lsl z1.s, z1.s, #31
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
 ; CHECK-NEXT:    asr z1.s, z1.s, #31

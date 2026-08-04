@@ -17145,6 +17145,34 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   return convertFromScalableVector(DAG, VT, Vec);
 }
 
+/// Try to recreate this build vector in half sized integer VT without losing
+/// data. This can work if all the extracts are from a smaller typed source
+/// vector.
+static SDValue getTruncatedBUILD_VECTOR(SDValue N, SelectionDAG &DAG) {
+  if (N.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  EVT VT = N.getValueType();
+  if (!VT.isInteger())
+    return SDValue();
+
+  EVT TruncatedTy = VT.changeElementType(
+      *DAG.getContext(),
+      VT.getVectorElementType().getHalfSizedIntegerVT(*DAG.getContext()));
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(TruncatedTy))
+    return SDValue();
+
+  unsigned TruncEltSizeInBits = TruncatedTy.getScalarSizeInBits();
+  if (all_of(N->ops(), [&](SDValue Elem) {
+        return Elem.isUndef() ||
+               (Elem.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+                Elem.getOperand(0).getValueType().getScalarSizeInBits() <=
+                    TruncEltSizeInBits);
+      }))
+    return DAG.getBuildVector(TruncatedTy, SDLoc(N), N->ops());
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -17514,6 +17542,12 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   if (NumElts >= 4) {
     if (SDValue Shuffle = ReconstructShuffle(Op, DAG))
       return Shuffle;
+    else if (SDValue TruncBV = getTruncatedBUILD_VECTOR(Op, DAG)) {
+      // Try to see if we can get a valid shuffle from the build vector
+      // recreated in a smaller type.
+      if (SDValue Shuffle = ReconstructShuffle(TruncBV, DAG))
+        return DAG.getAnyExtOrTrunc(Shuffle, DL, VT);
+    }
 
     if (SDValue Shuffle = ReconstructShuffleWithRuntimeMask(Op, DAG))
       return Shuffle;
