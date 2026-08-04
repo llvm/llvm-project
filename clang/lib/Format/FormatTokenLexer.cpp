@@ -595,38 +595,6 @@ bool FormatTokenLexer::tryMergeUserDefinedLiteral() {
   if (Tokens.size() < 2)
     return false;
 
-         // --- INTERCEPT STRING/CHARACTER UDLs ALREADY MERGED BY THE RAW LEXER ---
-  // --- INTERCEPT STRING/CHARACTER UDLs ALREADY MERGED BY THE RAW LEXER ---
-  // --- INTERCEPT STRING/CHARACTER UDLs ALREADY MERGED BY THE RAW LEXER ---
-  if (Tokens.back()->isOneOf(tok::string_literal, tok::char_constant, tok::numeric_constant) &&
-      Tokens.end()[-2]->is(tok::kw_operator)) {
-
-    FormatToken *OpToken = Tokens[Tokens.size() - 2];
-    FormatToken *LiteralToken = Tokens.back();
-
-           // Strict guard: Do not merge if this is a member access call (e.g., x.operator""_a())
-    if (Tokens.size() >= 3) {
-      FormatToken *PrevToken = Tokens[Tokens.size() - 3];
-      if (PrevToken->isOneOf(tok::period, tok::arrow) ||
-          PrevToken->TokenText == "." || PrevToken->TokenText == "->") {
-        return false;
-      }
-    }
-
-           // Ensure they are touching in the source text
-    if (!LiteralToken->hasWhitespaceBefore()) {
-      OpToken->TokenText = StringRef(OpToken->TokenText.data(),
-                                     OpToken->TokenText.size() + LiteralToken->TokenText.size());
-      OpToken->ColumnWidth += LiteralToken->ColumnWidth;
-
-      OpToken->Tok.setKind(tok::identifier);
-
-      Tokens.erase(&Tokens.back());
-      return true;
-    }
-  }
-
-         // --- ORIGINAL NUMERIC LITERAL LOGIC KICKS IN HERE ---
   auto *First = Tokens.end() - 2;
   auto &Suffix = First[1];
   if (Suffix->hasWhitespaceBefore() || Suffix->TokenText != "$")
