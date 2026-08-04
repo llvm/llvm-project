@@ -256,8 +256,6 @@ private:
 
   void *GetZAHeader() { return &m_za_header; }
 
-  void *GetPACMask() { return &m_pac_mask; }
-
   void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
