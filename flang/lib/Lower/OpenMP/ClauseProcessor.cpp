@@ -2135,6 +2135,15 @@ bool ClauseProcessor::processMap(
     TodoLocators(currentLocation, objects);
 
     if (iterator) {
+      // An executable target region needs a stable base capture for every
+      // iterated map object used in its body. Without such a capture, implicit
+      // mapping adds an ordinary whole-object map and changes the requested
+      // extent and direction. Reject this until omp.target can represent those
+      // captures separately from runtime map entries.
+      if (directive == llvm::omp::Directive::OMPD_target)
+        TODO(clauseLocation,
+             "TARGET construct with MAP iterator modifier");
+
       llvm::SmallVector<IteratorRange> iteratorRanges;
       llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
       collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
