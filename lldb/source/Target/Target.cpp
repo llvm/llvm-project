@@ -2211,8 +2211,11 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
     // it after failing to read from the process.
     error.Clear();
     bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
-    // Match the process-read path: a short read is an error.
-    if (bytes_read > 0 && bytes_read != dst_len && error.Success())
+    // A short read here is only a failure if a live read already failed too.
+    // Reaching this point with a valid process means the process contributed
+    // nothing.
+    if (bytes_read > 0 && bytes_read != dst_len && error.Success() &&
+        ProcessIsValid())
       error = Status::FromErrorStringWithFormatv(
           "only {0} of {1} bytes were read from the object file cache",
           bytes_read, dst_len);
