@@ -3,7 +3,7 @@
 ;; The module flag asks for lp64d, but without -mcpu we default to no D extension,
 ;; so we print a warning and ignore the module flag.
 ; RUN: llvm-as %s -o %t.bc
-; RUN: ld.lld -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=WARN
+; RUN: ld.lld -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=WARN --implicit-check-not="ignoring target-abi"
 ; WARN: Hard-float 'd' ABI can't be used for a target that doesn't support the D instruction set extension (ignoring target-abi)
 
 ;; TODO: This is inconsistent: RISCVAsmPrinter::emitStartOfAsmFile sets e_flags
@@ -19,8 +19,8 @@
 ; RUN: llvm-readobj --file-headers %t.so | FileCheck %s --check-prefix=FLAGS-MCPU
 ; RUN: ld.lld -plugin-opt=mcpu=sifive-u74 -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
 ; RUN: llvm-readobj --file-headers %t.so | FileCheck %s --check-prefix=FLAGS-MCPU
-; NOWARN-NOT: hard-float
-; FLAGS-MCPU: Flags [ (0x4)
+; NOWARN-NOT: ignoring target-abi
+; FLAGS-MCPU: Flags [ (0x5)
 ; FLAGS-MCPU-NEXT: EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
 ; FLAGS-MCPU-NEXT: EF_RISCV_RVC (0x1)
 ; FLAGS-MCPU-NEXT: ]
