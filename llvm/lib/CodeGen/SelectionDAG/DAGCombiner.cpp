@@ -20329,10 +20329,15 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
   //       Some range near 1/3 should be fine.
   EVT VT = N->getValueType(0);
   EVT ScalarVT = VT.getScalarType();
-  if ((ScalarVT == MVT::f32 &&
-       ExponentC->getValueAPF().isExactlyValue(1.0f / 3.0f)) ||
-      (ScalarVT == MVT::f64 &&
-       ExponentC->getValueAPF().isExactlyValue(1.0 / 3.0))) {
+  bool Exponent1by3 = (ScalarVT == MVT::f32 &&
+                       ExponentC->getValueAPF().isExactlyValue(1.0f / 3.0f)) ||
+                      (ScalarVT == MVT::f64 &&
+                       ExponentC->getValueAPF().isExactlyValue(1.0 / 3.0));
+  bool Exponent2by3 = (ScalarVT == MVT::f32 &&
+                       ExponentC->getValueAPF().isExactlyValue(2.0f / 3.0f)) ||
+                      (ScalarVT == MVT::f64 &&
+                       ExponentC->getValueAPF().isExactlyValue(2.0 / 3.0));
+  if (Exponent1by3 || Exponent2by3) {
     // pow(-0.0, 1/3) = +0.0; cbrt(-0.0) = -0.0.
     // pow(-inf, 1/3) = +inf; cbrt(-inf) = -inf.
     // pow(-val, 1/3) =  nan; cbrt(-val) = -num.
@@ -20354,7 +20359,12 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
          DAG.getTargetLoweringInfo().isOperationExpand(ISD::FCBRT, VT)))
       return SDValue();
 
-    return DAG.getNode(ISD::FCBRT, SDLoc(N), VT, N->getOperand(0));
+    SDLoc DL(N);
+    SDValue Cbrt = DAG.getNode(ISD::FCBRT, DL, VT, N->getOperand(0));
+    if (Exponent1by3)
+      return Cbrt;
+    // pow(X, 2/3) --> cbrt(X) * cbrt(X)
+    return DAG.getNode(ISD::FMUL, DL, VT, Cbrt, Cbrt);
   }
 
   // Try to convert x ** (1/4) and x ** (3/4) into square roots.
@@ -20363,7 +20373,8 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
   // power-of-2 fractional exponents.
   bool ExponentIs025 = ExponentC->getValueAPF().isExactlyValue(0.25);
   bool ExponentIs075 = ExponentC->getValueAPF().isExactlyValue(0.75);
-  if (ExponentIs025 || ExponentIs075) {
+  bool ExponentIs150 = ExponentC->getValueAPF().isExactlyValue(1.50);
+  if (ExponentIs025 || ExponentIs075 || ExponentIs150) {
     // pow(-0.0, 0.25) = +0.0; sqrt(sqrt(-0.0)) = -0.0.
     // pow(-inf, 0.25) = +inf; sqrt(sqrt(-inf)) =  NaN.
     // pow(-0.0, 0.75) = +0.0; sqrt(-0.0) * sqrt(sqrt(-0.0)) = +0.0.
@@ -20390,6 +20401,9 @@ SDValue DAGCombiner::visitFPOW(SDNode *N) {
     // pow(X, 0.25) --> sqrt(sqrt(X))
     SDLoc DL(N);
     SDValue Sqrt = DAG.getNode(ISD::FSQRT, DL, VT, N->getOperand(0));
+    // pow(X, 1.50) --> X * sqrt(X)
+    if (ExponentIs150)
+      return DAG.getNode(ISD::FMUL, DL, VT, N->getOperand(0), Sqrt);
     SDValue SqrtSqrt = DAG.getNode(ISD::FSQRT, DL, VT, Sqrt);
     if (ExponentIs025)
       return SqrtSqrt;
