@@ -365,10 +365,14 @@ template <class ELFT> void Writer<ELFT>::run() {
     if (errCount(ctx))
       return;
 
-    // With -o -, write to lld::outs() (the stdoutOS argument of
+    // Capture output for the embedded unoptimized dynamic debugging relocatable
+    // link.
+    // Otherwise, with -o -, write to lld::outs() (the stdoutOS argument of
     // link()) instead of committing the buffer, which would write to the
     // process's stdout.
-    if (ctx.arg.outputFile == "-") {
+    if (ctx.inDynDbgLink)
+      ctx.dynDbgOutput.swap(buffer);
+    else if (ctx.arg.outputFile == "-") {
       ctx.e.outs() << StringRef(
           reinterpret_cast<const char *>(buffer->getBufferStart()),
           buffer->getBufferSize());
@@ -1914,6 +1918,41 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // called after processSymbolAssignments() because it needs to know whether
     // a linker-script-defined symbol is absolute.
     scanRelocations<ELFT>(ctx);
+
+    // Process symbols referenced by the embedded unoptimized part of dynamic
+    // debugging.
+    if (ctx.hasDynDbg) {
+      bool ignoreUnresolved =
+          (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Ignore);
+      bool warnOnly = (ctx.arg.unresolvedSymbols == UnresolvedPolicy::Warn);
+      for (Symbol *sym : ctx.symtab->getSymbols()) {
+        if (!sym->isDynDbgRef)
+          continue;
+
+        if (sym->isUndefined()) {
+          if (ignoreUnresolved || sym->isWeak())
+            continue;
+
+          static InputSection dummy(ctx.internalFile, dynDbgSecName, 0, 0, 0, 0,
+                                    ArrayRef<uint8_t>());
+          ObjFile<ELFT> *dbgObj = dyn_cast<ObjFile<ELFT>>(sym->file);
+          InputSectionBase *isec =
+              dbgObj && dbgObj->dynDbgSec ? dbgObj->dynDbgSec.get() : &dummy;
+          ctx.undefErrs.push_back(
+              {cast<Undefined>(sym), {{isec, 0}}, warnOnly});
+          continue;
+        }
+
+        // Ensure there are PLT/GOT entries for references to shared symbols.
+        if (sym->isShared() && sym->isUsedInRegularObj && sym->dsoDefined) {
+          if (sym->isFunc())
+            sym->setFlags(NEEDS_PLT);
+          else if (sym->isObject())
+            sym->setFlags(NEEDS_GOT);
+        }
+      }
+    }
+
     reportUndefinedSymbols(ctx);
     postScanRelocations(ctx);
 
