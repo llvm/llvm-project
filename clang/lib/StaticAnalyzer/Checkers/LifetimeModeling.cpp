@@ -92,6 +92,7 @@ static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
   LifetimeSourceSet Set = LSet ? *LSet : F.getEmptySet();
   Set = F.add(Set, Source);
   State = State->set<LifetimeBoundMap>(RetVal, Set);
+
   return State;
 }
 
@@ -125,27 +126,7 @@ void LifetimeModeling::checkPostCall(const CallEvent &Call,
         State = bindSource(State, RetVal, ArgValRegion);
     }
   }
-  /*
-  auto ViewObj = Call.getReturnValue().getAs<nonloc::LazyCompoundVal>();
-  llvm::errs() << ViewObj << "\n";
-  RetVal.dump();
-  if (!ViewObj)
-    return;
 
-  llvm::errs() << ViewObj;
-  const MemRegion *LCVRegion = ViewObj->getRegion();
-  if (!LCVRegion)
-    return;
-  llvm::errs() << LCVRegion << "\n";
-  for (const ParmVarDecl *PVD : FD->parameters()) {
-    if (PVD->hasAttr<LifetimeBoundAttr>()) {
-      unsigned Idx = PVD->getFunctionScopeIndex();
-      SVal Arg = Call.getArgSVal(Idx);
-      if (const MemRegion *ArgValRegion = Arg.getAsRegion())
-        State = bindSource(State, RetVal, ArgValRegion);
-    }
-  }
-  */
   const auto *IC = dyn_cast<CXXInstanceCall>(&Call);
   if (IC && lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
     if (const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion())
