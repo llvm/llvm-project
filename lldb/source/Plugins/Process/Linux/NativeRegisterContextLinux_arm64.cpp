@@ -87,6 +87,42 @@ NativeRegisterContextLinux_arm64::GetInvalidationMask(
   }
 }
 
+unsigned int NativeRegisterContextLinux_arm64::GetPtraceSet(
+    NativeRegisterContextLinux_arm64::RegisterSetType set) const {
+  switch (set) {
+  case RegisterSetType::GPR:
+    return llvm::ELF::NT_PRSTATUS;
+  case RegisterSetType::FPR:
+    return llvm::ELF::NT_FPREGSET;
+  case RegisterSetType::SVE:
+  case RegisterSetType::SVE_HEADER:
+    switch (m_sve_state) {
+    case SVEState::Streaming:
+    case SVEState::StreamingFPSIMD:
+      return llvm::ELF::NT_ARM_SSVE;
+    default:
+      return llvm::ELF::NT_ARM_SVE;
+    }
+  case RegisterSetType::PAC:
+    return llvm::ELF::NT_ARM_PAC_MASK;
+  case RegisterSetType::MTE:
+    return llvm::ELF::NT_ARM_TAGGED_ADDR_CTRL;
+  case RegisterSetType::TLS:
+    return llvm::ELF::NT_ARM_TLS;
+  case RegisterSetType::ZA:
+  case RegisterSetType::ZA_HEADER:
+    return llvm::ELF::NT_ARM_ZA;
+  case RegisterSetType::ZT:
+    return llvm::ELF::NT_ARM_ZT;
+  case RegisterSetType::FPMR:
+    return llvm::ELF::NT_ARM_FPMR;
+  case RegisterSetType::GCS:
+    return llvm::ELF::NT_ARM_GCS;
+  case RegisterSetType::POE:
+    return llvm::ELF::NT_ARM_POE;
+  }
+}
+
 // A NativeRegisterContext is constructed per thread, but all threads' registers
 // will contain the same fields. Therefore this mutex prevents each instance
 // competing with the other, and subsequent instances from having to detect the

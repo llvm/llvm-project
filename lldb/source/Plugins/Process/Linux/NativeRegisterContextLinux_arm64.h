@@ -117,6 +117,9 @@ private:
 
   RegisterSetType m_validity = static_cast<RegisterSetType>(0);
 
+  // Returns the ptrace register set number for the given register set.
+  unsigned int GetPtraceSet(RegisterSetType set) const;
+
   void MakeValid(RegisterSetType set) { m_validity |= set; }
 
   [[nodiscard]] bool IsValid(RegisterSetType set) const {
