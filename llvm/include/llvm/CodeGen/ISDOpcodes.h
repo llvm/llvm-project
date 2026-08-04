@@ -650,6 +650,17 @@ enum NodeType {
   /// in terms of the element size of VEC1/VEC2, not in terms of bytes.
   VECTOR_SHUFFLE,
 
+  /// VECTOR_TABLE_SHUFFLE(VEC1, VEC2, VEC3) - Returns a vector with the same
+  /// number and type of elements as VEC3. VEC1 must have the same element type
+  /// as the result, but may contain a different number of elements. It is used
+  /// as the main data source for the elements in the output vector. VEC2 is
+  /// used as the shuffle mask, where each element is treated as an index into
+  /// VEC1 and places that VEC1 element into the respective output element. If
+  /// the index is out of range of the maximum number of elements in VEC1, then
+  /// the result element will instead be copied from the equivalent element in
+  /// VEC3.
+  VECTOR_TABLE_SHUFFLE,
+
   /// VECTOR_SPLICE_LEFT(VEC1, VEC2, OFFSET) - Shifts CONCAT_VECTORS(VEC1, VEC2)
   /// left by OFFSET elements and returns the lower half.
   VECTOR_SPLICE_LEFT,

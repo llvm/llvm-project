@@ -966,6 +966,7 @@ private:
   void SplitVecRes_VECTOR_REVERSE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N, SDValue &Lo,
                                   SDValue &Hi);
+  void SplitVecRes_VECTOR_TABLE_SHUFFLE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_SPLICE(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N);
   void SplitVecRes_VECTOR_INTERLEAVE(SDNode *N);
@@ -1010,6 +1011,7 @@ private:
   SDValue SplitVecOp_VECTOR_HISTOGRAM(SDNode *N);
   SDValue SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N);
   SDValue SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
+  SDValue SplitVecOp_VECTOR_TABLE_SHUFFLE(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
   // Vector Widening Support: LegalizeVectorTypes.cpp
