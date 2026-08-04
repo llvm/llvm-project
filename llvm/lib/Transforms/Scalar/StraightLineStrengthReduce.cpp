@@ -1395,25 +1395,6 @@ bool StraightLineStrengthReduce::
   if (!InstBB)
     return false;
 
-#if 0
-  for (const llvm::Use &Op : Inst->operands()) {
-    llvm::Value *OpVal = Op.get();
-    if (!OpVal) continue;
-    llvm::Instruction *OpInst = dyn_cast<llvm::Instruction>(OpVal);
-    if (!OpInst) continue;
-
-    for (llvm::User *User : OpInst->users()) {
-      if (llvm::Instruction *UserInst = dyn_cast<llvm::Instruction>(User)) {
-        llvm::BasicBlock *UserBB = UserInst->getParent();
-        if (UserBB != InstBB) {
-          dbgs() << "Inst's operand is used in another block: " << *UserInst << " in " << (UserBB->hasName() ? UserBB->getName() : "unnamed") << "\n";
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-#endif
   for (Value *OpVal : Inst->operand_values()) {
     auto *OpInst = dyn_cast<Instruction>(OpVal);
     if (!OpInst)
