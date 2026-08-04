@@ -13343,13 +13343,15 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
     setRoot(To);
 }
 
-
-/// ReplaceAllUsesOfValueExceptSelfWith - Identical to ReplaceAllUsesOfValueWith,
-/// but skips the replacement when the user of To is To itself. This can occur in
-/// cases where atemporary  self-referential TokenFactor node is created.
-void SelectionDAG::ReplaceAllUsesOfValueExceptSelfWith(SDValue From, SDValue To){
+/// ReplaceAllUsesOfValueExceptSelfWith - Identical to
+/// ReplaceAllUsesOfValueWith, but skips the replacement when the user of To is
+/// To itself. This can occur in cases where atemporary  self-referential
+/// TokenFactor node is created.
+void SelectionDAG::ReplaceAllUsesOfValueExceptSelfWith(SDValue From,
+                                                       SDValue To) {
   // Handle the really simple, really trivial case efficiently.
-  if (From == To) return;
+  if (From == To)
+    return;
 
   // Handle the simple, trivial, case efficiently.
   if (From.getNode()->getNumValues() == 1) {
@@ -13421,7 +13423,6 @@ void SelectionDAG::ReplaceAllUsesOfValueExceptSelfWith(SDValue From, SDValue To)
   if (From == getRoot())
     setRoot(To);
 }
-
 
 namespace {
 
@@ -13740,7 +13741,8 @@ void SelectionDAG::AddDbgValue(SDDbgValue *DB, bool isParameter) {
 void SelectionDAG::AddDbgLabel(SDDbgLabel *DB) { DbgInfo->add(DB); }
 
 SDValue SelectionDAG::makeEquivalentMemoryOrdering(SDValue OldChain,
-                                                   SDValue NewMemOpChain, bool SkipSelfReplacement) {
+                                                   SDValue NewMemOpChain,
+                                                   bool SkipSelfReplacement) {
   assert(isa<MemSDNode>(NewMemOpChain) && "Expected a memop node");
   assert(NewMemOpChain.getValueType() == MVT::Other && "Expected a token VT");
   // The new memory operation must have the same position as the old load in
