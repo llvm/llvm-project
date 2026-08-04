@@ -17,7 +17,7 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-struct FlattenCFGPass : RequiredPassInfoMixin<FlattenCFGPass> {
+struct FlattenCFGPass : OptionalPassInfoMixin<FlattenCFGPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm

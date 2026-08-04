@@ -509,7 +509,7 @@ void initializeAMDGPURewriteUndefForPHILegacyPass(PassRegistry &);
 extern char &AMDGPURewriteUndefForPHILegacyPassID;
 
 class AMDGPURewriteUndefForPHIPass
-    : public RequiredPassInfoMixin<AMDGPURewriteUndefForPHIPass> {
+    : public OptionalPassInfoMixin<AMDGPURewriteUndefForPHIPass> {
 public:
   AMDGPURewriteUndefForPHIPass() = default;
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
