@@ -80,7 +80,7 @@ def deleteMatchingLines(fileName: str, pattern: str) -> bool:
 def getListOfFiles(clang_tidy_path: str) -> List[str]:
     files = glob.glob(os.path.join(clang_tidy_path, "**"), recursive=True)
     files += [
-        os.path.normpath(os.path.join(clang_tidy_path, "../docs/ReleaseNotes.rst"))
+        os.path.normpath(os.path.join(clang_tidy_path, "../docs/ReleaseNotes.md"))
     ]
     files += glob.glob(
         os.path.join(clang_tidy_path, "..", "test", "clang-tidy", "checkers", "**"),
@@ -183,7 +183,7 @@ def add_release_notes(
     clang_tidy_path: str, old_check_name: str, new_check_name: str
 ) -> None:
     filename = os.path.normpath(
-        os.path.join(clang_tidy_path, "../docs/ReleaseNotes.rst")
+        os.path.join(clang_tidy_path, "../docs/ReleaseNotes.md")
     )
     with io.open(filename, "r", encoding="utf8") as f:
         lines = f.readlines()
