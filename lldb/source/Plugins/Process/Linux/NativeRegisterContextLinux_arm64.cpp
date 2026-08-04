@@ -579,7 +579,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetFPMROffset();
     assert(offset < GetSetSize(RegisterSetType::FPMR));
-    src = (uint8_t *)GetFPMRBuffer() + offset;
+    src = (uint8_t *)GetSetBuffer(RegisterSetType::FPMR) + offset;
   } else if (GetRegisterInfo().IsGCSReg(reg)) {
     error = ReadGCS();
     if (error.Fail())
@@ -862,7 +862,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetFPMROffset();
     assert(offset < GetSetSize(RegisterSetType::FPMR));
-    dst = (uint8_t *)GetFPMRBuffer() + offset;
+    dst = (uint8_t *)GetSetBuffer(RegisterSetType::FPMR) + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteFPMR();
@@ -1102,7 +1102,8 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   }
 
   if (GetRegisterInfo().IsFPMRPresent()) {
-    dst = AddSavedRegisters(dst, RegisterSetType::FPMR, GetFPMRBuffer(),
+    dst = AddSavedRegisters(dst, RegisterSetType::FPMR,
+                            GetSetBuffer(RegisterSetType::FPMR),
                             GetSetSize(RegisterSetType::FPMR));
   }
 
@@ -1330,7 +1331,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       break;
     case RegisterSetType::FPMR:
       error = RestoreRegisters(
-          GetFPMRBuffer(), &src, GetSetSize(RegisterSetType::FPMR), kind,
+          GetSetBuffer(RegisterSetType::FPMR), &src,
+          GetSetSize(RegisterSetType::FPMR), kind,
           std::bind(&NativeRegisterContextLinux_arm64::WriteFPMR, this));
       break;
     case RegisterSetType::GCS: {
@@ -1797,7 +1799,7 @@ Status NativeRegisterContextLinux_arm64::ReadFPMR() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetFPMRBuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::FPMR);
   ioVec.iov_len = GetSetSize(RegisterSetType::FPMR);
 
   error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::FPMR),
@@ -1817,7 +1819,7 @@ Status NativeRegisterContextLinux_arm64::WriteFPMR() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetFPMRBuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::FPMR);
   ioVec.iov_len = GetSetSize(RegisterSetType::FPMR);
 
   Invalidate(RegisterSetType::FPMR);

@@ -268,8 +268,6 @@ private:
 
   void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); }
 
-  void *GetFPMRBuffer() { return &m_fpmr_reg; }
-
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
   llvm::Error ReadHardwareDebugInfo() override;
