@@ -2015,6 +2015,11 @@ public:
   /// uses of other values produced by From.getNode() alone.
   LLVM_ABI void ReplaceAllUsesOfValueWith(SDValue From, SDValue To);
 
+
+  /// Replace any uses of From with To, except when the user of To is To
+  // itself, leaving uses of other values produced by From.getNode() alone.
+  LLVM_ABI void ReplaceAllUsesOfValueExceptSelfWith(SDValue From, SDValue To);
+
   /// Like ReplaceAllUsesOfValueWith, but for multiple values at once.
   /// This correctly handles the case where
   /// there is an overlap between the From values and the To values.
@@ -2027,7 +2032,7 @@ public:
   /// the same relative memory dependency position as the old load. Returns the
   /// new merged load chain.
   LLVM_ABI SDValue makeEquivalentMemoryOrdering(SDValue OldChain,
-                                                SDValue NewMemOpChain);
+                                                SDValue NewMemOpChain, bool SkipSelfReplacement = false);
 
   /// If an existing load has uses of its chain, create a token factor node with
   /// that chain and the new memory node's chain and update users of the old
