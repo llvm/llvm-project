@@ -4778,6 +4778,9 @@ bool TGParser::ParseFile() {
   if (Lex.getCode() == tgtok::Eof)
     return false;
 
+  if (Lex.getCode() == tgtok::Error)
+    return true;
+
   return TokError("Unexpected token at top level");
 }
 

@@ -119,6 +119,7 @@
 ; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Machine Trace Metrics
 ; CHECK-NEXT:       Early If-Conversion
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine InstCombiner
 ; CHECK-NEXT:       Machine Block Frequency Analysis
@@ -131,7 +132,6 @@
 ; CHECK-NEXT:       Machine code sinking
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
-; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       PowerPC Reduce CR logical Operation
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
 ; CHECK-NEXT:       Live Variable Analysis
