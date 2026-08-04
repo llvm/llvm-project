@@ -472,8 +472,7 @@ static cl::opt<int> ClDebugMax("asan-debug-max", cl::desc("Debug max inst"),
 
 static cl::opt<std::string> ClGlobalsMetadataSection(
     "asan-globals-metadata-section",
-    cl::desc("Emit global variable descriptions in a named section for "
-             "baremetal/linker-script targets"),
+    cl::desc("Emit global variable descriptions in a named section"),
     cl::init(""));
 
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
@@ -2810,10 +2809,6 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     GlobalsToAddToUsedList.push_back(G);
   }
   appendToCompilerUsed(M, ArrayRef<GlobalValue *>(GlobalsToAddToUsedList));
-
-  std::string ELFUniqueModuleId =
-      (UseGlobalsGC && TargetTriple.isOSBinFormatELF()) ? getUniqueModuleId(&M)
-                                                        : "";
 
   if (!ClGlobalsMetadataSection.empty()) {
     InstrumentGlobalsMetadataSection(IRB, NewGlobals, Initializers,
