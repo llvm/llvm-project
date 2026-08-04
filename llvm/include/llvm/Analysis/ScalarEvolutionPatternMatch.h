@@ -17,8 +17,6 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Support/PatternMatchHelpers.h"
 
-using namespace llvm::PatternMatchHelpers;
-
 namespace llvm {
 namespace PatternMatchHelpers {
 template <typename SCEVPtrT> struct match_bind<SCEVUseT<SCEVPtrT>> {
@@ -34,6 +32,8 @@ template <typename SCEVPtrT> struct match_bind<SCEVUseT<SCEVPtrT>> {
 } // namespace PatternMatchHelpers
 
 namespace SCEVPatternMatch {
+
+using namespace llvm::PatternMatchHelpers;
 
 template <typename Pattern> bool match(const SCEV *S, const Pattern &P) {
   return P.match(S);
