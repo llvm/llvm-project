@@ -469,7 +469,7 @@ void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
                                              raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   O << '.'
-    << nvvm::getTMAReductionOpName(
+    << nvvm::getTMATensorReductionOpName(
            static_cast<nvvm::TMAReductionOp>(MO.getImm()));
 }
 

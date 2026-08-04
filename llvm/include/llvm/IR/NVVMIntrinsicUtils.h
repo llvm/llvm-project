@@ -42,7 +42,7 @@ enum class TMAReductionOp : uint8_t {
   XOR = 7,
 };
 
-inline StringRef getTMAReductionOpName(TMAReductionOp Op) {
+inline StringRef getTMATensorReductionOpName(TMAReductionOp Op) {
   switch (Op) {
   case TMAReductionOp::ADD:
     return "add";
@@ -61,7 +61,7 @@ inline StringRef getTMAReductionOpName(TMAReductionOp Op) {
   case TMAReductionOp::XOR:
     return "xor";
   }
-  llvm_unreachable("invalid TMA reduction operation");
+  llvm_unreachable("invalid TMA tensorreduction operation");
 }
 
 // Enum to represent the cta_group::1 and

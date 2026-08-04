@@ -22,7 +22,8 @@ void nvvm::printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal) {
     llvm_unreachable(
         "printTMAReductionOp called with invalid value for immediate argument");
 
-  OS << getTMAReductionOpName(static_cast<TMAReductionOp>(CI->getZExtValue()));
+  OS << getTMATensorReductionOpName(
+      static_cast<TMAReductionOp>(CI->getZExtValue()));
 }
 
 void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
