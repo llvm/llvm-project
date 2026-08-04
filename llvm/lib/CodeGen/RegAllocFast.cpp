@@ -1872,6 +1872,15 @@ void RegAllocFastImpl::selectInlineAsmOperandsToFold(
       Blocked.push_back(Reg.asMCReg());
       continue;
     }
+    // A tied "+rm" pair (def + matching input) is one memory location
+    // shared between two different virtual registers once folded (see
+    // foldFoldableInlineAsmOperands()'s TiedUse handling below), and the
+    // register allocator must assign them the same physical register
+    // either way -- it's one unit of demand, not two. Count it once, via
+    // the def side; skip the tied use here so it isn't double-counted
+    // against the same register class.
+    if (MO.isTied() && MO.isUse())
+      continue;
     Demand &D = DemandByClass[MRI->getRegClass(Reg)];
     if (MI.mayFoldInlineAsmRegOp(I))
       D.Foldable.push_back(Reg);

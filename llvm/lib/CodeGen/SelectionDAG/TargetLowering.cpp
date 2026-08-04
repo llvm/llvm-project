@@ -6281,6 +6281,17 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
     if (OpInfo.hasMatchingInput()) {
       AsmOperandInfo &Input = ConstraintOperands[OpInfo.MatchingInput];
 
+      // The matching input's own constraint codes are just the matching
+      // digit (e.g. "0"), never {"r","m"}, so the {r,m}-exact-match check
+      // above that sets MayFoldRegister never fires for it directly. A tied
+      // "+rm" pair is one memory location shared between the def and its
+      // input once folded (see RegAllocFast::foldFoldableInlineAsmOperands's
+      // TiedUse handling and InlineSpiller's equivalent untie-then-recurse
+      // fold), so whether the pair may fold is really a property of the
+      // output side; propagate it here rather than leaving every other
+      // MayFoldRegister/RegMayBeFolded consumer to special-case tied inputs.
+      Input.MayFoldRegister = OpInfo.MayFoldRegister;
+
       if (OpInfo.ConstraintVT != Input.ConstraintVT) {
         std::pair<unsigned, const TargetRegisterClass *> MatchRC =
             getRegForInlineAsmConstraint(TRI, OpInfo.ConstraintCode,

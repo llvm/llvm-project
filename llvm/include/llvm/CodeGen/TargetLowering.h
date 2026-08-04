@@ -5351,11 +5351,14 @@ public:
     MVT ConstraintVT = MVT::Other;
 
     /// True if this operand's constraint codes are exactly {"r", "m"} (the
-    /// "rm" constraint, or the tied output half of "+rm"). getConstraintType
-    /// preference selection uses this to opt for 'r' while still allowing
-    /// the register allocator to fall back to 'm' under register pressure,
-    /// instead of picking 'm' unconditionally as it would for a generic
-    /// multi-alternative constraint.
+    /// "rm" constraint), or -- for the tied input half of a "+rm" pair,
+    /// whose own constraint codes are just the matching digit (e.g. "0") --
+    /// if the output operand it's tied to has this set (see
+    /// ParseConstraints()'s tied-operand hookup loop, which propagates it
+    /// there). getConstraintType preference selection uses this to opt for 'r'
+    /// while still allowing the register allocator to fall back to 'm' under
+    /// register pressure, instead of picking 'm' unconditionally as it would
+    /// for a generic multi-alternative constraint.
     bool MayFoldRegister = false;
 
     /// Copy constructor for copying from a ConstraintInfo.
