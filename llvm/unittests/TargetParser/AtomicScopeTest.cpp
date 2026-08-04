@@ -34,4 +34,32 @@ TEST(AtomicScopeTest, NonGPUTargetIsNone) {
   EXPECT_FALSE(parseAtomicScopeIRString(X86, "").has_value());
 }
 
+TEST(AtomicScopeTest, RoundTrip) {
+  static constexpr AtomicScope Scopes[] = {
+      AtomicScope::System,    AtomicScope::Device,    AtomicScope::Workgroup,
+      AtomicScope::Wavefront, AtomicScope::Single,    AtomicScope::Cluster};
+  const Triple Targets[] = {Triple("amdgcn-amd-amdhsa"),
+                            Triple("nvptx64-nvidia-cuda"),
+                            Triple("spirv64-unknown-unknown")};
+
+  for (const Triple &T : Targets) {
+    for (AtomicScope S : Scopes) {
+      for (bool IsSingleAddressSpace : {false, true}) {
+        auto Str = getAtomicScopeIRString(T, S, IsSingleAddressSpace);
+        if (!Str)
+          continue;
+        auto Parsed = parseAtomicScopeIRString(T, *Str);
+        ASSERT_TRUE(Parsed.has_value())
+            << "target=" << T.str() << " string='" << Str->str() << "'";
+
+        auto ReEmitted =
+            getAtomicScopeIRString(T, Parsed->first, Parsed->second);
+        ASSERT_TRUE(ReEmitted.has_value());
+        EXPECT_EQ(*ReEmitted, *Str)
+            << "target=" << T.str() << " string='" << Str->str() << "'";
+      }
+    }
+  }
+}
+
 } // namespace

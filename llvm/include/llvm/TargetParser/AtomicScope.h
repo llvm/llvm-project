@@ -32,21 +32,21 @@ enum class AtomicScope : unsigned {
 /// Returns the LLVM IR syncscope string that \p T uses to spell \p S.
 inline std::optional<StringRef>
 getAtomicScopeIRString(const Triple &T, AtomicScope S,
-                       bool OneAddressSpace = false) {
+                       bool IsSingleAddressSpace = false) {
   if (T.isAMDGPU()) {
     switch (S) {
     case AtomicScope::Single:
-      return OneAddressSpace ? "singlethread-one-as" : "singlethread";
+      return IsSingleAddressSpace ? "singlethread-one-as" : "singlethread";
     case AtomicScope::Wavefront:
-      return OneAddressSpace ? "wavefront-one-as" : "wavefront";
+      return IsSingleAddressSpace ? "wavefront-one-as" : "wavefront";
     case AtomicScope::Workgroup:
-      return OneAddressSpace ? "workgroup-one-as" : "workgroup";
+      return IsSingleAddressSpace ? "workgroup-one-as" : "workgroup";
     case AtomicScope::Cluster:
-      return OneAddressSpace ? "cluster-one-as" : "cluster";
+      return IsSingleAddressSpace ? "cluster-one-as" : "cluster";
     case AtomicScope::Device:
-      return OneAddressSpace ? "agent-one-as" : "agent";
+      return IsSingleAddressSpace ? "agent-one-as" : "agent";
     case AtomicScope::System:
-      return OneAddressSpace ? "one-as" : "";
+      return IsSingleAddressSpace ? "one-as" : "";
     }
     return std::nullopt;
   }
@@ -88,12 +88,14 @@ getAtomicScopeIRString(const Triple &T, AtomicScope S,
 }
 
 /// Parses a target syncscope string into its abstract scope, the inverse of
-/// getAtomicScopeIRString. Returns the scope and one-as variant if present.
+/// getAtomicScopeIRString. Returns the scope and whether it is the single
+/// address space variant.
 inline std::optional<std::pair<AtomicScope, bool>>
 parseAtomicScopeIRString(const Triple &T, StringRef Name) {
   using Result = std::optional<std::pair<AtomicScope, bool>>;
-  auto Make = [](AtomicScope S, bool OneAS) -> std::pair<AtomicScope, bool> {
-    return {S, OneAS};
+  auto Make = [](AtomicScope S,
+                 bool IsSingleAddressSpace) -> std::pair<AtomicScope, bool> {
+    return {S, IsSingleAddressSpace};
   };
   if (T.isAMDGPU())
     return StringSwitch<Result>(Name)

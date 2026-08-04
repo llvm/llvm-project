@@ -386,10 +386,12 @@ static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
 static inline StringRef mapScopeToSPIRV(const llvm::Triple &TargetTriple,
                                         StringRef AMDGCNScope) {
   static const llvm::Triple AMDGPU("amdgcn-amd-amdhsa");
-  if (auto Parsed = llvm::parseAtomicScopeIRString(AMDGPU, AMDGCNScope))
-    if (auto Str = llvm::getAtomicScopeIRString(TargetTriple, Parsed->first,
-                                                Parsed->second))
+  if (auto Parsed = llvm::parseAtomicScopeIRString(AMDGPU, AMDGCNScope)) {
+    auto [Scope, IsSingleAddressSpace] = *Parsed;
+    if (auto Str = llvm::getAtomicScopeIRString(TargetTriple, Scope,
+                                                IsSingleAddressSpace))
       return *Str;
+  }
   return AMDGCNScope;
 }
 
@@ -451,10 +453,11 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   AO = mapCABIAtomicOrdering(ord);
 
   // Some of the atomic builtins take the scope as a string name.
+  const llvm::Triple &TargetTriple = getTarget().getTriple();
   StringRef scp;
   if (llvm::getConstantStringInfo(Scope, scp)) {
-    if (getTarget().getTriple().isSPIRV())
-      scp = mapScopeToSPIRV(getTarget().getTriple(), scp);
+    if (TargetTriple.isSPIRV())
+      scp = mapScopeToSPIRV(TargetTriple, scp);
     SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
     return;
   }
