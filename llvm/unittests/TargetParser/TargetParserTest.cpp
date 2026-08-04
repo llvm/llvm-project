@@ -2787,6 +2787,35 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
   EXPECT_TRUE(HasFeature("gfx950", "bf16-cvt-insts"));
 }
 
+TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
+  // getFeatureBitset exposes the same per-GPU frontend feature set that
+  // fillAMDGPUFeatureMap consumes internally.
+  const AMDGPU::AMDGPUFeatureBitset &GFX900 =
+      AMDGPU::getFeatureBitset(AMDGPU::GK_GFX900);
+  EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_GFX9_INSTS));
+  EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_GFX8_INSTS));
+  EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_DPP));
+  EXPECT_TRUE(GFX900.test(AMDGPU::FEAT_WAVEFRONTSIZE64));
+  EXPECT_FALSE(GFX900.test(AMDGPU::FEAT_WAVEFRONTSIZE32));
+
+  // An unknown kind yields an empty bitset.
+  EXPECT_EQ(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE).count(), 0u);
+
+  // getFeatureNames maps the set bits back to their SubtargetFeature names, one
+  // per set bit.
+  SmallVector<StringRef, 0> Names;
+  AMDGPU::getFeatureNames(GFX900, Names);
+  EXPECT_EQ(Names.size(), GFX900.count());
+  EXPECT_NE(llvm::find(Names, "gfx9-insts"), Names.end());
+  EXPECT_NE(llvm::find(Names, "dpp"), Names.end());
+  EXPECT_NE(llvm::find(Names, "wavefrontsize64"), Names.end());
+  EXPECT_EQ(llvm::find(Names, "wavefrontsize32"), Names.end());
+
+  SmallVector<StringRef, 0> Empty;
+  AMDGPU::getFeatureNames(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE), Empty);
+  EXPECT_TRUE(Empty.empty());
+}
+
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
   SmallVector<StringRef, 0> All;
   AMDGPU::fillValidArchListAMDGCN(All, Triple::NoSubArch);
@@ -3120,12 +3149,12 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
   }
 
   EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908:xnack+:sramecc-")
-                ->getCanonicalTargetIDString(),
+                ->getCanonicalFeatureString(),
             "gfx908:sramecc-:xnack+");
-  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908")->getCanonicalTargetIDString(),
+  EXPECT_EQ(TargetID::parse(AMDHSA, "gfx908")->getCanonicalFeatureString(),
             "gfx908");
   EXPECT_EQ(TargetID::parse(Triple("amdgcn-amd-amdpal"), "gfx908:xnack-")
-                ->getCanonicalTargetIDString(),
+                ->getCanonicalFeatureString(),
             "gfx908:xnack-");
   EXPECT_TRUE(TargetID::parse(AMDHSA, "").has_value());
   EXPECT_FALSE(TargetID::parse(AMDHSA, "gfxbogus").has_value());
