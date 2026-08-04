@@ -90,6 +90,13 @@ public:
   /// Emit the module-level metadata that the platform cares about.
   virtual void emitModuleMetadata(MCStreamer &Streamer, Module &M) const {}
 
+  /// Get a read-only data section with the given name, using format-appropriate
+  /// defaults.
+  /// Returns nullptr if not supported by this object file format.
+  virtual MCSection *getNamedReadOnlySection(StringRef Name) const {
+    return nullptr;
+  }
+
   /// Emit Call Graph Profile metadata.
   void emitCGProfileMetadata(MCStreamer &Streamer, Module &M) const;
 

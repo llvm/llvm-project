@@ -377,6 +377,11 @@ void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
   emitCGProfileMetadata(Streamer, M);
 }
 
+MCSection *
+TargetLoweringObjectFileELF::getNamedReadOnlySection(StringRef Name) const {
+  return getContext().getELFSection(Name, ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
+}
+
 void TargetLoweringObjectFileELF::emitLinkerDirectives(MCStreamer &Streamer,
                                                        Module &M) const {
   auto &C = getContext();
@@ -1350,6 +1355,13 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   Streamer.addBlankLine();
 }
 
+MCSection *
+TargetLoweringObjectFileMachO::getNamedReadOnlySection(StringRef Name) const {
+  auto [Segment, SecName] = Name.split(',');
+  return getContext().getMachOSection(Segment, SecName, 0,
+                                      SectionKind::getReadOnly());
+}
+
 void TargetLoweringObjectFileMachO::emitLinkerDirectives(MCStreamer &Streamer,
                                                          Module &M) const {
   if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
@@ -1944,6 +1956,12 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   });
 }
 
+MCSection *
+TargetLoweringObjectFileCOFF::getNamedReadOnlySection(StringRef Name) const {
+  return getContext().getCOFFSection(
+      Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ);
+}
+
 void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
     MCStreamer &Streamer, Module &M) const {
   if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
@@ -2256,6 +2274,11 @@ void TargetLoweringObjectFileWasm::getModuleMetadata(Module &M) {
   for (GlobalValue *GV : Vec)
     if (auto *GO = dyn_cast<GlobalObject>(GV))
       Used.insert(GO);
+}
+
+MCSection *
+TargetLoweringObjectFileWasm::getNamedReadOnlySection(StringRef Name) const {
+  return getContext().getWasmSection(Name, SectionKind::getReadOnly());
 }
 
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
