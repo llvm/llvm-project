@@ -184,13 +184,13 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
 }
 
 TEST_F(PPDependencyDirectivesTest, HeaderNamesStartingWithCompoundTokens) {
-  StringRef Source =
-      "#if __has_include(<=>)\n"
-      "#include <=>\n"
-      "#endif\n"
-      "#if __has_include(<<>)\n"
-      "#include <<>\n"
-      "#endif\n";
+  StringRef Source = "#if __has_include(<=>)\n"
+                     "#include <=>\n"
+                     "#endif\n"
+                     "#if __has_include(<<>)\n"
+                     "#include <<>\n"
+                     "#endif\n"
+                     "#include \\\n<=>";
 
   SmallVector<dependency_directives_scan::Token> Tokens;
   SmallVector<dependency_directives_scan::Directive> Directives;
@@ -215,8 +215,7 @@ TEST_F(PPDependencyDirectivesTest, HeaderNamesStartingWithCompoundTokens) {
   VFS->setCurrentWorkingDirectory("/source");
   VFS->addFile("/source/=", 0, llvm::MemoryBuffer::getMemBuffer(""));
   VFS->addFile("/source/<", 0, llvm::MemoryBuffer::getMemBuffer(""));
-  VFS->addFile("/source/main.c", 0,
-               llvm::MemoryBuffer::getMemBuffer(Source));
+  VFS->addFile("/source/main.c", 0, llvm::MemoryBuffer::getMemBuffer(Source));
   FileMgr.setVirtualFileSystem(VFS);
 
   OptionalFileEntryRef FE;
@@ -250,8 +249,8 @@ TEST_F(PPDependencyDirectivesTest, HeaderNamesStartingWithCompoundTokens) {
   for (StringRef IncludedFile : IncludedFiles)
     IncludedFilesSlash.push_back(
         llvm::sys::path::convert_to_slash(IncludedFile));
-  SmallVector<std::string> ExpectedIncludes{"/source/main.c", "/source/=",
-                                            "/source/<"};
+  SmallVector<std::string> ExpectedIncludes{
+      "/source/main.c", "/source/=", "/source/<", "/source/="};
   EXPECT_EQ(IncludedFilesSlash, ExpectedIncludes);
 }
 

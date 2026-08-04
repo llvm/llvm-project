@@ -4708,6 +4708,8 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     }
 
     // Advance the index of lexed tokens.
+    // FIXME: This will skip too many tokens if the header-name ended in the
+    // middle of a token, such as in '<foo>='.
     while (true) {
       const dependency_directives_scan::Token &NextTok =
           DepDirectives.front().Tokens[NextDepDirectiveTokenIndex];

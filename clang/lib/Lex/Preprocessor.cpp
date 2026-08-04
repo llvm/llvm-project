@@ -1379,7 +1379,8 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
     if (auto NextTok = peekNextPPToken()) {
       if (NextTok->is(tok::raw_identifier))
         LookUpIdentifierInfo(*NextTok);
-      if (NextTok->isOneOf(tok::header_name, tok::identifier, tok::colon, tok::less)) {
+      if (NextTok->isOneOf(tok::header_name, tok::identifier, tok::colon,
+                           tok::less)) {
         Result.setKind(tok::kw_import);
         ModuleImportLoc = Result.getLocation();
         return true;
