@@ -35,6 +35,7 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/IR/Value.h>
 #include <mlir/IR/Visitors.h>
+#include <mlir/Interfaces/CallInterfaces.h>
 #include <mlir/Interfaces/LoopLikeInterface.h>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
@@ -134,6 +135,16 @@ static bool mustParallelizeOp(Operation *op) {
       .wasInterrupted();
 }
 
+// If val is defined by an hlfir.declare/fir.declare, returns the declared
+// memref (the value the declare wraps); otherwise returns val unchanged.
+static Value lookThroughDeclare(Value val) {
+  if (auto hlfirDecl = val.getDefiningOp<hlfir::DeclareOp>())
+    return hlfirDecl.getMemref();
+  if (auto firDecl = val.getDefiningOp<fir::DeclareOp>())
+    return firDecl.getMemref();
+  return val;
+}
+
 // Determines if a memory reference is thread-local in an OpenMP context.
 //
 // This is a best-effort analysis. We cannot definitively determine if code
@@ -174,19 +185,13 @@ static bool isOpenMPThreadLocalMemory(Operation *op, Value mem) {
     // sets the source value to the declare op result (not the block arg).
     // Trace through the declare to check if the underlying Memref is a
     // private block argument.
-    Value declMemref;
-    if (auto hlfirDecl = sourceValue.getDefiningOp<hlfir::DeclareOp>())
-      declMemref = hlfirDecl.getMemref();
-    else if (auto firDecl = sourceValue.getDefiningOp<fir::DeclareOp>())
-      declMemref = firDecl.getMemref();
-    if (declMemref) {
-      if (auto blockArg = llvm::dyn_cast<BlockArgument>(declMemref)) {
-        Operation *parentOp = blockArg.getOwner()->getParentOp();
-        if (auto argIface =
-                llvm::dyn_cast<omp::BlockArgOpenMPOpInterface>(parentOp)) {
-          if (llvm::is_contained(argIface.getPrivateBlockArgs(), blockArg))
-            return true;
-        }
+    if (auto blockArg =
+            llvm::dyn_cast<BlockArgument>(lookThroughDeclare(sourceValue))) {
+      Operation *parentOp = blockArg.getOwner()->getParentOp();
+      if (auto argIface =
+              llvm::dyn_cast<omp::BlockArgOpenMPOpInterface>(parentOp)) {
+        if (llvm::is_contained(argIface.getPrivateBlockArgs(), blockArg))
+          return true;
       }
     }
   }
@@ -272,8 +277,21 @@ static Value getOpenMPThreadLocalSource(Operation *op, Value mem) {
   if (!isOpenMPThreadLocalMemory(op, mem))
     return nullptr;
   fir::AliasAnalysis aliasAnalysis;
-  return llvm::dyn_cast_if_present<mlir::Value>(
+  Value source = llvm::dyn_cast_if_present<mlir::Value>(
       aliasAnalysis.getSource(mem).origin.u);
+  if (!source)
+    return nullptr;
+  // The alias analysis looks through a fir.declare/hlfir.declare that wraps an
+  // allocation, but stops at the declare result when it wraps a privatizing
+  // clause block argument (see isOpenMPThreadLocalMemory). A write through such
+  // a declare and a read of the block argument itself (or vice versa) would
+  // then result in different origins and fail to match, dropping a required
+  // broadcast. Look through the declare to the block argument so that both
+  // accesses canonicalize to the same key.
+  if (Value memref = lookThroughDeclare(source);
+      llvm::isa<BlockArgument>(memref))
+    return memref;
+  return source;
 }
 
 // Collects the thread-local memory locations that op writes to and that
@@ -319,6 +337,19 @@ static void collectThreadLocalWrites(Operation *op,
   }
 }
 
+// The thread-local locations that the whole team may read, used to decide
+// which writes performed inside an omp.single must be broadcasted with
+// copyprivate. "unknown" is set when an operation whose memory effects cannot
+// be determined is found (see collectThreadLocalReads): such an operation
+// might read any thread-local location, so every thread-local write then has
+// to be broadcasted to stay correct.
+struct ThreadLocalReads {
+  llvm::SmallDenseSet<Value> reads;
+  bool unknown = false;
+
+  bool mayBeReadByTeam(Value v) const { return unknown || reads.contains(v); }
+};
+
 // Collects into reads the thread-local allocations that are read anywhere in
 // scope. A thread-local location written from within an omp.single only needs
 // to be broadcasted if some other thread may later read it. The scope must be
@@ -328,9 +359,19 @@ static void collectThreadLocalWrites(Operation *op,
 // Reads are matched by their underlying thread-local allocation, mirroring
 // collectThreadLocalWrites, so that a load through a fir.declare/fir.convert
 // still keeps the corresponding write live for broadcasting.
-static void collectThreadLocalReads(Region &scope,
-                                    llvm::SmallDenseSet<Value> &reads) {
+//
+// An opaque call may read any thread-local location inside its callee, and a
+// memory-effecting operation may report a read of unspecified memory (a read
+// effect with no attached value). Neither read can be attributed to a specific
+// location, so reads.unknown is set to force every thread-local write to be
+// broadcasted. Other interface-less operations (e.g. omp.barrier, fir.declare)
+// have known, inspectable behaviour and are safe to ignore here.
+static void collectThreadLocalReads(Region &scope, ThreadLocalReads &reads) {
   scope.walk([&](Operation *op) {
+    if (isa<mlir::CallOpInterface>(op)) {
+      reads.unknown = true;
+      return;
+    }
     auto memEffects = dyn_cast<MemoryEffectOpInterface>(op);
     if (!memEffects)
       return;
@@ -340,10 +381,13 @@ static void collectThreadLocalReads(Region &scope,
       if (!isa<MemoryEffects::Read>(effect.getEffect()))
         continue;
       Value val = effect.getValue();
-      if (!val)
+      if (!val) {
+        // A read effect without an attached value reads unspecified memory.
+        reads.unknown = true;
         continue;
+      }
       if (Value source = getOpenMPThreadLocalSource(op, val))
-        reads.insert(source);
+        reads.reads.insert(source);
     }
   });
 }
@@ -432,11 +476,10 @@ static void cleanupBlock(Block *block) {
 // very last thing the omp.workshare region does, and thus whether the
 // synchronization of its last omp.single/omp.wsloop may be left to the
 // barrier emitted at the end of the omp.workshare region.
-static void
-parallelizeRegion(Region &sourceRegion, Region &targetRegion,
-                  IRMapping &rootMapping, Location loc, mlir::DominanceInfo &di,
-                  bool canUseNowait,
-                  const llvm::SmallDenseSet<Value> &threadLocalReads) {
+static void parallelizeRegion(Region &sourceRegion, Region &targetRegion,
+                              IRMapping &rootMapping, Location loc,
+                              mlir::DominanceInfo &di, bool canUseNowait,
+                              const ThreadLocalReads &threadLocalReads) {
   OpBuilder rootBuilder(sourceRegion.getContext());
   ModuleOp m = sourceRegion.getParentOfType<ModuleOp>();
   OpBuilder copyFuncBuilder(m.getBodyRegion());
@@ -524,7 +567,7 @@ parallelizeRegion(Region &sourceRegion, Region &targetRegion,
     // are used as is.
     llvm::SmallDenseSet<Value> seen(copyPrivate.begin(), copyPrivate.end());
     for (Value v : threadLocalWrites) {
-      if (!threadLocalReads.contains(v))
+      if (!threadLocalReads.mayBeReadByTeam(v))
         continue;
       Value mapped = singleMapping.lookupOrDefault(v);
       if (seen.insert(mapped).second)
@@ -724,7 +767,7 @@ LogicalResult lowerWorkshare(mlir::omp::WorkshareOp wsOp, DominanceInfo &di) {
     // omp.parallel is used as the scope so that reads performed after the
     // omp.workshare region are taken into account as well; if there is none,
     // fall back to the innermost isolated-from-above ancestor.
-    llvm::SmallDenseSet<Value> threadLocalReads;
+    ThreadLocalReads threadLocalReads;
     if (auto parallelOp = wsOp->getParentOfType<omp::ParallelOp>())
       collectThreadLocalReads(parallelOp.getRegion(), threadLocalReads);
     else if (Operation *top =

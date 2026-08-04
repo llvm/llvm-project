@@ -586,3 +586,68 @@ func.func @broadcast_when_written_through_declare(%shared: !fir.ref<i32>, %sink:
 
 // CHECK:       %[[TL:.*]] = fir.alloca i32
 // CHECK:       omp.single copyprivate(%[[TL]] -> @_workshare_copy_i32 : !fir.ref<i32>) {
+
+// -----
+
+// Check that a write performed from within an omp.single through an
+// hlfir.declare of a privatizing clause block argument is still broadcasted
+// when the location is read back through the block argument itself. The alias
+// analysis reports the declare result for the write but the block argument for
+// the read; getOpenMPThreadLocalSource canonicalizes both to the block
+// argument so the broadcast is not dropped.
+
+omp.private {type = private} @z_private : i32
+
+// CHECK-LABEL: func.func @broadcast_private_write_through_declare_read_direct
+func.func @broadcast_private_write_through_declare_read_direct(
+    %arg0: !fir.ref<i32>, %shared: !fir.ref<i32>, %sink: !fir.ref<i32>) {
+  omp.parallel private(@z_private %arg0 -> %priv_arg : !fir.ref<i32>) {
+    %decl:2 = hlfir.declare %priv_arg {uniq_name = "z"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    omp.workshare {
+      // The value comes from a shared load, so the store stays in the single.
+      %v = fir.load %shared : !fir.ref<i32>
+      fir.store %v to %decl#0 : !fir.ref<i32>
+      omp.terminator
+    }
+    // Read back the private variable directly through the block argument.
+    %r = fir.load %priv_arg : !fir.ref<i32>
+    fir.store %r to %sink : !fir.ref<i32>
+    omp.terminator
+  }
+  return
+}
+
+// CHECK:       omp.parallel private(@z_private %{{.*}} -> %[[PRIV:.*]] : !fir.ref<i32>) {
+// The broadcast copies the private block argument, matching the read.
+// CHECK:         omp.single copyprivate(%[[PRIV]] -> @_workshare_copy_i32 : !fir.ref<i32>) {
+
+// -----
+
+// Check that a thread-local location written from within an omp.single but
+// never read back through a visible load is still broadcasted when the team may
+// run an opaque call: the callee might read the location, and that read cannot
+// be attributed to a specific location. Contrast with
+// @write_only_thread_local_not_broadcast, which has no call and is left with a
+// plain omp.single.
+
+func.func private @opaque(!fir.ref<i32>)
+
+// CHECK-LABEL: func.func @opaque_call_forces_broadcast
+func.func @opaque_call_forces_broadcast(%shared: !fir.ref<i32>) {
+  omp.parallel {
+    %tl = fir.alloca i32
+    omp.workshare {
+      %v = fir.load %shared : !fir.ref<i32>
+      fir.store %v to %tl : !fir.ref<i32>
+      omp.terminator
+    }
+    // The callee might read %tl, so the write must be broadcasted.
+    fir.call @opaque(%tl) : (!fir.ref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// CHECK:       %[[TL:.*]] = fir.alloca i32
+// CHECK:         omp.single copyprivate(%[[TL]] -> @_workshare_copy_i32 : !fir.ref<i32>) {
+// CHECK:           fir.store %{{.*}} to %[[TL]] : !fir.ref<i32>
