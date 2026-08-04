@@ -1167,22 +1167,23 @@ static std::optional<NVPTX::L2Prefetch> parseL2Prefetch(StringRef Str) {
       .Default(std::nullopt);
 }
 
-template <typename T, typename ParseFn>
-static void parseMemCacheHintStringValue(LLVMContext &Ctx, StringRef Key,
-                                         const Metadata *Value, T &Result,
-                                         ParseFn Parse) {
+template <typename T>
+static std::optional<T>
+parseMemCacheHintStringValue(LLVMContext &Ctx, StringRef Key,
+                             const Metadata *Value,
+                             std::optional<T> (*Parse)(StringRef)) {
   const auto *Val = dyn_cast<MDString>(Value);
   if (!Val) {
     emitInvalidMemCacheHint(Ctx, Twine("'") + Key + "' expects a string value");
-    return;
+    return std::nullopt;
   }
 
   StringRef ValStr = Val->getString();
-  if (auto Parsed = Parse(ValStr))
-    Result = *Parsed;
-  else
+  auto Parsed = Parse(ValStr);
+  if (!Parsed)
     emitInvalidMemCacheHint(Ctx, Twine("unknown value '") + ValStr + "' for '" +
                                      Key + "'");
+  return Parsed;
 }
 
 static bool isGlobalOrGeneric(NVPTX::AddressSpace AddrSpace) {
@@ -1243,37 +1244,38 @@ std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
     const Metadata *Value = Node->getOperand(I + 1).get();
 
     if (KeyStr == "nvvm.l1_eviction") {
-      if (Subtarget->hasL1EvictionHint())
-        parseMemCacheHintStringValue(Ctx, KeyStr, Value, L1, parseL1Eviction);
+      auto ParsedL1 =
+          parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL1Eviction);
+      if (ParsedL1 && Subtarget->hasL1EvictionHint())
+        L1 = *ParsedL1;
       continue;
     }
 
     if (KeyStr == "nvvm.l2_eviction") {
-      NVPTX::L2Eviction ParsedL2 = NVPTX::L2Eviction::Normal;
-      parseMemCacheHintStringValue(Ctx, KeyStr, Value, ParsedL2,
-                                   parseL2Eviction);
-      if (isL2EvictionSupported(*Subtarget, Access, ParsedL2))
-        L2 = ParsedL2;
+      auto ParsedL2 =
+          parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL2Eviction);
+      if (ParsedL2 && isL2EvictionSupported(*Subtarget, Access, *ParsedL2))
+        L2 = *ParsedL2;
       continue;
     }
 
     if (KeyStr == "nvvm.l2_prefetch_size") {
-      NVPTX::L2Prefetch ParsedPrefetch = NVPTX::L2Prefetch::None;
-      parseMemCacheHintStringValue(Ctx, KeyStr, Value, ParsedPrefetch,
-                                   parseL2Prefetch);
-      if (isL2PrefetchSupported(*Subtarget, ParsedPrefetch, Access))
-        Prefetch = ParsedPrefetch;
+      auto ParsedPrefetch =
+          parseMemCacheHintStringValue(Ctx, KeyStr, Value, parseL2Prefetch);
+      if (ParsedPrefetch &&
+          isL2PrefetchSupported(*Subtarget, *ParsedPrefetch, Access))
+        Prefetch = *ParsedPrefetch;
       continue;
     }
 
     if (KeyStr == "nvvm.l2_cache_hint") {
-      if (isGlobalOrGeneric(Access.AddrSpace) && Subtarget->hasL2CacheHint()) {
-        if (auto *ValCI = mdconst::dyn_extract<ConstantInt>(Value))
-          CachePolicy = ValCI->getZExtValue();
-        else
-          emitInvalidMemCacheHint(
-              Ctx, "'nvvm.l2_cache_hint' expects an integer value");
-      }
+      const auto *ValCI = mdconst::dyn_extract<ConstantInt>(Value);
+      if (!ValCI)
+        emitInvalidMemCacheHint(
+            Ctx, "'nvvm.l2_cache_hint' expects an integer value");
+      else if (isGlobalOrGeneric(Access.AddrSpace) &&
+               Subtarget->hasL2CacheHint())
+        CachePolicy = ValCI->getZExtValue();
       continue;
     }
 

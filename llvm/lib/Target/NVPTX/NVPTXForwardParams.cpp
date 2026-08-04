@@ -112,7 +112,14 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
 
     Idx = getNamedOperandIdx(Opc, NVPTX::OpName::policy);
     assert(Idx != -1 && "no policy operand");
-    LI->getOperand(Idx).ChangeToRegister(NVPTX::NoRegister, false);
+    MachineOperand &Policy = LI->getOperand(Idx);
+    Register PolicyReg = Policy.getReg();
+    MachineInstr *PolicyDef =
+        PolicyReg.isValid() ? MRI.getVRegDef(PolicyReg) : nullptr;
+    Policy.ChangeToRegister(NVPTX::NoRegister, false);
+    // Remove the policy register's definition if it is now dead.
+    if (PolicyDef && PolicyDef->isDead(MRI))
+      RemoveList.push_back(PolicyDef);
   }
   return true;
 }

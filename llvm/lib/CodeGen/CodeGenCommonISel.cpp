@@ -34,7 +34,7 @@ const MDNode *llvm::getMemCacheHintMetadata(const Instruction &I,
   if (!MD)
     return nullptr;
 
-  for (unsigned Idx = 0, E = MD->getNumOperands(); Idx != E; Idx += 2) {
+  for (unsigned Idx = 0; Idx + 1 < MD->getNumOperands(); Idx += 2) {
     const auto *OpNoCI = mdconst::extract<ConstantInt>(MD->getOperand(Idx));
     const auto *Hint = cast<MDNode>(MD->getOperand(Idx + 1));
     if (OpNoCI->getZExtValue() == OperandNo)

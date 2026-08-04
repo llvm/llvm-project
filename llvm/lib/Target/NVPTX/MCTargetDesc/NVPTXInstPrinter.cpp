@@ -432,6 +432,7 @@ void NVPTXInstPrinter::printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
       return;
     }
   }
+  llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }
 
 void NVPTXInstPrinter::printCachePolicy(const MCInst *MI, int OpNum,

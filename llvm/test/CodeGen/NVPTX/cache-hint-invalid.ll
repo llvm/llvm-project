@@ -3,12 +3,15 @@
 ; RUN: llc < %t/bad-key.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-KEY
 ; RUN: llc < %t/bad-other-key.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-OTHER-KEY
 ; RUN: llc < %t/bad-l1-type.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-L1-TYPE
+; RUN: llc < %t/bad-l1-value.ll -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx50 2>&1 | FileCheck %s --check-prefix=BAD-L1-VALUE
 ; RUN: llc < %t/bad-l1-value.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-L1-VALUE
 ; RUN: llc < %t/bad-l2-type.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-L2-TYPE
 ; RUN: llc < %t/bad-l2-value.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-L2-VALUE
 ; RUN: llc < %t/bad-prefetch-type.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-PREFETCH-TYPE
 ; RUN: llc < %t/bad-prefetch-value.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-PREFETCH-VALUE
 ; RUN: llc < %t/bad-policy.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-POLICY
+; RUN: llc < %t/bad-policy.ll -mtriple=nvptx64 -mcpu=sm_60 -mattr=+ptx50 2>&1 | FileCheck %s --check-prefix=BAD-POLICY
+; RUN: llc < %t/bad-policy-shared.ll -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 2>&1 | FileCheck %s --check-prefix=BAD-POLICY-SHARED
 
 ;--- bad-empty.ll
 
@@ -124,6 +127,19 @@ define i32 @bad_prefetch_value(ptr addrspace(1) %p) {
 ; BAD-POLICY: warning: invalid NVPTX !mem.cache_hint metadata: 'nvvm.l2_cache_hint' expects an integer value
 define i32 @bad_cache_policy_value(ptr addrspace(1) %p) {
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !0
+  ret i32 %v
+}
+
+!0 = !{i32 0, !1}
+!1 = !{!"nvvm.l2_cache_hint", !"not_an_integer"}
+
+;--- bad-policy-shared.ll
+
+; nvvm.l2_cache_hint expects an integer cache-policy value even when the
+; address space does not support the hint.
+; BAD-POLICY-SHARED: warning: invalid NVPTX !mem.cache_hint metadata: 'nvvm.l2_cache_hint' expects an integer value
+define i32 @bad_cache_policy_value(ptr addrspace(3) %p) {
+  %v = load i32, ptr addrspace(3) %p, !mem.cache_hint !0
   ret i32 %v
 }
 
