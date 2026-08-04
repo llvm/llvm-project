@@ -1,0 +1,17 @@
+name: Checkout Baseline Tooling
+description: >-
+  Checkout the baseline tooling scripts prior to running any pre-commit hooks
+  or other GH action or workflow scripts.
+
+runs:
+  using: composite
+  steps:
+    - uses: llvm/llvm-project/.github/actions/checkout-baseline-tooling@main
+      with:
+        persist-credentials: false
+        sparse-checkout: |
+          llvm/utils/git/
+          .ci/
+          .github/
+        ref: main
+        path: baseline-scripts

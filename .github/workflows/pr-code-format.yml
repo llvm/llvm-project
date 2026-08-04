@@ -26,6 +26,9 @@ jobs:
           persist-credentials: false
           fetch-depth: 2
 
+      - name: Checkout Baseline Tooling
+        uses: llvm/llvm-project/.github/actions/checkout-baseline-tooling@main
+
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
@@ -49,10 +52,10 @@ jobs:
         # Create an empty comments file so the pr-write job doesn't fail.
         run: |
           echo "[]" > comments &&
-          python ./llvm/utils/git/code-format-helper.py \
+          python ./baseline-scripts/llvm/utils/git/code-format-helper.py \
             --write-comment-to-file \
             --token ${{ secrets.GITHUB_TOKEN }} \
-            --issue-number $GITHUB_PR_NUMBER \
+            --issue-number "$GITHUB_PR_NUMBER" \
             --start-rev HEAD~1 \
             --end-rev HEAD \
             --changed-files "$CHANGED_FILES"

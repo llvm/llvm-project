@@ -33,6 +33,9 @@ jobs:
           persist-credentials: false
           fetch-depth: 2
       
+      - name: Checkout Baseline Tooling
+        uses: llvm/llvm-project/.github/actions/checkout-baseline-tooling@main
+
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
@@ -55,7 +58,7 @@ jobs:
         run: |
           git config --global --add safe.directory '*'
 
-          . <(git diff --name-only HEAD~1...HEAD | python3 .ci/compute_projects.py)
+          . <(git diff --name-only HEAD~1...HEAD | python3 ./baseline-scripts/.ci/compute_projects.py)
 
           if [[ "${projects_to_build}" == "" ]]; then
             echo "No projects to analyze"
@@ -91,7 +94,7 @@ jobs:
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
           echo "[]" > comments &&
-          python3 llvm/utils/git/code-lint-helper.py \
+          python3 ./baseline-scripts/llvm/utils/git/code-lint-helper.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
             --start-rev HEAD~1 \
