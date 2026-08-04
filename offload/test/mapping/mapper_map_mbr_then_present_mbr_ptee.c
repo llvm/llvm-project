@@ -51,8 +51,8 @@ int main() {
   // CHECK-52: done
   //
   // clang-format off
-  // CHECK-60: omptarget message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
-  // CHECK-60: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK-60: message: device mapping required by 'present' map type modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
+  // CHECK-60: fatal error 1: failure of target construct while offloading is mandatory
   // clang-format on
 
   fprintf(stderr, "done\n");

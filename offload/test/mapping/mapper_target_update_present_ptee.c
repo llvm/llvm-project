@@ -53,8 +53,8 @@ int main() {
 
   // At 6.0 the out-of-bounds pointee fails the present check inside f1().
   // clang-format off
-  // CHECK-60-OOB: omptarget message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
-  // CHECK-60-OOB: omptarget fatal error 1: failure of target construct while offloading is mandatory
+  // CHECK-60-OOB: message: device mapping required by 'present' motion modifier does not exist for host address 0x{{0*}}[[#HOST_ADDR]] ([[#SIZE]] bytes)
+  // CHECK-60-OOB: fatal error 1: failure of target construct while offloading is mandatory
   // clang-format on
 #pragma omp target data map(from : s.y, x)
   {
