@@ -1611,3 +1611,218 @@ body: |
     $vgpr0 = COPY %4
     $vgpr1 = COPY %5
 ...
+
+# Vector to integer unmerge + merge combine tests.
+# G_UNMERGE_VALUES of a vector feeding G_MERGE_VALUES into an integer
+# should fold to direct G_UNMERGE_VALUES of the source vector.
+
+---
+name: vector_to_integer_merge_values
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: vector_to_integer_merge_values
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i16>), [[UV1:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY]](<4 x i16>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x i16>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[UV1]](<2 x i16>)
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[BITCAST]], [[C1]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[LSHR]], [[C]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[AND]], [[SHL]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[BITCAST1]], [[C1]]
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[LSHR1]], [[C]](i32)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[AND1]], [[SHL1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[OR]](i32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[OR1]](i32)
+    %0:_(<4 x i16>) = COPY $vgpr0_vgpr1
+    %1:_(i16), %2:_(i16), %3:_(i16), %4:_(i16) = G_UNMERGE_VALUES %0:_(<4 x i16>)
+    %5:_(i32) = G_MERGE_VALUES %1:_(i16), %2:_(i16)
+    %6:_(i32) = G_MERGE_VALUES %3:_(i16), %4:_(i16)
+    $vgpr0 = COPY %5:_(i32)
+    $vgpr1 = COPY %6:_(i32)
+...
+---
+name: vector_to_integer_build_vector
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: vector_to_integer_build_vector
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i16>), [[UV1:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY]](<4 x i16>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x i16>), [[UV3:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY]](<4 x i16>)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](<2 x i16>)
+    ; CHECK-NEXT: $vgpr1 = COPY [[UV3]](<2 x i16>)
+    %0:_(<4 x i16>) = COPY $vgpr0_vgpr1
+    %1:_(i16), %2:_(i16), %3:_(i16), %4:_(i16) = G_UNMERGE_VALUES %0:_(<4 x i16>)
+    %5:_(<2 x i16>) = G_BUILD_VECTOR %1:_(i16), %2:_(i16)
+    %6:_(<2 x i16>) = G_BUILD_VECTOR %3:_(i16), %4:_(i16)
+    $vgpr0 = COPY %5:_(<2 x i16>)
+    $vgpr1 = COPY %6:_(<2 x i16>)
+...
+---
+name: integer_to_vector_no_fold
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: integer_to_vector_no_fold
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](i64)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x i32>)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i32), %2:_(i32) = G_UNMERGE_VALUES %0:_(i64)
+    %3:_(<2 x i32>) = G_BUILD_VECTOR %1:_(i32), %2:_(i32)
+    $vgpr0_vgpr1 = COPY %3:_(<2 x i32>)
+...
+---
+name: equal_size_no_fold
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: equal_size_no_fold
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<2 x i32>)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[UV]](i32), [[UV1]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](i64)
+    %0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %1:_(i32), %2:_(i32) = G_UNMERGE_VALUES %0:_(<2 x i32>)
+    %3:_(i64) = G_MERGE_VALUES %1:_(i32), %2:_(i32)
+    $vgpr0_vgpr1 = COPY %3:_(i64)
+...
+---
+name: vector_to_integer_eight_i16
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: vector_to_integer_eight_i16
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i16>), [[UV1:%[0-9]+]]:_(<2 x i16>), [[UV2:%[0-9]+]]:_(<2 x i16>), [[UV3:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY]](<8 x i16>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x i16>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[UV1]](<2 x i16>)
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(i32) = G_BITCAST [[UV2]](<2 x i16>)
+    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST2]], [[C]](i32)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST [[UV3]](<2 x i16>)
+    ; CHECK-NEXT: [[LSHR3:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST3]], [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[BITCAST]], [[C1]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[LSHR]], [[C]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[AND]], [[SHL]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[BITCAST1]], [[C1]]
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[LSHR1]], [[C]](i32)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[AND1]], [[SHL1]]
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(i32) = G_AND [[BITCAST2]], [[C1]]
+    ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(i32) = G_SHL [[LSHR2]], [[C]](i32)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[AND2]], [[SHL2]]
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(i32) = G_AND [[BITCAST3]], [[C1]]
+    ; CHECK-NEXT: [[SHL3:%[0-9]+]]:_(i32) = G_SHL [[LSHR3]], [[C]](i32)
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(i32) = G_OR [[AND3]], [[SHL3]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[OR]](i32)
+    ; CHECK-NEXT: $vgpr1 = COPY [[OR1]](i32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[OR2]](i32)
+    ; CHECK-NEXT: $vgpr3 = COPY [[OR3]](i32)
+    %0:_(<8 x i16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(i16), %2:_(i16), %3:_(i16), %4:_(i16), %5:_(i16), %6:_(i16), %7:_(i16), %8:_(i16) = G_UNMERGE_VALUES %0:_(<8 x i16>)
+    %9:_(i32) = G_MERGE_VALUES %1:_(i16), %2:_(i16)
+    %10:_(i32) = G_MERGE_VALUES %3:_(i16), %4:_(i16)
+    %11:_(i32) = G_MERGE_VALUES %5:_(i16), %6:_(i16)
+    %12:_(i32) = G_MERGE_VALUES %7:_(i16), %8:_(i16)
+    $vgpr0 = COPY %9:_(i32)
+    $vgpr1 = COPY %10:_(i32)
+    $vgpr2 = COPY %11:_(i32)
+    $vgpr3 = COPY %12:_(i32)
+...
+---
+name: non_zero_start_index
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: non_zero_start_index
+    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i16>), [[UV1:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY]](<4 x i16>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV1]](<2 x i16>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[BITCAST]], [[C1]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[LSHR]], [[C]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[AND]], [[SHL]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[OR]](i32)
+    %0:_(<4 x i16>) = COPY $vgpr0_vgpr1
+    %1:_(i16), %2:_(i16), %3:_(i16), %4:_(i16) = G_UNMERGE_VALUES %0:_(<4 x i16>)
+    %5:_(i32) = G_MERGE_VALUES %3:_(i16), %4:_(i16)
+    $vgpr0 = COPY %5:_(i32)
+...
+
+# Integer to vector unmerge + build_vector combine tests.
+# G_UNMERGE_VALUES of an integer feeding G_BUILD_VECTOR into a vector should
+# fold to direct G_UNMERGE_VALUES of the source integer.
+
+---
+name: integer_to_vector_build_vector
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: integer_to_vector_build_vector
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](i128)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[UV2]](i32), [[UV3]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x i32>)
+    ; CHECK-NEXT: $vgpr2_vgpr3 = COPY [[BUILD_VECTOR1]](<2 x i32>)
+    %0:_(i128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(i32), %2:_(i32), %3:_(i32), %4:_(i32) = G_UNMERGE_VALUES %0:_(i128)
+    %5:_(<2 x i32>) = G_BUILD_VECTOR %1:_(i32), %2:_(i32)
+    %6:_(<2 x i32>) = G_BUILD_VECTOR %3:_(i32), %4:_(i32)
+    $vgpr0_vgpr1 = COPY %5:_(<2 x i32>)
+    $vgpr2_vgpr3 = COPY %6:_(<2 x i32>)
+...
+---
+name: integer_to_vector_non_divisible
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: integer_to_vector_non_divisible
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](i128)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x i32>) = G_BUILD_VECTOR [[UV]](i32), [[UV1]](i32), [[UV2]](i32)
+    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<3 x i32>) = G_BUILD_VECTOR [[UV3]](i32), [[UV]](i32), [[UV1]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x i32>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR1]](<3 x i32>)
+    %0:_(i128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(i32), %2:_(i32), %3:_(i32), %4:_(i32) = G_UNMERGE_VALUES %0:_(i128)
+    %9:_(<3 x i32>) = G_BUILD_VECTOR %1:_(i32), %2:_(i32), %3:_(i32)
+    %10:_(<3 x i32>) = G_BUILD_VECTOR %4:_(i32), %1:_(i32), %2:_(i32)
+    $vgpr0_vgpr1_vgpr2 = COPY %9:_(<3 x i32>)
+    $vgpr0_vgpr1_vgpr2 = COPY %10:_(<3 x i32>)
+...
