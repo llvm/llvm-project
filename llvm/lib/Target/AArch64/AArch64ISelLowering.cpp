@@ -8837,7 +8837,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::GET_ACTIVE_LANE_MASK:
     return LowerGET_ACTIVE_LANE_MASK(Op, DAG);
   case ISD::VECTOR_MATCH:
-    return LowerVectorMatch(Op, DAG, Subtarget);
+    return LowerVectorMatch(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:
     if (Op.getValueType().isVector())
