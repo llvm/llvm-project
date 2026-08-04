@@ -239,7 +239,6 @@ void TracePC::IterateCoveredFunctions(CallBack CB) {
   for (size_t i = 0; i < NumPCTables; i++) {
     auto &M = ModulePCTable[i];
     assert(M.Start < M.Stop);
-    auto ModuleName = GetModuleName(M.Start->PC);
     for (auto NextFE = M.Start; NextFE < M.Stop; ) {
       auto FE = NextFE;
       assert(PcIsFuncEntry(FE) && "Not a function entry point");
