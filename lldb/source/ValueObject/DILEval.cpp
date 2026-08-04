@@ -1092,13 +1092,10 @@ Interpreter::ValidateComparison(BinaryOpKind kind, lldb::ValueObjectSP &lhs,
   }
 
   // Check if the value can be compared to a pointer. We allow all pointers,
-  // integers, unscoped enumerations and a nullptr literal if it's an
-  // equality/inequality comparison. For "pointer <-> integer" C++ allows only
-  // equality/inequality comparison against literal zero and nullptr. However in
-  // the debugger context it's often useful to compare a pointer with an integer
-  // representing an address. That said, this also allows comparing nullptr and
-  // any integer, not just literal zero, e.g. "nullptr == 1 -> false". C++
-  // doesn't allow it, but we implement this for convenience.
+  // integers, unscoped enumerations and a `nullptr` literal if it's an
+  // equality/inequality comparison, including comparing a pointer with an
+  // integer representing an address. This also allows comparing `nullptr` and
+  // any integer, not just literal zero, e.g. `nullptr == 1` is false.
   auto comparable_to_pointer = [&](CompilerType t) {
     return t.IsPointerType() || t.IsInteger() ||
            t.IsUnscopedEnumerationType() || (!is_ordered && t.IsNullPtrType());
