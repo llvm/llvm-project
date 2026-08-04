@@ -1340,7 +1340,8 @@ Status NativeRegisterContextLinux_arm64::ReadGPR() {
   ioVec.iov_base = GetGPRBuffer();
   ioVec.iov_len = GetGPRBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetGPRBufferSize(), llvm::ELF::NT_PRSTATUS);
+  error = ReadRegisterSet(&ioVec, GetGPRBufferSize(),
+                          GetPtraceSet(RegisterSetType::GPR));
 
   if (error.Success())
     MakeValid(RegisterSetType::GPR);
@@ -1359,7 +1360,8 @@ Status NativeRegisterContextLinux_arm64::WriteGPR() {
 
   Invalidate(RegisterSetType::GPR);
 
-  return WriteRegisterSet(&ioVec, GetGPRBufferSize(), llvm::ELF::NT_PRSTATUS);
+  return WriteRegisterSet(&ioVec, GetGPRBufferSize(),
+                          GetPtraceSet(RegisterSetType::GPR));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadFPR() {
@@ -1372,7 +1374,8 @@ Status NativeRegisterContextLinux_arm64::ReadFPR() {
   ioVec.iov_base = GetFPRBuffer();
   ioVec.iov_len = GetFPRSize();
 
-  error = ReadRegisterSet(&ioVec, GetFPRSize(), llvm::ELF::NT_FPREGSET);
+  error =
+      ReadRegisterSet(&ioVec, GetFPRSize(), GetPtraceSet(RegisterSetType::FPR));
   if (error.Success())
     MakeValid(RegisterSetType::FPR);
 
@@ -1390,7 +1393,8 @@ Status NativeRegisterContextLinux_arm64::WriteFPR() {
 
   Invalidate(RegisterSetType::FPR);
 
-  return WriteRegisterSet(&ioVec, GetFPRSize(), llvm::ELF::NT_FPREGSET);
+  return WriteRegisterSet(&ioVec, GetFPRSize(),
+                          GetPtraceSet(RegisterSetType::FPR));
 }
 
 void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
@@ -1429,7 +1433,8 @@ Status NativeRegisterContextLinux_arm64::ReadPAuthMask() {
   ioVec.iov_base = GetPACMask();
   ioVec.iov_len = GetPACMaskSize();
 
-  error = ReadRegisterSet(&ioVec, GetPACMaskSize(), llvm::ELF::NT_ARM_PAC_MASK);
+  error = ReadRegisterSet(&ioVec, GetPACMaskSize(),
+                          GetPtraceSet(RegisterSetType::PAC));
 
   if (error.Success())
     MakeValid(RegisterSetType::PAC);
@@ -1519,7 +1524,7 @@ Status NativeRegisterContextLinux_arm64::ReadMTEControl() {
   ioVec.iov_len = GetMTEControlSize();
 
   error = ReadRegisterSet(&ioVec, GetMTEControlSize(),
-                          llvm::ELF::NT_ARM_TAGGED_ADDR_CTRL);
+                          GetPtraceSet(RegisterSetType::MTE));
 
   if (error.Success())
     MakeValid(RegisterSetType::MTE);
@@ -1541,7 +1546,7 @@ Status NativeRegisterContextLinux_arm64::WriteMTEControl() {
   Invalidate(RegisterSetType::MTE);
 
   return WriteRegisterSet(&ioVec, GetMTEControlSize(),
-                          llvm::ELF::NT_ARM_TAGGED_ADDR_CTRL);
+                          GetPtraceSet(RegisterSetType::MTE));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadTLS() {
@@ -1554,7 +1559,8 @@ Status NativeRegisterContextLinux_arm64::ReadTLS() {
   ioVec.iov_base = GetTLSBuffer();
   ioVec.iov_len = GetTLSBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetTLSBufferSize(), llvm::ELF::NT_ARM_TLS);
+  error = ReadRegisterSet(&ioVec, GetTLSBufferSize(),
+                          GetPtraceSet(RegisterSetType::TLS));
 
   if (error.Success())
     MakeValid(RegisterSetType::TLS);
@@ -1575,7 +1581,8 @@ Status NativeRegisterContextLinux_arm64::WriteTLS() {
 
   Invalidate(RegisterSetType::TLS);
 
-  return WriteRegisterSet(&ioVec, GetTLSBufferSize(), llvm::ELF::NT_ARM_TLS);
+  return WriteRegisterSet(&ioVec, GetTLSBufferSize(),
+                          GetPtraceSet(RegisterSetType::TLS));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadGCS() {
@@ -1588,7 +1595,8 @@ Status NativeRegisterContextLinux_arm64::ReadGCS() {
   ioVec.iov_base = GetGCSBuffer();
   ioVec.iov_len = GetGCSBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetGCSBufferSize(), llvm::ELF::NT_ARM_GCS);
+  error = ReadRegisterSet(&ioVec, GetGCSBufferSize(),
+                          GetPtraceSet(RegisterSetType::GCS));
 
   if (error.Success())
     MakeValid(RegisterSetType::GCS);
@@ -1609,7 +1617,8 @@ Status NativeRegisterContextLinux_arm64::WriteGCS() {
 
   Invalidate(RegisterSetType::GCS);
 
-  return WriteRegisterSet(&ioVec, GetGCSBufferSize(), llvm::ELF::NT_ARM_GCS);
+  return WriteRegisterSet(&ioVec, GetGCSBufferSize(),
+                          GetPtraceSet(RegisterSetType::GCS));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadZAHeader() {
@@ -1622,7 +1631,8 @@ Status NativeRegisterContextLinux_arm64::ReadZAHeader() {
   ioVec.iov_base = GetZAHeader();
   ioVec.iov_len = GetZAHeaderSize();
 
-  error = ReadRegisterSet(&ioVec, GetZAHeaderSize(), llvm::ELF::NT_ARM_ZA);
+  error = ReadRegisterSet(&ioVec, GetZAHeaderSize(),
+                          GetPtraceSet(RegisterSetType::ZA));
 
   if (error.Success())
     MakeValid(RegisterSetType::ZA_HEADER);
@@ -1640,7 +1650,8 @@ Status NativeRegisterContextLinux_arm64::ReadZA() {
   ioVec.iov_base = GetZABuffer();
   ioVec.iov_len = GetZABufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetZABufferSize(), llvm::ELF::NT_ARM_ZA);
+  error = ReadRegisterSet(&ioVec, GetZABufferSize(),
+                          GetPtraceSet(RegisterSetType::ZA));
 
   if (error.Success())
     MakeValid(RegisterSetType::ZA);
@@ -1664,7 +1675,8 @@ Status NativeRegisterContextLinux_arm64::WriteZA() {
 
   Invalidate(RegisterSetType::ZA);
 
-  return WriteRegisterSet(&ioVec, GetZABufferSize(), llvm::ELF::NT_ARM_ZA);
+  return WriteRegisterSet(&ioVec, GetZABufferSize(),
+                          GetPtraceSet(RegisterSetType::ZA));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadZT() {
@@ -1677,7 +1689,8 @@ Status NativeRegisterContextLinux_arm64::ReadZT() {
   ioVec.iov_base = GetZTBuffer();
   ioVec.iov_len = GetZTBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetZTBufferSize(), llvm::ELF::NT_ARM_ZT);
+  error = ReadRegisterSet(&ioVec, GetZTBufferSize(),
+                          GetPtraceSet(RegisterSetType::ZT));
   if (error.Success())
     MakeValid(RegisterSetType::ZT);
 
@@ -1697,7 +1710,8 @@ Status NativeRegisterContextLinux_arm64::WriteZT() {
 
   Invalidate(RegisterSetType::ZT);
 
-  return WriteRegisterSet(&ioVec, GetZTBufferSize(), llvm::ELF::NT_ARM_ZT);
+  return WriteRegisterSet(&ioVec, GetZTBufferSize(),
+                          GetPtraceSet(RegisterSetType::ZT));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadFPMR() {
@@ -1710,7 +1724,8 @@ Status NativeRegisterContextLinux_arm64::ReadFPMR() {
   ioVec.iov_base = GetFPMRBuffer();
   ioVec.iov_len = GetFPMRBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetFPMRBufferSize(), llvm::ELF::NT_ARM_FPMR);
+  error = ReadRegisterSet(&ioVec, GetFPMRBufferSize(),
+                          GetPtraceSet(RegisterSetType::FPMR));
 
   if (error.Success())
     MakeValid(RegisterSetType::FPMR);
@@ -1731,7 +1746,8 @@ Status NativeRegisterContextLinux_arm64::WriteFPMR() {
 
   Invalidate(RegisterSetType::FPMR);
 
-  return WriteRegisterSet(&ioVec, GetFPMRBufferSize(), llvm::ELF::NT_ARM_FPMR);
+  return WriteRegisterSet(&ioVec, GetFPMRBufferSize(),
+                          GetPtraceSet(RegisterSetType::FPMR));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadPOE() {
@@ -1744,7 +1760,8 @@ Status NativeRegisterContextLinux_arm64::ReadPOE() {
   ioVec.iov_base = GetPOEBuffer();
   ioVec.iov_len = GetPOEBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetPOEBufferSize(), llvm::ELF::NT_ARM_POE);
+  error = ReadRegisterSet(&ioVec, GetPOEBufferSize(),
+                          GetPtraceSet(RegisterSetType::POE));
 
   if (error.Success())
     MakeValid(RegisterSetType::POE);
@@ -1765,7 +1782,8 @@ Status NativeRegisterContextLinux_arm64::WritePOE() {
 
   Invalidate(RegisterSetType::POE);
 
-  return WriteRegisterSet(&ioVec, GetPOEBufferSize(), llvm::ELF::NT_ARM_POE);
+  return WriteRegisterSet(&ioVec, GetPOEBufferSize(),
+                          GetPtraceSet(RegisterSetType::POE));
 }
 
 void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
