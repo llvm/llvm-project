@@ -1478,13 +1478,7 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
   }
 
-  if (Target.getTriple().isAMDGPU() ||
-      (Target.getTriple().isSPIRV() &&
-       Target.getTriple().getVendor() == llvm::Triple::AMD) ||
-      (AuxTarget &&
-       (AuxTarget->getTriple().isAMDGPU() ||
-        ((AuxTarget->getTriple().isSPIRV() &&
-          AuxTarget->getTriple().getVendor() == llvm::Triple::AMD))))) {
+  if (Target.hasAMDGPUTypes() || (AuxTarget && (AuxTarget->hasAMDGPUTypes()))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
   InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AMDGPUTypes.def"

@@ -4998,7 +4998,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
   SDValue Ptr = getValue(PtrOperand);
   SDValue Src0 = getValue(Src0Operand);
   SDValue Mask = getValue(MaskOperand);
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
 
   EVT VT = Src0.getValueType();
 
@@ -5148,7 +5148,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
   SDValue Ptr = getValue(PtrOperand);
   SDValue Src0 = getValue(Src0Operand);
   SDValue Mask = getValue(MaskOperand);
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
 
   EVT VT = Src0.getValueType();
   AAMDNodes AAInfo = I.getAAMetadata();
@@ -8923,7 +8923,7 @@ void SelectionDAGBuilder::visitVPStore(
   if (!Alignment)
     Alignment = DAG.getEVTAlign(VT);
   SDValue Ptr = OpValues[1];
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   MachineMemOperand::Flags MMOFlags =
       TLI.getVPIntrinsicMemOperandFlags(VPIntrin);
@@ -9027,7 +9027,7 @@ void SelectionDAGBuilder::visitVPStridedStore(
 
   SDValue ST = DAG.getStridedStoreVP(
       getMemoryRoot(), DL, OpValues[0], OpValues[1],
-      DAG.getUNDEF(OpValues[1].getValueType()), OpValues[2], OpValues[3],
+      DAG.getPOISON(OpValues[1].getValueType()), OpValues[2], OpValues[3],
       OpValues[4], VT, MMO, ISD::UNINDEXED, /*IsTruncating*/ false,
       /*IsCompressing*/ false);
 

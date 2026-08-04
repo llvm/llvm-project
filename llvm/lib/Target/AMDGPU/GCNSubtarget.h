@@ -753,6 +753,10 @@ public:
     return hasPackedFP32Ops() || hasPackedFP32SingleSGPROps();
   };
 
+  bool hasAnyPackedFP64Ops() const { return hasPackedFP64SingleSGPROps(); };
+
+  bool hasAnyPackedU64Ops() const { return hasPackedU64SingleSGPROps(); };
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::getSGPRAllocGranule(getTargetID().getGPUKind());

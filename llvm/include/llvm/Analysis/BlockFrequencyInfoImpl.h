@@ -589,22 +589,22 @@ struct IrreducibleGraph {
   using BlockNode = BFIBase::BlockNode;
   struct IrrNode {
     BlockNode Node;
-    unsigned NumIn = 0;
-    std::deque<const IrrNode *> Edges;
+    SmallVector<const IrrNode *, 4> Succs;
 
     IrrNode(const BlockNode &Node) : Node(Node) {}
 
-    using iterator = std::deque<const IrrNode *>::const_iterator;
+    using iterator = SmallVectorImpl<const IrrNode *>::const_iterator;
 
-    iterator pred_begin() const { return Edges.begin(); }
-    iterator succ_begin() const { return Edges.begin() + NumIn; }
-    iterator pred_end() const { return succ_begin(); }
-    iterator succ_end() const { return Edges.end(); }
+    iterator succ_begin() const { return Succs.begin(); }
+    iterator succ_end() const { return Succs.end(); }
   };
   BlockNode Start;
   const IrrNode *StartIrr = nullptr;
   std::vector<IrrNode> Nodes;
   SmallDenseMap<uint32_t, IrrNode *, 4> Lookup;
+
+  /// The position of \p N in \a Nodes, for indexing side tables.
+  unsigned getIndex(const IrrNode *N) const { return N - Nodes.data(); }
 
   /// Construct an explicit graph containing irreducible control flow.
   ///
@@ -1173,16 +1173,17 @@ template <class BT> void BlockFrequencyInfoImpl<BT>::initializeLoops() {
 }
 
 template <class BT> void BlockFrequencyInfoImpl<BT>::computeMassInLoops() {
-  // Visit loops with the deepest first, and the top-level loops last.
-  for (auto L = Loops.rbegin(), E = Loops.rend(); L != E; ++L) {
+  // Visit loops with the deepest first, and the top-level loops last. The first
+  // computeMassInLoop returns false if *L contains an irreducible sub-SCC.
+  // computeIrreducibleMass then packages each such SCC into a new loop,
+  // inserted immediately after *L.
+  for (auto L = Loops.end(), B = Loops.begin(); L != B;) {
+    --L;
     if (computeMassInLoop(*L))
       continue;
-    auto Next = std::next(L);
-    computeIrreducibleMass(&*L, L.base());
-    L = std::prev(Next);
-    if (computeMassInLoop(*L))
-      continue;
-    llvm_unreachable("unhandled irreducible control flow");
+    computeIrreducibleMass(&*L, std::next(L));
+    if (!computeMassInLoop(*L))
+      llvm_unreachable("unhandled irreducible control flow");
   }
 }
 
