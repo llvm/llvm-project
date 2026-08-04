@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: std-at-least-c++17
+
+// UNSUPPORTED: libcpp-has-no-incomplete-pstl
+
 // <algorithm>
 
 // template<class ExecutionPolicy, class ForwardIterator, class Size, class T>
