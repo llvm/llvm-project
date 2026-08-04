@@ -904,9 +904,36 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
                 FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
   bool SkipConstantFolds =
-      (CF || CINT) && IsPowr && !FPOp->hasNoNaNs() &&
+      IsPowr && !FPOp->hasNoNaNs() &&
       !cannotBeOrderedLessThanZero(
           opr0, SQ.getWithInstruction(cast<Instruction>(FPOp)));
+
+  if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
+    // pow[r](x, [-]0.5) = sqrt(x) / rsqrt(x)
+    //
+    // sqrt/rsqrt and pow disagree on two negative inputs:
+    //   pow(-Inf, 0.5) == +Inf  but  sqrt(-Inf) == NaN   (ninf case)
+    //   pow(-0.0, 0.5) == +0.0  but  sqrt(-0.0) == -0.0  (nsz case)
+    // powr requires x >= 0 by the OpenCL spec, so -Inf is undefined behaviour
+    // and the ninf check can be skipped for powr/powr_fast. -0.0 is a valid
+    // input for powr since -0.0 >= 0 by IEEE comparison, so nsz is still
+    // required for all variants. sqrt/rsqrt already return NaN for a
+    // negative base like powr does, so this fold skips the base-sign check.
+    if (FPOp->hasNoSignedZeros() && (IsPowr || FPOp->hasNoInfs())) {
+      bool issqrt = CF->isExactlyValue(0.5);
+      if (FunctionCallee FPExpr =
+              getFunction(M, AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
+                                                  : AMDGPULibFunc::EI_RSQRT,
+                                           FInfo))) {
+        LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << FInfo.getName()
+                          << '(' << *opr0 << ")\n");
+        Value *nval = CreateCallEx(B, FPExpr, opr0,
+                                   issqrt ? "__pow2sqrt" : "__pow2rsqrt");
+        replaceCall(FPOp, nval);
+        return true;
+      }
+    }
+  }
 
   if (!SkipConstantFolds) {
     if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
@@ -943,32 +970,6 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
       Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
       replaceCall(FPOp, nval);
       return true;
-    }
-
-    if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
-      // pow[r](x, [-]0.5) = sqrt(x) / rsqrt(x)
-      //
-      // sqrt/rsqrt and pow disagree on two negative inputs:
-      //   pow(-Inf, 0.5) == +Inf  but  sqrt(-Inf) == NaN   (ninf case)
-      //   pow(-0.0, 0.5) == +0.0  but  sqrt(-0.0) == -0.0  (nsz case)
-      // powr requires x >= 0 by the OpenCL spec, so -Inf is undefined behaviour
-      // and the ninf check can be skipped for powr/powr_fast. -0.0 is a valid
-      // input for powr since -0.0 >= 0 by IEEE comparison, so nsz is still
-      // required for all variants.
-      if (FPOp->hasNoSignedZeros() && (IsPowr || FPOp->hasNoInfs())) {
-        bool issqrt = CF->isExactlyValue(0.5);
-        if (FunctionCallee FPExpr =
-                getFunction(M, AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
-                                                    : AMDGPULibFunc::EI_RSQRT,
-                                             FInfo))) {
-          LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << FInfo.getName()
-                            << '(' << *opr0 << ")\n");
-          Value *nval = CreateCallEx(B, FPExpr, opr0,
-                                     issqrt ? "__pow2sqrt" : "__pow2rsqrt");
-          replaceCall(FPOp, nval);
-          return true;
-        }
-      }
     }
   }
 

@@ -210,12 +210,12 @@ entry:
   ret float %call
 }
 
-; powr(x, 0.5) without nnan must NOT fold to sqrt: base may be negative.
+; powr(x, 0.5) folds to sqrt without nnan: sqrt(negative) is NaN, same as powr.
 define float @test_powr_afn_f32__half_no_nnan(float %x) #0 {
 ; CHECK-LABEL: define float @test_powr_afn_f32__half_no_nnan(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nsz afn float @_Z11__powr_fastff(float [[X]], float 5.000000e-01)
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz afn float @_Z4sqrtf(float [[X]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
@@ -249,12 +249,12 @@ entry:
   ret float %call
 }
 
-; powr(x, -0.5) without nnan must NOT fold to rsqrt: base may be negative.
+; powr(x, -0.5) folds to rsqrt without nnan: rsqrt(negative) is NaN, same as powr.
 define float @test_powr_afn_f32__neghalf_no_nnan(float %x) #0 {
 ; CHECK-LABEL: define float @test_powr_afn_f32__neghalf_no_nnan(
 ; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CALL:%.*]] = tail call nsz afn float @_Z11__powr_fastff(float [[X]], float -5.000000e-01)
+; CHECK-NEXT:    [[CALL:%.*]] = call nsz afn float @_Z5rsqrtf(float [[X]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:
