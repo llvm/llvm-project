@@ -1173,7 +1173,6 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
   // --- Write section data ---
   for (auto &E : Entries) {
     E.Data->writeTo(OS);
-    E.Data->clear();
   }
 
   // --- Write .strtab ---
@@ -1262,7 +1261,6 @@ Error DWPWriter::writeWASM(raw_pwrite_stream &OS) {
 
     // Data
     SD.writeTo(OS);
-    SD.clear();
   }
 
   return Error::success();

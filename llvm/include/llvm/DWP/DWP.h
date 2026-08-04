@@ -89,14 +89,13 @@ class LLVM_ABI DWPWriter {
 
     bool empty() const { return Chunks.empty() && Buffer.empty(); }
 
-    void writeTo(raw_ostream &OS) const {
+    void writeTo(raw_ostream &OS) {
       for (auto &C : Chunks)
         OS.write(C.data(), C.size());
       if (!Buffer.empty())
         OS.write(Buffer.data(), Buffer.size());
-    }
 
-    void clear() {
+      // Clear buffers to save some memory.
       Chunks = {};
       Buffer = {};
       OwnedBuffers = {};
