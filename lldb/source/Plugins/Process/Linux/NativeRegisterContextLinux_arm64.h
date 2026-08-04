@@ -274,8 +274,6 @@ private:
 
   void *GetZABuffer() { return m_za_ptrace_payload.data(); };
 
-  size_t GetZABufferSize() { return m_za_ptrace_payload.size(); }
-
   size_t GetMTEControlSize() { return sizeof(m_mte_ctrl_reg); }
 
   size_t GetTLSBufferSize() { return m_tls_size; }

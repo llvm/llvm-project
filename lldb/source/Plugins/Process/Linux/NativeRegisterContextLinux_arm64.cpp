@@ -1024,7 +1024,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   if ((m_sve_state != SVEState::Streaming) && GetRegisterInfo().IsZAPresent()) {
     // Use the header size not the buffer size, as we may be using the buffer
     // for fake data, which we do not want to write out.
-    assert(m_za_header.size <= GetZABufferSize());
+    assert(m_za_header.size <= GetSetSize(RegisterSetType::ZA));
     dst = AddSavedRegisters(dst, RegisterSetType::ZA, GetZABuffer(),
                             m_za_header.size);
   }
@@ -1042,7 +1042,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   }
 
   if ((m_sve_state == SVEState::Streaming) && GetRegisterInfo().IsZAPresent()) {
-    assert(m_za_header.size <= GetZABufferSize());
+    assert(m_za_header.size <= GetSetSize(RegisterSetType::ZA));
     dst = AddSavedRegisters(dst, RegisterSetType::ZA, GetZABuffer(),
                             m_za_header.size);
   }
@@ -1265,7 +1265,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       // may be incorrect due to being filled with dummy data previously. Resize
       // this so WriteZA uses the correct size.
       m_za_ptrace_payload.resize(m_za_header.size);
-      ::memcpy(GetZABuffer(), src, GetZABufferSize());
+      ::memcpy(GetZABuffer(), src, GetSetSize(RegisterSetType::ZA));
       MakeValid(RegisterSetType::ZA);
 
       error = WriteZA();
@@ -1279,7 +1279,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       // ZA buffer now has proper size, read back the data we wrote above, from
       // ptrace.
       error = ReadZA();
-      src += GetZABufferSize();
+      src += GetSetSize(RegisterSetType::ZA);
       break;
     case RegisterSetType::ZT:
       // Doing this would activate an inactive ZA, however we will only get here
@@ -1683,9 +1683,9 @@ Status NativeRegisterContextLinux_arm64::ReadZA() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetZABuffer();
-  ioVec.iov_len = GetZABufferSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::ZA);
 
-  error = ReadRegisterSet(&ioVec, GetZABufferSize(),
+  error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::ZA),
                           GetPtraceSet(RegisterSetType::ZA));
 
   if (error.Success())
@@ -1706,11 +1706,11 @@ Status NativeRegisterContextLinux_arm64::WriteZA() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetZABuffer();
-  ioVec.iov_len = GetZABufferSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::ZA);
 
   Invalidate(RegisterSetType::ZA);
 
-  return WriteRegisterSet(&ioVec, GetZABufferSize(),
+  return WriteRegisterSet(&ioVec, GetSetSize(RegisterSetType::ZA),
                           GetPtraceSet(RegisterSetType::ZA));
 }
 
