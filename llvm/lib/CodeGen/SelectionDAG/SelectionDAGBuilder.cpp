@@ -10397,8 +10397,9 @@ constructOperandInfo(ConstraintDecisionInfo &Info,
   return false;
 }
 
-/// Compute which constraint option to use for each operand.
-static void
+/// Compute which constraint option to use for each operand. Returns true (and
+/// sets Info.ErrorMsg) on failure.
+static bool
 computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
                        TargetLowering::AsmOperandInfoVector &TargetConstraints,
                        SelectionDAGBuilder &Builder, const TargetLowering &TLI,
@@ -10460,9 +10461,31 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     // need to provide an address for the memory input.
     if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
         !OpInfo.isIndirect) {
-      assert((OpInfo.isMultipleAlternative ||
-              (OpInfo.Type == InlineAsm::isInput)) &&
-             "Can only indirectify direct input operands!");
+      if (!OpInfo.isMultipleAlternative && OpInfo.Type != InlineAsm::isInput) {
+        // Indirectifying a direct operand this way -- taking the address of
+        // an existing value and switching the operand to reference it in
+        // memory -- only makes sense for an input: there's already a value
+        // to spill and reference by address. An output or clobber has no
+        // value yet (it's about to be produced), so there's nothing to
+        // spill; supporting that would mean synthesizing a stack slot,
+        // threading its address through as an out-parameter, and reloading
+        // the result afterward -- machinery this function doesn't have.
+        //
+        // In practice this is unreachable for Clang-generated IR: Clang only
+        // emits a direct (non-indirect) output for a constraint that
+        // doesn't allow memory at all (or, for an exact register-or-memory
+        // constraint like "rm", above -O0 -- see
+        // TargetLowering::MayFoldRegister and CGStmt.cpp's mirroring
+        // check), so a direct output constraint should never end up
+        // choosing C_Memory here. But hand-written or other-frontend IR can
+        // still construct this shape, so fail with a clean diagnostic
+        // rather than the assertion this used to be.
+        Info.ErrorMsg << "unsupported inline asm: constraint '"
+                      << OpInfo.ConstraintCode
+                      << "' cannot be satisfied in a register and has no "
+                         "memory to fall back to";
+        return true;
+      }
 
       // Memory operands really want the address of the value.
       Info.Chain = getAddressForMemoryInput(Info.Chain, Builder.getCurSDLoc(),
@@ -10475,6 +10498,8 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
       OpInfo.isIndirect = true;
     }
   }
+
+  return false;
 }
 
 /// Prepare DAG-level operands. As part of this, assign virtual and physical
@@ -10770,7 +10795,9 @@ determineConstraints(ConstraintDecisionInfo &Info,
     Info.Chain = Builder.lowerStartEH(Info.Chain, EHPadBB, Info.BeginLabel);
 
   // Second pass: Compute which constraint option to use.
-  computeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM, DAG);
+  if (computeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM,
+                             DAG))
+    return true;
 
   // AsmNodeOperands - The operands for the ISD::INLINEASM node.
   Info.AsmNodeOperands.push_back(SDValue()); // reserve space for input chain
