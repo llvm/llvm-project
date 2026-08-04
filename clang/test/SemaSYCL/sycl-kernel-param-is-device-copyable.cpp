@@ -48,6 +48,11 @@ class DeviceCopyable : public NotTriviallyCopyable {};
 template<>
 struct sycl::is_device_copyable<DeviceCopyable> : std::true_type {};
 
+struct DefinitelyCopyable {
+  int foo = 0;
+};
+static_assert(std::is_trivially_copyable_v<DefinitelyCopyable>,
+  "DefinitelyCopyable should be trivially copyable");
 
 // Check that sycl::is_device_copyable is respected
 namespace iscopyable1 {
@@ -58,8 +63,12 @@ void kernel_single_task(T t) {}
 
 void test() {
   DeviceCopyable a;
-  NotTriviallyCopyable b;
   kernel_single_task<KN<1>>(a);
+
+  NotTriviallyCopyable b;
   kernel_single_task<KN<2>>(b);
+
+  DefinitelyCopyable c;
+  kernel_single_task<KN<3>>(c);
 }
 } // namespace iscopyable1

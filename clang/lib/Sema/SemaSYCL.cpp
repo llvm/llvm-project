@@ -706,14 +706,14 @@ bool lookupIsDeviceCopyable(Sema &SemaRef, QualType &Ty, SourceLocation Loc) {
   SemaRef.LookupQualifiedName(IdentResult, SyclNamespace);
 
   if (IdentResult.isAmbiguous()) {
-    // TODO error or let go?
+    // TODO warn or error
     llvm::errs() << "debug2\n";
     return false;
   }
 
   ClassTemplateDecl *IDCDecl = IdentResult.getAsSingle<ClassTemplateDecl>();
   if (nullptr == IDCDecl) {
-    // TODO error or let go?
+    // TODO simply let go; it's undefined
     llvm::errs() << "debug3\n";
     return false;
   }
@@ -728,13 +728,13 @@ bool lookupIsDeviceCopyable(Sema &SemaRef, QualType &Ty, SourceLocation Loc) {
       /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
 
   if (IDCTrait.isNull()) {
-    // TODO error or let go?
+    // TODO simply let go; it's undefined
     llvm::errs() << "debug4\n";
     return false;
   }
   if (SemaRef.RequireCompleteType(Loc, IDCTrait,
                                   diag::err_sycl_incomplete_type_trait)) {
-    // TODO error or let go?
+    // TODO do I need this if?
     llvm::errs() << "debug5\n";
     return false;
   }
@@ -742,12 +742,13 @@ bool lookupIsDeviceCopyable(Sema &SemaRef, QualType &Ty, SourceLocation Loc) {
   CXXRecordDecl *RD = IDCTrait->getAsCXXRecordDecl();
   assert(RD && "specialization of class template is not a class?");
 
-  // Look up the ::promise_type member.
+  // Look up the ::value member.
   IdentifierInfo const &ValueIdent = Ctx.Idents.get("value");
   LookupResult ValueResult(SemaRef, &ValueIdent, Loc, Sema::LookupOrdinaryName);
   SemaRef.LookupQualifiedName(ValueResult, RD);
   if (ValueResult.empty() || ValueResult.isAmbiguous()) {
-    // TODO error or let go?
+    // TODO should I error or let go?
+    // definitely error on ambiguous, but what about empty?
     llvm::errs() << "debug6\n";
     return false;
   }
@@ -755,7 +756,7 @@ bool lookupIsDeviceCopyable(Sema &SemaRef, QualType &Ty, SourceLocation Loc) {
   ExprResult ValueExpr = SemaRef.BuildDeclarationNameExpr(
       CXXScopeSpec{}, ValueResult, /*NeedsADL=*/false);
   if (ValueExpr.isInvalid()) {
-    // TODO error or let go?
+    // TODO compiler error: this shouldn't happen?
     llvm::errs() << "debug7\n";
     return false;
   }
@@ -775,7 +776,7 @@ bool lookupIsDeviceCopyable(Sema &SemaRef, QualType &Ty, SourceLocation Loc) {
   ValueExpr = SemaRef.VerifyIntegerConstantExpression(ValueExpr.get(),
                                                       &IDCValue, Diagnoser);
   if (ValueExpr.isInvalid()) {
-    // TODO error or let go?
+    // TODO compiler error: this shouldn't happen?
     llvm::errs() << "debug8\n";
     return false;
   }
@@ -790,6 +791,22 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
       llvm::PointerUnion<const ParmVarDecl *, const CXXBaseSpecifier *,
                          const FieldDecl *>;
   SmallVector<ObjectAccess, 4> ObjectAccessPath;
+
+  struct DiagDetails {
+    QualType Type;
+    SourceLocation Loc;
+  };
+
+  // Return diagnostics info for an 'ObjectAccess' stored on ObjectAccessPath
+  DiagDetails getObjectAccessDiagDetails(ObjectAccess o) {
+    if (auto *PVD = dyn_cast<const ParmVarDecl *>(o))
+      return {PVD->getType(), PVD->getLocation()};
+    if (auto *FD = dyn_cast<const FieldDecl *>(o))
+      return {FD->getType(), FD->getLocation()};
+    if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(o))
+      return {BS->getType(), BS->getBaseTypeLoc()};
+    llvm_unreachable("Unexpected type in ObjectAccess");
+  }
 
   void emitObjectAccessPathNotes() {
     for (auto Parent : llvm::reverse(ObjectAccessPath)) {
@@ -869,29 +886,64 @@ public:
       return false;
     }
 
-    auto DirectParent = ObjectAccessPath.back();
+    DiagDetails Detail = getObjectAccessDiagDetails(ObjectAccessPath.back());
+
+    if (!lookupIsDeviceCopyable(SemaSYCLRef.SemaRef, Ty, Detail.Loc)) {
+      SemaSYCLRef.Diag(Detail.Loc,
+                        diag::err_sycl_kernel_param_not_device_copyable)
+          << Ty;
+      emitObjectAccessPathNotes();
+
+      IsValid = false;
+      return false;
+    }
+    // TODO the issue with this logic:
+    // - if a class is marked as copyable, I should STOP descending into the class's subfields
+    //   - we STOP because the user's declaration that a class is copyable should overwrite
+    //     the results of future traversals; we shouldn't descend any further 
+    //   - although, because we want to catch classes that are obviously not copyable, we'll
+    //     need to do a shallow traversal in the future, checking that there aren't data members
+    //     in the class that are obviously not copyable: this will need to be its own function
+    //     - the stop condition should be if there are stuff that obviously breaks SYCL spec
+    //       for "is device copyable"
+    // - if a class is not marked as copyable, _then_ descend into the class's subfields
+    //   - this is current behavior
+
+
+    // TODO Issue warning if type is obviously not copyable
+    // ... you can do this by making some sort of dict for memoizing whether or
+    // not a field/known type is not copyable
+
     // TODO Do I care about deep traversal + checking if every subfield within a
     // class is conformant?
     // TODO Do I at least need to dive into the lambdas
-    if (const ParmVarDecl *parmVar =
-            dyn_cast<const ParmVarDecl *>(DirectParent)) {
-      const CXXRecordDecl *RD = Ty.getNonReferenceType()->getAsCXXRecordDecl();
-      if (RD && !RD->isLambda() && (RD->isClass() || RD->isStruct())) {
-        if (!lookupIsDeviceCopyable(SemaSYCLRef.SemaRef, Ty,
-                                    parmVar->getLocation())) {
-          SemaSYCLRef.Diag(parmVar->getLocation(),
-                           diag::err_sycl_kernel_param_not_device_copyable)
-              << Ty;
-          emitObjectAccessPathNotes();
 
-          IsValid = false;
-          return false;
-        }
-        // TODO Issue warning if type is obviously not copyable
-        // ... but what does that mean? And how thorough do I want to check,
-        // even if the user has already marked it copyable?
-      }
-    }
+    // TODO I am not sure that parmVar guarantees base argument; we might be
+    // better off checking the objectaccess vector instead, althoug there has
+    // to be a better way to do this
+
+    //// ???: I don't think I need this check, it should be up to the logic of
+    //// this function to stop traversing 
+    // if (const ParmVarDecl *parmVar =
+    //         dyn_cast<const ParmVarDecl *>(DirectParent)) {
+    //   // TODO don't need this check, we can check after it failed I guess
+    //   const CXXRecordDecl *RD = Ty.getNonReferenceType()->getAsCXXRecordDecl();
+    //   if (RD && !RD->isLambda() && (RD->isClass() || RD->isStruct())) {
+    //     if (!lookupIsDeviceCopyable(SemaSYCLRef.SemaRef, Ty,
+    //                                 parmVar->getLocation())) {
+    //       SemaSYCLRef.Diag(parmVar->getLocation(),
+    //                        diag::err_sycl_kernel_param_not_device_copyable)
+    //           << Ty;
+    //       emitObjectAccessPathNotes();
+
+    //       IsValid = false;
+    //       return false;
+    //     }
+    //     // TODO Issue warning if type is obviously not copyable
+    //     // ... but what does that mean? And how thorough do I want to check,
+    //     // even if the user has already marked it copyable?
+    //   }
+    // }
     return true;
   }
 
