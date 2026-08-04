@@ -19,16 +19,10 @@ enum { alloc_size = ProcType::allocation_size(port_count, 1) };
 
 alignas(64) char buffer[alloc_size] = {0};
 
-// At namespace scope so the doorbell never refers to a dead local.
 uint64_t pending = 0;
 } // namespace
 
-// A doorbell can be only partially initialized. The AMDGPU offload plugin sets
-// 'value' to the address of a field inside its HSA signal, so it is never null,
-// while 'mailbox' is that signal's event mailbox pointer, which is null unless
-// the signal is backed by an interrupt. Ringing such a doorbell must not
-// dereference the null mailbox, and must still publish the pending work so a
-// polling server makes progress.
+// A null mailbox is ignored, but the work is still published.
 TEST(LlvmLibcRPCDoorbell, NotifyWithoutMailbox) {
   ProcType Proc(port_count, buffer);
 
@@ -39,13 +33,13 @@ TEST(LlvmLibcRPCDoorbell, NotifyWithoutMailbox) {
 
   Proc.notify(/*lane_mask=*/1);
 
-  // notify() has no effect when built with MSVC.
+  // notify() is a no-op on MSVC.
 #ifndef _MSC_VER
   EXPECT_EQ(pending, static_cast<uint64_t>(1));
 #endif
 }
 
-// A doorbell that was never configured at all is ignored entirely.
+// An unconfigured doorbell is ignored entirely.
 TEST(LlvmLibcRPCDoorbell, NotifyWithoutDoorbell) {
   ProcType Proc(port_count, buffer);
 
