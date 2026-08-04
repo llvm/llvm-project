@@ -1427,6 +1427,12 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       if (SrcVT.isVector() || DstVT.isVector())
         continue;
 
+      // bf16 never lives on the fp stack, so it needs no stack round trip. It
+      // is not an isScalarFPTypeInSSEReg type because it has no scalar compare
+      // or arithmetic instructions, but it is still held in an SSE register.
+      if (SrcVT == MVT::bf16 || DstVT == MVT::bf16)
+        continue;
+
       // If the source and destination are SSE registers, then this is a legal
       // conversion that should not be lowered.
       const X86TargetLowering *X86Lowering =
@@ -1481,6 +1487,12 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
 
       // If any of the sources are vectors, no fp stack involved.
       if (SrcVT.isVector() || DstVT.isVector())
+        continue;
+
+      // bf16 never lives on the fp stack, so it needs no stack round trip. It
+      // is not an isScalarFPTypeInSSEReg type because it has no scalar compare
+      // or arithmetic instructions, but it is still held in an SSE register.
+      if (SrcVT == MVT::bf16 || DstVT == MVT::bf16)
         continue;
 
       // If the source and destination are SSE registers, then this is a legal
