@@ -11,7 +11,7 @@
 // REQUIRES: stdlib=libc++
 // ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_HARDENING_MODE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE
 
-#include <vector> // pulls in the valid element access assertion
+#include <__assert>
 
 int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");

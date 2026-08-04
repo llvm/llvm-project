@@ -15,7 +15,7 @@
 // REQUIRES: stdlib=libc++
 // ADDITIONAL_COMPILE_FLAGS: -U_LIBCPP_ASSERTION_SEMANTIC -D_LIBCPP_ASSERTION_SEMANTIC=_LIBCPP_ASSERTION_SEMANTIC_OBSERVE
 
-#include <vector> // pulls in the valid element access assertion
+#include <__assert>
 
 int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
