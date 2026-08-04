@@ -1210,6 +1210,7 @@ public:
     ScalarsInSplitNodes.clear();
     MustGather.clear();
     ReassocScalarToTreeEntries.clear();
+    KeptReassocScalars.clear();
     NonScheduledFirst.clear();
     EntryToLastInstruction.clear();
     LastInstructionToPos.clear();
@@ -3935,6 +3936,11 @@ private:
   SmallDenseMap<const Value *, SmallVector<const TreeEntry *>>
       ReassocScalarToTreeEntries;
 
+  /// Peeled reassociated scalars that must survive erasure: claimed by a
+  /// gather node, listed in some tree entry's scalars, or feeding another
+  /// kept scalar.
+  SmallPtrSet<const Value *, 8> KeptReassocScalars;
+
   /// A set of first non-schedulable values.
   ValueSet NonScheduledFirst;
 
@@ -5069,8 +5075,14 @@ private:
           if (!ScheduleCopyableDataMap.empty()) {
             SmallVector<ScheduleCopyableData *> CopyableData =
                 getScheduleCopyableData(User, OpIdx, I);
-            for (ScheduleCopyableData *CD : CopyableData)
+            for (ScheduleCopyableData *CD : CopyableData) {
+              // Copyable elements modeled on a copyable user lane depend on
+              // the user's copyable scheduling data, not on the user itself,
+              // and are released when that copyable data is scheduled.
+              if (CD->getEdgeInfo().UserTE->isCopyableElement(User))
+                continue;
               DecrUnsched(CD, /*IsControl=*/false);
+            }
             if (!CopyableData.empty())
               return;
           }
@@ -5108,6 +5120,10 @@ private:
               }
             }
           }
+          // Tracks whether the bundle member instruction itself shows up in
+          // some operand column of its node (only copyable elements modeled
+          // through their own operands, like absorbed fmuls, do not).
+          bool FoundInOpColumns = false;
           // Decrement the unscheduled counter and insert to ready list if
           // ready.
           auto DecrUnschedForInst =
@@ -5220,6 +5236,7 @@ private:
                         IsBlended ? In->getOperand(OpIdx)
                                   : Bundle->getTreeEntry()->getOperand(
                                         OpIdx)[Lane])) {
+                  FoundInOpColumns |= I == In;
                   LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): "
                                     << *I << "\n");
                   DecrUnschedForInst(
@@ -5232,6 +5249,15 @@ private:
               It = std::find(std::next(It),
                              Bundle->getTreeEntry()->Scalars.end(), In);
             } while (It != Bundle->getTreeEntry()->Scalars.end());
+          }
+          // A copyable element absorbed into its user modeling (e.g. a
+          // copyable fmul turned into fmuladd(a, b, -0.0)) does not appear in
+          // the operand columns of its own node, so the scan above never
+          // releases the schedule data of the copyable instruction itself.
+          // Release it here to keep the unscheduled-deps counters balanced.
+          if (isa<ScheduleCopyableData>(BundleMember) && !FoundInOpColumns) {
+            if (ScheduleData *OpSD = getScheduleData(In))
+              DecrUnsched(OpSD, /*IsControl=*/false);
           }
           // Vector intrinsics may keep some arguments scalar (e.g. the
           // exponent of llvm.powi). Such scalar arguments are not modeled as
@@ -5288,7 +5314,12 @@ private:
                       continue;
                     for (ScheduleCopyableData *CD :
                          getScheduleCopyableData(In, U.getOperandNo(), OpI)) {
-                      DecrUnsched(CD, /*IsControl=*/false);
+                      // Deps of reassoc scalars modeled as copyable tree
+                      // operands are released by the operand scan above;
+                      // release each remaining dep only once.
+                      if (Checked.insert(std::make_pair(CD, U.getOperandNo()))
+                              .second)
+                        DecrUnsched(CD, /*IsControl=*/false);
                       ReleasedAsCopyable = true;
                     }
                   }
@@ -8884,6 +8915,22 @@ void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
+  // Peeled scalars still claimed by the tree (gathered or listed in some
+  // entry's scalars) survive as plain code, along with the peeled scalars
+  // in their operand chains, which no vector node can rematerialize.
+  KeptReassocScalars.clear();
+  SmallVector<const Value *, 8> KeptWorklist;
+  for (const Value *V : ReassocScalarToTreeEntries.keys())
+    if ((isGathered(V) || !getTreeEntries(V).empty()) &&
+        KeptReassocScalars.insert(V).second)
+      KeptWorklist.push_back(V);
+  while (!KeptWorklist.empty()) {
+    const Value *V = KeptWorklist.pop_back_val();
+    for (const Value *Op : cast<Instruction>(V)->operand_values())
+      if (ReassocScalarToTreeEntries.contains(Op) &&
+          KeptReassocScalars.insert(Op).second)
+        KeptWorklist.push_back(Op);
+  }
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
@@ -8938,8 +8985,10 @@ void BoUpSLP::buildExternalUses(
           continue;
 
         // Peeled reassociated scalars are subsumed by the flattened node and
-        // erased during vectorization, not external users.
-        if (isReassocScalarVectorized(UserInst)) {
+        // erased during vectorization, not external users. Kept ones survive
+        // and their uses of erased scalars become extracts like any other.
+        if (isReassocScalarVectorized(UserInst) &&
+            !KeptReassocScalars.contains(UserInst)) {
           LLVM_DEBUG(dbgs() << "SLP: \tInternal (reassociated) user will be "
                                "removed:"
                             << *U << ".\n");
@@ -11183,6 +11232,9 @@ class InstructionsCompatibilityAnalysis {
   const TargetLibraryInfo &TLI;
   unsigned MainOpcode = 0;
   Instruction *MainOp = nullptr;
+  /// Whether every copyable in the current value list is an absorbable
+  /// single-use fmul/fadd. Computed once per buildInstructionsState call.
+  bool AbsorbCopyableFMulOrFAdds = false;
 
   /// Checks if the opcode is supported as the main opcode for copyable
   /// elements.
@@ -11290,6 +11342,19 @@ class InstructionsCompatibilityAnalysis {
               MainBOOp1->getParent() == I->getParent())
             continue;
         }
+        // Keep fmuladd over fmul/fadd on a tie only when every copyable is
+        // an absorbed fmul/fadd.
+        if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp) &&
+            (I->getOpcode() == Instruction::FMul ||
+             I->getOpcode() == Instruction::FAdd) &&
+            AbsorbCopyableFMulOrFAdds)
+          continue;
+        // Same check when fmuladd replaces fmul/fadd on a tie.
+        if ((MainOp->getOpcode() == Instruction::FMul ||
+             MainOp->getOpcode() == Instruction::FAdd) &&
+            RecurrenceDescriptor::isFMulAddIntrinsic(I) &&
+            !AbsorbCopyableFMulOrFAdds)
+          continue;
       }
       UsedOutside = PUsedOutside;
       for (Instruction *I : P.second) {
@@ -11333,9 +11398,22 @@ class InstructionsCompatibilityAnalysis {
       return {V, V};
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
-    // fmuladd(0.0, -0.0, V) == V.
     if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
       Type *Ty = MainOp->getType();
+      if (S.hasAbsorbedCopyableFMulOrFAdd() &&
+          isAbsorbableCopyableFMulOrFAdd(S, V)) {
+        auto *I = cast<Instruction>(V);
+        // fmuladd(a, b, -0.0) == fmul a, b.
+        if (I->getOpcode() == Instruction::FMul)
+          return {I->getOperand(0), I->getOperand(1),
+                  ConstantFP::getNegativeZero(Ty)};
+        // fmuladd(1.0, a, b) == fadd a, b.
+        return {ConstantFP::get(Ty, 1.0), I->getOperand(0), I->getOperand(1)};
+      }
+      // fmuladd(V, 1.0, -0.0) == V.
+      if (S.getCopyableOpIdx() == 0)
+        return {V, ConstantFP::get(Ty, 1.0), ConstantFP::getNegativeZero(Ty)};
+      // fmuladd(0.0, -0.0, V) == V.
       return {ConstantFP::getZero(Ty), ConstantFP::getNegativeZero(Ty), V};
     }
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
@@ -11782,6 +11860,7 @@ public:
     }
     if (!VectorizeCopyableElements)
       return S;
+    AbsorbCopyableFMulOrFAdds = hasOnlyAbsorbableCopyableFMulOrFAdds(VL);
     findAndSetMainInstruction(VL, R);
     if (!MainOp)
       return S;
@@ -11792,6 +11871,14 @@ public:
     if (!WithProfitabilityCheck)
       return S;
     // Check if it is profitable to vectorize the instruction.
+    unsigned CopyableNum =
+        count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
+    // Absorb copyable single-use fmuls/fadds as fmuladd(a, b, -0.0) or
+    // fmuladd(1.0, a, b) when every copyable is such a binop: the binops die
+    // instead of being computed and gathered.
+    if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp) &&
+        AbsorbCopyableFMulOrFAdds)
+      S.setAbsorbCopyableFMulOrFAdd(true);
     SmallVector<BoUpSLP::ValueList> Operands = buildOperands(S, VL);
     auto BuildCandidates =
         [](SmallVectorImpl<std::pair<Value *, Value *>> &Candidates, Value *V1,
@@ -11858,13 +11945,11 @@ public:
         return OrigS;
       return S;
     }
-    // fmuladd is the only 3-operand copyable; the value sits in the addend.
+    // fmuladd is the only 3-operand copyable.
     assert((Operands.size() == 2 ||
             (Operands.size() == 3 &&
              RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
            "Unexpected number of operands!");
-    unsigned CopyableNum =
-        count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
     if (CopyableNum < VL.size() / 2)
       return S;
     // Too many phi copyables - exit.
@@ -11911,8 +11996,9 @@ public:
         }
       }
     }
-    // 2. Check, if operands can be vectorized. Skip for fmuladd; its addend
-    // is checked below and may legitimately hold many instructions.
+    // 2. Check, if operands can be vectorized. Skip for fmuladd; the
+    // copyable operand is checked below and may legitimately hold many
+    // instructions.
     if (Operands.size() == 2 &&
         count_if(Operands.back(), IsaPred<Instruction>) > 1)
       return OrigS;
@@ -11949,10 +12035,16 @@ public:
           count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
       return CopyableNum <= VL.size() / 2;
     };
-    // Check the addend for fmuladd, first operand otherwise.
-    if (!CheckOperand(Operands.size() == 2 ? Operands.front()
-                                           : Operands.back()))
-      return OrigS;
+    // Check the operand holding the copyable values.
+    if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
+      if (Operands.size() == 2)
+        return OrigS;
+      // Retry with the copyable modeled as the first multiplicand.
+      S.setCopyableOpIdx(0);
+      Operands = buildOperands(S, VL);
+      if (!CheckOperand(Operands[S.getCopyableOpIdx()]))
+        return OrigS;
+    }
 
     return S;
   }
@@ -11983,14 +12075,29 @@ public:
       // Operand-order normalization below swaps OpIdx 0 and OpIdx 1
       // of non-copyable lanes. That is only safe when the main op is
       // commutative (e.g. 0 - X is not X - 0, so `sub` must be
-      // excluded).
-      if (IsCommutative) {
+      // excluded). With absorbed fmul/fadd copyables the fmuladd
+      // multiplicands are commutative per lane and get normalized too;
+      // the 0/1 swaps never touch the addend column.
+      if (IsCommutative || S.hasAbsorbedCopyableFMulOrFAdd()) {
         // IsCommutative can hold for MainOp (e.g. a Sub/FSub feeding only
         // fabs/icmp-eq-0) without every lane sharing that property, so
-        // re-check the specific lane before swapping it.
+        // re-check the specific lane before swapping it. Absorbed fmul/fadd
+        // lanes are always commutative.
         auto CanSwap = [&](Value *V) {
+          if (S.hasAbsorbedCopyableFMulOrFAdd() &&
+              isAbsorbableCopyableFMulOrFAdd(S, V))
+            return true;
           return isCommutative(S.getMatchingMainOpOrAltOp(cast<Instruction>(V)),
                                V);
+        };
+        // Absorbed fmul/fadd copyables do not vote for the majority operand
+        // pattern (their multiplicand order is arbitrary) but take part
+        // in the swaps.
+        auto SwappableLane = [&](Value *V) {
+          return !isa<PoisonValue>(V) &&
+                 (!S.isCopyableElement(V) ||
+                  (S.hasAbsorbedCopyableFMulOrFAdd() &&
+                   isAbsorbableCopyableFMulOrFAdd(S, V)));
         };
         // Count (ID0, ID1) pair frequencies for operand normalization.
         // Pairs and their inverses are tracked under a canonical key
@@ -12001,12 +12108,15 @@ public:
           unsigned RevCount = 0;
         };
         SmallMapVector<std::pair<unsigned, unsigned>, PairInfo, 8> PairCounts;
+        SmallMapVector<unsigned, unsigned, 4> AddendIDCounts;
         unsigned MajID0 = 0, MajID1 = 0;
         for (auto [Idx, V] : enumerate(VL)) {
           if (S.isCopyableElement(V) || isa<PoisonValue>(V))
             continue;
           unsigned ID0 = Operands[0][Idx]->getValueID();
           unsigned ID1 = Operands[1][Idx]->getValueID();
+          if (S.hasAbsorbedCopyableFMulOrFAdd())
+            ++AddendIDCounts[Operands[2][Idx]->getValueID()];
           if (ID0 == ID1)
             continue;
           unsigned MinID = std::min(ID0, ID1);
@@ -12037,16 +12147,41 @@ public:
             }
           }
         }
-        // Normalize non-copyable lanes in two steps:
+        // Absorbed fadd copyables are fmuladd(1.0, a, b): pick the
+        // addend/multiplicand assignment matching the majority operand
+        // kinds of the non-copyable lanes in the multiplicand (1) and
+        // addend (2) columns.
+        if (S.hasAbsorbedCopyableFMulOrFAdd()) {
+          unsigned MajID2 = 0, Best2 = 0;
+          for (const auto &P : AddendIDCounts) {
+            if (P.second > Best2) {
+              Best2 = P.second;
+              MajID2 = P.first;
+            }
+          }
+          for (auto [Idx, V] : enumerate(VL)) {
+            auto *I = dyn_cast<Instruction>(V);
+            if (!I || I->getOpcode() != Instruction::FAdd ||
+                !isAbsorbableCopyableFMulOrFAdd(S, I))
+              continue;
+            unsigned ID1 = Operands[1][Idx]->getValueID();
+            unsigned ID2 = Operands[2][Idx]->getValueID();
+            unsigned Cur = (ID1 == MajID1) + (ID2 == MajID2);
+            unsigned Swapped = (ID2 == MajID1) + (ID1 == MajID2);
+            if (Swapped > Cur)
+              std::swap(Operands[1][Idx], Operands[2][Idx]);
+          }
+        }
+        // Normalize swappable lanes in two steps:
         // 1) Swap lanes whose operand types are the exact inverse of
         //    the majority pattern, making the non-copyable lanes
         //    consistent.
-        // 2) Independently, if a strict majority of non-copyable lanes
+        // 2) Independently, if a strict majority of swappable lanes
         //    have loads at OpIdx 1, swap those lanes to put loads at
         //    OpIdx 0 for better downstream vectorization.
         unsigned LAt0 = 0, LAt1 = 0, TotalNC = 0;
         for (auto [Idx, V] : enumerate(VL)) {
-          if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+          if (!SwappableLane(V))
             continue;
           // Step 1: swap exact-inverse lanes.
           if (BestCount > 0) {
@@ -12063,7 +12198,7 @@ public:
         // swap those lanes to put loads at OpIdx 0.
         if (TotalNC > 1 && LAt1 > LAt0 && LAt1 * 2 > TotalNC) {
           for (auto [Idx, V] : enumerate(VL)) {
-            if (S.isCopyableElement(V) || isa<PoisonValue>(V))
+            if (!SwappableLane(V))
               continue;
             if (!isa<LoadInst>(Operands[0][Idx]) &&
                 isa<LoadInst>(Operands[1][Idx]) && CanSwap(V))
@@ -19411,18 +19546,21 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
     }
     if (DeletedNodes.contains(TE.get()))
       continue;
-    if (!NodesCosts.contains(TE.get())) {
+    // Gather costs depend on the set of vectorized nodes available for
+    // reuse, which changes during trimming, so recalculate them for all
+    // gather nodes, not just for the transformed ones.
+    if (TE->isGather() || !NodesCosts.contains(TE.get())) {
       InstructionCost C =
           getEntryCost(TE.get(), VectorizedVals, CheckedExtracts);
       if (!C.isValid() || C == 0) {
-        NodesCosts.try_emplace(TE.get(), C);
+        NodesCosts[TE.get()] = C;
         continue;
       }
       uint64_t Scale = EntryToScale.lookup(TE.get());
       if (!Scale)
         Scale = getEntryEffectiveScale(*TE);
       C *= Scale;
-      NodesCosts.try_emplace(TE.get(), C);
+      NodesCosts[TE.get()] = C;
     }
   }
 
@@ -24801,6 +24939,14 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       BasicBlock::Create(Ctx, BB->getName() + ".rtscalar", Fn);
   BasicBlock *Tail = BasicBlock::Create(Ctx, BB->getName() + ".rtcont", Fn);
 
+  // Emit the runtime alias check while the block is still fully connected:
+  // LCSSA-preserving SCEV expansion rewrites out-of-loop uses of
+  // loop-defined bases to poison in predecessor-less blocks.
+  IRBuilder<> ChkBuilder(Term);
+  ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
+  SCEVExpander Exp(*SE, "slp.rtcheck");
+  Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
+
   // Clone the body into the scalar fallback block, in the original program
   // order (RTOrigBodyOrder).
   SmallDenseMap<Value *, Value *, 16> VMap;
@@ -24820,21 +24966,12 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
       if (Value *V = VMap.lookup(U.get()))
         U.set(V);
 
-  // Move the body (everything but PHIs and the terminator) into the vector
-  // block in the scheduled order.
-  for (Instruction &I : make_early_inc_range(*BB)) {
-    if (isa<PHINode>(&I) || I.isTerminator())
-      continue;
-    I.removeFromParent();
-    I.insertInto(VecBB, VecBB->end());
-  }
-
-  // Emit the runtime alias check before the still-present terminator, so the
-  // SCEV bounds are expanded at a valid insertion point.
-  IRBuilder<> ChkBuilder(Term);
-  ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
-  SCEVExpander Exp(*SE, "slp.rtcheck");
-  Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);
+  // Move the original body into the vector block in the current (scheduled)
+  // order, keeping the emitted check instructions in the header block.
+  SmallPtrSet<Instruction *, 16> BodyInsts(llvm::from_range, RTOrigBodyOrder);
+  for (Instruction &I : make_early_inc_range(*BB))
+    if (BodyInsts.contains(&I))
+      I.moveBefore(*VecBB, VecBB->end());
 
   // Move the original terminator into the continuation block and replace it
   // with the guard branch.
@@ -25643,8 +25780,11 @@ Value *BoUpSLP::vectorizeTree(
       RemovedInsts.push_back(I);
     }
 
-    // Erase peeled intermediates (not listed in Scalars).
+    // Erase peeled intermediates (not listed in Scalars), except the ones
+    // kept because the tree still claims them.
     for (Value *V : Entry->getReassocScalars()) {
+      if (KeptReassocScalars.contains(V))
+        continue;
 #ifndef NDEBUG
       for (User *U : V->users()) {
         LLVM_DEBUG(dbgs() << "SLP: \tvalidating user:" << *U << ".\n");
@@ -29521,7 +29661,9 @@ class HorizontalReduction {
     if (Kind == RecurKind::FMaximum || Kind == RecurKind::FMinimum)
       return ReductionOrdering::Unordered;
 
-    if (I->isAssociative())
+    // Reassociation alone cannot change the sign of a zero result, so nsz
+    // is not required for fadd reductions.
+    if (I->isAssociative() || (Kind == RecurKind::FAdd && I->hasAllowReassoc()))
       return ReductionOrdering::Unordered;
 
     return isCommutative(I) ? ReductionOrdering::Ordered
