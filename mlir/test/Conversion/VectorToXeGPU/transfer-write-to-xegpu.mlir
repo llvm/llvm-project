@@ -13,10 +13,10 @@ gpu.func @store_1D_vector(%vec: vector<8xf32>,
 // CHECK-LABEL:  @store_1D_vector(
 // CHECK-SAME:   %[[VEC:.+]]: vector<8xf32>,
 // CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
-// CHECK-DAG:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// CHECK-DAG:        %[[STEP:.+]] = vector.step
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK-DAG:    %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
+// CHECK-DAG:    %[[STEP:.+]] = vector.step
+// CHECK    :    arith.muli {{.*}} : index
+// CHECK    :    arith.addi {{.*}} : index
 // CHECK-DAG:    %[[BCAST:.+]] = vector.broadcast {{.*}} : index to vector<8xindex>
 // CHECK-DAG:    %[[IDX:.+]] = arith.addi %[[BCAST]], %{{.*}} : vector<8xindex>
 // CHECK-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
@@ -147,9 +147,9 @@ gpu.func @store_transposed(%vec: vector<8x16xf32>,
 // CHECK-SAME:   %[[SRC:.+]]: memref<32x64xf32>,
 // CHECK-SAME:   %[[OFFSET:.+]]: index
 // CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<8x16xi1>
-// CHECK-COUNT2: %[[STEP:.+]] = vector.step
-// CHECK-COUNT2: vector.shape_cast {{.*}}
-// CHECK-COUNT2: vector.broadcast {{.*}} : vector<8x16xindex>
+// CHECK     :   %[[STEP:.+]] = vector.step
+// CHECK     :   vector.shape_cast {{.*}}
+// CHECK     :   vector.broadcast {{.*}} : vector<8x16xindex>
 // CHECK-DAG:    %[[BCAST2:.+]] = vector.broadcast {{.*}} : index to vector<8x16xindex>
 // CHECK-DAG:    %[[IDX:.+]] = arith.addi %[[BCAST2]], {{.*}} : vector<8x16xindex>
 // CHECK-DAG:    %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<32x64xf32> -> index

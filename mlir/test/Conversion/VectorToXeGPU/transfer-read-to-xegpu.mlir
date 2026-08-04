@@ -13,8 +13,8 @@ gpu.func @load_1D_vector(%source: memref<8x16x32xf32>, %offset: index) -> vector
 // CHECK-SAME:   %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK:        %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
 // CHECK:        %[[STEP:.+]] = vector.step : vector<8xindex>
-// CHECK-COUNT2: arith.muli {{.*}} : index
-// CHECK-COUNT2: arith.addi {{.*}} : index
+// CHECK-COUNT-2: arith.muli {{.*}} : index
+// CHECK-COUNT-2: arith.addi {{.*}} : index
 // CHECK:        %[[SPLAT:.+]] = vector.broadcast {{.*}}:  index to vector<8xindex>
 // CHECK:        %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
 // CHECK:        %[[COLLAPSE:.+]] = memref.extract_aligned_pointer_as_index %[[SRC]] : memref<8x16x32xf32> -> index
