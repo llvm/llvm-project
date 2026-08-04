@@ -399,6 +399,39 @@ bool InstructionsState::isCopyableElement(Value *V) const {
          !Converter.hasCandidateOpcode(getOpcode());
 }
 
+bool isAbsorbableFMulOrFAdd(ArrayRef<Value *> VL, Value *V) {
+  auto *I = dyn_cast<Instruction>(V);
+  return I &&
+         (I->getOpcode() == Instruction::FMul ||
+          I->getOpcode() == Instruction::FAdd) &&
+         I->hasOneUse() && none_of(I->operands(), [&](Value *Op) {
+           return is_contained(VL, Op);
+         });
+}
+
+bool isAbsorbableCopyableFMulOrFAdd(const InstructionsState &S, Value *V) {
+  auto *I = dyn_cast<Instruction>(V);
+  return I && S.isCopyableElement(I) &&
+         (I->getOpcode() == Instruction::FMul ||
+          I->getOpcode() == Instruction::FAdd) &&
+         I->hasOneUse();
+}
+
+bool hasOnlyAbsorbableCopyableFMulOrFAdds(ArrayRef<Value *> VL) {
+  bool HasFMulOrFAdd = false;
+  for (Value *V : VL) {
+    if (isa<PoisonValue>(V))
+      continue;
+    auto *I = dyn_cast<Instruction>(V);
+    if (I && RecurrenceDescriptor::isFMulAddIntrinsic(I))
+      continue;
+    if (!isAbsorbableFMulOrFAdd(VL, V))
+      return false;
+    HasFMulOrFAdd = true;
+  }
+  return HasFMulOrFAdd;
+}
+
 bool InstructionsState::isExpandedBinOp(Value *V) const {
   assert(valid() && "InstructionsState is invalid.");
   if (isCopyableElement(V))
