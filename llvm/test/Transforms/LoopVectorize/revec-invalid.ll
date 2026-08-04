@@ -1,9 +1,9 @@
-; RUN: opt -S -passes=loop-vectorize -mtriple=aarch64 -mattr=+sve \
-; RUN:     -scalable-vectorization=on -force-vector-interleave=1 \
-; RUN:     -vectorize-vector-loops < %s | FileCheck %s --check-prefix=IR
-; RUN: opt -disable-output -passes=loop-vectorize -mtriple=aarch64 -mattr=+sve \
-; RUN:     -scalable-vectorization=on -force-vector-interleave=1 \
-; RUN:     -vectorize-vector-loops -pass-remarks-analysis=loop-vectorize \
+; RUN: opt -S -passes=loop-vectorize -vectorize-vector-loops \
+; RUN:     -force-vector-interleave=1 -force-vector-width="vscale x 1" \
+; RUN:     < %s | FileCheck %s --check-prefix=IR
+; RUN: opt -disable-output -passes=loop-vectorize -vectorize-vector-loops \
+; RUN:     -force-vector-interleave=1 -force-vector-width="vscale x 1" \
+; RUN:     -pass-remarks-analysis=loop-vectorize \
 ; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=REMARKS
 
 ; IR-LABEL: @insertelement_cost(
