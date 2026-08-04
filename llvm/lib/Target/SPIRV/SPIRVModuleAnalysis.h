@@ -231,9 +231,8 @@ struct ModuleAnalysisInfo {
       return "amdgpu.no.remote.memory";
     case AMDGPUAtomicMDKind::IgnoreDenormalMode:
       return "amdgpu.ignore.denormal.mode";
-    default:
-      llvm_unreachable("unknown AMDGPUAtomicMDKind");
     }
+    llvm_unreachable("unknown AMDGPUAtomicMDKind");
   }
 };
 } // namespace SPIRV
