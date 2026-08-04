@@ -264,8 +264,6 @@ private:
 
   void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
 
-  void *GetZTBuffer() { return m_zt_reg.data(); }
-
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
   llvm::Error ReadHardwareDebugInfo() override;
