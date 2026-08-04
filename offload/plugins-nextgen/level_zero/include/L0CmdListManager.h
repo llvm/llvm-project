@@ -13,6 +13,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CMDLISTMANAGER_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0CMDLISTMANAGER_H
 
+#include "APIHelpers.h"
 #include "L0Compat.h"
 #include "L0Context.h"
 #include "L0Defs.h"
@@ -177,16 +178,15 @@ public:
                            ze_event_handle_t SignalEvent = nullptr,
                            uint32_t NumWaitEvents = 0,
                            ze_event_handle_t *WaitEvents = nullptr) {
-    auto zeCommandListAppendHost = Context.zeCommandListAppendHostFunction;
-    if (!zeCommandListAppendHost)
+    if (!api_helper::canCall<zeCommandListAppendHostFunction>())
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "zeCommandListAppendHostFunction extension is not "
                            "available on this driver");
     std::lock_guard<std::mutex> Lock(Mtx);
-    CALL_ZE_RET_ERROR(zeCommandListAppendHost, CmdList,
-                      reinterpret_cast<void *>(Callback), UserData,
-                      /*pReserved*/ nullptr, SignalEvent, NumWaitEvents,
-                      WaitEvents);
+    CALL_ZE_RET_ERROR(
+        zeCommandListAppendHostFunction, CmdList,
+        reinterpret_cast<ze_host_function_callback_t>(Callback), UserData,
+        /*pNext*/ nullptr, SignalEvent, NumWaitEvents, WaitEvents);
     return Plugin::success();
   }
 };
