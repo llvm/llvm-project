@@ -159,9 +159,6 @@ public:
     Opts["cl_khr_global_int32_extended_atomics"] = true;
     Opts["cl_khr_local_int32_base_atomics"] = true;
     Opts["cl_khr_local_int32_extended_atomics"] = true;
-    // 64-bit atomics are supported natively on 64-bit targets, where
-    // MaxAtomicInlineWidth is the target pointer width. libclc needs these
-    // extensions enabled to define the 64-bit atomic builtins.
     if (MaxAtomicInlineWidth >= 64) {
       Opts["cl_khr_int64_base_atomics"] = true;
       Opts["cl_khr_int64_extended_atomics"] = true;
