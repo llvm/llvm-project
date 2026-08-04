@@ -266,8 +266,7 @@ public:
   VPValue *tryToExpand(const SCEV *S);
 
   /// Try to expand \p Pred into recipes and live-ins using the builder. Returns
-  /// nullptr if \p Pred cannot be expanded (not expected to happen for the
-  /// predicates we currently generate).
+  /// nullptr if \p Pred cannot be expanded yet.
   VPValue *tryToExpandPredicate(const SCEVPredicate *Pred);
 };
 //===----------------------------------------------------------------------===//

@@ -589,12 +589,18 @@ struct VPlanTransforms {
                                          VPRecipeBuilder &RecipeBuilder,
                                          VPCostContext &CostCtx);
 
-  /// \p MemOps must be updated to contain ones that haven't been processed by
-  /// the pass.
+  /// Search \p MemOps for strided accesses where the stride is only known at
+  /// runtime and specialize the plan so that these accesses become
+  /// unit-strided. This is done by introducing run-time checks to only execute
+  /// vector loop if the stride is unit-sized and replacing any references of
+  /// the stride inside vector region with speculated constant. This
+  /// transformation does NOT perform the actual widening of the memory
+  /// operations - that is left to the subsequent `widenConsecutiveMemOps` which
+  /// is simply enabled by this pass.
   static void
   multiversionForUnitStridedMemOps(VPlan &Plan, VPCostContext &CostCtx,
                                    VFRange &Range,
-                                   SmallVectorImpl<VPInstruction *> &MemOps);
+                                   ArrayRef<VPInstruction *> MemOps);
 
   /// Make VPlan-based scalarization decision prior to delegating to the ones
   /// made by the legacy CM. Only transforms "usesFirstLaneOnly` def-use chains

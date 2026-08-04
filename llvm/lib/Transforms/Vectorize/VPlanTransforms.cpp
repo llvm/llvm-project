@@ -5545,13 +5545,13 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
 void VPlanTransforms::multiversionForUnitStridedMemOps(
     VPlan &Plan, VPCostContext &CostCtx, VFRange &Range,
-    SmallVectorImpl<VPInstruction *> &MemOps) {
+    ArrayRef<VPInstruction *> MemOps) {
   ScalarEvolution *SE = CostCtx.PSE.getSE();
   SCEVUnionPredicate StridePredicates({}, *SE);
 
   for (VPInstruction *VPI : MemOps) {
-    auto *PtrOp = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
-                                                        : VPI->getOperand(1);
+    VPValue *PtrOp = VPI->getOpcode() == Instruction::Load ? VPI->getOperand(0)
+                                                           : VPI->getOperand(1);
 
     const SCEV *PtrSCEV =
         vputils::getSCEVExprForVPValue(PtrOp, CostCtx.PSE, CostCtx.L);
@@ -5568,8 +5568,8 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     if (VPI->getMask()) {
       Instruction *I = VPI->getUnderlyingInstr();
       bool IsLoad = VPI->getOpcode() == Instruction::Load;
-      // No reason to speculate unitstrideness if that won't improve vector code
-      // as we'd pay the price of not taking vector loop if the runtime
+      // Don't speculate unit-strideness if it won't result in any unit-strided
+      // loads, as we'd pay the price of not taking vector loop if the runtime
       // condition is false for no benefits.
       if (!CostCtx.Config.isLegalMaskedLoadOrStore(IsLoad, ScalarTy,
                                                    getLoadStoreAlignment(I),
@@ -5577,11 +5577,11 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
         continue;
     }
 
-    const auto *TypeSize = cast<SCEVConstant>(SE->getSizeOfExpr(
-        Stride->getType(), SE->getDataLayout().getTypeAllocSize(ScalarTy)));
-
     if (isa<SCEVConstant>(Stride))
       continue;
+
+    const auto *TypeSize = cast<SCEVConstant>(SE->getSizeOfExpr(
+        Stride->getType(), SE->getDataLayout().getTypeAllocSize(ScalarTy)));
 
     const SCEVConstant *StrideConstantMultiplier;
     const SCEV *StrideNonConstantMultiplier;
@@ -5681,7 +5681,7 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   VPValue *Pred = Expander.tryToExpandPredicate(&StridePredicates);
   assert(Pred && "Must be expandable!");
 
-  auto *StridesCheckBB = Plan.createVPBasicBlock("strides.check");
+  VPBasicBlock *StridesCheckBB = Plan.createVPBasicBlock("strides.check");
   attachVPCheckBlock(Plan, Pred, StridesCheckBB, /*AddBranchWeights=*/false);
 
   for (auto &R : make_early_inc_range(*Entry)) {
