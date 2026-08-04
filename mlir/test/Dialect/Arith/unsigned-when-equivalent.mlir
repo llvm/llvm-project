@@ -114,3 +114,28 @@ func.func @gpu_func(%arg0: memref<2x32xf32>, %arg1: memref<2x32xf32>, %arg2: mem
   } 
   return %arg1 : memref<2x32xf32> 
 }
+
+// CHECK-LABEL: func @vector_extract_loop_dynamic_index
+// CHECK: vector.extract %{{.*}}[%{{.*}}]
+// CHECK-NOT: vector.extract %{{.*}}[0]
+func.func @vector_extract_loop_dynamic_index() {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c13 = arith.constant 13 : index
+  %c0_i32 = arith.constant 0 : i32
+  %cst = arith.constant dense<[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]> : vector<13xi32>
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2(%c0, %c0_i32 : index, i32)
+^bb2(%iv: index, %acc: i32):
+  %cond = arith.cmpi slt, %iv, %c13 : index
+  cf.cond_br %cond, ^bb3, ^bb4
+^bb3:
+  %val = vector.extract %cst[%iv] : i32 from vector<13xi32>
+  %acc_next = arith.addi %acc, %val : i32
+  %iv_next = arith.addi %iv, %c1 : index
+  cf.br ^bb2(%iv_next, %acc_next : index, i32)
+^bb4:
+  vector.print %acc : i32
+  return
+}
