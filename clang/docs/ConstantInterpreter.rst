@@ -253,7 +253,7 @@ be derived to the object are illustrated in the following diagram:
   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
       ^   ^   ^       ^       ^   ^   ^       ^       ^   ^       ^       ^
       |   |   |       |       |   |   |   &a.c[0].b   |   |   &a.c[1].b   |
-      a   |&a.b.x   &a.b.y    &a.c  |&a.c[0].a          |&a.c[1].a          |
+      a   |&a.b.x  &a.b.y   &a.c  |&a.c[0].a          |&a.c[1].a          |
         &a.b                   &a.c[0]            &a.c[1]               &a.z
 
 The ``Base`` offset of all pointers points to the start of a field or
