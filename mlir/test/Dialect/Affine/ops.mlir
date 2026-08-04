@@ -508,3 +508,43 @@ func.func @parallel_minnumf_reduce() {
   return
 }
 
+
+// -----
+
+// CHECK-LABEL: func @affine_for_index_cast_symbol
+// Check that integer constants cast to index via arith.index_cast are valid
+// affine symbols even when not at the top level of the affine scope.
+func.func @affine_for_index_cast_symbol(%x: i64) -> i64 {
+  %c0 = arith.constant 0 : i64
+  %result:1 = affine.for %i = 0 to 2 iter_args(%acc = %c0) -> (i64) {
+    // CHECK: affine.for
+    %sum = arith.addi %acc, %x : i64
+    %bound = arith.constant 2 : i64
+    %idx = arith.index_cast %bound : i64 to index
+    affine.for %j = 0 to %idx {
+    }
+    affine.yield %sum : i64
+  }
+  return %result : i64
+}
+
+// -----
+
+// CHECK-LABEL: func @affine_for_index_cast_fptosi_symbol
+// Check that a float constant converted to integer via fptosi and then cast to
+// index via arith.index_cast is a valid affine symbol.
+func.func @affine_for_index_cast_fptosi_symbol(%x: i64) -> i64 {
+  %c0 = arith.constant 0 : i64
+  %result:1 = affine.for %i = 0 to 2 iter_args(%acc = %c0) -> (i64) {
+    // CHECK: affine.for
+    %sum = arith.addi %acc, %x : i64
+    %fbound = arith.constant 2.0 : f64
+    %ibound = arith.fptosi %fbound : f64 to i64
+    %idx = arith.index_cast %ibound : i64 to index
+    %ubound = arith.addi %idx, %i : index
+    affine.for %j = 0 to %idx {
+    }
+    affine.yield %sum : i64
+  }
+  return %result : i64
+}
