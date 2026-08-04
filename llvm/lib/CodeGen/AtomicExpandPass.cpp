@@ -415,11 +415,8 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     // - into a load if it is idempotent
     // - into a Cmpxchg/LL-SC loop otherwise
     // we try them in that order.
-    if (IsElementwiseExpand)
-      MadeChange |= tryExpandAtomicRMW(RMWI);
-    else
-      MadeChange |= (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
-                    tryExpandAtomicRMW(RMWI);
+    MadeChange |= (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
+                  tryExpandAtomicRMW(RMWI);
     return MadeChange;
   }
 

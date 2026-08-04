@@ -129,8 +129,7 @@ entry:
 define <8 x half> @fmin_v8f16_elementwise(ptr %addr, <8 x half> %val) {
 ; CHECK-LABEL: @fmin_v8f16_elementwise(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load atomic i128, ptr [[ADDR:%.*]] monotonic, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[TMP0]] to <8 x half>
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <8 x half>, ptr [[ADDR:%.*]] monotonic, align 16
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <8 x half> [ [[TMP1]], [[ENTRY:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -239,8 +238,7 @@ define <8 x i32> @nand_acq_rel_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; CHECK-NEXT:    [[LO_VAL:%.*]] = shufflevector <8 x i32> [[VAL:%.*]], <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[HI_VAL:%.*]] = shufflevector <8 x i32> [[VAL]], <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) [[ADDR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load atomic i128, ptr addrspace(1) [[ADDR]] syncscope("block") monotonic, align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i128 [[TMP0]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic <4 x i32>, ptr addrspace(1) [[ADDR]] syncscope("block") monotonic, align 32
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; CHECK:       atomicrmw.start:
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi <4 x i32> [ [[TMP1]], [[ENTRY:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
@@ -254,8 +252,7 @@ define <8 x i32> @nand_acq_rel_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; CHECK-NEXT:    [[TMP6]] = bitcast i128 [[NEWLOADED]] to <4 x i32>
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; CHECK:       atomicrmw.end:
-; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i128, ptr addrspace(1) [[HI_PTR]] syncscope("block") monotonic, align 16
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i128 [[TMP7]] to <4 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = load atomic <4 x i32>, ptr addrspace(1) [[HI_PTR]] syncscope("block") monotonic, align 16
 ; CHECK-NEXT:    br label [[ATOMICRMW_START2:%.*]]
 ; CHECK:       atomicrmw.start2:
 ; CHECK-NEXT:    [[LOADED3:%.*]] = phi <4 x i32> [ [[TMP8]], [[ATOMICRMW_END]] ], [ [[TMP13:%.*]], [[ATOMICRMW_START2]] ]
