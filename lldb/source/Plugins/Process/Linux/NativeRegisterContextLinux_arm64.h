@@ -260,8 +260,6 @@ private:
 
   void *GetMTEControl() { return &m_mte_ctrl_reg; }
 
-  void *GetTLSBuffer() { return &m_tls_regs; }
-
   void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }

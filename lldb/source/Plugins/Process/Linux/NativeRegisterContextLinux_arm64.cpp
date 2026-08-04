@@ -429,7 +429,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetTLSOffset();
     assert(offset < GetSetSize(RegisterSetType::TLS));
-    src = (uint8_t *)GetTLSBuffer() + offset;
+    src = (uint8_t *)GetSetBuffer(RegisterSetType::TLS) + offset;
   } else if (GetRegisterInfo().IsSVEReg(reg)) {
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
       return Status::FromErrorString("SVE disabled or not supported");
@@ -823,7 +823,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetTLSOffset();
     assert(offset < GetSetSize(RegisterSetType::TLS));
-    dst = (uint8_t *)GetTLSBuffer() + offset;
+    dst = (uint8_t *)GetSetBuffer(RegisterSetType::TLS) + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteTLS();
@@ -1120,7 +1120,8 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
                             GetSetSize(RegisterSetType::POE));
   }
 
-  dst = AddSavedRegisters(dst, RegisterSetType::TLS, GetTLSBuffer(),
+  dst = AddSavedRegisters(dst, RegisterSetType::TLS,
+                          GetSetBuffer(RegisterSetType::TLS),
                           GetSetSize(RegisterSetType::TLS));
 
   return error;
@@ -1292,7 +1293,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       break;
     case RegisterSetType::TLS:
       error = RestoreRegisters(
-          GetTLSBuffer(), &src, GetSetSize(RegisterSetType::TLS), kind,
+          GetSetBuffer(RegisterSetType::TLS), &src,
+          GetSetSize(RegisterSetType::TLS), kind,
           std::bind(&NativeRegisterContextLinux_arm64::WriteTLS, this));
       break;
     case RegisterSetType::ZA:
@@ -1637,7 +1639,7 @@ Status NativeRegisterContextLinux_arm64::ReadTLS() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetTLSBuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::TLS);
   ioVec.iov_len = GetSetSize(RegisterSetType::TLS);
 
   error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::TLS),
@@ -1657,7 +1659,7 @@ Status NativeRegisterContextLinux_arm64::WriteTLS() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetTLSBuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::TLS);
   ioVec.iov_len = GetSetSize(RegisterSetType::TLS);
 
   Invalidate(RegisterSetType::TLS);
