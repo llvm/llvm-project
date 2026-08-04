@@ -3694,8 +3694,9 @@ public:
   ///       // map clause are propagated to each component, except ATTACH
   ///       // entries (ATTACH|ALWAYS is reserved for attach(always), and other
   ///       // modifier bits have no meaning for ATTACH). PRESENT is
-  ///       // additionally propagated to pointee (attach-ptr) components when
-  ///       // PropagatePresentToPointee is set (OpenMP >= 6.0).
+  ///       // additionally propagated to components with HasAttachPtr (the
+  ///       // pointee data) when PropagatePresentToPointee is set
+  ///       // (OpenMP >= 6.0).
   ///       present_bit = (PropagatePresentToPointee && c.hasAttachPtr())
   ///                         ? PRESENT : 0;
   ///       imported_modifier_bits = type & (ALWAYS | DELETE | CLOSE |
@@ -3725,9 +3726,10 @@ public:
   /// \param CustomMapperCB Optional callback to generate code related to
   /// custom mappers.
   /// \param PropagatePresentToPointee If true, the PRESENT map-type modifier
-  /// from the outer clause is propagated to pointee (attach-ptr) entries the
-  /// mapper inserts. Callers set this only for OpenMP >= 6.0; at earlier
-  /// versions the present modifier is treated as not applying to the pointee.
+  /// from the outer clause is propagated to the pointee entries the mapper
+  /// inserts, i.e. those with HasAttachPtr. Callers set this only for
+  /// OpenMP >= 6.0; at earlier versions the present modifier is treated as not
+  /// applying to the pointee.
   LLVM_ABI Expected<Function *> emitUserDefinedMapper(
       function_ref<MapInfosOrErrorTy(
           InsertPointTy CodeGenIP, llvm::Value *PtrPHI, llvm::Value *BeginArg)>

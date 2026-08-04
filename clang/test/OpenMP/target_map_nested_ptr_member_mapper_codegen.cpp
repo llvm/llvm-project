@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// PRESENT is propagated to pointee (attach-ptr) entries only at OpenMP >= 6.0:
+// PRESENT is propagated to pointee entries only at OpenMP >= 6.0:
 // at 6.0 those entries carry map-type mask 5132 = ALWAYS|DELETE|CLOSE|PRESENT,
 // while the default (<= 5.2) CHECK uses 1036 = ALWAYS|DELETE|CLOSE (no PRESENT).
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -fopenmp-targets=powerpc64le-ibm-linux-gnu -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-60

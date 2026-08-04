@@ -10596,7 +10596,8 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///       // clause are propagated to each component, except ATTACH entries
 ///       // (ATTACH|ALWAYS is reserved for attach(always), and other modifier
 ///       // bits have no meaning for ATTACH). PRESENT is additionally
-///       // propagated to pointee (attach-ptr) components at OpenMP >= 6.0.
+///       // propagated to components with HasAttachPtr (the pointee data) at
+///       // OpenMP >= 6.0.
 ///       present_bit = (v60 && c.hasAttachPtr()) ? PRESENT : 0;
 ///       imported_modifier_bits =
 ///           type & (ALWAYS | DELETE | CLOSE | present_bit);
@@ -10679,10 +10680,10 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   CGM.getCXXABI().getMangleContext().mangleCanonicalTypeName(Ty, Out);
   std::string Name = getName({"omp_mapper", TyStr, D->getName()});
 
-  // Propagate the PRESENT modifier to pointee (attach-ptr) entries only for
-  // OpenMP >= 6.0; before 6.0 the present modifier does not apply to the
-  // pointee (see the OpenMP 6.0 erratum on the present motion vs. map-type
-  // modifier divergence).
+  // Propagate the PRESENT modifier to the pointee entries (those with
+  // HasAttachPtr) only for OpenMP >= 6.0; before 6.0 the present modifier does
+  // not apply to the pointee (see the OpenMP 6.0 erratum on the present motion
+  // vs. map-type modifier divergence).
   bool PropagatePresentToPointee = CGM.getLangOpts().OpenMP >= 60;
   llvm::Function *NewFn = cantFail(OMPBuilder.emitUserDefinedMapper(
       PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB,
