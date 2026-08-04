@@ -13,6 +13,9 @@
 /*
     functional synopsis
 
+#include <initializer_list>
+#include <typeinfo>
+
 namespace std
 {
 
@@ -581,6 +584,12 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #  endif
 
 #  include <version>
+
+// standard-mandated includes
+
+// [functional.syn]
+#  include <initializer_list>
+#  include <typeinfo>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

@@ -2716,7 +2716,7 @@ static bool isIntImmediate(const SDNode *N, uint64_t &Imm) {
   return false;
 }
 
-bool isVectorizedBinOp(unsigned Opcode) {
+static bool isVectorizedBinOp(unsigned Opcode) {
   switch (Opcode) {
   case AArch64ISD::SQDMULH:
     return true;
@@ -3909,7 +3909,7 @@ static SDValue getCondCode(SelectionDAG &DAG, AArch64CC::CondCode CC) {
   return DAG.getConstant(CC, SDLoc(), CondCodeVT);
 }
 
-unsigned numberOfInstrToLoadImm(const APInt &C) {
+static unsigned numberOfInstrToLoadImm(const APInt &C) {
   uint64_t Imm = C.getZExtValue();
   SmallVector<AArch64_IMM::ImmInsnModel> Insn;
   AArch64_IMM::expandMOVImm(Imm, 32, Insn);
@@ -6435,7 +6435,7 @@ SDValue AArch64TargetLowering::getRuntimePStateSM(SelectionDAG &DAG,
 //    ldr [%tileslice2, 8], [%ptr2, 8]
 // Case 5: The vecnum being an add of an immediate out of range is also handled,
 // in which case the same remainder logic as case 3 is used.
-SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
+static SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
   SDLoc DL(N);
 
   SDValue TileSlice = N->getOperand(2);
@@ -6482,7 +6482,7 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
                       DAG.getTargetConstant(ImmAddend, DL, MVT::i32)});
 }
 
-SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
+static SDValue LowerVectorMatch(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   SDValue ID =
       DAG.getTargetConstant(Intrinsic::aarch64_sve_match, DL, MVT::i64);
@@ -7329,7 +7329,8 @@ bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
          PreExtScalarVT == MVT::i32 || PreExtScalarVT == MVT::i64;
 }
 
-unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
+static unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned,
+                                   bool NeedsExtend) {
   std::map<std::tuple<bool, bool, bool>, unsigned> AddrModes = {
       {std::make_tuple(/*Scaled*/ false, /*Signed*/ false, /*Extend*/ false),
        AArch64ISD::GLD1_MERGE_ZERO},
@@ -7352,7 +7353,7 @@ unsigned getGatherVecOpcode(bool IsScaled, bool IsSigned, bool NeedsExtend) {
   return AddrModes.find(Key)->second;
 }
 
-unsigned getSignExtendedGatherOpcode(unsigned Opcode) {
+static unsigned getSignExtendedGatherOpcode(unsigned Opcode) {
   switch (Opcode) {
   default:
     llvm_unreachable("unimplemented opcode");
@@ -11848,7 +11849,7 @@ AArch64TargetLowering::LowerPtrAuthGlobalAddress(SDValue Op,
 // Looks through \param Val to determine the bit that can be used to
 // check the sign of the value. It returns the unextended value and
 // the sign bit position.
-std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
+static std::pair<SDValue, uint64_t> lookThroughSignExtension(SDValue Val) {
   if (Val.getOpcode() == ISD::SIGN_EXTEND_INREG)
     return {Val.getOperand(0),
             cast<VTSDNode>(Val.getOperand(1))->getVT().getFixedSizeInBits() -
@@ -27426,7 +27427,7 @@ static SDValue combineStoreValueFPToInt(StoreSDNode *ST,
   return SDValue(ST, 0);
 }
 
-bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
+static bool isHalvingTruncateOfLegalScalableType(EVT SrcVT, EVT DstVT) {
   return (SrcVT == MVT::nxv8i16 && DstVT == MVT::nxv8i8) ||
          (SrcVT == MVT::nxv4i32 && DstVT == MVT::nxv4i16) ||
          (SrcVT == MVT::nxv2i64 && DstVT == MVT::nxv2i32);
@@ -29949,8 +29950,8 @@ static SDValue getScaledOffsetForBitWidth(SelectionDAG &DAG, SDValue Offset,
 ///      [<Zn>.[S|D]{, #<imm>}]
 ///
 /// where <imm> = sizeof(<T>) * k, for k = 0, 1, ..., 31.
-inline static bool isValidImmForSVEVecImmAddrMode(unsigned OffsetInBytes,
-                                                  unsigned ScalarSizeInBytes) {
+static bool isValidImmForSVEVecImmAddrMode(unsigned OffsetInBytes,
+                                           unsigned ScalarSizeInBytes) {
   // The immediate is not a multiple of the scalar size.
   if (OffsetInBytes % ScalarSizeInBytes)
     return false;
