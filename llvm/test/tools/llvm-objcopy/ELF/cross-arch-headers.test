@@ -2,7 +2,7 @@
 # and DWO output.
 # Note that we don't actually need any DWARF to produce the DWO file.
 
-# RUN: yaml2obj -DMACHINE=EM_NONE %s -o %t.o
+# RUN: yaml2obj %s -o %t.o
 
 # Without --output-format, the format should match the input.
 # RUN: llvm-objcopy %t.o %t.default.o --split-dwo=%t.default.dwo
@@ -134,8 +134,7 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
   # Arbitrary values that do not match any value we convert to via --output-format.
-  Machine:         [[MACHINE]]
-  Flags:           [[FLAGS=<none>]]
+  Machine:         EM_NONE
   OSABI:           ELFOSABI_STANDALONE
 Sections:
   - Name:            .text

@@ -97,6 +97,8 @@
 # SPARCEL-NEXT: Arch: sparcel
 # S390X-NEXT:   Arch: s390x
 # X86-64-NEXT:  Arch: x86_64
+## When converting from binary, e_flags is 0 (no EF_AMDGPU_MACH value set),
+## so llvm-readobj reports Arch: unknown. This is intentional.
 # AMDGPU-NEXT:  Arch: unknown
 
 # 32-NEXT:      AddressSize: 32bit
