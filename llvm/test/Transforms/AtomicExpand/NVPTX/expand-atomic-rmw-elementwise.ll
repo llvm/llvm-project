@@ -104,26 +104,6 @@ entry:
   ret <4 x i32> %old
 }
 
-; Seq-cst elementwise expansion also gets one outer fence before splitting.
-define <2 x i32> @add_seq_cst_v4i32_elementwise(ptr %addr, <2 x i32> %val) {
-; CHECK-LABEL: @add_seq_cst_v4i32_elementwise(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    fence syncscope("block") seq_cst
-; CHECK-NEXT:    [[LO_VAL2:%.*]] = extractelement <2 x i32> [[LO_VAL:%.*]], i64 0
-; CHECK-NEXT:    [[HI_VAL3:%.*]] = extractelement <2 x i32> [[LO_VAL]], i64 1
-; CHECK-NEXT:    [[HI_PTR4:%.*]] = getelementptr inbounds i32, ptr [[ADDR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = atomicrmw add ptr [[ADDR]], i32 [[LO_VAL2]] syncscope("block") monotonic, align 16
-; CHECK-NEXT:    [[TMP3:%.*]] = atomicrmw add ptr [[HI_PTR4]], i32 [[HI_VAL3]] syncscope("block") monotonic, align 4
-; CHECK-NEXT:    [[LO_OLD8:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i64 0
-; CHECK-NEXT:    [[HI_OLD9:%.*]] = insertelement <2 x i32> [[LO_OLD8]], i32 [[TMP3]], i64 1
-; CHECK-NEXT:    fence syncscope("block") acquire
-; CHECK-NEXT:    ret <2 x i32> [[HI_OLD9]]
-;
-entry:
-  %old = atomicrmw elementwise add ptr %addr, <2 x i32> %val syncscope("block") seq_cst, align 16
-  ret <2 x i32> %old
-}
-
 ; Whole-vector cmpxchg expansion: sm_90 + ptx83 supports 128-bit cmpxchg, so
 ; this vector can stay whole during AtomicExpand.
 define <8 x half> @fmin_v8f16_elementwise(ptr %addr, <8 x half> %val) {

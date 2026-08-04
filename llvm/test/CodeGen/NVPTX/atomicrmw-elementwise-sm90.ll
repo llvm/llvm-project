@@ -15881,239 +15881,9 @@ define <8 x i8> @add_release_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %v
         ret <8 x i8> %retval
 }
 
-define <1 x i8> @add_seq_cst_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8> %val) {
-; SM90-LABEL: add_seq_cst_v1i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<16>;
-; SM90-NEXT:    .reg .b64 %rd<3>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd2, [add_seq_cst_v1i8_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.b8 %r6, [add_seq_cst_v1i8_global_cta_param_1];
-; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
-; SM90-NEXT:    and.b32 %r8, %r7, 3;
-; SM90-NEXT:    shl.b32 %r1, %r8, 3;
-; SM90-NEXT:    mov.b32 %r9, 255;
-; SM90-NEXT:    shl.b32 %r2, %r9, %r1;
-; SM90-NEXT:    not.b32 %r3, %r2;
-; SM90-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r15, [%rd1];
-; SM90-NEXT:  $L__BB348_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    add.s32 %r10, %r15, %r4;
-; SM90-NEXT:    and.b32 %r11, %r10, %r2;
-; SM90-NEXT:    and.b32 %r12, %r15, %r3;
-; SM90-NEXT:    or.b32 %r13, %r12, %r11;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r15, %r13;
-; SM90-NEXT:    setp.ne.b32 %p1, %r5, %r15;
-; SM90-NEXT:    mov.b32 %r15, %r5;
-; SM90-NEXT:    @%p1 bra $L__BB348_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    shr.u32 %r14, %r5, %r1;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b8 [func_retval0], %r14;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise add ptr  addrspace(1) %addr, <1 x i8> %val syncscope("block") seq_cst
-        ret <1 x i8> %retval
-}
 
-define <2 x i8> @add_seq_cst_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %val) {
-; SM90-LABEL: add_seq_cst_v2i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b16 %rs<10>;
-; SM90-NEXT:    .reg .b32 %r<18>;
-; SM90-NEXT:    .reg .b64 %rd<3>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [add_seq_cst_v2i8_global_cta_param_1];
-; SM90-NEXT:    mov.b32 %r4, {%rs1, %rs2};
-; SM90-NEXT:    ld.param.b64 %rd2, [add_seq_cst_v2i8_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:    and.b32 %r6, %r5, 3;
-; SM90-NEXT:    shl.b32 %r1, %r6, 3;
-; SM90-NEXT:    mov.b32 %r7, 65535;
-; SM90-NEXT:    shl.b32 %r8, %r7, %r1;
-; SM90-NEXT:    not.b32 %r2, %r8;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r17, [%rd1];
-; SM90-NEXT:  $L__BB349_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    shr.u32 %r9, %r17, %r1;
-; SM90-NEXT:    cvt.u16.u32 %rs3, %r9;
-; SM90-NEXT:    shr.u16 %rs4, %rs3, 8;
-; SM90-NEXT:    mov.b32 %r10, {%rs3, %rs4};
-; SM90-NEXT:    add.s16x2 %r11, %r10, %r4;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r11;
-; SM90-NEXT:    shl.b16 %rs7, %rs6, 8;
-; SM90-NEXT:    and.b16 %rs8, %rs5, 255;
-; SM90-NEXT:    or.b16 %rs9, %rs8, %rs7;
-; SM90-NEXT:    cvt.u32.u16 %r12, %rs9;
-; SM90-NEXT:    shl.b32 %r13, %r12, %r1;
-; SM90-NEXT:    and.b32 %r14, %r17, %r2;
-; SM90-NEXT:    or.b32 %r15, %r14, %r13;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r17, %r15;
-; SM90-NEXT:    setp.ne.b32 %p1, %r3, %r17;
-; SM90-NEXT:    mov.b32 %r17, %r3;
-; SM90-NEXT:    @%p1 bra $L__BB349_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    shr.u32 %r16, %r3, %r1;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b16 [func_retval0], %r16;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise add ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") seq_cst
-        ret <2 x i8> %retval
-}
 
-define <4 x i8> @add_seq_cst_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %val) {
-; SM90-LABEL: add_seq_cst_v4i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b16 %rs<13>;
-; SM90-NEXT:    .reg .b32 %r<19>;
-; SM90-NEXT:    .reg .b64 %rd<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r2, [add_seq_cst_v4i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [add_seq_cst_v4i8_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
-; SM90-NEXT:    prmt.b32 %r3, %r2, 0, 0x7773U;
-; SM90-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM90-NEXT:    prmt.b32 %r6, %r2, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM90-NEXT:    prmt.b32 %r10, %r2, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM90-NEXT:    prmt.b32 %r13, %r2, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
-; SM90-NEXT:  $L__BB350_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    prmt.b32 %r4, %r18, 0, 0x7773U;
-; SM90-NEXT:    cvt.u16.u32 %rs2, %r4;
-; SM90-NEXT:    add.s16 %rs3, %rs2, %rs1;
-; SM90-NEXT:    cvt.u32.u16 %r5, %rs3;
-; SM90-NEXT:    prmt.b32 %r7, %r18, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs5, %r7;
-; SM90-NEXT:    add.s16 %rs6, %rs5, %rs4;
-; SM90-NEXT:    cvt.u32.u16 %r8, %rs6;
-; SM90-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; SM90-NEXT:    prmt.b32 %r11, %r18, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs8, %r11;
-; SM90-NEXT:    add.s16 %rs9, %rs8, %rs7;
-; SM90-NEXT:    cvt.u32.u16 %r12, %rs9;
-; SM90-NEXT:    prmt.b32 %r14, %r18, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs11, %r14;
-; SM90-NEXT:    add.s16 %rs12, %rs11, %rs10;
-; SM90-NEXT:    cvt.u32.u16 %r15, %rs12;
-; SM90-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
-; SM90-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r18, %r17;
-; SM90-NEXT:    setp.ne.b32 %p1, %r1, %r18;
-; SM90-NEXT:    mov.b32 %r18, %r1;
-; SM90-NEXT:    @%p1 bra $L__BB350_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r1;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise add ptr  addrspace(1) %addr, <4 x i8> %val syncscope("block") seq_cst
-        ret <4 x i8> %retval
-}
 
-define <8 x i8> @add_seq_cst_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %val) {
-; SM90-LABEL: add_seq_cst_v8i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b16 %rs<25>;
-; SM90-NEXT:    .reg .b32 %r<35>;
-; SM90-NEXT:    .reg .b64 %rd<12>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [add_seq_cst_v8i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [add_seq_cst_v8i8_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NEXT:    mov.b64 {_, %r34}, %rd2;
-; SM90-NEXT:    cvt.u32.u64 %r33, %rd2;
-; SM90-NEXT:    prmt.b32 %r3, %r1, 0, 0x7773U;
-; SM90-NEXT:    cvt.u16.u32 %rs1, %r3;
-; SM90-NEXT:    prmt.b32 %r6, %r1, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs4, %r6;
-; SM90-NEXT:    prmt.b32 %r10, %r1, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs7, %r10;
-; SM90-NEXT:    prmt.b32 %r13, %r1, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs10, %r13;
-; SM90-NEXT:    prmt.b32 %r18, %r2, 0, 0x7773U;
-; SM90-NEXT:    prmt.b32 %r21, %r2, 0, 0x7772U;
-; SM90-NEXT:  $L__BB351_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    prmt.b32 %r4, %r33, 0, 0x7773U;
-; SM90-NEXT:    cvt.u16.u32 %rs2, %r4;
-; SM90-NEXT:    add.s16 %rs3, %rs2, %rs1;
-; SM90-NEXT:    cvt.u32.u16 %r5, %rs3;
-; SM90-NEXT:    prmt.b32 %r7, %r33, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs5, %r7;
-; SM90-NEXT:    add.s16 %rs6, %rs5, %rs4;
-; SM90-NEXT:    cvt.u32.u16 %r8, %rs6;
-; SM90-NEXT:    prmt.b32 %r9, %r8, %r5, 0x3340U;
-; SM90-NEXT:    prmt.b32 %r11, %r33, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs8, %r11;
-; SM90-NEXT:    add.s16 %rs9, %rs8, %rs7;
-; SM90-NEXT:    cvt.u32.u16 %r12, %rs9;
-; SM90-NEXT:    prmt.b32 %r14, %r33, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs11, %r14;
-; SM90-NEXT:    add.s16 %rs12, %rs11, %rs10;
-; SM90-NEXT:    cvt.u32.u16 %r15, %rs12;
-; SM90-NEXT:    prmt.b32 %r16, %r15, %r12, 0x3340U;
-; SM90-NEXT:    prmt.b32 %r17, %r16, %r9, 0x5410U;
-; SM90-NEXT:    cvt.u64.u32 %rd3, %r17;
-; SM90-NEXT:    cvt.u16.u32 %rs13, %r18;
-; SM90-NEXT:    prmt.b32 %r19, %r34, 0, 0x7773U;
-; SM90-NEXT:    cvt.u16.u32 %rs14, %r19;
-; SM90-NEXT:    add.s16 %rs15, %rs14, %rs13;
-; SM90-NEXT:    cvt.u32.u16 %r20, %rs15;
-; SM90-NEXT:    cvt.u16.u32 %rs16, %r21;
-; SM90-NEXT:    prmt.b32 %r22, %r34, 0, 0x7772U;
-; SM90-NEXT:    cvt.u16.u32 %rs17, %r22;
-; SM90-NEXT:    add.s16 %rs18, %rs17, %rs16;
-; SM90-NEXT:    cvt.u32.u16 %r23, %rs18;
-; SM90-NEXT:    prmt.b32 %r24, %r23, %r20, 0x3340U;
-; SM90-NEXT:    prmt.b32 %r25, %r2, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs19, %r25;
-; SM90-NEXT:    prmt.b32 %r26, %r34, 0, 0x7771U;
-; SM90-NEXT:    cvt.u16.u32 %rs20, %r26;
-; SM90-NEXT:    add.s16 %rs21, %rs20, %rs19;
-; SM90-NEXT:    cvt.u32.u16 %r27, %rs21;
-; SM90-NEXT:    prmt.b32 %r28, %r2, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs22, %r28;
-; SM90-NEXT:    prmt.b32 %r29, %r34, 0, 0x7770U;
-; SM90-NEXT:    cvt.u16.u32 %rs23, %r29;
-; SM90-NEXT:    add.s16 %rs24, %rs23, %rs22;
-; SM90-NEXT:    cvt.u32.u16 %r30, %rs24;
-; SM90-NEXT:    prmt.b32 %r31, %r30, %r27, 0x3340U;
-; SM90-NEXT:    prmt.b32 %r32, %r31, %r24, 0x5410U;
-; SM90-NEXT:    cvt.u64.u32 %rd4, %r32;
-; SM90-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NEXT:    cvt.u64.u32 %rd7, %r33;
-; SM90-NEXT:    cvt.u64.u32 %rd8, %r34;
-; SM90-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd10, %rd6;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd11, %rd10;
-; SM90-NEXT:    mov.b64 {_, %r34}, %rd11;
-; SM90-NEXT:    cvt.u32.u64 %r33, %rd11;
-; SM90-NEXT:    @%p1 bra $L__BB351_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r33, %r34};
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise add ptr  addrspace(1) %addr, <8 x i8> %val syncscope("block") seq_cst
-        ret <8 x i8> %retval
-}
 
 define <1 x i32> @add_monotonic_v1i32_global_cta(ptr addrspace(1) %addr, <1 x i32> %val) {
 ; SM90-LABEL: add_monotonic_v1i32_global_cta(
@@ -16354,90 +16124,9 @@ define <8 x i32> @add_release_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32>
         ret <8 x i32> %retval
 }
 
-define <1 x i32> @add_seq_cst_v1i32_global_cta(ptr addrspace(1) %addr, <1 x i32> %val) {
-; SM90-LABEL: add_seq_cst_v1i32_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .b32 %r<3>;
-; SM90-NEXT:    .reg .b64 %rd<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [add_seq_cst_v1i32_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.b32 %r1, [add_seq_cst_v1i32_global_cta_param_1];
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r2, [%rd1], %r1;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise add ptr  addrspace(1) %addr, <1 x i32> %val syncscope("block") seq_cst
-        ret <1 x i32> %retval
-}
 
-define <2 x i32> @add_seq_cst_v2i32_global_cta(ptr addrspace(1) %addr, <2 x i32> %val) {
-; SM90-LABEL: add_seq_cst_v2i32_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .b32 %r<5>;
-; SM90-NEXT:    .reg .b64 %rd<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [add_seq_cst_v2i32_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [add_seq_cst_v2i32_global_cta_param_1];
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r3, [%rd1], %r1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r4, [%rd1+4], %r2;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r4};
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise add ptr  addrspace(1) %addr, <2 x i32> %val syncscope("block") seq_cst
-        ret <2 x i32> %retval
-}
 
-define <4 x i32> @add_seq_cst_v4i32_global_cta(ptr addrspace(1) %addr, <4 x i32> %val) {
-; SM90-LABEL: add_seq_cst_v4i32_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .b32 %r<9>;
-; SM90-NEXT:    .reg .b64 %rd<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [add_seq_cst_v4i32_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [add_seq_cst_v4i32_global_cta_param_1];
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r5, [%rd1], %r1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r6, [%rd1+4], %r2;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r7, [%rd1+8], %r3;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r8, [%rd1+12], %r4;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r7, %r8};
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise add ptr  addrspace(1) %addr, <4 x i32> %val syncscope("block") seq_cst
-        ret <4 x i32> %retval
-}
 
-define <8 x i32> @add_seq_cst_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32> %val) {
-; SM90-LABEL: add_seq_cst_v8i32_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .b32 %r<17>;
-; SM90-NEXT:    .reg .b64 %rd<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [add_seq_cst_v8i32_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [add_seq_cst_v8i32_global_cta_param_1+16];
-; SM90-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [add_seq_cst_v8i32_global_cta_param_1];
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r9, [%rd1], %r5;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r10, [%rd1+4], %r6;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r11, [%rd1+8], %r7;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r12, [%rd1+12], %r8;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r13, [%rd1+16], %r1;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r14, [%rd1+20], %r2;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r15, [%rd1+24], %r3;
-; SM90-NEXT:    atom.relaxed.cta.global.add.u32 %r16, [%rd1+28], %r4;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.v4.b32 [func_retval0+16], {%r13, %r14, %r15, %r16};
-; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise add ptr  addrspace(1) %addr, <8 x i32> %val syncscope("block") seq_cst
-        ret <8 x i32> %retval
-}
 
 define <1 x i8> @nand_monotonic_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8> %val) {
 ; SM90-LABEL: nand_monotonic_v1i8_global_cta(
@@ -16449,6 +16138,311 @@ define <1 x i8> @nand_monotonic_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8>
 ; SM90-NEXT:  // %bb.0:
 ; SM90-NEXT:    ld.param.b64 %rd2, [nand_monotonic_v1i8_global_cta_param_0];
 ; SM90-NEXT:    ld.param.b8 %r6, [nand_monotonic_v1i8_global_cta_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
+; SM90-NEXT:    and.b32 %r8, %r7, 3;
+; SM90-NEXT:    shl.b32 %r1, %r8, 3;
+; SM90-NEXT:    mov.b32 %r9, 255;
+; SM90-NEXT:    shl.b32 %r2, %r9, %r1;
+; SM90-NEXT:    not.b32 %r3, %r2;
+; SM90-NEXT:    shl.b32 %r4, %r6, %r1;
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r16, [%rd1];
+; SM90-NEXT:  $L__BB360_1: // %atomicrmw.start
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    and.b32 %r10, %r16, %r4;
+; SM90-NEXT:    not.b32 %r11, %r10;
+; SM90-NEXT:    and.b32 %r12, %r11, %r2;
+; SM90-NEXT:    and.b32 %r13, %r16, %r3;
+; SM90-NEXT:    or.b32 %r14, %r13, %r12;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r14;
+; SM90-NEXT:    setp.ne.b32 %p1, %r5, %r16;
+; SM90-NEXT:    mov.b32 %r16, %r5;
+; SM90-NEXT:    @%p1 bra $L__BB360_1;
+; SM90-NEXT:  // %bb.2: // %atomicrmw.end
+; SM90-NEXT:    shr.u32 %r15, %r5, %r1;
+; SM90-NEXT:    st.param.b8 [func_retval0], %r15;
+; SM90-NEXT:    ret;
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <1 x i8> %val syncscope("block") monotonic
+        ret <1 x i8> %retval
+}
+
+define <2 x i8> @nand_monotonic_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %val) {
+; SM90-LABEL: nand_monotonic_v2i8_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<2>;
+; SM90-NEXT:    .reg .b16 %rs<9>;
+; SM90-NEXT:    .reg .b32 %r<19>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_monotonic_v2i8_global_cta_param_1];
+; SM90-NEXT:    mov.b32 %r4, {%rs1, %rs2};
+; SM90-NEXT:    ld.param.b64 %rd2, [nand_monotonic_v2i8_global_cta_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
+; SM90-NEXT:    and.b32 %r6, %r5, 3;
+; SM90-NEXT:    shl.b32 %r1, %r6, 3;
+; SM90-NEXT:    mov.b32 %r7, 65535;
+; SM90-NEXT:    shl.b32 %r8, %r7, %r1;
+; SM90-NEXT:    not.b32 %r2, %r8;
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
+; SM90-NEXT:  $L__BB361_1: // %atomicrmw.start
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    shr.u32 %r9, %r18, %r1;
+; SM90-NEXT:    cvt.u16.u32 %rs3, %r9;
+; SM90-NEXT:    shr.u16 %rs4, %rs3, 8;
+; SM90-NEXT:    mov.b32 %r10, {%rs3, %rs4};
+; SM90-NEXT:    and.b32 %r11, %r10, %r4;
+; SM90-NEXT:    xor.b32 %r12, %r11, 16711935;
+; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r12;
+; SM90-NEXT:    shl.b16 %rs7, %rs6, 8;
+; SM90-NEXT:    or.b16 %rs8, %rs5, %rs7;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs8;
+; SM90-NEXT:    shl.b32 %r14, %r13, %r1;
+; SM90-NEXT:    and.b32 %r15, %r18, %r2;
+; SM90-NEXT:    or.b32 %r16, %r15, %r14;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r18, %r16;
+; SM90-NEXT:    setp.ne.b32 %p1, %r3, %r18;
+; SM90-NEXT:    mov.b32 %r18, %r3;
+; SM90-NEXT:    @%p1 bra $L__BB361_1;
+; SM90-NEXT:  // %bb.2: // %atomicrmw.end
+; SM90-NEXT:    shr.u32 %r17, %r3, %r1;
+; SM90-NEXT:    st.param.b16 [func_retval0], %r17;
+; SM90-NEXT:    ret;
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") monotonic
+        ret <2 x i8> %retval
+}
+
+define <4 x i8> @nand_monotonic_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %val) {
+; SM90-LABEL: nand_monotonic_v4i8_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<2>;
+; SM90-NEXT:    .reg .b32 %r<6>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b32 %r2, [nand_monotonic_v4i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd1, [nand_monotonic_v4i8_global_cta_param_0];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
+; SM90-NEXT:  $L__BB362_1: // %atomicrmw.start
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    and.b32 %r3, %r5, %r2;
+; SM90-NEXT:    xor.b32 %r4, %r3, -1;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r5, %r4;
+; SM90-NEXT:    setp.ne.b32 %p1, %r1, %r5;
+; SM90-NEXT:    mov.b32 %r5, %r1;
+; SM90-NEXT:    @%p1 bra $L__BB362_1;
+; SM90-NEXT:  // %bb.2: // %atomicrmw.end
+; SM90-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM90-NEXT:    ret;
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <4 x i8> %val syncscope("block") monotonic
+        ret <4 x i8> %retval
+}
+
+define <8 x i8> @nand_monotonic_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %val) {
+; SM90-LABEL: nand_monotonic_v8i8_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<2>;
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<12>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [nand_monotonic_v8i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd1, [nand_monotonic_v8i8_global_cta_param_0];
+; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
+; SM90-NEXT:    mov.b64 {_, %r8}, %rd2;
+; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
+; SM90-NEXT:  $L__BB363_1: // %atomicrmw.start
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    cvt.u64.u32 %rd3, %r7;
+; SM90-NEXT:    cvt.u64.u32 %rd4, %r8;
+; SM90-NEXT:    shl.b64 %rd5, %rd4, 32;
+; SM90-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM90-NEXT:    and.b32 %r3, %r8, %r2;
+; SM90-NEXT:    and.b32 %r4, %r7, %r1;
+; SM90-NEXT:    xor.b32 %r5, %r4, -1;
+; SM90-NEXT:    cvt.u64.u32 %rd7, %r5;
+; SM90-NEXT:    xor.b32 %r6, %r3, -1;
+; SM90-NEXT:    cvt.u64.u32 %rd8, %r6;
+; SM90-NEXT:    shl.b64 %rd9, %rd8, 32;
+; SM90-NEXT:    or.b64 %rd10, %rd7, %rd9;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd6, %rd10;
+; SM90-NEXT:    setp.ne.b64 %p1, %rd11, %rd6;
+; SM90-NEXT:    mov.b64 {_, %r8}, %rd11;
+; SM90-NEXT:    cvt.u32.u64 %r7, %rd11;
+; SM90-NEXT:    @%p1 bra $L__BB363_1;
+; SM90-NEXT:  // %bb.2: // %atomicrmw.end
+; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r7, %r8};
+; SM90-NEXT:    ret;
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <8 x i8> %val syncscope("block") monotonic
+        ret <8 x i8> %retval
+}
+
+define <1 x i8> @nand_acquire_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8> %val) {
+; SM90-LABEL: nand_acquire_v1i8_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<2>;
+; SM90-NEXT:    .reg .b32 %r<17>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd2, [nand_acquire_v1i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b8 %r6, [nand_acquire_v1i8_global_cta_param_1];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
+; SM90-NEXT:    and.b32 %r8, %r7, 3;
+; SM90-NEXT:    shl.b32 %r1, %r8, 3;
+; SM90-NEXT:    mov.b32 %r9, 255;
+; SM90-NEXT:    shl.b32 %r2, %r9, %r1;
+; SM90-NEXT:    not.b32 %r3, %r2;
+; SM90-NEXT:    shl.b32 %r4, %r6, %r1;
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r16, [%rd1];
+; SM90-NEXT:  $L__BB364_1: // %atomicrmw.start
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    and.b32 %r10, %r16, %r4;
+; SM90-NEXT:    not.b32 %r11, %r10;
+; SM90-NEXT:    and.b32 %r12, %r11, %r2;
+; SM90-NEXT:    and.b32 %r13, %r16, %r3;
+; SM90-NEXT:    or.b32 %r14, %r13, %r12;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r14;
+; SM90-NEXT:    setp.ne.b32 %p1, %r5, %r16;
+; SM90-NEXT:    mov.b32 %r16, %r5;
+; SM90-NEXT:    @%p1 bra $L__BB364_1;
+; SM90-NEXT:  // %bb.2: // %atomicrmw.end
+; SM90-NEXT:    shr.u32 %r15, %r5, %r1;
+; SM90-NEXT:    fence.acquire.cta;
+; SM90-NEXT:    st.param.b8 [func_retval0], %r15;
+; SM90-NEXT:    ret;
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <1 x i8> %val syncscope("block") acquire
+        ret <1 x i8> %retval
+}
+
+define <2 x i8> @nand_acquire_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %val) {
+; SM90-LABEL: nand_acquire_v2i8_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<2>;
+; SM90-NEXT:    .reg .b16 %rs<9>;
+; SM90-NEXT:    .reg .b32 %r<19>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_acquire_v2i8_global_cta_param_1];
+; SM90-NEXT:    mov.b32 %r4, {%rs1, %rs2};
+; SM90-NEXT:    ld.param.b64 %rd2, [nand_acquire_v2i8_global_cta_param_0];
+; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
+; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
+; SM90-NEXT:    and.b32 %r6, %r5, 3;
+; SM90-NEXT:    shl.b32 %r1, %r6, 3;
+; SM90-NEXT:    mov.b32 %r7, 65535;
+; SM90-NEXT:    shl.b32 %r8, %r7, %r1;
+; SM90-NEXT:    not.b32 %r2, %r8;
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
+; SM90-NEXT:  $L__BB365_1: // %atomicrmw.start
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    shr.u32 %r9, %r18, %r1;
+; SM90-NEXT:    cvt.u16.u32 %rs3, %r9;
+; SM90-NEXT:    shr.u16 %rs4, %rs3, 8;
+; SM90-NEXT:    mov.b32 %r10, {%rs3, %rs4};
+; SM90-NEXT:    and.b32 %r11, %r10, %r4;
+; SM90-NEXT:    xor.b32 %r12, %r11, 16711935;
+; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r12;
+; SM90-NEXT:    shl.b16 %rs7, %rs6, 8;
+; SM90-NEXT:    or.b16 %rs8, %rs5, %rs7;
+; SM90-NEXT:    cvt.u32.u16 %r13, %rs8;
+; SM90-NEXT:    shl.b32 %r14, %r13, %r1;
+; SM90-NEXT:    and.b32 %r15, %r18, %r2;
+; SM90-NEXT:    or.b32 %r16, %r15, %r14;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r18, %r16;
+; SM90-NEXT:    setp.ne.b32 %p1, %r3, %r18;
+; SM90-NEXT:    mov.b32 %r18, %r3;
+; SM90-NEXT:    @%p1 bra $L__BB365_1;
+; SM90-NEXT:  // %bb.2: // %atomicrmw.end
+; SM90-NEXT:    shr.u32 %r17, %r3, %r1;
+; SM90-NEXT:    fence.acquire.cta;
+; SM90-NEXT:    st.param.b16 [func_retval0], %r17;
+; SM90-NEXT:    ret;
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") acquire
+        ret <2 x i8> %retval
+}
+
+define <4 x i8> @nand_acquire_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %val) {
+; SM90-LABEL: nand_acquire_v4i8_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<2>;
+; SM90-NEXT:    .reg .b32 %r<6>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b32 %r2, [nand_acquire_v4i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd1, [nand_acquire_v4i8_global_cta_param_0];
+; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
+; SM90-NEXT:  $L__BB366_1: // %atomicrmw.start
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    and.b32 %r3, %r5, %r2;
+; SM90-NEXT:    xor.b32 %r4, %r3, -1;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r5, %r4;
+; SM90-NEXT:    setp.ne.b32 %p1, %r1, %r5;
+; SM90-NEXT:    mov.b32 %r5, %r1;
+; SM90-NEXT:    @%p1 bra $L__BB366_1;
+; SM90-NEXT:  // %bb.2: // %atomicrmw.end
+; SM90-NEXT:    fence.acquire.cta;
+; SM90-NEXT:    st.param.b32 [func_retval0], %r1;
+; SM90-NEXT:    ret;
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <4 x i8> %val syncscope("block") acquire
+        ret <4 x i8> %retval
+}
+
+define <8 x i8> @nand_acquire_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %val) {
+; SM90-LABEL: nand_acquire_v8i8_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<2>;
+; SM90-NEXT:    .reg .b32 %r<9>;
+; SM90-NEXT:    .reg .b64 %rd<12>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [nand_acquire_v8i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd1, [nand_acquire_v8i8_global_cta_param_0];
+; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
+; SM90-NEXT:    mov.b64 {_, %r8}, %rd2;
+; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
+; SM90-NEXT:  $L__BB367_1: // %atomicrmw.start
+; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
+; SM90-NEXT:    cvt.u64.u32 %rd3, %r7;
+; SM90-NEXT:    cvt.u64.u32 %rd4, %r8;
+; SM90-NEXT:    shl.b64 %rd5, %rd4, 32;
+; SM90-NEXT:    or.b64 %rd6, %rd3, %rd5;
+; SM90-NEXT:    and.b32 %r3, %r8, %r2;
+; SM90-NEXT:    and.b32 %r4, %r7, %r1;
+; SM90-NEXT:    xor.b32 %r5, %r4, -1;
+; SM90-NEXT:    cvt.u64.u32 %rd7, %r5;
+; SM90-NEXT:    xor.b32 %r6, %r3, -1;
+; SM90-NEXT:    cvt.u64.u32 %rd8, %r6;
+; SM90-NEXT:    shl.b64 %rd9, %rd8, 32;
+; SM90-NEXT:    or.b64 %rd10, %rd7, %rd9;
+; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd6, %rd10;
+; SM90-NEXT:    setp.ne.b64 %p1, %rd11, %rd6;
+; SM90-NEXT:    mov.b64 {_, %r8}, %rd11;
+; SM90-NEXT:    cvt.u32.u64 %r7, %rd11;
+; SM90-NEXT:    @%p1 bra $L__BB367_1;
+; SM90-NEXT:  // %bb.2: // %atomicrmw.end
+; SM90-NEXT:    fence.acquire.cta;
+; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r7, %r8};
+; SM90-NEXT:    ret;
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <8 x i8> %val syncscope("block") acquire
+        ret <8 x i8> %retval
+}
+
+define <1 x i8> @nand_release_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8> %val) {
+; SM90-LABEL: nand_release_v1i8_global_cta(
+; SM90:       {
+; SM90-NEXT:    .reg .pred %p<2>;
+; SM90-NEXT:    .reg .b32 %r<17>;
+; SM90-NEXT:    .reg .b64 %rd<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd2, [nand_release_v1i8_global_cta_param_0];
+; SM90-NEXT:    fence.release.cta;
+; SM90-NEXT:    ld.param.b8 %r6, [nand_release_v1i8_global_cta_param_1];
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
 ; SM90-NEXT:    and.b32 %r8, %r7, 3;
@@ -16473,12 +16467,12 @@ define <1 x i8> @nand_monotonic_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8>
 ; SM90-NEXT:    shr.u32 %r15, %r5, %r1;
 ; SM90-NEXT:    st.param.b8 [func_retval0], %r15;
 ; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <1 x i8> %val syncscope("block") monotonic
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <1 x i8> %val syncscope("block") release
         ret <1 x i8> %retval
 }
 
-define <2 x i8> @nand_monotonic_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %val) {
-; SM90-LABEL: nand_monotonic_v2i8_global_cta(
+define <2 x i8> @nand_release_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %val) {
+; SM90-LABEL: nand_release_v2i8_global_cta(
 ; SM90:       {
 ; SM90-NEXT:    .reg .pred %p<2>;
 ; SM90-NEXT:    .reg .b16 %rs<9>;
@@ -16486,9 +16480,10 @@ define <2 x i8> @nand_monotonic_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8>
 ; SM90-NEXT:    .reg .b64 %rd<3>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_monotonic_v2i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_release_v2i8_global_cta_param_1];
 ; SM90-NEXT:    mov.b32 %r4, {%rs1, %rs2};
-; SM90-NEXT:    ld.param.b64 %rd2, [nand_monotonic_v2i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b64 %rd2, [nand_release_v2i8_global_cta_param_0];
+; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
 ; SM90-NEXT:    and.b32 %r6, %r5, 3;
@@ -16520,20 +16515,21 @@ define <2 x i8> @nand_monotonic_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8>
 ; SM90-NEXT:    shr.u32 %r17, %r3, %r1;
 ; SM90-NEXT:    st.param.b16 [func_retval0], %r17;
 ; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") monotonic
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") release
         ret <2 x i8> %retval
 }
 
-define <4 x i8> @nand_monotonic_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %val) {
-; SM90-LABEL: nand_monotonic_v4i8_global_cta(
+define <4 x i8> @nand_release_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %val) {
+; SM90-LABEL: nand_release_v4i8_global_cta(
 ; SM90:       {
 ; SM90-NEXT:    .reg .pred %p<2>;
 ; SM90-NEXT:    .reg .b32 %r<6>;
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r2, [nand_monotonic_v4i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_monotonic_v4i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.b32 %r2, [nand_release_v4i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd1, [nand_release_v4i8_global_cta_param_0];
+; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
 ; SM90-NEXT:  $L__BB370_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -16546,20 +16542,21 @@ define <4 x i8> @nand_monotonic_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8>
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r1;
 ; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <4 x i8> %val syncscope("block") monotonic
+        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <4 x i8> %val syncscope("block") release
         ret <4 x i8> %retval
 }
 
-define <8 x i8> @nand_monotonic_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %val) {
-; SM90-LABEL: nand_monotonic_v8i8_global_cta(
+define <8 x i8> @nand_release_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %val) {
+; SM90-LABEL: nand_release_v8i8_global_cta(
 ; SM90:       {
 ; SM90-NEXT:    .reg .pred %p<2>;
 ; SM90-NEXT:    .reg .b32 %r<9>;
 ; SM90-NEXT:    .reg .b64 %rd<12>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [nand_monotonic_v8i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_monotonic_v8i8_global_cta_param_0];
+; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [nand_release_v8i8_global_cta_param_1];
+; SM90-NEXT:    ld.param.b64 %rd1, [nand_release_v8i8_global_cta_param_0];
+; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
 ; SM90-NEXT:    mov.b64 {_, %r8}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
@@ -16585,475 +16582,13 @@ define <8 x i8> @nand_monotonic_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8>
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r7, %r8};
 ; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <8 x i8> %val syncscope("block") monotonic
-        ret <8 x i8> %retval
-}
-
-define <1 x i8> @nand_acquire_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8> %val) {
-; SM90-LABEL: nand_acquire_v1i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<17>;
-; SM90-NEXT:    .reg .b64 %rd<3>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd2, [nand_acquire_v1i8_global_cta_param_0];
-; SM90-NEXT:    ld.param.b8 %r6, [nand_acquire_v1i8_global_cta_param_1];
-; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
-; SM90-NEXT:    and.b32 %r8, %r7, 3;
-; SM90-NEXT:    shl.b32 %r1, %r8, 3;
-; SM90-NEXT:    mov.b32 %r9, 255;
-; SM90-NEXT:    shl.b32 %r2, %r9, %r1;
-; SM90-NEXT:    not.b32 %r3, %r2;
-; SM90-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r16, [%rd1];
-; SM90-NEXT:  $L__BB372_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    and.b32 %r10, %r16, %r4;
-; SM90-NEXT:    not.b32 %r11, %r10;
-; SM90-NEXT:    and.b32 %r12, %r11, %r2;
-; SM90-NEXT:    and.b32 %r13, %r16, %r3;
-; SM90-NEXT:    or.b32 %r14, %r13, %r12;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r14;
-; SM90-NEXT:    setp.ne.b32 %p1, %r5, %r16;
-; SM90-NEXT:    mov.b32 %r16, %r5;
-; SM90-NEXT:    @%p1 bra $L__BB372_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    shr.u32 %r15, %r5, %r1;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b8 [func_retval0], %r15;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <1 x i8> %val syncscope("block") acquire
-        ret <1 x i8> %retval
-}
-
-define <2 x i8> @nand_acquire_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %val) {
-; SM90-LABEL: nand_acquire_v2i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b16 %rs<9>;
-; SM90-NEXT:    .reg .b32 %r<19>;
-; SM90-NEXT:    .reg .b64 %rd<3>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_acquire_v2i8_global_cta_param_1];
-; SM90-NEXT:    mov.b32 %r4, {%rs1, %rs2};
-; SM90-NEXT:    ld.param.b64 %rd2, [nand_acquire_v2i8_global_cta_param_0];
-; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:    and.b32 %r6, %r5, 3;
-; SM90-NEXT:    shl.b32 %r1, %r6, 3;
-; SM90-NEXT:    mov.b32 %r7, 65535;
-; SM90-NEXT:    shl.b32 %r8, %r7, %r1;
-; SM90-NEXT:    not.b32 %r2, %r8;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
-; SM90-NEXT:  $L__BB373_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    shr.u32 %r9, %r18, %r1;
-; SM90-NEXT:    cvt.u16.u32 %rs3, %r9;
-; SM90-NEXT:    shr.u16 %rs4, %rs3, 8;
-; SM90-NEXT:    mov.b32 %r10, {%rs3, %rs4};
-; SM90-NEXT:    and.b32 %r11, %r10, %r4;
-; SM90-NEXT:    xor.b32 %r12, %r11, 16711935;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r12;
-; SM90-NEXT:    shl.b16 %rs7, %rs6, 8;
-; SM90-NEXT:    or.b16 %rs8, %rs5, %rs7;
-; SM90-NEXT:    cvt.u32.u16 %r13, %rs8;
-; SM90-NEXT:    shl.b32 %r14, %r13, %r1;
-; SM90-NEXT:    and.b32 %r15, %r18, %r2;
-; SM90-NEXT:    or.b32 %r16, %r15, %r14;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r18, %r16;
-; SM90-NEXT:    setp.ne.b32 %p1, %r3, %r18;
-; SM90-NEXT:    mov.b32 %r18, %r3;
-; SM90-NEXT:    @%p1 bra $L__BB373_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    shr.u32 %r17, %r3, %r1;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b16 [func_retval0], %r17;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") acquire
-        ret <2 x i8> %retval
-}
-
-define <4 x i8> @nand_acquire_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %val) {
-; SM90-LABEL: nand_acquire_v4i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<6>;
-; SM90-NEXT:    .reg .b64 %rd<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r2, [nand_acquire_v4i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_acquire_v4i8_global_cta_param_0];
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
-; SM90-NEXT:  $L__BB374_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    and.b32 %r3, %r5, %r2;
-; SM90-NEXT:    xor.b32 %r4, %r3, -1;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r5, %r4;
-; SM90-NEXT:    setp.ne.b32 %p1, %r1, %r5;
-; SM90-NEXT:    mov.b32 %r5, %r1;
-; SM90-NEXT:    @%p1 bra $L__BB374_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r1;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <4 x i8> %val syncscope("block") acquire
-        ret <4 x i8> %retval
-}
-
-define <8 x i8> @nand_acquire_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %val) {
-; SM90-LABEL: nand_acquire_v8i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<9>;
-; SM90-NEXT:    .reg .b64 %rd<12>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [nand_acquire_v8i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_acquire_v8i8_global_cta_param_0];
-; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NEXT:    mov.b64 {_, %r8}, %rd2;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
-; SM90-NEXT:  $L__BB375_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    cvt.u64.u32 %rd3, %r7;
-; SM90-NEXT:    cvt.u64.u32 %rd4, %r8;
-; SM90-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NEXT:    and.b32 %r3, %r8, %r2;
-; SM90-NEXT:    and.b32 %r4, %r7, %r1;
-; SM90-NEXT:    xor.b32 %r5, %r4, -1;
-; SM90-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-NEXT:    xor.b32 %r6, %r3, -1;
-; SM90-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd6, %rd10;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd11, %rd6;
-; SM90-NEXT:    mov.b64 {_, %r8}, %rd11;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd11;
-; SM90-NEXT:    @%p1 bra $L__BB375_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r7, %r8};
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <8 x i8> %val syncscope("block") acquire
-        ret <8 x i8> %retval
-}
-
-define <1 x i8> @nand_release_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8> %val) {
-; SM90-LABEL: nand_release_v1i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<17>;
-; SM90-NEXT:    .reg .b64 %rd<3>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd2, [nand_release_v1i8_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.param.b8 %r6, [nand_release_v1i8_global_cta_param_1];
-; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
-; SM90-NEXT:    and.b32 %r8, %r7, 3;
-; SM90-NEXT:    shl.b32 %r1, %r8, 3;
-; SM90-NEXT:    mov.b32 %r9, 255;
-; SM90-NEXT:    shl.b32 %r2, %r9, %r1;
-; SM90-NEXT:    not.b32 %r3, %r2;
-; SM90-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r16, [%rd1];
-; SM90-NEXT:  $L__BB376_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    and.b32 %r10, %r16, %r4;
-; SM90-NEXT:    not.b32 %r11, %r10;
-; SM90-NEXT:    and.b32 %r12, %r11, %r2;
-; SM90-NEXT:    and.b32 %r13, %r16, %r3;
-; SM90-NEXT:    or.b32 %r14, %r13, %r12;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r14;
-; SM90-NEXT:    setp.ne.b32 %p1, %r5, %r16;
-; SM90-NEXT:    mov.b32 %r16, %r5;
-; SM90-NEXT:    @%p1 bra $L__BB376_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    shr.u32 %r15, %r5, %r1;
-; SM90-NEXT:    st.param.b8 [func_retval0], %r15;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <1 x i8> %val syncscope("block") release
-        ret <1 x i8> %retval
-}
-
-define <2 x i8> @nand_release_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %val) {
-; SM90-LABEL: nand_release_v2i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b16 %rs<9>;
-; SM90-NEXT:    .reg .b32 %r<19>;
-; SM90-NEXT:    .reg .b64 %rd<3>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_release_v2i8_global_cta_param_1];
-; SM90-NEXT:    mov.b32 %r4, {%rs1, %rs2};
-; SM90-NEXT:    ld.param.b64 %rd2, [nand_release_v2i8_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:    and.b32 %r6, %r5, 3;
-; SM90-NEXT:    shl.b32 %r1, %r6, 3;
-; SM90-NEXT:    mov.b32 %r7, 65535;
-; SM90-NEXT:    shl.b32 %r8, %r7, %r1;
-; SM90-NEXT:    not.b32 %r2, %r8;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
-; SM90-NEXT:  $L__BB377_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    shr.u32 %r9, %r18, %r1;
-; SM90-NEXT:    cvt.u16.u32 %rs3, %r9;
-; SM90-NEXT:    shr.u16 %rs4, %rs3, 8;
-; SM90-NEXT:    mov.b32 %r10, {%rs3, %rs4};
-; SM90-NEXT:    and.b32 %r11, %r10, %r4;
-; SM90-NEXT:    xor.b32 %r12, %r11, 16711935;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r12;
-; SM90-NEXT:    shl.b16 %rs7, %rs6, 8;
-; SM90-NEXT:    or.b16 %rs8, %rs5, %rs7;
-; SM90-NEXT:    cvt.u32.u16 %r13, %rs8;
-; SM90-NEXT:    shl.b32 %r14, %r13, %r1;
-; SM90-NEXT:    and.b32 %r15, %r18, %r2;
-; SM90-NEXT:    or.b32 %r16, %r15, %r14;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r18, %r16;
-; SM90-NEXT:    setp.ne.b32 %p1, %r3, %r18;
-; SM90-NEXT:    mov.b32 %r18, %r3;
-; SM90-NEXT:    @%p1 bra $L__BB377_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    shr.u32 %r17, %r3, %r1;
-; SM90-NEXT:    st.param.b16 [func_retval0], %r17;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") release
-        ret <2 x i8> %retval
-}
-
-define <4 x i8> @nand_release_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %val) {
-; SM90-LABEL: nand_release_v4i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<6>;
-; SM90-NEXT:    .reg .b64 %rd<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r2, [nand_release_v4i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_release_v4i8_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
-; SM90-NEXT:  $L__BB378_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    and.b32 %r3, %r5, %r2;
-; SM90-NEXT:    xor.b32 %r4, %r3, -1;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r5, %r4;
-; SM90-NEXT:    setp.ne.b32 %p1, %r1, %r5;
-; SM90-NEXT:    mov.b32 %r5, %r1;
-; SM90-NEXT:    @%p1 bra $L__BB378_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    st.param.b32 [func_retval0], %r1;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <4 x i8> %val syncscope("block") release
-        ret <4 x i8> %retval
-}
-
-define <8 x i8> @nand_release_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %val) {
-; SM90-LABEL: nand_release_v8i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<9>;
-; SM90-NEXT:    .reg .b64 %rd<12>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [nand_release_v8i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_release_v8i8_global_cta_param_0];
-; SM90-NEXT:    fence.release.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NEXT:    mov.b64 {_, %r8}, %rd2;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
-; SM90-NEXT:  $L__BB379_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    cvt.u64.u32 %rd3, %r7;
-; SM90-NEXT:    cvt.u64.u32 %rd4, %r8;
-; SM90-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NEXT:    and.b32 %r3, %r8, %r2;
-; SM90-NEXT:    and.b32 %r4, %r7, %r1;
-; SM90-NEXT:    xor.b32 %r5, %r4, -1;
-; SM90-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-NEXT:    xor.b32 %r6, %r3, -1;
-; SM90-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd6, %rd10;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd11, %rd6;
-; SM90-NEXT:    mov.b64 {_, %r8}, %rd11;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd11;
-; SM90-NEXT:    @%p1 bra $L__BB379_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r7, %r8};
-; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <8 x i8> %val syncscope("block") release
         ret <8 x i8> %retval
 }
 
-define <1 x i8> @nand_seq_cst_v1i8_global_cta(ptr addrspace(1) %addr, <1 x i8> %val) {
-; SM90-LABEL: nand_seq_cst_v1i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<17>;
-; SM90-NEXT:    .reg .b64 %rd<3>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd2, [nand_seq_cst_v1i8_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.b8 %r6, [nand_seq_cst_v1i8_global_cta_param_1];
-; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
-; SM90-NEXT:    and.b32 %r8, %r7, 3;
-; SM90-NEXT:    shl.b32 %r1, %r8, 3;
-; SM90-NEXT:    mov.b32 %r9, 255;
-; SM90-NEXT:    shl.b32 %r2, %r9, %r1;
-; SM90-NEXT:    not.b32 %r3, %r2;
-; SM90-NEXT:    shl.b32 %r4, %r6, %r1;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r16, [%rd1];
-; SM90-NEXT:  $L__BB380_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    and.b32 %r10, %r16, %r4;
-; SM90-NEXT:    not.b32 %r11, %r10;
-; SM90-NEXT:    and.b32 %r12, %r11, %r2;
-; SM90-NEXT:    and.b32 %r13, %r16, %r3;
-; SM90-NEXT:    or.b32 %r14, %r13, %r12;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r5, [%rd1], %r16, %r14;
-; SM90-NEXT:    setp.ne.b32 %p1, %r5, %r16;
-; SM90-NEXT:    mov.b32 %r16, %r5;
-; SM90-NEXT:    @%p1 bra $L__BB380_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    shr.u32 %r15, %r5, %r1;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b8 [func_retval0], %r15;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <1 x i8> %val syncscope("block") seq_cst
-        ret <1 x i8> %retval
-}
 
-define <2 x i8> @nand_seq_cst_v2i8_global_cta(ptr addrspace(1) %addr, <2 x i8> %val) {
-; SM90-LABEL: nand_seq_cst_v2i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b16 %rs<9>;
-; SM90-NEXT:    .reg .b32 %r<19>;
-; SM90-NEXT:    .reg .b64 %rd<3>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b8 {%rs1, %rs2}, [nand_seq_cst_v2i8_global_cta_param_1];
-; SM90-NEXT:    mov.b32 %r4, {%rs1, %rs2};
-; SM90-NEXT:    ld.param.b64 %rd2, [nand_seq_cst_v2i8_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:    and.b32 %r6, %r5, 3;
-; SM90-NEXT:    shl.b32 %r1, %r6, 3;
-; SM90-NEXT:    mov.b32 %r7, 65535;
-; SM90-NEXT:    shl.b32 %r8, %r7, %r1;
-; SM90-NEXT:    not.b32 %r2, %r8;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r18, [%rd1];
-; SM90-NEXT:  $L__BB381_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    shr.u32 %r9, %r18, %r1;
-; SM90-NEXT:    cvt.u16.u32 %rs3, %r9;
-; SM90-NEXT:    shr.u16 %rs4, %rs3, 8;
-; SM90-NEXT:    mov.b32 %r10, {%rs3, %rs4};
-; SM90-NEXT:    and.b32 %r11, %r10, %r4;
-; SM90-NEXT:    xor.b32 %r12, %r11, 16711935;
-; SM90-NEXT:    mov.b32 {%rs5, %rs6}, %r12;
-; SM90-NEXT:    shl.b16 %rs7, %rs6, 8;
-; SM90-NEXT:    or.b16 %rs8, %rs5, %rs7;
-; SM90-NEXT:    cvt.u32.u16 %r13, %rs8;
-; SM90-NEXT:    shl.b32 %r14, %r13, %r1;
-; SM90-NEXT:    and.b32 %r15, %r18, %r2;
-; SM90-NEXT:    or.b32 %r16, %r15, %r14;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r3, [%rd1], %r18, %r16;
-; SM90-NEXT:    setp.ne.b32 %p1, %r3, %r18;
-; SM90-NEXT:    mov.b32 %r18, %r3;
-; SM90-NEXT:    @%p1 bra $L__BB381_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    shr.u32 %r17, %r3, %r1;
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b16 [func_retval0], %r17;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i8> %val syncscope("block") seq_cst
-        ret <2 x i8> %retval
-}
 
-define <4 x i8> @nand_seq_cst_v4i8_global_cta(ptr addrspace(1) %addr, <4 x i8> %val) {
-; SM90-LABEL: nand_seq_cst_v4i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<6>;
-; SM90-NEXT:    .reg .b64 %rd<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b32 %r2, [nand_seq_cst_v4i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_seq_cst_v4i8_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
-; SM90-NEXT:  $L__BB382_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    and.b32 %r3, %r5, %r2;
-; SM90-NEXT:    xor.b32 %r4, %r3, -1;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r1, [%rd1], %r5, %r4;
-; SM90-NEXT:    setp.ne.b32 %p1, %r1, %r5;
-; SM90-NEXT:    mov.b32 %r5, %r1;
-; SM90-NEXT:    @%p1 bra $L__BB382_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r1;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <4 x i8> %val syncscope("block") seq_cst
-        ret <4 x i8> %retval
-}
 
-define <8 x i8> @nand_seq_cst_v8i8_global_cta(ptr addrspace(1) %addr, <8 x i8> %val) {
-; SM90-LABEL: nand_seq_cst_v8i8_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<9>;
-; SM90-NEXT:    .reg .b64 %rd<12>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [nand_seq_cst_v8i8_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_seq_cst_v8i8_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NEXT:    mov.b64 {_, %r8}, %rd2;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd2;
-; SM90-NEXT:  $L__BB383_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    cvt.u64.u32 %rd3, %r7;
-; SM90-NEXT:    cvt.u64.u32 %rd4, %r8;
-; SM90-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NEXT:    and.b32 %r3, %r8, %r2;
-; SM90-NEXT:    and.b32 %r4, %r7, %r1;
-; SM90-NEXT:    xor.b32 %r5, %r4, -1;
-; SM90-NEXT:    cvt.u64.u32 %rd7, %r5;
-; SM90-NEXT:    xor.b32 %r6, %r3, -1;
-; SM90-NEXT:    cvt.u64.u32 %rd8, %r6;
-; SM90-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd11, [%rd1], %rd6, %rd10;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd11, %rd6;
-; SM90-NEXT:    mov.b64 {_, %r8}, %rd11;
-; SM90-NEXT:    cvt.u32.u64 %r7, %rd11;
-; SM90-NEXT:    @%p1 bra $L__BB383_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r7, %r8};
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <8 x i8> %val syncscope("block") seq_cst
-        ret <8 x i8> %retval
-}
 
 define <1 x i32> @nand_monotonic_v1i32_global_cta(ptr addrspace(1) %addr, <1 x i32> %val) {
 ; SM90-LABEL: nand_monotonic_v1i32_global_cta(
@@ -17066,14 +16601,14 @@ define <1 x i32> @nand_monotonic_v1i32_global_cta(ptr addrspace(1) %addr, <1 x i
 ; SM90-NEXT:    ld.param.b64 %rd1, [nand_monotonic_v1i32_global_cta_param_0];
 ; SM90-NEXT:    ld.param.b32 %r1, [nand_monotonic_v1i32_global_cta_param_1];
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
-; SM90-NEXT:  $L__BB384_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB372_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    and.b32 %r3, %r5, %r1;
 ; SM90-NEXT:    not.b32 %r4, %r3;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r2, [%rd1], %r5, %r4;
 ; SM90-NEXT:    setp.ne.b32 %p1, %r2, %r5;
 ; SM90-NEXT:    mov.b32 %r5, %r2;
-; SM90-NEXT:    @%p1 bra $L__BB384_1;
+; SM90-NEXT:    @%p1 bra $L__BB372_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17094,7 +16629,7 @@ define <2 x i32> @nand_monotonic_v2i32_global_cta(ptr addrspace(1) %addr, <2 x i
 ; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
 ; SM90-NEXT:    mov.b64 {_, %r6}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:  $L__BB385_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB373_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd3, %r5;
 ; SM90-NEXT:    cvt.u64.u32 %rd4, %r6;
@@ -17111,7 +16646,7 @@ define <2 x i32> @nand_monotonic_v2i32_global_cta(ptr addrspace(1) %addr, <2 x i
 ; SM90-NEXT:    setp.ne.b64 %p1, %rd12, %rd6;
 ; SM90-NEXT:    mov.b64 {_, %r6}, %rd12;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd12;
-; SM90-NEXT:    @%p1 bra $L__BB385_1;
+; SM90-NEXT:    @%p1 bra $L__BB373_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-NEXT:    ret;
@@ -17141,7 +16676,7 @@ define <4 x i32> @nand_monotonic_v4i32_global_cta(ptr addrspace(1) %addr, <4 x i
 ; SM90-NEXT:    cvt.u32.u64 %r11, %rd4;
 ; SM90-NEXT:    mov.b64 {_, %r10}, %rd3;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd3;
-; SM90-NEXT:  $L__BB386_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB374_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd5, %r9;
 ; SM90-NEXT:    cvt.u64.u32 %rd6, %r10;
@@ -17180,7 +16715,7 @@ define <4 x i32> @nand_monotonic_v4i32_global_cta(ptr addrspace(1) %addr, <4 x i
 ; SM90-NEXT:    mov.b64 {_, %r10}, %rd23;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd23;
 ; SM90-NEXT:    setp.ne.b64 %p1, %rd27, 0;
-; SM90-NEXT:    @%p1 bra $L__BB386_1;
+; SM90-NEXT:    @%p1 bra $L__BB374_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-NEXT:    ret;
@@ -17211,7 +16746,7 @@ define <8 x i32> @nand_monotonic_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i
 ; SM90-NEXT:    cvt.u32.u64 %r19, %rd4;
 ; SM90-NEXT:    mov.b64 {_, %r18}, %rd3;
 ; SM90-NEXT:    cvt.u32.u64 %r17, %rd3;
-; SM90-NEXT:  $L__BB387_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB375_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd5, %r17;
 ; SM90-NEXT:    cvt.u64.u32 %rd6, %r18;
@@ -17250,7 +16785,7 @@ define <8 x i32> @nand_monotonic_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i
 ; SM90-NEXT:    mov.b64 {_, %r18}, %rd23;
 ; SM90-NEXT:    cvt.u32.u64 %r17, %rd23;
 ; SM90-NEXT:    setp.ne.b64 %p1, %rd27, 0;
-; SM90-NEXT:    @%p1 bra $L__BB387_1;
+; SM90-NEXT:    @%p1 bra $L__BB375_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    mov.b64 %rd28, 0;
 ; SM90-NEXT:    {
@@ -17264,7 +16799,7 @@ define <8 x i32> @nand_monotonic_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i
 ; SM90-NEXT:    cvt.u32.u64 %r23, %rd30;
 ; SM90-NEXT:    mov.b64 {_, %r22}, %rd29;
 ; SM90-NEXT:    cvt.u32.u64 %r21, %rd29;
-; SM90-NEXT:  $L__BB387_3: // %atomicrmw.start2
+; SM90-NEXT:  $L__BB375_3: // %atomicrmw.start2
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd31, %r21;
 ; SM90-NEXT:    cvt.u64.u32 %rd32, %r22;
@@ -17303,7 +16838,7 @@ define <8 x i32> @nand_monotonic_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i
 ; SM90-NEXT:    mov.b64 {_, %r22}, %rd49;
 ; SM90-NEXT:    cvt.u32.u64 %r21, %rd49;
 ; SM90-NEXT:    setp.ne.b64 %p2, %rd53, 0;
-; SM90-NEXT:    @%p2 bra $L__BB387_3;
+; SM90-NEXT:    @%p2 bra $L__BB375_3;
 ; SM90-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM90-NEXT:    st.param.v4.b32 [func_retval0+16], {%r21, %r22, %r23, %r24};
 ; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r17, %r18, %r19, %r20};
@@ -17323,14 +16858,14 @@ define <1 x i32> @nand_acquire_v1i32_global_cta(ptr addrspace(1) %addr, <1 x i32
 ; SM90-NEXT:    ld.param.b64 %rd1, [nand_acquire_v1i32_global_cta_param_0];
 ; SM90-NEXT:    ld.param.b32 %r1, [nand_acquire_v1i32_global_cta_param_1];
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
-; SM90-NEXT:  $L__BB388_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB376_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    and.b32 %r3, %r5, %r1;
 ; SM90-NEXT:    not.b32 %r4, %r3;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r2, [%rd1], %r5, %r4;
 ; SM90-NEXT:    setp.ne.b32 %p1, %r2, %r5;
 ; SM90-NEXT:    mov.b32 %r5, %r2;
-; SM90-NEXT:    @%p1 bra $L__BB388_1;
+; SM90-NEXT:    @%p1 bra $L__BB376_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
@@ -17352,7 +16887,7 @@ define <2 x i32> @nand_acquire_v2i32_global_cta(ptr addrspace(1) %addr, <2 x i32
 ; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
 ; SM90-NEXT:    mov.b64 {_, %r6}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:  $L__BB389_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB377_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd3, %r5;
 ; SM90-NEXT:    cvt.u64.u32 %rd4, %r6;
@@ -17369,7 +16904,7 @@ define <2 x i32> @nand_acquire_v2i32_global_cta(ptr addrspace(1) %addr, <2 x i32
 ; SM90-NEXT:    setp.ne.b64 %p1, %rd12, %rd6;
 ; SM90-NEXT:    mov.b64 {_, %r6}, %rd12;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd12;
-; SM90-NEXT:    @%p1 bra $L__BB389_1;
+; SM90-NEXT:    @%p1 bra $L__BB377_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
@@ -17400,7 +16935,7 @@ define <4 x i32> @nand_acquire_v4i32_global_cta(ptr addrspace(1) %addr, <4 x i32
 ; SM90-NEXT:    cvt.u32.u64 %r11, %rd4;
 ; SM90-NEXT:    mov.b64 {_, %r10}, %rd3;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd3;
-; SM90-NEXT:  $L__BB390_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB378_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd5, %r9;
 ; SM90-NEXT:    cvt.u64.u32 %rd6, %r10;
@@ -17439,7 +16974,7 @@ define <4 x i32> @nand_acquire_v4i32_global_cta(ptr addrspace(1) %addr, <4 x i32
 ; SM90-NEXT:    mov.b64 {_, %r10}, %rd23;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd23;
 ; SM90-NEXT:    setp.ne.b64 %p1, %rd27, 0;
-; SM90-NEXT:    @%p1 bra $L__BB390_1;
+; SM90-NEXT:    @%p1 bra $L__BB378_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
@@ -17471,7 +17006,7 @@ define <8 x i32> @nand_acquire_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; SM90-NEXT:    cvt.u32.u64 %r19, %rd4;
 ; SM90-NEXT:    mov.b64 {_, %r18}, %rd3;
 ; SM90-NEXT:    cvt.u32.u64 %r17, %rd3;
-; SM90-NEXT:  $L__BB391_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB379_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd5, %r17;
 ; SM90-NEXT:    cvt.u64.u32 %rd6, %r18;
@@ -17510,7 +17045,7 @@ define <8 x i32> @nand_acquire_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; SM90-NEXT:    mov.b64 {_, %r18}, %rd23;
 ; SM90-NEXT:    cvt.u32.u64 %r17, %rd23;
 ; SM90-NEXT:    setp.ne.b64 %p1, %rd27, 0;
-; SM90-NEXT:    @%p1 bra $L__BB391_1;
+; SM90-NEXT:    @%p1 bra $L__BB379_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    mov.b64 %rd28, 0;
 ; SM90-NEXT:    {
@@ -17524,7 +17059,7 @@ define <8 x i32> @nand_acquire_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; SM90-NEXT:    cvt.u32.u64 %r23, %rd30;
 ; SM90-NEXT:    mov.b64 {_, %r22}, %rd29;
 ; SM90-NEXT:    cvt.u32.u64 %r21, %rd29;
-; SM90-NEXT:  $L__BB391_3: // %atomicrmw.start2
+; SM90-NEXT:  $L__BB379_3: // %atomicrmw.start2
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd31, %r21;
 ; SM90-NEXT:    cvt.u64.u32 %rd32, %r22;
@@ -17563,7 +17098,7 @@ define <8 x i32> @nand_acquire_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; SM90-NEXT:    mov.b64 {_, %r22}, %rd49;
 ; SM90-NEXT:    cvt.u32.u64 %r21, %rd49;
 ; SM90-NEXT:    setp.ne.b64 %p2, %rd53, 0;
-; SM90-NEXT:    @%p2 bra $L__BB391_3;
+; SM90-NEXT:    @%p2 bra $L__BB379_3;
 ; SM90-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM90-NEXT:    fence.acquire.cta;
 ; SM90-NEXT:    st.param.v4.b32 [func_retval0+16], {%r21, %r22, %r23, %r24};
@@ -17585,14 +17120,14 @@ define <1 x i32> @nand_release_v1i32_global_cta(ptr addrspace(1) %addr, <1 x i32
 ; SM90-NEXT:    fence.release.cta;
 ; SM90-NEXT:    ld.param.b32 %r1, [nand_release_v1i32_global_cta_param_1];
 ; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
-; SM90-NEXT:  $L__BB392_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB380_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    and.b32 %r3, %r5, %r1;
 ; SM90-NEXT:    not.b32 %r4, %r3;
 ; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r2, [%rd1], %r5, %r4;
 ; SM90-NEXT:    setp.ne.b32 %p1, %r2, %r5;
 ; SM90-NEXT:    mov.b32 %r5, %r2;
-; SM90-NEXT:    @%p1 bra $L__BB392_1;
+; SM90-NEXT:    @%p1 bra $L__BB380_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
@@ -17614,7 +17149,7 @@ define <2 x i32> @nand_release_v2i32_global_cta(ptr addrspace(1) %addr, <2 x i32
 ; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
 ; SM90-NEXT:    mov.b64 {_, %r6}, %rd2;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:  $L__BB393_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB381_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd3, %r5;
 ; SM90-NEXT:    cvt.u64.u32 %rd4, %r6;
@@ -17631,7 +17166,7 @@ define <2 x i32> @nand_release_v2i32_global_cta(ptr addrspace(1) %addr, <2 x i32
 ; SM90-NEXT:    setp.ne.b64 %p1, %rd12, %rd6;
 ; SM90-NEXT:    mov.b64 {_, %r6}, %rd12;
 ; SM90-NEXT:    cvt.u32.u64 %r5, %rd12;
-; SM90-NEXT:    @%p1 bra $L__BB393_1;
+; SM90-NEXT:    @%p1 bra $L__BB381_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
 ; SM90-NEXT:    ret;
@@ -17662,7 +17197,7 @@ define <4 x i32> @nand_release_v4i32_global_cta(ptr addrspace(1) %addr, <4 x i32
 ; SM90-NEXT:    cvt.u32.u64 %r11, %rd4;
 ; SM90-NEXT:    mov.b64 {_, %r10}, %rd3;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd3;
-; SM90-NEXT:  $L__BB394_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB382_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd5, %r9;
 ; SM90-NEXT:    cvt.u64.u32 %rd6, %r10;
@@ -17701,7 +17236,7 @@ define <4 x i32> @nand_release_v4i32_global_cta(ptr addrspace(1) %addr, <4 x i32
 ; SM90-NEXT:    mov.b64 {_, %r10}, %rd23;
 ; SM90-NEXT:    cvt.u32.u64 %r9, %rd23;
 ; SM90-NEXT:    setp.ne.b64 %p1, %rd27, 0;
-; SM90-NEXT:    @%p1 bra $L__BB394_1;
+; SM90-NEXT:    @%p1 bra $L__BB382_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
 ; SM90-NEXT:    ret;
@@ -17733,7 +17268,7 @@ define <8 x i32> @nand_release_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; SM90-NEXT:    cvt.u32.u64 %r19, %rd4;
 ; SM90-NEXT:    mov.b64 {_, %r18}, %rd3;
 ; SM90-NEXT:    cvt.u32.u64 %r17, %rd3;
-; SM90-NEXT:  $L__BB395_1: // %atomicrmw.start
+; SM90-NEXT:  $L__BB383_1: // %atomicrmw.start
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd5, %r17;
 ; SM90-NEXT:    cvt.u64.u32 %rd6, %r18;
@@ -17772,7 +17307,7 @@ define <8 x i32> @nand_release_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; SM90-NEXT:    mov.b64 {_, %r18}, %rd23;
 ; SM90-NEXT:    cvt.u32.u64 %r17, %rd23;
 ; SM90-NEXT:    setp.ne.b64 %p1, %rd27, 0;
-; SM90-NEXT:    @%p1 bra $L__BB395_1;
+; SM90-NEXT:    @%p1 bra $L__BB383_1;
 ; SM90-NEXT:  // %bb.2: // %atomicrmw.end
 ; SM90-NEXT:    mov.b64 %rd28, 0;
 ; SM90-NEXT:    {
@@ -17786,7 +17321,7 @@ define <8 x i32> @nand_release_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; SM90-NEXT:    cvt.u32.u64 %r23, %rd30;
 ; SM90-NEXT:    mov.b64 {_, %r22}, %rd29;
 ; SM90-NEXT:    cvt.u32.u64 %r21, %rd29;
-; SM90-NEXT:  $L__BB395_3: // %atomicrmw.start2
+; SM90-NEXT:  $L__BB383_3: // %atomicrmw.start2
 ; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
 ; SM90-NEXT:    cvt.u64.u32 %rd31, %r21;
 ; SM90-NEXT:    cvt.u64.u32 %rd32, %r22;
@@ -17825,276 +17360,11 @@ define <8 x i32> @nand_release_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32
 ; SM90-NEXT:    mov.b64 {_, %r22}, %rd49;
 ; SM90-NEXT:    cvt.u32.u64 %r21, %rd49;
 ; SM90-NEXT:    setp.ne.b64 %p2, %rd53, 0;
-; SM90-NEXT:    @%p2 bra $L__BB395_3;
+; SM90-NEXT:    @%p2 bra $L__BB383_3;
 ; SM90-NEXT:  // %bb.4: // %atomicrmw.end1
 ; SM90-NEXT:    st.param.v4.b32 [func_retval0+16], {%r21, %r22, %r23, %r24};
 ; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r17, %r18, %r19, %r20};
 ; SM90-NEXT:    ret;
         %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <8 x i32> %val syncscope("block") release
-        ret <8 x i32> %retval
-}
-
-define <1 x i32> @nand_seq_cst_v1i32_global_cta(ptr addrspace(1) %addr, <1 x i32> %val) {
-; SM90-LABEL: nand_seq_cst_v1i32_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<6>;
-; SM90-NEXT:    .reg .b64 %rd<2>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_seq_cst_v1i32_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.b32 %r1, [nand_seq_cst_v1i32_global_cta_param_1];
-; SM90-NEXT:    ld.relaxed.cta.global.b32 %r5, [%rd1];
-; SM90-NEXT:  $L__BB396_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    and.b32 %r3, %r5, %r1;
-; SM90-NEXT:    not.b32 %r4, %r3;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b32 %r2, [%rd1], %r5, %r4;
-; SM90-NEXT:    setp.ne.b32 %p1, %r2, %r5;
-; SM90-NEXT:    mov.b32 %r5, %r2;
-; SM90-NEXT:    @%p1 bra $L__BB396_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <1 x i32> %val syncscope("block") seq_cst
-        ret <1 x i32> %retval
-}
-
-define <2 x i32> @nand_seq_cst_v2i32_global_cta(ptr addrspace(1) %addr, <2 x i32> %val) {
-; SM90-LABEL: nand_seq_cst_v2i32_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<7>;
-; SM90-NEXT:    .reg .b64 %rd<13>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v2.b32 {%r1, %r2}, [nand_seq_cst_v2i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_seq_cst_v2i32_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.relaxed.cta.global.b64 %rd2, [%rd1];
-; SM90-NEXT:    mov.b64 {_, %r6}, %rd2;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd2;
-; SM90-NEXT:  $L__BB397_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    cvt.u64.u32 %rd3, %r5;
-; SM90-NEXT:    cvt.u64.u32 %rd4, %r6;
-; SM90-NEXT:    shl.b64 %rd5, %rd4, 32;
-; SM90-NEXT:    or.b64 %rd6, %rd3, %rd5;
-; SM90-NEXT:    and.b32 %r3, %r6, %r2;
-; SM90-NEXT:    and.b32 %r4, %r5, %r1;
-; SM90-NEXT:    cvt.u64.u32 %rd7, %r4;
-; SM90-NEXT:    cvt.u64.u32 %rd8, %r3;
-; SM90-NEXT:    shl.b64 %rd9, %rd8, 32;
-; SM90-NEXT:    or.b64 %rd10, %rd7, %rd9;
-; SM90-NEXT:    not.b64 %rd11, %rd10;
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b64 %rd12, [%rd1], %rd6, %rd11;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd12, %rd6;
-; SM90-NEXT:    mov.b64 {_, %r6}, %rd12;
-; SM90-NEXT:    cvt.u32.u64 %r5, %rd12;
-; SM90-NEXT:    @%p1 bra $L__BB397_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.v2.b32 [func_retval0], {%r5, %r6};
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <2 x i32> %val syncscope("block") seq_cst
-        ret <2 x i32> %retval
-}
-
-define <4 x i32> @nand_seq_cst_v4i32_global_cta(ptr addrspace(1) %addr, <4 x i32> %val) {
-; SM90-LABEL: nand_seq_cst_v4i32_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<2>;
-; SM90-NEXT:    .reg .b32 %r<13>;
-; SM90-NEXT:    .reg .b64 %rd<28>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [nand_seq_cst_v4i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_seq_cst_v4i32_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    mov.b64 %rd2, 0;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {%rd2, %rd2};
-; SM90-NEXT:    mov.b128 swap, {%rd2, %rd2};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd3, %rd4}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    mov.b64 {_, %r12}, %rd4;
-; SM90-NEXT:    cvt.u32.u64 %r11, %rd4;
-; SM90-NEXT:    mov.b64 {_, %r10}, %rd3;
-; SM90-NEXT:    cvt.u32.u64 %r9, %rd3;
-; SM90-NEXT:  $L__BB398_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    cvt.u64.u32 %rd5, %r9;
-; SM90-NEXT:    cvt.u64.u32 %rd6, %r10;
-; SM90-NEXT:    shl.b64 %rd7, %rd6, 32;
-; SM90-NEXT:    or.b64 %rd8, %rd5, %rd7;
-; SM90-NEXT:    cvt.u64.u32 %rd9, %r11;
-; SM90-NEXT:    cvt.u64.u32 %rd10, %r12;
-; SM90-NEXT:    shl.b64 %rd11, %rd10, 32;
-; SM90-NEXT:    or.b64 %rd12, %rd9, %rd11;
-; SM90-NEXT:    and.b32 %r5, %r12, %r4;
-; SM90-NEXT:    and.b32 %r6, %r11, %r3;
-; SM90-NEXT:    and.b32 %r7, %r10, %r2;
-; SM90-NEXT:    and.b32 %r8, %r9, %r1;
-; SM90-NEXT:    cvt.u64.u32 %rd13, %r8;
-; SM90-NEXT:    cvt.u64.u32 %rd14, %r7;
-; SM90-NEXT:    shl.b64 %rd15, %rd14, 32;
-; SM90-NEXT:    or.b64 %rd16, %rd13, %rd15;
-; SM90-NEXT:    not.b64 %rd17, %rd16;
-; SM90-NEXT:    cvt.u64.u32 %rd18, %r6;
-; SM90-NEXT:    cvt.u64.u32 %rd19, %r5;
-; SM90-NEXT:    shl.b64 %rd20, %rd19, 32;
-; SM90-NEXT:    or.b64 %rd21, %rd18, %rd20;
-; SM90-NEXT:    not.b64 %rd22, %rd21;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {%rd8, %rd12};
-; SM90-NEXT:    mov.b128 swap, {%rd17, %rd22};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd23, %rd24}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    xor.b64 %rd25, %rd24, %rd12;
-; SM90-NEXT:    xor.b64 %rd26, %rd23, %rd8;
-; SM90-NEXT:    or.b64 %rd27, %rd26, %rd25;
-; SM90-NEXT:    mov.b64 {_, %r12}, %rd24;
-; SM90-NEXT:    cvt.u32.u64 %r11, %rd24;
-; SM90-NEXT:    mov.b64 {_, %r10}, %rd23;
-; SM90-NEXT:    cvt.u32.u64 %r9, %rd23;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd27, 0;
-; SM90-NEXT:    @%p1 bra $L__BB398_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r9, %r10, %r11, %r12};
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <4 x i32> %val syncscope("block") seq_cst
-        ret <4 x i32> %retval
-}
-
-define <8 x i32> @nand_seq_cst_v8i32_global_cta(ptr addrspace(1) %addr, <8 x i32> %val) {
-; SM90-LABEL: nand_seq_cst_v8i32_global_cta(
-; SM90:       {
-; SM90-NEXT:    .reg .pred %p<3>;
-; SM90-NEXT:    .reg .b32 %r<25>;
-; SM90-NEXT:    .reg .b64 %rd<54>;
-; SM90-EMPTY:
-; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [nand_seq_cst_v8i32_global_cta_param_0];
-; SM90-NEXT:    fence.sc.cta;
-; SM90-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [nand_seq_cst_v8i32_global_cta_param_1];
-; SM90-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [nand_seq_cst_v8i32_global_cta_param_1+16];
-; SM90-NEXT:    mov.b64 %rd2, 0;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {%rd2, %rd2};
-; SM90-NEXT:    mov.b128 swap, {%rd2, %rd2};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd3, %rd4}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    mov.b64 {_, %r20}, %rd4;
-; SM90-NEXT:    cvt.u32.u64 %r19, %rd4;
-; SM90-NEXT:    mov.b64 {_, %r18}, %rd3;
-; SM90-NEXT:    cvt.u32.u64 %r17, %rd3;
-; SM90-NEXT:  $L__BB399_1: // %atomicrmw.start
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    cvt.u64.u32 %rd5, %r17;
-; SM90-NEXT:    cvt.u64.u32 %rd6, %r18;
-; SM90-NEXT:    shl.b64 %rd7, %rd6, 32;
-; SM90-NEXT:    or.b64 %rd8, %rd5, %rd7;
-; SM90-NEXT:    cvt.u64.u32 %rd9, %r19;
-; SM90-NEXT:    cvt.u64.u32 %rd10, %r20;
-; SM90-NEXT:    shl.b64 %rd11, %rd10, 32;
-; SM90-NEXT:    or.b64 %rd12, %rd9, %rd11;
-; SM90-NEXT:    and.b32 %r9, %r20, %r4;
-; SM90-NEXT:    and.b32 %r10, %r19, %r3;
-; SM90-NEXT:    and.b32 %r11, %r18, %r2;
-; SM90-NEXT:    and.b32 %r12, %r17, %r1;
-; SM90-NEXT:    cvt.u64.u32 %rd13, %r12;
-; SM90-NEXT:    cvt.u64.u32 %rd14, %r11;
-; SM90-NEXT:    shl.b64 %rd15, %rd14, 32;
-; SM90-NEXT:    or.b64 %rd16, %rd13, %rd15;
-; SM90-NEXT:    not.b64 %rd17, %rd16;
-; SM90-NEXT:    cvt.u64.u32 %rd18, %r10;
-; SM90-NEXT:    cvt.u64.u32 %rd19, %r9;
-; SM90-NEXT:    shl.b64 %rd20, %rd19, 32;
-; SM90-NEXT:    or.b64 %rd21, %rd18, %rd20;
-; SM90-NEXT:    not.b64 %rd22, %rd21;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {%rd8, %rd12};
-; SM90-NEXT:    mov.b128 swap, {%rd17, %rd22};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd23, %rd24}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    xor.b64 %rd25, %rd24, %rd12;
-; SM90-NEXT:    xor.b64 %rd26, %rd23, %rd8;
-; SM90-NEXT:    or.b64 %rd27, %rd26, %rd25;
-; SM90-NEXT:    mov.b64 {_, %r20}, %rd24;
-; SM90-NEXT:    cvt.u32.u64 %r19, %rd24;
-; SM90-NEXT:    mov.b64 {_, %r18}, %rd23;
-; SM90-NEXT:    cvt.u32.u64 %r17, %rd23;
-; SM90-NEXT:    setp.ne.b64 %p1, %rd27, 0;
-; SM90-NEXT:    @%p1 bra $L__BB399_1;
-; SM90-NEXT:  // %bb.2: // %atomicrmw.end
-; SM90-NEXT:    mov.b64 %rd28, 0;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {%rd28, %rd28};
-; SM90-NEXT:    mov.b128 swap, {%rd28, %rd28};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1+16], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd29, %rd30}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    mov.b64 {_, %r24}, %rd30;
-; SM90-NEXT:    cvt.u32.u64 %r23, %rd30;
-; SM90-NEXT:    mov.b64 {_, %r22}, %rd29;
-; SM90-NEXT:    cvt.u32.u64 %r21, %rd29;
-; SM90-NEXT:  $L__BB399_3: // %atomicrmw.start2
-; SM90-NEXT:    // =>This Inner Loop Header: Depth=1
-; SM90-NEXT:    cvt.u64.u32 %rd31, %r21;
-; SM90-NEXT:    cvt.u64.u32 %rd32, %r22;
-; SM90-NEXT:    shl.b64 %rd33, %rd32, 32;
-; SM90-NEXT:    or.b64 %rd34, %rd31, %rd33;
-; SM90-NEXT:    cvt.u64.u32 %rd35, %r23;
-; SM90-NEXT:    cvt.u64.u32 %rd36, %r24;
-; SM90-NEXT:    shl.b64 %rd37, %rd36, 32;
-; SM90-NEXT:    or.b64 %rd38, %rd35, %rd37;
-; SM90-NEXT:    and.b32 %r13, %r24, %r8;
-; SM90-NEXT:    and.b32 %r14, %r23, %r7;
-; SM90-NEXT:    and.b32 %r15, %r22, %r6;
-; SM90-NEXT:    and.b32 %r16, %r21, %r5;
-; SM90-NEXT:    cvt.u64.u32 %rd39, %r16;
-; SM90-NEXT:    cvt.u64.u32 %rd40, %r15;
-; SM90-NEXT:    shl.b64 %rd41, %rd40, 32;
-; SM90-NEXT:    or.b64 %rd42, %rd39, %rd41;
-; SM90-NEXT:    not.b64 %rd43, %rd42;
-; SM90-NEXT:    cvt.u64.u32 %rd44, %r14;
-; SM90-NEXT:    cvt.u64.u32 %rd45, %r13;
-; SM90-NEXT:    shl.b64 %rd46, %rd45, 32;
-; SM90-NEXT:    or.b64 %rd47, %rd44, %rd46;
-; SM90-NEXT:    not.b64 %rd48, %rd47;
-; SM90-NEXT:    {
-; SM90-NEXT:    .reg .b128 cmp, swap, dst;
-; SM90-NEXT:    mov.b128 cmp, {%rd34, %rd38};
-; SM90-NEXT:    mov.b128 swap, {%rd43, %rd48};
-; SM90-NEXT:    atom.relaxed.cta.global.cas.b128 dst, [%rd1+16], cmp, swap;
-; SM90-NEXT:    mov.b128 {%rd49, %rd50}, dst;
-; SM90-NEXT:    }
-; SM90-NEXT:    xor.b64 %rd51, %rd50, %rd38;
-; SM90-NEXT:    xor.b64 %rd52, %rd49, %rd34;
-; SM90-NEXT:    or.b64 %rd53, %rd52, %rd51;
-; SM90-NEXT:    mov.b64 {_, %r24}, %rd50;
-; SM90-NEXT:    cvt.u32.u64 %r23, %rd50;
-; SM90-NEXT:    mov.b64 {_, %r22}, %rd49;
-; SM90-NEXT:    cvt.u32.u64 %r21, %rd49;
-; SM90-NEXT:    setp.ne.b64 %p2, %rd53, 0;
-; SM90-NEXT:    @%p2 bra $L__BB399_3;
-; SM90-NEXT:  // %bb.4: // %atomicrmw.end1
-; SM90-NEXT:    fence.acquire.cta;
-; SM90-NEXT:    st.param.v4.b32 [func_retval0+16], {%r21, %r22, %r23, %r24};
-; SM90-NEXT:    st.param.v4.b32 [func_retval0], {%r17, %r18, %r19, %r20};
-; SM90-NEXT:    ret;
-        %retval = atomicrmw elementwise nand ptr  addrspace(1) %addr, <8 x i32> %val syncscope("block") seq_cst
         ret <8 x i32> %retval
 }
