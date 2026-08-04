@@ -776,7 +776,7 @@ public:
   NODE(parser, OmpTypeNameList)
   NODE(parser, OmpUnifiedAddressClause)
   NODE(parser, OmpUnifiedSharedMemoryClause)
-  NODE(parser, OmpUpdateClause)
+  NODE(parser, OmpUpdateDependObjectsClause)
   NODE(parser, OmpUseClause)
   NODE(parser, OmpUtilityDirective)
   NODE(parser, OmpVariableCategory)

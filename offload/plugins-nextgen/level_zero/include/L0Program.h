@@ -126,6 +126,9 @@ struct L0GlobalHandlerTy final : public GenericGlobalHandlerTy {
   Error getGlobalMetadataFromDevice(GenericDeviceTy &Device,
                                     DeviceImageTy &Image,
                                     GlobalTy &DeviceGlobal) override;
+
+protected:
+  bool isExportedSymbol(uint32_t Flags) override;
 };
 
 bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,
