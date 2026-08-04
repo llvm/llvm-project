@@ -22,6 +22,7 @@
 #  include <__mutex/once_flag.h>
 #  include <__utility/no_destroy.h>
 #  include <__utility/private_constructor_tag.h>
+#  include <__utility/swap.h>
 #  include <cstdint>
 #  include <stdexcept>
 #  include <string>
@@ -137,7 +138,13 @@ private:
   friend bool has_facet(const locale&) _NOEXCEPT;
   template <class _Facet>
   friend const _Facet& use_facet(const locale&);
+
+  _LIBCPP_HIDE_FROM_ABI friend void swap(locale&, locale&) _NOEXCEPT;
 };
+
+_LIBCPP_HIDE_FROM_ABI inline void swap(locale& __lhs, locale& __rhs) _NOEXCEPT {
+  std::swap(__lhs.__locale_, __rhs.__locale_);
+}
 
 class _LIBCPP_EXPORTED_FROM_ABI locale::facet : public __shared_count {
 protected:
