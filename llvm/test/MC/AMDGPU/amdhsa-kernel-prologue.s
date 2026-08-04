@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx1250 %s -filetype=null 2>&1 | FileCheck %s -implicit-check-not=warning: -check-prefix=GFX1250
+// RUN: llvm-mc -triple=amdgpu12.50-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s -implicit-check-not=warning: -check-prefix=GFX1250
 
 // GFX1250: :[[@LINE+1]]:1: warning: kernel 'test_wrong_before' does not begin with the required prologue sequence: GLOBAL_PREFETCH_B8 followed by V_NOP
 test_wrong_before:

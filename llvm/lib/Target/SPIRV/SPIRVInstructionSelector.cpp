@@ -23,6 +23,7 @@
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -192,9 +193,6 @@ private:
   bool selectAtomicPtrValue(
       Register ResVReg, SPIRVTypeInst ResType, MachineIRBuilder &MIRBuilder,
       function_ref<Register(SPIRVTypeInst IntType)> EmitAtomic) const;
-
-  bool selectInterlockedOp(Register ResVReg, SPIRVTypeInst ResType,
-                           MachineInstr &I, unsigned Opcode) const;
 
   bool selectAtomicCmpXchg(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
@@ -710,7 +708,6 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_any:
   case Intrinsic::spv_bitcast:
   case Intrinsic::spv_const_composite:
-  case Intrinsic::spv_cross:
   case Intrinsic::spv_degrees:
   case Intrinsic::spv_distance:
   case Intrinsic::spv_extractelt:
@@ -2583,36 +2580,6 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   return true;
 }
 
-bool SPIRVInstructionSelector::selectInterlockedOp(Register ResVReg,
-                                                   SPIRVTypeInst ResType,
-                                                   MachineInstr &I,
-                                                   unsigned Opcode) const {
-  Register Ptr = I.getOperand(2).getReg();
-  Register Value = I.getOperand(3).getReg();
-
-  SPIRV::StorageClass::StorageClass SC = GR.getPointerStorageClass(Ptr);
-  assert((SC == SPIRV::StorageClass::Workgroup ||
-          SC == SPIRV::StorageClass::StorageBuffer) &&
-         "InterlockedAdd requires Workgroup or StorageBuffer storage class");
-  uint32_t Scope = static_cast<uint32_t>(SC == SPIRV::StorageClass::Workgroup
-                                             ? SPIRV::Scope::Workgroup
-                                             : SPIRV::Scope::Device);
-  Register ScopeReg = buildI32Constant(Scope, I);
-
-  uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC));
-  Register MemSemReg = buildI32Constant(MemSem, I);
-
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(Ptr)
-      .addUse(ScopeReg)
-      .addUse(MemSemReg)
-      .addUse(Value)
-      .constrainAllUses(TII, TRI, RBI);
-  return true;
-}
-
 bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
   unsigned ArgI = I.getNumOperands() - 1;
   Register SrcReg =
@@ -2892,13 +2859,15 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
     // are expressed by OpSpecConstantOp with an Opcode.
     // TODO: maybe insert a check whether the Kernel capability was declared and
     // so PtrCastToGeneric/GenericCastToPtr are available.
-    unsigned SpecOpcode =
-        DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC)
-            ? static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric)
-            : (SrcSC == SPIRV::StorageClass::Generic &&
-                       isGenericCastablePtr(DstSC)
-                   ? static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr)
-                   : 0);
+    unsigned SpecOpcode = [&]() -> unsigned {
+      if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL)
+        return static_cast<uint32_t>(SPIRV::Opcode::Bitcast);
+      if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
+        return static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric);
+      if (SrcSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(DstSC))
+        return static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr);
+      return 0u;
+    }();
     // TODO: OpConstantComposite expects i8*, so we are forced to forget a
     // correct value of ResType and use general i8* instead. Maybe this should
     // be addressed in the emit-intrinsic step to infer a correct
@@ -4993,16 +4962,22 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
       CompositeArgs.push_back(WrapReg);
       continue;
     }
-    // Create a new register for the wrapper
-    WrapReg = MRI->createVirtualRegister(GR.getRegClass(OpType));
+    SPIRVTypeInst WrapType = OpType;
+    if (OpType->getOpcode() == SPIRV::OpTypePointer &&
+        GR.getPointerStorageClass(OpType) ==
+            SPIRV::StorageClass::CodeSectionINTEL) {
+      WrapType = GR.changePointerStorageClass(OpType,
+                                              SPIRV::StorageClass::Function, I);
+    }
+    WrapReg = MRI->createVirtualRegister(GR.getRegClass(WrapType));
     CompositeArgs.push_back(WrapReg);
     // Decorate the wrapper register and generate a new instruction
     MRI->setType(WrapReg, LLT::pointer(0, 64));
-    GR.assignSPIRVTypeToVReg(OpType, WrapReg, *MF);
+    GR.assignSPIRVTypeToVReg(WrapType, WrapReg, *MF);
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpSpecConstantOp))
                    .addDef(WrapReg)
-                   .addUse(GR.getSPIRVTypeID(OpType))
+                   .addUse(GR.getSPIRVTypeID(WrapType))
                    .addImm(static_cast<uint32_t>(SPIRV::Opcode::Bitcast))
                    .addUse(OpReg);
     GR.add(OpDefine, MIB);
@@ -5376,8 +5351,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_any:
     return selectAny(ResVReg, ResType, I);
-  case Intrinsic::spv_cross:
-    return selectExtInst(ResVReg, ResType, I, CL::cross, GL::Cross);
   case Intrinsic::spv_distance:
     return selectExtInst(ResVReg, ResType, I, CL::distance, GL::Distance);
   case Intrinsic::spv_lerp:
@@ -5507,8 +5480,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_reduce_and:
     return selectWaveReduceOp(ResVReg, ResType, I,
                               SPIRV::OpGroupNonUniformBitwiseAnd);
-  case Intrinsic::spv_interlocked_or:
-    return selectInterlockedOp(ResVReg, ResType, I, SPIRV::OpAtomicOr);
   case Intrinsic::spv_wave_reduce_umax:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:
@@ -6458,10 +6429,14 @@ bool SPIRVInstructionSelector::selectResourceNonUniformIndex(
 
 void SPIRVInstructionSelector::decorateUsesAsNonUniform(
     Register &NonUniformReg) const {
-  llvm::SmallVector<Register> WorkList = {NonUniformReg};
+  llvm::SmallVector<std::pair<Register, MachineInstr *>> WorkList = {
+      {NonUniformReg, nullptr}};
+  llvm::SmallSet<Register, 8> Visited;
   while (WorkList.size() > 0) {
-    Register CurrentReg = WorkList.back();
-    WorkList.pop_back();
+    auto [CurrentReg, DefMI] = WorkList.pop_back_val();
+
+    if (!Visited.insert(CurrentReg).second)
+      continue;
 
     bool IsDecorated = false;
     for (MachineInstr &Use : MRI->use_instructions(CurrentReg)) {
@@ -6476,12 +6451,15 @@ void SPIRVInstructionSelector::decorateUsesAsNonUniform(
         Register ResultReg = Use.getOperand(0).getReg();
         if (ResultReg == CurrentReg)
           continue;
-        WorkList.push_back(ResultReg);
+        WorkList.push_back({ResultReg, &Use});
       }
     }
 
     if (!IsDecorated) {
-      buildOpDecorate(CurrentReg, *MRI->getVRegDef(CurrentReg), TII,
+      MachineBasicBlock &MBB = *DefMI->getParent();
+      MachineInstr &InsertPt =
+          DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI->getNextNode();
+      buildOpDecorate(CurrentReg, InsertPt, TII,
                       SPIRV::Decoration::NonUniformEXT, {});
     }
   }

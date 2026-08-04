@@ -35,6 +35,11 @@ bool isConstant(Value *V) {
   return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
 }
 
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
+  const auto *CI = dyn_cast<ConstantInt>(V);
+  return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
+}
+
 bool isVectorLikeInstWithConstOps(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   // Non-instructions are vector-like only if they are undef.

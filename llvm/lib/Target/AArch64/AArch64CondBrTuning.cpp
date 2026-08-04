@@ -74,7 +74,6 @@ INITIALIZE_PASS(AArch64CondBrTuning, "aarch64-cond-br-tuning",
 
 void AArch64CondBrTuning::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

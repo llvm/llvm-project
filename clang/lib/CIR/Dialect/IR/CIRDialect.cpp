@@ -642,21 +642,44 @@ OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
 // CastOp
 //===----------------------------------------------------------------------===//
 
+static bool isFloatingPointCastKind(cir::CastKind kind) {
+  switch (kind) {
+  case cir::CastKind::floating:
+  case cir::CastKind::int_to_float:
+  case cir::CastKind::float_to_int:
+  case cir::CastKind::float_to_bool:
+  case cir::CastKind::bool_to_float:
+  case cir::CastKind::float_to_complex:
+  case cir::CastKind::float_complex_to_real:
+  case cir::CastKind::float_complex_to_bool:
+  case cir::CastKind::float_complex:
+  case cir::CastKind::float_complex_to_int_complex:
+  case cir::CastKind::int_complex_to_float_complex:
+    return true;
+  default:
+    return false;
+  }
+}
+
 LogicalResult cir::CastOp::verify() {
   mlir::Type resType = getType();
   mlir::Type srcType = getSrc().getType();
+  cir::CastKind kind = getKind();
+
+  if (getFenvAttr() && !isFloatingPointCastKind(kind))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point cast kinds";
 
   // Verify address space casts for pointer types. given that
   // casts for within a different address space are illegal.
   auto srcPtrTy = mlir::dyn_cast<cir::PointerType>(srcType);
   auto resPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
-  if (srcPtrTy && resPtrTy && (getKind() != cir::CastKind::address_space))
+  if (srcPtrTy && resPtrTy && (kind != cir::CastKind::address_space))
     if (srcPtrTy.getAddrSpace() != resPtrTy.getAddrSpace()) {
       return emitOpError() << "result type address space does not match the "
                               "address space of the operand";
     }
 
-  cir::CastKind kind = getKind();
   auto srcVTy = mlir::dyn_cast<cir::VectorType>(srcType);
   auto resVTy = mlir::dyn_cast<cir::VectorType>(resType);
   if (srcVTy && resVTy) {
@@ -674,7 +697,7 @@ LogicalResult cir::CastOp::verify() {
     resType = resVTy.getElementType();
   }
 
-  switch (getKind()) {
+  switch (kind) {
   case cir::CastKind::int_to_bool: {
     if (!mlir::isa<cir::BoolType>(resType))
       return emitOpError() << "requires !cir.bool type for result";
@@ -3296,7 +3319,36 @@ void cir::CoroBodyOp::build(OpBuilder &builder, OperationState &result,
 // CopyOp Definitions
 //===----------------------------------------------------------------------===//
 
+// Prints the pointer type(s) for a `cir.copy`. `src` and `dst` share the same
+// pointee type but may differ in address space; a single type is printed when
+// they match, otherwise both are printed (`src` first).
+static void printCopyTypes(mlir::OpAsmPrinter &printer, mlir::Operation *,
+                           mlir::Type srcType, mlir::Type dstType) {
+  printer.printType(srcType);
+  if (srcType != dstType) {
+    printer << ", ";
+    printer.printType(dstType);
+  }
+}
+
+static mlir::ParseResult parseCopyTypes(mlir::OpAsmParser &parser,
+                                        mlir::Type &srcType,
+                                        mlir::Type &dstType) {
+  if (parser.parseType(srcType))
+    return mlir::failure();
+  if (parser.parseOptionalComma().succeeded()) {
+    if (parser.parseType(dstType))
+      return mlir::failure();
+  } else {
+    dstType = srcType;
+  }
+  return mlir::success();
+}
+
 LogicalResult cir::CopyOp::verify() {
+  // The pointee types of `src` and `dst` are guaranteed to match by the
+  // SameOperandsPointeeType trait; they may still differ in address space.
+
   // A data layout is required for us to know the number of bytes to be copied.
   if (!getType().getPointee().hasTrait<DataLayoutTypeInterface::Trait>())
     return emitError() << "missing data layout for pointee type";
@@ -3485,10 +3537,36 @@ OpFoldResult cir::VecExtractOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// CmpOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CmpOp::verify() {
+  if (getFenvAttr() && !cir::isAnyFloatingPointType(getLhs().getType()))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point comparisons";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 
+LogicalResult cir::VecCmpOp::verify() {
+  if (getFenvAttr() && !cir::isFPOrVectorOfFPType(getLhs().getType()))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point comparisons";
+  return success();
+}
+
 OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
+  // Do not fold when fenv is present.
+  // TODO(cir): This is overly conservative. We could fold comparisons as long
+  //            as we can prove that the operation wouldn't raise exceptions or
+  //            when the fenv attribute does not require strict exception
+  //            semantics.
+  if (getFenvAttr())
+    return {};
+
   auto lhsVecAttr =
       mlir::dyn_cast_if_present<cir::ConstVectorAttr>(adaptor.getLhs());
   auto rhsVecAttr =
@@ -4269,9 +4347,23 @@ LogicalResult cir::AtomicFetchOp::verify() {
       getBinop() != cir::AtomicFetchKind::Sub &&
       getBinop() != cir::AtomicFetchKind::Max &&
       getBinop() != cir::AtomicFetchKind::Min &&
+      getBinop() != cir::AtomicFetchKind::Maximum &&
+      getBinop() != cir::AtomicFetchKind::Minimum &&
+      getBinop() != cir::AtomicFetchKind::MaximumNum &&
+      getBinop() != cir::AtomicFetchKind::MinimumNum &&
       !mlir::isa<cir::IntType>(getVal().getType()))
-    return emitError("only atomic add, sub, max, and min operation could "
-                     "operate on floating-point values");
+    return emitError("only atomic add, sub, max, min, maximum, minimum, "
+                     "maximum_num, and minimum_num operation could operate on "
+                     "floating-point values");
+
+  if ((getBinop() == cir::AtomicFetchKind::Maximum ||
+       getBinop() == cir::AtomicFetchKind::Minimum ||
+       getBinop() == cir::AtomicFetchKind::MaximumNum ||
+       getBinop() == cir::AtomicFetchKind::MinimumNum) &&
+      !mlir::isa<cir::FPTypeInterface>(getVal().getType()))
+    return emitError("atomic maximum, minimum, maximum_num, and minimum_num "
+                     "operation could only operate on floating-point values");
+
   return success();
 }
 

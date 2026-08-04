@@ -844,6 +844,8 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
   RegOpers.collect(*MI, *TRI, *MRI, true, /*IgnoreDead=*/false);
   RegOpers.adjustLaneLiveness(LIS, *MRI, SlotIdx);
   GCNRegPressure TempPressure = CurPressure;
+  // Tracks the live mask reported by the use loop for redefined registers.
+  SmallDenseMap<Register, LaneBitmask, 8> PostUseMask;
 
   for (const VRegMaskOrUnit &Use : RegOpers.Uses) {
     if (!Use.VRegOrUnit.isVirtualReg())
@@ -865,6 +867,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
     auto It = LiveRegs.find(Reg);
     LaneBitmask LiveMask = It != LiveRegs.end() ? It->second : LaneBitmask(0);
     LaneBitmask NewMask = LiveMask & ~LastUseMask;
+    PostUseMask[Reg] = NewMask;
     TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
   }
 
@@ -873,8 +876,15 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
     if (!Def.VRegOrUnit.isVirtualReg())
       continue;
     Register Reg = Def.VRegOrUnit.asVirtualReg();
-    auto It = LiveRegs.find(Reg);
-    LaneBitmask LiveMask = It != LiveRegs.end() ? It->second : LaneBitmask(0);
+    auto PostIt = PostUseMask.find(Reg);
+    LaneBitmask LiveMask;
+    if (PostIt != PostUseMask.end()) {
+      LiveMask = PostIt->second;
+    } else {
+      auto It = LiveRegs.find(Reg);
+      LiveMask = It != LiveRegs.end() ? It->second : LaneBitmask(0);
+    }
+
     LaneBitmask NewMask = LiveMask | Def.LaneMask;
     TempPressure.inc(Reg, LiveMask, NewMask, *MRI);
   }

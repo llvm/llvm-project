@@ -24,6 +24,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Casting.h"
@@ -50,6 +51,12 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "register-info-emitter"
+
+STATISTIC(NumExplicitRegClasses, "Number of explicit register classes");
+STATISTIC(NumSynthesizedRegClasses, "Number of synthesized register classes");
+STATISTIC(NumRegPressureSets, "Number of register pressure sets");
+
 static cl::OptionCategory RegisterInfoCat("Options for -gen-register-info");
 
 static cl::opt<bool>
@@ -70,6 +77,14 @@ public:
   RegisterInfoEmitter(const RecordKeeper &R)
       : Records(R), Target(R), RegBank(Target.getRegBank()) {
     RegBank.computeDerivedInfo();
+
+    const auto &RegClasses = RegBank.getRegClasses();
+    NumExplicitRegClasses =
+        llvm::count_if(RegClasses, [](const CodeGenRegisterClass &RC) {
+          return RC.getDef() != nullptr;
+        });
+    NumSynthesizedRegClasses = RegClasses.size() - NumExplicitRegClasses;
+    NumRegPressureSets = RegBank.getNumRegPressureSets();
   }
 
   // runEnums - Print out enum values for all of the registers.
