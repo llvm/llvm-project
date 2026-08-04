@@ -269,6 +269,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
                             ? llvm::Type::getInt64Ty(VMContext)
                             : nullptr;
   unsigned PaddingSlots = Padding ? 1 : 0;
+  unsigned SizeSlots = 1;
 
   // Treat an enum type as its underlying type.
   if (const auto *ED = Ty->getAsEnumDecl())
@@ -276,13 +277,13 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
 
   // Integer types smaller than a register are extended.
   if (Size < 64 && Ty->isIntegerType()) {
-    RegOffset += PaddingSlots + 1;
+    RegOffset += PaddingSlots + SizeSlots;
     return ABIArgInfo::getExtend(Ty, /*T=*/nullptr, Padding);
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>())
     if (EIT->getNumBits() < 64) {
-      RegOffset += PaddingSlots + 1;
+      RegOffset += PaddingSlots + SizeSlots;
       return ABIArgInfo::getExtend(Ty, /*T=*/nullptr, Padding);
     }
 
