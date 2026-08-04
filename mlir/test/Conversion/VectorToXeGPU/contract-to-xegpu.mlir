@@ -183,29 +183,30 @@ func.func @negative_accumulator_shape(%lhs: vector<8x16xf16>, %rhs: vector<16x16
 
 // -----
 
-// A batched matmul whose leading dimension is a batch dimension shared across
-// lhs, rhs, and acc lowers to a batched xegpu.dpas.
+// A batched matmul whose leading dimensions are batch dimensions shared across
+// lhs, rhs, and acc lowers to a batched xegpu.dpas. Two batch dims exercise the
+// upper bound (rank 4 = 2 batch + 2 core dims).
 
-#map = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
-#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
-#map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
-func.func @dpas_batched_gemm(%lhs: vector<4x8x16xf16>, %rhs: vector<4x16x16xf16>,
-    %acc: vector<4x8x16xf32>) -> vector<4x8x16xf32> {
+#map = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d4)>
+#map1 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d4, d3)>
+#map2 = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>
+func.func @dpas_batched_gemm(%lhs: vector<2x4x8x16xf16>, %rhs: vector<2x4x16x16xf16>,
+    %acc: vector<2x4x8x16xf32>) -> vector<2x4x8x16xf32> {
   %3 = vector.contract
     {indexing_maps = [#map, #map1, #map2],
-    iterator_types = ["parallel", "parallel", "parallel", "reduction"],
+    iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction"],
     kind = #vector.kind<add>} %lhs, %rhs, %acc
-    : vector<4x8x16xf16>, vector<4x16x16xf16> into vector<4x8x16xf32>
-  return %3 : vector<4x8x16xf32>
+    : vector<2x4x8x16xf16>, vector<2x4x16x16xf16> into vector<2x4x8x16xf32>
+  return %3 : vector<2x4x8x16xf32>
 }
 
 // CHECK-LABEL: @dpas_batched_gemm(
-// CHECK-SAME:  %[[LHS:.+]]: vector<4x8x16xf16>,
-// CHECK-SAME:  %[[RHS:.+]]: vector<4x16x16xf16>,
-// CHECK-SAME:  %[[ACC:.+]]: vector<4x8x16xf32>
+// CHECK-SAME:  %[[LHS:.+]]: vector<2x4x8x16xf16>,
+// CHECK-SAME:  %[[RHS:.+]]: vector<2x4x16x16xf16>,
+// CHECK-SAME:  %[[ACC:.+]]: vector<2x4x8x16xf32>
 // CHECK:       %[[DPAS:.+]] = xegpu.dpas
 // CHECK-SAME:    %[[LHS]], %[[RHS]], %[[ACC]]
-// CHECK-SAME:    {{.*}}-> vector<4x8x16xf32>
+// CHECK-SAME:    {{.*}}-> vector<2x4x8x16xf32>
 // CHECK:       return %[[DPAS]]
 
 // -----
@@ -227,4 +228,25 @@ func.func @negative_non_batched_nd(%lhs: vector<128x64x64xf16>, %rhs: vector<64x
 }
 
 // CHECK-LABEL: @negative_non_batched_nd(
+// CHECK:       vector.contract
+
+// -----
+
+// A row-major batched matmul with more than 2 batch dims (rank 5) exceeds the
+// xegpu.dpas limit of 2 batch + 2 core dims and is not lowered.
+
+#map = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3, d5)>
+#map1 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d5, d4)>
+#map2 = affine_map<(d0, d1, d2, d3, d4, d5) -> (d0, d1, d2, d3, d4)>
+func.func @negative_too_many_batch_dims(%lhs: vector<2x2x4x8x16xf16>, %rhs: vector<2x2x4x16x16xf16>,
+    %acc: vector<2x2x4x8x16xf32>) -> vector<2x2x4x8x16xf32> {
+  %3 = vector.contract
+    {indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>} %lhs, %rhs, %acc
+    : vector<2x2x4x8x16xf16>, vector<2x2x4x16x16xf16> into vector<2x2x4x8x16xf32>
+  return %3 : vector<2x2x4x8x16xf32>
+}
+
+// CHECK-LABEL: @negative_too_many_batch_dims(
 // CHECK:       vector.contract

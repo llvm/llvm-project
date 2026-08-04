@@ -999,15 +999,17 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
     if (!accType)
       return rewriter.notifyMatchFailure(contractOp, "Expects vector acc");
 
-    if (!getRowMajorMatmulBatchRank(contractOp.getIndexingMapsAttr()))
+    std::optional<int64_t> batchRank =
+        getRowMajorMatmulBatchRank(contractOp.getIndexingMapsAttr());
+    if (!batchRank)
       return rewriter.notifyMatchFailure(
           contractOp,
           "Expects a (batched) row-major matmul: leading dims must "
           "be batch dims shared by lhs, rhs, and acc; innermost two "
           "dims must be (M, K), (K, N), and (M, N)");
 
-    // xegpu.dpas operands are limited to rank 4 (2 batch + 2 core dims).
-    if (accType.getRank() > 4)
+    // xegpu.dpas operands are limited to 2 batch + 2 core dims.
+    if (*batchRank > 2)
       return rewriter.notifyMatchFailure(contractOp,
                                          "Expects operands of rank 4 or less");
 
