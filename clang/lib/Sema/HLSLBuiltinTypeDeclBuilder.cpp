@@ -1685,7 +1685,16 @@ BuiltinTypeDeclBuilder::addByteAddressBufferLoadMethods() {
   AddLoads("Load2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
   AddLoads("Load3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
   AddLoads("Load4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
-  AddLoads("Load", AST.DependentTy); // Templated version
+
+  // Templated Load<T>() needs buffer-order-aware handling for matrix T; see
+  // __builtin_hlsl_resource_load_typed in CGHLSLBuiltins.cpp.
+  {
+    IdentifierInfo &II = AST.Idents.get("Load", tok::TokenKind::identifier);
+    DeclarationName Load(&II);
+    addRawBufferGenericLoadFunction(Load);
+    addLoadWithStatusFunction(Load, AST.DependentTy);
+  }
+
   return *this;
 }
 
@@ -1706,7 +1715,13 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
   AddStore("Store2", AST.getExtVectorType(AST.UnsignedIntTy, 2));
   AddStore("Store3", AST.getExtVectorType(AST.UnsignedIntTy, 3));
   AddStore("Store4", AST.getExtVectorType(AST.UnsignedIntTy, 4));
-  AddStore("Store", AST.DependentTy); // Templated version
+
+  // Templated Store<T>(); see addByteAddressBufferLoadMethods() above.
+  {
+    IdentifierInfo &II = AST.Idents.get("Store", tok::TokenKind::identifier);
+    DeclarationName Store(&II);
+    addRawBufferGenericStoreFunction(Store);
+  }
 
   return *this;
 }
@@ -2449,6 +2464,42 @@ BuiltinTypeDeclBuilder::addLoadWithStatusFunction(DeclarationName &Name,
                     PH::Handle, PH::_0, PH::_1);
 
   return MMB.finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addRawBufferGenericLoadFunction(DeclarationName &Name) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  // The empty QualType is a placeholder. The actual return type is set below
+  // once the template parameter is created. This method is always const;
+  // it does not rebind the resource handle.
+  BuiltinTypeMethodBuilder MMB(*this, Name, QualType(), /*IsConst=*/true);
+  QualType ElemTy = MMB.addTemplateTypeParam("element_type");
+  MMB.ReturnTy = ElemTy;
+
+  return MMB.addParam("Index", AST.UnsignedIntTy)
+      .callBuiltin("__builtin_hlsl_resource_load_typed", ElemTy, PH::Handle,
+                   PH::_0, ElemTy)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addRawBufferGenericStoreFunction(
+    DeclarationName &Name) {
+  assert(!Record->isCompleteDefinition() && "record is already complete");
+  ASTContext &AST = SemaRef.getASTContext();
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+
+  BuiltinTypeMethodBuilder MMB(*this, Name, AST.VoidTy, /*IsConst=*/false);
+  QualType ElemTy = MMB.addTemplateTypeParam("element_type");
+
+  return MMB.addParam("Index", AST.UnsignedIntTy)
+      .addParam("Value", ElemTy)
+      .callBuiltin("__builtin_hlsl_resource_store_typed", AST.VoidTy,
+                   PH::Handle, PH::_0, PH::_1)
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleAccessFunction(

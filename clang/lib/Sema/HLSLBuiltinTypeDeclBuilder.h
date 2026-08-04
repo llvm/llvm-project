@@ -144,6 +144,10 @@ public:
   BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
                                            QualType ValueType);
   BuiltinTypeDeclBuilder &
+  addRawBufferGenericLoadFunction(DeclarationName &Name);
+  BuiltinTypeDeclBuilder &
+  addRawBufferGenericStoreFunction(DeclarationName &Name);
+  BuiltinTypeDeclBuilder &
   addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
                                         StringRef BuiltinName);
   BuiltinTypeDeclBuilder &addAppendMethod();
