@@ -67,7 +67,7 @@ static bool canAdvanceAssignment(AssignedLevel Level) {
 static void updateAssignmentLevel(
     const FieldDecl *Field, const Expr *Init, const CXXConstructorDecl *Ctor,
     llvm::DenseMap<const FieldDecl *, AssignedLevel> &AssignedFields) {
-  auto It = AssignedFields.try_emplace(Field, AssignedLevel::None).first;
+  const auto It = AssignedFields.try_emplace(Field, AssignedLevel::None).first;
 
   if (!canAdvanceAssignment(It->second))
     // fast path for already decided field.
@@ -275,9 +275,10 @@ void PreferMemberInitializerCheck::check(
     else
       InvalidFix = true;
 
-    auto Diag = diag(S->getBeginLoc(), "%0 should be initialized in a member"
-                                       " initializer of the constructor")
-                << Field;
+    const auto Diag =
+        diag(S->getBeginLoc(), "%0 should be initialized in a member"
+                               " initializer of the constructor")
+        << Field;
     if (InvalidFix)
       continue;
     const StringRef NewInit = Lexer::getSourceText(
