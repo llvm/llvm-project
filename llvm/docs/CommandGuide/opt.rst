@@ -53,6 +53,28 @@ OPTIONS
  `invoking opt <../NewPassManager.html#invoking-opt>`_ for more details on the
  pass pipeline syntax.
 
+.. option:: -mtriple=<target triple>
+
+ Override the target triple specified in the input file with the specified
+ string.
+
+.. option:: -march=<arch>
+
+ Specify the architecture for which to generate LLVM IR, overriding the target
+ encoded in the input file. See the output of ``opt -help`` for a list of
+ valid architectures. By default this is inferred from the target triple or
+ autodetected to the current architecture.
+
+.. option:: -mcpu=<cpuname>
+
+ Specify a specific chip in the current architecture to generate LLVM IR for.
+ By default this is inferred from the target triple and autodetected to
+ the current architecture. For a list of available CPUs, use:
+
+ .. code-block:: none
+
+   llvm-as < /dev/null | opt -mcpu=help
+
 .. option:: -mtune=<cpuname>
 
  Specify a specific chip microarchitecture in the current architecture
