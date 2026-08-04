@@ -2960,6 +2960,7 @@ public:
   using MapNamesArrayTy = SmallVector<Constant *, 4>;
   using MapDimArrayTy = SmallVector<uint64_t, 4>;
   using MapNonContiguousArrayTy = SmallVector<MapValuesArrayTy, 4>;
+  using MapHasAttachPtrArrayTy = SmallVector<bool, 4>;
 
   /// This structure contains combined information generated for mappable
   /// clauses, including base pointers, pointers, sizes, map types, user-defined
@@ -2978,6 +2979,29 @@ public:
     MapValuesArrayTy Sizes;
     MapFlagsArrayTy Types;
     MapNamesArrayTy Names;
+    /// True for entries that have an attach ptr, and thus an accompanying
+    /// ATTACH entry linking that ptr to its ptee.
+    ///
+    /// This is a property of the storage block an entry describes, not of the
+    /// map clause list item: it is true iff the entry's storage is the pointee
+    /// storage reached through some attach ptr. So, for `int *p; map(p[1:10])`,
+    /// which produces
+    ///   &p[1], &p[1], 10*sizeof(int), TO|FROM   <- HasAttachPtr = true
+    ///   &p,    &p[1], sizeof(void*),  ATTACH    <- HasAttachPtr = false
+    /// it is set on the pointee entry only. It is never set on the ATTACH entry
+    /// itself, nor on an entry that maps the pointer as an object in its own
+    /// right (e.g. the `map(p)` entry for the pointer's own storage).
+    ///
+    /// It is set on every entry whose storage lies in a pointee block,
+    /// including a combined struct entry for such a block and the individual
+    /// member entries that are MEMBER_OF it. e.g. for
+    /// `map(s2.s1p->x, s2.s1p->y)`:
+    ///   &s2.s1p[0], &s2.s1p->x, sizeof(x..y), ALLOC        <- true
+    ///   &s2.s1p[0], &s2.s1p->x, 4, MEMBER_OF(1)|TO|FROM    <- true
+    ///   &s2.s1p[0], &s2.s1p->y, 4, MEMBER_OF(1)|TO|FROM    <- true
+    ///   &s2.s1p,    &s2.s1p->x, sizeof(void*), ATTACH      <- false
+    /// with s2.s1p as the attach ptr for all three.
+    MapHasAttachPtrArrayTy HasAttachPtr;
     StructNonContiguousInfo NonContigInfo;
 
     /// Append arrays in \a CurInfo.
@@ -2990,6 +3014,8 @@ public:
       Sizes.append(CurInfo.Sizes.begin(), CurInfo.Sizes.end());
       Types.append(CurInfo.Types.begin(), CurInfo.Types.end());
       Names.append(CurInfo.Names.begin(), CurInfo.Names.end());
+      HasAttachPtr.append(CurInfo.HasAttachPtr.begin(),
+                          CurInfo.HasAttachPtr.end());
       NonContigInfo.Dims.append(CurInfo.NonContigInfo.Dims.begin(),
                                 CurInfo.NonContigInfo.Dims.end());
       NonContigInfo.Offsets.append(CurInfo.NonContigInfo.Offsets.begin(),
