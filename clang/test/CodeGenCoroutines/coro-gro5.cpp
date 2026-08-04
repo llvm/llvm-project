@@ -24,8 +24,8 @@ struct expected {
 expected f1() {
   // CHECK: %[[Retval:.+]] = alloca %struct.expected, align 1, !coro.outside.frame
 
+  // %Retval are captured
   // CHECK: gro.conv:
-  // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %[[Retval]])
   // CHECK: invoke void @_ZN8expectedC1E3tag(ptr {{.*}} %[[Retval]], i64 {{.*}})
 
   // CHECK: %[[GEP:.+]] = getelementptr {{.*}} %struct.expected, ptr %[[Retval]], i32 0, i32 0
