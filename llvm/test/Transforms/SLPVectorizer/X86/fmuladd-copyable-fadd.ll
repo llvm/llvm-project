@@ -204,8 +204,8 @@ define <4 x float> @buildvec_fadd_absorb_swap_ops(float %p, float %q, float %r, 
 ; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[Q]], i64 0
 ; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[S]], i64 1
 ; ENABLED-NEXT:    [[TMP4:%.*]] = fmul <2 x float> [[TMP1]], [[TMP3]]
-; ENABLED-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr [[SRCC]], align 4
 ; ENABLED-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr [[SRCB]], align 4
+; ENABLED-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr [[SRCC]], align 4
 ; ENABLED-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
