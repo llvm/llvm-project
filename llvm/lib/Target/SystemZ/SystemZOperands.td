@@ -506,16 +506,16 @@ defm imm64ll8c : Immediate<i64, [{
 }], UIMM8, "U8Imm">;
 
 // Immediates for the 8-bit LSB chunk of an i16, with the other i16 bits
-// being one.
-defm imm64ll8c_i16 : Immediate<i64, [{
-  return Imm.isIntN(64) &&
+// being one.  The immediate is a 16-bit value held in an i64.
+defm imm16ll8c_i64 : Immediate<i64, [{
+  return Imm.isIntN(16) &&
          (uint16_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
 }], UIMM8, "U8Imm">;
 
 // Immediates for the 8-bit LSB chunk of an i32, with the other i32 bits
-// being one.
-defm imm64ll8c_i32 : Immediate<i64, [{
-  return Imm.isIntN(64) &&
+// being one.  The immediate is a 32-bit value held in an i64.
+defm imm32ll8c_i64 : Immediate<i64, [{
+  return Imm.isIntN(32) &&
          (uint32_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
 }], UIMM8, "U8Imm">;
 

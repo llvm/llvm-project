@@ -1329,8 +1329,8 @@ let Defs = [CC] in {
   let mayLoad = 1, mayStore = 1 in
     defm NC : MemorySS<"nc", 0xD4, z_nc>;
 }
-defm : RMWIByte<and, NI, NIY, imm16ll8c, imm32ll8c, imm64ll8c, imm32zx8,
-                imm64zx8, imm64ll8c_i16, imm64ll8c_i32>;
+defm : RMWIByte<and, NI, NIY, imm16ll8c, imm32ll8c, imm32zx8,
+                imm64zx8, imm16ll8c_i64, imm32ll8c_i64, imm64ll8c>;
 
 //===----------------------------------------------------------------------===//
 // OR

@@ -50,54 +50,40 @@ class RMWI<ValueType vt, SDPatternOperator load, SDPatternOperator op,
 multiclass RMWIByte<SDPatternOperator operator, Instruction insn12,
                     Instruction insn20, PatFrag imm16Leaf = imm32zx8,
                     PatFrag imm32Leaf = imm32zx8,
-                    PatFrag imm64Leaf = imm64zx8,
                     PatFrag imm8Leaf32 = imm32zx8,
                     PatFrag imm8Leaf64 = imm64zx8,
-                    PatFrag imm64Leaf16 = imm64zx8,
-                    PatFrag imm64Leaf32 = imm64zx8> {
-  // Base register-displacement pairs.
+                    PatFrag imm16Leaf64 = imm64zx8,
+                    PatFrag imm32Leaf64 = imm64zx8,
+                    PatFrag imm64Leaf = imm64zx8> {
+  // 12-bit displacement variants.
   def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr12pair,
              imm8Leaf32, insn12>;
   def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr12pair,
              imm8Leaf64, insn12>;
+  def : RMWI<i32, nonvolatile_anyextloadi16, operator,
+             nonvolatile_truncstorei16, bdaddr12off1, imm16Leaf, insn12>;
+  def : RMWI<i64, nonvolatile_anyextloadi16, operator,
+             nonvolatile_truncstorei16, bdaddr12off1, imm16Leaf64, insn12>;
+  def : RMWI<i32, nonvolatile_load, operator, nonvolatile_store,
+             bdaddr12off3, imm32Leaf, insn12>;
+  def : RMWI<i64, nonvolatile_anyextloadi32, operator,
+             nonvolatile_truncstorei32, bdaddr12off3, imm32Leaf64, insn12>;
+  def : RMWI<i64, nonvolatile_load, operator, nonvolatile_store,
+             bdaddr12off7, imm64Leaf, insn12>;
+
+  // 20-bit displacement variants.
   def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr20pair,
              imm8Leaf32, insn20>;
   def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr20pair,
              imm8Leaf64, insn20>;
-
-  // 12-bit instruction offset variants.
-  def : RMWI<i32, nonvolatile_anyextloadi16, operator,
-             nonvolatile_truncstorei16, bdaddr12off1, imm16Leaf, insn12>;
-  def : RMWI<i64, nonvolatile_anyextloadi16, operator,
-             nonvolatile_truncstorei16, bdaddr12off1, imm64Leaf16, insn12>;
-  def : RMWI<i64, sextloadi16, operator, nonvolatile_truncstorei16,
-             bdaddr12off1, imm64Leaf, insn12>;
-
-  def : RMWI<i32, nonvolatile_load, operator, nonvolatile_store,
-             bdaddr12off3, imm32Leaf, insn12>;
-  def : RMWI<i64, nonvolatile_anyextloadi32, operator,
-             nonvolatile_truncstorei32, bdaddr12off3, imm64Leaf32, insn12>;
-  def : RMWI<i64, sextloadi32, operator, nonvolatile_truncstorei32,
-             bdaddr12off3, imm64Leaf, insn12>;
-
-  def : RMWI<i64, nonvolatile_load, operator, nonvolatile_store,
-             bdaddr12off7, imm64Leaf, insn12>;
-
-  // 20-bit instruction offset variants.
   def : RMWI<i32, nonvolatile_anyextloadi16, operator,
              nonvolatile_truncstorei16, bdaddr20off1, imm16Leaf, insn20>;
   def : RMWI<i64, nonvolatile_anyextloadi16, operator,
-             nonvolatile_truncstorei16, bdaddr20off1, imm64Leaf16, insn20>;
-  def : RMWI<i64, sextloadi16, operator, nonvolatile_truncstorei16,
-             bdaddr20off1, imm64Leaf, insn20>;
-
+             nonvolatile_truncstorei16, bdaddr20off1, imm16Leaf64, insn20>;
   def : RMWI<i32, nonvolatile_load, operator, nonvolatile_store,
              bdaddr20off3, imm32Leaf, insn20>;
   def : RMWI<i64, nonvolatile_anyextloadi32, operator,
-             nonvolatile_truncstorei32, bdaddr20off3, imm64Leaf32, insn20>;
-  def : RMWI<i64, sextloadi32, operator, nonvolatile_truncstorei32,
-             bdaddr20off3, imm64Leaf, insn20>;
-
+             nonvolatile_truncstorei32, bdaddr20off3, imm32Leaf64, insn20>;
   def : RMWI<i64, nonvolatile_load, operator, nonvolatile_store,
              bdaddr20off7, imm64Leaf, insn20>;
 }
