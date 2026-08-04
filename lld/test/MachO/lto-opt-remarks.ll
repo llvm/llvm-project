@@ -28,6 +28,9 @@
 ; RUN: not %lld -dylib %t/full.o -o /dev/null \
 ; RUN:   --opt-remarks-hotness-threshold invalid 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=ERR
+; RUN: not %lld -dylib %t/full.o -o /dev/null \
+; RUN:   --opt-remarks-hotness-threshold=invalid 2>&1 | \
+; RUN:   FileCheck %s --check-prefix=ERR
 
 ; REMARK:      --- !Passed
 ; REMARK:      Pass:            inline

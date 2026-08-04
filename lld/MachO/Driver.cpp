@@ -1987,24 +1987,22 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
-  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_filename,
-                                       OPT_opt_remarks_filename_eq))
+  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_filename))
     config->optRemarksFilename = arg->getValue();
-  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold,
-                                       OPT_opt_remarks_hotness_threshold_eq)) {
+  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
     auto threshold = remarks::parseHotnessThresholdOption(arg->getValue());
-    if (!threshold)
+    if (threshold) {
+      config->optRemarksHotnessThreshold = *threshold;
+    } else {
+      consumeError(threshold.takeError());
       error(arg->getSpelling() + ": invalid argument '" + arg->getValue() +
             "', only integer or 'auto' is supported");
-    else
-      config->optRemarksHotnessThreshold = *threshold;
+    }
   }
-  if (const Arg *arg =
-          args.getLastArg(OPT_opt_remarks_passes, OPT_opt_remarks_passes_eq))
+  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_passes))
     config->optRemarksPasses = arg->getValue();
   config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
-  if (const Arg *arg =
-          args.getLastArg(OPT_opt_remarks_format, OPT_opt_remarks_format_eq))
+  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_format))
     config->optRemarksFormat = arg->getValue();
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
