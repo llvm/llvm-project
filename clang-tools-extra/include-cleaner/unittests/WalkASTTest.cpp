@@ -855,13 +855,27 @@ TEST(WalkAST, ObjCPropertyRefExprMultipleProtocol) {
 
 TEST(WalkAST, ObjCPropertyRefExprClassReceiver) {
   testWalk(R"objc(
-    @interface $implicit^MyClass
+    @interface MyClass
     @property(class, nonatomic) int $explicit^foo;
     @end
   )objc",
            R"objc(
     void test() {
       int x = MyClass.^foo;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCPropertyRefExprClassReceiverInterface) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @property(class, nonatomic) int foo;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      int x = ^MyClass.foo;
     }
   )objc",
            {"-x", "objective-c"});

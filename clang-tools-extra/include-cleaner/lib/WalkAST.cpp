@@ -469,30 +469,6 @@ public:
       if (auto *Setter = E->getImplicitPropertySetter())
         report(E->getLocation(), Setter);
     }
-
-    // Report the receiver to ensure its declaring header is kept.
-    if (E->isObjectReceiver()) {
-      QualType Type = E->getBase()->IgnoreImpCasts()->getType();
-      if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
-        if (auto *Interface = ObjCPtr->getInterfaceDecl()) {
-          report(E->getLocation(), Interface, RefType::Implicit);
-        }
-        for (auto *Proto : ObjCPtr->quals()) {
-          report(E->getLocation(), Proto, RefType::Implicit);
-        }
-      }
-    } else if (E->isClassReceiver()) {
-      if (auto *Interface = E->getClassReceiver()) {
-        report(E->getLocation(), Interface, RefType::Implicit);
-      }
-    } else if (E->isSuperReceiver()) {
-      QualType Type = E->getSuperReceiverType();
-      if (const auto *ObjCPtr = Type->getAs<ObjCObjectPointerType>()) {
-        if (auto *Interface = ObjCPtr->getInterfaceDecl()) {
-          report(E->getLocation(), Interface, RefType::Implicit);
-        }
-      }
-    }
     return true;
   }
 
