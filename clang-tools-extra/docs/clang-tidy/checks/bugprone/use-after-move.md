@@ -269,3 +269,14 @@ argument (`*this`) is considered to be reinitialized. For non-member or
 static member functions, the first argument is considered to be
 reinitialized. Default value is an empty string.
 ```
+
+```{option} ReportAccessOnlyUseForTypes
+A semicolon-separated list of regular expressions matching names of types for
+which only an access of the object counts as a use. For a variable whose type
+is a pointer to a listed type, or a class that is the same as or derived from a
+listed type, the check reports a use only when the code accesses the object,
+that is, a member access (`p->m`, `p.m`), an overloaded dereference, a built-in
+dereference (`*p`), or a subscript (`p[i]`). Other references to the variable
+(such as passing it as an argument, comparing it, or copying it) are not
+reported. Default value is an empty string.
+```
