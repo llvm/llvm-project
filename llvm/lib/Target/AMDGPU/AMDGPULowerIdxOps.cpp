@@ -14,10 +14,9 @@
 ///   V_STORE_IDX_BITS -> V_LOAD_IDX_B32 + V_BFI_B32 + V_STORE_IDX_B32
 ///
 /// A sub-dword store is therefore a read-modify-write of the containing dword.
-/// This runs before AMDGPUAssignIdxToM0, so the whole-dword accesses created
-/// here take part in the usual M0 setup - they declare their write of M0
-/// themselves, like the pseudo they replace - and before register allocation
-/// because it introduces new virtual registers.
+/// This runs after SITargetLowering::finalizeLowering has given the pseudo its
+/// M0 operand, so the whole-dword accesses created here inherit it, and before
+/// register allocation because it introduces new virtual registers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -41,6 +40,7 @@ class AMDGPULowerIdxOpsImpl {
 public:
   AMDGPULowerIdxOpsImpl(MachineFunction &MF)
       : TII(MF.getSubtarget<GCNSubtarget>().getInstrInfo()),
+        TRI(MF.getSubtarget<GCNSubtarget>().getRegisterInfo()),
         MRI(&MF.getRegInfo()) {}
 
   bool run(MachineFunction &MF);
@@ -48,10 +48,24 @@ public:
 private:
   void lowerLoadIdxBits(MachineInstr &MI);
   void lowerStoreIdxBits(MachineInstr &MI);
+  void inheritM0Def(const MachineInstr &MI,
+                    const MachineInstrBuilder &MIB) const;
 
   const SIInstrInfo *TII;
+  const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
 };
+
+// An indexed access takes its index from M0 where the subtarget has movrel, and
+// clobbers M0 through s_set_gpr_idx_on where it indexes with the VGPR indexing
+// mode. SITargetLowering::finalizeLowering picks between the two and records a
+// clobber as an implicit def, so a whole-dword access replacing the pseudo here
+// has to carry that over: the index itself comes along with the operand.
+void AMDGPULowerIdxOpsImpl::inheritM0Def(const MachineInstr &MI,
+                                         const MachineInstrBuilder &MIB) const {
+  if (MI.definesRegister(AMDGPU::M0, TRI))
+    MIB.addDef(AMDGPU::M0, RegState::Implicit);
+}
 
 void AMDGPULowerIdxOpsImpl::lowerLoadIdxBits(MachineInstr &MI) {
   MachineBasicBlock *MBB = MI.getParent();
@@ -70,6 +84,7 @@ void AMDGPULowerIdxOpsImpl::lowerLoadIdxBits(MachineInstr &MI) {
               SrcAReg)
           .add(LoadIdx.getIdxOp())
           .add(LoadIdx.getOffsetOp());
+  inheritM0Def(MI, LoadMIB);
   auto *LoadMMO = *MI.memoperands_begin();
   LoadMIB.addMemOperand(LoadMMO);
   Register DataReg = LoadIdx.getDataOp().getReg();
@@ -106,6 +121,7 @@ void AMDGPULowerIdxOpsImpl::lowerStoreIdxBits(MachineInstr &MI) {
                          TII->get(AMDGPU::V_LOAD_IDX_B32), SrcAReg)
                      .add(StoreIdx.getIdxOp())
                      .add(StoreIdx.getOffsetOp());
+  inheritM0Def(MI, LoadMIB);
   // The index is read again by the store below, so it does not die here.
   LoadMIB->getOperand(1).setIsKill(false);
   auto *StoreMMO = *MI.memoperands_begin();
@@ -127,6 +143,7 @@ void AMDGPULowerIdxOpsImpl::lowerStoreIdxBits(MachineInstr &MI) {
           .addReg(DstAReg)
           .add(StoreIdx.getIdxOp())
           .add(StoreIdx.getOffsetOp());
+  inheritM0Def(MI, StoreMIB);
   StoreMIB.addMemOperand(StoreMMO);
 
   LLVM_DEBUG(dbgs() << " *** Expanded pseudo: "; MI.print(dbgs()));

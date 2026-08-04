@@ -5398,8 +5398,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   // The lowering of a VGPR "as memory" indexed access relies on it having
   // exactly one memory operand, since a sub-dword store synthesizes a load
   // operand from it, and on the index carrying no subregister, since
-  // AMDGPUAssignIdxToM0 rewrites it in place to M0. That the access writes M0
-  // is declared by the instruction itself, so it needs no check here.
+  // SITargetLowering::finalizeLowering rewrites it in place to M0.
   if (auto *LdStIdx = dyn_cast<AMDGPUMI::VLoadStoreIdxInst>(&MI)) {
     if (MI.getNumMemOperands() != 1) {
       ErrInfo = "v_load/store_idx should have exactly one memory operand.";

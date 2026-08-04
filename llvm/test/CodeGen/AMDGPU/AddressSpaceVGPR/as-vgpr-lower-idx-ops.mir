@@ -7,9 +7,10 @@
 #   V_LOAD_IDX_BITS  -> V_LOAD_IDX_B32 + V_BFE_{U,I}32
 #   V_STORE_IDX_BITS -> V_LOAD_IDX_B32 + V_BFI_B32 + V_STORE_IDX_B32
 #
-# The pass runs before AMDGPUAssignIdxToM0, so a register index is still
-# virtual here and the implicit-def $m0 that instruction selection attached is
-# carried over to the whole-dword accesses the expansion creates.
+# The index and any M0 clobber are given to the pseudo beforehand, by
+# SITargetLowering::finalizeLowering, so the whole-dword accesses the expansion
+# creates carry both over: the index as their own index operand, and the clobber
+# as an implicit def where the subtarget indexes with the VGPR indexing mode.
 
 ---
 name:            lower_load_idx_bits_zext
@@ -21,7 +22,7 @@ body:             |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 0, implicit-def $m0, implicit $exec :: (load (s8), addrspace 13)
+    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 0, implicit $exec, implicit-def $m0 :: (load (s8), addrspace 13)
     ; CHECK-NEXT: [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 [[V_LOAD_IDX_B32_]], 0, 8, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BFE_U32_e64_]]
     %0:sreg_32 = COPY $sgpr0
@@ -39,7 +40,7 @@ body:             |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 0, implicit-def $m0, implicit $exec :: (load (s8), addrspace 13)
+    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 0, implicit $exec, implicit-def $m0 :: (load (s8), addrspace 13)
     ; CHECK-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[V_LOAD_IDX_B32_]], 0, 8, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BFE_I32_e64_]]
     %0:sreg_32 = COPY $sgpr0
@@ -57,7 +58,7 @@ body:             |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 3, implicit-def $m0, implicit $exec :: (load (s16), addrspace 13)
+    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 3, implicit $exec, implicit-def $m0 :: (load (s16), addrspace 13)
     ; CHECK-NEXT: [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 [[V_LOAD_IDX_B32_]], 16, 16, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BFE_U32_e64_]]
     %0:sreg_32 = COPY $sgpr0
@@ -78,7 +79,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 0, implicit-def $m0, implicit $exec :: (load (s8), addrspace 13)
+    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 0, implicit $exec, implicit-def $m0 :: (load (s8), addrspace 13)
     ; CHECK-NEXT: [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 [[V_LOAD_IDX_B32_]], [[COPY1]], 8, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BFE_U32_e64_]]
     %0:sreg_32 = COPY $sgpr0
@@ -100,9 +101,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 0, implicit-def $m0, implicit $exec :: (load (s8), addrspace 13)
+    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 0, implicit $exec, implicit-def $m0 :: (load (s8), addrspace 13)
     ; CHECK-NEXT: [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 255, [[COPY1]], [[V_LOAD_IDX_B32_]], implicit $exec
-    ; CHECK-NEXT: V_STORE_IDX_B32 [[V_BFI_B32_e64_]], killed [[COPY]], 0, implicit-def $m0, implicit $exec :: (store (s8), addrspace 13)
+    ; CHECK-NEXT: V_STORE_IDX_B32 [[V_BFI_B32_e64_]], killed [[COPY]], 0, implicit $exec, implicit-def $m0 :: (store (s8), addrspace 13)
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sreg_32 = COPY $sgpr0
     %1:vgpr_32 = COPY $vgpr0
@@ -122,9 +123,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 2, implicit-def $m0, implicit $exec :: (load (s16), addrspace 13)
+    ; CHECK-NEXT: [[V_LOAD_IDX_B32_:%[0-9]+]]:vgpr_32 = V_LOAD_IDX_B32 [[COPY]], 2, implicit $exec, implicit-def $m0 :: (load (s16), addrspace 13)
     ; CHECK-NEXT: [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 [[COPY2]], [[COPY1]], [[V_LOAD_IDX_B32_]], implicit $exec
-    ; CHECK-NEXT: V_STORE_IDX_B32 [[V_BFI_B32_e64_]], [[COPY]], 2, implicit-def $m0, implicit $exec :: (store (s16), addrspace 13)
+    ; CHECK-NEXT: V_STORE_IDX_B32 [[V_BFI_B32_e64_]], [[COPY]], 2, implicit $exec, implicit-def $m0 :: (store (s16), addrspace 13)
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sreg_32 = COPY $sgpr0
     %1:vgpr_32 = COPY $vgpr0
