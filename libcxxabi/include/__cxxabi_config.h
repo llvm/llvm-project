@@ -135,11 +135,14 @@
 #endif
 
 // On Apple, Clang generates calls to _tlv_atexit and __cxa_thread_atexit is defined
-// in libc instead.
+// in libc instead. AIX uses a different mechanism for registering thread local
+// destructors (__pt_atexit_np).
 //
-// AIX uses a different mechanism for registering thread local destructors (__pt_atexit_np).
-#if !defined(__APPLE__) && !defined(_AIX)
-#  define _LIBCXXABI_DEFINE_THREAD_ATEXIT
+// On other platforms, libc++abi provides __cxa_thread_atexit.
+#if defined(__APPLE__) || defined(_AIX)
+#  define _LIBCXXABI_DEFINE_THREAD_ATEXIT 0
+#else
+#  define _LIBCXXABI_DEFINE_THREAD_ATEXIT 1
 #endif
 
 #endif // ____CXXABI_CONFIG_H
