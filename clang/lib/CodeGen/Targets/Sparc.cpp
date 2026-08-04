@@ -248,8 +248,15 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   auto &Context = getContext();
   auto &VMContext = getVMContext();
 
-  uint64_t Size = Context.getTypeSize(Ty);
+  // FIXME: the GCC-style `aligned` attribute on typedefs is not taken into
+  // account here, because the canonicalized type no longer has that
+  // information. Hence such over-aligned typedefs are not ABI-compatible with
+  // GCC.
+  //
+  // This is different from the `aligned` attribute on structs or fields, which
+  // is taken into account.
   unsigned Alignment = Context.getTypeAlign(Ty);
+  uint64_t Size = Context.getTypeSize(Ty);
 
   // Anything too big to fit in registers is passed with an explicit indirect
   // pointer / sret pointer.
