@@ -896,7 +896,7 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
          "Body of an implicit assignment operator should be compound stmt.");
   const auto *rootCS = cast<CompoundStmt>(rootS);
 
-  cgm.setCXXSpecialMemberAttr(cast<cir::FuncOp>(curFn), assignOp);
+  cgm.setFuncInfoAttr(cast<cir::FuncOp>(curFn), assignOp);
 
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
@@ -944,7 +944,8 @@ void CIRGenFunction::emitForwardingCallToLambda(
   // Now emit our call.
   CIRGenCallee callee =
       CIRGenCallee::forDirect(calleePtr, GlobalDecl(callOperator));
-  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs);
+  RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs,
+                       /*isMustTail=*/false);
 
   // Forward the returned value through the function's return slot.
   if (!resultType->isVoidType()) {
@@ -1541,7 +1542,8 @@ void CIRGenFunction::emitCXXConstructorCall(
       args, d, type, extraArgs.prefix, extraArgs.suffix, passPrototypeArgs);
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
-  emitCall(info, callee, ReturnValueSlot(), args, &c, getLoc(loc));
+  emitCall(info, callee, ReturnValueSlot(), args, &c, /*isMustTail=*/false,
+           getLoc(loc));
 
   if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !crd->isDynamicClass() &&
       type != Ctor_Base && cgm.getCodeGenOpts().StrictVTablePointers)

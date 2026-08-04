@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-- -passes='loop-unroll,simplifycfg,sroa' %s -S -o - | FileCheck %s
+; RUN: opt -mtriple=amdgpu-- -passes='loop-unroll,simplifycfg,sroa' %s -S -o - | FileCheck %s
 ; RUN: opt -mtriple=r600-- -passes='loop-unroll,simplifycfg,sroa' %s -S -o - | FileCheck %s
 
 ; This test contains a simple loop that initializes an array declared in

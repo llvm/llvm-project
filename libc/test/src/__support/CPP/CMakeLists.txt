@@ -54,6 +54,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  expected_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    expected_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.expected
+    libc.src.__support.CPP.type_traits
+)
+
+add_libc_test(
   stringview_test
   SUITE
     libc-cpp-utils-tests

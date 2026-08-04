@@ -1,4 +1,5 @@
 set(TARGET_PUBLIC_HEADERS
+    libc.include.alloca
     libc.include.arpa_inet
     libc.include.assert
     libc.include.byteswap
@@ -9,23 +10,28 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.dlfcn
     libc.include.elf
     libc.include.endian
+    libc.include.err
     libc.include.errno
     libc.include.fcntl
     libc.include.features
     libc.include.fenv
     libc.include.float
     libc.include.inttypes
+    libc.include.langinfo
     libc.include.libgen
     libc.include.limits
     libc.include.link
     libc.include.locale
     libc.include.malloc
     libc.include.math
+    libc.include.memory
+    libc.include.net_if
     libc.include.netinet_in
     libc.include.netinet_tcp
     libc.include.netinet_udp
     libc.include.poll
     libc.include.pthread
+    libc.include.pwd
     libc.include.sched
     libc.include.search
     libc.include.setjmp
@@ -41,24 +47,29 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.strings
     libc.include.sys_auxv
     libc.include.sys_epoll
+    libc.include.sys_fcntl
     libc.include.sys_ioctl
     libc.include.sys_mman
     libc.include.sys_param
     libc.include.sys_personality
+    libc.include.sys_poll
     libc.include.sys_prctl
     libc.include.sys_queue
     libc.include.sys_random
     libc.include.sys_resource
     libc.include.sys_select
     libc.include.sys_sendfile
+    libc.include.sys_signal
     libc.include.sys_socket
     libc.include.sys_stat
+    libc.include.sys_statfs
     libc.include.sys_statvfs
     libc.include.sys_syscall
     libc.include.sys_time
     libc.include.sys_types
     libc.include.sys_uio
     libc.include.sys_un
+    libc.include.sys_unistd
     libc.include.sys_utsname
     libc.include.sys_wait
     libc.include.syscall

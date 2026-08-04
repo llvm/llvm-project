@@ -3568,23 +3568,28 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     break;
   }
 
-  case Instruction::Load:
-    if (cast<LoadInst>(I).isAtomic()) {
+  case Instruction::Load: {
+    const auto &LI = cast<LoadInst>(I);
+    if (LI.isAtomic()) {
       Code = bitc::FUNC_CODE_INST_LOADATOMIC;
-      pushValueAndType(I.getOperand(0), InstID, Vals);
+      pushValueAndType(LI.getOperand(0), InstID, Vals);
     } else {
       Code = bitc::FUNC_CODE_INST_LOAD;
-      if (!pushValueAndType(I.getOperand(0), InstID, Vals)) // ptr
+      if (!pushValueAndType(LI.getOperand(0), InstID, Vals)) // ptr
         AbbrevToUse = FUNCTION_INST_LOAD_ABBREV;
     }
-    Vals.push_back(VE.getTypeID(I.getType()));
-    Vals.push_back(getEncodedAlign(cast<LoadInst>(I).getAlign()));
-    Vals.push_back(cast<LoadInst>(I).isVolatile());
-    if (cast<LoadInst>(I).isAtomic()) {
-      Vals.push_back(getEncodedOrdering(cast<LoadInst>(I).getOrdering()));
-      Vals.push_back(getEncodedSyncScopeID(cast<LoadInst>(I).getSyncScopeID()));
+    Vals.push_back(VE.getTypeID(LI.getType()));
+    Vals.push_back(getEncodedAlign(LI.getAlign()));
+    Vals.push_back(LI.isVolatile());
+    if (LI.isAtomic()) {
+      Vals.push_back(getEncodedOrdering(LI.getOrdering()));
+      Vals.push_back(getEncodedSyncScopeID(LI.getSyncScopeID()));
+      if (LI.isElementwise())
+        Vals.push_back(1);
     }
     break;
+  }
+
   case Instruction::Store:
     if (cast<StoreInst>(I).isAtomic()) {
       Code = bitc::FUNC_CODE_INST_STOREATOMIC;
@@ -4924,7 +4929,9 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     if (!VI || VI.getSummaryList().empty()) {
       // Only declarations should not have a summary (a declaration might
       // however have a summary if the def was in module level asm).
-      assert(F.isDeclaration());
+      if (!F.isDeclaration())
+        reportFatalUsageError("expected function definition " + F.getName() +
+                              " to have an associated value info.");
       continue;
     }
     auto *Summary = VI.getSummaryList()[0].get();

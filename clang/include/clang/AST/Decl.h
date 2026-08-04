@@ -1268,14 +1268,16 @@ public:
 
   /// Returns true for local variable declarations other than parameters.
   /// Note that this includes static variables inside of functions. It also
-  /// includes variables inside blocks.
+  /// includes variables inside blocks and expansion statements.
   ///
   ///   void foo() { int x; static int y; extern int z; }
   bool isLocalVarDecl() const {
     if (getKind() != Decl::Var && getKind() != Decl::Decomposition)
       return false;
     if (const DeclContext *DC = getLexicalDeclContext())
-      return DC->getRedeclContext()->isFunctionOrMethod();
+      return DC->getEnclosingNonExpansionStatementContext()
+          ->getRedeclContext()
+          ->isFunctionOrMethod();
     return false;
   }
 
@@ -2049,13 +2051,17 @@ public:
 
   };
 
-  /// Stashed information about a defaulted/deleted function body.
+  /// Stashed information about a defaulted/deleted function body, including
+  /// the active FP pragma overrides (FPOptionsOverride) from the declaration
+  /// site. These overrides are required to correctly synthesize the function
+  /// body.
   class DefaultedOrDeletedFunctionInfo final
       : llvm::TrailingObjects<DefaultedOrDeletedFunctionInfo, DeclAccessPair,
                               StringLiteral *> {
     friend TrailingObjects;
     unsigned NumLookups;
     bool HasDeletedMessage;
+    FPOptionsOverride FPFeatures;
 
     size_t numTrailingObjects(OverloadToken<DeclAccessPair>) const {
       return NumLookups;
@@ -2064,7 +2070,10 @@ public:
   public:
     static DefaultedOrDeletedFunctionInfo *
     Create(ASTContext &Context, ArrayRef<DeclAccessPair> Lookups,
+           FPOptionsOverride FPFeatures,
            StringLiteral *DeletedMessage = nullptr);
+
+    FPOptionsOverride getFPFeatures() const { return FPFeatures; }
 
     /// Get the unqualified lookup results that should be used in this
     /// defaulted function definition.

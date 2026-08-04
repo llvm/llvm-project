@@ -33,12 +33,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.h.inc"
 #include "mlir/Transforms/DialectConversion.h"
 
-//===----------------------------------------------------------------------===//
-// TOSA operation validation includes.
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Tosa/IR/TosaAvailability.h.inc"
-
 namespace mlir {
 class PatternRewriter;
 
@@ -92,8 +86,6 @@ public:
   }
 };
 
-LogicalResult verifyBlockScaledTensorType(mlir::Type type);
-
 } // namespace tosa
 } // namespace OpTrait
 
@@ -142,6 +134,10 @@ Type getStorageElementTypeOrSelf(Type type);
 
 // Returns the storage element type for a given value
 Type getStorageElementTypeOrSelf(Value value);
+
+// Verify a block scaled tensor type is valid
+LogicalResult verifyBlockScaledTensorType(mlir::Type type,
+                                          bool allowScaleValues);
 
 } // namespace tosa
 } // namespace mlir
