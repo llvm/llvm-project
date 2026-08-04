@@ -121,8 +121,15 @@ static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
 
+<<<<<<< HEAD
 STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
+=======
+static cl::opt<int> SLSRBasisDistanceThreshold(
+    "slsr-basis-distance-threshold", cl::init(96), cl::Hidden,
+    cl::desc("SLSR: skip rewrite if in-block distance from Basis's last "
+             "same-block use to the candidate Inst exceeds this"));
+>>>>>>> a5630b19d18c ([SLSR] Adding a cost model to avoid high regpressure)
 
 namespace {
 
@@ -586,6 +593,15 @@ private:
     if (auto *StrideInst = dyn_cast<Instruction>(C.Stride))
       PropagateDependency(StrideInst);
   };
+
+  bool hasOperandsUsedInNonRewritableUsersInAnotherBlock(
+      llvm::Instruction *Inst) const;
+  bool hasRewritableCandidates(const Instruction *Inst) const;
+  bool basisTooFarInSameBlock(
+      const Candidate &C,
+      DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>>
+          &IndexCache,
+      const Instruction *Inst) const;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS,
@@ -1315,6 +1331,7 @@ void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
   Value *Reduced = nullptr; // equivalent to but weaker than C.Ins
   // If delta is 0, C is a fully redundant of Basis, and Bump is nullptr,
   // just replace C.Ins with Basis.Ins
+  LLVM_DEBUG(dbgs() << "== Replacing " << *C.Ins);
   if (!Bump)
     Reduced = Basis.Ins;
   else {
@@ -1354,6 +1371,7 @@ void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
     };
     Reduced->takeName(C.Ins);
   }
+  LLVM_DEBUG(dbgs() << " with " << *Reduced << "\n");
   C.Ins->replaceAllUsesWith(Reduced);
   DeadInstructions.push_back(C.Ins);
 }
@@ -1368,6 +1386,135 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
   return StraightLineStrengthReduce(DL, DT, SE, TTI).runOnFunction(F);
 }
 
+// go through all operands of instruction, and check if any operand is used in
+// another block different from the instruction's block.
+bool StraightLineStrengthReduce::
+    hasOperandsUsedInNonRewritableUsersInAnotherBlock(
+        llvm::Instruction *Inst) const {
+  llvm::BasicBlock *InstBB = Inst->getParent();
+  if (!InstBB)
+    return false;
+
+#if 0
+  for (const llvm::Use &Op : Inst->operands()) {
+    llvm::Value *OpVal = Op.get();
+    if (!OpVal) continue;
+    llvm::Instruction *OpInst = dyn_cast<llvm::Instruction>(OpVal);
+    if (!OpInst) continue;
+
+    for (llvm::User *User : OpInst->users()) {
+      if (llvm::Instruction *UserInst = dyn_cast<llvm::Instruction>(User)) {
+        llvm::BasicBlock *UserBB = UserInst->getParent();
+        if (UserBB != InstBB) {
+          dbgs() << "Inst's operand is used in another block: " << *UserInst << " in " << (UserBB->hasName() ? UserBB->getName() : "unnamed") << "\n";
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+#endif
+  for (Value *OpVal : Inst->operand_values()) {
+    auto *OpInst = dyn_cast<Instruction>(OpVal);
+    if (!OpInst)
+      continue;
+
+    for (const User *U : OpInst->users())
+      if (auto *UI = dyn_cast<Instruction>(U))
+        if (UI->getParent() != InstBB && !hasRewritableCandidates(UI)) {
+          auto *UserBB = UI->getParent();
+          LLVM_DEBUG(dbgs()
+                     << "Inst's operand is used in another block "
+                     << "("
+                     << (InstBB->hasName() ? InstBB->getName() : "unnamed")
+                     << " -> "
+                     << (UserBB && UserBB->hasName() ? UserBB->getName()
+                                                     : "unnamed")
+                     << ") " << *UI << "\n");
+          return true;
+        }
+  }
+  return false;
+}
+
+bool StraightLineStrengthReduce::hasRewritableCandidates(
+    const Instruction *Inst) const {
+  if (!RewriteCandidates.count(Inst))
+    return false;
+
+  for (const Candidate *C : RewriteCandidates.at(Inst))
+    // TODO: may need to make sure the delta is constant.
+    if (C->Basis)
+      return true;
+
+  return false;
+}
+
+// Assign a monotonically increasing index to each (non-debug/pseudo)
+// instruction in BB so in-block distances can be queried in O(1).
+static DenseMap<const Instruction *, int>
+buildBlockIndexMap(const BasicBlock &BB) {
+  DenseMap<const Instruction *, int> IndexMap;
+  int Index = 0;
+  for (const Instruction &I : BB) {
+    // Skip debug/pseudo instructions so the distance math is identical
+    // between debug and release builds.
+    if (I.isDebugOrPseudoInst())
+      continue;
+    IndexMap[&I] = Index++;
+  }
+  return IndexMap;
+}
+
+// Return true
+// 1. if C.Basis used only in C.Ins's block
+// AND
+// 2. if any use of C.Basis before C.Ins and C.Ins exceeds
+// SLSRBasisDistanceThreshold.
+bool StraightLineStrengthReduce::basisTooFarInSameBlock(
+    const Candidate &C,
+    DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>>
+        &IndexCache,
+    const Instruction *I) const {
+  Instruction *Inst = C.Ins;
+  assert(Inst == I);
+  Instruction *BasisInst = C.Basis ? C.Basis->Ins : nullptr;
+  if (!BasisInst)
+    return false; // true
+
+  const BasicBlock *BB = Inst->getParent();
+  auto [It, Inserted] = IndexCache.try_emplace(BB);
+  if (Inserted)
+    It->second = buildBlockIndexMap(*BB);
+  const DenseMap<const Instruction *, int> &IndexMap = It->second;
+
+  auto InstIt = IndexMap.find(Inst);
+  if (InstIt == IndexMap.end())
+    return false;
+  int InstIdx = InstIt->second;
+
+  int LastUseIdx = 0;
+
+  bool FoundSameBlockUse = false;
+  for (const User *U : BasisInst->users()) {
+    const auto *UI = dyn_cast<Instruction>(U);
+    if (!UI)
+      continue;
+    if (UI->getParent() != BB) // && BB dominates UI's block
+      return false;
+    auto UseIt = IndexMap.find(UI);
+    if (UseIt == IndexMap.end() || UseIt->second >= InstIdx)
+      return false;
+    FoundSameBlockUse = true;
+    LastUseIdx = std::max(LastUseIdx, UseIt->second);
+  }
+
+  if (!FoundSameBlockUse)
+    return false;
+
+  return (InstIdx - LastUseIdx) > SLSRBasisDistanceThreshold;
+}
+
 bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "SLSR on Function: " << F.getName() << "\n");
   // Traverse the dominator tree in the depth-first order. This order makes sure
@@ -1375,6 +1522,24 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   for (const auto Node : depth_first(DT))
     for (auto &I : *(Node->getBlock()))
       allocateCandidatesAndFindBasis(&I);
+
+  // DenseMap<Instruction *, SmallVector<Candidate *, 3>> RewriteCandidates;
+  LLVM_DEBUG({
+    dbgs() << "RewriteCandidates after allocation (" << RewriteCandidates.size()
+           << " instructions):\n";
+    for (const auto &[Inst, Cands] : RewriteCandidates) {
+      // dbgs() << "Instruction: " << *Inst << " has " << Cands.size()
+      //        << " candidate(s)"
+      //        << (hasRewritableCandidates(Inst) ? " (rewritable)" : "
+      //        (non-rewritable)");
+      if (hasRewritableCandidates(Inst) &&
+          hasOperandsUsedInNonRewritableUsersInAnotherBlock(Inst))
+        dbgs() << "Instruction: " << *Inst
+               << " (rewritable BUT has operands used in non-rewritable users "
+                  "in another block)"
+               << "\n";
+    }
+  });
 
   // Build the dependency graph and sort candidate instructions from dependency
   // roots to leaves
@@ -1384,11 +1549,82 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   }
   sortCandidateInstructions();
 
+#if 0
+  // From SortedCandidateInsts, remove some candidates that are likely to increase register pressure.
+  // The candidate's Inst is the source of replacement.
+  // A candidate in the following criteria should be removed:
+  // 1. The candidate's Inst "has operands used in non-rewritable users in another block" 
+  //    -- checked by hasOperandsUsedInNonRewritableUsersInAnotherBlock(Inst)
+  //    -- This means the candidate's Inst's original operands are live in another block, thus
+  //    -- even if rewrite the Inst, the operands are still live in another block. 
+  //    -- Thus, rewriting the Inst based on Basis might add another long live range from the Basis.
+  //    -- This might need a refinement to check that "another block" is properly dominated by the candidate's Inst's block.
+  // 2. If the candidate's Basis's used in the the same block and its last is before the candidate's Inst and
+  //    the difference between the two is larger than a threshold.
+  //    -- If the candidate's Basis doesn't have a use in the same block, this condition should be ignored (met).
+  //    -- This might need a refinement to check if the Basis is only used in the same block.
+  //
+  // A candidate satisfies oth conditions 1 and 2 should be removed.
+  //
+  // Strategy to compute the difference between the two instructions:
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Instruction.h"
+
+    // Scans a block once to create a fixed layout map
+    llvm::DenseMap<const llvm::Instruction*, unsigned> buildBlockIndexMap(llvm::BasicBlock &BB) {
+        llvm::DenseMap<const llvm::Instruction*, unsigned> IndexMap;
+        unsigned Index = 0;
+        
+        for (const llvm::Instruction &I : BB) {
+            // Essential: Skip debug instructions so your register pressure 
+            // math doesn't change between 'Debug' and 'Release' compilation modes
+            if (I.isDebugOpcode()) 
+                continue;
+                
+            IndexMap[&I] = Index++;
+        }
+        return IndexMap;
+    }
+
+    // Example usage inside your runOnBasicBlock or similar pass function
+    void analyzeRegisterPressure(llvm::BasicBlock &BB) {
+        auto IndexMap = buildBlockIndexMap(BB);
+        
+        // Quick O(1) distance query
+        llvm::Instruction *InstA = ...;
+        llvm::Instruction *InstB = ...;
+        
+        if (IndexMap.count(InstA) && IndexMap.count(InstB)) {
+            int distance = static_cast<int>(IndexMap[InstB]) - static_cast<int>(IndexMap[InstA]);
+            // 'distance' indicates how many real instructions sit between A and B
+        }
+    }
+
+#endif
+
+  // Pre-rewrite: collect candidates likely to increase register pressure.
+  // Evaluate on the original IR, before any rewriteCandidate mutates it
+  // (rewriting inserts instructions and does replaceAllUsesWith, which would
+  // invalidate both the in-block index map and operands' user sets).
+  DenseSet<Instruction *> ToSkip;
+  {
+    DenseMap<const BasicBlock *, DenseMap<const Instruction *, int>> IndexCache;
+    for (Instruction *I : SortedCandidateInsts)
+      if (Candidate *C = pickRewriteCandidate(I))
+        if (hasOperandsUsedInNonRewritableUsersInAnotherBlock(I) &&
+            basisTooFarInSameBlock(*C, IndexCache, I))
+          ToSkip.insert(I);
+  }
+
   // Rewrite candidates in the topological order that rewrites a Candidate
   // always before rewriting its Basis
-  for (Instruction *I : reverse(SortedCandidateInsts))
+  for (Instruction *I : reverse(SortedCandidateInsts)) {
+    if (ToSkip.contains(I))
+      continue;
     if (Candidate *C = pickRewriteCandidate(I))
       rewriteCandidate(*C);
+  }
 
   for (auto *DeadIns : DeadInstructions)
     // A dead instruction may be another dead instruction's op,
