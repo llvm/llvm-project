@@ -314,16 +314,16 @@ defm real_sum_reassociation
           "f", "real-sum-reassociation",
           PosFlag<SetTrue, [], [],
                   "Enable Fortran-standard compliant reassociation within "
-                  "individual REAL sum expressions. This may change exact "
-                  "floating-point results">,
+                  "individual REAL and COMPLEX sum expressions. This may "
+                  "change exact floating-point results">,
           NegFlag<SetFalse, [], [],
-                  "Disable reassociation within individual REAL sum "
-                  "expressions">>,
+                  "Disable reassociation within individual REAL and COMPLEX "
+                  "sum expressions">>,
       DocBrief<[{
         Enable Fortran-standard compliant reassociation within individual
-        ``REAL`` sum expressions. This can improve optimization opportunities
-        and may change exact floating-point results while preserving
-        standard-conforming Fortran semantics.
+        ``REAL`` and ``COMPLEX`` sum expressions. This can improve optimization
+        opportunities and may change exact floating-point results while
+        preserving standard-conforming Fortran semantics.
       }]>;
 
 def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<f_Group>,
