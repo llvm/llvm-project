@@ -72,6 +72,13 @@ static cl::opt<unsigned>
                 cl::desc("Limit the number of steps taken when searching for a "
                          "recently loaded value"));
 
+// Limit the work done when looking for calls between a load and the condition
+// it feeds.
+static cl::opt<unsigned> MaxRegionInstrs(
+    "early-ifcvt-max-region-instrs", cl::Hidden, cl::init(64),
+    cl::desc("Limit the number of blocks and instructions examined when "
+             "searching for calls between a load and the condition it feeds"));
+
 STATISTIC(NumDiamondsSeen,  "Number of diamonds");
 STATISTIC(NumDiamondsConv,  "Number of diamonds converted");
 STATISTIC(NumTrianglesSeen, "Number of triangles");
@@ -851,8 +858,7 @@ private:
   bool doOperandsComeFromMemory(Register Reg, const MachineInstr *ConditionDef);
   bool callInPath(
       const MachineInstr *From, const MachineInstr *To,
-      const SmallPtrSetImpl<const MachineBasicBlock *> &IntermediateBlocks,
-      unsigned MaxInstructions = 64);
+      const SmallPtrSetImpl<const MachineBasicBlock *> &IntermediateBlocks);
 };
 
 class EarlyIfConverterLegacy : public MachineFunctionPass {
@@ -945,12 +951,11 @@ static bool isConstantPoolLoad(const MachineInstr *MI) {
 ///   - All instructions in IntermediateBlocks
 ///   - [start of To's block, To)
 ///
-/// Returns true if a call is found or if the path exceeds MaxInstructions.
+/// Returns true if a call is found or if the path exceeds MaxRegionInstrs.
 /// Uses NoCallBlocksCache to skip blocks already verified to have no calls.
 bool EarlyIfConverter::callInPath(
     const MachineInstr *From, const MachineInstr *To,
-    const SmallPtrSetImpl<const MachineBasicBlock *> &IntermediateBlocks,
-    unsigned MaxInstructions /* = 64 */) {
+    const SmallPtrSetImpl<const MachineBasicBlock *> &IntermediateBlocks) {
   if (From == To)
     return false;
 
@@ -960,7 +965,7 @@ bool EarlyIfConverter::callInPath(
 
   // Helper to check if instruction limit exceeded or call found.
   auto CheckInstrIsCall = [&](const MachineInstr &MI) {
-    return ++Count > MaxInstructions || MI.isCall();
+    return ++Count > MaxRegionInstrs || MI.isCall();
   };
 
   // If From and To are in the same block, just check (From, To).
