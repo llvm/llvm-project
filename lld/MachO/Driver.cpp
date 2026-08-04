@@ -1987,8 +1987,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
-  config->optRemarksFilename = args.getLastArgValue(
-      OPT_opt_remarks_filename, OPT_opt_remarks_filename_eq);
+  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_filename,
+                                       OPT_opt_remarks_filename_eq))
+    config->optRemarksFilename = arg->getValue();
   if (const Arg *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold,
                                        OPT_opt_remarks_hotness_threshold_eq)) {
     auto threshold = remarks::parseHotnessThresholdOption(arg->getValue());
@@ -1998,11 +1999,13 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     else
       config->optRemarksHotnessThreshold = *threshold;
   }
-  config->optRemarksPasses =
-      args.getLastArgValue(OPT_opt_remarks_passes, OPT_opt_remarks_passes_eq);
+  if (const Arg *arg =
+          args.getLastArg(OPT_opt_remarks_passes, OPT_opt_remarks_passes_eq))
+    config->optRemarksPasses = arg->getValue();
   config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
-  config->optRemarksFormat =
-      args.getLastArgValue(OPT_opt_remarks_format, OPT_opt_remarks_format_eq);
+  if (const Arg *arg =
+          args.getLastArg(OPT_opt_remarks_format, OPT_opt_remarks_format_eq))
+    config->optRemarksFormat = arg->getValue();
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
