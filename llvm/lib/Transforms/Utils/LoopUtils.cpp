@@ -2293,8 +2293,6 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
-  // Cache of (VF * IC * AccessSize) - 1, shared across checks with matching
-  // type and IC*AccessSize to avoid emitting duplicate runtime computations.
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     assert(IC * AccessSize > 0 &&
            "Threshold must be non-zero to use diff-check");
@@ -2313,9 +2311,9 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
 
     // Use (Diff - 1) <u (Threshold - 1), equivalent to 0 < Diff <u Threshold,
     // to exclude Diff == 0 (equal pointers are safe).
-    Value *One = ConstantInt::get(Ty, 1);
-    IsConflict = ChkBuilder.CreateICmpULT(ChkBuilder.CreateSub(Diff, One),
-                                          ThresholdMinusOne, "diff.check");
+    IsConflict = ChkBuilder.CreateICmpULT(
+        ChkBuilder.CreateSub(Diff, ConstantInt::get(Ty, 1)), ThresholdMinusOne,
+        "diff.check");
     SeenCompares.insert({{Diff, ThresholdMinusOne}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
