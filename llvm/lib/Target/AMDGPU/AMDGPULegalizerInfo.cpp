@@ -6939,11 +6939,13 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
       LLT RepackedTy = LLT::fixed_vector(NumValueDWords, LLT::integer(16));
       PackedI16 = B.buildMergeLikeInstr(RepackedTy, Repack).getReg(0);
     } else {
-      LLT MergedTy = LLT::fixed_vector(NumValueDWords, I32);
-      Register Merged =
-          NumValueDWords == 1
-              ? LoadElts[0]
-              : B.buildMergeLikeInstr(MergedTy, LoadElts).getReg(0);
+      Register Merged;
+      if (NumValueDWords == 1) {
+        Merged = LoadElts[0];
+      } else {
+        LLT MergedTy = LLT::fixed_vector(NumValueDWords, I32);
+        Merged = B.buildMergeLikeInstr(MergedTy, LoadElts).getReg(0);
+      }
       LLT PackedI16Ty = LLT::fixed_vector(NumValueDWords * 2, LLT::integer(16));
       PackedI16 = B.buildBitcast(PackedI16Ty, Merged).getReg(0);
     }
