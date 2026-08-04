@@ -27,7 +27,7 @@ namespace llvm {
 namespace AMDGPUAS {
 enum : unsigned {
   // The maximum value for flat, generic, local, private, constant and region.
-  MAX_AMDGPU_ADDRESS = 9,
+  MAX_AMDGPU_ADDRESS = 13,
 
   FLAT_ADDRESS = 0,   ///< Address space for flat memory.
   GLOBAL_ADDRESS = 1, ///< Address space for global memory (RAT0, VTX0).
