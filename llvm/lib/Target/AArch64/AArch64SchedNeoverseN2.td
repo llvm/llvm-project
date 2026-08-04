@@ -19,6 +19,7 @@ def NeoverseN2Model : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F,
+                                                    SVE2p1Unsupported.F,
     [HasSVE2p1, HasSVEB16B16, HasPAuthLR, HasCPA, HasCSSC, HasMOPS, HasMOPS_GO]);
 }
 
@@ -465,6 +466,10 @@ def N2Write_6c_2I_2L : SchedWriteRes<[N2UnitI, N2UnitI, N2UnitL, N2UnitL]> {
 def N2Write_7c_4L : SchedWriteRes<[N2UnitL, N2UnitL, N2UnitL, N2UnitL]> {
   let Latency     = 7;
   let NumMicroOps = 4;
+}
+
+def N2Write_14cyc_1L_1S : SchedWriteRes<[N2UnitL, N2UnitD]> {
+  let Latency     = 14;
 }
 
 //===----------------------------------------------------------------------===//
@@ -963,6 +968,14 @@ def : SchedAlias<WriteST,    N2Write_1c_1L01_1D>;
 def : SchedAlias<WriteSTIdx, N2Write_1c_1L01_1D_1I>;
 def : SchedAlias<WriteSTP,   N2Write_1c_1L01_1D>;
 def : SchedAlias<WriteAdr,   N2Write_1c_1I>; // copied from A57.
+
+// Atomic instructions
+// -----------------------------------------------------------------------------
+
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASB, CASH, CASW, CASX)>;
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASAB, CASAH, CASAW, CASAX)>;
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASLB, CASLH, CASLW, CASLX)>;
+def : InstRW<[N2Write_14cyc_1L_1S], (instrs CASALB, CASALH, CASALW, CASALX)>;
 
 // Tag load instructions
 // -----------------------------------------------------------------------------

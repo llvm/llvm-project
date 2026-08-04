@@ -44,8 +44,8 @@ public:
     _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __mean = 0, result_type __stddev = 1)
         : __mean_(__mean), __stddev_(__stddev) {}
 
-    _LIBCPP_HIDE_FROM_ABI result_type mean() const { return __mean_; }
-    _LIBCPP_HIDE_FROM_ABI result_type stddev() const { return __stddev_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type mean() const { return __mean_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type stddev() const { return __stddev_; }
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__mean_ == __y.__mean_ && __x.__stddev_ == __y.__stddev_;
@@ -73,21 +73,21 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI result_type mean() const { return __p_.mean(); }
-  _LIBCPP_HIDE_FROM_ABI result_type stddev() const { return __p_.stddev(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type mean() const { return __p_.mean(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type stddev() const { return __p_.stddev(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return -numeric_limits<result_type>::infinity(); }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::infinity(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return -numeric_limits<result_type>::infinity(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::infinity(); }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(const normal_distribution& __x, const normal_distribution& __y) {
     return __x.__p_ == __y.__p_ && __x.__v_hot_ == __y.__v_hot_ && (!__x.__v_hot_ || __x.__v_ == __y.__v_);

@@ -57,3 +57,21 @@ llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32, %redOperand :
 
   llvm.return
 }
+
+// LLVM-LABEL: @llvm_nvvm_barrier_arrive(
+// LLVM-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
+llvm.func @llvm_nvvm_barrier_arrive(%barID : i32, %numberOfThreads : i32) {
+  // LLVM: call void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 0, i32 %[[numThreads]])
+  // CHECK: nvvm.barrier.arrive number_of_threads = %{{.*}}
+  nvvm.barrier.arrive number_of_threads = %numberOfThreads
+  // LLVM: call void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 %[[barId]], i32 %[[numThreads]])
+  // CHECK: nvvm.barrier.arrive id = %{{.*}} number_of_threads = %{{.*}}
+  nvvm.barrier.arrive id = %barID number_of_threads = %numberOfThreads
+  // LLVM: call void @llvm.nvvm.barrier.cta.arrive.count(i32 0, i32 %[[numThreads]])
+  // CHECK: nvvm.barrier.arrive number_of_threads = %{{.*}} {aligned = false}
+  nvvm.barrier.arrive number_of_threads = %numberOfThreads {aligned = false}
+  // LLVM: call void @llvm.nvvm.barrier.cta.arrive.count(i32 %[[barId]], i32 %[[numThreads]])
+  // CHECK: nvvm.barrier.arrive id = %{{.*}} number_of_threads = %{{.*}} {aligned = false}
+  nvvm.barrier.arrive id = %barID number_of_threads = %numberOfThreads {aligned = false}
+  llvm.return
+}

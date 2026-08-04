@@ -54,6 +54,7 @@ if (SPHINX_FOUND)
       float
       glob
       inttypes
+      libgen
       locale
       nl_types
       net/if
@@ -85,6 +86,7 @@ if (SPHINX_FOUND)
       sys/wait
       termios
       threads
+      time
       uchar
       unistd
       wchar

@@ -44,9 +44,7 @@ public:
 
   lldb::tid_t GetThreadID() const { return m_thread_id; }
 
-  llvm::ArrayRef<unsigned long long> GetExceptionArguments() const {
-    return m_arguments;
-  }
+  llvm::ArrayRef<uint64_t> GetExceptionArguments() const { return m_arguments; }
 
   void Dump(llvm::raw_ostream &stream) const;
 
@@ -55,7 +53,7 @@ private:
   bool m_continuable;
   lldb::addr_t m_exception_addr;
   lldb::tid_t m_thread_id;
-  std::vector<unsigned long long> m_arguments;
+  std::vector<uint64_t> m_arguments;
 };
 }
 

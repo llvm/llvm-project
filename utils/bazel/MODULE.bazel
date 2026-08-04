@@ -6,14 +6,21 @@
 
 module(name = "llvm-project-overlay")
 
+# Compatibility floor: the oldest version of each dep that llvm-project is
+# tested against. Downstream consumers may override to any version >= this.
+# Bumping requires updating the compatibility docs; do not bump casually.
 bazel_dep(name = "apple_support", version = "2.6.1", repo_name = "build_bazel_apple_support")
-bazel_dep(name = "bazel_skylib", version = "1.9.0")
-bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "protobuf", version = "35.0", repo_name = "com_google_protobuf")
 bazel_dep(name = "rules_android", version = "0.7.2")
 bazel_dep(name = "rules_cc", version = "0.2.19")
-bazel_dep(name = "rules_python", version = "2.0.2")
+bazel_dep(name = "rules_python", version = "1.8.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
+
+# Latest pins: track upstream freely. No compatibility contract -- bump to
+# whatever version LLVM's own build needs; downstream consumers get whatever
+# resolves in their module graph.
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "zlib-ng", version = "2.3.3", repo_name = "llvm_zlib")
 bazel_dep(name = "zstd", version = "1.5.7.bcr.1", repo_name = "llvm_zstd")
 bazel_dep(name = "gmp", version = "6.3.0.bcr.1")

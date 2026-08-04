@@ -764,12 +764,13 @@ public:
   /// If CanBeNull is set by this function the pointer can either be null or be
   /// dereferenceable up to the returned number of bytes.
   ///
-  /// IF CanBeFreed is true, the pointer is known to be dereferenceable at
-  /// point of definition only.  Caller must prove that allocation is not
-  /// deallocated between point of definition and use.
+  /// If CanBeFreed is non-null, it will be populated with information on
+  /// whether the pointer might be freed, i.e. is only known dereferenceable
+  /// at the point of definition. By passing null the caller indicates that it
+  /// does not care.
   LLVM_ABI uint64_t getPointerDereferenceableBytes(const DataLayout &DL,
                                                    bool &CanBeNull,
-                                                   bool &CanBeFreed) const;
+                                                   bool *CanBeFreed) const;
 
   /// Returns an alignment of the pointer value.
   ///

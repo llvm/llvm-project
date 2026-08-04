@@ -20,11 +20,14 @@
 #define W_OK 2
 #define R_OK 4
 
+#define _SC_ARG_MAX 0
 #define _SC_PAGESIZE 1
 #define _SC_PAGE_SIZE _SC_PAGESIZE
+#define _SC_OPEN_MAX 4
+#define _SC_THREADS 67
 #define _SC_NPROCESSORS_CONF 83
 #define _SC_NPROCESSORS_ONLN 84
-#define _SC_THREADS 67
+#define _SC_PHYS_PAGES 85
 
 #define _PC_FILESIZEBITS 0
 #define _PC_LINK_MAX 1
@@ -62,5 +65,16 @@
   __llvm_libc_syscall((long)(sysno), (long)(arg1), (long)(arg2), (long)(arg3), \
                       (long)(arg4), (long)(arg5), (long)(arg6))
 #define syscall(...) __syscall_helper(__VA_ARGS__, 0, 1, 2, 3, 4, 5, 6)
+
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(expression)                                         \
+  (__extension__({                                                             \
+    long __result;                                                             \
+    do {                                                                       \
+      __result = (long)(expression);                                           \
+    } while (__result == -1L && errno == EINTR);                               \
+    __result;                                                                  \
+  }))
+#endif
 
 #endif // LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H

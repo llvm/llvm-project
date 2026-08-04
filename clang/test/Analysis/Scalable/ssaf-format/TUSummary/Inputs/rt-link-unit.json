@@ -2,8 +2,10 @@
   "data": [],
   "id_table": [],
   "linkage_table": [],
+  "target_triple": "arm64-apple-macosx",
   "tu_namespace": {
     "kind": "LinkUnit",
     "name": "libtest.so"
-  }
+  },
+  "type": "TUSummary"
 }
