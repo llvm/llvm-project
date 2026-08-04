@@ -269,7 +269,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
                             ? llvm::Type::getInt64Ty(VMContext)
                             : nullptr;
   unsigned PaddingSlots = Padding ? 1 : 0;
-  unsigned SizeSlots = 1;
+  unsigned SizeSlots = llvm::divideCeil(Size, 64);
 
   // Treat an enum type as its underlying type.
   if (const auto *ED = Ty->getAsEnumDecl())
@@ -289,7 +289,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
 
   // Other non-aggregates go in registers.
   if (!isAggregateTypeForABI(Ty)) {
-    RegOffset += PaddingSlots + llvm::divideCeil(Size, 64);
+    RegOffset += PaddingSlots + SizeSlots;
     return ABIArgInfo::getDirect(/*T=*/nullptr, /*Offset=*/0, Padding);
   }
 
@@ -305,7 +305,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   // Build a coercion type from the LLVM struct type.
   llvm::StructType *StrTy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty));
   if (!StrTy) {
-    RegOffset += PaddingSlots + llvm::divideCeil(Size, 64);
+    RegOffset += PaddingSlots + SizeSlots;
     return ABIArgInfo::getDirect(/*T=*/nullptr, /*Offset=*/0, Padding);
   }
 
