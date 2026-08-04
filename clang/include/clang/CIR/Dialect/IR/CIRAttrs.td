@@ -169,6 +169,8 @@ def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout"> {
     `>`
   }];
 
+  let genVerifyDecl = 1;
+
   let canHaveIllegalCXXABIType = 0;
 }
 

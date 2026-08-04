@@ -920,6 +920,22 @@ LogicalResult DynamicCastInfoAttr::verify(
 // RecordLayout lookup
 //===----------------------------------------------------------------------===//
 
+LogicalResult
+RecordLayoutAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                         cir::ArgPassingKind argPassingKind,
+                         bool hasTrivialDtor, uint64_t recordAlign) {
+  // record_align comes from ASTRecordLayout::getAlignment() and is consumed as
+  // an llvm::Align, which requires a non-zero power of two.  Reject anything
+  // else here so hand-written CIR gets a diagnostic instead of an assertion
+  // failure inside whichever pass reads the field.
+  if (recordAlign == 0)
+    return emitError() << "record_align must be non-zero";
+  if (!llvm::isPowerOf2_64(recordAlign))
+    return emitError() << "record_align must be a power of two, got "
+                       << recordAlign;
+  return success();
+}
+
 RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp module,
                                       mlir::StringAttr name) {
   auto dict = module->getAttrOfType<mlir::DictionaryAttr>(
