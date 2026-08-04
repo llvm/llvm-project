@@ -40,7 +40,7 @@ function(add_unittest_framework_library name)
   endif()
   target_compile_options(${name}.unit PRIVATE ${compile_options})
 
-    _get_hermetic_test_compile_options(compile_options "")
+  _get_hermetic_test_compile_options(compile_options "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
   target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
 
@@ -73,10 +73,12 @@ add_unittest_framework_library(
   LibcTest
   SRCS
     CmakeFilePath.cpp
+    LibcCTest.cpp
     LibcTest.cpp
     LibcTestMain.cpp
     TestLogger.cpp
   HDRS
+    LibcCTest.h
     LibcTest.h
     Test.h
     TestLogger.h
@@ -97,8 +99,21 @@ add_unittest_framework_library(
 )
 
 set(libc_death_test_srcs LibcDeathTestExecutors.cpp)
+set(libc_death_test_deps
+  libc.hdr.stdint_proxy
+  libc.src.__support.libc_assert
+)
 if (LIBC_TEST_SUBPROCESS_TESTS)
   list(APPEND libc_death_test_srcs ExecuteFunctionUnix.cpp)
+  if (LLVM_LIBC_FULL_BUILD)
+    list(APPEND libc_death_test_deps
+      libc.include.llvm-libc-macros.poll-macros
+      libc.include.llvm-libc-macros.signal_macros
+      libc.include.llvm-libc-macros.sys_wait_macros
+      libc.include.llvm-libc-types.pid_t
+      libc.include.llvm-libc-types.struct_pollfd
+    )
+  endif()
 endif()
 
 add_unittest_framework_library(
@@ -108,7 +123,7 @@ add_unittest_framework_library(
   HDRS
     ExecuteFunction.h
   DEPENDS
-    libc.hdr.stdint_proxy
+    ${libc_death_test_deps}
 )
 
 add_unittest_framework_library(

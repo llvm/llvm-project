@@ -35,6 +35,11 @@ bool isConstant(Value *V) {
   return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
 }
 
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
+  const auto *CI = dyn_cast<ConstantInt>(V);
+  return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
+}
+
 bool isVectorLikeInstWithConstOps(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   // Non-instructions are vector-like only if they are undef.
@@ -123,6 +128,15 @@ bool isSplat(ArrayRef<Value *> VL) {
       return false;
   }
   return FirstNonUndef != nullptr;
+}
+
+Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS) {
+  if (LHS == RHS)
+    return RHS;
+  if ((LHS == Intrinsic::fma || LHS == Intrinsic::fmuladd) &&
+      (RHS == Intrinsic::fma || RHS == Intrinsic::fmuladd))
+    return Intrinsic::fma;
+  return Intrinsic::not_intrinsic;
 }
 
 bool isCommutative(const Instruction *I, const Value *ValWithUses,

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
+#include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyExceptionInfo.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
@@ -80,6 +81,9 @@ public:
   void addISelPrepare(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMW) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
 };
 
 void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -241,14 +245,40 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(
     addMachineFunctionPass(WebAssemblyDebugFixupPass(), PMW);
 
   // Collect information to prepare for MC lowering / asm printing.
-  // TODO(boomanaiden154): WebAssemblyMCLowerPrePass
+  flushFPMsToMPM(PMW);
+  addModulePass(WebAssemblyMCLowerPrePass(), PMW);
+}
+
+void WebAssemblyCodeGenPassBuilder::addAsmPrinterBegin(
+    PassManagerWrapper &PMW) const {
+  addModulePass(WebAssemblyAsmPrinterBeginPass(), PMW);
+}
+
+void WebAssemblyCodeGenPassBuilder::addAsmPrinter(
+    PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(WebAssemblyAsmPrinterPass(), PMW);
+}
+
+void WebAssemblyCodeGenPassBuilder::addAsmPrinterEnd(
+    PassManagerWrapper &PMW) const {
+  addModulePass(WebAssemblyAsmPrinterEndPass(), PMW);
 }
 
 } // namespace
 
-void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
+void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "WebAssemblyPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
+  // targets that currently implement it have a ported asm-printer pass.
+  if (PIC) {
+    PIC->addClassToPassName(WebAssemblyAsmPrinterBeginPass::name(),
+                            "wasm-asm-printer-begin");
+    PIC->addClassToPassName(WebAssemblyAsmPrinterPass::name(),
+                            "wasm-asm-printer");
+    PIC->addClassToPassName(WebAssemblyAsmPrinterEndPass::name(),
+                            "wasm-asm-printer-end");
+  }
 }
 
 Error WebAssemblyTargetMachine::buildCodeGenPipeline(
