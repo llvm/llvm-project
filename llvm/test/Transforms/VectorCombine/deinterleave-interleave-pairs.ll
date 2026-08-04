@@ -353,6 +353,23 @@ else:
   ret <vscale x 16 x i16> zeroinitializer
 }
 
+define <8 x float> @fpmath_metadata(<8 x float> %v) {
+; CHECK-LABEL: define <8 x float> @fpmath_metadata(
+; CHECK-SAME: <8 x float> [[V:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x float> [[V]], splat (float 1.000000e+00), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    ret <8 x float> [[R]]
+;
+  %d = call { <4 x float>, <4 x float> }
+  @llvm.vector.deinterleave2.v8f32(<8 x float> %v)
+  %f0 = extractvalue { <4 x float>, <4 x float> } %d, 0
+  %f1 = extractvalue { <4 x float>, <4 x float> } %d, 1
+  %u0 = fadd <4 x float> %f0, splat (float 1.0), !fpmath !{float 2.5}
+  %u1 = fadd <4 x float> %f1, splat (float 1.0), !fpmath !{float 2.5}
+  %r = call <8 x float>
+  @llvm.vector.interleave2.v8f32(<4 x float> %u0, <4 x float> %u1)
+  ret <8 x float> %r
+}
+
 ; Negative test: operand bundles on the deinterleave must be preserved.
 define <vscale x 8 x i16> @negative_deinterleave2_operand_bundle(<vscale x 8 x i16> %v) {
 ; CHECK-LABEL: define <vscale x 8 x i16> @negative_deinterleave2_operand_bundle(
@@ -588,3 +605,6 @@ define <vscale x 8 x i16> @negative_deinterleave2_extra_intermediate_use(<vscale
   %r = call <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16> %u0, <vscale x 4 x i16> %u1)
   ret <vscale x 8 x i16> %r
 }
+;.
+; CHECK: [[META0]] = !{float 2.500000e+00}
+;.

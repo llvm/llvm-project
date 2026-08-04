@@ -5955,7 +5955,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       return false;
 
     if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
-      if (II->hasOperandBundles() || II->isConvergent() ||
+      if (II->hasOperandBundles() ||
           !isTriviallyVectorizable(II->getIntrinsicID()))
         return false;
     } else if (!isa<BinaryOperator, UnaryOperator, CastInst, CmpInst,
@@ -5996,7 +5996,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
     // Check whether every chain has reached the same interleave.
     if (auto *II = dyn_cast<IntrinsicInst>(NextInsts.front());
         II && II->getIntrinsicID() == InterleaveIID) {
-      if (II->hasOperandBundles() || II->arg_size() != Factor)
+      if (II->hasOperandBundles())
         return false;
 
       for (unsigned Index = 0; Index != Factor; ++Index)
@@ -6010,8 +6010,7 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
     Instruction *FirstInst = NextInsts.front();
     unsigned ChainOperand = OperandNumbers.front();
 
-    if (!isSupportedElementwise(FirstInst) ||
-        ChainOperand >= getNumDataOperands(FirstInst))
+    if (!isSupportedElementwise(FirstInst))
       return false;
 
     for (unsigned Index = 1; Index != Factor; ++Index) {
@@ -6058,6 +6057,9 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
   for (const ElementwiseStep &Step : Steps) {
     Instruction *NarrowInst = Step.Insts.front();
 
+    Builder.SetInsertPoint(NarrowInst);
+    Builder.SetCurrentDebugLocation(NarrowInst->getDebugLoc());
+
     unsigned NumOperands = getNumDataOperands(NarrowInst);
     SmallVector<Value *, 4> NewOperands;
     NewOperands.reserve(NumOperands);
@@ -6098,6 +6100,9 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
 
     SmallVector<Value *, 8> NarrowInsts(Step.Insts.begin(), Step.Insts.end());
     propagateIRFlags(NewValue, NarrowInsts);
+
+    if (auto *NewInst = dyn_cast<Instruction>(NewValue))
+      propagateMetadata(NewInst, NarrowInsts);
 
     WideValue = NewValue;
   }
