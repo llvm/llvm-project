@@ -6,24 +6,24 @@
 //
 // ── 3a. Itanium mangling  ────────────────────────────────────────────────────
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -emit-llvm -o - %s \
 // RUN:   | FileCheck %s --check-prefix=MANGLE
 //
 // ── 3b. Serialisation round-trip (TypeLoc reader/writer) ────────────────────
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -O0 -emit-pch -o %t.pch %s
 // RUN: echo "void pch_probe(MatA_t a);" > %t.pch_probe.cl
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -O0 -include-pch %t.pch \
 // RUN:   -ast-dump %t.pch_probe.cl \
 // RUN:   | FileCheck %s --check-prefix=PCH
 //
 // ── 3c. Structural equivalence (no diagnostics on compatible pair) ───────────
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -fsyntax-only -verify %s
 
 // expected-no-diagnostics
