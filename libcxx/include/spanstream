@@ -463,10 +463,6 @@ _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-#  if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
-#    include <type_traits>
-#  endif
-
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SPANSTREAM
