@@ -42,7 +42,21 @@ class SubtargetFeatureAddressableLocalMemorySize <int Value> : SubtargetFeature<
 def FeatureAddressableLocalMemorySize32768 : SubtargetFeatureAddressableLocalMemorySize<32768>;
 def FeatureAddressableLocalMemorySize65536 : SubtargetFeatureAddressableLocalMemorySize<65536>;
 def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMemorySize<163840>;
+def FeatureAddressableLocalMemorySize196608 : SubtargetFeatureAddressableLocalMemorySize<196608>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
+
+// Total size of LDS on the whole block, in bytes. Set this only when it is
+// larger than the addressable size, i.e. when one workgroup cannot use the whole
+// block (e.g. gfx10/11/12: a block is two 64k CUs => 128k total). If not set, it
+// defaults to the addressable size.
+class SubtargetFeatureLocalMemorySize <int Value> : SubtargetFeature<
+  "localmemorysize"#Value,
+  "LocalMemorySize",
+  !cast<string>(Value),
+  "The total size of local memory in bytes"
+>;
+
+def FeatureLocalMemorySize131072 : SubtargetFeatureLocalMemorySize<131072>;
 
 // Whether each wavefront size mode is available on the hardware,
 // independent of the active mode.

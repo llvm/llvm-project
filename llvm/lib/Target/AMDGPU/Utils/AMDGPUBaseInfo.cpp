@@ -1176,48 +1176,49 @@ unsigned getWavefrontSize(const MCSubtargetInfo &STI) {
   return 64;
 }
 
-unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
-  unsigned BytesPerCU = getAddressableLocalMemorySize(STI);
-
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share". So the effective local memory size is doubled in
-  // WGP mode on gfx10.
-  if (isGFX10Plus(STI) && !STI.getFeatureBits().test(FeatureCuMode))
-    BytesPerCU *= 2;
-
-  return BytesPerCU;
-}
-
-unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
+// Maximum LDS a single work-group can address. This is the fixed HW addressing
+// cap and does not depend on CU/WGP (full-SIMD) mode.
+static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize32768))
     return 32768;
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize65536))
     return 65536;
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize163840))
     return 163840;
+  if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize196608))
+    return 196608;
   if (STI.getFeatureBits().test(FeatureAddressableLocalMemorySize327680))
     return 327680;
   return 32768;
 }
 
+// Total physical LDS on the block. On some targets a single work-group cannot
+// address the whole block, so the physical size is larger than the addressable
+// size; those set FeatureLocalMemorySize (gfx10/11/12: two 64k CUs => 128k).
+// Otherwise it defaults to the addressable size.
+static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
+  if (STI.getFeatureBits().test(FeatureLocalMemorySize131072))
+    return 131072;
+  return getMaxHWAddressableLocalMemorySize(STI);
+}
+
+unsigned getLocalMemorySize(const MCSubtargetInfo &STI) {
+  // Total LDS on the block, halved in CU (half-WGP) mode.
+  unsigned Size = getPhysicalLocalMemorySize(STI);
+  if (!isFullSIMDMode(STI))
+    Size /= 2;
+  return Size;
+}
+
+unsigned getAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
+  // HW addressing cap, but no more than is available in the current mode.
+  return std::min(getMaxHWAddressableLocalMemorySize(STI),
+                  getLocalMemorySize(STI));
+}
+
 unsigned getEUsPerCU(const MCSubtargetInfo &STI) {
-  // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share".
-
-  // GFX12.5 only supports CU mode, which contains four SIMDs.
-  if (isGFX1250(STI)) {
-    assert(STI.getFeatureBits().test(FeatureCuMode));
-    return 4;
-  }
-
-  // For gfx10 in CU mode the functional block is the CU, which contains
-  // two SIMDs.
-  if (isGFX10Plus(STI) && STI.getFeatureBits().test(FeatureCuMode))
-    return 2;
-
-  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
-  // contains two CUs, so a total of four SIMDs.
-  return 4;
+  // Four SIMD32s in full SIMD mode, two in CU (half-WGP) mode.
+  return isFullSIMDMode(STI) ? 4 : 2;
 }
 
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo &STI,
@@ -2594,6 +2595,10 @@ bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isGFX1250(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts] && !isGFX13(STI);
+}
+
+bool isFullSIMDMode(const MCSubtargetInfo &STI) {
+  return isGFX1250(STI) || !STI.getFeatureBits().test(FeatureCuMode);
 }
 
 bool isGFX1250Plus(const MCSubtargetInfo &STI) {
