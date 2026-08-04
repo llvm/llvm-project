@@ -14,12 +14,17 @@
 
 // S2 mapper for: map(to: arr[0:2])
 // Per-element entries (i = array element index; N = __tgt_mapper_num_components()):
-//   &arr[i],     &arr[i].s1p,    sizeof(s1p..z),  MEMBER_OF(N) | ALLOC
-//   &arr[i],     &arr[i].z,      sizeof(int),     MEMBER_OF(N+1) | TO | FROM
-//   &arr[i].s1p, &arr[i].s1p->x, sizeof(int),     MEMBER_OF(N+1) | TO | FROM | PTR_AND_OBJ
-//   &arr[i].s1p, &arr[i].s1p->y, sizeof(int),     MEMBER_OF(N+1) | TO | FROM | PTR_AND_OBJ
-// FIXME: should use attach-style codegen for s1p->x/y instead of PTR_AND_OBJ,
-// which unnecessarily also maps s1p.
+//   &arr[i],        &arr[i].z,      sizeof(int),       MEMBER_OF(N)|TO|FROM
+//   &arr[i].s1p[0], &arr[i].s1p->x, sizeof(s1p->x..y), ALLOC
+//   &arr[i].s1p[0], &arr[i].s1p->x, sizeof(int),       MEMBER_OF(N+2)|TO|FROM
+//   &arr[i].s1p[0], &arr[i].s1p->y, sizeof(int),       MEMBER_OF(N+2)|TO|FROM
+//   &arr[i].s1p,    &arr[i].s1p->x, sizeof(S1 *),      ATTACH
+//
+// The s1p->x/y entries use attach-style codegen: their storage is the pointee
+// block, so they are not MEMBER_OF the arr[i] struct. They are MEMBER_OF the
+// combined ALLOC entry that covers that block (inner MEMBER_OF(2), shifted by
+// N), and a separate ATTACH entry links arr[i].s1p to it. Unlike PTR_AND_OBJ,
+// this does not also map s1p itself.
 
 typedef struct {
   int x;
@@ -34,8 +39,9 @@ typedef struct {
 #pragma omp declare mapper(default : S2 s2) map(s2.z, s2.s1p->x, s2.s1p->y)
 
 void foo(S2 *arr) {
-  // &arr,    &arr[0], 2*sizeof(S2), TARGET_PARAM | TO
-  // (mapper handles individual members)
+  // Top-level entries (the mapper above expands each element's members):
+  //   arr,  &arr[0], 2*sizeof(S2), TO       (with the S2 mapper attached)
+  //   &arr, &arr[0], sizeof(S2 *), ATTACH   (no mapper)
 #pragma omp target enter data map(to: arr[0:2])
   {}
 }
