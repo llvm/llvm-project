@@ -1523,7 +1523,6 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
     for (auto &I : *(Node->getBlock()))
       allocateCandidatesAndFindBasis(&I);
 
-  // DenseMap<Instruction *, SmallVector<Candidate *, 3>> RewriteCandidates;
   LLVM_DEBUG({
     dbgs() << "RewriteCandidates after allocation (" << RewriteCandidates.size()
            << " instructions):\n";
@@ -1549,59 +1548,29 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   }
   sortCandidateInstructions();
 
-#if 0
-  // From SortedCandidateInsts, remove some candidates that are likely to increase register pressure.
-  // The candidate's Inst is the source of replacement.
-  // A candidate in the following criteria should be removed:
-  // 1. The candidate's Inst "has operands used in non-rewritable users in another block" 
+  // From SortedCandidateInsts, remove some candidates that are likely to
+  // increase register pressure. The candidate's Inst is the source of
+  // replacement. A candidate in the following criteria should be removed:
+  // 1. The candidate's Inst "has operands used in non-rewritable users in
+  // another block"
   //    -- checked by hasOperandsUsedInNonRewritableUsersInAnotherBlock(Inst)
-  //    -- This means the candidate's Inst's original operands are live in another block, thus
-  //    -- even if rewrite the Inst, the operands are still live in another block. 
-  //    -- Thus, rewriting the Inst based on Basis might add another long live range from the Basis.
-  //    -- This might need a refinement to check that "another block" is properly dominated by the candidate's Inst's block.
-  // 2. If the candidate's Basis's used in the the same block and its last is before the candidate's Inst and
+  //    -- This means the candidate's Inst's original operands are live in
+  //    another block, thus
+  //    -- even if rewrite the Inst, the operands are still live in another
+  //    block.
+  //    -- Thus, rewriting the Inst based on Basis might add another long live
+  //    range from the Basis.
+  //    -- This might need a refinement to check that "another block" is
+  //    properly dominated by the candidate's Inst's block.
+  // 2. If the candidate's Basis's used in the the same block and its last is
+  // before the candidate's Inst and
   //    the difference between the two is larger than a threshold.
-  //    -- If the candidate's Basis doesn't have a use in the same block, this condition should be ignored (met).
-  //    -- This might need a refinement to check if the Basis is only used in the same block.
+  //    -- If the candidate's Basis doesn't have a use in the same block, this
+  //    condition should be ignored (met).
+  //    -- This might need a refinement to check if the Basis is only used in
+  //    the same block.
   //
-  // A candidate satisfies oth conditions 1 and 2 should be removed.
-  //
-  // Strategy to compute the difference between the two instructions:
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Instruction.h"
-
-    // Scans a block once to create a fixed layout map
-    llvm::DenseMap<const llvm::Instruction*, unsigned> buildBlockIndexMap(llvm::BasicBlock &BB) {
-        llvm::DenseMap<const llvm::Instruction*, unsigned> IndexMap;
-        unsigned Index = 0;
-        
-        for (const llvm::Instruction &I : BB) {
-            // Essential: Skip debug instructions so your register pressure 
-            // math doesn't change between 'Debug' and 'Release' compilation modes
-            if (I.isDebugOpcode()) 
-                continue;
-                
-            IndexMap[&I] = Index++;
-        }
-        return IndexMap;
-    }
-
-    // Example usage inside your runOnBasicBlock or similar pass function
-    void analyzeRegisterPressure(llvm::BasicBlock &BB) {
-        auto IndexMap = buildBlockIndexMap(BB);
-        
-        // Quick O(1) distance query
-        llvm::Instruction *InstA = ...;
-        llvm::Instruction *InstB = ...;
-        
-        if (IndexMap.count(InstA) && IndexMap.count(InstB)) {
-            int distance = static_cast<int>(IndexMap[InstB]) - static_cast<int>(IndexMap[InstA]);
-            // 'distance' indicates how many real instructions sit between A and B
-        }
-    }
-
-#endif
+  // A candidate satisfies both conditions 1 and 2 should be removed.
 
   // Pre-rewrite: collect candidates likely to increase register pressure.
   // Evaluate on the original IR, before any rewriteCandidate mutates it
