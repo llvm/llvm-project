@@ -77,12 +77,7 @@ struct ol_device_impl_t {
   InfoTreeNode Info;
 };
 
-llvm::Error ol_platform_impl_t::destroy() {
-  if (auto Res = Plugin->deinit())
-    return Res;
-
-  return llvm::Error::success();
-}
+llvm::Error ol_platform_impl_t::destroy() { return Plugin->deinit(); }
 
 llvm::Error ol_platform_impl_t::init() {
   if (!Plugin)
@@ -224,6 +219,16 @@ struct ol_context_impl_t {
     }
     OutstandingQueues.clear();
     return Result;
+  }
+
+  /// Drain outstanding queues and tear down the plugin-side context.
+  llvm::Error destroy() {
+    if (auto Err = drainOutstandingQueues())
+      return Err;
+    if (PluginCtx)
+      if (auto Err = PluginCtx->deinit())
+        return Err;
+    return llvm::Error::success();
   }
 
   ~ol_context_impl_t() {
@@ -641,11 +646,8 @@ Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
 }
 
 Error olDestroyContext_impl(ol_context_handle_t Context) {
-  if (auto Err = Context->drainOutstandingQueues())
+  if (auto Err = Context->destroy())
     return Err;
-  if (Context->PluginCtx)
-    if (auto Err = Context->PluginCtx->deinit())
-      return Err;
   return olDestroy(Context);
 }
 

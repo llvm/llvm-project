@@ -37,7 +37,8 @@ protected:
   L0CmdListManagerTy *CmdList = nullptr;
   /// Whether the queue is in-order or out-of-order.
   bool CreateQueueInOrder;
-  /// Owning plugin-side context (never null on an active queue).
+  /// Plugin-owned context this queue belongs to (never null on an active
+  /// queue).
   LevelZeroPluginContextTy *UserCtx = nullptr;
 
 public:
