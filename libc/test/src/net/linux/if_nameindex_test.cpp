@@ -49,11 +49,8 @@ template <typename T, size_t CAPACITY>
 static optional<T> pop_front(FixedVector<T, CAPACITY> &vec) {
   if (vec.empty())
     return nullopt;
-  // TODO: Add front() and erase() to FixedVector, then clean this up.
-  T first = vec[0];
-  for (size_t i = 1; i < vec.size(); ++i)
-    vec[i - 1] = vec[i];
-  vec.pop_back();
+  T first = vec.front();
+  vec.erase(vec.begin());
   return first;
 }
 

@@ -57,6 +57,16 @@ public:
     return true;
   }
 
+  LIBC_INLINE constexpr const T &front() const {
+    LIBC_ASSERT(!empty());
+    return store[0];
+  }
+
+  LIBC_INLINE constexpr T &front() {
+    LIBC_ASSERT(!empty());
+    return store[0];
+  }
+
   LIBC_INLINE constexpr const T &back() const {
     LIBC_ASSERT(!empty());
     return store[item_count - 1];
@@ -73,6 +83,14 @@ public:
     inline_memset(&store[item_count - 1], 0, sizeof(T));
     --item_count;
     return true;
+  }
+
+  LIBC_INLINE constexpr iterator erase(iterator pos) {
+    LIBC_ASSERT(pos >= begin() && pos < end());
+    for (iterator it = pos; it + 1 != end(); ++it)
+      *it = *(it + 1);
+    pop_back();
+    return pos;
   }
 
   LIBC_INLINE constexpr T &operator[](size_t idx) {
