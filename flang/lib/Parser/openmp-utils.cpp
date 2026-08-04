@@ -13,7 +13,6 @@
 #include "flang/Parser/openmp-utils.h"
 
 #include "flang/Common/indirection.h"
-#include "flang/Common/template.h"
 #include "flang/Common/visit.h"
 #include "flang/Parser/tools.h"
 #include "llvm/ADT/StringRef.h"

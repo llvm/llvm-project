@@ -459,6 +459,21 @@ Interpreter::Visit(const IdentifierNode &node) {
   if (!identifier)
     identifier = LookupEnumValue(node.GetName(), m_stack_frame);
 
+  if (!identifier && node.GetName() == "nullptr") {
+    // If we got a "nullptr" identifier, and there is no defined variable with
+    // this name, resolve it as a null pointer.
+    llvm::Expected<lldb::TypeSystemSP> type_system =
+        GetTypeSystemFromCU(m_stack_frame);
+    if (!type_system)
+      return type_system.takeError();
+    type_system.get()->GetPointerByteSize();
+    llvm::APInt value(type_system.get()->GetPointerByteSize() * CHAR_BIT, 0);
+    Scalar scalar(value);
+    CompilerType type = GetBasicType(*type_system, lldb::eBasicTypeNullPtr);
+    return ValueObject::CreateValueObjectFromScalar(m_stack_frame, scalar, type,
+                                                    "result");
+  }
+
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node.GetName());
@@ -559,6 +574,39 @@ Interpreter::Visit(const UnaryOpNode &node) {
     }
     return operand;
   }
+  case UnaryOpKind::Not: {
+    if (operand->GetCompilerType().IsReferenceType()) {
+      operand = operand->Dereference(error);
+      if (error.Fail())
+        return error.ToError();
+    }
+    llvm::Expected<lldb::ValueObjectSP> conv_op =
+        UnaryConversion(operand, node.GetLocation());
+    if (!conv_op)
+      return conv_op;
+    operand = *conv_op;
+    CompilerType operand_type = operand->GetCompilerType();
+    if (!operand_type.IsInteger()) {
+      std::string errMsg =
+          llvm::formatv("invalid argument type '{0}' to unary expression",
+                        operand_type.GetTypeName());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                  node.GetLocation());
+    }
+    Scalar scalar;
+    bool resolved = operand->ResolveValue(scalar);
+    if (!resolved) {
+      std::string errMsg = llvm::formatv("invalid operand value: {0}",
+                                         operand->GetError().AsCString());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                  node.GetLocation());
+    }
+
+    bool flipped = scalar.OnesComplement();
+    if (flipped)
+      return ValueObject::CreateValueObjectFromScalar(
+          m_stack_frame, scalar, operand->GetCompilerType(), "result");
+  }
   }
   return llvm::make_error<DILDiagnosticError>(m_expr, "invalid unary operation",
                                               node.GetLocation());
@@ -634,6 +682,12 @@ Interpreter::EvaluateScalarOp(BinaryOpKind kind, lldb::ValueObjectSP lhs,
     return value_object(l / r);
   case BinaryOpKind::Rem:
     return value_object(l % r);
+  case BinaryOpKind::And:
+    return value_object(l & r);
+  case BinaryOpKind::Xor:
+    return value_object(l ^ r);
+  case BinaryOpKind::Or:
+    return value_object(l | r);
   case BinaryOpKind::Shl:
     return value_object(l << r);
   case BinaryOpKind::Shr:
@@ -892,6 +946,28 @@ Interpreter::EvaluateAssignment(lldb::ValueObjectSP lhs,
 }
 
 llvm::Expected<lldb::ValueObjectSP>
+Interpreter::EvaluateBinaryBitwise(BinaryOpKind kind, lldb::ValueObjectSP lhs,
+                                   lldb::ValueObjectSP rhs, uint32_t location) {
+  // Operations {'&', '|', '^'} work for:
+  //  {integer,unscoped_enum} <-> {integer,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto type_or_err = ArithmeticConversion(lhs, rhs, location);
+  if (!type_or_err)
+    return type_or_err.takeError();
+  CompilerType result_type = *type_or_err;
+
+  if (!result_type.IsInteger()) {
+    std::string errMsg =
+        llvm::formatv("invalid operands to binary expression ('{0}' and '{1}')",
+                      orig_lhs_type.GetTypeName(), orig_rhs_type.GetTypeName());
+    return llvm::make_error<DILDiagnosticError>(m_expr, errMsg, location);
+  }
+
+  return EvaluateScalarOp(kind, lhs, rhs, result_type, location);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
 Interpreter::EvaluateBinaryShift(BinaryOpKind kind, lldb::ValueObjectSP lhs,
                                  lldb::ValueObjectSP rhs, uint32_t location) {
   // Operations {'>>', '<<'} work for:
@@ -977,6 +1053,10 @@ Interpreter::Visit(const BinaryOpNode &node) {
     return EvaluateBinaryDivision(lhs, rhs, node.GetLocation());
   case BinaryOpKind::Rem:
     return EvaluateBinaryRemainder(lhs, rhs, node.GetLocation());
+  case BinaryOpKind::And:
+  case BinaryOpKind::Xor:
+  case BinaryOpKind::Or:
+    return EvaluateBinaryBitwise(node.GetKind(), lhs, rhs, node.GetLocation());
   case BinaryOpKind::Shl:
   case BinaryOpKind::Shr:
     return EvaluateBinaryShift(node.GetKind(), lhs, rhs, node.GetLocation());

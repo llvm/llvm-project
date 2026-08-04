@@ -5,6 +5,12 @@ add_header(
 )
 
 add_header(
+  dirent_macros
+  HDR
+    dirent-macros.h
+)
+
+add_header(
   fcntl_macros
   HDR
     fcntl-macros.h
@@ -62,6 +68,12 @@ add_header(
   sys_socket_macros
   HDR
     sys-socket-macros.h
+)
+
+add_header(
+  net_if_macros
+  HDR
+    net-if-macros.h
 )
 
 add_header(

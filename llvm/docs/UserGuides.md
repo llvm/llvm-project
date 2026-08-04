@@ -5,9 +5,6 @@ you should look into [Clang](https://clang.llvm.org) instead. The
 documentation here is intended for users who have a need to work with the
 intermediate LLVM representation.
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -63,6 +60,7 @@ CompileCudaWithLLVM
 NVPTXUsage
 AMDGPUUsage
 AMDGPUAsyncOperations
+AMDGPUDMAOperations
 AMDGPUExecutionSynchronization
 AMDGPUMemoryModel
 SPIRVUsage
@@ -338,7 +336,12 @@ yaml2obj
 
 - {doc}`AMDGPUAsyncOperations`
 
-  Builtins for invoking asynchronous data transfer operations in AMD GPUs.
+  Asynchronous operations and the asyncmark mechanism for tracking their
+  completion on AMD GPUs.
+
+- {doc}`AMDGPUDMAOperations`
+
+  DMA operations that transfer data between global memory and LDS on AMD GPUs.
 
 - {doc}`AMDGPUMemoryModel`
 

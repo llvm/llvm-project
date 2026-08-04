@@ -188,8 +188,8 @@ define i100 @v1i100(<1 x i100> %v) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](s128)
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[COPY]](i64), [[COPY1]](i64)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i100) = G_TRUNC [[MV]](i128)
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[TRUNC]](i100)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[ANYEXT]](s128)
   ; CHECK-NEXT:   $x0 = COPY [[UV]](i64)

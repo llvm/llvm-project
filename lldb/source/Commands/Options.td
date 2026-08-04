@@ -488,6 +488,11 @@ let Command = "breakpoint add scripted" in {
 let Command = "breakpoint override add" in {
   def breakpoint_override_add_description : Option<"description", "d">,
     Desc<"Description string for this override resolver">, Arg<"HelpText">;
+  def breakpoint_override_add_mask : Option<"resolver-type-mask", "m">,
+    Desc<"Specifies which breakpoint resolver type the override operates on.  "
+    "The option can be repeated, lldb will 'and' the options together.  "
+    "If no options are specified, the default value is 'file_and_line'">,
+    EnumArg<"BreakpointResolverMask">;
 }
 
 let Command = "breakpoint clear" in {
@@ -715,6 +720,21 @@ let Command = "diagnostics dump" in {
         Group<1>,
         Arg<"Path">,
         Desc<"Dump the diagnostics to the given directory.">;
+}
+
+let Command = "diagnostics report" in {
+  def diagnostics_report_directory
+      : Option<"directory", "d">,
+        Group<1>,
+        Arg<"Path">,
+        Desc<"Write the bug report bundle to the given directory.">;
+  def diagnostics_report_no_open
+      : Option<"no-open", "n">,
+        Desc<"Write the bundle but do not open the bug tracker.">;
+  def diagnostics_report_plugin
+      : Option<"plugin", "P">,
+        Arg<"Plugin">,
+        Desc<"File the report with the named bug reporter plugin.">;
 }
 
 let Command = "expression" in {
@@ -1562,6 +1582,37 @@ let Command = "scripting extension list" in {
         Desc<"Specify the scripting "
              " language. If none is specified the default scripting language "
              "is used.">;
+  def scripting_extension_list_json
+      : Option<"json", "j">,
+        Desc<"Output the scripted extension list in json format.">;
+}
+
+let Command = "scripting extension generate" in {
+  def scripting_extension_generate_all_methods
+      : Option<"all", "a">,
+        Desc<"Generate all the extension methods, not only the abstract ones.">;
+  def scripting_extension_generate_language
+      : Option<"language", "l">,
+        EnumArg<"ScriptLang">,
+        Desc<"Specify the scripting language. If none is specified the "
+             "default scripting language is used.">;
+  def scripting_extension_generate_class_prefix
+      : Option<"name", "n">,
+        Arg<"ClassName">,
+        Required,
+        Desc<"Specify the class prefix name to include in the generated class "
+             "definitions.">;
+  def scripting_extension_generate_output_file
+      : Option<"output", "o">,
+        Arg<"Filename">,
+        Desc<"File location where the extension is generated.">;
+  def scripting_extension_generate_open_editor
+      : Option<"edit", "e">,
+        Arg<"Boolean">,
+        Desc<"Open the generated file in an external editor after writing "
+             "it to disk. Defaults to true; pass `-e false` to skip "
+             "opening the editor (e.g. under SSH without X forwarding, "
+             "or in scripted runs).">;
 }
 
 let Command = "source info" in {

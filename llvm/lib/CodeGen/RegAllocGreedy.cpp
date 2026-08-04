@@ -258,7 +258,6 @@ PreservedAnalyses RAGreedyPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<MachineBlockFrequencyAnalysis>();
   PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<SlotIndexesAnalysis>();
   PA.preserve<LiveDebugVariablesAnalysis>();
@@ -342,7 +341,6 @@ FunctionPass *llvm::createGreedyRegisterAllocator(RegAllocFilterFunc Ftor) {
 void RAGreedyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-  AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
   AU.addRequired<SlotIndexesWrapperPass>();
@@ -352,9 +350,7 @@ void RAGreedyLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<LiveStacksWrapperLegacy>();
   AU.addPreserved<LiveStacksWrapperLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
-  AU.addPreserved<MachineLoopInfoWrapperPass>();
   AU.addRequired<VirtRegMapWrapperLegacy>();
   AU.addPreserved<VirtRegMapWrapperLegacy>();
   AU.addRequired<LiveRegMatrixWrapperLegacy>();

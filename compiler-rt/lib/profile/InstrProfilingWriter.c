@@ -13,7 +13,11 @@
 /* For _alloca */
 #include <malloc.h>
 #endif
+#if defined(__FreeBSD__) && defined(_KERNEL)
+#include <sys/systm.h>
+#else
 #include <string.h>
+#endif
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"
@@ -343,6 +347,7 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
   /* The data and names sections are omitted in lightweight mode. */
   if (NumData == 0 && NamesSize == 0) {
     Header.CountersDelta = 0;
+    Header.BitmapDelta = 0;
     Header.NamesDelta = 0;
     Header.UniformCountersDelta = 0;
   }

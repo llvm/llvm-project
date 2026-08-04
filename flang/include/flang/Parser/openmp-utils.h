@@ -14,7 +14,6 @@
 #define FORTRAN_PARSER_OPENMP_UTILS_H
 
 #include "flang/Common/indirection.h"
-#include "flang/Common/template.h"
 #include "flang/Parser/parse-tree.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Frontend/OpenMP/OMP.h"

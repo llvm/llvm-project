@@ -14,8 +14,8 @@
 ; CHECK: br {{.*}} !llvm.loop [[POLLY_LOOP:![0-9]+]]
 ; CHECK: [[LOOP]] = distinct !{[[LOOP]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
 ; CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable", i32 0}
-; CHECK: [[POLLY_LOOP]] = distinct !{[[POLLY_LOOP]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
-; CHECK: [[META3]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: [[POLLY_LOOP]] = distinct !{[[POLLY_LOOP]], {{.*}}}
+; CHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"

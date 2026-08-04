@@ -98,6 +98,7 @@ def ol_errc_t : Enum {
     Etor<"INVALID_DEVICE", "invalid device">,
     Etor<"INVALID_QUEUE", "invalid queue">,
     Etor<"INVALID_EVENT", "invalid event">,
+    Etor<"INVALID_CONTEXT", "invalid context">,
     Etor<"SYMBOL_KIND", "the operation does not support this symbol kind">,
   ];
 }

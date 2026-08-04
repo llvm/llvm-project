@@ -366,6 +366,7 @@ def warn_alias_type_mismatch : Warning<
   "alias and aliasee have different types %0 and %1">,
   InGroup<DiagGroup<"attribute-alias">>;
 
+def err_fe_text_encoding_config : Error<"failed to set fexec-charset to '%0'">;
 def warn_atomic_op_misaligned : Warning<
   "misaligned atomic operation may incur "
   "significant performance penalty"
@@ -432,6 +433,35 @@ def warn_ssaf_write_tu_summary_failed :
 def warn_ssaf_tu_summary_requires_compilation_unit_id :
   Warning<"option '--ssaf-tu-summary-file=' requires "
           "'--ssaf-compilation-unit-id=' to be set">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_source_transformation_unknown_name :
+  Warning<"no source transformation registered with name: %0">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_source_transformation_requires :
+  Warning<"option '--ssaf-source-transformation=' requires "
+          "'%select{--ssaf-global-scope-analysis-result=|--ssaf-src-edit-file=|"
+          "--ssaf-transformation-report-file=|--ssaf-compilation-unit-id=}0' "
+          "to be set">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_read_wpa_suite_failed :
+  Warning<"failed to read whole-program analysis result from '%0': %1">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_option_ignored_without_source_transformation :
+  Warning<"option '%select{--ssaf-src-edit-file=|"
+          "--ssaf-transformation-report-file=}0' is ignored without "
+          "'--ssaf-source-transformation='">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_write_src_edit_failed :
+  Warning<"failed to write source edits to '%0': %1">,
+  InGroup<ScalableStaticAnalysis>, DefaultError;
+
+def warn_ssaf_write_transformation_report_failed :
+  Warning<"failed to write transformation report to '%0': %1">,
   InGroup<ScalableStaticAnalysis>, DefaultError;
 
 def err_extract_api_ignores_file_not_found :

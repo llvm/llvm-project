@@ -24,6 +24,7 @@
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Options/Options.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
+#include "clang/ScalableStaticAnalysis/Frontend/SourceTransformationFrontendAction.h"
 #include "clang/ScalableStaticAnalysis/Frontend/TUSummaryExtractorFrontendAction.h"
 #include "clang/ScalableStaticAnalysis/SSAFForceLinker.h" // IWYU pragma: keep
 #include "clang/StaticAnalyzer/Frontend/AnalyzerHelpFlags.h"
@@ -120,8 +121,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case InitOnly:               return std::make_unique<InitOnlyAction>();
   case ParseSyntaxOnly:        return std::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return std::make_unique<DumpModuleInfoAction>();
-  case VerifyPCH:              return std::make_unique<VerifyPCHAction>();
-  case TemplightDump:          return std::make_unique<TemplightDumpAction>();
+  case VerifyPCH:
+    return std::make_unique<VerifyPCHAction>();
 
   case PluginAction: {
     for (const FrontendPluginRegistry::entry &Plugin :
@@ -212,6 +213,17 @@ CreateFrontendAction(CompilerInstance &CI) {
 
   if (!CI.getSSAFOpts().TUSummaryFile.empty()) {
     Act = std::make_unique<ssaf::TUSummaryExtractorFrontendAction>(
+        std::move(Act));
+  }
+  // Enter the source-transformation action when the transformation option is
+  // set, and also when only an output option (--ssaf-src-edit-file= /
+  // --ssaf-transformation-report-file=) is set — the action's
+  // reportOrphanOptionMisuse then diagnoses that as a reverse orphan rather
+  // than silently ignoring the option.
+  if (!CI.getSSAFOpts().SourceTransformation.empty() ||
+      !CI.getSSAFOpts().SrcEditFile.empty() ||
+      !CI.getSSAFOpts().TransformationReportFile.empty()) {
+    Act = std::make_unique<ssaf::SourceTransformationFrontendAction>(
         std::move(Act));
   }
   return Act;

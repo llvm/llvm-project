@@ -576,6 +576,15 @@ gpu.func @create_mem_desc_with_stride_from_2d_memref() {
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @create_mem_desc_from_3d_memref({{.*}}) {
+gpu.func @create_mem_desc_from_3d_memref() {
+  //CHECK: [[alloc:%.+]] = memref.alloca() {alignment = 1024 : i64} : memref<1x16x64xf16, 3>
+  //CHECK: [[mdesc:%.+]] = xegpu.create_mem_desc [[alloc]] : memref<1x16x64xf16, 3> -> !xegpu.mem_desc<1x16x64xf16>
+  %m = memref.alloca() {alignment = 1024} : memref<1x16x64xf16, 3>
+  %mem_desc = xegpu.create_mem_desc %m : memref<1x16x64xf16, 3> -> !xegpu.mem_desc<1x16x64xf16>
+  gpu.return
+}
+
 // CHECK: gpu.func @load_matrix([[ARG0:%.+]]: !xegpu.mem_desc<16x64xf16>)
 gpu.func @load_matrix(%arg0: !xegpu.mem_desc<16x64xf16>) {
   // CHECK: xegpu.load_matrix [[ARG0]][8, 8] : !xegpu.mem_desc<16x64xf16> -> vector<8x16xf16>

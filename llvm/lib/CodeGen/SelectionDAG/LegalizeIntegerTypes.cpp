@@ -1635,6 +1635,45 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SRL(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_Rotate(SDNode *N) {
+  EVT OldVT = N->getValueType(0);
+  EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), OldVT);
+  SDValue Amt = N->getOperand(1);
+  unsigned Opcode = N->getOpcode();
+  unsigned OldBits = OldVT.getScalarSizeInBits();
+  unsigned NewBits = VT.getScalarSizeInBits();
+
+  // If the promoted type is twice the size (or more), then we can concatenate
+  // the value with itself and treat this similar to a funnel shift. This isn't
+  // necessary if the rotate amount is constant or if shl/srl of the original
+  // type are custom lowered.
+  // rotl(x,amt) -> (((aext(x) << bw) | zext(x)) << (amt % bw)) >> bw.
+  // rotr(x,amt) -> (((aext(x) << bw) | zext(x)) >> (amt % bw)).
+  if (NewBits >= (2 * OldBits) && !isa<ConstantSDNode>(Amt) &&
+      !TLI.isOperationLegalOrCustom(Opcode, VT) &&
+      TLI.getOperationAction(ISD::SHL, OldVT) != TargetLowering::Custom &&
+      TLI.getOperationAction(ISD::SRL, OldVT) != TargetLowering::Custom) {
+    SDValue Op0 = GetPromotedInteger(N->getOperand(0));
+    if (getTypeAction(Amt.getValueType()) == TargetLowering::TypePromoteInteger)
+      Amt = ZExtPromotedInteger(Amt);
+    EVT AmtVT = Amt.getValueType();
+
+    SDLoc DL(N);
+    // Amount has to be interpreted modulo the old bit width.
+    Amt = DAG.getNode(ISD::UREM, DL, AmtVT, Amt,
+                      DAG.getConstant(OldBits, DL, AmtVT));
+    SDValue HiShift = DAG.getShiftAmountConstant(OldBits, VT, DL);
+    SDValue Hi = DAG.getNode(ISD::SHL, DL, VT, Op0, HiShift);
+    SDValue Lo = DAG.getZeroExtendInReg(Op0, DL, OldVT);
+    SDValue Res = DAG.getNode(ISD::OR, DL, VT, Hi, Lo);
+    bool IsROTR = N->getOpcode() == ISD::ROTR;
+    Res = DAG.getNode(IsROTR ? ISD::SRL : ISD::SHL, DL, VT, Res, Amt);
+    // FIXME: We can avoid this by using ROTL when the promoted type is exactly
+    // twice the size.
+    if (!IsROTR)
+      Res = DAG.getNode(ISD::SRL, DL, VT, Res, HiShift);
+    return Res;
+  }
+
   // Lower the rotate to shifts and ORs which can be promoted.
   SDValue Res = TLI.expandROT(N, true /*AllowVectorOps*/, DAG);
   ReplaceValueWith(SDValue(N, 0), Res);
@@ -1752,7 +1791,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_CLMUL(SDNode *N) {
   EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), OldVT);
 
   if (Opcode == ISD::CLMUL) {
-    if (!TLI.isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT)) {
+    // Avoid the generic expansion if the cross-product expansion in
+    // ExpandIntRes_CLMUL would produce a better result.
+    if (!TLI.isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT) &&
+        !(getTypeAction(VT) == TargetLowering::TypeExpandInteger &&
+          TLI.isOperationLegalOrCustom(
+              ISD::CLMUL, TLI.getRegisterType(*DAG.getContext(), VT)))) {
       if (SDValue Res = TLI.expandCLMUL(N, DAG))
         return DAG.getNode(ISD::ANY_EXTEND, DL, VT, Res);
     }

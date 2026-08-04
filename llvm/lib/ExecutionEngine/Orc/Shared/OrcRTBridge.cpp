@@ -8,9 +8,13 @@
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
+#include "llvm/ExecutionEngine/Orc/RTBridge/Calls.h"
+
 namespace llvm {
 namespace orc {
 namespace rt {
+
+MainCaller::~MainCaller() = default;
 
 const char *SimpleExecutorDylibManagerInstanceName =
     "__llvm_orc_SimpleExecutorDylibManager_Instance";
@@ -83,6 +87,9 @@ const char *RunAsVoidFunctionWrapperName =
 const char *RunAsIntFunctionWrapperName =
     "__llvm_orc_bootstrap_run_as_int_function_wrapper";
 
+const char *const DispatchName = "__orc_rt_jit_dispatch";
+const char *const DispatchCtxName = "__orc_rt_jit_dispatch_ctx";
+
 const SimpleExecutorMemoryManagerSymbolNames
     orc_rt_SimpleNativeMemoryMapSPSSymbols = {
         "orc_rt_ci_SimpleNativeMemoryMap_Instance",
@@ -98,6 +105,11 @@ const SimpleExecutorDylibManagerSymbolNames
         "orc_rt_ci_sps_NativeDylibManager_load",
         "orc_rt_ci_sps_NativeDylibManager_lookup",
 };
+
+const MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_registerSections",
+        "orc_rt_ci_aa_sps_MachOUnwindInfoRegistrar_deregisterSections"};
 
 } // end namespace rt
 namespace rt_alt {

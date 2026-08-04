@@ -13,6 +13,7 @@
 
 #include "SPIRVRegularizer.h"
 #include "SPIRV.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -95,15 +96,14 @@ static void runLowerConstExpr(Function &F) {
     auto LowerConstantVec = [&II, &LowerOp, &WorkList,
                              &Ctx](ConstantVector *Vec,
                                    unsigned NumOfOp) -> Value * {
-      if (std::all_of(Vec->op_begin(), Vec->op_end(), [](Value *V) {
+      if (llvm::all_of(Vec->operands(), [](Value *V) {
             return isa<ConstantExpr>(V) || isa<Function>(V);
           })) {
         // Expand a vector of constexprs and construct it back with
         // series of insertelement instructions.
         std::list<Value *> OpList;
-        std::transform(Vec->op_begin(), Vec->op_end(),
-                       std::back_inserter(OpList),
-                       [LowerOp](Value *V) { return LowerOp(V); });
+        llvm::transform(Vec->operands(), std::back_inserter(OpList),
+                        [LowerOp](Value *V) { return LowerOp(V); });
         Value *Repl = nullptr;
         unsigned Idx = 0;
         auto *PhiII = dyn_cast<PHINode>(II);

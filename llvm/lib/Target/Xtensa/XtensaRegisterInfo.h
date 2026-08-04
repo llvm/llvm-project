@@ -20,7 +20,8 @@
 #include "XtensaGenRegisterInfo.inc"
 
 namespace llvm {
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class XtensaInstrInfo;
 class XtensaSubtarget;
 

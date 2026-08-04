@@ -50,6 +50,24 @@ func.func @canonicalize_buffer_cast_of_tensor_load_different_address_space(%arg0
 
 // -----
 
+// If unranked memrefs are not cast-compatible, don't fold them.
+// CHECK-LABEL: func @canonicalize_unranked_buffer_cast_of_tensor_load_different_address_space(
+//  CHECK-SAME:   %[[MEMREF:.*]]: memref<*xi64>)
+//  CHECK-SAME:     -> memref<*xi64, 1> {
+//  CHECK-NOT: memref.cast
+//      CHECK: %[[TENSOR:.*]] = bufferization.to_tensor %[[MEMREF]] : memref<*xi64> to tensor<*xi64>
+//      CHECK: %[[BUFFER:.*]] = bufferization.to_buffer %[[TENSOR]] : tensor<*xi64> to memref<*xi64, 1>
+//  CHECK-NOT: memref.cast
+//      CHECK: return %[[BUFFER]] : memref<*xi64, 1>
+func.func @canonicalize_unranked_buffer_cast_of_tensor_load_different_address_space(%arg0: memref<*xi64>)
+    -> memref<*xi64, 1> {
+  %0 = bufferization.to_tensor %arg0 : memref<*xi64> to tensor<*xi64>
+  %1 = bufferization.to_buffer %0 : tensor<*xi64> to memref<*xi64, 1>
+  return %1 : memref<*xi64, 1>
+}
+
+// -----
+
 // If the memrefs are definitely cast-compatible, canonicalize to
 //            cast.
 // CHECK-LABEL: func @canonicalize_buffer_cast_of_tensor_load(

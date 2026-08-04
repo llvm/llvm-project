@@ -152,6 +152,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
     setOperationAction(ISD::FMAXIMUM, T, Legal);
+    if (Subtarget->hasSIMD128() && MVT(T).isVector()) {
+      setOperationAction(ISD::PSEUDO_FMIN, T, Legal);
+      setOperationAction(ISD::PSEUDO_FMAX, T, Legal);
+    }
     // When experimental v8f16 support is enabled these instructions don't need
     // to be expanded.
     if (T != MVT::v8f16) {
@@ -197,6 +201,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         {ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXNUM, ISD::FMAXIMUMNUM},
         {MVT::v4f32, MVT::v2f64}, Custom);
   }
+
+  // Combine expands these operations, because wasi-libc and emscripten do not
+  // yet have the dedicated libcalls.
+  setTargetDAGCombine(
+      {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM});
+
   // SIMD-specific configuration
   if (Subtarget->hasSIMD128()) {
 
@@ -3980,6 +3990,28 @@ static SDValue performShiftCombine(SDNode *N,
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, MulLo, MulHi);
 }
 
+static SDValue performMinMaxF128Combine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getValueType(0) != MVT::f128)
+    return SDValue();
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  switch (N->getOpcode()) {
+  // wasi-libc and emscripten do not currently define fminimuml and fmaximuml.
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+    return TLI.expandFMINIMUM_FMAXIMUM(N, DAG);
+
+  // wasi-libc and emscripten do not currently define fminimum_numl and
+  // fmaximum_numl.
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    return TLI.expandFMINIMUMNUM_FMAXIMUMNUM(N, DAG);
+
+  default:
+    return SDValue();
+  }
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -4020,5 +4052,10 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performMulCombine(N, DCI);
   case ISD::SHL:
     return performShiftCombine(N, DCI);
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
+    return performMinMaxF128Combine(N, DCI.DAG);
   }
 }

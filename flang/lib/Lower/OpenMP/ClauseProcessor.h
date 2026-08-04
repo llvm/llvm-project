@@ -97,7 +97,8 @@ public:
   bool processInitializer(
       lower::SymMap &symMap,
       ReductionProcessor::GenInitValueCBTy &genInitValueCB,
-      const parser::OmpStylizedInstance *parserInitInstance = nullptr) const;
+      const parser::OmpStylizedInstance *parserInitInstance = nullptr,
+      unsigned instanceIdx = 0) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
@@ -110,6 +111,7 @@ public:
                          mlir::omp::NumThreadsClauseOps &result) const;
   bool processOrder(mlir::omp::OrderClauseOps &result) const;
   bool processOrdered(mlir::omp::OrderedClauseOps &result) const;
+  bool processPartial(std::optional<int64_t> &result) const;
   bool processPriority(lower::StatementContext &stmtCtx,
                        mlir::omp::PriorityClauseOps &result) const;
   bool processProcBind(mlir::omp::ProcBindClauseOps &result) const;

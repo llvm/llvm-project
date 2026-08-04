@@ -95,6 +95,10 @@ static llvm::cl::alias includeAlias("module-directory",
 static llvm::cl::list<std::string>
     intrinsicIncludeDirs("J", llvm::cl::desc("intrinsic module search paths"));
 
+static llvm::cl::list<std::string> implicitUseModules(
+    "implicit-use-module",
+    llvm::cl::desc("implicitly USE the named module for testing"));
+
 static llvm::cl::alias
     intrinsicIncludeAlias("intrinsic-module-directory",
                           llvm::cl::desc("intrinsic module directory"),
@@ -225,6 +229,10 @@ static llvm::cl::opt<bool> enableNoPPCNativeVecElemOrder(
 static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
+
+static llvm::cl::opt<bool> enableCUDAInit("fcuda-init",
+                                          llvm::cl::desc("enable CUDA Init"),
+                                          llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
     enableDoConcurrentOffload("fdoconcurrent-offload",
@@ -424,6 +432,27 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 
   // run semantics
   auto &parseTree = *parsing.parseTree();
+  std::vector<std::string> implicitUseModuleNames;
+  for (const std::string &module : implicitUseModules) {
+    bool moduleIsDefinedInInput{false};
+    for (const Fortran::parser::ProgramUnit &unit : parseTree.v) {
+      if (const auto *indirectModule{std::get_if<
+              Fortran::common::Indirection<Fortran::parser::Module>>(
+              &unit.u)}) {
+        const auto &moduleStmt{
+            std::get<Fortran::parser::Statement<Fortran::parser::ModuleStmt>>(
+                indirectModule->value().t)};
+        if (moduleStmt.statement.v.source.ToString() == module) {
+          moduleIsDefinedInInput = true;
+          break;
+        }
+      }
+    }
+    if (!moduleIsDefinedInInput) {
+      implicitUseModuleNames.push_back(module);
+    }
+  }
+  semanticsContext.set_implicitUseModules(implicitUseModuleNames);
   Fortran::semantics::Semantics semantics(semanticsContext, parseTree);
   semantics.Perform();
   semantics.EmitMessages(llvm::errs());
@@ -659,6 +688,9 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
+  }
+  if (enableCUDAInit) {
+    options.features.Enable(Fortran::common::LanguageFeature::CUDAInit);
   }
 
   if (enableDoConcurrentOffload) {
