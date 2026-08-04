@@ -4394,7 +4394,7 @@ LexStart:
       }
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::lessequal;
-    } else if (LangOpts.Digraphs && Char == ':') {     // '<:' -> '['
+    } else if (LangOpts.Digraphs && Char == ':') { // '<:' -> '['
       if (LangOpts.CPlusPlus11 &&
           getCharAndSize(CurPtr + SizeTmp, SizeTmp2) == ':') {
         // C++0x [lex.pptoken]p3:
@@ -4414,7 +4414,7 @@ LexStart:
 
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::l_square;
-    } else if (LangOpts.Digraphs && Char == '%') {     // '<%' -> '{'
+    } else if (LangOpts.Digraphs && Char == '%') { // '<%' -> '{'
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
       Kind = tok::l_brace;
     } else if (Char == '#' && /*Not a trigraph*/ SizeTmp == 1 &&
