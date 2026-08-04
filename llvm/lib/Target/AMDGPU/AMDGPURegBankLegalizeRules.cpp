@@ -2052,11 +2052,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs(
       {amdgcn_cvt_scalef32_sr_fp8_f16, amdgcn_cvt_scalef32_sr_bf8_f16,
        amdgcn_cvt_scalef32_sr_fp8_bf16, amdgcn_cvt_scalef32_sr_bf8_bf16})
-      .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32, Vgpr16, Vgpr32, Vgpr32}}});
+      .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32, Vgpr16, Vgpr32, Vgpr32}}})
+      .Any({{UniS32},
+            {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr16, Vgpr32, Vgpr32}}});
 
   addRulesForIOpcs(
       {amdgcn_cvt_scalef32_sr_fp8_f32, amdgcn_cvt_scalef32_sr_bf8_f32})
-      .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vgpr32}}});
+      .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vgpr32}}})
+      .Any({{UniS32},
+            {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32, Vgpr32}}});
 
   addRulesForIOpcs({amdgcn_cubesc, amdgcn_cubetc, amdgcn_cubema, amdgcn_cubeid,
                     amdgcn_fma_legacy},
