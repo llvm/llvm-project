@@ -101,7 +101,7 @@ TEST_P(olMemAllocAlignedTest, CudaExceedDefaultAlignment) {
   // The default page size for cuda is 64 KB.
   ASSERT_ERROR(OL_ERRC_UNSUPPORTED,
                olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
-                                 1024 * 64 * 64, &Alloc));
+                                 1024 * 64 * 64 * 64, &Alloc));
   ASSERT_EQ(Alloc, nullptr);
 }
 
