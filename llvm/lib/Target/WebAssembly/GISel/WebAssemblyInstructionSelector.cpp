@@ -222,69 +222,39 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
   }
-  case G_GLOBAL_VALUE: {
-    assert(I.getOperand(1).getTargetFlags() == 0 &&
-           "Unexpected target flags on generic G_GLOBAL_VALUE instruction");
+  case WebAssembly::G_Wrapper: {
+    LLT DefTy = MRI.getType(I.getOperand(0).getReg());
 
-    unsigned OperandFlags = 0;
-    const llvm::GlobalValue *GV = I.getOperand(1).getGlobal();
-    LLT PtrTy = MRI.getType(I.getOperand(0).getReg());
-    bool PtrIsI64 = PtrTy.getSizeInBits() == 64;
+    if (!DefTy.isPointer() || DefTy.getAddressSpace() != 0)
+      return false;
 
-    if (TLI.isPositionIndependent()) {
-      if (TM.shouldAssumeDSOLocal(GV)) {
-        const char *BaseName;
-        if (GV->getValueType()->isFunctionTy()) {
-          BaseName = MF.createExternalSymbolName("__table_base");
-          OperandFlags = WebAssemblyII::MO_TABLE_BASE_REL;
-        } else {
-          BaseName = MF.createExternalSymbolName("__memory_base");
-          OperandFlags = WebAssemblyII::MO_MEMORY_BASE_REL;
-        }
-        MachineIRBuilder B(I);
+    bool PtrIsI64 = DefTy.getSizeInBits() == 64;
 
-        Register MemBase = MRI.createVirtualRegister(
-            PtrIsI64 ? &WebAssembly::I64RegClass : &WebAssembly::I32RegClass);
-        MRI.setType(MemBase, PtrTy);
+    if (TLI.isPositionIndependent())
+      I.setDesc(TII.get(PtrIsI64 ? WebAssembly::GLOBAL_GET_I64
+                                 : WebAssembly::GLOBAL_GET_I32));
+    else
+      I.setDesc(
+          TII.get(PtrIsI64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32));
 
-        Register Offset = MRI.createVirtualRegister(
-            PtrIsI64 ? &WebAssembly::I64RegClass : &WebAssembly::I32RegClass);
-        MRI.setType(Offset, PtrTy);
-
-        B.buildInstr(PtrIsI64 ? WebAssembly::GLOBAL_GET_I64
-                              : WebAssembly::GLOBAL_GET_I32)
-            .addDef(MemBase)
-            .addExternalSymbol(BaseName);
-
-        B.buildInstr(PtrIsI64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32)
-            .addDef(Offset)
-            .addGlobalAddress(GV, I.getOperand(1).getOffset(), OperandFlags);
-
-        auto MIB =
-            B.buildInstr(PtrIsI64 ? WebAssembly::ADD_I64 : WebAssembly::ADD_I32)
-                .addDef(I.getOperand(0).getReg())
-                .addReg(MemBase)
-                .addReg(Offset);
-        constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
-
-        I.eraseFromParent();
-        return true;
-      }
-      OperandFlags = WebAssemblyII::MO_GOT;
-    }
-
-    unsigned NewOpc =
-        PtrIsI64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32;
-
-    if (OperandFlags & WebAssemblyII::MO_GOT) {
-      NewOpc =
-          PtrIsI64 ? WebAssembly::GLOBAL_GET_I64 : WebAssembly::GLOBAL_GET_I32;
-    }
-
-    I.setDesc(TII.get(NewOpc));
-    I.getOperand(1).setTargetFlags(OperandFlags);
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
+  }
+  case WebAssembly::G_WrapperREL: {
+    LLT DefTy = MRI.getType(I.getOperand(0).getReg());
 
+    if (!DefTy.isInteger())
+      return false;
+
+    bool PtrIsI64 = DefTy.getSizeInBits() == 64;
+
+    if (TLI.isPositionIndependent())
+      I.setDesc(
+          TII.get(PtrIsI64 ? WebAssembly::CONST_I64 : WebAssembly::CONST_I32));
+    else
+      return false;
+
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
   }
   default:
