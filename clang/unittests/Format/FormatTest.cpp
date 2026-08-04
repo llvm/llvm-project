@@ -26615,7 +26615,8 @@ TEST_F(FormatTest, LambdaArrowAsTrailingReturnArrow) {
   verifyNoCrash("void foo()([] consteval -> int {}())");
 }
 TEST_F(FormatTest, FormatsUserDefinedLiteralTemplates) {
-    verifyFormat("template <char... Cs> auto f() { return operator\"\"_mag<Cs...>(); }");
+  verifyFormat(
+      "template <char... Cs> auto f() { return operator\"\"_mag<Cs...>(); }");
 }
 } // namespace
 } // namespace test

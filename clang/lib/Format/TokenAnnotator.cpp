@@ -164,10 +164,13 @@ private:
     const auto *BeforeLess = Left->Previous;
 
     if (BeforeLess) {
-      bool isUDLOperator = BeforeLess->is(tok::string_literal) && BeforeLess->Previous && BeforeLess->Previous->is(tok::kw_operator);
+      bool isUDLOperator = BeforeLess->is(tok::string_literal) &&
+                           BeforeLess->Previous &&
+                           BeforeLess->Previous->is(tok::kw_operator);
       if (BeforeLess->Tok.isLiteral()) {
-          if (isUDLOperator) return true;
-          return false;
+        if (isUDLOperator)
+          return true;
+        return false;
       }
       if (BeforeLess->is(tok::r_brace))
         return false;
@@ -5238,7 +5241,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
   if (IsCpp) {
     if (Left.is(TT_OverloadedOperator) &&
         Right.isOneOf(TT_TemplateOpener, TT_TemplateCloser)) { 
-      if (Left.is(tok::string_literal) && Left.Previous && Left.Previous->is(tok::kw_operator)) {
+      if (Left.is(tok::string_literal) && Left.Previous &&
+          Left.Previous->is(tok::kw_operator)) {
         return false;
       }
       return true;
