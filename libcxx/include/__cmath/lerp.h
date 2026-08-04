@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_LERP_H
-#define _LIBCPP___MATH_LERP_H
+#ifndef _LIBCPP___CMATH_LERP_H
+#define _LIBCPP___CMATH_LERP_H
 
 #include <__config>
 #include <__type_traits/is_arithmetic.h>
@@ -61,4 +61,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP___MATH_LERP_H
+#endif // _LIBCPP___CMATH_LERP_H

@@ -320,7 +320,7 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #  include <__type_traits/is_floating_point.h>
 #  include <version>
 
-#  include <__math/lerp.h>
+#  include <__cmath/lerp.h>
 #  include <__math/special_functions.h>
 #  include <math.h>
 

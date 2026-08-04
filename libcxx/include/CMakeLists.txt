@@ -294,6 +294,7 @@ set(files
   __chrono/year_month_day.h
   __chrono/year_month_weekday.h
   __chrono/zoned_time.h
+  __cmath/lerp.h
   __compare/common_comparison_category.h
   __compare/compare_partial_order_fallback.h
   __compare/compare_strong_order_fallback.h
@@ -575,7 +576,6 @@ set(files
   __math/hypot.h
   __math/inverse_hyperbolic_functions.h
   __math/inverse_trigonometric_functions.h
-  __math/lerp.h
   __math/logarithms.h
   __math/min_max.h
   __math/modulo.h
