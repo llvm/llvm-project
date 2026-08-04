@@ -31,7 +31,6 @@ define <16 x i32> @f1() {
 ; CHECK-NEXT:    je .LBB0_5
 ; CHECK-NEXT:  # %bb.6:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-NEXT:    xorps %xmm2, %xmm2
 ; CHECK-NEXT:    xorps %xmm3, %xmm3
 ; CHECK-NEXT:    retq

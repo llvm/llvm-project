@@ -5,10 +5,10 @@ define double @PR120093() {
 ; CHECK-LABEL: PR120093:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    xorpd %xmm0, %xmm0
+; CHECK-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; CHECK-NEXT:    cmpnltpd %xmm1, %xmm0
-; CHECK-NEXT:    movmskpd %xmm0, %eax
+; CHECK-NEXT:    cmpnltpd %xmm0, %xmm1
+; CHECK-NEXT:    movmskpd %xmm1, %eax
 ; CHECK-NEXT:    cmpl $3, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb2

@@ -1633,8 +1633,7 @@ define <4 x i1> @is_positive_mask_v4i64_v4i1(<4 x i64> %x, <4 x i1> %y) {
 ; AVX512F-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpcmpgtq %ymm2, %ymm0, %k1
 ; AVX512F-NEXT:    vptestmd %xmm1, %xmm1, %k1 {%k1}
-; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; AVX512F-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;

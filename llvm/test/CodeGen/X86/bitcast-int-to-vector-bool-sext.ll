@@ -729,10 +729,8 @@ define <8 x i32> @PR157382(ptr %p0, ptr %p1, ptr %p2) {
 ; AVX2-NEXT:    vpxor %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm1, %ymm1
 ; AVX2-NEXT:    vpor %ymm1, %ymm4, %ymm1
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX2-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
-; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpxor %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm5, %xmm2, %xmm2
 ; AVX2-NEXT:    vpmovsxbd %xmm2, %ymm2
 ; AVX2-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vpand %ymm0, %ymm1, %ymm0

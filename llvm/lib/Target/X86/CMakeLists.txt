@@ -75,6 +75,7 @@ set(sources
   X86MachineFunctionInfo.cpp
   X86MacroFusion.cpp
   X86OptimizeLEAs.cpp
+  X86OptimizeVectorConstants.cpp
   X86PadShortFunction.cpp
   X86PartialReduction.cpp
   X86RegisterInfo.cpp

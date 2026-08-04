@@ -1,0 +1,68 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f -run-pass=x86-optimize-vector-constants -o - %s | FileCheck %s
+
+---
+name: test_constants
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vr512 = AVX512_512_SET0
+    %1:vr512 = AVX512_512_SETALLONES
+
+    ; CHECK: %0:vr512 = AVX512_512_SET0
+    ; CHECK: %1:vr512 = AVX512_512_SETALLONES
+    
+    ; Zeros coalescing
+    ; Same size and class:
+    %2:vr512 = AVX512_512_SET0
+    ; CHECK-NOT: %2:vr512 = AVX512_512_SET0
+    
+    ; Smaller size:
+    %3:vr256 = AVX_SET0
+    ; CHECK: %3:vr256 = COPY %0.sub_ymm
+    
+    ; Even smaller size:
+    %4:vr128 = V_SET0
+    ; CHECK: %4:vr128 = COPY %0.sub_xmm
+    
+    ; Cross-class zeros (scalar XMM-backed vs vector):
+    %5:fr64 = FsFLD0SD
+    ; CHECK: %5:fr64 = COPY %0.sub_xmm
+
+    ; All-ones coalescing
+    ; Smaller size:
+    %6:vr256 = AVX2_SETALLONES
+    ; CHECK: %6:vr256 = COPY %1.sub_ymm
+
+    ; Even smaller size:
+    %7:vr128x = AVX512_128_SETALLONES
+    ; CHECK: %7:vr128x = COPY %1.sub_xmm
+
+    ; Ensure we don't cross-pollinate zeros and all-ones:
+    %8:vr128 = V_SET0
+    ; CHECK: %8:vr128 = COPY %0.sub_xmm
+...
+
+---
+name: test_nondominating
+tracksRegLiveness: true
+body: |
+  bb.0:
+    JCC_1 %bb.2, 4, implicit undef $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    ; CHECK-LABEL: bb.1:
+    ; CHECK: %0:vr128 = V_SET0
+    %0:vr128 = V_SET0
+    JMP_1 %bb.3
+
+  bb.2:
+    ; CHECK-LABEL: bb.2:
+    ; CHECK: %1:vr128 = V_SET0
+    ; Ensure non-dominating sibling block materialization is NOT replaced with %0
+    %1:vr128 = V_SET0
+    JMP_1 %bb.3
+
+  bb.3:
+    RET 0
+...
