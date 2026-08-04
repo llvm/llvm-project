@@ -9,21 +9,18 @@
 #ifndef BOLT_PASSES_BRANCHLIVENESSUTILS_H
 #define BOLT_PASSES_BRANCHLIVENESSUTILS_H
 
-#include "llvm/ADT/DenseSet.h"
+#include "bolt/Core/BranchLiveness.h"
 
 namespace llvm {
-class MCInst;
-
 namespace bolt {
 class BinaryFunction;
 class RegAnalysis;
 
-/// Return true if \p BF has short-range branches.
-bool hasShortRangeBranch(BinaryFunction &BF);
+/// Return true if \p BF needs liveness info for branch transformations.
+bool needsBranchLiveness(BinaryFunction &BF);
 
-/// Return the branch instructions where the target flags register is dead.
-DenseSet<const MCInst *> computeDeadFlagBranches(BinaryFunction &BF,
-                                                 RegAnalysis &RA);
+/// Return liveness info required for branch transformations.
+BranchLivenessInfo computeBranchLiveness(BinaryFunction &BF, RegAnalysis &RA);
 
 } // namespace bolt
 } // namespace llvm

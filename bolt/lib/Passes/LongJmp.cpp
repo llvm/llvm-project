@@ -15,7 +15,6 @@
 #include "bolt/Passes/BranchLivenessUtils.h"
 #include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Utils/CommandLineOpts.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -666,8 +665,8 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   return Error::success();
 }
 
-void LongJmpPass::relaxLocalBranches(
-    BinaryFunction &BF, const DenseSet<const MCInst *> *DeadFlagBranches) {
+void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
+                                     const BranchLivenessInfo *BLI) {
   BinaryContext &BC = BF.getBinaryContext();
   auto &MIB = BC.MIB;
 
@@ -843,8 +842,7 @@ void LongJmpPass::relaxLocalBranches(
       // If the other successor is a fall-through, invert the condition code.
       BinaryBasicBlock *NextBB =
           BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
-      bool MustPreserveFlags =
-          !DeadFlagBranches || !DeadFlagBranches->count(&Inst);
+      bool MustPreserveFlags = BLI ? BLI->mustPreserveFlags(Inst) : true;
       bool IsReversibleBranch =
           MIB->isReversibleBranch(Inst, MustPreserveFlags);
       bool ShouldReverseBranch = BB->getConditionalSuccessor(false) == NextBB;
@@ -960,25 +958,25 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
           opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
          "LongJmp cannot work with functions split in more than two fragments");
 
-  DenseMap<BinaryFunction *, DenseSet<const MCInst *>> DeadFlagBranches;
+  DenseMap<BinaryFunction *, BranchLivenessInfo> BranchLiveness;
   if (opts::FixBranchesWithLiveness) {
     SmallVector<BinaryFunction *> Candidates;
     for (auto &It : BC.getBinaryFunctions()) {
       BinaryFunction &BF = It.second;
       if (!BC.shouldEmit(BF) || !BF.isSimple())
         continue;
-      if (hasShortRangeBranch(BF))
+      if (needsBranchLiveness(BF))
         Candidates.push_back(&BF);
     }
     if (!Candidates.empty()) {
       RegAnalysis RA(BC, nullptr, nullptr);
       for (BinaryFunction *BF : Candidates)
-        DeadFlagBranches[BF] = computeDeadFlagBranches(*BF, RA);
+        BranchLiveness[BF] = computeBranchLiveness(*BF, RA);
     }
   }
-  auto getDeadFlagBranches = [&](BinaryFunction &BF) {
-    auto It = DeadFlagBranches.find(&BF);
-    return It == DeadFlagBranches.end() ? nullptr : &It->second;
+  auto getBranchLiveness = [&](BinaryFunction &BF) {
+    auto It = BranchLiveness.find(&BF);
+    return It == BranchLiveness.end() ? nullptr : &It->second;
   };
 
   if (opts::CompactCodeModel) {
@@ -991,7 +989,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
         };
 
     ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-      relaxLocalBranches(BF, getDeadFlagBranches(BF));
+      relaxLocalBranches(BF, getBranchLiveness(BF));
     };
 
     ParallelUtilities::runOnEachFunction(
@@ -1016,7 +1014,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
       // Don't ruin non-simple functions, they can't afford to have the layout
       // changed.
       if (Modified && Func->isSimple())
-        Func->fixBranches(getDeadFlagBranches(*Func));
+        Func->fixBranches(getBranchLiveness(*Func));
     }
   } while (Modified);
   BC.outs() << "BOLT-INFO: Inserted " << NumHotStubs

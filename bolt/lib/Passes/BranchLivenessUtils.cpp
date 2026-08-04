@@ -19,7 +19,7 @@
 namespace llvm {
 namespace bolt {
 
-bool hasShortRangeBranch(BinaryFunction &BF) {
+bool needsBranchLiveness(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   if (!BC.isAArch64())
     return false;
@@ -30,27 +30,26 @@ bool hasShortRangeBranch(BinaryFunction &BF) {
   });
 }
 
-DenseSet<const MCInst *> computeDeadFlagBranches(BinaryFunction &BF,
-                                                 RegAnalysis &RA) {
+BranchLivenessInfo computeBranchLiveness(BinaryFunction &BF, RegAnalysis &RA) {
   BinaryContext &BC = BF.getBinaryContext();
-  SmallVector<MCInst *, 4> Insts;
+  SmallVector<MCInst *> Insts;
   if (BC.isAArch64())
     for (BinaryBasicBlock &BB : BF)
       for (MCInst &Inst : BB)
         if (BC.MIB->isShortRangeBranch(Inst))
           Insts.push_back(&Inst);
 
-  DenseSet<const MCInst *> DeadFlagBranches;
+  BranchLivenessInfo BLI;
   if (Insts.empty())
-    return DeadFlagBranches;
+    return BLI;
 
   DataflowInfoManager DIM(BF, &RA, nullptr);
   LivenessAnalysis &LA = DIM.getLivenessAnalysis();
   const MCPhysReg FlagsReg = BC.MIB->getFlagsReg();
   for (MCInst *Inst : Insts)
     if (!LA.getLiveIn(*Inst).test(FlagsReg))
-      DeadFlagBranches.insert(Inst);
-  return DeadFlagBranches;
+      BLI.BranchesWithDeadFlags.insert(Inst);
+  return BLI;
 }
 
 } // namespace bolt

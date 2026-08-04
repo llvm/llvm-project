@@ -12,6 +12,7 @@
 
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/BinaryBasicBlock.h"
+#include "bolt/Core/BranchLiveness.h"
 #include "bolt/Core/DynoStats.h"
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/MCPlusBuilder.h"
@@ -3676,8 +3677,7 @@ bool BinaryFunction::validateCFG() const {
   return true;
 }
 
-void BinaryFunction::fixBranches(
-    const DenseSet<const MCInst *> *DeadFlagBranches) {
+void BinaryFunction::fixBranches(const BranchLivenessInfo *BLI) {
   assert(isSimple() && "Expected function with valid CFG.");
 
   auto &MIB = BC.MIB;
@@ -3737,7 +3737,7 @@ void BinaryFunction::fixBranches(
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
         bool MustPreserveFlags =
-            !DeadFlagBranches || !DeadFlagBranches->count(CondBranch);
+            BLI ? BLI->mustPreserveFlags(*CondBranch) : true;
         if (!MIB->isReversibleBranch(*CondBranch, MustPreserveFlags)) {
           if (opts::Verbosity) {
             BC.outs() << "BOLT-INFO: unable to swap successors in " << *this

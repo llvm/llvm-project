@@ -18,7 +18,6 @@
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Utils/CommandLineOpts.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
@@ -562,7 +561,7 @@ Error FixupBranches::runOnFunctions(BinaryContext &BC) {
       opts::FixBranchesWithLiveness &&
       llvm::any_of(BC.getBinaryFunctions(), [&](auto &It) {
         BinaryFunction &BF = It.second;
-        return BC.shouldEmit(BF) && BF.isSimple() && hasShortRangeBranch(BF);
+        return BC.shouldEmit(BF) && BF.isSimple() && needsBranchLiveness(BF);
       });
 
   std::optional<RegAnalysis> RA;
@@ -574,9 +573,10 @@ Error FixupBranches::runOnFunctions(BinaryContext &BC) {
     if (!BC.shouldEmit(BF) || !BF.isSimple())
       continue;
 
-    DenseSet<const MCInst *> DeadFlagBranches =
-        RA ? computeDeadFlagBranches(BF, *RA) : DenseSet<const MCInst *>();
-    BF.fixBranches(&DeadFlagBranches);
+    BranchLivenessInfo BLI;
+    if (RA)
+      BLI = computeBranchLiveness(BF, *RA);
+    BF.fixBranches(&BLI);
   }
   return Error::success();
 }
