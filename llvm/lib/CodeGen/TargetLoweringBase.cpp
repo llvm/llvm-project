@@ -1173,7 +1173,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction({ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, VT,
                        Expand);
 
-    // Only some target support these vector operation. Most need to expand it.
+    // Only some target support these vector operations. Default them to Expand.
     setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
 
     // cttz.elts defaults to expand.
