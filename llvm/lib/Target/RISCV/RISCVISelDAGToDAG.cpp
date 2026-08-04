@@ -3589,10 +3589,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// compressible) standard load/store instructions.
 bool RISCVDAGToDAGISel::SelectAddrRegImm26(SDValue Addr, SDValue &Base,
                                            SDValue &Offset) {
-
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
-
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
 
