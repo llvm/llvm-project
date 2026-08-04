@@ -1321,6 +1321,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .legalIf(all(typeInSet(0, {S1, S32}), isPointer(1)));
 
+  getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
+
   auto &FCmpBuilder =
       getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct(
           {I1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase);
