@@ -9002,6 +9002,12 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                    Scope, Use, /* IsCoopMat */ true);
     if (!T.isNull())
       CurType = T;
+  } else {
+    Expr *RowsExpr = Attr.getArgAsExpr(0);
+    Expr *ColsExpr = Attr.getArgAsExpr(1);
+    QualType T = S.BuildMatrixType(CurType, RowsExpr, ColsExpr, Attr.getLoc());
+    if (!T.isNull())
+      CurType = T;
   }
 }
 
