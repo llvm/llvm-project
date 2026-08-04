@@ -14,6 +14,8 @@
 #include "clang/DependencyScanning/ScanAndUpdateArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/PrefixMappingFileSystem.h"
@@ -134,6 +136,8 @@ private:
   std::optional<cas::ObjectRef> ModuleIncludesBufferRef;
   std::optional<cas::ObjectRef> ModuleMapRef;
   std::optional<cas::ObjectRef> APINotesRef;
+  /// Top-level modules of the submodule names recorded in the include-tree.
+  llvm::SmallSetVector<Module *, 2> EnteredModules;
   /// When the builder is created from an existing tree, the main include tree.
   std::optional<cas::ObjectRef> MainIncludeTreeRef;
   SmallVector<FilePPState> IncludeStack;
@@ -570,6 +574,7 @@ void IncludeTreeBuilder::enteredSubmodule(Preprocessor &PP, Module *M,
   assert(!IncludeStack.back().SubmoduleName && "repeated enteredSubmodule");
   auto Ref = check(DB.storeFromString({}, M->getFullModuleName()));
   IncludeStack.back().SubmoduleName = Ref;
+  EnteredModules.insert(M->getTopLevelModule());
 }
 void IncludeTreeBuilder::exitedSubmodule(Preprocessor &PP, Module *M,
                                          SourceLocation ImportLoc,
@@ -737,16 +742,20 @@ Expected<cas::IncludeTreeRoot> IncludeTreeBuilder::finishIncludeTree(
   if (!MainIncludeTree)
     return MainIncludeTree.takeError();
 
-  if (!ScanInstance.getLangOpts().CurrentModule.empty()) {
-    SmallVector<cas::ObjectRef> Modules;
-    SmallVector<cas::ObjectRef> APINotes;
-    auto AddModule = [&](Module *M) -> llvm::Error {
-      Expected<cas::IncludeTree::Module> Mod = getIncludeTreeModule(DB, M);
-      if (!Mod)
-        return Mod.takeError();
-      Modules.push_back(Mod->getRef());
+  SmallVector<cas::ObjectRef> Modules;
+  SmallVector<cas::ObjectRef> APINotes;
+  llvm::SmallPtrSet<Module *, 4> AddedModules;
+  auto AddModule = [&](Module *M) -> llvm::Error {
+    if (!AddedModules.insert(M).second)
       return Error::success();
-    };
+    Expected<cas::IncludeTree::Module> Mod = getIncludeTreeModule(DB, M);
+    if (!Mod)
+      return Mod.takeError();
+    Modules.push_back(Mod->getRef());
+    return Error::success();
+  };
+
+  if (!ScanInstance.getLangOpts().CurrentModule.empty()) {
     if (Module *M = ScanInstance.getPreprocessor().getCurrentModule()) {
       if (Error E = AddModule(M))
         return std::move(E);
@@ -781,18 +790,26 @@ Expected<cas::IncludeTreeRoot> IncludeTreeBuilder::finishIncludeTree(
         if (Error E = AddModule(PM))
           return std::move(E);
     }
+  }
 
+  // Modules referenced by a recorded submodule name must be resolvable when
+  // replaying the include-tree.
+  for (Module *M : EnteredModules)
+    if (Error E = AddModule(M))
+      return std::move(E);
+
+  if (!Modules.empty()) {
     auto ModMap = cas::IncludeTree::ModuleMap::create(DB, Modules);
     if (!ModMap)
       return ModMap.takeError();
     ModuleMapRef = ModMap->getRef();
+  }
 
-    if (!APINotes.empty()) {
-      auto ModAPINotes = cas::IncludeTree::APINotes::create(DB, APINotes);
-      if (!ModAPINotes)
-        return ModAPINotes.takeError();
-      APINotesRef = ModAPINotes->getRef();
-    }
+  if (!APINotes.empty()) {
+    auto ModAPINotes = cas::IncludeTree::APINotes::create(DB, APINotes);
+    if (!ModAPINotes)
+      return ModAPINotes.takeError();
+    APINotesRef = ModAPINotes->getRef();
   }
 
   auto FileList =
