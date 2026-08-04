@@ -372,12 +372,7 @@ public:
             Value * = nullptr>
   Value(const T &V) : Value(toJSON(V)) {}
 
-  Value &operator=(const Value &M) {
-    destroy();
-    copyFrom(M);
-    return *this;
-  }
-  Value &operator=(Value &&M) {
+  Value &operator=(Value M) {
     destroy();
     moveFrom(std::move(M));
     return *this;
@@ -599,6 +594,7 @@ public:
       Owned.reset(new std::string(*C.Owned));
       Data = *Owned;
     } else {
+      Owned.reset();
       Data = C.Data;
     }
     return *this;
