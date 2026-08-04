@@ -16,6 +16,26 @@ consteval auto f2() {
   return R;
 }
 
+template <info R>
+consteval auto f3() {
+  return R;
+}
+
+template <const auto R>
+consteval auto f4() {
+  return R;
+}
+
+template <const decltype(^^int) R>
+consteval auto f5() {
+  return R;
+}
+
+template <const info R>
+consteval auto f6() {
+  return R;
+}
+
 consteval void test()
 {
     constexpr auto r = ^^int;
@@ -49,7 +69,29 @@ consteval void test()
     static_assert(f1< ^^float>() != ^^int);
 
     static_assert(f2<r>() == ^^int);
+    static_assert(f2<^^int>() == ^^int);
     static_assert(f2<^^float>() != ^^int);
+    static_assert(f2<^^int>() == f1<^^int>());
+
+    static_assert(f3<r>() == ^^int);
+    static_assert(f3<^^int>() == ^^int);
+    static_assert(f3<^^float>() != ^^int);
+    static_assert(f3<^^int>() == f2<^^int>());
+
+    static_assert(f4<r>() == ^^int);
+    static_assert(f4<^^int>() == ^^int);
+    static_assert(f4<^^float>() != ^^int);
+    static_assert(f4<^^int>() == f3<^^int>());
+
+    static_assert(f5<r>() == ^^int);
+    static_assert(f5<^^int>() == ^^int);
+    static_assert(f5<^^float>() != ^^int);
+    static_assert(f5<^^int>() == f4<^^int>());
+
+    static_assert(f6<r>() == ^^int);
+    static_assert(f6<^^int>() == ^^int);
+    static_assert(f6<^^float>() != ^^int);
+    static_assert(f6<^^int>() == f5<^^int>());
 
     static_assert(sizeof(info) == 8);
     static_assert(alignof(info) == 1);
@@ -59,6 +101,7 @@ consteval void test()
     static_assert(^^volatile int32_t == ^^volatile int);
     static_assert(^^const volatile int32_t == ^^const volatile int);
     static_assert(^^A != ^^int);
+    static_assert(^^const A == ^^const int);
 
 
     static_assert(^^int == ^^int);
