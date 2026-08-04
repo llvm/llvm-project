@@ -13,7 +13,6 @@
 #include "src/__support/CPP/iterator.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/config.h"
-#include "src/string/memory_utils/inline_memset.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -70,7 +69,6 @@ public:
   LIBC_INLINE constexpr bool pop_back() {
     if (item_count == 0)
       return false;
-    inline_memset(&store[item_count - 1], 0, sizeof(T));
     --item_count;
     return true;
   }
@@ -90,10 +88,7 @@ public:
   LIBC_INLINE constexpr size_t size() const { return item_count; }
 
   // Empties the store for all practical purposes.
-  LIBC_INLINE constexpr void reset() {
-    inline_memset(store.data(), 0, sizeof(T) * item_count);
-    item_count = 0;
-  }
+  LIBC_INLINE constexpr void reset() { item_count = 0; }
 
   // This static method does not free up the resources held by |store|,
   // say by calling `free` or something similar. It just does the equivalent
