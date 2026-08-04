@@ -4669,7 +4669,6 @@ void Verifier::visitStoreInst(StoreInst &SI) {
               SI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Store cannot have Acquire ordering", &SI);
 
-    Type *ScalarTy = ElTy;
     if (SI.isElementwise()) {
       Check(SI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
             "atomic elementwise store cannot be sequentially consistent.", &SI);
@@ -4678,19 +4677,17 @@ void Verifier::visitStoreInst(StoreInst &SI) {
       Check(VecTy,
             "atomic elementwise store operand must have fixed vector type!",
             &SI, ElTy);
-      if (VecTy) {
-        checkAtomicMemAccessSize(ScalarTy, &SI);
-        ScalarTy = VecTy->getElementType();
-      }
+      if (VecTy)
+        checkAtomicMemAccessSize(VecTy->getElementType(), &SI);
     }
 
-    Check(ScalarTy->getScalarType()->isIntOrPtrTy() ||
-              ScalarTy->getScalarType()->isByteTy() ||
-              ScalarTy->getScalarType()->isFloatingPointTy(),
+    Check(ElTy->getScalarType()->isIntOrPtrTy() ||
+              ElTy->getScalarType()->isByteTy() ||
+              ElTy->getScalarType()->isFloatingPointTy(),
           "atomic store operand must have integer, byte, pointer, floating "
           "point, or vector type!",
           ElTy, &SI);
-    checkAtomicMemAccessSize(ScalarTy, &SI);
+    checkAtomicMemAccessSize(ElTy, &SI);
   } else {
     Check(!SI.isElementwise(), "non-atomic store cannot be elementwise", &SI);
     Check(SI.getSyncScopeID() == SyncScope::System,
