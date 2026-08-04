@@ -3736,9 +3736,8 @@ void BinaryFunction::fixBranches(const BranchLivenessInfo *BLI) {
 
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
-        bool MustPreserveFlags =
-            BLI ? BLI->mustPreserveFlags(*CondBranch) : true;
-        if (!MIB->isReversibleBranch(*CondBranch, MustPreserveFlags)) {
+        bool PreserveFlags = BLI ? BLI->mustPreserveFlags(*CondBranch) : true;
+        if (!MIB->isReversibleBranch(*CondBranch, PreserveFlags)) {
           if (opts::Verbosity) {
             BC.outs() << "BOLT-INFO: unable to swap successors in " << *this
                       << '\n';
@@ -3749,7 +3748,7 @@ void BinaryFunction::fixBranches(const BranchLivenessInfo *BLI) {
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
         MIB->reverseBranchCondition(BB, *CondBranch, TSuccessor->getLabel(),
-                                    Ctx, MustPreserveFlags);
+                                    Ctx, PreserveFlags);
         return true;
       };
 

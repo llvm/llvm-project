@@ -842,9 +842,8 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
       // If the other successor is a fall-through, invert the condition code.
       BinaryBasicBlock *NextBB =
           BF->getLayout().getBasicBlockAfter(BB, /*IgnoreSplits*/ false);
-      bool MustPreserveFlags = BLI ? BLI->mustPreserveFlags(Inst) : true;
-      bool IsReversibleBranch =
-          MIB->isReversibleBranch(Inst, MustPreserveFlags);
+      bool PreserveFlags = BLI ? BLI->mustPreserveFlags(Inst) : true;
+      bool IsReversibleBranch = MIB->isReversibleBranch(Inst, PreserveFlags);
       bool ShouldReverseBranch = BB->getConditionalSuccessor(false) == NextBB;
 
       // Create a trampoline basic block for the fall-through target of the
@@ -862,7 +861,7 @@ void LongJmpPass::relaxLocalBranches(BinaryFunction &BF,
         {
           auto L = BC.scopeLock();
           MIB->reverseBranchCondition(BB, Inst, NextBB->getLabel(),
-                                      BC.Ctx.get(), MustPreserveFlags);
+                                      BC.Ctx.get(), PreserveFlags);
         }
         const uint64_t NewBBSize = BB->estimateSize();
 
@@ -963,9 +962,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     SmallVector<BinaryFunction *> Candidates;
     for (auto &It : BC.getBinaryFunctions()) {
       BinaryFunction &BF = It.second;
-      if (!BC.shouldEmit(BF) || !BF.isSimple())
-        continue;
-      if (needsBranchLiveness(BF))
+      if (BC.shouldEmit(BF) && BF.isSimple() && needsBranchLiveness(BF))
         Candidates.push_back(&BF);
     }
     if (!Candidates.empty()) {
@@ -983,14 +980,14 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     BC.outs()
         << "BOLT-INFO: relaxing branches for compact code model (<128MB)\n";
 
+    ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
+      relaxLocalBranches(BF, getBranchLiveness(BF));
+    };
+
     ParallelUtilities::PredicateTy SkipPredicate =
         [&](const BinaryFunction &BF) {
           return !BC.shouldEmit(BF) || !BF.isSimple();
         };
-
-    ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-      relaxLocalBranches(BF, getBranchLiveness(BF));
-    };
 
     ParallelUtilities::runOnEachFunction(
         BC, ParallelUtilities::SchedulingPolicy::SP_INST_LINEAR, WorkFun,
