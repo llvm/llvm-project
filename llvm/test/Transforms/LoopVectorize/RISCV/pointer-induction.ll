@@ -90,8 +90,8 @@ define i1 @scalarize_ptr_induction(ptr %start, ptr %end, ptr noalias %dst, i1 %c
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul <vscale x 2 x i64> [[TMP19]], splat (i64 -7070675565921424023)
 ; CHECK-NEXT:    [[TMP21:%.*]] = add <vscale x 2 x i64> [[TMP20]], splat (i64 -4)
 ; CHECK-NEXT:    [[TMP29:%.*]] = sub i64 [[TMP26]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <vscale x 2 x i64> [[TMP21]], i64 [[TMP29]]
-; CHECK-NEXT:    store i64 [[TMP16]], ptr [[DST]], align 1
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <vscale x 2 x i64> [[TMP21]], i64 [[TMP29]]
+; CHECK-NEXT:    store i64 [[TMP22]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP26]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP26]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = mul i64 12, [[TMP26]]
