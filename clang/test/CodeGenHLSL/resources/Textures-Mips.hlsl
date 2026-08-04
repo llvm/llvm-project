@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -DCOORD_DIM=2 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,NOARRAY -DTEXTURE=Texture2D -DCOORD_DIM=2 -DLOCATION_DIM=3 -DDXIL_TY=2
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,ARRAY -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DLOCATION_DIM=4 -DDXIL_TY=7
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips -DTEXTURE=Texture2D -DCOORD_DIM=2 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,NOARRAY -DTEXTURE=Texture2D -DCOORD_DIM=2 -DLOCATION_DIM=3 -DDXIL_TY=2
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -o - %s | llvm-cxxfilt | FileCheck %s --check-prefixes=CHECK,ARRAY -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -DLOCATION_DIM=4 -DDXIL_TY=7
 
 TEXTURE<float4> t;
 

@@ -238,6 +238,7 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[P]], %[[VECTOR_PH]] ], [ [[PTR_IND:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 1024, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
@@ -245,9 +246,12 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 4 x i64> [[TMP16]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i32> @llvm.vp.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> align 4 [[VECTOR_GEP]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr nuw i8, ptr [[P]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i32> @llvm.experimental.vp.strided.load.nxv4i32.p0.i64(ptr align 4 [[TMP6]], i64 8, <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = add <vscale x 4 x i32> [[TMP19]], splat (i32 1)
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i32.nxv4p0(<vscale x 4 x i32> [[TMP20]], <vscale x 4 x ptr> align 4 [[VECTOR_GEP]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP9]], [[INDEX]]
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP9]], 3
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP5]]
@@ -1560,7 +1564,7 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-NEXT:    [[TMP8:%.*]] = load double, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 2 x double> poison, double [[TMP8]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT5]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[INDEX]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[INDEX]] to i64
 ; CHECK-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP9]], 5
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 2 x double> @llvm.experimental.vp.strided.load.nxv2f64.p0.i64(ptr align 8 [[TMP10]], i64 32, <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
@@ -1613,7 +1617,7 @@ define void @type_cache_crash(ptr noalias %a, ptr noalias %b, ptr noalias %c, i3
 ; CHECK-UF2-NEXT:    [[TMP14:%.*]] = load double, ptr [[TMP13]], align 8
 ; CHECK-UF2-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x double> poison, double [[TMP14]], i64 0
 ; CHECK-UF2-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT3]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-UF2-NEXT:    [[TMP15:%.*]] = sext i32 [[INDEX]] to i64
+; CHECK-UF2-NEXT:    [[TMP15:%.*]] = zext i32 [[INDEX]] to i64
 ; CHECK-UF2-NEXT:    [[TMP29:%.*]] = shl i64 [[TMP15]], 5
 ; CHECK-UF2-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP29]]
 ; CHECK-UF2-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP5]] to i64
@@ -1745,7 +1749,7 @@ define void @lshr_exact_stride(ptr noalias %in, ptr noalias %out) {
 ; CHECK-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-UF2-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP9]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-UF2-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 4 x i64> [[VEC_IND]], [[TMP7]]
-; CHECK-UF2-NEXT:    [[TMP10:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-UF2-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-UF2-NEXT:    [[TMP11:%.*]] = add i64 [[TMP2]], 0
 ; CHECK-UF2-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 4
 ; CHECK-UF2-NEXT:    [[TMP13:%.*]] = add i64 [[TMP10]], [[TMP12]]
@@ -1970,7 +1974,7 @@ define void @lshr_stride_no_exact(ptr noalias %in, ptr noalias %out) {
 ; CHECK-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-UF2-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP9]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-UF2-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 4 x i64> [[VEC_IND]], [[TMP7]]
-; CHECK-UF2-NEXT:    [[TMP10:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-UF2-NEXT:    [[TMP10:%.*]] = shl nuw i64 [[INDEX]], 2
 ; CHECK-UF2-NEXT:    [[TMP11:%.*]] = add i64 [[TMP2]], 0
 ; CHECK-UF2-NEXT:    [[TMP12:%.*]] = mul i64 [[TMP11]], 4
 ; CHECK-UF2-NEXT:    [[TMP13:%.*]] = add i64 [[TMP10]], [[TMP12]]

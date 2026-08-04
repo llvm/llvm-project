@@ -54,22 +54,22 @@ define void @nested_irr_top_level_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pr
 ; CHECK-LABEL: @nested_irr_top_level_callbr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
-; CHECK-NEXT:            to label [[ENTRY_TARGET_A1:%.*]] [label %entry.target.A2]
+; CHECK-NEXT:            to label [[ENTRY_TARGET_A1:%.*]] [label [[ENTRY_TARGET_A2:%.*]]]
 ; CHECK:       A1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
-; CHECK-NEXT:            to label [[A1_TARGET_B1:%.*]] [label %A1.target.B2]
+; CHECK-NEXT:            to label [[A1_TARGET_B1:%.*]] [label [[A1_TARGET_B2:%.*]]]
 ; CHECK:       B1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
-; CHECK-NEXT:            to label [[B1_TARGET_B2:%.*]] [label %A3]
+; CHECK-NEXT:            to label [[B1_TARGET_B2:%.*]] [label [[A3:%.*]]]
 ; CHECK:       B2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
-; CHECK-NEXT:            to label [[B1:%.*]] [label %A3]
+; CHECK-NEXT:            to label [[B1:%.*]] [label [[A3]]]
 ; CHECK:       A3:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
-; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label %exit]
+; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label [[EXIT:%.*]]]
 ; CHECK:       A2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
-; CHECK-NEXT:            to label [[A1:%.*]] [label %exit]
+; CHECK-NEXT:            to label [[A1:%.*]] [label [[EXIT]]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       A3.target.A2:
@@ -79,7 +79,7 @@ define void @nested_irr_top_level_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pr
 ; CHECK:       entry.target.A2:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_A1]] ], [ true, [[ENTRY_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_A1]] ], [ true, [[ENTRY_TARGET_A2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
 ; CHECK:       B1.target.B2:
 ; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
@@ -88,7 +88,7 @@ define void @nested_irr_top_level_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pr
 ; CHECK:       A1.target.B2:
 ; CHECK-NEXT:    br label [[IRR_GUARD1]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[B1_TARGET_B2]] ], [ false, [[A1_TARGET_B1]] ], [ true, [[A1_TARGET_B2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[B1_TARGET_B2]] ], [ false, [[A1_TARGET_B1]] ], [ true, [[A1_TARGET_B2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
 ;
 entry:
@@ -108,6 +108,75 @@ A3:
 
 A2:
   callbr void asm "", "r,!i"(i1 %Pred5) to label %A1 [label %exit]
+
+exit:
+  ret void
+}
+
+define void @nested_irr_top_level_switch(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5) {
+; CHECK-LABEL: @nested_irr_top_level_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PRED0:%.*]], label [[ENTRY_TARGET_A1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[ENTRY_TARGET_A2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A1:
+; CHECK-NEXT:    switch i1 [[PRED1:%.*]], label [[A1_TARGET_B1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[A1_TARGET_B2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       B1:
+; CHECK-NEXT:    switch i1 [[PRED2:%.*]], label [[B1_TARGET_B2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[A3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       B2:
+; CHECK-NEXT:    switch i1 [[PRED3:%.*]], label [[B1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[A3]]
+; CHECK-NEXT:    ]
+; CHECK:       A3:
+; CHECK-NEXT:    switch i1 [[PRED4:%.*]], label [[A3_TARGET_A2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[EXIT:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A2:
+; CHECK-NEXT:    switch i1 [[PRED5:%.*]], label [[A1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A3.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       entry.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_A1]] ], [ true, [[ENTRY_TARGET_A2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+; CHECK:       B1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
+; CHECK:       A1.target.B1:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       A1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[B1_TARGET_B2]] ], [ false, [[A1_TARGET_B1]] ], [ true, [[A1_TARGET_B2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
+;
+entry:
+  switch i1 %Pred0, label %A1 [ i1 0, label %A2 ]
+
+A1:
+  switch i1 %Pred1, label %B1 [ i1 0, label %B2 ]
+
+B1:
+  switch i1 %Pred2, label %B2 [ i1 0, label %A3 ]
+
+B2:
+  switch i1 %Pred3, label %B1 [ i1 0, label %A3 ]
+
+A3:
+  switch i1 %Pred4, label %A2 [ i1 0, label %exit ]
+
+A2:
+  switch i1 %Pred5, label %A1 [ i1 0, label %exit ]
 
 exit:
   ret void
@@ -176,25 +245,25 @@ define void @nested_irr_in_loop_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred
 ; CHECK-NEXT:    br label [[H1:%.*]]
 ; CHECK:       H1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
-; CHECK-NEXT:            to label [[H1_TARGET_A1:%.*]] [label %H1.target.A2]
+; CHECK-NEXT:            to label [[H1_TARGET_A1:%.*]] [label [[H1_TARGET_A2:%.*]]]
 ; CHECK:       A1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
-; CHECK-NEXT:            to label [[A1_TARGET_B1:%.*]] [label %A1.target.B2]
+; CHECK-NEXT:            to label [[A1_TARGET_B1:%.*]] [label [[A1_TARGET_B2:%.*]]]
 ; CHECK:       B1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
-; CHECK-NEXT:            to label [[B1_TARGET_B2:%.*]] [label %A3]
+; CHECK-NEXT:            to label [[B1_TARGET_B2:%.*]] [label [[A3:%.*]]]
 ; CHECK:       B2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
-; CHECK-NEXT:            to label [[B1:%.*]] [label %A3]
+; CHECK-NEXT:            to label [[B1:%.*]] [label [[A3]]]
 ; CHECK:       A3:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
-; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label %L1]
+; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label [[L1:%.*]]]
 ; CHECK:       A2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
-; CHECK-NEXT:            to label [[A1:%.*]] [label %L1]
+; CHECK-NEXT:            to label [[A1:%.*]] [label [[L1]]]
 ; CHECK:       L1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED6:%.*]])
-; CHECK-NEXT:            to label [[EXIT:%.*]] [label %H1]
+; CHECK-NEXT:            to label [[EXIT:%.*]] [label [[H1]]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       A3.target.A2:
@@ -204,7 +273,7 @@ define void @nested_irr_in_loop_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred
 ; CHECK:       H1.target.A2:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
 ; CHECK:       B1.target.B2:
 ; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
@@ -213,7 +282,7 @@ define void @nested_irr_in_loop_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred
 ; CHECK:       A1.target.B2:
 ; CHECK-NEXT:    br label [[IRR_GUARD1]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[B1_TARGET_B2]] ], [ false, [[A1_TARGET_B1]] ], [ true, [[A1_TARGET_B2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[B1_TARGET_B2]] ], [ false, [[A1_TARGET_B1]] ], [ true, [[A1_TARGET_B2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
 ;
 entry:
@@ -239,6 +308,87 @@ A2:
 
 L1:
   callbr void asm "", "r,!i"(i1 %Pred6) to label %exit [label %H1]
+
+exit:
+  ret void
+}
+
+define void @nested_irr_in_loop_switch(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5, i1 %Pred6) {
+; CHECK-LABEL: @nested_irr_in_loop_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[H1:%.*]]
+; CHECK:       H1:
+; CHECK-NEXT:    switch i1 [[PRED0:%.*]], label [[H1_TARGET_A1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[H1_TARGET_A2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A1:
+; CHECK-NEXT:    switch i1 [[PRED1:%.*]], label [[A1_TARGET_B1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[A1_TARGET_B2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       B1:
+; CHECK-NEXT:    switch i1 [[PRED2:%.*]], label [[B1_TARGET_B2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[A3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       B2:
+; CHECK-NEXT:    switch i1 [[PRED3:%.*]], label [[B1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[A3]]
+; CHECK-NEXT:    ]
+; CHECK:       A3:
+; CHECK-NEXT:    switch i1 [[PRED4:%.*]], label [[A3_TARGET_A2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[L1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A2:
+; CHECK-NEXT:    switch i1 [[PRED5:%.*]], label [[A1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[L1]]
+; CHECK-NEXT:    ]
+; CHECK:       L1:
+; CHECK-NEXT:    switch i1 [[PRED6:%.*]], label [[EXIT:%.*]] [
+; CHECK-NEXT:      i1 false, label [[H1]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A3.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       H1.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+; CHECK:       B1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
+; CHECK:       A1.target.B1:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       A1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[B1_TARGET_B2]] ], [ false, [[A1_TARGET_B1]] ], [ true, [[A1_TARGET_B2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
+;
+entry:
+  br label %H1
+
+H1:
+  switch i1 %Pred0, label %A1 [ i1 0, label %A2 ]
+
+A1:
+  switch i1 %Pred1, label %B1 [ i1 0, label %B2 ]
+
+B1:
+  switch i1 %Pred2, label %B2 [ i1 0, label %A3 ]
+
+B2:
+  switch i1 %Pred3, label %B1 [ i1 0, label %A3 ]
+
+A3:
+  switch i1 %Pred4, label %A2 [ i1 0, label %L1 ]
+
+A2:
+  switch i1 %Pred5, label %A1 [ i1 0, label %L1 ]
+
+L1:
+  switch i1 %Pred6, label %exit [ i1 0, label %H1 ]
 
 exit:
   ret void
@@ -291,7 +441,7 @@ define void @loop_in_irr_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK-LABEL: @loop_in_irr_callbr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
-; CHECK-NEXT:            to label [[ENTRY_TARGET_A1:%.*]] [label %entry.target.A2]
+; CHECK-NEXT:            to label [[ENTRY_TARGET_A1:%.*]] [label [[ENTRY_TARGET_A2:%.*]]]
 ; CHECK:       A1:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[H1:%.*]] []
@@ -300,10 +450,10 @@ define void @loop_in_irr_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK-NEXT:            to label [[L1:%.*]] []
 ; CHECK:       L1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
-; CHECK-NEXT:            to label [[H1]] [label %A3]
+; CHECK-NEXT:            to label [[H1]] [label [[A3:%.*]]]
 ; CHECK:       A3:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
-; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label %exit]
+; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label [[EXIT:%.*]]]
 ; CHECK:       A2:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[A1:%.*]] []
@@ -316,7 +466,7 @@ define void @loop_in_irr_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK:       entry.target.A2:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_A1]] ], [ true, [[ENTRY_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_A1]] ], [ true, [[ENTRY_TARGET_A2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
 ;
 entry:
@@ -336,6 +486,63 @@ A3:
 
 A2:
   callbr void asm "", ""() to label %A1 []
+
+exit:
+  ret void
+}
+
+define void @loop_in_irr_switch(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
+; CHECK-LABEL: @loop_in_irr_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PRED0:%.*]], label [[ENTRY_TARGET_A1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[ENTRY_TARGET_A2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A1:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[H1:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       H1:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[L1:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       L1:
+; CHECK-NEXT:    switch i1 [[PRED1:%.*]], label [[H1]] [
+; CHECK-NEXT:      i1 false, label [[A3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A3:
+; CHECK-NEXT:    switch i1 [[PRED2:%.*]], label [[A3_TARGET_A2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[EXIT:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A2:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[A1:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A3.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       entry.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_A1]] ], [ true, [[ENTRY_TARGET_A2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+;
+entry:
+  switch i1 %Pred0, label %A1 [ i1 0, label %A2 ]
+
+A1:
+  switch i1 %Pred0, label %H1 []
+
+H1:
+  switch i1 %Pred0, label %L1 []
+
+L1:
+  switch i1 %Pred1, label %H1 [ i1 0, label %A3 ]
+
+A3:
+  switch i1 %Pred2, label %A2 [ i1 0, label %exit ]
+
+A2:
+  switch i1 %Pred0, label %A1 []
 
 exit:
   ret void
@@ -383,16 +590,16 @@ define void @loop_in_irr_shared_entry_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK-LABEL: @loop_in_irr_shared_entry_callbr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
-; CHECK-NEXT:            to label [[ENTRY_TARGET_H1:%.*]] [label %entry.target.A2]
+; CHECK-NEXT:            to label [[ENTRY_TARGET_H1:%.*]] [label [[ENTRY_TARGET_A2:%.*]]]
 ; CHECK:       H1:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[L1:%.*]] []
 ; CHECK:       L1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
-; CHECK-NEXT:            to label [[H1:%.*]] [label %A3]
+; CHECK-NEXT:            to label [[H1:%.*]] [label [[A3:%.*]]]
 ; CHECK:       A3:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
-; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label %exit]
+; CHECK-NEXT:            to label [[A3_TARGET_A2:%.*]] [label [[EXIT:%.*]]]
 ; CHECK:       A2:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[H1]] []
@@ -405,7 +612,7 @@ define void @loop_in_irr_shared_entry_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK:       entry.target.A2:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_H1]] ], [ true, [[ENTRY_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_H1]] ], [ true, [[ENTRY_TARGET_A2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[H1]]
 ;
 entry:
@@ -422,6 +629,57 @@ A3:
 
 A2:
   callbr void asm "", ""() to label %H1 []
+
+exit:
+  ret void
+}
+
+define void @loop_in_irr_shared_entry_switch(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
+; CHECK-LABEL: @loop_in_irr_shared_entry_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PRED0:%.*]], label [[ENTRY_TARGET_H1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[ENTRY_TARGET_A2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       H1:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[L1:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       L1:
+; CHECK-NEXT:    switch i1 [[PRED1:%.*]], label [[H1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[A3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A3:
+; CHECK-NEXT:    switch i1 [[PRED2:%.*]], label [[A3_TARGET_A2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[EXIT:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A2:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[H1]] [
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A3.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       entry.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A3_TARGET_A2]] ], [ false, [[ENTRY_TARGET_H1]] ], [ true, [[ENTRY_TARGET_A2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[H1]]
+;
+entry:
+  switch i1 %Pred0, label %H1 [ i1 0, label %A2 ]
+
+H1:
+  switch i1 %Pred0, label %L1 []
+
+L1:
+  switch i1 %Pred1, label %H1 [ i1 0, label %A3 ]
+
+A3:
+  switch i1 %Pred2, label %A2 [ i1 0, label %exit ]
+
+A2:
+  switch i1 %Pred0, label %H1 []
 
 exit:
   ret void
@@ -469,16 +727,16 @@ define void @loop_in_irr_shared_header_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK-LABEL: @loop_in_irr_shared_header_callbr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
-; CHECK-NEXT:            to label [[ENTRY_TARGET_A2:%.*]] [label %entry.target.H1]
+; CHECK-NEXT:            to label [[ENTRY_TARGET_A2:%.*]] [label [[ENTRY_TARGET_H1:%.*]]]
 ; CHECK:       H1:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[L1:%.*]] []
 ; CHECK:       L1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
-; CHECK-NEXT:            to label [[L1_TARGET_H1:%.*]] [label %A3]
+; CHECK-NEXT:            to label [[L1_TARGET_H1:%.*]] [label [[A3:%.*]]]
 ; CHECK:       A3:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
-; CHECK-NEXT:            to label [[A2:%.*]] [label %exit]
+; CHECK-NEXT:            to label [[A2:%.*]] [label [[EXIT:%.*]]]
 ; CHECK:       A2:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[A2_TARGET_H1:%.*]] []
@@ -493,7 +751,7 @@ define void @loop_in_irr_shared_header_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
 ; CHECK:       entry.target.H1:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ true, [[A2_TARGET_H1]] ], [ true, [[L1_TARGET_H1]] ], [ false, [[ENTRY_TARGET_A2]] ], [ true, [[ENTRY_TARGET_H1:%.*]] ]
+; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ true, [[A2_TARGET_H1]] ], [ true, [[L1_TARGET_H1]] ], [ false, [[ENTRY_TARGET_A2]] ], [ true, [[ENTRY_TARGET_H1]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_H1]], label [[H1:%.*]], label [[A2]]
 ;
 entry:
@@ -510,6 +768,59 @@ A3:
 
 A2:
   callbr void asm "", ""() to label %H1 []
+
+exit:
+  ret void
+}
+
+define void @loop_in_irr_shared_header_switch(i1 %Pred0, i1 %Pred1, i1 %Pred2) {
+; CHECK-LABEL: @loop_in_irr_shared_header_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PRED0:%.*]], label [[ENTRY_TARGET_A2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[ENTRY_TARGET_H1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       H1:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[L1:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       L1:
+; CHECK-NEXT:    switch i1 [[PRED1:%.*]], label [[L1_TARGET_H1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[A3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A3:
+; CHECK-NEXT:    switch i1 [[PRED2:%.*]], label [[A2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[EXIT:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A2:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[A2_TARGET_H1:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A2.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       L1.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       entry.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ true, [[A2_TARGET_H1]] ], [ true, [[L1_TARGET_H1]] ], [ false, [[ENTRY_TARGET_A2]] ], [ true, [[ENTRY_TARGET_H1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_H1]], label [[H1:%.*]], label [[A2]]
+;
+entry:
+  switch i1 %Pred0, label %A2 [ i1 0, label %H1 ]
+
+H1:
+  switch i1 %Pred0, label %L1 []
+
+L1:
+  switch i1 %Pred1, label %H1 [ i1 0, label %A3 ]
+
+A3:
+  switch i1 %Pred2, label %A2 [ i1 0, label %exit ]
+
+A2:
+  switch i1 %Pred0, label %H1 []
 
 exit:
   ret void
@@ -565,19 +876,19 @@ define void @loop_irr_loop_shared_header_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2,
 ; CHECK-NEXT:            to label [[H2:%.*]] []
 ; CHECK:       H2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
-; CHECK-NEXT:            to label [[H2_TARGET_A2:%.*]] [label %H2.target.H1]
+; CHECK-NEXT:            to label [[H2_TARGET_A2:%.*]] [label [[H2_TARGET_H1:%.*]]]
 ; CHECK:       H1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
-; CHECK-NEXT:            to label [[A3:%.*]] [label %H1.target.H1]
+; CHECK-NEXT:            to label [[A3:%.*]] [label [[H1_TARGET_H1:%.*]]]
 ; CHECK:       A3:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
-; CHECK-NEXT:            to label [[A2:%.*]] [label %L2]
+; CHECK-NEXT:            to label [[A2:%.*]] [label [[L2:%.*]]]
 ; CHECK:       A2:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[A2_TARGET_H1:%.*]] []
 ; CHECK:       L2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
-; CHECK-NEXT:            to label [[H2]] [label %exit]
+; CHECK-NEXT:            to label [[H2]] [label [[EXIT:%.*]]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       A2.target.H1:
@@ -589,7 +900,7 @@ define void @loop_irr_loop_shared_header_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2,
 ; CHECK:       H2.target.H1:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ true, [[A2_TARGET_H1]] ], [ true, [[H1_TARGET_H1:%.*]] ], [ false, [[H2_TARGET_A2]] ], [ true, [[H2_TARGET_H1:%.*]] ]
+; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ true, [[A2_TARGET_H1]] ], [ true, [[H1_TARGET_H1]] ], [ false, [[H2_TARGET_A2]] ], [ true, [[H2_TARGET_H1]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_H1]], label [[H1:%.*]], label [[A2]]
 ;
 entry:
@@ -609,6 +920,66 @@ A2:
 
 L2:
   callbr void asm "", "r,!i"(i1 %Pred3) to label %H2 [label %exit]
+
+exit:
+  ret void
+}
+
+define void @loop_irr_loop_shared_header_switch(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3) {
+; CHECK-LABEL: @loop_irr_loop_shared_header_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PRED0:%.*]], label [[H2:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       H2:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[H2_TARGET_A2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[H2_TARGET_H1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       H1:
+; CHECK-NEXT:    switch i1 [[PRED1:%.*]], label [[A3:%.*]] [
+; CHECK-NEXT:      i1 false, label [[H1_TARGET_H1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A3:
+; CHECK-NEXT:    switch i1 [[PRED2:%.*]], label [[A2:%.*]] [
+; CHECK-NEXT:      i1 false, label [[L2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A2:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[A2_TARGET_H1:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       L2:
+; CHECK-NEXT:    switch i1 [[PRED3:%.*]], label [[H2]] [
+; CHECK-NEXT:      i1 false, label [[EXIT:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A2.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       H1.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H2.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H2.target.H1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_H1:%.*]] = phi i1 [ true, [[A2_TARGET_H1]] ], [ true, [[H1_TARGET_H1]] ], [ false, [[H2_TARGET_A2]] ], [ true, [[H2_TARGET_H1]] ]
+; CHECK-NEXT:    br i1 [[GUARD_H1]], label [[H1:%.*]], label [[A2]]
+;
+entry:
+  switch i1 %Pred0, label %H2 []
+
+H2:
+  switch i1 %Pred0, label %A2 [ i1 0, label %H1 ]
+
+H1:
+  switch i1 %Pred1, label %A3 [ i1 0, label %H1 ]
+
+A3:
+  switch i1 %Pred2, label %A2 [ i1 0, label %L2 ]
+
+A2:
+  switch i1 %Pred0, label %H1 []
+
+L2:
+  switch i1 %Pred3, label %H2 [ i1 0, label %exit ]
 
 exit:
   ret void
@@ -685,22 +1056,22 @@ define void @siblings_top_level_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred
 ; CHECK-LABEL: @siblings_top_level_callbr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
-; CHECK-NEXT:            to label [[H1:%.*]] [label %fork1]
+; CHECK-NEXT:            to label [[H1:%.*]] [label [[FORK1:%.*]]]
 ; CHECK:       H1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
-; CHECK-NEXT:            to label [[H1_TARGET_A1:%.*]] [label %H1.target.A2]
+; CHECK-NEXT:            to label [[H1_TARGET_A1:%.*]] [label [[H1_TARGET_A2:%.*]]]
 ; CHECK:       A1:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[A1_TARGET_A2:%.*]] []
 ; CHECK:       A2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
-; CHECK-NEXT:            to label [[A1:%.*]] [label %L1]
+; CHECK-NEXT:            to label [[A1:%.*]] [label [[L1:%.*]]]
 ; CHECK:       L1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
-; CHECK-NEXT:            to label [[H1]] [label %exit]
+; CHECK-NEXT:            to label [[H1]] [label [[EXIT:%.*]]]
 ; CHECK:       fork1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
-; CHECK-NEXT:            to label [[FORK1_TARGET_B1:%.*]] [label %fork1.target.B2]
+; CHECK-NEXT:            to label [[FORK1_TARGET_B1:%.*]] [label [[FORK1_TARGET_B2:%.*]]]
 ; CHECK:       B1:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[H2:%.*]] []
@@ -709,10 +1080,10 @@ define void @siblings_top_level_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred
 ; CHECK-NEXT:            to label [[L2:%.*]] []
 ; CHECK:       L2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
-; CHECK-NEXT:            to label [[H2]] [label %L2.target.B2]
+; CHECK-NEXT:            to label [[H2]] [label [[L2_TARGET_B2:%.*]]]
 ; CHECK:       B2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED6:%.*]])
-; CHECK-NEXT:            to label [[B1:%.*]] [label %exit]
+; CHECK-NEXT:            to label [[B1:%.*]] [label [[EXIT]]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       A1.target.A2:
@@ -722,7 +1093,7 @@ define void @siblings_top_level_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred
 ; CHECK:       H1.target.A2:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A1_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A1_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
 ; CHECK:       L2.target.B2:
 ; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
@@ -731,7 +1102,7 @@ define void @siblings_top_level_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred
 ; CHECK:       fork1.target.B2:
 ; CHECK-NEXT:    br label [[IRR_GUARD1]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[L2_TARGET_B2:%.*]] ], [ false, [[FORK1_TARGET_B1]] ], [ true, [[FORK1_TARGET_B2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[L2_TARGET_B2]] ], [ false, [[FORK1_TARGET_B1]] ], [ true, [[FORK1_TARGET_B2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
 ;
 entry:
@@ -763,6 +1134,100 @@ L2:
 
 B2:
   callbr void asm "", "r,!i"(i1 %Pred6) to label %B1 [label %exit]
+
+exit:
+  ret void
+}
+
+define void @siblings_top_level_switch(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5, i1 %Pred6) {
+; CHECK-LABEL: @siblings_top_level_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PRED0:%.*]], label [[H1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[FORK1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       H1:
+; CHECK-NEXT:    switch i1 [[PRED1:%.*]], label [[H1_TARGET_A1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[H1_TARGET_A2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A1:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[A1_TARGET_A2:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       A2:
+; CHECK-NEXT:    switch i1 [[PRED2:%.*]], label [[A1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[L1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       L1:
+; CHECK-NEXT:    switch i1 [[PRED3:%.*]], label [[H1]] [
+; CHECK-NEXT:      i1 false, label [[EXIT:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       fork1:
+; CHECK-NEXT:    switch i1 [[PRED4:%.*]], label [[FORK1_TARGET_B1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[FORK1_TARGET_B2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       B1:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[H2:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       H2:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[L2:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       L2:
+; CHECK-NEXT:    switch i1 [[PRED5:%.*]], label [[H2]] [
+; CHECK-NEXT:      i1 false, label [[L2_TARGET_B2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       B2:
+; CHECK-NEXT:    switch i1 [[PRED6:%.*]], label [[B1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[EXIT]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       H1.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A1_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+; CHECK:       L2.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
+; CHECK:       fork1.target.B1:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       fork1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[L2_TARGET_B2]] ], [ false, [[FORK1_TARGET_B1]] ], [ true, [[FORK1_TARGET_B2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
+;
+entry:
+  switch i1 %Pred0, label %H1 [ i1 0, label %fork1 ]
+
+H1:
+  switch i1 %Pred1, label %A1 [ i1 0, label %A2 ]
+
+A1:
+  switch i1 %Pred0, label %A2 []
+
+A2:
+  switch i1 %Pred2, label %A1 [ i1 0, label %L1 ]
+
+L1:
+  switch i1 %Pred3, label %H1 [ i1 0, label %exit ]
+
+fork1:
+  switch i1 %Pred4, label %B1 [ i1 0, label %B2 ]
+
+B1:
+  switch i1 %Pred0, label %H2 []
+
+H2:
+  switch i1 %Pred0, label %L2 []
+
+L2:
+  switch i1 %Pred5, label %H2 [ i1 0, label %B2 ]
+
+B2:
+  switch i1 %Pred6, label %B1 [ i1 0, label %exit ]
 
 exit:
   ret void
@@ -852,22 +1317,22 @@ define void @siblings_in_loop_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3,
 ; CHECK-NEXT:            to label [[H0:%.*]] []
 ; CHECK:       H0:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
-; CHECK-NEXT:            to label [[H1:%.*]] [label %fork1]
+; CHECK-NEXT:            to label [[H1:%.*]] [label [[FORK1:%.*]]]
 ; CHECK:       H1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
-; CHECK-NEXT:            to label [[H1_TARGET_A1:%.*]] [label %H1.target.A2]
+; CHECK-NEXT:            to label [[H1_TARGET_A1:%.*]] [label [[H1_TARGET_A2:%.*]]]
 ; CHECK:       A1:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[A1_TARGET_A2:%.*]] []
 ; CHECK:       A2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
-; CHECK-NEXT:            to label [[A1:%.*]] [label %L1]
+; CHECK-NEXT:            to label [[A1:%.*]] [label [[L1:%.*]]]
 ; CHECK:       L1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
-; CHECK-NEXT:            to label [[H1]] [label %L0]
+; CHECK-NEXT:            to label [[H1]] [label [[L0:%.*]]]
 ; CHECK:       fork1:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
-; CHECK-NEXT:            to label [[FORK1_TARGET_B1:%.*]] [label %fork1.target.B2]
+; CHECK-NEXT:            to label [[FORK1_TARGET_B1:%.*]] [label [[FORK1_TARGET_B2:%.*]]]
 ; CHECK:       B1:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[H2:%.*]] []
@@ -876,13 +1341,13 @@ define void @siblings_in_loop_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3,
 ; CHECK-NEXT:            to label [[L2:%.*]] []
 ; CHECK:       L2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
-; CHECK-NEXT:            to label [[H2]] [label %L2.target.B2]
+; CHECK-NEXT:            to label [[H2]] [label [[L2_TARGET_B2:%.*]]]
 ; CHECK:       B2:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED6:%.*]])
-; CHECK-NEXT:            to label [[B1:%.*]] [label %L0]
+; CHECK-NEXT:            to label [[B1:%.*]] [label [[L0]]]
 ; CHECK:       L0:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED7:%.*]])
-; CHECK-NEXT:            to label [[EXIT:%.*]] [label %H0]
+; CHECK-NEXT:            to label [[EXIT:%.*]] [label [[H0]]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       A1.target.A2:
@@ -892,7 +1357,7 @@ define void @siblings_in_loop_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3,
 ; CHECK:       H1.target.A2:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A1_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A1_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
 ; CHECK:       L2.target.B2:
 ; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
@@ -901,7 +1366,7 @@ define void @siblings_in_loop_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3,
 ; CHECK:       fork1.target.B2:
 ; CHECK-NEXT:    br label [[IRR_GUARD1]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[L2_TARGET_B2:%.*]] ], [ false, [[FORK1_TARGET_B1]] ], [ true, [[FORK1_TARGET_B2:%.*]] ]
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[L2_TARGET_B2]] ], [ false, [[FORK1_TARGET_B1]] ], [ true, [[FORK1_TARGET_B2]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
 ;
 entry:
@@ -939,6 +1404,113 @@ B2:
 
 L0:
   callbr void asm "", "r,!i"(i1 %Pred7) to label %exit [label %H0]
+
+exit:
+  ret void
+}
+
+define void @siblings_in_loop_switch(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5, i1 %Pred6, i1 %Pred7) {
+; CHECK-LABEL: @siblings_in_loop_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PRED0:%.*]], label [[H0:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       H0:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[H1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[FORK1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       H1:
+; CHECK-NEXT:    switch i1 [[PRED1:%.*]], label [[H1_TARGET_A1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[H1_TARGET_A2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       A1:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[A1_TARGET_A2:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       A2:
+; CHECK-NEXT:    switch i1 [[PRED2:%.*]], label [[A1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[L1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       L1:
+; CHECK-NEXT:    switch i1 [[PRED3:%.*]], label [[H1]] [
+; CHECK-NEXT:      i1 false, label [[L0:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       fork1:
+; CHECK-NEXT:    switch i1 [[PRED4:%.*]], label [[FORK1_TARGET_B1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[FORK1_TARGET_B2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       B1:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[H2:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       H2:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[L2:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       L2:
+; CHECK-NEXT:    switch i1 [[PRED5:%.*]], label [[H2]] [
+; CHECK-NEXT:      i1 false, label [[L2_TARGET_B2:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       B2:
+; CHECK-NEXT:    switch i1 [[PRED6:%.*]], label [[B1:%.*]] [
+; CHECK-NEXT:      i1 false, label [[L0]]
+; CHECK-NEXT:    ]
+; CHECK:       L0:
+; CHECK-NEXT:    switch i1 [[PRED7:%.*]], label [[EXIT:%.*]] [
+; CHECK-NEXT:      i1 false, label [[H0]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       A1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       H1.target.A1:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       H1.target.A2:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_A2:%.*]] = phi i1 [ true, [[A1_TARGET_A2]] ], [ false, [[H1_TARGET_A1]] ], [ true, [[H1_TARGET_A2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_A2]], label [[A2:%.*]], label [[A1]]
+; CHECK:       L2.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1:%.*]]
+; CHECK:       fork1.target.B1:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       fork1.target.B2:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_B2:%.*]] = phi i1 [ true, [[L2_TARGET_B2]] ], [ false, [[FORK1_TARGET_B1]] ], [ true, [[FORK1_TARGET_B2]] ]
+; CHECK-NEXT:    br i1 [[GUARD_B2]], label [[B2:%.*]], label [[B1]]
+;
+entry:
+  switch i1 %Pred0, label %H0 []
+
+H0:
+  switch i1 %Pred0, label %H1 [ i1 0, label %fork1 ]
+
+H1:
+  switch i1 %Pred1, label %A1 [ i1 0, label %A2 ]
+
+A1:
+  switch i1 %Pred0, label %A2 []
+
+A2:
+  switch i1 %Pred2, label %A1 [ i1 0, label %L1 ]
+
+L1:
+  switch i1 %Pred3, label %H1 [ i1 0, label %L0 ]
+
+fork1:
+  switch i1 %Pred4, label %B1 [ i1 0, label %B2 ]
+
+B1:
+  switch i1 %Pred0, label %H2 []
+
+H2:
+  switch i1 %Pred0, label %L2 []
+
+L2:
+  switch i1 %Pred5, label %H2 [ i1 0, label %B2 ]
+
+B2:
+  switch i1 %Pred6, label %B1 [ i1 0, label %L0 ]
+
+L0:
+  switch i1 %Pred7, label %exit [ i1 0, label %H0 ]
 
 exit:
   ret void
@@ -1063,10 +1635,10 @@ define void @irr_in_irr_shared_entry_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 
 ; CHECK-LABEL: @irr_in_irr_shared_entry_callbr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED0:%.*]])
-; CHECK-NEXT:            to label [[IF_END:%.*]] [label %if.then]
+; CHECK-NEXT:            to label [[IF_END:%.*]] [label [[IF_THEN:%.*]]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED1:%.*]])
-; CHECK-NEXT:            to label [[IF_THEN7:%.*]] [label %if.else]
+; CHECK-NEXT:            to label [[IF_THEN7:%.*]] [label [[IF_ELSE:%.*]]]
 ; CHECK:       if.then7:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[IF_END16:%.*]] []
@@ -1075,49 +1647,49 @@ define void @irr_in_irr_shared_entry_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 
 ; CHECK-NEXT:            to label [[IF_END16]] []
 ; CHECK:       if.end16:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED2:%.*]])
-; CHECK-NEXT:            to label [[WHILE_COND_PREHEADER:%.*]] [label %if.then39]
+; CHECK-NEXT:            to label [[WHILE_COND_PREHEADER:%.*]] [label [[IF_THEN39:%.*]]]
 ; CHECK:       while.cond.preheader:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[WHILE_COND:%.*]] []
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED3:%.*]])
-; CHECK-NEXT:            to label [[WHILE_COND_TARGET_COND_TRUE49:%.*]] [label %lor.rhs]
+; CHECK-NEXT:            to label [[WHILE_COND_TARGET_COND_TRUE49:%.*]] [label [[LOR_RHS:%.*]]]
 ; CHECK:       cond.true49:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED4:%.*]])
-; CHECK-NEXT:            to label [[IF_THEN69:%.*]] [label %cond.true49.target.while.body63]
+; CHECK-NEXT:            to label [[IF_THEN69:%.*]] [label [[COND_TRUE49_TARGET_WHILE_BODY63:%.*]]]
 ; CHECK:       while.body63:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED5:%.*]])
-; CHECK-NEXT:            to label [[EXIT:%.*]] [label %while.cond47]
+; CHECK-NEXT:            to label [[EXIT:%.*]] [label [[WHILE_COND47:%.*]]]
 ; CHECK:       while.cond47:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED6:%.*]])
-; CHECK-NEXT:            to label [[COND_TRUE49:%.*]] [label %while.cond47.target.cond.end61]
+; CHECK-NEXT:            to label [[COND_TRUE49:%.*]] [label [[WHILE_COND47_TARGET_COND_END61:%.*]]]
 ; CHECK:       cond.end61:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED7:%.*]])
-; CHECK-NEXT:            to label [[COND_END61_TARGET_WHILE_BODY63:%.*]] [label %while.cond]
+; CHECK-NEXT:            to label [[COND_END61_TARGET_WHILE_BODY63:%.*]] [label [[WHILE_COND]]]
 ; CHECK:       if.then69:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED8:%.*]])
-; CHECK-NEXT:            to label [[EXIT]] [label %while.cond]
+; CHECK-NEXT:            to label [[EXIT]] [label [[WHILE_COND]]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED9:%.*]])
-; CHECK-NEXT:            to label [[LOR_RHS_TARGET_COND_END61:%.*]] [label %while.end76]
+; CHECK-NEXT:            to label [[LOR_RHS_TARGET_COND_END61:%.*]] [label [[WHILE_END76:%.*]]]
 ; CHECK:       while.end76:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[EXIT]] []
 ; CHECK:       if.then39:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED10:%.*]])
-; CHECK-NEXT:            to label [[EXIT]] [label %if.end.i145]
+; CHECK-NEXT:            to label [[EXIT]] [label [[IF_END_I145:%.*]]]
 ; CHECK:       if.end.i145:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED11:%.*]])
-; CHECK-NEXT:            to label [[EXIT]] [label %if.end8.i149]
+; CHECK-NEXT:            to label [[EXIT]] [label [[IF_END8_I149:%.*]]]
 ; CHECK:       if.end8.i149:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[EXIT]] []
 ; CHECK:       if.then:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED12:%.*]])
-; CHECK-NEXT:            to label [[EXIT]] [label %if.end.i]
+; CHECK-NEXT:            to label [[EXIT]] [label [[IF_END_I:%.*]]]
 ; CHECK:       if.end.i:
 ; CHECK-NEXT:    callbr void asm "", "r,!i"(i1 [[PRED13:%.*]])
-; CHECK-NEXT:            to label [[EXIT]] [label %if.end8.i]
+; CHECK-NEXT:            to label [[EXIT]] [label [[IF_END8_I:%.*]]]
 ; CHECK:       if.end8.i:
 ; CHECK-NEXT:    callbr void asm "", ""()
 ; CHECK-NEXT:            to label [[EXIT]] []
@@ -1130,14 +1702,14 @@ define void @irr_in_irr_shared_entry_callbr(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 
 ; CHECK:       while.cond.target.cond.true49:
 ; CHECK-NEXT:    br label [[IRR_GUARD]]
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_COND_END61:%.*]] = phi i1 [ true, [[WHILE_COND47_TARGET_COND_END61:%.*]] ], [ true, [[LOR_RHS_TARGET_COND_END61]] ], [ false, [[WHILE_COND_TARGET_COND_TRUE49]] ]
+; CHECK-NEXT:    [[GUARD_COND_END61:%.*]] = phi i1 [ true, [[WHILE_COND47_TARGET_COND_END61]] ], [ true, [[LOR_RHS_TARGET_COND_END61]] ], [ false, [[WHILE_COND_TARGET_COND_TRUE49]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_COND_END61]], label [[COND_END61:%.*]], label [[IRR_GUARD1:%.*]]
 ; CHECK:       cond.true49.target.while.body63:
 ; CHECK-NEXT:    br label [[IRR_GUARD1]]
 ; CHECK:       cond.end61.target.while.body63:
 ; CHECK-NEXT:    br label [[IRR_GUARD1]]
 ; CHECK:       irr.guard1:
-; CHECK-NEXT:    [[GUARD_WHILE_BODY63:%.*]] = phi i1 [ true, [[COND_TRUE49_TARGET_WHILE_BODY63:%.*]] ], [ true, [[COND_END61_TARGET_WHILE_BODY63]] ], [ false, [[IRR_GUARD]] ]
+; CHECK-NEXT:    [[GUARD_WHILE_BODY63:%.*]] = phi i1 [ true, [[COND_TRUE49_TARGET_WHILE_BODY63]] ], [ true, [[COND_END61_TARGET_WHILE_BODY63]] ], [ false, [[IRR_GUARD]] ]
 ; CHECK-NEXT:    br i1 [[GUARD_WHILE_BODY63]], label [[WHILE_BODY63:%.*]], label [[COND_TRUE49]]
 ;
 entry:
@@ -1199,6 +1771,165 @@ if.end.i:
 
 if.end8.i:
   callbr void asm "", ""() to label %exit []
+
+exit:
+  ret void
+}
+
+define void @irr_in_irr_shared_entry_switch(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3, i1 %Pred4, i1 %Pred5, i1 %Pred6, i1 %Pred7, i1 %Pred8, i1 %Pred9, i1 %Pred10, i1 %Pred11, i1 %Pred12, i1 %Pred13) {
+; CHECK-LABEL: @irr_in_irr_shared_entry_switch(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i1 [[PRED0:%.*]], label [[IF_END:%.*]] [
+; CHECK-NEXT:      i1 false, label [[IF_THEN:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       if.end:
+; CHECK-NEXT:    switch i1 [[PRED1:%.*]], label [[IF_THEN7:%.*]] [
+; CHECK-NEXT:      i1 false, label [[IF_ELSE:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       if.then7:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[IF_END16:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       if.else:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[IF_END16]] [
+; CHECK-NEXT:    ]
+; CHECK:       if.end16:
+; CHECK-NEXT:    switch i1 [[PRED2:%.*]], label [[WHILE_COND_PREHEADER:%.*]] [
+; CHECK-NEXT:      i1 false, label [[IF_THEN39:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       while.cond.preheader:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[WHILE_COND:%.*]] [
+; CHECK-NEXT:    ]
+; CHECK:       while.cond:
+; CHECK-NEXT:    switch i1 [[PRED3:%.*]], label [[WHILE_COND_TARGET_COND_TRUE49:%.*]] [
+; CHECK-NEXT:      i1 false, label [[LOR_RHS:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       cond.true49:
+; CHECK-NEXT:    switch i1 [[PRED4:%.*]], label [[IF_THEN69:%.*]] [
+; CHECK-NEXT:      i1 false, label [[COND_TRUE49_TARGET_WHILE_BODY63:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       while.body63:
+; CHECK-NEXT:    switch i1 [[PRED5:%.*]], label [[EXIT:%.*]] [
+; CHECK-NEXT:      i1 false, label [[WHILE_COND47:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       while.cond47:
+; CHECK-NEXT:    switch i1 [[PRED6:%.*]], label [[COND_TRUE49:%.*]] [
+; CHECK-NEXT:      i1 false, label [[WHILE_COND47_TARGET_COND_END61:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       cond.end61:
+; CHECK-NEXT:    switch i1 [[PRED7:%.*]], label [[COND_END61_TARGET_WHILE_BODY63:%.*]] [
+; CHECK-NEXT:      i1 false, label [[WHILE_COND]]
+; CHECK-NEXT:    ]
+; CHECK:       if.then69:
+; CHECK-NEXT:    switch i1 [[PRED8:%.*]], label [[EXIT]] [
+; CHECK-NEXT:      i1 false, label [[WHILE_COND]]
+; CHECK-NEXT:    ]
+; CHECK:       lor.rhs:
+; CHECK-NEXT:    switch i1 [[PRED9:%.*]], label [[LOR_RHS_TARGET_COND_END61:%.*]] [
+; CHECK-NEXT:      i1 false, label [[WHILE_END76:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       while.end76:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[EXIT]] [
+; CHECK-NEXT:    ]
+; CHECK:       if.then39:
+; CHECK-NEXT:    switch i1 [[PRED10:%.*]], label [[EXIT]] [
+; CHECK-NEXT:      i1 false, label [[IF_END_I145:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       if.end.i145:
+; CHECK-NEXT:    switch i1 [[PRED11:%.*]], label [[EXIT]] [
+; CHECK-NEXT:      i1 false, label [[IF_END8_I149:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       if.end8.i149:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[EXIT]] [
+; CHECK-NEXT:    ]
+; CHECK:       if.then:
+; CHECK-NEXT:    switch i1 [[PRED12:%.*]], label [[EXIT]] [
+; CHECK-NEXT:      i1 false, label [[IF_END_I:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       if.end.i:
+; CHECK-NEXT:    switch i1 [[PRED13:%.*]], label [[EXIT]] [
+; CHECK-NEXT:      i1 false, label [[IF_END8_I:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       if.end8.i:
+; CHECK-NEXT:    switch i1 [[PRED0]], label [[EXIT]] [
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+; CHECK:       while.cond47.target.cond.end61:
+; CHECK-NEXT:    br label [[IRR_GUARD:%.*]]
+; CHECK:       lor.rhs.target.cond.end61:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       while.cond.target.cond.true49:
+; CHECK-NEXT:    br label [[IRR_GUARD]]
+; CHECK:       irr.guard:
+; CHECK-NEXT:    [[GUARD_COND_END61:%.*]] = phi i1 [ true, [[WHILE_COND47_TARGET_COND_END61]] ], [ true, [[LOR_RHS_TARGET_COND_END61]] ], [ false, [[WHILE_COND_TARGET_COND_TRUE49]] ]
+; CHECK-NEXT:    br i1 [[GUARD_COND_END61]], label [[COND_END61:%.*]], label [[IRR_GUARD1:%.*]]
+; CHECK:       cond.true49.target.while.body63:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       cond.end61.target.while.body63:
+; CHECK-NEXT:    br label [[IRR_GUARD1]]
+; CHECK:       irr.guard1:
+; CHECK-NEXT:    [[GUARD_WHILE_BODY63:%.*]] = phi i1 [ true, [[COND_TRUE49_TARGET_WHILE_BODY63]] ], [ true, [[COND_END61_TARGET_WHILE_BODY63]] ], [ false, [[IRR_GUARD]] ]
+; CHECK-NEXT:    br i1 [[GUARD_WHILE_BODY63]], label [[WHILE_BODY63:%.*]], label [[COND_TRUE49]]
+;
+entry:
+  switch i1 %Pred0, label %if.end [ i1 0, label %if.then ]
+
+if.end:
+  switch i1 %Pred1, label %if.then7 [ i1 0, label %if.else ]
+
+if.then7:
+  switch i1 %Pred0, label %if.end16 []
+
+if.else:
+  switch i1 %Pred0, label %if.end16 []
+
+if.end16:
+  switch i1 %Pred2, label %while.cond.preheader [ i1 0, label %if.then39 ]
+
+while.cond.preheader:
+  switch i1 %Pred0, label %while.cond []
+
+while.cond:
+  switch i1 %Pred3, label %cond.true49 [ i1 0, label %lor.rhs ]
+
+cond.true49:
+  switch i1 %Pred4, label %if.then69 [ i1 0, label %while.body63 ]
+
+while.body63:
+  switch i1 %Pred5, label %exit [ i1 0, label %while.cond47 ]
+
+while.cond47:
+  switch i1 %Pred6, label %cond.true49 [ i1 0, label %cond.end61 ]
+
+cond.end61:
+  switch i1 %Pred7, label %while.body63 [ i1 0, label %while.cond ]
+
+if.then69:
+  switch i1 %Pred8, label %exit [ i1 0, label %while.cond ]
+
+lor.rhs:
+  switch i1 %Pred9, label %cond.end61 [ i1 0, label %while.end76 ]
+
+while.end76:
+  switch i1 %Pred0, label %exit []
+
+if.then39:
+  switch i1 %Pred10, label %exit [ i1 0, label %if.end.i145 ]
+
+if.end.i145:
+  switch i1 %Pred11, label %exit [ i1 0, label %if.end8.i149 ]
+
+if.end8.i149:
+  switch i1 %Pred0, label %exit []
+
+if.then:
+  switch i1 %Pred12, label %exit [ i1 0, label %if.end.i ]
+
+if.end.i:
+  switch i1 %Pred13, label %exit [ i1 0, label %if.end8.i ]
+
+if.end8.i:
+  switch i1 %Pred0, label %exit []
 
 exit:
   ret void

@@ -2059,8 +2059,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_sqshlu: {
     // Check if last operand is constant vector dup
-    auto ShiftAmount = isConstantOrConstantSplatVector(
-        *MRI.getVRegDef(MI.getOperand(3).getReg()), MRI);
+    auto ShiftAmount =
+        isConstantOrConstantSplatVector(MI.getOperand(3).getReg(), MRI);
     if (ShiftAmount) {
       // If so, create a new intrinsic with the correct shift amount
       MIB.buildInstr(AArch64::G_SQSHLU_I, {MI.getOperand(0)},
@@ -2091,6 +2091,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_neon_addhn:
+    return LowerBinOp(AArch64::G_ADDHN);
   case Intrinsic::aarch64_neon_sqadd: {
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
       return LowerBinOp(TargetOpcode::G_SADDSAT);

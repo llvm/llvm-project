@@ -40,6 +40,7 @@ def main(builtin_params={}):
         order=opts.order,
         params=params,
         config_prefix=opts.configPrefix,
+        pass_env=opts.pass_env,
         per_test_coverage=opts.per_test_coverage,
         gtest_sharding=opts.gtest_sharding,
         maxRetriesPerTest=opts.maxRetriesPerTest,
@@ -278,6 +279,8 @@ def run_tests(tests, lit_config, opts, discovered_tests):
         error = "warning: reached maximum number of test failures"
     except lit.run.TimeoutError:
         error = "warning: reached timeout"
+    except lit.run.WorkerCrashError as e:
+        lit_config.error(f"a worker process crashed: {e}")
 
     display.clear(interrupted)
     if error:

@@ -2747,7 +2747,7 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
     return false;
   }
 
-  if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
+  if (!Pointer::hasSameBase(LHS, RHS)) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_pointer_arith_unspecified)
         << LHS.toDiagnosticString(S.getASTContext())
@@ -2770,6 +2770,14 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
     S.Stk.push<T>();
     return true;
   }
+
+  // C++11 [expr.add]p6:
+  //   Unless both pointers point to elements of the same array object, or
+  //   one past the last element of the array object, the behavior is
+  //   undefined.
+  if (LHS.isBlockPointer() && !Pointer::elemsOfSameArray(LHS, RHS))
+    S.CCEDiag(S.Current->getSource(OpPC),
+              diag::note_constexpr_pointer_subtraction_not_same_array);
 
   std::optional<size_t> VL = LHS.computeLayoutOffset(S.getASTContext());
   if (!VL)
@@ -2902,10 +2910,11 @@ bool CastAPS(InterpState &S, uint32_t BitWidth) {
   return true;
 }
 
-// Cast an AP integer to Sint64, failing constant evaluation if the value is
-// negative or too large to fit (i.e. truncation would change the value).
+// Cast an AP integer to Sint64 for use as an offsetof array index, failing
+// constant evaluation if the value is negative or too large to fit in Sint64
+// (i.e. truncation would change the value).
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool CastNoOverflow(InterpState &S, CodePtr OpPC) {
+bool CastAPToOffsetIndex(InterpState &S, CodePtr OpPC) {
   T Source = S.Stk.pop<T>();
   APSInt Val = Source.toAPSInt();
   if (Val.isNegative() || Val.getActiveBits() > 63)

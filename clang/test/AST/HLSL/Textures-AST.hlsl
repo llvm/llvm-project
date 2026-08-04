@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2D -o - %s | FileCheck %s --check-prefixes=CHECK,SRV -DTEXTURE=Texture2D -DINDEX_SIZE=2
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=Texture2DArray -o - %s | FileCheck %s --check-prefixes=CHECK,SRV,SRV-ARRAY -DTEXTURE=Texture2DArray -DINDEX_SIZE=3
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2D -DRW=1 -o - %s | FileCheck %s --check-prefixes=CHECK,UAV,UAV-STORE,UAV-TRUNC -DTEXTURE=RWTexture2D -DINDEX_SIZE=2
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -ast-dump -disable-llvm-passes -finclude-default-header -DTEXTURE=RWTexture2DArray -DRW=1 -o - %s | FileCheck %s --check-prefixes=CHECK,UAV,UAV-ARRAY,UAV-STORE,UAV-NOTRUNC -DTEXTURE=RWTexture2DArray -DINDEX_SIZE=3
 
 // CHECK: ClassTemplateDecl {{.*}} [[TEXTURE]]
 // CHECK: TemplateTypeParmDecl {{.*}} element_type
