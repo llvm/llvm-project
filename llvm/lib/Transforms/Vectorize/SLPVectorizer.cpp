@@ -4645,8 +4645,8 @@ private:
   /// Deferred extract/rematerialization state for the current function pass.
   DeferredExtractTracker DE;
 
-  /// A list of scalar to be extracted without specific user because of too many
-  /// uses.
+  /// A list of scalars to be extracted without specific user because of too
+  /// many uses.
   SmallPtrSet<Value *, 4> ExternalUsesWithNonUsers;
 
   /// Values used only by @llvm.assume calls.
@@ -14129,18 +14129,14 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
                    DE.CouldBeExtract.contains(V);
           })) {
         for (Value *V : TE.Scalars) {
-          if (auto *EE = dyn_cast<ExtractElementInst>(V)) {
+          auto *EE = dyn_cast<ExtractElementInst>(V);
+          if (!EE)
+            EE = DE.CouldBeExtract.lookup(V);
+          if (EE) {
             uint64_t &VecScale =
                 GatherExtractSourceVecs.try_emplace(EE->getVectorOperand(), 0)
                     .first->second;
             VecScale = std::max(VecScale, Scale);
-          } else if (DE.CouldBeExtract.contains(V)) {
-            if (auto *EE = DE.CouldBeExtract.lookup(V)) {
-              uint64_t &VecScale =
-                GatherExtractSourceVecs.try_emplace(EE->getVectorOperand(), 0)
-                .first->second;
-              VecScale = std::max(VecScale, Scale);
-            }
           }
         }
       } else {
