@@ -1415,7 +1415,7 @@ Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
   ioVec.iov_len = GetSVEHeaderSize();
 
   error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(),
-                          GetPtraceSet(RegisterSetType::SVE));
+                          GetPtraceSet(RegisterSetType::SVE_HEADER));
 
   if (error.Success())
     MakeValid(RegisterSetType::SVE_HEADER);
@@ -1456,7 +1456,7 @@ Status NativeRegisterContextLinux_arm64::WriteSVEHeader() {
   Invalidate(RegisterSetType::SVE_HEADER);
 
   return WriteRegisterSet(&ioVec, GetSVEHeaderSize(),
-                          GetPtraceSet(RegisterSetType::SVE));
+                          GetPtraceSet(RegisterSetType::SVE_HEADER));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadAllSVE() {
