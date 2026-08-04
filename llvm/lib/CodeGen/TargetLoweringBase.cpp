@@ -1252,33 +1252,11 @@ static unsigned getVectorTypeBreakdownMVT(MVT VT, MVT &IntermediateVT,
     llvm_unreachable(
         "Splitting or widening of non-power-of-2 MVTs is not implemented.");
 
-  // FIXME: We don't generically support non-power-of-2-sized vectors for now.
+  // FIXME: We don't support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
   if (!isPowerOf2_32(EC.getKnownMinValue())) {
-    assert(VT.isFixedLengthVector() && "Expected a fixed-length vector VT");
-    unsigned NumElts = EC.getKnownMinValue();
-
-    // Find the largest legal vector type that exactly divides a
-    // non-power-of-two vector.
-    if (TLI->preferVectorizedNonPowerOfTwoTypeBreakdown()) {
-      for (unsigned PartElts = llvm::bit_floor(NumElts); PartElts > 1;
-           PartElts >>= 1) {
-        if (NumElts % PartElts != 0)
-          continue;
-
-        MVT PartVT = MVT::getVectorVT(EltTy, ElementCount::getFixed(PartElts));
-        if (PartVT == MVT() || !TLI->isTypeLegal(PartVT))
-          continue;
-
-        IntermediateVT = PartVT;
-        NumIntermediates = NumElts / PartElts;
-        RegisterVT = PartVT;
-        return NumIntermediates;
-      }
-    }
-
-    // Fall back to scalars if there is no exact legal vector decomposition.
-    NumVectorRegs = NumElts;
+    // Split EC to unit size (scalable property is preserved).
+    NumVectorRegs = EC.getKnownMinValue();
     EC = ElementCount::getFixed(1);
   }
 

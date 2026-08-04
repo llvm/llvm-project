@@ -1235,6 +1235,12 @@ public:
     return false;
   }
 
+  bool shouldUseDynamicVectorTypeBreakdown(EVT VT, bool ForCallingConv) const {
+    return preferVectorizedNonPowerOfTwoTypeBreakdown() && !ForCallingConv &&
+           VT.isFixedLengthVector() &&
+           !isPowerOf2_32(VT.getVectorNumElements());
+  }
+
   /// Certain targets such as MIPS require that some types such as vectors are
   /// always broken down into scalars in some contexts. This occurs even if the
   /// vector type is legal.
@@ -1859,9 +1865,8 @@ public:
   /// Return the type of registers that this ValueType will eventually require.
   MVT getRegisterType(LLVMContext &Context, EVT VT,
                       bool ForCallingConv = false) const {
-    if (VT.isSimple() && (!ForCallingConv || !VT.isFixedLengthVector() ||
-                          isPowerOf2_32(VT.getVectorNumElements()) ||
-                          !preferVectorizedNonPowerOfTwoTypeBreakdown()))
+    if (VT.isSimple() &&
+        !shouldUseDynamicVectorTypeBreakdown(VT, ForCallingConv))
       return getRegisterType(VT.getSimpleVT());
     if (VT.isVector()) {
       EVT VT1;
@@ -1892,9 +1897,8 @@ public:
   virtual unsigned getNumRegisters(LLVMContext &Context, EVT VT,
                                    std::optional<MVT> RegisterVT = std::nullopt,
                                    bool ForCallingConv = false) const {
-    if (VT.isSimple() && (!ForCallingConv || !VT.isFixedLengthVector() ||
-                          isPowerOf2_32(VT.getVectorNumElements()) ||
-                          !preferVectorizedNonPowerOfTwoTypeBreakdown())) {
+    if (VT.isSimple() &&
+        !shouldUseDynamicVectorTypeBreakdown(VT, ForCallingConv)) {
       assert((unsigned)VT.getSimpleVT().SimpleTy <
              std::size(NumRegistersForVT));
       return NumRegistersForVT[VT.getSimpleVT().SimpleTy];
