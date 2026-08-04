@@ -1,8 +1,5 @@
 # LLVM Testing Infrastructure Guide
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -265,6 +262,11 @@ lines is deprecated - please do not send or commit patches that use it.]*
 Put related tests into a single file rather than having a separate file per
 test. Check if there are files already covering your feature and consider
 adding your code there instead of creating a new file.
+
+If new tests depend on a separate LLVM pull request, wait at least a day after
+merging the LLVM PR before merging the
+[test-suite](https://github.com/llvm/llvm-test-suite.git) PR.  This avoids test
+failures when the merged test suite runs before the compiler updates.
 
 ### Generating assertions in regression tests
 

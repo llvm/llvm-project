@@ -402,8 +402,10 @@ static void callResourceInitMethod(CodeGenFunction &CGF,
   llvm::Constant *CalleeFn = CGF.CGM.GetAddrOfFunction(CreateMethod);
   const FunctionProtoType *Proto =
       CreateMethod->getType()->getAs<FunctionProtoType>();
-  const CGFunctionInfo &FnInfo =
-      CGF.CGM.getTypes().arrangeFreeFunctionCall(Args, Proto, false);
+  // HLSL code generation is restricted to DXIL and SPIR-V targets, so no
+  // caller declaration is needed for x86 SysV ABI selection.
+  const CGFunctionInfo &FnInfo = CGF.CGM.getTypes().arrangeFreeFunctionCall(
+      Args, Proto, false, /*ABIInfoFD=*/nullptr);
   ReturnValueSlot ReturnValue(ReturnAddress, false);
   CGCallee Callee(CGCalleeInfo(Proto), CalleeFn);
   CGF.EmitCall(FnInfo, Callee, ReturnValue, Args, nullptr);
@@ -1062,6 +1064,26 @@ static void addLocationDecoration(llvm::GlobalVariable *GV, unsigned Location) {
   GV->addMetadata("spirv.Decorations", *Decoration);
 }
 
+// A fragment shader input interface variable whose base type is an integer or
+// a 64-bit float (double) cannot be interpolated by the rasterizer. The Vulkan
+// specification requires these variables to be decorated with Flat (see
+// VUID-StandaloneSpirv-Flat-04744). Arrays and vectors are unwrapped to inspect
+// their base scalar type.
+static bool inputRequiresFlatDecoration(llvm::Type *Ty) {
+  while (true) {
+    if (auto *AT = dyn_cast<llvm::ArrayType>(Ty)) {
+      Ty = AT->getElementType();
+      continue;
+    }
+    if (auto *VT = dyn_cast<llvm::FixedVectorType>(Ty)) {
+      Ty = VT->getElementType();
+      continue;
+    }
+    break;
+  }
+  return Ty->isIntegerTy() || Ty->isDoubleTy();
+}
+
 static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
                                            llvm::Type *Ty, const Twine &Name,
                                            unsigned BuiltInID) {
@@ -1077,20 +1099,36 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
 
 static llvm::Value *createSPIRVLocationLoad(IRBuilder<> &B, llvm::Module &M,
                                             llvm::Type *Ty, unsigned Location,
-                                            StringRef Name) {
+                                            StringRef Name, bool NeedsFlat) {
   auto *GV = new llvm::GlobalVariable(
       M, Ty, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
       /* Initializer= */ nullptr, /* Name= */ Name, /* insertBefore= */ nullptr,
       llvm::GlobalVariable::GeneralDynamicTLSModel,
       /* AddressSpace */ 7, /* isExternallyInitialized= */ true);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  addLocationDecoration(GV, Location);
+
+  // Emit all decorations as a single `spirv.Decorations` node. Attaching
+  // multiple `spirv.Decorations` metadata nodes to the same global is not
+  // supported by the SPIR-V backend and results in all but one being dropped.
+  LLVMContext &Ctx = GV->getContext();
+  SmallVector<Metadata *, 2> Decorations;
+  Decorations.push_back(
+      MDNode::get(Ctx, {ConstantAsMetadata::get(
+                            B.getInt32(/* SPIRV::Decoration::Location */ 30)),
+                        ConstantAsMetadata::get(B.getInt32(Location))}));
+  if (NeedsFlat)
+    Decorations.push_back(
+        MDNode::get(Ctx, {ConstantAsMetadata::get(
+                             B.getInt32(/* SPIRV::Decoration::Flat */ 14))}));
+  GV->addMetadata("spirv.Decorations", *MDNode::get(Ctx, Decorations));
+
   return B.CreateLoad(Ty, GV);
 }
 
 llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
-    llvm::IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
+    llvm::IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
+    std::optional<unsigned> Index) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
@@ -1104,8 +1142,14 @@ llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
   unsigned ElementCount = AT ? AT->getNumElements() : 1;
   SPIRVLastAssignedInputSemanticLocation += ElementCount;
 
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  bool NeedsFlat =
+      ShaderAttr &&
+      ShaderAttr->getType() == llvm::Triple::EnvironmentType::Pixel &&
+      inputRequiresFlatDecoration(Type);
+
   return createSPIRVLocationLoad(B, CGM.getModule(), Type, Location,
-                                 VariableName.str());
+                                 VariableName.str(), NeedsFlat);
 }
 
 static void createSPIRVLocationStore(IRBuilder<> &B, llvm::Module &M,
@@ -1197,10 +1241,11 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
 }
 
 llvm::Value *CGHLSLRuntime::emitUserSemanticLoad(
-    IRBuilder<> &B, llvm::Type *Type, const clang::DeclaratorDecl *Decl,
-    HLSLAppliedSemanticAttr *Semantic, std::optional<unsigned> Index) {
+    IRBuilder<> &B, const FunctionDecl *FD, llvm::Type *Type,
+    const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
+    std::optional<unsigned> Index) {
   if (CGM.getTarget().getTriple().isSPIRV())
-    return emitSPIRVUserSemanticLoad(B, Type, Decl, Semantic, Index);
+    return emitSPIRVUserSemanticLoad(B, FD, Type, Decl, Semantic, Index);
 
   if (CGM.getTarget().getTriple().isDXIL())
     return emitDXILUserSemanticLoad(B, Type, Semantic, Index);
@@ -1275,7 +1320,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     }
 
     if (ST == Triple::EnvironmentType::Vertex) {
-      return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
+      return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index);
     }
   }
 
@@ -1344,7 +1389,7 @@ llvm::Value *CGHLSLRuntime::handleScalarSemanticLoad(
   std::optional<unsigned> Index = Semantic->getSemanticIndex();
   if (Semantic->getAttrName()->getName().starts_with_insensitive("SV_"))
     return emitSystemSemanticLoad(B, FD, Type, Decl, Semantic, Index);
-  return emitUserSemanticLoad(B, Type, Decl, Semantic, Index);
+  return emitUserSemanticLoad(B, FD, Type, Decl, Semantic, Index);
 }
 
 void CGHLSLRuntime::handleScalarSemanticStore(

@@ -5021,6 +5021,8 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
     divisor = CGF.CGM.getSize(elementSize);
   }
 
+  if (CGF.getLangOpts().StablePointerSubtraction)
+    return Builder.CreateSDiv(diffInChars, divisor, "sub.ptr.div");
   // Otherwise, do a full sdiv. This uses the "exact" form of sdiv, since
   // pointer difference in C is only defined in the case where both operands
   // are pointing to elements of an array.
@@ -6452,15 +6454,12 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   GEPOffsetAndOverflow EvaluatedGEP =
       EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
 
-  assert((!isa<llvm::Constant>(EvaluatedGEP.TotalOffset) ||
-          EvaluatedGEP.OffsetOverflows == Builder.getFalse()) &&
-         "If the offset got constant-folded, we don't expect that there was an "
-         "overflow.");
-
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
-  // Common case: if the total offset is zero, don't emit a check.
-  if (EvaluatedGEP.TotalOffset == Zero)
+  // Common case: if the total offset is zero and has not overflowed, don't emit
+  // a check.
+  if (EvaluatedGEP.TotalOffset == Zero &&
+      EvaluatedGEP.OffsetOverflows == Builder.getFalse())
     return GEPVal;
 
   // Now that we've computed the total offset, add it to the base pointer (with

@@ -17,6 +17,8 @@
 #include <__pstl/cpu_algos/find_if.h>
 #include <__pstl/cpu_algos/for_each.h>
 #include <__pstl/cpu_algos/merge.h>
+#include <__pstl/cpu_algos/mismatch.h>
+#include <__pstl/cpu_algos/reverse.h>
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
@@ -99,6 +101,14 @@ struct __for_each<__std_thread_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __merge<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_merge<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __mismatch<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_mismatch<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __reverse<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_reverse<__std_thread_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __stable_sort<__std_thread_backend_tag, _ExecutionPolicy>

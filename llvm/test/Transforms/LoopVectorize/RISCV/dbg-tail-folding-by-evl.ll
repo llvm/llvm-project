@@ -72,7 +72,7 @@ exit:
 !9 = !DILocation(line: 2, column: 27, scope: !3)
 !10 = !DILocation(line: 2, column: 5, scope: !3)
 !11 = distinct !{!11, !12}
-!12 = !{!"llvm.loop.vectorize.enable", i1 true}
+!12 = !{!"llvm.loop.vectorize.enable"}
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1]] = !DIFile(filename: "{{.*}}dbg-tail-folding-by-evl.cpp", directory: {{.*}})
