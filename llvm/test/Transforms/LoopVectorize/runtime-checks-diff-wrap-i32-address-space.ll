@@ -32,9 +32,9 @@ loop:
   %iv.ext = zext i32 %iv to i64
   %offset = mul i64 %iv.ext, u0x80000000
   ; I believe this produces a poison that becomes UB when dereferenced, but even
-  ; for UB input we can't `assert` and have produce something. Ensure that
-  ; DIFF_CHECK above (even if constant-foldable to false) is done in a type
-  ; that can represent IC x ConstantStride.
+  ; for UB input we can't `assert` and have to produce something. Ensure that
+  ; DIFF_CHECK above (even if constant-foldable to false) is done in a type that
+  ; can represent IC x ConstantStride.
   %gep.a = getelementptr inbounds i8, ptr addrspace(1) %a, i64 %offset
   %l = load i8, ptr addrspace(1) %gep.a
   %add = add i8 %l, 1
