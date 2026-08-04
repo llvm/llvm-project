@@ -4,8 +4,8 @@
 ; min(x / 2.0, 4.0) -> min(x, 8.0) / 2.0
 define float @test_min_fdiv(float %x) {
 ; CHECK-LABEL: @test_min_fdiv(
-; CHECK-NEXT:    [[DIV:%.*]] = fmul reassoc nsz float [[X:%.*]], 5.000000e-01
-; CHECK-NEXT:    [[MIN:%.*]] = call reassoc nsz float @llvm.minnum.f32(float [[DIV]], float 4.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz float @llvm.minnum.f32(float [[X:%.*]], float 8.000000e+00)
+; CHECK-NEXT:    [[MIN:%.*]] = fmul reassoc nnan nsz float [[TMP1]], 5.000000e-01
 ; CHECK-NEXT:    ret float [[MIN]]
 ;
   %div = fdiv reassoc nsz float %x, 2.0
@@ -16,8 +16,8 @@ define float @test_min_fdiv(float %x) {
 ; min(x * 2.0, 4.0) -> min(x, 2.0) * 2.0
 define float @test_min_fmul(float %x) {
 ; CHECK-LABEL: @test_min_fmul(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nsz float [[X:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[MIN:%.*]] = call reassoc nsz float @llvm.minnum.f32(float [[MUL]], float 4.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz float @llvm.minnum.f32(float [[X:%.*]], float 2.000000e+00)
+; CHECK-NEXT:    [[MIN:%.*]] = fmul reassoc nnan nsz float [[TMP1]], 2.000000e+00
 ; CHECK-NEXT:    ret float [[MIN]]
 ;
   %mul = fmul reassoc nsz float %x, 2.0
@@ -28,8 +28,8 @@ define float @test_min_fmul(float %x) {
 ; max(x / 2.0, 4.0) -> max(x, 8.0) / 2.0
 define float @test_max_fdiv(float %x) {
 ; CHECK-LABEL: @test_max_fdiv(
-; CHECK-NEXT:    [[DIV:%.*]] = fmul reassoc nsz float [[X:%.*]], 5.000000e-01
-; CHECK-NEXT:    [[MAX:%.*]] = call reassoc nsz float @llvm.maxnum.f32(float [[DIV]], float 4.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz float @llvm.maxnum.f32(float [[X:%.*]], float 8.000000e+00)
+; CHECK-NEXT:    [[MAX:%.*]] = fmul reassoc nnan nsz float [[TMP1]], 5.000000e-01
 ; CHECK-NEXT:    ret float [[MAX]]
 ;
   %div = fdiv reassoc nsz float %x, 2.0
@@ -40,8 +40,8 @@ define float @test_max_fdiv(float %x) {
 ; max(x * -2.0, 4.0) -> min(x, -2.0) * -2.0
 define float @test_max_fmul_neg(float %x) {
 ; CHECK-LABEL: @test_max_fmul_neg(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul reassoc nsz float [[X:%.*]], -2.000000e+00
-; CHECK-NEXT:    [[MAX:%.*]] = call reassoc nsz float @llvm.maxnum.f32(float [[MUL]], float 4.000000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nsz float @llvm.minnum.f32(float [[X:%.*]], float -2.000000e+00)
+; CHECK-NEXT:    [[MAX:%.*]] = fmul reassoc nnan nsz float [[TMP1]], -2.000000e+00
 ; CHECK-NEXT:    ret float [[MAX]]
 ;
   %mul = fmul reassoc nsz float %x, -2.0
