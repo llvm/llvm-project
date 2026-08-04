@@ -27,6 +27,7 @@
 #include "flang/Semantics/openmp-utils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/Support/CommandLine.h"
 #include <type_traits>
 
@@ -746,6 +747,17 @@ static bool baseInitReadsOrig(mlir::Block &initBlock) {
   return reads;
 }
 
+// A single init value is broadcast to every array element, so an initializer
+// that evaluates a call (once, not per element) cannot be broadcast safely.
+static bool baseInitHasCall(mlir::Region &region) {
+  bool hasCall = false;
+  region.walk([&](mlir::Operation *op) {
+    if (mlir::isa<mlir::CallOpInterface>(op))
+      hasCall = true;
+  });
+  return hasCall;
+}
+
 template <typename OpType>
 static OpType getOrCreateBoxedUserReduction(
     lower::AbstractConverter &converter, semantics::SemanticsContext *semaCtx,
@@ -805,16 +817,20 @@ static OpType getOrCreateBoxedUserReduction(
                             mlir::Type ty, mlir::Value moldArg,
                             mlir::Value /*privArg*/) -> mlir::Value {
     mlir::Type scalarTy = unwrapSeqOrBoxedType(ty);
+    auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(ty));
+    auto seqTy = boxTy ? mlir::dyn_cast_or_null<fir::SequenceType>(
+                             fir::unwrapRefType(boxTy.getEleTy()))
+                       : nullptr;
+    // An array init value is broadcast to every element, so it must be a
+    // constant identity; reading omp_orig or evaluating a call cannot be
+    // broadcast.
+    if (seqTy && (initReadsOrig || baseInitHasCall(baseInitRegion)))
+      TODO(loc,
+           "OpenMP user-defined reduction on an allocatable/pointer array "
+           "whose initializer reads omp_orig or evaluates a function call");
     llvm::SmallVector<mlir::Value> initArgs;
     if (initReadsOrig) {
-      auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(fir::unwrapRefType(ty));
-      auto seqTy = boxTy ? mlir::dyn_cast_or_null<fir::SequenceType>(
-                               fir::unwrapRefType(boxTy.getEleTy()))
-                         : nullptr;
-      if (seqTy)
-        TODO(loc, "OpenMP user-defined reduction on an allocatable/pointer "
-                  "array whose initializer reads omp_orig");
-      // Scalar: feed the original element to the cloned initializer's omp_orig.
+      // Scalar (arrays handled above): feed the original element to omp_orig.
       mlir::Value box = fir::LoadOp::create(b, loc, moldArg);
       mlir::Value addr = fir::BoxAddrOp::create(b, loc, box);
       initArgs.push_back(fir::LoadOp::create(b, loc, addr));

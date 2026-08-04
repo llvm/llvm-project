@@ -27,10 +27,16 @@ end subroutine
 ! CHECK:         omp.yield
 ! CHECK:       } init {
 ! CHECK:       ^bb0(%[[MOLD:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>):
-! The original f32 element is read (omp_orig), not a fabricated f32 constant.
+! The loaded original f32 element must reach the private element store, not be
+! replaced by a fabricated constant.
 ! CHECK:         %[[MBOX:.*]] = fir.load %[[MOLD]]
 ! CHECK:         %[[MADDR:.*]] = fir.box_addr %[[MBOX]]
-! CHECK:         fir.load %[[MADDR]] : !fir.heap<f32>
+! CHECK:         %[[ORIG:.*]] = fir.load %[[MADDR]] : !fir.heap<f32>
+! CHECK:         fir.store %[[ORIG]] to %[[OTMP:.*]] : !fir.ref<f32>
+! CHECK:         %[[ODECL:.*]]:2 = hlfir.declare %[[OTMP]] {{.*}}uniq_name = "omp_orig"
+! CHECK:         %[[PVAL:.*]] = fir.load %[[ODECL]]#0 : !fir.ref<f32>
+! CHECK:         %[[PRIV:.*]] = fir.allocmem f32
+! CHECK:         fir.store %[[PVAL]] to %[[PRIV]] : !fir.heap<f32>
 ! CHECK:         omp.yield
 ! CHECK:       } combiner {
 ! CHECK:       ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>, %[[ARG1:.*]]: !fir.ref<!fir.box<!fir.heap<f32>>>):

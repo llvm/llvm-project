@@ -23,10 +23,16 @@ end subroutine
 ! CHECK-LABEL: omp.declare_reduction @{{.*}}myinit_byref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:       init {
 ! CHECK:       ^bb0(%[[MOLD:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>, %[[ALLOC:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>>):
-! The original element is read (omp_orig), not replaced by a constant zero.
+! The loaded original element must reach the private element store, not be
+! discarded in favour of a constant zero.
 ! CHECK:         %[[MBOX:.*]] = fir.load %[[MOLD]]
 ! CHECK:         %[[MADDR:.*]] = fir.box_addr %[[MBOX]]
-! CHECK:         fir.load %[[MADDR]]
+! CHECK:         %[[ORIG:.*]] = fir.load %[[MADDR]] : !fir.heap<i32>
+! CHECK:         fir.store %[[ORIG]] to %[[OTMP:.*]] : !fir.ref<i32>
+! CHECK:         %[[ODECL:.*]]:2 = hlfir.declare %[[OTMP]] {{.*}}uniq_name = "omp_orig"
+! CHECK:         %[[PVAL:.*]] = fir.load %[[ODECL]]#0 : !fir.ref<i32>
+! CHECK:         %[[PRIV:.*]] = fir.allocmem i32
+! CHECK:         fir.store %[[PVAL]] to %[[PRIV]] : !fir.heap<i32>
 ! CHECK:         omp.yield
 ! CHECK:       } combiner {
 ! CHECK:         fir.box_addr
