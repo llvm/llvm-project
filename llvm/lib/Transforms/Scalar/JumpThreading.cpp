@@ -2147,6 +2147,14 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
   }
 }
 
+/// Return true if BB contains a convergent operation.
+static bool blockContainsConvergentOp(const BasicBlock *BB) {
+  return llvm::any_of(*BB, [](const Instruction &I) {
+    const auto *CB = dyn_cast<CallBase>(&I);
+    return CB && CB->isConvergent();
+  });
+}
+
 /// Attempt to thread through two successive basic blocks.
 bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
                                                          Value *Cond) {
@@ -2264,6 +2272,14 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
              << SuccBB->getName()
              << "' - it might create an irreducible loop!\n";
     });
+    return false;
+  }
+
+  // Don't create a new entry edge into a block with convergent operations.
+  if (blockContainsConvergentOp(SuccBB)) {
+    LLVM_DEBUG(dbgs() << "  Not threading through BB '" << BB->getName()
+                      << "' to dest BB '" << SuccBB->getName()
+                      << "' - destination contains convergent operations!\n");
     return false;
   }
 
@@ -2386,6 +2402,14 @@ bool JumpThreadingPass::tryThreadEdge(
           << "' to dest " << (SuccIsHeader ? "loop header BB '" : "block BB '")
           << SuccBB->getName() << "' - it might create an irreducible loop!\n";
     });
+    return false;
+  }
+
+  // Don't create a new entry edge into a block with convergent operations.
+  if (blockContainsConvergentOp(SuccBB)) {
+    LLVM_DEBUG(dbgs() << "  Not threading across BB '" << BB->getName()
+                      << "' to dest BB '" << SuccBB->getName()
+                      << "' - destination contains convergent operations!\n");
     return false;
   }
 
