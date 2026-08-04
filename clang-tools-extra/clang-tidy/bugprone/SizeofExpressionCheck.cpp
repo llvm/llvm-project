@@ -97,7 +97,7 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Some of the checks should not match in template code to avoid false
   // positives if sizeof is applied on template argument.
 
-  auto LoopCondExpr =
+  const auto LoopCondExpr =
       [](const ast_matchers::internal::Matcher<Stmt> &InnerMatcher) {
         return stmt(anyOf(forStmt(hasCondition(InnerMatcher)),
                           whileStmt(hasCondition(InnerMatcher)),

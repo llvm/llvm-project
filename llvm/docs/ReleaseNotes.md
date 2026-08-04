@@ -92,8 +92,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the RISC-V Backend
 
+* Added experimental MC support for the `Smcsps` and `Sscsps`
+  conditional stack pointer swap extensions.
+
 * Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
   Load) extension.
+
+* Bump Svukte extension to 1.0.
 
 ### Changes to the WebAssembly Backend
 
