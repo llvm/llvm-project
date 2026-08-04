@@ -442,12 +442,12 @@ void PointerReplacer::replace(Instruction *I) {
     NewPHI->takeName(PHI);
     NewPHI->copyMetadata(*PHI);
     WorkMap[PHI] = NewPHI;
-    for (unsigned I = 0; I < PHI->getNumIncomingValues(); ++I) {
-      Value *IncomingValue = PHI->getIncomingValue(I);
+    for (auto [IncomingValue, IncomingBlock] :
+         zip_equal(PHI->incoming_values(), PHI->blocks())) {
       Value *V = WorkMap.lookup(IncomingValue);
       assert(V && V->getType() == NewType &&
              "Type-changing PHI incoming value was not replaced");
-      NewPHI->addIncoming(V, PHI->getIncomingBlock(I));
+      NewPHI->addIncoming(V, IncomingBlock);
     }
   } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
     auto *V = getReplacement(GEP->getPointerOperand());
