@@ -5388,6 +5388,332 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
   }
 }
 
+static constexpr std::string_view predefinedAllocatorNames[]{
+    "omp_default_mem_alloc", "omp_large_cap_mem_alloc", "omp_const_mem_alloc",
+    "omp_high_bw_mem_alloc", "omp_low_lat_mem_alloc", "omp_cgroup_mem_alloc",
+    "omp_pteam_mem_alloc", "omp_thread_mem_alloc"};
+
+static constexpr std::string_view predefinedMemSpaceNames[]{
+    "omp_default_mem_space", "omp_large_cap_mem_space", "omp_const_mem_space",
+    "omp_high_bw_mem_space", "omp_low_lat_mem_space"};
+
+// omp_null_allocator and omp_null_mem_space are not themselves predefined
+// handles, but [6.0:315-316] gives each its own allowance.
+static constexpr std::string_view nullAllocatorName[]{"omp_null_allocator"};
+static constexpr std::string_view nullMemSpaceName[]{"omp_null_mem_space"};
+
+// Whether the ultimate symbol is an entity of the intrinsic omp_lib module
+// shipped with the compiler, as opposed to a same-named entity of a
+// user-defined module. `IsIntrinsicModules()` on the module scope's parent is
+// the provenance test that mod-file.cpp and expression.cpp already use.
+static bool IsIntrinsicOmpLibEntity(const Symbol &ultimate) {
+  const Scope &scope{ultimate.owner()};
+  if (!scope.IsModule()) {
+    return false;
+  }
+  const Symbol *module{scope.symbol()};
+  return module && module->name() == "omp_lib" &&
+      scope.parent().IsIntrinsicModules();
+}
+
+// Recognition of a predefined allocator or memory space differs by version.
+//
+// [5.2:182] asks whether the allocator *is* a predefined allocator, so it
+// identifies the entity: a use-associated rename of the intrinsic omp_lib
+// entity still denotes it, while an unrelated declaration -- even one with the
+// same spelling, the same value, or in a user module named omp_lib -- does not.
+//
+// [6.0:315] instead asks whether the allocator is an identifier that *matches
+// the name of* a predefined allocator, which is a property of the identifier
+// written in the clause, not of the entity it resolves to. A local declaration
+// of a predefined spelling therefore qualifies, while a rename to some other
+// name does not, even when it denotes the intrinsic entity.
+static bool IsPredefinedHandle(const parser::Name &name,
+    llvm::ArrayRef<std::string_view> names, unsigned version) {
+  if (version >= 60) {
+    return llvm::is_contained(names, name.ToString());
+  }
+  if (const Symbol *symbol{name.symbol}) {
+    const Symbol &ultimate{symbol->GetUltimate()};
+    return IsIntrinsicOmpLibEntity(ultimate) &&
+        llvm::is_contained(names, ultimate.name().ToString());
+  }
+  return false;
+}
+
+// The integer kind of an OpenMP allocator or memory-space handle, which
+// omp_lib declares as c_intptr_t. iso_c_binding is an intrinsic module, so it
+// can be read on demand the way semantics.cpp reads its other builtin modules;
+// the kind is therefore available even when the source uses neither module.
+static std::optional<std::int64_t> GetOmpHandleKind(SemanticsContext &context) {
+  const Scope *scope{context.GetBuiltinModule("iso_c_binding")};
+  if (!scope) {
+    return std::nullopt;
+  }
+  const Symbol *kindSymbol{
+      scope->FindSymbol(SourceName{"c_intptr_t", std::strlen("c_intptr_t")})};
+  if (!kindSymbol) {
+    return std::nullopt;
+  }
+  const auto *object{
+      kindSymbol->GetUltimate().detailsIf<ObjectEntityDetails>()};
+  const auto *init{object ? &object->init() : nullptr};
+  return init && *init ? evaluate::ToInt64(**init) : std::nullopt;
+}
+
+// Whether `symbol` has the integer kind that omp_lib gives its handles. The
+// check is skipped for a non-integer allocator, whose type is diagnosed
+// separately, so that the two do not double up.
+static bool HasOmpHandleKind(
+    const Symbol &symbol, SemanticsContext &context, std::int64_t &expected) {
+  const DeclTypeSpec *type{symbol.GetUltimate().GetType()};
+  if (!type || !type->IsNumeric(TypeCategory::Integer)) {
+    return true;
+  }
+  auto want{GetOmpHandleKind(context)};
+  if (!want) {
+    return true;
+  }
+  expected = *want;
+  auto got{evaluate::ToInt64(type->numericTypeSpec().kind())};
+  return !got || *got == *want;
+}
+
+void OmpStructureChecker::CheckUsesAllocatorsSpec(
+    const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  bool isLegacySyntax{std::get<bool>(spec.t)};
+
+  // The traits of the deprecated syntax are stored as a traits-array modifier,
+  // but they are not the 5.2 modifier, so they must not be version-checked.
+  if (!isLegacySyntax) {
+    if (!OmpVerifyModifiers(spec, llvm::omp::OMPC_uses_allocators,
+            GetContext().clauseSource, context_)) {
+      return;
+    }
+  }
+
+  auto &modifiers{OmpGetModifiers(spec)};
+  const auto *memSpace{
+      OmpGetUniqueModifier<parser::OmpMemspaceModifier>(modifiers)};
+  const auto *traits{
+      OmpGetUniqueModifier<parser::OmpTraitsArrayModifier>(modifiers)};
+
+  const parser::Expr &allocatorExpr{
+      std::get<parser::ScalarIntExpr>(spec.t).thing.thing.value()};
+  parser::CharBlock allocatorSource{allocatorExpr.source};
+  const parser::Name *allocatorName{
+      parser::Unwrap<parser::Name>(allocatorExpr)};
+
+  // [5.2:182] The allocator expression must be a base language identifier.
+  if (!allocatorName) {
+    context_.Say(allocatorSource,
+        "The allocator in a USES_ALLOCATORS clause must be a base language identifier"_err_en_US);
+    return;
+  }
+
+  bool isPredefined{
+      IsPredefinedHandle(*allocatorName, predefinedAllocatorNames, version)};
+  // [6.0:315] The clause has no effect for an allocator argument value of
+  // omp_null_allocator, and [6.0:316] exempts it from the variable rule. It
+  // has no such allowance before 6.0.
+  bool isNullAllocator{version >= 60 &&
+      IsPredefinedHandle(*allocatorName, nullAllocatorName, version)};
+
+  // [5.2:182] If allocator is a predefined allocator, no modifiers may be
+  // specified. This also covers the pre-5.2 rule that predefined allocators
+  // cannot have traits specified.
+  if (isPredefined && (memSpace || traits)) {
+    context_.Say(allocatorSource,
+        "A predefined allocator '%s' in a USES_ALLOCATORS clause cannot have modifiers or traits specified"_err_en_US,
+        allocatorName->ToString());
+  }
+
+  if (!isPredefined && !isNullAllocator) {
+    // [5.2:182] If allocator is not a predefined allocator, it must be a
+    // variable. Before 6.0 this also rejects omp_null_allocator, which is a
+    // named constant and is not one of the predefined allocators.
+    const Symbol *symbol{allocatorName->symbol};
+    if (!symbol || !IsVariableName(*symbol)) {
+      context_.Say(allocatorSource,
+          "A non-predefined allocator '%s' in a USES_ALLOCATORS clause must be a variable"_err_en_US,
+          allocatorName->ToString());
+    } else if (std::int64_t kind{0};
+        !HasOmpHandleKind(*symbol, context_, kind)) {
+      // [5.2:181], [6.0:315] The allocator argument is an expression of
+      // allocator_handle type.
+      context_.Say(allocatorSource,
+          "The allocator '%s' in a USES_ALLOCATORS clause must be of type INTEGER(KIND=%jd), i.e. OMP_ALLOCATOR_HANDLE_KIND"_err_en_US,
+          allocatorName->ToString(), static_cast<std::intmax_t>(kind));
+    }
+    // [5.0:175], [5.1:203] Non-predefined allocators appearing in a
+    // uses_allocators clause must have traits specified. The requirement was
+    // removed in 5.2, where omitted traits mean an empty traits array.
+    if (version < 52 && !traits) {
+      context_.Say(allocatorSource,
+          "A non-predefined allocator '%s' in a USES_ALLOCATORS clause must have traits specified in OpenMP v%d.%d"_err_en_US,
+          allocatorName->ToString(), version / 10, version % 10);
+    }
+  }
+
+  // [5.2:182] The allocator argument must not appear in other data-sharing
+  // attribute clauses or data-mapping attribute clauses on the same construct.
+  if (const Symbol *symbol{allocatorName->symbol}) {
+    static const llvm::omp::Clause conflictingClauses[]{
+        llvm::omp::Clause::OMPC_firstprivate,
+        llvm::omp::Clause::OMPC_has_device_addr,
+        llvm::omp::Clause::OMPC_is_device_ptr,
+        llvm::omp::Clause::OMPC_map,
+        llvm::omp::Clause::OMPC_private,
+    };
+    const parser::OmpDirectiveSpecification &dirSpec{*dirStack_.back()};
+    for (llvm::omp::Clause id : conflictingClauses) {
+      const parser::OmpClause *found{parser::omp::FindClause(dirSpec, id)};
+      if (!found) {
+        continue;
+      }
+      if (const parser::OmpObjectList *objects{GetOmpObjectList(*found)}) {
+        for (const parser::OmpObject &object : objects->v) {
+          if (const Symbol *other{GetObjectSymbol(object, /*ultimate=*/true)};
+              other == &symbol->GetUltimate()) {
+            context_.Say(allocatorSource,
+                "An allocator in a USES_ALLOCATORS clause cannot also appear in the %s clause on the same construct"_err_en_US,
+                parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
+          }
+        }
+      }
+    }
+  }
+
+  if (memSpace) {
+    // [5.2:182] The memspace-handle argument for the mem-space modifier must
+    // be an identifier that matches one of the predefined memory space names.
+    // [6.0:315] additionally gives omp_null_mem_space the meaning of
+    // omp_default_mem_space, so it is accepted from 6.0 onwards.
+    const parser::Expr &memSpaceExpr{memSpace->v.thing.thing.value()};
+    parser::CharBlock memSpaceSource{OmpGetModifierSource(modifiers, memSpace)};
+    const parser::Name *memSpaceName{
+        parser::Unwrap<parser::Name>(memSpaceExpr)};
+    bool ok{memSpaceName &&
+        (IsPredefinedHandle(*memSpaceName, predefinedMemSpaceNames, version) ||
+            (version >= 60 &&
+                IsPredefinedHandle(*memSpaceName, nullMemSpaceName, version)))};
+    if (!ok) {
+      context_.Say(memSpaceSource,
+          "The MEMSPACE modifier must name a predefined memory space"_err_en_US);
+    }
+  }
+
+  if (traits) {
+    CheckUsesAllocatorsTraits(*traits,
+        isLegacySyntax ? allocatorSource
+                       : OmpGetModifierSource(modifiers, traits));
+  }
+}
+
+void OmpStructureChecker::CheckUsesAllocatorsTraits(
+    const parser::OmpTraitsArrayModifier &traits, parser::CharBlock source) {
+  const parser::Expr &expr{traits.v.value()};
+  parser::CharBlock traitsSource{source.empty() ? expr.source : source};
+  const SomeExpr *value{GetExpr(context_, expr)};
+  if (!value) {
+    return;
+  }
+
+  const parser::Name *name{parser::Unwrap<parser::Name>(expr)};
+  const Symbol *symbol{name ? name->symbol : nullptr};
+
+  // [5.2:182] publishes one restriction for both languages: the traits
+  // argument must be a constant array, have constant values, and be defined in
+  // the same scope as the construct. [6.0:317] later splits that per language,
+  // keeping the same-scope requirement for C/C++ and stating the Fortran rule
+  // as a named constant of rank one. Follow the 6.0 clarification, so an
+  // otherwise valid host- or use-associated named constant is accepted.
+  if (!symbol) {
+    context_.Say(traitsSource,
+        "The traits array must be a named constant array"_err_en_US);
+    return;
+  }
+  if (value->Rank() != 1) {
+    context_.Say(traitsSource,
+        "The traits array '%s' must be a rank-one array"_err_en_US,
+        name->ToString());
+  }
+  if (!IsNamedConstant(symbol->GetUltimate()) ||
+      !evaluate::IsConstantExpr(*value)) {
+    context_.Say(traitsSource,
+        "The traits array '%s' must be a constant array with constant values"_err_en_US,
+        name->ToString());
+  }
+  const DeclTypeSpec *type{symbol->GetUltimate().GetType()};
+  const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
+  if (!derived || derived->name().ToString() != "omp_alloctrait") {
+    context_.Say(traitsSource,
+        "The traits array '%s' must be of type OMP_ALLOCTRAIT"_err_en_US,
+        name->ToString());
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::UsesAllocators &x) {
+  // If the clause is not allowed, don't diagnose specific problems with it.
+  if (!IsAllowedClause(llvm::omp::Clause::OMPC_uses_allocators)) {
+    return;
+  }
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  const std::list<parser::OmpUsesAllocatorsClause::AllocatorSpec> &specs{x.v.v};
+
+  // Classify by the syntax each specification was written in, which the parse
+  // tree records, rather than by whether a modifier happens to be present.
+  bool anyLegacyItem{false}, anyModifierItem{false};
+  for (auto &spec : specs) {
+    if (std::get<bool>(spec.t)) {
+      anyLegacyItem = true;
+    } else if (OmpGetModifiers(spec)) {
+      anyModifierItem = true;
+    }
+  }
+  // Only the deprecated grammar separates specifications with commas, so any
+  // parseable list of them is that grammar. A comma list whose items use the
+  // 5.2 modifier syntax is expressible in neither grammar; it is treated as an
+  // approximation of the 6.0 multiple-specification form.
+  bool isLegacyList{anyLegacyItem || (specs.size() > 1 && !anyModifierItem)};
+
+  if (version >= 60 && isLegacyList) {
+    // [6.0:B.2] "All features deprecated in versions 5.0, 5.1 and 5.2 were
+    // removed", which includes the comma-separated list syntax deprecated by
+    // [5.2:181].
+    context_.Say(GetContext().clauseSource,
+        "The comma-separated list syntax for the USES_ALLOCATORS clause was deprecated in OpenMP 5.2 and removed in OpenMP 6.0, use 'USES_ALLOCATORS([TRAITS(traits):] allocator)' instead"_err_en_US);
+    return;
+  }
+
+  if (specs.size() > 1 && version >= 60) {
+    // [6.0:315] permits more than one clause-argument-specification, but only
+    // the single-specification form is implemented so far.
+    context_.Say(GetContext().clauseSource,
+        "Multiple allocator specifications in a USES_ALLOCATORS clause are not yet supported"_err_en_US);
+    return;
+  }
+
+  if (specs.size() > 1 && anyModifierItem) {
+    // [5.2:181] uses_allocators takes a single clause-argument-specification,
+    // and only the deprecated list syntax may repeat it.
+    context_.Say(GetContext().clauseSource,
+        "The USES_ALLOCATORS clause accepts a single allocator specification in OpenMP v%d.%d"_err_en_US,
+        version / 10, version % 10);
+  } else if (version >= 52 && isLegacyList) {
+    // [5.2:181] The comma-separated "allocator[(traits)]" list syntax has been
+    // deprecated.
+    context_.Say(GetContext().clauseSource,
+        "The comma-separated list syntax for the USES_ALLOCATORS clause has been deprecated in OpenMP 5.2, use 'USES_ALLOCATORS([TRAITS(traits):] allocator)' instead"_port_en_US);
+  }
+
+  for (auto &spec : specs) {
+    CheckUsesAllocatorsSpec(spec);
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::IsDevicePtr &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(x.v, currSymbols);
