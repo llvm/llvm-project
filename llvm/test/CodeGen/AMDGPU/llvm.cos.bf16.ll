@@ -15,11 +15,9 @@ define amdgpu_kernel void @cos_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; FAKE16-NEXT:    s_mov_b32 s3, 0x3e230000
 ; FAKE16-NEXT:    v_mov_b32_e32 v1, 0
 ; FAKE16-NEXT:    s_wait_kmcnt 0x0
-; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; FAKE16-NEXT:    v_fma_mixlo_bf16 v0, s2, s3, 0 op_sel_hi:[1,0,0]
+; FAKE16-NEXT:    v_pk_mul_bf16 v0, 0x3e23, s2
 ; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; FAKE16-NEXT:    v_cos_bf16_e32 v0, v0
 ; FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
@@ -31,11 +29,9 @@ define amdgpu_kernel void @cos_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; REAL16-NEXT:    v_nop
 ; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; REAL16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
-; REAL16-NEXT:    s_mov_b32 s3, 0x3e230000
 ; REAL16-NEXT:    v_mov_b32_e32 v1, 0
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
-; REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; REAL16-NEXT:    v_fma_mixlo_bf16 v0, s2, s3, 0 op_sel_hi:[1,0,0]
+; REAL16-NEXT:    v_pk_mul_bf16 v0, 0x3e23, s2
 ; REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; REAL16-NEXT:    v_cos_bf16_e32 v0.l, v0.l
 ; REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
