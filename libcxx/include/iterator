@@ -751,19 +751,6 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #    pragma GCC system_header
 #  endif
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 17
-#    include <variant>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <cstddef>
-#    include <cstdlib>
-#    include <exception>
-#    include <new>
-#    include <type_traits>
-#    include <typeinfo>
-#    include <utility>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_ITERATOR
