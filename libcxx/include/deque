@@ -545,10 +545,8 @@ public:
   // - size_type: is always trivially relocatable, since it is required to be an integral type
   // - allocator_type: may not be trivially relocatable, so it's checked
   // None of these are referencing the `deque` itself, so if all of them are trivially relocatable, `deque` is too.
-  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
-      __libcpp_is_trivially_relocatable<__map>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
-      deque,
-      void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<__is_trivially_relocatable_v<__map> && __is_trivially_relocatable_v<allocator_type>, deque, void>;
 
   static_assert(is_nothrow_default_constructible<allocator_type>::value ==
                     is_nothrow_default_constructible<__pointer_allocator>::value,
