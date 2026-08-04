@@ -1289,7 +1289,7 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
     // here.  It is a rarely used thing, and would result in a lot of work to
     // properly handle this everywhere.
     if (isa<cir::BoolType>(condV.getType()))
-        condV = builder.createBoolToInt(condV, builder.getUIntNTy(1));
+      condV = builder.createBoolToInt(condV, builder.getUIntNTy(1));
 
     // TODO: PGO and likelihood (e.g. PGO.haveRegionCounts())
     assert(!cir::MissingFeatures::pgoUse());
