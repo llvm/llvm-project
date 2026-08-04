@@ -505,7 +505,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
         // ZA is a square of VL * VL and the ptrace buffer also includes the
         // header itself.
         m_za_ptrace_payload.resize(((m_za_header.vl) * (m_za_header.vl)) +
-                                   GetZAHeaderSize());
+                                   GetSetSize(RegisterSetType::ZA_HEADER));
         std::fill(m_za_ptrace_payload.begin(), m_za_ptrace_payload.end(), 0);
       } else {
         // ZA is active, read the real register.
@@ -517,7 +517,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       // ZA is part of the SME set but uses a separate member buffer for
       // storage. Therefore its effective byte offset is always 0 even if it
       // isn't 0 within the SME register set.
-      src = (uint8_t *)GetZABuffer() + GetZAHeaderSize();
+      src = (uint8_t *)GetZABuffer() + GetSetSize(RegisterSetType::ZA_HEADER);
     } else if (GetRegisterInfo().IsSMERegZT(reg)) {
       // Unlike ZA, the kernel will return register data for ZT0 when ZA is not
       // enabled. This data will be all 0s so we don't have to invent anything
@@ -802,7 +802,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
       // ZA is part of the SME set but not stored with the other SME registers.
       // So its byte offset is effectively always 0.
-      dst = (uint8_t *)GetZABuffer() + GetZAHeaderSize();
+      dst = (uint8_t *)GetZABuffer() + GetSetSize(RegisterSetType::ZA_HEADER);
       ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
       // While this is writing a header that contains a vector length, the only
@@ -1259,7 +1259,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       // ZA header size you pass in. Therefore we must write header and register
       // data (if present) in one go every time. Read the header only first just
       // to get the size.
-      ::memcpy(GetZAHeader(), src, GetZAHeaderSize());
+      ::memcpy(GetZAHeader(), src, GetSetSize(RegisterSetType::ZA_HEADER));
       // Read the header and register data. Can't use the buffer size here, it
       // may be incorrect due to being filled with dummy data previously. Resize
       // this so WriteZA uses the correct size.
@@ -1663,9 +1663,9 @@ Status NativeRegisterContextLinux_arm64::ReadZAHeader() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetZAHeader();
-  ioVec.iov_len = GetZAHeaderSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::ZA_HEADER);
 
-  error = ReadRegisterSet(&ioVec, GetZAHeaderSize(),
+  error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::ZA_HEADER),
                           GetPtraceSet(RegisterSetType::ZA));
 
   if (error.Success())

@@ -254,8 +254,6 @@ private:
 
   void *GetZAHeader() { return &m_za_header; }
 
-  size_t GetZAHeaderSize() { return sizeof(m_za_header); }
-
   void *GetPACMask() { return &m_pac_mask; }
 
   void *GetMTEControl() { return &m_mte_ctrl_reg; }
