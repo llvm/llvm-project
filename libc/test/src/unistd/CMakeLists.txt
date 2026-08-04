@@ -689,7 +689,6 @@ add_libc_test(
 if(LLVM_LIBC_FULL_BUILD)
   add_libc_test(
     _exit_test
-    UNIT_TEST_ONLY
     SUITE
       libc_unistd_unittests
     SRCS
