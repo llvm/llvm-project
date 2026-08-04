@@ -3374,6 +3374,58 @@ func.func @omp_parallel_allocate_empty_map() {
 
 // -----
 
+func.func @omp_parallel_allocate_empty_alignments() {
+  // expected-error @below {{unexpected allocate alignments without allocate variables}}
+  omp.parallel {
+    omp.terminator
+  } {allocate_alignments = array<i64>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_alignment_size(
+    %allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected as many allocate alignments as allocate variables}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_alignments = array<i64: 64, 128>, allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_negative_alignment(
+    %allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected non-negative allocate alignments}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_alignments = array<i64: -64>, allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
+omp.private {type = private} @allocate_private : i32
+
+func.func @omp_parallel_allocate_non_power_of_two_alignment(
+    %allocator : i64, %var : !llvm.ptr) {
+  // expected-error @below {{expected positive allocate alignments to be powers of two}}
+  omp.parallel allocate(%allocator : i64 -> %var : !llvm.ptr)
+      private(@allocate_private %var -> %private : !llvm.ptr) {
+    omp.terminator
+  } {allocate_alignments = array<i64: 24>, allocate_private_indices = array<i64: 0>}
+  return
+}
+
+// -----
+
 omp.private {type = private} @allocate_private : i32
 
 func.func @omp_parallel_allocate_missing_map(%allocator : i64, %var : !llvm.ptr) {
