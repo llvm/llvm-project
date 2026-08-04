@@ -490,7 +490,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
-    assert(offset < GetMTEControlSize());
+    assert(offset < GetSetSize(RegisterSetType::MTE));
     src = (uint8_t *)GetMTEControl() + offset;
   } else if (GetRegisterInfo().IsSMEReg(reg)) {
     if (GetRegisterInfo().IsSMERegZA(reg)) {
@@ -778,7 +778,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
-    assert(offset < GetMTEControlSize());
+    assert(offset < GetSetSize(RegisterSetType::MTE));
     dst = (uint8_t *)GetMTEControl() + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
@@ -933,7 +933,7 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
     return error;
 
   if (GetRegisterInfo().IsMTEPresent()) {
-    cached_size += sizeof(RegisterSetType) + GetMTEControlSize();
+    cached_size += sizeof(RegisterSetType) + GetSetSize(RegisterSetType::MTE);
     error = ReadMTEControl();
     if (error.Fail())
       return error;
@@ -1062,7 +1062,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
 
   if (GetRegisterInfo().IsMTEPresent()) {
     dst = AddSavedRegisters(dst, RegisterSetType::MTE, GetMTEControl(),
-                            GetMTEControlSize());
+                            GetSetSize(RegisterSetType::MTE));
   }
 
   if (GetRegisterInfo().IsFPMRPresent()) {
@@ -1246,7 +1246,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
     }
     case RegisterSetType::MTE:
       error = RestoreRegisters(
-          GetMTEControl(), &src, GetMTEControlSize(), kind,
+          GetMTEControl(), &src, GetSetSize(RegisterSetType::MTE), kind,
           std::bind(&NativeRegisterContextLinux_arm64::WriteMTEControl, this));
       break;
     case RegisterSetType::TLS:
@@ -1556,9 +1556,9 @@ Status NativeRegisterContextLinux_arm64::ReadMTEControl() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetMTEControl();
-  ioVec.iov_len = GetMTEControlSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::MTE);
 
-  error = ReadRegisterSet(&ioVec, GetMTEControlSize(),
+  error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::MTE),
                           GetPtraceSet(RegisterSetType::MTE));
 
   if (error.Success())
@@ -1576,11 +1576,11 @@ Status NativeRegisterContextLinux_arm64::WriteMTEControl() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetMTEControl();
-  ioVec.iov_len = GetMTEControlSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::MTE);
 
   Invalidate(RegisterSetType::MTE);
 
-  return WriteRegisterSet(&ioVec, GetMTEControlSize(),
+  return WriteRegisterSet(&ioVec, GetSetSize(RegisterSetType::MTE),
                           GetPtraceSet(RegisterSetType::MTE));
 }
 
