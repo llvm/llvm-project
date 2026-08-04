@@ -4227,10 +4227,10 @@ struct OmpMapTypeModifier {
 
 // Ref: [5.2:181-182]
 //
-// mem-space-modifier ->
+// mem-space ->
 //    MEMSPACE(memspace-handle)                     // since 5.2
-struct OmpMemspaceModifier {
-  WRAPPER_CLASS_BOILERPLATE(OmpMemspaceModifier, ScalarIntExpr);
+struct OmpMemSpace {
+  WRAPPER_CLASS_BOILERPLATE(OmpMemSpace, ScalarIntExpr);
 };
 
 // Ref: [4.5:56-63], [5.0:101-109], [5.1:126-133], [5.2:252-254]
@@ -4373,10 +4373,10 @@ struct OmpTaskDependenceType {
 
 // Ref: [5.2:181-182]
 //
-// traits-array-modifier ->
+// traits-array ->
 //    TRAITS(traits-array)                          // since 5.2
-struct OmpTraitsArrayModifier {
-  WRAPPER_CLASS_BOILERPLATE(OmpTraitsArrayModifier, common::Indirection<Expr>);
+struct OmpTraitsArray {
+  WRAPPER_CLASS_BOILERPLATE(OmpTraitsArray, common::Indirection<Expr>);
 };
 
 // Ref: [4.5:229-230], [5.0:324-325], [5.1:357-358], [5.2:161-162]
@@ -5188,17 +5188,16 @@ struct OmpUseClause {
 //        [, allocator[(traits-array)]]...) |       // since 5.0, dep. 5.2
 //    USES_ALLOCATORS([modifier...:] allocator)     // since 5.2
 // modifier ->
-//    mem-space-modifier |
-//    traits-array-modifier                         // since 5.2
+//    mem-space |
+//    traits-array                                  // since 5.2
 struct OmpUsesAllocatorsClause {
   struct AllocatorSpec {
     TUPLE_CLASS_BOILERPLATE(AllocatorSpec);
-    MODIFIER_BOILERPLATE(OmpMemspaceModifier, OmpTraitsArrayModifier);
+    MODIFIER_BOILERPLATE(OmpMemSpace, OmpTraitsArray);
     CharBlock source;
     // The traits of the deprecated "allocator(traits-array)" form are stored
     // as a traits-array modifier. The flag records which of the two surface
-    // syntaxes was written, which both the unparser and the deprecation
-    // diagnostic need.
+    // syntaxes was written.
     std::tuple<MODIFIERS(), ScalarIntExpr, /*IsLegacySyntax=*/bool> t;
   };
   WRAPPER_CLASS_BOILERPLATE(OmpUsesAllocatorsClause, std::list<AllocatorSpec>);

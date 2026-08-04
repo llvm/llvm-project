@@ -96,7 +96,7 @@ DECLARE_DESCRIPTOR(parser::OmpLowerBound);
 DECLARE_DESCRIPTOR(parser::OmpMapper);
 DECLARE_DESCRIPTOR(parser::OmpMapType);
 DECLARE_DESCRIPTOR(parser::OmpMapTypeModifier);
-DECLARE_DESCRIPTOR(parser::OmpMemspaceModifier);
+DECLARE_DESCRIPTOR(parser::OmpMemSpace);
 DECLARE_DESCRIPTOR(parser::OmpOrderModifier);
 DECLARE_DESCRIPTOR(parser::OmpOrderingModifier);
 DECLARE_DESCRIPTOR(parser::OmpPreferType);
@@ -109,7 +109,7 @@ DECLARE_DESCRIPTOR(parser::OmpSelfModifier);
 DECLARE_DESCRIPTOR(parser::OmpStepComplexModifier);
 DECLARE_DESCRIPTOR(parser::OmpStepSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpTaskDependenceType);
-DECLARE_DESCRIPTOR(parser::OmpTraitsArrayModifier);
+DECLARE_DESCRIPTOR(parser::OmpTraitsArray);
 DECLARE_DESCRIPTOR(parser::OmpVariableCategory);
 DECLARE_DESCRIPTOR(parser::OmpxHoldModifier);
 

@@ -6,8 +6,8 @@
 ! [5.2:181], [6.0:315] The allocator argument of USES_ALLOCATORS is an
 ! expression of allocator_handle type, which omp_lib declares as c_intptr_t.
 ! The rule holds whether or not the source uses omp_lib, so none of these
-! subroutines imports it. The expected kind is matched as a number rather than
-! spelled out, because it is the target's C_INTPTR_T kind.
+! subroutines imports it. The expected kind is matched as a number because it
+! is the target's C_INTPTR_T kind.
 
 ! CHECK: error: The allocator 'wrong_kind_alloc' in a USES_ALLOCATORS clause must be of type INTEGER(KIND={{[0-9]+}}), i.e. OMP_ALLOCATOR_HANDLE_KIND
 subroutine uses_allocators_wrong_handle_kind

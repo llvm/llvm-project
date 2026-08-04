@@ -8,8 +8,7 @@
 ! when its named constant has the right name and the right handle kind.
 !
 ! This module shadows the intrinsic omp_lib for the whole file, so it is kept
-! in a test of its own rather than contaminating tests that need the real
-! intrinsic module.
+! in a test of its own.
 
 ! CHECK: error: A non-predefined allocator 'omp_const_mem_alloc' in a USES_ALLOCATORS clause must be a variable
 

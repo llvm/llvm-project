@@ -557,9 +557,9 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpMapTypeModifier>() {
 }
 
 template <>
-const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpMemspaceModifier>() {
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpMemSpace>() {
   static const OmpModifierDescriptor desc{
-      /*name=*/"mem-space-modifier",
+      /*name=*/"mem-space",
       /*props=*/
       {
           {52, {OmpProperty::Unique}},
@@ -773,10 +773,9 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTaskDependenceType>() {
 }
 
 template <>
-const OmpModifierDescriptor &
-OmpGetDescriptor<parser::OmpTraitsArrayModifier>() {
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpTraitsArray>() {
   static const OmpModifierDescriptor desc{
-      /*name=*/"traits-array-modifier",
+      /*name=*/"traits-array",
       /*props=*/
       {
           {52, {OmpProperty::Unique}},

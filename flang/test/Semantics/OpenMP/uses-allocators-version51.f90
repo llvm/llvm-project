@@ -21,7 +21,7 @@ subroutine uses_allocators_51
   x = 2
   !$omp end target
 
-  !WARNING: 'traits-array-modifier' modifier is not supported in OpenMP v5.1, try -fopenmp-version=52
+  !WARNING: 'traits-array' modifier is not supported in OpenMP v5.1, try -fopenmp-version=52
   !$omp target uses_allocators(traits(tr): my_alloc)
   x = 3
   !$omp end target

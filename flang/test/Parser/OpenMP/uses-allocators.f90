@@ -61,7 +61,7 @@ end subroutine
 
 ! TRAITS(tr): a
 !PARSE-TREE: OmpClause -> UsesAllocators -> OmpUsesAllocatorsClause -> AllocatorSpec
-!PARSE-TREE-NEXT: Modifier -> OmpTraitsArrayModifier -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
+!PARSE-TREE-NEXT: Modifier -> OmpTraitsArray -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'tr'
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = 'a'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'a'
@@ -69,7 +69,7 @@ end subroutine
 
 ! MEMSPACE(omp_default_mem_space): a
 !PARSE-TREE: OmpClause -> UsesAllocators -> OmpUsesAllocatorsClause -> AllocatorSpec
-!PARSE-TREE-NEXT: Modifier -> OmpMemspaceModifier -> Scalar -> Integer -> Expr = '99_8'
+!PARSE-TREE-NEXT: Modifier -> OmpMemSpace -> Scalar -> Integer -> Expr = '99_8'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'omp_default_mem_space'
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = 'a'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'a'
@@ -77,18 +77,18 @@ end subroutine
 
 ! Both modifiers, in either order.
 !PARSE-TREE: OmpClause -> UsesAllocators -> OmpUsesAllocatorsClause -> AllocatorSpec
-!PARSE-TREE-NEXT: Modifier -> OmpMemspaceModifier -> Scalar -> Integer -> Expr = '4_8'
+!PARSE-TREE-NEXT: Modifier -> OmpMemSpace -> Scalar -> Integer -> Expr = '4_8'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'omp_low_lat_mem_space'
-!PARSE-TREE-NEXT: Modifier -> OmpTraitsArrayModifier -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
+!PARSE-TREE-NEXT: Modifier -> OmpTraitsArray -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'tr'
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = 'a'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'a'
 !PARSE-TREE-NEXT: bool = 'false'
 
 !PARSE-TREE: OmpClause -> UsesAllocators -> OmpUsesAllocatorsClause -> AllocatorSpec
-!PARSE-TREE-NEXT: Modifier -> OmpTraitsArrayModifier -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
+!PARSE-TREE-NEXT: Modifier -> OmpTraitsArray -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'tr'
-!PARSE-TREE-NEXT: Modifier -> OmpMemspaceModifier -> Scalar -> Integer -> Expr = '4_8'
+!PARSE-TREE-NEXT: Modifier -> OmpMemSpace -> Scalar -> Integer -> Expr = '4_8'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'omp_low_lat_mem_space'
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = 'a'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'a'
@@ -97,7 +97,7 @@ end subroutine
 ! The deprecated "allocator(traits)" form is stored as a traits modifier, and
 ! is flagged so that it unparses back to the syntax that was written.
 !PARSE-TREE: OmpClause -> UsesAllocators -> OmpUsesAllocatorsClause -> AllocatorSpec
-!PARSE-TREE-NEXT: Modifier -> OmpTraitsArrayModifier -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
+!PARSE-TREE-NEXT: Modifier -> OmpTraitsArray -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'tr'
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = 'a'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'a'
@@ -105,13 +105,13 @@ end subroutine
 
 ! The deprecated syntax can list more than one allocator specification.
 !PARSE-TREE: OmpClause -> UsesAllocators -> OmpUsesAllocatorsClause -> AllocatorSpec
-!PARSE-TREE-NEXT: Modifier -> OmpTraitsArrayModifier -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
+!PARSE-TREE-NEXT: Modifier -> OmpTraitsArray -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'tr'
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = 'a'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'a'
 !PARSE-TREE-NEXT: bool = 'true'
 !PARSE-TREE-NEXT: AllocatorSpec
-!PARSE-TREE-NEXT: Modifier -> OmpTraitsArrayModifier -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
+!PARSE-TREE-NEXT: Modifier -> OmpTraitsArray -> Expr = '[omp_alloctrait::omp_alloctrait(key=2_4,value=64_8)]'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'tr'
 !PARSE-TREE-NEXT: Scalar -> Integer -> Expr = 'b'
 !PARSE-TREE-NEXT: Designator -> DataRef -> Name = 'b'

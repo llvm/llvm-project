@@ -428,7 +428,7 @@ private:
   void CheckUsesAllocatorsSpec(
       const parser::OmpUsesAllocatorsClause::AllocatorSpec &spec);
   void CheckUsesAllocatorsTraits(
-      const parser::OmpTraitsArrayModifier &traits, parser::CharBlock source);
+      const parser::OmpTraitsArray &traits, parser::CharBlock source);
 
   void CheckIteratorRange(const parser::OmpIteratorSpecifier &x);
   void CheckIteratorModifier(const parser::OmpIterator &x);

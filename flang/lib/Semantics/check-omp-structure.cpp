@@ -46,6 +46,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <list>
 #include <map>
@@ -5404,8 +5405,7 @@ static constexpr std::string_view nullMemSpaceName[]{"omp_null_mem_space"};
 
 // Whether the ultimate symbol is an entity of the intrinsic omp_lib module
 // shipped with the compiler, as opposed to a same-named entity of a
-// user-defined module. `IsIntrinsicModules()` on the module scope's parent is
-// the provenance test that mod-file.cpp and expression.cpp already use.
+// user-defined module.
 static bool IsIntrinsicOmpLibEntity(const Symbol &ultimate) {
   const Scope &scope{ultimate.owner()};
   if (!scope.IsModule()) {
@@ -5442,9 +5442,9 @@ static bool IsPredefinedHandle(const parser::Name &name,
 }
 
 // The integer kind of an OpenMP allocator or memory-space handle, which
-// omp_lib declares as c_intptr_t. iso_c_binding is an intrinsic module, so it
-// can be read on demand the way semantics.cpp reads its other builtin modules;
-// the kind is therefore available even when the source uses neither module.
+// omp_lib declares as c_intptr_t. iso_c_binding is an intrinsic module and is
+// read on demand, so the kind is available even when the source uses neither
+// module.
 static std::optional<std::int64_t> GetOmpHandleKind(SemanticsContext &context) {
   const Scope *scope{context.GetBuiltinModule("iso_c_binding")};
   if (!scope) {
@@ -5463,7 +5463,7 @@ static std::optional<std::int64_t> GetOmpHandleKind(SemanticsContext &context) {
 
 // Whether `symbol` has the integer kind that omp_lib gives its handles. The
 // check is skipped for a non-integer allocator, whose type is diagnosed
-// separately, so that the two do not double up.
+// separately.
 static bool HasOmpHandleKind(
     const Symbol &symbol, SemanticsContext &context, std::int64_t &expected) {
   const DeclTypeSpec *type{symbol.GetUltimate().GetType()};
@@ -5494,10 +5494,8 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
   }
 
   auto &modifiers{OmpGetModifiers(spec)};
-  const auto *memSpace{
-      OmpGetUniqueModifier<parser::OmpMemspaceModifier>(modifiers)};
-  const auto *traits{
-      OmpGetUniqueModifier<parser::OmpTraitsArrayModifier>(modifiers)};
+  const auto *memSpace{OmpGetUniqueModifier<parser::OmpMemSpace>(modifiers)};
+  const auto *traits{OmpGetUniqueModifier<parser::OmpTraitsArray>(modifiers)};
 
   const parser::Expr &allocatorExpr{
       std::get<parser::ScalarIntExpr>(spec.t).thing.thing.value()};
@@ -5559,27 +5557,28 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
   // [5.2:182] The allocator argument must not appear in other data-sharing
   // attribute clauses or data-mapping attribute clauses on the same construct.
   if (const Symbol *symbol{allocatorName->symbol}) {
-    static const llvm::omp::Clause conflictingClauses[]{
-        llvm::omp::Clause::OMPC_firstprivate,
-        llvm::omp::Clause::OMPC_has_device_addr,
-        llvm::omp::Clause::OMPC_is_device_ptr,
-        llvm::omp::Clause::OMPC_map,
-        llvm::omp::Clause::OMPC_private,
-    };
+    const Symbol &ultimate{symbol->GetUltimate()};
     const parser::OmpDirectiveSpecification &dirSpec{*dirStack_.back()};
-    for (llvm::omp::Clause id : conflictingClauses) {
-      const parser::OmpClause *found{parser::omp::FindClause(dirSpec, id)};
-      if (!found) {
+    for (const parser::OmpClause &clause : dirSpec.Clauses().v) {
+      llvm::omp::Clause id{clause.Id()};
+      if (id == llvm::omp::Clause::OMPC_uses_allocators) {
         continue;
       }
-      if (const parser::OmpObjectList *objects{GetOmpObjectList(*found)}) {
-        for (const parser::OmpObject &object : objects->v) {
-          if (const Symbol *other{GetObjectSymbol(object, /*ultimate=*/true)};
-              other == &symbol->GetUltimate()) {
-            context_.Say(allocatorSource,
-                "An allocator in a USES_ALLOCATORS clause cannot also appear in the %s clause on the same construct"_err_en_US,
-                parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
-          }
+      if (!llvm::omp::isDataSharingAttributeClause(id, version) &&
+          id != llvm::omp::Clause::OMPC_map) {
+        continue;
+      }
+      const parser::OmpObjectList *objects{GetOmpObjectList(clause)};
+      if (!objects) {
+        continue;
+      }
+      for (const parser::OmpObject &object : objects->v) {
+        if (const Symbol *other{GetObjectSymbol(object, /*ultimate=*/true)};
+            other == &ultimate) {
+          context_.Say(allocatorSource,
+              "An allocator in a USES_ALLOCATORS clause cannot also appear in the %s clause on the same construct"_err_en_US,
+              parser::ToUpperCaseLetters(llvm::omp::getOpenMPClauseName(id)));
+          break;
         }
       }
     }
@@ -5612,7 +5611,7 @@ void OmpStructureChecker::CheckUsesAllocatorsSpec(
 }
 
 void OmpStructureChecker::CheckUsesAllocatorsTraits(
-    const parser::OmpTraitsArrayModifier &traits, parser::CharBlock source) {
+    const parser::OmpTraitsArray &traits, parser::CharBlock source) {
   const parser::Expr &expr{traits.v.value()};
   parser::CharBlock traitsSource{source.empty() ? expr.source : source};
   const SomeExpr *value{GetExpr(context_, expr)};
@@ -5664,7 +5663,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UsesAllocators &x) {
   const std::list<parser::OmpUsesAllocatorsClause::AllocatorSpec> &specs{x.v.v};
 
   // Classify by the syntax each specification was written in, which the parse
-  // tree records, rather than by whether a modifier happens to be present.
+  // tree records.
   bool anyLegacyItem{false}, anyModifierItem{false};
   for (auto &spec : specs) {
     if (std::get<bool>(spec.t)) {
@@ -5689,8 +5688,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::UsesAllocators &x) {
   }
 
   if (specs.size() > 1 && version >= 60) {
-    // [6.0:315] permits more than one clause-argument-specification, but only
-    // the single-specification form is implemented so far.
+    // [6.0:315] permits more than one clause-argument-specification.
     context_.Say(GetContext().clauseSource,
         "Multiple allocator specifications in a USES_ALLOCATORS clause are not yet supported"_err_en_US);
     return;

@@ -2636,12 +2636,12 @@ public:
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<OmpObjectList>(x.t));
   }
-  void Unparse(const OmpMemspaceModifier &x) {
+  void Unparse(const OmpMemSpace &x) {
     Word("MEMSPACE(");
     Walk(x.v);
     Put(")");
   }
-  void Unparse(const OmpTraitsArrayModifier &x) {
+  void Unparse(const OmpTraitsArray &x) {
     Word("TRAITS(");
     Walk(x.v);
     Put(")");
@@ -2655,7 +2655,7 @@ public:
       Walk(std::get<ScalarIntExpr>(x.t));
       if (modifiers) {
         for (const Modifier &m : *modifiers) {
-          if (auto *traits{std::get_if<OmpTraitsArrayModifier>(&m.u)}) {
+          if (auto *traits{std::get_if<OmpTraitsArray>(&m.u)}) {
             Put("(");
             Walk(traits->v);
             Put(")");

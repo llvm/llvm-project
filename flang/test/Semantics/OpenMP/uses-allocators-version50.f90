@@ -27,12 +27,12 @@ subroutine uses_allocators_50
   x = 3
   !$omp end target
 
-  !WARNING: 'traits-array-modifier' modifier is not supported in OpenMP v5.0, try -fopenmp-version=52
+  !WARNING: 'traits-array' modifier is not supported in OpenMP v5.0, try -fopenmp-version=52
   !$omp target uses_allocators(traits(tr): my_alloc)
   x = 4
   !$omp end target
 
-  !WARNING: 'mem-space-modifier' modifier is not supported in OpenMP v5.0, try -fopenmp-version=52
+  !WARNING: 'mem-space' modifier is not supported in OpenMP v5.0, try -fopenmp-version=52
   !$omp target uses_allocators(memspace(omp_default_mem_space): my_alloc)
   x = 5
   !$omp end target

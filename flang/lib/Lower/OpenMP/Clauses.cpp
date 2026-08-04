@@ -1816,10 +1816,9 @@ UsesAllocators make(const parser::OmpClause::UsesAllocators &inp,
 
   auto makeSpec = [&](const AllocatorSpec &spec) {
     auto &mods = semantics::OmpGetModifiers(spec);
-    auto *memSpace =
-        semantics::OmpGetUniqueModifier<parser::OmpMemspaceModifier>(mods);
+    auto *memSpace = semantics::OmpGetUniqueModifier<parser::OmpMemSpace>(mods);
     auto *traits =
-        semantics::OmpGetUniqueModifier<parser::OmpTraitsArrayModifier>(mods);
+        semantics::OmpGetUniqueModifier<parser::OmpTraitsArray>(mods);
 
     std::optional<UsesAllocators::TraitsArray> traitsArray;
     if (traits) {

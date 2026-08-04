@@ -7,8 +7,7 @@
 ! RUN: %not_todo_cmd %flang_fc1 -cpp -DLEGACY -emit-llvm %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
 
 ! Every shape that semantics accepts must reach the established "not yet
-! implemented" lowering boundary for USES_ALLOCATORS, rather than aborting
-! while the clause is converted for lowering. Each shape needs its own
+! implemented" lowering boundary for USES_ALLOCATORS. Each shape needs its own
 ! compilation because lowering stops at the first unimplemented clause.
 
 ! CHECK: not yet implemented: USES_ALLOCATORS clause is not implemented yet

@@ -3,8 +3,6 @@
 ! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=52
 
 ! OpenMP Version 5.2, Section 6.8: uses_allocators clause.
-! Each negative case is paired with the nearest valid case so that the checks
-! cannot reject conforming code.
 
 module uses_allocators_traits_module
   use omp_lib
@@ -155,12 +153,12 @@ subroutine uses_allocators_errors
   !$omp end target
 
   ! A modifier may appear at most once in one allocator specification.
-  !ERROR: 'traits-array-modifier' modifier cannot occur multiple times
+  !ERROR: 'traits-array' modifier cannot occur multiple times
   !$omp target uses_allocators(traits(tr), traits(tr): my_alloc)
   x = 13
   !$omp end target
 
-  !ERROR: 'mem-space-modifier' modifier cannot occur multiple times
+  !ERROR: 'mem-space' modifier cannot occur multiple times
   !$omp target uses_allocators(memspace(omp_const_mem_space), memspace(omp_high_bw_mem_space): my_alloc)
   x = 131
   !$omp end target
@@ -311,4 +309,36 @@ subroutine uses_allocators_predefined_shadow
   !$omp target uses_allocators(omp_const_mem_alloc)
   x = 1
   !$omp end target
+end subroutine
+
+subroutine uses_allocators_repeated_clauses
+  use omp_lib
+  ! As above, each case uses its own allocator.
+  integer(omp_allocator_handle_kind) :: map_alloc, priv_alloc, ir_alloc
+  type(omp_alloctrait), parameter :: tr(1) = &
+      [omp_alloctrait(omp_atk_alignment, 64)]
+  integer :: x, y
+
+  ! The conflict is in the second MAP clause, which is invisible to a scan
+  ! that inspects only the first occurrence of each clause id.
+  !ERROR: An allocator in a USES_ALLOCATORS clause cannot also appear in the MAP clause on the same construct
+  !$omp target map(to: y) map(tofrom: map_alloc) uses_allocators(traits(tr): map_alloc)
+  x = 1
+  !$omp end target
+
+  ! The same, for a repeated PRIVATE clause.
+  !ERROR: An allocator in a USES_ALLOCATORS clause cannot also appear in the PRIVATE clause on the same construct
+  !ERROR: Variable 'y' may not appear on both MAP and PRIVATE clauses on a TARGET construct
+  !$omp target private(y) private(priv_alloc) uses_allocators(traits(tr): priv_alloc)
+  x = 2
+  !$omp end target
+
+  ! IN_REDUCTION is a data-sharing attribute clause allowed on TARGET, but it
+  ! is not one of the privatizing clauses.
+  !$omp taskgroup task_reduction(+: ir_alloc)
+  !ERROR: An allocator in a USES_ALLOCATORS clause cannot also appear in the IN_REDUCTION clause on the same construct
+  !$omp target in_reduction(+: ir_alloc) uses_allocators(traits(tr): ir_alloc)
+  x = 3
+  !$omp end target
+  !$omp end taskgroup
 end subroutine

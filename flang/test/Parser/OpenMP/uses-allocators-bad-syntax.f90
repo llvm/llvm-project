@@ -5,10 +5,9 @@
 
 ! Forms that the USES_ALLOCATORS parser does not accept.
 !
-! The first construct is a valid clause carrying no error annotation. It is the
-! reason this test cannot pass vacuously: a compiler without USES_ALLOCATORS
-! parser support does not parse it either, and the resulting unexpected
-! diagnostic makes the harness fail rather than silently agree.
+! The first construct is a valid clause carrying no error annotation. A
+! compiler without USES_ALLOCATORS parser support does not parse it either, so
+! this test cannot pass vacuously.
 
 subroutine uses_allocators_bad_syntax
   use omp_lib

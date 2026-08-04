@@ -989,7 +989,7 @@ struct OmpMapTypeModifierParser {
 
 TYPE_PARSER(OmpMapTypeModifierParser{})
 
-TYPE_PARSER(construct<OmpMemspaceModifier>( //
+TYPE_PARSER(construct<OmpMemSpace>( //
     "MEMSPACE" >> parenthesized(scalarIntExpr)))
 
 TYPE_PARSER(construct<OmpOrderModifier>(
@@ -1047,7 +1047,7 @@ TYPE_PARSER(construct<OmpTaskDependenceType>(
     "MUTEXINOUTSET" >> pure(OmpTaskDependenceType::Value::Mutexinoutset) ||
     "OUT" >> pure(OmpTaskDependenceType::Value::Out)))
 
-TYPE_PARSER(construct<OmpTraitsArrayModifier>( //
+TYPE_PARSER(construct<OmpTraitsArray>( //
     "TRAITS" >> parenthesized(indirect(expr))))
 
 TYPE_PARSER(construct<OmpVariableCategory>(
@@ -1201,9 +1201,9 @@ TYPE_PARSER(sourced(
 
 TYPE_PARSER(sourced(construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
     sourced(construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
-                Parser<OmpMemspaceModifier>{}) ||
+                Parser<OmpMemSpace>{}) ||
         construct<OmpUsesAllocatorsClause::AllocatorSpec::Modifier>(
-            Parser<OmpTraitsArrayModifier>{})))))
+            Parser<OmpTraitsArray>{})))))
 
 TYPE_PARSER(sourced(construct<OmpWhenClause::Modifier>( //
     Parser<OmpContextSelector>{})))
@@ -1573,7 +1573,7 @@ static OmpUsesAllocatorsClause::AllocatorSpec makeLegacyAllocatorSpec(
     Name &&name, common::Indirection<Expr> &&traits) {
   using AllocatorSpec = OmpUsesAllocatorsClause::AllocatorSpec;
   CharBlock traitsSource{traits.value().source};
-  AllocatorSpec::Modifier mod{OmpTraitsArrayModifier{std::move(traits)}};
+  AllocatorSpec::Modifier mod{OmpTraitsArray{std::move(traits)}};
   mod.source = traitsSource;
   std::list<AllocatorSpec::Modifier> mods;
   mods.emplace_back(std::move(mod));
