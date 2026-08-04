@@ -15,59 +15,52 @@
 using namespace llvm;
 
 namespace {
-
-// A target that describes some of its address spaces, but not all of them.
 class FakeTTIImpl : public TargetTransformInfoImplBase {
 public:
-  explicit FakeTTIImpl(const DataLayout &DL)
-      : TargetTransformInfoImplBase(DL) {}
+  FakeTTIImpl(const DataLayout &DL, SmallVector<unsigned, 8> AddrSpaces)
+      : TargetTransformInfoImplBase(DL), AddrSpaces(std::move(AddrSpaces)) {}
 
-  SmallVector<TTI::PointerInfo, 8> getPointerInfos() const override {
-    return {TTI::PointerInfo{1, "global"}, TTI::PointerInfo{3, "local"},
-            TTI::PointerInfo{7, "private"}};
+  SmallVector<unsigned, 8> getAddressSpaces() const override {
+    return AddrSpaces;
   }
+
+private:
+  SmallVector<unsigned, 8> AddrSpaces;
 };
 
-TargetTransformInfo makeFakeTTI(const DataLayout &DL) {
-  return TargetTransformInfo(std::make_unique<const FakeTTIImpl>(DL));
+TargetTransformInfo makeFakeTTI(const DataLayout &DL,
+                                SmallVector<unsigned, 8> AddrSpaces) {
+  return TargetTransformInfo(
+      std::make_unique<const FakeTTIImpl>(DL, std::move(AddrSpaces)));
 }
 
-TEST(TargetTransformInfoTest, PointerInfosDefaultsToEmpty) {
+TEST(TargetTransformInfoTest, AddressSpacesDefaultsToEmpty) {
   DataLayout DL("p1:32:32-p2:64:64");
   TargetTransformInfo TTI(DL);
 
-  EXPECT_THAT(TTI.getPointerInfos(), ::testing::IsEmpty());
+  EXPECT_THAT(TTI.getAddressSpaces(), ::testing::IsEmpty());
 }
 
-TEST(TargetTransformInfoTest, PointerInfoDefaultsToNullopt) {
+TEST(TargetTransformInfoTest, AddressSpacesReportsDescribedAddrSpaces) {
   DataLayout DL("p1:32:32");
-  TargetTransformInfo TTI(DL);
+  TargetTransformInfo TTI = makeFakeTTI(DL, {1, 3, 7});
 
-  EXPECT_FALSE(TTI.getPointerInfo(0).has_value());
+  EXPECT_THAT(TTI.getAddressSpaces(), ::testing::ElementsAre(1u, 3u, 7u));
 }
 
-TEST(TargetTransformInfoTest, PointerInfoFindsDescribedAddrSpace) {
+#if GTEST_HAS_DEATH_TEST
+#ifndef NDEBUG
+TEST(TargetTransformInfoTest, AddressSpacesOutOfOrderOrDuplicatedIsRejected) {
   DataLayout DL("");
-  TargetTransformInfo TTI = makeFakeTTI(DL);
+  TargetTransformInfo TTI = makeFakeTTI(DL, {3, 1, 7});
 
-  std::optional<TTI::PointerInfo> PI = TTI.getPointerInfo(3);
-  ASSERT_TRUE(PI.has_value());
-  EXPECT_EQ(PI->AddrSpace, 3u);
-  EXPECT_EQ(PI->Name, "local");
+  EXPECT_DEATH(TTI.getAddressSpaces(), "out of order or duplicated");
+
+  TTI = makeFakeTTI(DL, {1, 3, 3});
+
+  EXPECT_DEATH(TTI.getAddressSpaces(), "out of order or duplicated");
 }
-
-TEST(TargetTransformInfoTest, PointerInfoFindsEveryReportedAddrSpace) {
-  DataLayout DL("p1:32:32");
-  TargetTransformInfo TTI = makeFakeTTI(DL);
-
-  for (const TTI::PointerInfo &Reported : TTI.getPointerInfos()) {
-    std::optional<TTI::PointerInfo> PI = TTI.getPointerInfo(Reported.AddrSpace);
-    ASSERT_TRUE(PI.has_value()) << "address space " << Reported.AddrSpace;
-    EXPECT_EQ(PI->AddrSpace, Reported.AddrSpace);
-    EXPECT_EQ(PI->Name, Reported.Name);
-  }
-
-  EXPECT_FALSE(TTI.getPointerInfo(999).has_value());
-}
+#endif // NDEBUG
+#endif // GTEST_HAS_DEATH_TEST
 
 } // end anonymous namespace

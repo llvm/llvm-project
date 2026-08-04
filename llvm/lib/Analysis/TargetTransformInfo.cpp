@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
+#include <functional>
 #include <optional>
 #include <utility>
 
@@ -312,14 +314,11 @@ bool llvm::TargetTransformInfo::addrspacesMayAlias(unsigned FromAS,
   return TTIImpl->addrspacesMayAlias(FromAS, ToAS);
 }
 
-SmallVector<TargetTransformInfo::PointerInfo, 8>
-TargetTransformInfo::getPointerInfos() const {
-  return TTIImpl->getPointerInfos();
-}
-
-std::optional<TargetTransformInfo::PointerInfo>
-TargetTransformInfo::getPointerInfo(unsigned AS) const {
-  return TTIImpl->getPointerInfo(AS);
+SmallVector<unsigned, 8> TargetTransformInfo::getAddressSpaces() const {
+  SmallVector<unsigned, 8> AddrSpaces = TTIImpl->getAddressSpaces();
+  assert(is_sorted(AddrSpaces, std::less_equal<>()) &&
+         "target reported address spaces out of order or duplicated");
+  return AddrSpaces;
 }
 
 unsigned TargetTransformInfo::getFlatAddressSpace() const {
