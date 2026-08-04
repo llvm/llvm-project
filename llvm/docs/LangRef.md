@@ -2800,8 +2800,7 @@ fn -> other_fn -> other_fn ; fn is norecurse
     optimizations that require assumptions about the floating-point rounding
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
-    not introduce any new floating-point instructions that may trap. All
-    function definitions that contain strictfp calls must be marked strictfp.
+    not introduce any new floating-point instructions that may trap.
 
 (denormal_fpenv)=
 
@@ -8059,14 +8058,12 @@ then the interleave count will be determined automatically.
 
 #### '`llvm.loop.vectorize.enable`' Metadata
 
-This metadata selectively enables or disables vectorization for the loop. The
-first operand is the string `llvm.loop.vectorize.enable` and the second operand
-is a bit. If the bit operand value is 1 vectorization is enabled. A value of
-0 disables vectorization:
+This metadata selectively enables or disables vectorization for the loop. Each
+node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.enable"}
+!1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
 #### '`llvm.loop.vectorize.predicate.enable`' Metadata
@@ -26742,6 +26739,9 @@ All function *calls* done in a function that uses constrained floating
 point intrinsics must have the `strictfp` attribute either on the
 calling instruction or on the declaration or definition of the function
 being called.
+
+All function *definitions* that use constrained floating point intrinsics
+must have the `strictfp` attribute.
 
 #### '`llvm.experimental.constrained.fadd`' Intrinsic
 

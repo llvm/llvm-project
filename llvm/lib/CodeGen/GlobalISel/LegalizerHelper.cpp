@@ -2141,11 +2141,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
 Register LegalizerHelper::coerceToInteger(Register Val) {
   LLT Ty = MRI.getType(Val);
-  if (Ty.isScalar())
+  if (Ty.isScalar() && !Ty.isFloat())
     return Val;
 
   const DataLayout &DL = MIRBuilder.getDataLayout();
   LLT NewTy = LLT::integer(Ty.getSizeInBits());
+
+  if (Ty.isFloat())
+    return MIRBuilder.buildBitcast(NewTy, Val).getReg(0);
+
   if (Ty.isPointer()) {
     if (DL.isNonIntegralAddressSpace(Ty.getAddressSpace()))
       return Register();
@@ -2283,6 +2287,8 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
       MIRBuilder.buildTrunc(DstReg, ResultReg);
     else if (DstTy.isPointer())
       MIRBuilder.buildIntToPtr(DstReg, ResultReg);
+    else if (DstTy != WideTy)
+      MIRBuilder.buildBitcast(DstReg, ResultReg);
 
     MI.eraseFromParent();
     return Legalized;

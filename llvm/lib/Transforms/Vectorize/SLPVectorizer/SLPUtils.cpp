@@ -726,7 +726,7 @@ bool isOnceUsedSeed(const Instruction *I) {
     }
   }
   const User *U = I->user_back();
-  if (isa<ExtractElementInst>(I))
+  if (isa<ExtractElementInst, ExtractValueInst>(I))
     return isa<InsertElementInst, InsertValueInst>(U);
   if (isa<CastInst>(I))
     return !isa<FPToSIInst, FPToUIInst>(I) &&
