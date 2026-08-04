@@ -86,7 +86,6 @@ define i32 @extract_last_active_v2i32(<2 x i32> %a, <2 x i1> %c) {
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[3,3,3,3]
 ; CHECK-NEXT:    psrld $31, %xmm0
 ; CHECK-NEXT:    movq %xmm0, %rcx
-; CHECK-NEXT:    movl %ecx, %ecx
 ; CHECK-NEXT:    orl -24(%rsp,%rcx,4), %eax
 ; CHECK-NEXT:    retq
   %res = call i32 @llvm.experimental.vector.extract.last.active.v2i32(<2 x i32> %a, <2 x i1> %c, i32 -1)
