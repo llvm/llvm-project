@@ -248,7 +248,7 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
 /// in the current context.
 /// Notes:
 ///   - CheckFloatStatus is the same as
-///     checkFloatingPointResultForOpportunisticFolding in
+///     checkFloatingPointResultForConstantFolding in
 ///     clang/lib/AST/ExprConstant.cpp.
 ///   - CheckFloatResult will also check if the result is NaN, in addition to
 ///     CheckFloatStatus's checks.
@@ -261,8 +261,8 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
                       APFloat::opStatus Status, FPOptions FPO);
 
 /// Check if the given floating-point evaluation status is allowed for
-/// opportunistic compile-time constant folding during translation (as opposed
-/// to mandatory constant expression evaluation).
+/// compile-time constant folding during translation (as opposed to mandatory
+/// constant expression evaluation).
 bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
                       FPOptions FPO);
 
