@@ -1,15 +1,19 @@
-//===-- Implementation of tmpfile --------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+///
+/// \file
+/// Linux implementation of tmpefile.
+///
+//===----------------------------------------------------------------------===//
 #include "src/stdio/tmpfile.h"
 #include "hdr/fcntl_macros.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "hdr/types/FILE.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 
 #include "src/__support/File/linux/file.h"
 #include "src/__support/common.h"

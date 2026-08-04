@@ -67,7 +67,8 @@ add_entrypoint_object(
     libc.src.__support.File.platform_file
 )
 
-add_entrypoint_object( tmpfile
+add_entrypoint_object(
+  tmpfile
   SRCS
     tmpfile.cpp
   HDRS
