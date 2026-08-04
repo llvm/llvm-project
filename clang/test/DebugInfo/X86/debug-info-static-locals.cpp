@@ -48,6 +48,7 @@ void test_braceless(int x) {
 // CHECK-SAME:                                retainedNodes: ![[B_DECLS:[0-9]+]]
 // CHECK: ![[B_DECLS]] = !{![[B_LB1_GVE]], ![[B_LB2_GVE:[0-9]+]]}
 // CHECK: ![[B_LB2_GVE]] = !DIGlobalVariableExpression(var: ![[B_LB2_GV:[0-9]+]]
+// CHECK: ![[B_LB2_GV]] = distinct !DIGlobalVariable(name: "foo", scope: ![[B_LBSCOPE:[0-9]+]]
 
 // CHECK: ![[LOCAL_VAR_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[BSCOPE]]
 // CHECK: ![[LOCAL_VAR1:[0-9]+]] = !DILocalVariable(name: "foobar", scope: ![[LOCAL_VAR_SCOPE]]
