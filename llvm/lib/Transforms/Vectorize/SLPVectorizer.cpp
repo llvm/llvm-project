@@ -1191,6 +1191,7 @@ class slpvectorizer::BoUpSLP {
   class ScheduleBundle;
   class ShuffleCostEstimator;
   class ShuffleInstructionBuilder;
+  class DeferredExtractTracker;
 
 public:
   /// If we decide to generate strided load / store, this struct contains all
@@ -1480,9 +1481,7 @@ public:
     CompressEntryToData.clear();
     ExternalUses.clear();
     ExternalUsesAsOriginalScalar.clear();
-    ExternalUsesAsExtract.clear();
-    ExternalUsesAsRematCostTmp.clear();
-    ExternalUsesAsExtractCostTmp.clear();
+    DE.clearForDeleteTree();
     ExternalUsesWithNonUsers.clear();
     RTChecks.clear();
     HasRuntimeCheckableBlockers = false;
@@ -2993,26 +2992,7 @@ public:
   /// is delayed until BoUpSLP is destructed.
   void eraseInstruction(Instruction *I) {
     DeletedInstructions.insert(I);
-    if (auto It = DeferredScalarsToExtract.find(I);
-        It != DeferredScalarsToExtract.end()) {
-      SmallPtrSet<Instruction *, 2> ProcessedExtracts;
-      for (DeferredExtractType &DET : It->getSecond()) {
-        auto *E = cast<Instruction>(DET.NewInst);
-        if (!ProcessedExtracts.insert(E).second)
-          continue;
-        bool LiveUsers = false;
-        for (Use &U : E->uses())
-          if (!isDeleted(cast<Instruction>(U.getUser()))) {
-            LiveUsers = true;
-            break;
-          }
-        if (!LiveUsers) {
-          LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *E << ".\n");
-          eraseInstruction(E);
-        }
-      }
-    }
-    DeferredScalarsToExtract.erase(I);
+    DE.eraseInstruction(I, *this);
   }
 
   /// Remove instructions from the parent function and clear the operands of \p
@@ -3175,15 +3155,11 @@ public:
                          OrdersType &ReorderIndices) const;
 
   // Create ExtractElement instructions that we deferred creating earlier
-  // to allow for better vectorization of chains using those values
+  // to allow for better vectorization of chains using those values.
   void emitDeferredExtracts();
 
-  const DenseMap<Value *, ExtractElementInst *> &getCouldBeExtract() const {
-    return CouldBeExtract;
-  }
-  const DenseMap<Value *, Instruction *> &getCouldBeRemat() const {
-    return CouldBeRemat;
-  }
+  // Get handle for the DeferredExtractTracker
+  const DeferredExtractTracker &getDE() { return DE; }
 
   ~BoUpSLP();
 
@@ -3313,22 +3289,195 @@ private:
                        SmallVectorImpl<unsigned> &CurrentOrder,
                        bool ResizeAllowed = false) const;
 
-  /// Vectorize a single entry in the tree.
-  Value *vectorizeTree(TreeEntry *E);
+  /// Tracks deferred extract/rematerialization data and late cleanup actions.
+  class DeferredExtractTracker {
+  public:
+    struct DeferredExtractType {
+      Value *Scalar;
+      Value *NewInst;
+      llvm::User *User;
+      DeferredExtractType(Value *Scalar, Value *NewInst, llvm::User *User)
+          : Scalar(Scalar), NewInst(NewInst), User(User) {}
+    };
 
-  struct DeferredExtractType {
-    Value *Scalar;
-    Value *NewInst;
-    llvm::User *User;
-    DeferredExtractType(Value *Scalar, Value *NewInst, llvm::User *User)
-        : Scalar(Scalar), NewInst(NewInst), User(User) {}
+    /// Map a scalar rematerialized form to the matching extractelement.
+    DenseMap<Value *, ExtractElementInst *> CouldBeExtract;
+    /// Reverse mapping used by scheduling: extractelement back to remat scalar.
+    DenseMap<Value *, Instruction *> CouldBeRemat;
+
+    /// Cases where extraction is estimated as more profitable but want to
+    /// delay extraction to allow for better vectorization in the interim.
+    SmallPtrSet<Value *, 4> ExternalUsesAsExtract;
+    /// Per-tree extract profitability cost for ExternalUsesAsExtract scalars.
+    DenseMap<const Value *, InstructionCost> ExternalUsesAsExtractCost;
+    DenseMap<const Value *, InstructionCost> ExternalUsesAsRematCost;
+    /// Cache the costs for the current tree since we may not keep around these
+    /// extracts if the tree is rejected.
+    DenseMap<const Value *, InstructionCost> ExternalUsesAsExtractCostTmp;
+    DenseMap<const Value *, InstructionCost> ExternalUsesAsRematCostTmp;
+
+    /// Track external uses that are more profitable as extracts. We
+    /// rematerialize the value initially, but on cleanup we need to swap back
+    /// in the extract instruction.
+    DenseMap<Value *, SmallVector<DeferredExtractType, 2>>
+        DeferredScalarsToExtract;
+
+    void clearForDeleteTree() {
+      ExternalUsesAsExtract.clear();
+      ExternalUsesAsRematCostTmp.clear();
+      ExternalUsesAsExtractCostTmp.clear();
+    }
+
+    void eraseInstruction(Instruction *I, BoUpSLP &R) {
+      if (auto It = DeferredScalarsToExtract.find(I);
+          It != DeferredScalarsToExtract.end()) {
+        SmallPtrSet<Instruction *, 2> ProcessedExtracts;
+        for (DeferredExtractType &DET : It->getSecond()) {
+          auto *E = cast<Instruction>(DET.NewInst);
+          if (!ProcessedExtracts.insert(E).second)
+            continue;
+          bool LiveUsers = false;
+          for (Use &U : E->uses())
+            if (!R.isDeleted(cast<Instruction>(U.getUser()))) {
+              LiveUsers = true;
+              break;
+            }
+          if (!LiveUsers) {
+            LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *E << ".\n");
+            R.eraseInstruction(E);
+          }
+        }
+      }
+      DeferredScalarsToExtract.erase(I);
+    }
+
+    void emitDeferredExtracts(BoUpSLP &R) {
+      SmallVector<DeferredExtractType> DeferredExtracts;
+      for (const auto &Entry : DeferredScalarsToExtract)
+        append_range(DeferredExtracts, Entry.second);
+      for (const auto &DET : DeferredExtracts) {
+        auto *UI = cast_or_null<Instruction>(DET.User);
+        if (!DET.User) {
+          DET.Scalar->replaceAllUsesWith(DET.NewInst);
+        } else {
+          if (R.isDeleted(UI))
+            continue;
+          DET.User->replaceUsesOfWith(DET.Scalar, DET.NewInst);
+          LLVM_DEBUG(dbgs() << "SLP: Delayed replacement:" << *UI << ".\n");
+        }
+      }
+      DeferredScalarsToExtract.clear();
+      for (const auto &DET : DeferredExtracts) {
+        LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *DET.Scalar << ".\n");
+        auto *I = cast<Instruction>(DET.Scalar);
+        if (R.isDeleted(I))
+          continue;
+        assert((I->use_empty() || all_of(I->uses(),
+                                         [&](Use &U) {
+                                           return R.isDeleted(
+                                               cast<Instruction>(U.getUser()));
+                                         })) &&
+               "trying to erase instruction with users.");
+        R.eraseInstruction(I);
+      }
+      for (const auto &P : CouldBeExtract) {
+        if (auto *Ext = P.second) {
+          if (!R.isDeleted(Ext)) {
+            unsigned NumUses = Ext->getNumUses();
+            if (!NumUses) {
+              R.eraseInstruction(Ext);
+            } else if (NumUses == 1) {
+              Value *User = Ext->uses().begin()->getUser();
+              if (auto *CI = dyn_cast<CastInst>(User);
+                  CI && CI->getNumUses() == 0) {
+                R.eraseInstruction(CI);
+                R.eraseInstruction(Ext);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    void transferExtractCost(Instruction *Inst, Instruction *Replacement) {
+      if (ExternalUsesAsExtractCostTmp.contains(Inst)) {
+        InstructionCost ExtractCost = ExternalUsesAsExtractCostTmp.lookup(Inst);
+        ExternalUsesAsExtractCost.try_emplace(Replacement, ExtractCost);
+      }
+    }
+
+    void transferRematCost(Instruction *Inst, Instruction *Replacement) {
+      if (ExternalUsesAsRematCostTmp.contains(Inst)) {
+        InstructionCost RematCost = ExternalUsesAsRematCostTmp.lookup(Inst);
+        ExternalUsesAsRematCost.try_emplace(Replacement, RematCost);
+      }
+    }
+
+    void logExtractRematPair(ExtractElementInst *EI, Instruction *RI) {
+      CouldBeExtract.try_emplace(RI, EI);
+      CouldBeRemat.try_emplace(EI, RI);
+    }
+
+    void replaceWithExtractCandidates(SmallVectorImpl<Value *> &VL) {
+      // Can this bundle be represented as extracts from the same vector
+      auto IsExtractLikeBundle = [&](ArrayRef<Value *> VL) -> bool {
+        if (!all_of(VL, [&](const Value *Scalar) -> bool {
+              return CouldBeExtract.contains(Scalar);
+            }))
+          return false;
+
+        auto *BaseEE = CouldBeExtract.lookup(VL[0]);
+        Value *BaseVec = BaseEE->getVectorOperand();
+        for (const Value *S : VL) {
+          auto *EE = CouldBeExtract.lookup(S);
+          // Only handle simple case where all elements come from the same
+          // vector If needs to be from multiple vectors, better off leaving in
+          // current form. Will handle replacing individual rematerializations
+          // with extracts during gather node creation.
+          Value *Vec = EE->getVectorOperand();
+          if (Vec != BaseVec)
+            return false;
+          std::optional<unsigned> Lane = getExtractIndex(EE);
+          if (!Lane)
+            return false;
+        }
+        return true;
+      };
+      if (!IsExtractLikeBundle(VL))
+        return;
+      (void)replaceWithExtracts(VL);
+    }
+
+    bool replaceWithExtracts(SmallVectorImpl<Value *> &VL) {
+      bool Replaced = false;
+      for (Value *&VPtr : VL) {
+        if (auto *Extract = CouldBeExtract.lookup(VPtr)) {
+          VPtr = Extract;
+          Replaced = true;
+        }
+      }
+      return Replaced;
+    }
+
+    void trackExternalUseCost(Value *ExternalUser, Value *Key, bool AsRemat,
+                              InstructionCost ExtractCost,
+                              InstructionCost RematCost) {
+      if (isDeferredExtractable(ExternalUser)) {
+        if (!AsRemat)
+          ExternalUsesAsExtract.insert(ExternalUser);
+        InstructionCost Delta =
+            AsRemat ? ExtractCost - RematCost : RematCost - ExtractCost;
+        auto &CostStruct =
+            AsRemat ? ExternalUsesAsRematCostTmp : ExternalUsesAsExtractCostTmp;
+        auto [ItCost, Inserted] = CostStruct.try_emplace(Key, Delta);
+        if (!Inserted)
+          ItCost->second = std::min(ItCost->second, Delta);
+      }
+    }
   };
 
-  /// Track external uses that are more profitable as extracts
-  /// We rematerialize the value initially, but on cleanup
-  /// we need to swap back in the extract instruction
-  DenseMap<Value *, SmallVector<DeferredExtractType, 2>>
-      DeferredScalarsToExtract;
+  /// Vectorize a single entry in the tree.
+  Value *vectorizeTree(TreeEntry *E);
 
   /// Vectorize a single entry in the tree, the \p Idx-th operand of the entry
   /// \p E.
@@ -4037,11 +4186,7 @@ private:
       /// Update the parent nodes operands to match
       bool ReplacedByExtractCandidate = false;
       if (EntryState == TreeEntry::NeedToGather) {
-        for (auto &VPtr : Last->Scalars)
-          if (auto *NewVPtr = CouldBeExtract.lookup(VPtr)) {
-            VPtr = NewVPtr;
-            ReplacedByExtractCandidate = true;
-          }
+        ReplacedByExtractCandidate = DE.replaceWithExtracts(Last->Scalars);
         if (ReplacedByExtractCandidate) {
           LoadEntriesToVectorize.remove(Last->Idx);
           ScalarsVectorizationLegality Legality =
@@ -4052,7 +4197,7 @@ private:
           if (UserTreeIdx.UserTE)
             for (auto &VPtr :
                  UserTreeIdx.UserTE->getOperand(UserTreeIdx.EdgeIdx))
-              if (auto *NewVPtr = CouldBeExtract.lookup(VPtr))
+              if (auto *NewVPtr = DE.CouldBeExtract.lookup(VPtr))
                 VPtr = NewVPtr;
         }
       }
@@ -4487,23 +4632,8 @@ private:
   /// extractelement materialization.
   SmallPtrSet<Value *, 4> ExternalUsesAsOriginalScalar;
 
-  /// Map a scalar rematerialized form to the matching extractelement.
-  DenseMap<Value *, ExtractElementInst *> CouldBeExtract;
-  /// Reverse mapping used by scheduling: extractelement back to remat scalar.
-  DenseMap<Value *, Instruction *> CouldBeRemat;
-
-  /// Cases where extraction is estimated as more profitable but want to delay
-  /// extraction to allow for better vectorization in the interim. These values
-  /// are converted to extracts in a late cleanup step after primary SLP
-  /// rewriting.
-  SmallPtrSet<Value *, 4> ExternalUsesAsExtract;
-  /// Per-tree extract profitability cost for ExternalUsesAsExtract scalars.
-  DenseMap<const Value *, InstructionCost> ExternalUsesAsExtractCost;
-  DenseMap<const Value *, InstructionCost> ExternalUsesAsRematCost;
-  /// Cache the costs for the current tree since we may not keep around these
-  /// extracts if the tree is rejected
-  DenseMap<const Value *, InstructionCost> ExternalUsesAsExtractCostTmp;
-  DenseMap<const Value *, InstructionCost> ExternalUsesAsRematCostTmp;
+  /// Deferred extract/rematerialization state for the current function pass.
+  DeferredExtractTracker DE;
 
   /// A list of scalar to be extracted without specific user because of too many
   /// uses.
@@ -5038,8 +5168,8 @@ private:
   /// extractelements/insertelements only or nodes with instructions, with
   /// uses/operands outside of the block.
   struct BlockScheduling {
-    BlockScheduling(BasicBlock *BB, BoUpSLP &R)
-        : BB(BB), ChunkSize(BB->size()), ChunkPos(ChunkSize), R(R) {}
+    BlockScheduling(BasicBlock *BB, const BoUpSLP::DeferredExtractTracker &DE)
+        : BB(BB), ChunkSize(BB->size()), ChunkPos(ChunkSize), DE(DE) {}
 
     void clear() {
       ScheduledBundles.clear();
@@ -5466,7 +5596,7 @@ private:
             // Track the operands from the extractelement copy
             // as well to make sure the dependency on the vector
             // is tracked
-            if (auto *EI = R.getCouldBeExtract().lookup(In)) {
+            if (auto *EI = DE.CouldBeExtract.lookup(In)) {
               for (const Use &U : EI->operands())
                 HandleOneOp(U);
             }
@@ -5585,9 +5715,9 @@ private:
                                         OpIdx)[Lane])) {
                   LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): "
                                     << *I << "\n");
-                  // The scheduling node works on the rematerialize version
+                  // The scheduling node works on the rematerialized version
                   // of the extract
-                  if (auto *RI = R.getCouldBeRemat().lookup(I))
+                  if (auto *RI = DE.CouldBeRemat.lookup(I))
                     I = RI;
                   DecrUnschedForInst(
                       I, Bundle->getTreeEntry(), OpIdx, Checked,
@@ -5680,8 +5810,7 @@ private:
               DecrUnschedForInst(BundleMember->getInst(), U.getOperandNo(), I);
             }
           }
-          if (auto *EI =
-                  R.getCouldBeExtract().lookup(BundleMember->getInst())) {
+          if (auto *EI = DE.CouldBeExtract.lookup(BundleMember->getInst())) {
             for (Use &U : EI->operands()) {
               if (auto *I = dyn_cast<Instruction>(U.get())) {
                 LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): " << *I
@@ -5921,7 +6050,7 @@ private:
     int ChunkPos;
 
     /// Use to access information about deferred extracts
-    BoUpSLP &R;
+    const BoUpSLP::DeferredExtractTracker &DE;
 
     /// Attaches ScheduleData to Instruction.
     /// Note that the mapping survives during all vectorization iterations, i.e.
@@ -12881,42 +13010,10 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
 
   SmallVector<int> ReuseShuffleIndices;
   SmallVector<Value *> VL(VLRef);
-  // Can this bundle be represented as extracts from the same vector
-  auto IsExtractLikeBundle = [&](ArrayRef<Value *> Scalars) -> bool {
-    if (!all_of(Scalars, [&](const Value *Scalar) -> bool {
-          return CouldBeExtract.contains(Scalar);
-        }))
-      return false;
-
-    auto *BaseEE = CouldBeExtract.lookup(Scalars[0]);
-    Value *BaseVec = BaseEE->getVectorOperand();
-    for (const Value *S : Scalars) {
-      auto *EE = CouldBeExtract.lookup(S);
-      // Only handle simple case where all elements come from the same vector
-      // If needs to be from multiple vectors, better off leaving in current
-      // form. Will handle replacing individual rematerializations with extracts
-      // during gather node creation.
-      Value *Vec = EE->getVectorOperand();
-      if (Vec != BaseVec)
-        return false;
-      std::optional<unsigned> Lane = getExtractIndex(EE);
-      if (!Lane)
-        return false;
-    }
-    return true;
-  };
-  auto ReplaceWithExtractCandidates = [&](SmallVectorImpl<Value *> &Scalars) {
-    if (!IsExtractLikeBundle(Scalars))
-      return;
-    for (Value *&VPtr : Scalars) {
-      auto *Extract = CouldBeExtract.lookup(VPtr);
-      VPtr = Extract;
-    }
-  };
   // Normally we replace at the time of operand creation but if first
   // Entry in tree these VL were never operands
   if (Depth == 0)
-    ReplaceWithExtractCandidates(VL);
+    DE.replaceWithExtractCandidates(VL);
 
   // Tries to build split node.
   auto TrySplitNode = [&](const InstructionsState &LocalState) {
@@ -13119,7 +13216,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   BasicBlock *BB = VL0->getParent();
   auto &BSRef = BlocksSchedules[BB];
   if (!BSRef)
-    BSRef = std::make_unique<BlockScheduling>(BB, *this);
+    BSRef = std::make_unique<BlockScheduling>(BB, DE);
 
   BlockScheduling &BS = *BSRef;
 
@@ -13152,7 +13249,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   SmallVector<ValueList> Operands = Analysis.buildOperands(S, VL);
   for (auto &Ops : Operands)
-    ReplaceWithExtractCandidates(Ops);
+    DE.replaceWithExtractCandidates(Ops);
 
   // Flatten associative binary chains into operand columns. Only the peeled
   // chain links are required to be single-use (they are erased); the root
@@ -13564,7 +13661,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       // Try to replace again after shuffling operands
       // TODO: Make VLOperands aware of deferred extracts
       for (auto &Ops : Operands)
-        ReplaceWithExtractCandidates(Ops);
+        DE.replaceWithExtractCandidates(Ops);
 
       TE->setOperands(Operands);
       for (unsigned I : seq<unsigned>(TE->getNumOperands()))
@@ -14014,7 +14111,7 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
       // entries and count once at the end.
       if (all_of(TE.Scalars, [&](Value *V) {
             return isa<ExtractElementInst, UndefValue, Constant>(V) ||
-                   CouldBeExtract.contains(V);
+                   DE.CouldBeExtract.contains(V);
           })) {
         for (Value *V : TE.Scalars) {
           if (auto *EE = dyn_cast<ExtractElementInst>(V)) {
@@ -14022,8 +14119,8 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop) {
                 GatherExtractSourceVecs.try_emplace(EE->getVectorOperand(), 0)
                     .first->second;
             VecScale = std::max(VecScale, Scale);
-          } else if (CouldBeExtract.contains(V)) {
-            if (auto *EE = CouldBeExtract.lookup(V)) {
+          } else if (DE.CouldBeExtract.contains(V)) {
+            if (auto *EE = DE.CouldBeExtract.lookup(V)) {
               uint64_t &VecScale =
                 GatherExtractSourceVecs.try_emplace(EE->getVectorOperand(), 0)
                 .first->second;
@@ -17243,13 +17340,13 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           if (UsedScalars.test(I))
             continue;
           if (auto *Inst = dyn_cast<Instruction>(UniqueValues[I])) {
-            if (auto It = ExternalUsesAsExtractCost.find(Inst);
-                It != ExternalUsesAsExtractCost.end()) {
+            if (auto It = DE.ExternalUsesAsExtractCost.find(Inst);
+                It != DE.ExternalUsesAsExtractCost.end()) {
               RematAdjustment += It->second;
               continue;
             }
-            if (auto It = ExternalUsesAsRematCost.find(Inst);
-                It != ExternalUsesAsRematCost.end()) {
+            if (auto It = DE.ExternalUsesAsRematCost.find(Inst);
+                It != DE.ExternalUsesAsRematCost.end()) {
               RematAdjustment += It->second;
               continue;
             }
@@ -18417,7 +18514,7 @@ bool BoUpSLP::isFullyVectorizableTinyTree(bool ForReduction) const {
             (((TE->hasState() &&
                TE->getOpcode() == Instruction::ExtractElement) ||
               all_of(TE->Scalars, IsaPred<ExtractElementInst, UndefValue>)) &&
-             isFixedVectorShuffle(TE->Scalars, Mask, AC, CouldBeExtract)) ||
+             isFixedVectorShuffle(TE->Scalars, Mask, AC, DE.CouldBeExtract)) ||
             (TE->hasState() && TE->getOpcode() == Instruction::Load &&
              !TE->isAltShuffle()) ||
             any_of(TE->Scalars, IsaPred<LoadInst>));
@@ -20393,14 +20490,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         }
         if (KeepScalar) {
           ExternalUsesAsOriginalScalar.insert(EU.Scalar);
-          if (isDeferredExtractable(EU.Scalar)) {
-            InstructionCost RematDelta = ExtraCost - ScalarCost;
-            auto [ItCost, Inserted] =
-                ExternalUsesAsRematCostTmp.try_emplace(EU.Scalar, RematDelta);
-            if (!Inserted)
-              ItCost->second = std::min(ItCost->second, RematDelta);
-          }
-
+          DE.trackExternalUseCost(/*ExternalUser*/ EU.Scalar, /*Key*/ EU.Scalar,
+                                  /*AsRemat*/ true, ExtraCost, ScalarCost);
           for (Value *V : Inst->operands()) {
             // Struct operands cannot be rebuilt by the !User extraction
             // path (it has no insertvalue chain), so leave their existing
@@ -20432,13 +20523,9 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
               }
             }
           }
-        } else if (isDeferredExtractable(EU.Scalar)) {
-          ExternalUsesAsExtract.insert(EU.Scalar);
-          InstructionCost ExtractDelta = ScalarCost - ExtraCost;
-          auto [ItCost, Inserted] =
-              ExternalUsesAsExtractCostTmp.try_emplace(Inst, ExtractDelta);
-          if (!Inserted)
-            ItCost->second = std::min(ItCost->second, ExtractDelta);
+        } else {
+          DE.trackExternalUseCost(/*ExternalUser*/ EU.Scalar, /*Key*/ Inst,
+                                  /*AsRemat*/ false, ExtraCost, ScalarCost);
         }
       }
     }
@@ -20844,7 +20931,7 @@ BoUpSLP::tryToGatherSingleRegisterExtractElements(
   // Check that gather of extractelements can be represented as just a
   // shuffle of a single/two vectors the scalars are extracted from.
   std::optional<TTI::ShuffleKind> Res =
-      isFixedVectorShuffle(GatheredExtracts, Mask, AC, CouldBeExtract);
+      isFixedVectorShuffle(GatheredExtracts, Mask, AC, DE.CouldBeExtract);
   if (!Res || all_of(Mask, equal_to(PoisonMaskElem))) {
     // TODO: try to check other subsets if possible.
     // Restore the original VL if attempt was not successful.
@@ -22904,7 +22991,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
   auto GetGatheredExtract = [&](unsigned Idx) -> ExtractElementInst * {
     if (auto *EI = dyn_cast<ExtractElementInst>(StoredGS[Idx]))
       return EI;
-    return CouldBeExtract.lookup(StoredGS[Idx]);
+    return DE.CouldBeExtract.lookup(StoredGS[Idx]);
   };
   if (!all_of(GatheredScalars, IsaPred<UndefValue>)) {
     // Check for gathered extracts.
@@ -22932,7 +23019,7 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       }
       if (Value *VecBase = ShuffleBuilder.adjustExtracts(
               E, ExtractMask, ExtractShuffles, NumParts, UseVecBaseAsInput,
-              CouldBeRemat)) {
+              DE.CouldBeRemat)) {
         ExtractVecBase = VecBase;
         if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
           if (VF == VecBaseTy->getNumElements() &&
@@ -25809,28 +25896,21 @@ Value *BoUpSLP::vectorizeTree(
         auto *EI = dyn_cast<ExtractElementInst>(ReplacedExtract);
         auto *RI = dyn_cast<Instruction>(Replacement);
         assert(EI && RI && "Expected to find underlying instructions");
-        if (CouldBeExtract.contains(RI))
+        if (DE.CouldBeExtract.contains(RI))
           return;
-        if (ExternalUsesAsRematCostTmp.contains(Inst)) {
-          InstructionCost RematCost = ExternalUsesAsRematCostTmp.lookup(Inst);
-          ExternalUsesAsRematCost.try_emplace(EI, RematCost);
-        }
-        CouldBeExtract.try_emplace(RI, EI);
-        CouldBeRemat.try_emplace(EI, RI);
+        DE.transferRematCost(Inst, EI);
+        DE.logExtractRematPair(EI, RI);
         ExtractAnyways = false;
         return;
       }
       auto *EI = dyn_cast<ExtractElementInst>(Replacement);
       auto *RI = Inst;
       assert(EI && RI && "Expected to find underlying instructions");
-      if (!ExternalUsesAsExtract.contains(RI) || CouldBeExtract.contains(RI))
+      if (!DE.ExternalUsesAsExtract.contains(RI) ||
+          DE.CouldBeExtract.contains(RI))
         return;
-      if (ExternalUsesAsExtractCostTmp.contains(Inst)) {
-        InstructionCost ExtractCost = ExternalUsesAsExtractCostTmp.lookup(Inst);
-        ExternalUsesAsExtractCost.try_emplace(RI, ExtractCost);
-      }
-      CouldBeExtract.try_emplace(RI, EI);
-      CouldBeRemat.try_emplace(EI, RI);
+      DE.transferExtractCost(Inst, RI);
+      DE.logExtractRematPair(EI, RI);
       if (User)
         User->replaceUsesOfWith(EI, RI);
       else
@@ -25902,8 +25982,8 @@ Value *BoUpSLP::vectorizeTree(
                "Extractelements should not be replaced.");
         Scalar->replaceAllUsesWith(NewInst);
       }
-      if (ExternalUsesAsExtract.contains(Scalar))
-        DeferredScalarsToExtract[Scalar].emplace_back(Scalar, NewInst, User);
+      if (DE.ExternalUsesAsExtract.contains(Scalar))
+        DE.DeferredScalarsToExtract[Scalar].emplace_back(Scalar, NewInst, User);
 
       if (IsDeferredScalar)
         TrackDeferredExtract(dyn_cast<Instruction>(Scalar), NewInst, User);
@@ -26003,8 +26083,9 @@ Value *BoUpSLP::vectorizeTree(
             !isa<StructType>(NewInst->getType())) {
           User->replaceAllUsesWith(NewInst);
           eraseInstruction(cast<Instruction>(User));
-        } else if (ExternalUsesAsExtract.contains(Scalar)) {
-          DeferredScalarsToExtract[Scalar].emplace_back(Scalar, NewInst, User);
+        } else if (DE.ExternalUsesAsExtract.contains(Scalar)) {
+          DE.DeferredScalarsToExtract[Scalar].emplace_back(Scalar, NewInst,
+                                                           User);
         } else {
           User->replaceUsesOfWith(Scalar, NewInst);
         }
@@ -26172,8 +26253,8 @@ Value *BoUpSLP::vectorizeTree(
         continue;
       if (!isa<Instruction>(Scalar) || Entry->isCopyableElement(Scalar))
         continue;
-      if (DeferredScalarsToExtract.contains(Scalar) ||
-          CouldBeRemat.contains(Scalar))
+      if (DE.DeferredScalarsToExtract.contains(Scalar) ||
+          DE.CouldBeRemat.contains(Scalar))
         continue;
 #ifndef NDEBUG
       Type *Ty = Scalar->getType();
@@ -26345,53 +26426,7 @@ Value *BoUpSLP::vectorizeTree(
   return Vec;
 }
 
-void BoUpSLP::emitDeferredExtracts() {
-  SmallVector<DeferredExtractType> DeferredExtracts;
-  for (const auto &Entry : DeferredScalarsToExtract)
-    append_range(DeferredExtracts, Entry.second);
-  for (const auto &DET : DeferredExtracts) {
-    auto *UI = cast_or_null<Instruction>(DET.User);
-    if (!DET.User) {
-      DET.Scalar->replaceAllUsesWith(DET.NewInst);
-    } else {
-      if (isDeleted(UI))
-        continue;
-      DET.User->replaceUsesOfWith(DET.Scalar, DET.NewInst);
-      LLVM_DEBUG(dbgs() << "SLP: Delayed replacement:" << *UI << ".\n");
-    }
-  }
-  DeferredScalarsToExtract.clear();
-  for (const auto &DET : DeferredExtracts) {
-    LLVM_DEBUG(dbgs() << "SLP: \tErasing scalar:" << *DET.Scalar << ".\n");
-    auto *I = cast<Instruction>(DET.Scalar);
-    if (isDeleted(I))
-      continue;
-    assert((I->use_empty() || all_of(I->uses(),
-                                     [&](Use &U) {
-                                       return isDeleted(
-                                           cast<Instruction>(U.getUser()));
-                                     })) &&
-           "trying to erase instruction with users.");
-    eraseInstruction(I);
-  }
-  for (const auto &P : CouldBeExtract) {
-    if (auto *Ext = P.second) {
-      if (!isDeleted(Ext)) {
-        unsigned NumUses = Ext->getNumUses();
-        if (!NumUses) {
-          eraseInstruction(Ext);
-        } else if (NumUses == 1) {
-          Value *User = Ext->uses().begin()->getUser();
-          if (auto *CI = dyn_cast<CastInst>(User);
-              CI && CI->getNumUses() == 0) {
-            eraseInstruction(CI);
-            eraseInstruction(Ext);
-          }
-        }
-      }
-    }
-  }
-}
+void BoUpSLP::emitDeferredExtracts() { DE.emitDeferredExtracts(*this); }
 
 void BoUpSLP::optimizeGatherSequence() {
   LLVM_DEBUG(dbgs() << "SLP: Optimizing " << GatherShuffleExtractSeq.size()
@@ -27196,18 +27231,19 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
       ScheduleDataMap[I] = SD;
     }
     // Both an extract and its rematerialization ought to be scheduled together
-    if (auto *EI = R.getCouldBeExtract().lookup(I))
+    if (auto *EI = DE.CouldBeExtract.lookup(I)) {
       if (!ScheduleDataMap.lookup(EI))
         ScheduleDataMap[EI] = SD;
-      else if (auto *RI = R.getCouldBeRemat().lookup(I))
-        if (!ScheduleDataMap.lookup(RI))
-          ScheduleDataMap[RI] = SD;
+    } else if (auto *RI = DE.CouldBeRemat.lookup(I)) {
+      if (!ScheduleDataMap.lookup(RI))
+        ScheduleDataMap[RI] = SD;
+    }
     bool IsSharedNode =
-        R.getCouldBeExtract().contains(I) || R.getCouldBeRemat().contains(I);
+        DE.CouldBeExtract.contains(I) || DE.CouldBeRemat.contains(I);
     assert((!isInSchedulingRegion(*SD) || IsSharedNode) &&
            "new ScheduleData already in scheduling region");
     if (!isInSchedulingRegion(*SD)) {
-      if (auto *RI = R.getCouldBeRemat().lookup(I))
+      if (auto *RI = DE.CouldBeRemat.lookup(I))
         SD->init(SchedulingRegionID, RI);
       else
         SD->init(SchedulingRegionID, I);
@@ -27804,7 +27840,7 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
       if (ShouldMove)
         PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
-      if (auto *EI = CouldBeExtract.lookup(PickedInst)) {
+      if (auto *EI = DE.CouldBeExtract.lookup(PickedInst)) {
         if (ShouldMove)
           EI->moveAfter(LastScheduledInst->getPrevNode());
         LastScheduledInst = EI;
@@ -31060,7 +31096,7 @@ public:
         }
         SmallVector<int> Mask;
         if (isFixedVectorShuffle(CommonCandidates, Mask, AC,
-                                 V.getCouldBeExtract())) {
+                                 V.getDE().CouldBeExtract)) {
           ++I;
           Candidates.swap(CommonCandidates);
           ShuffledExtracts = true;
@@ -33050,7 +33086,8 @@ bool SLPVectorizerPass::vectorizeInsertElementInst(InsertElementInst *IEI,
   SmallVector<int> Mask;
   if (!findBuildAggregate(IEI, TTI, BuildVectorOpds, BuildVectorInsts, R) ||
       (all_of(BuildVectorOpds, IsaPred<ExtractElementInst, UndefValue>) &&
-       isFixedVectorShuffle(BuildVectorOpds, Mask, AC, R.getCouldBeExtract())))
+       isFixedVectorShuffle(BuildVectorOpds, Mask, AC,
+                            R.getDE().CouldBeExtract)))
     return false;
 
   if (MaxVFOnly && BuildVectorInsts.size() == 2) {
