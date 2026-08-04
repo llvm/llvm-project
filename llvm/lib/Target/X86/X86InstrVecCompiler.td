@@ -19,6 +19,8 @@ let Predicates = [NoAVX512] in {
   // A vector extract of the first f32/f64 position is a subregister copy
   def : Pat<(f16 (extractelt (v8f16 VR128:$src), (iPTR 0))),
             (COPY_TO_REGCLASS (v8f16 VR128:$src), FR16)>;
+  def : Pat<(bf16 (extractelt (v8bf16 VR128:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v8bf16 VR128:$src), FR16)>;
   def : Pat<(f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
             (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32)>;
   def : Pat<(f64 (extractelt (v2f64 VR128:$src), (iPTR 0))),

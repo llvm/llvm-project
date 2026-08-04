@@ -2606,6 +2606,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
     }
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v8bf16, Legal);
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v16bf16, Custom);
@@ -2613,6 +2614,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationPromotedToType(Opc, MVT::v8bf16, MVT::v8f32);
       setOperationPromotedToType(Opc, MVT::v16bf16, MVT::v16f32);
     }
+    // Claim it here for the same reason F16C does:
+    // bf16 has a real widening for it in combineFP_EXTEND.
+    for (MVT VT : {MVT::v4f32, MVT::v8f32, MVT::v16f32})
+      setOperationAction(ISD::FP_EXTEND, VT, Custom);
     setOperationAction(ISD::SETCC, MVT::v8bf16, Custom);
     setOperationAction(ISD::SETCC, MVT::v16bf16, Custom);
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
@@ -19153,7 +19158,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     }
   }
 
-  if (VT == MVT::f16 || VT.getSizeInBits() == 32) {
+  if (VT == MVT::f16 || VT == MVT::bf16 || VT.getSizeInBits() == 32) {
     if (IdxVal == 0)
       return Op;
 
