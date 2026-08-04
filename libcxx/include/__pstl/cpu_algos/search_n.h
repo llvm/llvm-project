@@ -36,10 +36,14 @@ namespace __pstl {
 
 template <class _Backend, class _RawExecutionPolicy>
 struct __cpu_parallel_search_n {
-  template <class _Policy, class _ForwardIterator, class _Size, class _T, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator> operator()(
-      _Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _T& __value, _Predicate __pred)
-      const noexcept {
+  template <class _Policy, class _ForwardIterator, class _Size, class _Tp, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _Size __count,
+             const _Tp& __value,
+             _Predicate __pred) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       typedef typename std::iterator_traits<_ForwardIterator>::difference_type _DifferenceType;

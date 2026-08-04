@@ -795,11 +795,11 @@ _LIBCPP_HIDE_FROM_ABI _ForwardOutIterator rotate_copy(
 template <class _ExecutionPolicy,
           class _ForwardIterator,
           class _Size,
-          class _T,
+          class _Tp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI _ForwardIterator search_n(
-    _ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _T& __value) {
+    _ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _Tp& __value) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "search_n requires ForwardIterators");
   using _Implementation = __pstl::__dispatch<__pstl::__search_n, __pstl::__current_configuration, _RawPolicy>;
   return __pstl::__handle_exception<_Implementation>(
@@ -814,7 +814,7 @@ template <class _ExecutionPolicy,
 template <class _ExecutionPolicy,
           class _ForwardIterator,
           class _Size,
-          class _T,
+          class _Tp,
           class _BinaryPredicate,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
@@ -823,7 +823,7 @@ template <class _ExecutionPolicy,
     _ForwardIterator __first,
     _ForwardIterator __last,
     _Size __count,
-    const _T& __value,
+    const _Tp& __value,
     _BinaryPredicate __pred) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "search_n requires ForwardIterators");
   using _Implementation = __pstl::__dispatch<__pstl::__search_n, __pstl::__current_configuration, _RawPolicy>;

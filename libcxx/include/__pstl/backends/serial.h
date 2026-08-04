@@ -120,10 +120,14 @@ struct __reverse<__serial_backend_tag, _ExecutionPolicy> {
 
 template <class _ExecutionPolicy>
 struct __search_n<__serial_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _Size, class _T, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator> operator()(
-      _Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Size __count, const _T& __value, _Predicate __pred)
-      const noexcept {
+  template <class _Policy, class _ForwardIterator, class _Size, class _Tp, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _Size __count,
+             const _Tp& __value,
+             _Predicate __pred) const noexcept {
     return std::search_n(std::move(__first), std::move(__last), __count, __value, std::move(__pred));
   }
 };
