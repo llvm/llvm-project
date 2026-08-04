@@ -1229,7 +1229,14 @@ bool AArch64CallLowering::lowerTailCall(
 
     AArch64OutgoingValueAssigner CalleeAssigner(AssignFnFixed, AssignFnVarArg,
                                                 Subtarget, /*IsReturn*/ false);
-    if (!determineAssignments(CalleeAssigner, OutArgs, OutInfo))
+    // determineAssignments() may modify argument flags, so make a copy. It
+    // marks the first part of a split argument (e.g. an s128 on AArch64) with
+    // ISD::ArgFlagsTy::Split; reusing the mutated arguments for the real
+    // assignment below would make every part inherit that flag and change the
+    // registers they are assigned to.
+    SmallVector<ArgInfo, 8> OutArgsCopy;
+    append_range(OutArgsCopy, OutArgs);
+    if (!determineAssignments(CalleeAssigner, OutArgsCopy, OutInfo))
       return false;
 
     // The callee will pop the argument stack as a tail call. Thus, we must
