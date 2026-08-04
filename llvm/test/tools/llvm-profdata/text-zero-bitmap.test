@@ -1,0 +1,25 @@
+# A missing zero-bitmap record must not make a following Swift function name
+# look like a bitmap count. The text writer makes the record explicit so its
+# output can be read back without ambiguity.
+RUN: split-file %s %t
+RUN: llvm-profdata merge --instr --text %t/legacy.proftext -o %t/a
+RUN: FileCheck %s --input-file=%t/a --check-prefix=GENERATED
+RUN: llvm-profdata merge --instr --text %t/a -o %t/b
+RUN: diff %t/a %t/b
+
+GENERATED-LABEL: !zero_bitmap
+GENERATED: # Num Bitmap Bytes:
+GENERATED-NEXT: $0
+GENERATED: $s4main3fooyyF
+GENERATED: # Num Bitmap Bytes:
+GENERATED-NEXT: $0
+
+;--- legacy.proftext
+!zero_bitmap
+1
+1
+7
+$s4main3fooyyF
+2
+1
+9
