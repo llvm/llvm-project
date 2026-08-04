@@ -1564,7 +1564,10 @@ module std {
     module projected                  { header "__iterator/projected.h" }
     module ranges_iterator_traits     { header "__iterator/ranges_iterator_traits.h" }
     module readable_traits            { header "__iterator/readable_traits.h" }
-    module reverse_access             { header "__iterator/reverse_access.h" }
+    module reverse_access {
+      header "__iterator/reverse_access.h"
+      export std.iterator.reverse_iterator
+    }
     module reverse_iterator           { header "__iterator/reverse_iterator.h" }
     module segmented_iterator         { header "__iterator/segmented_iterator.h" }
     module size                       { header "__iterator/size.h" }
@@ -1632,9 +1635,17 @@ module std {
     export *
   }
 
-  // TODO: Understand why this needs to live in its own module
+  // These headers can't be submodules of std.locale: they are used by <ios> and <streambuf>,
+  // which are in turn used by the facet headers that make up std.locale, so making them part
+  // of std.locale would create a cycle.
   module locale_base {
     header "__locale"
+    module codecvt          { header "__locale_dir/codecvt.h"          export * }
+    module collate          { header "__locale_dir/collate.h"          export * }
+    module ctype            { header "__locale_dir/ctype.h"            export * }
+    module ctype_base       { header "__locale_dir/ctype_base.h"       export * }
+    module locale           { header "__locale_dir/locale.h"           export * }
+    module utf8_conversions { header "__locale_dir/utf8_conversions.h" export * }
     export *
   }
 
@@ -2418,6 +2429,9 @@ module std {
       }
       module mismatch {
         header "__pstl/cpu_algos/mismatch.h"
+      }
+      module reverse {
+        header "__pstl/cpu_algos/reverse.h"
       }
       module stable_sort {
         header "__pstl/cpu_algos/stable_sort.h"

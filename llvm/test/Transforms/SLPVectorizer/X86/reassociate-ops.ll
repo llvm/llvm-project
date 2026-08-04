@@ -1268,3 +1268,105 @@ entry:
   store i32 %A3, ptr %idxS3, align 4
   ret void
 }
+
+define i32 @gathered_peeled_scalar(i32 %conv) {
+; CHECK-LABEL: define i32 @gathered_peeled_scalar(
+; CHECK-SAME: i32 [[CONV:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = add i32 [[CONV]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[INVARIANT_OP]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> zeroinitializer, [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[CONV]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> <i32 1, i32 0>, [[TMP8]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ [[TMP1]], %[[ENTRY]] ], [ zeroinitializer, %[[BACKEDGE:.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = or <2 x i32> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i32> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    br label %[[BACKEDGE]]
+; CHECK:       [[BACKEDGE]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ [[TMP7]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP]]
+;
+entry:
+  %invariant.op = add i32 %conv, 0
+  %invariant.op3 = or i32 %invariant.op, 0
+  %invariant.op5 = add i32 0, 0
+  %conv16 = add i32 1, 0
+  br label %loop
+
+loop:                                             ; preds = %backedge, %entry
+  %m.019 = phi i32 [ %invariant.op5, %entry ], [ 0, %backedge ]
+  %conv86.lcssa1418 = phi i32 [ %invariant.op3, %entry ], [ 0, %backedge ]
+  %add11.1190.reass = or i32 %m.019, 0
+  %.reass4.3231 = or i32 %invariant.op3, 0
+  %conv8171 = or i32 0, %conv86.lcssa1418
+  %conv8.2210 = or i32 0, %conv8171
+  %conv8.3232 = or i32 %.reass4.3231, %conv8.2210
+  %add11.2212.reass = or i32 %add11.1190.reass, 0
+  %add11.3234.reass = or i32 %add11.2212.reass, %conv16
+  br label %backedge
+
+backedge:                                         ; preds = %loop
+  %add11.6303 = phi i32 [ %add11.3234.reass, %loop ]
+  %conv8.6301 = phi i32 [ %conv8.3232, %loop ]
+  br label %loop
+}
+
+define i32 @gathered_peeled_scalar_late() {
+; CHECK-LABEL: define i32 @gathered_peeled_scalar_late(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[DOTPREHEADER_PEEL_BEGIN:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 0 to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> zeroinitializer, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or <2 x i32> zeroinitializer, [[TMP4]]
+; CHECK-NEXT:    br [[DOTPREHEADER:label %.*]]
+; CHECK:       [[_PREHEADER:.*:]]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ [[TMP6]], [[DOTPREHEADER_PEEL_BEGIN1:%.*]] ], [ zeroinitializer, %[[K_EXIT_7:.*]] ]
+; CHECK-NEXT:    br i1 false, label %[[K_EXIT_THREAD:.*]], label %[[K_EXIT:.*]]
+; CHECK:       [[K_EXIT_THREAD]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i32> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = or <2 x i32> [[TMP9]], zeroinitializer
+; CHECK-NEXT:    br label %[[K_EXIT_7]]
+; CHECK:       [[K_EXIT]]:
+; CHECK-NEXT:    br label %[[K_EXIT_7]]
+; CHECK:       [[K_EXIT_7]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i32> [ [[TMP7]], %[[K_EXIT]] ], [ [[TMP10]], %[[K_EXIT_THREAD]] ]
+; CHECK-NEXT:    br [[DOTPREHEADER]]
+;
+.preheader.peel.begin:
+  %.reass5.7.peel = add i32 0, 0
+  %invariant.op = add i32 0, 1
+  %invariant.op4 = add i32 %invariant.op, 0
+  %.reass5.4 = or i32 %invariant.op4, 0
+  %0 = trunc i64 0 to i32
+  %1 = add i32 0, %0
+  %2 = add i32 %1, 0
+  %invariant.op233 = or i32 0, %2
+  br label %.preheader
+
+.preheader:                                       ; preds = %k.exit.7, %.preheader.peel.begin
+  %.0316 = phi i32 [ %2, %.preheader.peel.begin ], [ 0, %k.exit.7 ]
+  %.lcssa1215 = phi i32 [ %.reass5.7.peel, %.preheader.peel.begin ], [ 0, %k.exit.7 ]
+  br i1 false, label %k.exit.thread, label %k.exit
+
+k.exit.thread:                                    ; preds = %.preheader
+  %3 = or i32 0, %.lcssa1215
+  %4 = or i32 0, %3
+  %.reass244 = or i32 %.0316, 0
+  %.reass250 = or i32 %.reass244, 0
+  br label %k.exit.7
+
+k.exit:                                           ; preds = %.preheader
+  br label %k.exit.7
+
+k.exit.7:                                         ; preds = %k.exit, %k.exit.thread
+  %5 = phi i32 [ %invariant.op233, %k.exit ], [ %.reass250, %k.exit.thread ]
+  %6 = phi i32 [ %.reass5.4, %k.exit ], [ %4, %k.exit.thread ]
+  br label %.preheader
+}
