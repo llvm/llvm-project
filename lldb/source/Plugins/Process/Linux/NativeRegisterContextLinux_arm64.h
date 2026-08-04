@@ -276,8 +276,6 @@ private:
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
-  size_t GetZTBufferSize() { return m_zt_reg.size(); }
-
   size_t GetFPMRBufferSize() { return sizeof(m_fpmr_reg); }
 
   size_t GetGCSBufferSize() { return sizeof(m_gcs_regs); }

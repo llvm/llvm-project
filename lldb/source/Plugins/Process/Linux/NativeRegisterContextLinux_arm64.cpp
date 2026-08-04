@@ -907,7 +907,7 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
         GetRegisterInfo().IsZTPresent() &&
         // And ZA is active, which means that ZT0 is also active.
         m_za_header.size > sizeof(m_za_header)) {
-      cached_size += sizeof(RegisterSetType) + GetZTBufferSize();
+      cached_size += sizeof(RegisterSetType) + GetSetSize(RegisterSetType::ZT);
       // The kernel handles an inactive ZT0 for us, and it will read as 0s if
       // inactive (unlike ZA where we fake that behaviour).
       error = ReadZT();
@@ -1058,7 +1058,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
       // And ZA is enabled.
       m_za_header.size > sizeof(m_za_header))
     dst = AddSavedRegisters(dst, RegisterSetType::ZT, GetZTBuffer(),
-                            GetZTBufferSize());
+                            GetSetSize(RegisterSetType::ZT));
 
   if (GetRegisterInfo().IsMTEPresent()) {
     dst = AddSavedRegisters(dst, RegisterSetType::MTE, GetMTEControl(),
@@ -1286,7 +1286,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       // if the state we are restoring had an active ZA. Restoring ZT0 will
       // always come after restoring ZA.
       error = RestoreRegisters(
-          GetZTBuffer(), &src, GetZTBufferSize(), kind,
+          GetZTBuffer(), &src, GetSetSize(RegisterSetType::ZT), kind,
           std::bind(&NativeRegisterContextLinux_arm64::WriteZT, this));
       break;
     case RegisterSetType::FPMR:
@@ -1722,9 +1722,9 @@ Status NativeRegisterContextLinux_arm64::ReadZT() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetZTBuffer();
-  ioVec.iov_len = GetZTBufferSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::ZT);
 
-  error = ReadRegisterSet(&ioVec, GetZTBufferSize(),
+  error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::ZT),
                           GetPtraceSet(RegisterSetType::ZT));
   if (error.Success())
     MakeValid(RegisterSetType::ZT);
@@ -1741,11 +1741,11 @@ Status NativeRegisterContextLinux_arm64::WriteZT() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetZTBuffer();
-  ioVec.iov_len = GetZTBufferSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::ZT);
 
   Invalidate(RegisterSetType::ZT);
 
-  return WriteRegisterSet(&ioVec, GetZTBufferSize(),
+  return WriteRegisterSet(&ioVec, GetSetSize(RegisterSetType::ZT),
                           GetPtraceSet(RegisterSetType::ZT));
 }
 
