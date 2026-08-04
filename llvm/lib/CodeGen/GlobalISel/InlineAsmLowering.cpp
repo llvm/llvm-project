@@ -353,10 +353,8 @@ bool InlineAsmLowering::lowerInlineAsm(
         // equivalent SelectionDAG-path case.
         if (!OpInfo.isIndirect) {
           emitInlineAsmError(MIRBuilder, Call,
-                             "unsupported inline asm: constraint '" +
-                                 Twine(OpInfo.ConstraintCode) +
-                                 "' cannot be satisfied in a register and "
-                                 "has no memory to fall back to",
+                             TargetLowering::getRegMemInlineAsmUnsupportedDiag(
+                                 OpInfo.ConstraintCode),
                              GetOrCreateVRegs(Call));
           return true;
         }

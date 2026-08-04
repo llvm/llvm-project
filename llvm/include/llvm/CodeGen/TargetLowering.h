@@ -27,6 +27,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
@@ -5416,6 +5417,22 @@ public:
   /// RegAllocFast's or InlineSpiller's normal "ran out of registers"
   /// diagnostic.
   virtual bool supportsRegMemInlineAsmFolding() const { return false; }
+
+  /// The diagnostic to report when a direct (non-indirect) inline asm
+  /// operand needed a memory constraint but has nowhere to spill to -- see
+  /// supportsRegMemInlineAsmFolding() above for when this can happen.
+  /// Shared between the SelectionDAG (SelectionDAGBuilder.cpp's
+  /// computeConstraintToUse()) and GlobalISel (InlineAsmLowering.cpp's
+  /// lowerInlineAsm()) constraint-selection paths, which are otherwise
+  /// entirely independent implementations, so the two can't drift apart by
+  /// having their own hand-written copies of the same message text.
+  static std::string
+  getRegMemInlineAsmUnsupportedDiag(StringRef ConstraintCode) {
+    return ("unsupported inline asm: constraint '" + ConstraintCode +
+            "' cannot be satisfied in a register and has no memory to fall "
+            "back to")
+        .str();
+  }
 
   using ConstraintPair = std::pair<StringRef, TargetLowering::ConstraintType>;
   using ConstraintGroup = SmallVector<ConstraintPair>;

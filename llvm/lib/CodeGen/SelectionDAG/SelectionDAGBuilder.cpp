@@ -10480,10 +10480,8 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
         // choosing C_Memory here. But hand-written or other-frontend IR can
         // still construct this shape, so fail with a clean diagnostic
         // rather than the assertion this used to be.
-        Info.ErrorMsg << "unsupported inline asm: constraint '"
-                      << OpInfo.ConstraintCode
-                      << "' cannot be satisfied in a register and has no "
-                         "memory to fall back to";
+        Info.ErrorMsg << TargetLowering::getRegMemInlineAsmUnsupportedDiag(
+            OpInfo.ConstraintCode);
         return true;
       }
 
