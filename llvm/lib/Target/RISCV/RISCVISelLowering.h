@@ -82,9 +82,9 @@ public:
                                     EVT VT) const override;
 
   /// Return the number of registers for a given MVT, for inline assembly
-  unsigned
-  getNumRegisters(LLVMContext &Context, EVT VT,
-                  std::optional<MVT> RegisterVT = std::nullopt) const override;
+  unsigned getNumRegisters(LLVMContext &Context, EVT VT,
+                           std::optional<MVT> RegisterVT = std::nullopt,
+                           bool ForCallingConv = false) const override;
 
   /// Return the number of registers for a given MVT, ensuring vectors are
   /// treated as a series of gpr sized integers.

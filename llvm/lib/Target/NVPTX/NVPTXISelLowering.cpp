@@ -4025,12 +4025,13 @@ SDValue NVPTXTargetLowering::LowerCopyToReg_128(SDValue Op,
   return DAG.getNode(ISD::CopyToReg, DL, ResultsType, NewOps);
 }
 
-unsigned NVPTXTargetLowering::getNumRegisters(
-    LLVMContext &Context, EVT VT,
-    std::optional<MVT> RegisterVT = std::nullopt) const {
+unsigned NVPTXTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
+                                              std::optional<MVT> RegisterVT,
+                                              bool ForCallingConv) const {
   if (VT == MVT::i128 && RegisterVT == MVT::i128)
     return 1;
-  return TargetLoweringBase::getNumRegisters(Context, VT, RegisterVT);
+  return TargetLoweringBase::getNumRegisters(Context, VT, RegisterVT,
+                                             ForCallingConv);
 }
 
 bool NVPTXTargetLowering::splitValueIntoRegisterParts(

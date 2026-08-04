@@ -75,13 +75,14 @@ public:
       return TypeWidenVector;
     return TargetLoweringBase::getPreferredVectorAction(VT);
   }
-  unsigned
-  getNumRegisters(LLVMContext &Context, EVT VT,
-                  std::optional<MVT> RegisterVT) const override {
+  unsigned getNumRegisters(LLVMContext &Context, EVT VT,
+                           std::optional<MVT> RegisterVT,
+                           bool ForCallingConv = false) const override {
     // i128 inline assembly operand.
     if (VT == MVT::i128 && RegisterVT && *RegisterVT == MVT::Untyped)
       return 1;
-    return TargetLowering::getNumRegisters(Context, VT);
+    return TargetLowering::getNumRegisters(
+        Context, VT, /*RegisterVT=*/std::nullopt, ForCallingConv);
   }
   unsigned
   getVectorTypeBreakdownForCallingConv(LLVMContext &Context, CallingConv::ID CC,

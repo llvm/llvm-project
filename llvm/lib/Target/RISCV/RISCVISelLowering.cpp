@@ -2934,15 +2934,16 @@ MVT RISCVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
 }
 
-unsigned
-RISCVTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
-                                     std::optional<MVT> RegisterVT) const {
+unsigned RISCVTargetLowering::getNumRegisters(LLVMContext &Context, EVT VT,
+                                              std::optional<MVT> RegisterVT,
+                                              bool ForCallingConv) const {
   // Pair inline assembly operand
   if (VT == (Subtarget.is64Bit() ? MVT::i128 : MVT::i64) && RegisterVT &&
       *RegisterVT == MVT::Untyped)
     return 1;
 
-  return TargetLowering::getNumRegisters(Context, VT, RegisterVT);
+  return TargetLowering::getNumRegisters(Context, VT, RegisterVT,
+                                         ForCallingConv);
 }
 
 unsigned RISCVTargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,

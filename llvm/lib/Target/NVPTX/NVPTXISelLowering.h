@@ -224,7 +224,8 @@ private:
 
   SDValue LowerCopyToReg_128(SDValue Op, SelectionDAG &DAG) const;
   unsigned getNumRegisters(LLVMContext &Context, EVT VT,
-                           std::optional<MVT> RegisterVT) const override;
+                           std::optional<MVT> RegisterVT,
+                           bool ForCallingConv = false) const override;
   bool
   splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
                               SDValue *Parts, unsigned NumParts, MVT PartVT,
