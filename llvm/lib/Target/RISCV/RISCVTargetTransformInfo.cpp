@@ -1641,6 +1641,24 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
+  case Intrinsic::clmul: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (!LT.second.isVector() && ST->hasStdExtZvbc() && !ST->hasStdExtZbc() &&
+        !ST->hasStdExtZbkc()) {
+      // TODO: Once custom lowering in this case for RV32 is added, this guard
+      // should be removed and the cost model should be updated.
+      if (!ST->is64Bit() || LT.second != MVT::i64)
+        break;
+      // vmv.s.x v8, a0
+      // vclmul.vx v8, v8, a1
+      // vmv.x.s a0, v8
+      MVT VecVT = MVT::getScalableVectorVT(LT.second, 1);
+      return LT.first * getRISCVInstructionCost(
+                            {RISCV::VMV_S_X, RISCV::VCLMUL_VX, RISCV::VMV_X_S},
+                            VecVT, CostKind);
+    }
+    break;
+  }
   case Intrinsic::masked_udiv:
     return getArithmeticInstrCost(Instruction::UDiv, ICA.getReturnType(),
                                   CostKind);

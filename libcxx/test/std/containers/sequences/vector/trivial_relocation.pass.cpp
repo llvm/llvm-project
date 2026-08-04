@@ -38,7 +38,7 @@ struct NotTriviallyMovable {
   Inner inner_;
 };
 static_assert(!std::is_trivially_copyable<NotTriviallyMovable>::value, "");
-LIBCPP_STATIC_ASSERT(!std::__libcpp_is_trivially_relocatable<NotTriviallyMovable>::value, "");
+LIBCPP_NON_FROZEN_STATIC_ASSERT(!std::__is_trivially_relocatable_v<NotTriviallyMovable>, "");
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   Tracker track;

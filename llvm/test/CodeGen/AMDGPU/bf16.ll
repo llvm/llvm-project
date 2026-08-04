@@ -31324,10 +31324,7 @@ define bfloat @v_canonicalize_bf16(bfloat %a) #0 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-NEXT:    v_max_num_f32_e32 v0, v0, v0
-; GFX1250-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
+; GFX1250-NEXT:    v_pk_mul_bf16 v0, 1.0, v0 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %op = call bfloat @llvm.canonicalize.bf16(bfloat %a)
   ret bfloat %op

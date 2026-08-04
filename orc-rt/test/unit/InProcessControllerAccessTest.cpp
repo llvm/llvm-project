@@ -109,17 +109,26 @@ private:
 
 // Convenience: attach an InProcessControllerAccess to S, constructing a
 // MockIPEPC into MockOut from inside OnConnect.
-void attachWithMock(Session &S, std::unique_ptr<MockIPEPC> &MockOut) {
+// an optional OnBootstrap is called on from inside onconnect with
+// BootstrapInfoAccess
+void attachWithMock(
+    Session &S, std::unique_ptr<MockIPEPC> &MockOut,
+    std::optional<BootstrapInfo> BI = std::nullopt,
+    move_only_function<void(InProcessControllerAccess::BootstrapInfoAccess *)>
+        OnBootstrap = {}) {
   S.attach<InProcessControllerAccess>(
-      BootstrapInfo(S),
-      [&MockOut](InProcessControllerAccess &, BootstrapInfo &,
-                 InProcessControllerAccess::Connection *C,
-                 InProcessControllerAccess::BootstrapInfoAccess *) -> Error {
+      BI ? std::move(*BI) : BootstrapInfo(S),
+      [&MockOut, OnBootstrap = std::move(OnBootstrap)](
+          InProcessControllerAccess &, BootstrapInfo &,
+          InProcessControllerAccess::Connection *C,
+          InProcessControllerAccess::BootstrapInfoAccess *BIA) mutable
+          -> Error {
         MockOut = std::make_unique<MockIPEPC>(C);
+        if (OnBootstrap)
+          OnBootstrap(BIA);
         return Error::success();
       });
 }
-
 } // namespace
 
 TEST(InProcessControllerAccessTest, ConstructAndDestroyWithoutConnect) {
@@ -316,4 +325,22 @@ TEST(InProcessControllerAccessTest, CallFromControllerSuccess) {
 
   ASSERT_TRUE(Result);
   EXPECT_EQ(*Result, "world");
+}
+
+TEST(InProcessControllerAccessTest, BootstrapValuesExposeSubtargetFeatures) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  std::optional<std::string> Features;
+  std::unique_ptr<MockIPEPC> Mock;
+  attachWithMock(S, Mock, cantFail(BootstrapInfo::CreateDefault(S)),
+                 [&](InProcessControllerAccess::BootstrapInfoAccess *BIA) {
+                   const char *Name = nullptr;
+                   const char *Bytes = nullptr;
+                   uint64_t Size = 0;
+                   while (BIA->GetNextValue(BIA, &Name, &Bytes, &Size))
+                     if (std::string_view(Name) ==
+                         "orc-rt.Executor.SubtargetFeatures")
+                       Features = std::string(Bytes, Size);
+                 });
+
+  EXPECT_EQ(*Features, S.processInfo().targetCPUFeatures());
 }

@@ -44,19 +44,6 @@ using namespace mlir::abi;
 
 namespace {
 
-bool needsRewrite(const FunctionClassification &fc) {
-  // Direct without coercion is a true pass-through; any other kind (or a
-  // coerced Direct) means the rewriter must touch the IR.  Extend is
-  // technically attribute-only at the IR level but still counts because the
-  // attribute attachment changes observable behavior.
-  if ((fc.returnInfo.kind != ArgKind::Direct) || fc.returnInfo.coercedType)
-    return true;
-  for (const ArgClassification &ac : fc.argInfos)
-    if ((ac.kind != ArgKind::Direct) || ac.coercedType)
-      return true;
-  return false;
-}
-
 /// Return the coerced RecordType for a Direct classification that should be
 /// flattened into individual scalar arguments, or a null type if the
 /// classification does not call for flattening.
@@ -817,8 +804,14 @@ static void prependIndirectCallee(cir::CallOp call,
   // pointer's pointee and takes the call's result from that type, so the
   // pointee's return type has to track the rewrite: an sret return would
   // leave a result the call no longer produces, and a coerced return one of
-  // the wrong type.
-  auto newPtrTy = cir::PointerType::get(cir::FuncType::get(paramTypes, retTy));
+  // the wrong type.  The ellipsis has to survive for the same reason: the
+  // rebuilt pointee is what makes the lowered call variadic, and only a
+  // variadic call gets the vector-register count that the x86_64 SysV ABI
+  // passes in AL and that the callee's va_arg reads back.
+  auto calleeFnTy = cast<cir::FuncType>(
+      cast<cir::PointerType>(calleePtr.getType()).getPointee());
+  auto newPtrTy = cir::PointerType::get(
+      cir::FuncType::get(paramTypes, retTy, calleeFnTy.isVarArg()));
   if (calleePtr.getType() != newPtrTy)
     calleePtr = cir::CastOp::create(builder, call.getLoc(), newPtrTy,
                                     cir::CastKind::bitcast, calleePtr);
@@ -934,7 +927,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   // CIRGlobalValueInterface).
   cir::FuncOp funcOp = mlir::cast<cir::FuncOp>(funcOpInterface);
 
-  if (!needsRewrite(fc))
+  if (!fc.needsRewrite())
     return mlir::success();
 
   ArrayRef<mlir::Type> oldArgTypes = funcOp.getArgumentTypes();
@@ -1101,7 +1094,26 @@ mlir::LogicalResult
 CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                                       const FunctionClassification &fc,
                                       mlir::OpBuilder &builder) {
-  if (!needsRewrite(fc))
+  // The classification covers exactly the callee's declared parameters, and
+  // the rewrite below pairs it with the call's operands one for one.  Both
+  // directions of a mismatch have to be reported before the pass-through early
+  // return, or a call whose declared parameters happen to be pass-through is
+  // left as written with its surplus operands never classified.
+  //
+  // A surplus operand went through an ellipsis.  A shortfall means the callee
+  // was declared no_proto, which turns off the verifier's argument-count check
+  // altogether.
+  unsigned numOperands =
+      mlir::cast<cir::CIRCallOpInterface>(callOp).getNumArgOperands();
+  if (numOperands > fc.argInfos.size())
+    return callOp->emitOpError()
+           << "variadic arguments not yet implemented in CallConvLowering";
+  if (numOperands < fc.argInfos.size())
+    return callOp->emitOpError()
+           << "call passes fewer arguments than the callee declares, which is "
+              "not yet implemented in CallConvLowering";
+
+  if (!fc.needsRewrite())
     return mlir::success();
 
   if (mlir::isa<cir::TryCallOp>(callOp))
@@ -1128,11 +1140,6 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // types here for use in updateArgAttrs).
   SmallVector<mlir::Type> origCallArgTypes;
   llvm::append_range(origCallArgTypes, argOperands.getTypes());
-  if (argOperands.size() > fc.argInfos.size())
-    return call.emitOpError()
-           << "variadic arguments not yet implemented in CallConvLowering";
-  assert(fc.argInfos.size() == argOperands.size() &&
-         "call operand count must match classified arg count");
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
       continue;

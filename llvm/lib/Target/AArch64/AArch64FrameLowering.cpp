@@ -2818,12 +2818,6 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *AFI = MF.getInfo<AArch64FunctionInfo>();
 
-  if (IsWindows && hasFP(MF) && AFI->hasSwiftAsyncContext()) {
-    int FrameIdx = MFI.CreateStackObject(8, Align(16), true);
-    AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
-    MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
-  }
-
   // Insert VG into the list of CSRs, immediately before LR if saved.
   if (requiresSaveVG(MF)) {
     CalleeSavedInfo VGInfo(AArch64::VG);
@@ -2861,8 +2855,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
     MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
 
     // Grab 8 bytes below FP for the extended asynchronous frame info.
-    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && !IsWindows &&
-        Reg == AArch64::FP) {
+    if (hasFP(MF) && AFI->hasSwiftAsyncContext() && Reg == AArch64::FP) {
       FrameIdx = MFI.CreateStackObject(8, Alignment, true);
       AFI->setSwiftAsyncContextFrameIdx(FrameIdx);
       MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);

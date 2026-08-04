@@ -25,6 +25,7 @@
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/reverse_iterator.h>
+#include <__optional/optional.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
@@ -33,7 +34,6 @@
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

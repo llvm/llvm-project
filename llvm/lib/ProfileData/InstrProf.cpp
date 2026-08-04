@@ -568,7 +568,7 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
     return E;
 
   StringRef CanonicalName = getCanonicalName(VTablePGOName);
-  if (CanonicalName != VTablePGOName)
+  if (!CanonicalName.empty() && CanonicalName != VTablePGOName)
     return NameToGUIDMap(CanonicalName);
 
   return Error::success();
@@ -677,7 +677,7 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
     return Error::success();
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
-  if (CanonicalFuncName != PGOFuncName)
+  if (!CanonicalFuncName.empty() && CanonicalFuncName != PGOFuncName)
     return NameToGUIDMap(CanonicalFuncName);
 
   return Error::success();

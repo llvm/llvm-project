@@ -42,7 +42,7 @@ runs:
   using: "composite"
   steps:
     - name: Validate Input
-      uses: ./.github/workflows/validate-release-version
+      uses: $/.github/workflows/validate-release-version
       with:
         release-version: ${{ inputs.release-version }}
 
@@ -102,7 +102,7 @@ runs:
         pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
     - name: Check Permissions
-      uses: ./.github/workflows/require-team-membership
+      uses: $/.github/workflows/require-team-membership
       with:
         team-slug: llvm-release-managers
         LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ inputs.LLVM_TOKEN_GENERATOR_CLIENT_ID }}

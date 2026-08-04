@@ -1,5 +1,5 @@
 // RUN: not cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
-// RUN:     2>&1 | FileCheck %s
+// RUN:     -split-input-file 2>&1 | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 
@@ -26,3 +26,46 @@ module attributes {
 }
 
 // CHECK: error: 'cir.call' op indirect call cannot be classified in the 'classification-attr' driver mode
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct" }, { kind = "direct" } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
+} {
+
+  // A variadic indirect cir.try_call reaches the same driver-mode error.  It is
+  // collected so that its ellipsis is accounted for, which a per-function
+  // injected classification cannot describe either.
+  cir.func @variadic_try_caller(%fp: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                                %fmt: !cir.ptr<!s8i>, %n: !s32i) -> !s32i
+      attributes { test_classify = #passthrough } {
+    %0 = cir.try_call %fp(%fmt, %n) ^bb1, ^bb2
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
+  ^bb1:
+    cir.br ^bb4(%0 : !s32i)
+  ^bb2:
+    %1 = cir.eh.initiate : !cir.eh_token
+    cir.eh.dispatch %1 : !cir.eh_token [
+      catch_all : ^bb3
+    ]
+  ^bb3(%tok : !cir.eh_token):
+    %ct, %exn = cir.begin_catch %tok : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+    cir.end_catch %ct : !cir.catch_token
+    %2 = cir.const #cir.int<0> : !s32i
+    cir.br ^bb4(%2 : !s32i)
+  ^bb4(%r : !s32i):
+    cir.return %r : !s32i
+  }
+
+}
+
+// CHECK: error: 'cir.try_call' op indirect call cannot be classified in the 'classification-attr' driver mode

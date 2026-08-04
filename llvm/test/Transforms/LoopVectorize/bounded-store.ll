@@ -87,7 +87,7 @@ define void @bounded_load_with_store_optsize(ptr noalias %A, ptr noalias %B) opt
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = urem <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i32> [[VEC_IND]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP0]], i64 1

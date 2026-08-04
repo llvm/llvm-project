@@ -20,7 +20,7 @@ static bool isConcatenatedLiteralsOnPurpose(ASTContext *Ctx,
   //    i.e.:  const char* Array[] = { ("a" "b" "c"), "d", [...] };
 
   const TraversalKindScope RAII(*Ctx, TK_AsIs);
-  auto Parents = Ctx->getParents(*Lit);
+  const auto Parents = Ctx->getParents(*Lit);
   if (Parents.size() == 1 && Parents[0].get<ParenExpr>() != nullptr)
     return true;
 

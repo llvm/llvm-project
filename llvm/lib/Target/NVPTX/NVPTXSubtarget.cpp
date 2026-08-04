@@ -126,11 +126,6 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
 
   ParseSubtargetFeatures(getTargetName(), /*TuneCPU=*/getTargetName(), FS);
 
-  // Re-map SM version numbers, SmVersion carries the regular SMs which do
-  // have relative order, while FullSmVersion allows distinguishing sm_90 from
-  // sm_90a, which would *not* be a subset of sm_91.
-  SmVersion = getSmVersion();
-
   unsigned MinPTX = getMinPTXVersionForSM(FullSmVersion);
 
   if (PTXVersion == 0) {
@@ -150,25 +145,18 @@ NVPTXSubtarget &NVPTXSubtarget::initializeSubtargetDependencies(StringRef CPU,
   return *this;
 }
 
-NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, const std::string &CPU,
-                               const std::string &FS,
+NVPTXSubtarget::NVPTXSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                                const NVPTXTargetMachine &TM)
     : NVPTXGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), PTXVersion(0),
-      FullSmVersion(200), SmVersion(getSmVersion()),
-      InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
-  TSInfo = std::make_unique<NVPTXSelectionDAGInfo>();
-}
+      FullSmVersion(200), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
+      TLInfo(TM, *this), TSInfo(std::make_unique<NVPTXSelectionDAGInfo>()) {}
 
 NVPTXSubtarget::~NVPTXSubtarget() = default;
 
-const SelectionDAGTargetInfo *NVPTXSubtarget::getSelectionDAGInfo() const {
-  return TSInfo.get();
-}
-
-bool NVPTXSubtarget::hasPTXWithFamilySMs(unsigned PTXVersion,
+bool NVPTXSubtarget::hasPTXWithFamilySMs(unsigned MinPTXVersion,
                                          ArrayRef<unsigned> SMVersions) const {
   unsigned PTXVer = getPTXVersion();
-  if (!hasFamilySpecificFeatures() || PTXVer < PTXVersion)
+  if (!hasFamilySpecificFeatures() || PTXVer < MinPTXVersion)
     return false;
 
   unsigned SMVer = getSmVersion();
@@ -184,10 +172,10 @@ bool NVPTXSubtarget::hasPTXWithFamilySMs(unsigned PTXVersion,
   });
 }
 
-bool NVPTXSubtarget::hasPTXWithAccelSMs(unsigned PTXVersion,
+bool NVPTXSubtarget::hasPTXWithAccelSMs(unsigned MinPTXVersion,
                                         ArrayRef<unsigned> SMVersions) const {
   unsigned PTXVer = getPTXVersion();
-  if (!hasArchAccelFeatures() || PTXVer < PTXVersion)
+  if (!hasArchAccelFeatures() || PTXVer < MinPTXVersion)
     return false;
 
   unsigned SMVer = getSmVersion();
@@ -204,10 +192,10 @@ bool NVPTXSubtarget::allowFP16Math() const {
 }
 
 bool NVPTXSubtarget::hasF32x2Instructions() const {
-  return SmVersion >= 100 && PTXVersion >= 86 && !NoF32x2;
+  return getSmVersion() >= 100 && PTXVersion >= 86 && !NoF32x2;
 }
 
-bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
+bool NVPTXSubtarget::hasNativeBF16Support(unsigned Opcode) const {
   if (!hasBF16Math())
     return false;
 
@@ -238,15 +226,4 @@ bool NVPTXSubtarget::hasNativeBF16Support(int Opcode) const {
     return getSmVersion() >= 80 && getPTXVersion() >= 70;
   }
   return true;
-}
-
-void NVPTXSubtarget::failIfClustersUnsupported(
-    std::string const &FailureMessage) const {
-  if (hasClusters())
-    return;
-
-  report_fatal_error(formatv(
-      "NVPTX SM architecture \"{}\" and PTX version \"{}\" do not support {}. "
-      "Requires SM >= 90 and PTX >= 78.",
-      getFullSmVersion(), PTXVersion, FailureMessage));
 }

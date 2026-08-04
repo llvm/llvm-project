@@ -374,8 +374,9 @@ function(create_libc_unittest fq_target_name)
   )
 
   # LibcUnitTest should not depend on anything in LINK_LIBRARIES.
+  list(APPEND link_libraries LibcTest.unit)
   if(NOT LIBC_UNITTEST_C_TEST)
-    list(APPEND link_libraries LibcDeathTestExecutors.unit LibcTest.unit)
+    list(APPEND link_libraries LibcDeathTestExecutors.unit)
   endif()
 
   target_link_libraries(${fq_build_target_name} PRIVATE ${link_libraries})

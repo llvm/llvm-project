@@ -20,7 +20,7 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
     %val32:gpr(i32) = COPY $w1
-    %off:gpr(s64) = G_CONSTANT i64 2
+    %off:gpr(i64) = G_CONSTANT i64 2
     %wb:gpr(p0) = G_INDEXED_STORE %val32(i32), %ptr, %off, 1 :: (store (s16))
     $x0 = COPY %wb
     RET_ReallyLR
@@ -45,7 +45,7 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR
     %ptr:gpr(p0) = COPY $x0
     %val32:gpr(i32) = COPY $w1
-    %off:gpr(s64) = G_CONSTANT i64 2
+    %off:gpr(i64) = G_CONSTANT i64 2
     %wb:gpr(p0) = G_INDEXED_STORE %val32(i32), %ptr, %off, 0 :: (store (s16))
     $x0 = COPY %wb
     RET_ReallyLR

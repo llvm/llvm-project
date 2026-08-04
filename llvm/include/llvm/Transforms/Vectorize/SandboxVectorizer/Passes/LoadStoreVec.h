@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // A pass that vectorizes short store-load chains.
-// Unlike generic bottom-up vectorization, this pass can vectorize instructions
+// Unlike generic bundle vectorization, this pass can vectorize instructions
 // of different types.
 //
 

@@ -298,16 +298,17 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto Init = anyOf(
+  const auto Init = anyOf(
       initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, allowedInitExpr())),
                          initCountIs(0), hasType(arrayType()))),
       allowedInitExpr());
 
-  auto CandidateField = forField(unless(anyOf(
+  const auto CandidateField = forField(unless(anyOf(
       getLangOpts().CPlusPlus20 ? unless(anything()) : isBitField(),
       hasInClassInitializer(anything()), hasParent(recordDecl(isUnion())))));
 
-  auto DefaultInit = cxxCtorInitializer(CandidateField, withInitializer(Init));
+  const auto DefaultInit =
+      cxxCtorInitializer(CandidateField, withInitializer(Init));
   auto VisibleDefaultInit =
       cxxCtorInitializer(DefaultInit, hasOnlyVisibleReferencedDecls())
           .bind("visible-init");
@@ -368,7 +369,7 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  auto DiagDefaultMemberInitializer = [&] {
+  const auto DiagDefaultMemberInitializer = [&] {
     return diag(Field->getLocation(), "use default member initializer for %0")
            << Field;
   };
@@ -382,7 +383,7 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
     return;
   }
 
-  auto Diag = DiagDefaultMemberInitializer();
+  const auto Diag = DiagDefaultMemberInitializer();
 
   const SourceLocation FieldEnd =
       Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,

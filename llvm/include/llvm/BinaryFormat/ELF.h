@@ -973,6 +973,7 @@ enum : unsigned {
   EF_CUDA_SM100 = 0x64,
   EF_CUDA_SM101 = 0x65,
   EF_CUDA_SM103 = 0x67,
+  EF_CUDA_SM107 = 0x6b,
   EF_CUDA_SM110 = 0x6e,
   EF_CUDA_SM120 = 0x78,
   EF_CUDA_SM121 = 0x79,

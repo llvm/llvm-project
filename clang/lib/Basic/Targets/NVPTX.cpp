@@ -176,7 +176,7 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__NVPTX__");
 
   // Skip setting architecture dependent macros if undefined.
-  if (!IsNVIDIAOffloadArch(GPU))
+  if (!GPU.isNVPTX())
     return;
 
   if (Opts.CUDAIsDevice || Opts.OpenMPIsTargetDevice || !HostTarget) {

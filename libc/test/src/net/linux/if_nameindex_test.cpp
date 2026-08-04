@@ -16,11 +16,11 @@
 #include "hdr/types/socklen_t.h"
 #include "hdr/types/ssize_t.h"
 #include "hdr/types/struct_if_nameindex.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/tuple.h"
-#include "src/__support/CPP/type_traits/type_identity.h"
 #include "src/__support/error_or.h"
 #include "src/__support/fixedvector.h"
 #include "src/net/if_freenameindex.h"
@@ -38,31 +38,23 @@ using LIBC_NAMESPACE::Error;
 using LIBC_NAMESPACE::ErrorOr;
 using LIBC_NAMESPACE::FixedVector;
 using LIBC_NAMESPACE::cpp::get;
+using LIBC_NAMESPACE::cpp::nullopt;
+using LIBC_NAMESPACE::cpp::optional;
 using LIBC_NAMESPACE::cpp::span;
 using LIBC_NAMESPACE::cpp::string;
 using LIBC_NAMESPACE::cpp::string_view;
 using LIBC_NAMESPACE::cpp::tuple;
 
-// TODO: Add optional::value_or, then return optional<T>.
 template <typename T, size_t CAPACITY>
-static T
-pop_front_or(FixedVector<T, CAPACITY> &vec,
-             typename LIBC_NAMESPACE::cpp::type_identity<T>::type default_val) {
+static optional<T> pop_front(FixedVector<T, CAPACITY> &vec) {
   if (vec.empty())
-    return default_val;
+    return nullopt;
   // TODO: Add front() and erase() to FixedVector, then clean this up.
   T first = vec[0];
   for (size_t i = 1; i < vec.size(); ++i)
     vec[i - 1] = vec[i];
   vec.pop_back();
   return first;
-}
-
-// TODO: Add string::operator+=(string_view), then remove this helper.
-static void append_bytes(string &str, const void *data, size_t len) {
-  size_t old_size = str.size();
-  str.resize(old_size + len);
-  LIBC_NAMESPACE::inline_memcpy(str.data() + old_size, data, len);
 }
 
 namespace {
@@ -86,21 +78,21 @@ struct FakeNetworkSyscallPolicyData {
 template <FakeNetworkSyscallPolicyData *DATA> struct FakeNetworkSyscallPolicy {
   static ErrorOr<int> socket(int domain, int type, int protocol) {
     DATA->socket_calls.push_back(tuple<int, int, int>(domain, type, protocol));
-    return pop_front_or(DATA->socket_results, Error(ENFILE));
+    return pop_front(DATA->socket_results).value_or(Error(ENFILE));
   }
 
   static ErrorOr<ssize_t> sendto(int fd, const void *buf, size_t len, int flags,
                                  const struct sockaddr *, socklen_t) {
     DATA->sendto_calls.push_back(tuple<int, size_t, int>(fd, len, flags));
-    append_bytes(DATA->sendto_data, buf, len);
-    return pop_front_or(DATA->sendto_results, static_cast<ssize_t>(len));
+    DATA->sendto_data += string_view(static_cast<const char *>(buf), len);
+    return pop_front(DATA->sendto_results).value_or(static_cast<ssize_t>(len));
   }
 
   static ErrorOr<ssize_t> recvfrom(int fd, void *buf, size_t len, int flags,
                                    struct sockaddr *, socklen_t *) {
     DATA->recv_calls.push_back(tuple<int, size_t, int>(fd, len, flags));
     ErrorOr<span<const uint8_t>> chunk =
-        pop_front_or(DATA->recv_results, span<const uint8_t>());
+        pop_front(DATA->recv_results).value_or(span<const uint8_t>());
     if (!chunk.has_value())
       return Error(chunk.error());
     if (chunk->size() > len)
@@ -111,7 +103,7 @@ template <FakeNetworkSyscallPolicyData *DATA> struct FakeNetworkSyscallPolicy {
 
   static ErrorOr<int> close(int fd) {
     DATA->close_calls.push_back(fd);
-    return pop_front_or(DATA->close_results, 0);
+    return pop_front(DATA->close_results).value_or(0);
   }
 };
 

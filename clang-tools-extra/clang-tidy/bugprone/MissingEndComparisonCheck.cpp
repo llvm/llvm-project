@@ -204,9 +204,9 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   if (!EndExprText)
     return;
 
-  auto Diag = diag(BoolOp->getBeginLoc(),
-                   "result of standard algorithm used as 'bool'; did you "
-                   "mean to compare with the end iterator?");
+  const auto Diag = diag(BoolOp->getBeginLoc(),
+                         "result of standard algorithm used as 'bool'; did you "
+                         "mean to compare with the end iterator?");
 
   if (EndExprText->empty())
     return;

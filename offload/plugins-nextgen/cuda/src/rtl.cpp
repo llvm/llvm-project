@@ -841,6 +841,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuMemcpyDtoHAsync: %s");
   }
 
+  Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (auto Err = setContext())
+      return Err;
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    CUresult Res =
+        cuMemcpyAsync((CUdeviceptr)DstPtr, (CUdeviceptr)SrcPtr, Size, Stream);
+    return Plugin::check(Res, "error in cuMemcpyAsync: %s");
+  }
+
   /// Exchange data between two devices directly. We may use peer access if
   /// the CUDA devices and driver allow them.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,

@@ -42,7 +42,6 @@ test(S s,
   static_assert(sizeof(SizeT) == sizeof(typename SV::size_type), "");
 
   const SizeT old_size = s.size();
-  S s0                 = s;
   if (pos1 <= old_size && pos2 <= sv.size()) {
     s.replace(pos1, n1, sv, pos2, n2);
     LIBCPP_ASSERT(s.__invariants());
@@ -54,6 +53,7 @@ test(S s,
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s0 = s;
     try {
       s.replace(pos1, n1, sv, pos2, n2);
       assert(false);
@@ -71,7 +71,6 @@ test_npos(S s, typename S::size_type pos1, typename S::size_type n1, SV sv, type
   typedef typename S::size_type SizeT;
   static_assert((!std::is_same<S, SV>::value), "");
   const SizeT old_size = s.size();
-  S s0                 = s;
   if (pos1 <= old_size && pos2 <= sv.size()) {
     s.replace(pos1, n1, sv, pos2);
     LIBCPP_ASSERT(s.__invariants());
@@ -82,6 +81,7 @@ test_npos(S s, typename S::size_type pos1, typename S::size_type n1, SV sv, type
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s0 = s;
     try {
       s.replace(pos1, n1, sv, pos2);
       assert(false);

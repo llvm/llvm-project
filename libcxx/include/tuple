@@ -571,7 +571,7 @@ class _LIBCPP_NO_SPECIALIZATIONS tuple {
 
 public:
   using __trivially_relocatable _LIBCPP_NODEBUG =
-      __conditional_t<_And<__libcpp_is_trivially_relocatable<_Tp>...>::value, tuple, void>;
+      __conditional_t<__all<__is_trivially_relocatable_v<_Tp>...>::value, tuple, void>;
 
   // [tuple.cnstr]
 

@@ -352,8 +352,9 @@ bool SignalHandlerCheck::isLanguageVersionSupported(
 }
 
 void SignalHandlerCheck::registerMatchers(MatchFinder *Finder) {
-  auto SignalFunction = functionDecl(hasAnyName("::signal", "::std::signal"),
-                                     parameterCountIs(2), isStandard());
+  const auto SignalFunction =
+      functionDecl(hasAnyName("::signal", "::std::signal"), parameterCountIs(2),
+                   isStandard());
   auto HandlerExpr =
       declRefExpr(hasDeclaration(functionDecl().bind("handler_decl")),
                   unless(isExpandedFromMacro("SIG_IGN")),
@@ -488,7 +489,7 @@ bool SignalHandlerCheck::checkFunctionCPP14(
 
   bool StmtProblemsFound = false;
   ASTContext &Ctx = FBody->getASTContext();
-  auto Matches =
+  const auto Matches =
       match(decl(forEachDescendant(stmt().bind("stmt"))), *FBody, Ctx);
   for (const auto &Match : Matches) {
     const auto *FoundS = Match.getNodeAs<Stmt>("stmt");

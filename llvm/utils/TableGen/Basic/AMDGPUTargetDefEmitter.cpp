@@ -12,7 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,6 +32,16 @@ using namespace llvm;
 // Derive the GPUKind enum from a processor name, e.g. "gfx90a" -> "GK_GFX90A".
 static void emitGPUKindEnum(raw_ostream &OS, StringRef Name) {
   OS << "GK_";
+  for (char C : Name)
+    OS << ((C == '-') ? '_' : toUpper(C));
+}
+
+// Feature string to enumerator, e.g. "16-bit-insts" -> "FEAT_16_BIT_INSTS". The
+// FEAT_ prefix (rather than FEATURE_) avoids colliding with the legacy
+// ArchFeatureKind enumerators (e.g. FEATURE_XNACK_ON_OFF_MODES) during the
+// migration off that bitfield.
+static void emitFeatureEnum(raw_ostream &OS, StringRef Name) {
+  OS << "FEAT_";
   for (char C : Name)
     OS << ((C == '-') ? '_' : toUpper(C));
 }
@@ -151,6 +163,29 @@ static void emitFeatureExpr(raw_ostream &OS, const Record *Rec,
 
   if (!Any)
     OS << NoneSpelling;
+}
+
+// The frontend-visible features, bit order matching the list. Empty for R600
+// (no AMDGPUFrontendVisibleFeatures def).
+static std::vector<const Record *>
+collectFrontendFeatures(const RecordKeeper &RK) {
+  const Record *List = RK.getDef("AMDGPUFrontendVisibleFeatures");
+  if (!List)
+    return {};
+  return List->getValueAsListOfDefs("Features");
+}
+
+// The transitive closure of a GPU's SubtargetFeatures, following the Implies
+// edges (a feature enables everything it implies).
+static void collectFeatureClosure(const Record *GPU,
+                                  SetVector<const Record *> &Closure) {
+  std::vector<const Record *> Worklist = GPU->getValueAsListOfDefs("Features");
+  while (!Worklist.empty()) {
+    const Record *F = Worklist.back();
+    Worklist.pop_back();
+    if (Closure.insert(F))
+      append_range(Worklist, F->getValueAsListOfDefs("Implies"));
+  }
 }
 
 // Collect canonical GPUs and their aliases, in TableGen definition order. R600
@@ -350,10 +385,135 @@ static void emitAMDGPUAliases(raw_ostream &OS, const RecordKeeper &RK,
         "#endif // GET_AMDGPU_GPU_ALIAS_TABLE\n\n";
 }
 
+// Emit the frontend feature enum (GET_AMDGPU_FEATURE_ENUM), interning each
+// feature name into \p Names. Returns the name offsets indexed by feature bit.
+static std::vector<unsigned>
+emitAMDGPUFeatureEnum(raw_ostream &OS, ArrayRef<const Record *> Features,
+                      StringToOffsetTable &Names) {
+  std::vector<unsigned> Offsets;
+  if (Features.empty())
+    return Offsets;
+  Offsets.reserve(Features.size());
+
+  OS << "#ifdef GET_AMDGPU_FEATURE_ENUM\n"
+        "#undef GET_AMDGPU_FEATURE_ENUM\n";
+  for (const Record *F : Features) {
+    StringRef Name = F->getValueAsString("Name");
+    OS << "  ";
+    emitFeatureEnum(OS, Name);
+    OS << ",\n";
+    Offsets.push_back(Names.GetOrAddStringOffset(Name));
+  }
+  OS << "  NUM_FEATURES\n"
+        "#endif // GET_AMDGPU_FEATURE_ENUM\n\n";
+  return Offsets;
+}
+
+// Emit AMDGPUFeatureNames (GET_AMDGPU_FEATURE_NAME_TABLE): bit -> name offset.
+static void emitAMDGPUFeatureNames(raw_ostream &OS,
+                                   ArrayRef<unsigned> Offsets) {
+  if (Offsets.empty())
+    return;
+  OS << "#ifdef GET_AMDGPU_FEATURE_NAME_TABLE\n"
+        "#undef GET_AMDGPU_FEATURE_NAME_TABLE\n"
+        "static constexpr StringTable::Offset AMDGPUFeatureNames[] = {\n";
+  for (unsigned O : Offsets)
+    OS << "  " << O << ",\n";
+  OS << "};\n"
+        "#endif // GET_AMDGPU_FEATURE_NAME_TABLE\n\n";
+}
+
+// The set of frontend features that end up in the emitted bitset.
+static SetVector<const Record *>
+collectVisibleFeatures(const Record *GPU,
+                       const DenseMap<const Record *, unsigned> &FeatureIdx) {
+  SetVector<const Record *> Closure;
+  collectFeatureClosure(GPU, Closure);
+  SetVector<const Record *> Visible;
+  for (const Record *F : Closure) {
+    if (FeatureIdx.contains(F))
+      Visible.insert(F);
+  }
+
+  return Visible;
+}
+
+// Make sure a "gfxN-generic" processor doesn't expose a frontend-visible
+// feature missing from any covered processor.
+//
+// FIXME: The check should cover all SubtargetFeatures, not just the
+// frontend-visible ones. It is limited to those because a generic legitimately
+// carries some features a covered GPU lacks (bug/hazard workarounds and
+// worst-case-valued features); those cases need to be marked to opt out of the
+// check, plus min-value handling for numeric features.
+static void
+validateGenericFeatures(const Record *GPU,
+                        const DenseMap<const Record *, unsigned> &FeatureIdx) {
+  std::vector<const Record *> Covered =
+      GPU->getValueAsListOfDefs("CoveredGPUs");
+  if (Covered.empty())
+    return;
+
+  SetVector<const Record *> GenericFeatures =
+      collectVisibleFeatures(GPU, FeatureIdx);
+  for (const Record *Member : Covered) {
+    SetVector<const Record *> MemberFeatures =
+        collectVisibleFeatures(Member, FeatureIdx);
+    for (const Record *F : GenericFeatures) {
+      if (!MemberFeatures.contains(F)) {
+        PrintFatalError(GPU->getLoc(),
+                        "generic target '" + GPU->getValueAsString("Name") +
+                            "' exposes feature '" +
+                            F->getValueAsString("Name") +
+                            "' not supported by covered GPU '" +
+                            Member->getValueAsString("Name") + "'");
+      }
+    }
+  }
+}
+
+static void validateAMDGPU(const RecordKeeper &RK) {
+  DenseMap<const Record *, unsigned> FeatureIdx;
+  for (const auto &[Idx, F] : enumerate(collectFrontendFeatures(RK)))
+    FeatureIdx[F] = Idx;
+
+  for (const Record *GPU : RK.getAllDerivedDefinitions("AMDGPUGPUInfo"))
+    validateGenericFeatures(GPU, FeatureIdx);
+}
+
+// Emit a GPU's feature bitset initializer: its feature closure intersected with
+// the frontend-visible set \p FeatureIdx, e.g.
+// "AMDGPUFeatureBitset({FEATURE_DPP, FEATURE_CI_INSTS})".
+static void
+emitFeatureBitset(raw_ostream &OS, const Record *GPU,
+                  const DenseMap<const Record *, unsigned> &FeatureIdx) {
+  SetVector<const Record *> Closure;
+  collectFeatureClosure(GPU, Closure);
+
+  // Sort by bit index for stable output.
+  SmallVector<std::pair<unsigned, StringRef>> Bits;
+  for (const Record *F : Closure) {
+    auto It = FeatureIdx.find(F);
+    if (It != FeatureIdx.end())
+      Bits.emplace_back(It->second, F->getValueAsString("Name"));
+  }
+  sort(Bits);
+
+  OS << "AMDGPUFeatureBitset({";
+  ListSeparator LS(", ");
+  for (const auto &[Idx, Name] : Bits) {
+    OS << LS;
+    emitFeatureEnum(OS, Name);
+  }
+  OS << "})";
+}
+
 /// Emit a GPUInfo table indexed by (GPUKind - AMDGPUFirstGPUKind). Name and
 /// family strings are stored as offsets into the shared \p Names table.
-static void emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
-                            StringToOffsetTable &Names) {
+static void
+emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
+                StringToOffsetTable &Names,
+                const DenseMap<const Record *, unsigned> &FeatureIdx) {
   std::vector<const Record *> Canon = collectAMDGPUCanonicals(RK);
   if (Canon.empty())
     return;
@@ -370,6 +530,8 @@ static void emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
     emitSubArch(OS, R);
     OS << ", ";
     emitFeatureExpr(OS, R, "FEATURE_NONE");
+    OS << ", ";
+    emitFeatureBitset(OS, R, FeatureIdx);
     OS << ", ";
     emitIsaVersion(OS, R, '{', '}');
     OS << ", " << Names.GetOrAddStringOffset(getArchFamily(R)) << "},\n";
@@ -507,6 +669,8 @@ static void emitAMDGPUSubArchNames(raw_ostream &OS, const RecordKeeper &RK,
 }
 
 static void emitAMDGPUTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
+  validateAMDGPU(RK);
+
   OS << "// Autogenerated by AMDGPUTargetDefEmitter.cpp\n\n";
   // R600.td and AMDGPU.td are separate top-level files, so a run sees exactly
   // one family; the other family's sections emit nothing.
@@ -536,7 +700,18 @@ static void emitAMDGPUTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
     StringToOffsetTable Names;
     std::string Tables;
     raw_string_ostream TablesOS(Tables);
-    emitAMDGPUTable(TablesOS, RK, Names);
+
+    // The frontend feature enum and per-GPU bitsets share the AMDGPU string
+    // pool (feature names live alongside GPU names).
+    std::vector<const Record *> Features = collectFrontendFeatures(RK);
+    DenseMap<const Record *, unsigned> FeatureIdx;
+    for (const auto &[Idx, F] : enumerate(Features))
+      FeatureIdx[F] = Idx;
+
+    std::vector<unsigned> FeatureOffsets =
+        emitAMDGPUFeatureEnum(TablesOS, Features, Names);
+    emitAMDGPUTable(TablesOS, RK, Names, FeatureIdx);
+    emitAMDGPUFeatureNames(TablesOS, FeatureOffsets);
     emitAMDGPUAliases(TablesOS, RK, Names);
     emitAMDGPUSubArchNames(TablesOS, RK, Names);
     if (!Tables.empty()) {

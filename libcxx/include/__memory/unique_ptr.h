@@ -129,10 +129,10 @@ public:
   //
   // This unique_ptr implementation only contains a pointer to the unique object and a deleter, so there are no
   // references to itself. This means that the entire structure is trivially relocatable if its members are.
-  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
-      __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<deleter_type>::value,
-      unique_ptr,
-      void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<__is_trivially_relocatable_v<pointer> && __is_trivially_relocatable_v<deleter_type>,
+                      unique_ptr,
+                      void>;
 
 private:
   _LIBCPP_COMPRESSED_PAIR(pointer, __ptr_, deleter_type, __deleter_);
@@ -383,10 +383,10 @@ public:
   //
   // This unique_ptr implementation only contains a pointer to the unique object and a deleter, so there are no
   // references to itself. This means that the entire structure is trivially relocatable if its members are.
-  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
-      __libcpp_is_trivially_relocatable<pointer>::value && __libcpp_is_trivially_relocatable<deleter_type>::value,
-      unique_ptr,
-      void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<__is_trivially_relocatable_v<pointer> && __is_trivially_relocatable_v<deleter_type>,
+                      unique_ptr,
+                      void>;
 
 private:
   template <class _Up, class _OtherDeleter>

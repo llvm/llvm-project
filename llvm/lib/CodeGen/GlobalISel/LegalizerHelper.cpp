@@ -2141,11 +2141,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
 Register LegalizerHelper::coerceToInteger(Register Val) {
   LLT Ty = MRI.getType(Val);
-  if (Ty.isScalar())
+  if (Ty.isScalar() && !Ty.isFloat())
     return Val;
 
   const DataLayout &DL = MIRBuilder.getDataLayout();
   LLT NewTy = LLT::integer(Ty.getSizeInBits());
+
+  if (Ty.isFloat())
+    return MIRBuilder.buildBitcast(NewTy, Val).getReg(0);
+
   if (Ty.isPointer()) {
     if (DL.isNonIntegralAddressSpace(Ty.getAddressSpace()))
       return Register();

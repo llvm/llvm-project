@@ -1147,6 +1147,18 @@ Error GenericDeviceTy::dataRetrieve(void *HstPtr, const void *TgtPtr,
   return Err;
 }
 
+Error GenericDeviceTy::dataMemcpy(void *DstPtr, const void *SrcPtr,
+                                  int64_t Size, __tgt_async_info *AsyncInfo) {
+  if (Size == 0)
+    return Plugin::success();
+
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+
+  auto Err = dataMemcpyImpl(DstPtr, SrcPtr, Size, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
 Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
                                     void *DstPtr, int64_t Size,
                                     __tgt_async_info *AsyncInfo) {

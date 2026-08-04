@@ -89,18 +89,6 @@ del _to_int
 %enddef
 EMBED_VERSION(SWIG_VERSION)
 
-%pythoncode%{
-# ===================================
-# Iterator for lldb container objects
-# ===================================
-def lldb_iter(obj, getsize, getelem):
-    """A generator adaptor to support iteration for lldb container objects."""
-    size = getattr(obj, getsize)
-    elem = getattr(obj, getelem)
-    for i in range(size()):
-        yield elem(i)
-%}
-
 %include <std_string.i>
 %include "python-typemaps.swig"
 %include "macros.swig"

@@ -35,6 +35,14 @@ let cppNamespace = "::cir" in {
           "Return the number of operands, accounts for indirect call or "
           "exception info",
           "unsigned", "getNumArgOperands", (ins)>,
+      InterfaceMethod<
+          "Return whether the callee is a value resolved at run time rather "
+          "than a symbol named by the op",
+          "bool", "isIndirect", (ins)>,
+      InterfaceMethod<
+          "Return the callee pointer of an indirect call.  Only valid when "
+          "isIndirect() is true",
+          "mlir::Value", "getIndirectCall", (ins)>,
       InterfaceMethod<"Return whether the callee is nothrow",
                       "bool", "getNothrow", (ins)>,
       InterfaceMethod<"Return the side effects of the call operation",

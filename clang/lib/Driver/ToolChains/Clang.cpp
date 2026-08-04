@@ -1060,7 +1060,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       const ToolChain *TC = I.second;
       for (BoundArch Arch :
            D.getOffloadArchs(C, C.getArgs(), Action::OFK_Cuda, *TC)) {
-        if (IsNVIDIAOffloadArch(Arch.Arch))
+        if (Arch.Arch.isNVPTX())
           ArchIDs.insert(CudaArchToID(Arch.Arch));
       }
     }

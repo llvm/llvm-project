@@ -227,6 +227,11 @@ int main(int, char**) {
       }
 
       {
+        // reverse(first, last)
+        assert_non_throwing([=, &policy] { std::reverse(policy, std::move(first1), std::move(last1)); });
+      }
+
+      {
         // reverse_copy(first, last, dest)
         assert_non_throwing([=, &policy] {
           (void)std::reverse_copy(policy, std::move(first1), std::move(last1), std::move(dest));
@@ -364,6 +369,14 @@ int main(int, char**) {
         // is_sorted(first, last, comp)
         assert_non_throwing([=, &policy] {
           (void)std::is_sorted(policy, std::move(first1), std::move(last1), compare);
+        });
+
+        // is_sorted_until(first, last)
+        assert_non_throwing([=, &policy] { (void)std::is_sorted_until(policy, std::move(first1), std::move(last1)); });
+
+        // is_sorted_until(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::is_sorted_until(policy, std::move(first1), std::move(last1), compare);
         });
       }
 

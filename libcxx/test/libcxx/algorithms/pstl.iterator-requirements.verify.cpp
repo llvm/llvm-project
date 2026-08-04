@@ -126,6 +126,10 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    std::reverse(pol, non_bidir, non_bidir); // expected-error@*:* {{static assertion failed: reverse}}
+  }
+
+  {
     (void)std::reverse_copy(
         pol, non_bidir, non_bidir, it);            // expected-error@*:* {{static assertion failed: reverse_copy}}
     (void)std::reverse_copy(pol, it, it, non_fwd); // expected-error@*:* {{static assertion failed: reverse_copy}}
@@ -134,6 +138,18 @@ void f(non_forward_iterator non_fwd,
   {
     (void)std::is_partitioned(
         pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_partitioned}}
+  }
+
+  {
+    (void)std::is_sorted(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: is_sorted}}
+    (void)std::is_sorted(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_sorted}}
+  }
+
+  {
+    (void)std::is_sorted_until(
+        pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: is_sorted_until}}
+    (void)std::is_sorted_until(
+        pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_sorted_until}}
   }
 
   {

@@ -48,8 +48,8 @@ entry:
   ret void
 }
 
-; Should no be vectorized with a undef/poison element as padding, as
-; division by undef/poison may cause UB.  Must use VL predication or
+; Should no be vectorized with a poison element as padding, as
+; division by poison may cause UB.  Must use VL predication or
 ; masking instead, where RISCV wins.
 define void @v3_load_i32_udiv_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-LABEL: @v3_load_i32_udiv_by_constant_store(
