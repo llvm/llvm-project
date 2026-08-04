@@ -175,11 +175,20 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
       ++UtilityNodeIndex[UN];
   // Remove utility nodes if they have just one edge or are connected to all
   // functions
-  for (auto &N : Nodes)
-    llvm::erase_if(N.UtilityNodes, [&](auto &UN) {
+  for (auto &N : Nodes) {
+    size_t WriteIndex = 0;
+    for (size_t ReadIndex = 0; ReadIndex < N.UtilityNodes.size(); ++ReadIndex) {
+      auto UN = N.UtilityNodes[ReadIndex];
       unsigned UNI = UtilityNodeIndex[UN];
-      return UNI == 1 || UNI == NumNodes;
-    });
+      if (UNI == 1 || UNI == NumNodes)
+        continue;
+      N.UtilityNodes[WriteIndex] = UN;
+      N.UtilityNodeWeights[WriteIndex] = N.UtilityNodeWeights[ReadIndex];
+      ++WriteIndex;
+    }
+    N.UtilityNodes.resize(WriteIndex);
+    N.UtilityNodeWeights.resize(WriteIndex);
+  }
 
   // Renumber utility nodes so they can be used to index into Signatures
   UtilityNodeIndex.clear();
@@ -190,12 +199,17 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
   // Initialize signatures
   SignaturesT Signatures(/*Size=*/UtilityNodeIndex.size());
   for (auto &N : Nodes) {
-    for (auto &UN : N.UtilityNodes) {
+    for (auto [UN, Weight] : llvm::zip(N.UtilityNodes, N.UtilityNodeWeights)) {
       assert(UN < Signatures.size());
+      auto &Signature = Signatures[UN];
+      if (Signature.LeftCount != 0 || Signature.RightCount != 0)
+        assert(Signature.Weight == Weight &&
+               "a utility node must have a consistent weight");
+      Signature.Weight = Weight;
       if (N.Bucket == LeftBucket) {
-        Signatures[UN].LeftCount++;
+        Signature.LeftCount++;
       } else {
-        Signatures[UN].RightCount++;
+        Signature.RightCount++;
       }
     }
   }
@@ -227,6 +241,14 @@ unsigned BalancedPartitioning::runIteration(const FunctionNodeRange Nodes,
       Signature.CachedGainLR = Cost - logCost(L - 1, R + 1);
     if (R > 0)
       Signature.CachedGainRL = Cost - logCost(L + 1, R - 1);
+    // Scaling a utility's move gain is mathematically equivalent to adding
+    // Weight distinct utility nodes with the same signature, but avoids
+    // expanding the graph. Weight == 1 deliberately takes no FP operation so
+    // unweighted inputs preserve their previous behavior.
+    if (Signature.Weight != 1) {
+      Signature.CachedGainLR *= static_cast<float>(Signature.Weight);
+      Signature.CachedGainRL *= static_cast<float>(Signature.Weight);
+    }
     Signature.CachedGainIsValid = true;
   }
 

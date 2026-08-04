@@ -41,9 +41,12 @@
 
 #include "raw_ostream.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <mutex>
 #include <random>
@@ -60,10 +63,30 @@ class BPFunctionNode {
 public:
   using IDT = uint64_t;
   using UtilityNodeT = uint32_t;
+  using UtilityNodeWeightT = uint64_t;
 
   /// \param UtilityNodes the set of utility nodes (must be unique'd)
   BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes)
-      : Id(Id), UtilityNodes(UtilityNodes) {}
+      : Id(Id), UtilityNodes(UtilityNodes),
+        UtilityNodeWeights(UtilityNodes.size(), 1) {}
+
+  /// \param UtilityNodes the set of utility nodes (must be unique'd)
+  /// \param UtilityNodeWeights the weight of each corresponding utility node.
+  /// All occurrences of a utility node must have the same weight. Zero-weight
+  /// utility nodes are ignored.
+  BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes,
+                 ArrayRef<UtilityNodeWeightT> UtilityNodeWeights)
+      : Id(Id) {
+    assert(UtilityNodes.size() == UtilityNodeWeights.size() &&
+           "each utility node must have a weight");
+    for (auto [UtilityNode, Weight] :
+         llvm::zip(UtilityNodes, UtilityNodeWeights)) {
+      if (Weight == 0)
+        continue;
+      this->UtilityNodes.push_back(UtilityNode);
+      this->UtilityNodeWeights.push_back(Weight);
+    }
+  }
 
   /// The ID of this node
   IDT Id;
@@ -73,6 +96,9 @@ public:
 protected:
   /// The list of utility nodes associated with this node
   SmallVector<UtilityNodeT, 4> UtilityNodes;
+  /// The weight of each corresponding utility node. A utility node's cost is
+  /// multiplied by its weight without materializing duplicate utility nodes.
+  SmallVector<UtilityNodeWeightT, 4> UtilityNodeWeights;
   /// The bucket assigned by balanced partitioning
   std::optional<unsigned> Bucket;
   /// The index of the input order of the FunctionNodes
@@ -189,6 +215,8 @@ private:
     float CachedGainRL;
     /// Whether \p CachedGainLR and \p CachedGainRL are valid
     bool CachedGainIsValid = false;
+    /// The number of times this utility contributes to the objective
+    BPFunctionNode::UtilityNodeWeightT Weight = 1;
   };
 
 protected:

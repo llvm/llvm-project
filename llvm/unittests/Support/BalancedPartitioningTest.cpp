@@ -97,4 +97,43 @@ TEST_F(BalancedPartitioningTest, MoveGain) {
                   30.f);
 }
 
+TEST_F(BalancedPartitioningTest, WeightedUtilitiesMatchReplication) {
+  Config.SkipProbability = 0;
+  Config.TaskSplitDepth = 0;
+
+  std::vector<BPFunctionNode> WeightedNodes = {
+      BPFunctionNode(0, {1}, {1}),
+      BPFunctionNode(1, {1, 2}, {1, 1}),
+      BPFunctionNode(2, {0, 1, 2}, {10, 1, 1}),
+      BPFunctionNode(3, {0, 2}, {10, 1}),
+  };
+  std::vector<BPFunctionNode> ReplicatedNodes = {
+      BPFunctionNode(0, {10}),
+      BPFunctionNode(1, {10, 11}),
+      BPFunctionNode(2, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}),
+      BPFunctionNode(3, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11}),
+  };
+  std::vector<BPFunctionNode> UnweightedNodes = {
+      BPFunctionNode(0, {1}),
+      BPFunctionNode(1, {1, 2}),
+      BPFunctionNode(2, {0, 1, 2}),
+      BPFunctionNode(3, {0, 2}),
+  };
+  std::vector<BPFunctionNode> WeightOneNodes = {
+      BPFunctionNode(0, {1}, {1}),
+      BPFunctionNode(1, {1, 2}, {1, 1}),
+      BPFunctionNode(2, {0, 1, 2}, {1, 1, 1}),
+      BPFunctionNode(3, {0, 2}, {1, 1}),
+  };
+
+  Bp.run(WeightedNodes);
+  Bp.run(ReplicatedNodes);
+  Bp.run(UnweightedNodes);
+  Bp.run(WeightOneNodes);
+
+  EXPECT_EQ(getIds(WeightedNodes), getIds(ReplicatedNodes));
+  EXPECT_NE(getIds(WeightedNodes), getIds(UnweightedNodes));
+  EXPECT_EQ(getIds(WeightOneNodes), getIds(UnweightedNodes));
+}
+
 } // end namespace llvm

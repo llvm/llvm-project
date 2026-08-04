@@ -1153,9 +1153,11 @@ void TemporalProfTraceTy::createBPFunctionNodes(
   DenseMap<IDT, size_t> IdToFirstTimestamp;
   DenseMap<IDT, UtilityNodeT> IdToFirstUN;
   DenseMap<IDT, SmallVector<UtilityNodeT>> IdToUNs;
-  // TODO: We need to use the Trace.Weight field to give more weight to more
-  // important utilities
+  DenseMap<IDT, SmallVector<BPFunctionNode::UtilityNodeWeightT>> IdToUNWeights;
   for (auto &Trace : Traces) {
+    // A zero-weight trace is equivalent to no copies of the trace.
+    if (Trace.Weight == 0)
+      continue;
     size_t CutoffTimestamp = 1;
     for (size_t Timestamp = 0; Timestamp < Trace.FunctionNameRefs.size();
          Timestamp++) {
@@ -1170,8 +1172,10 @@ void TemporalProfTraceTy::createBPFunctionNodes(
       IdToFirstUN.try_emplace(Id, MaxUN);
     }
     for (auto &[Id, FirstUN] : IdToFirstUN)
-      for (auto UN = FirstUN; UN <= MaxUN; ++UN)
+      for (auto UN = FirstUN; UN <= MaxUN; ++UN) {
         IdToUNs[Id].push_back(UN);
+        IdToUNWeights[Id].push_back(Trace.Weight);
+      }
     ++MaxUN;
     IdToFirstUN.clear();
   }
@@ -1183,15 +1187,25 @@ void TemporalProfTraceTy::createBPFunctionNodes(
         ++UNFrequency[UN];
     // Filter out utility nodes that are too infrequent or too prevalent to make
     // BalancedPartitioning more effective.
-    for (auto &[Id, UNs] : IdToUNs)
-      llvm::erase_if(UNs, [&](auto &UN) {
+    for (auto &[Id, UNs] : IdToUNs) {
+      auto &Weights = IdToUNWeights[Id];
+      size_t WriteIndex = 0;
+      for (size_t ReadIndex = 0; ReadIndex < UNs.size(); ++ReadIndex) {
+        auto UN = UNs[ReadIndex];
         unsigned Freq = UNFrequency[UN];
-        return Freq <= 1 || 2 * Freq > IdToUNs.size();
-      });
+        if (Freq <= 1 || 2 * Freq > IdToUNs.size())
+          continue;
+        UNs[WriteIndex] = UN;
+        Weights[WriteIndex] = Weights[ReadIndex];
+        ++WriteIndex;
+      }
+      UNs.resize(WriteIndex);
+      Weights.resize(WriteIndex);
+    }
   }
 
   for (auto &[Id, UNs] : IdToUNs)
-    Nodes.emplace_back(Id, UNs);
+    Nodes.emplace_back(Id, UNs, IdToUNWeights[Id]);
 
   // Since BalancedPartitioning is sensitive to the initial order, we explicitly
   // order nodes by their earliest timestamp.
