@@ -70,6 +70,13 @@ long f_char_int128_aligned(char x, __int128 v, struct aligned16_struct q) {
     return q.a;
 }
 
+// FIXME: alignment on typedefs should be taken into account, but isn't.
+// CHECK-LABEL: define {{.*}} i32 @f_typedef_aligned(i32 noundef signext %x, i32 noundef signext %i)
+typedef int typedef_aligned_int __attribute__((aligned(16)));
+int f_typedef_aligned(int x, typedef_aligned_int i) {
+    return i;
+}
+
 // CHECK-LABEL: define{{.*}} i64 @f_emptyvar(i32 noundef zeroext %count, ...)
 long f_emptyvar(unsigned count, ...) {
     long ret;
