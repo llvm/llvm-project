@@ -1018,11 +1018,13 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
   // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge in order
   // to merge bits from two values without requiring PMV.Inv_Mask.
 
-  assert(Op != AtomicRMWInst::Or && Op != AtomicRMWInst::Xor && Op != AtomicRMWInst::And && "Or/Xor/And handled by widenPartwordAtomicRMW");
+  assert(Op != AtomicRMWInst::Or && Op != AtomicRMWInst::Xor &&
+         Op != AtomicRMWInst::And &&
+         "Or/Xor/And handled by widenPartwordAtomicRMW");
 
   if (Op == AtomicRMWInst::Xchg) {
-    // Clear all the bits we are exchanging out. These are the bits under the mask.
-    // We can clear them with an `and` of the inverse mask.
+    // Clear all the bits we are exchanging out. These are the bits under the
+    // mask. We can clear them with an `and` of the inverse mask.
     Value *Loaded_MaskOut = Builder.CreateAnd(Loaded, PMV.Inv_Mask);
     // Now that the prevous bits are cleared, we can swap in the new value with
     // an `or`.
@@ -1030,7 +1032,9 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
     return FinalVal;
   }
 
-  if (Op == AtomicRMWInst::Nand || (!PMV.ValueType->isVectorTy() && (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub))) {
+  if (Op == AtomicRMWInst::Nand ||
+      (!PMV.ValueType->isVectorTy() &&
+       (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub))) {
     // For `Nand` and non-vector `Add` and `Sub`, we can perform the operation
     // on the entire word because the extra bits in the unmasked region don't
     // affect the computation in the masked region. The operation might still
@@ -1043,12 +1047,13 @@ static Value *performMaskedAtomicOp(AtomicRMWInst::BinOp Op,
     // TODO: For these, can we use a wider vector op with additional lanes?
 
     // Atomic operation across the entire word.
-    Value *NewVal = buildAtomicRMWValue(Op, Builder, Loaded, ValOperand_Shifted);
+    Value *NewVal =
+        buildAtomicRMWValue(Op, Builder, Loaded, ValOperand_Shifted);
     // Reapply the bits in the unmasked region.
     Value *NewVal_Masked = Builder.CreateAnd(NewVal, PMV.Mask);
     Value *Loaded_MaskOut = Builder.CreateAnd(Loaded, PMV.Inv_Mask);
     Value *FinalVal = Builder.CreateOr(Loaded_MaskOut, NewVal_Masked);
-    return FinalVal; 
+    return FinalVal;
   }
 
   // All other ops operate on the sub-word size. Truncate down to the
@@ -1087,7 +1092,9 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
                        AI->getAlign(), TLI->getMinCmpXchgSizeInBits() / 8);
 
   Value *ValOperand_Shifted = nullptr;
-  bool NeedsShiftedOperand = Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Nand || (!PMV.ValueType->isVectorTy() &&
+  bool NeedsShiftedOperand =
+      Op == AtomicRMWInst::Xchg || Op == AtomicRMWInst::Nand ||
+      (!PMV.ValueType->isVectorTy() &&
        (Op == AtomicRMWInst::Add || Op == AtomicRMWInst::Sub));
 
   if (NeedsShiftedOperand) {
