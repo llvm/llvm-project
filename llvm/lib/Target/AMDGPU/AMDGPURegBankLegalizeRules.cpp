@@ -2504,7 +2504,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B32, {{VgprB32}, {IntrId, VgprB32, VgprB32}})
       .Div(B64, {{VgprB64}, {IntrId, VgprB64, VgprB64}});
 
-  addRulesForIOpcs({amdgcn_sin, amdgcn_cos}, Standard)
+  addRulesForIOpcs({amdgcn_sin, amdgcn_cos, amdgcn_tanh}, Standard)
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
