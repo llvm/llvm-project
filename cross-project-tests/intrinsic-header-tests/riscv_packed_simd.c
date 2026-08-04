@@ -2495,6 +2495,211 @@ int8x8_t test_psabs_i8x8(int8x8_t a) { return __riscv_psabs_i8x8(a); }
 // RV64:        psabs.h
 int16x4_t test_psabs_i16x4(int16x4_t a) { return __riscv_psabs_i16x4(a); }
 
+// Packed "Q-format" Multiplication
+// CHECK-LABEL: test_pmulq_i16x2:
+// CHECK:       pmulq.h
+int16x2_t test_pmulq_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pmulq_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulqr_i16x2:
+// CHECK:       pmulqr.h
+int16x2_t test_pmulqr_i16x2(int16x2_t a, int16x2_t b) {
+  return __riscv_pmulqr_i16x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulq_i16x4:
+// RV32:        pmulq.h
+// RV32:        pmulq.h
+// RV64:        pmulq.h
+int16x4_t test_pmulq_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pmulq_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulqr_i16x4:
+// RV32:        pmulqr.h
+// RV32:        pmulqr.h
+// RV64:        pmulqr.h
+int16x4_t test_pmulqr_i16x4(int16x4_t a, int16x4_t b) {
+  return __riscv_pmulqr_i16x4(a, b);
+}
+
+// CHECK-LABEL: test_pmulq_i32x2:
+// RV32:        mulq
+// RV32:        mulq
+// RV64:        pmulq.w
+int32x2_t test_pmulq_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pmulq_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_pmulqr_i32x2:
+// RV32:        mulqr
+// RV32:        mulqr
+// RV64:        pmulqr.w
+int32x2_t test_pmulqr_i32x2(int32x2_t a, int32x2_t b) {
+  return __riscv_pmulqr_i32x2(a, b);
+}
+
+// CHECK-LABEL: test_ppaire_i8x4:
+// CHECK:       ppaire.b
+int8x4_t test_ppaire_i8x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_ppaire_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_u8x4:
+// CHECK:       ppaire.b
+uint8x4_t test_ppaire_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_ppaire_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_i8x4:
+// CHECK:       ppaireo.b
+int8x4_t test_ppaireo_i8x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_ppaireo_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_u8x4:
+// CHECK:       ppaireo.b
+uint8x4_t test_ppaireo_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_ppaireo_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_i8x4:
+// CHECK:       ppairoe.b
+int8x4_t test_ppairoe_i8x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_ppairoe_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_u8x4:
+// CHECK:       ppairoe.b
+uint8x4_t test_ppairoe_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_ppairoe_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_i8x4:
+// CHECK:       ppairo.b
+int8x4_t test_ppairo_i8x4(int8x4_t rs1, int8x4_t rs2) {
+  return __riscv_ppairo_i8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_u8x4:
+// CHECK:       ppairo.b
+uint8x4_t test_ppairo_u8x4(uint8x4_t rs1, uint8x4_t rs2) {
+  return __riscv_ppairo_u8x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_i8x8:
+// RV32:        ppaire.db
+// RV64:        ppaire.b
+int8x8_t test_ppaire_i8x8(int8x8_t rs1, int8x8_t rs2) {
+  return __riscv_ppaire_i8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_u8x8:
+// RV32:        ppaire.db
+// RV64:        ppaire.b
+uint8x8_t test_ppaire_u8x8(uint8x8_t rs1, uint8x8_t rs2) {
+  return __riscv_ppaire_u8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_i8x8:
+// RV32:        ppaireo.db
+// RV64:        ppaireo.b
+int8x8_t test_ppaireo_i8x8(int8x8_t rs1, int8x8_t rs2) {
+  return __riscv_ppaireo_i8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_u8x8:
+// RV32:        ppaireo.db
+// RV64:        ppaireo.b
+uint8x8_t test_ppaireo_u8x8(uint8x8_t rs1, uint8x8_t rs2) {
+  return __riscv_ppaireo_u8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_i8x8:
+// RV32:        ppairoe.db
+// RV64:        ppairoe.b
+int8x8_t test_ppairoe_i8x8(int8x8_t rs1, int8x8_t rs2) {
+  return __riscv_ppairoe_i8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_u8x8:
+// RV32:        ppairoe.db
+// RV64:        ppairoe.b
+uint8x8_t test_ppairoe_u8x8(uint8x8_t rs1, uint8x8_t rs2) {
+  return __riscv_ppairoe_u8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_i8x8:
+// RV32:        ppairo.db
+// RV64:        ppairo.b
+int8x8_t test_ppairo_i8x8(int8x8_t rs1, int8x8_t rs2) {
+  return __riscv_ppairo_i8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_u8x8:
+// RV32:        ppairo.db
+// RV64:        ppairo.b
+uint8x8_t test_ppairo_u8x8(uint8x8_t rs1, uint8x8_t rs2) {
+  return __riscv_ppairo_u8x8(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_i16x4:
+// RV32:        ppaire.dh
+// RV64:        ppaire.h
+int16x4_t test_ppaire_i16x4(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_ppaire_i16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaire_u16x4:
+// RV32:        ppaire.dh
+// RV64:        ppaire.h
+uint16x4_t test_ppaire_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_ppaire_u16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_i16x4:
+// RV32:        ppaireo.dh
+// RV64:        ppaireo.h
+int16x4_t test_ppaireo_i16x4(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_ppaireo_i16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppaireo_u16x4:
+// RV32:        ppaireo.dh
+// RV64:        ppaireo.h
+uint16x4_t test_ppaireo_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_ppaireo_u16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_i16x4:
+// RV32:        ppairoe.dh
+// RV64:        ppairoe.h
+int16x4_t test_ppairoe_i16x4(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_ppairoe_i16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairoe_u16x4:
+// RV32:        ppairoe.dh
+// RV64:        ppairoe.h
+uint16x4_t test_ppairoe_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_ppairoe_u16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_i16x4:
+// RV32:        ppairo.dh
+// RV64:        ppairo.h
+int16x4_t test_ppairo_i16x4(int16x4_t rs1, int16x4_t rs2) {
+  return __riscv_ppairo_i16x4(rs1, rs2);
+}
+
+// CHECK-LABEL: test_ppairo_u16x4:
+// RV32:        ppairo.dh
+// RV64:        ppairo.h
+uint16x4_t test_ppairo_u16x4(uint16x4_t rs1, uint16x4_t rs2) {
+  return __riscv_ppairo_u16x4(rs1, rs2);
+}
+
 // CHECK-LABEL: test_pnzip_i8x4:
 // CHECK:       ppaire.b
 int8x4_t test_pnzip_i8x4(int16x2_t rs1, int16x2_t rs2) {

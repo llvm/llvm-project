@@ -14,7 +14,7 @@ class AArch64LinuxMTEMemoryRegionTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     @skipUnlessAArch64MTELinuxCompiler
     def test_mte_regions(self):
         if not self.isAArch64MTE():

@@ -33,8 +33,8 @@ define <vscale x 8 x i16> @sabs_nxv16i8_wide_add(<vscale x 8 x i16> %acc, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    sabd z1.b, p0/m, z1.b, z2.b
-; CHECK-NEXT:    uaddwb z0.h, z0.h, z1.b
-; CHECK-NEXT:    uaddwt z0.h, z0.h, z1.b
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    uadalp z0.h, p0/m, z1.b
 ; CHECK-NEXT:    ret
   %smax = tail call <vscale x 16 x i8> @llvm.smax.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
   %smin = tail call <vscale x 16 x i8> @llvm.smin.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b)
@@ -88,8 +88,8 @@ define <vscale x 4 x i32> @uabs_nxv16i8_wide_add(<vscale x 4 x i32> %acc, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    uabd z1.h, p0/m, z1.h, z2.h
-; CHECK-NEXT:    uaddwb z0.s, z0.s, z1.h
-; CHECK-NEXT:    uaddwt z0.s, z0.s, z1.h
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    uadalp z0.s, p0/m, z1.h
 ; CHECK-NEXT:    ret
   %umax = tail call <vscale x 8 x i16> @llvm.umax.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)
   %umin = tail call <vscale x 8 x i16> @llvm.umin.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b)

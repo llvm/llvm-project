@@ -569,7 +569,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
   SDValue Result = DAG.getLoad(
       ISD::UNINDEXED, N->getExtensionType(),
       N->getValueType(0).getVectorElementType(), SDLoc(N), N->getChain(),
-      N->getBasePtr(), DAG.getUNDEF(N->getBasePtr().getValueType()),
+      N->getBasePtr(), DAG.getPOISON(N->getBasePtr().getValueType()),
       N->getPointerInfo(), N->getMemoryVT().getVectorElementType(),
       N->getBaseAlign(), N->getMemOperand()->getFlags(), N->getAAInfo());
 
@@ -731,9 +731,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_VSELECT(SDNode *N) {
   if (BoolVT.bitsLT(CondVT))
     Cond = DAG.getNode(ISD::TRUNCATE, SDLoc(N), BoolVT, Cond);
 
-  return DAG.getSelect(SDLoc(N),
-                       LHS.getValueType(), Cond, LHS,
-                       GetScalarizedVector(N->getOperand(2)));
+  return DAG.getSelect(SDLoc(N), LHS.getValueType(), Cond, LHS,
+                       GetScalarizedVector(N->getOperand(2)), N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_SELECT(SDNode *N) {
@@ -2426,7 +2425,7 @@ void DAGTypeLegalizer::SplitVecRes_LOAD(LoadSDNode *LD, SDValue &Lo,
   ISD::LoadExtType ExtType = LD->getExtensionType();
   SDValue Ch = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
-  SDValue Offset = DAG.getUNDEF(Ptr.getValueType());
+  SDValue Offset = DAG.getPOISON(Ptr.getValueType());
   EVT MemoryVT = LD->getMemoryVT();
   MachineMemOperand::Flags MMOFlags = LD->getMemOperand()->getFlags();
   AAMDNodes AAInfo = LD->getAAInfo();

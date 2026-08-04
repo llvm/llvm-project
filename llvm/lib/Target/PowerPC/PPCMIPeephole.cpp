@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -161,6 +162,7 @@ public:
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
