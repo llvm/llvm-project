@@ -104,6 +104,8 @@ private:
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFromFP8(SDValue Op, bool IsBF8, SelectionDAG &DAG) const;
 
   // The raw.tbuffer and struct.tbuffer intrinsics have two offset args: offset
   // (the offset that is included in bounds checking and swizzling, to be split
@@ -165,6 +167,7 @@ private:
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue splitFP_ROUNDVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerScalarBF16FAdd(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerScalarBF16FCanonicalize(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINIMUM_FMAXIMUM(SDValue Op, SelectionDAG &DAG) const;
@@ -570,6 +573,15 @@ public:
 
   bool isCanonicalized(SelectionDAG &DAG, SDValue Op,
                        SDNodeFlags UserFlags = {}, unsigned MaxDepth = 5) const;
+
+  /// Returns true if \p Op is provably canonical (no FCANONICALIZE needed).
+  /// \p QueryVT is the scalar FP type being checked, threaded unchanged
+  /// through recursion since canonicality is per vector element. FP operands
+  /// whose scalar type differs from \p QueryVT are treated as non-canonical,
+  /// since canonicality does not survive a change of FP format (e.g. bitcast
+  /// v2bf16 to v2f16); non-FP operands are not checked against \p QueryVT.
+  bool isCanonicalized(SelectionDAG &DAG, SDValue Op, EVT QueryVT,
+                       SDNodeFlags UserFlags, unsigned MaxDepth) const;
   bool isCanonicalized(Register Reg, const MachineFunction &MF,
                        unsigned MaxDepth = 5) const;
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
