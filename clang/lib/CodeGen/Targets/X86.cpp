@@ -1756,6 +1756,17 @@ public:
         std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/true);
   }
 
+  // Unlike adjustInlineAsmType() (an ABI-specific type-lowering hook this
+  // class deliberately doesn't override, inheriting TargetCodeGenInfo's
+  // no-op default), register-or-memory inline asm folding support is a
+  // backend/ISA fact, not an ABI one: X86InstrInfo::getFrameIndexOperands()
+  // backs every X86 subtarget the same way regardless of OS. This class
+  // doesn't inherit from X86_64TargetCodeGenInfo (unlike WinX86_32, which
+  // inherits from X86_32TargetCodeGenInfo and so already gets this), so it
+  // needs its own override to avoid silently falling back to the
+  // TargetCodeGenInfo default of false.
+  bool supportsRegMemInlineAsmFolding() const override { return true; }
+
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
 
