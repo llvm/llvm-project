@@ -1162,7 +1162,6 @@ def V_LOAD_IDX_BITS : VPseudoInstSI<(outs VGPR_32:$data),
   let mayLoad = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
-  let Defs = [M0];
 }
 
 // Used for byte or short stores.
@@ -1175,7 +1174,6 @@ def V_STORE_IDX_BITS : VPseudoInstSI<(outs),
   let mayStore = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
-  let Defs = [M0];
 }
 
 // Select the REG_LOAD_BITS/REG_STORE_BITS target nodes into the sub-dword
