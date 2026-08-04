@@ -4761,6 +4761,8 @@ void Verifier::visitAtomicRMWInst(AtomicRMWInst &RMWI) {
     auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
     Check(VecTy, "atomicrmw elementwise operand must have fixed vector type!",
           &RMWI, ElTy);
+    if (VecTy)
+      checkAtomicMemAccessSize(VecTy->getElementType(), &RMWI);
   }
 
   if (Op == AtomicRMWInst::Xchg) {
