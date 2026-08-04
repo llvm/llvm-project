@@ -2444,10 +2444,30 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   llvm_unreachable("expected switch to return");
 }
 
-Register AMDGPULegalizerInfo::getSegmentAperture(
-  unsigned AS,
-  MachineRegisterInfo &MRI,
-  MachineIRBuilder &B) const {
+Register AMDGPULegalizerInfo::getSegmentAperture(unsigned AS,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineIRBuilder &B) const {
+  // See SITargetLowering::getSegmentAperture: an address space without an
+  // aperture of its own round-trips through the generic address space using the
+  // shared aperture tagged with its synthetic aperture number.
+  unsigned BaseAS = AS;
+  unsigned SANum = AMDGPU::tryGetSyntheticApertureNumber(AS);
+  if (SANum != AMDGPU::SyntheticAperture::None)
+    BaseAS = AMDGPUAS::LOCAL_ADDRESS;
+
+  Register Aperture = getBaseSegmentAperture(BaseAS, MRI, B);
+
+  if (SANum != AMDGPU::SyntheticAperture::None) {
+    const LLT I32 = LLT::integer(32);
+    auto Tag = B.buildConstant(I32, SANum);
+    return B.buildOr(I32, Aperture, Tag).getReg(0);
+  }
+
+  return Aperture;
+}
+
+Register AMDGPULegalizerInfo::getBaseSegmentAperture(
+    unsigned AS, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   MachineFunction &MF = B.getMF();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const LLT I32 = LLT::integer(32);
@@ -2586,7 +2606,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
       (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
-       DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+       DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::VGPR)) {
     auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
           ST.hasGloballyAddressableScratch()) {
@@ -2631,8 +2651,8 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   }
 
   if (DestAS == AMDGPUAS::FLAT_ADDRESS &&
-      (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
-       SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+      (SrcAS == AMDGPUAS::LOCAL_ADDRESS || SrcAS == AMDGPUAS::PRIVATE_ADDRESS ||
+       SrcAS == AMDGPUAS::VGPR)) {
     auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
       // Coerce the type of the low half of the result so we can use
       // merge_values.

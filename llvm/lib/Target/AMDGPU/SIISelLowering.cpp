@@ -9317,6 +9317,27 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
+  // An address space that has no aperture of its own round-trips through the
+  // generic address space using a synthetic aperture: the shared aperture with
+  // the aperture number in its low bits. Dereferencing such a generic pointer
+  // is undefined behaviour; the round-trip only has to preserve the value.
+  unsigned BaseAS = AS;
+  unsigned SANum = AMDGPU::tryGetSyntheticApertureNumber(AS);
+  if (SANum != AMDGPU::SyntheticAperture::None)
+    BaseAS = AMDGPUAS::LOCAL_ADDRESS;
+
+  SDValue Aperture = getBaseSegmentAperture(BaseAS, DL, DAG);
+
+  if (SANum != AMDGPU::SyntheticAperture::None) {
+    SDValue Tag = DAG.getConstant(SANum, DL, MVT::i32);
+    return DAG.getNode(ISD::OR, DL, MVT::i32, Aperture, Tag);
+  }
+
+  return Aperture;
+}
+
+SDValue SITargetLowering::getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
+                                                 SelectionDAG &DAG) const {
   if (Subtarget->hasApertureRegs()) {
     const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
                                        ? AMDGPU::SRC_SHARED_BASE
@@ -9417,10 +9438,10 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
 
-  // flat -> local/private
+  // flat -> local/private/vgpr
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
-        DestAS == AMDGPUAS::PRIVATE_ADDRESS) {
+        DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::VGPR) {
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
@@ -9447,10 +9468,10 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     }
   }
 
-  // local/private -> flat
+  // local/private/vgpr -> flat
   if (DestAS == AMDGPUAS::FLAT_ADDRESS) {
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
-        SrcAS == AMDGPUAS::PRIVATE_ADDRESS) {
+        SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::VGPR) {
       SDValue CvtPtr;
       if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
           Subtarget->hasGloballyAddressableScratch()) {
