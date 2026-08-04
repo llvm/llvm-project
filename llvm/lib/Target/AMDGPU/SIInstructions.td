@@ -1073,7 +1073,6 @@ def SI_INDIRECT_DST_V32 : SI_INDIRECT_DST<VReg_1024>;
 // AMDGPULowerVGPREncoding lowers each into an M0-relative move over the wave's
 // vector registers: v_movrels_b32 (load) / v_movreld_b32 (store) where the
 // subtarget has movrel, and a v_mov_b32 under the VGPR indexing mode otherwise.
-// It writes $idx to M0 there, beside the move that reads it.
 
 // Populates the VLdStIdxOpcodeInfo searchable table (see AMDGPUMachineInstrs.h
 // and AMDGPU::getVLdStIdxOpcodeInfo*), mapping each pseudo to its bit width and
@@ -1089,12 +1088,13 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
               VReg_512, VReg_1024] in {
   // The units of $idx and $offset are in dwords.
   //
-  // The index reaches the hardware through M0, so these define it: either by
-  // writing M0 for v_movrel[sd], which SITargetLowering::finalizeLowering
-  // rewrites $idx to, or through s_set_gpr_idx_on where the subtarget indexes
-  // with the VGPR indexing mode. Declaring that here also keeps a
-  // divergent-index access pinned inside its waterfall loop, since an
-  // instruction defining a physical register is not hoisted or sunk.
+  // The index reaches the hardware through M0, and how it gets there depends on
+  // the subtarget, so SITargetLowering::finalizeLowering fills that in rather
+  // than TableGen: for v_movrel[sd] it copies the index to M0 and rewrites $idx
+  // to it, making the access a plain M0 read; under the VGPR indexing mode the
+  // s_set_gpr_idx_on it expands to clobbers M0 instead, which the access
+  // carries as an implicit def. A divergent-index access is kept inside its
+  // waterfall loop by its implicit use of EXEC (see resultDependsOnExec).
   //
   // Unlike SI_INDIRECT_SRC/DST and the V_INDIRECT_REG_* pseudos, the storage
   // indexed here is the whole register file rather than a tuple an operand can
@@ -1106,7 +1106,6 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
       let mayLoad = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
-      let Defs = [M0];
   }
   def V_STORE_IDX_B#rc.Size : VPseudoInstSI <
     (outs),
@@ -1115,7 +1114,6 @@ foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
       let mayStore = 1;
       let UseNamedOperandTable = 1;
       let hasSideEffects = 0;
-      let Defs = [M0];
   }
 }
 
