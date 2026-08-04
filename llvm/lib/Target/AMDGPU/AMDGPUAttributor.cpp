@@ -1480,6 +1480,22 @@ struct AAAMDGPUVGPRBudget
     llvm_unreachable("AAAMDGPUVGPRBudget is only valid for function position");
   }
 
+  // When we known not all callers are known, we know that any unknown caller that reaches
+  // this function will have a pessimistic amdgpu-agpr-alloc attribute. This being pessimistic 
+  // means that the budget for the number of VGPRs and AGPRs will be split in half for the unknown 
+  // caller. We also know that the FlatWorkGroupSize attribute will also be pessimistic for at 
+  // least the current function (the one being called in the indirect callsite)
+  std::optional<unsigned> computePessimisticValue(Attributor &A) const {
+    Function *F = getAssociatedFunction();
+    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
+    const GCNSubtarget &ST = InfoCache.TM.getSubtarget<GCNSubtarget>(*F);
+    unsigned MaxWG = ST.getMaxFlatWorkGroupSize();
+    unsigned Occ = std::clamp(ST.getWavesPerEUForWorkGroup(MaxWG), 1u,
+                              ST.getMaxWavesPerEU());
+    unsigned Budget = ST.getMaxNumVGPRs(Occ, AMDGPU::getDynamicVGPRBlockSize(*F));
+    return Budget / 2;  // 128/2 == 64 on gfx90a at the max work-group size
+  }
+
   ChangeStatus updateImpl(Attributor &A) override {
     Function *F = getAssociatedFunction();
     VGPRBudgetState OldState = Budget;
@@ -1488,16 +1504,18 @@ struct AAAMDGPUVGPRBudget
     // accumulated, because the seed itself moves: a kernel's split shrinks as
     // AAAMDGPUMinAGPRAlloc climbs, and callees have to follow it down.
     if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+      unsigned VGPRBudget = 0;
       const auto *AGPRAlloc = A.getAAFor<AAAMDGPUMinAGPRAlloc>(
           *this, IRPosition::function(*F), DepClassTy::REQUIRED);
-      if (!AGPRAlloc || !AGPRAlloc->isValidState())
-        return indicatePessimisticFixpoint();
 
       auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
       const GCNSubtarget &ST = InfoCache.TM.getSubtarget<GCNSubtarget>(*F);
       unsigned MaxRegs = ST.getMaxNumVGPRs(*F);
-      unsigned VGPRBudget =
-          MaxRegs - std::min(MaxRegs, AGPRAlloc->getAssumed());
+      if (!AGPRAlloc || !AGPRAlloc->isValidState())
+        VGPRBudget = MaxRegs / 2; // pessimistic
+      else
+        VGPRBudget = MaxRegs - std::min(MaxRegs, AGPRAlloc->getAssumed());
+          
       Budget = {VGPRBudget, VGPRBudget, /*Unknown=*/false};
     } else {
       VGPRBudgetState Merged;
@@ -1521,10 +1539,19 @@ struct AAAMDGPUVGPRBudget
 
       bool UsedAssumedInformation = false;
       if (!A.checkForAllCallSites(CheckCallSite, *this,
-                                  /*RequireAllCallSites=*/true,
+                                  /*RequireAllCallSites=*/false,
                                   UsedAssumedInformation))
         return indicatePessimisticFixpoint();
 
+      // Checks for unknown call sites.
+      bool DummyUAI = false;
+      bool AllCallsitesKnown = A.checkForAllCallSites([](AbstractCallSite) { return true; }, *this, true, DummyUAI);
+
+      if (!AllCallsitesKnown) {
+        if (std::optional<unsigned> PessimisticValue = computePessimisticValue(A)) {
+          Merged.merge({*PessimisticValue, *PessimisticValue, /*Unknown=*/false});
+        } else return indicatePessimisticFixpoint();
+      }
       // Stays unknown when no caller contributed a budget, so that functions
       // outside any kernel's reach are left unconstrained.
       Budget = Merged;
