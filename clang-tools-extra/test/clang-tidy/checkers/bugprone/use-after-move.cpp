@@ -1,13 +1,15 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 -check-suffixes=,CXX11 %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection;::handle_accessor::Resource::invalidate", \
+// RUN:     bugprone-use-after-move.ArgumentInvalidationFunctions: "::argument_invalidation::Manager::close;::argument_invalidation::freeClose;::argument_invalidation::Manager::resetAt(1);::handle_accessor::Manager::release(0)", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset", \
 // RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle" \
 // RUN:   }}' -- \
 // RUN:   -fno-delayed-template-parsing
 // RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-use-after-move %t -- \
 // RUN:   -config='{CheckOptions: { \
-// RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection", \
+// RUN:     bugprone-use-after-move.InvalidationFunctions: "::std::move;::std::forward;::Database<>::StaticCloseConnection;Database<>::CloseConnection;FriendCloseConnection;FreeCloseConnection;::handle_accessor::Resource::invalidate", \
+// RUN:     bugprone-use-after-move.ArgumentInvalidationFunctions: "::argument_invalidation::Manager::close;::argument_invalidation::freeClose;::argument_invalidation::Manager::resetAt(1);::handle_accessor::Manager::release(0)", \
 // RUN:     bugprone-use-after-move.ReinitializationFunctions: "::Database<>::Reset;::Database<>::StaticReset;::FriendReset;::RegularReset", \
 // RUN:     bugprone-use-after-move.ReportAccessOnlyUseForTypes: "::report_access_only::AccessOnly;::report_access_only::HandleBase;::report_access_only::SmartHandle" \
 // RUN:   }}' -- \
@@ -2193,3 +2195,65 @@ void smartHandleCompareIsNotUse() {
 }
 
 } // namespace report_access_only
+
+////////////////////////////////////////////////////////////////////////////////
+// Tests for the ArgumentInvalidationFunctions option
+//
+// Functions in this option invalidate one argument. The index in the option
+// gives the argument (for example, `foo(0)`). This applies to free functions
+// and to member functions. The argument can be at any index.
+
+namespace argument_invalidation {
+
+struct Resource {
+  void use();
+};
+
+struct Manager {
+  void close(Resource *res);
+  void reset(Resource *res);
+  void resetAt(int pos, Resource *res);
+  void notInvalidating(Resource *res);
+};
+
+void freeClose(Resource *res);
+
+// A member function invalidates its first argument.
+void memberCloseInvalidatesArg() {
+  Manager mgr;
+  Resource *res = nullptr;
+  mgr.close(res);
+  res->use();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'res' used after it was invalidated by 'close'
+  // CHECK-NOTES: [[@LINE-3]]:7: note: invalidation occurred here
+}
+
+// A free function invalidates its first argument.
+void freeCloseInvalidatesArg() {
+  Resource *res = nullptr;
+  freeClose(res);
+  res->use();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'res' used after it was invalidated by 'freeClose'
+  // CHECK-NOTES: [[@LINE-3]]:3: note: invalidation occurred here
+}
+
+// A member function invalidates an argument at a non-zero index (here, index
+// 1). The other arguments stay valid.
+void nonZeroIndexInvalidatesCorrectArg() {
+  Manager mgr;
+  Resource *res = nullptr;
+  mgr.resetAt(0, res);
+  res->use();
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'res' used after it was invalidated by 'resetAt'
+  // CHECK-NOTES: [[@LINE-3]]:7: note: invalidation occurred here
+}
+
+// A function that is not configured does not invalidate its argument.
+void unconfiguredFunctionDoesNotInvalidate() {
+  Manager mgr;
+  Resource *res = nullptr;
+  mgr.notInvalidating(res);
+  res->use();
+}
+
+} // namespace argument_invalidation

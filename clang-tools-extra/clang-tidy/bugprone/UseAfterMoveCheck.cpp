@@ -66,6 +66,7 @@ class UseAfterMoveFinder {
 public:
   UseAfterMoveFinder(ASTContext *TheContext,
                      llvm::ArrayRef<StringRef> InvalidationFunctions,
+                     llvm::ArrayRef<StringRef> ArgumentInvalidationFunctions,
                      llvm::ArrayRef<StringRef> ReinitializationFunctions,
                      llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes,
                      const CXXRecordDecl *MovedAs);
@@ -92,6 +93,7 @@ private:
 
   ASTContext *Context;
   llvm::ArrayRef<StringRef> InvalidationFunctions;
+  llvm::ArrayRef<StringRef> ArgumentInvalidationFunctions;
   llvm::ArrayRef<StringRef> ReinitializationFunctions;
   llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes;
   const CXXRecordDecl *MovedAs;
@@ -106,12 +108,24 @@ static auto getNameMatcher(llvm::ArrayRef<StringRef> InvalidationFunctions) {
   return matchers::matchesAnyListedRegexName(InvalidationFunctions);
 }
 
+static SmallVector<std::pair<StringRef, unsigned>, 4>
+parseArgumentInvalidationFunctions(llvm::ArrayRef<StringRef> Entries);
+
 static StatementMatcher
 makeReinitMatcher(const ValueDecl *MovedVariable,
                   llvm::ArrayRef<StringRef> InvalidationFunctions,
+                  llvm::ArrayRef<StringRef> ArgumentInvalidationFunctions,
                   llvm::ArrayRef<StringRef> ReinitializationFunctions) {
   const auto DeclRefMatcher =
       declRefExpr(hasDeclaration(equalsNode(MovedVariable))).bind("declref");
+
+  // Functions in ArgumentInvalidationFunctions invalidate the variable. They do
+  // not reinitialize it. Thus, the check must not count an argument to these
+  // functions as a reinitialization. Collect their names to exclude them below.
+  SmallVector<StringRef, 4> ArgumentInvalidationNames;
+  for (const std::pair<StringRef, unsigned> &Func :
+       parseArgumentInvalidationFunctions(ArgumentInvalidationFunctions))
+    ArgumentInvalidationNames.push_back(Func.first);
 
   const auto StandardContainerTypeMatcher = hasType(hasUnqualifiedDesugaredType(
       recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
@@ -185,7 +199,9 @@ makeReinitMatcher(const ValueDecl *MovedVariable,
                               unless(parmVarDecl(hasType(
                                   references(qualType(isConstQualified())))))),
                           unless(callee(functionDecl(
-                              getNameMatcher(InvalidationFunctions)))))))
+                              anyOf(getNameMatcher(InvalidationFunctions),
+                                    matchers::matchesAnyListedRegexName(
+                                        ArgumentInvalidationNames))))))))
       .bind("reinit");
 }
 
@@ -205,10 +221,12 @@ static StatementMatcher inDecltypeOrTemplateArg() {
 
 UseAfterMoveFinder::UseAfterMoveFinder(
     ASTContext *TheContext, llvm::ArrayRef<StringRef> InvalidationFunctions,
+    llvm::ArrayRef<StringRef> ArgumentInvalidationFunctions,
     llvm::ArrayRef<StringRef> ReinitializationFunctions,
     llvm::ArrayRef<StringRef> ReportAccessOnlyUseForTypes,
     const CXXRecordDecl *MovedAs)
     : Context(TheContext), InvalidationFunctions(InvalidationFunctions),
+      ArgumentInvalidationFunctions(ArgumentInvalidationFunctions),
       ReinitializationFunctions(ReinitializationFunctions),
       ReportAccessOnlyUseForTypes(ReportAccessOnlyUseForTypes),
       MovedAs(MovedAs) {}
@@ -521,7 +539,8 @@ void UseAfterMoveFinder::getReinits(
     llvm::SmallPtrSetImpl<const Stmt *> *Stmts,
     llvm::SmallPtrSetImpl<const DeclRefExpr *> *DeclRefs) {
   const auto ReinitMatcher = makeReinitMatcher(
-      MovedVariable, InvalidationFunctions, ReinitializationFunctions);
+      MovedVariable, InvalidationFunctions, ArgumentInvalidationFunctions,
+      ReinitializationFunctions);
 
   Stmts->clear();
   DeclRefs->clear();
@@ -604,6 +623,8 @@ UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       InvalidationFunctions(utils::options::parseStringList(
           Options.get("InvalidationFunctions", "::std::move;::std::forward"))),
+      ArgumentInvalidationFunctions(utils::options::parseStringList(
+          Options.get("ArgumentInvalidationFunctions", ""))),
       ReinitializationFunctions(utils::options::parseStringList(
           Options.get("ReinitializationFunctions", ""))),
       ReportAccessOnlyUseForTypes(utils::options::parseStringList(
@@ -612,11 +633,46 @@ UseAfterMoveCheck::UseAfterMoveCheck(StringRef Name, ClangTidyContext *Context)
 void UseAfterMoveCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "InvalidationFunctions",
                 utils::options::serializeStringList(InvalidationFunctions));
+  Options.store(
+      Opts, "ArgumentInvalidationFunctions",
+      utils::options::serializeStringList(ArgumentInvalidationFunctions));
   Options.store(Opts, "ReinitializationFunctions",
                 utils::options::serializeStringList(ReinitializationFunctions));
   Options.store(
       Opts, "ReportAccessOnlyUseForTypes",
       utils::options::serializeStringList(ReportAccessOnlyUseForTypes));
+}
+
+// Parses the ArgumentInvalidationFunctions option entries. Each entry has the
+// form `name(index)` (for example, `::mlir::RewriterBase::replaceOp(0)`). The
+// function returns a name (a regular expression) and the index of the argument
+// that the call invalidates. If an entry has no index, the function uses the
+// first argument (index 0).
+static SmallVector<std::pair<StringRef, unsigned>, 4>
+parseArgumentInvalidationFunctions(llvm::ArrayRef<StringRef> Entries) {
+  SmallVector<std::pair<StringRef, unsigned>, 4> Result;
+  for (StringRef Entry : Entries) {
+    Entry = Entry.trim();
+    if (Entry.empty())
+      continue;
+
+    StringRef Name = Entry;
+    unsigned ArgIndex = 0;
+    if (Entry.ends_with(")")) {
+      const size_t Open = Entry.rfind('(');
+      if (Open != StringRef::npos) {
+        unsigned Parsed = 0;
+        if (!Entry.slice(Open + 1, Entry.size() - 1)
+                 .trim()
+                 .getAsInteger(10, Parsed)) {
+          Name = Entry.substr(0, Open).trim();
+          ArgIndex = Parsed;
+        }
+      }
+    }
+    Result.emplace_back(Name, ArgIndex);
+  }
+  return Result;
 }
 
 void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
@@ -631,22 +687,23 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
       callee(functionDecl(unless(isStaticStorageClass())));
   const auto DerivedToBaseCast =
       implicitCastExpr(hasCastKind(CK_DerivedToBase)).bind("optional-cast");
-  const auto CallMoveMatcher = callExpr(
-      callee(functionDecl(getNameMatcher(InvalidationFunctions))
-                 .bind("move-decl")),
-      anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
-            callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
-                     hasArgument(0, Arg))),
-      unless(inDecltypeOrTemplateArg()), unless(hasParent(TryEmplaceMatcher)),
-      expr().bind("call-move"),
-      optionally(
-          anyOf(hasParent(DerivedToBaseCast),
+
+  // Wraps an invalidation "core" matcher into the full moving-call matcher and
+  // registers it. The core matcher matches the invalidating call. It binds the
+  // callee as "move-decl" and the invalidated variable as "arg".
+  const auto AddMovingCallMatcher =
+      [&](const ast_matchers::internal::Matcher<CallExpr> &Core) {
+        const auto CallMoveMatcher = callExpr(
+            Core, unless(inDecltypeOrTemplateArg()),
+            unless(hasParent(TryEmplaceMatcher)), expr().bind("call-move"),
+            optionally(anyOf(
+                hasParent(DerivedToBaseCast),
                 hasArgument(
                     0, traverse(TK_AsIs, expr(hasParent(DerivedToBaseCast)))))),
-      anyOf(hasAncestor(compoundStmt(
-                hasParent(lambdaExpr().bind("containing-lambda")))),
-            hasAncestor(functionDecl(
-                anyOf(cxxConstructorDecl(
+            anyOf(hasAncestor(compoundStmt(
+                      hasParent(lambdaExpr().bind("containing-lambda")))),
+                  hasAncestor(functionDecl(anyOf(
+                      cxxConstructorDecl(
                           hasAnyConstructorInitializer(withInitializer(
                               expr(anyOf(equalsBoundNode("call-move"),
                                          hasDescendant(expr(
@@ -655,24 +712,47 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
                           .bind("containing-ctor"),
                       functionDecl().bind("containing-func"))))));
 
-  Finder->addMatcher(
-      traverse(
-          TK_AsIs,
-          // To find the Stmt that we assume performs the actual move, we look
-          // for the direct ancestor of the std::move() that isn't one of the
-          // node types ignored by ignoringParenImpCasts().
-          stmt(
-              forEach(expr(ignoringParenImpCasts(CallMoveMatcher))),
-              // Don't allow an InitListExpr to be the moving call. An
-              // InitListExpr has both a syntactic and a semantic form, and the
-              // parent-child relationships are different between the two. This
-              // could cause an InitListExpr to be analyzed as the moving call
-              // in addition to the Expr that we actually want, resulting in two
-              // diagnostics with different code locations for the same move.
-              unless(initListExpr()),
-              unless(expr(ignoringParenImpCasts(equalsBoundNode("call-move")))))
-              .bind("moving-call")),
-      this);
+        Finder->addMatcher(
+            traverse(
+                TK_AsIs,
+                // To find the Stmt that we assume performs the actual move, we
+                // look for the direct ancestor of the std::move() that isn't
+                // one of the node types ignored by ignoringParenImpCasts().
+                stmt(forEach(expr(ignoringParenImpCasts(CallMoveMatcher))),
+                     // Don't allow an InitListExpr to be the moving call. An
+                     // InitListExpr has both a syntactic and a semantic form,
+                     // and the parent-child relationships are different between
+                     // the two. This could cause an InitListExpr to be analyzed
+                     // as the moving call in addition to the Expr that we
+                     // actually want, resulting in two diagnostics with
+                     // different code locations for the same move.
+                     unless(initListExpr()),
+                     unless(expr(
+                         ignoringParenImpCasts(equalsBoundNode("call-move")))))
+                    .bind("moving-call")),
+            this);
+      };
+
+  // std::move(), std::forward(), and the functions in InvalidationFunctions
+  // invalidate the object of a member call, or the first argument of a free
+  // function call.
+  AddMovingCallMatcher(
+      allOf(callee(functionDecl(getNameMatcher(InvalidationFunctions))
+                       .bind("move-decl")),
+            anyOf(cxxMemberCallExpr(IsMemberCallee, on(Arg)),
+                  callExpr(unless(cxxMemberCallExpr(IsMemberCallee)),
+                           hasArgument(0, Arg)))));
+
+  // Functions in ArgumentInvalidationFunctions invalidate one argument. The
+  // index in the option gives the argument (for example, `foo(0)`). This
+  // applies to free functions and to member functions.
+  for (const std::pair<StringRef, unsigned> &Func :
+       parseArgumentInvalidationFunctions(ArgumentInvalidationFunctions)) {
+    AddMovingCallMatcher(allOf(
+        callee(functionDecl(matchers::matchesAnyListedRegexName(Func.first))
+                   .bind("move-decl")),
+        hasArgument(Func.second, ignoringParenImpCasts(Arg))));
+  }
 }
 
 void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
@@ -724,9 +804,9 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
       ParentCast ? ParentCast->getType()->getAsCXXRecordDecl() : nullptr;
 
   for (Stmt *CodeBlock : CodeBlocks) {
-    UseAfterMoveFinder Finder(Result.Context, InvalidationFunctions,
-                              ReinitializationFunctions,
-                              ReportAccessOnlyUseForTypes, MovedAs);
+    UseAfterMoveFinder Finder(
+        Result.Context, InvalidationFunctions, ArgumentInvalidationFunctions,
+        ReinitializationFunctions, ReportAccessOnlyUseForTypes, MovedAs);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
       emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
                      determineMoveType(MoveDecl), MoveDecl);
