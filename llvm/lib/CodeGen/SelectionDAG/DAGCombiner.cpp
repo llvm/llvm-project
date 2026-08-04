@@ -16691,6 +16691,16 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       return SCC;
   }
 
+  // Build vector can be truncating (wider operands). Check if we can do the
+  // build vector in a wider type, instead of truncating and any extending. All
+  // operands have the same type.
+  // ty1 aext(ty2 build_vector()) -> ty1 build_vector() of wider type.
+  if (N0.getOpcode() == ISD::BUILD_VECTOR &&
+      VT.getScalarSizeInBits() <=
+          N0.getOperand(0).getValueType().getScalarSizeInBits() &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::BUILD_VECTOR, VT)))
+    return DAG.getBuildVector(VT, DL, N0->ops());
+
   if (SDValue NewCtPop = widenCtPop(N, DAG, DL))
     return NewCtPop;
 
