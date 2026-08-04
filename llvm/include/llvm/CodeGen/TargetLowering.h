@@ -2485,11 +2485,14 @@ public:
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
-  /// AtomicRMW, if at all. Default is to never expand.
+  /// AtomicRMW, if at all. By default, elementwise operations are expanded and
+  /// floating-point operations use are expanded to a compare-exchange loop.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
-    return RMW->isFloatingPointOperation() ?
-      AtomicExpansionKind::CmpXChg : AtomicExpansionKind::None;
+    if (RMW->isElementwise())
+      return AtomicExpansionKind::Expand;
+    return RMW->isFloatingPointOperation() ? AtomicExpansionKind::CmpXChg
+                                           : AtomicExpansionKind::None;
   }
 
   /// Returns how the given atomic atomicrmw should be cast by the IR-level
