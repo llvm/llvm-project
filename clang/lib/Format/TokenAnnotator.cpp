@@ -5240,7 +5240,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
 
   if (IsCpp) {
     if (Left.is(TT_OverloadedOperator) &&
-        Right.isOneOf(TT_TemplateOpener, TT_TemplateCloser)) { 
+        Right.isOneOf(TT_TemplateOpener, TT_TemplateCloser)) {
       if (Left.is(tok::string_literal) && Left.Previous &&
           Left.Previous->is(tok::kw_operator)) {
         return false;
