@@ -122,6 +122,8 @@ private:
 
   size_t GetSetSize(RegisterSetType set) const;
 
+  void *GetSetBuffer(RegisterSetType set);
+
   void MakeValid(RegisterSetType set) { m_validity |= set; }
 
   [[nodiscard]] bool IsValid(RegisterSetType set) const {
