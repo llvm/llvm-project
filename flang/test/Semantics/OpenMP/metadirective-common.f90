@@ -54,3 +54,13 @@ subroutine f06(x)
   !$omp & when(implementation={vendor(llvm)}: parallel num_threads(4)) otherwise(nothing)
   x = 1
 end
+
+! The fallback (otherwise/default) variant is also checked
+subroutine f07(x)
+  integer :: x
+  !$omp metadirective &
+  !$omp & when(implementation={vendor(llvm)}: nothing) &
+!ERROR: A standalone METADIRECTIVE cannot contain a block-associated directive
+  !$omp & otherwise(parallel num_threads(4))
+  x = 1
+end

@@ -738,16 +738,16 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
     }
   }
   if (!isDelimited && checkDefaultNoneInAssociatedLoop) {
-    OmpVariantMatchContext matchContext{context_};
-    if (currentWhenSelector_ &&
-        MayVariantBeSelected(currentWhenSelector_, context_, matchContext) &&
-        llvm::omp::getDirectiveAssociation(dirId) ==
-            llvm::omp::Association::Block) {
-      unsigned version{context_.langOptions().OpenMPVersion};
-      context_.Say(x.DirName().source,
-          "A standalone %s cannot contain a block-associated directive"_err_en_US,
-          parser::omp::GetUpperName(
-              llvm::omp::Directive::OMPD_metadirective, version));
+    if (llvm::omp::getDirectiveAssociation(dirId) ==
+        llvm::omp::Association::Block) {
+      OmpVariantMatchContext matchContext{context_};
+      if (MayVariantBeSelected(currentWhenSelector_, context_, matchContext)) {
+        unsigned version{context_.langOptions().OpenMPVersion};
+        context_.Say(x.DirName().source,
+            "A standalone %s cannot contain a block-associated directive"_err_en_US,
+            parser::omp::GetUpperName(
+                llvm::omp::Directive::OMPD_metadirective, version));
+      }
     }
   }
 
