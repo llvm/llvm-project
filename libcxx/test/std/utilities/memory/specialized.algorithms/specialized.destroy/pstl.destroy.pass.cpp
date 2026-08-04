@@ -73,7 +73,8 @@ struct TestCounted {
   }
 };
 
-#if TEST_STD_VER > 17
+// std::destroy on a sequence of arrays is supported since C++20.
+#if TEST_STD_VER >= 20
 template <class Iter>
 struct TestArrayCounted3 {
   template <class ExecutionPolicy>
@@ -135,15 +136,15 @@ struct TestArrayCounted32 {
     }
   }
 };
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER >= 20
 
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<Counted*>{}, TestIteratorWithPolicies<TestCounted>{});
-#if TEST_STD_VER > 17
+#if TEST_STD_VER >= 20
   using CountedArray3 = Counted[3];
   types::for_each(types::forward_iterator_list<CountedArray3*>{}, TestIteratorWithPolicies<TestArrayCounted3>{});
   using CountedArray32 = Counted[3][2];
   types::for_each(types::forward_iterator_list<CountedArray32*>{}, TestIteratorWithPolicies<TestArrayCounted32>{});
-#endif // TEST_STD_VER > 17
+#endif // TEST_STD_VER >= 20
   return 0;
 }
