@@ -35,6 +35,9 @@ void DoNotOptimizeData(Container& c) {
   }
 }
 
+// Align benchmark functions and never inline them to reduce changes in performance in unrelated benchmarks
+#define BENCHMARK_ATTRS [[gnu::aligned(128), gnu::noinline]]
+
 template <class Container>
 void sequence_container_benchmarks(std::string container) {
   using ValueType = typename Container::value_type;
@@ -65,7 +68,7 @@ void sequence_container_benchmarks(std::string container) {
   /////////////////////////
   if constexpr (std::is_constructible_v<Container, std::size_t>) {
     // not all containers provide this constructor
-    bench("ctor(size_type)", [](auto& st) {
+    bench("ctor(size_type)", [] BENCHMARK_ATTRS(auto& st) {
       auto const size = st.range(0);
 
       for ([[maybe_unused]] auto _ : st) {
@@ -76,7 +79,7 @@ void sequence_container_benchmarks(std::string container) {
   }
 
   for (auto gen : generators)
-    bench("ctor(size_type, const value_type&)" + tostr(gen), [gen](auto& st) {
+    bench("ctor(size_type, const value_type&)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
       auto const size = st.range(0);
       ValueType value = gen();
       benchmark::DoNotOptimize(value);
@@ -88,7 +91,7 @@ void sequence_container_benchmarks(std::string container) {
     });
 
   for (auto gen : generators)
-    bench("ctor(Iterator, Iterator)" + tostr(gen), [gen](auto& st) {
+    bench("ctor(Iterator, Iterator)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
       auto const size = st.range(0);
       std::vector<ValueType> in;
       std::generate_n(std::back_inserter(in), size, gen);
@@ -104,7 +107,7 @@ void sequence_container_benchmarks(std::string container) {
 
 #if defined(__cpp_lib_containers_ranges) && __cpp_lib_containers_ranges >= 202202L
   for (auto gen : generators)
-    bench("ctor(Range)" + tostr(gen), [gen](auto& st) {
+    bench("ctor(Range)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
       auto const size = st.range(0);
       std::vector<ValueType> in;
       std::generate_n(std::back_inserter(in), size, gen);
@@ -118,7 +121,7 @@ void sequence_container_benchmarks(std::string container) {
 #endif
 
   for (auto gen : generators)
-    bench("ctor(const Self&)" + tostr(gen), [gen](auto& st) {
+    bench("ctor(const Self&)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
       auto const size = st.range(0);
       Container in;
       std::generate_n(std::back_inserter(in), size, gen);
@@ -135,7 +138,7 @@ void sequence_container_benchmarks(std::string container) {
   // Assignment
   /////////////////////////
   for (auto gen : generators)
-    bench("operator=(const Self&)" + tostr(gen), [gen](auto& st) {
+    bench("operator=(const Self&)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
       auto const size = st.range(0);
       Container in1, in2;
       std::generate_n(std::back_inserter(in1), size, gen);
@@ -161,7 +164,7 @@ void sequence_container_benchmarks(std::string container) {
   // implementation basically creates a new container from scratch or manages to reuse the
   // pre-existing storage.
   for (auto gen : generators)
-    bench("assign(input-iter, input-iter) (full container)" + tostr(gen), [gen](auto& st) {
+    bench("assign(input-iter, input-iter) (full container)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
       auto const size = st.range(0);
       std::vector<ValueType> in1, in2;
       std::generate_n(std::back_inserter(in1), size, gen);
@@ -185,7 +188,7 @@ void sequence_container_benchmarks(std::string container) {
   // Insertion
   /////////////////////////
   for (auto gen : generators)
-    bench("insert(begin)" + tostr(gen), [gen](auto& st) {
+    bench("insert(begin)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
       auto const size = st.range(0);
       std::vector<ValueType> in;
       std::generate_n(std::back_inserter(in), size, gen);
@@ -207,7 +210,7 @@ void sequence_container_benchmarks(std::string container) {
 
   if constexpr (std::random_access_iterator<typename Container::iterator>) {
     for (auto gen : generators)
-      bench("insert(middle)" + tostr(gen), [gen](auto& st) {
+      bench("insert(middle)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
         auto const size = st.range(0);
         std::vector<ValueType> in;
         std::generate_n(std::back_inserter(in), size, gen);
@@ -233,7 +236,7 @@ void sequence_container_benchmarks(std::string container) {
     // Insert at the start of a vector in a scenario where the vector already
     // has enough capacity to hold all the elements we are inserting.
     for (auto gen : generators)
-      bench("insert(begin, input-iter, input-iter) (no realloc)" + tostr(gen), [gen](auto& st) {
+      bench("insert(begin, input-iter, input-iter) (no realloc)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
         auto const size = st.range(0);
         std::vector<ValueType> in;
         std::generate_n(std::back_inserter(in), size, gen);
@@ -260,7 +263,7 @@ void sequence_container_benchmarks(std::string container) {
     // has almost enough capacity to hold all the elements we are inserting,
     // but does need to reallocate.
     for (auto gen : generators)
-      bench("insert(begin, input-iter, input-iter) (half filled)" + tostr(gen), [gen](auto& st) {
+      bench("insert(begin, input-iter, input-iter) (half filled)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
         auto const size = st.range(0);
         std::vector<ValueType> in;
         std::generate_n(std::back_inserter(in), size, gen);
@@ -286,7 +289,7 @@ void sequence_container_benchmarks(std::string container) {
     // more elements, but needs to reallocate almost immediately to fit the remaining
     // elements.
     for (auto gen : generators)
-      bench("insert(begin, input-iter, input-iter) (near full)" + tostr(gen), [gen](auto& st) {
+      bench("insert(begin, input-iter, input-iter) (near full)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
         auto const size = st.range(0);
         std::vector<ValueType> in;
         std::generate_n(std::back_inserter(in), size, gen);
@@ -320,7 +323,7 @@ void sequence_container_benchmarks(std::string container) {
       // For containers where we can observe capacity(), push_back a single element
       // without reserving to ensure the container needs to grow
       for (auto gen : generators)
-        bench("push_back() (growing)" + tostr(gen), [gen](auto& st) {
+        bench("push_back() (growing)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
           auto const size = st.range(0);
           std::vector<ValueType> in;
           std::generate_n(std::back_inserter(in), size, gen);
@@ -355,7 +358,7 @@ void sequence_container_benchmarks(std::string container) {
     // ensure the container doesn't grow
     if constexpr (has_reserve) {
       for (auto gen : generators)
-        bench("push_back() (with reserve)" + tostr(gen), [gen](auto& st) {
+        bench("push_back() (with reserve)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
           auto const size = st.range(0);
           std::vector<ValueType> in;
           std::generate_n(std::back_inserter(in), size, gen);
@@ -379,7 +382,7 @@ void sequence_container_benchmarks(std::string container) {
 
     // push_back many elements: this is amortized constant for std::vector but not all containers
     for (auto gen : generators)
-      bench("push_back() (many elements)" + tostr(gen), [gen](auto& st) {
+      bench("push_back() (many elements)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
         auto const size = st.range(0);
         std::vector<ValueType> in;
         std::generate_n(std::back_inserter(in), size, gen);
@@ -401,7 +404,7 @@ void sequence_container_benchmarks(std::string container) {
 
 #if TEST_STD_VER >= 23
     for (auto gen : generators)
-      bench("append_range() (into empty container)" + tostr(gen), [gen](auto& state) {
+      bench("append_range() (into empty container)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& state) {
         auto const size = state.range(0);
         std::vector<ValueType> in;
         std::generate_n(std::back_inserter(in), size, gen);
@@ -428,8 +431,9 @@ void sequence_container_benchmarks(std::string container) {
 
   if constexpr (has_prepend_range) {
     for (auto gen : generators)
-      bench("prepend_range() (into empty container)" + tostr(gen), [gen](auto& state) {
+      bench("prepend_range() (into empty container)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& state) {
         auto const size = state.range(0);
+        BENCHMARK_ATTRS
         std::vector<ValueType> in;
         std::generate_n(std::back_inserter(in), size, gen);
         DoNotOptimizeData(in);
@@ -451,7 +455,7 @@ void sequence_container_benchmarks(std::string container) {
   // Erasure
   /////////////////////////
   for (auto gen : generators)
-    bench("erase(begin)" + tostr(gen), [gen](auto& st) {
+    bench("erase(begin)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
       auto const size = st.range(0);
       std::vector<ValueType> in;
       std::generate_n(std::back_inserter(in), size, gen);
@@ -473,7 +477,7 @@ void sequence_container_benchmarks(std::string container) {
 
   if constexpr (std::random_access_iterator<typename Container::iterator>) {
     for (auto gen : generators)
-      bench("erase(middle)" + tostr(gen), [gen](auto& st) {
+      bench("erase(middle)" + tostr(gen), [gen] BENCHMARK_ATTRS(auto& st) {
         auto const size = st.range(0);
         std::vector<ValueType> in;
         std::generate_n(std::back_inserter(in), size, gen);
