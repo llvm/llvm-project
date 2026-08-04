@@ -30,6 +30,7 @@ from lldbsuite.support import temp_file
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
 from lldbsuite.test.cpu_feature import CPUFeature
+from lldbsuite.test.skip_reason import UnsupportedReason
 
 
 class DecorateMode:
@@ -151,6 +152,51 @@ def expectedFailureIf(condition, bugnumber=None):
         return expectedFailure_impl(bugnumber)
     else:
         return expectedFailure_impl
+
+
+def requiresSwiftPlugin(min_apple_os_version=None):
+    """Mark a test that can only pass when LLDB has the Swift language plugin.
+
+    More and more of Foundation is implemented in Swift, so its values are
+    increasingly backed by native Swift types that only the Swift language
+    plugin knows how to format. A test exercising such a value passes when LLDB
+    is built with Swift support and is expected to fail otherwise.
+
+    Starting with macOS/iOS/... 26.0 all Apple OS share a common
+    version number, so ``min_apple_os_version`` describes the release
+    in which a value moved to Swift. Older OS versions, non-Apple
+    targets, and any build that has the Swift plugin are expected to
+    pass. When ``min_apple_os_version`` is omitted the plugin is
+    required on every Apple OS.
+    """
+
+    def decorate(func):
+        # An LLDB built with the Swift plugin satisfies the requirement.
+        if _get_bool_config("swift", fail_value=False):
+            return func
+
+        # Otherwise the test is expected to fail, but only on Apple targets
+        # that are new enough to have moved the value to Swift.
+        apple_oslist = lldbplatformutil.getDarwinOSTriples() + ["xros", "xrsimulator"]
+        expected = _match_decorator_property(
+            apple_oslist, lldbplatformutil.getPlatform()
+        )
+        if expected and min_apple_os_version is not None:
+            target = lldb.selected_platform
+            actual = "%d.%d" % (
+                target.GetOSMajorVersion(),
+                target.GetOSMinorVersion(),
+            )
+            expected = _check_expected_version(">=", str(min_apple_os_version), actual)
+
+        return expectedFailureIf(expected)(func)
+
+    # Support bare usage (@requiresSwiftPlugin) in addition to the parenthesized
+    # form (@requiresSwiftPlugin(min_apple_os_version=...)).
+    if callable(min_apple_os_version):
+        func, min_apple_os_version = min_apple_os_version, None
+        return decorate(func)
+    return decorate
 
 
 def skipTestIfFn(expected_fn, bugnumber=None):
@@ -1076,6 +1122,126 @@ def skipUnlessPlatform(oslist):
         lldbplatformutil.getPlatform() in oslist,
         "requires one of %s" % (", ".join(oslist)),
     )
+
+
+##############################################################################
+# Platform *requirement* decorators.
+#
+# These express "this test can only ever run here", as opposed to the skipIf /
+# skipUnless family which means "this test ought to run here but is broken".
+# Tests turned off by a `require*` decorator are reported as UNSUPPORTED; tests
+# turned off by a `skip*` decorator are reported as SKIPPED. See
+# `lldbsuite.test.skip_reason` for how the distinction is carried.
+#
+# Reach for these when the test is inherently tied to a platform: it debugs a
+# platform-specific file format, drives a platform-specific API, or exercises
+# an OS feature that simply doesn't exist elsewhere. If the test is merely
+# untested or broken somewhere, keep using skipIf / skipUnless so it stays
+# visible as work to be done.
+##############################################################################
+
+
+def requirePlatform(oslist):
+    """Mark the item as runnable only on the listed target platforms.
+
+    Unlike `skipUnlessPlatform`, other platforms are reported as UNSUPPORTED
+    rather than SKIPPED.
+    """
+    return unittest.skipUnless(
+        lldbplatformutil.getPlatform() in oslist,
+        UnsupportedReason("requires one of %s" % (", ".join(oslist))),
+    )
+
+
+def requireNotPlatform(oslist):
+    """Mark the item as inherently inapplicable to the listed target platforms.
+
+    Unlike `skipIfPlatform`, the listed platforms are reported as UNSUPPORTED
+    rather than SKIPPED.
+    """
+    return unittest.skipIf(
+        lldbplatformutil.getPlatform() in oslist,
+        UnsupportedReason("unsupported on %s" % (", ".join(oslist))),
+    )
+
+
+def requireDarwin(func):
+    """Mark the item as inherently Darwin-only (Mach-O, debug maps, Darwin
+    kernel/runtime APIs, ...). Non-Darwin targets report UNSUPPORTED."""
+    return requirePlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+
+
+def requireNotDarwin(func):
+    """Mark the item as inherently inapplicable to Darwin targets."""
+    return requireNotPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
+
+
+def requireLinux(func):
+    """Mark the item as inherently Linux-only (procfs, Linux-specific syscalls,
+    ...). Other targets report UNSUPPORTED."""
+    return requirePlatform(["linux"])(func)
+
+
+def requireNotLinux(func):
+    """Mark the item as inherently inapplicable to Linux targets."""
+    return requireNotPlatform(["linux"])(func)
+
+
+def requireWindows(func):
+    """Mark the item as inherently Windows-only (PE/COFF, Win32 APIs, ...).
+    Other targets report UNSUPPORTED."""
+    return requirePlatform(["windows"])(func)
+
+
+def requireNotWindows(func):
+    """Mark the item as inherently inapplicable to Windows targets.
+
+    Use this for tests built on POSIX-only concepts: fork/exec semantics,
+    POSIX signals, ptrace, ELF/Mach-O specifics, shell pipelines, and so on.
+    """
+    return requireNotPlatform(["windows"])(func)
+
+
+def requirePOSIX(func):
+    """Mark the item as requiring a POSIX target.
+
+    A shorthand for `requireNotWindows` that reads better on tests whose
+    dependency is POSIX semantics generally rather than anything about
+    Windows specifically.
+    """
+    return requireNotPlatform(["windows"])(func)
+
+
+def requireSignals(func):
+    """Mark the item as requiring POSIX signal support on the target."""
+    return requireNotPlatform(["windows", "wasip1", "wasi"])(func)
+
+
+def requireNotWasm(func):
+    """Mark the item as inherently inapplicable to WebAssembly targets.
+
+    WebAssembly has no processes, no signals, no shared libraries and no
+    ptrace-style debugging, so a large amount of the test suite can never
+    apply to it.
+    """
+    return requireNotPlatform(["wasip1", "wasi"])(func)
+
+
+def requireHostPlatform(oslist):
+    """Mark the item as runnable only on the listed *host* platforms."""
+    return unittest.skipUnless(
+        lldbplatformutil.getHostPlatform() in oslist,
+        UnsupportedReason("requires one of %s as host" % (", ".join(oslist))),
+    )
+
+
+def requireDarwinHost(func):
+    """Mark the item as requiring a Darwin host, regardless of target.
+
+    Use for tests that drive host-side Darwin facilities: `xcrun`, the
+    simulator runtimes, dsymutil, the LLDB.framework layout, and so on.
+    """
+    return requireHostPlatform(lldbplatform.translate(lldbplatform.darwin_all))(func)
 
 
 def skipIfTargetDoesNotSupportThreads():

@@ -214,6 +214,11 @@ static bool containsPoison(mlir::Attribute attr) {
   return false;
 }
 
+static std::optional<mlir::Attribute>
+lowerConstRecordMemberAttr(mlir::Attribute attr,
+                           const mlir::TypeConverter *converter,
+                           mlir::ModuleOp moduleOp);
+
 std::optional<mlir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
                     const mlir::TypeConverter *converter,
@@ -238,9 +243,15 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
   if (mlir::isa<mlir::StringAttr>(constArr.getElts()))
     return convertStringAttrToDenseElementsAttr(constArr,
                                                 converter->convertType(type));
-  if (mlir::isa<cir::IntType>(type))
+  if (mlir::isa<cir::IntType>(type)) {
+    // A _BitInt array element is stored in a padded integer in memory; the
+    // dense-attribute path here cannot express that widening, so fall back to
+    // the insertvalue region, which widens each element via emitToMemory.
+    if (mlir::cast<cir::IntType>(type).isBitInt())
+      return std::nullopt;
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
         constArr, dims, type, converter->convertType(type));
+  }
 
   if (mlir::isa<cir::BoolType>(type))
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
@@ -271,6 +282,31 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
     return mlir::ArrayAttr::get(ctx, lowered);
   }
 
+  if (mlir::isa<cir::RecordType>(type)) {
+    // A record type is just an array of the element values.
+    auto eltsArr = mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts());
+    if (!eltsArr)
+      return std::nullopt;
+
+    llvm::SmallVector<mlir::Attribute> loweredElts;
+    loweredElts.reserve(cirArrayType.getSize());
+
+    for (mlir::Attribute elt : eltsArr) {
+      std::optional<mlir::Attribute> llvmElt =
+          lowerConstRecordMemberAttr(elt, converter, moduleOp);
+      if (!llvmElt)
+        return std::nullopt;
+      loweredElts.push_back(*llvmElt);
+    }
+
+    // Remaining elts are either going to be padding (and should be undef), or
+    // trailing-zeros. We can't really tell the difference as CIR lowering
+    // doesn't differentiate anyway, so just zero-fill them.
+    while (loweredElts.size() < cirArrayType.getSize())
+      loweredElts.push_back(mlir::LLVM::ZeroAttr::get(constArr.getContext()));
+    return mlir::ArrayAttr::get(constArr.getContext(), loweredElts);
+  }
+
   return std::nullopt;
 }
 
@@ -299,9 +335,14 @@ lowerConstRecordMemberAttr(mlir::Attribute attr,
   if (mlir::isa<cir::UndefAttr>(attr))
     return mlir::LLVM::UndefAttr::get(ctx);
 
-  if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr))
+  if (auto intAttr = mlir::dyn_cast<cir::IntAttr>(attr)) {
+    // A _BitInt member is stored in a padded integer in memory; defer to the
+    // insertvalue region (CIRAttrToValue), which performs the extension.
+    if (mlir::cast<cir::IntType>(intAttr.getType()).isBitInt())
+      return std::nullopt;
     return mlir::IntegerAttr::get(converter->convertType(intAttr.getType()),
                                   intAttr.getValue());
+  }
 
   if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr))
     return mlir::IntegerAttr::get(converter->convertType(boolAttr.getType()),

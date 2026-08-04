@@ -4496,6 +4496,14 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::i16,     {  1,  1,  2,  2 } }, // popcnt(zext())
     { ISD::CTPOP,      MVT::i8,      {  1,  1,  2,  2 } }, // popcnt(zext())
   };
+  static const CostKindTblEntry PCLMULCostTbl[] = {
+    { ISD::CLMUL,      MVT::v2i64,   {  3, 12,  4,  8 } }, // MOV+2xPCLMUL+unpack
+    { ISD::CLMUL,      MVT::v4i32,   {  8, 18, 12, 16 } }, // MOV+4xPCLMUL+unpack
+    { ISD::CLMUL,      MVT::i64,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i32,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i16,     {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+    { ISD::CLMUL,      MVT::i8,      {  3, 12,  4,  8 } }, // MOV+PCLMUL+MOV
+  };
   static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::ABS,        MVT::i64,     {  1,  2,  3,  3 } }, // SUB+CMOV
     { ISD::BITREVERSE, MVT::i64,     { 10, 12, 20, 22 } },
@@ -4718,6 +4726,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::UMULO;
     OpTy = RetTy->getContainedType(0);
     break;
+  case Intrinsic::clmul:
+    ISD = ISD::CLMUL;
+    break;
   }
 
   if (ISD != ISD::DELETED_NODE) {
@@ -4888,6 +4899,12 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         if (auto KindCost = Entry->Cost[CostKind])
           return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
     }
+
+    // FIXME: PCLMUL w/ AVX/AVX512 and VPCLMULQDQ are not handled properly.
+    if (ST->hasPCLMUL())
+      if (const auto *Entry = CostTableLookup(PCLMULCostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))

@@ -193,6 +193,7 @@ public:
   void VisitTemplateArgument(const TemplateArgument &Arg);
 
   void VisitMSGuidDecl(const MSGuidDecl *D);
+  void VisitTemplateParamObjectDecl(const TemplateParamObjectDecl *D);
 
   /// Emit a Decl's name using NamedDecl::printName() and return true if
   ///  the decl had no name.
@@ -1210,6 +1211,15 @@ void USRGenerator::VisitMSGuidDecl(const MSGuidDecl *D) {
   VisitDeclContext(D->getDeclContext());
   Out << "@MG@";
   D->NamedDecl::printName(Out);
+}
+
+void USRGenerator::VisitTemplateParamObjectDecl(
+    const TemplateParamObjectDecl *D) {
+  Out << "@TPO@";
+  VisitType(D->getType());
+  ODRHash Hash{};
+  Hash.AddStructuralValue(D->getValue());
+  Out << Hash.CalculateHash();
 }
 
 //===----------------------------------------------------------------------===//
