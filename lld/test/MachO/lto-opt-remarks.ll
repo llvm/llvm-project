@@ -26,7 +26,7 @@
 ; RUN: cat %t/thin.yaml.thin.*.yaml | FileCheck %s --check-prefix=THIN
 
 ; RUN: not %lld -dylib %t/full.o -o /dev/null \
-; RUN:   --opt-remarks-hotness-threshold=invalid 2>&1 | \
+; RUN:   --opt-remarks-hotness-threshold invalid 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=ERR
 
 ; REMARK:      --- !Passed
