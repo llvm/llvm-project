@@ -3,19 +3,23 @@
 
 ; In Shader execution models the SPIR-V max vector size is 4, so a G_PHI on
 ; a wider vector must be split into multiple PHIs of width 4.
-; Unlike the 32-lane case, the 16-lane type is explicitly listed as legal by
-; the backend, so it must be split before applying the explicit legality rules.
+; Unlike the 32 element case, the 16 case is listed as a legal type by the
+; backend, so it must be split before applying the explicit legality rules.
 
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#V4:]] = OpTypeVector %[[#I32]] 4
-; CHECK-COUNT-12: %[[#PHI:]] = OpPhi %[[#V4]]
-; CHECK: OpCompositeExtract %[[#I32]] %[[#PHI]]
 
 @A16 = internal addrspace(10) global [4 x <4 x i32>] zeroinitializer
 @Out16 = internal addrspace(10) global [4 x <4 x i32>] zeroinitializer
 @A32 = internal addrspace(10) global [8 x <4 x i32>] zeroinitializer
 @Out32 = internal addrspace(10) global [8 x <4 x i32>] zeroinitializer
 @Cond = internal addrspace(10) global i32 zeroinitializer
+
+; CHECK-LABEL: OpFunction %{{[0-9]+}} None %{{[0-9]+}} ; -- Begin function phi_v32
+; CHECK-COUNT-8: %[[#]] = OpPhi %[[#V4]]
+; CHECK: OpCompositeExtract %[[#I32]]
+; CHECK-NOT: OpPhi
+; CHECK: OpFunctionEnd
 
 define internal void @phi_v32() {
 entry:
@@ -73,6 +77,12 @@ merge:
   store <4 x i32> %s7, ptr addrspace(10) %o7
   ret void
 }
+
+; CHECK-LABEL: OpFunction %{{[0-9]+}} None %{{[0-9]+}} ; -- Begin function phi_v16
+; CHECK-COUNT-4: %[[#]] = OpPhi %[[#V4]]
+; CHECK: OpCompositeExtract %[[#I32]]
+; CHECK-NOT: OpPhi
+; CHECK: OpFunctionEnd
 
 define internal void @phi_v16() {
 entry:
