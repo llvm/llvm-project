@@ -5020,7 +5020,8 @@ void Sema::notePreviousDefinition(const NamedDecl *Old, SourceLocation New) {
 }
 
 bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
-  if (!hasVisibleDefinition(Old) &&
+  if ((!hasVisibleDefinition(Old) ||
+       isFromSameSingleIncludeHeader(Old, New->getLocation())) &&
       (New->getFormalLinkage() == Linkage::Internal || New->isInline() ||
        isa<VarTemplateSpecializationDecl>(New) ||
        New->getDescribedVarTemplate() ||
@@ -16246,7 +16247,9 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
     return;
 
   bool DefinitionVisible = false;
-  if (SkipBody && isRedefinitionAllowedFor(Definition, DefinitionVisible) &&
+  if (SkipBody &&
+      (isRedefinitionAllowedFor(Definition, DefinitionVisible) ||
+       isFromSameSingleIncludeHeader(Definition, FD->getLocation())) &&
       (Definition->getFormalLinkage() == Linkage::Internal ||
        Definition->isInlined() || Definition->getDescribedFunctionTemplate() ||
        !Definition->getTemplateParameterLists().empty())) {
@@ -18725,7 +18728,8 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 bool HiddenDefVisible = false;
                 if (SkipBody &&
                     (isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible) ||
-                     getLangOpts().C23)) {
+                     getLangOpts().C23 ||
+                     isFromSameSingleIncludeHeader(Def, NameLoc))) {
                   // There is a definition of this tag, but it is not visible.
                   // We explicitly make use of C++'s one definition rule here,
                   // and assume that this definition is identical to the hidden
