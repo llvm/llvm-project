@@ -23,8 +23,10 @@
 #include "rtl.h"
 
 #include "Shared/EnvironmentVar.h"
+#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
 
+#include <algorithm>
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -354,13 +356,79 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
   return OFFLOAD_SUCCESS;
 }
 
+/// Resolve \p NumArgs (base pointer, offset) pairs into a flattened array of
+/// argument-value pointers suitable for a kernel launch, writing the result
+/// into \p LaunchArgs.NumArgs/Args. 
+static void resolveKernelLaunchParams(void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                      uint32_t NumArgs,
+                                      llvm::SmallVector<void *> &Args,
+                                      llvm::SmallVector<void *> &Ptrs,
+                                      KernelLaunchArgsTy &LaunchArgs) {
+  LaunchArgs.NumArgs = NumArgs;
+  if (NumArgs == 0)
+    return;
+
+  Args.resize(NumArgs);
+  Ptrs.resize(NumArgs);
+
+  for (uint32_t I = 0; I < NumArgs; ++I)
+    Args[I] = reinterpret_cast<void *>(reinterpret_cast<intptr_t>(TgtArgs[I]) +
+                                       TgtOffsets[I]);
+  for (uint32_t I = 0; I < NumArgs; ++I)
+    Ptrs[I] = &Args[I];
+
+  LaunchArgs.Args = &Ptrs[0];
+}
+
 // Run region on device
 int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
                                KernelExtraArgsTy *KernelExtraArgs,
                                AsyncInfoTy &AsyncInfo) {
-  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, TgtVarsPtr, TgtOffsets,
-                            &KernelArgs, KernelExtraArgs, AsyncInfo);
+  llvm::SmallVector<void *> Args, Ptrs;
+
+  KernelLaunchArgsTy LaunchArgs;
+  LaunchArgs.OmpABIVersion = KernelArgs.Version;
+  LaunchArgs.ArgSizes = KernelArgs.ArgSizes;
+  LaunchArgs.Tripcount = KernelArgs.Tripcount;
+  LaunchArgs.DynCGroupMem = KernelArgs.DynCGroupMem;
+  std::copy(std::begin(KernelArgs.UserNumBlocks),
+            std::end(KernelArgs.UserNumBlocks), LaunchArgs.UserNumBlocks);
+  std::copy(std::begin(KernelArgs.UserThreadLimit),
+            std::end(KernelArgs.UserThreadLimit), LaunchArgs.UserThreadLimit);
+  LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
+  LaunchArgs.Flags.StrictBlocksAndThreads =
+      KernelArgs.Flags.StrictBlocksAndThreads;
+  LaunchArgs.Flags.DynCGroupMemFallback = KernelArgs.Flags.DynCGroupMemFallback;
+
+  if (KernelArgs.Flags.IsCUDA) {
+    // Kernel languages (CUDA/HIP) pass an already-flattened argument-pointer
+    // array through KernelArgs.ArgPtrs instead of using the OpenMP
+    // base-pointer/offset argument scheme.
+    auto *LaunchParams =
+        reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
+    LaunchArgs.NumArgs = LaunchParams->NumArgs;
+    LaunchArgs.Args = LaunchParams->Args;
+  } else {
+    resolveKernelLaunchParams(TgtVarsPtr, TgtOffsets, KernelArgs.NumArgs, Args,
+                              Ptrs, LaunchArgs);
+    // The dyn_ptr slot is reserved by the host (version >= 4) or by
+    // upgradeKernelArgs (version 3) as the last element of the argument
+    // array. Version 3 device kernels expect it first instead, so rotate it
+    // to the front to match that ABI.
+    if (KernelArgs.NumArgs > 0 &&
+        KernelArgs.Version >= OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
+      if (KernelArgs.Version == OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
+        std::rotate(Args.begin(), Args.end() - 1, Args.end());
+        LaunchArgs.DynPtrSlot = &Args[0];
+      } else {
+        LaunchArgs.DynPtrSlot = &Args[KernelArgs.NumArgs - 1];
+      }
+    }
+  }
+
+  return RTL->launch_kernel(RTLDeviceID, TgtEntryPtr, LaunchArgs,
+                            KernelExtraArgs, AsyncInfo);
 }
 
 // Run region on device
