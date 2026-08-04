@@ -8059,14 +8059,12 @@ then the interleave count will be determined automatically.
 
 #### '`llvm.loop.vectorize.enable`' Metadata
 
-This metadata selectively enables or disables vectorization for the loop. The
-first operand is the string `llvm.loop.vectorize.enable` and the second operand
-is a bit. If the bit operand value is 1 vectorization is enabled. A value of
-0 disables vectorization:
+This metadata selectively enables or disables vectorization for the loop. Each
+node has a single operand containing the name string:
 
 ```llvm
-!0 = !{!"llvm.loop.vectorize.enable", i1 0}
-!1 = !{!"llvm.loop.vectorize.enable", i1 1}
+!0 = !{!"llvm.loop.vectorize.enable"}
+!1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
 #### '`llvm.loop.vectorize.predicate.enable`' Metadata
