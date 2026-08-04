@@ -818,6 +818,15 @@ define void @coro_begin(ptr %0) {
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @coro_alloc
+define void @coro_alloc() {
+  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  ; CHECK: llvm.intr.coro.alloc %{{.*}} : (token) -> i1
+  %shouldAlloc = call i1 @llvm.coro.alloc(token %id)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @coro_size()
 define void @coro_size() {
   ; CHECK: llvm.intr.coro.size : i64
@@ -878,6 +887,69 @@ define void @coro_resume(ptr %0) {
 define void @coro_promise(ptr %0, i32 %1, i1 %2) {
   ; CHECK: llvm.intr.coro.promise %{{.*}}, %{{.*}}, %{{.*}} : (!llvm.ptr, i32, i1) -> !llvm.ptr
   %4 = call ptr @llvm.coro.promise(ptr %0, i32 %1, i1 %2)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @coro_frame
+define void @coro_frame() {
+  ; CHECK: llvm.intr.coro.frame : !llvm.ptr
+  %1 = call ptr @llvm.coro.frame()
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @coro_noop
+define void @coro_noop() {
+  ; CHECK: llvm.intr.coro.noop : !llvm.ptr
+  %1 = call ptr @llvm.coro.noop()
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @coro_destroy
+define void @coro_destroy(ptr %0) {
+  ; CHECK: llvm.intr.coro.destroy %{{.*}}
+  call void @llvm.coro.destroy(ptr %0)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @coro_done
+define void @coro_done(ptr %0) {
+  ; CHECK: llvm.intr.coro.done %{{.*}} : (!llvm.ptr) -> i1
+  %2 = call i1 @llvm.coro.done(ptr %0)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @coro_is_in_ramp
+define void @coro_is_in_ramp() {
+  ; CHECK: llvm.intr.coro.is_in_ramp : i1
+  %1 = call i1 @llvm.coro.is_in_ramp()
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @coro_dead
+define void @coro_dead(ptr %0) {
+  ; CHECK: llvm.intr.coro.dead %{{.*}}
+  call void @llvm.coro.dead(ptr %0)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @coro_await_suspend_void
+define void @coro_await_suspend_void(ptr %0, ptr %1, ptr %2) {
+  ; CHECK: llvm.intr.coro.await.suspend.void
+  call void @llvm.coro.await.suspend.void(ptr %0, ptr %1, ptr %2)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @coro_await_suspend_bool
+define void @coro_await_suspend_bool(ptr %0, ptr %1, ptr %2) {
+  ; CHECK: llvm.intr.coro.await.suspend.bool %{{.*}}, %{{.*}}, %{{.*}} : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i1
+  %4 = call i1 @llvm.coro.await.suspend.bool(ptr %0, ptr %1, ptr %2)
+  ret void
+}
+
+; CHECK-LABEL:  llvm.func @coro_await_suspend_handle
+define void @coro_await_suspend_handle(ptr %0, ptr %1, ptr %2) {
+  ; CHECK: llvm.intr.coro.await.suspend.handle
+  call void @llvm.coro.await.suspend.handle(ptr %0, ptr %1, ptr %2)
   ret void
 }
 
@@ -1406,6 +1478,7 @@ declare i16 @llvm.expect.with.probability.i16(i16, i16, double immarg)
 declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
+declare i1 @llvm.coro.alloc(token)
 declare i64 @llvm.coro.size.i64()
 declare i32 @llvm.coro.size.i32()
 declare i64 @llvm.coro.align.i64()
@@ -1416,6 +1489,15 @@ declare void @llvm.coro.end(ptr, i1, token)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 declare void @llvm.coro.resume(ptr)
 declare ptr @llvm.coro.promise(ptr nocapture, i32, i1)
+declare ptr @llvm.coro.frame()
+declare ptr @llvm.coro.noop()
+declare void @llvm.coro.destroy(ptr)
+declare i1 @llvm.coro.done(ptr nocapture readonly)
+declare i1 @llvm.coro.is_in_ramp()
+declare void @llvm.coro.dead(ptr)
+declare void @llvm.coro.await.suspend.void(ptr, ptr, ptr)
+declare i1 @llvm.coro.await.suspend.bool(ptr, ptr, ptr)
+declare void @llvm.coro.await.suspend.handle(ptr, ptr, ptr)
 declare i32 @llvm.eh.typeid.for.p0(ptr)
 declare ptr @llvm.stacksave.p0()
 declare ptr addrspace(1) @llvm.stacksave.p1()
