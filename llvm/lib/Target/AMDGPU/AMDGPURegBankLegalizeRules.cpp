@@ -1585,6 +1585,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64}}});
 
   bool hasPST = ST->hasPseudoScalarTrans();
+
+  Predicate isBFloat16([&](const MachineInstr &MI) -> bool {
+    return MRI->getType(MI.getOperand(0).getReg()).isBFloat16();
+  });
+
   addRulesForGOpcs({G_FSQRT}, Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16}})
       .Uni(S16, {{Sgpr16}, {Sgpr16}}, hasPST)
@@ -2484,15 +2489,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST);
 
-  addRulesForIOpcs({amdgcn_rcp, amdgcn_sqrt}, Standard)
-      .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
-      .Uni(S16, {{Sgpr16}, {IntrId, Sgpr16}}, hasPST)
-      .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}}, !hasPST)
-      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
-      .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
-      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32}}, !hasPST)
-      .Div(S64, {{Vgpr64}, {IntrId, Vgpr64}})
-      .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64}});
+  addRulesForIOpcs({amdgcn_rcp, amdgcn_sqrt})
+      .Any({{DivS16}, {{Vgpr16}, {IntrId, Vgpr16}}})
+      .Any({{{UniS16}, isBFloat16}, {{UniInVgprS16}, {IntrId, Vgpr16}}})
+      .Any({{{UniS16}, !isBFloat16}, {{Sgpr16}, {IntrId, Sgpr16}}}, hasPST)
+      .Any({{{UniS16}, !isBFloat16}, {{UniInVgprS16}, {IntrId, Vgpr16}}},
+           !hasPST)
+      .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32}}})
+      .Any({{UniS32}, {{Sgpr32}, {IntrId, Sgpr32}}}, hasPST)
+      .Any({{UniS32}, {{UniInVgprS32}, {IntrId, Vgpr32}}}, !hasPST)
+      .Any({{DivS64}, {{Vgpr64}, {IntrId, Vgpr64}}})
+      .Any({{UniS64}, {{UniInVgprS64}, {IntrId, Vgpr64}}});
 
   addRulesForIOpcs({amdgcn_log}, Standard)
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
