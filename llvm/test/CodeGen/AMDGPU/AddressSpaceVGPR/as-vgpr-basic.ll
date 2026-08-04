@@ -297,6 +297,29 @@ define void @copy_i64_aligned(ptr addrspace(13) inreg %dst, ptr addrspace(13) in
   ret void
 }
 
+; An access reads M0 rather than clobbering it, so two accesses at the same
+; index need it written only once.
+
+define i32 @load_i32_twice(ptr addrspace(13) inreg %p) {
+; GFX12-LABEL: load_i32_twice:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s0, 2
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v0
+; GFX12-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %x = load volatile i32, ptr addrspace(13) %p
+  %y = load volatile i32, ptr addrspace(13) %p
+  %z = add i32 %x, %y
+  ret i32 %z
+}
+
 ; Null and poison pointers must be accepted (produce valid code) rather than
 ; crash or fail the machine verifier. The specific null-pointer value is
 ; defined by the parent change that introduces the address space.
