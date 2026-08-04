@@ -248,9 +248,9 @@ class SPIRVLegalizePointerCastImpl {
           BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
     SmallVector<OperandBundleDef, 1> OpBundles;
     GetPtr->getOperandBundlesAsDefs(OpBundles);
-    CallInst *NewPtr = B.CreateCall(GetPtr->getFunctionType(),
-                                    GetPtr->getCalledOperand(),
-                                    {Handle, NewOffset}, OpBundles);
+    CallInst *NewPtr =
+        B.CreateCall(GetPtr->getFunctionType(), GetPtr->getCalledOperand(),
+                     {Handle, NewOffset}, OpBundles);
     NewPtr->setAttributes(GetPtr->getAttributes());
     NewPtr->setCallingConv(GetPtr->getCallingConv());
     Type *I8Ty = Type::getInt8Ty(B.getContext());
@@ -279,7 +279,7 @@ class SPIRVLegalizePointerCastImpl {
   }
 
   void storeScalarToByteLayout(IRBuilder<> &B, Value *Src, Value *Dst,
-                             Align Alignment) {
+                               Align Alignment) {
     LLVMContext &Ctx = B.getContext();
     Type *I8Ty = Type::getInt8Ty(Ctx);
     const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
