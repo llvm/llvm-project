@@ -190,10 +190,7 @@ LLVM_LIBC_HEADERS = [
     ),
     libc_header_info("nl_types"),
     libc_header_info("poll"),
-    libc_header_info(
-        "llvm-libc-proxy/elf_proxy",
-        proxy = True,
-    ),
+    libc_header_info("llvm-libc-proxy/elf_proxy"),
     libc_header_info("pthread"),
     libc_header_info("sched"),
     libc_header_info("search"),

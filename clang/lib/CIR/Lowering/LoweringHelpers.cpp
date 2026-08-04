@@ -214,6 +214,11 @@ static bool containsPoison(mlir::Attribute attr) {
   return false;
 }
 
+static std::optional<mlir::Attribute>
+lowerConstRecordMemberAttr(mlir::Attribute attr,
+                           const mlir::TypeConverter *converter,
+                           mlir::ModuleOp moduleOp);
+
 std::optional<mlir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
                     const mlir::TypeConverter *converter,
@@ -275,6 +280,31 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
       lowered.push_back(*llvmElt);
     }
     return mlir::ArrayAttr::get(ctx, lowered);
+  }
+
+  if (mlir::isa<cir::RecordType>(type)) {
+    // A record type is just an array of the element values.
+    auto eltsArr = mlir::dyn_cast<mlir::ArrayAttr>(constArr.getElts());
+    if (!eltsArr)
+      return std::nullopt;
+
+    llvm::SmallVector<mlir::Attribute> loweredElts;
+    loweredElts.reserve(cirArrayType.getSize());
+
+    for (mlir::Attribute elt : eltsArr) {
+      std::optional<mlir::Attribute> llvmElt =
+          lowerConstRecordMemberAttr(elt, converter, moduleOp);
+      if (!llvmElt)
+        return std::nullopt;
+      loweredElts.push_back(*llvmElt);
+    }
+
+    // Remaining elts are either going to be padding (and should be undef), or
+    // trailing-zeros. We can't really tell the difference as CIR lowering
+    // doesn't differentiate anyway, so just zero-fill them.
+    while (loweredElts.size() < cirArrayType.getSize())
+      loweredElts.push_back(mlir::LLVM::ZeroAttr::get(constArr.getContext()));
+    return mlir::ArrayAttr::get(constArr.getContext(), loweredElts);
   }
 
   return std::nullopt;
