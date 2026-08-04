@@ -42,7 +42,7 @@ define amdgpu_ps void @store_i16_aligned(ptr addrspace(13) inreg %p, i32 inreg %
 define amdgpu_ps void @store_i8_dynamic_mask(ptr addrspace(13) inreg %p, i32 inreg %vv) {
 ; DIS-LABEL: <store_i8_dynamic_mask>:
 ; DIS:      v_movrels_b32_e32 v1, v0
-; DIS:      v_bfi_b32 v0, s1, v0, v1
+; DIS:      v_bfi_b32 v0, s0, v0, v1
 ; DIS:      v_movreld_b32_e32 v0, v0
   %v = trunc i32 %vv to i8
   store i8 %v, ptr addrspace(13) %p
