@@ -27,6 +27,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: acosh
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: acoshf
     standards:
       - stdc
