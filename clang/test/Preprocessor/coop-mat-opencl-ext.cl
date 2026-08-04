@@ -1,6 +1,6 @@
 // clang/test/Preprocessor/coop_mat_opencl_ext.cl
 //
-// Patch 2: cl_ext_kernel_cooperative_matrix registration in
+// Patch 2: cl_khr_cooperative_matrix registration in
 //          OpenCLExtensions.def and enum definitions in opencl-c-base.h.
 //
 // Tests: extension macro is predefined when enabled, extension can be
@@ -9,23 +9,23 @@
 
 // ── 2a. Extension macro is predefined when the extension is enabled ─────────
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -E -dM %s \
 // RUN:   | FileCheck %s --check-prefix=EXT
 
-// EXT: cl_ext_kernel_cooperative_matrix
+// EXT: cl_khr_cooperative_matrix
 
 // ── 2b. Extension is NOT predefined when explicitly disabled ────────────────
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=-cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=-cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -E %s \
 // RUN:   | FileCheck %s --check-prefix=NOEXT
 
-// NOEXT-NOT: cl_ext_kernel_cooperative_matrix
+// NOEXT-NOT: cl_khr_cooperative_matrix
 
 // ── 2c. Enum constants are visible when extension is enabled ─────────────────
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -fsyntax-only -verify %s
 
 // expected-no-diagnostics

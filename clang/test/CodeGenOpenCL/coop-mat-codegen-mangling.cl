@@ -8,7 +8,7 @@
 //   (D) coop_mat_store   -- different pointer address spaces
 //
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -emit-llvm -O0 -o %t.ll %s
 // RUN: FileCheck --check-prefix=CHECK      %s < %t.ll
 // RUN: FileCheck --check-prefix=CHECK-DECL %s < %t.ll
