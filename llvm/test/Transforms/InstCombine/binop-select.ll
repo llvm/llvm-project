@@ -546,31 +546,31 @@ define i8 @commonArgWithAdd0(i1 %arg0) {
   ret i8 %v3
 }
 
-define i8 @commonArgWithOrShl0(i8 %arg0) {
+define i8 @commonArgWithOrShl0(i8 %x) {
 ; CHECK-LABEL: @commonArgWithOrShl0(
-; CHECK-NEXT:    [[V0:%.*]] = trunc i8 [[ARG0:%.*]] to i1
-; CHECK-NEXT:    [[V4:%.*]] = select i1 [[V0]], i8 -123, i8 9
-; CHECK-NEXT:    ret i8 [[V4]]
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 -123, i8 9
+; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
-  %v0 = trunc i8 %arg0 to i1
-  %v1 = select i1 %v0, i8 5, i8 9
-  %v3 = shl i8 %arg0, 7
-  %v4 = or i8 %v1, %v3
-  ret i8 %v4
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 5, i8 9
+  %shift = shl i8 %x, 7
+  %result = or i8 %sel, %shift
+  ret i8 %result
 }
 
-define i8 @commonArgWithOrShl1(i8 %arg0, i8 %arg1) {
+define i8 @commonArgWithOrShl1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @commonArgWithOrShl1(
-; CHECK-NEXT:    [[V0:%.*]] = trunc i8 [[ARG0:%.*]] to i1
-; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[ARG1:%.*]], -128
-; CHECK-NEXT:    [[V4:%.*]] = select i1 [[V0]], i8 [[TMP1]], i8 0
-; CHECK-NEXT:    ret i8 [[V4]]
+; CHECK-NEXT:    [[COND:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[TMP1:%.*]] = or i8 [[Y:%.*]], -128
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[COND]], i8 [[TMP1]], i8 0
+; CHECK-NEXT:    ret i8 [[RESULT]]
 ;
-  %v0 = trunc i8 %arg0 to i1
-  %v1 = select i1 %v0, i8 %arg1, i8 0
-  %v3 = shl i8 %arg0, 7
-  %v4 = or i8 %v1, %v3
-  ret i8 %v4
+  %cond = trunc i8 %x to i1
+  %sel = select i1 %cond, i8 %y, i8 0
+  %shift = shl i8 %x, 7
+  %result = or i8 %sel, %shift
+  ret i8 %result
 }
 
 define i16 @commonArgWithOrShlEqZext(i8 %x, i16 %y) {
