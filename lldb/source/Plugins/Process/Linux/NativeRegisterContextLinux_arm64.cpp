@@ -1155,7 +1155,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
       // First write SVE header. We do not use RestoreRegisters because we do
       // not want src to be modified yet.
-      ::memcpy(GetSVEHeader(), src, GetSVEHeaderSize());
+      ::memcpy(GetSVEHeader(), src, GetSetSize(RegisterSetType::SVE_HEADER));
       if (!sve::vl_valid(m_sve_header.vl)) {
         Invalidate(RegisterSetType::SVE_HEADER);
         error = Status::FromErrorStringWithFormat(
@@ -1446,9 +1446,9 @@ Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetSVEHeader();
-  ioVec.iov_len = GetSVEHeaderSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::SVE_HEADER);
 
-  error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(),
+  error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::SVE_HEADER),
                           GetPtraceSet(RegisterSetType::SVE_HEADER));
 
   if (error.Success())
@@ -1485,11 +1485,11 @@ Status NativeRegisterContextLinux_arm64::WriteSVEHeader() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetSVEHeader();
-  ioVec.iov_len = GetSVEHeaderSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::SVE_HEADER);
 
   Invalidate(RegisterSetType::SVE_HEADER);
 
-  return WriteRegisterSet(&ioVec, GetSVEHeaderSize(),
+  return WriteRegisterSet(&ioVec, GetSetSize(RegisterSetType::SVE_HEADER),
                           GetPtraceSet(RegisterSetType::SVE_HEADER));
 }
 

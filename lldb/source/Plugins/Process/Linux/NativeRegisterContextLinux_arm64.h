@@ -272,8 +272,6 @@ private:
 
   void *GetPOEBuffer() { return &m_poe_regs; }
 
-  size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
-
   size_t GetPACMaskSize() { return sizeof(m_pac_mask); }
 
   size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
