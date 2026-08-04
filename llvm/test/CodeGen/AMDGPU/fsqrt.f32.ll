@@ -414,7 +414,7 @@ define float @v_sqrt_f32_ninf(float %x) {
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
 ; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-IEEE-NEXT:    s_setpc_b64 s[30:31]
@@ -459,7 +459,7 @@ define float @v_sqrt_f32_ninf(float %x) {
 ; SDAG-DAZ-NEXT:    v_fma_f32 v1, v4, v1, v2
 ; SDAG-DAZ-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-DAZ-NEXT:    s_setpc_b64 s[30:31]
@@ -508,7 +508,7 @@ define float @v_sqrt_f32_no_infs_attribute(float %x) #5 {
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
 ; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-IEEE-NEXT:    s_setpc_b64 s[30:31]
@@ -553,7 +553,7 @@ define float @v_sqrt_f32_no_infs_attribute(float %x) #5 {
 ; SDAG-DAZ-NEXT:    v_fma_f32 v1, v4, v1, v2
 ; SDAG-DAZ-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-DAZ-NEXT:    s_setpc_b64 s[30:31]
@@ -814,7 +814,7 @@ define amdgpu_ps i32 @s_sqrt_f32_ninf(float inreg %x) {
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v1, v1, v2, s[0:1]
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-IEEE-NEXT:    v_readfirstlane_b32 s0, v0
@@ -873,7 +873,7 @@ define amdgpu_ps i32 @s_sqrt_f32_ninf(float inreg %x) {
 ; SDAG-DAZ-NEXT:    v_fma_f32 v1, v4, v1, v2
 ; SDAG-DAZ-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-DAZ-NEXT:    v_readfirstlane_b32 s0, v0
@@ -1048,7 +1048,7 @@ define float @v_sqrt_f32_nnan_ninf(float %x) {
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
 ; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-IEEE-NEXT:    s_setpc_b64 s[30:31]
@@ -1093,7 +1093,7 @@ define float @v_sqrt_f32_nnan_ninf(float %x) {
 ; SDAG-DAZ-NEXT:    v_fma_f32 v1, v4, v1, v2
 ; SDAG-DAZ-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-DAZ-NEXT:    s_setpc_b64 s[30:31]
@@ -1142,7 +1142,7 @@ define float @v_sqrt_f32_nnan_ninf_nsz(float %x) {
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
 ; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-IEEE-NEXT:    s_setpc_b64 s[30:31]
@@ -1187,7 +1187,7 @@ define float @v_sqrt_f32_nnan_ninf_nsz(float %x) {
 ; SDAG-DAZ-NEXT:    v_fma_f32 v1, v4, v1, v2
 ; SDAG-DAZ-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-DAZ-NEXT:    s_setpc_b64 s[30:31]
@@ -3162,7 +3162,7 @@ define float @v_sqrt_f32_ninf_known_never_zero(float nofpclass(zero) %x) {
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e64 v1, v2, v3, s[4:5]
 ; SDAG-IEEE-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-IEEE-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-IEEE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-IEEE-NEXT:    s_setpc_b64 s[30:31]
@@ -3207,7 +3207,7 @@ define float @v_sqrt_f32_ninf_known_never_zero(float nofpclass(zero) %x) {
 ; SDAG-DAZ-NEXT:    v_fma_f32 v1, v4, v1, v2
 ; SDAG-DAZ-NEXT:    v_mul_f32_e32 v2, 0x37800000, v1
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
-; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x260
+; SDAG-DAZ-NEXT:    v_mov_b32_e32 v2, 0x60
 ; SDAG-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; SDAG-DAZ-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; SDAG-DAZ-NEXT:    s_setpc_b64 s[30:31]
