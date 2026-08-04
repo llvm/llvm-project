@@ -1171,9 +1171,8 @@ Error DWPWriter::writeELF(raw_pwrite_stream &OS) {
                    /*EFlags=*/0, SHTOffset, NumSections, StrtabIdx);
 
   // --- Write section data ---
-  for (auto &E : Entries) {
+  for (auto &E : Entries)
     E.Data->writeTo(OS);
-  }
 
   // --- Write .strtab ---
   OS.write(Strtab.data(), Strtab.size());
