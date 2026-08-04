@@ -2295,7 +2295,7 @@ Value *llvm::addDiffRuntimeChecks(
   // Cache of (VF*IC*Stride-(Stride-AccessSize)) - 1, shared across checks with
   // matching type/IC/Stride to avoid emitting duplicate runtime computations.
   DenseMap<
-      std::tuple<Type *, unsigned /*IC*/, unsigned /*AbsCommonStrideInBytes*/,
+      std::tuple<Type *, unsigned /*IC*/, uint64_t /*AbsCommonStrideInBytes*/,
                  unsigned /*AccessSize*/>,
       Value *>
       ThresholdCache;
@@ -2304,22 +2304,26 @@ Value *llvm::addDiffRuntimeChecks(
     assert(IC * AccessSize > 0 &&
            "Threshold must be non-zero to use diff-check");
     Type *Ty = SinkStart->getType();
+
     // Compute the distance between first/last bytes of the accessed memory
     // during one vector loop iteration. This is equal to
     // VF*IC*Stride-(Stride-AccessSize).
-    uint64_t ICTimesStride = IC * AbsCommonStrideInBytes;
-    if (!isUIntN(Ty->getScalarSizeInBits(), ICTimesStride)) {
-      // This is probably UB in the original IR, but let's be conservative:
-      Ty = Ty->getWithNewBitWidth(Ty->getScalarSizeInBits() * 2);
-      assert(isUIntN(Ty->getScalarSizeInBits(), ICTimesStride));
-    }
+    static_assert((sizeof(IC) + sizeof(AbsCommonStrideInBytes)) * 8 <= 128,
+                  "APInt below would overflow!");
+    APInt ICTimesStride(128, IC);
+    ICTimesStride *= APInt(128, AbsCommonStrideInBytes);
+    if (ICTimesStride.getActiveBits() > Ty->getScalarSizeInBits())
+      Ty = Ty->getWithNewBitWidth(
+          NextPowerOf2(ICTimesStride.getActiveBits() - 1));
 
     Value *&ThresholdMinusOne =
         ThresholdCache[{Ty, IC, AbsCommonStrideInBytes, AccessSize}];
     if (!ThresholdMinusOne)
       ThresholdMinusOne = ChkBuilder.CreateSub(
-          ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                               ConstantInt::get(Ty, ICTimesStride)),
+          ChkBuilder.CreateMul(
+              GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
+              ConstantInt::get(
+                  Ty, ICTimesStride.zextOrTrunc(Ty->getScalarSizeInBits()))),
           ConstantInt::get(Ty, AbsCommonStrideInBytes - AccessSize + 1));
 
     Value *Diff = Expander.expandCodeFor(

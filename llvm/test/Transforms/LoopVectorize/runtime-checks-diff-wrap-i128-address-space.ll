@@ -5,12 +5,6 @@ target datalayout = "e-p:64:64-p1:128:128:128:128-i64:64-n32:64"
 
 ; With IC=2 and stride=0xFFFFFFFFFFFFFFFF (2^64-1), IC * stride is 2^65-2 which
 ; would wrap in uint64_t type..
-;
-; FIXME: ThresholdMinusOne 55340232221128654841 (0x2,FFFF,FFFF,FFFF,FFF9) is
-; wrong. It should be 4 (VF) * 2 (IC) * (2^64 - 1) (Stride) - ((2^64 - 1)
-; (Stride) - 1 (AccessSize) + 1) = 129127208515966861305
-; (0x6,FFFF,FFFF,FFFF,FFF9). We miscalculate it by truncating IC * stride to
-; uint64_t before extending it to i128.
 define void @test_wrap_i128_address_space(ptr addrspace(1) %a, ptr addrspace(1) %b, i32 %n) {
 ; CHECK-LABEL: define void @test_wrap_i128_address_space(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]], i32 [[N:%.*]]) {
@@ -22,7 +16,7 @@ define void @test_wrap_i128_address_space(ptr addrspace(1) %a, ptr addrspace(1) 
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i128 [[B1]], [[A2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i128 [[TMP0]], 1
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i128 [[TMP1]], 55340232221128654841
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i128 [[TMP1]], 129127208515966861305
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ;
