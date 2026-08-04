@@ -8,16 +8,16 @@
 //        TypeLoc operand slots, sizeof / getTypeInfoImpl.
 //
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -ast-dump %s \
 // RUN:   | FileCheck %s --check-prefix=AST
 //
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -O0 -emit-pch -o %t.pch %s
 // RUN: echo "MatA_float16x16 g;" > %t.aux.cl
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
-// RUN:   -cl-std=CL2.0 -cl-ext=+cl_ext_kernel_cooperative_matrix \
+// RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
 // RUN:   -finclude-default-header -O0 -include-pch %t.pch -ast-dump %t.aux.cl \
 // RUN:   | FileCheck %s --check-prefix=PCH
 
