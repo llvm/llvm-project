@@ -35,6 +35,8 @@ unsigned getSyntheticApertureNumber(unsigned AS) {
   switch (AS) {
   case AMDGPUAS::BARRIER:
     return SyntheticAperture::BARRIER;
+  case AMDGPUAS::VGPR:
+    return SyntheticAperture::VGPR;
   default:
     return SyntheticAperture::None;
   }
