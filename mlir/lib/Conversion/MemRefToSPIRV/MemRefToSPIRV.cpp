@@ -423,7 +423,7 @@ AllocaOpPattern::matchAndRewrite(memref::AllocaOp allocaOp, OpAdaptor adaptor,
   // SPIR-V requires Function variables to be declared in the first block.
   OpBuilder::InsertionGuard guard(rewriter);
   Block &entryBlock = function->getRegion(0).front();
-  auto insertionPoint = entryBlock.begin();
+  Block::iterator insertionPoint = entryBlock.begin();
   // Insert the variable after any existing ones to preserve ordering.
   while (insertionPoint != entryBlock.end() &&
          isa<spirv::VariableOp>(*insertionPoint))
