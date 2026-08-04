@@ -4863,9 +4863,7 @@ bool SPIRVInstructionSelector::selectConst(Register ResVReg,
   unsigned Opcode = I.getOpcode();
   unsigned TpOpcode = ResType->getOpcode();
   Register Reg;
-  if (TpOpcode == SPIRV::OpTypePointer ||
-      TpOpcode == SPIRV::OpTypeUntypedPointerKHR ||
-      TpOpcode == SPIRV::OpTypeEvent) {
+  if (ResType.isPointer() || TpOpcode == SPIRV::OpTypeEvent) {
     assert(Opcode == TargetOpcode::G_CONSTANT &&
            I.getOperand(1).getCImm()->isZero());
     MachineBasicBlock &DepMBB = I.getMF()->front();

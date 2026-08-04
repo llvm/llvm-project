@@ -334,11 +334,9 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
 SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
                                      MachineIRBuilder &MIRBuilder) {
-  auto EleOpc = ElemType->getOpcode();
   assert(NumElems >= 2 && "SPIR-V OpTypeVector requires at least 2 components");
 
-  if (EleOpc == SPIRV::OpTypePointer ||
-      EleOpc == SPIRV::OpTypeUntypedPointerKHR) {
+  if (ElemType.isPointer()) {
     if (!cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
              .canUseExtension(
                  SPIRV::Extension::SPV_INTEL_masked_gather_scatter)) {
@@ -350,6 +348,7 @@ SPIRVGlobalRegistry::getOpTypeVector(uint32_t NumElems, SPIRVTypeInst ElemType,
           DebugLoc(), DS_Error));
     }
   } else {
+    [[maybe_unused]] auto EleOpc = ElemType->getOpcode();
     assert((EleOpc == SPIRV::OpTypeInt || EleOpc == SPIRV::OpTypeFloat ||
             EleOpc == SPIRV::OpTypeBool) &&
            "Invalid vector element type");
@@ -858,7 +857,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   if (UseUntypedPointers) {
     SPIRVTypeInst DataType = getPointeeType(BaseType);
     if (!DataType)
-      DataType = getOrCreateSPIRVType(GVar->getValueType(), GVBuilder,
+      DataType = getOrCreateSPIRVType(GV->getValueType(), GVBuilder,
                                       SPIRV::AccessQualifier::ReadWrite,
                                       /*EmitIR=*/false);
     if (!DataType) {
