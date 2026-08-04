@@ -45,6 +45,16 @@ static llvm::Type *X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
   return Ty;
 }
 
+// Register-or-memory inline asm folding support is a backend/ISA fact, not
+// an ABI one: X86InstrInfo::getFrameIndexOperands() backs every X86
+// subtarget (32-bit, 64-bit, and their Windows variants alike) the same
+// way regardless of OS or calling convention. Every X86TargetCodeGenInfo
+// subclass shares this one answer, so it's factored into a single free
+// function (mirroring X86AdjustInlineAsmType() above) rather than
+// hand-duplicated in each override; see TargetCodeGenInfo's declaration
+// for why other targets default to false instead.
+static bool X86SupportsRegMemInlineAsmFolding() { return true; }
+
 /// Returns true if this type can be passed in SSE registers with the
 /// X86_VectorCall calling convention. Shared between x86_32 and x86_64.
 static bool isX86VectorTypeForVectorCall(ASTContext &Context, QualType Ty) {
@@ -231,10 +241,9 @@ public:
     return X86AdjustInlineAsmType(CGF, Constraint, Ty);
   }
 
-  // See X86_64TargetCodeGenInfo::supportsRegMemInlineAsmFolding(): the same
-  // shared X86InstrInfo::getFrameIndexOperands() implementation backs both
-  // ABIs here.
-  bool supportsRegMemInlineAsmFolding() const override { return true; }
+  bool supportsRegMemInlineAsmFolding() const override {
+    return X86SupportsRegMemInlineAsmFolding();
+  }
 
   void addReturnRegisterOutputs(CodeGenFunction &CGF, LValue ReturnValue,
                                 std::string &Constraints,
@@ -1477,11 +1486,9 @@ public:
     return X86AdjustInlineAsmType(CGF, Constraint, Ty);
   }
 
-  // X86InstrInfo::getFrameIndexOperands() implements the addressing-mode
-  // encoding llvm::TargetLowering::supportsRegMemInlineAsmFolding() needs;
-  // see TargetCodeGenInfo's declaration for why other targets default to
-  // false here.
-  bool supportsRegMemInlineAsmFolding() const override { return true; }
+  bool supportsRegMemInlineAsmFolding() const override {
+    return X86SupportsRegMemInlineAsmFolding();
+  }
 
   bool isNoProtoCallVariadic(const CallArgList &args,
                              const FunctionNoProtoType *fnType) const override {
@@ -1758,14 +1765,15 @@ public:
 
   // Unlike adjustInlineAsmType() (an ABI-specific type-lowering hook this
   // class deliberately doesn't override, inheriting TargetCodeGenInfo's
-  // no-op default), register-or-memory inline asm folding support is a
-  // backend/ISA fact, not an ABI one: X86InstrInfo::getFrameIndexOperands()
-  // backs every X86 subtarget the same way regardless of OS. This class
-  // doesn't inherit from X86_64TargetCodeGenInfo (unlike WinX86_32, which
-  // inherits from X86_32TargetCodeGenInfo and so already gets this), so it
-  // needs its own override to avoid silently falling back to the
-  // TargetCodeGenInfo default of false.
-  bool supportsRegMemInlineAsmFolding() const override { return true; }
+  // no-op default), this class doesn't inherit from X86_64TargetCodeGenInfo
+  // (unlike WinX86_32, which inherits from X86_32TargetCodeGenInfo and so
+  // already gets this), so it needs its own override to avoid silently
+  // falling back to the TargetCodeGenInfo default of false. See
+  // X86SupportsRegMemInlineAsmFolding() above for why the answer is the
+  // same across every X86 subclass.
+  bool supportsRegMemInlineAsmFolding() const override {
+    return X86SupportsRegMemInlineAsmFolding();
+  }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
