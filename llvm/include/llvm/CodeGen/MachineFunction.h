@@ -1115,19 +1115,19 @@ public:
   /// explicitly deallocated.
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
-      Align BaseAlignment, MMOMetadata Metadata = MMOMetadata(),
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
-      Align BaseAlignment, MMOMetadata Metadata = MMOMetadata(),
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, uint64_t Size,
-      Align BaseAlignment, MMOMetadata Metadata = MMOMetadata(),
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
@@ -1137,7 +1137,7 @@ public:
   }
   MachineMemOperand *getMachineMemOperand(
       MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
-      Align BaseAlignment, MMOMetadata Metadata = MMOMetadata(),
+      Align BaseAlignment, const MMOMetadata &Metadata = MMOMetadata(),
       SyncScope::ID SSID = SyncScope::System,
       AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
       AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {

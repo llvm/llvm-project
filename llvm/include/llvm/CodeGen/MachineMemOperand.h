@@ -203,13 +203,13 @@ public:
   /// when store does not occur must also be specified.
   LLVM_ABI
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags Flags, LocationSize TS,
-                    Align A, MMOMetadata Metadata = MMOMetadata(),
+                    Align A, const MMOMetadata &Metadata = MMOMetadata(),
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
                     AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   LLVM_ABI
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags Flags, LLT Type, Align A,
-                    MMOMetadata Metadata = MMOMetadata(),
+                    const MMOMetadata &Metadata = MMOMetadata(),
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
                     AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);

@@ -566,7 +566,7 @@ void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LocationSize Size,
-    Align BaseAlignment, MMOMetadata Metadata, SyncScope::ID SSID,
+    Align BaseAlignment, const MMOMetadata &Metadata, SyncScope::ID SSID,
     AtomicOrdering Ordering, AtomicOrdering FailureOrdering) {
   assert((!Size.hasValue() ||
           Size.getValue().getKnownMinValue() != ~UINT64_C(0)) &&
@@ -579,7 +579,7 @@ MachineMemOperand *MachineFunction::getMachineMemOperand(
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, LLT MemTy,
-    Align BaseAlignment, MMOMetadata Metadata, SyncScope::ID SSID,
+    Align BaseAlignment, const MMOMetadata &Metadata, SyncScope::ID SSID,
     AtomicOrdering Ordering, AtomicOrdering FailureOrdering) {
   return new (Allocator)
       MachineMemOperand(PtrInfo, F, MemTy, BaseAlignment, Metadata, SSID,
