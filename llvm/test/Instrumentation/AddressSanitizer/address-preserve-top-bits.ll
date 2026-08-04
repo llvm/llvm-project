@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes=asan -asan-preserve-topbits=4 -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-64
-; RUN: opt < %s -passes=asan -asan-preserve-topbits=4 -S -mtriple=arm-none-eabi | FileCheck %s --check-prefixes=CHECK,CHECK-32
+; RUN: opt < %s -passes=asan -asan-preserve-top-bits=4 -S -mtriple=x86_64-unknown-linux-gnu | FileCheck %s --check-prefixes=CHECK,CHECK-64
+; RUN: opt < %s -passes=asan -asan-preserve-top-bits=4 -S -mtriple=arm-none-eabi | FileCheck %s --check-prefixes=CHECK,CHECK-32
 
 define void @test(ptr %p) sanitize_address {
 ; CHECK-LABEL: define void @test(

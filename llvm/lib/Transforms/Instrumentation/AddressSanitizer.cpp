@@ -476,7 +476,7 @@ STATISTIC(NumOptimizedAccessesToGlobalVar,
 STATISTIC(NumOptimizedAccessesToStackVar,
           "Number of optimized accesses to stack vars");
 static cl::opt<unsigned> ClAsanPreserveTopBits(
-    "asan-preserve-topbits",
+    "asan-preserve-top-bits",
     cl::desc("Number of address top bits to preserve during shadow mapping"),
     cl::Hidden, cl::init(0));
 
