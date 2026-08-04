@@ -496,7 +496,12 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   case Instruction::Store:
     return Type::getVoidTy(Ctx);
   case Instruction::ICmp:
+    assert(Op0Ty->getScalarType()->isIntOrPtrTy() &&
+           "expected integer or pointer operand");
+    AssertOperandType(1, Op0Ty);
+    return CmpInst::makeCmpResultType(Op0Ty);
   case Instruction::FCmp:
+    assert(Op0Ty->isFPOrFPVectorTy() && "expected floating-point operand");
     AssertOperandType(1, Op0Ty);
     return CmpInst::makeCmpResultType(Op0Ty);
   case VPInstruction::ActiveLaneMask:
@@ -521,6 +526,8 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     assert(Op0Ty->isIntegerTy() && "expected integer operand");
     return IntegerType::get(Ctx, 32);
   case Instruction::Select: {
+    assert((!Op0Ty || Op0Ty->isIntOrIntVectorTy(1)) &&
+           "select condition must be bool");
     Type *Op1Ty = Operands[1]->getScalarType();
     AssertOperandType(2, Op1Ty);
     return Op1Ty;
