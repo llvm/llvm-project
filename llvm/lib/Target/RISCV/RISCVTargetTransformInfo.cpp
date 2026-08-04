@@ -682,7 +682,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(
               TTI::SK_Broadcast ||
           VIC != TTI::VectorInstrContext::SplatOpFolded) &&
          "Must be SK_Broadcast if a splat operation");
-  if (VIC == TTI::VectorInstrContext::SplatOpFolded)
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded && ST->sinkSplatOperands())
     return TTI::TCC_Free;
 
   assert((Mask.empty() || DstTy->isScalableTy() ||
@@ -2570,7 +2570,8 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
   // Scalar splat operand can be folded for vector ops that support splatting
   // the scalar operand, so the explicit insertelement is free in this context.
   if (Opcode == Instruction::InsertElement &&
-      VIC == TTI::VectorInstrContext::SplatOpFolded) {
+      VIC == TTI::VectorInstrContext::SplatOpFolded &&
+      ST->sinkSplatOperands()) {
     assert(Index == 0 && "SplatOpFolded sequence must insert into lane 0");
     return TTI::TCC_Free;
   }
