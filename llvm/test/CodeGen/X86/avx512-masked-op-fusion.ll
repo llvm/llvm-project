@@ -56,6 +56,3 @@ exit:
   store <16 x float> %res_max, ptr %pMax, align 64
   ret void
 }
-
-declare <16 x float> @llvm.x86.avx512.min.ps.512(<16 x float>, <16 x float>, i32)
-declare <16 x float> @llvm.x86.avx512.max.ps.512(<16 x float>, <16 x float>, i32)
