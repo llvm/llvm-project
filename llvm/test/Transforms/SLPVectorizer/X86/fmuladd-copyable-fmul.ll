@@ -624,3 +624,67 @@ entry:
   %v3 = insertelement <4 x float> %v2, float %z, i32 3
   ret <4 x float> %v3
 }
+
+; The absorbed copyable fmul %mul252 does not appear in the operand columns
+; of its own node, its schedule data must still be released when the copyable
+; data is scheduled.
+define i1 @copyable_fmul_self_dep() {
+; ENABLED-LABEL: define i1 @copyable_fmul_self_dep() {
+; ENABLED-NEXT:  [[ENTRY:.*:]]
+; ENABLED-NEXT:    [[SUB241:%.*]] = add i32 0, 1
+; ENABLED-NEXT:    [[CONV242:%.*]] = sitofp i32 [[SUB241]] to double
+; ENABLED-NEXT:    [[CONV251:%.*]] = sitofp i32 0 to double
+; ENABLED-NEXT:    [[MUL252:%.*]] = fmul double [[CONV251]], 0.000000e+00
+; ENABLED-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
+; ENABLED-NEXT:    [[TMP1:%.*]] = tail call double @llvm.fmuladd.f64(double [[CONV251]], double 0.000000e+00, double [[TMP0]])
+; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> <double -0.000000e+00, double poison>, double [[CONV242]], i64 1
+; ENABLED-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[MUL252]], i64 1
+; ENABLED-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> [[TMP2]], <2 x double> [[TMP3]])
+; ENABLED-NEXT:    [[TMP5:%.*]] = fptosi <2 x double> [[TMP4]] to <2 x i32>
+; ENABLED-NEXT:    [[TMP6:%.*]] = icmp slt <2 x i32> [[TMP5]], zeroinitializer
+; ENABLED-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP6]], i64 0
+; ENABLED-NEXT:    ret i1 [[TMP7]]
+;
+; DISABLED-LABEL: define i1 @copyable_fmul_self_dep() {
+; DISABLED-NEXT:  [[ENTRY:.*:]]
+; DISABLED-NEXT:    [[SUB241:%.*]] = add i32 0, 1
+; DISABLED-NEXT:    [[CONV242:%.*]] = sitofp i32 [[SUB241]] to double
+; DISABLED-NEXT:    [[CONV251:%.*]] = sitofp i32 0 to double
+; DISABLED-NEXT:    [[MUL252:%.*]] = fmul double [[CONV251]], 0.000000e+00
+; DISABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[CONV242]], i64 0
+; DISABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[MUL252]], i64 0
+; DISABLED-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> [[TMP0]], <2 x double> [[TMP1]])
+; DISABLED-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
+; DISABLED-NEXT:    [[TMP4:%.*]] = tail call double @llvm.fmuladd.f64(double [[CONV251]], double 0.000000e+00, double [[TMP3]])
+; DISABLED-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> <double 0.000000e+00, double poison>, <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 2>
+; DISABLED-NEXT:    [[TMP6:%.*]] = fptosi <2 x double> [[TMP5]] to <2 x i32>
+; DISABLED-NEXT:    [[TMP7:%.*]] = icmp slt <2 x i32> [[TMP6]], zeroinitializer
+; DISABLED-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP7]], i64 0
+; DISABLED-NEXT:    ret i1 [[TMP8]]
+;
+; COST-LABEL: define i1 @copyable_fmul_self_dep() {
+; COST-NEXT:  [[ENTRY:.*:]]
+; COST-NEXT:    [[TMP0:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> zeroinitializer, <2 x double> zeroinitializer, <2 x double> <double 0.000000e+00, double -0.000000e+00>)
+; COST-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> <double 0.000000e+00, double 1.000000e+00>, <2 x double> zeroinitializer, <2 x double> [[TMP0]])
+; COST-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> <double 0.000000e+00, double poison>, <2 x double> [[TMP1]], <2 x i32> <i32 0, i32 3>
+; COST-NEXT:    [[TMP3:%.*]] = fptosi <2 x double> [[TMP2]] to <2 x i32>
+; COST-NEXT:    [[TMP4:%.*]] = icmp slt <2 x i32> [[TMP3]], zeroinitializer
+; COST-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
+; COST-NEXT:    ret i1 [[TMP5]]
+;
+entry:
+  %sub241 = add i32 0, 1
+  %conv242 = sitofp i32 %sub241 to double
+  %conv251 = sitofp i32 0 to double
+  %mul252 = fmul double %conv251, 0.000000e+00
+  %0 = tail call double @llvm.fmuladd.f64(double %conv242, double 0.000000e+00, double %mul252)
+  %conv253 = fptosi double %0 to i32
+  %cmp254 = icmp slt i32 %conv253, 0
+  %1 = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00)
+  %2 = tail call double @llvm.fmuladd.f64(double %conv251, double 0.000000e+00, double %1)
+  %conv309 = fptosi double 0.000000e+00 to i32
+  %cmp310 = icmp slt i32 %conv309, 0
+  ret i1 %cmp310
+}
+
+declare double @llvm.fmuladd.f64(double, double, double)

@@ -2316,7 +2316,7 @@ static mlir::Type getConstArrayBaseElementType(mlir::Type ty) {
 
 static bool isBulkLowerableConstArrayBaseElement(mlir::Type baseElemTy) {
   return mlir::isa<cir::PointerType, cir::IntType, cir::BoolType,
-                   cir::FPTypeInterface>(baseElemTy);
+                   cir::FPTypeInterface, cir::RecordType>(baseElemTy);
 }
 
 mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
