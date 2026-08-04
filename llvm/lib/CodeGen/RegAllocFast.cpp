@@ -1976,9 +1976,20 @@ void RegAllocFastImpl::foldFoldableInlineAsmOperands(
                                                TRI->getSpillStackID(*RC));
     }
 
+    // CopyMI is an out-parameter foldMemoryOperand() uses to report a copy
+    // instruction it had to synthesize as part of folding (see its own
+    // declaration for that general contract) -- but TargetInstrInfo.cpp's
+    // implementation early-returns via foldInlineAsmMemOperand() for the
+    // MI.isInlineAsm() case specifically, before CopyMI is ever touched, so
+    // it's guaranteed to stay null here. Asserted rather than silently
+    // ignored so that guarantee breaking -- e.g. a future change to how
+    // inline asm folding is implemented -- fails loudly instead of quietly
+    // dropping whatever CopyMI would have pointed to.
     MachineInstr *CopyMI = nullptr;
     MachineInstr *NewMI = TII->foldMemoryOperand(*MI, {I}, FrameIndex, CopyMI);
     assert(NewMI && "operand was reported foldable but folding failed");
+    assert(!CopyMI &&
+           "inline asm folding shouldn't synthesize a copy instruction");
     if (!NewMI)
       continue;
 
