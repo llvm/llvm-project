@@ -22,7 +22,7 @@ struct expected {
 
 // CHECK-LABEL: define {{.*}} i8 @_Z2f1v()
 expected f1() {
-  // CHECK: %[[Retval:.+]] = alloca %struct.expected, align 1
+  // CHECK: %[[Retval:.+]] = alloca %struct.expected, align 1, !coro.outside.frame
 
   // CHECK: gro.conv:
   // CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %[[Retval]])
