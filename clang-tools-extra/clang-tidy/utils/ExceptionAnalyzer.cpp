@@ -253,8 +253,8 @@ static bool isQualificationConvertiblePointer(QualType From, QualType To,
 
   int I = 0;
   bool ConstUntilI = true;
-  auto SatisfiesCVRules = [&I, &ConstUntilI](const QualType &From,
-                                             const QualType &To) {
+  const auto SatisfiesCVRules = [&I, &ConstUntilI](const QualType &From,
+                                                   const QualType &To) {
     if (I > 1) {
       if (From.getQualifiers() != To.getQualifiers() && !ConstUntilI)
         return false;

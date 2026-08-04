@@ -3476,15 +3476,19 @@ bool X86TargetLowering::shouldReduceLoadWidth(
     if (const auto *GA = dyn_cast<GlobalAddressSDNode>(BasePtr.getOperand(0)))
       return GA->getTargetFlags() != X86II::MO_GOTTPOFF;
 
-  // If this is an (1) AVX vector load with (2) multiple uses and (3) all of
-  // those uses are extracted directly into a store, then the extract + store
-  // can be store-folded, or (4) any use will be used by legal full width
-  // instruction. Then, it's probably not worth splitting the load.
+  // If this is a (1) 128-bit or wider vector load, and any use will be used by
+  // a legal full width instruction, then the load can typically be memory
+  // folded into that instruction, so it's probably not worth splitting the
+  // load. Additionally, for (2) AVX vector loads with (3) multiple uses where
+  // (4) all of those uses are extracted directly into a store, the extract +
+  // store can be store-folded, so it's again not worth splitting.
   EVT VT = Load->getValueType(0);
-  if ((VT.is256BitVector() || VT.is512BitVector()) &&
-      !SDValue(Load, 0).hasOneUse()) {
+  if (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()) {
     bool FullWidthUse = false;
-    bool AllExtractStores = true;
+    // The extract + store folding only helps the AVX split case, which requires
+    // multiple uses of the load.
+    bool AllExtractStores = (VT.is256BitVector() || VT.is512BitVector()) &&
+                            !SDValue(Load, 0).hasOneUse();
     for (SDUse &Use : Load->uses()) {
       // Skip uses of the chain value. Result 0 of the node is the load value.
       if (Use.getResNo() != 0)
@@ -3493,7 +3497,7 @@ bool X86TargetLowering::shouldReduceLoadWidth(
       const SDNode *User = PeekThroughOneUserBitcasts(Use.getUser());
 
       // If this use is an extract + store, it's probably not worth splitting.
-      if (User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+      if (AllExtractStores && User->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
           all_of(User->uses(), [&](const SDUse &U) {
             const SDNode *Inner = PeekThroughOneUserBitcasts(U.getUser());
             return Inner->getOpcode() == ISD::STORE;
@@ -5497,21 +5501,23 @@ static bool getTargetConstantBitsFromNode(SDValue Op, unsigned EltSizeInBits,
     }
     if (auto *CDS = dyn_cast<ConstantDataSequential>(Cst)) {
       Type *Ty = CDS->getType();
-      Mask = APInt::getZero(Ty->getPrimitiveSizeInBits());
-      Type *EltTy = CDS->getElementType();
-      bool IsInteger = EltTy->isIntegerTy();
-      bool IsFP =
-          EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
-      if (!IsInteger && !IsFP)
-        return false;
-      unsigned EltBits = EltTy->getPrimitiveSizeInBits();
-      for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I)
-        if (IsInteger)
-          Mask.insertBits(CDS->getElementAsAPInt(I), I * EltBits);
-        else
-          Mask.insertBits(CDS->getElementAsAPFloat(I).bitcastToAPInt(),
-                          I * EltBits);
-      return true;
+      if (Ty->isVectorTy()) {
+        Mask = APInt::getZero(Ty->getPrimitiveSizeInBits());
+        Type *EltTy = CDS->getElementType();
+        bool IsInteger = EltTy->isIntegerTy();
+        bool IsFP =
+            EltTy->isHalfTy() || EltTy->isFloatTy() || EltTy->isDoubleTy();
+        if (!IsInteger && !IsFP)
+          return false;
+        unsigned EltBits = EltTy->getPrimitiveSizeInBits();
+        for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I)
+          if (IsInteger)
+            Mask.insertBits(CDS->getElementAsAPInt(I), I * EltBits);
+          else
+            Mask.insertBits(CDS->getElementAsAPFloat(I).bitcastToAPInt(),
+                            I * EltBits);
+        return true;
+      }
     }
     return false;
   };
@@ -18455,6 +18461,8 @@ static bool canCombineAsMaskOperation(SDValue V,
     case ISD::SRL:
     case ISD::SRA:
     case ISD::MUL:
+    case ISD::PSEUDO_FMIN:
+    case ISD::PSEUDO_FMAX:
       break;
     }
     if (!V->hasOneUse())

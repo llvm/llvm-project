@@ -973,6 +973,7 @@ enum : unsigned {
   EF_CUDA_SM100 = 0x64,
   EF_CUDA_SM101 = 0x65,
   EF_CUDA_SM103 = 0x67,
+  EF_CUDA_SM107 = 0x6b,
   EF_CUDA_SM110 = 0x6e,
   EF_CUDA_SM120 = 0x78,
   EF_CUDA_SM121 = 0x79,
@@ -1196,6 +1197,7 @@ enum : unsigned {
   SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
   SHT_LLVM_CFI_JUMP_TABLE = 0x6fff4c0e,     // LLVM CFI jump table.
   SHT_LLVM_CALL_GRAPH = 0x6fff4c0f,         // LLVM Call Graph Section.
+  SHT_LLVM_DYNDBG_ELF = 0x6fff4c10,         // LLVM Dynamic Debugging ELF.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
