@@ -570,7 +570,7 @@ entry:
   ret void
 }
 
-define internal void @atan2_float6() {
+define internal void @atan2_float6_from_shuffle() {
 entry:
   ; CHECK: OpFunction %[[#void]] None
   ; CHECK: %[[#shuffle_f32:]] = OpLoad %[[#vec4_float_32]]
@@ -710,7 +710,7 @@ entry:
   call void @atan2_half3x4(ptr addrspace(10) @mat_f16_3x4, ptr addrspace(10) @mat_f16_3x4, ptr addrspace(10) @mat_f16_3x4)
   call void @atan2_float4x3(ptr addrspace(10) @mat_f32_4x3, ptr addrspace(10) @mat_f32_4x3, ptr addrspace(10) @mat_f32_4x3)
   call void @atan2_half4x3(ptr addrspace(10) @mat_f16_4x3, ptr addrspace(10) @mat_f16_4x3, ptr addrspace(10) @mat_f16_4x3)
-  call void @atan2_float6()
+  call void @atan2_float6_from_shuffle()
   call void @atan2_half6()
   call void @atan2_float8()
   call void @atan2_half8()
