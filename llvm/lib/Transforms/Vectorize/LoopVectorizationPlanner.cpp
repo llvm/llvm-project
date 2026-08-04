@@ -283,9 +283,7 @@ ElementCount VFSelectionContext::getMaximizedVFForTarget(
   else
     MaxPermissibleVFWithoutMaxBW.FixedVF = MaxVF;
 
-  // REVEC: Avoid creating wider than expected scalable types by choosing
-  // VF > vscale x 1.
-  if (useMaxBandwidth(ComputeScalableMaxVF) && !Legal->LoopContainsVectors) {
+  if (useMaxBandwidth(ComputeScalableMaxVF)) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         llvm::bit_floor(WidestRegister.getKnownMinValue() / SmallestType),
         ComputeScalableMaxVF);
