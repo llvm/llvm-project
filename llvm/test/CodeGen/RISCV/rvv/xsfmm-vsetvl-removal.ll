@@ -5,10 +5,11 @@
 define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr noundef readonly captures(none) %a, i64 noundef %lda, ptr noundef readonly captures(none) %b, i64 noundef %ldb, ptr noundef writeonly captures(none) %c, i64 noundef %ldc) nounwind {
 ; CHECK-LABEL: matmulf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    beqz a0, .LBB0_14
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    beqz a1, .LBB0_14
-; CHECK-NEXT:  # %bb.2: # %for.body6.lr.ph.preheader
+; CHECK-NEXT:    seqz t0, a0
+; CHECK-NEXT:    seqz t1, a1
+; CHECK-NEXT:    or t0, t0, t1
+; CHECK-NEXT:    bnez t0, .LBB0_13
+; CHECK-NEXT:  # %bb.1: # %for.body6.lr.ph.preheader
 ; CHECK-NEXT:    addi sp, sp, -80
 ; CHECK-NEXT:    sd s0, 72(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 64(sp) # 8-byte Folded Spill
@@ -19,7 +20,6 @@ define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr
 ; CHECK-NEXT:    sd s6, 24(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s7, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s8, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    li t0, 0
 ; CHECK-NEXT:    ld t1, 80(sp)
 ; CHECK-NEXT:    slli t2, a4, 2
 ; CHECK-NEXT:    slli a4, a4, 1
@@ -28,16 +28,16 @@ define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr
 ; CHECK-NEXT:    slli t4, t1, 1
 ; CHECK-NEXT:    li t5, 2
 ; CHECK-NEXT:    li t6, 1
-; CHECK-NEXT:    j .LBB0_4
-; CHECK-NEXT:  .LBB0_3: # %for.cond.cleanup5
-; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=1
+; CHECK-NEXT:    j .LBB0_3
+; CHECK-NEXT:  .LBB0_2: # %for.cond.cleanup5
+; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    add t0, s1, t0
-; CHECK-NEXT:    bgeu t0, a0, .LBB0_13
-; CHECK-NEXT:  .LBB0_4: # %for.body6.lr.ph
+; CHECK-NEXT:    bgeu t0, a0, .LBB0_12
+; CHECK-NEXT:  .LBB0_3: # %for.body6.lr.ph
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB0_6 Depth 2
-; CHECK-NEXT:    # Child Loop BB0_7 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_12 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_5 Depth 2
+; CHECK-NEXT:    # Child Loop BB0_6 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_11 Depth 3
 ; CHECK-NEXT:    li s0, 0
 ; CHECK-NEXT:    mul s2, t0, t1
 ; CHECK-NEXT:    sub s1, a0, t0
@@ -47,16 +47,16 @@ define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr
 ; CHECK-NEXT:    slli s4, s2, 1
 ; CHECK-NEXT:    add s2, a3, s3
 ; CHECK-NEXT:    add s3, a7, s4
-; CHECK-NEXT:    j .LBB0_6
-; CHECK-NEXT:  .LBB0_5: # %for.cond.cleanup28
-; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=2
+; CHECK-NEXT:    j .LBB0_5
+; CHECK-NEXT:  .LBB0_4: # %for.cond.cleanup28
+; CHECK-NEXT:    # in Loop: Header=BB0_5 Depth=2
 ; CHECK-NEXT:    add s0, s4, s0
-; CHECK-NEXT:    bgeu s0, a1, .LBB0_3
-; CHECK-NEXT:  .LBB0_6: # %for.body6
-; CHECK-NEXT:    # Parent Loop BB0_4 Depth=1
+; CHECK-NEXT:    bgeu s0, a1, .LBB0_2
+; CHECK-NEXT:  .LBB0_5: # %for.body6
+; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    # => This Loop Header: Depth=2
-; CHECK-NEXT:    # Child Loop BB0_7 Depth 3
-; CHECK-NEXT:    # Child Loop BB0_12 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_6 Depth 3
+; CHECK-NEXT:    # Child Loop BB0_11 Depth 3
 ; CHECK-NEXT:    sub s4, a1, s0
 ; CHECK-NEXT:    sf.vsettnt s4, s4, e16, w2
 ; CHECK-NEXT:    slli s5, s0, 1
@@ -65,10 +65,10 @@ define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr
 ; CHECK-NEXT:    sf.vtzero.t mt0
 ; CHECK-NEXT:    add s6, a5, s5
 ; CHECK-NEXT:    mv s7, s2
-; CHECK-NEXT:    bltu a2, t5, .LBB0_8
-; CHECK-NEXT:  .LBB0_7: # %while.body
-; CHECK-NEXT:    # Parent Loop BB0_4 Depth=1
-; CHECK-NEXT:    # Parent Loop BB0_6 Depth=2
+; CHECK-NEXT:    bltu a2, t5, .LBB0_7
+; CHECK-NEXT:  .LBB0_6: # %while.body
+; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
+; CHECK-NEXT:    # Parent Loop BB0_5 Depth=2
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    vsetvli zero, s1, e16, m4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (s7)
@@ -86,12 +86,12 @@ define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr
 ; CHECK-NEXT:    sub a2, a2, s8
 ; CHECK-NEXT:    add s7, s7, t2
 ; CHECK-NEXT:    add s6, s6, t3
-; CHECK-NEXT:    bltu t6, a2, .LBB0_7
-; CHECK-NEXT:  .LBB0_8: # %while.end
-; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=2
-; CHECK-NEXT:    beqz a2, .LBB0_10
-; CHECK-NEXT:  # %bb.9: # %if.then18
-; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=2
+; CHECK-NEXT:    bltu t6, a2, .LBB0_6
+; CHECK-NEXT:  .LBB0_7: # %while.end
+; CHECK-NEXT:    # in Loop: Header=BB0_5 Depth=2
+; CHECK-NEXT:    beqz a2, .LBB0_9
+; CHECK-NEXT:  # %bb.8: # %if.then18
+; CHECK-NEXT:    # in Loop: Header=BB0_5 Depth=2
 ; CHECK-NEXT:    vsetvli zero, s1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (s7)
 ; CHECK-NEXT:    vsetvli zero, s4, e16, m8, ta, ma
@@ -102,16 +102,16 @@ define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr
 ; CHECK-NEXT:    sf.vsettk zero, a2
 ; CHECK-NEXT:    sf.mm.f.f mt0, v8, v16
 ; CHECK-NEXT:    sub a2, t6, a2
-; CHECK-NEXT:  .LBB0_10: # %if.end25
-; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=2
-; CHECK-NEXT:    beqz s1, .LBB0_5
-; CHECK-NEXT:  # %bb.11: # %for.body29.preheader
-; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=2
+; CHECK-NEXT:  .LBB0_9: # %if.end25
+; CHECK-NEXT:    # in Loop: Header=BB0_5 Depth=2
+; CHECK-NEXT:    beqz s1, .LBB0_4
+; CHECK-NEXT:  # %bb.10: # %for.body29.preheader
+; CHECK-NEXT:    # in Loop: Header=BB0_5 Depth=2
 ; CHECK-NEXT:    li s6, 0
 ; CHECK-NEXT:    add s5, s3, s5
-; CHECK-NEXT:  .LBB0_12: # %for.body29
-; CHECK-NEXT:    # Parent Loop BB0_4 Depth=1
-; CHECK-NEXT:    # Parent Loop BB0_6 Depth=2
+; CHECK-NEXT:  .LBB0_11: # %for.body29
+; CHECK-NEXT:    # Parent Loop BB0_3 Depth=1
+; CHECK-NEXT:    # Parent Loop BB0_5 Depth=2
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    sf.vsettnt zero, s4, e32, w1
 ; CHECK-NEXT:    sf.vtmv.v.t v8, s6
@@ -120,9 +120,9 @@ define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr
 ; CHECK-NEXT:    addi s6, s6, 1
 ; CHECK-NEXT:    vse16.v v16, (s5)
 ; CHECK-NEXT:    add s5, s5, t4
-; CHECK-NEXT:    bne s1, s6, .LBB0_12
-; CHECK-NEXT:    j .LBB0_5
-; CHECK-NEXT:  .LBB0_13: # %for.cond.cleanup
+; CHECK-NEXT:    bne s1, s6, .LBB0_11
+; CHECK-NEXT:    j .LBB0_4
+; CHECK-NEXT:  .LBB0_12: # %for.cond.cleanup
 ; CHECK-NEXT:    sf.vtdiscard
 ; CHECK-NEXT:    ld s0, 72(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 64(sp) # 8-byte Folded Reload
@@ -134,7 +134,7 @@ define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr
 ; CHECK-NEXT:    ld s7, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s8, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 80
-; CHECK-NEXT:  .LBB0_14: # %return
+; CHECK-NEXT:  .LBB0_13: # %return
 ; CHECK-NEXT:    ret
 ;
 ; X280-LABEL: matmulf16:
@@ -370,10 +370,11 @@ return:                                           ; preds = %entry, %for.cond.cl
 define void @matmul32(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr noundef readonly captures(none) %a, i64 noundef %lda, ptr noundef readonly captures(none) %b, i64 noundef %ldb, ptr noundef writeonly captures(none) %c, i64 noundef %ldc) nounwind {
 ; CHECK-LABEL: matmul32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    beqz a0, .LBB1_13
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    beqz a1, .LBB1_13
-; CHECK-NEXT:  # %bb.2: # %for.cond.preheader
+; CHECK-NEXT:    seqz t0, a0
+; CHECK-NEXT:    seqz t1, a1
+; CHECK-NEXT:    or t0, t0, t1
+; CHECK-NEXT:    bnez t0, .LBB1_12
+; CHECK-NEXT:  # %bb.1: # %for.cond.preheader
 ; CHECK-NEXT:    addi sp, sp, -48
 ; CHECK-NEXT:    sd s0, 40(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 32(sp) # 8-byte Folded Spill
@@ -381,21 +382,20 @@ define void @matmul32(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr 
 ; CHECK-NEXT:    sd s3, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s4, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s5, 0(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    li t0, 0
 ; CHECK-NEXT:    ld t1, 48(sp)
 ; CHECK-NEXT:    slli a6, a6, 2
 ; CHECK-NEXT:    slli a4, a4, 2
 ; CHECK-NEXT:    slli t2, t1, 2
-; CHECK-NEXT:    j .LBB1_4
-; CHECK-NEXT:  .LBB1_3: # %for.cond.cleanup5
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    j .LBB1_3
+; CHECK-NEXT:  .LBB1_2: # %for.cond.cleanup5
+; CHECK-NEXT:    # in Loop: Header=BB1_3 Depth=1
 ; CHECK-NEXT:    add t0, t4, t0
-; CHECK-NEXT:    bgeu t0, a0, .LBB1_12
-; CHECK-NEXT:  .LBB1_4: # %for.body6.lr.ph
+; CHECK-NEXT:    bgeu t0, a0, .LBB1_11
+; CHECK-NEXT:  .LBB1_3: # %for.body6.lr.ph
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB1_6 Depth 2
-; CHECK-NEXT:    # Child Loop BB1_8 Depth 3
-; CHECK-NEXT:    # Child Loop BB1_11 Depth 3
+; CHECK-NEXT:    # Child Loop BB1_5 Depth 2
+; CHECK-NEXT:    # Child Loop BB1_7 Depth 3
+; CHECK-NEXT:    # Child Loop BB1_10 Depth 3
 ; CHECK-NEXT:    li t3, 0
 ; CHECK-NEXT:    mul t5, t0, t1
 ; CHECK-NEXT:    sub t4, a0, t0
@@ -405,31 +405,31 @@ define void @matmul32(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr 
 ; CHECK-NEXT:    slli s0, t5, 2
 ; CHECK-NEXT:    add t5, a3, t6
 ; CHECK-NEXT:    add t6, a7, s0
-; CHECK-NEXT:    j .LBB1_6
-; CHECK-NEXT:  .LBB1_5: # %for.cond.cleanup20
-; CHECK-NEXT:    # in Loop: Header=BB1_6 Depth=2
+; CHECK-NEXT:    j .LBB1_5
+; CHECK-NEXT:  .LBB1_4: # %for.cond.cleanup20
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=2
 ; CHECK-NEXT:    add t3, s0, t3
-; CHECK-NEXT:    bgeu t3, a1, .LBB1_3
-; CHECK-NEXT:  .LBB1_6: # %for.body6
-; CHECK-NEXT:    # Parent Loop BB1_4 Depth=1
+; CHECK-NEXT:    bgeu t3, a1, .LBB1_2
+; CHECK-NEXT:  .LBB1_5: # %for.body6
+; CHECK-NEXT:    # Parent Loop BB1_3 Depth=1
 ; CHECK-NEXT:    # => This Loop Header: Depth=2
-; CHECK-NEXT:    # Child Loop BB1_8 Depth 3
-; CHECK-NEXT:    # Child Loop BB1_11 Depth 3
+; CHECK-NEXT:    # Child Loop BB1_7 Depth 3
+; CHECK-NEXT:    # Child Loop BB1_10 Depth 3
 ; CHECK-NEXT:    sub s0, a1, t3
 ; CHECK-NEXT:    sf.vsettnt s0, s0, e32, w1
 ; CHECK-NEXT:    sf.vsettnt zero, zero, e32, w1
 ; CHECK-NEXT:    sf.vsettm zero, t4
 ; CHECK-NEXT:    sf.vtzero.t mt0
 ; CHECK-NEXT:    slli s1, t3, 2
-; CHECK-NEXT:    beqz a2, .LBB1_9
-; CHECK-NEXT:  # %bb.7: # %for.body14.preheader
-; CHECK-NEXT:    # in Loop: Header=BB1_6 Depth=2
+; CHECK-NEXT:    beqz a2, .LBB1_8
+; CHECK-NEXT:  # %bb.6: # %for.body14.preheader
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=2
 ; CHECK-NEXT:    li s2, 0
 ; CHECK-NEXT:    add s3, a5, s1
 ; CHECK-NEXT:    mv s4, t5
-; CHECK-NEXT:  .LBB1_8: # %for.body14
-; CHECK-NEXT:    # Parent Loop BB1_4 Depth=1
-; CHECK-NEXT:    # Parent Loop BB1_6 Depth=2
+; CHECK-NEXT:  .LBB1_7: # %for.body14
+; CHECK-NEXT:    # Parent Loop BB1_3 Depth=1
+; CHECK-NEXT:    # Parent Loop BB1_5 Depth=2
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    vsetvli zero, t4, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (s4)
@@ -444,24 +444,24 @@ define void @matmul32(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr 
 ; CHECK-NEXT:    add s2, s5, s2
 ; CHECK-NEXT:    add s3, s3, a6
 ; CHECK-NEXT:    add s4, s4, a4
-; CHECK-NEXT:    bltu s2, a2, .LBB1_8
-; CHECK-NEXT:  .LBB1_9: # %for.cond18.preheader
-; CHECK-NEXT:    # in Loop: Header=BB1_6 Depth=2
-; CHECK-NEXT:    beqz t4, .LBB1_5
-; CHECK-NEXT:  # %bb.10: # %for.body21.preheader
-; CHECK-NEXT:    # in Loop: Header=BB1_6 Depth=2
+; CHECK-NEXT:    bltu s2, a2, .LBB1_7
+; CHECK-NEXT:  .LBB1_8: # %for.cond18.preheader
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=2
+; CHECK-NEXT:    beqz t4, .LBB1_4
+; CHECK-NEXT:  # %bb.9: # %for.body21.preheader
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=2
 ; CHECK-NEXT:    li s2, 0
 ; CHECK-NEXT:    add s1, t6, s1
-; CHECK-NEXT:  .LBB1_11: # %for.body21
-; CHECK-NEXT:    # Parent Loop BB1_4 Depth=1
-; CHECK-NEXT:    # Parent Loop BB1_6 Depth=2
+; CHECK-NEXT:  .LBB1_10: # %for.body21
+; CHECK-NEXT:    # Parent Loop BB1_3 Depth=1
+; CHECK-NEXT:    # Parent Loop BB1_5 Depth=2
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    sf.vste32 s2, (s1)
 ; CHECK-NEXT:    addi s2, s2, 1
 ; CHECK-NEXT:    add s1, s1, t2
-; CHECK-NEXT:    bne t4, s2, .LBB1_11
-; CHECK-NEXT:    j .LBB1_5
-; CHECK-NEXT:  .LBB1_12: # %for.cond.cleanup
+; CHECK-NEXT:    bne t4, s2, .LBB1_10
+; CHECK-NEXT:    j .LBB1_4
+; CHECK-NEXT:  .LBB1_11: # %for.cond.cleanup
 ; CHECK-NEXT:    sf.vtdiscard
 ; CHECK-NEXT:    ld s0, 40(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 32(sp) # 8-byte Folded Reload
@@ -470,7 +470,7 @@ define void @matmul32(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr 
 ; CHECK-NEXT:    ld s4, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s5, 0(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 48
-; CHECK-NEXT:  .LBB1_13: # %return
+; CHECK-NEXT:  .LBB1_12: # %return
 ; CHECK-NEXT:    ret
 ;
 ; X280-LABEL: matmul32:
