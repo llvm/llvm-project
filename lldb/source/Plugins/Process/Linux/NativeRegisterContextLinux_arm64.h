@@ -120,6 +120,8 @@ private:
   // Returns the ptrace register set number for the given register set.
   unsigned int GetPtraceSet(RegisterSetType set) const;
 
+  size_t GetSetSize(RegisterSetType set) const;
+
   void MakeValid(RegisterSetType set) { m_validity |= set; }
 
   [[nodiscard]] bool IsValid(RegisterSetType set) const {

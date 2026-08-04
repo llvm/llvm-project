@@ -123,6 +123,40 @@ unsigned int NativeRegisterContextLinux_arm64::GetPtraceSet(
   }
 }
 
+size_t NativeRegisterContextLinux_arm64::GetSetSize(
+    NativeRegisterContextLinux_arm64::RegisterSetType set) const {
+  switch (set) {
+  case RegisterSetType::GPR:
+    // Returns sizeof arm64 GPR ptrace buffer, which is different
+    // from GetGPRSize which returns sizeof RegisterInfoPOSIX_arm64::GPR.
+    return sizeof(m_gpr_arm64);
+  case RegisterSetType::FPR:
+    return sizeof(m_fpr);
+  case RegisterSetType::SVE:
+    return m_sve_ptrace_payload.size();
+  case RegisterSetType::SVE_HEADER:
+    return sizeof(m_sve_header);
+  case RegisterSetType::PAC:
+    return sizeof(m_pac_mask);
+  case RegisterSetType::MTE:
+    return sizeof(m_mte_ctrl_reg);
+  case RegisterSetType::TLS:
+    return m_tls_size;
+  case RegisterSetType::ZA:
+    return m_za_ptrace_payload.size();
+  case RegisterSetType::ZA_HEADER:
+    return sizeof(m_za_header);
+  case RegisterSetType::ZT:
+    return m_zt_reg.size();
+  case RegisterSetType::FPMR:
+    return sizeof(m_fpmr_reg);
+  case RegisterSetType::GCS:
+    return sizeof(m_gcs_regs);
+  case RegisterSetType::POE:
+    return sizeof(m_poe_regs);
+  }
+}
+
 // A NativeRegisterContext is constructed per thread, but all threads' registers
 // will contain the same fields. Therefore this mutex prevents each instance
 // competing with the other, and subsequent instances from having to detect the
