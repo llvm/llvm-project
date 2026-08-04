@@ -184,9 +184,8 @@ LIBC_INLINE ErrorOr<struct if_nameindex *> if_nameindex() {
   // TODO: Read more than one message.
   // TODO: Deduplicate interfaces to handle restarts.
   BlockStore<detail::InterfaceEntry, 16> store;
-  cpp::scope_exit destroy_store([&store]() {
-    BlockStore<detail::InterfaceEntry, 16>::destroy(&store);
-  });
+  cpp::scope_exit destroy_store(
+      [&store]() { BlockStore<detail::InterfaceEntry, 16>::destroy(&store); });
 
   if (ErrorOr<int> parse_res = detail::parse_netlink_messages(
           {buf, static_cast<size_t>(*recv_res)}, store);
