@@ -33,6 +33,8 @@ let Predicates = [HasAVX512] in {
             (COPY_TO_REGCLASS (v4f32 VR128X:$src), FR32X)>;
   def : Pat<(f64 (extractelt (v2f64 VR128X:$src), (iPTR 0))),
             (COPY_TO_REGCLASS (v2f64 VR128X:$src), FR64X)>;
+  def : Pat<(bf16 (extractelt (v8bf16 VR128X:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v8bf16 VR128X:$src), FR16X)>;
 }
 
 let Predicates = [NoVLX] in {
@@ -55,6 +57,8 @@ let Predicates = [HasVLX] in {
   // Implicitly promote a 64-bit scalar to a vector.
   def : Pat<(v2f64 (scalar_to_vector FR64X:$src)),
             (COPY_TO_REGCLASS FR64X:$src, VR128X)>;
+  def : Pat<(v8bf16 (scalar_to_vector (bf16 FR16X:$src))),
+            (COPY_TO_REGCLASS (bf16 FR16X:$src), VR128X)>;
 }
 
 //===----------------------------------------------------------------------===//

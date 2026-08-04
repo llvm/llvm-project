@@ -313,6 +313,7 @@ def : Pat<(v64i8 immAllZerosV), (AVX512_512_SET0)>;
 def : Pat<(v32i16 immAllZerosV), (AVX512_512_SET0)>;
 def : Pat<(v8i64 immAllZerosV), (AVX512_512_SET0)>;
 def : Pat<(v32f16 immAllZerosV), (AVX512_512_SET0)>;
+def : Pat<(v32bf16 immAllZerosV), (AVX512_512_SET0)>;
 def : Pat<(v16f32 immAllZerosV), (AVX512_512_SET0)>;
 def : Pat<(v8f64 immAllZerosV), (AVX512_512_SET0)>;
 }
@@ -342,18 +343,20 @@ def AVX512_256_SET0 : I<0, Pseudo, (outs VR256X:$dst), (ins), "",
 }
 
 let Predicates = [HasAVX512] in {
-def : Pat<(v8i16 immAllZerosV), (AVX512_128_SET0)>;
-def : Pat<(v16i8 immAllZerosV), (AVX512_128_SET0)>;
-def : Pat<(v2i64 immAllZerosV), (AVX512_128_SET0)>;
-def : Pat<(v8f16 immAllZerosV), (AVX512_128_SET0)>;
-def : Pat<(v4f32 immAllZerosV), (AVX512_128_SET0)>;
-def : Pat<(v2f64 immAllZerosV), (AVX512_128_SET0)>;
-def : Pat<(v32i8 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v16i16 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v4i64 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v16f16 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v8f32 immAllZerosV), (AVX512_256_SET0)>;
-def : Pat<(v4f64 immAllZerosV), (AVX512_256_SET0)>;
+def : Pat<(v8i16 immAllZerosV),   (AVX512_128_SET0)>;
+def : Pat<(v16i8 immAllZerosV),   (AVX512_128_SET0)>;
+def : Pat<(v2i64 immAllZerosV),   (AVX512_128_SET0)>;
+def : Pat<(v8f16 immAllZerosV),   (AVX512_128_SET0)>;
+def : Pat<(v8bf16 immAllZerosV),  (AVX512_128_SET0)>;
+def : Pat<(v4f32 immAllZerosV),   (AVX512_128_SET0)>;
+def : Pat<(v2f64 immAllZerosV),   (AVX512_128_SET0)>;
+def : Pat<(v32i8 immAllZerosV),   (AVX512_256_SET0)>;
+def : Pat<(v16i16 immAllZerosV),  (AVX512_256_SET0)>;
+def : Pat<(v4i64 immAllZerosV),   (AVX512_256_SET0)>;
+def : Pat<(v16f16 immAllZerosV),  (AVX512_256_SET0)>;
+def : Pat<(v16bf16 immAllZerosV), (AVX512_256_SET0)>;
+def : Pat<(v8f32 immAllZerosV),   (AVX512_256_SET0)>;
+def : Pat<(v4f64 immAllZerosV),   (AVX512_256_SET0)>;
 }
 
 // Alias instructions that map fld0 to xorps for sse or vxorps for avx.
@@ -369,6 +372,10 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
   def AVX512_FsFLD0F128 : I<0, Pseudo, (outs VR128X:$dst), (ins), "",
                             [(set VR128X:$dst, fp128imm0)]>;
 }
+
+// FR16X holds bf16 as well as f16, so bf16 zero reuses the f16 zeroing pseudo.
+let Predicates = [HasAVX512] in
+  def : Pat<(bf16 bfp16imm0), (AVX512_FsFLD0SH)>;
 
 //===----------------------------------------------------------------------===//
 // AVX-512 - VECTOR INSERT
@@ -1331,6 +1338,14 @@ let Predicates = [HasBWI] in {
             (VPBROADCASTWZrr VR128X:$src)>;
   def : Pat<(v32f16 (X86VBroadcast (f16 FR16X:$src))),
             (VPBROADCASTWZrr (COPY_TO_REGCLASS FR16X:$src, VR128X))>;
+
+  def : Pat<(v32bf16 (X86VBroadcastld16 addr:$src)),
+            (VPBROADCASTWZrm addr:$src)>;
+
+  def : Pat<(v32bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
+            (VPBROADCASTWZrr VR128X:$src)>;
+  def : Pat<(v32bf16 (X86VBroadcast (bf16 FR16X:$src))),
+            (VPBROADCASTWZrr (COPY_TO_REGCLASS FR16X:$src, VR128X))>;
 }
 let Predicates = [HasVLX, HasBWI] in {
   def : Pat<(v8f16 (X86VBroadcastld16 addr:$src)),
@@ -1346,6 +1361,21 @@ let Predicates = [HasVLX, HasBWI] in {
   def : Pat<(v8f16 (X86VBroadcast (f16 FR16X:$src))),
             (VPBROADCASTWZ128rr (COPY_TO_REGCLASS FR16X:$src, VR128X))>;
   def : Pat<(v16f16 (X86VBroadcast (f16 FR16X:$src))),
+            (VPBROADCASTWZ256rr (COPY_TO_REGCLASS FR16X:$src, VR128X))>;
+
+  def : Pat<(v8bf16 (X86VBroadcastld16 addr:$src)),
+            (VPBROADCASTWZ128rm addr:$src)>;
+  def : Pat<(v16bf16 (X86VBroadcastld16 addr:$src)),
+            (VPBROADCASTWZ256rm addr:$src)>;
+
+  def : Pat<(v8bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
+            (VPBROADCASTWZ128rr VR128X:$src)>;
+  def : Pat<(v16bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
+            (VPBROADCASTWZ256rr VR128X:$src)>;
+
+  def : Pat<(v8bf16 (X86VBroadcast (bf16 FR16X:$src))),
+            (VPBROADCASTWZ128rr (COPY_TO_REGCLASS FR16X:$src, VR128X))>;
+  def : Pat<(v16bf16 (X86VBroadcast (bf16 FR16X:$src))),
             (VPBROADCASTWZ256rr (COPY_TO_REGCLASS FR16X:$src, VR128X))>;
 }
 
@@ -11675,7 +11705,7 @@ let Predicates = [HasBWI], AddedComplexity = -10 in {
 def : Pat<(f16 (bitconvert (bf16 FR16X:$src))), (f16 FR16X:$src)>;
 def : Pat<(bf16 (bitconvert (f16 FR16X:$src))), (bf16 FR16X:$src)>;
 
-let Predicates = [HasBWI, HasBF16] in {
+let Predicates = [HasBWI], AddedComplexity = -10 in {
   def : Pat<(bf16 (load addr:$src)), (COPY_TO_REGCLASS (VPINSRWZrmi (v8i16 (IMPLICIT_DEF)), addr:$src, 0), FR16X)>;
   def : Pat<(store bf16:$src, addr:$dst), (VPEXTRWZmri addr:$dst, (v8i16 (COPY_TO_REGCLASS FR16X:$src, VR128)), 0)>;
   def : Pat<(i16 (bitconvert bf16:$src)), (EXTRACT_SUBREG (VPEXTRWZrri (v8i16 (COPY_TO_REGCLASS FR16X:$src, VR128X)), 0), sub_16bit)>;
@@ -13011,50 +13041,17 @@ let Predicates = [HasBF16, HasVLX] in {
   def : Pat<(v8bf16 (int_x86_vcvtneps2bf16256 (loadv8f32 addr:$src))),
             (VCVTNEPS2BF16Z256rm addr:$src)>;
 
-  def : Pat<(v8bf16 (X86VBroadcastld16 addr:$src)),
-            (VPBROADCASTWZ128rm addr:$src)>;
-  def : Pat<(v16bf16 (X86VBroadcastld16 addr:$src)),
-            (VPBROADCASTWZ256rm addr:$src)>;
-
-  def : Pat<(v8bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
-            (VPBROADCASTWZ128rr VR128X:$src)>;
-  def : Pat<(v16bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
-            (VPBROADCASTWZ256rr VR128X:$src)>;
-
   def : Pat<(v8bf16 (X86vfpround (v8f32 VR256X:$src))),
             (VCVTNEPS2BF16Z256rr VR256X:$src)>;
   def : Pat<(v8bf16 (X86vfpround (loadv8f32 addr:$src))),
             (VCVTNEPS2BF16Z256rm addr:$src)>;
-
-  // TODO: No scalar broadcast due to we don't support legal scalar bf16 so far.
 }
 
 let Predicates = [HasBF16] in {
-  def : Pat<(v8bf16 (X86VBroadcastld16 addr:$src)),
-            (VPBROADCASTWrm addr:$src)>;
-  def : Pat<(v16bf16 (X86VBroadcastld16 addr:$src)),
-            (VPBROADCASTWYrm addr:$src)>;
-  def : Pat<(v32bf16 (X86VBroadcastld16 addr:$src)),
-            (VPBROADCASTWZrm addr:$src)>;
-
-  def : Pat<(v8bf16 (X86VBroadcast (v8bf16 VR128:$src))),
-            (VPBROADCASTWrr VR128:$src)>;
-  def : Pat<(v16bf16 (X86VBroadcast (v8bf16 VR128:$src))),
-            (VPBROADCASTWYrr VR128:$src)>;
-  def : Pat<(v32bf16 (X86VBroadcast (v8bf16 VR128X:$src))),
-            (VPBROADCASTWZrr VR128X:$src)>;
-
   def : Pat<(v16bf16 (X86vfpround (v16f32 VR512:$src))),
             (VCVTNEPS2BF16Zrr VR512:$src)>;
   def : Pat<(v16bf16 (X86vfpround (loadv16f32 addr:$src))),
             (VCVTNEPS2BF16Zrm addr:$src)>;
-
-  def : Pat<(v8bf16 (X86VBroadcast (bf16 FR16X:$src))),
-            (VPBROADCASTWrr (COPY_TO_REGCLASS FR16X:$src, VR128))>;
-  def : Pat<(v16bf16 (X86VBroadcast (bf16 FR16X:$src))),
-            (VPBROADCASTWYrr (COPY_TO_REGCLASS FR16X:$src, VR128))>;
-  def : Pat<(v32bf16 (X86VBroadcast (bf16 FR16X:$src))),
-            (VPBROADCASTWZrr (COPY_TO_REGCLASS FR16X:$src, VR128X))>;
 }
 
 let Constraints = "$src1 = $dst" in {
@@ -13126,6 +13123,11 @@ def : Pat<(f16 (bitconvert GR16:$src)),
                 (VMOVW2SHrr
                  (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit)),
                 FR16X))>;
+def : Pat<(bf16 (bitconvert GR16:$src)),
+          (bf16 (COPY_TO_REGCLASS
+                 (VMOVW2SHrr
+                  (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit)),
+                 FR16X))>;
 def : Pat<(v8i16 (scalar_to_vector (i16 GR16:$src))),
           (VMOVW2SHrr (INSERT_SUBREG (IMPLICIT_DEF), GR16:$src, sub_16bit))>;
 def : Pat<(v4i32 (X86vzmovl (scalar_to_vector (and GR32:$src, 0xffff)))),
@@ -13187,6 +13189,11 @@ def VMOVWmr  : AVX512<0x7E, MRMDestMem, (outs),
 def : Pat<(i16 (bitconvert (f16 FR16X:$src))),
           (i16 (EXTRACT_SUBREG
                 (VMOVSH2Wrr (COPY_TO_REGCLASS (f16 FR16X:$src), VR128X)),
+                sub_16bit))>;
+// vmovw is a plain 16-bit move, so bf16 can use it just as well as f16.
+def : Pat<(i16 (bitconvert (bf16 FR16X:$src))),
+          (i16 (EXTRACT_SUBREG
+                (VMOVSH2Wrr (COPY_TO_REGCLASS (bf16 FR16X:$src), VR128X)),
                 sub_16bit))>;
 def : Pat<(i16 (extractelt (v8i16 VR128X:$src), (iPTR 0))),
           (i16 (EXTRACT_SUBREG (VMOVSH2Wrr VR128X:$src), sub_16bit))>;
