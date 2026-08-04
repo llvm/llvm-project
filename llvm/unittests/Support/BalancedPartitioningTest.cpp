@@ -100,12 +100,18 @@ TEST_F(BalancedPartitioningTest, MoveGain) {
 TEST_F(BalancedPartitioningTest, WeightedUtilitiesMatchReplication) {
   Config.SkipProbability = 0;
   Config.TaskSplitDepth = 0;
+  using WeightedUtilityNode = BPFunctionNode::WeightedUtilityNode;
 
   std::vector<BPFunctionNode> WeightedNodes = {
-      BPFunctionNode(0, {1}, {1}),
-      BPFunctionNode(1, {1, 2}, {1, 1}),
-      BPFunctionNode(2, {0, 1, 2}, {10, 1, 1}),
-      BPFunctionNode(3, {0, 2}, {10, 1}),
+      BPFunctionNode::createWithWeightedUtilities(0,
+                                                  {WeightedUtilityNode(1, 1)}),
+      BPFunctionNode::createWithWeightedUtilities(
+          1, {WeightedUtilityNode(1, 1), WeightedUtilityNode(2, 1)}),
+      BPFunctionNode::createWithWeightedUtilities(
+          2, {WeightedUtilityNode(0, 10), WeightedUtilityNode(1, 1),
+              WeightedUtilityNode(2, 1)}),
+      BPFunctionNode::createWithWeightedUtilities(
+          3, {WeightedUtilityNode(0, 10), WeightedUtilityNode(2, 1)}),
   };
   std::vector<BPFunctionNode> ReplicatedNodes = {
       BPFunctionNode(0, {10}),
@@ -120,10 +126,15 @@ TEST_F(BalancedPartitioningTest, WeightedUtilitiesMatchReplication) {
       BPFunctionNode(3, {0, 2}),
   };
   std::vector<BPFunctionNode> WeightOneNodes = {
-      BPFunctionNode(0, {1}, {1}),
-      BPFunctionNode(1, {1, 2}, {1, 1}),
-      BPFunctionNode(2, {0, 1, 2}, {1, 1, 1}),
-      BPFunctionNode(3, {0, 2}, {1, 1}),
+      BPFunctionNode::createWithWeightedUtilities(0,
+                                                  {WeightedUtilityNode(1, 1)}),
+      BPFunctionNode::createWithWeightedUtilities(
+          1, {WeightedUtilityNode(1, 1), WeightedUtilityNode(2, 1)}),
+      BPFunctionNode::createWithWeightedUtilities(
+          2, {WeightedUtilityNode(0, 1), WeightedUtilityNode(1, 1),
+              WeightedUtilityNode(2, 1)}),
+      BPFunctionNode::createWithWeightedUtilities(
+          3, {WeightedUtilityNode(0, 1), WeightedUtilityNode(2, 1)}),
   };
 
   Bp.run(WeightedNodes);

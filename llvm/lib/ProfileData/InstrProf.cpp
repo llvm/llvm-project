@@ -718,9 +718,10 @@ Error collectGlobalObjectNameStrings(ArrayRef<std::string> NameStrs,
   std::string UncompressedNameStrings =
       join(NameStrs.begin(), NameStrs.end(), getInstrProfNameSeparator());
 
-  assert(StringRef(UncompressedNameStrings)
-                 .count(getInstrProfNameSeparator()) == (NameStrs.size() - 1) &&
-         "PGO name is invalid (contains separator token)");
+  assert(
+      StringRef(UncompressedNameStrings).count(getInstrProfNameSeparator()) ==
+          (NameStrs.size() - 1) &&
+      "PGO name is invalid (contains separator token)");
 
   unsigned EncLen = encodeULEB128(UncompressedNameStrings.length(), P);
   P += EncLen;
@@ -1152,8 +1153,7 @@ void TemporalProfTraceTy::createBPFunctionNodes(
   UtilityNodeT MaxUN = 0;
   DenseMap<IDT, size_t> IdToFirstTimestamp;
   DenseMap<IDT, UtilityNodeT> IdToFirstUN;
-  DenseMap<IDT, SmallVector<UtilityNodeT>> IdToUNs;
-  DenseMap<IDT, SmallVector<BPFunctionNode::UtilityNodeWeightT>> IdToUNWeights;
+  DenseMap<IDT, SmallVector<BPFunctionNode::WeightedUtilityNode>> IdToUNs;
   for (auto &Trace : Traces) {
     // A zero-weight trace is equivalent to no copies of the trace.
     if (Trace.Weight == 0)
@@ -1172,10 +1172,8 @@ void TemporalProfTraceTy::createBPFunctionNodes(
       IdToFirstUN.try_emplace(Id, MaxUN);
     }
     for (auto &[Id, FirstUN] : IdToFirstUN)
-      for (auto UN = FirstUN; UN <= MaxUN; ++UN) {
-        IdToUNs[Id].push_back(UN);
-        IdToUNWeights[Id].push_back(Trace.Weight);
-      }
+      for (auto UN = FirstUN; UN <= MaxUN; ++UN)
+        IdToUNs[Id].emplace_back(UN, Trace.Weight);
     ++MaxUN;
     IdToFirstUN.clear();
   }
@@ -1184,28 +1182,18 @@ void TemporalProfTraceTy::createBPFunctionNodes(
     DenseMap<UtilityNodeT, unsigned> UNFrequency;
     for (auto &[Id, UNs] : IdToUNs)
       for (auto &UN : UNs)
-        ++UNFrequency[UN];
+        ++UNFrequency[UN.Id];
     // Filter out utility nodes that are too infrequent or too prevalent to make
     // BalancedPartitioning more effective.
-    for (auto &[Id, UNs] : IdToUNs) {
-      auto &Weights = IdToUNWeights[Id];
-      size_t WriteIndex = 0;
-      for (size_t ReadIndex = 0; ReadIndex < UNs.size(); ++ReadIndex) {
-        auto UN = UNs[ReadIndex];
-        unsigned Freq = UNFrequency[UN];
-        if (Freq <= 1 || 2 * Freq > IdToUNs.size())
-          continue;
-        UNs[WriteIndex] = UN;
-        Weights[WriteIndex] = Weights[ReadIndex];
-        ++WriteIndex;
-      }
-      UNs.resize(WriteIndex);
-      Weights.resize(WriteIndex);
-    }
+    for (auto &[Id, UNs] : IdToUNs)
+      llvm::erase_if(UNs, [&](auto &UN) {
+        unsigned Freq = UNFrequency[UN.Id];
+        return Freq <= 1 || 2 * Freq > IdToUNs.size();
+      });
   }
 
   for (auto &[Id, UNs] : IdToUNs)
-    Nodes.emplace_back(Id, UNs, IdToUNWeights[Id]);
+    Nodes.push_back(BPFunctionNode::createWithWeightedUtilities(Id, UNs));
 
   // Since BalancedPartitioning is sensitive to the initial order, we explicitly
   // order nodes by their earliest timestamp.
@@ -1228,13 +1216,13 @@ uint32_t getNumValueKindsInstrProf(const void *Record) {
 }
 
 uint32_t getNumValueSitesInstrProf(const void *Record, uint32_t VKind) {
-  return reinterpret_cast<const InstrProfRecord *>(Record)
-      ->getNumValueSites(VKind);
+  return reinterpret_cast<const InstrProfRecord *>(Record)->getNumValueSites(
+      VKind);
 }
 
 uint32_t getNumValueDataInstrProf(const void *Record, uint32_t VKind) {
-  return reinterpret_cast<const InstrProfRecord *>(Record)
-      ->getNumValueData(VKind);
+  return reinterpret_cast<const InstrProfRecord *>(Record)->getNumValueData(
+      VKind);
 }
 
 uint32_t getNumValueDataForSiteInstrProf(const void *R, uint32_t VK,
@@ -1435,9 +1423,8 @@ void annotateValueSite(Module &M, Instruction &Inst,
 }
 
 void annotateValueSite(Module &M, Instruction &Inst,
-                       ArrayRef<InstrProfValueData> VDs,
-                       uint64_t Sum, InstrProfValueKind ValueKind,
-                       uint32_t MaxMDCount) {
+                       ArrayRef<InstrProfValueData> VDs, uint64_t Sum,
+                       InstrProfValueKind ValueKind, uint32_t MaxMDCount) {
   if (VDs.empty())
     return;
   LLVMContext &Ctx = M.getContext();

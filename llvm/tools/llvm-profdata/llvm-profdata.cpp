@@ -38,6 +38,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
@@ -638,7 +639,7 @@ public:
     return New.empty() ? Name : FunctionId(New);
   }
 };
-}
+} // namespace
 
 struct WeightedFile {
   std::string Filename;
@@ -894,13 +895,11 @@ getFuncName(const StringMap<InstrProfWriter::ProfilingData>::value_type &Val) {
   return Val.first();
 }
 
-static std::string
-getFuncName(const SampleProfileMap::value_type &Val) {
+static std::string getFuncName(const SampleProfileMap::value_type &Val) {
   return Val.second.getContext().toString();
 }
 
-template <typename T>
-static void filterFunctions(T &ProfileMap) {
+template <typename T> static void filterFunctions(T &ProfileMap) {
   bool hasFilter = !FuncNameFilter.empty();
   bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
   if (!hasFilter && !hasNegativeFilter)
@@ -1499,8 +1498,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
                           BodySample.second.getSamples());
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
-                                    MaskedDiscriminator,
-                                    Remapper(Target.first), Target.second);
+                                    MaskedDiscriminator, Remapper(Target.first),
+                                    Target.second);
     }
   }
   for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
@@ -1517,12 +1516,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
 }
 
 static sampleprof::SampleProfileFormat FormatMap[] = {
-    sampleprof::SPF_None,
-    sampleprof::SPF_Text,
-    sampleprof::SPF_None,
-    sampleprof::SPF_Ext_Binary,
-    sampleprof::SPF_GCC,
-    sampleprof::SPF_Binary};
+    sampleprof::SPF_None,       sampleprof::SPF_Text, sampleprof::SPF_None,
+    sampleprof::SPF_Ext_Binary, sampleprof::SPF_GCC,  sampleprof::SPF_Binary};
 
 static std::unique_ptr<MemoryBuffer>
 getInputFileBuf(const StringRef &InputFile) {
@@ -3396,7 +3391,8 @@ static int show_main(StringRef ProgName) {
     exitWithErrorCode(EC, OutputFilename);
 
   if (ShowAllFunctions && !FuncNameFilter.empty())
-    WithColor::warning() << "-function argument ignored: showing all functions\n";
+    WithColor::warning()
+        << "-function argument ignored: showing all functions\n";
 
   if (!DebugInfoFilename.empty())
     return showDebugInfoCorrelation(DebugInfoFilename, SFormat, OS);
@@ -3446,15 +3442,20 @@ static int order_main() {
       IdToPageNumber[Node.Id] = IdToPageNumber.size() / 32;
 
     SmallSet<unsigned, 0> TouchedPages;
-    unsigned Area = 0;
+    uint64_t Area = 0;
     for (auto &Trace : TestTraces) {
+      if (Trace.Weight == 0)
+        continue;
+      uint64_t TraceArea = 0;
       for (auto Id : Trace.FunctionNameRefs) {
         auto It = IdToPageNumber.find(Id);
         if (It == IdToPageNumber.end())
           continue;
         TouchedPages.insert(It->getSecond());
-        Area += TouchedPages.size();
+        TraceArea = SaturatingAdd(TraceArea,
+                                  static_cast<uint64_t>(TouchedPages.size()));
       }
+      Area = SaturatingMultiplyAdd(TraceArea, Trace.Weight, Area);
       TouchedPages.clear();
     }
     OS << "# Total area under the page fault curve: " << (float)Area << "\n";

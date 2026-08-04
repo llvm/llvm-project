@@ -41,12 +41,10 @@
 
 #include "raw_ostream.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 
 #include <atomic>
-#include <cassert>
 #include <condition_variable>
 #include <mutex>
 #include <random>
@@ -65,27 +63,38 @@ public:
   using UtilityNodeT = uint32_t;
   using UtilityNodeWeightT = uint64_t;
 
-  /// \param UtilityNodes the set of utility nodes (must be unique'd)
-  BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes)
-      : Id(Id), UtilityNodes(UtilityNodes),
-        UtilityNodeWeights(UtilityNodes.size(), 1) {}
+  struct WeightedUtilityNode {
+    UtilityNodeT Id;
+    UtilityNodeWeightT Weight;
+
+    WeightedUtilityNode(UtilityNodeT Id, UtilityNodeWeightT Weight)
+        : Id(Id), Weight(Weight) {}
+
+    bool operator==(const WeightedUtilityNode &Other) const {
+      return Id == Other.Id && Weight == Other.Weight;
+    }
+  };
 
   /// \param UtilityNodes the set of utility nodes (must be unique'd)
-  /// \param UtilityNodeWeights the weight of each corresponding utility node.
-  /// All occurrences of a utility node must have the same weight. Zero-weight
-  /// utility nodes are ignored.
-  BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes,
-                 ArrayRef<UtilityNodeWeightT> UtilityNodeWeights)
-      : Id(Id) {
-    assert(UtilityNodes.size() == UtilityNodeWeights.size() &&
-           "each utility node must have a weight");
-    for (auto [UtilityNode, Weight] :
-         llvm::zip(UtilityNodes, UtilityNodeWeights)) {
-      if (Weight == 0)
+  BPFunctionNode(IDT Id, ArrayRef<UtilityNodeT> UtilityNodes) : Id(Id) {
+    for (UtilityNodeT UtilityNode : UtilityNodes)
+      this->UtilityNodes.emplace_back(UtilityNode, 1);
+  }
+
+  /// Create a node with weighted utility nodes (which must be unique'd). All
+  /// occurrences of a utility node must have the same weight. A utility's cost
+  /// is multiplied by its weight without materializing duplicate utility
+  /// nodes. Zero-weight utility nodes are ignored.
+  static BPFunctionNode
+  createWithWeightedUtilities(IDT Id,
+                              ArrayRef<WeightedUtilityNode> UtilityNodes) {
+    BPFunctionNode Node(Id);
+    for (WeightedUtilityNode UtilityNode : UtilityNodes) {
+      if (UtilityNode.Weight == 0)
         continue;
-      this->UtilityNodes.push_back(UtilityNode);
-      this->UtilityNodeWeights.push_back(Weight);
+      Node.UtilityNodes.push_back(UtilityNode);
     }
+    return Node;
   }
 
   /// The ID of this node
@@ -95,10 +104,7 @@ public:
 
 protected:
   /// The list of utility nodes associated with this node
-  SmallVector<UtilityNodeT, 4> UtilityNodes;
-  /// The weight of each corresponding utility node. A utility node's cost is
-  /// multiplied by its weight without materializing duplicate utility nodes.
-  SmallVector<UtilityNodeWeightT, 4> UtilityNodeWeights;
+  SmallVector<WeightedUtilityNode, 4> UtilityNodes;
   /// The bucket assigned by balanced partitioning
   std::optional<unsigned> Bucket;
   /// The index of the input order of the FunctionNodes
@@ -107,6 +113,9 @@ protected:
   friend class BPFunctionNodeTest_Basic_Test;
   friend class BalancedPartitioningTest_Basic_Test;
   friend class BalancedPartitioningTest_Large_Test;
+
+private:
+  explicit BPFunctionNode(IDT Id) : Id(Id) {}
 };
 
 /// Algorithm parameters; default values are tuned on real-world binaries

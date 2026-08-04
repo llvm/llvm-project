@@ -24,14 +24,10 @@ void PrintTo(const BPFunctionNode &Node, std::ostream *OS) {
 
 TEST(BPFunctionNodeTest, Basic) {
   auto NodeIs = [](BPFunctionNode::IDT Id,
-                   ArrayRef<BPFunctionNode::UtilityNodeT> UNs,
-                   ArrayRef<BPFunctionNode::UtilityNodeWeightT> Weights) {
+                   ArrayRef<BPFunctionNode::WeightedUtilityNode> UNs) {
     return AllOf(Field("Id", &BPFunctionNode::Id, Id),
                  Field("UtilityNodes", &BPFunctionNode::UtilityNodes,
-                       UnorderedElementsAreArray(UNs)),
-                 Field("UtilityNodeWeights",
-                       &BPFunctionNode::UtilityNodeWeights,
-                       UnorderedElementsAreArray(Weights)));
+                       UnorderedElementsAreArray(UNs)));
   };
 
   std::vector<BPFunctionNode> Nodes;
@@ -39,20 +35,21 @@ TEST(BPFunctionNodeTest, Basic) {
       {TemporalProfTraceTy({0, 1, 2, 3})}, Nodes, /*RemoveOutlierUNs=*/false);
   // Utility nodes that are too infrequent or too prevalent are filtered out.
   EXPECT_THAT(Nodes,
-              UnorderedElementsAre(NodeIs(0, {0, 1, 2}, {1, 1, 1}),
-                                   NodeIs(1, {1, 2}, {1, 1}),
-                                   NodeIs(2, {2}, {1}), NodeIs(3, {2}, {1})));
+              UnorderedElementsAre(NodeIs(0, {{0, 1}, {1, 1}, {2, 1}}),
+                                   NodeIs(1, {{1, 1}, {2, 1}}),
+                                   NodeIs(2, {{2, 1}}), NodeIs(3, {{2, 1}})));
 
   Nodes.clear();
   TemporalProfTraceTy::createBPFunctionNodes(
       {TemporalProfTraceTy({0, 1, 2, 3, 4}), TemporalProfTraceTy({4, 2})},
       Nodes, /*RemoveOutlierUNs=*/false);
 
-  EXPECT_THAT(Nodes, UnorderedElementsAre(NodeIs(0, {0, 1, 2, 3}, {1, 1, 1, 1}),
-                                          NodeIs(1, {1, 2, 3}, {1, 1, 1}),
-                                          NodeIs(2, {2, 3, 5}, {1, 1, 1}),
-                                          NodeIs(3, {2, 3}, {1, 1}),
-                                          NodeIs(4, {3, 4, 5}, {1, 1, 1})));
+  EXPECT_THAT(Nodes,
+              UnorderedElementsAre(NodeIs(0, {{0, 1}, {1, 1}, {2, 1}, {3, 1}}),
+                                   NodeIs(1, {{1, 1}, {2, 1}, {3, 1}}),
+                                   NodeIs(2, {{2, 1}, {3, 1}, {5, 1}}),
+                                   NodeIs(3, {{2, 1}, {3, 1}}),
+                                   NodeIs(4, {{3, 1}, {4, 1}, {5, 1}})));
 
   Nodes.clear();
   TemporalProfTraceTy::createBPFunctionNodes(
@@ -60,18 +57,20 @@ TEST(BPFunctionNodeTest, Basic) {
       Nodes, /*RemoveOutlierUNs=*/true);
 
   EXPECT_THAT(Nodes,
-              UnorderedElementsAre(NodeIs(0, {1}, {1}), NodeIs(1, {1}, {1}),
-                                   NodeIs(2, {5}, {1}), NodeIs(3, {}, {}),
-                                   NodeIs(4, {5}, {1})));
+              UnorderedElementsAre(NodeIs(0, {{1, 1}}), NodeIs(1, {{1, 1}}),
+                                   NodeIs(2, {{5, 1}}), NodeIs(3, {}),
+                                   NodeIs(4, {{5, 1}})));
 
   Nodes.clear();
   TemporalProfTraceTy::createBPFunctionNodes(
-      {TemporalProfTraceTy({0, 1, 2, 3}, 10), TemporalProfTraceTy({4, 5}, 0)},
+      {TemporalProfTraceTy({0, 1, 2, 3}, 10), TemporalProfTraceTy({0, 4, 1}, 1),
+       TemporalProfTraceTy({5, 6}, 0)},
       Nodes, /*RemoveOutlierUNs=*/false);
-  EXPECT_THAT(Nodes,
-              UnorderedElementsAre(NodeIs(0, {0, 1, 2}, {10, 10, 10}),
-                                   NodeIs(1, {1, 2}, {10, 10}),
-                                   NodeIs(2, {2}, {10}), NodeIs(3, {2}, {10})));
+  EXPECT_THAT(
+      Nodes, UnorderedElementsAre(
+                 NodeIs(0, {{0, 10}, {1, 10}, {2, 10}, {3, 1}, {4, 1}, {5, 1}}),
+                 NodeIs(1, {{1, 10}, {2, 10}, {5, 1}}), NodeIs(2, {{2, 10}}),
+                 NodeIs(3, {{2, 10}}), NodeIs(4, {{4, 1}, {5, 1}})));
 }
 
 } // end namespace llvm

@@ -22,8 +22,15 @@ using namespace llvm;
 #define DEBUG_TYPE "balanced-partitioning"
 
 void BPFunctionNode::dump(raw_ostream &OS) const {
-  OS << formatv("{{ID={0} Utilities={{{1:$[,]}} Bucket={2}}", Id,
-                make_range(UtilityNodes.begin(), UtilityNodes.end()), Bucket);
+  OS << "{ID=" << Id << " Utilities={";
+  for (const auto &UN : UtilityNodes)
+    OS << "(" << UN.Id << ", " << UN.Weight << ")";
+  OS << "} Bucket=";
+  if (Bucket)
+    OS << *Bucket;
+  else
+    OS << "none";
+  OS << "}";
 }
 
 template <typename Func>
@@ -172,40 +179,33 @@ void BalancedPartitioning::runIterations(const FunctionNodeRange Nodes,
   DenseMap<BPFunctionNode::UtilityNodeT, unsigned> UtilityNodeIndex;
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
-      ++UtilityNodeIndex[UN];
+      ++UtilityNodeIndex[UN.Id];
   // Remove utility nodes if they have just one edge or are connected to all
   // functions
-  for (auto &N : Nodes) {
-    size_t WriteIndex = 0;
-    for (size_t ReadIndex = 0; ReadIndex < N.UtilityNodes.size(); ++ReadIndex) {
-      auto UN = N.UtilityNodes[ReadIndex];
-      unsigned UNI = UtilityNodeIndex[UN];
-      if (UNI == 1 || UNI == NumNodes)
-        continue;
-      N.UtilityNodes[WriteIndex] = UN;
-      N.UtilityNodeWeights[WriteIndex] = N.UtilityNodeWeights[ReadIndex];
-      ++WriteIndex;
-    }
-    N.UtilityNodes.resize(WriteIndex);
-    N.UtilityNodeWeights.resize(WriteIndex);
-  }
+  for (auto &N : Nodes)
+    llvm::erase_if(N.UtilityNodes, [&](auto &UN) {
+      unsigned UNI = UtilityNodeIndex[UN.Id];
+      return UNI == 1 || UNI == NumNodes;
+    });
 
   // Renumber utility nodes so they can be used to index into Signatures
   UtilityNodeIndex.clear();
   for (auto &N : Nodes)
     for (auto &UN : N.UtilityNodes)
-      UN = UtilityNodeIndex.insert({UN, UtilityNodeIndex.size()}).first->second;
+      UN.Id = UtilityNodeIndex.insert({UN.Id, UtilityNodeIndex.size()})
+                  .first->second;
 
   // Initialize signatures
   SignaturesT Signatures(/*Size=*/UtilityNodeIndex.size());
   for (auto &N : Nodes) {
-    for (auto [UN, Weight] : llvm::zip(N.UtilityNodes, N.UtilityNodeWeights)) {
-      assert(UN < Signatures.size());
-      auto &Signature = Signatures[UN];
-      if (Signature.LeftCount != 0 || Signature.RightCount != 0)
-        assert(Signature.Weight == Weight &&
+    for (auto &UN : N.UtilityNodes) {
+      assert(UN.Id < Signatures.size());
+      auto &Signature = Signatures[UN.Id];
+      if (Signature.LeftCount == 0 && Signature.RightCount == 0)
+        Signature.Weight = UN.Weight;
+      else
+        assert(Signature.Weight == UN.Weight &&
                "a utility node must have a consistent weight");
-      Signature.Weight = Weight;
       if (N.Bucket == LeftBucket) {
         Signature.LeftCount++;
       } else {
@@ -307,14 +307,14 @@ bool BalancedPartitioning::moveFunctionNode(BPFunctionNode &N,
   // Update signatures and invalidate gain cache
   if (FromLeftToRight) {
     for (auto &UN : N.UtilityNodes) {
-      auto &Signature = Signatures[UN];
+      auto &Signature = Signatures[UN.Id];
       Signature.LeftCount--;
       Signature.RightCount++;
       Signature.CachedGainIsValid = false;
     }
   } else {
     for (auto &UN : N.UtilityNodes) {
-      auto &Signature = Signatures[UN];
+      auto &Signature = Signatures[UN.Id];
       Signature.LeftCount++;
       Signature.RightCount--;
       Signature.CachedGainIsValid = false;
@@ -343,8 +343,8 @@ float BalancedPartitioning::moveGain(const BPFunctionNode &N,
                                      const SignaturesT &Signatures) {
   float Gain = 0.f;
   for (auto &UN : N.UtilityNodes)
-    Gain += (FromLeftToRight ? Signatures[UN].CachedGainLR
-                             : Signatures[UN].CachedGainRL);
+    Gain += (FromLeftToRight ? Signatures[UN.Id].CachedGainLR
+                             : Signatures[UN.Id].CachedGainRL);
   return Gain;
 }
 
