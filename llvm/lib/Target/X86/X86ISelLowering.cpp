@@ -48575,7 +48575,8 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
     return SDValue();
 
   // For multi-use setcc, check that all users are vselects that benefit.
-  if (!Cond.hasOneUse()) {
+  bool CondHasOneUse = Cond.hasOneUse();
+  if (!CondHasOneUse) {
     if (!llvm::all_of(Cond->users(), [&](SDNode *User) {
           SDValue UserLHS, UserRHS;
           return sd_match(User, m_VSelect(m_Specific(Cond), m_Value(UserLHS),
@@ -48590,7 +48591,7 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   // (vselect M, L, R) -> (vselect ~M, R, L)
   ISD::CondCode NewCC = ISD::getSetCCInverse(CC, X.getValueType());
   SDValue NewCond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), X, Y, NewCC);
-  if (Cond.hasOneUse())
+  if (CondHasOneUse)
     return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
 
   // Invert the setcc for all users and commute all vselects.
