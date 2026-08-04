@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -verify -fsyntax-only %s
+// RUN: %clang_cc1 -std=c23 -triple x86_64-unknown-linux-gnu -verify -fsyntax-only -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -std=c23 -triple x86_64-scei-ps4 -verify=expected,ps4 -fsyntax-only %s
 
 #define M static
