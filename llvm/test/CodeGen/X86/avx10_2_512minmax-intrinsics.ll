@@ -18,14 +18,14 @@ define <32 x bfloat> @test_int_x86_avx10_vminmaxbf16512(<32 x bfloat> %A, <32 x 
 
 define <32 x bfloat> @test_int_x86_avx10_mask_vminmaxbf16512(<32 x bfloat> %A, <32 x bfloat> %B, <32 x bfloat> %C, i32 %D) nounwind {
 ; X64-LABEL: test_int_x86_avx10_mask_vminmaxbf16512:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x49,0x52,0xd1,0x7f]
 ; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_mask_vminmaxbf16512:
-; X86:       # %bb.0:
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x49,0x52,0xd1,0x7f]
 ; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
@@ -41,13 +41,13 @@ declare <32 x bfloat> @llvm.x86.avx10.vminmaxbf16512(<32 x bfloat> %A, <32 x bfl
 
 define <32 x bfloat> @test_int_x86_avx10_maskz_vminmaxbf16512(<32 x bfloat> %A, <32 x bfloat> %B, i32 %C) nounwind {
 ; X64-LABEL: test_int_x86_avx10_maskz_vminmaxbf16512:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0xc9,0x52,0xc1,0x7f]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_maskz_vminmaxbf16512:
-; X86:       # %bb.0:
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vminmaxbf16 $127, %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0xc9,0x52,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]

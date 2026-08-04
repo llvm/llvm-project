@@ -2607,8 +2607,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
     }
-    // Same split as f16: the 128-bit build is an instruction, the wider ones
-    // build into an xmm and insert.
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v8bf16, Legal);
     setOperationAction(ISD::SCALAR_TO_VECTOR, MVT::v16bf16, Custom);
     for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV}) {
@@ -2646,8 +2644,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FDIV, MVT::bf16, Custom);
     setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
     setOperationAction(ISD::FMA, MVT::bf16, Custom);
-    // vrndscalebf16 covers the whole round family for packed bf16, so these
-    // widen to a vector op the same way the arithmetic ones do.
     for (unsigned Opc : {ISD::FFLOOR, ISD::FCEIL, ISD::FTRUNC, ISD::FRINT,
                          ISD::FNEARBYINT, ISD::FROUNDEVEN})
       setOperationAction(Opc, MVT::bf16, Custom);

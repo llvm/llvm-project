@@ -58,8 +58,7 @@ define bfloat @ldexp_bf16(i8 zeroext %x) nounwind {
 ; WIN64-NEXT:    movzbl %cl, %edx
 ; WIN64-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
 ; WIN64-NEXT:    callq ldexp
-; WIN64-NEXT:    cvtsd2ss %xmm0, %xmm0
-; WIN64-NEXT:    callq __truncsfbf2
+; WIN64-NEXT:    callq __truncdfbf2
 ; WIN64-NEXT:    addq $40, %rsp
 ; WIN64-NEXT:    retq
 ;

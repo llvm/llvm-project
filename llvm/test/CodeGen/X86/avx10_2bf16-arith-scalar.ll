@@ -7,6 +7,8 @@ define bfloat @fadd_bf16(bfloat %a, bfloat %b) nounwind {
 ; AVX10_2-LABEL: fadd_bf16:
 ; AVX10_2:       # %bb.0: # %entry
 ; AVX10_2-NEXT:    vaddbf16 %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10_2-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fadd_bf16:
@@ -42,7 +44,11 @@ define bfloat @dont_fuse_bf16(bfloat %a, bfloat %b, bfloat %c) nounwind {
 ; AVX10_2-LABEL: dont_fuse_bf16:
 ; AVX10_2:       # %bb.0: # %entry
 ; AVX10_2-NEXT:    vmulbf16 %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10_2-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; AVX10_2-NEXT:    vaddbf16 %xmm2, %xmm0, %xmm0
+; AVX10_2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10_2-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: dont_fuse_bf16:
@@ -94,6 +100,8 @@ define bfloat @fsub_bf16(bfloat %a, bfloat %b) nounwind {
 ; AVX10_2-LABEL: fsub_bf16:
 ; AVX10_2:       # %bb.0: # %entry
 ; AVX10_2-NEXT:    vsubbf16 %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10_2-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fsub_bf16:
@@ -128,6 +136,8 @@ define bfloat @fmul_bf16(bfloat %a, bfloat %b) nounwind {
 ; AVX10_2-LABEL: fmul_bf16:
 ; AVX10_2:       # %bb.0: # %entry
 ; AVX10_2-NEXT:    vmulbf16 %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10_2-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fmul_bf16:
@@ -162,6 +172,8 @@ define bfloat @fdiv_bf16(bfloat %a, bfloat %b) nounwind {
 ; AVX10_2-LABEL: fdiv_bf16:
 ; AVX10_2:       # %bb.0: # %entry
 ; AVX10_2-NEXT:    vdivbf16 %xmm1, %xmm0, %xmm0
+; AVX10_2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10_2-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fdiv_bf16:
@@ -196,6 +208,8 @@ define bfloat @fsqrt_bf16(bfloat %a) nounwind {
 ; AVX10_2-LABEL: fsqrt_bf16:
 ; AVX10_2:       # %bb.0: # %entry
 ; AVX10_2-NEXT:    vsqrtbf16 %xmm0, %xmm0
+; AVX10_2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
+; AVX10_2-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: fsqrt_bf16:
