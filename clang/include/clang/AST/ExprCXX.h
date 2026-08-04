@@ -5509,31 +5509,31 @@ class CXXReflectExpr : public Expr {
 private:
   // TODO(Reflection): add support for TemplateReference, NamespaceReference and
   // DeclRefExpr
-  using operand_type = llvm::PointerUnion<TypeSourceInfo *>;
+  using operand_type = llvm::PointerUnion<const TypeSourceInfo *>;
 
   SourceLocation CaretCaretLoc;
   ReflectionKind Kind;
   operand_type Operand;
 
   CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
-                 TypeSourceInfo *TSI);
+                 const TypeSourceInfo *TSI);
   CXXReflectExpr(EmptyShell Empty);
 
 public:
   static CXXReflectExpr *Create(ASTContext &C, SourceLocation OperatorLoc,
-                                TypeSourceInfo *TSI);
+                                const TypeSourceInfo *TSI);
 
   static CXXReflectExpr *CreateEmpty(ASTContext &C);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
-        .Case<TypeSourceInfo *>(
-            [](auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
+        .Case<const TypeSourceInfo *>(
+            [](const auto *Ptr) { return Ptr->getTypeLoc().getBeginLoc(); });
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY {
     return llvm::TypeSwitch<operand_type, SourceLocation>(Operand)
-        .Case<TypeSourceInfo *>(
+        .Case<const TypeSourceInfo *>(
             [](auto *Ptr) { return Ptr->getTypeLoc().getEndLoc(); });
   }
 
@@ -5541,8 +5541,8 @@ public:
   SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
   ReflectionKind getKind() const { return Kind; }
   void *getOpaqueValue() const { return Operand.getOpaqueValue(); }
-  TypeSourceInfo *getTypeSourceInfo() const {
-    return cast<TypeSourceInfo *>(Operand);
+  const TypeSourceInfo *getTypeSourceInfo() const {
+    return cast<const TypeSourceInfo *>(Operand);
   }
 
   child_range children() {
