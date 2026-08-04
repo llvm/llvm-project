@@ -437,6 +437,18 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
     }
   }
 
+  // Emit a PseudoAddUpperImm instead of LUI+ADD when the offset is a multiple
+  // of 4096 and the source is the frame register. The frame register is
+  // invariant after PEI, so MachineLateInstrsCleanup can CSE identical pseudos.
+  // The pseudo is later expanded back to LUI+ADD.
+  if (Flag == MachineInstr::NoFlags && !KillSrcReg && DestReg != SrcReg &&
+      SrcReg == getFrameRegister(MF) && isShiftedInt<20, 12>(Val)) {
+    BuildMI(MBB, II, DL, TII->get(RISCV::PseudoAddUpperImm), DestReg)
+        .addReg(SrcReg)
+        .addImm(static_cast<uint32_t>(Val) >> 12);
+    return;
+  }
+
   unsigned Opc = RISCV::ADD;
   if (Val < 0) {
     Val = -Val;
@@ -588,6 +600,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!IsRVVSpill) {
     int64_t Val = Offset.getFixed();
     int64_t Lo12 = SignExtend64<12>(Val);
+    int64_t Lo26 = SignExtend64<26>(Val);
     unsigned Opc = MI.getOpcode();
 
     if (Opc == RISCV::ADDI && !isInt<12>(Val)) {
@@ -614,6 +627,11 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       // instruction will add 4 to the immediate. If that would overflow 12
       // bits, we can't fold the offset.
       MI.getOperand(FIOperandNum + 1).ChangeToImmediate(0);
+    } else if (Opc == RISCV::QC_E_ADDI || RISCVInstrInfo::isBaseQCLoad(MI) ||
+               RISCVInstrInfo::isBaseQCStore(MI)) {
+      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Lo26);
+      Offset = StackOffset::get((uint64_t)Val - (uint64_t)Lo26,
+                                Offset.getScalable());
     } else {
       // We can encode an add with 12 bit signed immediate in the immediate
       // operand of our user instruction.  As a result, the remaining
@@ -824,6 +842,23 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
 }
 
+bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
+                                           MCRegister Reg) const {
+  auto const &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
+
+  if (TRI->isGeneralPurposeRegister(MF, Reg))
+    return llvm::is_contained(RISCV::getArgGPRs(STI), Reg);
+
+  if (TRI->isFPRegister(Reg))
+    return llvm::is_contained(RISCV::getArgFPRs(STI), Reg);
+
+  if (RISCV::VRRegClass.contains(Reg))
+    return llvm::is_contained(RISCV::getArgVRs(STI), Reg);
+
+  return false;
+}
+
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
   if (Reg == RISCV::SF_VCIX_STATE)
     return "sf.vcix_state";
@@ -912,7 +947,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() && !DisableCostPerUse
+  // Set CostPerUse to 1 only when optimizing for size and RVC exists.
+  return MF.getFunction().hasOptSize() &&
+                 MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() &&
+                 !DisableCostPerUse
              ? 1
              : 0;
 }

@@ -116,6 +116,14 @@ public:
 
   bool SetValueFromCString(const char *value_str, lldb::SBError &error);
 
+  /// Returns false if this value cannot be modified through
+  /// SetValueFromCString() or SetData(), for instance because it
+  /// exists in the target, but has no writable storage (for example a
+  /// constant or variable value that was reconstructed from debug
+  /// info as the result of a computation). A true result does not
+  /// guarantee a write will succeed.
+  bool CanSetValue();
+
   lldb::SBTypeFormat GetTypeFormat();
 
   lldb::SBTypeSummary GetTypeSummary();
@@ -123,6 +131,22 @@ public:
   lldb::SBTypeFilter GetTypeFilter();
 
   lldb::SBTypeSynthetic GetTypeSynthetic();
+
+  /// Override the `SBTypeSynthetic` chosen by the DataFormatter system for this
+  /// instance.
+  ///
+  /// This can be used to great effect in scripted synthetic children providers
+  /// where a child's underlying type can only be figured out by inspecting the
+  /// containing object's other members.
+  void SetTypeSynthetic(lldb::SBTypeSynthetic &synthetic);
+
+  /// This function's primary use is to ease inspecting the internal state of
+  /// scripted synthetic children providers for debugging purposes.
+  ///
+  /// An other alternative usecase is for parent synthetic children providers to
+  /// imbue their children's synthetic children providers with additional
+  /// context after creation.
+  lldb::SBScriptObject GetTypeSyntheticImplementation();
 
   lldb::SBValue GetChildAtIndex(uint32_t idx);
 

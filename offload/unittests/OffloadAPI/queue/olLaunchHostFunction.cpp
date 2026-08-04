@@ -12,18 +12,12 @@
 #include <thread>
 
 struct olLaunchHostFunctionTest : OffloadQueueTest {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-    SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
-  }
+  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp()); }
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionTest);
 
 struct olLaunchHostFunctionKernelTest : OffloadKernelTest {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(OffloadKernelTest::SetUp());
-    SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
-  }
+  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadKernelTest::SetUp()); }
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionKernelTest);
 
@@ -52,6 +46,8 @@ TEST_P(olLaunchHostFunctionTest, SuccessSequence) {
 }
 
 TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
+  SKIP_KNOWN_FAILURE(LevelZero{"driver issue"});
+
   // Verify that a host kernel can block execution - A host task is created that
   // only resolves when Block is set to false.
   ol_kernel_launch_size_args_t LaunchArgs;

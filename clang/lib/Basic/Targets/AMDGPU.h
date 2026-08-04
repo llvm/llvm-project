@@ -30,8 +30,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   static const char *const GCCRegNames[];
 
-  static const LangASMap AMDGPUDefIsGenMap;
-  static const LangASMap AMDGPUDefIsPrivMap;
+  static const LangASMap AMDGPUAddrSpaceMap;
 
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
@@ -43,22 +42,20 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   /// Whether having image instructions.
   bool HasImage = false;
 
-  /// Target ID is device name followed by optional feature name postfixed
-  /// by plus or minus sign delimitted by colon, e.g. gfx908:xnack+:sramecc-.
-  /// If the target ID contains feature+, map it to true.
-  /// If the target ID contains feature-, map it to false.
-  /// If the target ID does not contain a feature (default), do not map it.
-  llvm::StringMap<bool> OffloadArchFeatures;
-  std::string TargetID;
+  /// Explicit xnack/sramecc target-id feature settings from the command line,
+  /// e.g. gfx908:xnack+:sramecc-. "Unsupported" means the feature was not
+  /// specified (or is not a valid target-id modifier for the processor).
+  llvm::AMDGPU::TargetIDSetting XnackSetting =
+      llvm::AMDGPU::TargetIDSetting::Unsupported;
+  llvm::AMDGPU::TargetIDSetting SramEccSetting =
+      llvm::AMDGPU::TargetIDSetting::Unsupported;
 
-  bool hasFP64() const {
-    return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FP64);
-  }
+  bool hasFP64() const { return getTriple().isAMDGCN(); }
 
   /// Has fast fma f32
   bool hasFastFMAF() const {
-    return !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
+    return getTriple().isAMDGCN() &&
+           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_FMA_F32);
   }
 
   /// Has fast fma f64
@@ -66,17 +63,15 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   bool hasFMAF() const {
     return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FMA);
+           !!(GPUFeatures & llvm::AMDGPU::R600_FEATURE_FMA);
   }
 
   bool hasFullRateDenormalsF32() const {
-    return !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
+    return getTriple().isAMDGCN() &&
+           !!(GPUFeatures & llvm::AMDGPU::FEATURE_FAST_DENORMAL_F32);
   }
 
-  bool hasLDEXPF() const {
-    return getTriple().isAMDGCN() ||
-           !!(GPUFeatures & llvm::AMDGPU::FEATURE_LDEXP);
-  }
+  bool hasLDEXPF() const { return getTriple().isAMDGCN(); }
 
   static bool isR600(const llvm::Triple &TT) {
     return TT.getArch() == llvm::Triple::r600;
@@ -96,8 +91,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
 public:
   AMDGPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
-
-  void setAddressSpaceMap(bool DefaultIsPrivate);
 
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override;
@@ -266,8 +259,6 @@ public:
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
-  bool useFP16ConversionIntrinsics() const override { return false; }
-
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -276,22 +267,26 @@ public:
   }
 
   bool isValidCPUName(StringRef Name) const override {
-    if (getTriple().isAMDGCN())
-      return llvm::AMDGPU::parseArchAMDGCN(Name) != llvm::AMDGPU::GK_NONE;
+    if (getTriple().isAMDGCN()) {
+      return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
+                                                Name) &&
+             !llvm::AMDGPU::isPseudoTarget(Name);
+    }
     return llvm::AMDGPU::parseArchR600(Name) != llvm::AMDGPU::GK_NONE;
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
       GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
-    } else {
-      GPUKind = llvm::AMDGPU::parseArchR600(Name);
-      GPUFeatures = llvm::AMDGPU::getArchAttrR600(GPUKind);
+      return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
+                                                GPUKind) &&
+             !llvm::AMDGPU::isPseudoTarget(GPUKind);
     }
-
+    GPUKind = llvm::AMDGPU::parseArchR600(Name);
+    GPUFeatures = llvm::AMDGPU::getArchAttrR600(GPUKind);
     return GPUKind != llvm::AMDGPU::GK_NONE;
   }
 
@@ -466,8 +461,7 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
     HasFullBFloat16 = true;
-    auto TargetIDFeatures =
-        getAllPossibleTargetIDFeatures(getTriple(), getArchNameAMDGCN(GPUKind));
+    unsigned ArchAttr = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
     for (const auto &F : Features) {
       assert(F.front() == '+' || F.front() == '-');
       if (F == "+wavefrontsize64")
@@ -478,25 +472,26 @@ public:
         CUMode = false;
       else if (F == "+image-insts")
         HasImage = true;
-      bool IsOn = F.front() == '+';
+      llvm::AMDGPU::TargetIDSetting Setting =
+          F.front() == '+' ? llvm::AMDGPU::TargetIDSetting::On
+                           : llvm::AMDGPU::TargetIDSetting::Off;
       StringRef Name = StringRef(F).drop_front();
-      if (!llvm::is_contained(TargetIDFeatures, Name))
-        continue;
-      assert(!OffloadArchFeatures.contains(Name));
-      OffloadArchFeatures[Name] = IsOn;
+      // xnack is a valid target-id modifier only when the processor supports
+      // on/off modes; sramecc when the processor supports sramecc.
+      if (Name == "xnack" &&
+          (ArchAttr & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES))
+        XnackSetting = Setting;
+      else if (Name == "sramecc" && (ArchAttr & llvm::AMDGPU::FEATURE_SRAMECC))
+        SramEccSetting = Setting;
     }
     return true;
   }
 
-  std::optional<std::string> getTargetID() const override {
-    if (!getTriple().isAMDGCN())
-      return std::nullopt;
-    // When -target-cpu is not set, we assume generic code that it is valid
-    // for all GPU and use an empty string as target ID to represent that.
-    if (GPUKind == llvm::AMDGPU::GK_NONE)
-      return std::string("");
-    return getCanonicalTargetID(getArchNameAMDGCN(GPUKind),
-                                OffloadArchFeatures);
+  bool isProcessorName(StringRef Name) const override {
+    llvm::AMDGPU::GPUKind NameKind = getTriple().isAMDGCN()
+                                         ? llvm::AMDGPU::parseArchAMDGCN(Name)
+                                         : llvm::AMDGPU::parseArchR600(Name);
+    return NameKind == GPUKind;
   }
 
   bool hasHIPImageSupport() const override { return HasImage; }

@@ -10,6 +10,13 @@ MODULE_ID = 4
 LOAD_ADDRESS = MODULE_ID << 32
 WASM_LOCAL_ADDR = 0x103E0
 
+# The synthetic address space globals are given, in which the offset is the
+# index into the global index space rather than a byte offset.
+WASM_GLOBAL_ADDRESS = 2 << 62
+
+# Globals the fake engine holds, as index -> (size in bytes, value).
+WASM_GLOBALS = {0: (4, 0x2A), 1: (8, 0xDEADBEEF)}
+
 
 def format_register_value(val):
     """
@@ -88,7 +95,20 @@ class MyResponder(MockGDBServerResponder):
             return self.qWasmCallStack()
         if packet.startswith("qWasmLocal"):
             return self.qWasmLocal(packet)
+        if packet.startswith("qWasmGlobal"):
+            return self.qWasmGlobal(packet)
         return MockGDBServerResponder.respond(self, packet)
+
+    def qWasmGlobal(self, packet):
+        # Format: qWasmGlobal:frame_index;index
+        data = packet.split(":")[1].split(";")
+        _, global_index = data
+        value = WASM_GLOBALS.get(int(global_index))
+        if value is None:
+            return "E03"
+        # A global is transferred as a whole value, in little-endian order.
+        size, val = value
+        return val.to_bytes(size, "little").hex()
 
     def qSupported(self, client_supported):
         return "qXfer:libraries:read+;PacketSize=1000;vContSupported-"
@@ -368,6 +388,15 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual(frame1.GetPC(), LOAD_ADDRESS | 0x01E5)
         self.assertIn("main", frame1.GetFunctionName())
 
+        frame2 = thread.GetFrameAtIndex(2)
+        self.assertTrue(frame2.IsValid())
+
+        # Wasm frames need distinct, ordered call frame addresses for StackID to
+        # tell an inner frame from an outer one. Without them every frame shares
+        # one address and stepping mistakes a step in for a step out.
+        self.assertLess(frame0.GetCFA(), frame1.GetCFA())
+        self.assertLess(frame1.GetCFA(), frame2.GetCFA())
+
         # Check that we can resolve local variables.
         a = frame0.FindVariable("a")
         self.assertTrue(a.IsValid())
@@ -376,3 +405,99 @@ class TestWasm(GDBRemoteTestBase):
         b = frame0.FindVariable("b")
         self.assertTrue(b.IsValid())
         self.assertEqual(b.GetValueAsUnsigned(), 2)
+
+    @skipIfAsan
+    @skipIfXmlSupportMissing
+    def test_max_backtrace_depth(self):
+        """Test that a Wasm backtrace stops at the depth the target sets, so
+        that a stack recursing without end is not walked to its end."""
+
+        yaml_path = "simple.yaml"
+        yaml_base, _ = os.path.splitext(yaml_path)
+        obj_path = self.getBuildArtifact(yaml_base)
+        self.yaml2obj(yaml_path, obj_path)
+
+        call_stacks = [
+            WasmCallStack(
+                [WasmStackFrame(0x019C), WasmStackFrame(0x01E5), WasmStackFrame(0x01FE)]
+            ),
+        ]
+        self.server.responder = MyResponder(obj_path, "test_wasm", call_stacks)
+
+        target = self.dbg.CreateTarget("")
+        process = self.connect(target, "wasm")
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+
+        thread = process.GetThreadAtIndex(0)
+        self.assertTrue(thread.IsValid())
+        self.assertTrue(thread.GetFrameAtIndex(0).IsValid())
+
+        # A depth set after a stop still applies to the frames a backtrace has
+        # not reported yet, which is when a user lowers it.
+        self.runCmd("settings set target.process.thread.max-backtrace-depth 2")
+
+        # The stub reported three frames, and the innermost two are the ones
+        # kept.
+        self.assertEqual(2, thread.GetNumFrames())
+        self.assertEqual(thread.GetFrameAtIndex(0).GetPC(), LOAD_ADDRESS | 0x019C)
+        self.assertEqual(thread.GetFrameAtIndex(1).GetPC(), LOAD_ADDRESS | 0x01E5)
+        self.assertFalse(thread.GetFrameAtIndex(2).IsValid())
+
+    @skipIfAsan
+    @skipIfXmlSupportMissing
+    def test_read_global(self):
+        """Test that a WebAssembly global can be read through the address its
+        module gives it, and that a read it cannot serve fails instead of
+        returning something plausible."""
+
+        yaml_path = "simple.yaml"
+        yaml_base, _ = os.path.splitext(yaml_path)
+        obj_path = self.getBuildArtifact(yaml_base)
+        self.yaml2obj(yaml_path, obj_path)
+
+        call_stacks = [WasmCallStack([WasmStackFrame(0x019C)])]
+        self.server.responder = MyResponder(obj_path, "test_wasm", call_stacks)
+
+        target = self.dbg.CreateTarget("")
+        process = self.connect(target, "wasm")
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateStopped]
+        )
+
+        # Read through the address the module gives its globals rather than a
+        # constructed one, so that the encoding the object file produces and the
+        # one the process decodes are checked against each other.
+        module = target.GetModuleAtIndex(0)
+        global_section = module.FindSection("global")
+        self.assertTrue(global_section.IsValid())
+        globals_addr = global_section.GetLoadAddress(target)
+        self.assertEqual(globals_addr, WASM_GLOBAL_ADDRESS | LOAD_ADDRESS)
+
+        # A global is read as a whole value.
+        error = lldb.SBError()
+        data = process.ReadMemory(globals_addr + 0, 4, error)
+        self.assertSuccess(error)
+        self.assertEqual(int.from_bytes(data, "little"), 0x2A)
+
+        data = process.ReadMemory(globals_addr + 1, 8, error)
+        self.assertSuccess(error)
+        self.assertEqual(int.from_bytes(data, "little"), 0xDEADBEEF)
+
+        # A type narrower than the global it is held in reads the low bytes,
+        # which is how a char or short global is read.
+        data = process.ReadMemory(globals_addr + 0, 1, error)
+        self.assertSuccess(error)
+        self.assertEqual(int.from_bytes(data, "little"), 0x2A)
+
+        # Reading more than a global holds would have to come from somewhere
+        # else. The next index is not adjacent storage, so this fails rather
+        # than returning whatever is nearby.
+        process.ReadMemory(globals_addr + 0, 8, error)
+        self.assertFalse(error.Success())
+        self.assertIn("4-byte global", error.GetCString())
+
+        # Likewise for a global that does not exist.
+        process.ReadMemory(globals_addr + 99, 4, error)
+        self.assertFalse(error.Success())

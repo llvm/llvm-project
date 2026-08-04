@@ -220,6 +220,7 @@ cc_test(
     srcs = glob(["Frontend/*.cpp"]),
     deps = [
         "//clang:basic",
+        "//clang:options",
         "//flang:EvaluateHeaders",
         "//flang:FrontendHeaders",
         "//flang:FrontendToolHeaders",
@@ -263,6 +264,7 @@ cc_test(
     deps = [
         "//flang:CommonHeaders",
         "//flang:RuntimeHeaders",
+        "//flang/include/flang/Optimizer/Analysis:AnalysisHeaders",
         "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
         "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
         "//flang/include/flang/Optimizer/Dialect:FIRDialectSupportHeaders",

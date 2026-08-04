@@ -24,10 +24,13 @@
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/WithColor.h"
+#include <assert.h>
 #include <memory>
+#include <mutex>
 #include <stdio.h>
 #include <string>
 #include <system_error>
@@ -42,7 +45,7 @@ namespace {
 // Lagacy v1 matcher.
 class RegexMatcher {
 public:
-  Error insert(StringRef Pattern, unsigned LineNumber);
+  Error insert(StringRef Pattern, unsigned LineNumber, bool SlashAgnostic);
   unsigned match(StringRef Query) const;
   StringRef findRule(unsigned LineNo) const;
 
@@ -60,7 +63,7 @@ private:
 
 class GlobMatcher {
 public:
-  Error insert(StringRef Pattern, unsigned LineNumber);
+  Error insert(StringRef Pattern, unsigned LineNumber, bool SlashAgnostic);
   unsigned match(StringRef Query) const;
   StringRef findRule(unsigned LineNo) const;
 
@@ -92,6 +95,8 @@ private:
 struct QueryOptions {
   bool UseGlobs = true;
   bool RemoveDotSlash = false;
+  bool WarnDotSlashMatch = false;
+  bool SlashAgnostic = false;
 };
 
 /// Represents a set of patterns and their line numbers
@@ -110,9 +115,11 @@ private:
 
   std::variant<RegexMatcher, GlobMatcher> M;
   QueryOptions Options;
+  mutable std::once_flag Warned;
 };
 
-Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
+Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber,
+                           bool SlashAgnostic) {
   if (Pattern.empty())
     return createStringError(errc::invalid_argument,
                              "Supplied regex was blank");
@@ -151,11 +158,13 @@ StringRef RegexMatcher::findRule(unsigned LineNo) const {
   return {};
 }
 
-Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber) {
+Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber,
+                          bool SlashAgnostic) {
   if (Pattern.empty())
     return createStringError(errc::invalid_argument, "Supplied glob was blank");
 
-  auto Res = GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024);
+  auto Res =
+      GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024, SlashAgnostic);
   if (auto Err = Res.takeError())
     return Err;
   Globs.emplace_back(Pattern, LineNumber, std::move(Res.get()));
@@ -253,13 +262,47 @@ Matcher::Matcher(QueryOptions QOpts) : Options(QOpts) {
 }
 
 Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
-  return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
+  return std::visit(
+      [&](auto &V) {
+        return V.insert(Pattern, LineNumber, Options.SlashAgnostic);
+      },
+      M);
 }
 
+/// Matches Query against the patterns. The behavior is controlled by
+/// `#!special-case-list` version.
+//
+// - Version 1 and 2: Path is matched as-is, regardless of presence of "./".
+// - Version 3, 5 and higher: Paths with leading dot-slash are canonicalized
+//   to paths without dot-slash before matching. This means that a rule
+//   like `src=./foo` will never match, and `src=foo` will match both
+//   `foo` and `./foo`. (Version 3 never became default but has this behavior).
+// - Version 4: Transitionary version. Paths are matched both ways
+//   (canonicalized and non-canonicalized) to maintain backward compatibility.
+//   If a match only works with the old behavior (non-canonicalized), a warning
+//   is emitted.
 unsigned Matcher::match(StringRef Query) const {
-  if (Options.RemoveDotSlash)
-    Query = llvm::sys::path::remove_leading_dotslash(Query);
-  return matchInternal(Query);
+  if (!Options.RemoveDotSlash)
+    return matchInternal(Query);
+
+  if (!Options.WarnDotSlashMatch)
+    return matchInternal(llvm::sys::path::remove_leading_dotslash(Query));
+
+  StringRef FixedQuery = llvm::sys::path::remove_leading_dotslash(Query);
+  unsigned FixedMatched = matchInternal(FixedQuery);
+  if (FixedQuery == Query)
+    return FixedMatched;
+
+  unsigned OriginalMatch = matchInternal(Query);
+  if (OriginalMatch > FixedMatched) {
+    std::call_once(Warned, [&]() {
+      WithColor::warning() << "Deprecated behaviour: pattern '"
+                           << findRule(OriginalMatch) << "' matches '" << Query
+                           << "', update it to match '" << FixedQuery
+                           << "' instead (further warnings suppressed).\n";
+    });
+  }
+  return std::max(OriginalMatch, FixedMatched);
 }
 
 unsigned Matcher::matchInternal(StringRef Query) const {
@@ -370,8 +413,17 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   // first line of the file. For more details, see
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
   bool UseGlobs = MinVersion(2);
-
   bool RemoveDotSlash = MinVersion(3);
+  bool WarnDotSlash = MinVersion(4) && !MinVersion(5);
+  // TODO: Improve efficiency on Windows.
+  // `SlashAgnostic` makes `GlobMatcher` lookup inefficient by reducing the part
+  // of the pattern handled by the RadixTree. This was already the case even
+  // before `SlashAgnostic` because `GlobMatcher` pessimizes on escape sequences
+  // needed to represent Windows backslashes. A possible, but not unique,
+  // solution is to assume (or convert Windows query) backslashes, and
+  // preprocess the Glob pattern to use different escape sequences.
+  bool SlashAgnostic = MinVersion(4) && llvm::sys::path::is_style_windows(
+                                            llvm::sys::path::Style::native);
 
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
@@ -420,8 +472,11 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
 
     QueryOptions QOpts;
     QOpts.UseGlobs = UseGlobs;
-    if (llvm::is_contained(PathPrefixes, Prefix))
+    if (llvm::is_contained(PathPrefixes, Prefix)) {
       QOpts.RemoveDotSlash = RemoveDotSlash;
+      QOpts.WarnDotSlashMatch = WarnDotSlash;
+      QOpts.SlashAgnostic = SlashAgnostic;
+    }
 
     auto [Pattern, Category] = Postfix.split("=");
     auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(Category, QOpts);

@@ -28,6 +28,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1003,6 +1004,15 @@ LogicalResult MmaOp::verify() {
     case MMATypes::f16:
       kFactor = 8;
       multiplicandFragType = f16x2Ty;
+      expectedResult.push_back(f16x2x2StructTy);
+      expectedResult.push_back(f32x4StructTy);
+      break;
+    case MMATypes::e4m3:
+    case MMATypes::e5m2:
+      // FP8 (m16n8k16 / m16n8k32) packs 4 values per 32-bit register, same
+      // as s8/u8, but the accumulator is f16 or f32 (not integer).
+      kFactor = 16;
+      multiplicandFragType = i32Ty;
       expectedResult.push_back(f16x2x2StructTy);
       expectedResult.push_back(f32x4StructTy);
       break;
@@ -3427,9 +3437,10 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 /// intrinsic ID.
 static llvm::Intrinsic::ID getBarrierSyncIntrinsic(bool aligned,
                                                    bool hasCount) {
-  if (hasCount)
+  if (hasCount) {
     return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count
                    : llvm::Intrinsic::nvvm_barrier_cta_sync_count;
+  }
   return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all
                  : llvm::Intrinsic::nvvm_barrier_cta_sync_all;
 }
@@ -3465,6 +3476,20 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
   if (hasCount)
     args.push_back(mt.lookupValue(thisOp.getNumberOfThreads()));
   return {id, std::move(args)};
+}
+
+mlir::NVVM::IDArgPair NVVM::BarrierArriveOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierArriveOp>(op);
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::Value *numThreads = mt.lookupValue(thisOp.getNumberOfThreads());
+  llvm::Intrinsic::ID id =
+      thisOp.getAligned()
+          ? llvm::Intrinsic::nvvm_barrier_cta_arrive_aligned_count
+          : llvm::Intrinsic::nvvm_barrier_cta_arrive_count;
+  return {id, {barrierId, numThreads}};
 }
 
 mlir::NVVM::IDArgPair NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
@@ -6315,6 +6340,15 @@ LogicalResult Tcgen05LdRedOp::verify() {
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct NVVMInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
   addOperations<
@@ -6329,6 +6363,7 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
+  addInterfaces<NVVMInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, NVVMDialect>();
   declarePromisedInterface<gpu::TargetAttrInterface, NVVMTargetAttr>();
 }

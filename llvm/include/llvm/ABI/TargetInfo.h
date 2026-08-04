@@ -16,7 +16,9 @@
 
 #include "llvm/ABI/FunctionInfo.h"
 #include "llvm/ABI/Types.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
+#include <memory>
 
 namespace llvm {
 namespace abi {
@@ -74,14 +76,26 @@ public:
   const ABICompatInfo &getABICompatInfo() const { return CompatInfo; }
 
 protected:
-  RecordArgABI getRecordArgABI(const RecordType *RT) const;
-  RecordArgABI getRecordArgABI(const Type *Ty) const;
-  bool isPromotableInteger(const IntegerType *IT) const;
-  ArgInfo getNaturalAlignIndirect(const Type *Ty, bool ByVal = true) const;
-  bool isAggregateTypeForABI(const Type *Ty) const;
+  LLVM_ABI RecordArgABI getRecordArgABI(const RecordType *RT) const;
+  LLVM_ABI RecordArgABI getRecordArgABI(const Type *Ty) const;
+  LLVM_ABI bool isPromotableInteger(const IntegerType *IT) const;
+  LLVM_ABI ArgInfo getNaturalAlignIndirect(const Type *Ty,
+                                           bool ByVal = true) const;
+  LLVM_ABI bool isAggregateTypeForABI(const Type *Ty) const;
 };
 
-std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
+LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
+
+/// The AVX ABI level for X86 targets.
+enum class X86AVXABILevel {
+  None,
+  AVX,
+  AVX512,
+};
+
+LLVM_ABI std::unique_ptr<TargetInfo>
+createX86_64TargetInfo(TypeBuilder &TB, X86AVXABILevel AVXLevel,
+                       bool Has64BitPointers, const ABICompatInfo &Compat);
 
 } // namespace abi
 } // namespace llvm

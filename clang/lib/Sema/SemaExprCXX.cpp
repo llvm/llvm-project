@@ -1070,10 +1070,8 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
 
       // We don't keep the instantiated default argument expressions around so
       // we must rebuild them here.
-      for (unsigned I = 1, E = CD->getNumParams(); I != E; ++I) {
-        if (CheckCXXDefaultArgExpr(ThrowLoc, CD, CD->getParamDecl(I)))
-          return true;
-      }
+      if (BuildCtorClosureDefaultArgs(ThrowLoc, CD, /*IsCopy=*/true))
+        return true;
     }
   }
 
@@ -1489,6 +1487,14 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
 }
 
 bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
+  // If we're outside the body of a member function, then we'll have a specified
+  // type for 'this'. Constraint substitution is the exception: a concept is
+  // evaluated in its own declaration context (see GH#197215), so it loses the
+  // enclosing '*this' even though it may legitimately name a member of the
+  // class currently being instantiated.
+  if (CXXThisTypeOverride.isNull() && !inConstraintSubstitution())
+    return false;
+
   // Determine whether we're looking into a class that's currently being
   // defined.
   CXXRecordDecl *Class = BaseType->getAsCXXRecordDecl();
@@ -2716,6 +2722,71 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   return false;
 }
 
+static void diagnoseNoViableFunctionForAllocationOverloadResolution(
+    Sema &S, LookupResult &R, SourceRange Range, ArrayRef<Expr *> Args,
+    OverloadCandidateSet &Candidates, OverloadCandidateSet *AlignedCandidates,
+    Expr *AlignArg) {
+  // If this is an allocation of the form 'new (p) X' for some object
+  // pointer p (or an expression that will decay to such a pointer),
+  // diagnose the reason for the error.
+  if (!R.isClassLookup() && Args.size() == 2 &&
+      (Args[1]->getType()->isObjectPointerType() ||
+       Args[1]->getType()->isArrayType())) {
+    const QualType Arg1Type = Args[1]->getType();
+    QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
+    if (UnderlyingType->isPointerType())
+      UnderlyingType = UnderlyingType->getPointeeType();
+    if (UnderlyingType.isConstQualified()) {
+      S.Diag(Args[1]->getExprLoc(),
+             diag::err_placement_new_into_const_qualified_storage)
+          << Arg1Type << Args[1]->getSourceRange();
+      return;
+    }
+    S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
+        << R.getLookupName() << Range;
+    // Listing the candidates is unlikely to be useful; skip it.
+    return;
+  }
+
+  // Finish checking all candidates before we note any. This checking can
+  // produce additional diagnostics so can't be interleaved with our
+  // emission of notes.
+  //
+  // For an aligned allocation, separately check the aligned and unaligned
+  // candidates with their respective argument lists.
+  SmallVector<OverloadCandidate *, 32> Cands;
+  SmallVector<OverloadCandidate *, 32> AlignedCands;
+  llvm::SmallVector<Expr *, 4> AlignedArgs;
+  if (AlignedCandidates) {
+    auto IsAligned = [](OverloadCandidate &C) {
+      const unsigned AlignArgOffset = 1;
+      return C.Function->getNumParams() > AlignArgOffset &&
+             C.Function->getParamDecl(AlignArgOffset)->getType()->isAlignValT();
+    };
+    auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
+
+    AlignedArgs.reserve(Args.size() + 1);
+    AlignedArgs.push_back(Args[0]);
+    AlignedArgs.push_back(AlignArg);
+    AlignedArgs.append(Args.begin() + 1, Args.end());
+    AlignedCands = AlignedCandidates->CompleteCandidates(
+        S, OCD_AllCandidates, AlignedArgs, R.getNameLoc(), IsAligned);
+
+    Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
+                                          R.getNameLoc(), IsUnaligned);
+  } else {
+    Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
+                                          R.getNameLoc());
+  }
+
+  S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
+      << R.getLookupName() << Range;
+  if (AlignedCandidates)
+    AlignedCandidates->NoteCandidates(S, AlignedArgs, AlignedCands, "",
+                                      R.getNameLoc());
+  Candidates.NoteCandidates(S, Args, Cands, "", R.getNameLoc());
+}
+
 enum class ResolveMode { Typed, Untyped };
 static bool resolveAllocationOverloadInterior(
     Sema &S, LookupResult &R, SourceRange Range, ResolveMode Mode,
@@ -2802,71 +2873,9 @@ static bool resolveAllocationOverloadInterior(
       Operator = nullptr;
       return false;
     }
-    if (Diagnose) {
-      // If this is an allocation of the form 'new (p) X' for some object
-      // pointer p (or an expression that will decay to such a pointer),
-      // diagnose the reason for the error.
-      if (!R.isClassLookup() && Args.size() == 2 &&
-          (Args[1]->getType()->isObjectPointerType() ||
-           Args[1]->getType()->isArrayType())) {
-        const QualType Arg1Type = Args[1]->getType();
-        QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
-        if (UnderlyingType->isPointerType())
-          UnderlyingType = UnderlyingType->getPointeeType();
-        if (UnderlyingType.isConstQualified()) {
-          S.Diag(Args[1]->getExprLoc(),
-                 diag::err_placement_new_into_const_qualified_storage)
-              << Arg1Type << Args[1]->getSourceRange();
-          return true;
-        }
-        S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
-            << R.getLookupName() << Range;
-        // Listing the candidates is unlikely to be useful; skip it.
-        return true;
-      }
-
-      // Finish checking all candidates before we note any. This checking can
-      // produce additional diagnostics so can't be interleaved with our
-      // emission of notes.
-      //
-      // For an aligned allocation, separately check the aligned and unaligned
-      // candidates with their respective argument lists.
-      SmallVector<OverloadCandidate*, 32> Cands;
-      SmallVector<OverloadCandidate*, 32> AlignedCands;
-      llvm::SmallVector<Expr*, 4> AlignedArgs;
-      if (AlignedCandidates) {
-        auto IsAligned = [NonTypeArgumentOffset](OverloadCandidate &C) {
-          auto AlignArgOffset = NonTypeArgumentOffset + 1;
-          return C.Function->getNumParams() > AlignArgOffset &&
-                 C.Function->getParamDecl(AlignArgOffset)
-                     ->getType()
-                     ->isAlignValT();
-        };
-        auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
-
-        AlignedArgs.reserve(Args.size() + NonTypeArgumentOffset + 1);
-        for (unsigned Idx = 0; Idx < NonTypeArgumentOffset + 1; ++Idx)
-          AlignedArgs.push_back(Args[Idx]);
-        AlignedArgs.push_back(AlignArg);
-        AlignedArgs.append(Args.begin() + NonTypeArgumentOffset + 1,
-                           Args.end());
-        AlignedCands = AlignedCandidates->CompleteCandidates(
-            S, OCD_AllCandidates, AlignedArgs, R.getNameLoc(), IsAligned);
-
-        Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
-                                              R.getNameLoc(), IsUnaligned);
-      } else {
-        Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
-                                              R.getNameLoc());
-      }
-
-      S.Diag(R.getNameLoc(), diag::err_ovl_no_viable_function_in_call)
-          << R.getLookupName() << Range;
-      if (AlignedCandidates)
-        AlignedCandidates->NoteCandidates(S, AlignedArgs, AlignedCands, "",
-                                          R.getNameLoc());
-      Candidates.NoteCandidates(S, Args, Cands, "", R.getNameLoc());
-    }
+    if (Diagnose)
+      diagnoseNoViableFunctionForAllocationOverloadResolution(
+          S, R, Range, Args, Candidates, AlignedCandidates, AlignArg);
     return true;
 
   case OR_Ambiguous:
@@ -7655,7 +7664,6 @@ static void CheckIfAnyEnclosingLambdasMustCaptureAnyPotentialCaptures(
     Expr *const FE, LambdaScopeInfo *const CurrentLSI, Sema &S) {
 
   assert(!S.isUnevaluatedContext());
-  assert(S.CurContext->isDependentContext());
 #ifndef NDEBUG
   DeclContext *DC = S.CurContext;
   while (isa_and_nonnull<CapturedDecl>(DC))

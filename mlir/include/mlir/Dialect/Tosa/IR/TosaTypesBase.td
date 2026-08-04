@@ -103,15 +103,57 @@ def Tosa_MXInt8
   }];
 }
 
+def Tosa_MXFPValue
+    : AnyTypeOf<[F8E4M3FN, F8E5M2, F4E2M1FN, F6E2M3FN, F6E3M2FN, Tosa_MXInt8],
+                "micro-scaling format number">;
+def Tosa_MXFPScale
+    : AnyTypeOf<[F8E8M0FNU], "micro-scaling format scale number">;
+
+def Tosa_BlockScaled
+    : Tosa_Type<"BlockScaled", "block_scaled",
+                [DeclareTypeInterfaceMethods<
+                    DenseElementTypeInterface, ["getDenseElementBitSize",
+                                                "convertToAttribute",
+                                                "convertFromAttribute"]>]> {
+  let summary = "Block scaled tensor element type.";
+
+  let description = [{
+    This does not specify an implementation type. A tensor of this type is a
+    tensor which has block-scaled quantization applied.
+
+    This compound type is made up of 3 components:
+    `block_shape` - The size and axis of each block. Currently only supports
+      specifying the block size along the innermost dimension.
+    `scale_type` - The type of the scale value associated with each block.
+    `value_type` - The type of the data values in each block.
+    `scale_values` - Optional array of per-block scale values. If not provided,
+      the type is assumed to be dynamically quantized at runtime.
+
+  }];
+
+  let parameters = (ins
+    EnumParameter<Tosa_BlockShape>:$block_shape,
+    Tosa_MXFPScale:$scale_type,
+    Tosa_MXFPValue:$value_type,
+    OptionalArrayRefParameter<"Attribute">:$scale_values
+  );
+
+  let assemblyFormat =
+      "`<` $block_shape```:```$scale_type```:```$value_type "
+      "(`,` `{` custom<ScaleValues>($scale_values, ref($scale_type))^ `}`)? "
+      "`>`";
+
+  let extraClassDeclaration = [{
+    bool hasScaleValues() const { return !getScaleValues().empty(); }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Multi-category types.
 //===----------------------------------------------------------------------===//
-def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat, Tosa_MXInt8],
-                                "number">;
-
-def Tosa_MXFPNumber : AnyTypeOf<[F8E4M3FN, F8E5M2, F4E2M1FN, F6E2M3FN, F6E3M2FN, Tosa_MXInt8],
-                                "micro-scaling format number">;
-def Tosa_MXFPScaleNumber : AnyTypeOf<[F8E8M0FNU], "micro-scaling format scale number">;
+def Tosa_AnyNumber : AnyTypeOf<[Tosa_Int, Tosa_QuantizedInt, AnyFloat,
+                                Tosa_MXInt8, Tosa_BlockScaled],
+                               "number">;
 
 //===----------------------------------------------------------------------===//
 // TOSA Tensor Conformance
@@ -129,24 +171,31 @@ def AtLeastRankOne : And<[
   IsRankedTensorTypePred,
   CPred<"::llvm::cast<::mlir::RankedTensorType>($_self).getRank() >= 1">]>;
 
-class TosaTensorOf<
-    list<Type> allowedTypes, string summary = "tosa-conformant tensor">
-    : TensorOf<allowedTypes, [Or<[HasNo0Dimensions, IsUnrankedTensorTypePred]>], summary>;
+def IsValidBlockScaledTensorType
+    : CPred<"::mlir::succeeded(::mlir::tosa::verifyBlockScaledTensorType($_self, false))">;
 
-class TosaRankedTensorOf<
-    list<Type> allowedTypes, list<Pred> preds = [], string summary = "tosa-conformant ranked tensor">
-    : RankedTensorOf<allowedTypes, !listconcat([HasNo0Dimensions], preds), summary>;
-
-class TosaUnrankedTensorOf<list<Type> allowedTypes, list<Pred> preds = [], string summary = "tosa-conformant unranked tensor">
-    : UnrankedTensorOf<allowedTypes, preds, summary>;
+// We include unranked tensors as a supported type for all possible tosa
+// Tensors as unranked does not guarantee invalid. If unranked tensors exist
+// they should be shape propagated using Tosa's shape inference pass and verified
+// to not include any remaining unranked tensors.
+class TosaTensorOf<list<Type> allowedTypes,
+                   list<Pred> extraRankedTensorPreds = [],
+                   string summary = "tosa-conformant tensor">
+    : TensorOf<allowedTypes,
+               [Or<[
+                    IsUnrankedTensorTypePred, 
+                    And<!listconcat([IsRankedTensorTypePred, HasNo0Dimensions], extraRankedTensorPreds)>
+                ]>,
+                IsValidBlockScaledTensorType],
+               summary>;
 
 class TosaTensorRankOf<list<Type> allowedTypes, list<int> ranks>
-    : TosaRankedTensorOf<allowedTypes,
+    : TosaTensorOf<allowedTypes,
       [HasAnyRankOfPred<ranks>],
-      !interleave(!foreach(rank, ranks, rank # "D"), "/") # " tensor">;
+      !interleave(!foreach(rank, ranks, rank # "D"), "/") # " tosa-conformant tensor">;
 
 class TosaScalarTensorOf<list<Type> allowedTypes, list<int> ranks>
-    : TosaRankedTensorOf<allowedTypes,
+    : TosaTensorOf<allowedTypes,
       [HasAnyRankOfPred<ranks>, AllDimensionsAreSizeOne],
       "tosa-conformant scalar tensor">;
 
@@ -163,9 +212,6 @@ def Tosa_FloatTensor : TosaTensorOf<[AnyFloat]>;
 // Either ranked or unranked tensor of TOSA supported element types.
 def Tosa_Tensor : TosaTensorOf<[Tosa_AnyNumber]>;
 
-// Must be ranked but no further constraints
-def Tosa_RankedTensor : TosaRankedTensorOf<[Tosa_AnyNumber]>;
-
 // Any tensor element type allowed in Tosa ops.
 def Tosa_ElementType : Type<Or<[Tosa_Int.predicate, Tosa_QuantizedInt.predicate,
                                 AnyFloat.predicate]>, "tosa.dtype">;
@@ -177,72 +223,48 @@ class Tosa_TensorOfOrNone<list<Type> allowedTypes, string description = ""> :
 // Tensor types with constrained ranks.
 //===----------------------------------------------------------------------===//
 
-def Tosa_Rank0Tensor : TosaTensorRankOf<[Tosa_AnyNumber], [0]>;
+def Tosa_ScalarTensor : TosaScalarTensorOf<[Tosa_AnyNumber], [1]>;
+def Tosa_ScalarInt8Tensor : TosaScalarTensorOf<[Tosa_Int8], [1]>;
+def Tosa_ScalarIntOrFloatTensor : TosaScalarTensorOf<[Tosa_Int, AnyFloat], [1]>;
+def Tosa_ScalarInt32Tensor : TosaScalarTensorOf<[Tosa_Int32], [1]>;
 
-def Tosa_ScalarTensor : AnyTypeOf<[TosaUnrankedTensorOf<[Tosa_Int, AnyFloat]>, TosaScalarTensorOf<[Tosa_AnyNumber], [1]>]>;
-def Tosa_ScalarInt8Tensor : AnyTypeOf<[TosaUnrankedTensorOf<[Tosa_Int8]>, TosaScalarTensorOf<[Tosa_Int8], [1]>]>;
-def Tosa_ScalarIntOrFloatTensor : AnyTypeOf<[TosaUnrankedTensorOf<[Tosa_Int, AnyFloat]>, TosaScalarTensorOf<[Tosa_Int, AnyFloat], [1]>]>;
-def Tosa_ScalarInt32Tensor : AnyTypeOf<[TosaUnrankedTensorOf<[Tosa_Int32]>, TosaScalarTensorOf<[Tosa_Int32], [1]>]>;
-
-// We include unranked tensors as a supported type for all possible tosa
-// Tensors as unranked does not guarantee invalid. If unranked tensors exist
-// they should be shape propagate used Tosa's shape inference pass and verified
-// to not include any remaining unranked tensors.
-def Tosa_UnrankedTensor : TosaUnrankedTensorOf<[Tosa_AnyNumber]>;
-
-def Tosa_Tensor1D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [1]>], "1-d tosa-conformant tensor", "::mlir::TensorType">;
-def Tosa_Tensor2D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [2]>], "2-d tosa-conformant tensor", "::mlir::TensorType">;
-def Tosa_Tensor3D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [3]>], "3-d tosa-conformant tensor", "::mlir::TensorType">;
-def Tosa_Tensor4D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [4]>], "4-d tosa-conformant tensor", "::mlir::TensorType">;
-def Tosa_Tensor5D : AnyTypeOf<[Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [5]>], "5-d tosa-conformant tensor", "::mlir::TensorType">;
+def Tosa_Tensor1D : TosaTensorRankOf<[Tosa_AnyNumber], [1]>;
+def Tosa_Tensor2D : TosaTensorRankOf<[Tosa_AnyNumber], [2]>;
+def Tosa_Tensor3D : TosaTensorRankOf<[Tosa_AnyNumber], [3]>;
+def Tosa_Tensor4D : TosaTensorRankOf<[Tosa_AnyNumber], [4]>;
+def Tosa_Tensor5D : TosaTensorRankOf<[Tosa_AnyNumber], [5]>;
 
 // 1D tensor of specific types
-def Tosa_1DInt8Tensor : 1DTensorOf<[Tosa_Int8]>;
-def Tosa_1DInt16Or32Tensor : 1DTensorOf<[Tosa_Int16Or32]>;
+def Tosa_1DInt8Tensor : TosaTensorRankOf<[Tosa_Int8], [1]>;
+def Tosa_1DInt16Or32Tensor : TosaTensorRankOf<[Tosa_Int16Or32], [1]>;
 
-// Ranked tensors up to given rank.
-def Tosa_Tensor1Dto4D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [1,2,3,4]>]>;
-def Tosa_Tensor1Dto6D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [1,2,3,4,5,6]>]>;
+// Tensors up to a given rank. Unranked tensors are accepted.
+def Tosa_Tensor1Dto4D : TosaTensorRankOf<[Tosa_AnyNumber], [1,2,3,4]>;
+def Tosa_Tensor1Dto6D : TosaTensorRankOf<[Tosa_AnyNumber], [1,2,3,4,5,6]>;
 
-def Tosa_TensorUpto4D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4]>]>;
+def Tosa_TensorUpto4D : TosaTensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4]>;
 
-def Tosa_IndexTensor1D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [1]>]>;
-def Tosa_IndexTensor2D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [2]>]>;
+def Tosa_IndexTensor1D : TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [1]>;
+def Tosa_IndexTensor2D : TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [2]>;
 
-def Tosa_TensorAtLeast1D : AnyTypeOf<[
-  Tosa_UnrankedTensor, TosaRankedTensorOf<[Tosa_AnyNumber], [AtLeastRankOne]>], "tosa-conformant tensor of at least rank 1", "::mlir::TensorType">;
+def Tosa_TensorAtLeast1D
+    : TosaTensorOf<[Tosa_AnyNumber], [AtLeastRankOne],
+                   "tosa-conformant tensor of at least rank 1">;
 
-def Tosa_MXFPDataTensor3D : AnyTypeOf<[
-  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
-  TosaTensorRankOf<[Tosa_MXFPNumber], [3]>
-]>;
-def Tosa_MXFPScaleTensor3D : AnyTypeOf<[
-  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
-  TosaTensorRankOf<[Tosa_MXFPScaleNumber], [3]>
-]>;
-def Tosa_MXFPDataTensor4D : AnyTypeOf<[
-  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
-  TosaTensorRankOf<[Tosa_MXFPNumber], [4]>
-]>;
-def Tosa_MXFPScaleTensor4D : AnyTypeOf<[
-  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
-  TosaTensorRankOf<[Tosa_MXFPScaleNumber], [4]>
-]>;
-def Tosa_MXFPDataTensorAtLeast1D : AnyTypeOf<[
-  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
-  TosaRankedTensorOf<[Tosa_MXFPNumber], [AtLeastRankOne]>],
-  "tosa-conformant tensor of at least rank 1", "::mlir::TensorType"
->;
-def Tosa_MXFPScaleTensorAtLeast1D : AnyTypeOf<[
-  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
-  TosaRankedTensorOf<[Tosa_MXFPScaleNumber], [AtLeastRankOne]>],
-  "tosa-conformant tensor of at least rank 1", "::mlir::TensorType"
->;
+def Tosa_MXFPDataTensor3D
+    : TosaTensorRankOf<[Tosa_MXFPValue], [3]>;
+def Tosa_MXFPScaleTensor3D
+    : TosaTensorRankOf<[Tosa_MXFPScale], [3]>;
+def Tosa_MXFPDataTensor4D
+    : TosaTensorRankOf<[Tosa_MXFPValue], [4]>;
+def Tosa_MXFPScaleTensor4D
+    : TosaTensorRankOf<[Tosa_MXFPScale], [4]>;
+def Tosa_MXFPDataTensorAtLeast1D
+    : TosaTensorOf<[Tosa_MXFPValue], [AtLeastRankOne],
+                   "tosa-conformant tensor of at least rank 1">;
+def Tosa_MXFPScaleTensorAtLeast1D
+    : TosaTensorOf<[Tosa_MXFPScale], [AtLeastRankOne],
+                   "tosa-conformant tensor of at least rank 1">;
 
 //===----------------------------------------------------------------------===//
 // Generic scalar, vector, or tensor of a particular type.
@@ -250,7 +272,7 @@ def Tosa_MXFPScaleTensorAtLeast1D : AnyTypeOf<[
 
 class Tosa_TypeLike<list<Type> types, string description = ""> : TypeConstraint<Or<[
      AnyTypeOf<types>.predicate,
-     VectorOfNonZeroRankOf<types>.predicate,
+     VectorOfAnyRankOf<types>.predicate,
      TosaTensorOf<types>.predicate]>,
      description>;
 
