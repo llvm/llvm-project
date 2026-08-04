@@ -378,3 +378,17 @@ CustomStringView dangling_sv() {
   char s[] = "dangling";
   return CustomStringView(s); // expected-warning {{address of stack memory associated with local variable 's' returned}} 
 }
+
+struct Chained {
+  Chained &self() [[clang::lifetimebound]] { return *this; }
+  Chained() {
+    self();
+    self(); // no-warning
+  }
+};
+
+void takes_by_value(Chained arg);
+
+void no_dangling_by_value_argument() {
+  takes_by_value(Chained()); // no-warning
+}
