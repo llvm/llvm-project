@@ -124,7 +124,8 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   if (auto ABIOrErr = RISCVABI::computeTargetABI(*this, ABIName)) {
     TargetABI = *ABIOrErr;
   } else {
-    errs() << toString(ABIOrErr.takeError()) << " (ignoring target-abi)\n";
+    errs() << "note: " << toString(ABIOrErr.takeError())
+           << " (ignoring target-abi)\n";
     TargetABI = cantFail(RISCVABI::computeTargetABI(*this, ""));
   }
   RISCVFeatures::validate(TT, getFeatureBits());

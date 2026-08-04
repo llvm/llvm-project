@@ -14,6 +14,7 @@
 #include "RISCVAsmBackend.h"
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
+#include "RISCVSubtarget.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -30,16 +31,7 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
   MCAssembler &MCA = getStreamer().getAssembler();
-  auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  // See RISCVSubtarget::initializeSubtargetDependencies: can't be fatal.
-  auto ABIOrErr =
-      RISCVABI::computeTargetABI(STI, MAB.getTargetOptions().getABIName());
-  if (ABIOrErr) {
-    setTargetABI(*ABIOrErr);
-  } else {
-    errs() << toString(ABIOrErr.takeError()) << " (ignoring target-abi)\n";
-    setTargetABI(cantFail(RISCVABI::computeTargetABI(STI, "")));
-  }
+  setTargetABI(static_cast<const RISCVSubtarget &>(STI).getTargetABI());
   setFlagsFromFeatures(STI);
 
   // Compute the initial ISA string.  This serves two purposes:
