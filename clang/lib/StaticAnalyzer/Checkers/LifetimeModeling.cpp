@@ -58,9 +58,7 @@ static bool isDanglingStackSource(const MemRegion *Source,
     // is used, so it does not dangle.
     /*
     if (llvm::any_of(C.stackframes(), [&](const StackFrame &Frame) {
-          if (&Frame != SF)
-            return false;
-          return true;
+          return &Frame == SF;
         }))
     */
     if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
