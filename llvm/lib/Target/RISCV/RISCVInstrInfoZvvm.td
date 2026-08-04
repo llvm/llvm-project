@@ -50,6 +50,19 @@ def VScaleOp : RegisterOperand<VMV0> {
   let DecoderMethod = "decodeVMaskReg";
 }
 
+//===----------------------------------------------------------------------===//
+// IME configuration pseudos
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZvvmm], Uses = [VTYPE], hasSideEffects = 0,
+    mayLoad = 0, mayStore = 0, isCodeGenOnly = 1 in
+def PseudoIMEReadVTYPE
+    : Pseudo<(outs GPR:$rd), (ins),
+             [(set GPR:$rd,
+                   (XLenVT (riscv_read_csr (XLenVT SysRegVTYPE.Encoding))))]>,
+      PseudoInstExpansion<(CSRRS GPR:$rd, SysRegVTYPE.Encoding, X0)>,
+      Sched<[WriteCSR, ReadCSR]>;
+
 class VTileLoadBase<bits<2> mop, dag ins, string opcodestr, string argstr>
     : RVInst<(outs VR:$vd),
              ins, opcodestr, argstr, [], InstFormatR> {
