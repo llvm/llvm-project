@@ -1622,6 +1622,9 @@ CGHLSLRuntime::handleSemanticStore(
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
                                       llvm::Function *Fn) {
+  DXILInputSemanticIndex = 0;
+  DXILOutputSemanticIndex = 0;
+
   llvm::Module &M = CGM.getModule();
   llvm::LLVMContext &Ctx = M.getContext();
   auto *EntryTy = llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx), false);
