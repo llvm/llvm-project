@@ -95,16 +95,37 @@ body:             |
   bb.1:
   ; CHECK-LABEL: name: @Sign_Vector
   ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %maskff:_ KnownBits:00000110 SignBits:5
-  ; CHECK-NEXT: %maskf:_ KnownBits:00000100 SignBits:5
+  ; CHECK-NEXT: %mask6:_ KnownBits:00000110 SignBits:5
+  ; CHECK-NEXT: %mask4:_ KnownBits:00000100 SignBits:5
   ; CHECK-NEXT: %x0_x1:_ KnownBits:000001?0 SignBits:5
   ; CHECK-NEXT: %and:_ KnownBits:???????? SignBits:5
   ; CHECK-NEXT: %x0_0:_ KnownBits:???????? SignBits:5
   ; CHECK-NEXT: %x0_1:_ KnownBits:???????? SignBits:7
    %copy_x0:_(<4 x i8>) = COPY $w0
-   %maskff:_(i8) = G_CONSTANT i8 6
-   %maskf:_(i8) = G_CONSTANT i8 4
-   %x0_x1:_(<4 x i8>) = G_BUILD_VECTOR %maskf, %maskf, %maskff, %maskff
+   %mask6:_(i8) = G_CONSTANT i8 6
+   %mask4:_(i8) = G_CONSTANT i8 4
+   %x0_x1:_(<4 x i8>) = G_BUILD_VECTOR %mask4, %mask4, %mask6, %mask6
+   %and:_(<4 x i8>) = G_ASHR %copy_x0, %x0_x1
+   %x0_0:_(<2 x i8>), %x0_1:_(<2 x i8>) = G_UNMERGE_VALUES %and
+...
+---
+name:            Sign_Vector_Poison
+body:             |
+  bb.1:
+  ; CHECK-LABEL: name: @Sign_Vector_Poison
+  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %mask8:_ KnownBits:00001000 SignBits:4
+  ; CHECK-NEXT: %mask6:_ KnownBits:00000110 SignBits:5
+  ; CHECK-NEXT: %mask4:_ KnownBits:00000100 SignBits:5
+  ; CHECK-NEXT: %x0_x1:_ KnownBits:0000???0 SignBits:4
+  ; CHECK-NEXT: %and:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %x0_0:_ KnownBits:???????? SignBits:5
+  ; CHECK-NEXT: %x0_1:_ KnownBits:00000000 SignBits:8
+   %copy_x0:_(<4 x i8>) = COPY $w0
+   %mask8:_(i8) = G_CONSTANT i8 8
+   %mask6:_(i8) = G_CONSTANT i8 6
+   %mask4:_(i8) = G_CONSTANT i8 4
+   %x0_x1:_(<4 x i8>) = G_BUILD_VECTOR %mask4, %mask6, %mask8, %mask8
    %and:_(<4 x i8>) = G_ASHR %copy_x0, %x0_x1
    %x0_0:_(<2 x i8>), %x0_1:_(<2 x i8>) = G_UNMERGE_VALUES %and
 ...

@@ -797,10 +797,7 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       return; // TODO: Handle vector->subelement unmerges
 
     // Figure out the result operand index
-    unsigned DstIdx = 0;
-    for (; DstIdx != NumOps - 1 && MI.getOperand(DstIdx).getReg() != R;
-         ++DstIdx)
-      ;
+    unsigned DstIdx = MI.findRegisterDefOperandIdx(R, nullptr);
 
     APInt SubDemandedElts = DemandedElts;
     if (SrcTy.isVector()) {
@@ -2521,10 +2518,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       break;
 
     // Figure out the result operand index
-    unsigned DstIdx = 0;
-    for (; DstIdx != NumOps - 1 && MI.getOperand(DstIdx).getReg() != R;
-         ++DstIdx)
-      ;
+    unsigned DstIdx = MI.findRegisterDefOperandIdx(R, nullptr);
 
     APInt SubDemandedElts = DemandedElts;
     unsigned DstLanes = DstTy.isVector() ? DstTy.getNumElements() : 1;
@@ -2535,12 +2529,13 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
 
     unsigned SrcOpKnown =
         computeNumSignBits(SrcReg, SubDemandedElts, Depth + 1);
-    if (SrcTy.isVector())
+    if (SrcTy.isVector()) {
       FirstAnswer = SrcOpKnown;
-    else if (SrcOpKnown >= (MI.getNumOperands() - DstIdx - 2) * TyBits)
+    } else if (SrcOpKnown >= (MI.getNumOperands() - DstIdx - 2) * TyBits) {
       FirstAnswer = SrcOpKnown >= (MI.getNumOperands() - DstIdx - 1) * TyBits
                         ? TyBits
                         : SrcOpKnown % TyBits;
+    }
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR: {
