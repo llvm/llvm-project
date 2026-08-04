@@ -50,6 +50,10 @@
       mlir::omp::TargetOp
 
 namespace mlir::omp {
+/// Value of the `omp_null_allocator` handle. Using it as an allocator operand
+/// selects the default allocator of the binding task.
+constexpr int64_t kNullAllocator = 0;
+
 /// Find the omp.new_cli, generator, and consumer of a canonical loop info.
 std::tuple<NewCliOp, OpOperand *, OpOperand *> decodeCli(mlir::Value cli);
 

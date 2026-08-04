@@ -14,6 +14,7 @@
 #include <__algorithm/for_each.h>
 #include <__algorithm/merge.h>
 #include <__algorithm/mismatch.h>
+#include <__algorithm/reverse.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/transform.h>
 #include <__config>
@@ -103,6 +104,16 @@ struct __merge<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__last2),
         std::move(__outit),
         std::forward<_Comp>(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __reverse<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _BidirectionalIterator>
+  _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept {
+    std::reverse(std::move(__first), std::move(__last));
+    return __empty{};
   }
 };
 

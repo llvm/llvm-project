@@ -501,8 +501,8 @@ class EytzingerSampleProfileNameTable final : public SampleProfileNameTable {
 
 public:
   EytzingerSampleProfileNameTable(const support::ulittle64_t *Data,
-                                  uint64_t NumCS, uint64_t NumFlat,
-                                  uint64_t NumInlinees)
+                                  size_t NumCS, size_t NumFlat,
+                                  size_t NumInlinees)
       : Array(Data, NumCS + NumFlat + NumInlinees),
         Spans{{{Data, NumCS},
                {Data + NumCS, NumFlat},

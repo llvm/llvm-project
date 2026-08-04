@@ -87,8 +87,7 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[END2]], -8
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 [[TMP17]], [[BASE2]]
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i64 [[TMP12]], 3
-; CHECK-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP13]], 3
+; CHECK-NEXT:    [[TMP14:%.*]] = and i64 [[TMP12]], -8
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 8
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
