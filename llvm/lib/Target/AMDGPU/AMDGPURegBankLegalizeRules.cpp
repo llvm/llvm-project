@@ -2619,7 +2619,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, VgprV2S16, VgprV2S16, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, VgprV2S16, VgprV2S16, Vgpr32}});
 
-  addRulesForIOpcs({amdgcn_fdot2_f16_f16}, Standard)
+  addRulesForIOpcs({amdgcn_fdot2_f16_f16, amdgcn_fdot2_bf16_bf16}, Standard)
       .Uni(S16, {{UniInVgprS16}, {IntrId, VgprV2S16, VgprV2S16, Vgpr16}})
       .Div(S16, {{Vgpr16}, {IntrId, VgprV2S16, VgprV2S16, Vgpr16}});
 

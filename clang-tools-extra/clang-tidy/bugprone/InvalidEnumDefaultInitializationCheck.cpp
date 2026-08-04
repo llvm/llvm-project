@@ -81,7 +81,7 @@ public:
     const RecordDecl *RD = T->getDecl()->getDefinition();
     if (!RD || RD->isUnion())
       return false;
-    auto VisitField = [this](const FieldDecl *F) {
+    const auto VisitField = [this](const FieldDecl *F) {
       return Visit(F->getType().getTypePtr());
     };
     return llvm::any_of(RD->fields(), VisitField);
@@ -110,7 +110,7 @@ void InvalidEnumDefaultInitializationCheck::registerMatchers(
       enumDecl(isCompleteAndHasNoZeroValue(),
                unless(matchers::matchesAnyListedRegexName(IgnoredEnums)))
           .bind("enum")));
-  auto EnumOrArrayOfEnum = qualType(hasUnqualifiedDesugaredType(
+  const auto EnumOrArrayOfEnum = qualType(hasUnqualifiedDesugaredType(
       anyOf(EnumWithoutZeroValue,
             arrayType(hasElementType(qualType(
                 hasUnqualifiedDesugaredType(EnumWithoutZeroValue)))))));
