@@ -594,6 +594,11 @@ private:
   DeviceImageTy *ImagePtr = nullptr;
 
 protected:
+  /// Whether the kernel performs a cross-team reduction.
+  bool isCrossTeamReduction() const {
+    return KernelEnvironment.Configuration.ReductionDataSize != 0;
+  }
+
   /// The preferred number of threads to run the kernel.
   uint32_t PreferredNumThreads;
 

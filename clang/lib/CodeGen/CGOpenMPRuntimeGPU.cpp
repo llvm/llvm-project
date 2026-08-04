@@ -31,6 +31,19 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm::omp;
 
+/// Returns true if \p D is a teams reduction directive. This corresponds to the
+/// condition under which CGOpenMPRuntimeGPU::emitReduction builds a teams
+/// reduction (its ReductionKind is OMPD_teams and there is at least one
+/// reduction clause).
+static bool hasTeamsReduction(const OMPExecutableDirective &D) {
+  if (!isOpenMPTeamsDirective(D.getDirectiveKind()))
+    return false;
+  for (const auto *C : D.getClausesOfKind<OMPReductionClause>())
+    if (C->getModifier() != OMPC_REDUCTION_inscan)
+      return true;
+  return false;
+}
+
 namespace {
 /// Pre(post)-action for different OpenMP constructs specialized for NVPTX.
 class NVPTXActionTy final : public PrePostActionTy {
@@ -753,6 +766,15 @@ void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
       IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
              : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
   computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
+
+  // Set MaxThreads to twice the default workgroup size for SPMD cross-team
+  // reductions. For these reductions, we want to have fewer, larger teams to
+  // make better use of intra-team reduction and not over-emphasize the
+  // inter-team part. Note that this only buys us more freedom. The actual grid
+  // size for the launch is going to be chosen later by the offload plugin.
+  if (IsSPMD && Attrs.MaxThreads.front() < 0 && hasTeamsReduction(D))
+    Attrs.MaxThreads.front() =
+        2 * CGM.getTarget().getGridValue().GV_Default_WG_Size;
 
   CGBuilderTy &Bld = CGF.Builder;
   Bld.restoreIP(OMPBuilder.createTargetInit(Bld, Attrs));

@@ -119,8 +119,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
       KernelArgs.Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
     return nullptr;
 
-  const auto &RedCfg = KernelEnvironment.Configuration;
-  const bool NeedsReductionBuffer = RedCfg.ReductionDataSize != 0;
+  const bool NeedsReductionBuffer = isCrossTeamReduction();
   if (NeedsReductionBuffer && KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
     return Plugin::error(ErrorCode::INVALID_BINARY,
                          "kernel was built against an older OpenMP "
@@ -150,6 +149,7 @@ GenericKernelTy::getKernelLaunchEnvironment(
   LocalKLE.ReductionBuffer = nullptr;
 
   if (NeedsReductionBuffer) {
+    const auto &RedCfg = KernelEnvironment.Configuration;
     // Use number of teams many buffer elements.
     auto AllocOrErr = GenericDevice.dataAlloc(
         uint64_t(RedCfg.ReductionDataSize) * NumBlocks0,
@@ -390,8 +390,13 @@ GenericKernelTy::getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
   if (UserThreadLimit > 0 && isGenericMode())
     UserThreadLimit += GenericDevice.getWarpSize();
 
-  return std::min(MaxNumThreads, (UserThreadLimit > 0) ? UserThreadLimit
-                                                       : PreferredNumThreads);
+  // Favor fewer, larger teams for cross-team reductions. We deliberately
+  // increased MaxNumThreads in Codegen.
+  return std::min(
+      MaxNumThreads,
+      (UserThreadLimit > 0)
+          ? UserThreadLimit
+          : (isCrossTeamReduction() ? MaxNumThreads : PreferredNumThreads));
 }
 
 uint32_t GenericKernelTy::getEffectiveNumBlocks(
@@ -422,6 +427,19 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
       // will execute one iteration of the loop; rounded up to the nearest
       // integer. However, if that results in too few blocks, we artificially
       // reduce the thread count per block to increase the outer parallelism.
+
+      // Favor fewer, larger teams for cross-team reductions. As a heuristic, we
+      // aim for double the default number of threads and half the default
+      // number of blocks.
+      if (isCrossTeamReduction()) {
+        // Never launch more teams than the trip count needs.
+        uint64_t NumBlocks =
+            std::min<uint64_t>(std::max<uint64_t>(DefaultNumBlocks / 2, 1),
+                               ((LoopTripCount - 1) / EffectiveNumThreads) + 1);
+        return std::min(NumBlocks, uint64_t(GenericDevice.getBlockLimit(
+                                       EffectiveNumThreads)));
+      }
+
       auto MinThreads = GenericDevice.getMinThreadsForLowTripCountLoop();
       MinThreads = std::min(MinThreads, EffectiveNumThreads);
 
