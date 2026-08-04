@@ -51,10 +51,7 @@ enum UniformityLLTOpPredicateID {
   UniS32,
   UniS64,
   UniS128,
-  // Matches bfloat16 only, unlike UniS16 which matches any uniform 16-bit
-  // scalar. Used by the transcendentals, which have no pseudo scalar bfloat16
-  // form and so have to stay on the VALU. Order rules using this ahead of the
-  // UniS16 rule they carve out of, and note that fast rules cannot express it.
+
   UniBF16,
 
   DivS1,
