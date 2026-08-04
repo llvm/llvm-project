@@ -3,11 +3,6 @@
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt -enable-early-ifcvt-data-dependent -early-ifcvt-max-region-instrs=3 -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=CHECK-SMALL-BUDGET
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m1 -run-pass=early-ifcvt -enable-early-ifcvt-data-dependent -verify-machine-dom-info -o - %s | FileCheck %s --check-prefix=CHECK-LARGE-BUDGET
 
---- |
-  define i32 @load_in_pred_region_over_instruction_budget(ptr %p, i32 %x, i32 %y) {
-    ret i32 0
-  }
-...
 ---
 name:            load_in_pred_region_over_instruction_budget
 alignment:       4
