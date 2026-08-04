@@ -49,7 +49,7 @@ struct clang::CIRGen::CGCoroData {
   // body must be skipped. If the promise type does not define an exception
   // handler, this is null.
   Address resumeEHVar = Address::invalid();
-  //
+
   // If coro.id came from the builtin, remember the expression to give better
   // diagnostic. If CoroIdExpr is nullptr, the coro.id was created by
   // EmitCoroutineBody.
@@ -194,6 +194,9 @@ static void createCoroData(CIRGenFunction &cgf,
     if (curCoro.data->coroIdExpr)
       cgf.cgm.error(coroIdExpr->getBeginLoc(),
                     "only one __builtin_coro_id can be used in a function");
+    else if (coroIdExpr)
+      cgf.cgm.error(coroIdExpr->getBeginLoc(),
+                    "__builtin_coro_id shall not be used in a C++ coroutine");
     else
       llvm_unreachable("EmitCoroutineBodyStatement called twice?");
 
