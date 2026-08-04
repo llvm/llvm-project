@@ -244,7 +244,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FSUB, MVT::bf16, Expand);
       // Widen scalar fadd to a v2bf16 operation with an unused high lane.
       setOperationAction(ISD::FADD, MVT::bf16, Custom);
-      // Widen scalar fcanonicalize to a v2bf16 operation with an unused high lane.
+      // Widen scalar fcanonicalize to a v2bf16 operation with an unused high
+      // lane.
       setOperationAction(ISD::FCANONICALIZE, MVT::bf16, Custom);
     }
 
@@ -8821,8 +8822,9 @@ SDValue SITargetLowering::lowerScalarBF16FAdd(SDValue Op,
                      DAG.getConstant(0, DL, MVT::i32));
 }
 
-SDValue SITargetLowering::lowerScalarBF16FCanonicalize(SDValue Op,
-                                                       SelectionDAG &DAG) const {
+SDValue
+SITargetLowering::lowerScalarBF16FCanonicalize(SDValue Op,
+                                               SelectionDAG &DAG) const {
   assert(Subtarget->hasBF16PackedInsts());
 
   SDLoc DL(Op);
