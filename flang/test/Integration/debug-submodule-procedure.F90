@@ -21,4 +21,4 @@ end submodule subkid
 #endif
 
 ! CHECK: !DISubprogram(name: "hello", linkageName: "_QMsubparPhello", scope: ![[MOD:[0-9]+]]
-! CHECK: ![[MOD]] = !DIModule(scope: ![[#]], name: "subpar"
+! CHECK: ![[MOD]] = !DIModule(scope: ![[#]], name: "subpar.subkid"

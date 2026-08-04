@@ -117,7 +117,6 @@ private:
       llvm::SetVector<mlir::LLVM::DIImportedEntityAttr> &importedEntities);
   void buildModuleDebugImportsMap(mlir::ModuleOp module);
   void buildDefinedModuleNames(mlir::ModuleOp module);
-  void markSubmoduleAncestorsDefined(mlir::ModuleOp module);
   void expandUseStmtForDebug(
       fir::UseStmtOp useOp, mlir::LLVM::DISubprogramAttr spAttr,
       mlir::LLVM::DIFileAttr fileAttr, mlir::LLVM::DICompileUnitAttr cuAttr,
@@ -796,8 +795,16 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       }
     }
   } else if (!result.second.modules.empty()) {
-    Scope = getOrCreateModuleAttr(getDebugModuleName(result.second.modules),
-                                  fileAttr, cuAttr);
+    // A separate module procedure is mangled with the module that declares its
+    // interface, so its own name does not name the submodule that defines it.
+    // The root of the ancestry is the same either way.
+    auto submodule = funcOp->getAttrOfType<mlir::StringAttr>(
+        fir::getDefiningSubmoduleAttrName());
+    std::string name = submodule
+                           ? getDebugModuleName(result.second.modules.front(),
+                                                submodule.getValue())
+                           : getDebugModuleName(result.second.modules);
+    Scope = getOrCreateModuleAttr(name, fileAttr, cuAttr);
   }
 
   auto addTargetOpDISP = [&](llvm::ArrayRef<mlir::Attribute> entities) {
@@ -1076,47 +1083,6 @@ void AddDebugInfoPass::buildDefinedModuleNames(mlir::ModuleOp module) {
   definedModuleNames.clear();
   for (auto &entry : moduleDebugImportsByName)
     definedModuleNames.insert(entry.getKey());
-  markSubmoduleAncestorsDefined(module);
-}
-
-// We do not describe submodules yet: a submodule gets no DIModuleAttr of its
-// own and the entities it defines hang off the DIModuleAttr of its ancestor
-// module. So the ancestor has to be a definition in a unit that compiles the
-// submodule. Were it a declaration, it would carry no scope, and those entities
-// would not be able to reach a compile unit and would be dropped from the debug
-// information entirely. Members of a submodule name it in their mangled name,
-// so take the ancestor from them. All of this goes away once submodules are
-// described in their own right.
-void AddDebugInfoPass::markSubmoduleAncestorsDefined(mlir::ModuleOp module) {
-  // The mangled name of a module level global carries its whole module chain,
-  // so mark the ancestor as defined whenever a submodule below it is compiled
-  // here.
-  for (auto globalOp : module.getOps<fir::GlobalOp>()) {
-    std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
-    if (!isModuleLevelName(result.second))
-      continue;
-    llvm::ArrayRef<std::string> modules = result.second.modules;
-    for (const std::string &submodule : modules.drop_front()) {
-      if (moduleDebugImportsByName.contains(submodule)) {
-        definedModuleNames.insert(modules.front());
-        break;
-      }
-    }
-  }
-
-  // Handle a submodule whose members are all procedures, which has no global to
-  // go by. A procedure without a body is defined elsewhere and says nothing
-  // about what this unit defines.
-  for (auto funcOp : module.getOps<mlir::func::FuncOp>()) {
-    if (funcOp.isExternal())
-      continue;
-    mlir::Attribute attr = funcOp->getAttr(fir::getInternalFuncNameAttrName());
-    llvm::StringRef name =
-        attr ? mlir::cast<mlir::StringAttr>(attr).getValue() : funcOp.getName();
-    std::pair result = fir::NameUniquer::deconstruct(name);
-    if (!result.second.modules.empty())
-      definedModuleNames.insert(result.second.modules.front());
-  }
 }
 
 void AddDebugInfoPass::expandUseStmtForDebug(

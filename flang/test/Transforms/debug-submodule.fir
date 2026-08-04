@@ -1,7 +1,9 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
 // A submodule is named after the module at the root of its ancestry, which the
-// uniqued name of a module entity also records.
+// uniqued name of a module entity also records. A separate module procedure is
+// the exception: it is mangled with the module that declares its interface, so
+// it carries the defining submodule as an attribute instead.
 
 module {
   fir.module_debug_imports "shapes" {
@@ -17,6 +19,9 @@ module {
     %0 = fir.zero_bits i32
     fir.has_value %0 : i32
   } loc(#loc_sub_var)
+  func.func @_QMshapesPsquare() attributes {fir.defining_submodule = "impl"} {
+    return
+  } loc(#loc_square)
 
   fir.module_debug_imports "deep" in "shapes" {
   } loc(#loc_deep)
@@ -32,6 +37,7 @@ module {
 #loc_parent_var = loc("shapes.f90":7:14)
 #loc_impl = loc("impl.f90":6:1)
 #loc_sub_var = loc("impl.f90":8:14)
+#loc_square = loc("impl.f90":10:3)
 #loc_deep = loc("deep.f90":5:1)
 #loc_deep_var = loc("deep.f90":7:14)
 #loc_helper = loc("deep.f90":9:3)
@@ -51,4 +57,5 @@ module {
 // CHECK-DAG: #llvm.di_global_variable<scope = #[[IMPL]], name = "sub_var"
 // CHECK-DAG: #llvm.di_global_variable<scope = #[[DEEP]], name = "deep_var"
 
+// CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[IMPL]], name = "square"
 // CHECK-DAG: #llvm.di_subprogram<{{.*}}scope = #[[DEEP]], name = "deep_helper"
