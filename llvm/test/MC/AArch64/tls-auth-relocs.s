@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=+pauth -show-encoding < %s | FileCheck %s
-// RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=+pauth -filetype=obj < %s -o - | \
+// RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=+pauth -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=+pauth -filetype=obj %s -o - | \
 // RUN:   llvm-readobj -r --symbols - | FileCheck --check-prefix=CHECK-ELF %s
 
         adrp x8, :tlsdesc_auth:var
