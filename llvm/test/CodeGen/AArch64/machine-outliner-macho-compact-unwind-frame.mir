@@ -1,5 +1,8 @@
 # RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
 # RUN:     -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MACHO
+# RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
+# RUN:     -aarch64-outliner-compact-unwind-frame=false -verify-machineinstrs %s -o - | \
+# RUN:     FileCheck %s --check-prefix=NOFRAME
 # RUN: llc -mtriple=aarch64-linux-gnu -run-pass=prolog-epilog -run-pass=machine-outliner \
 # RUN:     -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=ELF
 
@@ -25,6 +28,18 @@ body:             |
   bb.1:
     ; Calls interleaved with single defs so the only repeated sequence is the
     ; call-containing one, forcing a MachineOutlinerDefault (LR-save) frame.
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 6
+
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    BL @baz, implicit-def dead $lr, implicit $sp
+    $w17 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 5
+
     BL @baz, implicit-def dead $lr, implicit $sp
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
@@ -71,6 +86,16 @@ body:             |
 # MACHO-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
 # MACHO: early-clobber $sp, $fp, $lr = LDPXpost $sp, 2
 # MACHO-NEXT: RET $lr
+
+# With the frame-record optimization disabled, MachO keeps the LR-alone save.
+# NOFRAME: name:            OUTLINED_FUNCTION_0
+# NOFRAME-NOT: STPXpre
+# NOFRAME: frame-setup CFI_INSTRUCTION def_cfa_offset 16
+# NOFRAME-NEXT: frame-setup CFI_INSTRUCTION offset $w30, -16
+# NOFRAME-NEXT: early-clobber $sp = STRXpre $lr, $sp, -16
+# NOFRAME-NEXT: BL @baz, implicit-def dead $lr, implicit $sp
+# NOFRAME: early-clobber $sp, $lr = LDRXpost $sp, 16
+# NOFRAME-NEXT: RET $lr
 
 # On ELF the LR-alone save is unchanged.
 # ELF: name:            OUTLINED_FUNCTION_0
