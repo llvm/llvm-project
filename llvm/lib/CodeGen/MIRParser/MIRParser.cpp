@@ -410,12 +410,14 @@ bool MIRParserImpl::computeFunctionProperties(
   bool HasInlineAsm = false;
   bool HasFakeUses = false;
   bool AllTiedOpsRewritten = true, HasTiedOps = false;
-  for (const MachineBasicBlock &MBB : MF) {
+  for (MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
       if (MI.isPHI())
         HasPHI = true;
-      if (MI.isInlineAsm())
+      if (MI.isInlineAsm()) {
         HasInlineAsm = true;
+        MBB.setHasInlineAsm(true);
+      }
       if (MI.isFakeUse())
         HasFakeUses = true;
       for (unsigned I = 0; I < MI.getNumOperands(); ++I) {

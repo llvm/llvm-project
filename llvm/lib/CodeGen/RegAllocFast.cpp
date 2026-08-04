@@ -402,13 +402,6 @@ private:
 
   bool mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const;
 
-  /// Cached copy of MachineFunction::hasInlineAsm(), set once in
-  /// runOnMachineFunction(). Lets allocateBasicBlock() skip scanning each
-  /// block for foldable inline asm operands with a single function-wide
-  /// check, since the overwhelming majority of functions contain no inline
-  /// asm at all.
-  bool MFHasInlineAsm = false;
-
   void selectInlineAsmOperandsToFold(MachineInstr &MI,
                                      SmallSet<Register, 8> &ToFold);
   void foldFoldableInlineAsmOperands(MachineBasicBlock &MBB);
@@ -2061,11 +2054,13 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
   // their memory form before the main allocation loop runs, so those
   // operands never compete for a register at all -- see
   // foldFoldableInlineAsmOperands() for why this can't be done lazily like
-  // greedy's on-demand InlineSpiller folding. Gated on MFHasInlineAsm so
-  // functions with no inline asm at all -- the common case -- pay nothing
-  // beyond the one function-wide check already made in
-  // runOnMachineFunction(), instead of an extra per-block scan.
-  if (MFHasInlineAsm)
+  // greedy's on-demand InlineSpiller folding. Gated on
+  // MachineBasicBlock::hasInlineAsm(), which ISel (or the MIR parser, for
+  // directly-parsed .mir input) already populates for free as a byproduct of
+  // a scan it does anyway -- see its declaration for the staleness caveat.
+  // This means blocks that don't themselves contain inline asm pay only an
+  // O(1) check, even in functions where some other block does.
+  if (MBB.hasInlineAsm())
     foldFoldableInlineAsmOperands(MBB);
 
   // Traverse block in reverse order allocating instructions one by one.
@@ -2124,7 +2119,6 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
   MFI = &MF.getFrameInfo();
-  MFHasInlineAsm = MF.hasInlineAsm();
   MRI->freezeReservedRegs();
   RegClassInfo.runOnMachineFunction(MF);
   unsigned NumRegUnits = TRI->getNumRegUnits();

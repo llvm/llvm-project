@@ -227,6 +227,18 @@ private:
   /// Indicate that this basic block is the indirect dest of an INLINEASM_BR.
   bool IsInlineAsmBrIndirectTarget = false;
 
+  /// Indicate that this basic block directly contains an INLINEASM or
+  /// INLINEASM_BR instruction, as of the last time it was computed (see
+  /// MachineFunction::hasInlineAsm(), which this mirrors at block
+  /// granularity). Like that flag, this is set once -- during instruction
+  /// selection, or when parsing MIR directly -- and is not
+  /// incrementally maintained afterward, so a pass that inserts, removes, or
+  /// moves an INLINEASM/INLINEASM_BR between blocks after that point can make
+  /// it stale. Consumers that rely on it (e.g. to skip per-block scanning)
+  /// must tolerate that: a false negative here should fail safe (e.g. by
+  /// falling back to a slower correct path), never silently miscompile.
+  bool HasInlineAsm = false;
+
   /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
@@ -741,6 +753,15 @@ public:
   void setIsInlineAsmBrIndirectTarget(bool V = true) {
     IsInlineAsmBrIndirectTarget = V;
   }
+
+  /// Returns true if this block directly contains an INLINEASM or
+  /// INLINEASM_BR instruction, as of the last time it was computed. See the
+  /// HasInlineAsm field comment for the staleness caveat.
+  bool hasInlineAsm() const { return HasInlineAsm; }
+
+  /// Indicates if this block directly contains an INLINEASM or INLINEASM_BR
+  /// instruction.
+  void setHasInlineAsm(bool V = true) { HasInlineAsm = V; }
 
   /// Returns true if it is legal to hoist instructions into this block.
   LLVM_ABI bool isLegalToHoistInto() const;
