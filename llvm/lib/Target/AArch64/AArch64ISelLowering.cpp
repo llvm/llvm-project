@@ -25251,18 +25251,6 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));
-  case Intrinsic::aarch64_sve_saddwb:
-    return DAG.getNode(AArch64ISD::SADDWB, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
-  case Intrinsic::aarch64_sve_saddwt:
-    return DAG.getNode(AArch64ISD::SADDWT, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
-  case Intrinsic::aarch64_sve_uaddwb:
-    return DAG.getNode(AArch64ISD::UADDWB, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
-  case Intrinsic::aarch64_sve_uaddwt:
-    return DAG.getNode(AArch64ISD::UADDWT, SDLoc(N), N->getValueType(0),
-                       N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_sve_eor_u:
     return DAG.getNode(ISD::XOR, SDLoc(N), N->getValueType(0), N->getOperand(2),
                        N->getOperand(3));
@@ -34755,11 +34743,23 @@ AArch64TargetLowering::LowerPARTIAL_REDUCE_MLA(SDValue Op,
 
   bool IsUnsigned = Op.getOpcode() == ISD::PARTIAL_REDUCE_UMLA;
 
+  // Attempt to fold v4i32 -> v2i64 via Neon *ADALP.
+  if (Subtarget->isNeonAvailable() && OrigResultVT == MVT::v2i64) {
+    unsigned Opc = IsUnsigned ? AArch64ISD::UADDLP : AArch64ISD::SADDLP;
+    if (ConvertToScalable)
+      DotNode = convertFromScalableVector(DAG, MVT::v4i32, DotNode);
+    SDValue Res = DAG.getNode(Opc, DL, OrigResultVT, DotNode);
+    return DAG.getNode(ISD::ADD, DL, OrigResultVT, OrigAcc, Res);
+  }
+
+  // Otherwise use SVE2 *ADALP.
   if (Subtarget->hasSVE2() || Subtarget->isStreamingSVEAvailable()) {
-    unsigned LoOpcode = IsUnsigned ? AArch64ISD::UADDWB : AArch64ISD::SADDWB;
-    unsigned HiOpcode = IsUnsigned ? AArch64ISD::UADDWT : AArch64ISD::SADDWT;
-    SDValue Lo = DAG.getNode(LoOpcode, DL, ResultVT, Acc, DotNode);
-    SDValue Res = DAG.getNode(HiOpcode, DL, ResultVT, Lo, DotNode);
+    unsigned IID = IsUnsigned ? Intrinsic::aarch64_sve_uadalp
+                              : Intrinsic::aarch64_sve_sadalp;
+    SDValue Pg = getPredicateForVector(DAG, DL, ResultVT);
+    SDValue Res =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResultVT,
+                    DAG.getConstant(IID, DL, MVT::i64), Pg, Acc, DotNode);
     return ConvertToScalable ? convertFromScalableVector(DAG, OrigResultVT, Res)
                              : Res;
   }
