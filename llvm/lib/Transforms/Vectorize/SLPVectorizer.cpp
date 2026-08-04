@@ -4672,6 +4672,10 @@ private:
     friend class ScheduleData;
     friend class ScheduleCopyableData;
 
+    using OpRange = llvm::User::op_range;
+    using operand_range =
+        llvm::detail::concat_range<llvm::Use, OpRange, OpRange>;
+
   protected:
     enum class Kind { ScheduleData, ScheduleBundle, ScheduleCopyableData };
     Kind getKind() const { return K; }
@@ -4735,6 +4739,14 @@ private:
       return cast<ScheduleCopyableData>(this)->getInst();
     }
 
+    operand_range operands() {
+      if (auto *SD = dyn_cast<ScheduleData>(this))
+        return SD->operands();
+      return llvm::concat<llvm::Use>(
+          getInst()->operands(),
+          OpRange{getInst()->op_end(), getInst()->op_end()});
+    }
+
     /// Gets/sets if the bundle is scheduled.
     bool isScheduled() const { return IsScheduled; }
     void setScheduled(bool Scheduled) { IsScheduled = Scheduled; }
@@ -4786,6 +4798,7 @@ private:
       SchedulingRegionID = BlockSchedulingRegionID;
       clearDependencies();
       Inst = I;
+      ExtractInst = nullptr;
     }
 
     /// Verify basic self consistency properties
@@ -4859,6 +4872,15 @@ private:
     /// Gets the instruction.
     Instruction *getInst() const { return Inst; }
 
+    operand_range operands() {
+      if (ExtractInst)
+        return llvm::concat<Use>(Inst->operands(), ExtractInst->operands());
+      return llvm::concat<llvm::Use>(Inst->operands(),
+                                     OpRange{Inst->op_end(), Inst->op_end()});
+    }
+
+    void setExtractInst(Instruction *I) { ExtractInst = I; }
+
     /// Gets the list of memory dependencies.
     ArrayRef<ScheduleData *> getMemoryDependencies() const {
       return MemoryDependencies;
@@ -4918,6 +4940,8 @@ private:
     /// for scheduling.
     /// Note that this is negative as long as Dependencies is not calculated.
     int UnscheduledDeps = InvalidDeps;
+
+    Instruction *ExtractInst = nullptr;
   };
 
 #ifndef NDEBUG
@@ -5584,7 +5608,7 @@ private:
             // Copyable data is used only once (uses itself).
             TotalOpCount = OperandsUses[In] = 1;
           } else {
-            auto HandleOneOp = [&](const Use &U) {
+            for (const Use &U : BundleMember->operands()) {
               if (auto *I = dyn_cast<Instruction>(U.get())) {
                 auto Res = OperandsUses.try_emplace(I, 0);
                 unsigned ExtraDeps = 1;
@@ -5600,15 +5624,6 @@ private:
                 Res.first->getSecond() += ExtraDeps;
                 TotalOpCount += ExtraDeps;
               }
-            };
-            for (const Use &U : In->operands())
-              HandleOneOp(U);
-            // Track the operands from the extractelement copy
-            // as well to make sure the dependency on the vector
-            // is tracked
-            if (auto *EI = DE.CouldBeExtract.lookup(In)) {
-              for (const Use &U : EI->operands())
-                HandleOneOp(U);
             }
           }
           // Decrement the unscheduled counter and insert to ready list if
@@ -5813,21 +5828,11 @@ private:
         } else {
           // If BundleMember is a stand-alone instruction, no operand reordering
           // has taken place, so we directly access its operands.
-          for (Use &U : BundleMember->getInst()->operands()) {
+          for (Use &U : BundleMember->operands()) {
             if (auto *I = dyn_cast<Instruction>(U.get())) {
               LLVM_DEBUG(dbgs()
                          << "SLP:   check for readiness (def): " << *I << "\n");
               DecrUnschedForInst(BundleMember->getInst(), U.getOperandNo(), I);
-            }
-          }
-          if (auto *EI = DE.CouldBeExtract.lookup(BundleMember->getInst())) {
-            for (Use &U : EI->operands()) {
-              if (auto *I = dyn_cast<Instruction>(U.get())) {
-                LLVM_DEBUG(dbgs() << "SLP:   check for readiness (def): " << *I
-                                  << "\n");
-                DecrUnschedForInst(BundleMember->getInst(), U.getOperandNo(),
-                                   I);
-              }
             }
           }
         }
@@ -27255,10 +27260,14 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
     assert((!isInSchedulingRegion(*SD) || IsSharedNode) &&
            "new ScheduleData already in scheduling region");
     if (!isInSchedulingRegion(*SD)) {
-      if (auto *RI = DE.CouldBeRemat.lookup(I))
+      if (auto *RI = DE.CouldBeRemat.lookup(I)) {
         SD->init(SchedulingRegionID, RI);
-      else
+        SD->setExtractInst(I);
+      } else {
         SD->init(SchedulingRegionID, I);
+        if (auto *EI = DE.CouldBeExtract.lookup(I))
+          SD->setExtractInst(EI);
+      }
     }
 
     auto CanIgnoreLoad = [](const Instruction *I) {
