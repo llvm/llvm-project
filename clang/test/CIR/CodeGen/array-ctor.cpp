@@ -171,3 +171,73 @@ void multi_dimensional() {
 // OGCG:       br i1 %[[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
 // OGCG:     [[EXIT]]:
 // OGCG:       ret void
+
+struct Temp {
+  ~Temp();
+};
+
+struct CausesTemp {
+  CausesTemp(Temp = Temp());
+};
+
+void TempInArray() {
+  CausesTemp ct[42];
+}
+
+// CIR-BEFORE-LPP: cir.func {{.*}} @_Z11TempInArrayv()
+// CIR-BEFORE-LPP:   %[[ARRAY:.*]] = cir.alloca "ct" {{.*}} init : !cir.ptr<!cir.array<!rec_CausesTemp x 42>>
+// CIR-BEFORE-LPP:   %[[TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Temp>
+// CIR-BEFORE-LPP:   cir.array.ctor %[[ARRAY]] : !cir.ptr<!cir.array<!rec_CausesTemp x 42>> {
+// CIR-BEFORE-LPP:    ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_CausesTemp>):
+// CIR-BEFORE-LPP:      cir.cleanup.scope {
+// CIR-BEFORE-LPP:        %[[LOAD:.*]] = cir.load {{.*}} %[[TMP]] : !cir.ptr<!rec_Temp>, !rec_Temp
+// CIR-BEFORE-LPP:        cir.call @_ZN10CausesTempC1E4Temp(%[[ARG]], %[[LOAD]])
+// CIR-BEFORE-LPP:        cir.yield
+// CIR-BEFORE-LPP:      } cleanup normal {
+// CIR-BEFORE-LPP:        cir.call @_ZN4TempD1Ev(%[[TMP]]) nothrow
+// CIR-BEFORE-LPP:        cir.yield
+// CIR-BEFORE-LPP:      }
+// CIR-BEFORE-LPP:    }
+// CIR-BEFORE-LPP:   cir.return
+// CIR-BEFORE-LPP: }
+
+// CIR-LABEL: cir.func {{.*}} @_Z11TempInArrayv()
+// CIR:        %[[TMP:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_Temp>
+// CIR:        cir.do {
+// CIR-NEXT:     %[[CURRENT:.*]] = cir.load %[[ITER:.*]] : !cir.ptr<!cir.ptr<!rec_CausesTemp>>, !cir.ptr<!rec_CausesTemp>
+// CIR-NEXT:     cir.cleanup.scope {
+// CIR-NEXT:       %[[LOAD:.*]] = cir.load {{.*}} %[[TMP]] : !cir.ptr<!rec_Temp>, !rec_Temp
+// CIR-NEXT:       cir.call @_ZN10CausesTempC1E4Temp(%[[CURRENT]], %[[LOAD]])
+// CIR-NEXT:       cir.yield
+// CIR-NEXT:     } cleanup normal {
+// CIR-NEXT:       cir.call @_ZN4TempD1Ev(%[[TMP]]) nothrow
+// CIR-NEXT:       cir.yield
+// CIR-NEXT:     }
+// CIR-NEXT:     %[[CONST1:.*]] = cir.const #cir.int<1> : !u64i
+// CIR-NEXT:     %[[NEXT:.*]] = cir.ptr_stride %[[CURRENT]], %[[CONST1]] : (!cir.ptr<!rec_CausesTemp>, !u64i) -> !cir.ptr<!rec_CausesTemp>
+// CIR-NEXT:     cir.store %[[NEXT]], %[[ITER]] : !cir.ptr<!rec_CausesTemp>, !cir.ptr<!cir.ptr<!rec_CausesTemp>>
+// CIR-NEXT:     cir.yield
+// CIR-NEXT:   } while {
+// CIR:        }
+
+// LLVM-LABEL: define {{.*}}void @_Z11TempInArrayv()
+// LLVM:       %[[TMP:.*]] = alloca %struct.Temp
+// LLVM:       %[[ITER:.*]] = alloca ptr
+// LLVM:       br label %[[DO_BR:.*]]
+// LLVM:       [[DO_BR]]:
+// LLVM:       %[[CURRENT:.*]] = load ptr, ptr %[[ITER]]
+// LLVM:       br label %[[CONSTRUCT_BR:.*]]
+// LLVM:       [[CONSTRUCT_BR]]:
+// LLVM:       %[[LOAD:.*]] = load %struct.Temp, ptr %[[TMP]]
+// LLVM:       call void @_ZN10CausesTempC1E4Temp(ptr {{.*}}%[[CURRENT]], %struct.Temp %[[LOAD]])
+// LLVM:       br label %[[CLEANUP_BR:.*]]
+// LLVM:       [[CLEANUP_BR]]:
+// LLVM:       call void @_ZN4TempD1Ev({{.*}}[[TMP]])
+
+// OGCG-LABEL: define {{.*}}void @_Z11TempInArrayv()
+// OGCG:       %[[TMP:.*]] = alloca %struct.Temp
+// OGCG:       br label %[[LOOP:.*]]
+// OGCG:       [[LOOP]]:
+// OGCG:       %[[CURRENT:.*]] = phi ptr
+// OGCG:       call void @_ZN10CausesTempC1E4Temp(ptr {{.*}}%[[CURRENT]], ptr{{.*}}[[TMP]])
+// OGCG:       call void @_ZN4TempD1Ev({{.*}}[[TMP]])
