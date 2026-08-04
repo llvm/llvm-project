@@ -382,11 +382,11 @@ static cl::opt<uint64_t>
 
 static cl::opt<uint64_t> ClMappingMin(
     "asan-mapping-min",
-    cl::desc("Do not do shadow memory checks for pointers below this address"),
+    cl::desc("Omit shadow memory checks for pointers below this address"),
     cl::Hidden, cl::init(0));
 static cl::opt<uint64_t> ClMappingMax(
     "asan-mapping-max",
-    cl::desc("Do not do shadow memory checks for pointers above this address"),
+    cl::desc("Omit shadow memory checks for pointers above this address"),
     cl::Hidden, cl::init(0));
 
 // Optimization flags. Not user visible, used mostly for testing
