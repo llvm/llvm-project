@@ -254,8 +254,6 @@ private:
 
   void *GetSVEHeader() { return &m_sve_header; }
 
-  void *GetZAHeader() { return &m_za_header; }
-
   void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }

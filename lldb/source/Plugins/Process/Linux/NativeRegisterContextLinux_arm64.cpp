@@ -1305,7 +1305,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       // ZA header size you pass in. Therefore we must write header and register
       // data (if present) in one go every time. Read the header only first just
       // to get the size.
-      ::memcpy(GetZAHeader(), src, GetSetSize(RegisterSetType::ZA_HEADER));
+      ::memcpy(GetSetBuffer(RegisterSetType::ZA_HEADER), src,
+               GetSetSize(RegisterSetType::ZA_HEADER));
       // Read the header and register data. Can't use the buffer size here, it
       // may be incorrect due to being filled with dummy data previously. Resize
       // this so WriteZA uses the correct size.
@@ -1713,7 +1714,7 @@ Status NativeRegisterContextLinux_arm64::ReadZAHeader() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetZAHeader();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::ZA_HEADER);
   ioVec.iov_len = GetSetSize(RegisterSetType::ZA_HEADER);
 
   error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::ZA_HEADER),
