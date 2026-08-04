@@ -33,12 +33,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.h.inc"
 #include "mlir/Transforms/DialectConversion.h"
 
-//===----------------------------------------------------------------------===//
-// TOSA operation validation includes.
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Tosa/IR/TosaAvailability.h.inc"
-
 namespace mlir {
 class PatternRewriter;
 

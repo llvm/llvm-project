@@ -1,11 +1,11 @@
 # REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc %s -o %t.o
 # RUN: echo '.globl f, g, h; f: g: h:' | llvm-mc -filetype=obj -triple=powerpc - -o %t1.o
-# RUN: ld.lld -z nosort-thunks -shared %t1.o -soname t1.so -o %t1.so
+# RUN: ld.lld -shared %t1.o -soname t1.so -o %t1.so
 # RUN: echo 'bl f+0x8000@plt' | llvm-mc -filetype=obj -triple=powerpc - -o %t2.o
 
 ## Check we can create PLT entries for -fPIE or -fpie executable.
-# RUN: ld.lld -z nosort-thunks -pie %t.o %t1.so %t2.o -o %t
+# RUN: ld.lld -pie %t.o %t1.so %t2.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-readobj -d %t | FileCheck --check-prefix=DYN %s
 # RUN: llvm-readelf -S %t | FileCheck --check-prefix=SEC %s
@@ -13,7 +13,7 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,PIE %s
 
 ## Check we can create PLT entries for -fPIC or -fpic DSO.
-# RUN: ld.lld -z nosort-thunks -shared %t.o %t1.so %t2.o -o %t
+# RUN: ld.lld -shared %t.o %t1.so %t2.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=CHECK,SHARED %s
 
@@ -41,53 +41,39 @@
 # PIE-NEXT:           bl 0x10244
 # PIE-NEXT:           bl 0x10244
 ## Two bl 00008000.got2.plt_pic32.g
-# PIE-NEXT:           bl 0x10254
-# PIE-NEXT:           bl 0x10254
+# PIE-NEXT:           bl 0x10284
+# PIE-NEXT:           bl 0x10284
 ## Two bl 00008000.got2.plt_pic32.h
-# PIE-NEXT:           bl 0x10264
-# PIE-NEXT:           bl 0x10264
+# PIE-NEXT:           bl 0x10274
+# PIE-NEXT:           bl 0x10274
 # PIE-NEXT:           addis 30, 30, {{.*}}
 # PIE-NEXT:           addi 30, 30, {{.*}}
-## bl 00008000.plt_pic32.f
-# PIE-NEXT:           bl 0x10274
-## bl 00008000.plt_pic32.f
-# PIE-NEXT:           bl 0x10284
+## bl 00000000.plt_pic32.f
+# PIE-NEXT:           bl 0x10254
+## bl 00008000.got2.plt_pic32.f
+# PIE-NEXT:           bl 0x10264
 # SHARED-NEXT:        bcl 20, 31, 0x10230
 # SHARED-NEXT: 10230: mflr 30
 # SHARED-NEXT:        addis 30, 30, 3
 # SHARED-NEXT:        addi 30, 30, -32420
 # SHARED-NEXT:        bl 0x10264
 # SHARED-NEXT:        bl 0x10264
-# SHARED-NEXT:        bl 0x10274
-# SHARED-NEXT:        bl 0x10274
-# SHARED-NEXT:        bl 0x10284
-# SHARED-NEXT:        bl 0x10284
+# SHARED-NEXT:        bl 0x102a4
+# SHARED-NEXT:        bl 0x102a4
+# SHARED-NEXT:        bl 0x10294
+# SHARED-NEXT:        bl 0x10294
 # SHARED-NEXT:        addis 30, 30, {{.*}}
 # SHARED-NEXT:        addi 30, 30, {{.*}}
-# SHARED-NEXT:        bl 0x10294
-# SHARED-NEXT:        bl 0x102a4
+# SHARED-NEXT:        bl 0x10274
+# SHARED-NEXT:        bl 0x10284
 # CHECK-EMPTY:
 
-## -fPIC call stubs of f and g.
+## -fPIC call stub of f.
 # CHECK-NEXT:  <00008000.got2.plt_pic32.f>:
 # CHECK-NEXT:    lwz 11, 32760(30)
 # CHECK-NEXT:    mtctr 11
 # CHECK-NEXT:    bctr
 # CHECK-NEXT:    nop
-# CHECK-EMPTY:
-# CHECK-NEXT:  <00008000.got2.plt_pic32.g>:
-# CHECK-NEXT:    lwz 11, 32764(30)
-# CHECK-NEXT:    mtctr 11
-# CHECK-NEXT:    bctr
-# CHECK-NEXT:    nop
-# CHECK-EMPTY:
-
-## The -fPIC call stub of h needs two instructions addis+lwz to represent the offset 65536*1-32768.
-# CHECK-NEXT:  <00008000.got2.plt_pic32.h>:
-# CHECK-NEXT:    addis 11, 30, 1
-# CHECK-NEXT:    lwz 11, -32768(11)
-# CHECK-NEXT:    mtctr 11
-# CHECK-NEXT:    bctr
 # CHECK-EMPTY:
 
 ## -fpic call stub of f.
@@ -102,6 +88,27 @@
 ## .got2 may have different addresses in different object files,
 ## so the call stub cannot be shared.
 # CHECK-NEXT:  <00008000.got2.plt_pic32.f>:
+# CHECK-NEXT:    lwz 11, 32760(30)
+# CHECK-NEXT:    mtctr 11
+# CHECK-NEXT:    bctr
+# CHECK-NEXT:    nop
+# CHECK-EMPTY:
+
+## The -fPIC call stub of h needs two instructions addis+lwz to represent the offset 65536*1-32768.
+# CHECK-NEXT:  <00008000.got2.plt_pic32.h>:
+# CHECK-NEXT:    addis 11, 30, 1
+# CHECK-NEXT:    lwz 11, -32768(11)
+# CHECK-NEXT:    mtctr 11
+# CHECK-NEXT:    bctr
+# CHECK-EMPTY:
+
+## -fPIC call stub of g.
+# CHECK-NEXT:  <00008000.got2.plt_pic32.g>:
+# CHECK-NEXT:    lwz 11, 32764(30)
+# CHECK-NEXT:    mtctr 11
+# CHECK-NEXT:    bctr
+# CHECK-NEXT:    nop
+# CHECK-EMPTY:
 
 ## In Secure PLT ABI, .plt stores function pointers to first instructions of .glink
 # HEX: 0x00040374 00010294 00010298 0001029c

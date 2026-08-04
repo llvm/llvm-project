@@ -708,7 +708,6 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_any:
   case Intrinsic::spv_bitcast:
   case Intrinsic::spv_const_composite:
-  case Intrinsic::spv_cross:
   case Intrinsic::spv_degrees:
   case Intrinsic::spv_distance:
   case Intrinsic::spv_extractelt:
@@ -2860,13 +2859,15 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
     // are expressed by OpSpecConstantOp with an Opcode.
     // TODO: maybe insert a check whether the Kernel capability was declared and
     // so PtrCastToGeneric/GenericCastToPtr are available.
-    unsigned SpecOpcode =
-        DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC)
-            ? static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric)
-            : (SrcSC == SPIRV::StorageClass::Generic &&
-                       isGenericCastablePtr(DstSC)
-                   ? static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr)
-                   : 0);
+    unsigned SpecOpcode = [&]() -> unsigned {
+      if (SrcSC == SPIRV::StorageClass::CodeSectionINTEL)
+        return static_cast<uint32_t>(SPIRV::Opcode::Bitcast);
+      if (DstSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(SrcSC))
+        return static_cast<uint32_t>(SPIRV::Opcode::PtrCastToGeneric);
+      if (SrcSC == SPIRV::StorageClass::Generic && isGenericCastablePtr(DstSC))
+        return static_cast<uint32_t>(SPIRV::Opcode::GenericCastToPtr);
+      return 0u;
+    }();
     // TODO: OpConstantComposite expects i8*, so we are forced to forget a
     // correct value of ResType and use general i8* instead. Maybe this should
     // be addressed in the emit-intrinsic step to infer a correct
@@ -4961,16 +4962,22 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
       CompositeArgs.push_back(WrapReg);
       continue;
     }
-    // Create a new register for the wrapper
-    WrapReg = MRI->createVirtualRegister(GR.getRegClass(OpType));
+    SPIRVTypeInst WrapType = OpType;
+    if (OpType->getOpcode() == SPIRV::OpTypePointer &&
+        GR.getPointerStorageClass(OpType) ==
+            SPIRV::StorageClass::CodeSectionINTEL) {
+      WrapType = GR.changePointerStorageClass(OpType,
+                                              SPIRV::StorageClass::Function, I);
+    }
+    WrapReg = MRI->createVirtualRegister(GR.getRegClass(WrapType));
     CompositeArgs.push_back(WrapReg);
     // Decorate the wrapper register and generate a new instruction
     MRI->setType(WrapReg, LLT::pointer(0, 64));
-    GR.assignSPIRVTypeToVReg(OpType, WrapReg, *MF);
+    GR.assignSPIRVTypeToVReg(WrapType, WrapReg, *MF);
     auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                        TII.get(SPIRV::OpSpecConstantOp))
                    .addDef(WrapReg)
-                   .addUse(GR.getSPIRVTypeID(OpType))
+                   .addUse(GR.getSPIRVTypeID(WrapType))
                    .addImm(static_cast<uint32_t>(SPIRV::Opcode::Bitcast))
                    .addUse(OpReg);
     GR.add(OpDefine, MIB);
@@ -5344,8 +5351,6 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectAll(ResVReg, ResType, I);
   case Intrinsic::spv_any:
     return selectAny(ResVReg, ResType, I);
-  case Intrinsic::spv_cross:
-    return selectExtInst(ResVReg, ResType, I, CL::cross, GL::Cross);
   case Intrinsic::spv_distance:
     return selectExtInst(ResVReg, ResType, I, CL::distance, GL::Distance);
   case Intrinsic::spv_lerp:
@@ -6452,7 +6457,8 @@ void SPIRVInstructionSelector::decorateUsesAsNonUniform(
 
     if (!IsDecorated) {
       MachineBasicBlock &MBB = *DefMI->getParent();
-      MachineInstr &InsertPt = DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI;
+      MachineInstr &InsertPt =
+          DefMI->isPHI() ? *MBB.getFirstNonPHI() : *DefMI->getNextNode();
       buildOpDecorate(CurrentReg, InsertPt, TII,
                       SPIRV::Decoration::NonUniformEXT, {});
     }
