@@ -822,6 +822,82 @@ This is a performance optimization, which speeds up debugging by avoiding
 multiple round-trips for retrieving thread information. The information from this
 packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets.
 
+## jAddressSpacesInfo
+
+Ask the server for the address spaces the process exposes.
+
+Most processes have a single, flat address space, but some (such as GPUs) have
+multiple address spaces where the same numeric address refers to different
+storage depending on the address space (for example global, local, private or
+generic memory). This packet lets the client discover those address spaces.
+
+This packet requires the `address-spaces+` feature from `qSupported`, which a
+server only advertises when its process exposes address spaces.
+
+The response is a JSON array of dictionaries, one per address space:
+```
+    [
+      {"name":"global","space_id":1,"is_thread_specific":false},
+      {"name":"local","space_id":2,"is_thread_specific":true}
+    ]
+```
+
+Each dictionary has the following keys:
+
+* `name`: the human readable name of the address space.
+* `space_id`: the integer identifier of the address space.
+* `is_thread_specific`: true if the address space is thread specific.
+
+The client only sends this packet when the server advertised `address-spaces+`
+in its `qSupported` response. If a server that advertised the feature has no
+address spaces to report, it replies with an unsupported (empty) response.
+
+**Priority To Implement:** Required for targets that use address spaces, not
+needed for targets that don't need address spaces.
+
+## address-spaces (qSupported feature)
+
+A server advertises `address-spaces+` in its `qSupported` response when its
+process exposes address spaces. This single feature implies both the
+`jAddressSpacesInfo` packet and the optional `address_space:<hex-id>;` suffix on
+the memory packets described below.
+
+### The `address_space` suffix
+
+To read from a specific address space, the client appends an optional
+`address_space:<hex-id>;` key-value suffix to the existing memory packets rather
+than introducing a dedicated packet, where `<hex-id>` is the address space id
+reported by `jAddressSpacesInfo`, in base 16 like the other numeric values in
+these packets. An id of `0`, or the absence of the suffix, means the default
+address space and behaves exactly as before, so address-space-unaware stubs and
+reads are unaffected.
+
+```
+send packet: $x1000,4;address_space:1a;
+read packet: $<binary encoding of the 4 bytes at 0x1000 in address space 0x1a>
+```
+
+If `jAddressSpacesInfo` reported the address space as `is_thread_specific`, a
+`thread:<hex-tid>;` key-value pair is appended to identify the thread the
+address belongs to. It is only sent for thread specific address spaces.
+
+```
+send packet: $x1000,4;address_space:1a;thread:1a2b;
+read packet: $<binary encoding of the 4 bytes at 0x1000 in address space 0x1a of thread 0x1a2b>
+```
+
+Packets that currently accept the suffix:
+
+* `m` / `x`: read memory from a specific address space.
+
+Because the suffix is an optional key-value pair on the existing packets, the
+same mechanism can be extended to other address-bearing packets (memory writes
+`M` / `X`, breakpoints `z` / `Z`, etc.) as the need arises, without introducing
+new packets or bifurcating the address-space-aware and unaware code paths.
+
+**Priority To Implement:** Required for targets that expose more than one
+address space, not needed for targets that have a single address space.
+
 ## MultiMemRead
 
 Read memory from multiple memory ranges.
@@ -2769,6 +2845,11 @@ xADDRESS,LENGTH
 ```
 
 where both `ADDRESS` and `LENGTH` are big-endian base 16 values.
+
+The `x` packet may also carry an optional `address_space:<hex-id>;` suffix to read
+from a non-default address space, followed by `thread:<hex-tid>;` when that
+address space is thread specific; see
+[the address-spaces feature](#address-spaces-qsupported-feature).
 
 To test if this packet is available, send a addr/len of 0:
 ```

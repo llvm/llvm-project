@@ -137,6 +137,7 @@ protected:
   std::unordered_map<uint32_t, lldb::DataBufferSP> m_saved_registers_map;
   uint32_t m_next_saved_registers_id = 1;
   bool m_thread_suffix_supported = false;
+  bool m_address_space_suffix_supported = false;
   bool m_list_threads_in_stop_reply = false;
   bool m_non_stop = false;
   bool m_disabling_non_stop = false;
@@ -267,6 +268,8 @@ protected:
   PacketResult Handle_qThreadStopInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_jThreadsInfo(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_jAddressSpacesInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qWatchpointSupportInfo(StringExtractorGDBRemote &packet);
 
