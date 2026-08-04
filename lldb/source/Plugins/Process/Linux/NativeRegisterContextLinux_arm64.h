@@ -270,8 +270,6 @@ private:
 
   void *GetFPMRBuffer() { return &m_fpmr_reg; }
 
-  void *GetGCSBuffer() { return &m_gcs_regs; }
-
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
   llvm::Error ReadHardwareDebugInfo() override;

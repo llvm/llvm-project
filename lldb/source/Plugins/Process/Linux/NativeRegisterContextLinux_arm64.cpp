@@ -587,7 +587,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetGCSOffset();
     assert(offset < GetSetSize(RegisterSetType::GCS));
-    src = (uint8_t *)GetGCSBuffer() + offset;
+    src = (uint8_t *)GetSetBuffer(RegisterSetType::GCS) + offset;
   } else if (GetRegisterInfo().IsPOEReg(reg)) {
     error = ReadPOE();
     if (error.Fail())
@@ -873,7 +873,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetGCSOffset();
     assert(offset < GetSetSize(RegisterSetType::GCS));
-    dst = (uint8_t *)GetGCSBuffer() + offset;
+    dst = (uint8_t *)GetSetBuffer(RegisterSetType::GCS) + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteGCS();
@@ -1107,7 +1107,8 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   }
 
   if (GetRegisterInfo().IsGCSPresent()) {
-    dst = AddSavedRegisters(dst, RegisterSetType::GCS, GetGCSBuffer(),
+    dst = AddSavedRegisters(dst, RegisterSetType::GCS,
+                            GetSetBuffer(RegisterSetType::GCS),
                             GetSetSize(RegisterSetType::GCS));
   }
 
@@ -1351,7 +1352,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       const uint8_t *new_gcs_src =
           reinterpret_cast<const uint8_t *>(&new_gcs_regs);
       error = RestoreRegisters(
-          GetGCSBuffer(), &new_gcs_src, GetSetSize(RegisterSetType::GCS), kind,
+          GetSetBuffer(RegisterSetType::GCS), &new_gcs_src,
+          GetSetSize(RegisterSetType::GCS), kind,
           std::bind(&NativeRegisterContextLinux_arm64::WriteGCS, this));
       src += GetSetSize(RegisterSetType::GCS);
 
@@ -1666,7 +1668,7 @@ Status NativeRegisterContextLinux_arm64::ReadGCS() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetGCSBuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::GCS);
   ioVec.iov_len = GetSetSize(RegisterSetType::GCS);
 
   error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::GCS),
@@ -1686,7 +1688,7 @@ Status NativeRegisterContextLinux_arm64::WriteGCS() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetGCSBuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::GCS);
   ioVec.iov_len = GetSetSize(RegisterSetType::GCS);
 
   Invalidate(RegisterSetType::GCS);
