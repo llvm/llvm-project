@@ -609,12 +609,16 @@ public:
   RelrBaseSection(Ctx &, unsigned concurrency, bool isAArch64Auth = false);
   /// Add a relative dynamic relocation that uses the target address of \p sym
   /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
+  template <bool concurrent = false>
   void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
                         Symbol &sym, int64_t addend, RelType addendRelType,
-                        RelExpr expr, unsigned shard) {
+                        RelExpr expr, unsigned shard = 0) {
     assert(expr != R_ADDEND && "expected non-addend relocation expression");
     isec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
-    relocsVec[shard].push_back({&isec, isec.relocs().size() - 1});
+    if constexpr (concurrent)
+      relocsVec[shard].push_back({&isec, isec.relocs().size() - 1});
+    else
+      relocs.push_back({&isec, isec.relocs().size() - 1});
   }
   bool isNeeded() const override {
     return !relocs.empty() ||
@@ -1236,6 +1240,7 @@ public:
   void writeTo(uint8_t *buf) override;
   InputSection *getTargetInputSection() const;
   bool assignOffsets();
+  void sortByDestination();
 
   // When true, round up reported size of section to 4 KiB. See comment
   // in addThunkSection() for more details.
