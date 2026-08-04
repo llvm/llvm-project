@@ -1,17 +1,20 @@
 set(ORC_RT_HEADERS
     orc-rt-c/Compiler.h
-    orc-rt-c/CoreTyspe.h
+    orc-rt-c/CoreTypes.h
     orc-rt-c/Error.h
     orc-rt-c/Logging.h
+    orc-rt-c/Session.h
     orc-rt-c/WrapperFunction.h
-    orc-rt-c/orc-rt.h
     orc-rt/AllocAction.h
     orc-rt/BitmaskEnum.h
     orc-rt/BootstrapInfo.h
     orc-rt/CCallback.h
+    orc-rt/CallableTraitsHelper.h
     orc-rt/Compiler.h
+    orc-rt/Endian.h
     orc-rt/Error.h
     orc-rt/ExecutorAddress.h
+    orc-rt/ExecutorProcessInfo.h
     orc-rt/InProcessControllerAccess.h
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
@@ -32,11 +35,13 @@ set(ORC_RT_HEADERS
     orc-rt/SimplePackedSerialization.h
     orc-rt/SimpleSymbolTable.h
     orc-rt/StandaloneMachOUnwindInfoRegistrar.h
+    orc-rt/StringExtras.h
     orc-rt/TaskGroup.h
     orc-rt/ThreadPoolRunner.h
     orc-rt/WrapperFunction.h
     orc-rt/bind.h
     orc-rt/bit.h
+    orc-rt/iterator_range.h
     orc-rt/move_only_function.h
     orc-rt/scope_exit.h
     orc-rt/span.h

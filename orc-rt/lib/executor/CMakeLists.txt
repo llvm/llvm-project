@@ -71,7 +71,10 @@ target_include_directories(orc-rt-executor-impl-headers INTERFACE
 
 # Apply RTTI and exceptions compile flags
 target_compile_options(orc-rt-executor PRIVATE ${ORC_RT_COMPILE_FLAGS})
-# TODO: Use common runtimes infrastructure for output and install paths
+# TODO?: Use common runtimes infrastructure for output and install paths
+# jared:
+# We need to decide where we want this to end up
+# For now we will leave it as is until we make that call
 install(TARGETS orc-rt-executor
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
           COMPONENT OrcRT_Development
