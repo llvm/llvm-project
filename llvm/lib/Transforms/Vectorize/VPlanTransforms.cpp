@@ -1366,6 +1366,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   }
 
   const APInt *APC;
+  // TODO: Enable optimizations in the vector preheader in a follow-up PR.
+  // This check currently means we only simplify before region dissolution.
+  VPBasicBlock *Preheader = Plan->getVectorPreheader();
+  if (CanCreateNewRecipe && Preheader && Def->getParent() != Preheader &&
+      match(Def, m_URem(m_VPValue(X), m_APInt(APC))) && APC->isPowerOf2()) {
+    return Def->replaceAllUsesWith(Builder.createAnd(
+        X, Plan->getConstantInt(*APC - 1), Def->getDebugLoc()));
+  }
+
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
       APC->isPowerOf2()) {
     auto *MulR = cast<VPRecipeWithIRFlags>(Def);

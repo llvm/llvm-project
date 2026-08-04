@@ -56,11 +56,6 @@ bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
 /// plain adds.
 unsigned getReassocCombineOpcode(unsigned Opcode);
 
-/// \returns the subtract opcode applied to the negated columns of a
-/// reassociated node: fsub for the float add/sub family, plain sub for the
-/// integer one.
-unsigned getReassocSubOpcode(unsigned Opcode);
-
 /// \returns True if \p I can be a link of a flattenable binary chain:
 /// subtracts flatten as adds of a negated leaf, float subtracts need reassoc
 /// to allow the regrouping.
@@ -322,6 +317,16 @@ SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val, unsigned VF);
 /// Opcode. Disabled lanes of these intrinsics are poison rather than UB,
 /// unlike the plain opcode.
 Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode);
+
+/// Returns true if \p I forms a vectorizable bundle on its own and its single
+/// user does not tear the vector apart. Loads and addresses are excluded: the
+/// tree is built without the users, so it does not pay off the extracts. A
+/// cast, feeding a multi-used cast, is excluded for the same reason, such a
+/// user stays scalar. The fp-to-int conversions move the result to the other
+/// register domain, so the extracts are paid on top of the repacking. The
+/// values, feeding the inserts, are vectorized together with them by the
+/// dedicated attempt.
+bool isOnceUsedSeed(const Instruction *I);
 
 } // namespace llvm::slpvectorizer
 

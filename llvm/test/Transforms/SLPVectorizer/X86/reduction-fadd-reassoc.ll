@@ -7,28 +7,8 @@ define double @reassoc_only(ptr %p) {
 ; CHECK-LABEL: define double @reassoc_only(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[L0:%.*]] = load double, ptr [[P]], align 8
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[P]], i64 1
-; CHECK-NEXT:    [[L1:%.*]] = load double, ptr [[P1]], align 8
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr double, ptr [[P]], i64 2
-; CHECK-NEXT:    [[L2:%.*]] = load double, ptr [[P2]], align 8
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr double, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load double, ptr [[P3]], align 8
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr double, ptr [[P]], i64 4
-; CHECK-NEXT:    [[L4:%.*]] = load double, ptr [[P4]], align 8
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr double, ptr [[P]], i64 5
-; CHECK-NEXT:    [[L5:%.*]] = load double, ptr [[P5]], align 8
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr double, ptr [[P]], i64 6
-; CHECK-NEXT:    [[L6:%.*]] = load double, ptr [[P6]], align 8
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr double, ptr [[P]], i64 7
-; CHECK-NEXT:    [[L7:%.*]] = load double, ptr [[P7]], align 8
-; CHECK-NEXT:    [[C1:%.*]] = fadd reassoc double [[L0]], [[L1]]
-; CHECK-NEXT:    [[C2:%.*]] = fadd reassoc double [[C1]], [[L2]]
-; CHECK-NEXT:    [[C3:%.*]] = fadd reassoc double [[C2]], [[L3]]
-; CHECK-NEXT:    [[C4:%.*]] = fadd reassoc double [[C3]], [[L4]]
-; CHECK-NEXT:    [[C5:%.*]] = fadd reassoc double [[C4]], [[L5]]
-; CHECK-NEXT:    [[C6:%.*]] = fadd reassoc double [[C5]], [[L6]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc double [[C6]], [[L7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x double>, ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v8f64(double -0.000000e+00, <8 x double> [[TMP0]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
 entry:
@@ -63,14 +43,7 @@ define double @reassoc_repeated_vals(double %x) {
 ; CHECK-LABEL: define double @reassoc_repeated_vals(
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C1:%.*]] = fadd reassoc double [[X]], [[X]]
-; CHECK-NEXT:    [[C2:%.*]] = fadd reassoc double [[C1]], [[X]]
-; CHECK-NEXT:    [[C3:%.*]] = fadd reassoc double [[C2]], [[X]]
-; CHECK-NEXT:    [[C4:%.*]] = fadd reassoc double [[C3]], [[X]]
-; CHECK-NEXT:    [[C5:%.*]] = fadd reassoc double [[C4]], [[X]]
-; CHECK-NEXT:    [[C6:%.*]] = fadd reassoc double [[C5]], [[X]]
-; CHECK-NEXT:    [[C7:%.*]] = fadd reassoc double [[C6]], [[X]]
-; CHECK-NEXT:    [[TMP0:%.*]] = fadd reassoc double [[C7]], [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul double [[X]], 9.000000e+00
 ; CHECK-NEXT:    ret double [[TMP0]]
 ;
 entry:
