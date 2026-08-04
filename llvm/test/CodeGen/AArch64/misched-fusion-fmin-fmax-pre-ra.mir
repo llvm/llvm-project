@@ -1,16 +1,17 @@
 # REQUIRES: asserts
 
-# RUN: llc -o /dev/null %s -mtriple=aarch64-linux-gnu -mattr=+fuse-fmin-fmax -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=FUSE
-# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=FUSE
+# RUN: llc -o /dev/null %s -mtriple=aarch64-linux-gnu -mattr=+fuse-fmin-fmax -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
+# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSE
 
-# RUN: llc -o /dev/null %s -mtriple=aarch64-linux-gnu -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=NOFUSE
-# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -mattr=-fuse-fmin-fmax -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=NOFUSE
+# RUN: llc -o /dev/null %s -mtriple=aarch64-linux-gnu -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -o /dev/null %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -mattr=-fuse-fmin-fmax -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
 
 ---
 name: fmax_fmax_h
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmax_h
     ; CHECK: SU(0): %0:fpr16 = FMAXHrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -25,6 +26,7 @@ name: fmax_fmin_h
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmin_h
     ; CHECK: SU(0): %0:fpr16 = FMAXHrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -39,6 +41,7 @@ name: fmin_fmax_h
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmax_h
     ; CHECK: SU(0): %0:fpr16 = FMINHrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -53,6 +56,7 @@ name: fmin_fmin_h
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmin_h
     ; CHECK: SU(0): %0:fpr16 = FMINHrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -67,6 +71,7 @@ name: fmax_fmax_s
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmax_s
     ; CHECK: SU(0): %0:fpr32 = FMAXSrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -81,6 +86,7 @@ name: fmax_fmin_s
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmin_s
     ; CHECK: SU(0): %0:fpr32 = FMAXSrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -95,6 +101,7 @@ name: fmin_fmax_s
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmax_s
     ; CHECK: SU(0): %0:fpr32 = FMINSrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -109,6 +116,7 @@ name: fmin_fmin_s
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmin_s
     ; CHECK: SU(0): %0:fpr32 = FMINSrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -123,6 +131,7 @@ name: fmax_fmax_d
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmax_d
     ; CHECK: SU(0): %0:fpr64 = FMAXDrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -137,6 +146,7 @@ name: fmax_fmin_d
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmin_d
     ; CHECK: SU(0): %0:fpr64 = FMAXDrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -151,6 +161,7 @@ name: fmin_fmax_d
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmax_d
     ; CHECK: SU(0): %0:fpr64 = FMINDrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -165,6 +176,7 @@ name: fmin_fmin_d
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmin_d
     ; CHECK: SU(0): %0:fpr64 = FMINDrr
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -179,6 +191,7 @@ name: fmax_fmax_v4f16
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmax_v4f16
     ; CHECK: SU(0): %0:fpr64 = FMAXv4f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -193,6 +206,7 @@ name: fmax_fmin_v4f16
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmin_v4f16
     ; CHECK: SU(0): %0:fpr64 = FMAXv4f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -207,6 +221,7 @@ name: fmin_fmax_v4f16
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmax_v4f16
     ; CHECK: SU(0): %0:fpr64 = FMINv4f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -221,6 +236,7 @@ name: fmin_fmin_v4f16
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmin_v4f16
     ; CHECK: SU(0): %0:fpr64 = FMINv4f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -235,6 +251,7 @@ name: fmax_fmax_v8f16
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmax_v8f16
     ; CHECK: SU(0): %0:fpr128 = FMAXv8f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -249,6 +266,7 @@ name: fmax_fmin_v8f16
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmin_v8f16
     ; CHECK: SU(0): %0:fpr128 = FMAXv8f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -263,6 +281,7 @@ name: fmin_fmax_v8f16
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmax_v8f16
     ; CHECK: SU(0): %0:fpr128 = FMINv8f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -277,6 +296,7 @@ name: fmin_fmin_v8f16
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmin_v8f16
     ; CHECK: SU(0): %0:fpr128 = FMINv8f16
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -291,6 +311,7 @@ name: fmax_fmax_v2f32
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmax_v2f32
     ; CHECK: SU(0): %0:fpr64 = FMAXv2f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -305,6 +326,7 @@ name: fmax_fmin_v2f32
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmin_v2f32
     ; CHECK: SU(0): %0:fpr64 = FMAXv2f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -319,6 +341,7 @@ name: fmin_fmax_v2f32
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmax_v2f32
     ; CHECK: SU(0): %0:fpr64 = FMINv2f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -333,6 +356,7 @@ name: fmin_fmin_v2f32
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmin_v2f32
     ; CHECK: SU(0): %0:fpr64 = FMINv2f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -347,6 +371,7 @@ name: fmax_fmax_v4f32
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmax_v4f32
     ; CHECK: SU(0): %0:fpr128 = FMAXv4f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -361,6 +386,7 @@ name: fmax_fmin_v4f32
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmin_v4f32
     ; CHECK: SU(0): %0:fpr128 = FMAXv4f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -375,6 +401,7 @@ name: fmin_fmax_v4f32
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmax_v4f32
     ; CHECK: SU(0): %0:fpr128 = FMINv4f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -389,6 +416,7 @@ name: fmin_fmin_v4f32
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmin_v4f32
     ; CHECK: SU(0): %0:fpr128 = FMINv4f32
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -403,6 +431,7 @@ name: fmax_fmax_v2f64
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmax_v2f64
     ; CHECK: SU(0): %0:fpr128 = FMAXv2f64
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -417,6 +446,7 @@ name: fmax_fmin_v2f64
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmax_fmin_v2f64
     ; CHECK: SU(0): %0:fpr128 = FMAXv2f64
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -431,6 +461,7 @@ name: fmin_fmax_v2f64
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmax_v2f64
     ; CHECK: SU(0): %0:fpr128 = FMINv2f64
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
@@ -445,6 +476,7 @@ name: fmin_fmin_v2f64
 tracksRegLiveness: true
 body: |
   bb.0:
+    ; CHECK-LABEL: fmin_fmin_v2f64
     ; CHECK: SU(0): %0:fpr128 = FMINv2f64
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
