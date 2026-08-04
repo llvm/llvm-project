@@ -1992,7 +1992,6 @@ Parser::parseBlockExpr(std::optional<StringRef> blockName, SMRange nameLoc) {
 }
 
 FailureOr<ast::Expr *> Parser::parseCaretExpr() {
-  SMRange loc = curToken.getLoc();
   consumeToken(Token::caret);
 
   if (curToken.isNot(Token::identifier))
