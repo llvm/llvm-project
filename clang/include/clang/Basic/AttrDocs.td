@@ -9114,7 +9114,7 @@ The full documentation is available here: https://learn.microsoft.com/en-us/wind
 }
 
 def HLSLResourceClassDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatType;
   let Content = [{
 The ``hlsl::resource_class`` attribute specifies the resource class of the HLSL
 resource represented by a member variable of type ``__hlsl_resource_t``,
@@ -9124,7 +9124,7 @@ only valid for resource handles.
 }
 
 def HLSLResourceDimensionDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatType;
   let Content = [{
 The ``hlsl::dimension`` attribute specifies the dimensions of the HLSL resource
 represented by a member variable of type ``__hlsl_resource_t``, declaring the
@@ -9134,7 +9134,7 @@ valid for resource handles.
 }
 
 def HLSLContainedTypeDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatType;
   let Content = [{
 The ``hlsl::contained_type`` attribute specifies the type of the HLSL resource
 represented by a member variable of type ``__hlsl_resource_t``. This attribute
@@ -9143,7 +9143,7 @@ is only valid for resource handles.
 }
 
 def HLSLRawBufferDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatType;
   let Content = [{
 The ``hlsl::raw_buffer`` attribute specifies that the HLSL resource represented
 by a member variable of type ``__hlsl_resource_t`` has raw buffer semantics.
@@ -9152,7 +9152,7 @@ This attribute is only valid for resource handles.
 }
 
 def HLSLIsArrayDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatType;
   let Content = [{
 The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
 by a member variable of type ``__hlsl_resource_t`` has array dimensions. This
@@ -9161,7 +9161,7 @@ attribute is only valid for resource handles.
 }
 
 def HLSLIsMultiSampledDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatType;
   let Content = [{
 The ``hlsl::is_array`` attribute specifies that the HLSL resource represented
 by a member variable of type ``__hlsl_resource_t`` is multisampled. This
@@ -9170,7 +9170,7 @@ attribute is only valid for resource handles.
 }
 
 def HLSLIsROVDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatType;
   let Content = [{
 The ``hlsl::is_rov`` attribute specifies that the HLSL resource represented by
 a member variable of type ``__hlsl_resource_t`` is a rasterizer ordered view.
@@ -9179,14 +9179,13 @@ This attribute is only valid for resource handles.
 }
 
 def HLSLIsCounterDocs : Documentation {
-  let Category = DocCatVariable;
+  let Category = DocCatType;
   let Content = [{
 The ``hlsl::is_counter`` attribute specifies that the HLSL resource represented
 by a member variable of type ``__hlsl_resource_t`` is a counter buffer. This
 attribute is only valid for resource handles.
   }];
 }
-
 
 def HLSLGroupSharedAddressSpaceDocs : Documentation {
   let Category = DocCatVariable;
