@@ -13426,6 +13426,14 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   const SCEV *Stride = IV->getStepRecurrence(*this);
 
   bool PositiveStride = isKnownPositive(Stride);
+  // A dominating guard may prove the stride positive.
+  if (!PositiveStride) {
+    const SCEV *GuardedStride = applyLoopGuards(Stride, L);
+    if (isKnownPositive(GuardedStride)) {
+      Stride = GuardedStride;
+      PositiveStride = true;
+    }
+  }
 
   // Whether the IV may reach the maximum value before the exit is taken.
   bool IVMayOverflow = true;
