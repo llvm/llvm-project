@@ -274,8 +274,6 @@ private:
 
   void *GetPOEBuffer() { return &m_poe_regs; }
 
-  void *GetZABuffer() { return m_za_ptrace_payload.data(); };
-
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
   llvm::Error ReadHardwareDebugInfo() override;

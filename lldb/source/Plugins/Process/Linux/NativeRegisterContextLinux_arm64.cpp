@@ -549,7 +549,8 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       // ZA is part of the SME set but uses a separate member buffer for
       // storage. Therefore its effective byte offset is always 0 even if it
       // isn't 0 within the SME register set.
-      src = (uint8_t *)GetZABuffer() + GetSetSize(RegisterSetType::ZA_HEADER);
+      src = (uint8_t *)GetSetBuffer(RegisterSetType::ZA) +
+            GetSetSize(RegisterSetType::ZA_HEADER);
     } else if (GetRegisterInfo().IsSMERegZT(reg)) {
       // Unlike ZA, the kernel will return register data for ZT0 when ZA is not
       // enabled. This data will be all 0s so we don't have to invent anything
@@ -834,7 +835,8 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
       // ZA is part of the SME set but not stored with the other SME registers.
       // So its byte offset is effectively always 0.
-      dst = (uint8_t *)GetZABuffer() + GetSetSize(RegisterSetType::ZA_HEADER);
+      dst = (uint8_t *)GetSetBuffer(RegisterSetType::ZA) +
+            GetSetSize(RegisterSetType::ZA_HEADER);
       ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
       // While this is writing a header that contains a vector length, the only
@@ -1057,8 +1059,9 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
     // Use the header size not the buffer size, as we may be using the buffer
     // for fake data, which we do not want to write out.
     assert(m_za_header.size <= GetSetSize(RegisterSetType::ZA));
-    dst = AddSavedRegisters(dst, RegisterSetType::ZA, GetZABuffer(),
-                            m_za_header.size);
+    dst =
+        AddSavedRegisters(dst, RegisterSetType::ZA,
+                          GetSetBuffer(RegisterSetType::ZA), m_za_header.size);
   }
 
   if ((GetRegisterInfo().IsSVEPresent() || GetRegisterInfo().IsSSVEPresent()) &&
@@ -1075,8 +1078,9 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
 
   if ((m_sve_state == SVEState::Streaming) && GetRegisterInfo().IsZAPresent()) {
     assert(m_za_header.size <= GetSetSize(RegisterSetType::ZA));
-    dst = AddSavedRegisters(dst, RegisterSetType::ZA, GetZABuffer(),
-                            m_za_header.size);
+    dst =
+        AddSavedRegisters(dst, RegisterSetType::ZA,
+                          GetSetBuffer(RegisterSetType::ZA), m_za_header.size);
   }
 
   // If ZT0 is present and we are going to be restoring an active ZA (which
@@ -1297,7 +1301,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       // may be incorrect due to being filled with dummy data previously. Resize
       // this so WriteZA uses the correct size.
       m_za_ptrace_payload.resize(m_za_header.size);
-      ::memcpy(GetZABuffer(), src, GetSetSize(RegisterSetType::ZA));
+      ::memcpy(GetSetBuffer(RegisterSetType::ZA), src,
+               GetSetSize(RegisterSetType::ZA));
       MakeValid(RegisterSetType::ZA);
 
       error = WriteZA();
@@ -1714,7 +1719,7 @@ Status NativeRegisterContextLinux_arm64::ReadZA() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetZABuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::ZA);
   ioVec.iov_len = GetSetSize(RegisterSetType::ZA);
 
   error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::ZA),
@@ -1737,7 +1742,7 @@ Status NativeRegisterContextLinux_arm64::WriteZA() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetZABuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::ZA);
   ioVec.iov_len = GetSetSize(RegisterSetType::ZA);
 
   Invalidate(RegisterSetType::ZA);
