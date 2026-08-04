@@ -5349,6 +5349,14 @@ public:
     /// The ValueType for the operand value.
     MVT ConstraintVT = MVT::Other;
 
+    /// True if this operand's constraint codes are exactly {"r", "m"} (the
+    /// "rm" constraint, or the tied output half of "+rm"). getConstraintType
+    /// preference selection uses this to opt for 'r' while still allowing
+    /// the register allocator to fall back to 'm' under register pressure,
+    /// instead of picking 'm' unconditionally as it would for a generic
+    /// multi-alternative constraint.
+    bool MayFoldRegister = false;
+
     /// Copy constructor for copying from a ConstraintInfo.
     AsmOperandInfo(InlineAsm::ConstraintInfo Info)
         : InlineAsm::ConstraintInfo(std::move(Info)) {}
