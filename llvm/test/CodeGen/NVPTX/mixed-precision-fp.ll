@@ -441,3 +441,163 @@ define float @test_fma_f32_bf16_2(bfloat %a, bfloat %b, float %c) {
 
   ret float %r2
 }
+
+; MULTI-USE EXTENSIONS
+
+define float @test_add_sub_f32_f16_multiuse(half %a, float %b) {
+; CHECK-NOF32FTZ-LABEL: test_add_sub_f32_f16_multiuse(
+; CHECK-NOF32FTZ:       {
+; CHECK-NOF32FTZ-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<6>;
+; CHECK-NOF32FTZ-EMPTY:
+; CHECK-NOF32FTZ-NEXT:  // %bb.0:
+; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_add_sub_f32_f16_multiuse_param_0];
+; CHECK-NOF32FTZ-NEXT:    cvt.f32.f16 %r1, %rs1;
+; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r2, [test_add_sub_f32_f16_multiuse_param_1];
+; CHECK-NOF32FTZ-NEXT:    add.rn.f32 %r3, %r1, %r2;
+; CHECK-NOF32FTZ-NEXT:    sub.rn.f32 %r4, %r1, %r2;
+; CHECK-NOF32FTZ-NEXT:    add.rn.f32 %r5, %r3, %r4;
+; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NOF32FTZ-NEXT:    ret;
+;
+; CHECK-F32FTZ-LABEL: test_add_sub_f32_f16_multiuse(
+; CHECK-F32FTZ:       {
+; CHECK-F32FTZ-NEXT:    .reg .b16 %rs<2>;
+; CHECK-F32FTZ-NEXT:    .reg .b32 %r<6>;
+; CHECK-F32FTZ-EMPTY:
+; CHECK-F32FTZ-NEXT:  // %bb.0:
+; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_add_sub_f32_f16_multiuse_param_0];
+; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.f16 %r1, %rs1;
+; CHECK-F32FTZ-NEXT:    ld.param.b32 %r2, [test_add_sub_f32_f16_multiuse_param_1];
+; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r3, %r1, %r2;
+; CHECK-F32FTZ-NEXT:    sub.rn.ftz.f32 %r4, %r1, %r2;
+; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r5, %r3, %r4;
+; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-F32FTZ-NEXT:    ret;
+  %ext = fpext half %a to float
+  %add = fadd float %ext, %b
+  %sub = fsub float %ext, %b
+  %result = fadd float %add, %sub
+  ret float %result
+}
+
+define float @test_add_sub_f32_bf16_multiuse(bfloat %a, float %b) {
+; CHECK-NOF32FTZ-LABEL: test_add_sub_f32_bf16_multiuse(
+; CHECK-NOF32FTZ:       {
+; CHECK-NOF32FTZ-NEXT:    .reg .b16 %rs<2>;
+; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<6>;
+; CHECK-NOF32FTZ-EMPTY:
+; CHECK-NOF32FTZ-NEXT:  // %bb.0:
+; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_add_sub_f32_bf16_multiuse_param_0];
+; CHECK-NOF32FTZ-NEXT:    cvt.f32.bf16 %r1, %rs1;
+; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r2, [test_add_sub_f32_bf16_multiuse_param_1];
+; CHECK-NOF32FTZ-NEXT:    add.rn.f32 %r3, %r1, %r2;
+; CHECK-NOF32FTZ-NEXT:    sub.rn.f32 %r4, %r1, %r2;
+; CHECK-NOF32FTZ-NEXT:    add.rn.f32 %r5, %r3, %r4;
+; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-NOF32FTZ-NEXT:    ret;
+;
+; CHECK-F32FTZ-LABEL: test_add_sub_f32_bf16_multiuse(
+; CHECK-F32FTZ:       {
+; CHECK-F32FTZ-NEXT:    .reg .b16 %rs<2>;
+; CHECK-F32FTZ-NEXT:    .reg .b32 %r<6>;
+; CHECK-F32FTZ-EMPTY:
+; CHECK-F32FTZ-NEXT:  // %bb.0:
+; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_add_sub_f32_bf16_multiuse_param_0];
+; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.bf16 %r1, %rs1;
+; CHECK-F32FTZ-NEXT:    ld.param.b32 %r2, [test_add_sub_f32_bf16_multiuse_param_1];
+; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r3, %r1, %r2;
+; CHECK-F32FTZ-NEXT:    sub.rn.ftz.f32 %r4, %r1, %r2;
+; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r5, %r3, %r4;
+; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r5;
+; CHECK-F32FTZ-NEXT:    ret;
+  %ext = fpext bfloat %a to float
+  %add = fadd float %ext, %b
+  %sub = fsub float %ext, %b
+  %result = fadd float %add, %sub
+  ret float %result
+}
+
+define float @test_fma_f32_f16_multiuse(half %a, half %b, float %c) {
+; CHECK-NOF32FTZ-LABEL: test_fma_f32_f16_multiuse(
+; CHECK-NOF32FTZ:       {
+; CHECK-NOF32FTZ-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<7>;
+; CHECK-NOF32FTZ-EMPTY:
+; CHECK-NOF32FTZ-NEXT:  // %bb.0:
+; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_fma_f32_f16_multiuse_param_0];
+; CHECK-NOF32FTZ-NEXT:    cvt.f32.f16 %r1, %rs1;
+; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs2, [test_fma_f32_f16_multiuse_param_1];
+; CHECK-NOF32FTZ-NEXT:    cvt.f32.f16 %r2, %rs2;
+; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r3, [test_fma_f32_f16_multiuse_param_2];
+; CHECK-NOF32FTZ-NEXT:    fma.rn.f32 %r4, %r1, %r2, %r3;
+; CHECK-NOF32FTZ-NEXT:    add.rn.f32 %r5, %r1, %r2;
+; CHECK-NOF32FTZ-NEXT:    add.rn.f32 %r6, %r4, %r5;
+; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NOF32FTZ-NEXT:    ret;
+;
+; CHECK-F32FTZ-LABEL: test_fma_f32_f16_multiuse(
+; CHECK-F32FTZ:       {
+; CHECK-F32FTZ-NEXT:    .reg .b16 %rs<3>;
+; CHECK-F32FTZ-NEXT:    .reg .b32 %r<7>;
+; CHECK-F32FTZ-EMPTY:
+; CHECK-F32FTZ-NEXT:  // %bb.0:
+; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_fma_f32_f16_multiuse_param_0];
+; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.f16 %r1, %rs1;
+; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs2, [test_fma_f32_f16_multiuse_param_1];
+; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.f16 %r2, %rs2;
+; CHECK-F32FTZ-NEXT:    ld.param.b32 %r3, [test_fma_f32_f16_multiuse_param_2];
+; CHECK-F32FTZ-NEXT:    fma.rn.ftz.f32 %r4, %r1, %r2, %r3;
+; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r5, %r1, %r2;
+; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r6, %r4, %r5;
+; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-F32FTZ-NEXT:    ret;
+  %exta = fpext half %a to float
+  %extb = fpext half %b to float
+  %fma = call float @llvm.fma.f32(float %exta, float %extb, float %c)
+  %add = fadd float %exta, %extb
+  %result = fadd float %fma, %add
+  ret float %result
+}
+
+define float @test_fma_f32_bf16_multiuse(bfloat %a, bfloat %b, float %c) {
+; CHECK-NOF32FTZ-LABEL: test_fma_f32_bf16_multiuse(
+; CHECK-NOF32FTZ:       {
+; CHECK-NOF32FTZ-NEXT:    .reg .b16 %rs<3>;
+; CHECK-NOF32FTZ-NEXT:    .reg .b32 %r<7>;
+; CHECK-NOF32FTZ-EMPTY:
+; CHECK-NOF32FTZ-NEXT:  // %bb.0:
+; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs1, [test_fma_f32_bf16_multiuse_param_0];
+; CHECK-NOF32FTZ-NEXT:    cvt.f32.bf16 %r1, %rs1;
+; CHECK-NOF32FTZ-NEXT:    ld.param.b16 %rs2, [test_fma_f32_bf16_multiuse_param_1];
+; CHECK-NOF32FTZ-NEXT:    cvt.f32.bf16 %r2, %rs2;
+; CHECK-NOF32FTZ-NEXT:    ld.param.b32 %r3, [test_fma_f32_bf16_multiuse_param_2];
+; CHECK-NOF32FTZ-NEXT:    fma.rn.f32 %r4, %r1, %r2, %r3;
+; CHECK-NOF32FTZ-NEXT:    add.rn.f32 %r5, %r1, %r2;
+; CHECK-NOF32FTZ-NEXT:    add.rn.f32 %r6, %r4, %r5;
+; CHECK-NOF32FTZ-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-NOF32FTZ-NEXT:    ret;
+;
+; CHECK-F32FTZ-LABEL: test_fma_f32_bf16_multiuse(
+; CHECK-F32FTZ:       {
+; CHECK-F32FTZ-NEXT:    .reg .b16 %rs<3>;
+; CHECK-F32FTZ-NEXT:    .reg .b32 %r<7>;
+; CHECK-F32FTZ-EMPTY:
+; CHECK-F32FTZ-NEXT:  // %bb.0:
+; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs1, [test_fma_f32_bf16_multiuse_param_0];
+; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.bf16 %r1, %rs1;
+; CHECK-F32FTZ-NEXT:    ld.param.b16 %rs2, [test_fma_f32_bf16_multiuse_param_1];
+; CHECK-F32FTZ-NEXT:    cvt.ftz.f32.bf16 %r2, %rs2;
+; CHECK-F32FTZ-NEXT:    ld.param.b32 %r3, [test_fma_f32_bf16_multiuse_param_2];
+; CHECK-F32FTZ-NEXT:    fma.rn.ftz.f32 %r4, %r1, %r2, %r3;
+; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r5, %r1, %r2;
+; CHECK-F32FTZ-NEXT:    add.rn.ftz.f32 %r6, %r4, %r5;
+; CHECK-F32FTZ-NEXT:    st.param.b32 [func_retval0], %r6;
+; CHECK-F32FTZ-NEXT:    ret;
+  %exta = fpext bfloat %a to float
+  %extb = fpext bfloat %b to float
+  %fma = call float @llvm.fma.f32(float %exta, float %extb, float %c)
+  %add = fadd float %exta, %extb
+  %result = fadd float %fma, %add
+  ret float %result
+}

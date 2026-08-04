@@ -1759,13 +1759,13 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   }
 }
 
-// Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
+// Pattern for llvm.fma.f32 with single-use extensions and no FTZ flag
 let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
-  def : Pat<(f32 (fma (f32 (fpextend f16:$a)),
-                      (f32 (fpextend f16:$b)), f32:$c)),
+  def : Pat<(f32 (fma (f32 (OneUse1<fpextend> f16:$a)),
+                      (f32 (OneUse1<fpextend> f16:$b)), f32:$c)),
             (INT_NVVM_MIXED_FMA_rn_f32_f16 B16:$a, B16:$b, B32:$c)>;
-  def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), 
-                      (f32 (fpextend bf16:$b)), f32:$c)),
+  def : Pat<(f32 (fma (f32 (OneUse1<fpextend> bf16:$a)),
+                      (f32 (OneUse1<fpextend> bf16:$b)), f32:$c)),
             (INT_NVVM_MIXED_FMA_rn_f32_bf16 B16:$a, B16:$b, B32:$c)>;
 }
 
@@ -1921,11 +1921,11 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   }
 }
 
-// Pattern for fadd when there is no FTZ flag
+// Pattern for fadd with a single-use extension and no FTZ flag
 let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
-  def : Pat<(f32 (fadd (f32 (fpextend f16:$a)), f32:$b)),
+  def : Pat<(f32 (fadd (f32 (OneUse1<fpextend> f16:$a)), f32:$b)),
             (INT_NVVM_MIXED_ADD_rn_f32_f16 B16:$a, B32:$b)>;
-  def : Pat<(f32 (fadd (f32 (fpextend bf16:$a)), f32:$b)),
+  def : Pat<(f32 (fadd (f32 (OneUse1<fpextend> bf16:$a)), f32:$b)),
             (INT_NVVM_MIXED_ADD_rn_f32_bf16 B16:$a, B32:$b)>;
 }
 
@@ -1981,11 +1981,11 @@ foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
   }
 }
 
-// Pattern for fsub when there is no FTZ flag
+// Pattern for fsub with a single-use extension and no FTZ flag
 let Predicates = [hasSM<100>, hasPTX<86>, doNoF32FTZ] in {
-  def : Pat<(f32 (fsub (f32 (fpextend f16:$a)), f32:$b)),
+  def : Pat<(f32 (fsub (f32 (OneUse1<fpextend> f16:$a)), f32:$b)),
             (INT_NVVM_MIXED_SUB_rn_f32_f16 B16:$a, B32:$b)>;
-  def : Pat<(f32 (fsub (f32 (fpextend bf16:$a)), f32:$b)),
+  def : Pat<(f32 (fsub (f32 (OneUse1<fpextend> bf16:$a)), f32:$b)),
             (INT_NVVM_MIXED_SUB_rn_f32_bf16 B16:$a, B32:$b)>;
 }
 
