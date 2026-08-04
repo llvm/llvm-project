@@ -356,13 +356,8 @@ bool VFSelectionContext::isScalableVectorizationAllowed() {
   // Disable scalable vectorization if the loop contains any instructions
   // with element types not supported for scalable vectors.
   if (any_of(ElementTypesInLoop, [&](Type *Ty) {
-        if (auto *FVTy = dyn_cast<FixedVectorType>(Ty)) {
-          if (!VectorizeVectorLoops)
-            return true;
-          Ty = FVTy->getElementType();
-        } else if (Ty->isVectorTy())
-          return true;
-        return !Ty->isVoidTy() && !TTI.isElementTypeLegalForScalableVector(Ty);
+        return !Ty->isVoidTy() &&
+               !TTI.isElementTypeLegalForScalableVector(Ty->getScalarType());
       })) {
     reportVectorizationInfo("Scalable vectorization is not supported "
                             "for all element types found in this loop.",

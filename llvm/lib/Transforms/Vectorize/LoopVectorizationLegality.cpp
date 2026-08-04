@@ -995,13 +995,11 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
              [](const Value *V) { return V->getType()->isVectorTy(); }))
     LoopContainsVectors = true;
 
-  auto CanWidenInstructionTy = [TTI = TTI](Instruction const &Inst) {
+  auto CanWidenInstructionTy = [](Instruction const &Inst) {
     Type *InstTy = Inst.getType();
 
-    // TODO-REVEC: To support fixed VFs, we'll need to query a diffent TTI hook.
     if (isa<FixedVectorType>(InstTy))
-      return VectorizeVectorLoops &&
-             TTI->isElementTypeLegalForScalableVector(InstTy->getScalarType());
+      return VectorizeVectorLoops.getValue();
 
     if (!isa<StructType>(InstTy))
       return canVectorizeTy(InstTy);
@@ -1019,8 +1017,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
            "CanWidenInstructionTy was not checked beforehand.");
     Type *FromTy = CastI.getOperand(0)->getType();
     return VectorType::isValidElementType(FromTy) ||
-           (isa<FixedVectorType>(FromTy) && VectorizeVectorLoops &&
-            TTI->isElementTypeLegalForScalableVector(FromTy->getScalarType()));
+           (isa<FixedVectorType>(FromTy) && VectorizeVectorLoops);
   };
 
   // Check that the instruction return type is vectorizable.
@@ -1037,10 +1034,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
   // Check that the stored type is vectorizable.
   if (auto *ST = dyn_cast<StoreInst>(&I)) {
     Type *T = ST->getValueOperand()->getType();
-    bool CanWidenStoreType =
-        VectorType::isValidElementType(T) ||
-        (isa<FixedVectorType>(T) && VectorizeVectorLoops &&
-         TTI->isElementTypeLegalForScalableVector(T->getScalarType()));
+    bool CanWidenStoreType = VectorType::isValidElementType(T) ||
+                             (isa<FixedVectorType>(T) && VectorizeVectorLoops);
     if (!CanWidenStoreType) {
       reportVectorizationFailure("Store instruction cannot be vectorized",
                                  "CantVectorizeStore", ORE, TheLoop, ST);
