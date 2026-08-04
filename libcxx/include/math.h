@@ -389,9 +389,9 @@ namespace __math {
 
 // MS UCRT provides non-template fpclassify overloads for float, double, and long double that are unconditionally
 // non-constexpr.
-// To workaround this, we use _LIBCPP_PREFERRED_OVERLOAD to make our overloads stronger those overloads, which is
+// To workaround this, we use _LIBCPP_PREFERRED_OVERLOAD to make our overloads stronger than those overloads, which is
 // necessary for constexpr addition in C++23. When _LIBCPP_PREFERRED_OVERLOAD is not supported, we use template
-// overloads as workaround to avoid conflicts.
+// overloads as a workaround to avoid conflicts.
 
 #      ifdef _LIBCPP_PREFERRED_OVERLOAD
 [[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23
