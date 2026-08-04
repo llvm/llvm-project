@@ -110,16 +110,14 @@ genAllocateClause(lower::AbstractConverter &converter,
   if (std::get<std::optional<Allocate::AlignModifier>>(clause.t))
     TODO(currentLocation, "OmpAllocateClause ALIGN modifier");
 
-  // Check if allocate clause has allocator specified. If so, add it
-  // to list of allocators, otherwise, add default allocator to
-  // list of allocators.
+  // Use a null handle to select the binding task's default allocator.
   using ComplexModifier = Allocate::AllocatorComplexModifier;
   if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
     mlir::Value operand = firOpBuilder.createIntegerConstant(
-        currentLocation, firOpBuilder.getI32Type(), 1);
+        currentLocation, firOpBuilder.getI32Type(), mlir::omp::kNullAllocator);
     allocatorOperands.append(objects.size(), operand);
   }
 
@@ -1098,7 +1096,16 @@ addAlignedClause(lower::AbstractConverter &converter,
           std::get<std::optional<Aligned::Alignment>>(clause.t)) {
     mlir::Value operand = fir::getBase(
         converter.genExprValue(*alignmentValueParserExpr, stmtCtx));
-    alignment = *fir::getIntIfConstant(operand);
+    std::optional<llvm::APInt> constantAlignment =
+        fir::getIntIfConstant(operand);
+    if (!constantAlignment)
+      fir::emitFatalError(operand.getLoc(), "alignment must be a constant");
+    std::optional<std::int64_t> constantAlignment64 =
+        constantAlignment->trySExtValue();
+    if (!constantAlignment64)
+      fir::emitFatalError(operand.getLoc(),
+                          "alignment does not fit in a 64-bit integer");
+    alignment = *constantAlignment64;
   } else {
     llvm::StringMap<bool> featuresMap = getTargetFeatures(builder.getModule());
     llvm::Triple triple = fir::getTargetTriple(builder.getModule());

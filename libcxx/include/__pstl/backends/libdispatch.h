@@ -37,6 +37,8 @@
 #include <__pstl/cpu_algos/find_if.h>
 #include <__pstl/cpu_algos/for_each.h>
 #include <__pstl/cpu_algos/merge.h>
+#include <__pstl/cpu_algos/mismatch.h>
+#include <__pstl/cpu_algos/reverse.h>
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
@@ -241,7 +243,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
       auto __this_chunk_size = __chunk == 0 ? __partitions.__first_chunk_size_ : __partitions.__chunk_size_;
       auto __index           = __chunk == 0 ? 0
                                             : (__chunk * __partitions.__chunk_size_) +
-                                        (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
+                                                  (__partitions.__first_chunk_size_ - __partitions.__chunk_size_);
       if (__this_chunk_size != 1) {
         std::__construct_at(
             __values.get() + __chunk,
@@ -367,6 +369,14 @@ struct __for_each<__libdispatch_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __merge<__libdispatch_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_merge<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __mismatch<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_mismatch<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __reverse<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_reverse<__libdispatch_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __stable_sort<__libdispatch_backend_tag, _ExecutionPolicy>

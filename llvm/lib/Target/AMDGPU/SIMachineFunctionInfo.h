@@ -272,6 +272,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   bool WaveLimiter = false;
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
+  bool HasNoWWMPoolSGPRSpillFallback = false;
   uint16_t NumWaveDispatchSGPRs = 0;
   uint16_t NumWaveDispatchVGPRs = 0;
   uint32_t HighBitsOf32BitAddress = 0;
@@ -334,6 +335,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
     YamlIO.mapOptional("hasSpilledSGPRs", MFI.HasSpilledSGPRs, false);
     YamlIO.mapOptional("hasSpilledVGPRs", MFI.HasSpilledVGPRs, false);
+    YamlIO.mapOptional("hasNoWWMPoolSGPRSpillFallback",
+                       MFI.HasNoWWMPoolSGPRSpillFallback, false);
     YamlIO.mapOptional("numWaveDispatchSGPRs", MFI.NumWaveDispatchSGPRs, false);
     YamlIO.mapOptional("numWaveDispatchVGPRs", MFI.NumWaveDispatchVGPRs, false);
     YamlIO.mapOptional("scratchRSrcReg", MFI.ScratchRSrcReg,
@@ -613,6 +616,11 @@ private:
   // frame, so save it here and add it to the RegScavenger later.
   std::optional<int> ScavengeFI;
 
+  // Ordinary SGPR spills fell back to memory because no WWM VGPR pool was
+  // available. This path may require additional nested VGPR scavenging slots
+  // during frame-index elimination.
+  bool HasNoWWMPoolSGPRSpillFallback = false;
+
   // Map each VGPR CSR to the mask needed to save and restore it using block
   // load/store instructions. Only used if the subtarget feature for VGPR block
   // load/store is enabled.
@@ -852,6 +860,11 @@ public:
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
   std::optional<int> getOptionalScavengeFI() const { return ScavengeFI; }
+
+  void setNoWWMPoolSGPRSpillFallback() { HasNoWWMPoolSGPRSpillFallback = true; }
+  bool hasNoWWMPoolSGPRSpillFallback() const {
+    return HasNoWWMPoolSGPRSpillFallback;
+  }
 
   unsigned getBytesInStackArgArea() const {
     return BytesInStackArgArea;

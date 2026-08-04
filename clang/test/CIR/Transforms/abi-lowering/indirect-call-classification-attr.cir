@@ -1,0 +1,28 @@
+// RUN: not cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:     2>&1 | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct" }, { kind = "direct" } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
+} {
+
+  // classification-attr injects a per-function classification, which cannot
+  // describe a callee resolved at run time, so an indirect call is a hard
+  // error in this driver mode rather than being left silently unrewritten.
+  cir.func @caller(%fp: !cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>,
+                   %arg0: !s32i, %arg1: !s32i) -> !s32i
+      attributes { test_classify = #passthrough } {
+    %0 = cir.call %fp(%arg0, %arg1)
+        : (!cir.ptr<!cir.func<(!s32i, !s32i) -> !s32i>>, !s32i, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+}
+
+// CHECK: error: 'cir.call' op indirect call cannot be classified in the 'classification-attr' driver mode

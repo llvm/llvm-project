@@ -197,6 +197,8 @@ def sve_cntd_imm_neg : ComplexPattern<i64, 1, "SelectRDVLImm<1, 16, -2>">;
 def NEONSplatOfSVELogicalImmPat : ComplexPattern<vAny, 1, "SelectNEONSplatOfSVELogicalImm", []>;
 def NEONSplatOfSVEAddSubImm : ComplexPattern<vAny, 2, "SelectNEONSplatOfSVEAddSubImm", []>;
 def NEONSplatOfSVEArithSImm: ComplexPattern<vAny, 1, "SelectNEONSplatOfSVEArithSImm", []>;
+def NEONSplatOfSImm8: ComplexPattern<vAny, 1, "SelectNEONSplatOfSImm8", []>;
+def NEONSplatOfUImm8: ComplexPattern<vAny, 1, "SelectNEONSplatOfUImm8", []>;
 
 def SDT_AArch64Reduce : SDTypeProfile<1, 2, [SDTCisVec<1>, SDTCisVec<2>]>;
 def SDT_AArch64ReduceWithInit : SDTypeProfile<1, 3,
@@ -4046,6 +4048,20 @@ let Predicates = [HasSVE2_or_SME] in {
   defm SADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<0, "sadalp", int_aarch64_sve_sadalp>;
   defm UADALP_ZPmZ : sve2_int_sadd_long_accum_pairwise<1, "uadalp", int_aarch64_sve_uadalp>;
 
+  def : Pat<(nxv8i16 (partial_reduce_smla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
+            (SADALP_ZPmZ_H (PTRUE_H 31), $Acc, $Input)>;
+  def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
+            (SADALP_ZPmZ_S (PTRUE_S 31), $Acc, $Input)>;
+  def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
+            (SADALP_ZPmZ_D (PTRUE_D 31), $Acc, $Input)>;
+
+  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
+            (UADALP_ZPmZ_H (PTRUE_H 31), $Acc, $Input)>;
+  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
+            (UADALP_ZPmZ_S (PTRUE_S 31), $Acc, $Input)>;
+  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
+            (UADALP_ZPmZ_D (PTRUE_D 31), $Acc, $Input)>;
+
   // SVE2 integer pairwise arithmetic
   defm ADDP_ZPmZ  : sve2_int_arith_pred<0b100011, "addp",  int_aarch64_sve_addp>;
   defm SMAXP_ZPmZ : sve2_int_arith_pred<0b101001, "smaxp", int_aarch64_sve_smaxp>;
@@ -4134,18 +4150,33 @@ let Predicates = [HasSVE2_or_SME] in {
   defm USUBWB_ZZZ : sve2_wide_int_arith_wide<0b110, "usubwb", int_aarch64_sve_usubwb>;
   defm USUBWT_ZZZ : sve2_wide_int_arith_wide<0b111, "usubwt", int_aarch64_sve_usubwt>;
 
-  def : Pat<(nxv2i64 (partial_reduce_umla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
-            (UADDWT_ZZZ_D (UADDWB_ZZZ_D $Acc, $Input), $Input)>;
-  def : Pat<(nxv2i64 (partial_reduce_smla nxv2i64:$Acc, nxv4i32:$Input, (nxv4i32 (splat_vector (i32 1))))),
-            (SADDWT_ZZZ_D (SADDWB_ZZZ_D $Acc, $Input), $Input)>;
-  def : Pat<(nxv4i32 (partial_reduce_umla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
-            (UADDWT_ZZZ_S (UADDWB_ZZZ_S $Acc, $Input), $Input)>;
-  def : Pat<(nxv4i32 (partial_reduce_smla nxv4i32:$Acc, nxv8i16:$Input, (nxv8i16 (splat_vector (i32 1))))),
-            (SADDWT_ZZZ_S (SADDWB_ZZZ_S $Acc, $Input), $Input)>;
-  def : Pat<(nxv8i16 (partial_reduce_umla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
-            (UADDWT_ZZZ_H (UADDWB_ZZZ_H $Acc, $Input), $Input)>;
-  def : Pat<(nxv8i16 (partial_reduce_smla nxv8i16:$Acc, nxv16i8:$Input, (nxv16i8 (splat_vector (i32 1))))),
-            (SADDWT_ZZZ_H (SADDWB_ZZZ_H $Acc, $Input), $Input)>;
+  def : Pat<(add nxv8i16:$Acc, (sext_inreg nxv8i16:$Input, nxv8i8)),
+            (SADDWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(add nxv4i32:$Acc, (sext_inreg nxv4i32:$Input, nxv4i16)),
+            (SADDWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(add nxv2i64:$Acc, (sext_inreg nxv2i64:$Input, nxv2i32)),
+            (SADDWB_ZZZ_D $Acc, $Input)>;
+
+  def : Pat<(sub nxv8i16:$Acc, (sext_inreg nxv8i16:$Input, nxv8i8)),
+            (SSUBWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(sub nxv4i32:$Acc, (sext_inreg nxv4i32:$Input, nxv4i16)),
+            (SSUBWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(sub nxv2i64:$Acc, (sext_inreg nxv2i64:$Input, nxv2i32)),
+            (SSUBWB_ZZZ_D $Acc, $Input)>;
+
+  def : Pat<(add nxv8i16:$Acc, (and nxv8i16:$Input, (splat_vector (i32 0xFF)))),
+            (UADDWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(add nxv4i32:$Acc, (and nxv4i32:$Input, (splat_vector (i32 0xFFFF)))),
+            (UADDWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(add nxv2i64:$Acc, (and nxv2i64:$Input, (splat_vector (i64 0xFFFFFFFF)))),
+            (UADDWB_ZZZ_D $Acc, $Input)>;
+
+  def : Pat<(sub nxv8i16:$Acc, (and nxv8i16:$Input, (splat_vector (i32 0xFF)))),
+            (USUBWB_ZZZ_H $Acc, $Input)>;
+  def : Pat<(sub nxv4i32:$Acc, (and nxv4i32:$Input, (splat_vector (i32 0xFFFF)))),
+            (USUBWB_ZZZ_S $Acc, $Input)>;
+  def : Pat<(sub nxv2i64:$Acc, (and nxv2i64:$Input, (splat_vector (i64 0xFFFFFFFF)))),
+            (USUBWB_ZZZ_D $Acc, $Input)>;
 
   // SVE2 integer multiply long
   defm SQDMULLB_ZZZ : sve2_wide_int_arith_long<0b11000, "sqdmullb", int_aarch64_sve_sqdmullb>;
@@ -4586,36 +4617,36 @@ def ST1B_2Z        : sve2p1_mem_cst_ss_2z<"st1b", 0b00, 0b0, ZZ_b_mul_r, GPR64sh
 def ST1H_2Z        : sve2p1_mem_cst_ss_2z<"st1h", 0b01, 0b0, ZZ_h_mul_r, GPR64shifted16>;
 def ST1W_2Z        : sve2p1_mem_cst_ss_2z<"st1w", 0b10, 0b0, ZZ_s_mul_r, GPR64shifted32>;
 def ST1D_2Z        : sve2p1_mem_cst_ss_2z<"st1d", 0b11, 0b0, ZZ_d_mul_r, GPR64shifted64>;
-defm ST1B_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1b", 0b00, 0b0, ZZ_b_mul_r>;
-defm ST1H_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1h", 0b01, 0b0, ZZ_h_mul_r>;
-defm ST1W_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1w", 0b10, 0b0, ZZ_s_mul_r>;
-defm ST1D_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1d", 0b11, 0b0, ZZ_d_mul_r>;
+defm ST1B_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1b", 0b00, 0b0, ZZ_b_mul_r, ZZ_b_strided_and_contiguous>;
+defm ST1H_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1h", 0b01, 0b0, ZZ_h_mul_r, ZZ_h_strided_and_contiguous>;
+defm ST1W_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1w", 0b10, 0b0, ZZ_s_mul_r, ZZ_s_strided_and_contiguous>;
+defm ST1D_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1d", 0b11, 0b0, ZZ_d_mul_r, ZZ_d_strided_and_contiguous>;
 def STNT1B_2Z      : sve2p1_mem_cst_ss_2z<"stnt1b", 0b00, 0b1, ZZ_b_mul_r, GPR64shifted8>;
 def STNT1H_2Z      : sve2p1_mem_cst_ss_2z<"stnt1h", 0b01, 0b1, ZZ_h_mul_r, GPR64shifted16>;
 def STNT1W_2Z      : sve2p1_mem_cst_ss_2z<"stnt1w", 0b10, 0b1, ZZ_s_mul_r, GPR64shifted32>;
 def STNT1D_2Z      : sve2p1_mem_cst_ss_2z<"stnt1d", 0b11, 0b1, ZZ_d_mul_r, GPR64shifted64>;
-defm STNT1B_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1b", 0b00, 0b1, ZZ_b_mul_r>;
-defm STNT1H_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1h", 0b01, 0b1, ZZ_h_mul_r>;
-defm STNT1W_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1w", 0b10, 0b1, ZZ_s_mul_r>;
-defm STNT1D_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1d", 0b11, 0b1, ZZ_d_mul_r>;
+defm STNT1B_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1b", 0b00, 0b1, ZZ_b_mul_r, ZZ_b_strided_and_contiguous>;
+defm STNT1H_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1h", 0b01, 0b1, ZZ_h_mul_r, ZZ_h_strided_and_contiguous>;
+defm STNT1W_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1w", 0b10, 0b1, ZZ_s_mul_r, ZZ_s_strided_and_contiguous>;
+defm STNT1D_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1d", 0b11, 0b1, ZZ_d_mul_r, ZZ_d_strided_and_contiguous>;
 
 // Stores of four registers
 def ST1B_4Z        : sve2p1_mem_cst_ss_4z<"st1b", 0b00, 0b0, ZZZZ_b_mul_r, GPR64shifted8>;
 def ST1H_4Z        : sve2p1_mem_cst_ss_4z<"st1h", 0b01, 0b0, ZZZZ_h_mul_r, GPR64shifted16>;
 def ST1W_4Z        : sve2p1_mem_cst_ss_4z<"st1w", 0b10, 0b0, ZZZZ_s_mul_r, GPR64shifted32>;
 def ST1D_4Z        : sve2p1_mem_cst_ss_4z<"st1d", 0b11, 0b0, ZZZZ_d_mul_r, GPR64shifted64>;
-defm ST1B_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1b", 0b00, 0b0, ZZZZ_b_mul_r>;
-defm ST1H_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1h", 0b01, 0b0, ZZZZ_h_mul_r>;
-defm ST1W_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1w", 0b10, 0b0, ZZZZ_s_mul_r>;
-defm ST1D_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1d", 0b11, 0b0, ZZZZ_d_mul_r>;
+defm ST1B_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1b", 0b00, 0b0, ZZZZ_b_mul_r, ZZZZ_b_strided_and_contiguous>;
+defm ST1H_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1h", 0b01, 0b0, ZZZZ_h_mul_r, ZZZZ_h_strided_and_contiguous>;
+defm ST1W_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1w", 0b10, 0b0, ZZZZ_s_mul_r, ZZZZ_s_strided_and_contiguous>;
+defm ST1D_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1d", 0b11, 0b0, ZZZZ_d_mul_r, ZZZZ_d_strided_and_contiguous>;
 def STNT1B_4Z      : sve2p1_mem_cst_ss_4z<"stnt1b", 0b00, 0b1, ZZZZ_b_mul_r, GPR64shifted8>;
 def STNT1H_4Z      : sve2p1_mem_cst_ss_4z<"stnt1h", 0b01, 0b1, ZZZZ_h_mul_r, GPR64shifted16>;
 def STNT1W_4Z      : sve2p1_mem_cst_ss_4z<"stnt1w", 0b10, 0b1, ZZZZ_s_mul_r, GPR64shifted32>;
 def STNT1D_4Z      : sve2p1_mem_cst_ss_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r, GPR64shifted64>;
-defm STNT1B_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1b", 0b00, 0b1, ZZZZ_b_mul_r>;
-defm STNT1H_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1h", 0b01, 0b1, ZZZZ_h_mul_r>;
-defm STNT1W_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1w", 0b10, 0b1, ZZZZ_s_mul_r>;
-defm STNT1D_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r>;
+defm STNT1B_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1b", 0b00, 0b1, ZZZZ_b_mul_r, ZZZZ_b_strided_and_contiguous>;
+defm STNT1H_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1h", 0b01, 0b1, ZZZZ_h_mul_r, ZZZZ_h_strided_and_contiguous>;
+defm STNT1W_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1w", 0b10, 0b1, ZZZZ_s_mul_r, ZZZZ_s_strided_and_contiguous>;
+defm STNT1D_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r, ZZZZ_d_strided_and_contiguous>;
 
 multiclass store_pn_x2<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
@@ -4697,6 +4728,88 @@ defm WHILELO_CXX : sve2p1_int_while_rr_pn<"whilelo", 0b110, AArch64whilelo_pn_fl
 defm WHILELS_CXX : sve2p1_int_while_rr_pn<"whilels", 0b111, AArch64whilels_pn_flag>;
 } // End HasSVE2p1_or_StreamingSME2
 
+// Override the default contiguous-only patterns when SME2 is available,
+// allow register allocation to choose a strided or contiguous tuple.
+multiclass store_pn_x2_sme2<ValueType Ty, SDPatternOperator Store,
+                             Instruction RegImmPseudo> {
+  // scalar + immediate (mul vl)
+  let AddedComplexity = 2 in
+  def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg,
+              (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
+            (RegImmPseudo
+                (REG_SEQUENCE ZPR2StridedOrContiguous,
+                              Ty:$vec0, zsub0, Ty:$vec1, zsub1),
+                PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
+
+  let AddedComplexity = 1 in
+  def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg, GPR64:$base),
+            (RegImmPseudo
+                (REG_SEQUENCE ZPR2StridedOrContiguous,
+                              Ty:$vec0, zsub0, Ty:$vec1, zsub1),
+                PNR:$PNg, GPR64:$base, (i64 0))>;
+}
+
+multiclass store_pn_x4_sme2<ValueType Ty, SDPatternOperator Store,
+                             Instruction RegImmPseudo> {
+  // scalar + immediate (mul vl)
+  let AddedComplexity = 2 in
+  def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3,
+              aarch64svcount:$PNg,
+              (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
+            (RegImmPseudo
+                (REG_SEQUENCE ZPR4StridedOrContiguous,
+                              Ty:$vec0, zsub0, Ty:$vec1, zsub1,
+                              Ty:$vec2, zsub2, Ty:$vec3, zsub3),
+                PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
+
+  let AddedComplexity = 1 in
+  def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3,
+                  aarch64svcount:$PNg, GPR64:$base),
+            (RegImmPseudo
+                (REG_SEQUENCE ZPR4StridedOrContiguous,
+                              Ty:$vec0, zsub0, Ty:$vec1, zsub1,
+                              Ty:$vec2, zsub2, Ty:$vec3, zsub3),
+                PNR:$PNg, GPR64:$base, (i64 0))>;
+}
+
+let Predicates = [HasSME2] in {
+// Stores of 2 strided or contiguous vectors
+defm : store_pn_x2_sme2<nxv16i8, int_aarch64_sve_st1_pn_x2, ST1B_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8i16, int_aarch64_sve_st1_pn_x2, ST1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv4i32, int_aarch64_sve_st1_pn_x2, ST1W_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv2i64, int_aarch64_sve_st1_pn_x2, ST1D_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv16i8, int_aarch64_sve_stnt1_pn_x2, STNT1B_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8i16, int_aarch64_sve_stnt1_pn_x2, STNT1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv4i32, int_aarch64_sve_stnt1_pn_x2, STNT1W_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv2i64, int_aarch64_sve_stnt1_pn_x2, STNT1D_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8f16, int_aarch64_sve_st1_pn_x2, ST1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8bf16, int_aarch64_sve_st1_pn_x2, ST1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv4f32, int_aarch64_sve_st1_pn_x2, ST1W_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv2f64, int_aarch64_sve_st1_pn_x2, ST1D_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8f16, int_aarch64_sve_stnt1_pn_x2, STNT1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv8bf16, int_aarch64_sve_stnt1_pn_x2, STNT1H_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv4f32, int_aarch64_sve_stnt1_pn_x2, STNT1W_2Z_IMM_PSEUDO>;
+defm : store_pn_x2_sme2<nxv2f64, int_aarch64_sve_stnt1_pn_x2, STNT1D_2Z_IMM_PSEUDO>;
+
+// Stores of 4 strided or contiguous vectors
+defm : store_pn_x4_sme2<nxv16i8, int_aarch64_sve_st1_pn_x4, ST1B_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8i16, int_aarch64_sve_st1_pn_x4, ST1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv4i32, int_aarch64_sve_st1_pn_x4, ST1W_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv2i64, int_aarch64_sve_st1_pn_x4, ST1D_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv16i8, int_aarch64_sve_stnt1_pn_x4, STNT1B_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8i16, int_aarch64_sve_stnt1_pn_x4, STNT1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv4i32, int_aarch64_sve_stnt1_pn_x4, STNT1W_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv2i64, int_aarch64_sve_stnt1_pn_x4, STNT1D_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8f16, int_aarch64_sve_st1_pn_x4, ST1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8bf16, int_aarch64_sve_st1_pn_x4, ST1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv4f32, int_aarch64_sve_st1_pn_x4, ST1W_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv2f64, int_aarch64_sve_st1_pn_x4, ST1D_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8f16, int_aarch64_sve_stnt1_pn_x4, STNT1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv8bf16, int_aarch64_sve_stnt1_pn_x4, STNT1H_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv4f32, int_aarch64_sve_stnt1_pn_x4, STNT1W_4Z_IMM_PSEUDO>;
+defm : store_pn_x4_sme2<nxv2f64, int_aarch64_sve_stnt1_pn_x4, STNT1D_4Z_IMM_PSEUDO>;
+}
+
 let Predicates = [HasSVE_or_SME] in {
 
 // Aliases for existing SVE instructions for which predicate-as-counter are
@@ -4711,41 +4824,61 @@ def : InstAlias<"pfalse\t$Pd", (PFALSE PPRorPNR8:$Pd), 0>;
 // Promote NEON operations to SVE when an SVE immediate form can be used.
 class PromoteNEONToSVEImm
   <SDNode Opc, ValueType VT, ComplexPattern ImmPat, Instruction SVEImmInst, ValueType ImmType>
-  : Pat<(Opc (VT V128:$Vm), (VT (ImmPat ImmType:$imm))),
+  : Pat<(Opc VT:$Vm, (VT (ImmPat ImmType:$imm))),
       (EXTRACT_SUBREG (SVEImmInst
-        (INSERT_SUBREG (IMPLICIT_DEF), (VT V128: $Vm), zsub), ImmType:$imm), zsub)>;
+        (INSERT_SUBREG (IMPLICIT_DEF), $Vm, NEONType<VT>.ZPRsubreg), ImmType:$imm), NEONType<VT>.ZPRsubreg)>;
+
 // Same as PromoteNEONToSVEImm but accepts immediates with a shift (for ADD/SUB).
 class PromoteNEONToSVEImmWithShift
   <SDNode Opc, ValueType VT, ComplexPattern ImmPat, Instruction SVEImmInst>
-  : Pat<(Opc (VT V128:$Vm), (VT (ImmPat i32:$imm, i32:$shift))),
+  : Pat<(Opc VT:$Vm, (VT (ImmPat i32:$imm, i32:$shift))),
       (EXTRACT_SUBREG (SVEImmInst
-        (INSERT_SUBREG (IMPLICIT_DEF), (VT V128: $Vm), zsub), i32:$imm, i32:$shift), zsub)>;
+        (INSERT_SUBREG (IMPLICIT_DEF), $Vm, NEONType<VT>.ZPRsubreg), i32:$imm, i32:$shift), NEONType<VT>.ZPRsubreg)>;
 
 let Predicates = [HasSVE_or_SME] in {
-  foreach VT = [v2i64, v4i32, v8i16, v16i8] in {
+  foreach VT = [v1i64, v2i64, v2i32, v4i32, v4i16, v8i16, v8i8, v16i8] in {
     // Logical operations
     def : PromoteNEONToSVEImm<and, VT, NEONSplatOfSVELogicalImmPat, AND_ZI_PSEUDO, i64>;
     def : PromoteNEONToSVEImm<xor, VT, NEONSplatOfSVELogicalImmPat, EOR_ZI_PSEUDO, i64>;
     def : PromoteNEONToSVEImm< or, VT, NEONSplatOfSVELogicalImmPat, ORR_ZI_PSEUDO, i64>;
   }
 
-  // Arith operations: ADD
-  def : PromoteNEONToSVEImmWithShift<add, v2i64, NEONSplatOfSVEAddSubImm, ADD_ZI_D_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<add, v4i32, NEONSplatOfSVEAddSubImm, ADD_ZI_S_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<add, v8i16, NEONSplatOfSVEAddSubImm, ADD_ZI_H_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<add, v16i8, NEONSplatOfSVEAddSubImm, ADD_ZI_B_PSEUDO>;
+  foreach VT = [v1i64, v2i64] in {
+    def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_D_PSEUDO>;
+    def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_D_PSEUDO>;
+    def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEAddSubImm, MUL_ZI_D_PSEUDO, i32>;
+    // NOTE: smax/smin/umax/umin are custom lowered to SVE predicated operations.
+  }
 
-  // Arith operations: SUB
-  def : PromoteNEONToSVEImmWithShift<sub, v2i64, NEONSplatOfSVEAddSubImm, SUB_ZI_D_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<sub, v4i32, NEONSplatOfSVEAddSubImm, SUB_ZI_S_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<sub, v8i16, NEONSplatOfSVEAddSubImm, SUB_ZI_H_PSEUDO>;
-  def : PromoteNEONToSVEImmWithShift<sub, v16i8, NEONSplatOfSVEAddSubImm, SUB_ZI_B_PSEUDO>;
+  foreach VT = [v2i32, v4i32] in {
+    def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_S_PSEUDO>;
+    def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_S_PSEUDO>;
+    def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEArithSImm, MUL_ZI_S_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smin,         VT, NEONSplatOfSImm8, SMIN_ZI_S_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smax,         VT, NEONSplatOfSImm8, SMAX_ZI_S_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umax,         VT, NEONSplatOfUImm8, UMAX_ZI_S_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umin,         VT, NEONSplatOfUImm8, UMIN_ZI_S_PSEUDO, i32>;
+  }
 
-  // Arith operations: MUL
-  def : PromoteNEONToSVEImm<mul, v2i64, NEONSplatOfSVEAddSubImm, MUL_ZI_D_PSEUDO, i32>;
-  def : PromoteNEONToSVEImm<mul, v4i32, NEONSplatOfSVEArithSImm, MUL_ZI_S_PSEUDO, i32>;
-  def : PromoteNEONToSVEImm<mul, v8i16, NEONSplatOfSVEArithSImm, MUL_ZI_H_PSEUDO, i32>;
-  def : PromoteNEONToSVEImm<mul, v16i8, NEONSplatOfSVEArithSImm, MUL_ZI_B_PSEUDO, i32>;
+  foreach VT = [v4i16, v8i16] in {
+    def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_H_PSEUDO>;
+    def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_H_PSEUDO>;
+    def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEArithSImm, MUL_ZI_H_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smax,         VT, NEONSplatOfSImm8, SMAX_ZI_H_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smin,         VT, NEONSplatOfSImm8, SMIN_ZI_H_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umax,         VT, NEONSplatOfUImm8, UMAX_ZI_H_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umin,         VT, NEONSplatOfUImm8, UMIN_ZI_H_PSEUDO, i32>;
+  }
+
+  foreach VT = [v8i8, v16i8] in {
+    def : PromoteNEONToSVEImmWithShift<add, VT, NEONSplatOfSVEAddSubImm, ADD_ZI_B_PSEUDO>;
+    def : PromoteNEONToSVEImmWithShift<sub, VT, NEONSplatOfSVEAddSubImm, SUB_ZI_B_PSEUDO>;
+    def : PromoteNEONToSVEImm<mul,          VT, NEONSplatOfSVEArithSImm, MUL_ZI_B_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smax,         VT, NEONSplatOfSImm8, SMAX_ZI_B_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<smin,         VT, NEONSplatOfSImm8, SMIN_ZI_B_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umax,         VT, NEONSplatOfUImm8, UMAX_ZI_B_PSEUDO, i32>;
+    def : PromoteNEONToSVEImm<umin,         VT, NEONSplatOfUImm8, UMIN_ZI_B_PSEUDO, i32>;
+  }
 }
 
 //===----------------------------------------------------------------------===//

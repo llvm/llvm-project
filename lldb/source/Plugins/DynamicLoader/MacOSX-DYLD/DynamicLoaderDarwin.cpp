@@ -311,8 +311,7 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
               // don't map it into lldb's target section load list.
               if (info.segments[i].vmsize == 0) {
                 LLDB_LOG(log, "{0}: Omitting zero-size segment {1}",
-                         info.file_spec.GetFilename(),
-                         info.segments[i].name.AsCString(""));
+                         info.file_spec.GetFilename(), info.segments[i].name);
                 continue;
               }
 
@@ -320,8 +319,7 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
                 LLDB_LOG(log,
                          "{0}: In-memory segment size for {1} is {2:x}"
                          " but file segment size is {3:x}",
-                         info.file_spec.GetFilename(),
-                         info.segments[i].name.AsCString(""),
+                         info.file_spec.GetFilename(), info.segments[i].name,
                          info.segments[i].vmsize, section_sp->GetByteSize());
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
@@ -387,11 +385,11 @@ bool DynamicLoaderDarwin::UnloadModuleSections(Module *module,
                     section_sp, old_section_load_addr))
               changed = true;
           } else {
-            Debugger::ReportWarning(
-                llvm::formatv("unable to find and unload segment named "
-                              "'{0}' in '{1}' in macosx dynamic loader plug-in",
-                              info.segments[i].name.AsCString("<invalid>"),
-                              image_object_file->GetFileSpec().GetPath()));
+            Debugger::ReportWarning(llvm::formatv(
+                "unable to find and unload segment named "
+                "'{0}' in '{1}' in macosx dynamic loader plug-in",
+                info.segments[i].name[0] ? info.segments[i].name : "<invalid>",
+                image_object_file->GetFileSpec().GetPath()));
           }
         }
       }
@@ -522,8 +520,11 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       Segment segment;
       StructuredData::Dictionary *seg =
           segments->GetItemAtIndex(j)->GetAsDictionary();
-      segment.name =
-          ConstString(seg->GetValueForKey("name")->GetAsString()->GetValue());
+      llvm::StringRef seg_name =
+          seg->GetValueForKey("name")->GetAsString()->GetValue();
+      strncpy(segment.name, seg_name.data(),
+              std::min(seg_name.size(), size_t(16)));
+      segment.name[16] = '\0';
       segment.vmaddr = seg->GetValueForKey("vmaddr")->GetUnsignedIntegerValue();
       segment.vmsize = seg->GetValueForKey("vmsize")->GetUnsignedIntegerValue();
       segment.fileoff =
@@ -572,7 +573,7 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       // that starts of file offset zero and that has bytes in the file...
       if ((image_infos[i].segments[k].fileoff == 0 &&
            image_infos[i].segments[k].filesize > 0) ||
-          (image_infos[i].segments[k].name == "__TEXT")) {
+          (llvm::StringRef(image_infos[i].segments[k].name) == "__TEXT")) {
         image_infos[i].slide =
             image_infos[i].address - image_infos[i].segments[k].vmaddr;
         // We have found the slide amount, so we can exit this for loop.
@@ -871,13 +872,13 @@ bool DynamicLoaderDarwin::AlwaysRelyOnEHUnwindInfo(SymbolContext &sym_ctx) {
 void DynamicLoaderDarwin::Segment::PutToLog(Log *log,
                                             lldb::addr_t slide) const {
   if (slide == 0)
-    LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")",
-              name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize);
+    LLDB_LOGF(log, "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ")", name,
+              vmaddr + slide, vmaddr + slide + vmsize);
   else
-    LLDB_LOGF(
-        log,
-        "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64 ") slide = 0x%" PRIx64,
-        name.AsCString(""), vmaddr + slide, vmaddr + slide + vmsize, slide);
+    LLDB_LOGF(log,
+              "\t\t%16s [0x%16.16" PRIx64 " - 0x%16.16" PRIx64
+              ") slide = 0x%" PRIx64,
+              name, vmaddr + slide, vmaddr + slide + vmsize, slide);
 }
 
 lldb_private::ArchSpec DynamicLoaderDarwin::ImageInfo::GetArchitecture() const {
