@@ -58,6 +58,10 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::is_sorted(std::execution::par, std::begin(a), std::end(a), pred2);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::is_sorted_until(std::execution::par, std::begin(a), std::end(a));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::is_sorted_until(std::execution::par, std::begin(a), std::end(a), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::reverse_copy(std::execution::par, std::begin(a), std::end(a), std::begin(b));
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::adjacent_difference(std::execution::par, std::begin(a), std::end(a), std::begin(b));
@@ -71,4 +75,12 @@ void test() {
   std::mismatch(std::execution::par, std::begin(a), std::end(a), std::begin(b), pred2);
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::mismatch(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::adjacent_find(std::execution::par, std::begin(a), std::end(a));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::adjacent_find(std::execution::par, std::begin(a), std::end(a), pred2);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::lexicographical_compare(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b));
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::lexicographical_compare(std::execution::par, std::begin(a), std::end(a), std::begin(b), std::end(b), pred2);
 }

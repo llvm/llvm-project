@@ -166,7 +166,7 @@ The ``add_new_check.py`` script will:
     register it in the module and in the build system;
   * create a lit test file in the ``test/clang-tidy/`` directory;
   * create a documentation file and include it into the
-    ``docs/clang-tidy/checks/list.rst``.
+    ``docs/clang-tidy/checks/list.md``.
 
 Let's look at the check class definition in more detail:
 

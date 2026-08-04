@@ -312,15 +312,15 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
     if (Src->isPointer()) {
       if (Opc == Instruction::PtrToInt)
         exposeProvenance(Src->asPointer().provenance());
-      return MaterializedConstant(Src->asPointer().address().trunc(BitWidth),
-                                  Cacheable);
+      return MaterializedConstant(
+          Src->asPointer().address().zextOrTrunc(BitWidth), Cacheable);
     }
     std::vector<AnyValue> Vec = Src->asAggregate();
     for (auto &V : Vec) {
       if (V.isPointer()) {
         if (Opc == Instruction::PtrToInt)
           exposeProvenance(V.asPointer().provenance());
-        V = V.asPointer().address().trunc(BitWidth);
+        V = V.asPointer().address().zextOrTrunc(BitWidth);
       }
     }
     return MaterializedConstant(std::move(Vec), Cacheable);
@@ -1054,7 +1054,8 @@ Context::computeGEP(GEPOperator &GEP,
       unsigned ElementIdx = cast<ConstantInt>(V)->getZExtValue();
       const StructLayout *SL = DL.getStructLayout(STy);
       // Element offset is in bytes.
-      ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx)),
+      ApplyScaledOffset(APInt(IndexBitWidth, SL->getElementOffset(ElementIdx),
+                              /*isSigned=*/false, /*implicitTrunc=*/true),
                         APInt(IndexBitWidth, 1));
       continue;
     }

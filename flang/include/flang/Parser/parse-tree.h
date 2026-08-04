@@ -4212,9 +4212,8 @@ struct OmpMapType {
 //    CLOSE |                                       // since 5.0, until 5.2
 //    PRESENT                                       // since 5.1, until 5.2
 // Since 6.0 the map-type-modifier has been split into individual modifiers.
-//
 struct OmpMapTypeModifier {
-  ENUM_CLASS(Value, Always, Close, Present, Ompx_Hold)
+  ENUM_CLASS(Value, Always, Close, Present)
   WRAPPER_CLASS_BOILERPLATE(OmpMapTypeModifier, Value);
 };
 
@@ -5113,8 +5112,8 @@ struct OmpUnifiedSharedMemoryClause {
 //    UPDATE(dependence-type)                       // since 5.0, until 5.1
 // update-clause ->
 //    UPDATE(task-dependence-type)                  // since 5.2
-struct OmpUpdateClause {
-  UNION_CLASS_BOILERPLATE(OmpUpdateClause);
+struct OmpUpdateDependObjectsClause {
+  UNION_CLASS_BOILERPLATE(OmpUpdateDependObjectsClause);
   // The dependence type is an argument here, not a modifier.
   std::variant<OmpDependenceType, OmpTaskDependenceType> u;
 };

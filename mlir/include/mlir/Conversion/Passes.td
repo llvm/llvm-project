@@ -919,6 +919,7 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   ];
   let dependentDialects = [
     "arith::ArithDialect",
+    "vector::VectorDialect",
     "xevm::XeVMDialect",
     "LLVM::LLVMDialect",
   ];
@@ -1119,6 +1120,15 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
 def ConvertOpenACCToSCFPass : Pass<"convert-openacc-to-scf", "ModuleOp"> {
   let summary = "Convert the OpenACC ops to OpenACC with SCF dialect";
   let dependentDialects = ["scf::SCFDialect", "acc::OpenACCDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACCToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertACCToLLVMPass : Pass<"acc-to-llvm", "ModuleOp"> {
+  let summary = "Lower OpenACC operations to LLVM dialect.";
+  let dependentDialects = ["LLVM::LLVMDialect", "acc::OpenACCDialect"];
 }
 
 //===----------------------------------------------------------------------===//
