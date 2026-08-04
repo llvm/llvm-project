@@ -1735,7 +1735,7 @@ void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     bool Is64Bit = PPC::G8RCRegClass.contains(SrcReg);
     unsigned MvCode = Is64Bit ? PPC::MTOCRF8 : PPC::MTOCRF;
     unsigned ShCode = Is64Bit ? PPC::RLWINM8 : PPC::RLWINM;
-    unsigned CRNum = TRI->getEncodingValue(DestReg);
+    unsigned CRNum = RI.getEncodingValue(DestReg);
     if (CRNum == 7) {
       BuildMI(MBB, I, DL, get(MvCode), DestReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
