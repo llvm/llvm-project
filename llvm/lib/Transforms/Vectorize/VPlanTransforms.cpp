@@ -5633,8 +5633,8 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
     const SCEVPredicate *NewPred =
         SE->getComparePredicate(CmpInst::ICMP_EQ, ToMultiVersion, MVConst);
 
-    // Check if new predicate implies that backedge is never taken. If so, there
-    // is no reason to multiversion for it.
+    // Check if new predicate implies that vectorizing a loop of such trip count
+    // is meaningless. The heuristic here could probably be improved.
     auto *PredicatedMaxBTC = SE->rewriteUsingPredicate(
         SE->getSymbolicMaxBackedgeTakenCount(CostCtx.L), CostCtx.L,
         StridePredicates.getUnionWith(NewPred, *SE)
@@ -5645,8 +5645,9 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
               return SE->isKnownPredicate(
                   ICmpInst::ICMP_ULT, PredicatedMaxBTC,
                   SE->getConstant(PredicatedMaxBTC->getType(),
-                                  VF.isScalable() ? 1
-                                                  : VF.getFixedValue() - 1));
+                                  Plan.hasTailFolded() || VF.isScalable()
+                                      ? 1
+                                      : VF.getFixedValue() - 1));
             },
             Range))
       continue;
