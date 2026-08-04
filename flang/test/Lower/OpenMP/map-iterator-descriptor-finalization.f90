@@ -3,8 +3,8 @@
 ! RUN:   --implicit-check-not=map_entries \
 ! RUN:   --implicit-check-not='map_clauses(attach'
 
-! Verify that MapInfoFinalization does not expand iterator-nested maps for
-! descriptor-backed arrays.
+! Verify that descriptor-backed iterator maps describe only selected data and
+! MapInfoFinalization does not add descriptor parent or attachment maps.
 
 subroutine iter_map_assumed_shape(a, n)
   integer :: a(:)
