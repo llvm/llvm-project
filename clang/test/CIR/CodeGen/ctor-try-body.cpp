@@ -30,7 +30,7 @@ struct HasThings : Base {
     side_effect2();
   }
 
-// CIR: cir.func {{.*}}@_ZN9HasThingsC2ERK4Ctor(%[[THIS_ARG:.*]]: !cir.ptr<!rec_HasThings> {{.*}}, %[[C_ARG:.*]]: !cir.ptr<!rec_Ctor> {{.*}}) {{.*}}special_member<#cir.cxx_ctor<!rec_HasThings, custom>>{{.*}} {
+// CIR: cir.func {{.*}}@_ZN9HasThingsC2ERK4Ctor(%[[THIS_ARG:.*]]: !cir.ptr<!rec_HasThings> {{.*}}, %[[C_ARG:.*]]: !cir.ptr<!rec_Ctor> {{.*}}) {{.*}}func_info<#cir.cxx_ctor<!rec_HasThings, custom>>{{.*}} {
 // CIR-NEXT:  %[[THIS_ALLOC:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_HasThings>>
 // CIR-NEXT:  %[[C_ALLOC:.*]] = cir.alloca "c" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Ctor>>
 // CIR-NEXT:  cir.store %[[THIS_ARG]], %[[THIS_ALLOC]] : !cir.ptr<!rec_HasThings>, !cir.ptr<!cir.ptr<!rec_HasThings>>

@@ -50,9 +50,18 @@ static bool isSignatureValid(FunctionType *FTy,
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 
+/// Table of required target features indexed by enum value.
+#define GET_INTRINSIC_TARGET_FEATURES_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
   return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
+}
+
+StringRef Intrinsic::getRequiredTargetFeatures(ID id) {
+  assert(id < num_intrinsics && "invalid intrinsic ID!");
+  return IntrinsicTargetFeaturesTable[IntrinsicTargetFeaturesOffsetTable[id]];
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -358,10 +367,10 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_EXTERNREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 10));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmExternref, 0));
     return;
   case IIT_FUNCREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 20));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmFuncref, 0));
     return;
   case IIT_PTR:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 0));
@@ -371,9 +380,11 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::Pointer, Infos[NextElt++]));
     return;
   case IIT_ANY: {
-    unsigned OverloadInfo = Infos[NextElt++];
+    unsigned OverloadIndex = Infos[NextElt++];
+    unsigned ArgKindEnums = Infos[NextElt++];
+    unsigned Packed = (ArgKindEnums << 8) | OverloadIndex;
     OutputTable.push_back(
-        IITDescriptor::get(IITDescriptor::Overloaded, OverloadInfo));
+        IITDescriptor::get(IITDescriptor::Overloaded, Packed));
     return;
   }
   case IIT_MATCH: {
@@ -556,7 +567,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return Type::getPPC_FP128Ty(Context);
   case IITDescriptor::AArch64Svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
-
+  case IITDescriptor::WasmExternref:
+    return TargetExtType::get(Context, "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return TargetExtType::get(Context, "wasm.funcref");
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.IntegerWidth);
   case IITDescriptor::Vector:
@@ -1029,6 +1043,14 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return PrintMsg(isa<TargetExtType>(Ty) &&
                         cast<TargetExtType>(Ty)->getName() == "aarch64.svcount",
                     "aarch64.svcount");
+  case IITDescriptor::WasmExternref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.externref",
+                    "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.funcref",
+                    "wasm.funcref");
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
     StringRef Scalable = D.VectorWidth.isScalable() ? "vscale " : "";
@@ -1076,20 +1098,70 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
            "Table consistency error");
     OverloadTys.push_back(Ty);
 
-    switch (D.getOverloadKind()) {
-    case IITDescriptor::AK_Any:
-      return false; // Success
-    case IITDescriptor::AK_AnyInteger:
-      return PrintMsg(Ty->isIntOrIntVectorTy(), "any integer or integer vector",
-                      OIdx);
-    case IITDescriptor::AK_AnyFloat:
-      return PrintMsg(Ty->isFPOrFPVectorTy(), "any fp or fp vector", OIdx);
-    case IITDescriptor::AK_AnyVector:
-      return PrintMsg(isa<VectorType>(Ty), "any vector type", OIdx);
-    case IITDescriptor::AK_AnyPointer:
-      return PrintMsg(isa<PointerType>(Ty), "any pointer type", OIdx);
+    IITDescriptor::AnyKindVectorConstraint VC;
+    IITDescriptor::AnyKindElementConstraint EC;
+    std::tie(VC, EC) = D.getOverloadConstraints();
+
+    bool IsValid = [&]() {
+      switch (VC) {
+      case IITDescriptor::VC_None:
+        return true;
+      case IITDescriptor::VC_Vector:
+        return isa<VectorType>(Ty);
+      case IITDescriptor::VC_Scalar:
+        return !isa<VectorType>(Ty);
+      }
+      llvm_unreachable("invalid vector constraint");
+    }();
+
+    IsValid &= [&]() {
+      Type *ETy = Ty->getScalarType();
+      switch (EC) {
+      case IITDescriptor::EC_None:
+        return true;
+      case IITDescriptor::EC_Integer:
+        return ETy->isIntegerTy();
+      case IITDescriptor::EC_Float:
+        return ETy->isFloatingPointTy();
+      case IITDescriptor::EC_Pointer:
+        return ETy->isPointerTy();
+      }
+      llvm_unreachable("invalid element constraint");
+    }();
+
+    if (IsValid)
+      return false;
+
+    static constexpr StringLiteral VectorKinds[] = {
+        "",
+        "vector",
+        "scalar",
+    };
+    static constexpr StringLiteral ElementKinds[] = {
+        "",
+        "integer",
+        "fp",
+        "pointer",
+    };
+
+    if (EC == IITDescriptor::EC_None) {
+      // No constraint on element type.
+      // Expected = any {vector | scalar} type.
+      StringLiteral VK = ArrayRef(VectorKinds)[VC];
+      return PrintMsg(false, formatv("any {} type", VK), OIdx);
     }
-    llvm_unreachable("all argument kinds not covered");
+
+    StringLiteral EK = ArrayRef(ElementKinds)[EC];
+    switch (VC) {
+    case IITDescriptor::VC_None:
+      // Expected = any EK or EK vector.
+      return PrintMsg(false, formatv("any {0} or {0} vector", EK), OIdx);
+    case IITDescriptor::VC_Vector:
+      return PrintMsg(false, formatv("any {} vector", EK), OIdx);
+    case IITDescriptor::VC_Scalar:
+      return PrintMsg(false, formatv("any {} type", EK), OIdx);
+    }
+    llvm_unreachable("invalid vector constraint");
   }
 
   case IITDescriptor::Match: {
@@ -1400,5 +1472,16 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 
+LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,
+                                          const Constant *ImmArgVal) {
+  uint64_t Val = cast<ConstantInt>(ImmArgVal)->getZExtValue();
+  OS << static_cast<FPClassTest>(Val);
+}
+
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+
+// Emit the default-argument values table and lookup function
+// (Intrinsic::getAllDefaultArgValues).
+#define GET_INTRINSIC_DEFAULT_ARG_VALUES
 #include "llvm/IR/IntrinsicImpl.inc"

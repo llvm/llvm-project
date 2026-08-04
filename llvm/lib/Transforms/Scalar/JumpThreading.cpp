@@ -1364,11 +1364,16 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   // farther than to a predecessor, we need to reuse the code from GVN's PRE.
   // It requires domination tree analysis, so for this simple case it is an
   // overkill.
-  if (PredsScanned.size() != AvailablePreds.size() &&
-      !isSafeToSpeculativelyExecute(LoadI))
-    for (auto I = LoadBB->begin(); &*I != LoadI; ++I)
-      if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
-        return false;
+  std::optional<bool> GuaranteedToTransfer;
+  auto CanSpeculateInto = [&](const BasicBlock *Pred) {
+    if (isSafeToSpeculativelyExecute(LoadI, Pred->getTerminator()))
+      return true;
+
+    if (!GuaranteedToTransfer)
+      GuaranteedToTransfer = isGuaranteedToTransferExecutionToSuccessor(
+          LoadBB->begin(), LoadI->getIterator());
+    return *GuaranteedToTransfer;
+  };
 
   // If there is exactly one predecessor where the value is unavailable, the
   // already computed 'OneUnavailablePred' block is it.  If it ends in an
@@ -1376,6 +1381,8 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   if (PredsScanned.size() == AvailablePreds.size()+1 &&
       OneUnavailablePred->getTerminator()->getNumSuccessors() == 1) {
     UnavailablePred = OneUnavailablePred;
+    if (!CanSpeculateInto(UnavailablePred))
+      return false;
   } else if (PredsScanned.size() != AvailablePreds.size()) {
     // Otherwise, we had multiple unavailable predecessors or we had a critical
     // edge from the one.
@@ -1389,8 +1396,11 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
       if (isa<IndirectBrInst>(P->getTerminator()))
         return false;
 
-      if (!AvailablePredSet.count(P))
+      if (!AvailablePredSet.count(P)) {
+        if (!CanSpeculateInto(P))
+          return false;
         PredsToSplit.push_back(P);
+      }
     }
 
     // Split them out to their own block.
@@ -2680,16 +2690,16 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
                     << "' to eliminate branch on phi.  Cost: "
                     << DuplicationCost << " block is:" << *BB << "\n");
 
-  // Unless PredBB ends with an unconditional branch, split the edge so that we
-  // can just clone the bits from BB into the end of the new PredBB.
+  // When BB contains PHIs, we need a dedicated PredBB to clone these PHIs into,
+  // so split the PredBB -> BB edge to create one. Otherwise fall back to
+  // cloning into PredBB directly, splitting only when it lacks an unconditional
+  // branch.
+  BasicBlock *OldPredBB = PredBB;
   UncondBrInst *OldPredBranch = dyn_cast<UncondBrInst>(PredBB->getTerminator());
-
-  if (!OldPredBranch) {
-    BasicBlock *OldPredBB = PredBB;
+  if (isa<PHINode>(BB->front()) || !OldPredBranch) {
     PredBB = SplitEdge(OldPredBB, BB);
     Updates.push_back({DominatorTree::Insert, OldPredBB, PredBB});
     Updates.push_back({DominatorTree::Insert, PredBB, BB});
-    Updates.push_back({DominatorTree::Delete, OldPredBB, BB});
     OldPredBranch = cast<UncondBrInst>(PredBB->getTerminator());
   }
 
@@ -2701,8 +2711,12 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   auto RItBeforeInsertPt = std::next(OldPredBranch->getReverseIterator());
 
   BasicBlock::iterator BI = BB->begin();
-  for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
-    ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
+  for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI) {
+    PHINode *NewPN = PHINode::Create(PN->getType(), 1, PN->getName() + ".dup");
+    NewPN->insertBefore(OldPredBranch->getIterator());
+    NewPN->addIncoming(PN->getIncomingValueForBlock(PredBB), OldPredBB);
+    ValueMapping[PN] = NewPN;
+  }
 
   // Clone noalias scope declarations in the duplicated instructions. Otherwise
   // the duplicate would share the original block's scopes, and alias analysis
@@ -2782,9 +2796,14 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
 
   // Remove the unconditional branch at the end of the PredBB block.
   OldPredBranch->eraseFromParent();
-  if (auto *BPI = getBPI())
-    BPI->copyEdgeProbabilities(BB, PredBB);
   DTU->applyUpdatesPermissive(Updates);
+
+  BasicBlock *ThreadBB = PredBB;
+  if (PredBB != OldPredBB && MergeBlockIntoPredecessor(PredBB, DTU.get()))
+    ThreadBB = OldPredBB;
+
+  if (auto *BPI = getBPI())
+    BPI->copyEdgeProbabilities(BB, ThreadBB);
 
   ++NumDupes;
   return true;

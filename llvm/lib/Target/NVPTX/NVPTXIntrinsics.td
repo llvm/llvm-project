@@ -2749,31 +2749,61 @@ def LD_GLOBAL_NC_v4i32 : VLDG_G_ELE_V4<B32>;
 def LD_GLOBAL_NC_v4i64 : VLDG_G_ELE_V4<B64>;
 def LD_GLOBAL_NC_v8i32 : VLDG_G_ELE_V8<B32>;
 
-multiclass NG_TO_G<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
-  if Supports32 then
-    def "" : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
-             "cvta." # Str # ".u32">, Requires<Preds>;
-  
-  def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
-              "cvta." # Str # ".u64">, Requires<Preds>;
+class addrspacecast_spaces<NVPTXAddressSpace src_space,
+                           NVPTXAddressSpace dst_space> :
+  PatFrag<(ops node:$a), (addrspacecast node:$a),
+    "const auto *ASC = cast<AddrSpaceCastSDNode>(N);" #
+      "return ASC->getSrcAddressSpace() == " # src_space.Enum #
+         " && ASC->getDestAddressSpace() == " # dst_space.Enum # ";">;
+
+
+multiclass CvtaFromInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                         bit supports_32> {
+  defvar asc_pat = addrspacecast_spaces<as, AddrSpaceGeneric>;
+  let Predicates = preds in {
+    if supports_32 then
+      def _32 : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
+              "cvta" # as.Suffix # ".u32",
+              [(set i32:$result, (asc_pat i32:$src))]>;
+
+    def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
+                "cvta" # as.Suffix # ".u64",
+                [(set i64:$result, (asc_pat i64:$src))]>;
+
+    def : Pat<(i64 (asc_pat i32:$src)),
+              (!cast<Instruction>(NAME # "_64") (CVT_u64_u32 $src, CvtNONE))>;
+  }
 }
 
-multiclass G_TO_NG<string Str, bit Supports32 = 1, list<Predicate> Preds = []> {
-  if Supports32 then
-    def "" : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
-            "cvta.to." # Str # ".u32">, Requires<Preds>;
-  
-  def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
-            "cvta.to." # Str # ".u64">, Requires<Preds>;
+multiclass CvtaToInsts<NVPTXAddressSpace as, list<Predicate> preds,
+                       bit supports_32> {
+  defvar asc_pat = addrspacecast_spaces<AddrSpaceGeneric, as>;
+  let Predicates = preds in {
+    if supports_32 then
+      def _32 : BasicNVPTXInst<(outs B32:$result), (ins B32:$src),
+              "cvta.to" # as.Suffix # ".u32",
+              [(set i32:$result, (asc_pat i32:$src))]>;
+
+    def _64 : BasicNVPTXInst<(outs B64:$result), (ins B64:$src),
+              "cvta.to" # as.Suffix # ".u64",
+              [(set i64:$result, (asc_pat i64:$src))]>;
+
+    def : Pat<(i32 (asc_pat i64:$src)),
+              (CVT_u32_u64 (!cast<Instruction>(NAME # "_64") $src), CvtNONE)>;
+  }
 }
 
-foreach space = ["local", "shared", "global", "const", "param"] in {
-  defm cvta_#space : NG_TO_G<space>;
-  defm cvta_to_#space : G_TO_NG<space>;
+multiclass CvtaInsts<NVPTXAddressSpace as, list<Predicate> preds = [],
+                     bit supports_32 = true> {
+  defm _ # as.Name : CvtaFromInsts<as, preds, supports_32>;
+  defm _to_ # as.Name : CvtaToInsts<as, preds, supports_32>;
 }
 
-defm cvta_shared_cluster : NG_TO_G<"shared::cluster", false, [hasClusters]>;
-defm cvta_to_shared_cluster : G_TO_NG<"shared::cluster", false, [hasClusters]>;
+foreach as = [AddrSpaceLocal, AddrSpaceShared, AddrSpaceGlobal, AddrSpaceConst] in
+  defm cvta : CvtaInsts<as>;
+
+defm cvta : CvtaInsts<AddrSpaceParam, [hasPTX<77>, hasSM<70>]>;
+defm cvta : CvtaInsts<AddrSpaceSharedCluster, [hasClusters], supports_32=false>;
 
 
 // nvvm.move intrinsicc
@@ -5769,7 +5799,10 @@ class TCGEN05_LDST_REGINFO<int Veclen> {
   list<NVPTXRegClass> regs = !listsplat(B32, Veclen);
   // generate list of regnames for load/store operands
   list<string> reg_names = !foreach(x, !range(0, Veclen), "r" # x);
-  string regstring = "{{" # !interleave(!foreach(n, !range(0, Veclen), "$r" # n), ", ") # "}}";
+  string regstring = "{{" #
+                      !interleave(
+                        !foreach(n, !range(0, Veclen), "$r" # n), ", ") #
+                     "}}";
   dag Ins = !dag(ins, regs, reg_names);
   dag Outs = !dag(outs, regs, reg_names);
 }
@@ -5785,7 +5818,8 @@ class TCGEN05_LD_INST<string Shape, int Num, bit Pack> :
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
 
   let InOperandList = !con((ins B32:$taddr),
-                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)));
+                           !if(!eq(Shape, "16x32bx2"),
+                                  (ins i64imm:$offset), (ins)));
   let OutOperandList = Info.Outs;
   let AsmString = "tcgen05.ld.sync.aligned"
                   # "." # Shape
@@ -5809,7 +5843,8 @@ class TCGEN05_ST_INST<string Shape, int Num, bit Unpack> :
                                 NVVM_TCGEN05_LDST_ACCESS_SIZE<Shape, Num>.veclen>;
 
   let InOperandList = !con((ins B32:$taddr),
-                           !if(!eq(Shape, "16x32bx2"), (ins i64imm:$offset), (ins)),
+                           !if(!eq(Shape, "16x32bx2"),
+                                  (ins i64imm:$offset), (ins)),
                            Info.Ins);
   let OutOperandList = (outs);
   let AsmString = "tcgen05.st.sync.aligned"
@@ -5954,6 +5989,126 @@ let Predicates = [hasSM<100>, hasPTX<86>] in {
     BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, B64:$size, i64imm:$value),
               "st.bulk.shared::cta",
               [(int_nvvm_st_bulk_shared_cta addr:$dest_addr, i64:$size, st_bulk_imm:$value)]>;
+}
+
+//
+// Asynchronous store instructions
+//
+
+def SDTAsyncStoreMbarrierB128 : SDTypeProfile<0, 4,
+  [SDTCisPtrTy<0>, SDTCisVT<1, i64>, SDTCisVT<2, i64>, SDTCisPtrTy<3>]>;
+def st_async_mbarrier_b128 :
+  SDNode<"NVPTXISD::ST_ASYNC_MBARRIER_B128", SDTAsyncStoreMbarrierB128,
+         [SDNPHasChain, SDNPMayStore]>;
+
+class ST_ASYNC_MBARRIER<string type, NVPTXRegClass reg> :
+  BasicNVPTXInst<(outs),
+            (ins ADDR:$dest_addr, reg:$value, ADDR:$mbar),
+    "st.async.shared::cluster.mbarrier::complete_tx::bytes." # type>;
+
+def ST_ASYNC_MBARRIER_B128 :
+  NVPTXInst<(outs),
+            (ins ADDR:$dest_addr, B64:$value0, B64:$value1, ADDR:$mbar),
+    "{{\n\t"
+    ".reg .b128 %in_128;\n\t"
+    "mov.b128 %in_128, {$value0, $value1};\n\t"
+    "st.async.shared::cluster.mbarrier::complete_tx::bytes.b128 \t[$dest_addr], %in_128, [$mbar];\n\t"
+    "}}">;
+
+let Predicates = [hasSM<90>, hasPTX<81>] in {
+  foreach size = ["32", "64"] in {
+    defvar valueType = !cast<ValueType>("i" # size);
+    defvar reg = !cast<NVPTXRegClass>("B" # size);
+
+    def : Pat<(int_nvvm_st_async
+                 addr:$dest_addr, valueType:$value, addr:$mbar),
+              (ST_ASYNC_MBARRIER<"b" # size, reg>
+                 addr:$dest_addr, $value, addr:$mbar)>;
+  }
+}
+
+let Predicates = [hasSM<90>, hasPTX<92>] in {
+  def : Pat<(st_async_mbarrier_b128
+               addr:$dest_addr, i64:$value0, i64:$value1, addr:$mbar),
+            (ST_ASYNC_MBARRIER_B128
+               addr:$dest_addr, $value0, $value1, addr:$mbar)>;
+}
+
+def SDTAsyncStoreRelease : SDTypeProfile<0, 3,
+  [SDTCisPtrTy<0>, SDTCisVT<2, i1>]>;
+def SDTAsyncStoreMMIO : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
+
+class StAsyncReleaseNode<string variant, string type, SDTypeProfile sdt> :
+  SDNode<"NVPTXISD::ST_ASYNC_" # variant # "_" # type,
+         sdt,
+         [SDNPHasChain, SDNPMayStore]>;
+
+def MultimemFlag : Operand<i1> {
+  let PrintMethod = "printMultimem";
+}
+
+class ST_ASYNC_SYS<string type, NVPTXRegClass reg> :
+  BasicFlagsNVPTXInst<(outs), (ins ADDR:$dest_addr, reg:$value),
+                      (ins MultimemFlag:$is_multimem),
+    "${is_multimem}st.async.release.sys.global." # type>;
+
+class ST_ASYNC_GPU<string type, NVPTXRegClass reg> :
+  BasicFlagsNVPTXInst<(outs), (ins ADDR:$dest_addr, reg:$value),
+                      (ins MultimemFlag:$is_multimem),
+    "${is_multimem}st.async.release.gpu.global." # type>;
+
+class ST_ASYNC_MMIO_SYS<string type, NVPTXRegClass reg> :
+  BasicNVPTXInst<(outs), (ins ADDR:$dest_addr, reg:$value),
+    "st.async.mmio.release.sys.global." # type>;
+
+class ST_ASYNC_RELEASE_B8_BODY<string instr_prefix, string prefix> {
+  // The minimum supported register size to pass in arguments is 16-bits, so 
+  // the 8-bit value is passed in using a 16-bit register and truncated to 
+  // 8-bits with a cvt instruction.
+  string body =
+    "{{ \n\t"
+    ".reg .b8 \t%st_async_val; \n\t"
+    "cvt.u8.u16 \t%st_async_val, $value; \n\t" #
+    prefix # instr_prefix # ".b8\t [$dest_addr], %st_async_val; \n\t"
+    "}}";
+}
+
+def ST_ASYNC_SYS_B8 :
+  NVPTXInst<(outs), (ins ADDR:$dest_addr, B16:$value, MultimemFlag:$is_multimem),
+    ST_ASYNC_RELEASE_B8_BODY<"st.async.release.sys.global", "${is_multimem}">.body>;
+def ST_ASYNC_GPU_B8 :
+  NVPTXInst<(outs), (ins ADDR:$dest_addr, B16:$value, MultimemFlag:$is_multimem),
+    ST_ASYNC_RELEASE_B8_BODY<"st.async.release.gpu.global", "${is_multimem}">.body>;
+def ST_ASYNC_MMIO_SYS_B8 :
+  NVPTXInst<(outs), (ins ADDR:$dest_addr, B16:$value),
+    ST_ASYNC_RELEASE_B8_BODY<"st.async.mmio.release.sys.global", "">.body>;
+
+
+let Predicates = [hasSM<100>, hasPTX<87>] in {
+  foreach rti = [I16RT, I32RT, I64RT] in {
+    def : Pat<(int_nvvm_st_async_sys
+                 addr:$dest_addr, rti.Ty:$value, timm:$is_multimem),
+              (ST_ASYNC_SYS<rti.PtxType, rti.RC>
+                 addr:$dest_addr, $value, $is_multimem)>;
+    def : Pat<(int_nvvm_st_async_gpu
+                 addr:$dest_addr, rti.Ty:$value, timm:$is_multimem),
+              (ST_ASYNC_GPU<rti.PtxType, rti.RC>
+                 addr:$dest_addr, $value, $is_multimem)>;
+    def : Pat<(int_nvvm_st_async_mmio_sys
+                 addr:$dest_addr, rti.Ty:$value),
+              (ST_ASYNC_MMIO_SYS<rti.PtxType, rti.RC>
+                 addr:$dest_addr, $value)>;
+  }
+
+  def : Pat<(StAsyncReleaseNode<"SYS", "B8", SDTAsyncStoreRelease>
+               addr:$dest_addr, i16:$value, timm:$is_multimem),
+            (ST_ASYNC_SYS_B8 addr:$dest_addr, $value, $is_multimem)>;
+  def : Pat<(StAsyncReleaseNode<"GPU", "B8", SDTAsyncStoreRelease>
+               addr:$dest_addr, i16:$value, timm:$is_multimem),
+            (ST_ASYNC_GPU_B8 addr:$dest_addr, $value, $is_multimem)>;
+  def : Pat<(StAsyncReleaseNode<"MMIO_SYS", "B8", SDTAsyncStoreMMIO>
+               addr:$dest_addr, i16:$value),
+            (ST_ASYNC_MMIO_SYS_B8 addr:$dest_addr, $value)>;
 }
 
 //

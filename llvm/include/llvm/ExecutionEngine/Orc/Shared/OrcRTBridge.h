@@ -61,9 +61,8 @@ LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
 LLVM_ABI extern const char *RegisterJITLoaderGDBAllocActionName;
 
-LLVM_ABI extern const char *RunAsMainWrapperName;
-LLVM_ABI extern const char *RunAsVoidFunctionWrapperName;
-LLVM_ABI extern const char *RunAsIntFunctionWrapperName;
+LLVM_ABI extern const char *const DispatchName;
+LLVM_ABI extern const char *const DispatchCtxName;
 
 /// Symbol names for memory management implementation.
 /// FIXME: We should find a better home for this struct.
@@ -92,6 +91,18 @@ struct SimpleExecutorDylibManagerSymbolNames {
 /// interface.
 extern const LLVM_ABI SimpleExecutorDylibManagerSymbolNames
     orc_rt_NativeDylibManagerSPSSymbols;
+
+/// Symbol names for the ORC runtime's StandaloneMachOUnwindInfoRegistrar
+/// SPS interface.
+struct MachOUnwindInfoRegistrarSymbolNames {
+  StringRef RegisterSectionsName;
+  StringRef DeregisterSectionsName;
+};
+
+/// Default symbol names for the ORC runtime's
+/// StandaloneMachOUnwindInfoRegistrar SPS interface.
+extern const LLVM_ABI MachOUnwindInfoRegistrarSymbolNames
+    orc_rt_MachOUnwindInfoRegistrarSPSSymbols;
 
 using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
@@ -142,8 +153,6 @@ using SPSSimpleRemoteMemoryMapReleaseSignature = shared::SPSError(
 
 using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
                                       shared::SPSSequence<shared::SPSString>);
-using SPSRunAsVoidFunctionSignature = int32_t(shared::SPSExecutorAddr);
-using SPSRunAsIntFunctionSignature = int32_t(shared::SPSExecutorAddr, int32_t);
 } // end namespace rt
 
 namespace rt_alt {

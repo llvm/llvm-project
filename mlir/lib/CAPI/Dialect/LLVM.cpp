@@ -467,7 +467,7 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
       cast<DISubroutineTypeAttr>(unwrap(type)),
       llvm::map_to_vector(
           unwrapList(nRetainedNodes, retainedNodes, nodesStorage),
-          llvm::CastTo<DINodeAttr>),
+          llvm::CastTo<Attribute>),
       llvm::map_to_vector(
           unwrapList(nAnnotations, annotations, annotationsStorage),
           llvm::CastTo<DINodeAttr>)));
@@ -590,21 +590,22 @@ MlirAttribute mlirLLVMMDConstantAttrGetValue(MlirAttribute attr) {
   return wrap((Attribute)cast<MDConstantAttr>(unwrap(attr)).getValue());
 }
 
-MlirAttribute mlirLLVMMDFuncAttrGet(MlirContext ctx, MlirAttribute name) {
-  return wrap(
-      MDFuncAttr::get(unwrap(ctx), cast<FlatSymbolRefAttr>(unwrap(name))));
+MlirAttribute mlirLLVMMDGlobalValueAttrGet(MlirContext ctx,
+                                           MlirAttribute name) {
+  return wrap(MDGlobalValueAttr::get(unwrap(ctx),
+                                     cast<FlatSymbolRefAttr>(unwrap(name))));
 }
 
-bool mlirLLVMAttrIsAMDFuncAttr(MlirAttribute attr) {
-  return isa<MDFuncAttr>(unwrap(attr));
+bool mlirLLVMAttrIsAMDGlobalValueAttr(MlirAttribute attr) {
+  return isa<MDGlobalValueAttr>(unwrap(attr));
 }
 
-MlirTypeID mlirLLVMMDFuncAttrGetTypeID(void) {
-  return wrap(MDFuncAttr::getTypeID());
+MlirTypeID mlirLLVMMDGlobalValueAttrGetTypeID(void) {
+  return wrap(MDGlobalValueAttr::getTypeID());
 }
 
-MlirAttribute mlirLLVMMDFuncAttrGetName(MlirAttribute attr) {
-  return wrap((Attribute)cast<MDFuncAttr>(unwrap(attr)).getName());
+MlirAttribute mlirLLVMMDGlobalValueAttrGetName(MlirAttribute attr) {
+  return wrap((Attribute)cast<MDGlobalValueAttr>(unwrap(attr)).getName());
 }
 
 MlirAttribute mlirLLVMMDNodeAttrGet(MlirContext ctx, intptr_t nOperands,
