@@ -101,11 +101,11 @@ struct [[trivial_abi]] alignas(8) MyPtr {
 int receiveMyPtr(MyPtr o) { return *o.ptr; }
 
 // CHECK-LABEL: define dso_local noundef i32 @"?receiveMyPtr@@Y{{.*}}"
-// CHECK-SAME: (ptr nofree noundef align 8 dead_on_return dereferenceable(4) %o)
+// CHECK-SAME: (ptr nofree noundef align 8 dead_on_return dereferenceable(8) %o)
 
 int passMyPtr() { return receiveMyPtr(MyPtr()); }
 
 // CHECK-LABEL: define dso_local noundef i32 @"?passMyPtr@@Y{{.*}}"
 // CHECK: [[TMP:%[^ ]*]] = alloca %struct.MyPtr, align 8
 // CHECK: call x86_thiscallcc noundef ptr @"??0MyPtr@@QAE@XZ"(ptr {{[^,]*}} [[TMP]])
-// CHECK: call noundef i32 @"?receiveMyPtr@@Y{{.*}}"(ptr nofree noundef align 8 dead_on_return dereferenceable(4) [[TMP]])
+// CHECK: call noundef i32 @"?receiveMyPtr@@Y{{.*}}"(ptr nofree noundef align 8 dead_on_return dereferenceable(8) [[TMP]])

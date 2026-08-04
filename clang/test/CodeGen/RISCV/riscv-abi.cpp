@@ -130,11 +130,11 @@ struct child5_virtual_s : virtual parent5_virtual_s {
 };
 
 // ILP32-ILP32F-ILP32D-LABEL: define dso_local void @_Z38int32_float_virtual_struct_inheritance16child5_virtual_s
-// ILP32-ILP32F-ILP32D-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_CHILD5_VIRTUAL_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr nofree noundef align 4 dead_on_return dereferenceable(8) [[A:%.*]]) #[[ATTR0]] {
+// ILP32-ILP32F-ILP32D-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_CHILD5_VIRTUAL_S:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr nofree noundef align 4 dead_on_return dereferenceable(12) [[A:%.*]]) #[[ATTR0]] {
 // ILP32-ILP32F-ILP32D:  entry:
 //
 // LP64-LP64F-LP64D-LABEL: define dso_local void @_Z38int32_float_virtual_struct_inheritance16child5_virtual_s
-// LP64-LP64F-LP64D-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_CHILD5_VIRTUAL_S:%.*]]) align 8 [[AGG_RESULT:%.*]], ptr nofree noundef align 8 dead_on_return dereferenceable(12) [[A:%.*]]) #[[ATTR0]] {
+// LP64-LP64F-LP64D-SAME: (ptr dead_on_unwind noalias writable sret([[STRUCT_CHILD5_VIRTUAL_S:%.*]]) align 8 [[AGG_RESULT:%.*]], ptr nofree noundef align 8 dead_on_return dereferenceable(16) [[A:%.*]]) #[[ATTR0]] {
 // LP64-LP64F-LP64D:  entry:
 //
 struct child5_virtual_s int32_float_virtual_struct_inheritance(struct child5_virtual_s a) {

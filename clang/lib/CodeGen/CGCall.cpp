@@ -3251,7 +3251,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         // function's execution.
         Attrs.addAttribute(llvm::Attribute::NoFree);
         Attrs.addDereferenceableAttr(
-            getMinimumObjectSize(ParamType).getQuantity());
+            Context.getTypeSizeInChars(ParamType).getQuantity());
       }
 
       // byval disables readnone and readonly.
