@@ -102,6 +102,8 @@ Makes programs 10x faster by doing Special New Thing.
   table extensions and the `Smehv` and `Ssehv` synchronous exception hardware
   vectoring extensions.
 
+* Bump Svukte extension to 1.0.
+
 ### Changes to the WebAssembly Backend
 
 ### Changes to the Windows Target

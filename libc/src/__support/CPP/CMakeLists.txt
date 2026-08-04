@@ -114,6 +114,9 @@ add_header_library(
   optional
   HDRS
     optional.h
+  DEPENDS
+    .type_traits
+    .utility
 )
 
 add_header_library(

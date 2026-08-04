@@ -1,5 +1,5 @@
 llvm-calc-occupancy - AMDGPU occupancy calculator
-==================================================
+=================================================
 
 .. program:: llvm-calc-occupancy
 
