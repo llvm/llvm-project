@@ -19,6 +19,10 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 
+#include "llvm/Support/ErrorHandling.h"
+
+#include <cassert>
+
 namespace cir {
 
 CIRDiagnosticHandler::CIRDiagnosticHandler(mlir::MLIRContext *ctx,
@@ -64,6 +68,8 @@ clang::SourceLocation CIRDiagnosticHandler::translateLoc(mlir::Location loc) {
 void CIRDiagnosticHandler::emit(mlir::Diagnostic &diag, bool isNote) {
   unsigned diagID;
   if (isNote) {
+    assert(diag.getSeverity() == mlir::DiagnosticSeverity::Note &&
+           "a note attached to a diagnostic must have Note severity");
     diagID = clang::diag::note_cir_mlir_diagnostic;
   } else {
     switch (diag.getSeverity()) {
@@ -77,8 +83,8 @@ void CIRDiagnosticHandler::emit(mlir::Diagnostic &diag, bool isNote) {
       diagID = clang::diag::remark_cir_mlir_diagnostic;
       break;
     case mlir::DiagnosticSeverity::Note:
-      diagID = clang::diag::note_cir_mlir_diagnostic;
-      break;
+      llvm_unreachable("a top-level MLIR diagnostic should not have Note "
+                       "severity; notes arrive via getNotes()");
     }
   }
   Diags.Report(translateLoc(diag.getLocation()), diagID) << diag.str();
