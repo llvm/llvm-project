@@ -403,8 +403,7 @@ define <8 x i32> @test_signed_v8i32_v8f32(<8 x float> %f) nounwind {
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; AVX2-NEXT:    vcvttps2dq %ymm0, %ymm2
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
-; AVX2-NEXT:    vblendvps %ymm1, %ymm3, %ymm2, %ymm1
+; AVX2-NEXT:    vxorps %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vcmpunordps %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vandnps %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
@@ -770,15 +769,14 @@ define <4 x i1> @test_signed_v4i1_v4f64(<4 x double> %f) nounwind {
 ; AVX2-LABEL: test_signed_v4i1_v4f64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vcmpunordpd %ymm0, %ymm0, %ymm1
+; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-1.0E+0,-1.0E+0,-1.0E+0,-1.0E+0]
 ; AVX2-NEXT:    vmaxpd %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vminpd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm0
-; AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -882,13 +880,11 @@ define <4 x i32> @test_signed_v4i32_v4f64(<4 x double> %f) nounwind {
 ; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttpd2dq %ymm0, %xmm2
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2147483647,2147483647,2147483647,2147483647]
-; AVX2-NEXT:    vblendvps %xmm1, %xmm3, %xmm2, %xmm1
+; AVX2-NEXT:    vxorpd %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vcmpunordpd %ymm0, %ymm0, %ymm0
 ; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX2-NEXT:    vpandn %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

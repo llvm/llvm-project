@@ -22473,6 +22473,16 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
           IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
         }
 
+        // Optimize vector lowering on SSE2/AVX/AVX2 where mask is an all-ones
+        // bitmask vector (SelCCVT == DstVT). XOR(Cvt, PosOvf) maps INT_MIN
+        // (0x80000000) to INT_MAX (0x7FFFFFFF) on positive overflow without
+        // needing INT_MAX in the constant pool or select emulation.
+        if (SelCCVT == DstVT) {
+          SDValue Fixed = DAG.getNode(ISD::XOR, dl, DstVT, Cvt, PosOvf);
+          SDValue NotNaN = DAG.getNOT(dl, IsNaN, DstVT);
+          return DAG.getNode(ISD::AND, dl, DstVT, Fixed, NotNaN);
+        }
+
         SDValue IntMax =
             DAG.getConstant(APInt::getSignedMaxValue(32), dl, DstVT);
         SDValue Zero = DAG.getConstant(0, dl, DstVT);
@@ -22501,13 +22511,26 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         else
           Cvt = expandFP_TO_UINT_SSE(DstVT.getSimpleVT(), Clamped, dl, DAG,
                                      Subtarget);
-        SDValue UintMax = DAG.getConstant(APInt::getMaxValue(32), dl, DstVT);
-        SDValue Result = DAG.getSelect(dl, DstVT, IsOvf, UintMax, Cvt);
-        
-        SDValue Zero = DAG.getConstant(0, dl, DstVT);
+        // Optimize vector lowering on SSE2/AVX/AVX2 where mask is an all-ones
+        // bitmask vector (SelCCVT == DstVT). OR(Cvt, IsOvf) produces UINT_MAX
+        // (0xFFFFFFFF) on overflow without a constant pool load or select.
+        SDValue Result;
+        if (SelCCVT == DstVT) {
+          Result = DAG.getNode(ISD::OR, dl, DstVT, Cvt, IsOvf);
+        } else {
+          SDValue UintMax = DAG.getConstant(APInt::getMaxValue(32), dl, DstVT);
+          Result = DAG.getSelect(dl, DstVT, IsOvf, UintMax, Cvt);
+        }
+
         SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
         if (CCVT != SelCCVT)
           IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
+
+        if (SelCCVT == DstVT) {
+          SDValue NotNaN = DAG.getNOT(dl, IsNaN, DstVT);
+          return DAG.getNode(ISD::AND, dl, DstVT, Result, NotNaN);
+        }
+        SDValue Zero = DAG.getConstant(0, dl, DstVT);
         return DAG.getSelect(dl, DstVT, IsNaN, Zero, Result);
       }
     }
@@ -22549,7 +22572,6 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     // For saturation, FMAXC and FMINC might pass NaN through (since they return
     // the second operand if either is NaN).
     // Fix up NaN by selecting 0 explicitly.
-    SDValue Zero = DAG.getConstant(0, dl, DstVT);
     EVT CCVT =
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
     SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
@@ -22557,6 +22579,16 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
     if (CCVT != SelCCVT)
       IsNaN = DAG.getNode(ISD::TRUNCATE, dl, SelCCVT, IsNaN);
+
+    // On SSE2/AVX/AVX2 where mask is an all-ones bitmask vector, use ANDN
+    // (AND(Result, ~IsNaN)) to zero out NaN without needing a zero constant
+    // vector or select emulation.
+    if (SelCCVT == DstVT) {
+      SDValue NotNaN = DAG.getNOT(dl, IsNaN, DstVT);
+      return DAG.getNode(ISD::AND, dl, DstVT, Result, NotNaN);
+    }
+
+    SDValue Zero = DAG.getConstant(0, dl, DstVT);
     return DAG.getSelect(dl, DstVT, IsNaN, Zero, Result);
   }
   // This code is only for floats and doubles. Fall back to generic code for

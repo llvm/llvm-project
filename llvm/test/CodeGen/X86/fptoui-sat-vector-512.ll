@@ -1937,10 +1937,10 @@ define <8 x i32> @test_unsigned_v8i32_v8f64(<8 x double> %f) nounwind {
 ; AVX512F-NEXT:    vpsrad $31, %ymm2, %ymm4
 ; AVX512F-NEXT:    vcvttpd2dq %zmm3, %ymm3
 ; AVX512F-NEXT:    vpand %ymm4, %ymm3, %ymm3
-; AVX512F-NEXT:    vpor %ymm3, %ymm2, %ymm2
 ; AVX512F-NEXT:    vcmpgepd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
-; AVX512F-NEXT:    vpor %ymm2, %ymm1, %ymm1
+; AVX512F-NEXT:    vpor %ymm1, %ymm2, %ymm1
+; AVX512F-NEXT:    vpor %ymm3, %ymm1, %ymm1
 ; AVX512F-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpandn %ymm1, %ymm0, %ymm0

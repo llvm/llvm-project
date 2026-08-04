@@ -2036,8 +2036,7 @@ define <8 x i32> @test_signed_v8i32_v8f64(<8 x double> %f) nounwind {
 ; AVX512F-NEXT:    vcvttpd2dq %zmm0, %ymm1
 ; AVX512F-NEXT:    vcmpgepd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
-; AVX512F-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
-; AVX512F-NEXT:    vblendvps %ymm2, %ymm3, %ymm1, %ymm1
+; AVX512F-NEXT:    vpxor %ymm2, %ymm1, %ymm1
 ; AVX512F-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpandn %ymm1, %ymm0, %ymm0
