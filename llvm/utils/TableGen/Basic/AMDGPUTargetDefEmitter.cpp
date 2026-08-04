@@ -36,9 +36,12 @@ static void emitGPUKindEnum(raw_ostream &OS, StringRef Name) {
     OS << ((C == '-') ? '_' : toUpper(C));
 }
 
-// Feature string to enumerator, e.g. "16-bit-insts" -> "FEATURE_16_BIT_INSTS".
+// Feature string to enumerator, e.g. "16-bit-insts" -> "FEAT_16_BIT_INSTS". The
+// FEAT_ prefix (rather than FEATURE_) avoids colliding with the legacy
+// ArchFeatureKind enumerators (e.g. FEATURE_XNACK_ON_OFF_MODES) during the
+// migration off that bitfield.
 static void emitFeatureEnum(raw_ostream &OS, StringRef Name) {
-  OS << "FEATURE_";
+  OS << "FEAT_";
   for (char C : Name)
     OS << ((C == '-') ? '_' : toUpper(C));
 }
