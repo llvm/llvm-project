@@ -125,7 +125,6 @@ private:
   bool foldInsExtVectorToShuffle(Instruction &I);
   bool foldBitOpOfCastops(Instruction &I);
   bool foldBitOpOfCastConstant(Instruction &I);
-  bool foldBinopOfShuffles(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -2441,70 +2440,6 @@ bool VectorCombine::foldConcatOfBoolMasks(Instruction &I) {
   }
 
   replaceValue(I, *Result);
-  return true;
-}
-
-/// Fold binop(shuffle(V0, Mask), shuffle(V1, Mask))
-/// --> shuffle(binop(V0, V1), Mask)
-bool VectorCombine::foldBinopOfShuffles(Instruction &I) {
-  // It is not safe to transform things like div, urem, etc. because we may
-  // create undefined behavior when executing those on unknown vector elements.
-  if (!isSafeToSpeculativelyExecute(&I))
-    return false;
-
-  // If both arguments of the binary operation are shuffles that use the same
-  // mask and shuffle within a single vector, move the shuffle after the binop.
-  ArrayRef<int> Mask;
-  Value *LHS, *RHS, *V0, *V1;
-  if (!match(&I, m_BinOp(m_Value(LHS), m_Value(RHS))) ||
-      !match(LHS, m_Shuffle(m_Value(V0), m_Poison(), m_Mask(Mask))) ||
-      !match(RHS, m_Shuffle(m_Value(V1), m_Poison(), m_SpecificMask(Mask))))
-    return false;
-
-  if (V0->getType() != V1->getType())
-    return false;
-
-  auto *BO = cast<BinaryOperator>(&I);
-  auto *OpTy = cast<VectorType>(V0->getType());
-  auto *DstTy = cast<VectorType>(I.getType());
-  Instruction::BinaryOps Opcode = BO->getOpcode();
-
-  InstructionCost OldCost;
-  OldCost += TTI.getInstructionCost(&I, CostKind);
-  OldCost += TTI.getInstructionCost(cast<Instruction>(LHS), CostKind);
-  if (LHS != RHS)
-    OldCost += TTI.getInstructionCost(cast<Instruction>(RHS), CostKind);
-
-  InstructionCost NewCost;
-  NewCost += TTI.getArithmeticInstrCost(Opcode, OpTy, CostKind,
-                                        TTI::getOperandInfo(V0),
-                                        TTI::getOperandInfo(V1), {V0, V1});
-  NewCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc, DstTy,
-                                OpTy, Mask, CostKind);
-
-  // Add multiple use costs (assuming the multiple use isn't just the BinOp).
-  if (!(LHS == RHS && LHS->hasOneUser())) {
-    if (!LHS->hasOneUse())
-      NewCost += TTI.getInstructionCost(cast<Instruction>(LHS), CostKind);
-    if (LHS != RHS && !RHS->hasOneUse())
-      NewCost += TTI.getInstructionCost(cast<Instruction>(RHS), CostKind);
-  }
-
-  LLVM_DEBUG(dbgs() << "Found a binop of matching shuffles: " << I
-                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
-                    << "\n");
-
-  // TODO: When to allow equal costs (as we reduce instruction count)?
-  if (!NewCost.isValid() || NewCost >= OldCost)
-    return false;
-
-  Value *NewBO = Builder.CreateBinOp(Opcode, V0, V1);
-  Value *NewShuffle = Builder.CreateShuffleVector(NewBO, Mask);
-  if (auto *NewInst = dyn_cast<Instruction>(NewBO))
-    NewInst->copyIRFlags(BO);
-
-  Worklist.pushValue(NewBO);
-  replaceValue(I, *NewShuffle);
   return true;
 }
 
@@ -6275,6 +6210,37 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   replaceValue(I, *CastToOrig);
   return true;
 }
+
+/// Given the maximum shuffle index and load vector type, compute the number of
+/// elements for the shrunk load, rounding up to the next full vector register
+/// boundary to avoid scalar remainders that legalize poorly.
+static unsigned getAlignedNumElements(unsigned MaxIdx, FixedVectorType *LoadTy,
+                                      const TargetTransformInfo &TTI,
+                                      const DataLayout &DL) {
+  unsigned RawNumElements = MaxIdx + 1u;
+  Type *ElemTy = LoadTy->getElementType();
+  // Skip alignment for illegal element types.
+  if (!TTI.isTypeLegal(ElemTy))
+    return RawNumElements;
+
+  TypeSize ElemSize = DL.getTypeSizeInBits(ElemTy);
+  if (ElemSize.isScalable() || ElemSize.isZero())
+    return RawNumElements;
+
+  TypeSize RegSize =
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector);
+  if (RegSize.isScalable() || RegSize.isZero())
+    return RawNumElements;
+
+  unsigned ElemsPerReg = RegSize.getFixedValue() / ElemSize.getFixedValue();
+  // If the load already fits in a register, keep the exact size.
+  // Otherwise round up to the next full register boundary.
+  if (ElemsPerReg == 0 || RawNumElements <= ElemsPerReg)
+    return RawNumElements;
+
+  return alignTo(RawNumElements, ElemsPerReg);
+}
+
 // Attempt to shrink loads that are only used by shufflevector instructions.
 bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   auto *OldLoad = dyn_cast<LoadInst>(&I);
@@ -6324,7 +6290,8 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
-    unsigned const NewNumElements = Indices->second + 1u;
+    unsigned const NewNumElements =
+        getAlignedNumElements(Indices->second, OldLoadTy, TTI, *DL);
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
@@ -6629,16 +6596,12 @@ bool VectorCombine::run() {
           return true;
         if (foldBitOpOfCastConstant(I))
           return true;
-        if (foldBinopOfShuffles(I))
-          return true;
         break;
       case Instruction::PHI:
         if (shrinkPhiOfShuffles(I))
           return true;
         break;
       default:
-        if (foldBinopOfShuffles(I))
-          return true;
         if (shrinkType(I))
           return true;
         break;

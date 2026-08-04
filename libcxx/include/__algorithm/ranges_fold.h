@@ -31,6 +31,7 @@
 #include <__type_traits/decay.h>
 #include <__type_traits/invoke.h>
 #include <__utility/forward.h>
+#include <__utility/in_place.h>
 #include <__utility/move.h>
 #include <optional>
 

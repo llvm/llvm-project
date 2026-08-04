@@ -110,16 +110,14 @@ genAllocateClause(lower::AbstractConverter &converter,
   if (std::get<std::optional<Allocate::AlignModifier>>(clause.t))
     TODO(currentLocation, "OmpAllocateClause ALIGN modifier");
 
-  // Check if allocate clause has allocator specified. If so, add it
-  // to list of allocators, otherwise, add default allocator to
-  // list of allocators.
+  // Use a null handle to select the binding task's default allocator.
   using ComplexModifier = Allocate::AllocatorComplexModifier;
   if (auto &mod = std::get<std::optional<ComplexModifier>>(clause.t)) {
     mlir::Value operand = fir::getBase(converter.genExprValue(mod->v, stmtCtx));
     allocatorOperands.append(objects.size(), operand);
   } else {
     mlir::Value operand = firOpBuilder.createIntegerConstant(
-        currentLocation, firOpBuilder.getI32Type(), 1);
+        currentLocation, firOpBuilder.getI32Type(), mlir::omp::kNullAllocator);
     allocatorOperands.append(objects.size(), operand);
   }
 
