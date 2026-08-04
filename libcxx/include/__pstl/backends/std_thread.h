@@ -18,6 +18,7 @@
 #include <__atomic/atomic.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__exception/terminate.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
@@ -27,6 +28,7 @@
 #include <__memory/unique_ptr.h>
 #include <__new/exceptions.h>
 #include <__numeric/reduce.h>
+#include <__optional/optional.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
@@ -43,7 +45,6 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
