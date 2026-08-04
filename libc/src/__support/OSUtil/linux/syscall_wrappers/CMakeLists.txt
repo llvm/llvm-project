@@ -955,11 +955,10 @@ add_header_library(
 )
 
 add_header_library(
-  fork
+  clone3
   HDRS
-    fork.h
+    clone3.h
   DEPENDS
-    libc.hdr.signal_macros
     libc.hdr.types.pid_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common

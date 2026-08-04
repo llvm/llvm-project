@@ -17,8 +17,8 @@
 #include "hdr/types/pid_t.h"
 #include "hdr/types/sigset_t.h"
 #include "src/__support/OSUtil/exit.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/clone3.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/execle.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/fork.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigaction.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/rt_sigprocmask.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/wait4.h"
@@ -27,6 +27,8 @@
 #include "src/__support/macros/config.h"
 #include "src/signal/linux/signal_utils.h"
 #include "src/unistd/environ.h"
+
+#include <linux/sched.h> // For struct clone_args
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -65,7 +67,9 @@ LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
     return -1;
   }
 
-  auto fork_res = linux_syscalls::fork();
+  struct clone_args cl_args{};
+  cl_args.exit_signal = SIGCHLD;
+  auto fork_res = linux_syscalls::clone3(&cl_args, sizeof(cl_args));
   if (!fork_res.has_value()) {
     linux_syscalls::rt_sigaction(SIGINT, &orig_int, nullptr);
     linux_syscalls::rt_sigaction(SIGQUIT, &orig_quit, nullptr);
@@ -82,7 +86,7 @@ LLVM_LIBC_FUNCTION(int, system, (const char *command)) {
 
     // Error checking isn't helpful since this is the forked process, so we
     // can't set errno. All we can meaningfully do is exit with status 127.
-    linux_syscalls::execle("/bin/sh", "sh", "-c", command, 0, environ);
+    linux_syscalls::execle("/bin/sh", "sh", "-c", command, nullptr, environ);
 
     internal::exit(127);
   }
