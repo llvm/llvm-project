@@ -1122,6 +1122,62 @@ inline GetElementPtr_match m_GetElementPtr(Type *&SourceElementType,
   return GetElementPtr_match(SourceElementType, Operands);
 }
 
+/// The parts of a load through a pointer selected between two bases:
+///
+///   load (gep (select Cond, TrueBase, FalseBase), Indices...)
+struct SelectedBaseLoadPattern {
+  VPInstruction *Addr = nullptr;
+  SmallVector<VPValue *> GEPOperands;
+  VPValue *Cond = nullptr;
+  VPValue *TrueBase = nullptr;
+  VPValue *FalseBase = nullptr;
+};
+
+/// Match a simple load through a GEP whose base pointer is selected per
+/// iteration between two distinct candidates.
+struct SelectedBaseLoad_match {
+  SelectedBaseLoadPattern &Pattern;
+
+  bool match(const VPInstruction *Load) const {
+    if (Load->getOpcode() != Instruction::Load)
+      return false;
+
+    auto *LI = dyn_cast_or_null<LoadInst>(Load->getUnderlyingInstr());
+    if (!LI || !LI->isSimple())
+      return false;
+
+    Type *SourceElementTy = nullptr;
+    ArrayRef<VPValue *> GEPOperands;
+    if (!VPlanPatternMatch::match(
+            Load->getOperand(0),
+            m_GetElementPtr(SourceElementTy, GEPOperands)) ||
+        GEPOperands.size() < 2)
+      return false;
+
+    VPValue *Cond = nullptr;
+    VPValue *TrueBase = nullptr;
+    VPValue *FalseBase = nullptr;
+    if (!VPlanPatternMatch::match(GEPOperands.front(),
+                                  m_Select(m_VPValue(Cond), m_VPValue(TrueBase),
+                                           m_VPValue(FalseBase))) ||
+        !Cond->getScalarType()->isIntegerTy(1) || TrueBase == FalseBase)
+      return false;
+
+    auto *Addr = dyn_cast<VPInstruction>(Load->getOperand(0));
+    if (!Addr)
+      return false;
+
+    Pattern = {Addr, SmallVector<VPValue *>(GEPOperands), Cond, TrueBase,
+               FalseBase};
+    return true;
+  }
+};
+
+inline SelectedBaseLoad_match
+m_SelectedBaseLoad(SelectedBaseLoadPattern &Pattern) {
+  return {Pattern};
+}
+
 template <typename SubPattern_t> struct OneUse_match {
   SubPattern_t SubPattern;
 
