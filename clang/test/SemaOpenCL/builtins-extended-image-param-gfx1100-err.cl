@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1100 -target-feature +extended-image-insts -S -verify=expected -o - %s
+// RUN: %clang_cc1 -triple amdgpu11.00-- -S -verify=expected -o - %s
 // REQUIRES: amdgpu-registered-target
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable

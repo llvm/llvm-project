@@ -57,6 +57,8 @@ static_library("Utils") {
     "LoopPeel.cpp",
     "LoopRotationUtils.cpp",
     "LoopSimplify.cpp",
+    "LoopSplitUtils.cpp",
+    "LoopSplitUtilsPass.cpp",
     "LoopUnroll.cpp",
     "LoopUnrollAndJam.cpp",
     "LoopUnrollRuntime.cpp",

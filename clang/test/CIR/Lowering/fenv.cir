@@ -1,0 +1,235 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module {
+  // CHECK-LABEL: llvm.func @fadd_variants
+  cir.func @fadd_variants(%a: !cir.float, %b: !cir.float) {
+    // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %[[RM]], %[[EB]]) : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+    %0 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>}
+
+    // CHECK: llvm.fadd %{{.*}}, %{{.*}} : f32
+    %1 = cir.fadd %a, %b : !cir.float
+
+    // CHECK: %[[RM2:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+    // CHECK: %[[EB2:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %[[RM2]], %[[EB2]]) : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<>}
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @rounding_modes
+  cir.func @rounding_modes(%a: !cir.float, %b: !cir.float) {
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %0 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.downward">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %1 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = downward>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.upward">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = upward>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.towardzero">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %3 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = upwardzero>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearestaway">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %4 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearestaway>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"round.dynamic">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %5 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = unknown>}
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @exception_behaviors
+  cir.func @exception_behaviors(%a: !cir.float, %b: !cir.float) {
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %0 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.maytrap">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %1 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<strict_except = false>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %2 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<except_mode = masked, strict_except = false>}
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %3 = cir.fadd %a, %b : !cir.float {fenv = #cir.fenv<dynamic_rounding_mode = tonearest>}
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @all_binops
+  cir.func @all_binops(%a: !cir.double, %b: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %0 = cir.fadd %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fsub"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %1 = cir.fsub %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fmul"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %2 = cir.fmul %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fdiv"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %3 = cir.fdiv %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.frem"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %4 = cir.frem %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @vector_binop
+  cir.func @vector_binop(%a: !cir.vector<4 x !cir.float>,
+                         %b: !cir.vector<4 x !cir.float>) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xf32>
+    %0 = cir.fadd %a, %b : !cir.vector<4 x !cir.float> {fenv = #cir.fenv<strict_except = true>}
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @unary_fp_builtins
+  cir.func @unary_fp_builtins(%a: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.cos"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, !llvm.metadata, !llvm.metadata) -> f64
+    %0 = cir.cos %a : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.sqrt"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, !llvm.metadata, !llvm.metadata) -> f64
+    %1 = cir.sqrt %a : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.ceil"(%{{.*}}, %[[EB]]) : (f64, !llvm.metadata) -> f64
+    %2 = cir.ceil %a : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.fabs(%{{.*}}) : (f64) -> f64
+    %3 = cir.fabs %a : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.cos(%{{.*}}) : (f64) -> f64
+    %4 = cir.cos %a : !cir.double
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @binary_fp_builtins
+  cir.func @binary_fp_builtins(%a: !cir.double, %b: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.pow"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %0 = cir.pow %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.atan2"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %1 = cir.atan2 %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.frem"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %2 = cir.fmod %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.maximum"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata) -> f64
+    %3 = cir.fmaximum %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.minimum"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, !llvm.metadata) -> f64
+    %4 = cir.fminimum %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.copysign(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
+    %5 = cir.copysign %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @ternary_fp_builtins
+  cir.func @ternary_fp_builtins(%a: !cir.double, %b: !cir.double,
+                                %c: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fma"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64, !llvm.metadata, !llvm.metadata) -> f64
+    %0 = cir.fma %a, %b, %c : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, f64) -> f64
+    %1 = cir.fma %a, %b, %c : !cir.double
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @minmax_num
+  cir.func @minmax_num(%a: !cir.double, %b: !cir.double) {
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.maxnum"(%{{.*}}, %{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<nsz>} : (f64, f64, !llvm.metadata) -> f64
+    %0 = cir.fmaxnum %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.minnum"(%{{.*}}, %{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<nsz>} : (f64, f64, !llvm.metadata) -> f64
+    %1 = cir.fminnum %a, %b : !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.maxnum(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<nsz>} : (f64, f64) -> f64
+    %2 = cir.fmaxnum %a, %b : !cir.double
+    // CHECK: llvm.intr.minnum(%{{.*}}, %{{.*}}) {fastmathFlags = #llvm.fastmath<nsz>} : (f64, f64) -> f64
+    %3 = cir.fminnum %a, %b : !cir.double
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @fp_casts
+  cir.func @fp_casts(%a: !cir.float, %b: !cir.double, %i: !s32i) {
+    // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fptrunc"(%{{.*}}, %[[RM]], %[[EB]]) : (f64, !llvm.metadata, !llvm.metadata) -> f32
+    %0 = cir.cast floating %b : !cir.double -> !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[EB2:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fpext"(%{{.*}}, %[[EB2]]) : (f32, !llvm.metadata) -> f64
+    %1 = cir.cast floating %a : !cir.float -> !cir.double {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.sitofp"(%{{.*}}, %{{.*}}, %{{.*}}) : (i32, !llvm.metadata, !llvm.metadata) -> f32
+    %2 = cir.cast int_to_float %i : !s32i -> !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fptosi"(%{{.*}}, %{{.*}}) : (f32, !llvm.metadata) -> i32
+    %3 = cir.cast float_to_int %a : !cir.float -> !s32i {fenv = #cir.fenv<strict_except = true>}
+    // Without fenv the plain LLVM cast ops are used.
+    // CHECK: llvm.fptrunc %{{.*}} : f64 to f32
+    %4 = cir.cast floating %b : !cir.double -> !cir.float
+    // CHECK: llvm.fpext %{{.*}} : f32 to f64
+    %5 = cir.cast floating %a : !cir.float -> !cir.double
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @fp_cmp
+  cir.func @fp_cmp(%a: !cir.float, %b: !cir.float) {
+    // CHECK: %[[PRED:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"olt">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmps"(%{{.*}}, %{{.*}}, %[[PRED]], %[[EB]]) : (f32, f32, !llvm.metadata, !llvm.metadata) -> i1
+    %0 = cir.cmp lt %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[PRED_LE:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"ole">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmps"(%{{.*}}, %{{.*}}, %[[PRED_LE]], %{{.*}}) : (f32, f32, !llvm.metadata, !llvm.metadata) -> i1
+    %1 = cir.cmp le %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[PRED_GT:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"ogt">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmps"(%{{.*}}, %{{.*}}, %[[PRED_GT]], %{{.*}}) : (f32, f32, !llvm.metadata, !llvm.metadata) -> i1
+    %2 = cir.cmp gt %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[PRED_GE:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"oge">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmps"(%{{.*}}, %{{.*}}, %[[PRED_GE]], %{{.*}}) : (f32, f32, !llvm.metadata, !llvm.metadata) -> i1
+    %3 = cir.cmp ge %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[PRED_EQ:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"oeq">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmp"(%{{.*}}, %{{.*}}, %[[PRED_EQ]], %{{.*}}) : (f32, f32, !llvm.metadata, !llvm.metadata) -> i1
+    %4 = cir.cmp eq %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[PRED_NE:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"une">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmp"(%{{.*}}, %{{.*}}, %[[PRED_NE]], %{{.*}}) : (f32, f32, !llvm.metadata, !llvm.metadata) -> i1
+    %5 = cir.cmp ne %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[PRED_ONE:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"one">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmp"(%{{.*}}, %{{.*}}, %[[PRED_ONE]], %{{.*}}) : (f32, f32, !llvm.metadata, !llvm.metadata) -> i1
+    %6 = cir.cmp one %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[PRED_UNO:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"uno">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmp"(%{{.*}}, %{{.*}}, %[[PRED_UNO]], %{{.*}}) : (f32, f32, !llvm.metadata, !llvm.metadata) -> i1
+    %7 = cir.cmp uno %a, %b : !cir.float {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : f32
+    %8 = cir.cmp lt %a, %b : !cir.float
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @fp_vec_cmp
+  cir.func @fp_vec_cmp(%a: !cir.vector<4 x !cir.float>,
+                       %b: !cir.vector<4 x !cir.float>) {
+    // CHECK: %[[PRED:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"ogt">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: %[[CMP:.*]] = llvm.call_intrinsic "llvm.experimental.constrained.fcmps"(%{{.*}}, %{{.*}}, %[[PRED]], %[[EB]]) : (vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xi1>
+    // CHECK: llvm.sext %[[CMP]] : vector<4xi1> to vector<4xi32>
+    %0 = cir.vec.cmp(gt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {
+      fenv = #cir.fenv<strict_except = true>
+    }
+    // CHECK: %[[PRED_EQ:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"oeq">
+    // CHECK: %[[CMP_EQ:.*]] = llvm.call_intrinsic "llvm.experimental.constrained.fcmp"(%{{.*}}, %{{.*}}, %[[PRED_EQ]], %{{.*}}) : (vector<4xf32>, vector<4xf32>, !llvm.metadata, !llvm.metadata) -> vector<4xi1>
+    // CHECK: llvm.sext %[[CMP_EQ]] : vector<4xi1> to vector<4xi32>
+    %1 = cir.vec.cmp(eq, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> {
+      fenv = #cir.fenv<strict_except = true>
+    }
+    // CHECK: llvm.fcmp "olt" %{{.*}}, %{{.*}} : vector<4xf32>
+    // CHECK: llvm.sext %{{.*}} : vector<4xi1> to vector<4xi32>
+    %2 = cir.vec.cmp(lt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @unary_fp_to_int_builtins
+  cir.func @unary_fp_to_int_builtins(%a: !cir.double) {
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.lround"(%{{.*}}, %[[EB]]) : (f64, !llvm.metadata) -> i64
+    %0 = cir.lround %a : !cir.double -> !s64i {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.llround"(%{{.*}}, %{{.*}}) : (f64, !llvm.metadata) -> i64
+    %1 = cir.llround %a : !cir.double -> !s64i {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+    // CHECK: %[[EB2:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.lrint"(%{{.*}}, %[[RM]], %[[EB2]]) : (f64, !llvm.metadata, !llvm.metadata) -> i64
+    %2 = cir.lrint %a : !cir.double -> !s64i {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.llrint"(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, !llvm.metadata, !llvm.metadata) -> i64
+    %3 = cir.llrint %a : !cir.double -> !s64i {fenv = #cir.fenv<strict_except = true>}
+    // CHECK: llvm.intr.lround(%{{.*}}) : (f64) -> i64
+    %4 = cir.lround %a : !cir.double -> !s64i
+    cir.return
+  }
+}

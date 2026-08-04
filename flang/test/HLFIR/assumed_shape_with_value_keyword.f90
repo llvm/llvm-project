@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-hlfir %s -o - | FileCheck %s
 
 ! Addresses assumed shape dummy argument with VALUE keyword
 
