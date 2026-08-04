@@ -1694,10 +1694,10 @@ set(files
 configure_file("__config_site.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/__config_site" @ONLY)
 configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DIR}/__assertion_handler" COPYONLY)
 
-# We generate the modulemap file so that we can include __config_site in it. When using a target-specific include
-# directory, give it its own modulemap.
+# We generate the main modulemap file so that we can include __config_site in it. When using a target-specific
+# include directory, give it its own modulemap.
 if (LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-  configure_file("target.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap" COPYONLY)
+  configure_file("target.modulemap" "${LIBCXX_GENERATED_INCLUDE_TARGET_DIR}/module.modulemap" COPYONLY)
 else()
   set(LIBCXX_CONFIG_SITE_MODULE_ENTRY "textual header \"__config_site\"")
 endif()
