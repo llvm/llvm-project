@@ -56,13 +56,11 @@ static bool isDanglingStackSource(const MemRegion *Source,
     // dangle. If that frame is not on the stack then the source outlives
     // the returned value. The source is still alive when the returned value
     // is used, so it does not dangle.
-    /*
-    if (llvm::any_of(C.stackframes(), [&](const StackFrame &Frame) {
-          return &Frame == SF;
-        }))
-    */
-    if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
-      return true;
+    if (llvm::any_of(C.stackframes(),
+                     [&](const StackFrame &Frame) { return &Frame == SF; }))
+
+      if (SF == CurrentSF || !SF->isParentOf(CurrentSF))
+        return true;
   }
   return false;
 }
@@ -92,7 +90,6 @@ static ProgramStateRef bindSource(ProgramStateRef State, SVal RetVal,
   LifetimeSourceSet Set = LSet ? *LSet : F.getEmptySet();
   Set = F.add(Set, Source);
   State = State->set<LifetimeBoundMap>(RetVal, Set);
-
   return State;
 }
 
