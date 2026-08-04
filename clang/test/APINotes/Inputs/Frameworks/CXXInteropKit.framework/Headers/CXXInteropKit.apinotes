@@ -7,9 +7,14 @@ Classes:
   - Selector: 'didMoveToParentViewController:'
     SwiftName: didMove(toParent:)
     MethodKind: Instance
+  - Selector: 'methodWithRawName:'
+    SwiftName: '`raw method`(`raw param`:)'
+    MethodKind: Instance
 Enumerators:
 - Name: SomeClassRed
   SwiftName: red
+- Name: SomeClassRaw
+  SwiftName: '`raw constant`'
 Tags:
 - Name: NSSomeEnumOptions
   SwiftName: SomeEnum.Options

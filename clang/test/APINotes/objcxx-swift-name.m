@@ -14,10 +14,19 @@
 // CHECK-NEXT: ParmVarDecl
 // CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "didMove(toParent:)"
 
+// CHECK: Dumping NSSomeClass::methodWithRawName::
+// CHECK-NEXT: ObjCMethodDecl {{.+}} imported in CXXInteropKit - methodWithRawName: 'void'
+// CHECK-NEXT: ParmVarDecl
+// CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "`raw method`(`raw param`:)"
+
 // CHECK: Dumping SomeClassRed:
 // CHECK-NEXT: EnumConstantDecl {{.+}} imported in CXXInteropKit SomeClassRed 'ColorEnum'
 // CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "red"
 
-// CHECK-ANONYMOUS-ENUM: Dumping (unnamed enum at {{.+}}/Frameworks/CXXInteropKit.framework/Headers/CXXInteropKit.h:19:9):
+// CHECK: Dumping SomeClassRaw:
+// CHECK-NEXT: EnumConstantDecl {{.+}} imported in CXXInteropKit SomeClassRaw 'ColorEnum'
+// CHECK-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "`raw constant`"
+
+// CHECK-ANONYMOUS-ENUM: Dumping (unnamed enum at {{.+}}/Frameworks/CXXInteropKit.framework/Headers/CXXInteropKit.h:20:9):
 // CHECK-ANONYMOUS-ENUM-NEXT: EnumDecl {{.+}} imported in CXXInteropKit <undeserialized declarations> 'NSSomeEnumOptions':'unsigned long'
 // CHECK-ANONYMOUS-ENUM-NEXT: SwiftNameAttr {{.+}} <<invalid sloc>> "SomeEnum.Options"

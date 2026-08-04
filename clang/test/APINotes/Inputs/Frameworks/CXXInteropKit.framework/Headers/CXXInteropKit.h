@@ -6,11 +6,12 @@
 @interface NSSomeClass (UIContainerViewControllerCallbacks)
 
 - (void)didMoveToParentViewController:(NSSomeClass *)parent;
+- (void)methodWithRawName:(int)x;
 
 @end
 
 // Named "SomeClassRed" for ast node filtering in the test.
-enum ColorEnum { SomeClassRed, SomeClassGreen, SomeClassBlue };
+enum ColorEnum { SomeClassRed, SomeClassGreen, SomeClassBlue, SomeClassRaw };
 
 #define CF_OPTIONS(_type, _name) _type __attribute__((availability(swift, unavailable))) _name; enum : _name
 #define NS_OPTIONS(_type, _name) CF_OPTIONS(_type, _name)
