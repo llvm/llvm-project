@@ -659,8 +659,11 @@ std::optional<TargetID> TargetID::parse(const Triple &TT,
   if (!TT.isAMDGCN())
     return std::nullopt;
 
-  // Filter out unrecognized subarch suffixes.
-  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn")
+  // Filter out unrecognized subarch suffixes. The bare arch may be spelled
+  // either "amdgcn" (legacy) or "amdgpu" (new subarch triples); anything else
+  // with no recognized subarch is a stray suffix.
+  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn" &&
+      TT.getArchName() != "amdgpu")
     return std::nullopt;
 
   // A named processor (i.e. not the empty/generic wildcard, which is resolved
@@ -729,7 +732,7 @@ void TargetID::printCanonicalTargetIDString(raw_ostream &OS) const {
   printFeatureModifiers(OS, getSramEccSetting(), getXnackSetting());
 }
 
-std::string TargetID::getCanonicalFeatureString() const {
+std::string TargetID::getCanonicalTargetIDString() const {
   std::string Str;
   raw_string_ostream OS(Str);
   printCanonicalTargetIDString(OS);
