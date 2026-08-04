@@ -1,15 +1,18 @@
 // RUN: %clang_cc1 -O3 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -O0 -triple %itanium_abi_triple -funsafe-math-optimizations -emit-llvm -o - %s | FileCheck %s --check-prefix=UNSAFE
 
+float func(float);
+
 // Simple case
 float fp_reassoc_simple(float a, float b, float c) {
 // CHECK: _Z17fp_reassoc_simplefff
 // CHECK: %[[A:.+]] = fadd reassoc float %b, %c
-// CHECK: %[[M:.+]] = fmul reassoc float %b, %[[A]]
-// CHECK-NEXT: fadd reassoc float %c, %[[M]]
+// CHECK: %[[C:.+]] = tail call reassoc {{.*}} @_Z4funcf(float {{.*}} %[[A]])
+// CHECK: %[[N:.+]] = fneg reassoc float %[[C]]
+// CHECK: call reassoc {{.*}} @_Z4funcf(float {{.*}} %[[N]])
 #pragma clang fp reassociate(on)
-  a = b + c;
-  return a * b + c;
+  a = func(b + c);
+  return func(-a);
 }
 
 // Reassoc pragma should only apply to its scope
@@ -67,10 +70,19 @@ float fp_file_scope_stop(float a, float b, float c) {
 #pragma clang fp reassociate(off)
 float fp_reassoc_off(float a, float b, float c) {
   // CHECK: _Z14fp_reassoc_offfff
-  // CHECK: %[[D1:.+]] = fdiv float %a, %c
-  // CHECK-NEXT: %[[D2:.+]] = fdiv float %b, %c
-  // CHECK-NEXT: fadd float %[[D1]], %[[D2]]
-  return (a / c) + (b / c);
+  // CHECK: %[[N:.+]] = fneg float %a
+  // CHECK: %[[C:.+]] = tail call noundef float @_Z4funcf(float noundef %[[N]])
+  // CHECK: %[[D1:.+]] = fdiv float %[[C]], %c
+  // CHECK: %[[D2:.+]] = fdiv float %b, %c
+  // CHECK: fadd float %[[D2]], %[[D1]]
+  //
+  // UNSAFE: _Z14fp_reassoc_offfff
+  // UNSAFE: %[[N:.+]] = fneg nsz arcp afn float
+  // UNSAFE: %[[C:.+]] = call nsz arcp afn noundef float @_Z4funcf(float noundef %[[N]])
+  // UNSAFE: %[[D1:.+]] = fdiv nsz arcp afn float %[[C]]
+  // UNSAFE: %[[D2:.+]] = fdiv nsz arcp afn float
+  // UNSAFE: fadd nsz arcp afn float %[[D1]], %[[D2]]
+  return (func(-a) / c) + (b / c);
 }
 
 // Takes latest flag
@@ -93,16 +105,3 @@ float fp_reassoc_call_helper(float a, float b, float c) {
   return helper_func(a, b, c);
 }
 
-
-double fp_reassoc_call_helper(bool flag, double x, double y) {
-  return flag ? x : y;
-}
-
-#pragma clang fp reassociate(off)
-double fp_reassoc_off_fneg_call(double x) {
-  // UNSAFE-LABEL: _Z24fp_reassoc_off_fneg_calld
-  // UNSAFE: fcmp nsz arcp afn
-  // UNSAFE: fneg nsz arcp afn
-  // UNSAFE: call nsz arcp afn
-  return fp_reassoc_call_helper(x < 0, -x, x);
-}
