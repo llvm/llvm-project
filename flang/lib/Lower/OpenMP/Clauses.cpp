@@ -970,8 +970,8 @@ Firstprivate make(const parser::OmpClause::Firstprivate &inp,
 
 // Flush: empty
 
-From make(
-    const parser::OmpClause::From &inp, semantics::SemanticsContext &semaCtx) {
+From make(const parser::OmpClause::From &inp,
+          semantics::SemanticsContext &semaCtx) {
   // inp.v -> parser::OmpFromClause
   CLAUSET_ENUM_CONVERT( //
       convertExp, parser::OmpExpectation::Value, From::Expectation,
@@ -1011,9 +1011,9 @@ From make(
   }();
 
   return From{{/*Expectation=*/maybeExp,
-      /*Mappers=*/std::move(mappers),
-      /*Iterator=*/std::move(iterator),
-      /*LocatorList=*/makeObjects(t4, semaCtx)}};
+               /*Mappers=*/std::move(mappers),
+               /*Iterator=*/std::move(iterator),
+               /*LocatorList=*/makeObjects(t4, semaCtx)}};
 }
 
 // Full: empty
