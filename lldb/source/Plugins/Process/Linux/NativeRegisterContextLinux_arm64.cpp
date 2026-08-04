@@ -482,7 +482,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetPAuthOffset();
-    assert(offset < GetPACMaskSize());
+    assert(offset < GetSetSize(RegisterSetType::PAC));
     src = (uint8_t *)GetPACMask() + offset;
   } else if (GetRegisterInfo().IsMTEReg(reg)) {
     error = ReadMTEControl();
@@ -1465,9 +1465,9 @@ Status NativeRegisterContextLinux_arm64::ReadPAuthMask() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetPACMask();
-  ioVec.iov_len = GetPACMaskSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::PAC);
 
-  error = ReadRegisterSet(&ioVec, GetPACMaskSize(),
+  error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::PAC),
                           GetPtraceSet(RegisterSetType::PAC));
 
   if (error.Success())
