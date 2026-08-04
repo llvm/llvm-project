@@ -181,11 +181,17 @@ mlir::StringAttr getTargetFunctionName(mlir::MLIRContext *context,
 
 } // namespace
 
-// Check if a global represents a module variable
+// Check if a name belongs to a module rather than to a procedure.
+static bool isModuleLevelName(const fir::NameUniquer::DeconstructedName &name) {
+  return name.procs.empty() && !name.modules.empty();
+}
+
+// Check if a global represents a module variable or a module named constant
 static bool isModuleVariable(fir::GlobalOp globalOp) {
   std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
-  return result.first == fir::NameUniquer::NameKind::VARIABLE &&
-         result.second.procs.empty() && !result.second.modules.empty();
+  return (result.first == fir::NameUniquer::NameKind::VARIABLE ||
+          result.first == fir::NameUniquer::NameKind::CONSTANT) &&
+         isModuleLevelName(result.second);
 }
 
 // Look up DIGlobalVariable from a global symbol
@@ -379,7 +385,8 @@ void AddDebugInfoPass::handleDeclareOp(fir::cg::XDeclareOp declOp,
                                        mlir::Value dummyScope) {
   auto result = fir::NameUniquer::deconstruct(declOp.getUniqName());
 
-  if (result.first != fir::NameUniquer::NameKind::VARIABLE)
+  if (result.first != fir::NameUniquer::NameKind::VARIABLE &&
+      result.first != fir::NameUniquer::NameKind::CONSTANT)
     return;
 
   if (createCommonBlockGlobal(declOp, result.second.name, fileAttr, scopeAttr,
@@ -512,8 +519,23 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   mlir::OpBuilder builder(context);
 
   std::pair result = fir::NameUniquer::deconstruct(globalOp.getSymName());
-  if (result.first != fir::NameUniquer::NameKind::VARIABLE)
+  switch (result.first) {
+  case fir::NameUniquer::NameKind::VARIABLE:
+    break;
+  case fir::NameUniquer::NameKind::CONSTANT:
+    // A constant local to a procedure is described while walking that
+    // procedure, where `scope` is its DISubprogramAttr. Reaching here with any
+    // other scope means the procedure is not in the IR, typically because it
+    // was never called and got removed while its constant survived. There is
+    // no procedure to attach the constant to, and describing it at compile
+    // unit scope would wrongly make it visible everywhere.
+    if (!isModuleLevelName(result.second) &&
+        !mlir::isa<mlir::LLVM::DISubprogramAttr>(scope))
+      return;
+    break;
+  default:
     return;
+  }
 
   if (fir::NameUniquer::isSpecialSymbol(result.second.name))
     return;
@@ -524,12 +546,20 @@ void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
   if (modOpt)
     scope = *modOpt;
 
+  // An entity with internal linkage, such as a constant or a SAVE variable
+  // declared inside a procedure, is not visible outside this compilation unit.
+  // It also needs no linkage name because there is no external symbol for a
+  // debugger to match it against.
+  bool isLocalToUnit = globalOp.getLinkName() == "internal";
+  mlir::StringAttr linkageName =
+      isLocalToUnit ? mlir::StringAttr()
+                    : mlir::StringAttr::get(context, globalOp.getName());
+
   mlir::LLVM::DITypeAttr diType =
       typeGen.convertType(globalOp.getType(), fileAttr, scope, declOp);
   auto gvAttr = mlir::LLVM::DIGlobalVariableAttr::get(
       context, scope, mlir::StringAttr::get(context, result.second.name),
-      mlir::StringAttr::get(context, globalOp.getName()), fileAttr, line,
-      diType, /*isLocalToUnit*/ false,
+      linkageName, fileAttr, line, diType, isLocalToUnit,
       /*isDefinition*/ globalOp.isInitialized(), /* alignInBits*/ 0);
   auto dbgExpr = mlir::LLVM::DIGlobalVariableExpressionAttr::get(
       globalOp.getContext(), gvAttr, nullptr);

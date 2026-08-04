@@ -47,7 +47,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
 // CHECK-DAG: #[[MOD:.*]] = #llvm.di_module<{{.*}}scope = #[[CU]]{{.*}}name = "example"{{.*}}>
 // CHECK-DAG: #[[SP:.*]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
 // CHECK-DAG: #[[MOD_SP:.*]] = #llvm.di_subprogram<{{.*}}name = "mod_sub"{{.*}}retainedNodes = {{.*}}>
-// CHECK-DAG: #llvm.di_global_variable<scope = #[[SP]], name = "arr"{{.*}}line = 22{{.*}}>
-// CHECK-DAG: #llvm.di_global_variable<scope = #[[SP]], name = "s"{{.*}}line = 23{{.*}}>
-// CHECK-DAG: #llvm.di_global_variable<scope = #[[MOD_SP]], name = "ss"{{.*}}line = 12{{.*}}>
-// CHECK-DAG: #llvm.di_global_variable<scope = #[[MOD]], name = "mod_arr"{{.*}}line = 5{{.*}}>
+// A variable with the SAVE attribute inside a procedure has internal linkage,
+// so it is local to the compile unit and has no linkage name. A module
+// variable is visible to other compilation units and keeps its linkage name.
+// CHECK-DAG: #llvm.di_global_variable<scope = #[[SP]], name = "arr", file = {{.*}}, line = 22, type = {{.*}}, isLocalToUnit = true, isDefined = true>
+// CHECK-DAG: #llvm.di_global_variable<scope = #[[SP]], name = "s", file = {{.*}}, line = 23, type = {{.*}}, isLocalToUnit = true, isDefined = true>
+// CHECK-DAG: #llvm.di_global_variable<scope = #[[MOD_SP]], name = "ss", file = {{.*}}, line = 12, type = {{.*}}, isLocalToUnit = true, isDefined = true>
+// CHECK-DAG: #llvm.di_global_variable<scope = #[[MOD]], name = "mod_arr", linkageName = "_QMexampleEmod_arr"{{.*}}line = 5{{.*}}>
