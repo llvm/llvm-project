@@ -6,7 +6,6 @@ add_flang_library(FlangOpenMPTransforms
   GenericLoopConversion.cpp
   MapsForPrivatizedSymbols.cpp
   MapInfoFinalization.cpp
-  DeleteUnreachableTargets.cpp
   LowerWorkdistribute.cpp
   LowerWorkshare.cpp
   LowerNontemporal.cpp
