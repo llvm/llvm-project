@@ -1,9 +1,14 @@
-//===-- Linux implementation of sem_clockwait -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux implementation of sem_clockwait.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/semaphore/sem_clockwait.h"
@@ -15,6 +20,7 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/semaphore/linux/semaphore.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -22,6 +28,8 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, sem_clockwait,
                    (sem_t *__restrict sem, clockid_t clock_id,
                     const struct timespec *__restrict abstime)) {
+  LIBC_CRASH_ON_NULLPTR(sem);
+
   Semaphore *semaphore = reinterpret_cast<Semaphore *>(sem);
   if (!semaphore->is_valid()) {
     libc_errno = EINVAL;

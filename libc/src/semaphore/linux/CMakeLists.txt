@@ -5,6 +5,7 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.limits_macros
+    libc.hdr.offsetof_macros
     libc.hdr.time_macros
     libc.hdr.types.clockid_t
     libc.hdr.types.mode_t
@@ -13,6 +14,8 @@ add_header_library(
     libc.src.__support.CPP.atomic
     libc.src.__support.error_or
     libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.null_check
     libc.src.__support.threads.futex_utils
     libc.src.__support.time.abs_timeout
 )
@@ -56,6 +59,7 @@ add_entrypoint_object(
     libc.hdr.limits_macros
     libc.hdr.types.sem_t
     libc.src.__support.CPP.new
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -69,6 +73,7 @@ add_entrypoint_object(
     .semaphore
     libc.hdr.errno_macros
     libc.hdr.types.sem_t
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -82,6 +87,7 @@ add_entrypoint_object(
     .semaphore
     libc.hdr.errno_macros
     libc.hdr.types.sem_t
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -98,6 +104,7 @@ add_entrypoint_object(
     libc.hdr.semaphore_macros
     libc.hdr.types.mode_t
     libc.hdr.types.sem_t
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -112,6 +119,7 @@ add_entrypoint_object(
     .semaphore
     libc.hdr.errno_macros
     libc.hdr.types.sem_t
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -124,6 +132,7 @@ add_entrypoint_object(
   DEPENDS
     .named_semaphore
     .semaphore
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -137,6 +146,7 @@ add_entrypoint_object(
     .semaphore
     libc.hdr.errno_macros
     libc.hdr.types.sem_t
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -150,6 +160,7 @@ add_entrypoint_object(
     .semaphore
     libc.hdr.errno_macros
     libc.hdr.types.sem_t
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -163,6 +174,7 @@ add_entrypoint_object(
     .semaphore
     libc.hdr.errno_macros
     libc.hdr.types.sem_t
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -177,6 +189,7 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.hdr.types.sem_t
     libc.hdr.types.struct_timespec
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )
 
@@ -192,5 +205,6 @@ add_entrypoint_object(
     libc.hdr.types.clockid_t
     libc.hdr.types.sem_t
     libc.hdr.types.struct_timespec
+    libc.src.__support.macros.null_check
     libc.src.errno.errno
 )

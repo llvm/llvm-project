@@ -1,9 +1,14 @@
-//===-- Unittests for named POSIX semaphores ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for named POSIX semaphores.
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
@@ -65,6 +70,38 @@ TEST_F(LlvmLibcSemOpenTest, OpenExisting) {
   EXPECT_EQ(value, 10);
 
   ASSERT_THAT(LIBC_NAMESPACE::sem_close(second), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::sem_close(first), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::sem_unlink(name), Succeeds());
+}
+
+TEST_F(LlvmLibcSemOpenTest, DistinctHandlesShareState) {
+  const char *name = APPEND_LIBC_TEST("/llvmlibc_sem_open_handles");
+
+  LIBC_NAMESPACE::sem_unlink(name);
+  LIBC_NAMESPACE::libc_errno = 0;
+
+  sem_t *first = LIBC_NAMESPACE::sem_open(name, O_CREAT | O_EXCL, 0644, 0);
+  ASSERT_NE(first, SEM_FAILED);
+
+  sem_t *second = LIBC_NAMESPACE::sem_open(name, 0);
+  ASSERT_NE(second, SEM_FAILED);
+
+  // Each call returns its own handle.
+  EXPECT_NE(first, second);
+
+  // Both handles operate on the same underlying semaphore, so a post through
+  // one is observed through the other.
+  ASSERT_THAT(LIBC_NAMESPACE::sem_post(first), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::sem_wait(second), Succeeds());
+
+  // Closing one handle leaves the other usable.
+  ASSERT_THAT(LIBC_NAMESPACE::sem_close(second), Succeeds());
+  ASSERT_THAT(LIBC_NAMESPACE::sem_post(first), Succeeds());
+
+  int value = -1;
+  ASSERT_THAT(LIBC_NAMESPACE::sem_getvalue(first, &value), Succeeds());
+  EXPECT_EQ(value, 1);
+
   ASSERT_THAT(LIBC_NAMESPACE::sem_close(first), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::sem_unlink(name), Succeeds());
 }

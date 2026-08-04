@@ -1,9 +1,14 @@
-//===-- Implementation header for sem_unlink function -----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation header for sem_unlink.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_SEMAPHORE_SEM_UNLINK_H
