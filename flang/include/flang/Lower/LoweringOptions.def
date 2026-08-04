@@ -93,5 +93,8 @@ ENUM_LOWERINGOPT(PreserveUseDebugInfo, unsigned, 1, 0)
 /// Portable, Extremum, ExtremeNum). Default: Legacy.
 ENUM_LOWERINGOPT(FPMaxminBehavior, Fortran::common::FPMaxminBehavior, 2, 0)
 
+/// When true, enables semantics for -finit-local-zero during codegen.
+ENUM_LOWERINGOPT(InitLocalZeroDef, unsigned, 1, 0)
+
 #undef LOWERINGOPT
 #undef ENUM_LOWERINGOPT

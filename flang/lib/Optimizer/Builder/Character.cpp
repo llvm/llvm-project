@@ -898,3 +898,34 @@ fir::factory::convertCharacterKind(fir::FirOpBuilder &builder,
                              dest);
   return fir::CharBoxValue{dest, srcBoxChar.getLen()};
 }
+
+mlir::LLVM::MemsetOp
+fir::factory::emitMemset(fir::FirOpBuilder &builder, mlir::Location loc,
+                         Fortran::lower::AbstractConverter &converter,
+                         const Fortran::semantics::Symbol &sym,
+                         mlir::Value val) {
+  fir::ExtendedValue ext = converter.getSymbolExtendedValue(sym);
+  const auto *charBox = ext.getCharBox();
+  mlir::Value buffer = charBox->getBuffer();
+  assert(buffer && "CharBox buffer is null");
+  auto eleTy = fir::unwrapRefType(buffer.getType());
+  auto charTy = mlir::cast<fir::CharacterType>(fir::unwrapSequenceType(eleTy));
+  unsigned kindBytes =
+      builder.getKindMap().getCharacterBitsize(charTy.getFKind()) / 8;
+  auto lenVal = charBox->getLen();
+  mlir::Value lenI64 = builder.createConvert(loc, builder.getI64Type(), lenVal);
+  mlir::Value kind =
+      builder.createIntegerConstant(loc, builder.getI64Type(), kindBytes);
+  auto mulOp = mlir::arith::MulIOp::create(builder, loc, lenI64, kind);
+  auto byteLen = builder.createConvert(loc, builder.getI64Type(), mulOp);
+
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+  mlir::Value ptr = builder.createConvert(loc, ptrTy, buffer);
+
+  mlir::ModuleOp mod = builder.getModule();
+  mlir::OpBuilder modBuilder(mod.getBodyRegion());
+  modBuilder.setInsertionPointToEnd(val.getParentBlock());
+  return mlir::LLVM::MemsetOp::create(
+      modBuilder, loc, ptr, val, byteLen,
+      fir::isa_volatile_type(converter.genType(sym)));
+}
