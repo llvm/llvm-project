@@ -615,12 +615,13 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     AffineMap readMap = readOp.getPermutationMap();
     bool isTransposeLoad = isInnermostTwoDimsTransposed(readMap);
 
-    // Prefer an nd block load. It requires HW block-load support, a non-0D
-    // vector backed by a scalar-element memref, and a map the block load can
-    // realize. Out-of-bounds reads are allowed as long as the padding matches
-    // load_nd's implicit zero padding.
+    // Prefer an nd block load. It requires HW block-load support, a vector of
+    // rank >= 2 backed by a scalar-element memref, and a map the block load can
+    // realize. 1D vectors use the scattered xegpu.load path instead, which has
+    // a richer interface (e.g. layout capabilities). Out-of-bounds reads are
+    // allowed as long as the padding matches load_nd's implicit zero padding.
     bool canLowerToLoadNd =
-        hasBlockLoadSupport && loadedVecTy.getRank() > 0 &&
+        hasBlockLoadSupport && loadedVecTy.getRank() > 1 &&
         (readMap.isMinorIdentity() || isTransposeLoad) &&
         readMemTy.getElementType().isIntOrFloat() &&
         (!isOutOfBounds || isZeroOrPoisonPadding(readOp.getPadding()));
@@ -726,12 +727,13 @@ struct TransferWriteLowering
     bool hasBlockStoreSupport =
         (chip == "pvc" || chip == "bmg" || chip == "cri");
 
-    // Prefer an nd block store. It requires HW block-store support, a non-0D
-    // vector backed by a scalar-element memref, and a minor-identity map (block
-    // stores have no transpose support). Out-of-bounds writes are handled by
-    // the descriptor's boundary check.
+    // Prefer an nd block store. It requires HW block-store support, a vector of
+    // rank >= 2 backed by a scalar-element memref, and a minor-identity map
+    // (block stores have no transpose support). 1D vectors use the scattered
+    // xegpu.store path instead, which has a richer interface. Out-of-bounds
+    // writes are handled by the descriptor's boundary check.
     AffineMap map = writeOp.getPermutationMap();
-    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 0 &&
+    bool canLowerToStoreNd = hasBlockStoreSupport && vecTy.getRank() > 1 &&
                              map.isMinorIdentity() &&
                              writeMemTy.getElementType().isIntOrFloat();
 

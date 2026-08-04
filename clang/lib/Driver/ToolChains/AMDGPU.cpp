@@ -771,24 +771,26 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, BoundArch BA,
   }
 
   if (!getTriple().isSPIRV()) {
-    std::optional<llvm::AMDGPU::TargetID> PTID = checkTargetID(*DAL);
+    AMDGPUToolChain::ParsedTargetIDType PTID = checkTargetID(*DAL);
 
-    // Synthesize feature flags for explicit target ID modifiers (xnack,
-    // sramecc).
-    if (PTID) {
-      using llvm::AMDGPU::TargetIDSetting;
-      if (PTID->isXnackOnOrOff())
-        DAL->AddFlagArg(nullptr, Opts.getOption(PTID->getXnackSetting() ==
-                                                        TargetIDSetting::On
+    // Synthesize feature flags for target ID modifiers (xnack, sramecc).
+    if (PTID.OptionalFeatureMap) {
+      const llvm::StringMap<bool> &FeatureMap = *PTID.OptionalFeatureMap;
+
+      auto XnackIt = FeatureMap.find("xnack");
+      if (XnackIt != FeatureMap.end()) {
+        DAL->AddFlagArg(nullptr, Opts.getOption(XnackIt->second
                                                     ? options::OPT_mxnack
                                                     : options::OPT_mno_xnack));
+      }
 
-      if (PTID->isSramEccOnOrOff())
-        DAL->AddFlagArg(
-            nullptr,
-            Opts.getOption(PTID->getSramEccSetting() == TargetIDSetting::On
-                               ? options::OPT_msramecc
-                               : options::OPT_mno_sramecc));
+      auto SrameccIt = FeatureMap.find("sramecc");
+      if (SrameccIt != FeatureMap.end()) {
+        DAL->AddFlagArg(nullptr,
+                        Opts.getOption(SrameccIt->second
+                                           ? options::OPT_msramecc
+                                           : options::OPT_mno_sramecc));
+      }
     }
   }
 
@@ -1002,33 +1004,28 @@ AMDGPUToolChain::getGPUArch(const llvm::opt::ArgList &DriverArgs) const {
       getTriple(), DriverArgs.getLastArgValue(options::OPT_mcpu_EQ));
 }
 
-StringRef
-AMDGPUToolChain::getTargetIDArg(const llvm::opt::ArgList &DriverArgs) const {
-  // Target IDs are only meaningful for AMDGCN targets.
-  if (!getTriple().isAMDGCN())
-    return StringRef();
-  return DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
-}
-
-std::optional<llvm::AMDGPU::TargetID>
+AMDGPUToolChain::ParsedTargetIDType
 AMDGPUToolChain::getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const {
-  StringRef TargetID = getTargetIDArg(DriverArgs);
+  StringRef TargetID = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
   if (TargetID.empty())
-    return std::nullopt;
+    return {};
 
-  return llvm::AMDGPU::TargetID::parse(getTriple(), TargetID);
+  llvm::StringMap<bool> FeatureMap;
+  auto OptionalGpuArch = parseTargetID(getTriple(), TargetID, &FeatureMap);
+  if (!OptionalGpuArch)
+    return {TargetID.str(), std::nullopt, std::nullopt};
+
+  return {TargetID.str(), OptionalGpuArch->str(), FeatureMap};
 }
 
-std::optional<llvm::AMDGPU::TargetID>
+AMDGPUToolChain::ParsedTargetIDType
 AMDGPUToolChain::checkTargetID(const llvm::opt::ArgList &DriverArgs) const {
-  std::optional<llvm::AMDGPU::TargetID> ID = getParsedTargetID(DriverArgs);
-  // Diagnose a non-empty but invalid target ID.
-  if (!ID) {
-    StringRef TargetID = getTargetIDArg(DriverArgs);
-    if (!TargetID.empty())
-      getDriver().Diag(clang::diag::err_drv_bad_target_id) << TargetID;
+  auto PTID = getParsedTargetID(DriverArgs);
+  if (PTID.OptionalTargetID && !PTID.OptionalGPUArch) {
+    getDriver().Diag(clang::diag::err_drv_bad_target_id)
+        << *PTID.OptionalTargetID;
   }
-  return ID;
+  return PTID;
 }
 
 Expected<SmallVector<std::string>>
@@ -1308,21 +1305,26 @@ LTOKind AMDGPUToolChain::getLTOMode(const ArgList &Args,
 }
 
 static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
-  std::optional<llvm::AMDGPU::TargetID> ID =
-      llvm::AMDGPU::TargetID::parse(TT, TargetID);
-  if (!ID)
+  // Arch-specific check - only report as supported if arch has xnack+
+  if (!TT.isAMDGCN())
     return false;
+  llvm::StringRef Processor = getProcessorFromTargetID(TT, TargetID);
+  llvm::AMDGPU::GPUKind ProcKind = llvm::AMDGPU::parseArchAMDGCN(Processor);
+  unsigned Features = llvm::AMDGPU::getArchAttrAMDGCN(ProcKind);
 
-  unsigned Features = llvm::AMDGPU::getArchAttrAMDGCN(ID->getGPUKind());
-
-  // If the processor has xnack but doesn't support on/off modes, xnack is
-  // always on.
-  if ((Features & llvm::AMDGPU::FEATURE_XNACK) &&
-      !(Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES))
+  // If processor has xnack but doesn't support on/off modes, xnack is always on
+  bool XnackAlwaysOn = (Features & llvm::AMDGPU::FEATURE_XNACK) &&
+                       !(Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES);
+  if (XnackAlwaysOn)
     return true;
 
-  // Otherwise, it is available only if the target ID explicitly enables it.
-  return ID->getXnackSetting() == llvm::AMDGPU::TargetIDSetting::On;
+  // Otherwise, check if xnack+ is explicitly enabled in the target ID
+  llvm::StringMap<bool> FeatureMap;
+  auto OptionalGpuArch = parseTargetID(TT, TargetID, &FeatureMap);
+  if (!OptionalGpuArch)
+    return false;
+  auto Loc = FeatureMap.find("xnack");
+  return (Loc != FeatureMap.end() && Loc->second);
 }
 
 SanitizerMask AMDGPUToolChain::getSupportedSanitizers(

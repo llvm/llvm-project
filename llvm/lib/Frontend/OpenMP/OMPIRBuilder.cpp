@@ -1055,6 +1055,11 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
   if (!OffloadInfoManager.empty())
     createOffloadEntriesAndInfoMetadata(ErrorReportFn);
 
+  // Rewrite uses of globals to their replacement declare target globals if
+  // we are processing a device module.
+  if (Config.isTargetDevice())
+    applyDeclareTargetGlobalReplacements();
+
   if (Config.EmitLLVMUsedMetaInfo.value_or(false)) {
     std::vector<WeakTrackingVH> LLVMCompilerUsed = {
         M.getGlobalVariable("__openmp_nvptx_data_transfer_temporary_storage")};
@@ -1065,6 +1070,104 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
 }
 
 bool OpenMPIRBuilder::isFinalized() { return IsFinalized; }
+
+void OpenMPIRBuilder::registerDeclareTargetGlobalReplacement(
+    GlobalValue *Original, GlobalValue *Replacement) {
+  assert(Original && Replacement &&
+         "Null values provided to registerDeclareTargetGlobalReplacement");
+  DeclareTargetGlobalReplacements.push_back({Original, Replacement});
+}
+
+void OpenMPIRBuilder::applyDeclareTargetGlobalReplacements() {
+  for (DeclareTargetGlobalReplacement &R : DeclareTargetGlobalReplacements) {
+    GlobalValue *OldGV = R.Original;
+    GlobalValue *NewGV = R.Replacement;
+
+    assert(OldGV && NewGV &&
+           "A null value was inserted into DeclareTargetGlobalReplacements");
+
+    // The assert above should catch this case, but this is kept to attempt
+    // to proceed without issue when asserts are off.
+    if (!OldGV || !NewGV)
+      continue;
+
+    // The replacement global is a reference pointer that holds the
+    // address of the device-resident storage. Every use must load the
+    // reference pointer first and use the loaded address.
+    //
+    // Constant expression users (e.g. a constant GEP embedded in another
+    // global's initializer or in an instruction) cannot have a load inserted
+    // in place, so first expand any constant-expression users that live inside
+    // functions into instructions. Any remaining constant users are handled
+    // via a direct constant rewrite below as we cannot materialize a load
+    // there.
+    //
+    // NOTE: We extend the constant rewrite to module scope, as we replace all
+    // usages.
+    if (auto *OldConst = dyn_cast<Constant>(OldGV))
+      convertUsersOfConstantsToInstructions(OldConst,
+                                            /*RestrictToFunc=*/nullptr,
+                                            /*RemoveDeadConstants=*/false);
+
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    SmallVector<User *, 16> Users(OldGV->users());
+    for (User *U : Users) {
+      auto *Insn = dyn_cast<Instruction>(U);
+      if (!Insn)
+        continue;
+
+      // A PHI node cannot have a load inserted immediately before it, as PHIs
+      // must remain grouped at the top of their basic block. So we need to
+      // make sure any loads we emit are generated in the preceding edge, a
+      // PHI may reference the global on more than one edge, so every matching
+      // slot must be handled.
+      if (auto *PHI = dyn_cast<PHINode>(Insn)) {
+        for (unsigned I = 0, E = PHI->getNumIncomingValues(); I < E; ++I) {
+          if (PHI->getIncomingValue(I) != OldGV)
+            continue;
+
+          BasicBlock *IncomingBB = PHI->getIncomingBlock(I);
+          Builder.SetInsertPoint(IncomingBB->getTerminator());
+          Builder.SetCurrentDebugLocation(PHI->getDebugLoc());
+          LoadInst *EdgeLoad = Builder.CreateLoad(NewGV->getType(), NewGV);
+          PHI->setIncomingValue(I, EdgeLoad);
+        }
+        continue;
+      }
+
+      Builder.SetInsertPoint(Insn);
+      Builder.SetCurrentDebugLocation(Insn->getDebugLoc());
+      LoadInst *Load = Builder.CreateLoad(NewGV->getType(), NewGV);
+
+      // The replacement declare target global lives in the default address
+      // space, whereas the original global may reside in a non-default
+      // address space. In that case the initial lowering may have
+      // emitted an addrspacecast that is no longer valid.  Replace the
+      // whole addrspacecast with the load and erase it rather than
+      // feeding the load back into the (now pointless) cast.
+      // NOTE: If we end up with replacement declare target globals in
+      // non-zero AS's the below will need some minor extensions to have the
+      // option to alter the address space cast to the new address space where
+      // required rather than just replacing it.
+      if (auto *ASC = dyn_cast<AddrSpaceCastInst>(Insn)) {
+        unsigned NewGVAS = NewGV->getType()->getPointerAddressSpace();
+        assert(NewGVAS == 0 &&
+               "Non-default address space declare target global");
+        unsigned OldGVAS = OldGV->getType()->getPointerAddressSpace();
+        unsigned DestAS = ASC->getType()->getPointerAddressSpace();
+        if (DestAS == 0 && NewGVAS != OldGVAS) {
+          ASC->replaceAllUsesWith(Load);
+          ASC->eraseFromParent();
+          continue;
+        }
+      }
+
+      Insn->replaceUsesOfWith(OldGV, Load);
+    }
+  }
+
+  DeclareTargetGlobalReplacements.clear();
+}
 
 OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
