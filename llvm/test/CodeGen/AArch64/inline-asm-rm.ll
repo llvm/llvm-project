@@ -12,51 +12,92 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu --global-isel=false --fast-isel=false --regalloc=fast < %s \
 ; RUN:     | FileCheck --check-prefix=FAST_RA %s
 
-; Test rm constraints on AArch64 under all three ISel frameworks.
-
-define i64 @test_rm_output() {
-; GLOBAL_ISEL_GREEDY_RA-LABEL: test_rm_output:
+; AArch64 has not implemented TargetInstrInfo::getFrameIndexOperands(), so
+; TargetLowering::supportsRegMemInlineAsmFolding() correctly returns false
+; for it: preferring a register for an "rm" constraint here would have
+; nothing to fall back to if that register genuinely isn't available.
+; CGStmt.cpp's mirroring check means Clang, for this target, keeps emitting
+; the indirect (pointer-argument) form for a plain "rm"/"+rm" output that it
+; always has -- this is the realistic case AArch64 users actually hit, and
+; it's expected to work correctly and identically across all three ISel
+; frameworks, the same as it always has. See
+; inline-asm-rm-unsupported-direct.ll for the direct-form (Clang would never
+; emit this for this target) regression guard.
+define i64 @test_rm_output_indirect() {
+; GLOBAL_ISEL_GREEDY_RA-LABEL: test_rm_output_indirect:
 ; GLOBAL_ISEL_GREEDY_RA:       // %bb.0: // %entry
+; GLOBAL_ISEL_GREEDY_RA-NEXT:    sub sp, sp, #16
+; GLOBAL_ISEL_GREEDY_RA-NEXT:    .cfi_def_cfa_offset 16
+; GLOBAL_ISEL_GREEDY_RA-NEXT:    add x8, sp, #8
 ; GLOBAL_ISEL_GREEDY_RA-NEXT:    //APP
-; GLOBAL_ISEL_GREEDY_RA-NEXT:    // x0
+; GLOBAL_ISEL_GREEDY_RA-NEXT:    // [x8]
 ; GLOBAL_ISEL_GREEDY_RA-NEXT:    //NO_APP
+; GLOBAL_ISEL_GREEDY_RA-NEXT:    ldr x0, [sp, #8]
+; GLOBAL_ISEL_GREEDY_RA-NEXT:    add sp, sp, #16
 ; GLOBAL_ISEL_GREEDY_RA-NEXT:    ret
 ;
-; GLOBAL_ISEL_FAST_RA-LABEL: test_rm_output:
+; GLOBAL_ISEL_FAST_RA-LABEL: test_rm_output_indirect:
 ; GLOBAL_ISEL_FAST_RA:       // %bb.0: // %entry
+; GLOBAL_ISEL_FAST_RA-NEXT:    sub sp, sp, #16
+; GLOBAL_ISEL_FAST_RA-NEXT:    .cfi_def_cfa_offset 16
+; GLOBAL_ISEL_FAST_RA-NEXT:    add x8, sp, #8
 ; GLOBAL_ISEL_FAST_RA-NEXT:    //APP
-; GLOBAL_ISEL_FAST_RA-NEXT:    // x0
+; GLOBAL_ISEL_FAST_RA-NEXT:    // [x8]
 ; GLOBAL_ISEL_FAST_RA-NEXT:    //NO_APP
+; GLOBAL_ISEL_FAST_RA-NEXT:    ldr x0, [sp, #8]
+; GLOBAL_ISEL_FAST_RA-NEXT:    add sp, sp, #16
 ; GLOBAL_ISEL_FAST_RA-NEXT:    ret
 ;
-; FAST_ISEL_GREEDY_RA-LABEL: test_rm_output:
+; FAST_ISEL_GREEDY_RA-LABEL: test_rm_output_indirect:
 ; FAST_ISEL_GREEDY_RA:       // %bb.0: // %entry
+; FAST_ISEL_GREEDY_RA-NEXT:    sub sp, sp, #16
+; FAST_ISEL_GREEDY_RA-NEXT:    .cfi_def_cfa_offset 16
+; FAST_ISEL_GREEDY_RA-NEXT:    add x8, sp, #8
 ; FAST_ISEL_GREEDY_RA-NEXT:    //APP
-; FAST_ISEL_GREEDY_RA-NEXT:    // x0
+; FAST_ISEL_GREEDY_RA-NEXT:    // [x8]
 ; FAST_ISEL_GREEDY_RA-NEXT:    //NO_APP
+; FAST_ISEL_GREEDY_RA-NEXT:    ldr x0, [sp, #8]
+; FAST_ISEL_GREEDY_RA-NEXT:    add sp, sp, #16
 ; FAST_ISEL_GREEDY_RA-NEXT:    ret
 ;
-; FAST_ISEL_FAST_RA-LABEL: test_rm_output:
+; FAST_ISEL_FAST_RA-LABEL: test_rm_output_indirect:
 ; FAST_ISEL_FAST_RA:       // %bb.0: // %entry
+; FAST_ISEL_FAST_RA-NEXT:    sub sp, sp, #16
+; FAST_ISEL_FAST_RA-NEXT:    .cfi_def_cfa_offset 16
+; FAST_ISEL_FAST_RA-NEXT:    add x8, sp, #8
 ; FAST_ISEL_FAST_RA-NEXT:    //APP
-; FAST_ISEL_FAST_RA-NEXT:    // x0
+; FAST_ISEL_FAST_RA-NEXT:    // [x8]
 ; FAST_ISEL_FAST_RA-NEXT:    //NO_APP
+; FAST_ISEL_FAST_RA-NEXT:    ldr x0, [sp, #8]
+; FAST_ISEL_FAST_RA-NEXT:    add sp, sp, #16
 ; FAST_ISEL_FAST_RA-NEXT:    ret
 ;
-; GREEDY_RA-LABEL: test_rm_output:
+; GREEDY_RA-LABEL: test_rm_output_indirect:
 ; GREEDY_RA:       // %bb.0: // %entry
+; GREEDY_RA-NEXT:    sub sp, sp, #16
+; GREEDY_RA-NEXT:    .cfi_def_cfa_offset 16
+; GREEDY_RA-NEXT:    add x8, sp, #8
 ; GREEDY_RA-NEXT:    //APP
-; GREEDY_RA-NEXT:    // x0
+; GREEDY_RA-NEXT:    // [x8]
 ; GREEDY_RA-NEXT:    //NO_APP
+; GREEDY_RA-NEXT:    ldr x0, [sp, #8]
+; GREEDY_RA-NEXT:    add sp, sp, #16
 ; GREEDY_RA-NEXT:    ret
 ;
-; FAST_RA-LABEL: test_rm_output:
+; FAST_RA-LABEL: test_rm_output_indirect:
 ; FAST_RA:       // %bb.0: // %entry
+; FAST_RA-NEXT:    sub sp, sp, #16
+; FAST_RA-NEXT:    .cfi_def_cfa_offset 16
+; FAST_RA-NEXT:    add x8, sp, #8
 ; FAST_RA-NEXT:    //APP
-; FAST_RA-NEXT:    // x0
+; FAST_RA-NEXT:    // [x8]
 ; FAST_RA-NEXT:    //NO_APP
+; FAST_RA-NEXT:    ldr x0, [sp, #8]
+; FAST_RA-NEXT:    add sp, sp, #16
 ; FAST_RA-NEXT:    ret
 entry:
-  %0 = tail call i64 asm "# $0", "=rm"()
+  %out = alloca i64, align 8
+  call void asm "// $0", "=*rm"(ptr elementtype(i64) %out)
+  %0 = load i64, ptr %out, align 8
   ret i64 %0
 }

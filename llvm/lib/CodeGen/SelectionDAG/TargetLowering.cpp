@@ -6130,8 +6130,18 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
     // direct "=rm" output with a matching tied input). The register allocator
     // can fold both the output and its tied input to the same memory slot when
     // under pressure.
+    //
+    // Gated on supportsRegMemInlineAsmFolding(): preferring 'r' here commits
+    // to a register allocator being able to fold back to memory if 'r'
+    // doesn't pan out, and that fold has no generic implementation -- it
+    // needs a target-specific TargetInstrInfo::getFrameIndexOperands()
+    // override, which today only X86 has. Without this guard, any other
+    // target would prefer 'r', then hit an unreachable() the moment a
+    // register genuinely wasn't available, instead of the register
+    // allocator's normal, clean "ran out of registers" diagnostic.
     if (OpInfo.Codes.size() == 2 && llvm::is_contained(OpInfo.Codes, "r") &&
-        llvm::is_contained(OpInfo.Codes, "m"))
+        llvm::is_contained(OpInfo.Codes, "m") &&
+        supportsRegMemInlineAsmFolding())
       OpInfo.MayFoldRegister = true;
 
     // Compute the value type for each operand.

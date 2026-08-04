@@ -2976,9 +2976,19 @@ void AsmConstraintsInfo::HandleOutputConstraints() {
     // parser here: anything it doesn't recognize (e.g. a commutative '%'
     // modifier, which isn't tracked on TargetInfo::ConstraintInfo) simply
     // falls through to the existing, always-safe indirect path below.
+    //
+    // getTargetHooks().supportsRegMemInlineAsmFolding() must agree with the
+    // backend's own gate
+    // (llvm::TargetLowering::supportsRegMemInlineAsmFolding()): taking the
+    // by-value path commits to the backend being able to fall back to memory if
+    // a register genuinely isn't available, and only one target has that
+    // fallback implemented today. Getting this wrong is not a missed
+    // optimization -- it turns ordinary, previously-working inline asm on every
+    // other target into a hard compile error.
     bool IsExactRegMem = false;
     if (CGM.getCodeGenOpts().OptimizationLevel != 0 && Info.allowsRegister() &&
-        Info.allowsMemory()) {
+        Info.allowsMemory() &&
+        getTargetHooks().supportsRegMemInlineAsmFolding()) {
       StringRef Codes = OutputConstraint;
       if (Info.earlyClobber() && Codes.starts_with("&"))
         Codes = Codes.drop_front();

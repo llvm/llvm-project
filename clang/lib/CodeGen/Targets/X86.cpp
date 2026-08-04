@@ -231,6 +231,11 @@ public:
     return X86AdjustInlineAsmType(CGF, Constraint, Ty);
   }
 
+  // See X86_64TargetCodeGenInfo::supportsRegMemInlineAsmFolding(): the same
+  // shared X86InstrInfo::getFrameIndexOperands() implementation backs both
+  // ABIs here.
+  bool supportsRegMemInlineAsmFolding() const override { return true; }
+
   void addReturnRegisterOutputs(CodeGenFunction &CGF, LValue ReturnValue,
                                 std::string &Constraints,
                                 std::vector<llvm::Type *> &ResultRegTypes,
@@ -1471,6 +1476,12 @@ public:
                                   llvm::Type* Ty) const override {
     return X86AdjustInlineAsmType(CGF, Constraint, Ty);
   }
+
+  // X86InstrInfo::getFrameIndexOperands() implements the addressing-mode
+  // encoding llvm::TargetLowering::supportsRegMemInlineAsmFolding() needs;
+  // see TargetCodeGenInfo's declaration for why other targets default to
+  // false here.
+  bool supportsRegMemInlineAsmFolding() const override { return true; }
 
   bool isNoProtoCallVariadic(const CallArgList &args,
                              const FunctionNoProtoType *fnType) const override {

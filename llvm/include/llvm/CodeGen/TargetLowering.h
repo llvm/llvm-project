@@ -5401,6 +5401,22 @@ public:
   /// Given a constraint, return the type of constraint it is for this target.
   virtual ConstraintType getConstraintType(StringRef Constraint) const;
 
+  /// Returns true if this target can fold a register operand of an inline
+  /// asm instruction back to a memory operand (see
+  /// TargetInstrInfo::getFrameIndexOperands(), which a target must override
+  /// with its own addressing-mode encoding for this to work -- the base
+  /// TargetInstrInfo implementation is unreachable()). ParseConstraints()
+  /// only sets MayFoldRegister -- and so only ever prefers 'r' over 'm' for
+  /// an exact "rm"/"+rm" constraint -- when this returns true, so that
+  /// register-pressure fallback (RegAllocFast's inline asm folding, or
+  /// InlineSpiller for the greedy allocator) has an actual implementation to
+  /// fall back to instead of crashing. Defaults to false: without this,
+  /// preferring 'r' for "rm" and then genuinely running out of registers
+  /// would attempt to fold to memory and hit that unreachable() instead of
+  /// RegAllocFast's or InlineSpiller's normal "ran out of registers"
+  /// diagnostic.
+  virtual bool supportsRegMemInlineAsmFolding() const { return false; }
+
   using ConstraintPair = std::pair<StringRef, TargetLowering::ConstraintType>;
   using ConstraintGroup = SmallVector<ConstraintPair>;
   /// Given an OpInfo with list of constraints codes as strings, return a
