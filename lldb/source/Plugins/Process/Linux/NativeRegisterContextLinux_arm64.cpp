@@ -420,7 +420,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       }
 
       assert(offset < GetSetSize(RegisterSetType::SVE));
-      src = (uint8_t *)GetSVEBuffer() + offset;
+      src = (uint8_t *)GetSetBuffer(RegisterSetType::SVE) + offset;
     }
   } else if (GetRegisterInfo().IsTLSReg(reg)) {
     error = ReadTLS();
@@ -499,13 +499,13 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
         if (GetRegisterInfo().IsSVEZReg(reg)) {
           offset = CalculateSVEOffset(reg_info);
           assert(offset < GetSetSize(RegisterSetType::SVE));
-          ::memcpy(sve_reg_non_live.data(), (uint8_t *)GetSVEBuffer() + offset,
-                   16);
+          ::memcpy(sve_reg_non_live.data(),
+                   (uint8_t *)GetSetBuffer(RegisterSetType::SVE) + offset, 16);
         }
       } else {
         offset = CalculateSVEOffset(reg_info);
         assert(offset < GetSetSize(RegisterSetType::SVE));
-        src = (uint8_t *)GetSVEBuffer() + offset;
+        src = (uint8_t *)GetSetBuffer(RegisterSetType::SVE) + offset;
       }
     }
   } else if (GetRegisterInfo().IsPAuthReg(reg)) {
@@ -684,7 +684,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       }
 
       assert(offset < GetSetSize(RegisterSetType::SVE));
-      dst = (uint8_t *)GetSVEBuffer() + offset;
+      dst = (uint8_t *)GetSetBuffer(RegisterSetType::SVE) + offset;
       ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
       return WriteAllSVE();
     }
@@ -790,7 +790,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
           // first 16 bytes only as SVE payload mirrors legacy fpsimd structure
           offset = CalculateSVEOffset(reg_info);
           assert(offset < GetSetSize(RegisterSetType::SVE));
-          dst = (uint8_t *)GetSVEBuffer() + offset;
+          dst = (uint8_t *)GetSetBuffer(RegisterSetType::SVE) + offset;
           ::memcpy(dst, reg_value.GetBytes(), 16);
 
           return WriteAllSVE();
@@ -800,7 +800,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       } else {
         offset = CalculateSVEOffset(reg_info);
         assert(offset < GetSetSize(RegisterSetType::SVE));
-        dst = (uint8_t *)GetSVEBuffer() + offset;
+        dst = (uint8_t *)GetSetBuffer(RegisterSetType::SVE) + offset;
         ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
         return WriteAllSVE();
       }
@@ -1069,7 +1069,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
     dst = AddRegisterSetType(dst, RegisterSetType::SVE);
     std::memcpy(dst, &m_sve_state, sizeof(m_sve_state));
     dst += sizeof(m_sve_state);
-    dst = AddSavedRegistersData(dst, GetSVEBuffer(),
+    dst = AddSavedRegistersData(dst, GetSetBuffer(RegisterSetType::SVE),
                                 GetSetSize(RegisterSetType::SVE));
   } else {
     dst = AddSavedRegisters(dst, RegisterSetType::FPR, GetFPRBuffer(),
@@ -1216,7 +1216,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
 
       // Write header and register data, incrementing src this time.
       error = RestoreRegisters(
-          GetSVEBuffer(), &src, GetSetSize(RegisterSetType::SVE), kind,
+          GetSetBuffer(RegisterSetType::SVE), &src,
+          GetSetSize(RegisterSetType::SVE), kind,
           std::bind(&NativeRegisterContextLinux_arm64::WriteAllSVE, this));
       break;
     case RegisterSetType::FPR: {
@@ -1543,7 +1544,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllSVE() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetSVEBuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::SVE);
   ioVec.iov_len = GetSetSize(RegisterSetType::SVE);
 
   error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::SVE),
@@ -1564,7 +1565,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
 
   struct iovec ioVec;
 
-  ioVec.iov_base = GetSVEBuffer();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::SVE);
   ioVec.iov_len = GetSetSize(RegisterSetType::SVE);
 
   Invalidate(RegisterSetType::SVE);
