@@ -1256,6 +1256,14 @@ llvm::Value *CGHLSLRuntime::emitDXILUserSemanticLoad(
         /*GsVertexOrPrimIndex=*/llvm::PoisonValue::get(B.getInt32Ty())};
     llvm::Value *Result =
         B.CreateCall(IntrFn, Args, OB, Twine(Name).concat(Twine(Row++)));
+    // Booleans use their memory representation in DXIL signatures, but direct
+    // function parameters use their value representation.
+    if (Result->getType() != Type) {
+      assert(Shape.RowType->hasBooleanRepresentation() &&
+             "unexpected semantic load type mismatch");
+      Result = B.CreateICmpNE(
+          Result, llvm::Constant::getNullValue(Result->getType()), "loadedv");
+    }
     assert(Row == Shape.Rows && "unexpected number of semantic rows");
     return Result;
   }
@@ -1347,6 +1355,14 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
       for (unsigned I = AT->getNumElements(); I-- > 0;)
         Worklist.push_back({Val, I});
       continue;
+    }
+
+    // Booleans use their memory representation in DXIL signatures, but direct
+    // function results use their value representation.
+    if (Val->getType() != RowTy) {
+      assert(Shape.RowType->hasBooleanRepresentation() &&
+             "unexpected semantic store type mismatch");
+      Val = B.CreateZExt(Val, RowTy, "storedv");
     }
 
     SmallVector<Value *> Args{/*SigElementId=*/B.getInt32(SigId),
