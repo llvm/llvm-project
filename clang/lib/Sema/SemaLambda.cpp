@@ -1601,6 +1601,9 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // cleanups from the enclosing full-expression.
   PushExpressionEvaluationContextForFunction(
       ExpressionEvaluationContext::PotentiallyEvaluated, LSI->CallOperator);
+
+  currentEvaluationContext().InImmediateFunctionContext =
+      LSI->CallOperator->isConsteval();
 }
 
 void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
