@@ -2162,17 +2162,6 @@ protected:
 /// of intrinsics. Supported update operations are: add, sub, uadd.sat, umax,
 /// and umin, where the other term is loop-invariant.
 class VPHistogramRecipe : public VPRecipeBase, public VPIRMetadata {
-public:
-  /// The kind of update operation performed on histogram buckets.
-  enum class HistogramUpdateKind {
-    Add,
-    Sub,
-    UAddSat,
-    UMax,
-    UMin,
-  };
-
-private:
   /// The update operation kind for this histogram.
   HistogramUpdateKind UpdateKind;
 

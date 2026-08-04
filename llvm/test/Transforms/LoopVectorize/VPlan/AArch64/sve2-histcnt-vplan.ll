@@ -172,7 +172,7 @@ for.exit:
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     [[STEPS3:vp.*]] = SCALAR-STEPS [[IV3]], ir<1>, [[VF3]]
 ; CHECK-NEXT:     CLONE [[GEP_IDX3:.*]] = getelementptr inbounds ir<%indices>, [[STEPS3]]
-; CHECK-NEXT:     [[VECP_IDX3:vp.*]] = vector-pointer inbounds [[GEP_IDX3]]
+; CHECK-NEXT:     [[VECP_IDX3:vp.*]] = vector-pointer inbounds i32, [[GEP_IDX3]]
 ; CHECK-NEXT:     WIDEN [[IDX3:.*]] = load [[VECP_IDX3]]
 ; CHECK-NEXT:     WIDEN-CAST [[EXT_IDX3:.*]] = zext [[IDX3]] to i64
 ; CHECK-NEXT:     WIDEN-GEP [[GEP_BUCKET3:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX3]]

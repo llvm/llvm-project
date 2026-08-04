@@ -6358,27 +6358,6 @@ VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   };
 }
 
-/// Return the HistogramUpdateKind for the given update opcode (instruction
-/// opcode or intrinsic ID), as stored in HistogramInfo during legality.
-static VPHistogramRecipe::HistogramUpdateKind
-getHistogramUpdateKind(unsigned Opcode) {
-  using HistogramUpdateKind = VPHistogramRecipe::HistogramUpdateKind;
-  switch (Opcode) {
-  case Instruction::Add:
-    return HistogramUpdateKind::Add;
-  case Instruction::Sub:
-    return HistogramUpdateKind::Sub;
-  case Intrinsic::uadd_sat:
-    return HistogramUpdateKind::UAddSat;
-  case Intrinsic::umax:
-    return HistogramUpdateKind::UMax;
-  case Intrinsic::umin:
-    return HistogramUpdateKind::UMin;
-  default:
-    llvm_unreachable("Unsupported histogram update operation");
-  }
-}
-
 VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (VPI->getOpcode() != Instruction::Store)
     return nullptr;
@@ -6389,8 +6368,6 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
     return nullptr;
 
   const HistogramInfo *HI = *HistInfo;
-  VPHistogramRecipe::HistogramUpdateKind UpdateKind =
-      getHistogramUpdateKind(HI->UpdateOpcode);
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
@@ -6403,8 +6380,8 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (CM.isMaskRequired(HI->Store))
     HGramOps.push_back(VPI->getMask());
 
-  return new VPHistogramRecipe(UpdateKind, HGramOps, cast<VPIRMetadata>(*VPI),
-                               VPI->getDebugLoc());
+  return new VPHistogramRecipe(HI->UpdateKind, HGramOps,
+                               cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
 bool VPRecipeBuilder::replaceWithFinalIfReductionStore(

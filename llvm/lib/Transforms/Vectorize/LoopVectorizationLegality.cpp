@@ -1089,16 +1089,20 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
   // FIXME: We assume the loop invariant term is on the RHS.
   //        Fine for an immediate/constant, but maybe not a generic value?
   Value *HIncVal = nullptr;
-  if (!match(HUpdateOp,
-             m_Add(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HUpdateOp,
-             m_Sub(m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HUpdateOp, m_Intrinsic<Intrinsic::uadd_sat>(
-                            m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HUpdateOp, m_Intrinsic<Intrinsic::umax>(
-                            m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))) &&
-      !match(HUpdateOp, m_Intrinsic<Intrinsic::umin>(
-                            m_Load(m_Specific(HPtrInstr)), m_Value(HIncVal))))
+  HistogramUpdateKind UpdateKind;
+  auto Bucket = m_Load(m_Specific(HPtrInstr));
+  if (match(HUpdateOp, m_Add(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::Add;
+  else if (match(HUpdateOp, m_Sub(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::Sub;
+  else if (match(HUpdateOp,
+                 m_Intrinsic<Intrinsic::uadd_sat>(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::UAddSat;
+  else if (match(HUpdateOp, m_UMax(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::UMax;
+  else if (match(HUpdateOp, m_UMin(Bucket, m_Value(HIncVal))))
+    UpdateKind = HistogramUpdateKind::UMin;
+  else
     return false;
 
   // Make sure the increment value is loop invariant.
@@ -1147,15 +1151,8 @@ static bool findHistogram(LoadInst *LI, StoreInst *HSt, Loop *TheLoop,
 
   LLVM_DEBUG(dbgs() << "LV: Found histogram for: " << *HSt << "\n");
 
-  // Determine the update opcode.
-  unsigned UpdateOpcode;
-  if (auto *BO = dyn_cast<BinaryOperator>(HUpdateOp))
-    UpdateOpcode = BO->getOpcode();
-  else
-    UpdateOpcode = cast<IntrinsicInst>(HUpdateOp)->getIntrinsicID();
-
   // Store the operations that make up the histogram.
-  Histograms.emplace_back(IndexedLoad, HUpdateOp, HSt, UpdateOpcode);
+  Histograms.emplace_back(IndexedLoad, HUpdateOp, HSt, UpdateKind);
   return true;
 }
 
