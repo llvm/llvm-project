@@ -1498,7 +1498,7 @@ def Common : InheritableAttr {
 def Const : InheritableAttr {
   let Spellings = [GCC<"const">, GCC<"__const">];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [ConstPureDocs];
   let SimpleHandler = 1;
 }
 
@@ -3176,7 +3176,7 @@ def ArmLocallyStreaming : InheritableAttr, TargetSpecificAttr<TargetAArch64> {
 def Pure : InheritableAttr {
   let Spellings = [GCC<"pure">];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [ConstPureDocs];
   let SimpleHandler = 1;
 }
 
