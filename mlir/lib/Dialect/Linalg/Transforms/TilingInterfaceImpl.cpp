@@ -84,11 +84,29 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
 
 /// Verify that tiling can be applied in presence of semi-affine maps.
 static LogicalResult
-validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> offsets,
-                             ArrayRef<OpFoldResult> sizes) {
-  auto isTiledDim = [&](unsigned pos) {
-    return pos < offsets.size() && !isZeroInteger(offsets[pos]);
-  };
+validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> sizes) {
+  // Precompute each dimension's constant tile-size upper bound once.
+  // A failed entry marks a dynamic tile with no static bound.
+  SmallVector<FailureOr<int64_t>> tileSizeBounds =
+      llvm::map_to_vector(sizes, [](OpFoldResult size) {
+        return ValueBoundsConstraintSet::computeConstantBound(
+            presburger::BoundType::UB, size,
+            /*stopCondition=*/nullptr, ValueBoundsOptions{/*closedUB=*/true});
+      });
+  SmallVector<int64_t> loopRanges = linalgOp.getStaticLoopRanges();
+
+  // Dynamic tiles or dynamic loop ranges are conservatively treated as tiled.
+  SmallVector<bool> tiledDims(loopRanges.size(), false);
+  for (auto [pos, tileSize] : llvm::enumerate(tileSizeBounds)) {
+    if (failed(tileSize)) {
+      tiledDims[pos] = true;
+      continue;
+    }
+    if (*tileSize == 0)
+      continue;
+    tiledDims[pos] =
+        ShapedType::isDynamic(loopRanges[pos]) || *tileSize < loopRanges[pos];
+  }
 
   for (AffineMap map : linalgOp.getIndexingMapsArray()) {
     for (AffineExpr result : map.getResults()) {
@@ -101,15 +119,16 @@ validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> offsets,
             kind != AffineExprKind::CeilDiv)
           return WalkResult::advance();
 
-        // Skip if the semi-affine expression does not involve any of the tiled
-        // dimensions.
-        bool involvesTiledDim = false;
-        for (unsigned pos = 0, e = offsets.size(); pos < e; ++pos) {
-          if (isTiledDim(pos) && expr.isFunctionOfDim(pos)) {
-            involvesTiledDim = true;
-            break;
-          }
-        }
+        // Skip if the semi-affine expression does not involve any tiled
+        // dimension: an untiled dimension keeps its full extent in every tile,
+        // so re-applying the map on the slice is exact.
+        bool involvesTiledDim = expr.walk([&](AffineExpr e) -> WalkResult {
+                                      auto dim = dyn_cast<AffineDimExpr>(e);
+                                      if (dim && tiledDims[dim.getPosition()])
+                                        return WalkResult::interrupt();
+                                      return WalkResult::advance();
+                                    })
+                                    .wasInterrupted();
         if (!involvesTiledDim)
           return WalkResult::advance();
 
@@ -126,7 +145,6 @@ validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> offsets,
                  "constant step can be tiled over a tiled dimension";
           return WalkResult::interrupt();
         }
-        unsigned dimPos = dimExpr.getPosition();
 
         // Tiles are spaced by the full tile size, so tile origins are its
         // multiples (0, tileSize, 2*tileSize, ...).
@@ -135,11 +153,8 @@ validateTilingSemiAffineMaps(LinalgOp linalgOp, ArrayRef<OpFoldResult> offsets,
         // truncated at the same origin, spanning a subset of the same `d'`, so
         // full-tile validity implies partial-tile validity and validating the
         // upper-bound tile size suffices.
-        FailureOr<int64_t> tileSize =
-            ValueBoundsConstraintSet::computeConstantBound(
-                presburger::BoundType::UB, sizes[dimPos],
-                /*stopCondition=*/nullptr,
-                ValueBoundsOptions{/*closedUB=*/true});
+        unsigned dimPos = dimExpr.getPosition();
+        FailureOr<int64_t> tileSize = tileSizeBounds[dimPos];
 
         // Dynamic tile sizes are assumed to be valid.
         // Unit tile is always valid.
@@ -242,7 +257,7 @@ struct LinalgOpTilingInterface
     // Thus, tiling is allowed only when the semi-affine maps can be proven safe
     // for the current tiling configuration. Otherwise, tiling can end up
     // producing incorrect results.
-    if (failed(validateTilingSemiAffineMaps(linalgOp, offsets, sizes)))
+    if (failed(validateTilingSemiAffineMaps(linalgOp, sizes)))
       return failure();
     SmallVector<Value> valuesToTile = linalgOp->getOperands();
     SmallVector<Value> tiledOperands = makeTiledShapes(
