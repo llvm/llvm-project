@@ -1981,7 +1981,7 @@ Interpreter::Visit(const ConditionalNode &node) {
     return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                 node.GetLocation());
   }
-  // Note: Unlike C++, DIL evaluates only the operand chosen by the condition,
+  // Note: DIL evaluates only the operand chosen by the condition,
   // and doesn't check the type or evaluate the other operand.
   auto value_or_err = condition->GetValueAsBool();
   if (value_or_err) {

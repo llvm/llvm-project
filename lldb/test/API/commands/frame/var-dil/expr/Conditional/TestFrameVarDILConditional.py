@@ -19,7 +19,7 @@ class TestFrameVarDILConditional(TestBase):
 
         self.runCmd("settings set target.experimental.use-DIL true")
 
-        # Unlike C++, DIL evaluates only the operand chosen by the condition,
+        # DIL evaluates only the operand chosen by the condition,
         # and doesn't check the type or evaluate the other operand.
         # Check integer values.
         self.expect_var_path("true ? sh : sh", value="2", type="short")
