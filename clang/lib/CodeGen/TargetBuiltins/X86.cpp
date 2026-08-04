@@ -161,9 +161,8 @@ static Value *EmitX86ExpandLoad(CodeGenFunction &CGF,
   Value *MaskVec = getMaskVecValue(
       CGF, Ops[2], cast<FixedVectorType>(ResultTy)->getNumElements());
 
-  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_expandload,
-                                           ResultTy);
-  return CGF.Builder.CreateCall(F, { Ptr, MaskVec, Ops[1] });
+  return CGF.Builder.CreateMaskedExpandLoad(ResultTy, Ptr, MaybeAlign(),
+                                            MaskVec, Ops[1]);
 }
 
 static Value *EmitX86CompressExpand(CodeGenFunction &CGF,
@@ -186,9 +185,8 @@ static Value *EmitX86CompressStore(CodeGenFunction &CGF,
 
   Value *MaskVec = getMaskVecValue(CGF, Ops[2], ResultTy->getNumElements());
 
-  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_compressstore,
-                                           ResultTy);
-  return CGF.Builder.CreateCall(F, { Ops[1], Ptr, MaskVec });
+  return CGF.Builder.CreateMaskedCompressStore(Ops[1], Ptr, MaybeAlign(),
+                                               MaskVec);
 }
 
 static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
@@ -684,18 +682,11 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
   cast<llvm::GlobalValue>(CpuModel)->setDSOLocal(true);
 
   // Calculate the index needed to access the correct field based on the
-  // range. Also adjust the expected value.
+  // range. ABI_VALUE matches with compiler-rt/libgcc values.
   auto [Index, Value] = StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
-#define X86_VENDOR(ENUM, STRING)                                               \
-  .Case(STRING, {0u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_TYPE_ALIAS(ENUM, ALIAS)                                        \
-  .Case(ALIAS, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_TYPE(ENUM, STR)                                                \
-  .Case(STR, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_SUBTYPE_ALIAS(ENUM, ALIAS)                                     \
-  .Case(ALIAS, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_SUBTYPE(ENUM, STR)                                             \
-  .Case(STR, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE) .Case(STRING, {0u, ABI_VALUE})
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, {1u, ABI_VALUE})
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) .Case(STR, {2u, ABI_VALUE})
 #include "llvm/TargetParser/X86TargetParser.def"
                                .Default({0, 0});
   assert(Value != 0 && "Invalid CPUStr passed to CpuIs");
@@ -977,6 +968,16 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_tzcnt_u64: {
     Function *F = CGM.getIntrinsic(Intrinsic::cttz, Ops[0]->getType());
     return Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
+  }
+  case X86::BI__builtin_ia32_pdep_si:
+  case X86::BI__builtin_ia32_pdep_di: {
+    Function *F = CGM.getIntrinsic(Intrinsic::pdep, Ops[0]->getType());
+    return Builder.CreateCall(F, Ops);
+  }
+  case X86::BI__builtin_ia32_pext_si:
+  case X86::BI__builtin_ia32_pext_di: {
+    Function *F = CGM.getIntrinsic(Intrinsic::pext, Ops[0]->getType());
+    return Builder.CreateCall(F, Ops);
   }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:

@@ -14,6 +14,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_PTRACE_H
 #define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_PTRACE_H
 
+#include "hdr/types/pid_t.h"
 #include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -22,8 +23,11 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE ErrorOr<long> ptrace(int request) {
-  return syscall_checked<long>(SYS_ptrace, request);
+// NB: This function follows the kernel ABI, which means the result of
+// PTRACE_PEEK requests is returned through the fourth argument.
+LIBC_INLINE ErrorOr<long> ptrace(int request, pid_t pid, void *addr,
+                                 void *data) {
+  return syscall_checked<long>(SYS_ptrace, request, pid, addr, data);
 }
 
 } // namespace linux_syscalls

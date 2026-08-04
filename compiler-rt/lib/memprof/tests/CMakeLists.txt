@@ -28,6 +28,7 @@ set(MEMPROF_SOURCES
 set(MEMPROF_UNITTESTS
   histogram_encoding.cpp
   rawprofile.cpp
+  shadow.cpp
   driver.cpp)
 
 include_directories(../../../include)

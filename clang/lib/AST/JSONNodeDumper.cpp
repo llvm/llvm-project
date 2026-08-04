@@ -771,7 +771,7 @@ void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
   case UnaryTransformType::Enum:                                               \
     JOS.attribute("transformKind", #Trait);                                    \
     break;
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/Traits.inc"
   }
 }
 
@@ -1130,9 +1130,6 @@ void JSONNodeDumper::VisitExplicitInstantiationDecl(
     break;
   case TSK_ImplicitInstantiation:
     JOS.attribute("templateSpecializationKind", "implicit_instantiation");
-    break;
-  case TSK_FriendDeclaration:
-    JOS.attribute("templateSpecializationKind", "friend_declaration");
     break;
   case TSK_ExplicitSpecialization:
     JOS.attribute("templateSpecializationKind", "explicit_specialization");

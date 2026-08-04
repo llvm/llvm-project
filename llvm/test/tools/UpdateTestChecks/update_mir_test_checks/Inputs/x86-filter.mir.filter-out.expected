@@ -32,7 +32,7 @@ body:             |
     ; CHECK-LABEL: name: ptrtoint_s8
     ; CHECK: liveins: $rdi
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $al = COPY [[COPY1]]
+    ; CHECK: $al = COPY [[COPY1]]
     ; CHECK-NEXT: RET 0, implicit $al
     %0:gpr(p0) = COPY $rdi
     %1:gpr(s8) = G_PTRTOINT %0(p0)
@@ -57,7 +57,7 @@ body:             |
     ; CHECK: liveins: $rdi
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
-    ; CHECK-NEXT: $eax = COPY [[COPY1]]
+    ; CHECK: $eax = COPY [[COPY1]]
     ; CHECK-NEXT: RET 0, implicit $eax
     %0:gpr(p0) = COPY $rdi
     %1:gpr(s32) = G_PTRTOINT %0(p0)

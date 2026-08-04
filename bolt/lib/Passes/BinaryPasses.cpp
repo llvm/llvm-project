@@ -11,15 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/BinaryPasses.h"
-#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
+#include <cmath>
 #include <mutex>
 #include <numeric>
 #include <vector>
@@ -258,6 +257,7 @@ bool BinaryFunctionPass::shouldPrint(const BinaryFunction &BF) const {
 }
 
 void NormalizeCFG::runOnFunction(BinaryFunction &BF) {
+  const BinaryContext &BC = BF.getBinaryContext();
   uint64_t NumRemoved = 0;
   uint64_t NumDuplicateEdges = 0;
   uint64_t NeedsFixBranches = 0;
@@ -287,7 +287,14 @@ void NormalizeCFG::runOnFunction(BinaryFunction &BF) {
     // Redirect all predecessors to the successor block.
     while (!BB.pred_empty()) {
       BinaryBasicBlock *Predecessor = *BB.pred_begin();
-      if (Predecessor->hasJumpTable())
+      // Do not redirect a predecessor that reaches this block via an indirect
+      // branch. This covers both a regular jump table and an unresolved
+      // "unknown control flow" indirect jump (in --strict mode), where the
+      // instruction has no jump table annotation but the jump table data still
+      // references this block. Removing this block would leave a dangling
+      // reference in .rodata, an undefined jump table entry at emission time.
+      const MCInst *LastInst = Predecessor->getLastNonPseudoInstr();
+      if (LastInst && BC.MIB->isIndirectBranch(*LastInst))
         break;
 
       if (Predecessor == Successor)
@@ -546,22 +553,12 @@ bool ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
 }
 
 Error FixupBranches::runOnFunctions(BinaryContext &BC) {
-  std::unique_ptr<BinaryFunctionCallGraph> CG;
-  std::unique_ptr<RegAnalysis> RA;
-  std::unique_ptr<DataflowInfoManager> DIM;
-
-  if (opts::LivenessAnalysis) {
-    CG = std::make_unique<BinaryFunctionCallGraph>(buildCallGraph(BC));
-    RA = std::make_unique<RegAnalysis>(BC, &BC.getBinaryFunctions(), CG.get());
-  }
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &Function = It.second;
     if (!BC.shouldEmit(Function) || !Function.isSimple())
       continue;
 
-    if (opts::LivenessAnalysis)
-      DIM = std::make_unique<DataflowInfoManager>(Function, RA.get(), nullptr);
-    Function.fixBranches(DIM.get());
+    Function.fixBranches();
   }
   return Error::success();
 }
@@ -972,7 +969,7 @@ uint64_t SimplifyConditionalTailCalls::fixTailCalls(BinaryFunction &BF) {
       uint64_t Count = 0;
       if (CondSucc != BB) {
         // Patch the new target address into the conditional branch.
-        MIB->reverseBranchCondition(PredBB, *CondBranch, CalleeSymbol, Ctx);
+        MIB->reverseBranchCondition(*CondBranch, CalleeSymbol, Ctx);
         // Since we reversed the condition on the branch we need to change
         // the target for the unconditional branch or add a unconditional
         // branch to the old target.  This has to be done manually since

@@ -1,0 +1,135 @@
+# This test makes sure that LLDB correctly merges the section list of files
+# that have different section layouts in the main executable and in the
+# .debug file. Prior to this fix a bug would cause some sections to be
+# replaced in the module's unified list and would replace the .symtab section
+# due to section IDs being used when replacing sections.
+
+# RUN: mkdir -p %t/.build-id/1b
+# RUN: yaml2obj %s -o %t/full.out
+# RUN: llvm-objcopy --strip-debug %t/full.out %t/strip-debug.out
+# RUN: cd %t
+# RUN: llvm-objcopy --only-keep-debug %t/full.out --strip-symbol=main %t/.build-id/1b/8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug
+# RUN: %lldb -b -o "image dump symtab" -o "image dump sections" -o "quit" %t/strip-debug.out | FileCheck %s
+
+# Make sure the symbol table is still in LLDB. Prior to this fix the ELF
+# symbol table section was being replaced.
+# CHECK: [    0]      1     Code            0x00000000004003d0                    0x0000000000000008 0x00000002 main
+
+# Make sure we see the .symtab section and .strtab section in the section
+# list. Prior to this fix they were being replaced.
+# CHECK: 0x0000000000000001 regular                [0x0000000000400274-0x0000000000400298)  r--  0x00000040 0x00000024 0x00000002 strip-debug.out..note.gnu.build-id
+# CHECK: 0x0000000000000002 code                   [0x00000000004003d0-0x00000000004003d8)  r-x  0x00000070 0x00000008 0x00000006 strip-debug.out..text
+# CHECK: 0x0000000000000003 data                   [0x00000000004003e0-0x00000000004003e8)  r--  0x00000080 0x00000008 0x00000002 strip-debug.out..data
+# CHECK: 0x0000000000000004 elf-symbol-table                                                ---  0x00000088 0x00000030 0x00000000 strip-debug.out..symtab
+# CHECK: 0x0000000000000005 regular                                                         ---  0x000000b8 0x00000006 0x00000000 strip-debug.out..strtab
+# CHECK: 0x0000000000000017 regular                                                         ---  0x000000fc 0x00000135 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..shstrtab
+# CHECK: 0x0000000000000004 dwarf-abbrev                                                    ---  0x00000064 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_abbrev
+# CHECK: 0x0000000000000005 dwarf-addr                                                      ---  0x0000006c 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_addr
+# CHECK: 0x0000000000000006 dwarf-aranges                                                   ---  0x00000074 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_aranges
+# CHECK: 0x0000000000000007 dwarf-frame                                                     ---  0x0000007c 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_frame
+# CHECK: 0x0000000000000008 dwarf-info                                                      ---  0x00000084 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_info
+# CHECK: 0x0000000000000009 dwarf-line                                                      ---  0x0000008c 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_line
+# CHECK: 0x000000000000000a dwarf-line-str                                                  ---  0x00000094 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_line_str
+# CHECK: 0x000000000000000b dwarf-loc                                                       ---  0x0000009c 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_loc
+# CHECK: 0x000000000000000c dwarf-loclists                                                  ---  0x000000a4 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_loclists
+# CHECK: 0x000000000000000d dwarf-macinfo                                                   ---  0x000000ac 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_macinfo
+# CHECK: 0x000000000000000e dwarf-macro                                                     ---  0x000000b4 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_macro
+# CHECK: 0x000000000000000f dwarf-names                                                     ---  0x000000bc 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_names
+# CHECK: 0x0000000000000010 dwarf-pubnames                                                  ---  0x000000c4 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_pubnames
+# CHECK: 0x0000000000000011 dwarf-pubtypes                                                  ---  0x000000cc 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_pubtypes
+# CHECK: 0x0000000000000012 dwarf-ranges                                                    ---  0x000000d4 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_ranges
+# CHECK: 0x0000000000000013 dwarf-rnglists                                                  ---  0x000000dc 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_rnglists
+# CHECK: 0x0000000000000014 dwarf-str                                                       ---  0x000000e4 0x00000008 0x00000030 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_str
+# CHECK: 0x0000000000000015 dwarf-str-offsets                                               ---  0x000000ec 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_str_offsets
+# CHECK: 0x0000000000000016 dwarf-types                                                     ---  0x000000f4 0x00000008 0x00000000 8a73ac238390e32a7ff4ac8ebe4d6a41ecf5c9.debug..debug_types
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x00000000004003D0
+Sections:
+  - Name:            .note.gnu.build-id
+    Type:            SHT_NOTE
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000400274
+    AddressAlign:    0x0000000000000004
+    Content:         040000001400000003000000474E55001B8A73AC238390E32A7FF4AC8EBE4D6A41ECF5C9
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x00000000004003D0
+    AddressAlign:    0x0000000000000010
+    Content:         DEADBEEFBAADF00D
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x00000000004003E0
+    AddressAlign:    0x0000000000000010
+    Content:         DDDDDDDDDDDDDDDD
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_addr
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_aranges
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_frame
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loc
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loclists
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_macinfo
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_macro
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_names
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_pubnames
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_pubtypes
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_ranges
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_rnglists
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_str
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_types
+    Type:            SHT_PROGBITS
+    Content:         DEADBEEFBAADF00D
+Symbols:
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x00000000004003D0
+    Size:            0x0000000000000008
+...

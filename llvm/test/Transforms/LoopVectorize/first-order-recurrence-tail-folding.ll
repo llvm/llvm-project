@@ -107,8 +107,8 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
 ; VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 33, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[VEC_IV:%.*]] = add i64 [[TMP0]], 0
+; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
@@ -284,8 +284,8 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
 ; VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 33, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[VEC_IV:%.*]] = add i64 [[TMP0]], 0
+; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
@@ -469,8 +469,8 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
 ; VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 33, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[VEC_IV:%.*]] = add i64 [[TMP0]], 0
+; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]

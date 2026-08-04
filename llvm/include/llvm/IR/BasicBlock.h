@@ -747,7 +747,7 @@ public:
   /// instructions, so the order should be validated no more than once after
   /// each ordering to ensure that transforms have the same algorithmic
   /// complexity when asserts are enabled as when they are disabled.
-  LLVM_ABI_FOR_TEST void validateInstrOrdering() const;
+  LLVM_ABI void validateInstrOrdering() const;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -767,10 +767,6 @@ inline void BasicBlock::validateInstrOrdering() const {}
 // maps and sets. The iterator is made up of its node pointer, and the
 // debug-info "head" bit.
 template <> struct DenseMapInfo<BasicBlock::iterator> {
-  static inline BasicBlock::iterator getEmptyKey() {
-    return BasicBlock::iterator(nullptr);
-  }
-
   static unsigned getHashValue(const BasicBlock::iterator &It) {
     return DenseMapInfo<void *>::getHashValue(
                reinterpret_cast<void *>(It.getNodePtr())) ^

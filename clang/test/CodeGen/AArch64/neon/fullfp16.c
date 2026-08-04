@@ -34,7 +34,7 @@
 #include <arm_fp16.h>
 
 //===------------------------------------------------------===//
-// 2.5.1.1.  Addition
+// 2.5.1.5.  Addition
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vaddh_f16(
 float16_t test_vaddh_f16(float16_t a, float16_t b) {
@@ -60,7 +60,7 @@ float16_t test_vsubh_f16(float16_t a, float16_t b) {
 }
 
 //===------------------------------------------------------===//
-// 2.5.9.1.  Multiplication
+// 2.5.1.9.1.  Multiplication
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vmulh_f16(
 float16_t test_vmulh_f16(float16_t a, float16_t b) {
@@ -83,6 +83,52 @@ float16_t test_vdivh_f16(float16_t a, float16_t b) {
 // LLVM:  [[DIV:%.*]] = fdiv half [[A]], [[B]]
 // LLVM:  ret half [[DIV]]
   return vdivh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.7.  Maximum
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vmaxh_f16
+float16_t test_vmaxh_f16(float16_t a, float16_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmax"
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[MAX:%.*]] = call half @llvm.aarch64.neon.fmax.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MAX]]
+  return vmaxh_f16(a, b);
+}
+
+// ALL-LABEL: test_vmaxnmh_f16
+float16_t test_vmaxnmh_f16(float16_t a, float16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fmaxnm"
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[MAX:%.*]] = call half @llvm.aarch64.neon.fmaxnm.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MAX]]
+  return vmaxnmh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.8.  Mimimum
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vminh_f16
+float16_t test_vminh_f16(float16_t a, float16_t b) {
+// CIR: {{%.*}} = cir.call_llvm_intrinsic "aarch64.neon.fmin"
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[MIN:%.*]] = call half @llvm.aarch64.neon.fmin.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MIN]]
+  return vminh_f16(a, b);
+}
+
+// ALL-LABEL: test_vminnmh_f16
+float16_t test_vminnmh_f16(float16_t a, float16_t b) {
+// CIR:  cir.call_llvm_intrinsic "aarch64.neon.fminnm"
+
+// LLVM-SAME: half {{.*}} [[A:%.]], half {{.*}} [[B:%.]]) {{.*}} {
+// LLVM:  [[MIN:%.*]] = call half @llvm.aarch64.neon.fminnm.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MIN]]
+  return vminnmh_f16(a, b);
 }
 
 //===------------------------------------------------------===//
@@ -175,11 +221,110 @@ float16_t test_vrsqrtsh_f16(float16_t a, float16_t b) {
 }
 
 //===------------------------------------------------------===//
+// 2.5.1.2.3.  Reciprocal step
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vrecpsh_f16
+float16_t test_vrecpsh_f16(float16_t a, float16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.frecps"
+
+// LLVM-SAME: half {{.*}} [[A:%.*]], half {{.*}} [[B:%.*]])
+// LLVM: [[RECPS:%.*]] = call half @llvm.aarch64.neon.frecps.f16(half [[A]], half [[B]])
+// LLVM: ret half [[RECPS]]
+  return vrecpsh_f16(a, b);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.3.  Rounding
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vrndh_f16
+float16_t test_vrndh_f16(float16_t a) {
+// CIR: cir.trunc
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.trunc.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndh_f16(a);
+}
+
+// ALL-LABEL: test_vrndah_f16
+float16_t test_vrndah_f16(float16_t a) {
+// CIR: cir.round
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.round.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndah_f16(a);
+}
+
+// ALL-LABEL: test_vrndih_f16
+float16_t test_vrndih_f16(float16_t a) {
+// CIR: cir.nearbyint
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.nearbyint.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndih_f16(a);
+}
+
+// ALL-LABEL: test_vrndmh_f16
+float16_t test_vrndmh_f16(float16_t a) {
+// CIR: cir.floor
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.floor.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndmh_f16(a);
+}
+
+// ALL-LABEL: test_vrndnh_f16
+float16_t test_vrndnh_f16(float16_t a) {
+// CIR: cir.roundeven
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.roundeven.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndnh_f16(a);
+}
+
+// ALL-LABEL: test_vrndph_f16
+float16_t test_vrndph_f16(float16_t a) {
+// CIR: cir.ceil
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.ceil.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndph_f16(a);
+}
+
+// ALL-LABEL: test_vrndxh_f16
+float16_t test_vrndxh_f16(float16_t a) {
+// CIR: cir.rint
+
+// LLVM-SAME: half {{.*}} [[A:%.*]])
+// LLVM:  [[RND:%.*]] =  call half @llvm.rint.f16(half [[A]])
+// LLVM:  ret half [[RND]]
+  return vrndxh_f16(a);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.4.  Square root
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vsqrth_f16
+float16_t test_vsqrth_f16(float16_t a) {
+// CIR:  cir.call_llvm_intrinsic "sqrt"
+
+// LLVM-SAME: half{{.*}} [[A:%.*]])
+// LLVM:  [[SQR:%.*]] = call half @llvm.sqrt.f16(half [[A]])
+// LLVM:  ret half [[SQR]]
+  return vsqrth_f16(a);
+}
+
+//===------------------------------------------------------===//
 // 2.5.4.1. Negate
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vnegh_f16
 float16_t test_vnegh_f16(float16_t a) {
-// CIR: cir.minus {{.*}} : !cir.f16
+// CIR: cir.fneg {{.*}} : !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]])
 // LLVM: [[NEG:%.*]] = fneg half [[A:%.*]]
@@ -202,7 +347,7 @@ float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
 
 // ALL-LABEL: test_vfmsh_f16
 float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
-// CIR: [[SUB:%.*]] = cir.minus %{{.*}} : !cir.f16
+// CIR: [[SUB:%.*]] = cir.fneg %{{.*}} : !cir.f16
 // CIR: cir.call_llvm_intrinsic "fma" [[SUB]], {{.*}} : (!cir.f16, !cir.f16, !cir.f16) -> !cir.f16
 
 // LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]], half{{.*}} [[C:%.*]])
@@ -210,4 +355,17 @@ float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
 // LLVM:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half [[C]], half [[A]])
 // LLVM:  ret half [[ADD]]
   return vfmsh_f16(a, b, c);
+}
+
+//===------------------------------------------------------===//
+// 2.5.1.9.2  Multiply extended 
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vmulxh_f16
+float16_t test_vmulxh_f16(float16_t a, float16_t b) {
+// CIR: cir.call_llvm_intrinsic "aarch64.neon.fmulx"
+
+// LLVM-SAME: half{{.*}} [[A:%.*]], half{{.*}} [[B:%.*]])
+// LLVM:  [[MUL:%.*]] = call half @llvm.aarch64.neon.fmulx.f16(half [[A]], half [[B]])
+// LLVM:  ret half [[MUL]]
+  return vmulxh_f16(a, b);
 }

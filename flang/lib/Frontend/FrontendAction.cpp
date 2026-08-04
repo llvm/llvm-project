@@ -17,7 +17,6 @@
 #include "flang/Frontend/FrontendPluginRegistry.h"
 #include "flang/Parser/parsing.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace Fortran::frontend;
@@ -163,7 +162,8 @@ bool FrontendAction::runParse(bool emitMessages) {
   CompilerInstance &ci = this->getInstance();
 
   // Parse. In case of failure, report and return.
-  ci.getParsing().Parse(llvm::outs());
+  const common::LangOptions &langOpts = ci.getInvocation().getLangOpts();
+  ci.getParsing().Parse(llvm::outs(), langOpts);
 
   if (reportFatalParsingErrors()) {
     return false;

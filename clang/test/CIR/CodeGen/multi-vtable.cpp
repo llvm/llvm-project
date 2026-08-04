@@ -67,7 +67,7 @@ void Child::MotherKey() {}
 // LLVM-SAME:     ]
 // LLVM-SAME: }
 
-// OGCG:      @_ZTV5Child = constant { [4 x ptr], [3 x ptr] } {
+// OGCG:      @_ZTV5Child = unnamed_addr constant { [4 x ptr], [3 x ptr] } {
 // OGCG-SAME:     [4 x ptr] [
 // OGCG-SAME:         ptr null,
 // OGCG-SAME:         ptr null,
@@ -101,7 +101,7 @@ void Child::MotherKey() {}
 // LLVM-SAME:     ]
 // LLVM-SAME: }
 
-// OGCG:      @_ZTV6Mother = constant { [4 x ptr] } {
+// OGCG:      @_ZTV6Mother = unnamed_addr constant { [4 x ptr] } {
 // OGCG-SAME:     [4 x ptr] [
 // OGCG-SAME:         ptr null,
 // OGCG-SAME:         ptr null,
@@ -128,7 +128,7 @@ void Child::MotherKey() {}
 // LLVM-SAME:     ]
 // LLVM-SAME: }
 
-// OGCG:      @_ZTV6Father = constant { [3 x ptr] } {
+// OGCG:      @_ZTV6Father = unnamed_addr constant { [3 x ptr] } {
 // OGCG-SAME:     [3 x ptr] [
 // OGCG-SAME:         ptr null,
 // OGCG-SAME:         ptr null,
@@ -140,7 +140,7 @@ void Child::MotherKey() {}
 Child::Child() {}
 
 // CIR: cir.func {{.*}} @_ZN5ChildC2Ev(%[[THIS_ARG:.*]]: !cir.ptr<!rec_Child>
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR:   %[[MOTHER_BASE:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Child> nonnull [0] -> !cir.ptr<!rec_Mother>

@@ -2788,6 +2788,11 @@ public:
     Inst.setOpcode(X86::TRAP);
   }
 
+  void createBreakpoint(MCInst &Inst) const override {
+    Inst.clear();
+    Inst.setOpcode(X86::INT3);
+  }
+
   void createCondBranch(MCInst &Inst, const MCSymbol *Target, unsigned CC,
                         MCContext *Ctx) const override {
     Inst.setOpcode(X86::JCC_1);
@@ -2806,10 +2811,8 @@ public:
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
-  void
-  reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
-                         const MCSymbol *TBB, MCContext *Ctx,
-                         DataflowInfoManager *DIM = nullptr) const override {
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+                              MCContext *Ctx) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
@@ -3286,7 +3289,7 @@ public:
   }
 
   BlocksVectorTy indirectCallPromotion(
-      const MCInst &CallInst,
+      const MCInst &CallInst, MCPhysReg Reg,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &Targets,
       const std::vector<std::pair<MCSymbol *, uint64_t>> &VtableSyms,
       const std::vector<MCInst *> &MethodFetchInsns,

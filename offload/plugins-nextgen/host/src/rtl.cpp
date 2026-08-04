@@ -30,19 +30,9 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-
-#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
-    !defined(__ORDER_BIG_ENDIAN__)
-#error "Missing preprocessor definitions for endianness detection."
-#endif
-
-#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-#define LITTLEENDIAN_CPU
-#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-#define BIGENDIAN_CPU
-#endif
 
 // The number of devices in this plugin.
 #define NUM_DEVICES 4
@@ -59,13 +49,14 @@ struct GenELF64KernelTy;
 struct GenELF64DeviceTy;
 struct GenELF64PluginTy;
 
+using llvm::endianness;
 using llvm::sys::DynamicLibrary;
 using namespace error;
 
 /// Class implementing kernel functionalities for GenELF64.
 struct GenELF64KernelTy : public GenericKernelTy {
   /// Construct the kernel with a name and an execution mode.
-  GenELF64KernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
+  GenELF64KernelTy(StringRef Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -108,7 +99,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
                            "cooperative kernel launch not supported for host");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
-    Func(LaunchParams.Data);
+    Func(LaunchParams.Args);
     return Plugin::success();
   }
 
@@ -121,8 +112,9 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
 private:
-  /// Host kernel arguments are defined as a single, contiguous buffer.
-  using KernelTy = void(void *);
+  /// Host kernel arguments are defined as an array of pointers, one per
+  /// argument, each pointing to that argument's storage.
+  using KernelTy = void(void **);
   /// The kernel function to execute.
   KernelTy *Func;
 };
@@ -173,7 +165,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   std::string getComputeUnitKind() const override { return "generic-64bit"; }
 
   /// Construct the kernel for a specific image on the device.
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
+  Expected<GenericKernelTy &> constructKernel(StringRef Name) override {
     // Allocate and construct the kernel.
     GenELF64KernelTy *GenELF64Kernel = Plugin.allocate<GenELF64KernelTy>();
     if (!GenELF64Kernel)
@@ -233,7 +225,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t /* Alignment */) override {
     if (Size == 0)
       return nullptr;
 
@@ -397,6 +390,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     Info.add("Max Memory Allocation Size (bytes)", 1, "",
              DeviceInfo::MAX_MEM_ALLOC_SIZE);
     Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
+    Info.add("Number of Lanes", 1, "", DeviceInfo::NUM_LANES);
     auto &MaxGroupSize =
         *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
                   DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
@@ -543,17 +537,15 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 #elif defined(__s390x__)
     return llvm::Triple::systemz;
 #elif defined(__aarch64__)
-#ifdef LITTLEENDIAN_CPU
-    return llvm::Triple::aarch64;
-#else
-    return llvm::Triple::aarch64_be;
-#endif
+    if constexpr (endianness::native == endianness::little)
+      return llvm::Triple::aarch64;
+    else
+      return llvm::Triple::aarch64_be;
 #elif defined(__powerpc64__)
-#ifdef LITTLEENDIAN_CPU
-    return llvm::Triple::ppc64le;
-#else
-    return llvm::Triple::ppc64;
-#endif
+    if constexpr (endianness::native == endianness::little)
+      return llvm::Triple::ppc64le;
+    else
+      return llvm::Triple::ppc64;
 #elif defined(__riscv) && (__riscv_xlen == 64)
     return llvm::Triple::riscv64;
 #elif defined(__loongarch__) && (__loongarch_grlen == 64)
@@ -567,7 +559,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 };
 
 template <typename... ArgsTy>
-static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
+[[maybe_unused]] static Error Plugin::check(int32_t Code, const char *ErrMsg,
+                                            ArgsTy... Args) {
   if (Code == 0)
     return Plugin::success();
 

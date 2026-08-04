@@ -117,6 +117,7 @@ public:
   SDValue LowerUAddSubOCarry(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFMINFMAX(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
@@ -290,6 +291,15 @@ public:
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
+
+  bool supportKCFIBundles() const override { return true; }
+
+  MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
+                              MachineBasicBlock::instr_iterator &MBBI,
+                              const TargetInstrInfo *TII) const override;
+
+  bool hasInlineStackProbe(const MachineFunction &MF) const override;
+  unsigned getStackProbeSize(const MachineFunction &MF, Align StackAlign) const;
 
 private:
   void initializeHVXLowering();
@@ -488,6 +498,7 @@ private:
   SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFpSetoeq(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;

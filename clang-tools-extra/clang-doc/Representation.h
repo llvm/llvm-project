@@ -23,6 +23,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/StringSaver.h"
 #include <array>
@@ -224,7 +225,7 @@ enum class CommentKind {
   CK_Unknown
 };
 
-enum OutputFormatTy { md, yaml, html, json, md_mustache };
+enum OutputFormatTy { md, html, json };
 
 CommentKind stringToCommentKind(llvm::StringRef KindStr);
 llvm::StringRef commentKindToString(CommentKind Kind);
@@ -585,6 +586,8 @@ struct NamespaceInfo : public Info {
   NamespaceInfo(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
                 StringRef Path = StringRef());
 
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_namespace; }
+
   void merge(NamespaceInfo &&I);
 
   ScopeChildren Children;
@@ -597,6 +600,24 @@ struct SymbolInfo : public Info {
       : Info(IT, USR, Name, Path) {}
 
   SymbolInfo(const SymbolInfo &Other, llvm::BumpPtrAllocator &Arena);
+
+  // SymbolInfo is an intermediate base without its own InfoType. It covers
+  // every Info* kind that relates to symbols, which mostly just excludes
+  // Namespace in the current schema.
+  static bool classof(const Info *I) {
+    switch (I->IT) {
+    case InfoType::IT_record:
+    case InfoType::IT_function:
+    case InfoType::IT_enum:
+    case InfoType::IT_typedef:
+    case InfoType::IT_concept:
+    case InfoType::IT_variable:
+    case InfoType::IT_friend:
+      return true;
+    default:
+      return false;
+    }
+  }
 
   void merge(SymbolInfo &&I);
 
@@ -627,6 +648,9 @@ struct FriendInfo : public SymbolInfo {
              const StringRef Name = StringRef())
       : SymbolInfo(IT, USR, Name) {}
   FriendInfo(const FriendInfo &Other, llvm::BumpPtrAllocator &Arena);
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_friend; }
+
   bool mergeable(const FriendInfo &Other);
   void merge(FriendInfo &&Other);
 
@@ -641,6 +665,8 @@ struct VarInfo : public SymbolInfo {
   VarInfo() : SymbolInfo(InfoType::IT_variable) {}
   explicit VarInfo(SymbolID USR) : SymbolInfo(InfoType::IT_variable, USR) {}
 
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_variable; }
+
   void merge(VarInfo &&I);
 
   TypeInfo Type;
@@ -651,6 +677,8 @@ struct VarInfo : public SymbolInfo {
 struct FunctionInfo : public SymbolInfo {
   FunctionInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_function, USR) {}
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_function; }
 
   void merge(FunctionInfo &&I);
 
@@ -679,6 +707,8 @@ struct RecordInfo : public SymbolInfo {
              StringRef Path = StringRef());
 
   RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena);
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_record; }
 
   void merge(RecordInfo &&I);
 
@@ -714,6 +744,8 @@ struct RecordInfo : public SymbolInfo {
 struct TypedefInfo : public SymbolInfo {
   TypedefInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_typedef, USR) {}
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_typedef; }
 
   void merge(TypedefInfo &&I);
 
@@ -782,6 +814,8 @@ struct EnumInfo : public SymbolInfo {
   EnumInfo() : SymbolInfo(InfoType::IT_enum) {}
   EnumInfo(SymbolID USR) : SymbolInfo(InfoType::IT_enum, USR) {}
 
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_enum; }
+
   void merge(EnumInfo &&I);
 
   // Indicates whether this enum is scoped (e.g. enum class).
@@ -798,6 +832,8 @@ struct EnumInfo : public SymbolInfo {
 struct ConceptInfo : public SymbolInfo {
   ConceptInfo() : SymbolInfo(InfoType::IT_concept) {}
   ConceptInfo(SymbolID USR) : SymbolInfo(InfoType::IT_concept, USR) {}
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_concept; }
 
   void merge(ConceptInfo &&I);
 

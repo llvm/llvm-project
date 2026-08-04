@@ -66,10 +66,6 @@ public:
         (unsigned)Float.bitcastToAPInt().getZExtValue(), QTypeHash);
   }
 
-  static inline NSConstantNumberMapInfo getEmptyKey() {
-    return NSConstantNumberMapInfo();
-  }
-
   bool operator==(const NSConstantNumberMapInfo &RHS) const {
     if (InfoType != RHS.InfoType || QType != RHS.QType)
       return false;
@@ -159,10 +155,6 @@ namespace llvm {
 using namespace clang::CodeGen::CGObjCMacConstantLiteralUtil;
 
 template <> struct DenseMapInfo<NSConstantNumberMapInfo> {
-  static NSConstantNumberMapInfo getEmptyKey() {
-    return NSConstantNumberMapInfo::getEmptyKey();
-  }
-
   static unsigned getHashValue(const NSConstantNumberMapInfo &S) {
     return S.getHashValue();
   }

@@ -100,29 +100,29 @@ define amdgpu_kernel void @test_urem3264(ptr addrspace(1) %out, i64 %x, i64 %y) 
   ret void
 }
 
-;EG-LABEL: {{^}}test_udiv2364:
+;EG-LABEL: {{^}}test_udiv2264:
 ;EG: UINT_TO_FLT
 ;EG: UINT_TO_FLT
 ;EG: FLT_TO_UINT
 ;EG-NOT: RECIP_UINT
 ;EG-NOT: BFE_UINT
-define amdgpu_kernel void @test_udiv2364(ptr addrspace(1) %out, i64 %x, i64 %y) {
-  %1 = lshr i64 %x, 41
-  %2 = lshr i64 %y, 41
+define amdgpu_kernel void @test_udiv2264(ptr addrspace(1) %out, i64 %x, i64 %y) {
+  %1 = lshr i64 %x, 42
+  %2 = lshr i64 %y, 42
   %result = udiv i64 %1, %2
   store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-;EG-LABEL: {{^}}test_urem2364:
+;EG-LABEL: {{^}}test_urem2264:
 ;EG: UINT_TO_FLT
 ;EG: UINT_TO_FLT
 ;EG: FLT_TO_UINT
 ;EG-NOT: RECIP_UINT
 ;EG-NOT: BFE_UINT
-define amdgpu_kernel void @test_urem2364(ptr addrspace(1) %out, i64 %x, i64 %y) {
-  %1 = lshr i64 %x, 41
-  %2 = lshr i64 %y, 41
+define amdgpu_kernel void @test_urem2264(ptr addrspace(1) %out, i64 %x, i64 %y) {
+  %1 = lshr i64 %x, 42
+  %2 = lshr i64 %y, 42
   %result = urem i64 %1, %2
   store i64 %result, ptr addrspace(1) %out
   ret void

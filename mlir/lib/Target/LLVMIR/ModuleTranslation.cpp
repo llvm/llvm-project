@@ -31,6 +31,7 @@
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -926,13 +927,13 @@ void mlir::LLVM::detail::connectPHINodes(Region &region,
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
     ArrayRef<llvm::Value *> args, ArrayRef<llvm::Type *> tys) {
-  return builder.CreateIntrinsic(intrinsic, tys, args);
+  return builder.CreateIntrinsicWithoutFolding(intrinsic, tys, args);
 }
 
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
     llvm::IRBuilderBase &builder, llvm::Intrinsic::ID intrinsic,
     llvm::Type *retTy, ArrayRef<llvm::Value *> args) {
-  return builder.CreateIntrinsic(retTy, intrinsic, args);
+  return builder.CreateIntrinsicWithoutFolding(retTy, intrinsic, args);
 }
 
 llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
@@ -981,11 +982,16 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   SmallVector<llvm::Value *> args(immArgPositions.size() + operands.size());
   for (auto [immArgPos, immArgName] :
        llvm::zip(immArgPositions, immArgAttrNames)) {
-    auto attr = llvm::cast<TypedAttr>(intrOp->getAttr(immArgName));
-    assert(attr.getType().isIntOrFloat() && "expected int or float immarg");
-    auto *type = moduleTranslation.convertType(attr.getType());
+    Attribute attr = intrOp->getAttr(immArgName);
+    if (auto intrinsicIntegerAttr =
+            dyn_cast<LLVM::IntrinsicIntegerAttrInterface>(attr))
+      attr = intrinsicIntegerAttr.getIntegerAttr();
+    auto typedAttr = llvm::cast<TypedAttr>(attr);
+    assert(typedAttr.getType().isIntOrFloat() &&
+           "expected int or float immarg");
+    auto *type = moduleTranslation.convertType(typedAttr.getType());
     args[immArgPos] = LLVM::detail::getLLVMConstant(
-        type, attr, intrOp->getLoc(), moduleTranslation);
+        type, typedAttr, intrOp->getLoc(), moduleTranslation);
   }
   unsigned opArg = 0;
   for (auto &arg : args) {
@@ -1193,7 +1199,9 @@ convertMLIRAttributesToLLVM(Location loc, llvm::LLVMContext &ctx,
 
 LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   // Mapping from compile unit to its respective set of global variables.
-  DenseMap<llvm::DICompileUnit *, SmallVector<llvm::Metadata *>> allGVars;
+  DenseMap<llvm::DICompileUnit *, SmallVector<llvm::Metadata *>> globalGVars;
+  // Mapping from subprogram to its respective set of static local variables.
+  DenseMap<llvm::DISubprogram *, SmallVector<llvm::Metadata *>> staticLocals;
 
   // First, create all global variables and global aliases in LLVM IR. A global
   // or alias body may refer to another global/alias or itself, so all the
@@ -1286,7 +1294,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
         //
         // 3. For entities like static local variables in C or variable with
         // SAVE attribute in Fortran, the scope hierarchy can be
-        // variable -> DISubprogram -> DICompileUnit
+        // variable (-> DILocalScope)* -> DISubprogram
         llvm::DIScope *scope = diGlobalVar->getScope();
         if (auto *mod = dyn_cast_if_present<llvm::DIModule>(scope))
           scope = mod->getScope();
@@ -1294,15 +1302,23 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
           if (auto *sp =
                   dyn_cast_if_present<llvm::DISubprogram>(cb->getScope()))
             scope = sp->getUnit();
-        } else if (auto *sp = dyn_cast_if_present<llvm::DISubprogram>(scope))
-          scope = sp->getUnit();
+        } else if (auto *lbb =
+                       dyn_cast_if_present<llvm::DILexicalBlockBase>(scope)) {
+          scope = lbb->getSubprogram();
+        }
 
-        // Get the compile unit (scope) of the the global variable.
+        // Get the compile unit (scope) of the the global variable, or the
+        // subprogram of the static local variable.
         if (llvm::DICompileUnit *compileUnit =
                 dyn_cast_if_present<llvm::DICompileUnit>(scope)) {
           // Update the compile unit with this incoming global variable
           // expression during the finalizing step later.
-          allGVars[compileUnit].push_back(diGlobalExpr);
+          globalGVars[compileUnit].push_back(diGlobalExpr);
+        } else if (llvm::DISubprogram *sp =
+                       dyn_cast_if_present<llvm::DISubprogram>(scope)) {
+          // Update the subprogram with this incoming static local variable
+          // expression during the finalizing step later.
+          staticLocals[sp].push_back(diGlobalExpr);
         }
       }
     }
@@ -1494,10 +1510,14 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
 
   // Finally, update the compile units their respective sets of global variables
   // created earlier.
-  for (const auto &[compileUnit, globals] : allGVars) {
+  for (const auto &[compileUnit, globals] : globalGVars)
     compileUnit->replaceGlobalVariables(
         llvm::MDTuple::get(getLLVMContext(), globals));
-  }
+
+  // And update the subprograms with their respective sets of static local
+  // variables.
+  for (const auto &[sp, globals] : staticLocals)
+    sp->retainNodes(globals.begin(), globals.end());
 
   // Convert global alias bodies.
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::AliasOp>()) {
@@ -1560,6 +1580,59 @@ static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
         return convertIntegerToMetadata(context, llvm::APInt(32, value));
       });
   return llvm::MDNode::get(context, mdValues);
+}
+
+FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
+    Attribute attr, function_ref<InFlightDiagnostic()> emitError) {
+  llvm::LLVMContext &llvmContext = getLLVMContext();
+
+  return llvm::TypeSwitch<Attribute, FailureOr<llvm::Metadata *>>(attr)
+      .Case([&](MDStringAttr a) -> FailureOr<llvm::Metadata *> {
+        return llvm::MDString::get(llvmContext, a.getValue().getValue());
+      })
+      .Case([&](MDConstantAttr a) -> FailureOr<llvm::Metadata *> {
+        IntegerAttr intAttr = llvm::dyn_cast<IntegerAttr>(a.getValue());
+        if (!intAttr) {
+          return emitError()
+                 << "expected integer attribute in metadata constant";
+        }
+        return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+            llvm::Type::getIntNTy(llvmContext,
+                                  intAttr.getType().getIntOrFloatBitWidth()),
+            intAttr.getValue()));
+      })
+      .Case([&](MDGlobalValueAttr a) -> FailureOr<llvm::Metadata *> {
+        if (llvm::Function *fn = lookupFunction(a.getName().getValue()))
+          return llvm::ValueAsMetadata::get(fn);
+        if (llvm::GlobalValue *global = lookupGlobal(a.getName().getValue()))
+          return llvm::ValueAsMetadata::get(global);
+        Operation *symbol =
+            symbolTable().lookupSymbolIn(mlirModule, a.getName());
+        if (auto alias = dyn_cast_if_present<LLVM::AliasOp>(symbol)) {
+          if (llvm::GlobalValue *global = lookupAlias(alias))
+            return llvm::ValueAsMetadata::get(global);
+        }
+        if (auto ifunc = dyn_cast_if_present<LLVM::IFuncOp>(symbol)) {
+          if (llvm::GlobalValue *global = lookupIFunc(ifunc))
+            return llvm::ValueAsMetadata::get(global);
+        }
+        return emitError() << "could not resolve metadata reference '"
+                           << a.getName() << "'";
+      })
+      .Case([&](MDNodeAttr a) -> FailureOr<llvm::Metadata *> {
+        SmallVector<llvm::Metadata *> operands;
+        for (Attribute operand : a.getOperands()) {
+          FailureOr<llvm::Metadata *> md =
+              convertMetadataAttr(operand, emitError);
+          if (failed(md))
+            return failure();
+          operands.push_back(*md);
+        }
+        return llvm::MDNode::get(llvmContext, operands);
+      })
+      .Default([&](Attribute attr) -> FailureOr<llvm::Metadata *> {
+        return emitError() << "unsupported LLVM metadata attribute " << attr;
+      });
 }
 
 LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
@@ -1999,8 +2072,19 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     convertFunctionKernelAttributes(function, llvmFunc, *this);
 
     // Convert function_entry_count attribute to metadata.
-    if (std::optional<uint64_t> entryCount = function.getFunctionEntryCount())
-      llvmFunc->setEntryCount(entryCount.value());
+    if (auto entryCount = function.getFunctionEntryCountAttr()) {
+      ArrayRef<uint64_t> imports = entryCount.getImports();
+      llvm::DenseSet<llvm::GlobalValue::GUID> importGUIDs;
+      if (!imports.empty())
+        importGUIDs.insert(imports.begin(), imports.end());
+      llvm::MDBuilder metadataBuilder(llvmFunc->getContext());
+      llvmFunc->setMetadata(
+          llvm::LLVMContext::MD_prof,
+          metadataBuilder.createFunctionEntryCount(
+              entryCount.getEntryCount(),
+              entryCount.getCountType() == ProfileCountType::Synthetic,
+              imports.empty() ? nullptr : &importGUIDs));
+    }
 
     // Convert result attributes.
     if (ArrayAttr allResultAttrs = function.getAllResultAttrs()) {
