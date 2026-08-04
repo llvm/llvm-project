@@ -4722,12 +4722,10 @@ class CIR_CoroIntrinsicOp<string mnem, dag ins, dag outs,
 // Coroutine intrinsic IdOp
 //===----------------------------------------------------------------------===//
 
-// TODO: This operation should return an MLIR `token` once the type becomes
-// available. `CIR_UInt32` is used as a temporary placeholder.
-def CIR_CoroIntrinsicIdOp : CIR_CoroIntrinsicOp<"id",
+def CIR_CoroIdOp : CIR_CoroIntrinsicOp<"id",
     (ins CIR_AnyIntType:$align, CIR_VoidPtrType:$promise,
          CIR_VoidPtrType:$coroaddr, CIR_VoidPtrType:$fnaddrs),
-    (outs CIR_UInt32:$result)> {
+    (outs Token:$result), [TokenProducerTrait]> {
   let summary = "Represents llvm.coro.id";
   let description = [{
     Marks the beginning of a coroutine's lifetime and identifies it to the
@@ -4748,9 +4746,8 @@ def CIR_CoroIntrinsicIdOp : CIR_CoroIntrinsicOp<"id",
 // Coroutine intrinsic AllocOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroIntrinsicAllocOp : CIR_CoroIntrinsicOp<"alloc",
-    (ins CIR_AnyIntType:$id),
-    (outs CIR_AnyBoolType:$result)> {
+def CIR_CoroAllocOp : CIR_CoroIntrinsicOp<"alloc", (ins Token:$id),
+    (outs CIR_AnyBoolType:$result), [TokenConsumerTrait]> {
   let summary = "Represents llvm.coro.alloc";
   let description = [{
     Queries whether the coroutine identified by `id` needs a dynamically
@@ -4763,11 +4760,9 @@ def CIR_CoroIntrinsicAllocOp : CIR_CoroIntrinsicOp<"alloc",
 // Coroutine intrinsic BeginOp
 //===----------------------------------------------------------------------===//
 
-// TODO: Replace the `id` operand with MLIR's `token` type once it becomes
-// available. This operand corresponds to the token produced by `llvm.coro.id`.
-def CIR_CoroIntrinsicBeginOp : CIR_CoroIntrinsicOp<"begin",
-    (ins CIR_UInt32:$id, CIR_VoidPtrType:$coroframeAddr),
-    (outs CIR_VoidPtrType:$result)> {
+def CIR_CoroBeginOp : CIR_CoroIntrinsicOp<"begin",
+    (ins Token:$id, CIR_VoidPtrType:$coroframeAddr),
+    (outs CIR_VoidPtrType:$result), [TokenConsumerTrait]> {
   let summary = "Represents llvm.coro.begin";
   let description = [{
     Initializes the coroutine frame using `coroframeAddr`. `id` is the token
@@ -4780,9 +4775,9 @@ def CIR_CoroIntrinsicBeginOp : CIR_CoroIntrinsicOp<"begin",
 // Coroutine intrinsic EndOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroIntrinsicEndOp : CIR_CoroIntrinsicOp<"end",
+def CIR_CoroEndOp : CIR_CoroIntrinsicOp<"end",
     (ins CIR_VoidPtrType:$handle, CIR_AnyBoolType:$unwind),
-    (outs CIR_AnyBoolType:$result)> {
+    (outs CIR_AnyBoolType:$result), [TokenConsumerTrait]> {
   let summary = "Represents llvm.coro.end";
   let description = [{
     Marks a point at which a coroutine must be suspended or destroyed for the
@@ -4798,11 +4793,9 @@ def CIR_CoroIntrinsicEndOp : CIR_CoroIntrinsicOp<"end",
 // Coroutine intrinsic FreeOp
 //===----------------------------------------------------------------------===//
 
-// TODO: Replace the `id` operand with MLIR's `token` type once it becomes
-// available. This operand corresponds to the token produced by `llvm.coro.id`.
-def CIR_CoroIntrinsicFreeOp : CIR_CoroIntrinsicOp<"free",
-    (ins CIR_AnyIntType:$id, CIR_VoidPtrType:$coroframe),
-    (outs CIR_VoidPtrType:$result)> {
+def CIR_CoroFreeOp : CIR_CoroIntrinsicOp<"free",
+    (ins Token:$id, CIR_VoidPtrType:$coroframe),
+    (outs CIR_VoidPtrType:$result), [TokenConsumerTrait]> {
   let summary = "Represents llvm.coro.free";
   let description = [{
     Given the coroutine identified by `id` and its frame pointer `coroframe`
@@ -4816,8 +4809,8 @@ def CIR_CoroIntrinsicFreeOp : CIR_CoroIntrinsicOp<"free",
 // Coroutine intrinsic SizeOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CoroIntrinsicSizeOp : CIR_CoroIntrinsicOp<"size",
-    (ins), (outs CIR_UInt64:$result)> {
+def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
+    (outs CIR_UInt64:$result)> {
   let summary = "Represents llvm.coro.size";
   let description = [{
     Returns the size, in bytes, of the coroutine frame.

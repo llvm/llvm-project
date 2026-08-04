@@ -5167,38 +5167,38 @@ mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMCoroIntrinsicFreeOpLowering::matchAndRewrite(
-    cir::CoroIntrinsicFreeOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMCoroFreeOpLowering::matchAndRewrite(
+    cir::CoroFreeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
 }
 
-mlir::LogicalResult CIRToLLVMCoroIntrinsicEndOpLowering::matchAndRewrite(
-    cir::CoroIntrinsicEndOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMCoroEndOpLowering::matchAndRewrite(
+    cir::CoroEndOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
 }
 
-mlir::LogicalResult CIRToLLVMCoroIntrinsicAllocOpLowering::matchAndRewrite(
-    cir::CoroIntrinsicAllocOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMCoroAllocOpLowering::matchAndRewrite(
+    cir::CoroAllocOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
 }
 
-mlir::LogicalResult CIRToLLVMCoroIntrinsicBeginOpLowering::matchAndRewrite(
-    cir::CoroIntrinsicBeginOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMCoroBeginOpLowering::matchAndRewrite(
+    cir::CoroBeginOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
 }
 
-mlir::LogicalResult CIRToLLVMCoroIntrinsicIdOpLowering::matchAndRewrite(
-    cir::CoroIntrinsicIdOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMCoroIdOpLowering::matchAndRewrite(
+    cir::CoroIdOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
 }
 
-mlir::LogicalResult CIRToLLVMCoroIntrinsicSizeOpLowering::matchAndRewrite(
-    cir::CoroIntrinsicSizeOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMCoroSizeOpLowering::matchAndRewrite(
+    cir::CoroSizeOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return mlir::failure();
 }

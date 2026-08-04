@@ -44,13 +44,13 @@ VoidTask silly_task() {
 
 // CIR: %[[NullPtr:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
 // CIR: %[[Align:.*]] = cir.const #cir.int<16> : !u32i
-// CIR: %[[CoroId:.*]] = cir.coro.intrinsic.id(%[[Align]], %[[NullPtr]], %[[NullPtr]], %[[NullPtr]]) : (!u32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> !u32i
+// CIR: %[[CoroId:.*]] = cir.coro.intrinsic.id(%[[Align]], %[[NullPtr]], %[[NullPtr]], %[[NullPtr]]) : (!u32i, !cir.ptr<!void>, !cir.ptr<!void>, !cir.ptr<!void>) -> token
 // OGCG: %[[CoroId:.*]] = call token @llvm.coro.id(i32 16, ptr %[[VoidPromisseAddr]], ptr null, ptr null)
 
 // Perform allocation calling operator 'new' depending on __builtin_coro_alloc and
 // call __builtin_coro_begin for the final coroutine frame address.
 
-// CIR: %[[ShouldAlloc:.*]] = cir.coro.intrinsic.alloc(%[[CoroId]]) : (!u32i) -> !cir.bool
+// CIR: %[[ShouldAlloc:.*]] = cir.coro.intrinsic.alloc(%[[CoroId]]) : (token) -> !cir.bool
 // CIR: cir.store{{.*}} %[[NullPtr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR: cir.if %[[ShouldAlloc]] {
 // CIR:   %[[CoroSize:.*]] = cir.coro.intrinsic.size() : () -> !u64i
@@ -58,7 +58,7 @@ VoidTask silly_task() {
 // CIR:   cir.store{{.*}} %[[AllocAddr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR: }
 // CIR: %[[Load0:.*]] = cir.load{{.*}} %[[SavedFrameAddr]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-// CIR: %[[CoroFrameAddr:.*]] = cir.coro.intrinsic.begin(%[[CoroId]], %[[Load0]]) : (!u32i, !cir.ptr<!void>) -> !cir.ptr<!void>
+// CIR: %[[CoroFrameAddr:.*]] = cir.coro.intrinsic.begin(%[[CoroId]], %[[Load0]]) : (token, !cir.ptr<!void>) -> !cir.ptr<!void>
 
 // OGCG: %[[ShouldAlloc:.*]]  = call i1 @llvm.coro.alloc(token %[[CoroId]])
 // OGCG: br i1 %[[ShouldAlloc]], label %coro.alloc, label %coro.init
@@ -190,7 +190,7 @@ VoidTask silly_task() {
 // The `if` ensures we only call delete on non-null.
 
 // CIR: } cleanup  normal {
-// CIR:   %[[FreeMem:.*]] = cir.coro.intrinsic.free(%[[CoroId]], %[[CoroFrameAddr]]) : (!u32i, !cir.ptr<!void>) -> !cir.ptr<!void>
+// CIR:   %[[FreeMem:.*]] = cir.coro.intrinsic.free(%[[CoroId]], %[[CoroFrameAddr]]) : (token, !cir.ptr<!void>) -> !cir.ptr<!void>
 // CIR:   %[[NullPtr2:.*]] = cir.const #cir.ptr<null>
 // CIR:   %[[Cond:.*]] = cir.cmp ne %[[FreeMem]], %[[NullPtr2]]
 // CIR:   cir.if %[[Cond]] {

@@ -1862,14 +1862,14 @@ public:
   void emitConstructorBody(FunctionArgList &args);
 
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
-  cir::CoroIntrinsicEndOp emitCoroEndBuiltinCall(mlir::Location loc,
-                                                 mlir::Value nullPtr);
-  cir::CoroIntrinsicIdOp emitCoroIDBuiltinCall(const CallExpr *e);
-  cir::CoroIntrinsicAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
-  cir::CoroIntrinsicBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
+  cir::CoroEndOp emitCoroEndBuiltinCall(mlir::Location loc,
+                                        mlir::Value nullPtr);
+  cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
+  cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
+  cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
 
-  cir::CoroIntrinsicSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
-  cir::CoroIntrinsicFreeOp emitCoroFreeBuiltin(const CallExpr *e);
+  cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
+  cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 
   void emitDestroy(Address addr, QualType type, Destroyer *destroyer);

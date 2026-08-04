@@ -1363,12 +1363,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_coro_id:
     return RValue::get(emitCoroIDBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_alloc: {
-    cir::CoroIntrinsicAllocOp coroAlloc = emitCoroAllocBuiltinCall(e);
+    cir::CoroAllocOp coroAlloc = emitCoroAllocBuiltinCall(e);
     return coroAlloc ? RValue::get(coroAlloc.getResult())
                      : getUndefRValue(e->getType());
   }
   case Builtin::BI__builtin_coro_begin: {
-    cir::CoroIntrinsicBeginOp coroBeg = emitCoroBeginBuiltinCall(e);
+    cir::CoroBeginOp coroBeg = emitCoroBeginBuiltinCall(e);
     return coroBeg ? RValue::get(coroBeg.getResult())
                    : getUndefRValue(e->getType());
   }
@@ -1402,7 +1402,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return emitCoroutineFrame();
   }
   case Builtin::BI__builtin_coro_free: {
-    cir::CoroIntrinsicFreeOp coroFree = emitCoroFreeBuiltin(e);
+    cir::CoroFreeOp coroFree = emitCoroFreeBuiltin(e);
     return coroFree ? RValue::get(coroFree.getResult())
                     : getUndefRValue(e->getType());
   }
