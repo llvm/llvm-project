@@ -330,27 +330,21 @@ public:
     Parser.addAliasForDirective(".dword", ".8byte");
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
-    auto ABIName = StringRef(getTargetOptions().ABIName);
-    if (ABIName.ends_with("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
-      errs() << "Hard-float 'f' ABI can't be used for a target that "
-                "doesn't support the F instruction set extension (ignoring "
-                "target-abi)\n";
-    } else if (ABIName.ends_with("d") &&
-               !getSTI().hasFeature(RISCV::FeatureStdExtD)) {
-      errs() << "Hard-float 'd' ABI can't be used for a target that "
-                "doesn't support the D instruction set extension (ignoring "
-                "target-abi)\n";
-    }
-
-    // Use computeTargetABI to check if ABIName is valid. If invalid, output
-    // error message.
-    RISCVABI::computeTargetABI(STI, ABIName);
-
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
 
     if (AddBuildAttributes)
       getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
+  }
+
+  // Validate the requested -target-abi now that the lexer has been primed
+  // with the first token, so diagnostics can be reported with a real source
+  // location instead of being printed with no location information.
+  void onBeginOfFile() override {
+    Expected<RISCVABI::ABI> ABIOrErr =
+        RISCVABI::computeTargetABI(getSTI(), getTargetOptions().ABIName);
+    if (!ABIOrErr)
+      getParser().printError(getLoc(), toString(ABIOrErr.takeError()));
   }
 };
 

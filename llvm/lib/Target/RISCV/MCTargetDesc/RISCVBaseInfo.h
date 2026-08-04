@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -733,8 +734,8 @@ enum ABI {
 };
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
-// not supported for the subtargets triple and FeatureBits combination.
-ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
+// not supported for the subtarget's triple and FeatureBits combination.
+Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);
 
