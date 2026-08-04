@@ -6697,6 +6697,8 @@ static void collectMapDataFromMapOperands(
         builder, moduleTranslation));
     mapData.MapClause.push_back(mapOp.getOperation());
     mapData.Types.push_back(convertClauseMapFlags(mapOp.getMapType()));
+    // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+    mapData.HasAttachPtr.push_back(false);
     mapData.Names.push_back(LLVM::createMappingInformation(
         mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
     mapData.DevicePointers.push_back(llvm::OpenMPIRBuilder::DeviceInfoTy::None);
@@ -6765,6 +6767,8 @@ static void collectMapDataFromMapOperands(
         mapData.MapClause.push_back(mapOp.getOperation());
         mapData.Types.push_back(
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM);
+        // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+        mapData.HasAttachPtr.push_back(false);
         mapData.Names.push_back(LLVM::createMappingInformation(
             mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
         mapData.DevicePointers.push_back(devInfoTy);
@@ -6805,6 +6809,8 @@ static void collectMapDataFromMapOperands(
       // rematerialized, so the address of the decriptor for a given object
       // may change from one place to another.
       mapData.Types.push_back(mapType);
+      // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+      mapData.HasAttachPtr.push_back(false);
       // Technically it's possible for a non-descriptor mapping to have
       // both has-device-addr and ALWAYS, so lookup the mapper in case it
       // exists.
@@ -6821,6 +6827,8 @@ static void collectMapDataFromMapOperands(
       mapData.Types.push_back(
           isDevicePtr ? mapType
                       : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+      // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+      mapData.HasAttachPtr.push_back(false);
       mapData.Mappers.push_back(nullptr);
     }
     mapData.Names.push_back(LLVM::createMappingInformation(
@@ -7126,6 +7134,8 @@ processIndividualMap(llvm::IRBuilderBase &builder,
   combinedInfo.Mappers.emplace_back(mapData.Mappers[mapDataIdx]);
   combinedInfo.Names.emplace_back(mapData.Names[mapDataIdx]);
   combinedInfo.Types.emplace_back(mapFlag);
+  // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+  combinedInfo.HasAttachPtr.emplace_back(false);
   combinedInfo.Sizes.emplace_back(
       isPtrTy ? builder.CreateSelect(
                     builder.CreateIsNull(mapData.Pointers[mapDataIdx]),
@@ -7189,6 +7199,8 @@ static void mapParentWithMembers(
   }
 
   combinedInfo.Types.emplace_back(baseFlag);
+  // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+  combinedInfo.HasAttachPtr.emplace_back(false);
   combinedInfo.DevicePointers.emplace_back(
       mapData.DevicePointers[mapDataIndex]);
   // Only attach the mapper to the base entry when we are mapping the whole
@@ -7289,6 +7301,8 @@ static void mapParentWithMembers(
     if (targetDirective == TargetDirectiveEnumTy::TargetUpdate || hasMapClose ||
         overlapIdxs.size() == 1) {
       combinedInfo.Types.emplace_back(mapFlag);
+      // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+      combinedInfo.HasAttachPtr.emplace_back(false);
       combinedInfo.DevicePointers.emplace_back(
           mapData.DevicePointers[mapDataIndex]);
       combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
@@ -7329,6 +7343,8 @@ static void mapParentWithMembers(
         auto isPtrMap = checkIfPointerMap(
             llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataOverlapIdx]));
         combinedInfo.Types.emplace_back(mapFlag);
+        // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+        combinedInfo.HasAttachPtr.emplace_back(false);
         combinedInfo.DevicePointers.emplace_back(
             llvm::OpenMPIRBuilder::DeviceInfoTy::None);
         combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
@@ -7357,6 +7373,8 @@ static void mapParentWithMembers(
       }
 
       combinedInfo.Types.emplace_back(mapFlag);
+      // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+      combinedInfo.HasAttachPtr.emplace_back(false);
       combinedInfo.DevicePointers.emplace_back(
           llvm::OpenMPIRBuilder::DeviceInfoTy::None);
       combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
@@ -8104,67 +8122,6 @@ static void getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
 
   targetInfo =
       ompBuilder.getTargetEntryUniqueInfo(fileInfoCallBack, vfs, parentName);
-}
-
-static void
-handleDeclareTargetMapVar(MapInfoData &mapData,
-                          LLVM::ModuleTranslation &moduleTranslation,
-                          llvm::IRBuilderBase &builder, llvm::Function *func) {
-  assert(moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice() &&
-         "function only supported for target device codegen");
-  llvm::IRBuilderBase::InsertPointGuard guard(builder);
-  for (size_t i = 0; i < mapData.MapClause.size(); ++i) {
-    // In the case of declare target mapped variables, the basePointer is
-    // the reference pointer generated by the convertDeclareTargetAttr
-    // method. Whereas the kernelValue is the original variable, so for
-    // the device we must replace all uses of this original global variable
-    // (stored in kernelValue) with the reference pointer (stored in
-    // basePointer for declare target mapped variables), as for device the
-    // data is mapped into this reference pointer and should be loaded
-    // from it, the original variable is discarded. On host both exist and
-    // metadata is generated (elsewhere in the convertDeclareTargetAttr)
-    // function to link the two variables in the runtime and then both the
-    // reference pointer and the pointer are assigned in the kernel argument
-    // structure for the host.
-    if (!mapData.IsDeclareTarget[i])
-      continue;
-    // If the original map value is a constant, then we have to make sure all
-    // of it's uses within the current kernel/function that we are going to
-    // rewrite are converted to instructions, as we will be altering the old
-    // use (OriginalValue) from a constant to an instruction, which will be
-    // illegal and ICE the compiler if the user is a constant expression of
-    // some kind e.g. a constant GEP.
-    if (auto *constant = dyn_cast<llvm::Constant>(mapData.OriginalValue[i]))
-      convertUsersOfConstantsToInstructions(constant, func, false);
-
-    // The users iterator will get invalidated if we modify an element,
-    // so we populate this vector of uses to alter each user on an
-    // individual basis to emit its own load (rather than one load for
-    // all).
-    llvm::SmallVector<llvm::User *> userVec;
-    for (llvm::User *user : mapData.OriginalValue[i]->users())
-      userVec.push_back(user);
-
-    for (llvm::User *user : userVec) {
-      auto *insn = dyn_cast<llvm::Instruction>(user);
-      if (!insn || insn->getFunction() != func)
-        continue;
-      auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
-      llvm::Value *substitute = mapData.BasePointers[i];
-      auto declTarPtr =
-          mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr() : mapOp.getVarPtr();
-      if (isDeclareTargetLink(declTarPtr) ||
-          (isDeclareTargetTo(declTarPtr) &&
-           moduleTranslation.getOpenMPBuilder()
-               ->Config.hasRequiresUnifiedSharedMemory())) {
-        builder.SetCurrentDebugLocation(insn->getDebugLoc());
-        substitute = builder.CreateLoad(mapData.BasePointers[i]->getType(),
-                                        mapData.BasePointers[i]);
-        cast<llvm::LoadInst>(substitute)->moveBefore(insn->getIterator());
-      }
-      user->replaceUsesOfWith(mapData.OriginalValue[i], substitute);
-    }
-  }
 }
 
 // The createDeviceArgumentAccessor function generates
@@ -8998,6 +8955,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
     combinedInfos.Types.push_back(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM |
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+    // TODO: set HasAttachPtr from Flang for pointee-storage entries.
+    combinedInfos.HasAttachPtr.push_back(false);
     if (!combinedInfos.Names.empty())
       combinedInfos.Names.push_back(nullPtr);
     combinedInfos.Mappers.push_back(nullptr);
@@ -9125,12 +9084,6 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (dds.DepArray)
     builder.CreateFree(dds.DepArray);
-
-  // Remap access operations to declare target reference pointers for the
-  // device, essentially generating extra loadop's as necessary
-  if (moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice())
-    handleDeclareTargetMapVar(mapData, moduleTranslation, builder,
-                              llvmOutlinedFn);
 
   return success();
 }
@@ -9283,12 +9236,11 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       if (ompBuilder->Config.isTargetDevice() &&
           (captureClause == omp::DeclareTargetCaptureClause::link ||
            requiresUSM)) {
-        llvm::Type *ptrTy = gVal->getType();
-        // For USM the global type becomes a pointer handle, as opposed to the
-        // globals original type.
-        if (requiresUSM)
-          ptrTy = llvm::PointerType::get(llvmModule->getContext(), 0);
-        bool addrGlobalCreated = ompBuilder->getAddrOfDeclareTargetVar(
+        // For USM and link we generate a global reference pointer in the
+        // default address space (e.g address space 0), as opposed to the
+        // globals original type and address space.
+        llvm::Type *ptrTy = llvm::PointerType::get(llvmModule->getContext(), 0);
+        llvm::Constant *refPtr = ompBuilder->getAddrOfDeclareTargetVar(
             captureClauseKind, deviceClause, isDeclaration, isExternallyVisible,
             ompBuilder->getTargetEntryUniqueInfo(fileInfoCallBack, vfs),
             mangledName, generatedRefs, /*OpenMPSimd*/ false, targetTriple,
@@ -9299,8 +9251,16 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
         // linkage to optimize out the unneeded full-variable storage later,
         // since we can't prevent the LLVM dialect from generating globals
         // without also breaking target lowering.
-        if (addrGlobalCreated)
+        if (refPtr) {
           gVar->setLinkage(llvm::GlobalValue::InternalLinkage);
+
+          // Register the (original global, reference pointer) pair so that the
+          // OpenMPIRBuilder can rewrite uses of the original global during
+          // finalization.
+          if (auto *newGV =
+                  dyn_cast<llvm::GlobalValue>(refPtr->stripPointerCasts()))
+            ompBuilder->registerDeclareTargetGlobalReplacement(gVal, newGV);
+        }
       }
 
       // Mark 'device_type(host) enter(...)' variables as external in the device
