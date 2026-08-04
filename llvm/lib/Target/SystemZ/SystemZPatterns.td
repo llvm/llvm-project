@@ -50,16 +50,14 @@ class RMWI<ValueType vt, SDPatternOperator load, SDPatternOperator op,
 multiclass RMWIByte<SDPatternOperator operator, Instruction insn12,
                     Instruction insn20, PatFrag imm16Leaf = imm32zx8,
                     PatFrag imm32Leaf = imm32zx8,
-                    PatFrag imm8Leaf32 = imm32zx8,
-                    PatFrag imm8Leaf64 = imm64zx8,
                     PatFrag imm16Leaf64 = imm64zx8,
                     PatFrag imm32Leaf64 = imm64zx8,
                     PatFrag imm64Leaf = imm64zx8> {
   // 12-bit displacement variants.
   def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr12pair,
-             imm8Leaf32, insn12>;
+             imm32zx8, insn12>;
   def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr12pair,
-             imm8Leaf64, insn12>;
+             imm64zx8, insn12>;
   def : RMWI<i32, nonvolatile_anyextloadi16, operator,
              nonvolatile_truncstorei16, bdaddr12off1, imm16Leaf, insn12>;
   def : RMWI<i64, nonvolatile_anyextloadi16, operator,
@@ -73,9 +71,9 @@ multiclass RMWIByte<SDPatternOperator operator, Instruction insn12,
 
   // 20-bit displacement variants.
   def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr20pair,
-             imm8Leaf32, insn20>;
+             imm32zx8, insn20>;
   def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr20pair,
-             imm8Leaf64, insn20>;
+             imm64zx8, insn20>;
   def : RMWI<i32, nonvolatile_anyextloadi16, operator,
              nonvolatile_truncstorei16, bdaddr20off1, imm16Leaf, insn20>;
   def : RMWI<i64, nonvolatile_anyextloadi16, operator,
