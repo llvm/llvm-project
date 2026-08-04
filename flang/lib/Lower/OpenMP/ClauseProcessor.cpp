@@ -2002,6 +2002,9 @@ void ClauseProcessor::processMapObjectsWithIterator(
     if (hasIteratorIVReference(object, *ivSyms)) {
       if (!inDeclareMapper && getBaseObject(object, semaCtx))
         TODO(clauseLocation, "iterator modifier with derived type member map");
+      if (const auto *symbol{object.sym()};
+          symbol && semantics::IsOptional(*symbol))
+        TODO(clauseLocation, "iterator modifier with optional locator");
       result.mapIterated.push_back(buildIteratedMapEntry(
           converter, semaCtx, clauseLocation, iteratorRanges, object,
           mapperIdNameRef, mapTypeBits, directive));
