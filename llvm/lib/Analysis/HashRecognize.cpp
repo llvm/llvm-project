@@ -181,9 +181,8 @@ isSignificantBitCheckWellFormed(const RecurrenceInfo &ConditionalRecurrence,
       m_c_Xor(m_ZExtOrTruncOrSelf(m_Specific(ConditionalRecurrence.Phi)),
               m_ZExtOrTruncOrSelf(m_Specific(SimpleRecurrence.Phi))));
   BinaryOperator *BitShift = ConditionalRecurrence.BO;
-  if (!IsBigEndian &&
-      match(SI, m_Select(m_Trunc(m_Value(L)), m_Instruction(TV),
-                         m_Instruction(FV))))
+  if (!IsBigEndian && match(SI, m_Select(m_Trunc(m_Value(L)), m_Instruction(TV),
+                                         m_Instruction(FV))))
     return match(L, MatchPred) && FV == BitShift &&
            match(TV, m_c_Xor(m_Specific(BitShift),
                              m_SpecificInt(*ConditionalRecurrence.ExtraConst)));
@@ -309,9 +308,8 @@ bool RecurrenceInfo::matchConditionalRecurrence(
   Value *FoundStart = Phi->getIncomingValue(!LatchIdx);
 
   Instruction *TV, *FV;
-  if (!match(FoundStep,
-             m_Select(m_CombineOr(m_Cmp(), m_Trunc(m_Value())),
-                      m_Instruction(TV), m_Instruction(FV))))
+  if (!match(FoundStep, m_Select(m_CombineOr(m_Cmp(), m_Trunc(m_Value())),
+                                 m_Instruction(TV), m_Instruction(FV))))
     return false;
 
   // For a conditional recurrence, both the true and false values of the
