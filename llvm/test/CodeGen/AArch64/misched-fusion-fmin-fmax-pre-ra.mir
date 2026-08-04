@@ -15,10 +15,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr16 = FMAXHrr
-    %0:fpr16 = FMAXHrr undef $h0, undef $h1, implicit $fpcr
-    %1:fpr16 = FADDHrr undef $h3, undef $h4, implicit $fpcr
-    %2:fpr16 = FMAXHrr %0, undef $h2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr16 = FMAXHrr
+    %0:fpr16 = FMAXHrr undef %1:fpr16, undef %2:fpr16, implicit $fpcr
+    %3:fpr16 = FADDHrr undef %4:fpr16, undef %5:fpr16, implicit $fpcr
+    %6:fpr16 = FMAXHrr %0, undef %7:fpr16, implicit $fpcr
 ...
 ---
 name: fmax_fmin_h
@@ -29,10 +29,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr16 = FMINHrr
-    %0:fpr16 = FMAXHrr undef $h0, undef $h1, implicit $fpcr
-    %1:fpr16 = FADDHrr undef $h3, undef $h4, implicit $fpcr
-    %2:fpr16 = FMINHrr %0, undef $h2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr16 = FMINHrr
+    %0:fpr16 = FMAXHrr undef %1:fpr16, undef %2:fpr16, implicit $fpcr
+    %3:fpr16 = FADDHrr undef %4:fpr16, undef %5:fpr16, implicit $fpcr
+    %6:fpr16 = FMINHrr %0, undef %7:fpr16, implicit $fpcr
 ...
 ---
 name: fmin_fmax_h
@@ -43,10 +43,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr16 = FMAXHrr
-    %0:fpr16 = FMINHrr undef $h0, undef $h1, implicit $fpcr
-    %1:fpr16 = FADDHrr undef $h3, undef $h4, implicit $fpcr
-    %2:fpr16 = FMAXHrr %0, undef $h2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr16 = FMAXHrr
+    %0:fpr16 = FMINHrr undef %1:fpr16, undef %2:fpr16, implicit $fpcr
+    %3:fpr16 = FADDHrr undef %4:fpr16, undef %5:fpr16, implicit $fpcr
+    %6:fpr16 = FMAXHrr %0, undef %7:fpr16, implicit $fpcr
 ...
 ---
 name: fmin_fmin_h
@@ -57,10 +57,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr16 = FMINHrr
-    %0:fpr16 = FMINHrr undef $h0, undef $h1, implicit $fpcr
-    %1:fpr16 = FADDHrr undef $h3, undef $h4, implicit $fpcr
-    %2:fpr16 = FMINHrr %0, undef $h2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr16 = FMINHrr
+    %0:fpr16 = FMINHrr undef %1:fpr16, undef %2:fpr16, implicit $fpcr
+    %3:fpr16 = FADDHrr undef %4:fpr16, undef %5:fpr16, implicit $fpcr
+    %6:fpr16 = FMINHrr %0, undef %7:fpr16, implicit $fpcr
 ...
 ---
 name: fmax_fmax_s
@@ -71,10 +71,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr32 = FMAXSrr
-    %0:fpr32 = FMAXSrr undef $s0, undef $s1, implicit $fpcr
-    %1:fpr32 = FADDSrr undef $s3, undef $s4, implicit $fpcr
-    %2:fpr32 = FMAXSrr %0, undef $s2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr32 = FMAXSrr
+    %0:fpr32 = FMAXSrr undef %1:fpr32, undef %2:fpr32, implicit $fpcr
+    %3:fpr32 = FADDSrr undef %4:fpr32, undef %5:fpr32, implicit $fpcr
+    %6:fpr32 = FMAXSrr %0, undef %7:fpr32, implicit $fpcr
 ...
 ---
 name: fmax_fmin_s
@@ -85,10 +85,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr32 = FMINSrr
-    %0:fpr32 = FMAXSrr undef $s0, undef $s1, implicit $fpcr
-    %1:fpr32 = FADDSrr undef $s3, undef $s4, implicit $fpcr
-    %2:fpr32 = FMINSrr %0, undef $s2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr32 = FMINSrr
+    %0:fpr32 = FMAXSrr undef %1:fpr32, undef %2:fpr32, implicit $fpcr
+    %3:fpr32 = FADDSrr undef %4:fpr32, undef %5:fpr32, implicit $fpcr
+    %6:fpr32 = FMINSrr %0, undef %7:fpr32, implicit $fpcr
 ...
 ---
 name: fmin_fmax_s
@@ -99,10 +99,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr32 = FMAXSrr
-    %0:fpr32 = FMINSrr undef $s0, undef $s1, implicit $fpcr
-    %1:fpr32 = FADDSrr undef $s3, undef $s4, implicit $fpcr
-    %2:fpr32 = FMAXSrr %0, undef $s2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr32 = FMAXSrr
+    %0:fpr32 = FMINSrr undef %1:fpr32, undef %2:fpr32, implicit $fpcr
+    %3:fpr32 = FADDSrr undef %4:fpr32, undef %5:fpr32, implicit $fpcr
+    %6:fpr32 = FMAXSrr %0, undef %7:fpr32, implicit $fpcr
 ...
 ---
 name: fmin_fmin_s
@@ -113,10 +113,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr32 = FMINSrr
-    %0:fpr32 = FMINSrr undef $s0, undef $s1, implicit $fpcr
-    %1:fpr32 = FADDSrr undef $s3, undef $s4, implicit $fpcr
-    %2:fpr32 = FMINSrr %0, undef $s2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr32 = FMINSrr
+    %0:fpr32 = FMINSrr undef %1:fpr32, undef %2:fpr32, implicit $fpcr
+    %3:fpr32 = FADDSrr undef %4:fpr32, undef %5:fpr32, implicit $fpcr
+    %6:fpr32 = FMINSrr %0, undef %7:fpr32, implicit $fpcr
 ...
 ---
 name: fmax_fmax_d
@@ -127,10 +127,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMAXDrr
-    %0:fpr64 = FMAXDrr undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDDrr undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMAXDrr %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXDrr
+    %0:fpr64 = FMAXDrr undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDDrr undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXDrr %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmax_fmin_d
@@ -141,10 +141,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMINDrr
-    %0:fpr64 = FMAXDrr undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDDrr undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMINDrr %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMINDrr
+    %0:fpr64 = FMAXDrr undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDDrr undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINDrr %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmin_fmax_d
@@ -155,10 +155,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMAXDrr
-    %0:fpr64 = FMINDrr undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDDrr undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMAXDrr %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXDrr
+    %0:fpr64 = FMINDrr undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDDrr undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXDrr %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmin_fmin_d
@@ -169,10 +169,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMINDrr
-    %0:fpr64 = FMINDrr undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDDrr undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMINDrr %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMINDrr
+    %0:fpr64 = FMINDrr undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDDrr undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINDrr %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmax_fmax_v4f16
@@ -183,10 +183,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMAXv4f16
-    %0:fpr64 = FMAXv4f16 undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDv4f16 undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMAXv4f16 %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXv4f16
+    %0:fpr64 = FMAXv4f16 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv4f16 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXv4f16 %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmax_fmin_v4f16
@@ -197,10 +197,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMINv4f16
-    %0:fpr64 = FMAXv4f16 undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDv4f16 undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMINv4f16 %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMINv4f16
+    %0:fpr64 = FMAXv4f16 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv4f16 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINv4f16 %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmin_fmax_v4f16
@@ -211,10 +211,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMAXv4f16
-    %0:fpr64 = FMINv4f16 undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDv4f16 undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMAXv4f16 %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXv4f16
+    %0:fpr64 = FMINv4f16 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv4f16 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXv4f16 %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmin_fmin_v4f16
@@ -225,10 +225,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMINv4f16
-    %0:fpr64 = FMINv4f16 undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDv4f16 undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMINv4f16 %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMINv4f16
+    %0:fpr64 = FMINv4f16 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv4f16 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINv4f16 %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmax_fmax_v8f16
@@ -239,10 +239,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMAXv8f16
-    %0:fpr128 = FMAXv8f16 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv8f16 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMAXv8f16 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXv8f16
+    %0:fpr128 = FMAXv8f16 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv8f16 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXv8f16 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmax_fmin_v8f16
@@ -253,10 +253,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMINv8f16
-    %0:fpr128 = FMAXv8f16 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv8f16 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMINv8f16 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMINv8f16
+    %0:fpr128 = FMAXv8f16 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv8f16 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINv8f16 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmin_fmax_v8f16
@@ -267,10 +267,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMAXv8f16
-    %0:fpr128 = FMINv8f16 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv8f16 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMAXv8f16 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXv8f16
+    %0:fpr128 = FMINv8f16 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv8f16 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXv8f16 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmin_fmin_v8f16
@@ -281,10 +281,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMINv8f16
-    %0:fpr128 = FMINv8f16 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv8f16 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMINv8f16 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMINv8f16
+    %0:fpr128 = FMINv8f16 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv8f16 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINv8f16 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmax_fmax_v2f32
@@ -295,10 +295,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMAXv2f32
-    %0:fpr64 = FMAXv2f32 undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDv2f32 undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMAXv2f32 %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXv2f32
+    %0:fpr64 = FMAXv2f32 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv2f32 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXv2f32 %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmax_fmin_v2f32
@@ -309,10 +309,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMINv2f32
-    %0:fpr64 = FMAXv2f32 undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDv2f32 undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMINv2f32 %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMINv2f32
+    %0:fpr64 = FMAXv2f32 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv2f32 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINv2f32 %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmin_fmax_v2f32
@@ -323,10 +323,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMAXv2f32
-    %0:fpr64 = FMINv2f32 undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDv2f32 undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMAXv2f32 %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMAXv2f32
+    %0:fpr64 = FMINv2f32 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv2f32 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMAXv2f32 %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmin_fmin_v2f32
@@ -337,10 +337,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr64 = FMINv2f32
-    %0:fpr64 = FMINv2f32 undef $d0, undef $d1, implicit $fpcr
-    %1:fpr64 = FADDv2f32 undef $d3, undef $d4, implicit $fpcr
-    %2:fpr64 = FMINv2f32 %0, undef $d2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr64 = FMINv2f32
+    %0:fpr64 = FMINv2f32 undef %1:fpr64, undef %2:fpr64, implicit $fpcr
+    %3:fpr64 = FADDv2f32 undef %4:fpr64, undef %5:fpr64, implicit $fpcr
+    %6:fpr64 = FMINv2f32 %0, undef %7:fpr64, implicit $fpcr
 ...
 ---
 name: fmax_fmax_v4f32
@@ -351,10 +351,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMAXv4f32
-    %0:fpr128 = FMAXv4f32 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv4f32 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMAXv4f32 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXv4f32
+    %0:fpr128 = FMAXv4f32 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv4f32 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXv4f32 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmax_fmin_v4f32
@@ -365,10 +365,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMINv4f32
-    %0:fpr128 = FMAXv4f32 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv4f32 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMINv4f32 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMINv4f32
+    %0:fpr128 = FMAXv4f32 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv4f32 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINv4f32 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmin_fmax_v4f32
@@ -379,10 +379,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMAXv4f32
-    %0:fpr128 = FMINv4f32 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv4f32 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMAXv4f32 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXv4f32
+    %0:fpr128 = FMINv4f32 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv4f32 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXv4f32 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmin_fmin_v4f32
@@ -393,10 +393,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMINv4f32
-    %0:fpr128 = FMINv4f32 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv4f32 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMINv4f32 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMINv4f32
+    %0:fpr128 = FMINv4f32 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv4f32 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINv4f32 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmax_fmax_v2f64
@@ -407,10 +407,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMAXv2f64
-    %0:fpr128 = FMAXv2f64 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv2f64 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMAXv2f64 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXv2f64
+    %0:fpr128 = FMAXv2f64 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv2f64 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXv2f64 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmax_fmin_v2f64
@@ -421,10 +421,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMINv2f64
-    %0:fpr128 = FMAXv2f64 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv2f64 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMINv2f64 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMINv2f64
+    %0:fpr128 = FMAXv2f64 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv2f64 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINv2f64 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmin_fmax_v2f64
@@ -435,10 +435,10 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMAXv2f64
-    %0:fpr128 = FMINv2f64 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv2f64 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMAXv2f64 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMAXv2f64
+    %0:fpr128 = FMINv2f64 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv2f64 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMAXv2f64 %0, undef %7:fpr128, implicit $fpcr
 ...
 ---
 name: fmin_fmin_v2f64
@@ -449,8 +449,8 @@ body: |
     ; CHECK: Successors:
     ; FUSE: SU(2): Ord  Latency={{[0-9]+}} Cluster
     ; NOFUSE-NOT: SU(2): Ord  Latency={{[0-9]+}} Cluster
-    ; CHECK: SU(2): %2:fpr128 = FMINv2f64
-    %0:fpr128 = FMINv2f64 undef $q0, undef $q1, implicit $fpcr
-    %1:fpr128 = FADDv2f64 undef $q3, undef $q4, implicit $fpcr
-    %2:fpr128 = FMINv2f64 %0, undef $q2, implicit $fpcr
+    ; CHECK: SU(2): dead %6:fpr128 = FMINv2f64
+    %0:fpr128 = FMINv2f64 undef %1:fpr128, undef %2:fpr128, implicit $fpcr
+    %3:fpr128 = FADDv2f64 undef %4:fpr128, undef %5:fpr128, implicit $fpcr
+    %6:fpr128 = FMINv2f64 %0, undef %7:fpr128, implicit $fpcr
 ...
