@@ -2146,8 +2146,7 @@ bool ClauseProcessor::processMap(
       // extent and direction. Reject this until omp.target can represent those
       // captures separately from runtime map entries.
       if (directive == llvm::omp::Directive::OMPD_target)
-        TODO(clauseLocation,
-             "TARGET construct with MAP iterator modifier");
+        TODO(clauseLocation, "TARGET construct with MAP iterator modifier");
 
       llvm::SmallVector<IteratorRange> iteratorRanges;
       llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;

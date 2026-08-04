@@ -1556,8 +1556,8 @@ genIteratorMapBounds(Fortran::lower::AbstractConverter &converter,
   }
 
   auto lowerSubscriptToIndex = [&](const SubscriptExpr &expr) -> mlir::Value {
-    mlir::Value value = fir::getBase(
-        converter.genExprValue(toEvExpr(expr), stmtCtx, &loc));
+    mlir::Value value =
+        fir::getBase(converter.genExprValue(toEvExpr(expr), stmtCtx, &loc));
     return builder.createConvert(loc, idxTy, value);
   };
 
