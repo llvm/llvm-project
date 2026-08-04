@@ -3044,10 +3044,22 @@ public:
     if (!sliceResult.isValid)
       return failure();
 
-    // Create the new op in canonical form.
-    auto sourceType = ExtractSliceOp::inferCanonicalRankReducedResultType(
+    // Create the new op in canonical form. The refined shape is inferred from
+    // the destination type, but the encoding is a per-value property of the
+    // source: insert_slice does not convert between encodings, so the
+    // produced cast/op must carry the source's encoding (dropping it would
+    // silently discard downstream metadata such as bounds, layout, or
+    // sparsity descriptors). If the source's encoding no longer holds on the
+    // refined shape (e.g. a `VerifiableTensorEncoding` that self-invalidates),
+    // it is dropped in accordance with the encoding's own contract.
+    auto sourceTypeBase = ExtractSliceOp::inferCanonicalRankReducedResultType(
         insertSliceOp.getSourceType().getRank(), insertSliceOp.getDestType(),
         mixedSizes);
+    auto sourceType = RankedTensorType::get(
+        sourceTypeBase.getShape(), sourceTypeBase.getElementType(),
+        propagateEncoding(insertSliceOp.getSourceType().getEncoding(),
+                          sourceTypeBase.getShape(),
+                          sourceTypeBase.getElementType()));
     Value toInsert = insertSliceOp.getSource();
     if (sourceType != insertSliceOp.getSourceType()) {
       OpBuilder::InsertionGuard g(rewriter);
