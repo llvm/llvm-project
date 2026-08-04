@@ -494,8 +494,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       if (NeedsXRayDeps)
         linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
 
-      bool WantPthread = Args.hasArg(options::OPT_pthread) ||
-                         Args.hasArg(options::OPT_pthreads);
+      bool WantPthread = Args.hasArg(options::OPT_pthread);
 
       // Use the static OpenMP runtime with -static-openmp
       bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
