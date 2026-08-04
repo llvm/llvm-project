@@ -5615,10 +5615,6 @@ static SDValue lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
   if (SrcInfo[0].second != 0 || SlideAmt >= 0)
     return SDValue();
 
-  unsigned SlideDownAmt = -SlideAmt;
-  if (SlideDownAmt >= NumElts)
-    return SDValue();
-
   // Check whether the leading lanes are consecutive lanes
   // from the second slide.
   auto IsSecondSlideLane = [&](unsigned I) {
@@ -5632,18 +5628,21 @@ static SDValue lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
   };
 
   unsigned VL = 0;
+  bool IsFirst = false;
   for (unsigned I = 0; I != NumElts; ++I) {
-    if (!IsSecondSlideLane(I))
-      break;
+    if (!IsSecondSlideLane(I)) {
+      IsFirst = true;
+      continue;
+    }
+
+    if (IsFirst)
+      return SDValue();
     ++VL;
   }
 
+  unsigned SlideDownAmt = -SlideAmt;
   if (VL == 0 || VL == NumElts || VL > NumElts - SlideDownAmt)
     return SDValue();
-
-  for (unsigned I = VL; I != NumElts; ++I)
-    if (IsSecondSlideLane(I))
-      return SDValue();
 
   SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
   SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
@@ -5652,6 +5651,8 @@ static SDValue lowerVECTOR_SHUFFLEAsPrefixVSlidedown(
       RISCVVType::TAIL_UNDISTURBED_MASK_UNDISTURBED | RISCVVType::MASK_AGNOSTIC;
   auto TrueMask = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).first;
   SDValue VLOp = DAG.getConstant(VL, DL, XLenVT);
+  Src1 = convertToScalableVector(ContainerVT, Src1, DAG, Subtarget);
+  Src2 = convertToScalableVector(ContainerVT, Src2, DAG, Subtarget);
   SDValue Slidedown = getVSlidedown(DAG, Subtarget, DL, ContainerVT, Src1, Src2,
                                     DAG.getConstant(SlideDownAmt, DL, XLenVT),
                                     TrueMask, VLOp, Policy);
