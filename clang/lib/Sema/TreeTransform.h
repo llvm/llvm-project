@@ -7198,8 +7198,7 @@ TreeTransform<Derived>::TransformPackIndexingType(TypeLocBuilder &TLB,
         if (!Selected->containsUnexpandedParameterPack() &&
             !Selected->isInstantiationDependentType()) {
           Sema::ArgPackSubstIndexRAII SubstIndex(getSema(), std::nullopt);
-          QualType Result =
-              getDerived().TransformType(TLB, TL.getPatternLoc());
+          QualType Result = getDerived().TransformType(TLB, TL.getPatternLoc());
           if (Result.isNull())
             return QualType();
           QualType Out = SemaRef.Context.getPackIndexingType(
