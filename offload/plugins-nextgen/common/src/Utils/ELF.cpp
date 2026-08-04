@@ -13,6 +13,8 @@
 #include "Utils/ELF.h"
 
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
@@ -362,4 +364,56 @@ utils::elf::getSymbolAddress(const ELFSymbolRef &SymRef) {
   if (const ELF64BEObjectFile *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
     return getSymbolAddressImpl(*ELFObj, SymRef);
   return createError("Only 64-bit ELF files are supported");
+}
+
+SmallVector<utils::elf::SourceLocation>
+utils::elf::symbolize(DWARFContext &DICtx, uint64_t Addr) {
+  SmallVector<SourceLocation> Locations;
+  DILineInfoSpecifier Spec(DILineInfoSpecifier::FileLineInfoKind::RawValue,
+                           DILineInfoSpecifier::FunctionNameKind::ShortName);
+  DIInliningInfo Info =
+      DICtx.getInliningInfoForAddress(object::SectionedAddress{Addr}, Spec);
+  Locations.reserve(Info.getNumberOfFrames());
+  for (uint32_t I = 0, N = Info.getNumberOfFrames(); I < N; ++I) {
+    const DILineInfo &Frame = Info.getFrame(I);
+    Locations.push_back({Frame.FunctionName, Frame.FileName,
+                         static_cast<uint32_t>(Frame.Line),
+                         static_cast<uint32_t>(Frame.Column)});
+  }
+  return Locations;
+}
+
+// Returns the name of the symbol of type \p Type whose [value, value + size)
+// range covers \p Addr, or an empty string if none is found.
+static StringRef findSymbolByAddress(const ObjectFile &ELFObj, uint64_t Addr,
+                                     uint8_t Type) {
+  for (const SymbolRef &Sym : ELFObj.symbols()) {
+    ELFSymbolRef ESym(Sym);
+    if (ESym.getELFType() != Type || ESym.getSize() == 0)
+      continue;
+    Expected<uint64_t> ValueOrErr = Sym.getValue();
+    if (!ValueOrErr) {
+      consumeError(ValueOrErr.takeError());
+      continue;
+    }
+    if (Addr < *ValueOrErr || Addr >= *ValueOrErr + ESym.getSize())
+      continue;
+    Expected<StringRef> NameOrErr = Sym.getName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
+      continue;
+    }
+    if (!NameOrErr->empty())
+      return *NameOrErr;
+  }
+  return StringRef();
+}
+
+StringRef utils::elf::findDataSymbol(const ObjectFile &ELFObj, uint64_t Addr) {
+  return findSymbolByAddress(ELFObj, Addr, ELF::STT_OBJECT);
+}
+
+StringRef utils::elf::findFunctionSymbol(const ObjectFile &ELFObj,
+                                         uint64_t Addr) {
+  return findSymbolByAddress(ELFObj, Addr, ELF::STT_FUNC);
 }

@@ -24,6 +24,18 @@ static void message(const char *msg, Args &&...args) {
 static void message(const char *msg) { (void)write(2, msg, strlen(msg)); }
 #endif
 
+// The SPIR-V target cannot currently use the GPU libc / RPC.
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX
+#include <gpuintrin.h>
+
+#include "sanitizer/gpu_sanitizer.h"
+#include "shared/rpc.h"
+
+// The libc RPC client used to ship results to the host for symbolization.
+[[gnu::visibility("protected"),
+  gnu::weak]] rpc::Client __ubsan_rpc_client asm("__llvm_rpc_client");
+#endif
+
 // If for some reason we cannot build the runtime with preserve_all, don't
 // emit any symbol. Programs that need them will fail to link, but that is
 // better than randomly corrupted registers.
@@ -40,11 +52,13 @@ static void message(const char *msg) { (void)write(2, msg, strlen(msg)); }
 #define PRESERVE_HANDLERS false
 #endif
 
+#if !(SANITIZER_AMDGPU || SANITIZER_NVPTX)
 static const int kMaxCallerPcs = 20;
 static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];
 // Number of elements in caller_pcs. A special value of kMaxCallerPcs + 1 means
 // that "too many errors" has already been reported.
 static __sanitizer::atomic_uint32_t caller_pcs_sz;
+#endif
 
 static char *append_str(const char *s, char *buf, const char *end) {
   for (const char *p = s; (buf < end) && (*p != '\0'); ++p, ++buf)
@@ -75,7 +89,28 @@ static void format_msg(const char *kind, uintptr_t caller, char *buf,
 }
 
 static void format(const char *kind, uintptr_t caller) {
-#if SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX
+  (void)format_msg;
+  // Ship a structured report to the host, which rebases and symbolizes the pc;
+  // the block/thread/lane triple pins the offending work-item. The report fits
+  // one packet, so it is sent fire-and-forget in a single send.
+  __ubsan_gpu_report rep = {};
+  rep.pc = static_cast<unsigned long long>(caller);
+  rep.block[0] = __gpu_block_id(__GPU_X_DIM);
+  rep.block[1] = __gpu_block_id(__GPU_Y_DIM);
+  rep.block[2] = __gpu_block_id(__GPU_Z_DIM);
+  rep.thread[0] = __gpu_thread_id(__GPU_X_DIM);
+  rep.thread[1] = __gpu_thread_id(__GPU_Y_DIM);
+  rep.thread[2] = __gpu_thread_id(__GPU_Z_DIM);
+  rep.lane = __gpu_lane_id();
+  for (unsigned i = 0; i < UBSAN_GPU_KIND_MAX - 1 && kind[i]; ++i)
+    rep.kind[i] = kind[i];
+
+  rpc::Client::Port Port = __ubsan_rpc_client.open<UBSAN_GPU_REPORT_OPCODE>();
+  Port.send([&](rpc::Buffer *buf, uint32_t) {
+    __builtin_memcpy(buf->data, &rep, sizeof(rep));
+  });
+#elif SANITIZER_SPIRV
   (void)format_msg;
   message("ubsan: %s by %p\n", kind, reinterpret_cast<void *>(caller));
 #else
@@ -88,6 +123,11 @@ static void format(const char *kind, uintptr_t caller) {
 [[gnu::cold]] static void report_error(const char *kind, uintptr_t caller) {
   if (caller == 0)
     return;
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX
+  // The host process coalesces duplicate reports.
+  format(kind, caller);
+  return;
+#else
   while (true) {
     unsigned sz = __sanitizer::atomic_load_relaxed(&caller_pcs_sz);
     if (sz > kMaxCallerPcs)
@@ -119,6 +159,7 @@ static void format(const char *kind, uintptr_t caller) {
 
     format(kind, caller);
   }
+#endif
 }
 
 SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,

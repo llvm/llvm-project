@@ -15,6 +15,7 @@ add_library(PluginCommon OBJECT
   src/JIT.cpp
   src/RecordReplay.cpp
   src/RPC.cpp
+  src/Sanitizer.cpp
   src/OffloadError.cpp
   src/Utils/ELF.cpp
 )
@@ -52,6 +53,8 @@ target_include_directories(PluginCommon PUBLIC
   ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}
   ${LIBOMPTARGET_BINARY_INCLUDE_DIR}
   ${LIBOMPTARGET_INCLUDE_DIR}
+  # For the shared GPU sanitizer report ABI header.
+  ${OFFLOAD_SOURCE_DIR}/../compiler-rt/include
 )
 
 set_target_properties(PluginCommon PROPERTIES POSITION_INDEPENDENT_CODE ON)

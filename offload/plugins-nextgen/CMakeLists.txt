@@ -12,7 +12,7 @@ function(add_target_library target_name lib_name)
       AggressiveInstCombine Analysis BinaryFormat BitReader BitWriter CodeGen
       Core Extensions FrontendOffloading InstCombine Instrumentation IPO IRReader
       Linker MC Object Passes ProfileData Remarks ScalarOpts Support Target
-      TargetParser TransformUtils Vectorize)
+      TargetParser TransformUtils Vectorize DebugInfoDWARF Object)
   endif()
   llvm_update_compile_flags(${target_name})
   target_include_directories(${target_name} PUBLIC ${common_dir}/include
