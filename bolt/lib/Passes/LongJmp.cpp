@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/LongJmp.h"
+#include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/BranchLivenessUtils.h"
 #include "bolt/Passes/RegAnalysis.h"
@@ -90,7 +91,7 @@ LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
                            bool TgtIsFunc, uint64_t AtAddress) {
   BinaryFunction &Func = *SourceBB.getFunction();
   const BinaryContext &BC = Func.getBinaryContext();
-  const bool IsCold = SourceBB.isCold();
+  const bool IsCold = Func.isSplit() && SourceBB.isCold();
   MCSymbol *StubSym = BC.Ctx->createNamedTempSymbol("Stub");
   std::unique_ptr<BinaryBasicBlock> StubBB = Func.createBasicBlock(StubSym);
   MCInst Inst;
@@ -177,7 +178,7 @@ LongJmpPass::lookupGlobalStub(const BinaryBasicBlock &SourceBB,
                               uint64_t DotAddress) const {
   const BinaryFunction &Func = *SourceBB.getFunction();
   const StubGroupsTy &StubGroups =
-      SourceBB.isCold() ? ColdStubGroups : HotStubGroups;
+      Func.isSplit() && SourceBB.isCold() ? ColdStubGroups : HotStubGroups;
   return lookupStubFromGroup(StubGroups, Func, Inst, TgtSym, DotAddress);
 }
 
@@ -187,7 +188,7 @@ BinaryBasicBlock *LongJmpPass::lookupLocalStub(const BinaryBasicBlock &SourceBB,
                                                uint64_t DotAddress) const {
   const BinaryFunction &Func = *SourceBB.getFunction();
   const DenseMap<const BinaryFunction *, StubGroupsTy> &StubGroups =
-      SourceBB.isCold() ? ColdLocalStubs : HotLocalStubs;
+      Func.isSplit() && SourceBB.isCold() ? ColdLocalStubs : HotLocalStubs;
   const auto Iter = StubGroups.find(&Func);
   if (Iter == StubGroups.end())
     return nullptr;
@@ -263,7 +264,7 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
     StubBB->setExecutionCount(StubBB->getExecutionCount() + OrigCount);
     if (NewBB) {
       StubBB->addSuccessor(TgtBB, OrigCount, OrigMispreds);
-      StubBB->setIsCold(BB.isCold());
+      StubBB->setIsCold(Func.isSplit() && BB.isCold());
     }
     // Call / tail call
   } else {
@@ -271,7 +272,7 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
                               BB.getExecutionCount());
     if (NewBB) {
       assert(TgtBB == nullptr);
-      StubBB->setIsCold(BB.isCold());
+      StubBB->setIsCold(Func.isSplit() && BB.isCold());
       // Set as entry point because this block is valid but we have no preds
       StubBB->getFunction()->addEntryPoint(*StubBB);
     }
@@ -304,7 +305,7 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
   uint64_t ColdDot = ColdAddresses[&Func];
   bool Cold = false;
   for (const BinaryBasicBlock *BB : Func.getLayout().blocks()) {
-    if (Cold || BB->isCold()) {
+    if (Func.isSplit() && (Cold || BB->isCold())) {
       Cold = true;
       BBAddresses[BB] = ColdDot;
       ColdDot += BC.computeCodeSize(BB->begin(), BB->end());
@@ -324,11 +325,17 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
       continue;
+    const FunctionFragment &ColdFragment =
+        Func->getLayout().getFragment(FragmentNum::cold());
+    // Match BinaryEmitter by skipping empty split fragments without islands.
+    if (ColdFragment.empty() && !Func->hasConstantIsland())
+      continue;
     DotAddress = alignTo(DotAddress, Func->getMinAlignment());
     uint64_t Pad =
         offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
     if (Pad <= Func->getMaxColdAlignmentBytes())
       DotAddress += Pad;
+    DotAddress += opts::padFunctionBefore(*Func);
     ColdAddresses[Func] = DotAddress;
     LLVM_DEBUG(dbgs() << Func->getPrintName() << " cold tentative: "
                       << Twine::utohexstr(DotAddress) << "\n");
@@ -337,6 +344,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
       DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
       DotAddress += IslandSize;
     }
+    DotAddress += opts::padFunctionAfter(*Func);
   }
   return DotAddress;
 }
@@ -350,6 +358,8 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
   uint32_t CurrentIndex = 0;
   if (opts::HotFunctionsAtEnd) {
     for (BinaryFunction *BF : SortedFunctions) {
+      if (!BC.shouldEmit(*BF))
+        continue;
       if (BF->hasValidIndex()) {
         LastHotIndex = CurrentIndex;
         break;
@@ -359,6 +369,8 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
     }
   } else {
     for (BinaryFunction *BF : SortedFunctions) {
+      if (!BC.shouldEmit(*BF))
+        continue;
       if (!BF->hasValidIndex()) {
         LastHotIndex = CurrentIndex;
         break;
@@ -396,6 +408,7 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
         offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
     if (Pad <= Func->getMaxAlignmentBytes())
       DotAddress += Pad;
+    DotAddress += opts::padFunctionBefore(*Func);
     HotAddresses[Func] = DotAddress;
     LLVM_DEBUG(dbgs() << Func->getPrintName() << " tentative: "
                       << Twine::utohexstr(DotAddress) << "\n");
@@ -408,6 +421,7 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
       DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
       DotAddress += IslandSize;
     }
+    DotAddress += opts::padFunctionAfter(*Func);
     ++CurrentIndex;
   }
 

@@ -15,6 +15,7 @@
 #define BOLT_CORE_BINARY_EMITTER_H
 
 #include "llvm/ADT/StringRef.h"
+#include <cstddef>
 
 namespace llvm {
 class MCStreamer;
@@ -39,5 +40,15 @@ void emitFunctionBody(MCStreamer &Streamer, BinaryFunction &BF,
 
 } // namespace bolt
 } // namespace llvm
+
+namespace opts {
+
+/// Return the padding requested before each emitted fragment of \p Function.
+std::size_t padFunctionBefore(const llvm::bolt::BinaryFunction &Function);
+
+/// Return the padding requested after each emitted fragment of \p Function.
+std::size_t padFunctionAfter(const llvm::bolt::BinaryFunction &Function);
+
+} // namespace opts
 
 #endif
