@@ -358,7 +358,7 @@ int32_t DeviceTy::notifyDataUnmapped(void *HstPtr) {
 
 /// Resolve \p NumArgs (base pointer, offset) pairs into a flattened array of
 /// argument-value pointers suitable for a kernel launch, writing the result
-/// into \p LaunchArgs.NumArgs/Args. 
+/// into \p LaunchArgs.NumArgs/Args.
 static void resolveKernelLaunchParams(void **TgtArgs, ptrdiff_t *TgtOffsets,
                                       uint32_t NumArgs,
                                       llvm::SmallVector<void *> &Args,
@@ -386,6 +386,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                KernelExtraArgsTy *KernelExtraArgs,
                                AsyncInfoTy &AsyncInfo) {
   llvm::SmallVector<void *> Args, Ptrs;
+  llvm::SmallVector<int64_t> ArgSizes;
 
   KernelLaunchArgsTy LaunchArgs;
   LaunchArgs.OmpABIVersion = KernelArgs.Version;
@@ -421,6 +422,14 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
       if (KernelArgs.Version == OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
         std::rotate(Args.begin(), Args.end() - 1, Args.end());
         LaunchArgs.DynPtrSlot = &Args[0];
+
+        // Keep ArgSizes in sync with the rotated Args, if present.
+        if (LaunchArgs.ArgSizes) {
+          ArgSizes.assign(LaunchArgs.ArgSizes,
+                          LaunchArgs.ArgSizes + KernelArgs.NumArgs);
+          std::rotate(ArgSizes.begin(), ArgSizes.end() - 1, ArgSizes.end());
+          LaunchArgs.ArgSizes = ArgSizes.data();
+        }
       } else {
         LaunchArgs.DynPtrSlot = &Args[KernelArgs.NumArgs - 1];
       }
