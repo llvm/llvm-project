@@ -325,7 +325,8 @@ struct VPlanTransforms {
   /// will be folded later.
   static void
   truncateToMinimalBitwidths(VPlan &Plan,
-                             const MapVector<Instruction *, uint64_t> &MinBWs);
+                             const MapVector<Instruction *, uint64_t> &MinBWs,
+                             VFRange &Range);
 
   /// Check \p Plan's live-ins and replace them with constants, if they can be
   /// simplified via SCEV.
@@ -660,6 +661,11 @@ struct VPlanTransforms {
   static void narrowInductionTruncates(VPlan &Plan, VFRange &Range,
                                        const TargetTransformInfo &TTI,
                                        PredicatedScalarEvolution &PSE);
+
+  /// Convert the scatter to extract-last-active-lane + scalar store if
+  /// profitable.
+  static void narrowScatters(VPlan &Plan, VPCostContext &Ctx, VFRange &Range,
+                             bool FoldTailWithEVL);
 };
 
 } // namespace llvm
