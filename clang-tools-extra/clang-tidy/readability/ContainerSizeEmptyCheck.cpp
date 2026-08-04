@@ -38,7 +38,7 @@ AST_POLYMORPHIC_MATCHER_P2(hasAnyArgumentWithParam,
   int ParamIndex = 0;
   for (; ArgIndex < Node.getNumArgs(); ++ArgIndex) {
     ast_matchers::internal::BoundNodesTreeBuilder ArgMatches(*Builder);
-    if (ArgMatcher.matches(*(Node.getArg(ArgIndex)->IgnoreParenCasts()), Finder,
+    if (ArgMatcher.matches(*Node.getArg(ArgIndex)->IgnoreParenCasts(), Finder,
                            &ArgMatches)) {
       ast_matchers::internal::BoundNodesTreeBuilder ParamMatches(ArgMatches);
       if (expr(anyOf(cxxConstructExpr(hasDeclaration(cxxConstructorDecl(

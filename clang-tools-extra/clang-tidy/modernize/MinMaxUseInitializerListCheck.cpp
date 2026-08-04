@@ -61,7 +61,7 @@ static FindArgsResult findArgs(const CallExpr *Call) {
     Result.Args = SmallVector<const Expr *>(Call->arguments());
   } else {
     // if it has 3 arguments then the last will be the comparison
-    Result.Compare = *(std::next(Call->arguments().begin(), 2));
+    Result.Compare = *std::next(Call->arguments().begin(), 2);
     Result.Args = SmallVector<const Expr *>(llvm::drop_end(Call->arguments()));
   }
   Result.First = Result.Args.front();

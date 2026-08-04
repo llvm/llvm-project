@@ -514,7 +514,7 @@ getCallableMaterialization(const MatchFinder::MatchResult &Result) {
 
   const auto *CE = dyn_cast<CXXConstructExpr>(NoTemporaries);
   const auto *FC = dyn_cast<CXXFunctionalCastExpr>(NoTemporaries);
-  if ((isa<CallExpr>(NoTemporaries)) || (CE && (CE->getNumArgs() > 0)) ||
+  if (isa<CallExpr>(NoTemporaries) || (CE && (CE->getNumArgs() > 0)) ||
       (FC && (FC->getCastKind() == CK_ConstructorConversion)))
     // CE is something that looks like a call, with arguments - either
     // a function call or a constructor invocation.
