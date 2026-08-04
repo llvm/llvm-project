@@ -362,7 +362,7 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
 
     CycleOs << *N->getDecl() << " -> ";
   }
-  CycleOs << *(FoundPath.front()->getDecl());
+  CycleOs << *FoundPath.front()->getDecl();
 
   Chk.diag((*VarNode)->getDecl()->getLocation(),
            "possible cyclical initialization: %0", DiagnosticIDs::Note)

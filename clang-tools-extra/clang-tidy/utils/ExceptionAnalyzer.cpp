@@ -443,7 +443,7 @@ ExceptionAnalyzer::ExceptionInfo::filterIgnoredExceptions(
       if (TD->getDeclName().isIdentifier()) {
         if ((IgnoreBadAlloc &&
              (TD->getName() == "bad_alloc" && TD->isInStdNamespace())) ||
-            (IgnoredTypes.contains(TD->getName())))
+            IgnoredTypes.contains(TD->getName()))
           TypesToDelete.push_back(T);
       }
     }

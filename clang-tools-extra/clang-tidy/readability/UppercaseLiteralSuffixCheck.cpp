@@ -216,7 +216,7 @@ void UppercaseLiteralSuffixCheck::check(
              "'%1', which is not uppercase")
         << IsInteger << Details->OldSuffix;
     if (Details->FixIt) // Similarly, a fix-it is not always possible.
-      Complaint << *(Details->FixIt);
+      Complaint << *Details->FixIt;
   }
 }
 

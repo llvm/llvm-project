@@ -92,7 +92,7 @@ IdDependentBackwardBranchCheck::hasIdDepVar(const Expr *Expression) {
     const auto FoundVariable = IdDepVarsMap.find(CheckVariable);
     if (FoundVariable == IdDepVarsMap.end())
       return nullptr;
-    return &(FoundVariable->second);
+    return &FoundVariable->second;
   }
   for (const auto *Child : Expression->children())
     if (const auto *ChildExpression = dyn_cast_if_present<Expr>(Child))
@@ -114,7 +114,7 @@ IdDependentBackwardBranchCheck::hasIdDepField(const Expr *Expression) {
     const auto FoundField = IdDepFieldsMap.find(CheckField);
     if (FoundField == IdDepFieldsMap.end())
       return nullptr;
-    return &(FoundField->second);
+    return &FoundField->second;
   }
   for (const auto *Child : Expression->children())
     if (const auto *ChildExpression = dyn_cast_if_present<Expr>(Child))

@@ -89,7 +89,7 @@ private:
 
 AST_MATCHER_P(Expr, lengthExprForStringNode, std::string, ID) {
   return Builder->removeBindings(NotLengthExprForStringNode(
-      ID, DynTypedNode::create(Node), &(Finder->getASTContext())));
+      ID, DynTypedNode::create(Node), &Finder->getASTContext()));
 }
 
 } // namespace
