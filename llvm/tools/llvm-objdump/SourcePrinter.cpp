@@ -188,8 +188,6 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
   DataExtractor Data(LocExpr.Expr, Unit->getContext().isLittleEndian());
   DWARFExpression Expression(Data, Unit->getAddressByteSize());
 
-  // Return an empty name for a target lookup miss so the compact printer can
-  // decode an ASCII-packed name before reporting the register as unknown.
   auto GetRegName = [&MRI](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
     if (std::optional<MCRegister> LLVMRegNum =
             MRI.getLLVMRegNum(DwarfRegNum, IsEH))
