@@ -1459,6 +1459,10 @@ def fp16imm0 : PatLeaf<(f16 fpimm), [{
   return N->isPosZero();
 }]>;
 
+def bfp16imm0 : PatLeaf<(bf16 fpimm), [{
+  return N->isExactlyValue(+0.0);
+}]>;
+
 def fp32imm0 : PatLeaf<(f32 fpimm), [{
   return N->isPosZero();
 }]>;
