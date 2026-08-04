@@ -3013,6 +3013,16 @@ InstCombinerImpl::convertOrOfShiftsToFunnelShift(Instruction &Or) {
           match(R, m_And(m_Neg(m_Specific(X)), m_SpecificInt(Mask))))
         return X;
 
+      // (shl ShVal,(X+1) & (Width-1)) | (lshr ShVal,(X+Width-1)^(Width-1))
+      {
+        Value *ShAmt = nullptr;
+        if (match(L, m_c_And(m_Value(ShAmt), m_SpecificInt(Mask))) &&
+            match(ShAmt, m_c_Add(m_Value(X), m_SpecificInt(1))) &&
+            match(R, m_c_Xor(m_c_Add(m_Specific(X), m_SpecificInt(Mask)),
+                             m_SpecificInt(Mask))))
+          return ShAmt;
+      }
+
       // (shl ShVal, X) | (lshr ShVal, ((-X) & (Width - 1)))
       if (match(R, m_And(m_Neg(m_Specific(L)), m_SpecificInt(Mask))))
         return L;

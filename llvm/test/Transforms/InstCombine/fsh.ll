@@ -1307,12 +1307,7 @@ define i32 @rot_fsh(i32 %x, i32 %y) {
 define i8 @rot_add_xor_mask_fshl(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rot_add_xor_mask_fshl(
 ; CHECK-NEXT:    [[SHL_AMT:%.*]] = add i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[SHL_M:%.*]] = and i8 [[SHL_AMT]], 7
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[SHL_M]]
-; CHECK-NEXT:    [[LSHR_AMT:%.*]] = add i8 [[Y]], 7
-; CHECK-NEXT:    [[LSHR_M:%.*]] = xor i8 [[LSHR_AMT]], 7
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[X]], [[LSHR_M]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], [[LSHR]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SHL_AMT]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %shl_amt = add i8 %y, 1
@@ -1328,12 +1323,7 @@ define i8 @rot_add_xor_mask_fshl(i8 %x, i8 %y) {
 define i64 @rot_add_xor_mask_fshl_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: @rot_add_xor_mask_fshl_i64(
 ; CHECK-NEXT:    [[SHL_AMT:%.*]] = add nuw i64 [[Y:%.*]], 1
-; CHECK-NEXT:    [[SHL_M:%.*]] = and i64 [[SHL_AMT]], 63
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], [[SHL_M]]
-; CHECK-NEXT:    [[LSHR_AMT:%.*]] = add i64 [[Y]], 63
-; CHECK-NEXT:    [[LSHR_M:%.*]] = xor i64 [[LSHR_AMT]], 63
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[X]], [[LSHR_M]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[SHL]], [[LSHR]]
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshl.i64(i64 [[X:%.*]], i64 [[X]], i64 [[SHL_AMT]])
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %shl_amt = add nuw i64 %y, 1
@@ -1349,12 +1339,7 @@ define i64 @rot_add_xor_mask_fshl_i64(i64 %x, i64 %y) {
 define i8 @rot_add_xor_mask_fshl_commute(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rot_add_xor_mask_fshl_commute(
 ; CHECK-NEXT:    [[SHL_AMT:%.*]] = add i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[SHL_M:%.*]] = and i8 [[SHL_AMT]], 7
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[SHL_M]]
-; CHECK-NEXT:    [[LSHR_AMT:%.*]] = add i8 [[Y]], 7
-; CHECK-NEXT:    [[LSHR_M:%.*]] = xor i8 [[LSHR_AMT]], 7
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[X]], [[LSHR_M]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[LSHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SHL_AMT]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %shl_amt = add i8 %y, 1
@@ -1370,12 +1355,7 @@ define i8 @rot_add_xor_mask_fshl_commute(i8 %x, i8 %y) {
 define <2 x i8> @rot_add_xor_mask_fshl_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @rot_add_xor_mask_fshl_vec(
 ; CHECK-NEXT:    [[SHL_AMT:%.*]] = add <2 x i8> [[Y:%.*]], splat (i8 1)
-; CHECK-NEXT:    [[SHL_M:%.*]] = and <2 x i8> [[SHL_AMT]], splat (i8 7)
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[X:%.*]], [[SHL_M]]
-; CHECK-NEXT:    [[LSHR_AMT:%.*]] = add <2 x i8> [[Y]], splat (i8 7)
-; CHECK-NEXT:    [[LSHR_M:%.*]] = xor <2 x i8> [[LSHR_AMT]], splat (i8 7)
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr <2 x i8> [[X]], [[LSHR_M]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[SHL]], [[LSHR]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.fshl.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[X]], <2 x i8> [[SHL_AMT]])
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %shl_amt = add <2 x i8> %y, splat (i8 1)
@@ -1391,12 +1371,7 @@ define <2 x i8> @rot_add_xor_mask_fshl_vec(<2 x i8> %x, <2 x i8> %y) {
 define i8 @rot_add_xor_mask_fshr(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rot_add_xor_mask_fshr(
 ; CHECK-NEXT:    [[LSHR_AMT:%.*]] = add i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[LSHR_M:%.*]] = and i8 [[LSHR_AMT]], 7
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[X:%.*]], [[LSHR_M]]
-; CHECK-NEXT:    [[SHL_AMT:%.*]] = add i8 [[Y]], 7
-; CHECK-NEXT:    [[SHL_M:%.*]] = xor i8 [[SHL_AMT]], 7
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X]], [[SHL_M]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[LSHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[LSHR_AMT]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lshr_amt = add i8 %y, 1
@@ -1412,12 +1387,7 @@ define i8 @rot_add_xor_mask_fshr(i8 %x, i8 %y) {
 define i64 @rot_add_xor_mask_fshr_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: @rot_add_xor_mask_fshr_i64(
 ; CHECK-NEXT:    [[LSHR_AMT:%.*]] = add nuw i64 [[Y:%.*]], 1
-; CHECK-NEXT:    [[LSHR_M:%.*]] = and i64 [[LSHR_AMT]], 63
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i64 [[X:%.*]], [[LSHR_M]]
-; CHECK-NEXT:    [[SHL_AMT:%.*]] = add i64 [[Y]], 63
-; CHECK-NEXT:    [[SHL_M:%.*]] = xor i64 [[SHL_AMT]], 63
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X]], [[SHL_M]]
-; CHECK-NEXT:    [[R:%.*]] = or i64 [[LSHR]], [[SHL]]
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.fshr.i64(i64 [[X:%.*]], i64 [[X]], i64 [[LSHR_AMT]])
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %lshr_amt = add nuw i64 %y, 1
@@ -1433,12 +1403,7 @@ define i64 @rot_add_xor_mask_fshr_i64(i64 %x, i64 %y) {
 define i8 @rot_add_xor_mask_fshr_commute(i8 %x, i8 %y) {
 ; CHECK-LABEL: @rot_add_xor_mask_fshr_commute(
 ; CHECK-NEXT:    [[LSHR_AMT:%.*]] = add i8 [[Y:%.*]], 1
-; CHECK-NEXT:    [[LSHR_M:%.*]] = and i8 [[LSHR_AMT]], 7
-; CHECK-NEXT:    [[LSHR:%.*]] = lshr i8 [[X:%.*]], [[LSHR_M]]
-; CHECK-NEXT:    [[SHL_AMT:%.*]] = add i8 [[Y]], 7
-; CHECK-NEXT:    [[SHL_M:%.*]] = xor i8 [[SHL_AMT]], 7
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X]], [[SHL_M]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], [[LSHR]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.fshr.i8(i8 [[X:%.*]], i8 [[X]], i8 [[LSHR_AMT]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %lshr_amt = add i8 %y, 1
