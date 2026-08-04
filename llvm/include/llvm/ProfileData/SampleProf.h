@@ -278,9 +278,10 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
   case SecFuncMetadata:
     IsFlagLegal = std::is_same<SecFuncMetadataFlags, SecFlagType>();
     break;
-  default:
   case SecFuncOffsetTable:
     IsFlagLegal = std::is_same<SecFuncOffsetFlags, SecFlagType>();
+    break;
+  default:
     break;
   }
   if (!IsFlagLegal)
