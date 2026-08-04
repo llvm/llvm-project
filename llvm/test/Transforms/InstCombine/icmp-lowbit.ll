@@ -191,6 +191,21 @@ define i1 @lowbit_ne_one_commuted_i8(i8 %x) {
 
 declare void @use_i8(i8)
 
+define i1 @lowbit_eq_zero_neg_extra_use_i8(i8 %x) {
+; CHECK-LABEL: define i1 @lowbit_eq_zero_neg_extra_use_i8(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[X]]
+; CHECK-NEXT:    call void @use_i8(i8 [[NEG]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %neg = sub i8 0, %x
+  call void @use_i8(i8 %neg)
+  %lowbit = and i8 %x, %neg
+  %r = icmp eq i8 %lowbit, 0
+  ret i1 %r
+}
+
 define i1 @lowbit_eq_zero_extra_uses_i8(i8 %x) {
 ; CHECK-LABEL: define i1 @lowbit_eq_zero_extra_uses_i8(
 ; CHECK-SAME: i8 [[X:%.*]]) {
