@@ -944,8 +944,7 @@ namespace {
     void writeASTVisitorTraversal(raw_ostream &OS) const override {
       OS << "  {\n";
       OS << "    OMPInteropInfo *I = A->" << getLowerName() << "_begin();\n";
-      OS << "    " << getType() << " *E = A->" << getLowerName()
-         << "_end();\n";
+      OS << "    " << getType() << " *E = A->" << getLowerName() << "_end();\n";
       OS << "    for (; I != E; ++I) {\n";
       OS << "      for (auto &P : I->Prefs) {\n";
       OS << "        if (P.Fr && !getDerived().TraverseStmt(P.Fr))\n";
