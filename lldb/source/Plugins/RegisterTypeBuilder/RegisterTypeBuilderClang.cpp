@@ -61,7 +61,7 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
         llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
     type_system->StartTagDeclarationDefinition(fields_type);
 
-    // We assume that RegisterFlags has padded and sorted the fields
+    // We assume that RegisterTypeFlags has padded and sorted the fields
     // already.
     for (const RegisterTypeFlags::Field &field : flags.GetFields()) {
       CompilerType field_type = field_uint_type;
@@ -113,7 +113,7 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
     // So that the size of the type matches the size of the register.
     type_system->SetIsPacked(fields_type);
 
-    // This should be true if RegisterFlags padded correctly.
+    // This should be true if RegisterTypeFlags padded correctly.
     assert(llvm::expectedToOptional(fields_type.GetByteSize(nullptr))
                .value_or(0) == flags.GetSize());
   }
