@@ -276,8 +276,6 @@ private:
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
 
-  size_t GetGCSBufferSize() { return sizeof(m_gcs_regs); }
-
   size_t GetPOEBufferSize() { return sizeof(m_poe_regs); }
 
   llvm::Error ReadHardwareDebugInfo() override;

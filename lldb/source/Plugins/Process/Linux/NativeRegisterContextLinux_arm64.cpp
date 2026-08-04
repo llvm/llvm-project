@@ -553,7 +553,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetGCSOffset();
-    assert(offset < GetGCSBufferSize());
+    assert(offset < GetSetSize(RegisterSetType::GCS));
     src = (uint8_t *)GetGCSBuffer() + offset;
   } else if (GetRegisterInfo().IsPOEReg(reg)) {
     error = ReadPOE();
@@ -838,7 +838,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetGCSOffset();
-    assert(offset < GetGCSBufferSize());
+    assert(offset < GetSetSize(RegisterSetType::GCS));
     dst = (uint8_t *)GetGCSBuffer() + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
@@ -947,7 +947,7 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
   }
 
   if (GetRegisterInfo().IsGCSPresent()) {
-    cached_size += sizeof(RegisterSetType) + GetGCSBufferSize();
+    cached_size += sizeof(RegisterSetType) + GetSetSize(RegisterSetType::GCS);
     error = ReadGCS();
     if (error.Fail())
       return error;
@@ -1072,7 +1072,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
 
   if (GetRegisterInfo().IsGCSPresent()) {
     dst = AddSavedRegisters(dst, RegisterSetType::GCS, GetGCSBuffer(),
-                            GetGCSBufferSize());
+                            GetSetSize(RegisterSetType::GCS));
   }
 
   if (GetRegisterInfo().IsPOEPresent()) {
@@ -1313,9 +1313,9 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       const uint8_t *new_gcs_src =
           reinterpret_cast<const uint8_t *>(&new_gcs_regs);
       error = RestoreRegisters(
-          GetGCSBuffer(), &new_gcs_src, GetGCSBufferSize(), kind,
+          GetGCSBuffer(), &new_gcs_src, GetSetSize(RegisterSetType::GCS), kind,
           std::bind(&NativeRegisterContextLinux_arm64::WriteGCS, this));
-      src += GetGCSBufferSize();
+      src += GetSetSize(RegisterSetType::GCS);
 
       break;
     }
@@ -1628,9 +1628,9 @@ Status NativeRegisterContextLinux_arm64::ReadGCS() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetGCSBuffer();
-  ioVec.iov_len = GetGCSBufferSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::GCS);
 
-  error = ReadRegisterSet(&ioVec, GetGCSBufferSize(),
+  error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::GCS),
                           GetPtraceSet(RegisterSetType::GCS));
 
   if (error.Success())
@@ -1648,11 +1648,11 @@ Status NativeRegisterContextLinux_arm64::WriteGCS() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetGCSBuffer();
-  ioVec.iov_len = GetGCSBufferSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::GCS);
 
   Invalidate(RegisterSetType::GCS);
 
-  return WriteRegisterSet(&ioVec, GetGCSBufferSize(),
+  return WriteRegisterSet(&ioVec, GetSetSize(RegisterSetType::GCS),
                           GetPtraceSet(RegisterSetType::GCS));
 }
 
