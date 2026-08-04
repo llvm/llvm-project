@@ -11,6 +11,7 @@ Checks: >
   misc-uniqueptr-reset-release,
 
   modernize-redundant-void-arg,
+  modernize-use-override,
 
   readability-duplicate-include,
   readability-function-cognitive-complexity,
@@ -50,6 +51,5 @@ CheckOptions:
 # modernize-loop-convert,
 # modernize-use-equals-delete,
 # modernize-use-nullptr,
-# modernize-use-override,
 # readability-identifier-naming,
 # readability-simplify-boolean-expr,
