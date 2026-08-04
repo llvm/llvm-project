@@ -218,6 +218,9 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       "-mcpu=hexagon" +
       toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
+  if (std::get<0>(ParsePICArgs(HTC, Args)) == llvm::Reloc::PIC_)
+    CmdArgs.push_back("-position-independent");
+
   addSanitizerRuntimes(HTC, Args, CmdArgs);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
