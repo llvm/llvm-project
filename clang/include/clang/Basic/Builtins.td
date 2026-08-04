@@ -1931,7 +1931,7 @@ def MatrixColumnMajorStore : Builtin {
   let Prototype = "void(...)";
 }
 
-// Cooperative Matrix builtins for cl_ext_kernel_cooperative_matrix
+// Cooperative Matrix builtins for cl_khr_cooperative_matrix
 def CoopMatLoad : Builtin {
   let Spellings = ["coop_mat_load"];
   let Attributes = [NoThrow, CustomTypeChecking];
