@@ -52,8 +52,8 @@ template <size_t N>
 LIBC_INLINE cpp::simd<float, N> exp10f(cpp::simd<float, N> x) {
   using FPBits = typename fputil::FPBits<float>;
 
-  cpp::simd<bool, N> is_inf = x > 0x1p+7f;
-  cpp::simd<bool, N> is_zero = x < -0x1p+7f;
+  cpp::simd<bool, N> is_inf = x >= 0x1.344136p+5f;
+  cpp::simd<bool, N> is_zero = x <= -0x1.693c6bp+5f;
   cpp::simd<bool, N> is_special = is_inf | is_zero;
 
   cpp::simd<float, N> special_res = is_inf ? FPBits::inf().get_val() : 0.0f;
