@@ -278,8 +278,6 @@ private:
 
   size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
 
-  unsigned GetSVERegSet();
-
   void *GetZABuffer() { return m_za_ptrace_payload.data(); };
 
   size_t GetZABufferSize() { return m_za_ptrace_payload.size(); }

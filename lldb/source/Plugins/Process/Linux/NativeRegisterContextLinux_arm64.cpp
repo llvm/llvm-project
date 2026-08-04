@@ -1400,16 +1400,6 @@ void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
   ConfigureRegisterContext();
 }
 
-unsigned NativeRegisterContextLinux_arm64::GetSVERegSet() {
-  switch (m_sve_state) {
-  case SVEState::Streaming:
-  case SVEState::StreamingFPSIMD:
-    return llvm::ELF::NT_ARM_SSVE;
-  default:
-    return llvm::ELF::NT_ARM_SVE;
-  }
-}
-
 Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
   Status error;
 
@@ -1420,7 +1410,8 @@ Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
   ioVec.iov_base = GetSVEHeader();
   ioVec.iov_len = GetSVEHeaderSize();
 
-  error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(), GetSVERegSet());
+  error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(),
+                          GetPtraceSet(RegisterSetType::SVE));
 
   if (error.Success())
     MakeValid(RegisterSetType::SVE_HEADER);
@@ -1459,7 +1450,8 @@ Status NativeRegisterContextLinux_arm64::WriteSVEHeader() {
 
   Invalidate(RegisterSetType::SVE_HEADER);
 
-  return WriteRegisterSet(&ioVec, GetSVEHeaderSize(), GetSVERegSet());
+  return WriteRegisterSet(&ioVec, GetSVEHeaderSize(),
+                          GetPtraceSet(RegisterSetType::SVE));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadAllSVE() {
@@ -1471,7 +1463,8 @@ Status NativeRegisterContextLinux_arm64::ReadAllSVE() {
   ioVec.iov_base = GetSVEBuffer();
   ioVec.iov_len = GetSVEBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetSVEBufferSize(), GetSVERegSet());
+  error = ReadRegisterSet(&ioVec, GetSVEBufferSize(),
+                          GetPtraceSet(RegisterSetType::SVE));
 
   if (error.Success())
     MakeValid(RegisterSetType::SVE);
@@ -1493,7 +1486,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
 
   Invalidate(RegisterSetType::SVE);
 
-  return WriteRegisterSet(&ioVec, GetSVEBufferSize(), GetSVERegSet());
+  return WriteRegisterSet(&ioVec, GetSVEBufferSize(),
+                          GetPtraceSet(RegisterSetType::SVE));
 }
 
 Status NativeRegisterContextLinux_arm64::ReadSMEControl() {
