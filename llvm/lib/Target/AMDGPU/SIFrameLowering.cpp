@@ -1793,10 +1793,16 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     // Add an emergency spill slot
     RS->addScavengingFrameIndex(FuncInfo->getScavengeFI(MFI, *TRI));
 
-    // If we are spilling SGPRs to memory with a large frame, we may need a
-    // second VGPR emergency frame index.
-    if (HaveSGPRToVMemSpill &&
-        allocateScavengingFrameIndexesNearIncomingSP(MF)) {
+    if (HaveSGPRToVMemSpill && FuncInfo->hasNoWWMPoolSGPRSpillFallback()) {
+      // The no-WWM-pool fallback can reach SGPR-to-memory lowering while an
+      // ordinary frame-index scavenge is live. It may then need one slot for
+      // its temporary VGPR and another for recursive address materialization.
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
+    } else if (HaveSGPRToVMemSpill &&
+               allocateScavengingFrameIndexesNearIncomingSP(MF)) {
+      // Existing large-frame SGPR-to-memory spills need one additional VGPR
+      // emergency frame index.
       RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
     }
   }

@@ -39,6 +39,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -3331,7 +3332,7 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
   if (registers_count)
     response.IndentMore();
 
-  llvm::StringSet<> field_enums_seen;
+  std::unordered_set<const RegisterType *> register_types_emitted;
   for (int reg_index = 0; reg_index < registers_count; reg_index++) {
     const RegisterInfo *reg_info =
         reg_context.GetRegisterInfoAtIndex(reg_index);
@@ -3343,12 +3344,8 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       continue;
     }
 
-    if (reg_info->flags_type) {
-      response.IndentMore();
-      reg_info->flags_type->EnumsToXML(response, field_enums_seen);
-      reg_info->flags_type->ToXML(response);
-      response.IndentLess();
-    }
+    if (reg_info->register_type)
+      reg_info->register_type->ToXML(response, register_types_emitted);
 
     response.Indent();
     response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32
@@ -3369,8 +3366,8 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
     if (!format.empty())
       response << "format=\"" << format << "\" ";
 
-    if (reg_info->flags_type)
-      response << "type=\"" << reg_info->flags_type->GetID() << "\" ";
+    if (reg_info->register_type)
+      response << "type=\"" << reg_info->register_type->GetID() << "\" ";
 
     const char *const register_set_name =
         reg_context.GetRegisterSetNameForRegisterAtIndex(reg_index);
