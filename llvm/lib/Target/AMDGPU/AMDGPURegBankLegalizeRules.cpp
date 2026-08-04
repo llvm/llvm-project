@@ -1943,7 +1943,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_permlane16, amdgcn_permlanex16}, Standard)
       .Div(S32, {{Vgpr32},
                  {IntrId, Vgpr32, Vgpr32, SgprB32_ReadFirstLane,
-                  SgprB32_ReadFirstLane}});
+                  SgprB32_ReadFirstLane}})
+      .Div(V2S16, {{VgprV2S16},
+                   {IntrId, VgprV2S16, VgprV2S16, SgprB32_ReadFirstLane,
+                    SgprB32_ReadFirstLane}})
+      .Any({{DivPtr32},
+            {{VgprPtr32},
+             {IntrId, VgprPtr32, VgprPtr32, SgprB32_ReadFirstLane,
+              SgprB32_ReadFirstLane}}});
 
   addRulesForIOpcs({amdgcn_permlane_bcast, amdgcn_permlane_up,
                     amdgcn_permlane_down, amdgcn_permlane_xor},
