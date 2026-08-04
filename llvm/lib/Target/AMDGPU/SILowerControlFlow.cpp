@@ -102,7 +102,7 @@ private:
   MachineBasicBlock *emitEndCf(MachineInstr &MI);
 
   void findMaskOperands(MachineInstr &MI, unsigned OpNo,
-                        SmallVectorImpl<MachineOperand> &Src) const;
+                        SmallVectorImpl<MachineOperand *> &Src) const;
 
   void combineMasks(MachineInstr &MI);
 
@@ -569,11 +569,12 @@ MachineBasicBlock *SILowerControlFlow::emitEndCf(MachineInstr &MI) {
 
 // Returns replace operands for a logical operation, either single result
 // for exec or two operands if source was another equivalent operation.
-void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
-       SmallVectorImpl<MachineOperand> &Src) const {
+void SILowerControlFlow::findMaskOperands(
+    MachineInstr &MI, unsigned OpNo,
+    SmallVectorImpl<MachineOperand *> &Src) const {
   MachineOperand &Op = MI.getOperand(OpNo);
   if (!Op.isReg() || !Op.getReg().isVirtual()) {
-    Src.push_back(Op);
+    Src.push_back(&Op);
     return;
   }
 
@@ -590,10 +591,10 @@ void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
         !(I->isCopy() && I->getOperand(0).getReg() != LMC.ExecReg))
       return;
 
-  for (const auto &SrcOp : Def->explicit_operands())
+  for (MachineOperand &SrcOp : Def->explicit_operands())
     if (SrcOp.isReg() && SrcOp.isUse() &&
         (SrcOp.getReg().isVirtual() || SrcOp.getReg() == LMC.ExecReg))
-      Src.push_back(SrcOp);
+      Src.push_back(&SrcOp);
 }
 
 // Search and combine pairs of equivalent instructions, like
@@ -602,7 +603,7 @@ void SILowerControlFlow::findMaskOperands(MachineInstr &MI, unsigned OpNo,
 // One of the operands is exec mask.
 void SILowerControlFlow::combineMasks(MachineInstr &MI) {
   assert(MI.getNumExplicitOperands() == 3);
-  SmallVector<MachineOperand, 2> Src1, Src2;
+  SmallVector<MachineOperand *, 2> Src1, Src2;
   findMaskOperands(MI, 1, Src1);
   findMaskOperands(MI, 2, Src2);
 
@@ -612,14 +613,14 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI) {
   MachineOperand *Leaf, *NestedLHS, *NestedRHS;
   if (Src1.size() == 2 && Src2.size() == 1) {
     OpToReplace = 1;
-    NestedLHS = &Src1[0];
-    NestedRHS = &Src1[1];
-    Leaf = &Src2[0];
+    NestedLHS = Src1[0];
+    NestedRHS = Src1[1];
+    Leaf = Src2[0];
   } else if (Src1.size() == 1 && Src2.size() == 2) {
     OpToReplace = 2;
-    Leaf = &Src1[0];
-    NestedLHS = &Src2[0];
-    NestedRHS = &Src2[1];
+    Leaf = Src1[0];
+    NestedLHS = Src2[0];
+    NestedRHS = Src2[1];
   } else {
     return;
   }
