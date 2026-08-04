@@ -379,16 +379,21 @@ CustomStringView dangling_sv() {
   return CustomStringView(s); // expected-warning {{address of stack memory associated with local variable 's' returned}} 
 }
 
-struct Chained {
-  Chained &self() [[clang::lifetimebound]] { return *this; }
-  Chained() {
+// `self()` is annotated [[clang::lifetimebound]], so its return is bound to
+// *this. The BoundToSelf instance is built as a by-value argument temporary,
+// so its frame is not live on the stack when self() returns. 
+struct BoundToSelf {
+  BoundToSelf &self() [[clang::lifetimebound]] { return *this; } // no-warning
+  BoundToSelf() {
     self();
-    self(); // no-warning
+    self();
   }
 };
 
-void takes_by_value(Chained arg);
+void takes_by_value(BoundToSelf arg);
 
 void no_dangling_by_value_argument() {
-  takes_by_value(Chained()); // no-warning
+  // The BoundToSelf temporary's frame is not live on the stack when `self()` returns.
+  // The returned reference does not dangle.
+  takes_by_value(BoundToSelf());
 }
