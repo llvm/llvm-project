@@ -1061,8 +1061,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &FNegAbs = getActionDefinitionsBuilder({G_FNEG, G_FABS});
   FNegAbs.legalFor(FPTypesPK16)
+      .legalFor({BF16, V2BF16})
       .legalFor(ST.hasAnyPackedFP32Ops(), {V2F32})
-      .clampMaxNumElementsStrict(0, F16, 2);
+      .clampMaxNumElementsStrict(0, F16, 2)
+      .clampMaxNumElementsStrict(0, BF16, 2);
   if (ST.hasAnyPackedFP32Ops())
     FNegAbs.clampMaxNumElementsStrict(0, F32, 2);
   FNegAbs.scalarize(0);
