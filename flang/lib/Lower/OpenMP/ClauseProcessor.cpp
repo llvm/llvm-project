@@ -362,7 +362,9 @@ static mlir::Value buildIteratedMapEntry(
 
         // Use the array base as var_ptr with bounds so the runtime can
         // associate this mapping with whole-array mappings via the base
-        // address.
+        // address. Iterator maps represent selected data directly and do not
+        // include the descriptor parent or attachment entries used by ordinary
+        // descriptor maps.
         mlir::Value baseAddr = mapInfo->entity.getBase();
         if (mlir::isa<fir::BaseBoxType>(baseAddr.getType()))
           baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
