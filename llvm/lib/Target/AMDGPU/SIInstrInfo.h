@@ -1484,17 +1484,19 @@ public:
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
 
-  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32 or
-  /// 64 instructions. Packed math FP32/FP64/U64 instructions typically accept
-  /// SGPRs or VGPRs as source operands. On gfx12+, if a source operand uses
-  /// SGPRs, the HW can only read the first SGPR and use it for both the low and
-  /// high operations.
-  /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
-  /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
-  /// be used.
-  bool isLegalGFX12PlusPackedMathFP32or64BitOperand(
-      const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
-      const MachineOperand *MO = nullptr) const;
+  /// Check if \p MO would be a legal operand for a single-SGPR-read
+  /// instruction.
+  ///
+  /// Single-SGPR-read instructions typically accept VGPRs, SGPRs, or immediates
+  /// as source operands. On gfx12+, if a source operand uses SGPRs, the HW can
+  /// only read the first SGPR and replicate the value across all lanes. \p SrcN
+  /// can be 0, 1, or 2, representing src0, src1, and src2, respectively. If \p
+  /// MO is nullptr, the operand corresponding to \p SrcN will be used. Non-SGPR
+  /// operands are always considered legal.
+  bool
+  isLegalSingleSGPRReadInstOperand(const MachineRegisterInfo &MRI,
+                                   const MachineInstr &MI, unsigned SrcN,
+                                   const MachineOperand *MO = nullptr) const;
 
   /// Legalize operands in \p MI by either commuting it or inserting a
   /// copy of src1.
@@ -1892,10 +1894,10 @@ namespace AMDGPU {
   LLVM_READONLY
   int32_t getMFMAEarlyClobberOp(uint32_t Opcode);
 
-  /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
-  /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
+  /// \returns Version of an instruction which uses AGPRs for coupled operands
+  /// given an \p Opcode which uses VGPRs for coupled operands.
   LLVM_READONLY
-  int32_t getMFMASrcCVDstAGPROp(uint32_t Opcode);
+  int32_t getAGPRFormOp(uint32_t Opcode);
 
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY

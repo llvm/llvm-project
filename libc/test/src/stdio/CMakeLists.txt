@@ -309,6 +309,7 @@ if(LLVM_LIBC_FULL_BUILD)
   # In fullbuild mode, fscanf's tests use the internal FILE for other functions.
   list(APPEND fscanf_test_deps
        libc.src.stdio.fclose
+       libc.src.stdio.feof
        libc.src.stdio.ferror
        libc.src.stdio.fopen
        libc.src.stdio.fwrite
@@ -325,6 +326,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     SRCS
       fscanf_test.cpp
     DEPENDS
+      libc.hdr.stdio_macros
       libc.src.stdio.fscanf
       ${fscanf_test_deps}
       libc.src.__support.CPP.string_view

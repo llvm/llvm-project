@@ -294,6 +294,7 @@ MAKE_EMPTY_CLASS(Simd, Simd);
 MAKE_EMPTY_CLASS(Threads, Threads);
 MAKE_EMPTY_CLASS(Unknown, Unknown);
 MAKE_EMPTY_CLASS(Untied, Untied);
+MAKE_EMPTY_CLASS(Update, Update);
 MAKE_EMPTY_CLASS(Weak, Weak);
 MAKE_EMPTY_CLASS(Write, Write);
 
@@ -1228,7 +1229,6 @@ Map make(const parser::OmpClause::Map &inp,
       // clang-format off
       MS(Always,    Always)
       MS(Close,     Close)
-      MS(Ompx_Hold, OmpxHold)
       MS(Present,   Present)
       // clang-format on
   );
@@ -1755,16 +1755,14 @@ Uniform make(const parser::OmpClause::Uniform &inp,
 // Unknown: empty
 // Untied: empty
 
-Update make(const parser::OmpClause::Update &inp,
-            semantics::SemanticsContext &semaCtx) {
-  // inp.v -> parser::OmpUpdateClause
-  if (inp.v) {
-    return common::visit(
-        [](auto &&s) { return Update{/*DependenceType=*/makeDepType(s)}; },
-        inp.v->u);
-  } else {
-    return Update{/*DependenceType=*/std::nullopt};
-  }
+UpdateDependObjects make(const parser::OmpClause::UpdateDependObjects &inp,
+                         semantics::SemanticsContext &semaCtx) {
+  // inp.v -> parser::OmpUpdateDependObjectsClause
+  return common::visit(
+      [](auto &&s) {
+        return UpdateDependObjects{/*DependenceType=*/makeDepType(s)};
+      },
+      inp.v.u);
 }
 
 Use make(const parser::OmpClause::Use &inp,
