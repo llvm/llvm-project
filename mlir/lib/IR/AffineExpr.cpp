@@ -17,6 +17,7 @@
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
@@ -1710,25 +1711,46 @@ std::optional<int64_t> mlir::getBoundForAffineExpr(
   if (failed(simpleResult))
     return std::nullopt;
   ArrayRef<int64_t> flattenedExpr = flattener.operandExprStack.back();
-  // TODO: Handle local variables. We can get hold of flattener.localExprs and
-  // get bound on the local expr recursively.
-  if (flattener.numLocals > 0)
-    return std::nullopt;
   int64_t bound = 0;
-  // Substitute the constant lower or upper bound for the dimensional or
-  // symbolic input depending on `isUpper` to determine the bound.
-  for (unsigned i = 0, e = numDims + numSymbols; i < e; ++i) {
-    if (flattenedExpr[i] > 0) {
-      auto &constBound = isUpper ? constUpperBounds[i] : constLowerBounds[i];
-      if (!constBound)
-        return std::nullopt;
-      bound += *constBound * flattenedExpr[i];
-    } else if (flattenedExpr[i] < 0) {
-      auto &constBound = isUpper ? constLowerBounds[i] : constUpperBounds[i];
-      if (!constBound)
-        return std::nullopt;
-      bound += *constBound * flattenedExpr[i];
+
+  // Helper to retrieve the bound for a dimension, symbol, or local variable.
+  // Returns std::nullopt if the required bound is not available.
+  auto getBoundForIndex = [&](unsigned index,
+                              bool wantUpper) -> std::optional<int64_t> {
+    unsigned numDimsAndSymbols = numDims + numSymbols;
+
+    // Dimensions and symbols: retrieve directly from the input bounds arrays.
+    if (index < numDimsAndSymbols) {
+      const std::optional<int64_t> &bound =
+          wantUpper ? constUpperBounds[index] : constLowerBounds[index];
+      return bound;
     }
+
+    // Local variables, recursively compute the bound on the underlying local
+    // expression.
+    unsigned localIndex = index - numDimsAndSymbols;
+    return getBoundForAffineExpr(flattener.localExprs[localIndex], numDims,
+                                 numSymbols, constLowerBounds, constUpperBounds,
+                                 wantUpper);
+  };
+
+  // Accumulate bounds for dimensions, symbols, and local variables.
+  unsigned totalVars = numDims + numSymbols + flattener.numLocals;
+  for (unsigned i = 0, e = totalVars; i < e; ++i) {
+    int64_t flattenedValue = flattenedExpr[i];
+    if (flattenedValue == 0)
+      continue;
+
+    // Determine the bound direction needed for the term. If coefficient > 0, we
+    // need upper bound for max (isUpper=true) and lower bound for min
+    // (isUpper=false). If coefficient < 0, the direction flips.
+    bool wantUpper = (flattenedValue > 0) == isUpper;
+
+    std::optional<int64_t> constBound = getBoundForIndex(i, wantUpper);
+    if (!constBound)
+      return std::nullopt;
+
+    bound += *constBound * flattenedValue;
   }
   // Constant term.
   bound += flattenedExpr.back();

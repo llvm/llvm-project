@@ -2614,3 +2614,21 @@ func.func @split_delinearize_spanning_final_part_vector(
   %1:4 = affine.delinearize_index %0 into (2, 3, 8, 4) : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
   return %1#0, %1#1, %1#2, %1#3 : vector<4xindex>, vector<4xindex>, vector<4xindex>, vector<4xindex>
 }
+
+// -----
+
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<(d0, d1) -> (d0 + (d0 + d1) floordiv 4 + 2)>
+// CHECK-LABEL: func @simplify_loop_ub_with_local_var
+// CHECK:         affine.for %[[VAL_0:.*]] = 0 to 4 {
+// CHECK:           affine.for %[[VAL_1:.*]] = 0 to 4 {
+// CHECK:             affine.for %[[VAL_2:.*]] = 0 to #[[$MAP]](%[[VAL_0]], %[[VAL_1]]) {
+func.func @simplify_loop_ub_with_local_var(%arg0: index) {
+  affine.for %arg1 = 0 to 4 {
+    affine.for %arg2 = 0 to 4 {
+      affine.for %arg3 = 0 to min affine_map<(d0, d1) -> (10, (d0 + d1) floordiv 4 + d0 + 2)>(%arg1, %arg2) {
+        "test.foo"(%arg3) : (index) -> ()
+      }
+    }
+  }
+  return
+}
