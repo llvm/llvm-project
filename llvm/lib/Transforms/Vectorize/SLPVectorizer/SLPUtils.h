@@ -45,6 +45,12 @@ inline constexpr int UsesLimit = 64;
 /// expressions).
 bool isConstant(Value *V);
 
+/// \returns True if \p V is the integer identity constant for binary \p Opcode
+/// (e.g. 0 for add, 1 for mul, all-ones for and). Floating-point identities are
+/// excluded: a ConstantInt never matches the ConstantFP getBinOpIdentity()
+/// returns for FAdd/FMul, whose identity fast-math may break anyway.
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
+
 /// Checks if \p V is one of vector-like instructions, i.e. undef,
 /// insertelement/extractelement with constant indices for fixed vector type
 /// or extractvalue instruction.
@@ -79,6 +85,14 @@ bool allConstant(ArrayRef<Value *> VL);
 /// \returns True if all of the values in \p VL are identical or some of them
 /// are UndefValue.
 bool isSplat(ArrayRef<Value *> VL);
+
+/// Checks if \p LHS and \p RHS are the same intrinsic, or one is llvm.fma
+/// and the other is llvm.fmuladd, since both lower to the same fused
+/// vector operation.
+/// \returns the intrinsic ID to use for the pair (\p RHS if the IDs match,
+/// otherwise Intrinsic::fma), or Intrinsic::not_intrinsic if they are not
+/// equivalent.
+Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS);
 
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 /// For BinaryOperator, it also checks if \p ValWithUses is used in specific

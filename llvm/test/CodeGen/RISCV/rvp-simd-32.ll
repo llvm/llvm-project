@@ -2304,6 +2304,42 @@ define <4 x i8> @test_vselect_v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) {
   ret <4 x i8> %res
 }
 
+define <4 x i8> @test_ppaire_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_ppaire_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppaire.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_ppaireo_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_ppaireo_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppaireo.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_ppairoe_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_ppairoe_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppairoe.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 1, i32 4, i32 3, i32 6>
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_ppairo_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_ppairo_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ppairo.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = shufflevector <4 x i8> %a, <4 x i8> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+  ret <4 x i8> %res
+}
+
 define <2 x i16> @test_bswap_v2i16(<2 x i16> %a) {
 ; CHECK-LABEL: test_bswap_v2i16:
 ; CHECK:       # %bb.0:
@@ -2773,4 +2809,22 @@ define <2 x i16> @test_undef_v2i16() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ret
   ret <2 x i16> undef
+}
+
+define <2 x i16> @test_pmulq_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pmulq_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulq.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulq.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pmulqr_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pmulqr_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmulqr.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pmulqr.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
 }

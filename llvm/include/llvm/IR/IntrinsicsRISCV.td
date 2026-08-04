@@ -2061,6 +2061,10 @@ class RVPBinaryIntrinsic
   def int_riscv_pabd  : RVPBinaryIntrinsic;
   def int_riscv_pabdu : RVPBinaryIntrinsic;
 
+  // Packed "Q-format" Multiplication.
+  def int_riscv_pmulq  : RVPBinaryIntrinsic;
+  def int_riscv_pmulqr : RVPBinaryIntrinsic;
+
   // Packed Saturating and Rounding Shifts.
   class RVPShiftIntrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],

@@ -1776,6 +1776,37 @@ def BarrierOp : OpenMP_Op<"barrier"> {
 }
 
 //===----------------------------------------------------------------------===//
+// [5.1] 2.5.4 error directive
+//===----------------------------------------------------------------------===//
+
+def ErrorOp : OpenMP_Op<"error"> {
+  let summary = "error directive";
+  let description = [{
+    The error directive instructs the compiler or runtime to display a message
+    and, when the severity is `fatal`, to terminate execution. The
+    `at(compilation)` form is handled entirely by the frontend; this operation
+    represents only the `at(execution)` form, which lowers to a call to the
+    `__kmpc_error` runtime entry point.
+
+    The `severity` attribute selects `warning` or `fatal` behavior. The message
+    to display is optional and may be provided as a compile-time-constant
+    string in the `message` attribute, or a pointer to a null-terminated string.
+  }];
+
+  let arguments = (ins ClauseSeverityAttr:$severity,
+                       OptionalAttr<StrAttr>:$message,
+                       Optional<OpenMP_PointerLikeType>:$message_expr);
+
+  let assemblyFormat = [{
+    `severity` `(` custom<ClauseAttr>($severity) `)`
+    ( `message` `(` $message^ `)` )?
+    ( `message_expr` `(` $message_expr^ `:` type($message_expr) `)` )? attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // [5.1] 2.19.9 ordered Construct
 //===----------------------------------------------------------------------===//
 
