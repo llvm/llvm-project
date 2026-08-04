@@ -523,7 +523,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
     assert(offset < GetSetSize(RegisterSetType::MTE));
-    src = (uint8_t *)GetMTEControl() + offset;
+    src = (uint8_t *)GetSetBuffer(RegisterSetType::MTE) + offset;
   } else if (GetRegisterInfo().IsSMEReg(reg)) {
     if (GetRegisterInfo().IsSMERegZA(reg)) {
       error = ReadZAHeader();
@@ -812,7 +812,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
     assert(offset < GetSetSize(RegisterSetType::MTE));
-    dst = (uint8_t *)GetMTEControl() + offset;
+    dst = (uint8_t *)GetSetBuffer(RegisterSetType::MTE) + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
     return WriteMTEControl();
@@ -1098,7 +1098,8 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
                             GetSetSize(RegisterSetType::ZT));
 
   if (GetRegisterInfo().IsMTEPresent()) {
-    dst = AddSavedRegisters(dst, RegisterSetType::MTE, GetMTEControl(),
+    dst = AddSavedRegisters(dst, RegisterSetType::MTE,
+                            GetSetBuffer(RegisterSetType::MTE),
                             GetSetSize(RegisterSetType::MTE));
   }
 
@@ -1288,7 +1289,8 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
     }
     case RegisterSetType::MTE:
       error = RestoreRegisters(
-          GetMTEControl(), &src, GetSetSize(RegisterSetType::MTE), kind,
+          GetSetBuffer(RegisterSetType::MTE), &src,
+          GetSetSize(RegisterSetType::MTE), kind,
           std::bind(&NativeRegisterContextLinux_arm64::WriteMTEControl, this));
       break;
     case RegisterSetType::TLS:
@@ -1603,7 +1605,7 @@ Status NativeRegisterContextLinux_arm64::ReadMTEControl() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetMTEControl();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::MTE);
   ioVec.iov_len = GetSetSize(RegisterSetType::MTE);
 
   error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::MTE),
@@ -1623,7 +1625,7 @@ Status NativeRegisterContextLinux_arm64::WriteMTEControl() {
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetMTEControl();
+  ioVec.iov_base = GetSetBuffer(RegisterSetType::MTE);
   ioVec.iov_len = GetSetSize(RegisterSetType::MTE);
 
   Invalidate(RegisterSetType::MTE);

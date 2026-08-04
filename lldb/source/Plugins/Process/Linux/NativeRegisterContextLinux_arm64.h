@@ -258,8 +258,6 @@ private:
 
   void *GetPACMask() { return &m_pac_mask; }
 
-  void *GetMTEControl() { return &m_mte_ctrl_reg; }
-
   void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
