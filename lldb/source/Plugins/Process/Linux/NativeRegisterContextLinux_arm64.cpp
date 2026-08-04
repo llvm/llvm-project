@@ -561,7 +561,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetPOEOffset();
-    assert(offset < GetPOEBufferSize());
+    assert(offset < GetSetSize(RegisterSetType::POE));
     src = (uint8_t *)GetPOEBuffer() + offset;
   } else
     return Status::FromErrorString(
@@ -849,7 +849,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetPOEOffset();
-    assert(offset < GetPOEBufferSize());
+    assert(offset < GetSetSize(RegisterSetType::POE));
     dst = (uint8_t *)GetPOEBuffer() + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
@@ -954,7 +954,7 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
   }
 
   if (GetRegisterInfo().IsPOEPresent()) {
-    cached_size += sizeof(RegisterSetType) + GetPOEBufferSize();
+    cached_size += sizeof(RegisterSetType) + GetSetSize(RegisterSetType::POE);
     error = ReadPOE();
     if (error.Fail())
       return error;
@@ -1077,7 +1077,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
 
   if (GetRegisterInfo().IsPOEPresent()) {
     dst = AddSavedRegisters(dst, RegisterSetType::POE, GetPOEBuffer(),
-                            GetPOEBufferSize());
+                            GetSetSize(RegisterSetType::POE));
   }
 
   dst = AddSavedRegisters(dst, RegisterSetType::TLS, GetTLSBuffer(),
@@ -1321,7 +1321,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
     }
     case RegisterSetType::POE:
       error = RestoreRegisters(
-          GetPOEBuffer(), &src, GetPOEBufferSize(), kind,
+          GetPOEBuffer(), &src, GetSetSize(RegisterSetType::POE), kind,
           std::bind(&NativeRegisterContextLinux_arm64::WritePOE, this));
       break;
     case RegisterSetType::PAC:
@@ -1793,9 +1793,9 @@ Status NativeRegisterContextLinux_arm64::ReadPOE() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetPOEBuffer();
-  ioVec.iov_len = GetPOEBufferSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::POE);
 
-  error = ReadRegisterSet(&ioVec, GetPOEBufferSize(),
+  error = ReadRegisterSet(&ioVec, GetSetSize(RegisterSetType::POE),
                           GetPtraceSet(RegisterSetType::POE));
 
   if (error.Success())
@@ -1813,11 +1813,11 @@ Status NativeRegisterContextLinux_arm64::WritePOE() {
 
   struct iovec ioVec;
   ioVec.iov_base = GetPOEBuffer();
-  ioVec.iov_len = GetPOEBufferSize();
+  ioVec.iov_len = GetSetSize(RegisterSetType::POE);
 
   Invalidate(RegisterSetType::POE);
 
-  return WriteRegisterSet(&ioVec, GetPOEBufferSize(),
+  return WriteRegisterSet(&ioVec, GetSetSize(RegisterSetType::POE),
                           GetPtraceSet(RegisterSetType::POE));
 }
 
