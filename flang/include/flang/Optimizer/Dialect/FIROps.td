@@ -3092,13 +3092,18 @@ def fir_ModuleDebugImportsOp : fir_Op<"module_debug_imports", [
     The region holds one `fir.use_stmt` per `USE`, in program order. This
     operation has no runtime effect. It is emitted only when full debug
     information is requested.
+
+    For a submodule, `ancestor_module` names the module at the root of its
+    ancestry. A submodule is not a first class entity in FIR, and its name is
+    not qualified, so this is what tells the two apart.
   }];
 
-  let arguments = (ins StrAttr:$module_name);
+  let arguments = (ins StrAttr:$module_name,
+                       OptionalAttr<StrAttr>:$ancestor_module);
   let regions = (region SizedRegion<1>:$uses);
 
   let assemblyFormat = [{
-    $module_name attr-dict-with-keyword $uses
+    $module_name (`in` $ancestor_module^)? attr-dict-with-keyword $uses
   }];
 }
 

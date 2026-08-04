@@ -148,6 +148,28 @@ private:
                            fir::cg::XDeclareOp typeGenDeclOp);
 };
 
+// A submodule has no name of its own in the debug info. Like gfortran, name it
+// after its ancestor module and itself, which the standard guarantees to be
+// enough to tell the submodules of a program apart. Join the two with a '.', as
+// gfortran does. A '.' cannot appear in a Fortran identifier, so the result can
+// never collide with a module that is really called that, which matters because
+// a module is looked up by this name alone.
+std::string getDebugModuleName(llvm::StringRef ancestor, llvm::StringRef name) {
+  if (ancestor.empty())
+    return name.str();
+  return (ancestor + "." + name).str();
+}
+
+// The (sub)module that owns an entity, as named in the debug info. A uniqued
+// name records the whole ancestry, from the module down to the innermost
+// submodule, so the first and the last of those are what we need.
+std::string getDebugModuleName(llvm::ArrayRef<std::string> modules) {
+  assert(!modules.empty() && "not a module entity");
+  if (modules.size() == 1)
+    return modules.front();
+  return getDebugModuleName(modules.front(), modules.back());
+}
+
 /// Whether \p loc already carries debug information of type \c AttrT, fused
 /// onto it by this pass. A location is fused for unrelated reasons too, most
 /// notably one that came from an INCLUDE'd file, so what the fusion holds has
@@ -566,7 +588,8 @@ AddDebugInfoPass::getModuleAttrFromGlobalOp(fir::GlobalOp globalOp,
   if (sp)
     scope = sp.getCompileUnit();
 
-  return getOrCreateModuleAttr(result.second.modules[0], fileAttr, scope);
+  return getOrCreateModuleAttr(getDebugModuleName(result.second.modules),
+                               fileAttr, scope);
 }
 
 void AddDebugInfoPass::handleGlobalOp(fir::GlobalOp globalOp,
@@ -773,7 +796,8 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
       }
     }
   } else if (!result.second.modules.empty()) {
-    Scope = getOrCreateModuleAttr(result.second.modules[0], fileAttr, cuAttr);
+    Scope = getOrCreateModuleAttr(getDebugModuleName(result.second.modules),
+                                  fileAttr, cuAttr);
   }
 
   auto addTargetOpDISP = [&](llvm::ArrayRef<mlir::Attribute> entities) {
@@ -1034,7 +1058,8 @@ void AddDebugInfoPass::handleUseStatements(
 void AddDebugInfoPass::buildModuleDebugImportsMap(mlir::ModuleOp module) {
   moduleDebugImportsByName.clear();
   module.walk([&](fir::ModuleDebugImportsOp op) {
-    moduleDebugImportsByName[op.getModuleName().str()] = op;
+    moduleDebugImportsByName[getDebugModuleName(
+        op.getAncestorModule().value_or(""), op.getModuleName())] = op;
   });
 }
 

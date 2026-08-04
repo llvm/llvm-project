@@ -310,9 +310,21 @@ emitModuleDebugImports(Fortran::lower::AbstractConverter &converter,
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
 
+  // A submodule is named after its ancestor module in the debug info, so
+  // record which module that is.
+  mlir::StringAttr ancestorNameAttr;
+  if (const auto *details{
+          modSym->detailsIf<Fortran::semantics::ModuleDetails>()};
+      details && details->isSubmodule())
+    if (const Fortran::semantics::Scope *ancestor{details->ancestor()};
+        ancestor && ancestor->symbol())
+      ancestorNameAttr = mlir::StringAttr::get(
+          builder.getContext(), ancestor->symbol()->name().ToString());
+
   auto op = fir::ModuleDebugImportsOp::create(
       builder, loc,
-      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()));
+      mlir::StringAttr::get(builder.getContext(), modSym->name().ToString()),
+      ancestorNameAttr);
   mlir::Region &region = op.getUses();
   mlir::Block *block = new mlir::Block();
   region.push_back(block);
