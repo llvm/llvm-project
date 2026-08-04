@@ -1443,15 +1443,8 @@ void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
       if (auto type{evaluate::DynamicType::From(object)};
           type && type->category() == TypeCategory::Derived) {
         const auto &derived{type->GetDerivedTypeSpec()};
-        if (const auto *dtDetails{
-                derived.typeSymbol().detailsIf<DerivedTypeDetails>()}) {
-          if (dtDetails->isEnumerationType()) {
-            context_.Say(namelistLocation,
-                "Enumeration type '%s' may not be a namelist group object"_err_en_US,
-                derived.name());
-            continue;
-          }
-        }
+        // A bare enumeration-type namelist group object is rejected earlier at
+        // declaration time (F2023 C8109) in NamelistChecker.
         // A namelist group object of derived type that is not processed by
         // defined I/O expands into its components (F2023 12.6.3), so reject one
         // that reaches an enumeration effective item.

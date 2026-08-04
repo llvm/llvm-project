@@ -120,3 +120,24 @@ end
 !end enumeration type
 !end
 
+! Explicit PUBLIC accessibility statement overriding one enumerator of a
+! PRIVATE enumeration type. Per F2023 7.6.2p2, the access-spec on the
+! ENUMERATION TYPE statement sets the default accessibility of the enumerators
+! (private here), so red and blue are private; 'public :: green' overrides
+! green back to public. Only the override differing from the type default is
+! emitted.
+module m8
+  enumeration type, private :: color
+    enumerator :: red, green, blue
+  end enumeration type
+  public :: green
+end module
+
+!Expect: m8.mod
+!module m8
+!enumeration type,private::color
+!enumerator::red,green,blue
+!end enumeration type
+!public::green
+!end
+

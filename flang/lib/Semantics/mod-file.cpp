@@ -763,12 +763,27 @@ void ModFileWriter::PutEnumerationType(const Symbol &typeSymbol) {
     decls_ << '\n';
   }
   decls_ << "end enumeration type\n";
-  // Emit access overrides for individual enumerators, matching the
-  // pattern used elsewhere in mod file output (e.g., namelists, generics).
+  // Emit accessibility only for enumerators that differ from the default the
+  // reader will apply the ENUMERATION TYPE access-spec if present, otherwise
+  // the module default.
   if (!isSubmodule_) {
+    Attr enumDefault{Attr::PUBLIC};
+    if (const Symbol *modSym{typeSymbol.owner().symbol()}) {
+      if (const auto *modDetails{modSym->detailsIf<ModuleDetails>()}) {
+        if (modDetails->isDefaultPrivate()) {
+          enumDefault = Attr::PRIVATE;
+        }
+      }
+    }
+    if (auto a{details.enumeratorDefaultAccess()}) {
+      enumDefault = *a;
+    }
     for (const auto &e : enumerators) {
-      if (e.sym->attrs().test(Attr::PRIVATE)) {
-        decls_ << "private::" << e.name << '\n';
+      Attr actual{
+          e.sym->attrs().test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC};
+      if (actual != enumDefault) {
+        decls_ << (actual == Attr::PRIVATE ? "private::" : "public::") << e.name
+               << '\n';
       }
     }
   }

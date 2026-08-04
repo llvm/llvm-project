@@ -114,8 +114,8 @@ end subroutine
 subroutine test_namelist_enum_object()
   use enum_io_mod
   type(color) :: c
-  namelist /nml/ c
   !ERROR: Enumeration type 'color' may not be a namelist group object
+  namelist /nml/ c
   write(*, nml=nml)
 end subroutine
 

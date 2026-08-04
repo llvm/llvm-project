@@ -4117,11 +4117,9 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::Probe(
             common::LanguageFeature::EnumerationType)) {
       const semantics::DerivedTypeSpec *derived{nullptr};
       if (const ActualArgument *arg{FindFirstDummyArgument(arguments, "a")}) {
-        if (auto type{arg->GetType()}) {
-          derived = GetDerivedTypeSpec(*type);
-        }
+        derived = GetEnumerationTypeSpec(arg->GetType());
       }
-      if (derived && derived->IsEnumerationType()) {
+      if (derived) {
         return call.name == "next"
             ? HandleEnumerationNext(*derived, arguments, context)
             : HandleEnumerationPrevious(*derived, arguments, context);

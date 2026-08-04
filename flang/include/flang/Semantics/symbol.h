@@ -547,6 +547,10 @@ public:
   bool isDECStructure() const { return isDECStructure_; }
   bool isEnumerationType() const { return isEnumerationType_; }
   void set_isEnumerationType(bool x = true) { isEnumerationType_ = x; }
+  std::optional<Attr> enumeratorDefaultAccess() const {
+    return enumeratorDefaultAccess_;
+  }
+  void set_enumeratorDefaultAccess(Attr a) { enumeratorDefaultAccess_ = a; }
   // Name of the hidden component created for an enumeration type to hold
   // the 1-based enumerator ordinal.
   static constexpr char ordinalComponentName[]{"__ordinal"};
@@ -606,6 +610,7 @@ private:
   // These fields are only used if the derived type is an enumeration type.
   bool isEnumerationType_{false};
   int enumeratorCount_{0};
+  std::optional<Attr> enumeratorDefaultAccess_;
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const DerivedTypeDetails &);

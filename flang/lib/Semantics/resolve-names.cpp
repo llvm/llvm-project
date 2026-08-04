@@ -4596,7 +4596,19 @@ void ModuleVisitor::ApplyDefaultAccess() {
     Symbol &symbol{*pair.second};
     if (!symbol.attrs().HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
       Attr attr{defaultAttr};
-      if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
+      if (symbol.test(Symbol::Flag::EnumeratorParameter)) {
+        // F2023 7.6.2p2: the access-spec on the ENUMERATION TYPE statement
+        // supplies the default accessibility of its enumerators.  A
+        // use-associated enumerator also carries the flag but holds UseDetails,
+        // not ObjectEntityDetails; it follows the module default here.
+        if (const auto *obj{symbol.detailsIf<ObjectEntityDetails>()}) {
+          const Symbol &typeSym{obj->type()->derivedTypeSpec().typeSymbol()};
+          if (auto a{typeSym.get<DerivedTypeDetails>()
+                      .enumeratorDefaultAccess()}) {
+            attr = *a;
+          }
+        }
+      } else if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
         if (generic->derivedType()) {
           // If a generic interface has a derived type of the same
           // name that has an explicit accessibility attribute, then
@@ -6117,13 +6129,10 @@ bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
 void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   const auto &name{std::get<parser::Name>(x.t)};
   Attrs attrs{EndAttrs()};
-  if (const auto &optAccessSpec{
-          std::get<std::optional<parser::AccessSpec>>(x.t)};
-      optAccessSpec) {
-    if (!NonDerivedTypeScope().IsModule()) { // F2023 C7114
-      Say(currStmtSource().value(),
-          "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
-    }
+  const auto &optAccessSpec{std::get<std::optional<parser::AccessSpec>>(x.t)};
+  if (optAccessSpec && !NonDerivedTypeScope().IsModule()) { // F2023 C7114
+    Say(currStmtSource().value(),
+        "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
   }
   // F2023 C7116: the enumeration-type-name in an enumeration-type-spec shall be
   // the name of a previously defined enumeration type.  Enumeration Types are
@@ -6139,6 +6148,12 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   }
   DerivedTypeDetails details;
   details.set_isEnumerationType(true);
+  // An access-spec on the ENUMERATION TYPE statement sets the default
+  // accessibility of its enumerators.
+  if (optAccessSpec) {
+    details.set_enumeratorDefaultAccess(
+        attrs.test(Attr::PRIVATE) ? Attr::PRIVATE : Attr::PUBLIC);
+  }
   auto &symbol{MakeSymbol(name, attrs, std::move(details))};
   symbol.ReplaceName(name.source);
   PushScope(Scope::Kind::DerivedType, &symbol);

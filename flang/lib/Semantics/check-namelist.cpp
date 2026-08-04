@@ -36,6 +36,15 @@ void NamelistChecker::Leave(const parser::NamelistStmt &nmlStmt) {
                 "A namelist group object '%s' should not be a PARAMETER"_port_en_US,
                 nmlObjSymbol->name());
           }
+          if (const DeclTypeSpec *type{nmlObjSymbol->GetType()}) {
+            if (const DerivedTypeSpec *derived{type->AsDerived()}) {
+              if (IsEnumerationType(*derived)) { // F2023 C8109
+                context_.Say(nmlObjName.source,
+                    "Enumeration type '%s' may not be a namelist group object"_err_en_US,
+                    derived->name());
+              }
+            }
+          }
         }
       }
     }

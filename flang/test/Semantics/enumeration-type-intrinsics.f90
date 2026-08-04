@@ -139,19 +139,21 @@ subroutine test_previous_boundary_with_stat()
   pc = previous(red, stat=istat)
 end subroutine
 
-subroutine test_next_boundary_warning()
+subroutine test_next_boundary_no_diagnostic()
   use enum_intrinsics_mod
   type(color) :: nc
-  ! NEXT at boundary without STAT — error
-  !CHECK: error: NEXT() of last enumerator without STAT= causes error termination
+  ! NEXT at boundary without STAT is a runtime error termination, not a
+  ! compile-time error: folding leaves the call unfolded and emits no
+  ! diagnostic (the statement may never execute).
   nc = next(blue)
 end subroutine
 
-subroutine test_previous_boundary_warning()
+subroutine test_previous_boundary_no_diagnostic()
   use enum_intrinsics_mod
   type(color) :: pc
-  ! PREVIOUS at boundary without STAT — error
-  !CHECK: error: PREVIOUS() of first enumerator without STAT= causes error termination
+  ! PREVIOUS at boundary without STAT is a runtime error termination, not a
+  ! compile-time error: folding leaves the call unfolded and emits no
+  ! diagnostic (the statement may never execute).
   pc = previous(red)
 end subroutine
 
@@ -159,12 +161,22 @@ subroutine test_next_previous_array_boundary()
   use enum_intrinsics_mod
   type(color) :: nc(2), pc(2)
   ! NEXT/PREVIOUS are elemental: a constant array with any element at the
-  ! boundary is error termination without STAT=, so the whole reference is
-  ! diagnosed and left unfolded (same as the scalar boundary case).
-  !CHECK: error: NEXT() of last enumerator without STAT= causes error termination
+  ! boundary is a runtime error termination without STAT=, so folding leaves
+  ! the whole reference unfolded and emits no diagnostic (same as the scalar
+  ! boundary case).
   nc = next([green, blue])
-  !CHECK: error: PREVIOUS() of first enumerator without STAT= causes error termination
   pc = previous([red, green])
+end subroutine
+
+subroutine test_next_previous_boundary_constant()
+  use enum_intrinsics_mod
+  ! In a required-constant context the boundary case cannot be deferred to
+  ! run time: the initializer must fold to a constant, so the boundary is
+  ! diagnosed at compile time.
+  !CHECK: error: NEXT() of the last enumerator is out of range
+  logical, parameter :: nb = next(blue) == green
+  !CHECK: error: PREVIOUS() of the first enumerator is out of range
+  logical, parameter :: pb = previous(red) == green
 end subroutine
 
 subroutine test_huge_real_still_works()
