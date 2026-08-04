@@ -111,6 +111,6 @@ clang-doc options:
 ```
 
 The following flags should only be used if `format` is set to `html`:
-\- `repository`
-\- `source-root`
-\- `stylesheets`
+- `repository`
+- `source-root`
+- `stylesheets`

@@ -36,7 +36,7 @@ to the header list file directory. Use -prefix to specify a different
 directory.
 
 `<front-end-options>` is a place-holder for regular Clang
-front-end arguments, which must follow the \<include-files-list>.
+front-end arguments, which must follow the `<include-files-list>`.
 Note that by default, modularize assumes .h files
 contain C++ source, so if you are using a different language,
 you might need to use a `-x` option to tell Clang that the

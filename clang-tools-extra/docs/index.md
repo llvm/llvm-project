@@ -36,7 +36,7 @@ documentation contains no instructions about how to use the tools, only the APIs
 that make up the software. For usage instructions, please see the user's guide
 or reference manual for each tool.
 
-- [Doxygen documentation][doxygen documentation]
+- <a href="doxygen/annotated.html">Doxygen documentation</a>
 
 :::{note}
 This documentation is generated directly from the source code with doxygen.
@@ -48,5 +48,3 @@ development, what you're about to read is out of date!
 
 - {ref}`genindex`
 - {ref}`search`
-
-[doxygen documentation]: doxygen/annotated.html

@@ -86,9 +86,9 @@ option to output the trace information to a file.
 The pp-trace output is formatted as YAML. See <https://yaml.org/> for general
 YAML information. It's arranged as a sequence of information about the
 callback call, including the callback name and argument information, for
-example::
+example:
 
-```
+```yaml
 ---
 - Callback: Name
   Argument1: Value1
@@ -97,9 +97,9 @@ example::
 ...
 ```
 
-With real data::
+With real data:
 
-```
+```yaml
 ---
 - Callback: FileChanged
   Loc: "c:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-include.cpp:1:1"
@@ -164,9 +164,9 @@ Argument descriptions:
 | FileType      | (C_User\|C_System\|C_ExternCSystem)                   | SrcMgr::CharacteristicKind    | Include type.                  |
 | PrevFID       | ((file)\|(invalid))                                   | FileID                        | Previous file, if any.         |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: FileChanged
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-include.cpp:1:1"
   Reason: EnterFile
@@ -187,9 +187,9 @@ Argument descriptions:
 | FilenameTok   | (token)                             | const Token                | The token in ParentFile that indicates the skipped file. |
 | FileType      | (C_User\|C_System\|C_ExternCSystem) | SrcMgr::CharacteristicKind | The file type.                                           |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: FileSkipped
   ParentFile: "/path/filename.h"
   FilenameTok: "filename.h"
@@ -214,9 +214,9 @@ Argument descriptions:
 | RelativePath  | "(path)"                | StringRef       | The path relative to SearchPath, at which the include file was found.                                        |
 | Imported      | ((module name)\|(null)) | const Module    | The module, whenever an inclusion directive was automatically turned into a module import or null otherwise. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: InclusionDirective
   HashLoc: "D:/Clang/llvmnewmod/clang-tools-extra/test/pp-trace/pp-trace-include.cpp:4:1"
   IncludeTok: include
@@ -241,9 +241,9 @@ Argument descriptions:
 | Path          | "(path)"                | ModuleIdPath   | The identifiers (and their locations) of the module "path". |
 | Imported      | ((module name)\|(null)) | const Module   | The imported module; can be null if importing failed.       |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: moduleImport
   ImportLoc: "d:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-modules.cpp:4:2"
   Path: [{Name: Level1B, Loc: "d:/Clang/llvmnewmod/clang-tools-extra/test/pp-trace/pp-trace-modules.cpp:4:9"}, {Name: Level2B, Loc: "d:/Clang/llvmnewmod/clang-tools-extra/test/pp-trace/pp-trace-modules.cpp:4:17"}]
@@ -260,9 +260,9 @@ Argument descriptions:
 | -------------- | --------------------- | -------------- | ----------- |
 | (no arguments) |                       |                |             |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: EndOfMainFile
 ```
 
@@ -277,9 +277,9 @@ Argument descriptions:
 | Loc           | "(file):(line):(col)" | SourceLocation    | The location of the directive. |
 | str           | (name)                | const std::string | The text of the directive.     |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: Ident
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-ident.cpp:3:1"
   str: "$Id$"
@@ -296,9 +296,9 @@ Argument descriptions:
 | Loc           | "(file):(line):(col)"                            | SourceLocation       | The location of the directive.    |
 | Introducer    | (PIK_HashPragma\|PIK\_\_Pragma\|PIK\_\_\_pragma) | PragmaIntroducerKind | The type of the pragma directive. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaDirective
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   Introducer: PIK_HashPragma
@@ -316,9 +316,9 @@ Argument descriptions:
 | Kind          | ((name)\|(null))      | const IdentifierInfo | The comment kind symbol.       |
 | Str           | (message directive)   | const std::string    | The comment message directive. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaComment
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   Kind: library
@@ -337,9 +337,9 @@ Argument descriptions:
 | Name          | "(name)"              | const std::string | The name.                      |
 | Value         | (string)              | const std::string | The value.                     |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaDetectMismatch
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   Name: name
@@ -357,9 +357,9 @@ Argument descriptions:
 | Loc           | "(file):(line):(col)" | SourceLocation | The location of the directive.   |
 | DebugType     | (string)              | StringRef      | Indicates type of debug message. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaDebug
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   DebugType: warning
@@ -378,9 +378,9 @@ Argument descriptions:
 | Kind          | (PMK_Message\|PMK_Warning\|PMK_Error) | PPCallbacks::PragmaMessageKind | The type of the message directive.      |
 | Str           | (string)                              | StringRef                      | The text of the message directive.      |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaMessage
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   Namespace: "GCC"
@@ -399,9 +399,9 @@ Argument descriptions:
 | Loc           | "(file):(line):(col)" | SourceLocation | The location of the directive. |
 | Namespace     | (name)                | StringRef      | Namespace name.                |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaDiagnosticPush
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   Namespace: "GCC"
@@ -418,9 +418,9 @@ Argument descriptions:
 | Loc           | "(file):(line):(col)" | SourceLocation | The location of the directive. |
 | Namespace     | (name)                | StringRef      | Namespace name.                |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaDiagnosticPop
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   Namespace: "GCC"
@@ -439,9 +439,9 @@ Argument descriptions:
 | mapping       | (0\|MAP_IGNORE\|MAP_WARNING\|MAP_ERROR\|MAP_FATAL) | diag::Severity | Mapping type.                  |
 | Str           | (string)                                           | StringRef      | Warning/error name.            |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaDiagnostic
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   Namespace: "GCC"
@@ -462,9 +462,9 @@ Argument descriptions:
 | StateLoc      | "(file):(line):(col)" | SourceLocation       | The location of the state. |
 | State         | (1\|0)                | unsigned             | Enabled/disabled state.    |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaOpenCLExtension
   NameLoc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:10"
   Name: Name
@@ -484,9 +484,9 @@ Argument descriptions:
 | WarningSpec   | (string)              | StringRef      | The warning specifier.         |
 | Ids           | \[(number)[, ...]\]   | ArrayRef\<int> | The warning numbers.           |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaWarning
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   WarningSpec: disable
@@ -504,9 +504,9 @@ Argument descriptions:
 | Loc           | "(file):(line):(col)" | SourceLocation | The location of the directive. |
 | Level         | (number)              | int            | Warning level.                 |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaWarningPush
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
   Level: 1
@@ -522,9 +522,9 @@ Argument descriptions:
 | ------------- | --------------------- | -------------- | ------------------------------ |
 | Loc           | "(file):(line):(col)" | SourceLocation | The location of the directive. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: PragmaWarningPop
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-pragma.cpp:3:1"
 ```
@@ -542,9 +542,9 @@ Argument descriptions:
 | Range          | ["(file):(line):(col)", "(file):(line):(col)"] | SourceRange          | The source range for the expansion.                                                                    |
 | Args           | \[(name)\|(number)\|\<(token name)>[, ...]\]   | const MacroArgs      | The argument tokens. Names and numbers are literal, everything else is of the form '\<' tokenName '>'. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: MacroExpands
   MacroNameTok: X_IMPL
   MacroDirective: MD_Define
@@ -563,9 +563,9 @@ Argument descriptions:
 | MacroNameTok   | (token)                                 | const Token          | The macro name token.                                          |
 | MacroDirective | (MD_Define\|MD_Undefine\|MD_Visibility) | const MacroDirective | The kind of macro directive from the MacroDirective structure. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: MacroDefined
   MacroNameTok: X_IMPL
   MacroDirective: MD_Define
@@ -582,9 +582,9 @@ Argument descriptions:
 | MacroNameTok   | (token)                                 | const Token          | The macro name token.                                          |
 | MacroDirective | (MD_Define\|MD_Undefine\|MD_Visibility) | const MacroDirective | The kind of macro directive from the MacroDirective structure. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: MacroUndefined
   MacroNameTok: X_IMPL
   MacroDirective: MD_Define
@@ -602,9 +602,9 @@ Argument descriptions:
 | MacroDirective | (MD_Define\|MD_Undefine\|MD_Visibility)        | const MacroDirective | The kind of macro directive from the MacroDirective structure. |
 | Range          | ["(file):(line):(col)", "(file):(line):(col)"] | SourceRange          | The source range for the directive.                            |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: Defined
   MacroNameTok: MACRO
   MacroDirective: (null)
@@ -621,9 +621,9 @@ Argument descriptions:
 | ------------- | ---------------------------------------------- | -------------- | ------------------------- |
 | Range         | ["(file):(line):(col)", "(file):(line):(col)"] | SourceRange    | The source range skipped. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: SourceRangeSkipped
   Range: [":/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:2", ":/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:9:2"]
 ```
@@ -640,9 +640,9 @@ Argument descriptions:
 | ConditionRange | ["(file):(line):(col)", "(file):(line):(col)"] | SourceRange    | The source range for the condition. |
 | ConditionValue | (true\|false)                                  | bool           | The condition value.                |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: If
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:2"
   ConditionRange: ["D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:4", "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:9:1"]
@@ -662,9 +662,9 @@ Argument descriptions:
 | ConditionValue | (true\|false)                                  | bool           | The condition value.                |
 | IfLoc          | "(file):(line):(col)"                          | SourceLocation | The location of the directive.      |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: Elif
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:10:2"
   ConditionRange: ["D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:10:4", "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:11:1"]
@@ -684,9 +684,9 @@ Argument descriptions:
 | MacroNameTok   | (token)                                 | const Token          | The macro name token.                                          |
 | MacroDirective | (MD_Define\|MD_Undefine\|MD_Visibility) | const MacroDirective | The kind of macro directive from the MacroDirective structure. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: Ifdef
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-conditional.cpp:3:1"
   MacroNameTok: MACRO
@@ -705,9 +705,9 @@ Argument descriptions:
 | MacroNameTok   | (token)                                 | const Token          | The macro name token.                                          |
 | MacroDirective | (MD_Define\|MD_Undefine\|MD_Visibility) | const MacroDirective | The kind of macro directive from the MacroDirective structure. |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: Ifndef
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-conditional.cpp:3:1"
   MacroNameTok: MACRO
@@ -725,9 +725,9 @@ Argument descriptions:
 | Loc           | "(file):(line):(col)" | SourceLocation | The location of the else directive. |
 | IfLoc         | "(file):(line):(col)" | SourceLocation | The location of the if directive.   |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: Else
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:10:2"
   IfLoc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:2"
@@ -744,9 +744,9 @@ Argument descriptions:
 | Loc           | "(file):(line):(col)" | SourceLocation | The location of the endif directive. |
 | IfLoc         | "(file):(line):(col)" | SourceLocation | The location of the if directive.    |
 
-Example::
+Example:
 
-```
+```yaml
 - Callback: Endif
   Loc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:10:2"
   IfLoc: "D:/Clang/llvm/clang-tools-extra/test/pp-trace/pp-trace-macro.cpp:8:2"
@@ -771,3 +771,4 @@ To build from source:
 [building llvm with cmake]: https://llvm.org/docs/CMake.html
 [clang tools documentation]: https://clang.llvm.org/docs/ClangTools.html
 [getting started with the llvm system]: https://llvm.org/docs/GettingStarted.html
+

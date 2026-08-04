@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
 }
 ```
 
-One cannot use `` :program:`clang-change-namespace `` to inline a namespace.
+One cannot use {program}`clang-change-namespace` to inline a namespace.
 
 ## Symbol references not updated
 
@@ -285,7 +285,7 @@ pattern.
 :::
 
 :::{option} -i
-Inplace edit \<file>s, if specified.
+Inplace edit `<file>`s, if specified.
 :::
 
 :::{option} --new_namespace=<string>

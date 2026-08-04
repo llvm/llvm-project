@@ -403,3 +403,4 @@ by type, or by access pattern).
 ### Field grouping
 
 Group related fields together for better code organization and readability.
+

@@ -43,94 +43,83 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         self.assertEqual(out_str, expected_text)
 
     def test_find_heading(self) -> None:
-        text = textwrap.dedent(
-            """\
-            - Deprecated the :program:`clang-tidy` ``zircon`` module. All checks have been
-              moved to the ``fuchsia`` module instead. The ``zircon`` module will be removed
+        text = textwrap.dedent("""\
+            - Deprecated the {program}`clang-tidy` `zircon` module. All checks have been
+              moved to the `fuchsia` module instead. The `zircon` module will be removed
               in the 24th release.
 
-            New checks
-            ^^^^^^^^^^
-            - New :doc:`bugprone-derived-method-shadowing-base-method
+            #### New checks
+            - New {doc}`bugprone-derived-method-shadowing-base-method
               <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
-            """
-        )
+            """)
         lines = text.splitlines(True)
         idx = _mod.find_heading(lines, "New checks")
         self.assertEqual(idx, 4)
 
     def test_duplicate_detection_and_report(self) -> None:
         # Ensure duplicate detection works properly when sorting is incorrect.
-        text = textwrap.dedent(
-            """\
-            Changes in existing checks
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        text = textwrap.dedent("""\
+            #### Changes in existing checks
 
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            - Improved :doc:`bugprone-exception-escape
+            - Improved {doc}`bugprone-exception-escape
               <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
               exceptions from captures are now diagnosed, exceptions in the bodies of
               lambdas that aren't actually invoked are not.
 
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            """
-        )
+            """)
         lines = text.splitlines(True)
         report = _mod._emit_duplicate_report(lines, "Changes in existing checks")
         self.assertIsNotNone(report)
         report_str = cast(str, report)
 
-        expected_report = textwrap.dedent(
-            """\
+        expected_report = textwrap.dedent("""\
             Error: Duplicate entries in 'Changes in existing checks'.
 
             Please merge these entries into a single bullet point.
 
-            -- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters
+            -- Duplicate: - Improved {doc}`bugprone-easily-swappable-parameters
 
-            - At line 4:
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - At line 3:
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            - At line 14:
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - At line 13:
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            """
-        )
+            """)
         self.assertEqual(report_str, expected_report)
 
     def test_process_release_notes_with_unsorted_content(self) -> None:
         # When content is not normalized, the function writes normalized text and returns 0.
-        rn_text = textwrap.dedent(
-            """\
-            New checks
-            ^^^^^^^^^^
+        rn_text = textwrap.dedent("""\
+            #### New checks
 
-            - New :doc:`readability-redundant-parentheses
+            - New {doc}`readability-redundant-parentheses
               <clang-tidy/checks/readability/redundant-parentheses>` check.
 
               Detect redundant parentheses.
 
-            - New :doc:`bugprone-derived-method-shadowing-base-method
+            - New {doc}`bugprone-derived-method-shadowing-base-method
               <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
 
               Finds derived class methods that shadow a (non-virtual) base class method.
 
-            """
-        )
+            """)
         with tempfile.TemporaryDirectory() as td:
             rn_doc = os.path.join(td, "ReleaseNotes.md")
             out_path = os.path.join(td, "out.md")
@@ -145,51 +134,45 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             with open(out_path, "r", encoding="utf-8") as f:
                 out = f.read()
 
-            expected_out = textwrap.dedent(
-                """\
-                New checks
-                ^^^^^^^^^^
+            expected_out = textwrap.dedent("""\
+                #### New checks
 
-                - New :doc:`bugprone-derived-method-shadowing-base-method
+                - New {doc}`bugprone-derived-method-shadowing-base-method
                   <clang-tidy/checks/bugprone/derived-method-shadowing-base-method>` check.
 
                   Finds derived class methods that shadow a (non-virtual) base class method.
 
-                - New :doc:`readability-redundant-parentheses
+                - New {doc}`readability-redundant-parentheses
                   <clang-tidy/checks/readability/redundant-parentheses>` check.
 
                   Detect redundant parentheses.
 
-                """
-            )
+                """)
 
             self.assertEqual(out, expected_out)
             self.assertIn("not alphabetically sorted", buf.getvalue())
 
     def test_process_release_notes_prioritizes_sorting_over_duplicates(self) -> None:
         # Sorting is incorrect and duplicates exist, should report ordering issues first.
-        rn_text = textwrap.dedent(
-            """\
-            Changes in existing checks
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rn_text = textwrap.dedent("""\
+            #### Changes in existing checks
 
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            - Improved :doc:`bugprone-exception-escape
+            - Improved {doc}`bugprone-exception-escape
               <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
               exceptions from captures are now diagnosed, exceptions in the bodies of
               lambdas that aren't actually invoked are not.
 
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            """
-        )
+            """)
         with tempfile.TemporaryDirectory() as td:
             rn_doc = os.path.join(td, "ReleaseNotes.md")
             out_path = os.path.join(td, "out.md")
@@ -207,54 +190,48 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
 
             with open(out_path, "r", encoding="utf-8") as f:
                 out = f.read()
-            expected_out = textwrap.dedent(
-                """\
-                Changes in existing checks
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_out = textwrap.dedent("""\
+                #### Changes in existing checks
 
-                - Improved :doc:`bugprone-easily-swappable-parameters
+                - Improved {doc}`bugprone-easily-swappable-parameters
                   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
                   correcting a spelling mistake on its option
-                  ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+                  `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-                - Improved :doc:`bugprone-easily-swappable-parameters
+                - Improved {doc}`bugprone-easily-swappable-parameters
                   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
                   correcting a spelling mistake on its option
-                  ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+                  `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-                - Improved :doc:`bugprone-exception-escape
+                - Improved {doc}`bugprone-exception-escape
                   <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
                   exceptions from captures are now diagnosed, exceptions in the bodies of
                   lambdas that aren't actually invoked are not.
 
-                """
-            )
+                """)
             self.assertEqual(out, expected_out)
 
     def test_process_release_notes_with_duplicates_fails(self) -> None:
         # Sorting is already correct but duplicates exist, should return 3 and report.
-        rn_text = textwrap.dedent(
-            """\
-            Changes in existing checks
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rn_text = textwrap.dedent("""\
+            #### Changes in existing checks
 
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            - Improved :doc:`bugprone-exception-escape
+            - Improved {doc}`bugprone-exception-escape
               <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
               exceptions from captures are now diagnosed, exceptions in the bodies of
               lambdas that aren't actually invoked are not.
 
-            """
-        )
+            """)
         with tempfile.TemporaryDirectory() as td:
             rn_doc = os.path.join(td, "ReleaseNotes.md")
             out_path = os.path.join(td, "out.md")
@@ -266,28 +243,26 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
                 rc = _mod.process_release_notes(out_path, rn_doc)
 
             self.assertEqual(rc, 3)
-            expected_report = textwrap.dedent(
-                """\
+            expected_report = textwrap.dedent("""\
                 Error: Duplicate entries in 'Changes in existing checks'.
 
                 Please merge these entries into a single bullet point.
 
-                -- Duplicate: - Improved :doc:`bugprone-easily-swappable-parameters
+                -- Duplicate: - Improved {doc}`bugprone-easily-swappable-parameters
 
-                - At line 4:
-                - Improved :doc:`bugprone-easily-swappable-parameters
+                - At line 3:
+                - Improved {doc}`bugprone-easily-swappable-parameters
                   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
                   correcting a spelling mistake on its option
-                  ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+                  `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-                - At line 9:
-                - Improved :doc:`bugprone-easily-swappable-parameters
+                - At line 8:
+                - Improved {doc}`bugprone-easily-swappable-parameters
                   <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
                   correcting a spelling mistake on its option
-                  ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+                  `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-                """
-            )
+                """)
             self.assertEqual(buf.getvalue(), expected_report)
 
             with open(out_path, "r", encoding="utf-8") as f:
@@ -295,109 +270,97 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             self.assertEqual(out, rn_text)
 
     def test_release_notes_handles_nested_sub_bullets(self) -> None:
-        rn_text = textwrap.dedent(
-            """\
-            Changes in existing checks
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rn_text = textwrap.dedent("""\
+            #### Changes in existing checks
 
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+            - Improved {doc}`llvm-prefer-isa-or-dyn-cast-in-conditionals
               <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
 
               - Fix-it handles callees with nested-name-specifier correctly.
 
-              - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
+              - `if` statements with init-statement (`if (auto X = ...; ...)`) are
                 handled correctly.
 
-              - ``for`` loops are supported.
+              - `for` loops are supported.
 
-            - Improved :doc:`bugprone-exception-escape
+            - Improved {doc}`bugprone-exception-escape
               <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
               exceptions from captures are now diagnosed, exceptions in the bodies of
               lambdas that aren't actually invoked are not.
 
-            """
-        )
+            """)
 
         out = _mod.normalize_release_notes(rn_text.splitlines(True))
 
-        expected_out = textwrap.dedent(
-            """\
-            Changes in existing checks
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        expected_out = textwrap.dedent("""\
+            #### Changes in existing checks
 
-            - Improved :doc:`bugprone-easily-swappable-parameters
+            - Improved {doc}`bugprone-easily-swappable-parameters
               <clang-tidy/checks/bugprone/easily-swappable-parameters>` check by
               correcting a spelling mistake on its option
-              ``NamePrefixSuffixSilenceDissimilarityTreshold``.
+              `NamePrefixSuffixSilenceDissimilarityTreshold`.
 
-            - Improved :doc:`bugprone-exception-escape
+            - Improved {doc}`bugprone-exception-escape
               <clang-tidy/checks/bugprone/exception-escape>` check's handling of lambdas:
               exceptions from captures are now diagnosed, exceptions in the bodies of
               lambdas that aren't actually invoked are not.
 
-            - Improved :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+            - Improved {doc}`llvm-prefer-isa-or-dyn-cast-in-conditionals
               <clang-tidy/checks/llvm/prefer-isa-or-dyn-cast-in-conditionals>` check:
 
               - Fix-it handles callees with nested-name-specifier correctly.
 
-              - ``if`` statements with init-statement (``if (auto X = ...; ...)``) are
+              - `if` statements with init-statement (`if (auto X = ...; ...)`) are
                 handled correctly.
 
-              - ``for`` loops are supported.
+              - `for` loops are supported.
 
-           """
-        )
+           """)
         self.assertEqual(out, expected_out)
 
     def test_release_notes_handles_multiline_doc(self) -> None:
-        rn_text = textwrap.dedent(
-            """\
-            Changes in existing checks
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        rn_text = textwrap.dedent("""\
+            #### Changes in existing checks
 
-            - Renamed :doc:`performance-faster-string-find
+            - Renamed {doc}`performance-faster-string-find
               <clang-tidy/checks/performance/faster-string-find>` to
-              :doc:`performance-faster-string-operation
+              {doc}`performance-faster-string-operation
               <clang-tidy/checks/performance/faster-string-operation>`.
               The `performance-faster-string-find` name is kept as an alias.
 
-            - Renamed :doc:`google-explicit-constructor
+            - Renamed {doc}`google-explicit-constructor
               <clang-tidy/checks/google/explicit-constructor>`
-              to :doc:`misc-explicit-constructor
+              to {doc}`misc-explicit-constructor
               <clang-tidy/checks/misc/explicit-constructor>`. The
               `google-explicit-constructor`
               name is kept as an alias.
 
-            """
-        )
+            """)
 
         out = _mod.normalize_release_notes(rn_text.splitlines(True))
 
-        expected_out = textwrap.dedent(
-            """\
-            Changes in existing checks
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        expected_out = textwrap.dedent("""\
+            #### Changes in existing checks
 
-            - Renamed :doc:`google-explicit-constructor
+            - Renamed {doc}`google-explicit-constructor
               <clang-tidy/checks/google/explicit-constructor>`
-              to :doc:`misc-explicit-constructor
+              to {doc}`misc-explicit-constructor
               <clang-tidy/checks/misc/explicit-constructor>`. The
               `google-explicit-constructor`
               name is kept as an alias.
 
-            - Renamed :doc:`performance-faster-string-find
+            - Renamed {doc}`performance-faster-string-find
               <clang-tidy/checks/performance/faster-string-find>` to
-              :doc:`performance-faster-string-operation
+              {doc}`performance-faster-string-operation
               <clang-tidy/checks/performance/faster-string-operation>`.
               The `performance-faster-string-find` name is kept as an alias.
 
-            """
-        )
+            """)
         self.assertEqual(out, expected_out)
 
     def test_process_checks_list_normalizes_output(self) -> None:

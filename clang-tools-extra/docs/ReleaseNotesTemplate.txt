@@ -1,7 +1,16 @@
-% If you want to modify sections/contents permanently, you should modify both
-% ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+---
+myst:
+  enable_extensions:
+    - attrs_block
+    - colon_fence
+    - substitution
+---
 
-# Extra Clang Tools {{ release }} {{ ReleaseNotesTitle }}
+% If you want to modify sections/contents permanently, you should modify both
+% ReleaseNotes.md and ReleaseNotesTemplate.txt.
+
+{#extra-clang-tools-release-releasenotestitle}
+# Extra Clang Tools {{env.config.release}} {{ (('(In-Progress) ' if env.app.tags.has('PreRelease') else '') ~ 'Release Notes') }}
 
 ```{contents}
 :depth: 3
@@ -13,7 +22,7 @@ Written by the [LLVM Team](https://llvm.org/)
 ::::{only} PreRelease
 
 :::{warning}
-These are in-progress notes for the upcoming Extra Clang Tools {{ version }} release.
+These are in-progress notes for the upcoming Extra Clang Tools {{env.config.version}} release.
 Release notes for previous releases can be found on
 [the Download Page](https://releases.llvm.org/download.html).
 :::
@@ -22,7 +31,7 @@ Release notes for previous releases can be found on
 ## Introduction
 
 This document contains the release notes for the Extra Clang Tools, part of the
-Clang release {{ release }}. Here we describe the status of the Extra Clang Tools in
+Clang release {{env.config.release}}. Here we describe the status of the Extra Clang Tools in
 some detail, including major improvements from the previous release and new
 feature work. All LLVM releases may be downloaded from the [LLVM releases web
 site](https://llvm.org/releases/).
@@ -36,7 +45,8 @@ main Clang web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the [releases page](https://llvm.org/releases/).
 
-## What's New in Extra Clang Tools {{ release }}?
+{#what-s-new-in-extra-clang-tools-release}
+## What's New in Extra Clang Tools {{env.config.release}}?
 
 Some of the major new features and improvements to Extra Clang Tools are listed
 here. Generic improvements to Extra Clang Tools as a whole or to its underlying
@@ -95,4 +105,3 @@ infrastructure are described first, followed by tool-specific sections.
 ### Improvements to pp-trace
 
 ### Clang-tidy Visual Studio plugin
-

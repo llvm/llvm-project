@@ -93,7 +93,7 @@ Customized settings in `.vimrc`:
 - `let g:clang_include_fixer_jump_to_include = 0`
 
   Set to 1 if you want to jump to the new inserted `#include` line. Default is
-  0\.
+  0.
 
 - `let g:clang_include_fixer_query_mode = 0`
 
