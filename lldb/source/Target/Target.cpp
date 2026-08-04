@@ -2209,12 +2209,13 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (!file_cache_read_buffer && resolved_addr.IsSectionOffset()) {
     // If we didn't already try and read from the object file cache, then try
     // it after failing to read from the process.
-    // ReadMemoryFromFileCache() only ever sets "error", so clear it to keep a
-    // failed process read from poisoning a successful read here. Only a full
-    // read counts: ReadSectionData() clamps, leaving the tail of "dst" unset.
+    error.Clear();
     bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
-    if (bytes_read == dst_len)
-      error.Clear();
+    // Match the process-read path: a short read is an error.
+    if (bytes_read > 0 && bytes_read != dst_len && error.Success())
+      error = Status::FromErrorStringWithFormatv(
+          "only {0} of {1} bytes were read from the object file cache",
+          bytes_read, dst_len);
     return bytes_read;
   }
   return 0;

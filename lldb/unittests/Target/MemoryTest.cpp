@@ -797,8 +797,7 @@ LoadCommands:
   EXPECT_TRUE(error.Success()) << error.AsCString();
   EXPECT_EQ(llvm::StringRef(buf, sizeof(buf)), "hello");
 
-  // A short read must not be reported as success: ReadSectionData() clamps to
-  // the 12-byte section, so the tail of "big" would be left uninitialized.
+  // A short read must be reported as an error.
   char big[20] = {};
   Status short_error;
   EXPECT_EQ(target_sp->ReadMemory(addr, big, sizeof(big), short_error,
