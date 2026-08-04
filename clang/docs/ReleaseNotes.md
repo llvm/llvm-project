@@ -548,6 +548,9 @@ features cannot lower the translation-unit ABI level;
   `thread_limit` clauses for OpenMP 6.1 or later.
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper
   are now propagated onto the maps the mapper expands to.
+- Mapping of expressions with base-pointers through a user-defined mapper (e.g.
+  `map(s.p[0:n])`) now conforms to OpenMP's conditional pointer-attachment,
+  matching the behavior of such maps outside a mapper.
 
 ### SYCL Support
 

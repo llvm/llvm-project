@@ -205,11 +205,14 @@ public:
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
-      if (isInstUnsupported({TargetOpcode::G_SEXT_INREG, {DstTy}}))
-        return false;
-      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       LLT SrcTy = MRI.getType(SrcReg);
       uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
+      if (isInstUnsupported({TargetOpcode::G_SEXT_INREG,
+                             {DstTy},
+                             {},
+                             {static_cast<int64_t>(SizeInBits)}}))
+        return false;
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       if (DstTy != MRI.getType(TruncSrc))
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
       // Elide G_SEXT_INREG if possible. This is similar to eliding G_AND in
@@ -998,6 +1001,8 @@ public:
       LLT DstTy = MRI.getType(Dst);
       Register UnmergeSrc = Unmerge->getSourceReg();
       LLT UnmergeSrcTy = MRI.getType(UnmergeSrc);
+      unsigned DstSize = DstTy.getSizeInBits();
+      unsigned UnmergeSrcSize = UnmergeSrcTy.getSizeInBits();
 
       // Recognize copy of UnmergeSrc to Dst.
       // Unmerge UnmergeSrc and reassemble it using merge-like opcode into Dst.
@@ -1006,7 +1011,8 @@ public:
       // %Dst:_(Ty) = G_merge_like_opcode %0:_(EltTy), %1, ...
       //
       // %Dst:_(Ty) = COPY %UnmergeSrc:_(Ty)
-      if ((DstTy == UnmergeSrcTy) && (Elt0UnmergeIdx == 0)) {
+      if ((DstSize == UnmergeSrcSize) && (DstTy == UnmergeSrcTy) &&
+          (Elt0UnmergeIdx == 0)) {
         if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize,
                                    /*AllowUndef=*/DstTy.isVector()))
           return false;
@@ -1017,7 +1023,8 @@ public:
       }
 
       // Recognize UnmergeSrc that can be unmerged to DstTy directly.
-      // Types have to be either both vector or both non-vector types.
+      // Types can be either both vector or both non-vector types, or one
+      // is a vector type and the other is a scalar type.
       // In case of vector types, the scalar elements need to match.
       // Merge-like opcodes are combined one at the time. First one creates new
       // unmerge, following should use the same unmerge (builder performs CSE).
@@ -1027,14 +1034,23 @@ public:
       // %AnotherDst:_(DstTy) = G_merge_like_opcode %2:_(EltTy), %3
       //
       // %Dst:_(DstTy), %AnotherDst = G_UNMERGE_VALUES %UnmergeSrc
-      if (((!DstTy.isVector() && !UnmergeSrcTy.isVector()) ||
-           (DstTy.isVector() && UnmergeSrcTy.isVector() &&
-            DstTy.getScalarType() == UnmergeSrcTy.getScalarType())) &&
+      bool MixedVectorScalar = DstTy.isVector() != UnmergeSrcTy.isVector();
+      if ((DstSize < UnmergeSrcSize) &&
+          (!DstTy.isVector() || !UnmergeSrcTy.isVector() ||
+           DstTy.getScalarType() == UnmergeSrcTy.getScalarType()) &&
           (Elt0UnmergeIdx % NumMIElts == 0) &&
-          getCoverTy(UnmergeSrcTy, DstTy) == UnmergeSrcTy) {
+          (MixedVectorScalar
+               ? UnmergeSrcSize % DstSize == 0
+               : getCoverTy(UnmergeSrcTy, DstTy) == UnmergeSrcTy)) {
         if (!isSequenceFromUnmerge(MI, 0, Unmerge, Elt0UnmergeIdx, NumMIElts,
                                    EltSize, false))
           return false;
+        if (MixedVectorScalar) {
+          LegalizeActionStep ActionStep = LI.getAction(
+              {TargetOpcode::G_UNMERGE_VALUES, {DstTy, UnmergeSrcTy}});
+          if (ActionStep.Action != LegalizeAction::Legal)
+            return false;
+        }
         MIB.setInstrAndDebugLoc(MI);
         auto NewUnmerge = MIB.buildUnmerge(DstTy, Unmerge->getSourceReg());
         unsigned DstIdx = (Elt0UnmergeIdx * EltSize) / DstTy.getSizeInBits();
@@ -1054,7 +1070,8 @@ public:
       //
       // %Dst:_(DstTy) = G_merge_like_opcode %UnmergeSrc, %AnotherUnmergeSrc
 
-      if ((DstTy.isVector() == UnmergeSrcTy.isVector()) &&
+      if ((DstSize > UnmergeSrcSize) &&
+          (DstTy.isVector() == UnmergeSrcTy.isVector()) &&
           getCoverTy(DstTy, UnmergeSrcTy) == DstTy) {
         SmallVector<Register, 4> ConcatSources;
         unsigned NumElts = Unmerge->getNumDefs();
