@@ -632,10 +632,16 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
   //   search the problem space.
 
   // When iterating for a solution, we stop early if we find probabilities
-  // that produce a Freq whose difference from FreqDesired is small
+  // that produce a Freq whose relative difference from FreqDesired is small
   // (FreqPrec).  Otherwise, we expect to compute a solution at least that
-  // accurate (but surely far more accurate).
+  // accurate (but surely far more accurate).  We use relative precision
+  // because FreqDesired can be very large (e.g., 10^7) when the original loop
+  // probability is very close to 1, and floating-point arithmetic cannot
+  // maintain a small absolute error on such large values.
   const double FreqPrec = 1e-6;
+  auto FreqIsClose = [&](double Freq) {
+    return fabs(Freq - FreqDesired) < FreqPrec * std::max(1.0, FreqDesired);
+  };
 
   // Compute the new frequency produced by using Prob throughout CondLatches.
   auto ComputeFreq = [&](double Prob) {
@@ -662,8 +668,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     double Prob = -B / A;
     // If it computes an invalid Prob, FreqDesired is impossibly low or high.
     // Otherwise, Prob should produce nearly FreqDesired.
-    assert((Prob < 0 || Prob > 1 ||
-            fabs(ComputeFreq(Prob) - FreqDesired) < FreqPrec) &&
+    assert((Prob < 0 || Prob > 1 || FreqIsClose(ComputeFreq(Prob))) &&
            "Expected accurate frequency when linear case is possible");
     Prob = std::max(Prob, 0.);
     Prob = std::min(Prob, 1.);
@@ -681,8 +686,7 @@ static void fixProbContradiction(Loop *L, UnrollLoopOptions ULO,
     double Prob = (-B + sqrt(B * B - 4 * A * C)) / (2 * A);
     // If it computes an invalid Prob, FreqDesired is impossibly low or high.
     // Otherwise, Prob should produce nearly FreqDesired.
-    assert((Prob < 0 || Prob > 1 ||
-            fabs(ComputeFreq(Prob) - FreqDesired) < FreqPrec) &&
+    assert((Prob < 0 || Prob > 1 || FreqIsClose(ComputeFreq(Prob))) &&
            "Expected accurate frequency when quadratic case is possible");
     Prob = std::max(Prob, 0.);
     Prob = std::min(Prob, 1.);
