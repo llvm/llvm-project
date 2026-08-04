@@ -674,18 +674,11 @@ define <8 x i16> @test_ushll_cmp(<8 x i8> %a, <8 x i8> %b) #0 {
 }
 
 define  <8 x i16> @mul_of_shl_zext(<8 x i8> %a, <8 x i16> %b) {
-; CHECK-SD-LABEL: mul_of_shl_zext:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: mul_of_shl_zext:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #1
-; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: mul_of_shl_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #1
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %shl = shl <8 x i16> %a.ext, splat (i16 1)
   %mul = mul <8 x i16> %shl, %b
@@ -695,9 +688,8 @@ define  <8 x i16> @mul_of_shl_zext(<8 x i8> %a, <8 x i16> %b) {
 define  <8 x i16> @shl_of_mul_zext(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: shl_of_mul_zext:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #1
 ; CHECK-SD-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shl_of_mul_zext:
@@ -732,18 +724,11 @@ define  <8 x i16> @shl_of_mul_zext_zext(<8 x i8> %a, <8 x i8> %b) {
 }
 
 define  <8 x i16> @mul_of_shl_sext(<8 x i8> %a, <8 x i16> %b) {
-; CHECK-SD-LABEL: mul_of_shl_sext:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: mul_of_shl_sext:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #1
-; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: mul_of_shl_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #1
+; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
   %a.ext = sext <8 x i8> %a to <8 x i16>
   %shl = shl <8 x i16> %a.ext, splat (i16 1)
   %mul = mul <8 x i16> %shl, %b
@@ -753,9 +738,8 @@ define  <8 x i16> @mul_of_shl_sext(<8 x i8> %a, <8 x i16> %b) {
 define  <8 x i16> @shl_of_mul_sext(<8 x i8> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: shl_of_mul_sext:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #1
 ; CHECK-SD-NEXT:    mul v0.8h, v0.8h, v1.8h
-; CHECK-SD-NEXT:    add v0.8h, v0.8h, v0.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shl_of_mul_sext:
