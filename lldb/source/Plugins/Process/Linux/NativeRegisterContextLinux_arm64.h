@@ -252,8 +252,6 @@ private:
 
   void SetSVERegVG(uint64_t vg) { m_sve_header.vl = vg * 8; }
 
-  void *GetSVEHeader() { return &m_sve_header; }
-
   void *GetSMEPseudoBuffer() { return &m_sme_pseudo_regs; }
 
   size_t GetSMEPseudoBufferSize() { return sizeof(m_sme_pseudo_regs); }
