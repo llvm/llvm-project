@@ -225,26 +225,10 @@ define <16 x i1> @match_v16i8_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %m
 ; CHECK-LABEL: match_v16i8_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v9, 8
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 9
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 10
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 11
-; CHECK-NEXT:    vmv.x.s a3, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 12
-; CHECK-NEXT:    vmv.x.s a4, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 13
-; CHECK-NEXT:    vmv.x.s a5, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 14
-; CHECK-NEXT:    vmv.x.s a6, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 15
-; CHECK-NEXT:    vmv.x.s a7, v10
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1
-; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vrgather.vi v11, v9, 0
 ; CHECK-NEXT:    vrgather.vi v12, v9, 2
+; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vmseq.vv v11, v8, v11
 ; CHECK-NEXT:    vmseq.vv v12, v8, v12
 ; CHECK-NEXT:    vmor.mm v10, v11, v10
@@ -261,24 +245,32 @@ define <16 x i1> @match_v16i8_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %m
 ; CHECK-NEXT:    vmseq.vv v12, v8, v13
 ; CHECK-NEXT:    vmor.mm v10, v10, v11
 ; CHECK-NEXT:    vrgather.vi v11, v9, 7
+; CHECK-NEXT:    vrgather.vi v13, v9, 8
+; CHECK-NEXT:    vmor.mm v10, v10, v12
+; CHECK-NEXT:    vmseq.vv v11, v8, v11
+; CHECK-NEXT:    vmseq.vv v12, v8, v13
+; CHECK-NEXT:    vmor.mm v10, v10, v11
+; CHECK-NEXT:    vrgather.vi v11, v9, 9
+; CHECK-NEXT:    vrgather.vi v13, v9, 10
+; CHECK-NEXT:    vmor.mm v10, v10, v12
+; CHECK-NEXT:    vmseq.vv v11, v8, v11
+; CHECK-NEXT:    vmseq.vv v12, v8, v13
+; CHECK-NEXT:    vmor.mm v10, v10, v11
+; CHECK-NEXT:    vrgather.vi v11, v9, 11
+; CHECK-NEXT:    vrgather.vi v13, v9, 12
+; CHECK-NEXT:    vmor.mm v10, v10, v12
+; CHECK-NEXT:    vmseq.vv v11, v8, v11
+; CHECK-NEXT:    vmseq.vv v12, v8, v13
+; CHECK-NEXT:    vmor.mm v10, v10, v11
+; CHECK-NEXT:    vrgather.vi v11, v9, 13
+; CHECK-NEXT:    vrgather.vi v13, v9, 14
+; CHECK-NEXT:    vmor.mm v10, v10, v12
+; CHECK-NEXT:    vmseq.vv v11, v8, v11
+; CHECK-NEXT:    vmseq.vv v12, v8, v13
+; CHECK-NEXT:    vmor.mm v10, v10, v11
+; CHECK-NEXT:    vrgather.vi v11, v9, 15
 ; CHECK-NEXT:    vmor.mm v9, v10, v12
-; CHECK-NEXT:    vmseq.vv v10, v8, v11
-; CHECK-NEXT:    vmseq.vx v11, v8, a0
-; CHECK-NEXT:    vmor.mm v9, v9, v10
-; CHECK-NEXT:    vmseq.vx v10, v8, a1
-; CHECK-NEXT:    vmor.mm v9, v9, v11
-; CHECK-NEXT:    vmseq.vx v11, v8, a2
-; CHECK-NEXT:    vmor.mm v9, v9, v10
-; CHECK-NEXT:    vmseq.vx v10, v8, a3
-; CHECK-NEXT:    vmor.mm v9, v9, v11
-; CHECK-NEXT:    vmseq.vx v11, v8, a4
-; CHECK-NEXT:    vmor.mm v9, v9, v10
-; CHECK-NEXT:    vmseq.vx v10, v8, a5
-; CHECK-NEXT:    vmor.mm v9, v9, v11
-; CHECK-NEXT:    vmseq.vx v11, v8, a6
-; CHECK-NEXT:    vmor.mm v9, v9, v10
-; CHECK-NEXT:    vmor.mm v9, v9, v11
-; CHECK-NEXT:    vmseq.vx v8, v8, a7
+; CHECK-NEXT:    vmseq.vv v8, v8, v11
 ; CHECK-NEXT:    vmor.mm v8, v9, v8
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
 ; CHECK-NEXT:    ret
@@ -290,32 +282,28 @@ define <8 x i1> @match_v8i8_v8i8(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask) {
 ; CHECK-LABEL: match_v8i8_v8i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v9, 4
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 5
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 6
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 7
-; CHECK-NEXT:    vmv.x.s a3, v10
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1
 ; CHECK-NEXT:    vrgather.vi v11, v9, 0
 ; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vmseq.vv v11, v8, v11
 ; CHECK-NEXT:    vrgather.vi v12, v9, 2
 ; CHECK-NEXT:    vmor.mm v10, v11, v10
+; CHECK-NEXT:    vrgather.vi v11, v9, 3
+; CHECK-NEXT:    vmseq.vv v12, v8, v12
+; CHECK-NEXT:    vmseq.vv v11, v8, v11
+; CHECK-NEXT:    vmor.mm v10, v10, v12
+; CHECK-NEXT:    vrgather.vi v12, v9, 4
+; CHECK-NEXT:    vmor.mm v10, v10, v11
+; CHECK-NEXT:    vrgather.vi v11, v9, 5
+; CHECK-NEXT:    vmseq.vv v12, v8, v12
+; CHECK-NEXT:    vmseq.vv v11, v8, v11
+; CHECK-NEXT:    vmor.mm v10, v10, v12
+; CHECK-NEXT:    vrgather.vi v12, v9, 6
+; CHECK-NEXT:    vmor.mm v10, v10, v11
 ; CHECK-NEXT:    vmseq.vv v11, v8, v12
-; CHECK-NEXT:    vrgather.vi v12, v9, 3
+; CHECK-NEXT:    vrgather.vi v12, v9, 7
 ; CHECK-NEXT:    vmor.mm v9, v10, v11
-; CHECK-NEXT:    vmseq.vv v10, v8, v12
-; CHECK-NEXT:    vmseq.vx v11, v8, a0
-; CHECK-NEXT:    vmor.mm v9, v9, v10
-; CHECK-NEXT:    vmseq.vx v10, v8, a1
-; CHECK-NEXT:    vmor.mm v9, v9, v11
-; CHECK-NEXT:    vmseq.vx v11, v8, a2
-; CHECK-NEXT:    vmor.mm v9, v9, v10
-; CHECK-NEXT:    vmor.mm v9, v9, v11
-; CHECK-NEXT:    vmseq.vx v8, v8, a3
+; CHECK-NEXT:    vmseq.vv v8, v8, v12
 ; CHECK-NEXT:    vmor.mm v8, v9, v8
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
 ; CHECK-NEXT:    ret
@@ -360,32 +348,28 @@ define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) {
 ; CHECK-LABEL: match_v8i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v9, 4
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 5
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 6
-; CHECK-NEXT:    vmv.x.s a2, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 7
-; CHECK-NEXT:    vmv.x.s a3, v10
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1
-; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vrgather.vi v11, v9, 0
 ; CHECK-NEXT:    vrgather.vi v12, v9, 2
+; CHECK-NEXT:    vmseq.vv v10, v8, v10
 ; CHECK-NEXT:    vmseq.vv v11, v8, v11
 ; CHECK-NEXT:    vmseq.vv v12, v8, v12
 ; CHECK-NEXT:    vmor.mm v10, v11, v10
 ; CHECK-NEXT:    vrgather.vi v11, v9, 3
+; CHECK-NEXT:    vrgather.vi v13, v9, 4
+; CHECK-NEXT:    vmor.mm v10, v10, v12
+; CHECK-NEXT:    vmseq.vv v11, v8, v11
+; CHECK-NEXT:    vmseq.vv v12, v8, v13
+; CHECK-NEXT:    vmor.mm v10, v10, v11
+; CHECK-NEXT:    vrgather.vi v11, v9, 5
+; CHECK-NEXT:    vrgather.vi v13, v9, 6
+; CHECK-NEXT:    vmor.mm v10, v10, v12
+; CHECK-NEXT:    vmseq.vv v11, v8, v11
+; CHECK-NEXT:    vmseq.vv v12, v8, v13
+; CHECK-NEXT:    vmor.mm v10, v10, v11
+; CHECK-NEXT:    vrgather.vi v11, v9, 7
 ; CHECK-NEXT:    vmor.mm v9, v10, v12
-; CHECK-NEXT:    vmseq.vv v10, v8, v11
-; CHECK-NEXT:    vmseq.vx v11, v8, a0
-; CHECK-NEXT:    vmor.mm v9, v9, v10
-; CHECK-NEXT:    vmseq.vx v10, v8, a1
-; CHECK-NEXT:    vmor.mm v9, v9, v11
-; CHECK-NEXT:    vmseq.vx v11, v8, a2
-; CHECK-NEXT:    vmor.mm v9, v9, v10
-; CHECK-NEXT:    vmor.mm v9, v9, v11
-; CHECK-NEXT:    vmseq.vx v8, v8, a3
+; CHECK-NEXT:    vmseq.vv v8, v8, v11
 ; CHECK-NEXT:    vmor.mm v8, v9, v8
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
 ; CHECK-NEXT:    ret
@@ -1137,18 +1121,16 @@ define <4 x i1> @match_v4xi32_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %ma
 ; CHECK-LABEL: match_v4xi32_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v9, 2
-; CHECK-NEXT:    vmv.x.s a0, v10
-; CHECK-NEXT:    vslidedown.vi v10, v9, 3
-; CHECK-NEXT:    vmv.x.s a1, v10
 ; CHECK-NEXT:    vrgather.vi v10, v9, 1
 ; CHECK-NEXT:    vrgather.vi v11, v9, 0
-; CHECK-NEXT:    vmseq.vv v9, v8, v10
-; CHECK-NEXT:    vmseq.vv v10, v8, v11
-; CHECK-NEXT:    vmseq.vx v11, v8, a0
-; CHECK-NEXT:    vmor.mm v9, v10, v9
-; CHECK-NEXT:    vmor.mm v9, v9, v11
-; CHECK-NEXT:    vmseq.vx v8, v8, a1
+; CHECK-NEXT:    vrgather.vi v12, v9, 2
+; CHECK-NEXT:    vmseq.vv v10, v8, v10
+; CHECK-NEXT:    vmseq.vv v11, v8, v11
+; CHECK-NEXT:    vmseq.vv v12, v8, v12
+; CHECK-NEXT:    vmor.mm v10, v11, v10
+; CHECK-NEXT:    vrgather.vi v11, v9, 3
+; CHECK-NEXT:    vmor.mm v9, v10, v12
+; CHECK-NEXT:    vmseq.vv v8, v8, v11
 ; CHECK-NEXT:    vmor.mm v8, v9, v8
 ; CHECK-NEXT:    vmand.mm v0, v8, v0
 ; CHECK-NEXT:    ret
@@ -1157,47 +1139,16 @@ define <4 x i1> @match_v4xi32_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %ma
 }
 
 define <2 x i1> @match_v2xi64_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask) {
-; RV32-LABEL: match_v2xi64_v2i64:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    li a0, 32
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vmv.x.s a1, v9
-; RV32-NEXT:    vsrl.vx v10, v9, a0
-; RV32-NEXT:    vmv.x.s a2, v10
-; RV32-NEXT:    vslidedown.vi v9, v9, 1
-; RV32-NEXT:    vmv.x.s a3, v9
-; RV32-NEXT:    vsrl.vx v9, v9, a0
-; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    sw a1, 8(sp)
-; RV32-NEXT:    sw a2, 12(sp)
-; RV32-NEXT:    sw a3, 0(sp)
-; RV32-NEXT:    sw a0, 4(sp)
-; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v9, (a0), zero
-; RV32-NEXT:    mv a0, sp
-; RV32-NEXT:    vlse64.v v10, (a0), zero
-; RV32-NEXT:    vmseq.vv v9, v8, v9
-; RV32-NEXT:    vmseq.vv v8, v8, v10
-; RV32-NEXT:    vmor.mm v8, v9, v8
-; RV32-NEXT:    vmand.mm v0, v8, v0
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: match_v2xi64_v2i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v10, v9, 1
-; RV64-NEXT:    vmv.x.s a0, v10
-; RV64-NEXT:    vrgather.vi v10, v9, 0
-; RV64-NEXT:    vmseq.vv v9, v8, v10
-; RV64-NEXT:    vmseq.vx v8, v8, a0
-; RV64-NEXT:    vmor.mm v8, v9, v8
-; RV64-NEXT:    vmand.mm v0, v8, v0
-; RV64-NEXT:    ret
+; CHECK-LABEL: match_v2xi64_v2i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vrgather.vi v10, v9, 1
+; CHECK-NEXT:    vrgather.vi v11, v9, 0
+; CHECK-NEXT:    vmseq.vv v9, v8, v10
+; CHECK-NEXT:    vmseq.vv v8, v8, v11
+; CHECK-NEXT:    vmor.mm v8, v8, v9
+; CHECK-NEXT:    vmand.mm v0, v8, v0
+; CHECK-NEXT:    ret
   %r = tail call <2 x i1> @llvm.experimental.vector.match(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask)
   ret <2 x i1> %r
 }

@@ -1044,8 +1044,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       if (!isTypeLegal(VT))
         continue;
 
-      setOperationAction(ISD::VECTOR_MATCH, VT, Expand);
-
       setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
 
       // Mask VTs are custom-expanded into a series of standard nodes

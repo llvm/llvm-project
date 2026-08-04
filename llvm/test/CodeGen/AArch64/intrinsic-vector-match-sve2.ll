@@ -18,11 +18,9 @@ define <1 x i1> @match_v1i8_v1i8(<1 x i8> %op1, <1 x i8> %op2, <1 x i1> %mask) #
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    umov w8, v1.b[0]
 ; CHECK-NEXT:    dup v1.8b, w8
-; CHECK-NEXT:    sbfx w8, w0, #0, #1
 ; CHECK-NEXT:    cmeq v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    umov w0, v0.b[0]
+; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    and w0, w8, w0
 ; CHECK-NEXT:    ret
   %r = tail call <1 x i1> @llvm.experimental.vector.match(<1 x i8> %op1, <1 x i8> %op2, <1 x i1> %mask)
   ret <1 x i1> %r
@@ -104,11 +102,9 @@ define <16 x i1> @match_v16i8_v1i8(<16 x i8> %op1, <1 x i8> %op2, <16 x i1> %mas
 ; CHECK-LABEL: match_v16i8_v1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    shl v2.16b, v2.16b, #7
 ; CHECK-NEXT:    dup v1.16b, v1.b[0]
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmlt v1.16b, v2.16b, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <1 x i8> %op2, <16 x i1> %mask)
   ret <16 x i1> %r
@@ -122,10 +118,8 @@ define <16 x i1> @match_v16i8_v2i8(<16 x i8> %op1, <2 x i8> %op2, <16 x i1> %mas
 ; CHECK-NEXT:    dup v1.16b, v1.b[0]
 ; CHECK-NEXT:    cmeq v3.16b, v0.16b, v3.16b
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    shl v1.16b, v2.16b, #7
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    cmlt v1.16b, v1.16b, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <2 x i8> %op2, <16 x i1> %mask)
   ret <16 x i1> %r
@@ -139,7 +133,6 @@ define <16 x i1> @match_v16i8_v4i8(<16 x i8> %op1, <4 x i8> %op2, <16 x i1> %mas
 ; CHECK-NEXT:    dup v4.16b, v1.b[0]
 ; CHECK-NEXT:    dup v5.16b, v1.b[4]
 ; CHECK-NEXT:    dup v1.16b, v1.b[6]
-; CHECK-NEXT:    shl v2.16b, v2.16b, #7
 ; CHECK-NEXT:    cmeq v3.16b, v0.16b, v3.16b
 ; CHECK-NEXT:    cmeq v4.16b, v0.16b, v4.16b
 ; CHECK-NEXT:    cmeq v5.16b, v0.16b, v5.16b
@@ -147,8 +140,7 @@ define <16 x i1> @match_v16i8_v4i8(<16 x i8> %op1, <4 x i8> %op2, <16 x i1> %mas
 ; CHECK-NEXT:    orr v1.16b, v4.16b, v3.16b
 ; CHECK-NEXT:    orr v0.16b, v5.16b, v0.16b
 ; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    cmlt v1.16b, v2.16b, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <4 x i8> %op2, <16 x i1> %mask)
   ret <16 x i1> %r
@@ -354,14 +346,13 @@ define <4 x i1> @match_v4xi32_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %ma
 ; CHECK-NEXT:    cmeq v4.4s, v0.4s, v4.4s
 ; CHECK-NEXT:    cmeq v5.4s, v0.4s, v5.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    shl v1.4h, v2.4h, #15
-; CHECK-NEXT:    orr v2.16b, v4.16b, v3.16b
-; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-NEXT:    orr v1.16b, v4.16b, v3.16b
 ; CHECK-NEXT:    orr v0.16b, v5.16b, v0.16b
-; CHECK-NEXT:    orr v0.16b, v2.16b, v0.16b
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    shl v1.4h, v2.4h, #15
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %r = tail call <4 x i1> @llvm.experimental.vector.match(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %mask)
   ret <4 x i1> %r
@@ -370,16 +361,15 @@ define <4 x i1> @match_v4xi32_v4i32(<4 x i32> %op1, <4 x i32> %op2, <4 x i1> %ma
 define <2 x i1> @match_v2xi64_v2i64(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask) #0 {
 ; CHECK-LABEL: match_v2xi64_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl v2.2s, v2.2s, #31
 ; CHECK-NEXT:    dup v3.2d, v1.d[1]
 ; CHECK-NEXT:    dup v1.2d, v1.d[0]
-; CHECK-NEXT:    cmlt v2.2s, v2.2s, #0
 ; CHECK-NEXT:    cmeq v3.2d, v0.2d, v3.2d
 ; CHECK-NEXT:    cmeq v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    shl v1.2s, v2.2s, #31
 ; CHECK-NEXT:    orr v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    sshll v1.2d, v2.2s, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmlt v1.2s, v1.2s, #0
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %r = tail call <2 x i1> @llvm.experimental.vector.match(<2 x i64> %op1, <2 x i64> %op2, <2 x i1> %mask)
   ret <2 x i1> %r

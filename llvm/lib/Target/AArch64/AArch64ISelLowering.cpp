@@ -1613,9 +1613,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   }
 
-  for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
-    setOperationAction(ISD::VECTOR_MATCH, VT, Expand);
-
   // FIXME: Move lowering for more nodes here if those are common between
   // SVE and SME.
   if (Subtarget->isSVEorStreamingSVEAvailable()) {
@@ -1631,8 +1628,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
-      setOperationAction(ISD::VECTOR_MATCH, VT, Expand);
     }
+
     if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable()) {
       for (MVT VT : {MVT::nxv16i1, MVT::nxv8i1})
         setOperationAction(ISD::VECTOR_MATCH, VT, Custom);

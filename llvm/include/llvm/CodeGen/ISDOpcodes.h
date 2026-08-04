@@ -1631,7 +1631,9 @@ enum NodeType {
   /// intrinsic.
   /// Operands: Source, Needle, Mask
   /// Source has the same number of elements as the result and Needle may have
-  /// a different number of elements. The result type matches Mask.
+  /// a different number of elements. The result type matches Mask. The ISD
+  /// node supports result and mask types wider than i1, in these cases the
+  /// high bits conform to getBooleanContents similar to the SETCC operator.
   VECTOR_MATCH,
 
   /// The `llvm.loop.dependence.{war, raw}.mask` intrinsics
