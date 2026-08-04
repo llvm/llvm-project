@@ -1602,12 +1602,14 @@ static bool checkAndReplaceCondition(
     ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
     Instruction *ContextInst, Module *ReproducerModule,
     ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT,
+    LoopInfo &LI, ScalarEvolution &SE,
     SmallVectorImpl<Instruction *> &ToRemove) {
   auto ReplaceCmpWithConstant = [&](Instruction *CheckInst, bool IsTrue) {
     generateReproducer(CheckInst, ICmpInst::isSigned(Pred), ReproducerModule,
                        ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(CheckInst->getType()), IsTrue);
+    SmallPtrSet<const Loop *, 2> AffectedLoops;
     bool Changed = CheckInst->replaceUsesWithIf(ConstantC, [&](Use &U) {
       auto *UserI = getContextInstForUse(U);
       auto *DTN = DT.getNode(UserI->getParent());
@@ -1620,8 +1622,27 @@ static bool checkAndReplaceCondition(
       // Conditions in an assume trivially simplify to true. Skip uses
       // in assume calls to not destroy the available information.
       auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-      return !II || II->getIntrinsicID() != Intrinsic::assume;
+      if (II && II->getIntrinsicID() == Intrinsic::assume)
+        return false;
+
+      // Replacing the condition of a terminator in a loop-exiting block may
+      // change how often the loop is exited, so cached trip counts, while
+      // still correct, may be less precise than freshly computed ones. Keep
+      // track of the affected loops, so their cached info can be dropped.
+      if (auto *User = dyn_cast<Instruction>(U.getUser());
+          User && User->isTerminator()) {
+        BasicBlock *BB = User->getParent();
+        if (Loop *L = LI.getLoopFor(BB); L && L->isLoopExiting(BB))
+          AffectedLoops.insert(L);
+      }
+      return true;
     });
+
+    // The exit conditions of the affected loops (and any enclosing loops the
+    // exiting blocks may also exit) changed; drop the cached trip counts so
+    // later passes re-compute them with the now more precise exit structure.
+    for (const Loop *L : AffectedLoops)
+      SE.forgetTopmostLoop(L);
     NumCondsRemoved++;
 
     // Update the debug value records that satisfy the same condition used
@@ -2059,7 +2080,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
       } else if (match(Inst, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
         bool Simplified = checkAndReplaceCondition(
             Pred, A, B, Inst, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
-            ReproducerModule.get(), ReproducerCondStack, S.DT, ToRemove);
+            ReproducerModule.get(), ReproducerCondStack, S.DT, S.LI, S.SE,
+            ToRemove);
         if (!Simplified &&
             match(CB.getContextInst(), m_LogicalOp(m_Value(), m_Value()))) {
           Simplified = checkOrAndOpImpliedByOther(
