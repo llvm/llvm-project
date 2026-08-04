@@ -669,46 +669,19 @@ LogicalResult BulkStoreOp::verify() {
   return success();
 }
 
-LogicalResult AsyncStoreOp::verify() {
-  unsigned addrSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getAddr().getType()).getAddressSpace();
-  NVVM::AsyncStoreScope scope = getScope();
-  mlir::Type valueType = getValue().getType();
-  bool isMmio = getIsMmio();
-  bool isMultimem = getIsMultimem();
+LogicalResult AsyncStoreGlobalOp::verify() {
+  NVVM::MemScopeKind scope = getScope();
+  bool isMmio = getMmio();
+  bool isMultimem = getMultimem();
 
-  if (addrSpace == NVVMMemorySpace::Global) {
-    if (getMbarrier())
-      return emitOpError("mbarrier is not supported for global address space");
+  if (scope != MemScopeKind::SYS && scope != MemScopeKind::GPU)
+    return emitOpError("scope must be either SYS or GPU");
 
-    if (valueType.isInteger(128))
-      return emitOpError("only 8, 16, 32, and 64 bit values are supported for "
-                         "global address space");
+  if (isMmio && scope != MemScopeKind::SYS)
+    return emitOpError("mmio is only supported for SYS scope");
 
-    if (scope == AsyncStoreScope::NONE)
-      return emitOpError(
-          "scope must be set for async store to global address space");
-
-    if (isMmio && scope != AsyncStoreScope::SYS)
-      return emitOpError("mmio is only supported for SYS scope");
-
-    if (isMmio && isMultimem)
-      return emitOpError("multimem is not supported for mmio");
-  }
-
-  if (addrSpace == NVVMMemorySpace::SharedCluster) {
-    if (valueType.isInteger(8) || valueType.isInteger(16))
-      return emitOpError("only 32, 64, and 128 bit values are supported for "
-                         "shared cluster address space");
-
-    if (isMultimem || isMmio)
-      return emitOpError("multimem and mmio are not supported for shared "
-                         "cluster address space");
-
-    if (scope != AsyncStoreScope::NONE)
-      return emitOpError("scope is not supported for async store to shared "
-                         "cluster address space");
-  }
+  if (isMmio && isMultimem)
+    return emitOpError("multimem is not supported for mmio");
 
   return success();
 }
@@ -3707,40 +3680,38 @@ DivFOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
           {mt.lookupValue(thisOp.getLhs()), mt.lookupValue(thisOp.getRhs())}};
 }
 
-mlir::NVVM::IDArgPair
-AsyncStoreOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                                    llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::AsyncStoreOp>(op);
-  NVVM::NVVMMemorySpace addrSpace = static_cast<NVVM::NVVMMemorySpace>(
-      llvm::cast<LLVM::LLVMPointerType>(thisOp.getAddr().getType())
-          .getAddressSpace());
-  mlir::NVVM::AsyncStoreScope scope = thisOp.getScope();
+mlir::NVVM::IDArgPair AsyncStoreGlobalOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  using IDArgPair = mlir::NVVM::IDArgPair;
+  auto thisOp = cast<NVVM::AsyncStoreGlobalOp>(op);
+  mlir::NVVM::MemScopeKind scope = thisOp.getScope();
+  bool isMmio = thisOp.getMmio();
 
   llvm::Value *addr = mt.lookupValue(thisOp.getAddr());
   llvm::Value *value = mt.lookupValue(thisOp.getValue());
-  llvm::Value *mbarrier =
-      thisOp.getMbarrier() ? mt.lookupValue(thisOp.getMbarrier()) : nullptr;
-  llvm::Value *isMultimem =
-      thisOp.getIsMultimem() ? builder.getInt1(true) : builder.getInt1(false);
+  llvm::Value *isMultimem = builder.getInt1(thisOp.getMultimem());
 
-  switch (addrSpace) {
-  case NVVMMemorySpace::Global:
-    if (scope == AsyncStoreScope::SYS) {
-      if (thisOp.getIsMmio())
-        return {llvm::Intrinsic::nvvm_st_async_mmio_sys, {addr, value}};
-      else
-        return {llvm::Intrinsic::nvvm_st_async_sys, {addr, value, isMultimem}};
-    } else if (scope == AsyncStoreScope::GPU) {
-      return {llvm::Intrinsic::nvvm_st_async_gpu, {addr, value, isMultimem}};
-    }
-    llvm_unreachable("unsupported async store scope for global address space");
-  case NVVMMemorySpace::SharedCluster:
-    return {llvm::Intrinsic::nvvm_st_async, {addr, value, mbarrier}};
-  default:
-    llvm_unreachable("unsupported address space");
+  if (scope == MemScopeKind::SYS) {
+    return isMmio ? IDArgPair(llvm::Intrinsic::nvvm_st_async_mmio_sys,
+                              {addr, value})
+                  : IDArgPair(llvm::Intrinsic::nvvm_st_async_sys,
+                              {addr, value, isMultimem});
+  } else if (scope == MemScopeKind::GPU) {
+    return NVVM::IDArgPair(llvm::Intrinsic::nvvm_st_async_gpu,
+                           {addr, value, isMultimem});
   }
+  llvm_unreachable("unsupported async store scope for global address space");
+}
 
-  return {llvm::Intrinsic::not_intrinsic, {}};
+mlir::NVVM::IDArgPair AsyncStoreSharedOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::AsyncStoreSharedOp>(op);
+
+  llvm::Value *addr = mt.lookupValue(thisOp.getAddr());
+  llvm::Value *value = mt.lookupValue(thisOp.getValue());
+  llvm::Value *mbarrier = mt.lookupValue(thisOp.getMbarrier());
+
+  return {llvm::Intrinsic::nvvm_st_async, {addr, value, mbarrier}};
 }
 
 mlir::NVVM::IDArgPair
