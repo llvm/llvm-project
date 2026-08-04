@@ -36,7 +36,6 @@
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
