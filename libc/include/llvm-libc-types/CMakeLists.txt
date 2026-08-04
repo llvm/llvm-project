@@ -262,6 +262,7 @@ add_header(
 )
 add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
 add_header(struct_ifreq HDR struct_ifreq.h DEPENDS libc.include.llvm-libc-macros.net_if_macros .struct_sockaddr)
+add_header(struct_if_nameindex HDR struct_if_nameindex.h)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)
 add_header(struct_linger HDR struct_linger.h)
 add_header(struct_ucred HDR struct_ucred.h DEPENDS .pid_t .uid_t .gid_t)
