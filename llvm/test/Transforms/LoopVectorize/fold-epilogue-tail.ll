@@ -1,18 +1,23 @@
 ; REQUIRES: asserts
-; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
+
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
 ; RUN: -pass-remarks-analysis=loop-vectorize -force-vector-width=16 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s
 
-; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -force-vector-width=16 \
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize -enable-vplan-native-path --disable-output \
+; RUN: -epilogue-tail-folding-policy=prefer-fold-tail -pass-remarks-analysis=loop-vectorize \
+; RUN: -force-vector-width=16 -epilogue-vectorization-force-VF=8 < %s 2>&1 | FileCheck %s --check-prefix=CHECK-OUTER-LOOP
+
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -force-vector-width=16 \
 ; RUN:  -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-MAIN-VF
 
-; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -epilogue-vectorization-force-VF=8  \
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail -epilogue-vectorization-force-VF=8  \
 ; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-FORCED-EPILOGUE-VF
 
-; RUN: opt -S -p loop-vectorize -debug -enable-epilogue-vectorization=false \
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize -enable-epilogue-vectorization=false \
 ; RUN: --disable-output -force-vector-width=16 -epilogue-vectorization-force-VF=8 -epilogue-tail-folding-policy=prefer-fold-tail \
 ; RUN: -pass-remarks-analysis=loop-vectorize < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DISABLED-EPILOG
 
-; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
 ; RUN: -force-vector-width=16 -epilogue-vectorization-force-VF=8 -vectorize-scev-check-threshold=0 < %s 2>&1 | FileCheck %s \
 ; RUN: --check-prefix=CHECK-NO-VPLANS
 
@@ -35,10 +40,38 @@ exit:
   ret void
 }
 
+define void @test_outer_loop(ptr %A, i64 %m) {
+; CHECK-OUTER-LOOP-LABEL: Checking a loop in 'test_outer_loop'
+; CHECK-OUTER-LOOP: LV: Epilgue tail-folding is not supported for outer loop
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %iv.outer = phi i64 [ 0, %entry ], [ %iv.outer.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %iv.inner = phi i64 [ 0, %outer.header ], [ %iv.inner.next, %inner ]
+  %gep = getelementptr inbounds i32, ptr %A, i64 %iv.inner
+  store i32 0, ptr %gep, align 4
+  %iv.inner.next = add nuw nsw i64 %iv.inner, 1
+  %inner.ec = icmp eq i64 %iv.inner.next, 8
+  br i1 %inner.ec, label %outer.latch, label %inner
+
+outer.latch:
+  %iv.outer.next = add nuw nsw i64 %iv.outer, 1
+  %outer.ec = icmp eq i64 %iv.outer.next, %m
+  br i1 %outer.ec, label %exit, label %outer.header, !llvm.loop !1
+
+exit:
+  ret void
+}
+
 ; This case can't be tail-folded because all the iterations will be executed by
 ; main vector loop.
-define void @test_epilogue_tf_reset(ptr %A) {
-; CHECK-LABEL: Checking a loop in 'test_epilogue_tf_reset'
+define void @test_no_iterations_left(ptr %A) {
+; CHECK-LABEL: Checking a loop in 'test_no_iterations_left'
 ; CHECK: LV: epilogue tail-folding is enabled
 ; CHECK: LV: This case of epilogue loop can't be tail-folded.
 ; CHECK: LV: Applying epilogue tail-folding failed, disable it.
@@ -58,11 +91,11 @@ exit:
   ret void
 }
 
-define void @test_epilogue_tf_no_fv(ptr %A, i64 %n) {
-; CHECK-NO-FORCED-MAIN-VF-LABEL: Checking a loop in 'test_epilogue_tf_no_fv'
+define void @test_no_fv(ptr %A, i64 %n) {
+; CHECK-NO-FORCED-MAIN-VF-LABEL: Checking a loop in 'test_no_fv'
 ; CHECK-NO-FORCED-MAIN-VF: remark: <unknown>:0:0: For now, Epilogue tail-folding can't be applied without forced epilogue/main loop VF
 
-; CHECK-NO-FORCED-EPILOGUE-VF-LABEL: Checking a loop in 'test_epilogue_tf_no_fv'
+; CHECK-NO-FORCED-EPILOGUE-VF-LABEL: Checking a loop in 'test_no_fv'
 ; CHECK-NO-FORCED-EPILOGUE-VF: remark: <unknown>:0:0: For now, Epilogue tail-folding can't be applied without forced epilogue/main loop VF
 ;
 entry:
@@ -177,3 +210,6 @@ exit:
   %result = phi i64 [ %ext, %loop ]
   ret i64 %result
 }
+
+!1 = distinct !{!1, !2}
+!2 = !{!"llvm.loop.vectorize.enable"}
