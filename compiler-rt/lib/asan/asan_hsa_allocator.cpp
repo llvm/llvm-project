@@ -63,7 +63,7 @@ static_assert(AP32<LocalAddressSpaceView>::kMetadataSize == 0,
 hsa_status_t asan_hsa_amd_memory_pool_allocate(
     hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags, void** ptr,
     BufferedStackTrace* stack) {
-  AmdgpuAllocationInfo aa_info;
+  AmdHsaAllocationInfo aa_info;
   aa_info.alloc_func =
       reinterpret_cast<void*>((uptr)&__asan::asan_hsa_amd_memory_pool_allocate);
   aa_info.memory_pool = memory_pool;
@@ -182,7 +182,7 @@ hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
     return HSA_STATUS_ERROR_INVALID_ARGUMENT;
   }
 
-  if (!__sanitizer::AmdgpuVmemReserveUsesHostMapping(flags)) {
+  if (!__sanitizer::AmdHsaVmemReserveUsesHostMapping(flags)) {
     const hsa_status_t status = REAL(hsa_amd_vmem_address_reserve_align)(
         ptr, size, address, alignment, flags);
     if (status == HSA_STATUS_SUCCESS && ptr && *ptr)
@@ -192,7 +192,7 @@ hsa_status_t asan_hsa_amd_vmem_address_reserve_align(
     return status;
   }
 
-  AmdgpuAllocationInfo aa_info;
+  AmdHsaAllocationInfo aa_info;
   aa_info.alloc_func = reinterpret_cast<void*>(
       (uptr)&__asan::asan_hsa_amd_vmem_address_reserve_align);
   aa_info.memory_pool = {0};
@@ -296,13 +296,13 @@ hsa_status_t asan_hsa_init() {
   hsa_status_t status = REAL(hsa_init)();
   if (status == HSA_STATUS_SUCCESS) {
     // Only clear state when recovering from a prior shutdown (avoids clearing
-    // amdgpu_event_registered on every refcount bump and re-registering).
-    if (__sanitizer::AmdgpuDeviceAllocator::IsRuntimeShutdown())
-      __sanitizer::AmdgpuDeviceAllocator::ClearRuntimeShutdownState();
+    // amdhsa_event_registered on every refcount bump and re-registering).
+    if (__sanitizer::AmdHsaDeviceAllocator::IsRuntimeShutdown())
+      __sanitizer::AmdHsaDeviceAllocator::ClearRuntimeShutdownState();
     // Load HSA entry points once the runtime is up; device allocator may stay
     // disabled, but interceptors and RegisterSystemEventHandlers need them.
-    if (__sanitizer::AmdgpuDeviceAllocator::Init(/*allow_dlopen=*/true))
-      __sanitizer::AmdgpuDeviceAllocator::RegisterSystemEventHandlers();
+    if (__sanitizer::AmdHsaDeviceAllocator::Init(/*allow_dlopen=*/true))
+      __sanitizer::AmdHsaDeviceAllocator::RegisterSystemEventHandlers();
   }
   return status;
 }

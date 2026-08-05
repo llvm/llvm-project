@@ -52,42 +52,42 @@ static const char kDefaultHsaRuntimePath[] = "libhsa-runtime64.so";
 // Always align to page boundary to match current ROCr behavior
 static const size_t kPageSize_ = 4096;
 
-static atomic_uint8_t amdgpu_runtime_shutdown{0};
-static atomic_uint8_t amdgpu_event_registered{0};
+static atomic_uint8_t amdhsa_runtime_shutdown{0};
+static atomic_uint8_t amdhsa_event_registered{0};
 static atomic_uint8_t hsa_amd_symbols_loaded{0};
 
 static bool HsaSymbolsLoaded() {
   return atomic_load(&hsa_amd_symbols_loaded, memory_order_acquire) != 0;
 }
 
-bool AmdgpuDeviceAllocator::IsRuntimeShutdown() {
+bool AmdHsaDeviceAllocator::IsRuntimeShutdown() {
   return static_cast<bool>(
-      atomic_load(&amdgpu_runtime_shutdown, memory_order_acquire));
+      atomic_load(&amdhsa_runtime_shutdown, memory_order_acquire));
 }
 
-void AmdgpuDeviceAllocator::NotifyRuntimeShutdown() {
+void AmdHsaDeviceAllocator::NotifyRuntimeShutdown() {
   uint8_t shutdown = 0;
-  if (atomic_compare_exchange_strong(&amdgpu_runtime_shutdown, &shutdown, 1,
+  if (atomic_compare_exchange_strong(&amdhsa_runtime_shutdown, &shutdown, 1,
                                      memory_order_acq_rel)) {
-    VReport(2, "Amdgpu Allocator: AMDGPU runtime shutdown detected\n");
+    VReport(2, "AmdHsa Allocator: AMDGPU runtime shutdown detected\n");
   }
 }
 
 // Clear shutdown state when hsa_init() succeeds again (re-init after shutdown).
-// Resets amdgpu_runtime_shutdown so allocator operations are enabled, and
-// amdgpu_event_registered so RegisterSystemEventHandlers() will register the
+// Resets amdhsa_runtime_shutdown so allocator operations are enabled, and
+// amdhsa_event_registered so RegisterSystemEventHandlers() will register the
 // shutdown callback for the new runtime instance.
-void AmdgpuDeviceAllocator::ClearRuntimeShutdownState() {
-  atomic_store(&amdgpu_runtime_shutdown, 0, memory_order_release);
-  atomic_store(&amdgpu_event_registered, 0, memory_order_release);
+void AmdHsaDeviceAllocator::ClearRuntimeShutdownState() {
+  atomic_store(&amdhsa_runtime_shutdown, 0, memory_order_release);
+  atomic_store(&amdhsa_event_registered, 0, memory_order_release);
 }
 
-void AmdgpuDeviceAllocator::NoteDeviceAllocatorFailure(
+void AmdHsaDeviceAllocator::NoteDeviceAllocatorFailure(
     DeviceAllocationInfo* da_info, DeviceAllocFailure failure) {
-  if (!da_info || da_info->type_ != DAT_AMDGPU)
+  if (!da_info || da_info->type_ != DAT_AMDHSA)
     return;
-  AmdgpuAllocationInfo* aa_info =
-      reinterpret_cast<AmdgpuAllocationInfo*>(da_info);
+  AmdHsaAllocationInfo* aa_info =
+      reinterpret_cast<AmdHsaAllocationInfo*>(da_info);
   switch (failure) {
     case DEV_ALLOC_FAILURE_NOT_INITIALIZED:
       aa_info->EnsureFailureStatus(HSA_STATUS_ERROR_NOT_INITIALIZED);
@@ -103,7 +103,7 @@ void AmdgpuDeviceAllocator::NoteDeviceAllocatorFailure(
 // this still fails (hsa_init can succeed with an unloaded device backend).
 // Bind hsa_amd_* via dlopen(RTLD_NOLOAD) + dlsym(handle) — not REAL() here
 // and not RTLD_NEXT/DEFAULT (those resolve ASan interceptors and recurse).
-bool AmdgpuDeviceAllocator::Init(bool allow_dlopen) {
+bool AmdHsaDeviceAllocator::Init(bool allow_dlopen) {
   SpinMutexLock l(&hsa_runtime_init_mu);
   if (HsaSymbolsLoaded())
     return true;
@@ -124,7 +124,7 @@ bool AmdgpuDeviceAllocator::Init(bool allow_dlopen) {
       hsa_runtime_handle = dlopen(path, RTLD_NOW);
     if (!hsa_runtime_handle) {
       const char* err = dlerror();
-      VReport(2, "Amdgpu Init: dlopen(%s) failed: %s\n", path,
+      VReport(2, "AmdHsa Init: dlopen(%s) failed: %s\n", path,
               err ? err : "unknown error");
       return false;
     }
@@ -150,7 +150,7 @@ bool AmdgpuDeviceAllocator::Init(bool allow_dlopen) {
   for (uptr i = 0; i < ARRAY_SIZE(kSymbols); ++i) {
     void* sym = dlsym(hsa_runtime_handle, kSymbols[i].name);
     if (!sym) {
-      VReport(2, "Amdgpu Init: Failed to load %s from ROCr handle\n",
+      VReport(2, "AmdHsa Init: Failed to load %s from ROCr handle\n",
               kSymbols[i].name);
       success = false;
     }
@@ -158,22 +158,22 @@ bool AmdgpuDeviceAllocator::Init(bool allow_dlopen) {
   }
   if (!success) {
     internal_memset(&hsa_amd, 0, sizeof(hsa_amd));
-    VReport(1, "Amdgpu Init: Failed to load AMDGPU runtime functions\n");
+    VReport(1, "AmdHsa Init: Failed to load AMDGPU runtime functions\n");
     return false;
   }
   atomic_store(&hsa_amd_symbols_loaded, 1, memory_order_release);
   return true;
 }
 
-void* AmdgpuDeviceAllocator::Allocate(uptr size, uptr alignment,
+void* AmdHsaDeviceAllocator::Allocate(uptr size, uptr alignment,
                                       DeviceAllocationInfo* da_info) {
-  AmdgpuAllocationInfo* aa_info =
-      reinterpret_cast<AmdgpuAllocationInfo*>(da_info);
+  AmdHsaAllocationInfo* aa_info =
+      reinterpret_cast<AmdHsaAllocationInfo*>(da_info);
 
   // Do not allocate if AMDGPU runtime is shutdown
   if (UNLIKELY(IsRuntimeShutdown())) {
     VReport(1,
-            "Amdgpu Allocate: Runtime shutdown, skipping allocation for size "
+            "AmdHsa Allocate: Runtime shutdown, skipping allocation for size "
             "%zu alignment %zu\n",
             size, alignment);
     aa_info->EnsureFailureStatus(HSA_STATUS_ERROR_INVALID_RUNTIME_STATE);
@@ -199,18 +199,18 @@ void* AmdgpuDeviceAllocator::Allocate(uptr size, uptr alignment,
   return aa_info->ptr;
 }
 
-void AmdgpuDeviceAllocator::Deallocate(void* p) {
+void AmdHsaDeviceAllocator::Deallocate(void* p) {
   // Deallocate does nothing after AMDGPU runtime shutdown
   if (UNLIKELY(IsRuntimeShutdown())) {
     VReport(
         1,
-        "Amdgpu Deallocate: Runtime shutdown, skipping deallocation for %p\n",
+        "AmdHsa Deallocate: Runtime shutdown, skipping deallocation for %p\n",
         reinterpret_cast<void*>(p));
     return;
   }
 
   DevicePointerInfo DevPtrInfo;
-  if (AmdgpuDeviceAllocator::GetPointerInfo(reinterpret_cast<uptr>(p),
+  if (AmdHsaDeviceAllocator::GetPointerInfo(reinterpret_cast<uptr>(p),
                                             &DevPtrInfo)) {
     if (DevPtrInfo.type == HSA_EXT_POINTER_TYPE_HSA) {
       UNUSED hsa_status_t status = hsa_amd.memory_pool_free(p);
@@ -221,7 +221,7 @@ void AmdgpuDeviceAllocator::Deallocate(void* p) {
   }
 }
 
-static uptr AmdgpuPointerInfoMapBase(uptr ptr,
+static uptr AmdHsaPointerInfoMapBase(uptr ptr,
                                      const hsa_amd_pointer_info_t& info) {
   switch (info.type) {
     case HSA_EXT_POINTER_TYPE_RESERVED_ADDR: {
@@ -248,7 +248,7 @@ static uptr AmdgpuPointerInfoMapBase(uptr ptr,
   }
 }
 
-bool AmdgpuDeviceAllocator::GetPointerInfo(uptr ptr,
+bool AmdHsaDeviceAllocator::GetPointerInfo(uptr ptr,
                                            DevicePointerInfo* ptr_info) {
   if (!ptr_info)
     return false;
@@ -256,7 +256,7 @@ bool AmdgpuDeviceAllocator::GetPointerInfo(uptr ptr,
   // GetPointerInfo returns false after AMDGPU runtime shutdown
   if (UNLIKELY(IsRuntimeShutdown())) {
     VReport(1,
-            "Amdgpu GetPointerInfo: Runtime shutdown, skipping query for %p\n",
+            "AmdHsa GetPointerInfo: Runtime shutdown, skipping query for %p\n",
             reinterpret_cast<void*>(ptr));
     return false;
   }
@@ -272,7 +272,7 @@ bool AmdgpuDeviceAllocator::GetPointerInfo(uptr ptr,
   if (info.type == HSA_EXT_POINTER_TYPE_UNKNOWN || !info.sizeInBytes)
     return false;
 
-  const uptr map_beg = AmdgpuPointerInfoMapBase(ptr, info);
+  const uptr map_beg = AmdHsaPointerInfoMapBase(ptr, info);
   if (!map_beg)
     return false;
 
@@ -284,10 +284,10 @@ bool AmdgpuDeviceAllocator::GetPointerInfo(uptr ptr,
 }
 // Register shutdown system event handler only once
 // TODO: Register multiple event handlers if needed in future
-void AmdgpuDeviceAllocator::RegisterSystemEventHandlers() {
+void AmdHsaDeviceAllocator::RegisterSystemEventHandlers() {
   uint8_t registered = 0;
   // Check if shutdown event handler is already registered
-  if (atomic_compare_exchange_strong(&amdgpu_event_registered, &registered, 1,
+  if (atomic_compare_exchange_strong(&amdhsa_event_registered, &registered, 1,
                                      memory_order_acq_rel)) {
     // Callback to detect and notify AMDGPU runtime shutdown
     hsa_amd_system_event_callback_t callback = [](const hsa_amd_event_t* event,
@@ -295,7 +295,7 @@ void AmdgpuDeviceAllocator::RegisterSystemEventHandlers() {
       if (!event)
         return HSA_STATUS_ERROR_INVALID_ARGUMENT;
       if (event->event_type == HSA_AMD_SYSTEM_SHUTDOWN_EVENT)
-        AmdgpuDeviceAllocator::NotifyRuntimeShutdown();
+        AmdHsaDeviceAllocator::NotifyRuntimeShutdown();
       return HSA_STATUS_SUCCESS;
     };
     // Register the event callback
@@ -305,17 +305,17 @@ void AmdgpuDeviceAllocator::RegisterSystemEventHandlers() {
     if (status == HSA_STATUS_SUCCESS)
       VReport(
           1,
-          "Amdgpu RegisterSystemEventHandlers: Registered shutdown event \n");
+          "AmdHsa RegisterSystemEventHandlers: Registered shutdown event \n");
     else {
       VReport(1,
-              "Amdgpu RegisterSystemEventHandlers: Failed to register shutdown "
+              "AmdHsa RegisterSystemEventHandlers: Failed to register shutdown "
               "event \n");
-      atomic_store(&amdgpu_event_registered, 0, memory_order_release);
+      atomic_store(&amdhsa_event_registered, 0, memory_order_release);
     }
   }
 }
 
-uptr AmdgpuDeviceAllocator::GetPageSize() { return kPageSize_; }
+uptr AmdHsaDeviceAllocator::GetPageSize() { return kPageSize_; }
 
 // File-scope singleton: function-local static would emit __cxa_guard_* calls
 // that are unavailable when this TU is linked into standalone runtimes.

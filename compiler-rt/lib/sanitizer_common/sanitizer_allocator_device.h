@@ -15,7 +15,7 @@
 
 // DeviceAllocatorT: device-mapped heap bookkeeping. Map/unmap uses the
 // primary's MapUnmapCallback. Alloc/free/pointer queries use DeviceBackend
-// (NoOpDeviceAllocator, AmdgpuDeviceAllocator, ...).
+// (NoOpDeviceAllocator, AmdHsaDeviceAllocator, ...).
 
 enum DeviceAllocationType {
   DAT_UNKNOWN = 0,
