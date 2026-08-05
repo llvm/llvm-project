@@ -6636,7 +6636,8 @@ TEST_P(ErrorHandlingTest, ImportedTypeCacheIsInvalidatedOnFailure) {
   // gone wrong, because ASTImporter::ImportedTypes was never scrubbed
   // when X's own Decl import failed.
   ASTImporter *Importer = findFromTU(FromX)->Importer.get();
-  const Type *FromXTy = FromTU->getASTContext().getCanonicalTagType(FromX)->getTypePtr();
+  const Type *FromXTy =
+      FromTU->getASTContext().getCanonicalTagType(FromX)->getTypePtr();
   ASSERT_TRUE(FromXTy);
   Expected<const Type *> ToTyOrErr = Importer->Import(FromXTy);
   EXPECT_FALSE(static_cast<bool>(ToTyOrErr));
