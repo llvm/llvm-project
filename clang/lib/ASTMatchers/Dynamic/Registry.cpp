@@ -534,6 +534,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(ompFromClause);
   REGISTER_MATCHER(ompToClause);
   REGISTER_MATCHER(ompExecutableDirective);
+  REGISTER_MATCHER(ompFlattenDirective);
   REGISTER_MATCHER(ompSplitDirective);
   REGISTER_MATCHER(ompTargetUpdateDirective);
   REGISTER_MATCHER(on);

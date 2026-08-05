@@ -1,0 +1,89 @@
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -std=c++20 -fopenmp -fopenmp-version=60 -fsyntax-only -Wuninitialized -verify %s
+
+extern "C" void body(...);
+
+void func(int n) {
+
+  // The associated statement must be a for loop.
+  // expected-error@+2 {{statement after '#pragma omp flatten' must be a for loop}}
+  #pragma omp flatten
+  ;
+
+  // A non-loop statement is rejected as well.
+  // expected-error@+2 {{statement after '#pragma omp flatten' must be a for loop}}
+  #pragma omp flatten
+  int b = 0;
+
+  // A single loop is not enough: flatten combines two perfectly nested loops,
+  // so the body of the outer loop must itself be a for loop.
+  #pragma omp flatten
+  for (int i = 0; i < 7; ++i)
+    // expected-error@+1 {{statement after '#pragma omp flatten' must be a for loop}}
+    ;
+
+  // The associated statement of a directive is not a for loop.
+  // expected-error@+2 {{statement after '#pragma omp flatten' must be a for loop}}
+  #pragma omp flatten
+  #pragma omp for
+  for (int i = 0; i < 7; ++i)
+    for (int j = 0; j < 7; ++j)
+      body(i, j);
+
+  {
+    // expected-error@+2 {{expected statement}}
+    #pragma omp flatten
+  }
+
+  // The loops must be perfectly nested: no code is allowed between them.
+  #pragma omp flatten
+  for (int i = 0; i < n; ++i) {
+    int x = 0;
+    // expected-error@-2 {{statement after '#pragma omp flatten' must be a for loop}}
+    for (int j = 0; j < n; ++j)
+      body(i, j, x);
+  }
+
+  // Each affected loop must be in OpenMP canonical form.
+  #pragma omp flatten
+  for (int i = 0; i < n; ++i)
+    // expected-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', '>=', or '!=') of loop variable 'j'}}
+    for (int j = 0; j / 3 < n; ++j)
+      body(i, j);
+
+  // The affected loops must be rectangular: an inner bound may not depend on an
+  // outer loop counter.
+  #pragma omp flatten
+  for (int i = 0; i < n; ++i)
+    // expected-error@+1 {{expected loop invariant expression}}
+    for (int j = i; j < n; ++j)
+      body(i, j);
+
+  // The 'sizes' clause is not allowed on 'flatten'.
+  // expected-error@+1 {{unexpected OpenMP clause 'sizes' in directive '#pragma omp flatten'}}
+  #pragma omp flatten sizes(2)
+  for (int i = 0; i < 7; ++i)
+    for (int j = 0; j < 9; ++j)
+      body(i, j);
+
+  // The 'permutation' clause is not allowed on 'flatten'.
+  // expected-error@+1 {{unexpected OpenMP clause 'permutation' in directive '#pragma omp flatten'}}
+  #pragma omp flatten permutation(2, 1)
+  for (int i = 0; i < 7; ++i)
+    for (int j = 0; j < 9; ++j)
+      body(i, j);
+
+  // Tokens after the directive name are ignored with a warning.
+  // expected-warning@+1 {{extra tokens at the end of '#pragma omp flatten' are ignored}}
+  #pragma omp flatten foo
+  for (int i = 0; i < 7; ++i)
+    for (int j = 0; j < 9; ++j)
+      body(i, j);
+
+  // The 'depth' clause is only available from OpenMP 6.1; it is rejected here
+  // under -fopenmp-version=60.
+  // expected-error@+1 {{unexpected OpenMP clause 'depth' in directive '#pragma omp flatten'}}
+  #pragma omp flatten depth(2)
+  for (int i = 0; i < 7; ++i)
+    for (int j = 0; j < 9; ++j)
+      body(i, j);
+}
