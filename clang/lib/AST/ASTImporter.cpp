@@ -3847,10 +3847,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     // Functions with auto return type may define a struct inside their body
     // and the return type could refer to that struct.
     // E.g.: auto foo() { struct X{}; return X(); }
-    // To avoid an infinite recursion when importing, create the FunctionDecl
-    // with a simplified return type.
-    // Reuse this approach for auto return types declared as typenames from
-    // template params, tracked in FindFunctionDeclImportCycle.
+    // There are many more cases when types inside the function declaration
+    // can appear in the return type, like types declared as typenames from
+    // template params.
+    // All such cases are tracked in FindFunctionDeclImportCycle.
     if (Importer.FindFunctionDeclImportCycle.isCycle(D)) {
       FromReturnTy = Importer.getFromContext().VoidTy;
       UsedDifferentProtoType = true;
