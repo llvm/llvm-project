@@ -1100,6 +1100,10 @@ const ProgramPointTag *ExprEngine::cleanupNodeTag() {
   return &cleanupTag;
 }
 
+static bool justRunCheckersAsPreVisit(const Stmt *S) { return false; }
+
+static bool justRunCheckersAsPostVisit(const Stmt *S) { return false; }
+
 void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   // Reclaim any unnecessary nodes in the ExplodedGraph.
   G.reclaimRecentlyAllocatedNodes();
@@ -1115,17 +1119,35 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   } else
     CleanedStates.insert(Pred);
 
-  // Visit the statement.
-  ExplodedNodeSet Dst;
+  ExplodedNodeSet PreVisited;
   for (const auto I : CleanedStates) {
-    ExplodedNodeSet DstI;
-    // Visit the statement.
-    Visit(currStmt, I, DstI);
-    Dst.insert(DstI);
+    ExplodedNodeSet Tmp;
+    if (justRunCheckersAsPreVisit(currStmt)) {
+      getCheckerManager().runCheckersForPreStmt(Tmp, I, currStmt, *this);
+      PreVisited.insert(Tmp);
+    } else
+      PreVisited.insert(I);
+  }
+
+  ExplodedNodeSet Visited;
+  for (const auto I : PreVisited) {
+    ExplodedNodeSet Tmp;
+    Visit(currStmt, I, Tmp);
+    Visited.insert(Tmp);
+  }
+
+  ExplodedNodeSet PostVisited;
+  for (const auto I : Visited) {
+    ExplodedNodeSet Tmp;
+    if (justRunCheckersAsPostVisit(currStmt)) {
+      getCheckerManager().runCheckersForPostStmt(Tmp, I, currStmt, *this);
+      PostVisited.insert(Tmp);
+    } else
+      PostVisited.insert(I);
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(PostVisited, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
