@@ -1100,9 +1100,23 @@ const ProgramPointTag *ExprEngine::cleanupNodeTag() {
   return &cleanupTag;
 }
 
-static bool justRunCheckersAsPreVisit(const Stmt *S) { return false; }
+static bool justRunCheckersAsPreVisit(const Stmt *S) {
+  switch (S->getStmtClass()) {
+  default:
+    return false;
+  case Stmt::CXXBindTemporaryExprClass:
+    return true;
+  }
+}
 
-static bool justRunCheckersAsPostVisit(const Stmt *S) { return false; }
+static bool justRunCheckersAsPostVisit(const Stmt *S) {
+  switch (S->getStmtClass()) {
+  default:
+    return false;
+  case Stmt::CXXBindTemporaryExprClass:
+    return true;
+  }
+}
 
 void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   // Reclaim any unnecessary nodes in the ExplodedGraph.
@@ -1648,7 +1662,7 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
 }
 
 void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
-                                           ExplodedNodeSet &PreVisit,
+                                           ExplodedNode *Pred,
                                            ExplodedNodeSet &Dst) {
   // This is a fallback solution in case we didn't have a construction
   // context when we were constructing the temporary. Otherwise the map should
@@ -1656,21 +1670,19 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
   if (!getAnalysisManager().options.ShouldIncludeTemporaryDtorsInCFG) {
     // In case we don't have temporary destructors in the CFG, do not mark
     // the initialization - we would otherwise never clean it up.
-    Dst = PreVisit;
+    Dst.insert(Pred);
     return;
   }
-  for (ExplodedNode *Node : PreVisit) {
-    ProgramStateRef State = Node->getState();
-    const StackFrame *SF = Node->getStackFrame();
-    if (!getObjectUnderConstruction(State, BTE, SF)) {
-      // FIXME: Currently the state might also already contain the marker due to
-      // incorrect handling of temporaries bound to default parameters; for
-      // those, we currently skip the CXXBindTemporaryExpr but rely on adding
-      // temporary destructor nodes.
-      State = addObjectUnderConstruction(State, BTE, SF, UnknownVal());
-    }
-    Dst.insert(Engine.makePostStmtNode(BTE, State, Node));
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+  if (!getObjectUnderConstruction(State, BTE, SF)) {
+    // FIXME: Currently the state might also already contain the marker due to
+    // incorrect handling of temporaries bound to default parameters; for
+    // those, we currently skip the CXXBindTemporaryExpr but rely on adding
+    // temporary destructor nodes.
+    State = addObjectUnderConstruction(State, BTE, SF, UnknownVal());
   }
+  Dst.insert(Engine.makePostStmtNode(BTE, State, Pred));
 }
 
 ProgramStateRef ExprEngine::escapeValues(ProgramStateRef State,
@@ -1898,14 +1910,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       // Handled due to fully linearised CFG.
       break;
 
-    case Stmt::CXXBindTemporaryExprClass: {
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-      ExplodedNodeSet Next;
-      VisitCXXBindTemporaryExpr(cast<CXXBindTemporaryExpr>(S), PreVisit, Next);
-      getCheckerManager().runCheckersForPostStmt(Dst, Next, S, *this);
+    case Stmt::CXXBindTemporaryExprClass:
+      VisitCXXBindTemporaryExpr(cast<CXXBindTemporaryExpr>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::ArrayInitLoopExprClass:
       VisitArrayInitLoopExpr(cast<ArrayInitLoopExpr>(S), Pred, Dst);
