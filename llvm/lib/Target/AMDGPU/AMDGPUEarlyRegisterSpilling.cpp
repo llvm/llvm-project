@@ -75,7 +75,12 @@ public:
   enum class CodeGenPlan {
     EmitSpillRestore, // This is the common case where we emit spill/restore
                       // instructions.
-    MoveRestoreInsideTheLoop, // Move the restore inside the loop.
+    MoveRestoreBeforeUseInsideLoop, // Move the restore before the use if the
+                                    // use is in the outermost loop.
+    MoveRestoreInLoopPrehearedInsideLoop, // If the use is not in the outermost
+                                          // loop, then we emit the restore in
+                                          // the loop preheader in the outermost
+                                          // loop.
     EmitNewRestoreBeforeUse, // Emit a restore before a use instead of using the
                              // restore of the Head of the group.
   };
@@ -421,8 +426,9 @@ void RestoreCandidate::generateSpillRestoreInstrs(
   MachineBasicBlock *CurMBB = CurMI->getParent();
 
   CodeGenPlan Plan = getCodeGenPlan();
+
   switch (Plan) {
-  case CodeGenPlan::MoveRestoreInsideTheLoop: {
+  case CodeGenPlan::MoveRestoreBeforeUseInsideLoop: {
     // Move the restore that is in loop preheader inside the loop before the
     // HEAD.
     assert(GroupsOfUses.size() == 1 &&
@@ -477,6 +483,64 @@ void RestoreCandidate::generateSpillRestoreInstrs(
 
     // Update RestoreRegToDomGroup map with the updated DomGroup.
     RestoreRegToDomGroup[OrigRestore->getOperand(0).getReg()] = DG;
+
+    break;
+  }
+  case CodeGenPlan::MoveRestoreInLoopPrehearedInsideLoop: {
+
+    DomGroup &DG = *GroupsOfUses.begin();
+    MachineInstr *Head = DG.getHead();
+    MachineBasicBlock *HeadMBB = Head->getParent();
+    MachineInstr *OrigRestore = DG.getRestore();
+    MachineBasicBlock *NewRestoreBlock = DG.getRestoreBlock();
+    OrigRestore->removeFromParent();
+    MachineBasicBlock::iterator WhereToRestore =
+        NewRestoreBlock->getFirstTerminator();
+    if (WhereToRestore == NewRestoreBlock->end())
+      WhereToRestore = NewRestoreBlock->instr_end();
+    NewRestoreBlock->insert(WhereToRestore, OrigRestore);
+
+    updateIndexes(OrigRestore, Indexes);
+    updateLiveness(OrigRestore, LIS);
+    updateIndexes(Head, Indexes);
+    updateLiveness(Head, LIS);
+    NUA->updateInstrIds(Head);
+    NUA->updateInstrIds(OrigRestore);
+
+    if ((OrigRestore != CurMI) && (Head != CurMI)) {
+      updateIndexes(CurMI, Indexes);
+      updateLiveness(CurMI, LIS);
+      if ((HeadMBB != CurMBB) && (NewRestoreBlock != CurMBB))
+        NUA->updateInstrIds(CurMI);
+    }
+
+    // Update RestoreRegToDomGroup map with the updated DomGroup.
+    RestoreRegToDomGroup[OrigRestore->getOperand(0).getReg()] = DG;
+
+    LLVM_DEBUG(dbgs() << "------------------------------------------------\n");
+    LLVM_DEBUG(dbgs() << "Plan: Move restore instruction from loop preheader "
+                         "(outside the loop) inside the outermost loop. \n");
+    LLVM_DEBUG(dbgs() << "------------------------------------------------\n");
+    LLVM_DEBUG(dbgs() << "The high register pressure point is " << *CurMI);
+    LLVM_DEBUG(dbgs() << "The high register pressure block is bb."
+                      << CurMBB->getNumber() << "\n");
+    if (MLI->getLoopFor(CurMBB)) {
+      LLVM_DEBUG(dbgs() << "The high register pressure point is in a loop\n");
+    } else {
+      LLVM_DEBUG(
+          dbgs() << "The high register pressure point is not in a loop\n");
+    }
+    LLVM_DEBUG(dbgs() << "Candidate register = " << printReg(CandidateReg, TRI)
+                      << "\n");
+    LLVM_DEBUG(dbgs() << "Original restore = " << *OrigRestore << "\n");
+    LLVM_DEBUG(dbgs() << "Move restore at the end of bb."
+                      << NewRestoreBlock->getNumber() << "\n");
+    LLVM_DEBUG(
+        dbgs() << "Live interval for restored register "
+               << printReg(OrigRestore->getOperand(0).getReg(), TRI) << ": ";
+        LIS->getInterval(OrigRestore->getOperand(0).getReg()).print(dbgs());
+        dbgs() << "\n");
+
     break;
   }
   case CodeGenPlan::EmitNewRestoreBeforeUse: {
@@ -1303,8 +1367,12 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
   // instruction for the head of the group or if a use is inside the loop, we
   // emit the restore in loop preheader. If we found out that the above restore
   // optimizations increase the pressure, then we do one of the following:
-  // - CodeGenPlan::MoveRestoreInsideTheLoop : move the restore instruction from
-  // the loop preheader to the use inside the loop.
+  // - CodeGenPlan::MoveRestoreBeforeUseInsideLoop : move the restore
+  // instruction from the loop preheader to the use inside the loop.
+  // - CodeGenPlan::MoveRestoreInLoopPrehearedInsideLoop : We do not want to
+  // move the restore in loops with lood depth > 1. In this case, we move the
+  // restore inside the loop and in the loop preheader of the loop nest with
+  // loop depth 2.
   // - CodeGenPlan::EmitNewRestoreBeforeUse : This breaks the live range from
   // the Head of the group to the use(s) in the high register pressure area.
   //
@@ -1342,21 +1410,52 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
           (CurMI == Head ||
            (DT->dominates(CurMI, Head) && !DT->dominates(Head, CurMI)))) {
 
-        // Create Candidate information.
-        auto Candidate = std::make_unique<RestoreCandidate>(
-            OrigRestore->getOperand(0).getReg(), Mask,
-            RestoreCandidate::CodeGenPlan::MoveRestoreInsideTheLoop, TRI, MRI,
-            TII, FrameInfo, LIS, Indexes, DT, MLI, NUA);
+        MachineLoop *HeadLoop = MLI->getLoopFor(Head->getParent());
 
-        Candidate->addGroup(DG);
+        if (HeadLoop->getLoopDepth() == 1) {
+          // Create Candidate information.
+          auto Candidate = std::make_unique<RestoreCandidate>(
+              OrigRestore->getOperand(0).getReg(), Mask,
+              RestoreCandidate::CodeGenPlan::MoveRestoreBeforeUseInsideLoop,
+              TRI, MRI, TII, FrameInfo, LIS, Indexes, DT, MLI, NUA);
 
-        // Calculate the restore cost.
-        Candidate->calculateSpillRestoreCost();
-        Candidate->setNextUseDistance(NextUseDist);
-        LLVM_DEBUG(dbgs() << "Restore cost for register = "
-                          << printReg(CandidateReg, TRI) << " = "
-                          << Candidate->getSpillRestoreCost() << "\n");
-        FinalCandidates.push_back(std::move(Candidate));
+          Candidate->addGroup(DG);
+
+          // Calculate the restore cost.
+          Candidate->calculateSpillRestoreCost();
+          Candidate->setNextUseDistance(NextUseDist);
+          LLVM_DEBUG(dbgs() << "Restore cost for register = "
+                            << printReg(CandidateReg, TRI) << " = "
+                            << Candidate->getSpillRestoreCost() << "\n");
+          FinalCandidates.push_back(std::move(Candidate));
+        } else {
+          MachineLoop *CurLoop = HeadLoop;
+          while (CurLoop->getLoopDepth() > 2) {
+            CurLoop = CurLoop->getParentLoop();
+          }
+          assert(CurLoop->getLoopDepth() == 2 &&
+                 "The loop has wrong loop depth.");
+          MachineBasicBlock *CurLoopPreheader = CurLoop->getLoopPreheader();
+          assert(CurLoopPreheader && "There is not loop preheader");
+
+          // Create Candidate information.
+          auto Candidate = std::make_unique<RestoreCandidate>(
+              OrigRestore->getOperand(0).getReg(), Mask,
+              RestoreCandidate::CodeGenPlan::
+                  MoveRestoreInLoopPrehearedInsideLoop,
+              TRI, MRI, TII, FrameInfo, LIS, Indexes, DT, MLI, NUA);
+
+          DG.setRestoreBlock(CurLoopPreheader);
+          Candidate->addGroup(DG);
+
+          // Calculate the restore cost.
+          Candidate->calculateSpillRestoreCost();
+          Candidate->setNextUseDistance(NextUseDist);
+          LLVM_DEBUG(dbgs() << "Restore cost for register = "
+                            << printReg(CandidateReg, TRI) << " = "
+                            << Candidate->getSpillRestoreCost() << "\n");
+          FinalCandidates.push_back(std::move(Candidate));
+        }
       } else {
 
         if (DG.size() == 1)
