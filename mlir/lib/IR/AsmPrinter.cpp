@@ -3589,12 +3589,8 @@ void OperationPrinter::printResourceFileMetadata(
 
         // Skip serializing entirely if the exact size already exceeds the
         // limit, e.g. hex-encoding a large blob.
-        if (sizeHint >= 0 && uint64_t(sizeHint) > charLimit.value()) {
-          LLVM_DEBUG(llvm::dbgs() << "eliding resource '" << key
-                                  << "' without materializing (sizeHint="
-                                  << sizeHint << ")\n");
+        if (sizeHint >= 0 && uint64_t(sizeHint) > charLimit.value())
           return;
-        }
 
         llvm::raw_string_ostream ss(resourceStr);
         valueFn(ss);

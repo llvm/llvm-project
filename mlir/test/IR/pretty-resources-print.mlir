@@ -1,4 +1,3 @@
-// REQUIRES: asserts
 // Check printing with --mlir-elide-resource-strings-if-larger elides printing large resources
 
 // RUN: mlir-opt %s --mlir-elide-resource-strings-if-larger=20| FileCheck %s
@@ -9,12 +8,6 @@
 // these two RUN lines check the off-by-one boundary of the sizeHint-based elision.
 // RUN: mlir-opt %s --mlir-elide-resource-strings-if-larger=14| FileCheck %s --check-prefix=BOUND14
 // RUN: mlir-opt %s --mlir-elide-resource-strings-if-larger=13| FileCheck %s --check-prefix=BOUND13
-
-// These directly verify the sizeHint fast path itself (not just the resulting output) by
-// checking for its debug log: it must fire when blob3 is elided but not when it is printed.
-// RUN: mlir-opt %s --mlir-elide-resource-strings-if-larger=13 --debug-only=mlir-asm-printer 2>&1 | FileCheck %s --check-prefix=DEBUG-ELIDE
-// RUN: mlir-opt %s --mlir-elide-resource-strings-if-larger=14 --debug-only=mlir-asm-printer 2>&1 | FileCheck %s --check-prefix=DEBUG-PRINT
-
 
 // To ensure we print the resource keys, have reference to them
 // CHECK: attr = dense_resource<blob1> : tensor<3xi64>
@@ -34,9 +27,6 @@
 // BOUND14-NEXT: attr = dense_resource<blob3> : tensor<1xi8>
 // BOUND13-NEXT: attr = dense_resource<blob3> : tensor<1xi8>
 "test.blob3op"() {attr = dense_resource<blob3> : tensor<1xi8> } : () -> ()
-
-// DEBUG-ELIDE: eliding resource 'blob3' without materializing (sizeHint=14)
-// DEBUG-PRINT-NOT: eliding resource 'blob3' without materializing
 
 // CHECK:      {-#
 // CHECK-NEXT:   dialect_resources: {
