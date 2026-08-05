@@ -215,7 +215,7 @@ void InProcessControllerAccess::callController(
 }
 
 void InProcessControllerAccess::sendWrapperResult(
-    uint64_t CallId, WrapperFunctionBuffer ResultBytes) {
+    WrapperFunctionBuffer ResultBytes, uint64_t CallId) {
   assert(C && "sendWrapperResult called before connect");
   if (C->EnterMessageScope(C)) {
     C->ReturnWrapperResult(C->IPEPC, CallId, ResultBytes.release());
@@ -245,8 +245,8 @@ void InProcessControllerAccess::doDisconnect() {
 
 void InProcessControllerAccess::callWrapper(
     uint64_t CallId, void *Fn, orc_rt_WrapperFunctionBuffer ArgBytes) {
-  handleWrapperCall(CallId, reinterpret_cast<orc_rt_WrapperFunction>(Fn),
-                    WrapperFunctionBuffer(ArgBytes));
+  handleWrapperCall(reinterpret_cast<orc_rt_WrapperFunction>(Fn),
+                    WrapperFunctionBuffer(ArgBytes), CallId);
 }
 
 void InProcessControllerAccess::callWrapperEntry(
