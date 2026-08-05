@@ -268,12 +268,14 @@ enum ScriptedExtension {
   eScriptedExtensionScriptedThread,
   eScriptedExtensionScriptedFrame,
   eScriptedExtensionScriptedStackFrameRecognizer,
-  eScriptedExtensionScriptedCommand,
-  eScriptedExtensionParsedCommand,
-  eScriptedExtensionScriptedStringSummary,
-  eScriptedExtensionScriptedSyntheticChildren,
-  kLastScriptedExtension = eScriptedExtensionScriptedSyntheticChildren
+  kLastScriptedExtension = eScriptedExtensionScriptedStackFrameRecognizer
 };
+//enum for the Thread Tracers in Thread.cpp
+enum ThreadTracerKind {
+  eThreadTracerKindDefault = 0,
+  eThreadTracerKindAssembly,
+};
+
 
 /// Register numbering types.
 // See RegisterContext::ConvertRegisterKindToRegisterNumber to convert any of
@@ -927,7 +929,6 @@ enum SectionType {
   eSectionTypeLLDBFormatters,
   eSectionTypeSwiftModules,
   eSectionTypeWasmName,
-  eSectionTypeWasmGlobal,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){

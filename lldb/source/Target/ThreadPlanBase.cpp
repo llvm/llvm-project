@@ -30,15 +30,24 @@ using namespace lldb_private;
 ThreadPlanBase::ThreadPlanBase(Thread &thread)
     : ThreadPlan(ThreadPlan::eKindBase, "base plan", thread, eVoteYes,
                  eVoteNoOpinion) {
-// Set the tracer to a default tracer.
-// FIXME: need to add a thread settings variable to pix various tracers...
-#define THREAD_PLAN_USE_ASSEMBLY_TRACER 1
-
-#ifdef THREAD_PLAN_USE_ASSEMBLY_TRACER
-  ThreadPlanTracerSP new_tracer_sp(new ThreadPlanAssemblyTracer(thread));
-#else
-  ThreadPlanTracerSP new_tracer_sp(new ThreadPlanTracer(m_thread));
-#endif
+// =========================================================================
+  // THREAD PLAN TRACER SELECTION
+  // To add a new custom tracer:
+  // 1. Add your tracer enum value to `lldb::ThreadTracerKind` in `lldb-enumerations.h`.
+  // 2. Map the CLI string in `g_thread_tracer_kind_values` in `Thread.cpp`.
+  // 3. Add a new `case` label below to instantiate your `ThreadPlanTracer` subclass.
+  // =========================================================================                  
+ThreadPlanTracerSP new_tracer_sp;
+  switch (thread.GetTracerKind()) {
+  case eThreadTracerKindDefault:
+    new_tracer_sp = std::make_shared<ThreadPlanTracer>(thread);
+    break;
+  case eThreadTracerKindAssembly:
+  default:
+    new_tracer_sp = std::make_shared<ThreadPlanAssemblyTracer>(thread);
+    break;
+  }
+  
   new_tracer_sp->EnableTracing(thread.GetTraceEnabledState());
   SetThreadPlanTracer(new_tracer_sp);
   SetIsControllingPlan(true);
@@ -47,7 +56,7 @@ ThreadPlanBase::ThreadPlanBase(Thread &thread)
 ThreadPlanBase::~ThreadPlanBase() = default;
 
 void ThreadPlanBase::GetDescription(Stream *s, lldb::DescriptionLevel level) {
-  s->PutCString("Base thread plan.");
+  s->Printf("Base thread plan.");
 }
 
 bool ThreadPlanBase::ValidatePlan(Stream *error) { return true; }

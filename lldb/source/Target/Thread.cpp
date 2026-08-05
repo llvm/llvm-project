@@ -80,6 +80,23 @@ enum {
 #include "TargetPropertiesEnum.inc"
 };
 
+
+static constexpr OptionEnumValueElement g_thread_tracer_kind_values[] = {
+    {
+        eThreadTracerDefault,
+        "default",
+        "Standard thread tracer (logs stack frame and source location)",
+    },
+    {
+        eThreadTracerAssembly,
+        "assembly",
+        "Instruction-level assembly tracer (disassembles code and logs register diffs)",
+    },
+    
+};
+
+
+
 class ThreadOptionValueProperties
     : public Cloneable<ThreadOptionValueProperties, OptionValueProperties> {
 public:
@@ -112,6 +129,12 @@ ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   } else
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Thread::GetGlobalProperties());
+}
+
+lldb::ThreadTracerKind ThreadProperties::GetTracerKind() const {
+  const uint32_t idx = ePropertyThreadTracerKind;
+  return static_cast<lldb::ThreadTracerKind>(
+      GetPropertyAtIndexAsEnum(idx, g_thread_properties[idx].default_uint_value));
 }
 
 ThreadProperties::~ThreadProperties() = default;
@@ -2156,21 +2179,21 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
                             bool print_json_thread, bool print_json_stopinfo) {
   const bool stop_format = false;
   DumpUsingSettingsFormat(strm, 0, stop_format);
-  strm.PutCString("\n");
+  strm.Printf("\n");
 
   StructuredData::ObjectSP thread_info = GetExtendedInfo();
 
   if (print_json_thread || print_json_stopinfo) {
     if (thread_info && print_json_thread) {
       thread_info->Dump(strm);
-      strm.PutCString("\n");
+      strm.Printf("\n");
     }
 
     if (print_json_stopinfo && m_stop_info_sp) {
       StructuredData::ObjectSP stop_info = m_stop_info_sp->GetExtendedInfo();
       if (stop_info) {
         stop_info->Dump(strm);
-        strm.PutCString("\n");
+        strm.Printf("\n");
       }
     }
 
@@ -2201,7 +2224,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     bool printed_breadcrumb = false;
     if (breadcrumb && breadcrumb->GetType() == eStructuredDataTypeDictionary) {
       if (printed_activity)
-        strm.PutCString("\n");
+        strm.Printf("\n");
       StructuredData::Dictionary *breadcrumb_dict =
           breadcrumb->GetAsDictionary();
       StructuredData::ObjectSP breadcrumb_text =
@@ -2215,7 +2238,7 @@ bool Thread::GetDescription(Stream &strm, lldb::DescriptionLevel level,
     }
     if (messages && messages->GetType() == eStructuredDataTypeArray) {
       if (printed_breadcrumb)
-        strm.PutCString("\n");
+        strm.Printf("\n");
       StructuredData::Array *messages_array = messages->GetAsArray();
       const size_t msg_count = messages_array->GetSize();
       if (msg_count > 0) {
