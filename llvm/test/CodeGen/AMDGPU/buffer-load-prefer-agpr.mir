@@ -1,0 +1,64 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 \
+# RUN:   -run-pass=amdgpu-prepare-agpr-alloc,greedy,virtregrewriter \
+# RUN:   -verify-regalloc -verify-machineinstrs -o - %s | \
+# RUN:   FileCheck --check-prefixes=VGPR,COMMON %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 \
+# RUN:   -amdgpu-buffer-load-prefer-agpr=false \
+# RUN:   -run-pass=amdgpu-prepare-agpr-alloc,greedy,virtregrewriter \
+# RUN:   -verify-regalloc -verify-machineinstrs -o - %s | \
+# RUN:   FileCheck --check-prefixes=VGPR,COMMON %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 \
+# RUN:   -amdgpu-buffer-load-prefer-agpr=true \
+# RUN:   -run-pass=amdgpu-prepare-agpr-alloc,greedy,virtregrewriter \
+# RUN:   -verify-regalloc -verify-machineinstrs -o - %s | \
+# RUN:   FileCheck --check-prefixes=AGPR,COMMON %s
+
+--- |
+  define amdgpu_kernel void @prefer_agpr_mfma() {
+    ret void
+  }
+
+  define amdgpu_kernel void @require_vgpr() {
+    ret void
+  }
+...
+---
+name:            prefer_agpr_mfma
+tracksRegLiveness: true
+body:             |
+  ; AGPR-LABEL: name: prefer_agpr_mfma
+  ; AGPR: [[LOAD:\$agpr[0-9]+_agpr[0-9]+]] = BUFFER_LOAD_DWORDX2_OFFSET
+  ; AGPR: V_SMFMAC_F32_16X16X32_F16_e64 [[LOAD]],
+  ; AGPR: BUFFER_STORE_DWORDX2_OFFSET killed renamable [[LOAD]],
+  ; VGPR-LABEL: name: prefer_agpr_mfma
+  ; VGPR: [[LOAD:\$vgpr[0-9]+_vgpr[0-9]+]] = BUFFER_LOAD_DWORDX2_OFFSET
+  ; VGPR: V_SMFMAC_F32_16X16X32_F16_e64 [[LOAD]],
+  ; VGPR: BUFFER_STORE_DWORDX2_OFFSET killed renamable [[LOAD]],
+  bb.0:
+    %0:av_64_align2 = BUFFER_LOAD_DWORDX2_OFFSET undef %1:sgpr_128, 0, 0, 0, 0, implicit $exec
+    %2:av_128_align2 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:av_128_align2 = IMPLICIT_DEF
+    %4:av_128_align2 = V_SMFMAC_F32_16X16X32_F16_e64 %0, %2, %3, 0, 0, %4, implicit $mode, implicit $exec
+    BUFFER_STORE_DWORDX4_OFFSET %4, undef %1:sgpr_128, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX2_OFFSET %0, undef %1:sgpr_128, 0, 8, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
+---
+name:            require_vgpr
+tracksRegLiveness: true
+body:             |
+  ; COMMON-LABEL: name: require_vgpr
+  ; COMMON: [[LOAD_LO:\$vgpr[0-9]+]]_[[LOAD_HI:vgpr[0-9]+]] = BUFFER_LOAD_DWORDX2_OFFSET
+  ; COMMON: V_SMFMAC_F32_16X16X32_F16_e64 [[LOAD_LO]]_[[LOAD_HI]],
+  ; COMMON: V_ADD_U32_e32 killed [[LOAD_LO]],
+  bb.0:
+    ; The VGPR-only add constrains the load result to a VGPR register class.
+    %0:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFSET undef %1:sgpr_128, 0, 0, 0, 0, implicit $exec
+    %2:av_128_align2 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:av_128_align2 = IMPLICIT_DEF
+    %4:av_128_align2 = V_SMFMAC_F32_16X16X32_F16_e64 %0, %2, %3, 0, 0, %4, implicit $mode, implicit $exec
+    %5:vgpr_32 = V_ADD_U32_e32 %0.sub0, %3, implicit $exec
+    S_ENDPGM 0
+...

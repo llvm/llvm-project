@@ -22,10 +22,16 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-prepare-agpr-alloc"
+
+static cl::opt<bool> BufferLoadPreferAGPR(
+    "amdgpu-buffer-load-prefer-agpr",
+    cl::desc("Prefer AGPRs for eligible buffer load results"), cl::Hidden,
+    cl::init(false));
 
 namespace {
 
@@ -35,6 +41,7 @@ private:
   MachineRegisterInfo &MRI;
 
   bool isAV64Imm(const MachineOperand &MO) const;
+  bool shouldPreferAGPR(Register Reg) const;
 
 public:
   AMDGPUPrepareAGPRAllocImpl(const GCNSubtarget &ST, MachineRegisterInfo &MRI)
@@ -86,6 +93,22 @@ bool AMDGPUPrepareAGPRAllocImpl::isAV64Imm(const MachineOperand &MO) const {
   return MO.isImm() && TII.isLegalAV64PseudoImm(MO.getImm());
 }
 
+bool AMDGPUPrepareAGPRAllocImpl::shouldPreferAGPR(Register Reg) const {
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  if (!SIRegisterInfo::hasVGPRs(RC) || !SIRegisterInfo::hasAGPRs(RC))
+    return false;
+
+  for (const MachineOperand &Use : MRI.use_nodbg_operands(Reg)) {
+    const MachineInstr &UseMI = *Use.getParent();
+    const TargetRegisterClass *UseRC = UseMI.getRegClassConstraint(
+        Use.getOperandNo(), &TII, &TII.getRegisterInfo());
+    if (UseRC && !SIRegisterInfo::hasAGPRs(UseRC))
+      return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
   if (MRI.isReserved(AMDGPU::AGPR0))
     return false;
@@ -96,6 +119,16 @@ bool AMDGPUPrepareAGPRAllocImpl::run(MachineFunction &MF) {
   bool Changed = false;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
+      if (BufferLoadPreferAGPR && TII.isMUBUF(MI) && MI.mayLoad() &&
+          !MI.mayStore() && MI.getOperand(0).isReg() &&
+          MI.getOperand(0).isDef()) {
+        Register DstReg = MI.getOperand(0).getReg();
+        if (DstReg.isVirtual() && shouldPreferAGPR(DstReg)) {
+          MRI.setRegAllocationHint(DstReg, AMDGPURI::PreferAGPR, Register());
+          Changed = true;
+        }
+      }
+
       if ((MI.getOpcode() == AMDGPU::V_MOV_B32_e32 &&
            TII.isInlineConstant(MI, 1)) ||
           (MI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
