@@ -296,10 +296,11 @@ static bool loadLevelZero() {
   return true;
 }
 
-// Some APIs might be invalid in some level zero and
+// Some APIs might be invalid in some Level Zero and
 // compute runtime environments. They will return
 // `ZE_RESULT_ERROR_UNSUPPORTED_FEATURE`. This
 // function sets their dlwrap pointers to null
+// in this situation.
 static void invalidateLevelZeroSymbols() {
   INVALIDATE_LEVEL_ZERO_API(zeCommandListAppendLaunchKernelWithArguments);
 }
