@@ -119,3 +119,12 @@ subroutine test_iterator_mixed_object_warning(arr, other, n)
   !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data [-Wopenmp-usage]
   !$omp target enter data map(iterator(i = 1:n), to: arr, other(i))
 end subroutine
+
+subroutine test_plain_enter_iterator_exit_warning(arr, n)
+  integer, intent(inout) :: arr(:)
+  integer, intent(in) :: n
+  integer :: i
+  !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data [-Wopenmp-usage]
+  !$omp target enter data map(to: arr)
+  !$omp target exit data map(iterator(i = 1:n), from: arr(i))
+end subroutine
