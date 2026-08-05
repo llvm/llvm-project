@@ -113,6 +113,11 @@ struct LoopSplitUtils::SplitState {
   /// Values that must survive across partitions (carried and/or live-out).
   SmallVector<EscapingValue, 8> Escaping;
 
+  /// Latch compares displaced by rewriteLatch() that had no remaining use at
+  /// the time. Once SSA is reconstructed, we can know for certain which ones
+  /// are dead and erase them at that point.
+  SmallVector<ICmpInst *, 4> DanglingLatchCmps;
+
   EscapingValue &addEscaping(Value *Def) { return Escaping.emplace_back(Def); }
 };
 
@@ -319,6 +324,10 @@ bool LoopSplitUtils::split() {
   clonePartitions(S);
   chainPartitions(S);
   reconstructSSA(S);
+  // Strip out any remaining dead latch compares.
+  for (ICmpInst *Cmp : S.DanglingLatchCmps)
+    if (Cmp->use_empty())
+      Cmp->eraseFromParent();
   ExpanderCleaner.markResultUsed();
   return true;
 }
@@ -493,9 +502,11 @@ void LoopSplitUtils::clonePartitions(SplitState &S) {
 }
 
 // Replace a partition's latch test so it iterates only within [start, SelEnd].
-static void rewriteLatch(Loop *PL, Value *IndOp, Value *SelEnd,
-                         BasicBlock *Exit, bool Signed, bool Descending,
-                         bool LatchComparesPHI) {
+// Returns the old latch compare if it is now (seemingly) unused, for the caller
+// to erase if it is still dead after SSA has been rebuilt.
+static ICmpInst *rewriteLatch(Loop *PL, Value *IndOp, Value *SelEnd,
+                              BasicBlock *Exit, bool Signed, bool Descending,
+                              bool LatchComparesPHI) {
   auto *Term = cast<CondBrInst>(PL->getLoopLatch()->getTerminator());
   auto *Cmp = cast<ICmpInst>(Term->getCondition());
   IRBuilder<> B(Cmp);
@@ -518,8 +529,7 @@ static void rewriteLatch(Loop *PL, Value *IndOp, Value *SelEnd,
         /*IsExpected=*/false);
   }
   Term->eraseFromParent();
-  if (Cmp->use_empty())
-    Cmp->eraseFromParent();
+  return Cmp->use_empty() ? Cmp : nullptr;
 }
 
 // Pass 2: emit each partition's guard branch, clamp its latch, wire the
@@ -568,8 +578,10 @@ void LoopSplitUtils::chainPartitions(SplitState &S) {
     }
     GuardTerm->eraseFromParent();
 
-    rewriteLatch(P.SubLoop, P.LatchIndOp, P.SelEnd, P.Exit, InductionIsSigned,
-                 S.Descending, S.LatchComparesPHI);
+    if (ICmpInst *DanglingCmp =
+            rewriteLatch(P.SubLoop, P.LatchIndOp, P.SelEnd, P.Exit,
+                         InductionIsSigned, S.Descending, S.LatchComparesPHI))
+      S.DanglingLatchCmps.push_back(DanglingCmp);
     P.Exit->getTerminator()->setSuccessor(0, MergeAfter);
   }
 
