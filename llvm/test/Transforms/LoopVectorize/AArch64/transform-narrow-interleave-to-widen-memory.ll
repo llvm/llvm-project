@@ -613,11 +613,10 @@ define void @multiple_store_groups_storing_same_load_group(ptr noalias %A, ptr n
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = getelementptr { double, double }, ptr [[A]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
-; VF2-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x double>, ptr [[TMP0]], align 8
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr { double, double }, ptr [[B]], i64 [[INDEX]]
 ; VF2-NEXT:    store <2 x double> [[WIDE_LOAD1]], ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr { double, double }, ptr [[C]], i64 [[INDEX]]
-; VF2-NEXT:    store <2 x double> [[WIDE_LOAD2]], ptr [[TMP2]], align 8
+; VF2-NEXT:    store <2 x double> [[WIDE_LOAD1]], ptr [[TMP2]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; VF2-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
