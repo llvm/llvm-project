@@ -34,6 +34,18 @@ __attribute__((device)) void pin_wide(float12 *out, float12 in) {
   *out = x;
 }
 
+// A store from inside a lambda that captured the variable by reference reaches
+// it through the capture field of a different function, not through its alloca,
+// so the pin has to be recognised from the referenced declaration.
+// CHECK-LABEL: define{{.*}}pin_captured
+// CHECK: call <2 x i32> @llvm.amdgcn.pin.vgpr.v2i32(<2 x i32> %{{[0-9]+}}, i32 6)
+__attribute__((device)) void pin_captured(float2 *out, float2 in) {
+  __attribute__((amdgpu_pin_vgpr(6))) float2 x;
+  auto set = [&](float2 v) { x = v; };
+  set(in);
+  *out = x;
+}
+
 // A constant-expression argument (here via a template parameter) is accepted and
 // evaluated at instantiation.
 template <int N>

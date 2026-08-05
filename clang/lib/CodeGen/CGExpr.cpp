@@ -3055,6 +3055,19 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
   EmitStoreOfScalar(SV, Dst, isInit);
 }
 
+void CodeGenFunction::tryTrackAMDGPUPinnedCapture(const VarDecl *VD,
+                                                  const LValue &LV) {
+  bool IsAGPR = VD->hasAttr<AMDGPUPinAGPRAttr>();
+  if (!IsAGPR && !VD->hasAttr<AMDGPUPinVGPRAttr>())
+    return;
+  if (!getTarget().getTriple().isAMDGCN() || !LV.isSimple())
+    return;
+  const Expr *RegE = IsAGPR ? VD->getAttr<AMDGPUPinAGPRAttr>()->getReg()
+                            : VD->getAttr<AMDGPUPinVGPRAttr>()->getReg();
+  unsigned Reg = RegE->EvaluateKnownConstInt(getContext()).getZExtValue();
+  AMDGPUPinnedLocals[LV.getPointer(*this)] = {IsAGPR, Reg};
+}
+
 llvm::Value *CodeGenFunction::emitAMDGPUPinnedValue(llvm::Value *V,
                                                     llvm::Value *Addr) {
   auto It = AMDGPUPinnedLocals.find(Addr);
@@ -3727,8 +3740,11 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
     // Check for captured variables.
     if (E->refersToEnclosingVariableOrCapture()) {
       VD = VD->getCanonicalDecl();
-      if (auto *FD = LambdaCaptureFields.lookup(VD))
-        return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
+      if (auto *FD = LambdaCaptureFields.lookup(VD)) {
+        LValue CapLVal = EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
+        tryTrackAMDGPUPinnedCapture(VD, CapLVal);
+        return CapLVal;
+      }
       if (CapturedStmtInfo) {
         auto I = LocalDeclMap.find(VD);
         if (I != LocalDeclMap.end()) {
