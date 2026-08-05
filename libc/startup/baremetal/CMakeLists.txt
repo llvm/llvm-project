@@ -69,7 +69,9 @@ add_custom_target(libc-startup)
 
 set(fq_target_name libc.startup.baremetal.${LIBC_TARGET_ARCHITECTURE}.crt1)
 add_dependencies(libc-startup ${fq_target_name})
-install(FILES $<TARGET_OBJECTS:${fq_target_name}>
-        DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-        RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
-        COMPONENT libc)
+if(NOT LLVM_LIBC_ENABLE_MINOR_VARIANT)
+  install(FILES $<TARGET_OBJECTS:${fq_target_name}>
+          DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+          RENAME $<TARGET_PROPERTY:${fq_target_name},OUTPUT_NAME>
+          COMPONENT libc)
+endif()
