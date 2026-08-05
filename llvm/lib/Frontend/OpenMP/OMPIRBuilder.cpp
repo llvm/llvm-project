@@ -5808,7 +5808,8 @@ CanonicalLoopInfo *OpenMPIRBuilder::createLoopSkeleton(
 
   Builder.SetInsertPoint(Latch);
   Value *Next = Builder.CreateAdd(IndVarPHI, ConstantInt::get(IndVarTy, 1),
-                                  "omp_" + Name + ".next", /*HasNUW=*/true);
+                                  "omp_" + Name + ".next", /*HasNUW=*/true,
+                                  /*HasNSW=*/Config.hasNoSignedWrap());
   Builder.CreateBr(Header);
   IndVarPHI->addIncoming(Next, Latch);
 
@@ -6004,8 +6005,10 @@ Expected<CanonicalLoopInfo *> OpenMPIRBuilder::createCanonicalLoop(
 
   auto BodyGen = [=](InsertPointTy CodeGenIP, Value *IV) {
     Builder.restoreIP(CodeGenIP);
-    Value *Span = Builder.CreateMul(IV, Step);
-    Value *IndVar = Builder.CreateAdd(Span, Start);
+    Value *Span = Builder.CreateMul(IV, Step, "", /*HasNUW=*/false,
+                                    /*HasNSW=*/Config.hasNoSignedWrap());
+    Value *IndVar = Builder.CreateAdd(Span, Start, "", /*HasNUW=*/false,
+                                      /*HasNSW=*/Config.hasNoSignedWrap());
     if (InScan)
       ScanRedInfo->IV = IndVar;
     return BodyGenCB(Builder.saveIP(), IndVar);
@@ -6160,7 +6163,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyStaticWorkshareLoop(
     Builder.SetInsertPoint(CLI->getBody(),
                            CLI->getBody()->getFirstInsertionPt());
     Builder.SetCurrentDebugLocation(DL);
-    return Builder.CreateAdd(OldIV, LowerBound);
+    return Builder.CreateAdd(OldIV, LowerBound, "", /*HasNUW=*/false,
+                             /*HasNSW=*/Config.hasNoSignedWrap());
   });
 
   // In the "exit" block, call the "fini" function.
