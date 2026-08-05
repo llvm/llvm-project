@@ -21,6 +21,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/Flags.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -107,11 +108,16 @@ ProcessAIXCore::~ProcessAIXCore() {
 }
 
 lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore64Header header) {
-  const lldb::addr_t addr = header.StackBaseAddr;
-  FileRange file_range(header.StackOffset, header.StackSize);
-  VMRangeToFileOffset::Entry range_entry(addr, header.StackSize, file_range);
+  const uint32_t rw = lldb::ePermissionsReadable | lldb::ePermissionsWritable;
 
-  if (header.StackSize > 0) {
+  // Helper lambda: append one (vm_addr, file_offset, size) region to both
+  // address range tables, merging with the previous entry when contiguous.
+  auto append = [&](lldb::addr_t vm_addr, lldb::addr_t file_offset,
+                    lldb::addr_t size, uint32_t permissions) {
+    if (size == 0 || vm_addr == LLDB_INVALID_ADDRESS)
+      return;
+    FileRange file_range(file_offset, size);
+    VMRangeToFileOffset::Entry range_entry(vm_addr, size, file_range);
     VMRangeToFileOffset::Entry *last_entry = m_core_aranges.Back();
     if (last_entry &&
         last_entry->GetRangeEnd() == range_entry.GetRangeBase() &&
@@ -122,22 +128,32 @@ lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore64Header header) {
     } else {
         m_core_aranges.Append(range_entry);
     }
-  }
+    m_core_range_infos.Append(
+        VMRangeToPermissions::Entry(vm_addr, size, permissions));
+  };
 
-  const uint32_t permissions = lldb::ePermissionsReadable |
-      lldb::ePermissionsWritable;
+  // Stack region
+  append(header.StackBaseAddr, header.StackOffset, header.StackSize, rw);
 
-  m_core_range_infos.Append(
-      VMRangeToPermissions::Entry(addr, header.StackSize, permissions));
+  // Data region (.data)
+  append(header.DataBaseAddr, header.DataRegionOffset, header.DataSize, rw);
 
-  return addr;
+  // Small-data region (.sdata)
+  append(header.SDataBase, header.DataRegionOffset + header.DataSize,
+         header.SDataSize, rw);
+
+  return header.StackBaseAddr;
 }
-lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore32Header header) {
-  const lldb::addr_t addr = header.StackBaseAddr;
-  FileRange file_range(header.StackOffset, header.StackSize);
-  VMRangeToFileOffset::Entry range_entry(addr, header.StackSize, file_range);
 
-  if (header.StackSize > 0) {
+lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore32Header header) {
+  const uint32_t rw = lldb::ePermissionsReadable | lldb::ePermissionsWritable;
+
+  auto append = [&](lldb::addr_t vm_addr, lldb::addr_t file_offset,
+                    lldb::addr_t size, uint32_t permissions) {
+    if (size == 0 || vm_addr == LLDB_INVALID_ADDRESS)
+      return;
+    FileRange file_range(file_offset, size);
+    VMRangeToFileOffset::Entry range_entry(vm_addr, size, file_range);
     VMRangeToFileOffset::Entry *last_entry = m_core_aranges.Back();
     if (last_entry &&
         last_entry->GetRangeEnd() == range_entry.GetRangeBase() &&
@@ -148,15 +164,21 @@ lldb::addr_t ProcessAIXCore::AddAddressRanges(AIXCORE::AIXCore32Header header) {
     } else {
         m_core_aranges.Append(range_entry);
     }
-  }
+    m_core_range_infos.Append(
+        VMRangeToPermissions::Entry(vm_addr, size, permissions));
+  };
 
-  const uint32_t permissions = lldb::ePermissionsReadable |
-      lldb::ePermissionsWritable;
+  // Stack region
+  append(header.StackBaseAddr, header.StackOffset, header.StackSize, rw);
 
-  m_core_range_infos.Append(
-      VMRangeToPermissions::Entry(addr, header.StackSize, permissions));
+  // Data region (.data)
+  append(header.DataBaseAddr, header.DataRegionOffset, header.DataSize, rw);
 
-  return addr;
+  // Small-data region (.sdata)
+  append(header.SDataBase, header.DataRegionOffset + header.DataSize,
+         header.SDataSize, rw);
+
+  return header.StackBaseAddr;
 }
 
 bool ProcessAIXCore::CanDebug(lldb::TargetSP target_sp,
@@ -351,6 +373,9 @@ Status ProcessAIXCore::DoLoadCore() {
         return error;
     }
 
+    m_core_aranges.Sort();
+    m_core_range_infos.Sort();
+
     m_thread_data_valid = true;
     if (m_is64bit)
         ParseAIXCoreFile();
@@ -463,7 +488,42 @@ size_t ProcessAIXCore::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
 
 Status ProcessAIXCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                               MemoryRegionInfo &region_info) {
+  region_info.Clear();
+  const VMRangeToPermissions::Entry *permission_entry =
+      m_core_range_infos.FindEntryThatContainsOrFollows(load_addr);
+  if (permission_entry) {
+    if (permission_entry->Contains(load_addr)) {
+      region_info.GetRange().SetRangeBase(permission_entry->GetRangeBase());
+      region_info.GetRange().SetRangeEnd(permission_entry->GetRangeEnd());
+      const Flags permissions(permission_entry->data);
+      region_info.SetReadable(permissions.Test(lldb::ePermissionsReadable)
+                                  ? eLazyBoolYes
+                                  : eLazyBoolNo);
+      region_info.SetWritable(permissions.Test(lldb::ePermissionsWritable)
+                                  ? eLazyBoolYes
+                                  : eLazyBoolNo);
+      region_info.SetExecutable(permissions.Test(lldb::ePermissionsExecutable)
+                                    ? eLazyBoolYes
+                                    : eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolYes);
+    } else if (load_addr < permission_entry->GetRangeBase()) {
+      region_info.GetRange().SetRangeBase(load_addr);
+      region_info.GetRange().SetRangeEnd(permission_entry->GetRangeBase());
+      region_info.SetReadable(eLazyBoolNo);
+      region_info.SetWritable(eLazyBoolNo);
+      region_info.SetExecutable(eLazyBoolNo);
+      region_info.SetMapped(eLazyBoolNo);
+    }
     return Status();
+  }
+  // Address is beyond all known regions.
+  region_info.GetRange().SetRangeBase(load_addr);
+  region_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
+  region_info.SetReadable(eLazyBoolNo);
+  region_info.SetWritable(eLazyBoolNo);
+  region_info.SetExecutable(eLazyBoolNo);
+  region_info.SetMapped(eLazyBoolNo);
+  return Status();
 }
 
 Status ProcessAIXCore::DoDestroy() { return Status(); }

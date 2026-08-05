@@ -315,6 +315,7 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
     llvm::StringRef name_no_dot =
         symbolName.starts_with(".") ? symbolName.drop_front() : symbolName;
     auto storageClass = xcoff_sym_ref.getStorageClass();
+
     // C_HIDEXT symbols are not needed to be exposed, with the exception of TOC
     // which is responsible for storing references to global data
     if (storageClass == XCOFF::C_HIDEXT && symbolName != "TOC") {
@@ -343,6 +344,14 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
       if (m_binary->is64Bit())
         if (csect_aux.getAuxType64() != XCOFF::AUX_CSECT)
           continue;
+
+      // XTY_LD symbols are label definitions that live inside another csect
+      // Unnamed XTY_SD XMC_PR csects are raw code bodies whose named entry
+      // point is a C_EXT XTY_LD symbol 
+      if ((csect_aux.getSymbolType() == XCOFF::XTY_LD) || 
+          (csect_aux.getSymbolType() == XCOFF::XTY_SD && symbolName.empty())) {
+        continue;
+      }
     }
 
     Symbol symbol;
@@ -378,6 +387,43 @@ void ObjectFileXCOFF::ParseSymtab(Symtab &lldb_symtab) {
 
     symbol.SetType(MapSymbolType(sym_type_or_err.get()));
 
+    // For other csect symbols (C_EXT, C_WEAKEXT, C_HIDEXT) use the csect auxiliary
+    // entry to determine the symbol's byte size and whether to keep it.
+    if (xcoff_sym_ref.isCsectSymbol()) {
+      auto aux_csect_or_err = xcoff_sym_ref.getXCOFFCsectAuxRef();
+      if (aux_csect_or_err) {
+        const llvm::object::XCOFFCsectAuxRef csect_aux = aux_csect_or_err.get();
+
+        if (csect_aux.getSymbolType() == XCOFF::XTY_SD) {
+          XCOFF::StorageMappingClass smc = csect_aux.getStorageMappingClass();
+
+          // XMC_DS is a function descriptor csect in .data (3 pointers)
+          // Skip it as it is not code and would shadow the real entry symbol
+          if (smc == XCOFF::XMC_DS) {
+            continue;
+          }
+
+          // XMC_RO, XMC_RW, and XMC_BS are non-code csects (read-only data
+          // tables, writable data, BSS)
+          if (smc == XCOFF::XMC_RO || smc == XCOFF::XMC_RW ||
+              smc == XCOFF::XMC_BS) {
+            symbol.GetAddressRef() = Address();
+            uint64_t csect_size = csect_aux.getSectionOrLength();
+            if (csect_size > 0)
+              symbol.SetByteSize(csect_size);
+          } else if (smc == XCOFF::XMC_PR) {
+            // XMC_PR is a standalone named code csect (not an entry label
+            // inside a larger csect).  Set its declared size directly.
+            uint64_t csect_size = csect_aux.getSectionOrLength();
+            if (csect_size > 0) {
+              symbol.SetByteSize(csect_size);
+            }
+          }
+        }
+      } else {
+        llvm::consumeError(aux_csect_or_err.takeError());
+      }
+    }
     lldb_symtab.AddSymbol(symbol);
   }
 }
