@@ -630,35 +630,15 @@ define <4 x i32> @four_way_i8_i32_vl128_sudot(ptr %accptr, ptr %uptr, ptr %sptr)
 }
 
 define <2 x i64> @four_way_i8_i64_vl128_usdot(ptr %accptr, ptr %uptr, ptr %sptr) {
-; NEON-LABEL: four_way_i8_i64_vl128_usdot:
-; NEON:       // %bb.0:
-; NEON-NEXT:    movi v1.2d, #0000000000000000
-; NEON-NEXT:    ldr q0, [x1]
-; NEON-NEXT:    ldr q2, [x2]
-; NEON-NEXT:    usdot v1.4s, v0.16b, v2.16b
-; NEON-NEXT:    ldr q0, [x0]
-; NEON-NEXT:    sadalp v0.2d, v1.4s
-; NEON-NEXT:    ret
-;
-; SVE-LABEL: four_way_i8_i64_vl128_usdot:
-; SVE:       // %bb.0:
-; SVE-NEXT:    movi v1.2d, #0000000000000000
-; SVE-NEXT:    ldr q0, [x1]
-; SVE-NEXT:    ldr q2, [x2]
-; SVE-NEXT:    usdot z1.s, z0.b, z2.b
-; SVE-NEXT:    ldr q0, [x0]
-; SVE-NEXT:    sadalp v0.2d, v1.4s
-; SVE-NEXT:    ret
-;
-; SVE2-LABEL: four_way_i8_i64_vl128_usdot:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    movi v1.2d, #0000000000000000
-; SVE2-NEXT:    ldr q0, [x1]
-; SVE2-NEXT:    ldr q2, [x2]
-; SVE2-NEXT:    usdot z1.s, z0.b, z2.b
-; SVE2-NEXT:    ldr q0, [x0]
-; SVE2-NEXT:    sadalp v0.2d, v1.4s
-; SVE2-NEXT:    ret
+; COMMON-LABEL: four_way_i8_i64_vl128_usdot:
+; COMMON:       // %bb.0:
+; COMMON-NEXT:    movi v1.2d, #0000000000000000
+; COMMON-NEXT:    ldr q0, [x1]
+; COMMON-NEXT:    ldr q2, [x2]
+; COMMON-NEXT:    usdot v1.4s, v0.16b, v2.16b
+; COMMON-NEXT:    ldr q0, [x0]
+; COMMON-NEXT:    sadalp v0.2d, v1.4s
+; COMMON-NEXT:    ret
 ;
 ; SME-LABEL: four_way_i8_i64_vl128_usdot:
 ; SME:       // %bb.0:
@@ -1128,7 +1108,7 @@ define <2 x i64> @eight_way_i8_i64_vl128(ptr %accptr, ptr %uptr, ptr %sptr) {
 ; SVE-NEXT:    movi v1.2d, #0000000000000000
 ; SVE-NEXT:    ldr q0, [x1]
 ; SVE-NEXT:    ldr q2, [x2]
-; SVE-NEXT:    udot z1.s, z2.b, z0.b
+; SVE-NEXT:    udot v1.4s, v2.16b, v0.16b
 ; SVE-NEXT:    ldr q0, [x0]
 ; SVE-NEXT:    uadalp v0.2d, v1.4s
 ; SVE-NEXT:    ret
@@ -1185,7 +1165,7 @@ define <2 x i64> @eight_way_i8_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vsca
 ; SVE-NEXT:    movi v1.2d, #0000000000000000
 ; SVE-NEXT:    ldr q0, [x1]
 ; SVE-NEXT:    ldr q2, [x2]
-; SVE-NEXT:    udot z1.s, z2.b, z0.b
+; SVE-NEXT:    udot v1.4s, v2.16b, v0.16b
 ; SVE-NEXT:    ldr q0, [x0]
 ; SVE-NEXT:    uadalp v0.2d, v1.4s
 ; SVE-NEXT:    ret
@@ -1241,8 +1221,8 @@ define <4 x i64> @four_way_i8_i64_vl128_double_width(ptr %accptr, ptr %uptr, ptr
 ; SVE-NEXT:    movi v3.2d, #0000000000000000
 ; SVE-NEXT:    ldp q0, q5, [x2]
 ; SVE-NEXT:    ldp q1, q4, [x1]
-; SVE-NEXT:    udot z2.s, z0.b, z1.b
-; SVE-NEXT:    udot z3.s, z5.b, z4.b
+; SVE-NEXT:    udot v2.4s, v0.16b, v1.16b
+; SVE-NEXT:    udot v3.4s, v5.16b, v4.16b
 ; SVE-NEXT:    ldp q0, q1, [x0]
 ; SVE-NEXT:    uadalp v0.2d, v2.4s
 ; SVE-NEXT:    uadalp v1.2d, v3.4s
