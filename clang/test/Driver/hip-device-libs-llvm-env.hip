@@ -24,7 +24,7 @@
 // RUN: 2>&1 | FileCheck --check-prefix=INC %s
 
 // INC: "-cc1" "-triple" "amdgcn-amd-amdhsa-llvm"
-// INC-SAME: "-include" "__clang_gpu_device_functions.h"
+// INC-SAME: "-internal-isystem" "{{.*}}hip_wrappers"
 
 // RUN: %clang -### --target=x86_64-linux-gnu -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   --offload-targets=amdgcn-amd-amdhsa-llvm --offload-arch=gfx90a \
@@ -38,4 +38,4 @@
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefix=NOINC %s
 
-// NOINC-NOT: __clang_gpu_device_functions.h
+// NOINC-NOT: hip_wrappers
