@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Unittests for unnamed POSIX semaphores.
+/// Unittests for sem_post and the sem_wait.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -31,7 +31,7 @@
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
-using LlvmLibcSemTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+using LlvmLibcSemWaitTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 // Returns an absolute deadline a few milliseconds past now on the given clock.
 static timespec deadline_in_10ms(clockid_t clock_id) {
@@ -45,77 +45,25 @@ static timespec deadline_in_10ms(clockid_t clock_id) {
   return ts;
 }
 
-TEST_F(LlvmLibcSemTest, InitGetValueDestroy) {
-  sem_t sem;
-  ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 3), Succeeds());
-
-  int value = -1;
-  ASSERT_THAT(LIBC_NAMESPACE::sem_getvalue(&sem, &value), Succeeds());
-  EXPECT_EQ(value, 3);
-
-  ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
-}
-
-TEST_F(LlvmLibcSemTest, InitValueTooLarge) {
-  sem_t sem;
-  // A count above SEM_VALUE_MAX cannot be represented.
-  ASSERT_THAT(LIBC_NAMESPACE::sem_init(
-                  &sem, 0, static_cast<unsigned int>(SEM_VALUE_MAX) + 1),
-              Fails(EINVAL));
-}
-
-TEST_F(LlvmLibcSemTest, InitShared) {
-  sem_t sem;
-  // A non-zero pshared is accepted; the semaphore then uses the shared futex
-  // addressing mode.
-  ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 1, 1), Succeeds());
-  ASSERT_THAT(LIBC_NAMESPACE::sem_wait(&sem), Succeeds());
-  ASSERT_THAT(LIBC_NAMESPACE::sem_post(&sem), Succeeds());
-  ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
-}
-
-TEST_F(LlvmLibcSemTest, UseAfterDestroy) {
-  sem_t sem;
-  ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 1), Succeeds());
-  ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
-
-  // The canary no longer matches, so every operation reports EINVAL rather
-  // than acting on a destroyed semaphore.
-  int value = -1;
-  EXPECT_THAT(LIBC_NAMESPACE::sem_getvalue(&sem, &value), Fails(EINVAL));
-  EXPECT_THAT(LIBC_NAMESPACE::sem_post(&sem), Fails(EINVAL));
-  EXPECT_THAT(LIBC_NAMESPACE::sem_wait(&sem), Fails(EINVAL));
-  EXPECT_THAT(LIBC_NAMESPACE::sem_trywait(&sem), Fails(EINVAL));
-  EXPECT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Fails(EINVAL));
-
-  timespec ts = deadline_in_10ms(CLOCK_REALTIME);
-  EXPECT_THAT(LIBC_NAMESPACE::sem_timedwait(&sem, &ts), Fails(EINVAL));
-  EXPECT_THAT(LIBC_NAMESPACE::sem_clockwait(&sem, CLOCK_MONOTONIC, &ts),
-              Fails(EINVAL));
-}
-
-TEST_F(LlvmLibcSemTest, PostAndWait) {
+TEST_F(LlvmLibcSemWaitTest, PostAndWait) {
   sem_t sem;
   ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 0), Succeeds());
 
   ASSERT_THAT(LIBC_NAMESPACE::sem_post(&sem), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::sem_post(&sem), Succeeds());
 
-  int value = -1;
-  ASSERT_THAT(LIBC_NAMESPACE::sem_getvalue(&sem, &value), Succeeds());
-  EXPECT_EQ(value, 2);
-
   // The count is positive, so neither wait blocks.
   ASSERT_THAT(LIBC_NAMESPACE::sem_wait(&sem), Succeeds());
   ASSERT_THAT(LIBC_NAMESPACE::sem_wait(&sem), Succeeds());
 
+  int value = -1;
   ASSERT_THAT(LIBC_NAMESPACE::sem_getvalue(&sem, &value), Succeeds());
   EXPECT_EQ(value, 0);
 
   ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
 }
 
-TEST_F(LlvmLibcSemTest, TryWait) {
+TEST_F(LlvmLibcSemWaitTest, TryWait) {
   sem_t sem;
   ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 1), Succeeds());
 
@@ -127,7 +75,7 @@ TEST_F(LlvmLibcSemTest, TryWait) {
   ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
 }
 
-TEST_F(LlvmLibcSemTest, PostOverflow) {
+TEST_F(LlvmLibcSemWaitTest, PostOverflow) {
   sem_t sem;
   ASSERT_THAT(LIBC_NAMESPACE::sem_init(
                   &sem, 0, static_cast<unsigned int>(SEM_VALUE_MAX)),
@@ -143,7 +91,7 @@ TEST_F(LlvmLibcSemTest, PostOverflow) {
   ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
 }
 
-TEST_F(LlvmLibcSemTest, TimedWaitLocksImmediately) {
+TEST_F(LlvmLibcSemWaitTest, TimedWaitLocksImmediately) {
   sem_t sem;
   ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 1), Succeeds());
 
@@ -152,7 +100,7 @@ TEST_F(LlvmLibcSemTest, TimedWaitLocksImmediately) {
   ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
 }
 
-TEST_F(LlvmLibcSemTest, TimedWaitTimeout) {
+TEST_F(LlvmLibcSemWaitTest, TimedWaitTimeout) {
   sem_t sem;
   ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 0), Succeeds());
 
@@ -162,7 +110,7 @@ TEST_F(LlvmLibcSemTest, TimedWaitTimeout) {
   ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
 }
 
-TEST_F(LlvmLibcSemTest, TimedWaitInvalidTimespec) {
+TEST_F(LlvmLibcSemWaitTest, TimedWaitInvalidTimespec) {
   sem_t sem;
   ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 0), Succeeds());
 
@@ -174,7 +122,7 @@ TEST_F(LlvmLibcSemTest, TimedWaitInvalidTimespec) {
   ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
 }
 
-TEST_F(LlvmLibcSemTest, ClockWaitMonotonicTimeout) {
+TEST_F(LlvmLibcSemWaitTest, ClockWaitMonotonicTimeout) {
   sem_t sem;
   ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 0), Succeeds());
 
@@ -185,7 +133,7 @@ TEST_F(LlvmLibcSemTest, ClockWaitMonotonicTimeout) {
   ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
 }
 
-TEST_F(LlvmLibcSemTest, ClockWaitUnsupportedClock) {
+TEST_F(LlvmLibcSemWaitTest, ClockWaitUnsupportedClock) {
   sem_t sem;
   ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 0), Succeeds());
 

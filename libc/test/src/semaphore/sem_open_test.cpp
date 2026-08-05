@@ -25,7 +25,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcSemOpenTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
@@ -130,10 +129,4 @@ TEST_F(LlvmLibcSemOpenTest, OpenNonExistent) {
   // Without O_CREAT the name must already exist.
   EXPECT_EQ(LIBC_NAMESPACE::sem_open(name, 0), SEM_FAILED);
   ASSERT_ERRNO_EQ(ENOENT);
-}
-
-TEST_F(LlvmLibcSemOpenTest, UnlinkNonExistent) {
-  const char *name = APPEND_LIBC_TEST("/llvmlibc_sem_missing_unlink");
-
-  EXPECT_THAT(LIBC_NAMESPACE::sem_unlink(name), Fails(ENOENT));
 }

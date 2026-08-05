@@ -9,8 +9,8 @@ add_header_library(
     libc.hdr.time_macros
     libc.hdr.types.clockid_t
     libc.hdr.types.mode_t
+    libc.hdr.types.sem_t
     libc.hdr.types.struct_timespec
-    libc.include.llvm-libc-types.sem_t
     libc.src.__support.CPP.atomic
     libc.src.__support.error_or
     libc.src.__support.libc_assert
