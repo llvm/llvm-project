@@ -3910,7 +3910,7 @@ void ASTDeclReader::attachPreviousDecl(ASTReader &Reader, Decl *D,
 
   if (PreviousNonLocal) {
     if (Sema *S = Reader.getSema()) {
-      if (auto *ND = dyn_cast<NamedDecl>(D))
+      if (auto *ND = dyn_cast<NamedDecl>(D); ND && !isa<NamespaceDecl>(ND))
         S->mergeDeclAttributes(ND, PreviousNonLocal);
     }
   }
