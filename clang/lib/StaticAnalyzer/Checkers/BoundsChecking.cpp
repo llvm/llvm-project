@@ -13,11 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Checkers/BoundsChecking.h"
-#include "clang/StaticAnalyzer/Checkers/Taint.h"
 
 using namespace clang;
 using namespace ento;
-using namespace bounds;
 
 // NOTE: This function is the "heart" of this algorithm. It simplifies
 // inequalities with transformations that are valid (and very elementary) in
