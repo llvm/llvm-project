@@ -212,9 +212,10 @@ VoidTask silly_task() {
 
 // Call builtin coro end and return
 
-// CIR: %[[CoroEndArg0:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CIR: %[[TK_NONE:.*]] = cir.token.none
 // CIR: %[[CoroEndArg1:.*]] = cir.const #false
-// CIR: = cir.coro.intrinsic.end(%[[CoroEndArg0]], %[[CoroEndArg1]]) : (!cir.ptr<!void>, !cir.bool) -> !cir.bool
+// CIR: %[[CoroEndArg0:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!void>
+// CIR: cir.coro.intrinsic.end(%[[CoroEndArg0]], %[[CoroEndArg1]], %[[TK_NONE]]) : (!cir.ptr<!void>, !cir.bool, token)
 
 // CIR: %[[Tmp1:.*]] = cir.load{{.*}} %[[VoidTaskAddr]]
 // CIR: cir.return %[[Tmp1]]
@@ -402,7 +403,7 @@ folly::coro::Task<void> yield1() {
 // CIR:   cir.yield
 // CIR: } cleanup  normal {
 // CIR: }
-// CIR: = cir.coro.intrinsic.end(%{{.*}}, %{{.*}})
+// CIR: cir.coro.intrinsic.end(%{{.*}}, %{{.*}}, %{{.*}})
 // CIR: %[[RETLOAD:.*]] = cir.load{{.*}} %[[RETVAL]]
 // CIR: cir.return %[[RETLOAD]]
 // CIR: }
