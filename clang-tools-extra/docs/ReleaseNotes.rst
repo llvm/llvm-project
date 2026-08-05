@@ -94,6 +94,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Improved :program:`check_clang_tidy.py` by adding support of
+  ``-std=cXX-or-earlier`` values, mirroring the existing ``-std=cXX-or-later``.
+  New construct expands to the given standard and every earlier one.
+
 New checks
 ^^^^^^^^^^
 

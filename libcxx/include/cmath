@@ -323,7 +323,7 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #  include <__type_traits/promote.h>
 #  include <version>
 
-#  include <__math/special_functions.h>
+#  include <__cmath/special_functions.h>
 #  include <math.h>
 
 #  ifndef _LIBCPP_MATH_H
