@@ -13,6 +13,7 @@
 
 #include "AMDGPUCoExecSchedStrategy.h"
 #include "AMDGPUIGroupLP.h"
+#include "AMDGPUWMMASchedule.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -712,6 +713,7 @@ llvm::createGCNCoExecMachineScheduler(MachineSchedContext *C) {
   ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<AMDGPUCoExecSchedStrategy>(C));
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
+  DAG->addMutation(createAMDGPUWMMAScheduleDAGMutation(C->MF));
   return DAG;
 }
 
