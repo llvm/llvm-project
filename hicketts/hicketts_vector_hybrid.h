@@ -1,5 +1,5 @@
-#ifndef HICKETTS_VECTOR_H_
-#define HICKETTS_VECTOR_H_
+#ifndef HICKETTS_VECTOR_HYBRID_H_
+#define HICKETTS_VECTOR_HYBRID_H_
 
 /// A minimal std::vector-like container exercising two families of attribute,
 /// sharing ONE predicate vocabulary with hicketts_optional_hybrid.h.
@@ -110,4 +110,4 @@ public:
 
 } // namespace mylib
 
-#endif // HICKETTS_VECTOR_H_
+#endif // HICKETTS_VECTOR_HYBRID_H_

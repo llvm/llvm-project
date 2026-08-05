@@ -1,14 +1,14 @@
 // Test fixture for the vector-like lifetime + predicate-role experiment.
 //
 // Real attributes are inline and always on. Default run:
-//   build-llvm/bin/clang-tidy hicketts/test_hicketts_vector.cpp -- \
+//   build-llvm/bin/clang-tidy hicketts/test_hicketts_vector_hybrid.cpp -- \
 //       -std=c++17 -Ihicketts
 //
 // + proposed predicate roles (needs the role attributes implemented):
-//   build-llvm/bin/clang-tidy hicketts/test_hicketts_vector.cpp -- \
+//   build-llvm/bin/clang-tidy hicketts/test_hicketts_vector_hybrid.cpp -- \
 //       -std=c++17 -Ihicketts -DHV_ROLES
 
-#include "hicketts_vector.h"
+#include "hicketts_vector_hybrid.h"
 
 using mylib::HickettsVector;
 
