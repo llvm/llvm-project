@@ -6104,7 +6104,7 @@ defvar Tcgen05MMABlockScaleKindAttr =
     [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMABlockScaleKindList>]>;
 
 def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
-    [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110, 107]>]> {
+    [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs MMA operation on 5th-gen tensor cores";
 
   let description = [{
@@ -6190,7 +6190,7 @@ def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
 }
 
 def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
-    [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110, 107]>]> {
+    [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs MMA operation with sparse A matrix on 5th-gen tensor cores";
 
   let description = [{
@@ -6273,7 +6273,7 @@ def Tcgen05MMABlockScaleAttr : EnumAttr<NVVM_Dialect, Tcgen05MMABlockScale,
 }
 
 def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
-    [NVVMRequiresSMf<[100, 101, 110, 107]>]> {
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs block scaled MMA operation on 5th-gen tensor cores";
 
   let description = [{
@@ -6349,7 +6349,7 @@ def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
 }
 
 def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
-    [NVVMRequiresSMf<[100, 101, 110, 107]>]> {
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs block scaled MMA operation with sparse A matrix on 5th-gen tensor cores";
 
   let description = [{
