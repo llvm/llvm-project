@@ -7,36 +7,15 @@ declare void @prevent_clone(i32) noduplicate
 define void @cannot_clone_noduplicate_call(i32 %n) {
 ; CHECK-LABEL: define void @cannot_clone_noduplicate_call(
 ; CHECK-SAME: i32 [[N:%.*]]) {
-; CHECK-NEXT:  [[LS_GUARD0:.*:]]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[SMAX]], -1
-; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 3)
-; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i32 0, [[SMIN]]
-; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
-; CHECK:       [[ENTRY]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @prevent_clone(i32 [[IV]])
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[ITR_CHK1:%.*]] = icmp sle i32 [[IV_NEXT]], [[SMIN]]
-; CHECK-NEXT:    br i1 [[ITR_CHK1]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[LS_GUARD1]]
-; CHECK:       [[LS_GUARD1]]:
-; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i32 4, [[TMP0]]
-; CHECK-NEXT:    br i1 [[ITR_CHK2]], label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
-; CHECK:       [[ENTRY_LS1]]:
+; CHECK-NEXT:  [[ENTRY_LS1:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
 ; CHECK:       [[LOOP_LS1]]:
-; CHECK-NEXT:    [[IV_LS1:%.*]] = phi i32 [ 4, %[[ENTRY_LS1]] ], [ [[IV_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    [[IV_LS1:%.*]] = phi i32 [ 0, %[[ENTRY_LS1]] ], [ [[IV_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
 ; CHECK-NEXT:    call void @prevent_clone(i32 [[IV_LS1]])
 ; CHECK-NEXT:    [[IV_NEXT_LS1]] = add i32 [[IV_LS1]], 1
-; CHECK-NEXT:    [[ITR_CHK3:%.*]] = icmp sle i32 [[IV_NEXT_LS1]], [[TMP0]]
+; CHECK-NEXT:    [[ITR_CHK3:%.*]] = icmp slt i32 [[IV_NEXT_LS1]], [[N]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK3]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
 ; CHECK:       [[LS_EXIT1]]:
-; CHECK-NEXT:    br label %[[LS_FINAL_EXIT]]
-; CHECK:       [[LS_FINAL_EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -56,54 +35,24 @@ exit:
 define void @cannot_clone_indirectbr(i32 %n, i1 %which) {
 ; CHECK-LABEL: define void @cannot_clone_indirectbr(
 ; CHECK-SAME: i32 [[N:%.*]], i1 [[WHICH:%.*]]) {
-; CHECK-NEXT:  [[LS_GUARD0:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[BR_ADDR:%.*]] = select i1 [[WHICH]], ptr blockaddress(@cannot_clone_indirectbr, %[[BLOCK_A:.*]]), ptr blockaddress(@cannot_clone_indirectbr, %[[BLOCK_B:.*]])
-; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N]], i32 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[SMAX]], -1
-; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP0]], i32 3)
-; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i32 0, [[SMIN]]
-; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
-; CHECK:       [[ENTRY]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LS1:.*]] ]
 ; CHECK-NEXT:    indirectbr ptr [[BR_ADDR]], [label %[[BLOCK_A]], label %[[BLOCK_B]]]
 ; CHECK:       [[BLOCK_A]]:
 ; CHECK-NEXT:    [[VAL_A:%.*]] = add i32 [[IV]], 100
-; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK-NEXT:    br label %[[LOOP_LS1]]
 ; CHECK:       [[BLOCK_B]]:
 ; CHECK-NEXT:    [[VAL_B:%.*]] = add i32 [[IV]], 200
-; CHECK-NEXT:    br label %[[LATCH]]
-; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[VAL:%.*]] = phi i32 [ [[VAL_A]], %[[BLOCK_A]] ], [ [[VAL_B]], %[[BLOCK_B]] ]
-; CHECK-NEXT:    call void @use(i32 [[VAL]])
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[ITR_CHK1:%.*]] = icmp sle i32 [[IV_NEXT]], [[SMIN]]
-; CHECK-NEXT:    br i1 [[ITR_CHK1]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[LS_GUARD1]]
-; CHECK:       [[LS_GUARD1]]:
-; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i32 4, [[TMP0]]
-; CHECK-NEXT:    br i1 [[ITR_CHK2]], label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
-; CHECK:       [[ENTRY_LS1]]:
-; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
+; CHECK-NEXT:    br label %[[LOOP_LS1]]
 ; CHECK:       [[LOOP_LS1]]:
-; CHECK-NEXT:    [[IV_LS1:%.*]] = phi i32 [ 4, %[[ENTRY_LS1]] ], [ [[IV_NEXT_LS1:%.*]], %[[LATCH_LS1:.*]] ]
-; CHECK-NEXT:    indirectbr ptr [[BR_ADDR]], [label %[[BLOCK_A_LS1:.*]], label %[[BLOCK_B_LS1:.*]]]
-; CHECK:       [[BLOCK_B_LS1]]:
-; CHECK-NEXT:    [[VAL_B_LS1:%.*]] = add i32 [[IV_LS1]], 200
-; CHECK-NEXT:    br label %[[LATCH_LS1]]
-; CHECK:       [[BLOCK_A_LS1]]:
-; CHECK-NEXT:    [[VAL_A_LS1:%.*]] = add i32 [[IV_LS1]], 100
-; CHECK-NEXT:    br label %[[LATCH_LS1]]
-; CHECK:       [[LATCH_LS1]]:
-; CHECK-NEXT:    [[VAL_LS1:%.*]] = phi i32 [ [[VAL_A_LS1]], %[[BLOCK_A_LS1]] ], [ [[VAL_B_LS1]], %[[BLOCK_B_LS1]] ]
+; CHECK-NEXT:    [[VAL_LS1:%.*]] = phi i32 [ [[VAL_A]], %[[BLOCK_A]] ], [ [[VAL_B]], %[[BLOCK_B]] ]
 ; CHECK-NEXT:    call void @use(i32 [[VAL_LS1]])
-; CHECK-NEXT:    [[IV_NEXT_LS1]] = add i32 [[IV_LS1]], 1
-; CHECK-NEXT:    [[ITR_CHK3:%.*]] = icmp sle i32 [[IV_NEXT_LS1]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[ITR_CHK3]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
-; CHECK:       [[LS_EXIT1]]:
-; CHECK-NEXT:    br label %[[LS_FINAL_EXIT]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[LS_FINAL_EXIT:.*]]
 ; CHECK:       [[LS_FINAL_EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

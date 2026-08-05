@@ -223,6 +223,12 @@ bool LoopSplitUtils::isLegal() {
     return false;
   }
 
+  // Splitting a loop clones it, so cloning must be safe.
+  if (!L->isSafeToClone()) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop not safe to clone\n");
+    return false;
+  }
+
   // A computable backedge-taken count fixes the iteration space we rebuild.
   const SCEV *BTC = SE->getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(BTC)) {
