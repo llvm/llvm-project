@@ -17,23 +17,27 @@ import unittest
 
 class TestAlphabeticalOrderCheck(unittest.TestCase):
     def test_normalize_list_md_sorts_rows(self) -> None:
-        input_text = textwrap.dedent("""\
+        input_text = textwrap.dedent(
+            """\
             | Name | Offers fixes |
             | --- | --- |
             | {doc}`bugprone-virtual-near-miss <bugprone/virtual-near-miss>` | Yes |
             | {doc}`cert-flp30-c <cert/flp30-c>` |  |
             | {doc}`abseil-cleanup-ctad <abseil/cleanup-ctad>` | Yes |
             | A non-doc row that should stay after docs |  |
-            """)
+            """
+        )
 
-        expected_text = textwrap.dedent("""\
+        expected_text = textwrap.dedent(
+            """\
             | Name | Offers fixes |
             | --- | --- |
             | {doc}`abseil-cleanup-ctad <abseil/cleanup-ctad>` | Yes |
             | {doc}`bugprone-virtual-near-miss <bugprone/virtual-near-miss>` | Yes |
             | {doc}`cert-flp30-c <cert/flp30-c>` |  |
             | A non-doc row that should stay after docs |  |
-            """)
+            """
+        )
 
         out_str = _mod.normalize_list_md(input_text)
         self.assertEqual(out_str, expected_text)
@@ -397,14 +401,16 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
         self.assertEqual(out, expected_out)
 
     def test_process_checks_list_normalizes_output(self) -> None:
-        list_text = textwrap.dedent("""\
+        list_text = textwrap.dedent(
+            """\
             | Name | Redirect | Offers fixes |
             | --- | --- | --- |
             | {doc}`cert-dcl16-c <cert/dcl16-c>` | {doc}`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>` | Yes |
             | {doc}`cert-con36-c <cert/con36-c>` | {doc}`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>` |  |
             | {doc}`cert-dcl37-c <cert/dcl37-c>` | {doc}`bugprone-reserved-identifier <bugprone/reserved-identifier>` | Yes |
             | {doc}`cert-arr39-c <cert/arr39-c>` | {doc}`bugprone-sizeof-expression <bugprone/sizeof-expression>` |  |
-            """)
+            """
+        )
         with tempfile.TemporaryDirectory() as td:
             in_doc = os.path.join(td, "list.md")
             out_doc = os.path.join(td, "out.md")
@@ -422,14 +428,16 @@ class TestAlphabeticalOrderCheck(unittest.TestCase):
             with open(out_doc, "r", encoding="utf-8") as f:
                 out = f.read()
 
-            expected_out = textwrap.dedent("""\
+            expected_out = textwrap.dedent(
+                """\
                 | Name | Redirect | Offers fixes |
                 | --- | --- | --- |
                 | {doc}`cert-arr39-c <cert/arr39-c>` | {doc}`bugprone-sizeof-expression <bugprone/sizeof-expression>` |  |
                 | {doc}`cert-con36-c <cert/con36-c>` | {doc}`bugprone-spuriously-wake-up-functions <bugprone/spuriously-wake-up-functions>` |  |
                 | {doc}`cert-dcl16-c <cert/dcl16-c>` | {doc}`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>` | Yes |
                 | {doc}`cert-dcl37-c <cert/dcl37-c>` | {doc}`bugprone-reserved-identifier <bugprone/reserved-identifier>` | Yes |
-                """)
+                """
+            )
             self.assertEqual(out, expected_out)
 
 
