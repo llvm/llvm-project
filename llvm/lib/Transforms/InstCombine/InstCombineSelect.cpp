@@ -4527,13 +4527,14 @@ static bool isSelectZeroSignInsignificant(SelectInst &SI) {
       auto *User = cast<Instruction>(U.getUser());
       if (User == &SI)
         continue;
+      if (canIgnoreSignBitOfZero(U))
+        continue;
       if (isa<PHINode, SelectInst>(User)) {
         if (Visited.insert(User).second)
           Worklist.push_back(User);
         continue;
       }
-      if (!canIgnoreSignBitOfZero(U))
-        return false;
+      return false;
     }
   }
   return true;
