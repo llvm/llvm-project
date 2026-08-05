@@ -33652,8 +33652,7 @@ static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
   MVT VT = Op.getSimpleValueType();
 
   // Special case. If the input fits in 8-bits we can use a single 8-bit TEST.
-  if (VT == MVT::i8 ||
-      DAG.MaskedValueIsZero(X, APInt::getBitsSetFrom(VT.getSizeInBits(), 8))) {
+  if (VT == MVT::i8 || DAG.computeKnownBits(X).countMaxActiveBits() <= 8) {
     X = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, X);
     SDValue Flags = DAG.getNode(X86ISD::CMP, DL, MVT::i32, X,
                                 DAG.getConstant(0, DL, MVT::i8));
@@ -33668,7 +33667,7 @@ static SDValue LowerPARITY(SDValue Op, const X86Subtarget &Subtarget,
     return SDValue();
 
   if (VT == MVT::i64) {
-    // Xor the high and low 16-bits together using a 32-bit operation.
+    // Xor the high and low 32-bits together using a 32-bit operation.
     SDValue Hi = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32,
                              DAG.getNode(ISD::SRL, DL, MVT::i64, X,
                                          DAG.getConstant(32, DL, MVT::i8)));
@@ -48564,21 +48563,44 @@ static SDValue commuteSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 
   ISD::CondCode CC;
   SDValue Cond, X, Y, LHS, RHS;
-  if (!sd_match(N, m_VSelect(m_AllOf(m_Value(Cond),
-                                     m_OneUse(m_SetCC(m_Value(X), m_Value(Y),
-                                                      m_CondCode(CC)))),
-                             m_Value(LHS), m_Value(RHS))))
+  if (!sd_match(
+          N, m_VSelect(m_AllOf(m_Value(Cond),
+                               m_SetCC(m_Value(X), m_Value(Y), m_CondCode(CC))),
+                       m_Value(LHS), m_Value(RHS))))
     return SDValue();
 
   if (canCombineAsMaskOperation(LHS, Subtarget) ||
       !canCombineAsMaskOperation(RHS, Subtarget))
     return SDValue();
 
+  // For multi-use setcc, check that all users are vselects that benefit.
+  bool CondHasOneUse = Cond.hasOneUse();
+  if (!CondHasOneUse) {
+    if (!llvm::all_of(Cond->users(), [&](SDNode *User) {
+          SDValue UserLHS, UserRHS;
+          return sd_match(User, m_VSelect(m_Specific(Cond), m_Value(UserLHS),
+                                          m_Value(UserRHS))) &&
+                 !canCombineAsMaskOperation(UserLHS, Subtarget) &&
+                 canCombineAsMaskOperation(UserRHS, Subtarget);
+        }))
+      return SDValue();
+  }
+
   // Commute LHS and RHS to create opportunity to select mask instruction.
   // (vselect M, L, R) -> (vselect ~M, R, L)
   ISD::CondCode NewCC = ISD::getSetCCInverse(CC, X.getValueType());
-  Cond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), X, Y, NewCC);
-  return DAG.getSelect(DL, LHS.getValueType(), Cond, RHS, LHS);
+  SDValue NewCond = DAG.getSetCC(SDLoc(Cond), Cond.getValueType(), X, Y, NewCC);
+  if (CondHasOneUse)
+    return DAG.getSelect(DL, LHS.getValueType(), NewCond, RHS, LHS);
+
+  // Invert the setcc for all users and commute all vselects.
+  DAG.ReplaceAllUsesOfValueWith(Cond, NewCond);
+  for (SDNode *User : NewCond->users()) {
+    SDValue UserLHS = User->getOperand(1);
+    SDValue UserRHS = User->getOperand(2);
+    DAG.UpdateNodeOperands(User, NewCond, UserRHS, UserLHS);
+  }
+  return SDValue(N, 0);
 }
 
 /// Do target-specific dag combines on SELECT and VSELECT nodes.

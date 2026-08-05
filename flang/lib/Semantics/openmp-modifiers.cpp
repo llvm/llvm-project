@@ -457,6 +457,23 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearStep>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"linear-step",
+      /*props=*/
+      {
+          {45, {OmpProperty::Unique}},
+      },
+      /*clauses=*/
+      {
+          {45, {Clause::OMPC_linear}},
+          {52, {}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLoopModifier>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"loop-modifier",
@@ -709,12 +726,11 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpStepSimpleModifier>() {
       /*name=*/"step-simple-modifier",
       /*props=*/
       {
-          {45, {OmpProperty::Unique}},
           {52, {OmpProperty::Unique, OmpProperty::Exclusive}},
       },
       /*clauses=*/
       {
-          {45, {Clause::OMPC_linear}},
+          {52, {Clause::OMPC_linear}},
       },
   };
   return desc;

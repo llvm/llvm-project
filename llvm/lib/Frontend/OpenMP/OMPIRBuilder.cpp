@@ -10542,7 +10542,7 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
                                    llvm::Value *BeginArg)>
         GenMapInfoCB,
     Type *ElemTy, StringRef FuncName, CustomMapperCallbackTy CustomMapperCB,
-    bool PreserveMemberOfFlags) {
+    bool PreserveMemberOfFlags, bool PropagatePresentToPointee) {
   SmallVector<Type *> Params;
   Params.emplace_back(Builder.getPtrTy());
   Params.emplace_back(Builder.getPtrTy());
@@ -10801,16 +10801,41 @@ Expected<Function *> OpenMPIRBuilder::emitUserDefinedMapper(
     // specified in the declared mapper.
     //
     // Map-type-modifying bits: ALWAYS, DELETE, CLOSE, PRESENT.
-    // TODO: PRESENT is not propagated here yet. Doing so requires
-    // distinguishing pointee entries from the struct's own storage; it is
-    // handled in a follow-on.
-    Value *ImportedModifierBits = Builder.CreateAnd(
-        MapType,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
-                OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
-                OpenMPOffloadMappingFlags::OMP_MAP_CLOSE)));
+    //
+    // ALWAYS/DELETE/CLOSE are propagated to every (non-ATTACH) entry.
+    //
+    // PRESENT is propagated only to entries that have an attach ptr
+    // (HasAttachPtr): the pointee data, which occupies a different storage
+    // block than the struct being mapped and so is not covered by the
+    // present-check on the struct's own storage. A present modifier on the
+    // outer clause must still require that pointee to be present on the device.
+    //
+    // This is gated on \p PropagatePresentToPointee (set by callers only for
+    // OpenMP >= 6.0). Before 6.0 the present modifier is treated as not
+    // applying to the pointee: the spec committee confirmed the divergence
+    // between the present "motion" modifier (to/from) and the present map-type
+    // modifier (map) was unintentional, to be fixed as an OpenMP 6.0 erratum,
+    // so for 5.2 present is ignored for the pointee for both map and to/from.
+    //
+    // TODO: PRESENT should also be propagated to the struct's own members
+    // (e.g. the s.x, s.y of map(present, mapper(id): s)) so that an absent
+    // member triggers the present-check. We cannot do that yet: while pointer
+    // members are mapped with PTR_AND_OBJ, a single combined entry allocates
+    // the whole struct (including the pointer's storage), so propagating
+    // PRESENT to it would wrongly require the pointer's pointee to be present.
+    // Enable member propagation once Clang stops emitting PTR_AND_OBJ and uses
+    // attach-style maps throughout.
+    uint64_t ModifierBits =
+        static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+            OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS |
+            OpenMPOffloadMappingFlags::OMP_MAP_DELETE |
+            OpenMPOffloadMappingFlags::OMP_MAP_CLOSE);
+    if (PropagatePresentToPointee && Info->HasAttachPtr[I])
+      ModifierBits |=
+          static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
+              OpenMPOffloadMappingFlags::OMP_MAP_PRESENT);
+    Value *ImportedModifierBits =
+        Builder.CreateAnd(MapType, Builder.getInt64(ModifierBits));
     Value *CurMapTypeWithModifiers = Builder.CreateOr(
         CurMapType, ImportedModifierBits, "omp.maptype.with.modifiers");
 
