@@ -5546,7 +5546,6 @@ define void @local_atomic_fmax_noret_v2f16(ptr addrspace(3) %ptr, <2 x half> %va
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:  .LBB22_1: ; %atomicrmw.start
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_pk_max_num_f16 v3, v1, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_pk_max_num_f16 v3, v2, v1
 ; GFX12-NEXT:    s_wait_storecnt 0x0
@@ -5793,7 +5792,6 @@ define void @local_atomic_fmax_noret_v2f16__offset(ptr addrspace(3) %ptr, <2 x h
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:  .LBB23_1: ; %atomicrmw.start
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-NEXT:    v_pk_max_num_f16 v3, v1, v1
 ; GFX12-NEXT:    s_wait_dscnt 0x0
 ; GFX12-NEXT:    v_pk_max_num_f16 v3, v2, v1
 ; GFX12-NEXT:    s_wait_storecnt 0x0

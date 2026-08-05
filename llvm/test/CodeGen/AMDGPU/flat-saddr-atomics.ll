@@ -13653,7 +13653,6 @@ define void @flat_atomic_fmax_v2f16_saddr_nortn(ptr inreg %ptr, <2 x half> %data
 ; GFX1250-NEXT:    flat_load_b32 v3, v1, s[0:1] offset:40
 ; GFX1250-NEXT:  .LBB125_1: ; %atomicrmw.start
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1250-NEXT:    v_pk_max_num_f16 v2, v0, v0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_pk_max_num_f16 v2, v3, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
@@ -13767,7 +13766,6 @@ define void @flat_atomic_fmin_v2f16_saddr_nortn(ptr inreg %ptr, <2 x half> %data
 ; GFX1250-NEXT:    flat_load_b32 v3, v1, s[0:1] offset:40
 ; GFX1250-NEXT:  .LBB127_1: ; %atomicrmw.start
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX1250-NEXT:    v_pk_max_num_f16 v2, v0, v0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    v_pk_min_num_f16 v2, v3, v0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
