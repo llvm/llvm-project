@@ -393,10 +393,8 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
   LaunchArgs.ArgSizes = KernelArgs.ArgSizes;
   LaunchArgs.Tripcount = KernelArgs.Tripcount;
   LaunchArgs.DynCGroupMem = KernelArgs.DynCGroupMem;
-  std::copy(std::begin(KernelArgs.UserNumBlocks),
-            std::end(KernelArgs.UserNumBlocks), LaunchArgs.UserNumBlocks);
-  std::copy(std::begin(KernelArgs.UserThreadLimit),
-            std::end(KernelArgs.UserThreadLimit), LaunchArgs.UserThreadLimit);
+  llvm::copy(KernelArgs.UserNumBlocks, LaunchArgs.UserNumBlocks);
+  llvm::copy(KernelArgs.UserThreadLimit, LaunchArgs.UserThreadLimit);
   LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
   LaunchArgs.Flags.StrictBlocksAndThreads =
       KernelArgs.Flags.StrictBlocksAndThreads;
