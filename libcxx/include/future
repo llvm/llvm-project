@@ -542,6 +542,11 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI bool __has_value() const { return (__state_ & __constructed) || (__exception_ != nullptr); }
 
+  _LIBCPP_HIDE_FROM_ABI bool __has_value_locked() const {
+    lock_guard<mutex> __lk(__mut_);
+    return __has_value();
+  }
+
   _LIBCPP_HIDE_FROM_ABI void __attach_future() {
     lock_guard<mutex> __lk(__mut_);
     bool __has_future_attached = (__state_ & __future_attached) != 0;
@@ -1661,7 +1666,7 @@ template <class _Rp, class... _ArgTypes>
 void packaged_task<_Rp(_ArgTypes...)>::operator()(_ArgTypes... __args) {
   if (__p_.__state_ == nullptr)
     std::__throw_future_error(future_errc::no_state);
-  if (__p_.__state_->__has_value())
+  if (__p_.__state_->__has_value_locked())
     std::__throw_future_error(future_errc::promise_already_satisfied);
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
@@ -1678,7 +1683,7 @@ template <class _Rp, class... _ArgTypes>
 void packaged_task<_Rp(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __args) {
   if (__p_.__state_ == nullptr)
     std::__throw_future_error(future_errc::no_state);
-  if (__p_.__state_->__has_value())
+  if (__p_.__state_->__has_value_locked())
     std::__throw_future_error(future_errc::promise_already_satisfied);
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
@@ -1760,7 +1765,7 @@ template <class... _ArgTypes>
 void packaged_task<void(_ArgTypes...)>::operator()(_ArgTypes... __args) {
   if (__p_.__state_ == nullptr)
     std::__throw_future_error(future_errc::no_state);
-  if (__p_.__state_->__has_value())
+  if (__p_.__state_->__has_value_locked())
     std::__throw_future_error(future_errc::promise_already_satisfied);
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
@@ -1778,7 +1783,7 @@ template <class... _ArgTypes>
 void packaged_task<void(_ArgTypes...)>::make_ready_at_thread_exit(_ArgTypes... __args) {
   if (__p_.__state_ == nullptr)
     std::__throw_future_error(future_errc::no_state);
-  if (__p_.__state_->__has_value())
+  if (__p_.__state_->__has_value_locked())
     std::__throw_future_error(future_errc::promise_already_satisfied);
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
