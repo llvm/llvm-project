@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PISARegEncoder.h"
+#include "llvm/CodeGen/Register.h"
+#include "llvm/MC/MCRegisterInfo.h"
 
 using namespace llvm;
 using namespace PISA;

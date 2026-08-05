@@ -11,7 +11,6 @@
 
 #include "MCTargetDesc/PISABaseInfo.h"
 #include "MCTargetDesc/PISAEnum.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {

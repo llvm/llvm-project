@@ -17,8 +17,6 @@
 #include "PISAUtils.h"
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/CodeGen/Register.h"
-#include "llvm/IR/PISAIntrinsicUtils.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -151,7 +149,7 @@ void PISAInstPrinter::printMemScopeOpnd(const MCInst *MCI, unsigned OpNo,
   };
   const MCOperand &MCOp = MCI->getOperand(OpNo);
   const unsigned Scope = MCOp.getImm();
-  assert(Scope <= pisa::MemoryScope::subgroup && "Invalid memory scope");
+  assert(Scope < std::size(MemScopeStrs) && "Invalid memory scope");
   OS << MemScopeStrs[Scope];
 }
 
