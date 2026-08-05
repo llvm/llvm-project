@@ -512,7 +512,7 @@ private:
 ///
 /// becomes
 ///
-///   concat(elementwise(x0, x1), elementwise(y0, y1))
+///   concat(elementwise(x0, y0), elementwise(x1, y1))
 ///
 /// This pattern is intentionally expressed on `linalg.generic`: tensor
 /// elementwise operations such as `arith.addf` are converted to that form by
