@@ -31,12 +31,6 @@ class Value;
 
 namespace llvm::slpvectorizer {
 
-/// \returns true if \p Scalar can stay rematerialized during vectorization and
-/// be switched to an extractelement later.
-/// For now, only support load and load-cast pairs since those are simpler to
-/// handle and are commonly profitable to rematerialize
-bool isDeferredExtractable(Value *Scalar);
-
 /// \returns true if \p Opcode is allowed as part of the main/alternate
 /// instruction for SLP vectorization.
 ///

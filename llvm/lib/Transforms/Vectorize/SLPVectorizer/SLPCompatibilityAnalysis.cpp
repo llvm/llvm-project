@@ -26,12 +26,6 @@ using namespace llvm;
 
 namespace llvm::slpvectorizer {
 
-bool isDeferredExtractable(Value *Scalar) {
-  if (isa<VectorType>(Scalar->getType()))
-    return false;
-  return isa<LoadInst>(Scalar);
-}
-
 bool isValidForAlternation(unsigned Opcode) {
   return !Instruction::isIntDivRem(Opcode);
 }

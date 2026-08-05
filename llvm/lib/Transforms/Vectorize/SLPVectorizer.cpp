@@ -3474,6 +3474,16 @@ private:
           ItCost->second = std::min(ItCost->second, Delta);
       }
     }
+
+    /// \returns true if \p Scalar can stay rematerialized during vectorization
+    /// and be switched to an extractelement later. For now, only support load
+    /// and load-cast pairs since those are simpler to handle and are commonly
+    /// profitable to rematerialize
+    static bool isDeferredExtractable(Value *Scalar) {
+      if (isa<VectorType>(Scalar->getType()))
+        return false;
+      return isa<LoadInst>(Scalar);
+    }
   };
 
   /// Vectorize a single entry in the tree.
@@ -25973,7 +25983,8 @@ Value *BoUpSLP::vectorizeTree(
       } else {
         Builder.SetInsertPoint(&F->getEntryBlock(), F->getEntryBlock().begin());
       }
-      bool IsDeferredScalar = isDeferredExtractable(Scalar);
+      bool IsDeferredScalar =
+          DeferredExtractTracker::isDeferredExtractable(Scalar);
       Value *NewInst = ExtractAndExtendIfNeeded(Vec);
       // Required to update internally referenced instructions.
       if (Scalar != NewInst) {
@@ -26076,7 +26087,8 @@ Value *BoUpSLP::vectorizeTree(
         }
       } else {
         Builder.SetInsertPoint(cast<Instruction>(User));
-        bool IsDeferredScalar = isDeferredExtractable(Scalar);
+        bool IsDeferredScalar =
+            DeferredExtractTracker::isDeferredExtractable(Scalar);
         Value *NewInst = ExtractAndExtendIfNeeded(Vec);
         if (isa<StructType>(Scalar->getType()) &&
             isa_and_nonnull<ExtractValueInst>(User) &&
