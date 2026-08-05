@@ -423,3 +423,134 @@ func.func @no_promote_subview_masked(%v: vector<4xf32>, %init: vector<8xf32>, %p
   %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
   return %r : vector<8xf32>
 }
+
+// -----
+
+// A prefetching software-pipelined loop. The stage buffer double-buffers the
+// prefetched tile: the prefetch of the next tile is skipped on the last iteration.
+
+// CHECK-LABEL: func.func @pipelined_prefetch
+//    CHECK-NOT:   memref.alloca
+//        CHECK:   %[[P0:.*]] = vector.transfer_read %{{.*}} : memref<64xf32>, vector<8xf32>
+//    CHECK-NOT:   vector.transfer_write
+//        CHECK:   scf.for %[[I:.*]] = {{.*}} iter_args(%[[ACC:.*]] = %{{.*}}, %[[STAGE:.*]] = %[[P0]]) -> (vector<8xf32>, vector<8xf32>)
+//        CHECK:     %[[ACCN:.*]] = arith.addf %[[ACC]], %[[STAGE]] : vector<8xf32>
+//        CHECK:     %[[INEXT:.*]] = arith.addi %[[I]], %{{.*}}
+//        CHECK:     %[[G:.*]] = arith.cmpi slt, %[[INEXT]], %{{.*}}
+//        CHECK:     %[[NEXT:.*]] = scf.if %[[G]] -> (vector<8xf32>) {
+//        CHECK:       %[[CUR:.*]] = vector.transfer_read %{{.*}}[%[[INEXT]]]
+//        CHECK:       scf.yield %[[CUR]] : vector<8xf32>
+//        CHECK:     } else {
+//        CHECK:       scf.yield %[[STAGE]] : vector<8xf32>
+//        CHECK:     }
+//        CHECK:     scf.yield %[[ACCN]], %[[NEXT]] : vector<8xf32>, vector<8xf32>
+func.func @pipelined_prefetch(%lb: index, %ub: index, %step: index, %in: memref<64xf32>, %pad: f32) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant dense<0.0> : vector<8xf32>
+  %stage = memref.alloca() : memref<8xf32>
+  // Prologue: prefetch tile[0] into the stage buffer.
+  %p0 = vector.transfer_read %in[%c0], %pad {in_bounds = [true]} : memref<64xf32>, vector<8xf32>
+  vector.transfer_write %p0, %stage[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %r = scf.for %i = %lb to %ub step %step iter_args(%acc = %cst) -> (vector<8xf32>) {
+    // Consume the tile prefetched by the previous iteration (unconditional).
+    %tile = vector.transfer_read %stage[%c0], %pad {in_bounds = [true]} : memref<8xf32>, vector<8xf32>
+    %accn = arith.addf %acc, %tile : vector<8xf32>
+    // Prefetch the next tile into the stage buffer (skip on the last iteration).
+    %inext = arith.addi %i, %c1 : index
+    %g = arith.cmpi slt, %inext, %ub : index
+    scf.if %g {
+      %next = vector.transfer_read %in[%inext], %pad {in_bounds = [true]} : memref<64xf32>, vector<8xf32>
+      vector.transfer_write %next, %stage[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+    }
+    scf.yield %accn : vector<8xf32>
+  }
+  return %r : vector<8xf32>
+}
+
+// -----
+
+// A whole-buffer accumulator updated conditionally inside an scf.if (a masked
+// running reduction).
+
+// CHECK-LABEL: func.func @cond_accumulate
+//    CHECK-NOT:   memref.alloca
+//    CHECK-NOT:   vector.transfer_write
+//    CHECK-NOT:   vector.transfer_read
+//        CHECK:   %[[R:.*]] = scf.for {{.*}} iter_args(%[[ACC:.*]] = %{{.*}}) -> (vector<4xf32>)
+//        CHECK:     %[[M:.*]] = memref.load
+//        CHECK:     %[[NEW:.*]] = scf.if %[[M]] -> (vector<4xf32>) {
+//        CHECK:       %[[D:.*]] = arith.addf %[[ACC]], %[[ACC]] : vector<4xf32>
+//        CHECK:       scf.yield %[[D]] : vector<4xf32>
+//        CHECK:     } else {
+//        CHECK:       scf.yield %[[ACC]] : vector<4xf32>
+//        CHECK:     }
+//        CHECK:     scf.yield %[[NEW]] : vector<4xf32>
+//        CHECK:   return %[[R]] : vector<4xf32>
+func.func @cond_accumulate(%lb: index, %ub: index, %step: index, %init: vector<4xf32>, %pad: f32, %mask: memref<?xi1>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<4xf32>
+  vector.transfer_write %init, %a[%c0] {in_bounds = [true]} : vector<4xf32>, memref<4xf32>
+  scf.for %i = %lb to %ub step %step {
+    %m = memref.load %mask[%i] : memref<?xi1>
+    %v = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<4xf32>, vector<4xf32>
+    scf.if %m {
+      %d = arith.addf %v, %v : vector<4xf32>
+      vector.transfer_write %d, %a[%c0] {in_bounds = [true]} : vector<4xf32>, memref<4xf32>
+    }
+    scf.yield
+  }
+  %r = vector.transfer_read %a[%c0], %pad {in_bounds = [true]} : memref<4xf32>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
+// A tiled GEMM with a dynamic K early-exit. A local accumulator tile D sums the
+// K-tiles via vector.contract only while k < dyn_k. 
+
+// CHECK-LABEL: func.func @gemm_k_early_exit
+//   CHECK-SAME:   (%[[A:.*]]: memref<4x16xf32>, %[[B:.*]]: memref<16x4xf32>, %[[C:.*]]: memref<4x4xf32>, %[[DYNK:.*]]: index, %[[PAD:.*]]: f32)
+//    CHECK-NOT:   memref.alloca
+//        CHECK:   %[[R:.*]] = scf.for %[[K:.*]] = {{.*}} iter_args(%[[ACC:.*]] = %{{.*}}) -> (vector<4x4xf32>)
+//        CHECK:     %[[INRANGE:.*]] = arith.cmpi slt, %[[K]], %[[DYNK]]
+//        CHECK:     %[[NEW:.*]] = scf.if %[[INRANGE]] -> (vector<4x4xf32>) {
+//        CHECK:       %[[ATILE:.*]] = vector.transfer_read %[[A]]
+//        CHECK:       %[[BTILE:.*]] = vector.transfer_read %[[B]]
+//        CHECK:       %[[MM:.*]] = vector.contract {{.*}} %[[ATILE]], %[[BTILE]], %[[ACC]]
+//        CHECK:       scf.yield %[[MM]] : vector<4x4xf32>
+//        CHECK:     } else {
+//        CHECK:       scf.yield %[[ACC]] : vector<4x4xf32>
+//        CHECK:     }
+//        CHECK:     scf.yield %[[NEW]] : vector<4x4xf32>
+//        CHECK:   %[[CVAL:.*]] = vector.transfer_read %[[C]]
+//        CHECK:   %[[SUM:.*]] = arith.addf %[[CVAL]], %[[R]] : vector<4x4xf32>
+//        CHECK:   vector.transfer_write %[[SUM]], %[[C]]
+func.func @gemm_k_early_exit(%A: memref<4x16xf32>, %B: memref<16x4xf32>,
+                             %C: memref<4x4xf32>, %dyn_k: index, %pad: f32) {
+  %c0 = arith.constant 0 : index
+  %c4 = arith.constant 4 : index
+  %c16 = arith.constant 16 : index
+  %cst = arith.constant dense<0.0> : vector<4x4xf32>
+  // Local accumulator tile D, zero-initialized.
+  %d = memref.alloca() : memref<4x4xf32>
+  vector.transfer_write %cst, %d[%c0, %c0] {in_bounds = [true, true]} : vector<4x4xf32>, memref<4x4xf32>
+  scf.for %k = %c0 to %c16 step %c4 {
+    // Early exit: only accumulate K tiles whose offset is below dyn_k.
+    %inrange = arith.cmpi slt, %k, %dyn_k : index
+    scf.if %inrange {
+      %atile = vector.transfer_read %A[%c0, %k], %pad {in_bounds = [true, true]} : memref<4x16xf32>, vector<4x4xf32>
+      %btile = vector.transfer_read %B[%k, %c0], %pad {in_bounds = [true, true]} : memref<16x4xf32>, vector<4x4xf32>
+      %acc = vector.transfer_read %d[%c0, %c0], %pad {in_bounds = [true, true]} : memref<4x4xf32>, vector<4x4xf32>
+      %mm = vector.contract {indexing_maps = [affine_map<(m, n, k) -> (m, k)>, affine_map<(m, n, k) -> (k, n)>, affine_map<(m, n, k) -> (m, n)>], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>} %atile, %btile, %acc : vector<4x4xf32>, vector<4x4xf32> into vector<4x4xf32>
+      vector.transfer_write %mm, %d[%c0, %c0] {in_bounds = [true, true]} : vector<4x4xf32>, memref<4x4xf32>
+    }
+    scf.yield
+  }
+  // Accumulate the local tile D into the C parameter: C = C + D.
+  %cval = vector.transfer_read %C[%c0, %c0], %pad {in_bounds = [true, true]} : memref<4x4xf32>, vector<4x4xf32>
+  %dval = vector.transfer_read %d[%c0, %c0], %pad {in_bounds = [true, true]} : memref<4x4xf32>, vector<4x4xf32>
+  %sum = arith.addf %cval, %dval : vector<4x4xf32>
+  vector.transfer_write %sum, %C[%c0, %c0] {in_bounds = [true, true]} : vector<4x4xf32>, memref<4x4xf32>
+  return
+}
