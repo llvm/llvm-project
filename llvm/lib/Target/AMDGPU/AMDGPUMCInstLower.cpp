@@ -14,6 +14,8 @@
 
 #include "AMDGPUMCInstLower.h"
 #include "AMDGPUAsmPrinter.h"
+#include "AMDGPUMachineInstrs.h"
+#include "AMDGPUMemoryUtils.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -433,8 +435,19 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
 
     if (MI->isMetaInstruction()) {
-      if (isVerbose())
+      if (isVerbose()) {
+        if (const auto *Marker = dyn_cast<AMDGPUMI::VGPRLifetimeInst>(MI)) {
+          const auto &MD =
+              AMDGPU::AllocatedVGPRsMetadata::get(Marker->getObject());
+          unsigned Begin = MD.getAddress() / 4;
+          unsigned End = (MD.getAddress() + MD.getSize() - 1) / 4;
+          OutStreamer->emitRawComment(
+              Twine(" VGPR lifetime ") + (Marker->isStart() ? "start" : "end") +
+              ": v[" + Twine(Begin) + ":" + Twine(End) + "]");
+          return;
+        }
         OutStreamer->emitRawComment(" meta instruction");
+      }
       return;
     }
 

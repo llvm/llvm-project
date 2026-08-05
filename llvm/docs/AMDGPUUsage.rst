@@ -2143,6 +2143,24 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    * Local pointer to the LDS barrier data.
 
+  llvm.amdgcn.vgpr.lifetime.start                  Marks the start of the lifetime of an object in the
+                                                   :ref:`VGPR<amdgpu-address-spaces>` address space, whose
+                                                   placement within it is recorded by
+                                                   :ref:`amdgpu.allocated.vgprs<amdgpu_allocated_vgprs>`.
+                                                   Takes the ``alloca`` as its only argument.
+
+                                                   This is a backend-only intrinsic, created from
+                                                   ``llvm.lifetime.start`` by the ``amdgpu-promote-alloca``
+                                                   pass; frontends should not emit it. The registers the
+                                                   object occupies are marked as used between it and the
+                                                   matching end, so register allocation does not hand them
+                                                   to anything else there. An object with no start is live
+                                                   from its definition.
+
+  llvm.amdgcn.vgpr.lifetime.end                    Marks the end of such a lifetime; see
+                                                   ``llvm.amdgcn.vgpr.lifetime.start``. An object with no
+                                                   end is live to the end of the function.
+
   ==============================================   ==========================================================
 
 .. TODO::
@@ -2516,8 +2534,30 @@ whether to skip the DPP optimization.
   ; Few expected active lanes: the atomic optimizer may skip the DPP optimization.
   %old0 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 4}
 
-  ; Many expected active lanes: the DPP optimization is not skipped.
-  %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
+; Many expected active lanes: the DPP optimization is not skipped.
+%old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
+
+.. _amdgpu_allocated_vgprs:
+
+'``amdgpu.allocated.vgprs``' Metadata
+-------------------------------------
+
+Records where in the :ref:`VGPR <amdgpu-address-spaces>` address space an
+``alloca`` in that address space was placed. It has two ``i32`` constant
+operands: the byte address of the object within the address space, and its size
+in bytes. Both are multiples of four for the address, since an object cannot
+share a register with another one.
+
+The metadata is added by the ``amdgpu-promote-alloca`` pass and is not intended
+to be written by frontends. The backend uses it in two ways: the address of the
+``alloca`` lowers to the constant recorded here rather than to a stack slot, and
+the physical registers the object occupies are derived from it so that register
+allocation can be kept off them while the object is live.
+
+.. code-block:: llvm
+
+  ; An object of four dwords placed at v[0:3].
+  %obj = alloca [4 x i32], addrspace(13), !amdgpu.allocated.vgprs !{i32 0, i32 16}
 
 
 LLVM IR Attributes

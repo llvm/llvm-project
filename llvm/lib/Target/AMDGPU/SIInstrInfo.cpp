@@ -4233,13 +4233,16 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
     return false;
 
   // VGPR "as memory" indexed accesses only alias each other, and then only
-  // when their [idx+offset, idx+offset+width) dword ranges overlap.
+  // when their [idx+offset, idx+offset+width) dword ranges overlap. The
+  // exception is a lifetime marker, which conceptually overwrites the whole
+  // object it covers and so may alias any access to it.
   const bool IsLdStIdxA = isa<AMDGPUMI::VLoadStoreIdxInst>(MIa);
   const bool IsLdStIdxB = isa<AMDGPUMI::VLoadStoreIdxInst>(MIb);
   if (IsLdStIdxA || IsLdStIdxB) {
     if (IsLdStIdxA && IsLdStIdxB)
       return checkInstOffsetsDoNotOverlap(MIa, MIb);
-    return true;
+    return !isa<AMDGPUMI::VGPRLifetimeInst>(MIa) &&
+           !isa<AMDGPUMI::VGPRLifetimeInst>(MIb);
   }
 
   if (isLDSDMA(MIa) || isLDSDMA(MIb))
