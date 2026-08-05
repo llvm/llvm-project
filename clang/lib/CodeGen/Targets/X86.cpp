@@ -3556,12 +3556,10 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
             Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
             /*ByVal=*/false);
 
-      // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
-      // Clang matches them for compatibility.
       if (BT->getKind() == BuiltinType::Int128 ||
           BT->getKind() == BuiltinType::UInt128)
-        return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
-            llvm::Type::getInt64Ty(getVMContext()), 2));
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
 
       // Mingw64 GCC returns f128 via sret, and Clang matches that for
       // compatibility. This mirrors the X86 backend's CanLowerReturn logic.
