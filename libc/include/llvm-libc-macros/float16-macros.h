@@ -11,7 +11,7 @@
 
 #include "../llvm-libc-types/float128.h"
 
-#if defined(__arm__) && defined(_M_ARM)
+#if (defined(__arm__) && defined(_M_ARM)) || defined(__riscv)
 #define LIBC_USE_SOFT_FLOAT16
 #endif
 
