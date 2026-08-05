@@ -176,7 +176,6 @@ set(x86_files
   amxfp8intrin.h
   amxintrin.h
   amxmovrsintrin.h
-  amxtf32intrin.h
   avx10_2_512bf16intrin.h
   avx10_2_512convertintrin.h
   avx10_2_512minmaxintrin.h
@@ -308,6 +307,9 @@ set(gpu_files
   nvptxintrin.h
   amdgpuintrin.h
   spirvintrin.h
+  __clang_gpu_builtin_vars.h
+  __clang_gpu_device_functions.h
+  __clang_gpu_intrinsics.h
   )
 
 set(windows_only_files
@@ -413,6 +415,7 @@ set(zos_wrapper_files
   zos_wrappers/locale.h
   zos_wrappers/math.h
   zos_wrappers/poll.h
+  zos_wrappers/stdlib.h
   zos_wrappers/string.h
   zos_wrappers/time.h
   zos_wrappers/variant.h

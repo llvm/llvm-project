@@ -10,6 +10,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include <cassert>
 
@@ -304,6 +305,16 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
 
+  if (astContext.getLangOpts().CUDAIsDevice) {
+    if (type->isCUDADeviceBuiltinSurfaceType()) {
+      if (mlir::Type ty =
+              cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinSurfaceDeviceType())
+        return ty;
+    } else if (type->isCUDADeviceBuiltinTextureType()) {
+      assert(!cir::MissingFeatures::cudaTextureType());
+    }
+  }
+
   // Process record types before the type cache lookup.
   if (const auto *recordType = dyn_cast<RecordType>(type))
     return convertRecordDeclType(recordType->getDecl()->getDefinitionOrSelf());
@@ -494,7 +505,9 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
       resultType = cir::VectorType::get(builder.getSInt32Ty(), 8);             \
     } else {                                                                   \
-      resultType = builder.getPointerTo(cgm.voidTy);                           \
+      resultType = builder.getPointerTo(                                       \
+          cgm.voidTy,                                                          \
+          cir::TargetAddressSpaceAttr::get(&getMLIRContext(), AS));            \
     }                                                                          \
     break;                                                                     \
   }

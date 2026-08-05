@@ -19,7 +19,6 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Runtime/entry-names.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
@@ -641,22 +640,12 @@ static constexpr IntrinsicHandler cudaHandlers[]{
      {{}},
      /*isElemental=*/false},
 };
+static_assert(fir::isSorted(cudaHandlers) && "map must be sorted");
 
-template <std::size_t N>
-static constexpr bool isSorted(const IntrinsicHandler (&array)[N]) {
-  // Replace by std::sorted when C++20 is default (will be constexpr).
-  const IntrinsicHandler *lastSeen{nullptr};
-  bool isSorted{true};
-  for (const auto &x : array) {
-    if (lastSeen)
-      isSorted &= std::string_view{lastSeen->name} < std::string_view{x.name};
-    lastSeen = &x;
-  }
-  return isSorted;
-}
-static_assert(isSorted(cudaHandlers) && "map must be sorted");
-
-const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name) {
+const IntrinsicHandler *findCUDAIntrinsicHandler(llvm::StringRef name,
+                                                 bool isBindcCall) {
+  if (isBindcCall)
+    return nullptr;
   auto compare = [](const IntrinsicHandler &cudaHandler, llvm::StringRef name) {
     return name.compare(cudaHandler.name) > 0;
   };
@@ -893,9 +882,13 @@ CUDAIntrinsicLibrary::genAtomicCas(mlir::Type resultType,
           .getResult(0);
   auto cmpxchg = mlir::LLVM::AtomicCmpXchgOp::create(
       builder, loc, address, arg1, arg2, successOrdering, failureOrdering);
-  mlir::Value boolResult =
-      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 1);
-  return builder.createConvert(loc, resultType, boolResult);
+  // atomicCAS returns the value originally stored at the address, which is the
+  // first element of the cmpxchg result, not the success flag.
+  mlir::Value oldValue =
+      mlir::LLVM::ExtractValueOp::create(builder, loc, cmpxchg, 0);
+  if (mlir::isa<mlir::Float32Type, mlir::Float64Type>(resultType))
+    return mlir::LLVM::BitcastOp::create(builder, loc, resultType, oldValue);
+  return builder.createConvert(loc, resultType, oldValue);
 }
 
 mlir::Value

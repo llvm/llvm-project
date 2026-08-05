@@ -9,24 +9,21 @@
 #include "flang/Optimizer/Transforms/MIFOpConversion.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/Character.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MIFCommon.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/MIF/MIFOps.h"
-#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Runtime/stop.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace fir {
 #define GEN_PASS_DEF_MIFOPCONVERSION
@@ -423,6 +420,43 @@ struct MIFInitOpConversion : public mlir::OpRewritePattern<mif::InitOp> {
   }
 };
 
+/// After a PRIF call that always writes i64 cosubscripts into a sequence
+/// buffer, convert the buffer to the declared Fortran element type when it
+/// is narrower than i64. Returns \p i64Result unchanged when eleTy == i64Ty;
+/// otherwise allocates a typed buffer, copies with element-wise conversion,
+/// and returns the result widened to \p declaredBoxTy.
+static mlir::Value convertI64SeqToEleTy(fir::FirOpBuilder &builder,
+                                        mlir::Location loc,
+                                        mlir::Value i64Result, mlir::Type i64Ty,
+                                        mlir::Type eleTy, std::int64_t corank,
+                                        mlir::Type declaredBoxTy) {
+  if (eleTy == i64Ty)
+    return i64Result;
+  mlir::Value i64Buf = fir::BoxAddrOp::create(
+      builder, loc,
+      builder.getRefType(
+          mlir::cast<fir::BoxType>(i64Result.getType()).getEleTy()),
+      i64Result);
+  mlir::Type declaredSeqType = fir::SequenceType::get(
+      static_cast<fir::SequenceType::Extent>(corank), eleTy);
+  mlir::Value declaredBuf = builder.createTemporary(loc, declaredSeqType);
+  mlir::Type indexTy = builder.getIndexType();
+  mlir::Type i64RefTy = builder.getRefType(i64Ty);
+  mlir::Type eleRefTy = builder.getRefType(eleTy);
+  for (std::int64_t i = 0; i < corank; ++i) {
+    mlir::Value idx = builder.createIntegerConstant(loc, indexTy, i);
+    mlir::Value srcAddr =
+        fir::CoordinateOp::create(builder, loc, i64RefTy, i64Buf, idx);
+    mlir::Value i64Val = fir::LoadOp::create(builder, loc, srcAddr);
+    mlir::Value eleVal = builder.createConvert(loc, eleTy, i64Val);
+    mlir::Value dstAddr =
+        fir::CoordinateOp::create(builder, loc, eleRefTy, declaredBuf, idx);
+    fir::StoreOp::create(builder, loc, eleVal, dstAddr);
+  }
+  mlir::Value result = builder.createBox(loc, declaredBuf);
+  return fir::ConvertOp::create(builder, loc, declaredBoxTy, result);
+}
+
 /// Convert mif.this_image operation to PRIF runtime call
 struct MIFThisImageOpConversion
     : public mlir::OpRewritePattern<mif::ThisImageOp> {
@@ -485,6 +519,10 @@ struct MIFThisImageOpConversion
         fir::CallOp::create(builder, loc, funcOp, args);
         result = fir::ConvertOp::create(builder, loc,
                                         genBoxedSequenceType(i64Ty), result);
+        auto boxResultTy = mlir::cast<fir::BoxType>(op.getResult().getType());
+        mlir::Type eleTy = fir::unwrapSequenceType(boxResultTy.getEleTy());
+        result = convertI64SeqToEleTy(builder, loc, result, i64Ty, eleTy,
+                                      corank, op.getResult().getType());
       }
       rewriter.replaceOp(op, result);
     } else {
@@ -1194,6 +1232,11 @@ struct MIFCoshapeOpConversion : public mlir::OpRewritePattern<mif::CoshapeOp> {
     fir::CallOp::create(builder, loc, funcOp, args);
     result = fir::ConvertOp::create(builder, loc, genBoxedSequenceType(i64Ty),
                                     result);
+
+    auto boxResultTy = mlir::cast<fir::BoxType>(op.getResult().getType());
+    mlir::Type eleTy = fir::unwrapSequenceType(boxResultTy.getEleTy());
+    result = convertI64SeqToEleTy(builder, loc, result, i64Ty, eleTy, corank,
+                                  op.getResult().getType());
     rewriter.replaceOp(op, result);
     return mlir::success();
   }
@@ -1317,6 +1360,32 @@ struct MIFImageIndexOpConversion
   }
 };
 
+static void genCoarrayHandle(fir::FirOpBuilder &builder, mlir::ModuleOp mod,
+                             fir::DeclareOp op) {
+  builder.setInsertionPointAfter(op);
+  mlir::Location loc = op.getLoc();
+  mlir::Type ty = fir::unwrapRefType(op.getMemref().getType());
+
+  if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty)) {
+    if (boxTy.isCoarray()) {
+      mlir::Type handleTy =
+          fir::BoxType::get(getCoarrayHandleType(builder, loc));
+      std::string globalName =
+          op.getUniqName().str() + coarrayHandleSuffix.str();
+      fir::GlobalOp global = builder.createGlobal(
+          loc, handleTy, globalName, builder.createLinkOnceLinkage());
+      mlir::Region &region = global.getRegion();
+      region.push_back(new mlir::Block);
+      mlir::Block &block = region.back();
+      auto insertPt = builder.saveInsertionPoint();
+      builder.setInsertionPointToStart(&block);
+      auto box = fir::factory::createUnallocatedBox(builder, loc, handleTy, {});
+      fir::HasValueOp::create(builder, loc, box);
+      builder.restoreInsertionPoint(insertPt);
+    }
+  }
+}
+
 class MIFOpConversion : public fir::impl::MIFOpConversionBase<MIFOpConversion> {
 public:
   void runOnOperation() override {
@@ -1341,11 +1410,15 @@ public:
 
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-    mif::populateMIFOpConversionPatterns(typeConverter, *dl, patterns);
-
     target.addLegalDialect<fir::FIROpsDialect, mlir::cf::ControlFlowDialect>();
     target.addLegalOp<mlir::ModuleOp>();
 
+    // Generate non-allocated missing coarray_handle
+    fir::FirOpBuilder builder(op, fir::getKindMapping(op));
+    module.walk(
+        [&](fir::DeclareOp op) { genCoarrayHandle(builder, module, op); });
+
+    mif::populateMIFOpConversionPatterns(typeConverter, *dl, patterns);
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
       mlir::emitError(mlir::UnknownLoc::get(ctx),

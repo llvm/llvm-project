@@ -1187,6 +1187,18 @@ acc.shutdown device_num(%idxValue : index) if(%ifCond)
 
 // -----
 
+%devTypeInt = arith.constant 2 : i32
+%onHostInt = acc.on_device %devTypeInt : i32 -> i1
+%devTypeIndex = arith.constant 2 : index
+%onHostIndex = acc.on_device %devTypeIndex : index -> i1
+
+// CHECK: [[DEVTYPEINT:%.*]] = arith.constant 2 : i32
+// CHECK: %[[ONHOSTINT:.*]] = acc.on_device [[DEVTYPEINT]] : i32 -> i1
+// CHECK: [[DEVTYPEINDEX:%.*]] = arith.constant 2 : index
+// CHECK: %[[ONHOSTINDEX:.*]] = acc.on_device [[DEVTYPEINDEX]] : index -> i1
+
+// -----
+
 func.func @testexitdataop(%a: !llvm.ptr) -> () {
   %ifCond = arith.constant true
   %i64Value = arith.constant 1 : i64

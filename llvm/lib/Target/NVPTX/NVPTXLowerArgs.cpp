@@ -268,6 +268,13 @@ void copyByValParam(Function &F, Argument &Arg, Value &ParamPtr) {
       Arg.getParamAlign().value_or(DL.getPrefTypeAlign(ByValType)));
   Arg.replaceAllUsesWith(AllocA);
 
+  // If the parameter is never read (writeonly or readnone), there is nothing to
+  // copy in; the alloca above already provides the writable local storage the
+  // body needs, and reading the param here would contradict the attribute.
+  if (Arg.hasAttribute(Attribute::ReadNone) ||
+      Arg.hasAttribute(Attribute::WriteOnly))
+    return;
+
   // Be sure to propagate alignment to this copy; LLVM doesn't know that NVPTX
   // addrspacecast preserves alignment.  Since params are constant, this copy
   // is definitely not volatile.
@@ -343,6 +350,20 @@ static void lowerKernelByValParam(Argument &OldArg, Argument &NewParamArg,
   copyByValParam(F, OldArg, NewParamArg);
 }
 
+// Mark a param-space byval argument as non-writable.
+static void markArgNonWritable(Argument &Arg) {
+  if (Arg.onlyReadsMemory())
+    return;
+
+  if (Arg.hasAttribute(Attribute::WriteOnly)) {
+    Arg.removeAttr(Attribute::WriteOnly);
+    Arg.addAttr(Attribute::ReadNone);
+    return;
+  }
+
+  Arg.addAttr(Attribute::ReadOnly);
+}
+
 // Rewrite a kernel's signature so that each byval argument is declared directly
 // as a pointer in the param address space, then lower the body to match. This
 // creates a new function, moves the body across, and erases \p F.
@@ -366,11 +387,11 @@ static void rewriteKernelByValSignature(Function &F, const bool HasCvtaParam) {
 
   // ISel reads the param symbol directly for kernel byval arguments; this is
   // valid because the signature rewrite above puts them in the param address
-  // space. Mark them readonly: any mutation is redirected to a local copy
+  // space. Mark them non-writable: any mutation is redirected to a local copy
   // below, so the param itself is never written.
   for (Argument &NewArg : NF->args())
     if (NewArg.hasByValAttr())
-      NewArg.addAttr(Attribute::ReadOnly);
+      markArgNonWritable(NewArg);
 
   // Take over F's name and uses (e.g. @llvm.used, nvvm.annotations metadata),
   // then move the body across.

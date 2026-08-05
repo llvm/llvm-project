@@ -778,13 +778,13 @@ define void @crash(ptr %ptr) {
 ; CHECK-NEXT:    %incdec.ptr112 = getelementptr inbounds i8, ptr %text.addr.5, i64 -1
 ; CHECK-NEXT:    --> {(-1 + null)<nuw><nsw>,+,-1}<nw><%while.cond111> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %while.cond111: Computable, %while.body: Uniform }
 ; CHECK-NEXT:    %lastout.2271 = phi ptr [ %incdec.ptr126, %while.body125 ], [ %ptr, %while.end117 ]
-; CHECK-NEXT:    --> {%ptr,+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-2 + (-1 * (ptrtoint ptr %ptr to i64)) + %ptr),+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
+; CHECK-NEXT:    --> {%ptr,+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-2 + (-1 * (ptrtoaddr ptr %ptr to i64)) + %ptr),+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:    %incdec.ptr126 = getelementptr inbounds i8, ptr %lastout.2271, i64 1
-; CHECK-NEXT:    --> {(1 + %ptr),+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-1 + (-1 * (ptrtoint ptr %ptr to i64)) + %ptr),+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
+; CHECK-NEXT:    --> {(1 + %ptr),+,1}<nuw><%while.body125> U: full-set S: full-set Exits: {(-1 + (-1 * (ptrtoaddr ptr %ptr to i64)) + %ptr),+,-1}<nw><%while.cond111> LoopDispositions: { %while.body125: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @crash
-; CHECK-NEXT:  Loop %while.body125: backedge-taken count is {(-2 + (-1 * (ptrtoint ptr %ptr to i64))),+,-1}<nw><%while.cond111>
+; CHECK-NEXT:  Loop %while.body125: backedge-taken count is {(-2 + (-1 * (ptrtoaddr ptr %ptr to i64))),+,-1}<nw><%while.cond111>
 ; CHECK-NEXT:  Loop %while.body125: constant max backedge-taken count is i64 -2
-; CHECK-NEXT:  Loop %while.body125: symbolic max backedge-taken count is {(-2 + (-1 * (ptrtoint ptr %ptr to i64))),+,-1}<nw><%while.cond111>
+; CHECK-NEXT:  Loop %while.body125: symbolic max backedge-taken count is {(-2 + (-1 * (ptrtoaddr ptr %ptr to i64))),+,-1}<nw><%while.cond111>
 ; CHECK-NEXT:  Loop %while.body125: Trip multiple is 1
 ; CHECK-NEXT:  Loop %while.cond111: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %while.cond111: Unpredictable constant max backedge-taken count.
@@ -1302,15 +1302,15 @@ define void @not_optimized_range_check_unsigned2(ptr %pred, i32 %N) {
 ; CHECK-NEXT:    %N.off = add i32 %N, -1
 ; CHECK-NEXT:    --> (-1 + %N) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %gep = getelementptr inbounds i16, ptr %pred, i32 %iv
-; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: ((2 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %pred) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%pred,+,2}<nuw><%loop> U: full-set S: full-set Exits: %pred LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %N LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,2) S: [1,2) Exits: 1 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @not_optimized_range_check_unsigned2
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -2
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 0
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 0
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -1361,13 +1361,13 @@ define void @ptr_induction_eq_1(ptr %a, ptr %b) {
 ; CHECK-LABEL: 'ptr_induction_eq_1'
 ; CHECK-NEXT:  Classifying expressions for: @ptr_induction_eq_1
 ; CHECK-NEXT:    %ptr.iv = phi ptr [ %ptr.iv.next, %loop ], [ %a, %entry ]
-; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%a,+,8}<nuw><%loop> U: full-set S: full-set Exits: ((8 * ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 8
-; CHECK-NEXT:    --> {(8 + %a),+,8}<nuw><%loop> U: full-set S: full-set Exits: (8 + (8 * ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(8 + %a),+,8}<nuw><%loop> U: full-set S: full-set Exits: (8 + (8 * ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8))<nuw> + %a) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_eq_1
-; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693951
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
@@ -1430,11 +1430,11 @@ define void @ptr_induction_early_exit_eq_1_with_align_on_load(ptr %a, ptr %b, pt
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_with_align_on_load
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoaddr ptr %a_ to i64)) + (ptrtoaddr ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoaddr ptr %a_ to i64)) + (ptrtoaddr ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoaddr ptr %a_ to i64)) + (ptrtoaddr ptr %b_ to i64)) /u 8)
 ;
 entry:
   %a_ = load ptr, ptr %a, !align !{i64 8}
@@ -1469,11 +1469,11 @@ define void @ptr_induction_early_exit_eq_1_with_align_on_arguments(ptr align 8 %
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_with_align_on_arguments
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a to i64)) + (ptrtoint ptr %b to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoaddr ptr %a to i64)) + (ptrtoaddr ptr %b to i64)) /u 8)
 ;
 entry:
   %cmp = icmp eq ptr %a, %b
@@ -1510,11 +1510,11 @@ define void @ptr_induction_early_exit_eq_1_align_assumption_1(ptr %a, ptr %b, pt
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_align_assumption_1
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoaddr ptr %a_ to i64)) + (ptrtoaddr ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoaddr ptr %a_ to i64)) + (ptrtoaddr ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoaddr ptr %a_ to i64)) + (ptrtoaddr ptr %b_ to i64)) /u 8)
 ;
 entry:
   %a_ = load ptr, ptr %a
@@ -1555,11 +1555,11 @@ define void @ptr_induction_early_exit_eq_1_align_assumption_2(ptr %a, ptr %b, pt
 ; CHECK-NEXT:  Determining loop execution counts for: @ptr_induction_early_exit_eq_1_align_assumption_2
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    exit count for loop.inc: ((-8 + (-1 * (ptrtoaddr ptr %a_ to i64)) + (ptrtoaddr ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 2305843009213693950
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-8 + (-1 * (ptrtoaddr ptr %a_ to i64)) + (ptrtoaddr ptr %b_ to i64)) /u 8)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoint ptr %a_ to i64)) + (ptrtoint ptr %b_ to i64)) /u 8)
+; CHECK-NEXT:    symbolic max exit count for loop.inc: ((-8 + (-1 * (ptrtoaddr ptr %a_ to i64)) + (ptrtoaddr ptr %b_ to i64)) /u 8)
 ;
 entry:
   %a_ = load ptr, ptr %a
@@ -1654,5 +1654,197 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
+  ret void
+}
+
+; Two range-check idioms on the same variable.
+; The first constrains %N to [1, 101).
+; The second (`5 + %N u< 8`) has a raw range that wraps in the unsigned representation.
+;
+; Intersecting the wrapping raw range with %N already-known [1, 101) range
+; would narrow it to [1, 3) and tighten the trip count.
+define void @range_check_idiom_tighten_wrapping(i32 %N) {
+; CHECK-LABEL: 'range_check_idiom_tighten_wrapping'
+; CHECK-NEXT:  Classifying expressions for: @range_check_idiom_tighten_wrapping
+; CHECK-NEXT:    %N.off1 = add i32 %N, -1
+; CHECK-NEXT:    --> (-1 + %N) U: full-set S: full-set
+; CHECK-NEXT:    %N.off2 = add i32 %N, 5
+; CHECK-NEXT:    --> (5 + %N) U: full-set S: full-set
+; CHECK-NEXT:    %iv = phi i32 [ 0, %next ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2) S: [0,2) Exits: (-1 + %N) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,3) S: [1,3) Exits: %N LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @range_check_idiom_tighten_wrapping
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %N)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %N.off1 = add i32 %N, -1
+  %chk1 = icmp ult i32 %N.off1, 100
+  br i1 %chk1, label %next, label %exit
+
+next:
+  %N.off2 = add i32 %N, 5
+  %chk2 = icmp ult i32 %N.off2, 8
+  br i1 %chk2, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %next ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; TODO: The guard `zext i32 (-1 + %len) to i64 ult 4` implies that
+; `%len` is in [1, 5).
+define void @range_check_idiom_through_zext(i32 %len) {
+; CHECK-LABEL: 'range_check_idiom_through_zext'
+; CHECK-NEXT:  Classifying expressions for: @range_check_idiom_through_zext
+; CHECK-NEXT:    %len.off = add i32 %len, -1
+; CHECK-NEXT:    --> (-1 + %len) U: full-set S: full-set
+; CHECK-NEXT:    %len.wide = zext i32 %len.off to i64
+; CHECK-NEXT:    --> (zext i32 (-1 + %len) to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %len) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %len LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @range_check_idiom_through_zext
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %len)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -2
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %len)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %len.off = add i32 %len, -1
+  %len.wide = zext i32 %len.off to i64
+  %chk = icmp ult i64 %len.wide, 4
+  br i1 %chk, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %len
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; TODO: The guard `zext i32 (-1 + %len) to i64 ugt 2` implies that
+; `%len` is in [4, 1) (wrapping: {4,...,UINT_MAX} U {0};
+; note that %len == 0 satisfies the guard via 0 - 1 = UINT_MAX).
+define void @range_check_idiom_through_zext_ugt(i32 %len) {
+; CHECK-LABEL: 'range_check_idiom_through_zext_ugt'
+; CHECK-NEXT:  Classifying expressions for: @range_check_idiom_through_zext_ugt
+; CHECK-NEXT:    %len.off = add i32 %len, -1
+; CHECK-NEXT:    --> (-1 + %len) U: full-set S: full-set
+; CHECK-NEXT:    %len.wide = zext i32 %len.off to i64
+; CHECK-NEXT:    --> (zext i32 (-1 + %len) to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %len) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %len LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @range_check_idiom_through_zext_ugt
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %len)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %len)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %len.off = add i32 %len, -1
+  %len.wide = zext i32 %len.off to i64
+  %chk = icmp ugt i64 %len.wide, 2
+  br i1 %chk, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %len
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Do not peel when the RHS does not fit in the narrow type:
+;   (zext X) ult 300  !=  X ult trunc(300)
+;
+; Since trunc i64 300 to i8 is 44, X = 44 is a counterexample: the wide
+; comparison is true, while the narrow comparison would be false.
+define void @range_check_idiom_through_zext_rhs_too_wide(i8 %len) {
+; CHECK-LABEL: 'range_check_idiom_through_zext_rhs_too_wide'
+; CHECK-NEXT:  Classifying expressions for: @range_check_idiom_through_zext_rhs_too_wide
+; CHECK-NEXT:    %len.off = add i8 %len, -1
+; CHECK-NEXT:    --> (-1 + %len) U: full-set S: full-set
+; CHECK-NEXT:    %len.wide = zext i8 %len.off to i64
+; CHECK-NEXT:    --> (zext i8 (-1 + %len) to i64) U: [0,256) S: [0,256)
+; CHECK-NEXT:    %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-128) S: [0,-128) Exits: (-1 + %len) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i8 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-128) S: [1,-128) Exits: %len LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @range_check_idiom_through_zext_rhs_too_wide
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %len)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i8 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %len)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %len.off = add i8 %len, -1
+  %len.wide = zext i8 %len.off to i64
+  %chk = icmp ult i64 %len.wide, 300
+  br i1 %chk, label %loop, label %exit
+
+loop:
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i8 %iv, 1
+  %ec = icmp eq i8 %iv.next, %len
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
+; Do not peel signed predicates through zext:
+;   (zext X) slt 4  !=  X slt 4
+;
+; For example, when %len = 0, %len.off is i32 -1. After zext it becomes
+; 4294967295, so the wide signed comparison is false, while the narrow
+; signed comparison would be true.
+define void @range_check_idiom_through_zext_signed(i32 %len) {
+; CHECK-LABEL: 'range_check_idiom_through_zext_signed'
+; CHECK-NEXT:  Classifying expressions for: @range_check_idiom_through_zext_signed
+; CHECK-NEXT:    %len.off = add i32 %len, -1
+; CHECK-NEXT:    --> (-1 + %len) U: full-set S: full-set
+; CHECK-NEXT:    %len.wide = zext i32 %len.off to i64
+; CHECK-NEXT:    --> (zext i32 (-1 + %len) to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (-1 + %len) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: %len LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @range_check_idiom_through_zext_signed
+; CHECK-NEXT:  Loop %loop: backedge-taken count is (-1 + %len)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-1 + %len)
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  %len.off = add i32 %len, -1
+  %len.wide = zext i32 %len.off to i64
+  %chk = icmp slt i64 %len.wide, 4
+  br i1 %chk, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %len
+  br i1 %ec, label %exit, label %loop
+
+exit:
   ret void
 }

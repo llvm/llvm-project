@@ -115,10 +115,9 @@ void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
   EmitEOL();
 }
 
-raw_ostream &SystemZHLASMAsmStreamer::getCommentOS() {
-  if (!IsVerboseAsm)
-    return nulls(); // Discard comments unless in verbose asm mode.
-  return CommentStream;
+void SystemZHLASMAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
+  OS << MAI->getCommentString() << T;
+  EmitEOL();
 }
 
 void SystemZHLASMAsmStreamer::AddComment(const Twine &T, bool EOL) {

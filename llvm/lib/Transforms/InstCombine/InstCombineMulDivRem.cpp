@@ -1698,6 +1698,12 @@ Value *InstCombinerImpl::takeLog2(Value *Op, unsigned Depth, bool AssumeNonZero,
         });
   }
 
+  // log2(X + 1) IIF X[0,1] -> X
+  if (Op->getType()->getScalarSizeInBits() != 1 &&
+      match(Op, m_Add(m_Value(X), m_One())) &&
+      computeKnownBits(X, cast<Instruction>(Op)).countMaxActiveBits() == 1)
+    return IfFold([&]() { return X; });
+
   return nullptr;
 }
 
@@ -1776,9 +1782,10 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
   }
 
   // Op0 / C where C is large (negative) --> zext (Op0 >= C)
-  // TODO: Could use isKnownNegative() to handle non-constant values.
+  // This also handles non-constant values where the sign bit is known to be
+  // set.
   Type *Ty = I.getType();
-  if (match(Op1, m_Negative())) {
+  if (isKnownNegative(Op1, SQ.getWithInstruction(&I))) {
     Value *Cmp = Builder.CreateICmpUGE(Op0, Op1);
     return CastInst::CreateZExtOrBitCast(Cmp, Ty);
   }

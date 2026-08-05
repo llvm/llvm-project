@@ -20,16 +20,16 @@ define void @foo(ptr noalias nocapture %A, ptr noalias nocapture %B, float %T) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[B]], i64 11
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x float>, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[T]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[T]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = fmul <2 x float> [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = fpext <2 x float> [[TMP16]] to <2 x double>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <2 x double> [[TMP17]], <double 5.000000e+00, double 6.000000e+00>
 ; CHECK-NEXT:    [[TMP15:%.*]] = fptosi <2 x double> [[TMP14]] to <2 x i8>
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP15]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP15]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP12]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i8> [[TMP15]], i32 1
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i8> [[TMP15]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP19]], ptr [[TMP20]], align 1
 ; CHECK-NEXT:    ret void
 ;

@@ -3000,6 +3000,9 @@ bool HexagonFrameLowering::useRestoreFunction(const MachineFunction &MF,
       const CSIVect &CSI) const {
   if (shouldInlineCSR(MF, CSI))
     return false;
+  // The returning restore stubs do jumpr r31, this breaks ShadowCallStack:
+  if (MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack))
+    return false;
   // The restore functions do a bit more than just restoring registers.
   // The non-returning versions will go back directly to the caller's
   // caller, others will clean up the stack frame in preparation for
