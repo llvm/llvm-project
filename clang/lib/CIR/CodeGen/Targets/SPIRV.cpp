@@ -42,11 +42,18 @@ public:
     if (!fd)
       return;
 
+    auto func = mlir::cast<cir::FuncOp>(global);
+
     if (cgm.getLangOpts().OpenCL &&
         DeviceKernelAttr::isOpenCLSpelling(fd->getAttr<DeviceKernelAttr>())) {
-      auto func = mlir::cast<cir::FuncOp>(global);
       func.setCallingConv(cir::CallingConv::SpirKernel);
+      return;
     }
+
+    if (cgm.getLangOpts().HIP &&
+        cgm.getTriple().getVendor() == llvm::Triple::AMD &&
+        fd->hasAttr<CUDAGlobalAttr>())
+      func.setCallingConv(cir::CallingConv::SpirKernel);
   }
 };
 
