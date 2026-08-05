@@ -66,7 +66,7 @@ class DWARFUnit;
 
 namespace bolt {
 
-struct BranchLivenessInfo;
+class BranchLivenessInfo;
 
 using InputOffsetToAddressMapTy = std::unordered_multimap<uint64_t, uint64_t>;
 

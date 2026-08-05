@@ -18,6 +18,7 @@ add_llvm_library(LLVMBOLTCore
   BinaryData.cpp
   BinaryEmitter.cpp
   BinaryFunction.cpp
+  BranchLiveness.cpp
   BinaryFunctionCallGraph.cpp
   BinaryFunctionProfile.cpp
   BinarySection.cpp

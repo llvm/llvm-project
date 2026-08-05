@@ -14,7 +14,7 @@
 namespace llvm {
 namespace bolt {
 
-struct BranchLivenessInfo;
+class BranchLivenessInfo;
 
 /// LongJmp is veneer-insertion pass originally written for AArch64 that
 /// compensates for its short-range branches, typically done during linking. We

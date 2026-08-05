@@ -969,7 +969,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
     if (!Candidates.empty()) {
       RegAnalysis RA(BC, nullptr, nullptr);
       for (BinaryFunction *BF : Candidates)
-        BranchLiveness[BF] = computeBranchLiveness(*BF, RA);
+        BranchLiveness.try_emplace(BF, computeBranchLiveness(*BF, RA));
     }
   }
   auto getBranchLiveness = [&](BinaryFunction &BF) {

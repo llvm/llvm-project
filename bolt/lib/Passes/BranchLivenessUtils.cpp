@@ -42,7 +42,7 @@ BranchLivenessInfo computeBranchLiveness(BinaryFunction &BF, RegAnalysis &RA) {
             !BC.MIB->isReversibleBranch(Inst))
           Insts.push_back(&Inst);
 
-  BranchLivenessInfo BLI;
+  BranchLivenessInfo BLI(BF);
   if (Insts.empty())
     return BLI;
 
@@ -51,7 +51,7 @@ BranchLivenessInfo computeBranchLiveness(BinaryFunction &BF, RegAnalysis &RA) {
   const MCPhysReg FlagsReg = BC.MIB->getFlagsReg();
   for (MCInst *Inst : Insts)
     if (!LA.getLiveIn(*Inst).test(FlagsReg))
-      BLI.BranchesWithDeadFlags.insert(Inst);
+      BLI.setFlagsDead(*Inst);
   return BLI;
 }
 

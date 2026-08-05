@@ -9,19 +9,31 @@
 #ifndef BOLT_CORE_BRANCHLIVENESS_H
 #define BOLT_CORE_BRANCHLIVENESS_H
 
-#include "llvm/ADT/DenseSet.h"
-
 namespace llvm {
 class MCInst;
 
 namespace bolt {
+class BinaryFunction;
 
-struct BranchLivenessInfo {
-  DenseSet<const MCInst *> BranchesWithDeadFlags;
+class BranchLivenessInfo {
+  BinaryFunction *BF;
+  unsigned AnnotationIndex;
 
-  bool mustPreserveFlags(const MCInst &Inst) const {
-    return !BranchesWithDeadFlags.count(&Inst);
-  }
+  void swap(BranchLivenessInfo &Other) noexcept;
+
+public:
+  explicit BranchLivenessInfo(BinaryFunction &BF);
+  ~BranchLivenessInfo();
+
+  // Copies would create multiple owners for removing the same annotations.
+  BranchLivenessInfo(const BranchLivenessInfo &) = delete;
+  BranchLivenessInfo &operator=(const BranchLivenessInfo &) = delete;
+
+  BranchLivenessInfo(BranchLivenessInfo &&Other) noexcept;
+  BranchLivenessInfo &operator=(BranchLivenessInfo &&Other) noexcept;
+
+  bool mustPreserveFlags(const MCInst &Inst) const;
+  void setFlagsDead(MCInst &Inst);
 };
 
 } // namespace bolt
