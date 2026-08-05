@@ -4,9 +4,7 @@
 define <16 x i8> @test_tbx1_zero_splat(<16 x i8> %tbl, <16 x i8> %idx) {
 ; CHECK-LABEL: test_tbx1_zero_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    tbx v2.16b, { v0.16b }, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> zeroinitializer, <16 x i8> %tbl, <16 x i8> %idx)
   ret <16 x i8> %res
@@ -15,11 +13,9 @@ define <16 x i8> @test_tbx1_zero_splat(<16 x i8> %tbl, <16 x i8> %idx) {
 define <16 x i8> @test_tbx2_zero_splat(<16 x i8> %tbl1, <16 x i8> %tbl2, <16 x i8> %idx) {
 ; CHECK-LABEL: test_tbx2_zero_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v3.2d, #0000000000000000
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-NEXT:    tbx v3.16b, { v0.16b, v1.16b }, v2.16b
-; CHECK-NEXT:    mov v0.16b, v3.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.aarch64.neon.tbx2.v16i8(<16 x i8> zeroinitializer, <16 x i8> %tbl1, <16 x i8> %tbl2, <16 x i8> %idx)
   ret <16 x i8> %res
@@ -28,12 +24,10 @@ define <16 x i8> @test_tbx2_zero_splat(<16 x i8> %tbl1, <16 x i8> %tbl2, <16 x i
 define <16 x i8> @test_tbx3_zero_splat(<16 x i8> %tbl1, <16 x i8> %tbl2, <16 x i8> %tbl3, <16 x i8> %idx) {
 ; CHECK-LABEL: test_tbx3_zero_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2 def $q0_q1_q2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2 def $q0_q1_q2
-; CHECK-NEXT:    tbx v4.16b, { v0.16b, v1.16b, v2.16b }, v3.16b
-; CHECK-NEXT:    mov v0.16b, v4.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b }, v3.16b
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.aarch64.neon.tbx3.v16i8(<16 x i8> zeroinitializer, <16 x i8> %tbl1, <16 x i8> %tbl2, <16 x i8> %tbl3, <16 x i8> %idx)
   ret <16 x i8> %res
@@ -42,13 +36,11 @@ define <16 x i8> @test_tbx3_zero_splat(<16 x i8> %tbl1, <16 x i8> %tbl2, <16 x i
 define <16 x i8> @test_tbx4_zero_splat(<16 x i8> %tbl1, <16 x i8> %tbl2, <16 x i8> %tbl3, <16 x i8> %tbl4, <16 x i8> %idx) {
 ; CHECK-LABEL: test_tbx4_zero_splat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v5.2d, #0000000000000000
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
-; CHECK-NEXT:    tbx v5.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
-; CHECK-NEXT:    mov v0.16b, v5.16b
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
 ; CHECK-NEXT:    ret
   %res = call <16 x i8> @llvm.aarch64.neon.tbx4.v16i8(<16 x i8> zeroinitializer, <16 x i8> %tbl1, <16 x i8> %tbl2, <16 x i8> %tbl3, <16 x i8> %tbl4, <16 x i8> %idx)
   ret <16 x i8> %res
