@@ -2091,6 +2091,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MI.eraseFromParent();
     return true;
   }
+  case Intrinsic::aarch64_neon_addhn:
+    return LowerBinOp(AArch64::G_ADDHN);
   case Intrinsic::aarch64_neon_sqadd: {
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
       return LowerBinOp(TargetOpcode::G_SADDSAT);
