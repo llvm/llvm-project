@@ -416,8 +416,8 @@ def LoadInput : DXILOp<4, loadInput> {
   let Doc = "Loads a scalar value from a shader input register component.";
   let intrinsics = [IntrinSelect<int_dx_load_input,
       [IntrinArgIndex<1>, IntrinArgIndex<2>, IntrinArgIndex<3>]>];
-  // inputSigId, rowIndex, colIndex
-  let arguments = [Int32Ty, Int32Ty, Int8Ty];
+  // inputSigId, rowIndex, colIndex, gsVertexOrPrimIndex
+  let arguments = [Int32Ty, Int32Ty, Int8Ty, Int32Ty];
   let result = OverloadTy;
   let overloads = [Overloads<DXIL1_0, [HalfTy, FloatTy, Int16Ty, Int32Ty]>];
   let stages = [Stages<DXIL1_0, [all_stages]>];
