@@ -525,7 +525,6 @@ void FunctionCognitiveComplexityCheck::check(
 
   // Output all the basic increments of complexity.
   for (const auto &Detail : Visitor.CC.Details) {
-    // How much of an increment?
     auto [MsgId, Increase] = Detail.process();
     assert(MsgId < Msgs.size() && "MsgId should always be valid");
     // Increase, on the other hand, can be 0.
