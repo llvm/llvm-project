@@ -7,8 +7,8 @@ define void @vf_dependent_uniform(ptr noalias %p, ptr %p.out, ptr %p.in, i64 %n)
 ; CHECK-LABEL: define void @vf_dependent_uniform(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr [[P_OUT:%.*]], ptr [[P_IN:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P_IN2:%.*]] = ptrtoaddr ptr [[P_IN]] to i64
 ; CHECK-NEXT:    [[P_OUT1:%.*]] = ptrtoaddr ptr [[P_OUT]] to i64
+; CHECK-NEXT:    [[P_IN2:%.*]] = ptrtoaddr ptr [[P_IN]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:
@@ -114,8 +114,8 @@ define void @uniform_load(ptr noalias %p, ptr %p.out, ptr %p.in, i64 %n) {
 ; CHECK-LABEL: define void @uniform_load(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr [[P_OUT:%.*]], ptr [[P_IN:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P_IN2:%.*]] = ptrtoaddr ptr [[P_IN]] to i64
 ; CHECK-NEXT:    [[P_OUT1:%.*]] = ptrtoaddr ptr [[P_OUT]] to i64
+; CHECK-NEXT:    [[P_IN2:%.*]] = ptrtoaddr ptr [[P_IN]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:
@@ -181,8 +181,8 @@ define void @uniform_store(ptr noalias %p, ptr %p.out, ptr %p.in, i64 %n) {
 ; CHECK-LABEL: define void @uniform_store(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr [[P_OUT:%.*]], ptr [[P_IN:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P_IN2:%.*]] = ptrtoaddr ptr [[P_IN]] to i64
 ; CHECK-NEXT:    [[P_OUT1:%.*]] = ptrtoaddr ptr [[P_OUT]] to i64
+; CHECK-NEXT:    [[P_IN2:%.*]] = ptrtoaddr ptr [[P_IN]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:

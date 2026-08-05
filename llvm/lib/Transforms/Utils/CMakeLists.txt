@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMTransformUtils
   AddDiscriminators.cpp
   AMDGPUEmitPrintf.cpp
   ASanStackFrameLayout.cpp
+  AssignGUID.cpp
   AssumeBundleBuilder.cpp
   BasicBlockUtils.cpp
   BreakCriticalEdges.cpp
@@ -48,6 +49,8 @@ add_llvm_component_library(LLVMTransformUtils
   LoopPeel.cpp
   LoopRotationUtils.cpp
   LoopSimplify.cpp
+  LoopSplitUtils.cpp
+  LoopSplitUtilsPass.cpp
   LoopUnroll.cpp
   LoopUnrollAndJam.cpp
   LoopUnrollRuntime.cpp

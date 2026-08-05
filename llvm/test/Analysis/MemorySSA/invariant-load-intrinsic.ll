@@ -1,17 +1,12 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 
 declare void @clobber(ptr)
-declare i32 @readonly_call(ptr) memory(read)
-declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, <4 x i1>, <4 x i32>)
-declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, <4 x i1>, <4 x i32>)
-declare <4 x i32> @llvm.masked.expandload.v4i32.p0(ptr, <4 x i1>, <4 x i32>)
-declare <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr>, <4 x i1>, i32)
 
 define <4 x i32> @masked_load_invariant(ptr %p, <4 x i1> %mask, <4 x i32> %passthru) {
 ; CHECK-LABEL: define <4 x i32> @masked_load_invariant(
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: call void @clobber(ptr %p)
-; CHECK: MemoryUse(1)
+; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %v = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %p, <4 x i1> %mask, <4 x i32> %passthru), !invariant.load !0
   call void @clobber(ptr %p)
   %v = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %p, <4 x i1> %mask, <4 x i32> %passthru), !invariant.load !0
@@ -33,7 +28,7 @@ define <4 x i32> @masked_gather_invariant(ptr %p, <4 x ptr> %ptrs, <4 x i1> %mas
 ; CHECK-LABEL: define <4 x i32> @masked_gather_invariant(
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: call void @clobber(ptr %p)
-; CHECK: MemoryUse(1)
+; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> %passthru), !invariant.load !0
   call void @clobber(ptr %p)
   %v = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %ptrs, <4 x i1> %mask, <4 x i32> %passthru), !invariant.load !0
@@ -44,7 +39,7 @@ define <4 x i32> @masked_expandload_invariant(ptr %p, <4 x i1> %mask, <4 x i32> 
 ; CHECK-LABEL: define <4 x i32> @masked_expandload_invariant(
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: call void @clobber(ptr %p)
-; CHECK: MemoryUse(1)
+; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %v = call <4 x i32> @llvm.masked.expandload.v4i32.p0(ptr %p, <4 x i1> %mask, <4 x i32> %passthru), !invariant.load !0
   call void @clobber(ptr %p)
   %v = call <4 x i32> @llvm.masked.expandload.v4i32.p0(ptr %p, <4 x i1> %mask, <4 x i32> %passthru), !invariant.load !0
@@ -55,22 +50,11 @@ define <4 x i32> @vp_gather_invariant(ptr %p, <4 x ptr> %ptrs, <4 x i1> %mask, i
 ; CHECK-LABEL: define <4 x i32> @vp_gather_invariant(
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: call void @clobber(ptr %p)
-; CHECK: MemoryUse(1)
+; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %v = call <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr> %ptrs, <4 x i1> %mask, i32 %vl), !invariant.load !0
   call void @clobber(ptr %p)
   %v = call <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr> %ptrs, <4 x i1> %mask, i32 %vl), !invariant.load !0
   ret <4 x i32> %v
-}
-
-define i32 @ordinary_readonly_call_with_metadata(ptr %p) {
-; CHECK-LABEL: define i32 @ordinary_readonly_call_with_metadata(
-; CHECK: 1 = MemoryDef(liveOnEntry)
-; CHECK-NEXT: call void @clobber(ptr %p)
-; CHECK: MemoryUse(1)
-; CHECK-NEXT: %v = call i32 @readonly_call(ptr %p), !invariant.load !0
-  call void @clobber(ptr %p)
-  %v = call i32 @readonly_call(ptr %p), !invariant.load !0
-  ret i32 %v
 }
 
 !0 = !{}

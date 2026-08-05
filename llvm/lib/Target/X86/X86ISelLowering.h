@@ -276,7 +276,8 @@ namespace llvm {
 
     CondMergingParams
     getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
-                                  const Value *Rhs) const override;
+                                  const Value *Rhs,
+                                  const Function *F) const override;
 
     bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
 
@@ -353,6 +354,9 @@ namespace llvm {
                                                     unsigned MaskIndex,
                                                     TargetLoweringOpt &TLO,
                                                     unsigned Depth) const;
+
+    unsigned getPreferredShrunkVectorSizeInBits(
+        SDValue Op, const APInt &DemandedElts) const override;
 
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,
@@ -565,6 +569,9 @@ namespace llvm {
     bool reduceSelectOfFPConstantLoads(EVT CmpOpVT) const override;
 
     bool convertSelectOfConstantsToMath(EVT VT) const override;
+
+    bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                         EVT CCVT) const override;
 
     bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                                 SDValue C) const override;

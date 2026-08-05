@@ -1466,6 +1466,8 @@ public:
   LLVM_ABI static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
   LLVM_ABI static MDNode *getMergedCalleeTypeMetadata(const MDNode *A,
                                                       const MDNode *B);
+  LLVM_ABI static MDNode *getMergedAllocTokenMetadata(const MDNode *A,
+                                                      const MDNode *B);
 
   /// Convert !captures metadata to CaptureComponents. MD may be nullptr.
   LLVM_ABI static CaptureComponents toCaptureComponents(const MDNode *MD);
@@ -1545,6 +1547,17 @@ public:
 
   /// Shrink the operands by 1.
   void pop_back() { resize(getNumOperands() - 1); }
+
+  /// Filter out tuple elements that do not satisfy predicate.
+  /// Return this if no elements should be filtered out (without re-uniquing).
+  template <typename T> MDTuple *filter(T &&Pred) {
+    ArrayRef<MDOperand> Ops = operands();
+    // Exit if no nodes should be removed.
+    if (llvm::all_of(Ops, Pred))
+      return this;
+    return get(getContext(),
+               to_vector_of<Metadata *>(llvm::make_filter_range(Ops, Pred)));
+  }
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == MDTupleKind;

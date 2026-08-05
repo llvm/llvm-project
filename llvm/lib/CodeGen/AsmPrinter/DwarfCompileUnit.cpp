@@ -524,9 +524,15 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
     addFlag(*SPDie, dwarf::DW_AT_APPLE_omit_frame_ptr);
 
   if (emitFuncLineTableOffsets() && LineTableSym) {
-    addSectionLabel(
-        *SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
-        Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol());
+    MCSymbol *Symbol =
+        Asm->getObjFileLowering().getDwarfLineSection()->getBeginSymbol();
+    if (isDwoUnit()) {
+      addSectionDelta(*SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
+                      Symbol);
+    } else {
+      addSectionLabel(*SPDie, dwarf::DW_AT_LLVM_stmt_sequence, LineTableSym,
+                      Symbol);
+    }
   }
 
   // Only include DW_AT_frame_base in full debug info

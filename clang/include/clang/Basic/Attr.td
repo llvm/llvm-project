@@ -477,7 +477,7 @@ class TargetArch<list<string> arches> : TargetSpec {
 }
 def TargetARM : TargetArch<["arm", "thumb", "armeb", "thumbeb"]>;
 def TargetAArch64 : TargetArch<["aarch64", "aarch64_be", "aarch64_32"]>;
-def TargetAMDGPU : TargetArch<["amdgcn", "r600"]>;
+def TargetAMDGPU : TargetArch<["amdgpu", "r600"]>;
 def TargetAnyArm : TargetArch<!listconcat(TargetARM.Arches, TargetAArch64.Arches)>;
 def TargetAVR : TargetArch<["avr"]>;
 def TargetBPF : TargetArch<["bpfel", "bpfeb"]>;
@@ -512,7 +512,7 @@ def TargetMicrosoftCXXABI : TargetArch<["x86", "x86_64", "arm", "thumb", "aarch6
 // environment on Windows 2. an offloading target e.g. amdgcn or nvptx with
 // a host target in MSVC environment on Windows.
 def TargetMicrosoftRecordLayout : TargetArch<["x86", "x86_64", "arm", "thumb",
-                                              "aarch64", "amdgcn", "nvptx",
+                                              "aarch64", "amdgpu", "nvptx",
                                               "nvptx64", "spirv", "spirv32",
                                               "spirv64"]> {
   let CustomCode = [{ Target.hasMicrosoftRecordLayout() }];
@@ -2137,9 +2137,19 @@ def LifetimeBound : DeclOrTypeAttr {
 }
 
 def LifetimeCaptureBy : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetime_capture_by", 1>];
+  let Spellings = [Clang<"lifetime_capture_by">,
+                   Clang<"lifetime_capture_by_this">,
+                   Clang<"lifetime_capture_by_global">,
+                   Clang<"lifetime_capture_by_unknown">];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Args = [VariadicParamOrParamIdxArgument<"Params">];
+  let Accessors = [Accessor<"isThis", [Clang<"lifetime_capture_by_this">]>,
+                   Accessor<"isGlobal", [Clang<"lifetime_capture_by_global">]>,
+                   Accessor<"isUnknown", [Clang<"lifetime_capture_by_unknown">]>,
+                   Accessor<"isStandaloneSpecial",
+                            [Clang<"lifetime_capture_by_this">,
+                             Clang<"lifetime_capture_by_global">,
+                             Clang<"lifetime_capture_by_unknown">]>];
   let Documentation = [LifetimeCaptureByDocs];
   let AdditionalMembers = [{
 private:
@@ -2522,6 +2532,19 @@ def AMDGPUMaxNumWorkGroups : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
+def AMDGPUNamedBarrierWrapper : InheritableAttr {
+  let Spellings = [];
+  let Args = [];
+  let Documentation = [InternalOnly];
+  let SemaHandler = 0;
+}
+
+def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
+  let Spellings = [Clang<"amdgpu_av">];
+  let Args = [StringArgument<"Mode">];
+  let Documentation = [AMDGPUAvailableVisibleDocs];
+}
+
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];
@@ -2675,7 +2698,7 @@ def CountedByOrNull : DeclOrTypeAttr {
   let Args = [ExprArgument<"Count">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [CountedByOrNullDocs];
   let LangOpts = [COnly];
 }
 
@@ -2698,7 +2721,7 @@ def SizedBy : DeclOrTypeAttr {
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [SizedByDocs];
   let LangOpts = [COnly];
 }
 
@@ -2708,7 +2731,7 @@ def SizedByOrNull : DeclOrTypeAttr {
   let Args = [ExprArgument<"Size">, IntArgument<"NestedLevel", 1>];
   let LateParsed = LateAttrParseExperimentalExt;
   let ParseArgumentsAsUnevaluated = 1;
-  let Documentation = [CountedByDocs];
+  let Documentation = [SizedByOrNullDocs];
   let LangOpts = [COnly];
 }
 
@@ -3170,6 +3193,17 @@ def Regparm : TypeAttr {
   // Represented as part of the enclosing function type.
   let ASTNode = 0;
 }
+
+// FIXME: The following Swift interop attributes currently only support
+// the GNU __attribute__ syntax and lack a CXX11/C23 [[]] spelling.
+//
+// A Clang vendor namespace spelling (e.g., [[clang::swift_name]]) or a
+// Swift vendor namespace spelling (e.g., [[swift::name]]) were both
+// considered, but it was decided not to commit to either prematurely.
+// Doing so deserves more attention -- among other things, one would
+// want to avoid name stuttering (e.g., [[swift::swift_name]]).
+//
+// See https://github.com/llvm/llvm-project/pull/183484
 
 def SwiftType : Attr {
   // This attribute has no spellings as it is only ever created implicitly
@@ -5185,6 +5219,12 @@ def HLSLIsArray : TypeAttr {
   let Documentation = [InternalOnly];
 }
 
+def HLSLIsMultiSampled : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_ms">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
   let LangOpts = [HLSL];
@@ -5306,7 +5346,7 @@ def HLSLVkLocation : HLSLAnnotationAttr {
 }
 
 // `row_major` / `column_major` are HLSL keywords that select the in-memory
-// layout of a matrix-typed declaration. 
+// layout of a matrix-typed declaration.
 def HLSLRowMajor : TypeAttr {
   let Spellings = [CustomKeyword<"row_major">];
   let LangOpts = [HLSL];

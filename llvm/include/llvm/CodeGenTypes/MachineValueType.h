@@ -64,6 +64,10 @@ namespace llvm {
     bool operator>=(const MVT& S) const { return SimpleTy >= S.SimpleTy; }
     bool operator<=(const MVT& S) const { return SimpleTy <= S.SimpleTy; }
 
+    // Support comparison with SimpleValueType.
+    bool operator==(SimpleValueType S) const { return SimpleTy == S; }
+    bool operator!=(SimpleValueType S) const { return SimpleTy != S; }
+
     /// Support for debugging, callable in GDB: VT.dump()
     LLVM_ABI void dump() const;
 
@@ -270,6 +274,21 @@ namespace llvm {
       MVT EltVT = getVectorElementType();
       auto EltCnt = getVectorElementCount();
       return MVT::getVectorVT(EltVT, EltCnt * 2);
+    }
+
+    // Return a VT for an Integer or vetor of integer type doubled in size
+    MVT widenIntegerElementType() const {
+      MVT BaseTy = getScalarType();
+      assert(BaseTy.isInteger() && "Not an integer or vector of integer MVT!");
+      assert((BaseTy != MVT::LAST_INTEGER_VALUETYPE) &&
+             "Widening of this Integer type not supported !");
+      MVT SclTy = getIntegerVT(BaseTy.getScalarSizeInBits() * 2);
+      assert((SclTy != MVT::INVALID_SIMPLE_VALUE_TYPE) &&
+             "Failed to widen to a valid scalar MVT!");
+      MVT ResTy = changeElementType(SclTy);
+      assert((ResTy != MVT::INVALID_SIMPLE_VALUE_TYPE) &&
+             "Failed to widen to a valid vector MVT!");
+      return ResTy;
     }
 
     /// Returns true if the given vector is a power of 2.

@@ -1238,6 +1238,13 @@ class LinuxCoreTestCase(TestBase):
         cstr = var.GetSummary()
         self.assertEqual(cstr, '"_start"')
 
+        # Reading through the target falls back to the application binary too,
+        # and must not report the failed process read.
+        error = lldb.SBError()
+        addr = target.ResolveLoadAddress(var.GetValueAsUnsigned())
+        self.assertEqual(target.ReadMemory(addr, 7, error), b"_start\0")
+        self.assertSuccess(error)
+
     @skipIfLLVMTargetMissing("X86")
     @skipIfWindows
     def test_linux_no_exe(self):
@@ -1453,7 +1460,17 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/nt_file_foo")
+        exe_path = "/path/nt_file_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        # Verify that the process info is correct.
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), "nt_file_foo")
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
@@ -1472,7 +1489,18 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "/path/execfn_foo")
+        exe_path = "/path/execfn_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        # Verify that the process info is correct.
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), "execfn_foo")
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
+
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
@@ -1488,7 +1516,18 @@ class LinuxCoreTestCase(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(core_path)
         exe_module = target.modules[0]
-        self.assertEqual(exe_module.GetFileSpec().fullpath, "prpsinfo_foo")
+        exe_path = "prpsinfo_foo"
+        symlink_path = "/path/prpsinfo_foo"
+        self.assertEqual(exe_module.GetFileSpec().fullpath, exe_path)
+
+        process_info = target.process.GetProcessInfo()
+        self.assertEqual(process_info.GetName(), exe_path)
+        self.assertEqual(process_info.GetArg0(), symlink_path)
+        self.assertEqual(process_info.GetExecutableFile().fullpath, exe_path)
+        self.assertEqual(process_info.GetNumArguments(), 1)
+        self.assertEqual(process_info.GetArgumentAtIndex(0), "--verbose")
+
+
         self.dbg.DeleteTarget(target)
 
 

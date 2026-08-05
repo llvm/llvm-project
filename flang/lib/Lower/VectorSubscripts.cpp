@@ -17,7 +17,6 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Semantics/expression.h"
 
 namespace {
 /// Helper class to lower a designator containing vector subscripts into a

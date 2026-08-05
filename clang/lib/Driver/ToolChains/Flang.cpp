@@ -11,6 +11,7 @@
 #include "Cuda.h"
 
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/MakeSupport.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
@@ -33,6 +34,98 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
   CmdArgs.push_back("-x");
   // Map the driver type to the frontend type.
   CmdArgs.push_back(types::getTypeName(Input.getType()));
+}
+
+// Translate the dependency-file options into the arguments understood by
+// `flang -fc1`. The options handled here:
+//   -M    Emit only the dependencies and skip code generation. They are
+//         written to stdout unless -MF redirects them.
+//   -MM   Treated identically to -M. The -MM/-M split exists to omit system
+//         headers, but Fortran has no notion of system vs user headers, so
+//         there is nothing for -MM to exclude.
+//   -MD   Compile normally and produce the object file, while also writing the
+//         dependency file. Its name defaults to the -o value, or the input
+//         file name when -o is absent, with the extension replaced by .d.
+//   -MMD  Treated identically to -MD, for the same reason -MM equals -M.
+//   -MF   Set the path of the dependency file to write.
+//   -MT   Set the dependency target name (the part before the colon).
+//   -MQ   Like -MT, but additionally quotes characters special to Make.
+static void renderDependencyGenerationOptions(Compilation &C,
+                                              const JobAction &JA,
+                                              const ArgList &Args,
+                                              const InputInfo &Output,
+                                              const InputInfoList &Inputs,
+                                              ArgStringList &CmdArgs) {
+  Arg *ArgM = Args.getLastArg(options::OPT_M, options::OPT_MM);
+  Arg *ArgMD = Args.getLastArg(options::OPT_MD, options::OPT_MMD);
+
+  if (!ArgM && !ArgMD)
+    return;
+
+  // Drop warnings for -M/-MM so they don't mix into the dependency output.
+  if (ArgM)
+    CmdArgs.push_back("-w");
+  else
+    ArgM = ArgMD;
+
+  // Emit "-MT <target>", quoting Make metacharacters when requested.
+  auto addTarget = [&](StringRef Target, bool Quote) {
+    CmdArgs.push_back("-MT");
+    if (Quote) {
+      SmallString<128> Quoted;
+      clang::quoteMakeTarget(Target, Quoted);
+      CmdArgs.push_back(Args.MakeArgString(Quoted));
+    } else {
+      CmdArgs.push_back(Args.MakeArgString(Target));
+    }
+  };
+
+  // Decide where to write the dependency file.
+  const char *DepFile;
+  if (Arg *MF = Args.getLastArg(options::OPT_MF)) {
+    // -MF gives the path explicitly.
+    DepFile = MF->getValue();
+    C.addFailureResultFile(DepFile, &JA);
+  } else if (Output.getType() == types::TY_Dependencies) {
+    // Plain -M/-MM: the dependency file is the output, so use its name
+    DepFile = Output.getFilename();
+  } else if (!ArgMD) {
+    // -M/-MM with no -o: write the dependencies to stdout.
+    DepFile = "-";
+  } else {
+    // -MD/-MMD: name it after -o, else the input, with a .d extension.
+    SmallString<128> P;
+    if (Arg *OutputOpt = Args.getLastArg(options::OPT_o))
+      P = OutputOpt->getValue();
+    else
+      P = llvm::sys::path::filename(Inputs[0].getBaseInput());
+    llvm::sys::path::replace_extension(P, "d");
+    DepFile = Args.MakeArgString(P);
+    C.addFailureResultFile(DepFile, &JA);
+  }
+  CmdArgs.push_back("-dependency-file");
+  CmdArgs.push_back(DepFile);
+
+  // Render the explicit target(s). -MT is verbatim, -MQ is Make-quoted.
+  bool HasTarget = false;
+  for (const Arg *A : Args.filtered(options::OPT_MT, options::OPT_MQ)) {
+    HasTarget = true;
+    A->claim();
+    addTarget(A->getValue(), A->getOption().matches(options::OPT_MQ));
+  }
+
+  // With no explicit target, default to the object file. In -M/-MM mode -o
+  // names the dependency file, not the target, so derive <base>.o instead.
+  if (!HasTarget) {
+    Arg *OutputOpt = Args.getLastArg(options::OPT_o);
+    if (OutputOpt && Output.getType() != types::TY_Dependencies) {
+      addTarget(OutputOpt->getValue(), /*Quote=*/true);
+    } else {
+      SmallString<128> P(llvm::sys::path::filename(Inputs[0].getBaseInput()));
+      llvm::sys::path::replace_extension(P, "o");
+      addTarget(P, /*Quote=*/true);
+    }
+  }
 }
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
@@ -87,7 +180,7 @@ void Flang::addPreprocessingOptions(const ArgList &Args,
 ///  -Ofast
 ///  -O4
 ///  -O3
-/// For all other cases, loop versioning is is disabled.
+/// For all other cases, loop versioning is disabled.
 ///
 /// The gfortran compiler automatically enables the option for -O3 or -Ofast.
 ///
@@ -199,6 +292,10 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back(SplitDWARFOut);
     }
   }
+
+  // Handle compressed debug sections (-gz).
+  renderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
+
   addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 }
 
@@ -240,6 +337,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_loop_fusion,
                     options::OPT_fno_experimental_loop_fusion);
+  Args.addOptInFlag(CmdArgs, options::OPT_freal_sum_reassociation,
+                    options::OPT_fno_real_sum_reassociation);
 
   handleInterchangeLoopsArgs(Args, CmdArgs);
   handleVectorizeLoopsArgs(Args, CmdArgs);
@@ -605,9 +704,8 @@ void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddAArch64TargetArgs(Args, CmdArgs);
     break;
-
+  case llvm::Triple::amdgpu:
   case llvm::Triple::r600:
-  case llvm::Triple::amdgcn:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
     AddAMDGPUTargetArgs(Args, CmdArgs, BA, DeviceOffloadKind);
     break;
@@ -757,15 +855,34 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
     // generating code for a device, so that only the relevant code is emitted.
     CmdArgs.push_back("-fopenmp-is-target-device");
 
+    // -fopenmp-target-fast implies -fopenmp-assume-no-thread-state and
+    // -fopenmp-assume-no-nested-parallelism, and forces -O3 unless an
+    // explicit optimization level was requested.
+    bool TargetFastUsed =
+        Args.hasFlag(options::OPT_fopenmp_target_fast,
+                     options::OPT_fno_openmp_target_fast, false);
+
+    if (TargetFastUsed && !Args.hasArg(options::OPT_O_Group))
+      CmdArgs.push_back("-O3");
+
     // When in OpenMP offloading mode, enable debugging on the device.
     Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);
     if (Args.hasFlag(options::OPT_fopenmp_target_debug,
                      options::OPT_fno_openmp_target_debug, /*Default=*/false))
       CmdArgs.push_back("-fopenmp-target-debug");
-    if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
+
+    // Handle -fopenmp-assume-no-thread-state (implied by target-fast)
+    if (Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
+                     options::OPT_fno_openmp_assume_no_thread_state,
+                     /*Default=*/TargetFastUsed))
       CmdArgs.push_back("-fopenmp-assume-no-thread-state");
-    if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
+
+    // Handle -fopenmp-assume-no-nested-parallelism (implied by target-fast)
+    if (Args.hasFlag(options::OPT_fopenmp_assume_no_nested_parallelism,
+                     options::OPT_fno_openmp_assume_no_nested_parallelism,
+                     /*Default=*/TargetFastUsed))
       CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+
     if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                       true))
       CmdArgs.push_back("-nogpulib");
@@ -1051,9 +1168,12 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   CmdArgs.push_back(Args.MakeArgString(TripleStr));
 
   if (isa<PreprocessJobAction>(JA)) {
-    CmdArgs.push_back("-E");
-    if (Args.getLastArg(options::OPT_dM)) {
-      CmdArgs.push_back("-dM");
+    if (Output.getType() == types::TY_Dependencies) {
+      CmdArgs.push_back("-fsyntax-only");
+    } else {
+      CmdArgs.push_back("-E");
+      if (Args.getLastArg(options::OPT_dM))
+        CmdArgs.push_back("-dM");
     }
   } else if (isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) {
     if (JA.getType() == types::TY_Nothing) {
@@ -1308,6 +1428,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
+
+  renderDependencyGenerationOptions(C, JA, Args, Output, Inputs, CmdArgs);
 
   addDashXForInput(Args, Input, CmdArgs);
 

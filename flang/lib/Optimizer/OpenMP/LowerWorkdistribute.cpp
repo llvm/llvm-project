@@ -24,8 +24,6 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/HLFIR/Passes.h"
-#include "flang/Optimizer/OpenMP/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -34,7 +32,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
-#include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/Dialect/Utils/IndexingUtils.h>
@@ -46,7 +43,6 @@
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <mlir/Support/LLVM.h>
 #include <optional>
-#include <variant>
 
 namespace flangomp {
 #define GEN_PASS_DEF_LOWERWORKDISTRIBUTE
@@ -761,7 +757,8 @@ FailureOr<omp::TargetOp> splitTargetData(omp::TargetOp targetOp,
   // Create the inner target op
   auto newTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
       targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
       targetOp.getDependIterated(), targetOp.getDevice(),
       targetOp.getDynGroupprivateAccessGroupAttr(),
@@ -1486,7 +1483,8 @@ genPreTargetOp(omp::TargetOp targetOp, SmallVector<Value> &preMapOperands,
   // update the hostEvalVars of preTargetOp
   omp::TargetOp preTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
       targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
       targetOp.getDependIterated(), targetOp.getDevice(),
       targetOp.getDynGroupprivateAccessGroupAttr(),
@@ -1580,7 +1578,8 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
   // Create the isolated target op
   omp::TargetOp isolatedTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
       targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
       targetOp.getDependIterated(), targetOp.getDevice(),
       targetOp.getDynGroupprivateAccessGroupAttr(),
@@ -1666,7 +1665,8 @@ static omp::TargetOp genPostTargetOp(omp::TargetOp targetOp,
   // Create the post target op
   omp::TargetOp postTargetOp = omp::TargetOp::create(
       rewriter, targetOp.getLoc(), targetOp.getAllocateVars(),
-      targetOp.getAllocatorVars(), targetOp.getDependKindsAttr(),
+      targetOp.getAllocatorVars(), targetOp.getAllocateAlignmentsAttr(),
+      targetOp.getAllocatePrivateIndicesAttr(), targetOp.getDependKindsAttr(),
       targetOp.getDependVars(), targetOp.getDependIteratedKindsAttr(),
       targetOp.getDependIterated(), targetOp.getDevice(),
       targetOp.getDynGroupprivateAccessGroupAttr(),

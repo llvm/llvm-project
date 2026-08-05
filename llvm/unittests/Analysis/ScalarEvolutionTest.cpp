@@ -704,7 +704,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
   ReturnInst::Create(Context, nullptr, EndBB);
   ScalarEvolution SE = buildSE(*F);
   const SCEV *S = SE.getSCEV(Accum);
-  S = SE.getLosslessPtrToIntExpr(S);
+  S = SE.getPtrToAddrExpr(S);
   Type *I128Ty = Type::getInt128Ty(Context);
   SE.getZeroExtendExpr(S, I128Ty);
 }
@@ -1278,6 +1278,46 @@ TEST_F(ScalarEvolutionsTest, SCEVAddNUW) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, ProveUMinULT) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @foo(i32 %x, i32 %y) { "
+                          "  ret void "
+                          "} ",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *Ty = Type::getInt32Ty(F.getContext());
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Y = SE.getSCEV(getArgByName(F, "y"));
+    const SCEV *UMin = SE.getUMinExpr(X, Y);
+
+    // umin(X, Y) u< X + 1 when add is NUW.
+    const SCEV *XPlusOneNUW = SE.getAddExpr(X, SE.getOne(Ty), SCEV::FlagNUW);
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, UMin, XPlusOneNUW));
+
+    // Same via ICMP_UGT (swapped operands).
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_UGT, XPlusOneNUW, UMin));
+
+    // Check the second operand: umin(X, Y) u< Y + 5 with NUW.
+    const SCEV *Five = SE.getConstant(APInt(32, 5));
+    const SCEV *YPlus5NUW = SE.getAddExpr(Y, Five, SCEV::FlagNUW);
+    EXPECT_TRUE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, UMin, YPlus5NUW));
+
+    // Negative: without NUW, X + 2 might wrap to 0.
+    const SCEV *Two = SE.getConstant(APInt(32, 2));
+    const SCEV *XPlus2NoFlags = SE.getAddExpr(X, Two);
+    EXPECT_FALSE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, UMin, XPlus2NoFlags));
+
+    // Negative: umin(X, Y) u< X is not provable (equal when X <= Y).
+    EXPECT_FALSE(SE.isKnownPredicate(ICmpInst::ICMP_ULT, UMin, X));
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, SCEVgetRanges) {
   LLVMContext C;
   SMDiagnostic Err;
@@ -1762,9 +1802,9 @@ TEST_F(ScalarEvolutionsTest, ComplexityComparatorIsStrictWeakOrdering2) {
   const SCEV *S1 = SE.getSCEV(F->getArg(1));
   const SCEV *S2 = SE.getSCEV(F->getArg(2));
 
-  const SCEV *P0 = SE.getPtrToIntExpr(S0, Int64Ty);
-  const SCEV *P1 = SE.getPtrToIntExpr(S1, Int64Ty);
-  const SCEV *P2 = SE.getPtrToIntExpr(S2, Int64Ty);
+  const SCEV *P0 = SE.getPtrToAddrExpr(S0);
+  const SCEV *P1 = SE.getPtrToAddrExpr(S1);
+  const SCEV *P2 = SE.getPtrToAddrExpr(S2);
 
   const SCEV *M0 = SE.getNegativeSCEV(P0);
   const SCEV *M2 = SE.getNegativeSCEV(P2);

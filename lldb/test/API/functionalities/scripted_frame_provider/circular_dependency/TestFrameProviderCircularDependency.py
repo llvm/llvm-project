@@ -46,7 +46,6 @@ class FrameProviderCircularDependencyTestCase(TestBase):
 
         return target, thread
 
-    @expectedFailureAll(oslist=["linux"], archs=["arm$"])
     def test_circular_dependency_with_function_replacement(self):
         """
         Test the circular dependency fix with a provider that replaces function names.
@@ -165,6 +164,7 @@ class FrameProviderCircularDependencyTestCase(TestBase):
             )
 
     @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr24778")
+    @skipIf(bugnumber="https://github.com/llvm/llvm-project/pull/208992")
     def test_circular_dependency_evaluate_expression_in_get_frame(self):
         """
         Test that calling EvaluateExpression in get_frame_at_index doesn't

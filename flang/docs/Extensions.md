@@ -469,6 +469,20 @@ print *, is_contiguous(a(::2))                   ! prints T in Flang
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
+* In `NAMELIST` input, an assignment to a scalar item may omit its
+  value (e.g. `l=`, immediately followed by the next name-value pair,
+  the group terminator, or end-of-record).  F2023 13.11.2 p1 requires
+  one or more values to follow the `=`, but classic nvfortran and
+  gfortran accept the empty form and leave the item's current value
+  unchanged.  Flang follows the same convention.  For example, given
+  a namelist group `nml` with a `LOGICAL` scalar `l`, an `INTEGER`
+  scalar `i_count`, and a `REAL` scalar `r_value`, the input record
+  ```
+  &nml l= i_count=7 r_value=2.72/
+  ```
+  leaves `l` unchanged and assigns `7` and `2.72` to `i_count` and
+  `r_value` respectively.  Without this extension, the runtime would
+  abort with `Bad character 'i' in LOGICAL input field`.
 * In `NAMELIST` input, a `!` character is accepted as terminating the
   current value and introducing a comment even when it is not preceded
   by a value separator.  For example, `name=0.01!comment` is accepted

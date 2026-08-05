@@ -34,7 +34,7 @@ Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
 void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source) {
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   Source.getAllMetadata(MD);
-  for (const auto [ID, N] : MD) {
+  for (const auto &[ID, N] : MD) {
     switch (ID) {
     case LLVMContext::MD_dbg:
     case LLVMContext::MD_invariant_load:
@@ -409,9 +409,11 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
 bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
                            AAResults *AA) {
   MemorySSAWalker *Walker = MSSA->getWalker();
-  SmallVector<MemoryAccess *> WorkList{Walker->getClobberingMemoryAccess(Load)};
-  SmallPtrSet<MemoryAccess *, 8> Visited;
   MemoryLocation Loc(MemoryLocation::get(Load));
+  MemoryUseOrDef *Use = MSSA->getMemoryAccess(Load);
+  SmallVector<MemoryAccess *> WorkList{
+      Walker->getClobberingMemoryAccess(Use->getDefiningAccess(), Loc)};
+  SmallPtrSet<MemoryAccess *, 8> Visited;
 
   LLVM_DEBUG(dbgs() << "Checking clobbering of: " << *Load << '\n');
 
@@ -446,7 +448,8 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
 
     const MemoryPhi *Phi = cast<MemoryPhi>(MA);
     for (const auto &Use : Phi->incoming_values())
-      WorkList.push_back(cast<MemoryAccess>(&Use));
+      WorkList.push_back(
+          Walker->getClobberingMemoryAccess(cast<MemoryAccess>(&Use), Loc));
   }
 
   LLVM_DEBUG(dbgs() << "      -> no clobber\n");

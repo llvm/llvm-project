@@ -141,8 +141,8 @@ define void @example2(i32 %n, i32 %x) optsize {
 ; CHECK:       vector.body14:
 ; CHECK-NEXT:    [[INDEX16:%.*]] = phi i64 [ 0, [[VECTOR_PH8]] ], [ [[INDEX_NEXT29:%.*]], [[PRED_STORE_CONTINUE26:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH8]] ], [ [[VEC_IND_NEXT26:%.*]], [[PRED_STORE_CONTINUE26]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[I_0_LCSSA]], [[INDEX16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT20]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[I_0_LCSSA]], [[INDEX16]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP18]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF19:%.*]], label [[PRED_STORE_CONTINUE20:%.*]]
 ; CHECK:       pred.store.if17:
@@ -267,6 +267,7 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE16:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE16]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT12]]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 8
@@ -279,7 +280,6 @@ define void @example3(i32 %n, ptr noalias nocapture %p, ptr noalias nocapture %q
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT12]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP3]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -434,6 +434,7 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE15:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE15]] ]
+; CHECK-NEXT:    [[TMP27:%.*]] = icmp ule <4 x i16> [[VEC_IND]], splat (i16 256)
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[TMP1]], 4
@@ -450,7 +451,6 @@ define void @example23c(ptr noalias nocapture %src, ptr noalias nocapture %dst) 
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP28]]
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP29]]
 ; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP27:%.*]] = icmp ule <4 x i16> [[VEC_IND]], splat (i16 256)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP27]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -526,6 +526,7 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE14:%.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i16> [ <i16 0, i16 1, i16 2, i16 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_STORE_CONTINUE14]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ule <4 x i16> [[VEC_IND]], splat (i16 256)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 4
@@ -542,7 +543,6 @@ define i64 @example23d(ptr noalias nocapture %src, ptr noalias nocapture %dst) o
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[NEXT_GEP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ule <4 x i16> [[VEC_IND]], splat (i16 256)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
