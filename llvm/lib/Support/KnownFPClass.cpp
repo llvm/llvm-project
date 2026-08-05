@@ -614,8 +614,9 @@ KnownFPClass KnownFPClass::sinh(const KnownFPClass &KnownSrc) {
 KnownFPClass KnownFPClass::cosh(const KnownFPClass &KnownSrc) {
   KnownFPClass Known;
 
-  // cosh(x) >= 1 for all real x; cosh(+-Inf) = +Inf. Never negative.
-  Known.knownNot(fcNegative);
+  // cosh(x) >= 1 for all real x; cosh(+-Inf) = +Inf. Never negative,
+  // zero, or subnormal.
+  Known.knownNot(fcNegative | fcZero | fcSubnormal);
 
   Known.propagateNaN(KnownSrc);
 
