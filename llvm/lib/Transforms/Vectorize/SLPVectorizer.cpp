@@ -4857,15 +4857,19 @@ private:
           if (!ScheduleCopyableDataMap.empty()) {
             SmallVector<ScheduleCopyableData *> CopyableData =
                 getScheduleCopyableData(User, OpIdx, I);
+            bool ReleasedAsCopyable = false;
             for (ScheduleCopyableData *CD : CopyableData) {
               // Copyable elements modeled on a copyable user lane depend on
               // the user's copyable scheduling data, not on the user itself,
-              // and are released when that copyable data is scheduled.
+              // and are released when that copyable data is scheduled. The
+              // user's own schedule data still carries the def-use dependency
+              // in this case, so it must be released below.
               if (CD->getEdgeInfo().UserTE->isCopyableElement(User))
                 continue;
               DecrUnsched(CD, /*IsControl=*/false);
+              ReleasedAsCopyable = true;
             }
-            if (!CopyableData.empty())
+            if (ReleasedAsCopyable)
               return;
           }
           if (ScheduleData *OpSD = getScheduleData(I))
