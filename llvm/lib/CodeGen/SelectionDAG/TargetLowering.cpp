@@ -324,14 +324,19 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 
 /// Select the libcall and the condition code to test its result against 0 for
 /// an ordered floating-point compare. \p BoolLC is the boolean helper (result
-/// is 0/1); \p TriStateLC is the three-way helper (result is -1/0/1, tested
-/// against 0 with \p TriStateCC). The boolean form is preferred when available.
+/// is 0/1). \p TriStateLC is the per-predicate three-way helper and \p
+/// GenericLC the generic single-symbol three-way helper (both return -1/0/1,
+/// tested against 0 with \p TriStateCC). The boolean form is preferred, then
+/// the per-predicate three-way, then the generic three-way.
 static std::pair<RTLIB::Libcall, ISD::CondCode>
 selectFPCmpLibcall(const LibcallLoweringInfo &Libcalls, RTLIB::Libcall BoolLC,
-                   RTLIB::Libcall TriStateLC, ISD::CondCode TriStateCC) {
+                   RTLIB::Libcall TriStateLC, RTLIB::Libcall GenericLC,
+                   ISD::CondCode TriStateCC) {
   if (Libcalls.getLibcallImpl(BoolLC) != RTLIB::Unsupported)
     return {BoolLC, ISD::SETNE};
-  return {TriStateLC, TriStateCC};
+  if (Libcalls.getLibcallImpl(TriStateLC) != RTLIB::Unsupported)
+    return {TriStateLC, TriStateCC};
+  return {GenericLC, TriStateCC};
 }
 
 void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
@@ -363,47 +368,47 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   switch (CCCode) {
   case ISD::SETEQ:
   case ISD::SETOEQ:
-    std::tie(LC1, CC1) =
-        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ),
-                           FP_CMP_LIBCALL(FCMP3_PRED_OEQ), ISD::SETEQ);
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ), FP_CMP_LIBCALL(FCMP3_PRED_OEQ),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETEQ);
     break;
   case ISD::SETNE:
   case ISD::SETUNE:
-    std::tie(LC1, CC1) =
-        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(UNE),
-                           FP_CMP_LIBCALL(FCMP3_PRED_UNE), ISD::SETNE);
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(UNE), FP_CMP_LIBCALL(FCMP3_PRED_UNE),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETNE);
     // Some ABIs (e.g. AEABI) provide neither a not-equal nor a three-way
     // compare; obtain not-equal (UNE = !OEQ) by inverting ordered-equal.
     if (DAG.getLibcalls().getLibcallImpl(LC1) == RTLIB::Unsupported) {
-      std::tie(LC1, CC1) =
-          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ),
-                             FP_CMP_LIBCALL(FCMP3_PRED_OEQ), ISD::SETEQ);
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ),
+          FP_CMP_LIBCALL(FCMP3_PRED_OEQ), FP_CMP_LIBCALL(FCMP3), ISD::SETEQ);
       ShouldInvertCC = true;
     }
     break;
   case ISD::SETGE:
   case ISD::SETOGE:
-    std::tie(LC1, CC1) =
-        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OGE),
-                           FP_CMP_LIBCALL(FCMP3_PRED_OGE), ISD::SETGE);
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OGE), FP_CMP_LIBCALL(FCMP3_PRED_OGE),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETGE);
     break;
   case ISD::SETLT:
   case ISD::SETOLT:
-    std::tie(LC1, CC1) =
-        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OLT),
-                           FP_CMP_LIBCALL(FCMP3_PRED_OLT), ISD::SETLT);
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OLT), FP_CMP_LIBCALL(FCMP3_PRED_OLT),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETLT);
     break;
   case ISD::SETLE:
   case ISD::SETOLE:
-    std::tie(LC1, CC1) =
-        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OLE),
-                           FP_CMP_LIBCALL(FCMP3_PRED_OLE), ISD::SETLE);
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OLE), FP_CMP_LIBCALL(FCMP3_PRED_OLE),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETLE);
     break;
   case ISD::SETGT:
   case ISD::SETOGT:
-    std::tie(LC1, CC1) =
-        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OGT),
-                           FP_CMP_LIBCALL(FCMP3_PRED_OGT), ISD::SETGT);
+    std::tie(LC1, CC1) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OGT), FP_CMP_LIBCALL(FCMP3_PRED_OGT),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETGT);
     break;
   case ISD::SETO:
     ShouldInvertCC = true;
@@ -420,33 +425,33 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
   case ISD::SETUEQ:
     LC1 = FP_CMP_LIBCALL(UO);
     CC1 = ISD::SETNE;
-    std::tie(LC2, CC2) =
-        selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ),
-                           FP_CMP_LIBCALL(FCMP3_PRED_OEQ), ISD::SETEQ);
+    std::tie(LC2, CC2) = selectFPCmpLibcall(
+        DAG.getLibcalls(), FP_CMP_LIBCALL(OEQ), FP_CMP_LIBCALL(FCMP3_PRED_OEQ),
+        FP_CMP_LIBCALL(FCMP3), ISD::SETEQ);
     break;
   default:
     // Invert CC for unordered comparisons, handled by the ordered inverse.
     ShouldInvertCC = true;
     switch (CCCode) {
     case ISD::SETULT:
-      std::tie(LC1, CC1) =
-          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OGE),
-                             FP_CMP_LIBCALL(FCMP3_PRED_OGE), ISD::SETGE);
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OGE),
+          FP_CMP_LIBCALL(FCMP3_PRED_OGE), FP_CMP_LIBCALL(FCMP3), ISD::SETGE);
       break;
     case ISD::SETULE:
-      std::tie(LC1, CC1) =
-          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OGT),
-                             FP_CMP_LIBCALL(FCMP3_PRED_OGT), ISD::SETGT);
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OGT),
+          FP_CMP_LIBCALL(FCMP3_PRED_OGT), FP_CMP_LIBCALL(FCMP3), ISD::SETGT);
       break;
     case ISD::SETUGT:
-      std::tie(LC1, CC1) =
-          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OLE),
-                             FP_CMP_LIBCALL(FCMP3_PRED_OLE), ISD::SETLE);
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OLE),
+          FP_CMP_LIBCALL(FCMP3_PRED_OLE), FP_CMP_LIBCALL(FCMP3), ISD::SETLE);
       break;
     case ISD::SETUGE:
-      std::tie(LC1, CC1) =
-          selectFPCmpLibcall(DAG.getLibcalls(), FP_CMP_LIBCALL(OLT),
-                             FP_CMP_LIBCALL(FCMP3_PRED_OLT), ISD::SETLT);
+      std::tie(LC1, CC1) = selectFPCmpLibcall(
+          DAG.getLibcalls(), FP_CMP_LIBCALL(OLT),
+          FP_CMP_LIBCALL(FCMP3_PRED_OLT), FP_CMP_LIBCALL(FCMP3), ISD::SETLT);
       break;
     default:
       llvm_unreachable("Do not know how to soften this setcc!");
