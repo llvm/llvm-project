@@ -2108,22 +2108,19 @@ struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
 
   LogicalResult matchAndRewrite(linalg::ReduceOp reduceOp,
                                 PatternRewriter &rewriter) const override {
-    if (reduceOp.getNumResults() != 1)
+    if (reduceOp.getNumResults() != 1 || !reduceOp.hasPureTensorSemantics())
       return failure();
 
     auto broadcastOp =
         reduceOp.getInputs().front().getDefiningOp<linalg::BroadcastOp>();
-    if (!broadcastOp || broadcastOp.getNumResults() != 1)
+    if (!broadcastOp || !broadcastOp.hasPureTensorSemantics())
       return failure();
 
-    auto sourceType =
-        dyn_cast<RankedTensorType>(broadcastOp.getInput().getType());
+    auto sourceType = cast<RankedTensorType>(broadcastOp.getInput().getType());
     auto broadcastType =
-        dyn_cast<RankedTensorType>(broadcastOp.getResult().front().getType());
-    auto resultType =
-        dyn_cast<RankedTensorType>(reduceOp.getResult(0).getType());
-    if (!sourceType || !broadcastType || !resultType ||
-        !sourceType.hasStaticShape() || !broadcastType.hasStaticShape() ||
+        cast<RankedTensorType>(broadcastOp.getResult().front().getType());
+    auto resultType = cast<RankedTensorType>(reduceOp.getResult(0).getType());
+    if (!sourceType.hasStaticShape() || !broadcastType.hasStaticShape() ||
         !resultType.hasStaticShape() || sourceType != resultType)
       return failure();
 
@@ -2132,8 +2129,10 @@ struct FoldReduceBroadcast : public OpRewritePattern<linalg::ReduceOp> {
     if (broadcastDims != reduceDims)
       return failure();
 
+    // Reducing an empty broadcast dimension yields the init value, not the
+    // broadcast input.
     for (int64_t dimension : broadcastDims)
-      if (broadcastType.getDimSize(dimension) <= 0)
+      if (broadcastType.getDimSize(dimension) == 0)
         return failure();
 
     std::optional<BroadcastReduceKind> kind =
