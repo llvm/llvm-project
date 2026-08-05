@@ -650,6 +650,13 @@ struct OMPInformationCache : public InformationCache {
 
   /// Indicates if we have already linked in the OpenMP device library.
   bool OpenMPPostLink = false;
+
+  /// Kernels that OpenMPOpt transformed from generic to SPMD mode. Recorded at
+  /// the transform (changeToSPMDMode) so later cleanup does not have to
+  /// re-derive the mode. Such kernels no longer run a generic-mode state
+  /// machine, so the parallel data-sharing wrapper passed to __kmpc_parallel_60
+  /// is dead in them.
+  SmallPtrSet<Function *, 8> SPMDizedKernels;
 };
 
 template <typename Ty, bool InsertInvalidates = true>
@@ -968,6 +975,12 @@ struct OpenMPOpt {
 
       // TODO: This should be folded into buildCustomStateMachine.
       Changed |= rewriteDeviceCodeStateMachine();
+
+      // Drop the parallel data-sharing wrapper from __kmpc_parallel_60 calls in
+      // SPMD kernels, where the runtime never uses it, so the (otherwise dead)
+      // wrapper can be eliminated instead of lingering as a non-kernel LDS
+      // user.
+      Changed |= removeSPMDParallelWrappers();
 
       if (remarksEnabled())
         analysisGlobalization();
@@ -1983,6 +1996,11 @@ private:
   /// the cases we can avoid taking the address of a function.
   bool rewriteDeviceCodeStateMachine();
 
+  /// In SPMD kernels the parallel data-sharing wrapper passed to
+  /// __kmpc_parallel_60 is never used by the runtime; null it out so the dead
+  /// wrapper (and any LDS it references) can be removed.
+  bool removeSPMDParallelWrappers();
+
   ///
   ///}}
 
@@ -2244,6 +2262,47 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
 
     ++NumOpenMPParallelRegionsReplacedInGPUStateMachine;
 
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+bool OpenMPOpt::removeSPMDParallelWrappers() {
+  // Nothing to clean up unless we SPMD-ized at least one kernel.
+  if (OMPInfoCache.SPMDizedKernels.empty())
+    return false;
+
+  OMPInformationCache::RuntimeFunctionInfo &KernelParallelRFI =
+      OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_60];
+  if (!KernelParallelRFI || !KernelParallelRFI.Declaration)
+    return false;
+
+  constexpr unsigned WrapperFunctionArgNo = 6;
+  bool Changed = false;
+  for (User *U : KernelParallelRFI.Declaration->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    if (!CI || CI->getCalledOperand() != KernelParallelRFI.Declaration ||
+        CI->arg_size() <= WrapperFunctionArgNo)
+      continue;
+
+    Value *Wrapper = CI->getArgOperand(WrapperFunctionArgNo);
+    if (isa<ConstantPointerNull>(Wrapper))
+      continue;
+
+    // Only drop the wrapper for a parallel region reached from a single kernel
+    // that we transformed to SPMD mode. A region also reachable from a
+    // generic-mode kernel still needs its wrapper for that kernel's state
+    // machine, and getUniqueKernelFor conservatively bails on such shared
+    // regions. (Mirrors the unique-kernel requirement in
+    // rewriteDeviceCodeStateMachine.)
+    Kernel K = getUniqueKernelFor(*CI->getFunction());
+    if (!K || !OMPInfoCache.SPMDizedKernels.contains(K))
+      continue;
+
+    CI->setArgOperand(
+        WrapperFunctionArgNo,
+        ConstantPointerNull::get(cast<PointerType>(Wrapper->getType())));
     Changed = true;
   }
 
@@ -4301,6 +4360,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     ++NumOpenMPTargetRegionKernelsSPMD;
 
+    // Record that this kernel now runs SPMD so post-Attributor cleanup can drop
+    // the now-dead parallel data-sharing wrapper without re-deriving the mode.
+    OMPInfoCache.SPMDizedKernels.insert(Kernel);
+
     auto Remark = [&](OptimizationRemark OR) {
       return OR << "Transformed generic-mode kernel to SPMD-mode.";
     };
@@ -5040,17 +5103,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       case OMPRTL___kmpc_for_static_loop_4u:
       case OMPRTL___kmpc_for_static_loop_8:
       case OMPRTL___kmpc_for_static_loop_8u:
-        // Parallel regions might be reached by these calls, as they take a
-        // callback argument potentially containing arbitrary user-provided
-        // code.
-        ReachedUnknownParallelRegions.insert(&CB);
-        // TODO: The presence of these calls on their own does not prevent a
-        // kernel from being SPMD-izable. We mark it as such because we need
-        // further changes in order to also consider the contents of the
-        // callbacks passed to them.
-        SPMDCompatibilityTracker.indicatePessimisticFixpoint();
-        SPMDCompatibilityTracker.insert(&CB);
-        break;
+        handleStaticLoop(A, CB);
+        return;
       default:
         // Unknown OpenMP runtime calls cannot be executed in SPMD-mode,
         // generally. However, they do not hide parallel regions.
@@ -5106,6 +5160,12 @@ struct AAKernelInfoCallSite : AAKernelInfo {
         return indicatePessimisticFixpoint();
 
       CallBase &CB = cast<CallBase>(getAssociatedValue());
+      if (isStaticLoopRTL(It->getSecond())) {
+        handleStaticLoop(A, CB);
+        return StateBefore == getState() ? ChangeStatus::UNCHANGED
+                                         : ChangeStatus::CHANGED;
+      }
+
       if (It->getSecond() == OMPRTL___kmpc_parallel_60) {
         if (!handleParallel60(A, CB))
           return indicatePessimisticFixpoint();
@@ -5169,6 +5229,54 @@ struct AAKernelInfoCallSite : AAKernelInfo {
 
   /// Deal with a __kmpc_parallel_60 call (\p CB). Returns true if the call was
   /// handled, if a problem occurred, false is returned.
+  /// The __kmpc_*_static_loop_* runtime entries take the loop body as a
+  /// callback. Analyse it when it resolves to a function instead of assuming
+  /// it hides arbitrary parallelism.
+  void handleStaticLoop(Attributor &A, CallBase &CB) {
+    const unsigned int LoopBodyArgNo = 1;
+
+    auto *LoopBody = dyn_cast<Function>(
+        CB.getArgOperand(LoopBodyArgNo)->stripPointerCasts());
+    auto *BodyAA =
+        LoopBody
+            ? A.getAAFor<AAKernelInfo>(*this, IRPosition::function(*LoopBody),
+                                       DepClassTy::OPTIONAL)
+            : nullptr;
+    if (!BodyAA || !BodyAA->getState().isValidState() ||
+        !BodyAA->ReachedKnownParallelRegions.isValidState() ||
+        !BodyAA->ReachedKnownParallelRegions.empty() ||
+        !BodyAA->ReachedUnknownParallelRegions.isValidState() ||
+        !BodyAA->ReachedUnknownParallelRegions.empty())
+      ReachedUnknownParallelRegions.insert(&CB);
+
+    // TODO: The presence of these calls on their own does not prevent a
+    // kernel from being SPMD-izable. We mark it as such because we need
+    // further changes in order to also consider the contents of the
+    // callbacks passed to them.
+    SPMDCompatibilityTracker.indicatePessimisticFixpoint();
+    SPMDCompatibilityTracker.insert(&CB);
+  }
+
+  static bool isStaticLoopRTL(RuntimeFunction RF) {
+    switch (RF) {
+    case OMPRTL___kmpc_distribute_static_loop_4:
+    case OMPRTL___kmpc_distribute_static_loop_4u:
+    case OMPRTL___kmpc_distribute_static_loop_8:
+    case OMPRTL___kmpc_distribute_static_loop_8u:
+    case OMPRTL___kmpc_distribute_for_static_loop_4:
+    case OMPRTL___kmpc_distribute_for_static_loop_4u:
+    case OMPRTL___kmpc_distribute_for_static_loop_8:
+    case OMPRTL___kmpc_distribute_for_static_loop_8u:
+    case OMPRTL___kmpc_for_static_loop_4:
+    case OMPRTL___kmpc_for_static_loop_4u:
+    case OMPRTL___kmpc_for_static_loop_8:
+    case OMPRTL___kmpc_for_static_loop_8u:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool handleParallel60(Attributor &A, CallBase &CB) {
     const unsigned int NonWrapperFunctionArgNo = 5;
     const unsigned int WrapperFunctionArgNo = 6;

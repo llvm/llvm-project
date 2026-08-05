@@ -97,6 +97,6 @@ attributes #0 = { vscale_range(1, 16) }
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
 !3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 !4 = !{!"llvm.loop.interleave.count", i32 1}
-!5 = !{!"llvm.loop.vectorize.enable", i1 true}
+!5 = !{!"llvm.loop.vectorize.enable"}
 !6 = distinct !{!6, !1, !7, !3, !4, !5}
 !7 = !{!"llvm.loop.vectorize.width", i32 2}

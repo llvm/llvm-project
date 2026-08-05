@@ -30,7 +30,8 @@ namespace clang::CIRGen {
 
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
-    : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder) {
+    : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
+      curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
 }
 
@@ -484,6 +485,24 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
 
+  // This is an artifact of the legacy handling of constrained floating-point
+  // modes. The rounding mode and exception behavior tracked in
+  // clang::LangOptions don't correspond directly to the representation we
+  // use in CIR, but the CIR settings can be derived from them. We track the
+  // default state using the legacy settings because it keeps the tracking in
+  // sync with classic codegen.
+  llvm::RoundingMode rm = getLangOpts().getDefaultRoundingMode();
+  LangOptions::FPExceptionModeKind eb = getLangOpts().getDefaultExceptionMode();
+  builder.setDefaultConstrainedRounding(rm);
+  builder.setDefaultConstrainedExcept(eb);
+  builder.setIsFPConstrained(false);
+  if ((fd && (fd->UsesFPIntrin() || fd->hasAttr<StrictFPAttr>())) ||
+      (!fd && (eb != LangOptions::FPExceptionModeKind::FPE_Ignore ||
+               rm != llvm::RoundingMode::NearestTiesToEven))) {
+    builder.setIsFPConstrained(true);
+    fn->setAttr(cir::CIRDialect::getStrictFPAttrName(),
+                mlir::UnitAttr::get(fn.getContext()));
+  }
   prologueCleanupDepth = ehStack.stable_begin();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
@@ -721,10 +740,6 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
-    if (funcDecl->UsesFPIntrin() || funcDecl->hasAttr<StrictFPAttr>()) {
-      cgm.errorNYI(loc, "STDC FENV_ACCESS");
-      return fn;
-    }
 
     // Save parameters for coroutine function.
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
@@ -961,23 +976,6 @@ LValue CIRGenFunction::makeNaturalAlignAddrLValue(mlir::Value val,
   Address addr(val, convertTypeForMem(ty), alignment);
   assert(!cir::MissingFeatures::opTBAA());
   return makeAddrLValue(addr, ty, baseInfo);
-}
-
-// Map the LangOption for exception behavior into the corresponding enum in
-// the IR.
-static llvm::fp::ExceptionBehavior
-toConstrainedExceptMd(LangOptions::FPExceptionModeKind kind) {
-  switch (kind) {
-  case LangOptions::FPE_Ignore:
-    return llvm::fp::ebIgnore;
-  case LangOptions::FPE_MayTrap:
-    return llvm::fp::ebMayTrap;
-  case LangOptions::FPE_Strict:
-    return llvm::fp::ebStrict;
-  case LangOptions::FPE_Default:
-    llvm_unreachable("expected explicitly initialized exception behavior");
-  }
-  llvm_unreachable("unsupported FP exception behavior");
 }
 
 clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
@@ -1389,13 +1387,12 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   // TODO(cir): create guard to restore fast math configurations.
   assert(!cir::MissingFeatures::fastMathGuard());
 
-  [[maybe_unused]] llvm::RoundingMode newRoundingBehavior =
-      fpFeatures.getRoundingMode();
-  // TODO(cir): override rounding behaviour once FM configs are guarded.
-  [[maybe_unused]] llvm::fp::ExceptionBehavior newExceptionBehavior =
-      toConstrainedExceptMd(static_cast<LangOptions::FPExceptionModeKind>(
-          fpFeatures.getExceptionMode()));
-  // TODO(cir): override exception behaviour once FM configs are guarded.
+  llvm::RoundingMode newRoundingMode = fpFeatures.getRoundingMode();
+  LangOptions::FPExceptionModeKind newExceptionBehavior =
+      fpFeatures.getExceptionMode();
+
+  cgf.builder.setDefaultConstrainedRounding(newRoundingMode);
+  cgf.builder.setDefaultConstrainedExcept(newExceptionBehavior);
 
   // TODO(cir): override FP flags once FM configs are guarded.
   assert(!cir::MissingFeatures::fastMathFlags());
@@ -1403,8 +1400,8 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   assert((cgf.curFuncDecl == nullptr || cgf.builder.getIsFPConstrained() ||
           isa<CXXConstructorDecl>(cgf.curFuncDecl) ||
           isa<CXXDestructorDecl>(cgf.curFuncDecl) ||
-          (newExceptionBehavior == llvm::fp::ebIgnore &&
-           newRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
+          (newExceptionBehavior == LangOptions::FPE_Ignore &&
+           newRoundingMode == llvm::RoundingMode::NearestTiesToEven)) &&
          "FPConstrained should be enabled on entire function");
 
   // TODO(cir): mark CIR function with fast math attributes.
