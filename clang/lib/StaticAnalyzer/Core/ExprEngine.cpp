@@ -2441,43 +2441,42 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
     return Engine.makeNode(BE, WidenedState, Pred);
   }
 
-  // FIXME: Refactor this into a checker.
-  if (BlockCount >= AMgr.options.maxBlockVisitOnPath) {
-    static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
-    const ProgramPoint TaggedLoc = BE.withTag(&Tag);
-    HasGeneratedNodes = true;
-    const ExplodedNode *Sink =
-        Engine.makeNode(TaggedLoc, Pred->getState(), Pred, /*MarkAsSink=*/true);
+  if (BlockCount < AMgr.options.maxBlockVisitOnPath)
+    return HasGeneratedNodes ? Pred : MakeDefaultNode();
 
-    const StackFrame *SF = Pred->getStackFrame();
-    if (!SF->inTopFrame()) {
-      // FIXME: This will unconditionally prevent inlining this function (even
-      // from other entry points), which is not a reasonable heuristic: even if
-      // we reached max block count on this particular execution path, there
-      // may be other execution paths (especially with other parametrizations)
-      // where the analyzer can reach the end of the function (so there is no
-      // natural reason to avoid inlining it). However, disabling this would
-      // significantly increase the analysis time (because more entry points
-      // would exhaust their allocated budget), so it must be compensated by a
-      // different (more reasonable) reduction of analysis scope.
-      Engine.FunctionSummaries->markShouldNotInline(SF->getDecl());
+  static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
+  const ProgramPoint TaggedLoc = BE.withTag(&Tag);
+  HasGeneratedNodes = true;
+  const ExplodedNode *Sink =
+      Engine.makeNode(TaggedLoc, Pred->getState(), Pred, /*MarkAsSink=*/true);
 
-      // Re-run the call evaluation without inlining it, by storing the
-      // no-inlining policy in the state and enqueuing the new work item on
-      // the list. Replay should almost never fail. Use the stats to catch it
-      // if it does.
-      if ((!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, SF)))
-        return nullptr;
-      NumMaxBlockCountReachedInInlined++;
-    } else
-      NumMaxBlockCountReached++;
+  const StackFrame *SF = Pred->getStackFrame();
+  if (!SF->inTopFrame()) {
+    // FIXME: This will unconditionally prevent inlining this function (even
+    // from other entry points), which is not a reasonable heuristic: even if
+    // we reached max block count on this particular execution path, there
+    // may be other execution paths (especially with other parametrizations)
+    // where the analyzer can reach the end of the function (so there is no
+    // natural reason to avoid inlining it). However, disabling this would
+    // significantly increase the analysis time (because more entry points
+    // would exhaust their allocated budget), so it must be compensated by a
+    // different (more reasonable) reduction of analysis scope.
+    Engine.FunctionSummaries->markShouldNotInline(SF->getDecl());
 
-    // Make sink nodes as exhausted(for stats) only if retry failed.
-    Engine.blocksExhausted.push_back(std::make_pair(BE, Sink));
+    // Re-run the call evaluation without inlining it, by storing the
+    // no-inlining policy in the state and enqueuing the new work item on
+    // the list. Replay should almost never fail. Use the stats to catch it
+    // if it does.
+    if ((!AMgr.options.NoRetryExhausted && replayWithoutInlining(Pred, SF)))
+      return nullptr;
+    NumMaxBlockCountReachedInInlined++;
+  } else
+    NumMaxBlockCountReached++;
 
-    return nullptr;
-  }
-  return HasGeneratedNodes ? Pred : MakeDefaultNode();
+  // Make sink nodes as exhausted(for stats) only if retry failed.
+  Engine.blocksExhausted.push_back(std::make_pair(BE, Sink));
+
+  return nullptr;
 }
 
 void ExprEngine::runCheckersForBlockEntrance(const BlockEntrance &Entrance,
