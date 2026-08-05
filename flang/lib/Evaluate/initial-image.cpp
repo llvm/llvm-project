@@ -197,6 +197,7 @@ private:
       // If no padding is needed, use original data without copy
       return image_.data_.data() + offset;
     }
+    CHECK(padWithZero_);
     buffer.assign(bytes, 0);
     if (offset < image_.data_.size()) {
       std::memcpy(buffer.data(), image_.data_.data() + offset,
