@@ -656,4 +656,6 @@ int main() {
           [&] { [[maybe_unused]] CIter it3(iter1); }(), "Trying to convert from a valueless iterator of concat_view.");
     }
   }
+
+  return 0;
 }
