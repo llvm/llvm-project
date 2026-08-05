@@ -20,7 +20,7 @@
 ; RUN: %{cmd} -force-vector-width=16 -epilogue-vectorization-force-VF=8 -enable-vplan-native-path \
 ; RUN: < %s 2>&1 | FileCheck %s --check-prefix=CHECK-OUTER-LOOP
 
-; RUN: opt -S -p loop-vectorize -debug --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
+; RUN: opt -S -p loop-vectorize -debug-only=loop-vectorize --disable-output -epilogue-tail-folding-policy=prefer-fold-tail \
 ; RUN: -force-vector-width=16 -epilogue-vectorization-force-VF=8 -vectorize-scev-check-threshold=0 < %s 2>&1 | FileCheck %s \
 ; RUN: --check-prefix=CHECK-NO-VPLANS
 
@@ -59,8 +59,8 @@ exit:
 
 ; This case can't be tail-folded because all the iterations will be executed by
 ; main vector loop.
-define void @test_epilogue_tf_reset(ptr %A) {
-; CHECK-LABEL: LV: Checking a loop in 'test_epilogue_tf_reset'
+define void @test_no_iterations_left(ptr %A) {
+; CHECK-LABEL: LV: Checking a loop in 'test_no_iterations_left'
 ; CHECK: LV: epilogue tail-folding is enabled
 ; CHECK: LV: This case of epilogue loop can't be tail-folded.
 ; CHECK: LV: Applying epilogue tail-folding failed, disable it.

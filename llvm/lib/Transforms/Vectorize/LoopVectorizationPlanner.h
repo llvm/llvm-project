@@ -938,7 +938,6 @@ public:
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// tail-folding should be avoided up-front, no plans are generated.
   bool planForEpilogueTF(ElementCount UserVF, unsigned UserIC,
-                         ElementCount EpilogueUserVF,
                          LoopVectorizationCostModel &EpilogueCM);
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan

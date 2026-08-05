@@ -5514,27 +5514,19 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
 }
 
 bool LoopVectorizationPlanner::planForEpilogueTF(
-    ElementCount UserVF, unsigned UserIC, ElementCount EpilogueUserVF,
+    ElementCount UserVF, unsigned UserIC,
     LoopVectorizationCostModel &EpilogueCM) {
   if (VPlans.empty()) {
     LLVM_DEBUG(dbgs() << "LV: no vplans have been built for main loop VF, bail "
                          "out of epilogue tail-folding\n");
     return false;
   }
-  if (!OrigLoop->isInnermost())
-    return false;
-
-  if (!EpilogueUserVF.isVector() ||
-      (estimateElementCount(EpilogueUserVF, Config.getVScaleForTuning()) >=
-       estimateElementCount(UserVF, Config.getVScaleForTuning())) *
-          UserIC)
-    return false;
 
   EpilogueCM.ValuesToIgnore.insert_range(CM->ValuesToIgnore);
   EpilogueCM.VecValuesToIgnore.insert_range(CM->VecValuesToIgnore);
 
   FixedScalableVFPair MaxFactors =
-      EpilogueCM.computeMaxVF(EpilogueUserVF, /*UserIC*/ 1);
+      EpilogueCM.computeMaxVF(EpilogueVectorizationForceVF, /*UserIC*/ 1);
   if (!MaxFactors ||
       !EpilogueCM
            .foldTailByMasking()) { // Cases that should not to be vectorized
@@ -5545,8 +5537,6 @@ bool LoopVectorizationPlanner::planForEpilogueTF(
   }
 
   auto VPlan1 = tryToBuildVPlan1(EpilogueCM);
-  if (!VPlan1)
-    return false;
 
   if (!useMaskedInterleavedAccesses(TTI)) {
     LLVM_DEBUG(
@@ -5562,20 +5552,23 @@ bool LoopVectorizationPlanner::planForEpilogueTF(
 
   // Collect the instructions (and their associated costs) that will be more
   // profitable to scalarize.
-  EpilogueCM.collectNonVectorizedAndSetWideningDecisions(EpilogueUserVF);
+  EpilogueCM.collectNonVectorizedAndSetWideningDecisions(
+      EpilogueVectorizationForceVF);
 
   // Expecting only 2 vplans as epilogue TF is applied only for forced VFs.
   assert(VPlans.size() == 2 &&
          "For tail-folded epilogue, VPlans size is expected to be 2");
   // Remove the last vplan, which should be the epilogue plan to replace it by
   // the tail-folded vplan:
-  assert(VPlans.back()->getSingleVF() == EpilogueUserVF &&
+  assert(VPlans.back()->getSingleVF() == EpilogueVectorizationForceVF &&
          "For tail-folded epilogue, last vplan is expected to have "
          "EpilogueUserVF");
   VPlans.pop_back();
-  buildVPlans(*VPlan1, EpilogueUserVF, EpilogueUserVF, EpilogueCM);
+  buildVPlans(*VPlan1, EpilogueVectorizationForceVF,
+              EpilogueVectorizationForceVF, EpilogueCM);
 
-  cost(*VPlans.back(), EpilogueUserVF, /*RU=*/nullptr, EpilogueCM);
+  cost(*VPlans.back(), EpilogueVectorizationForceVF, /*RU=*/nullptr,
+       EpilogueCM);
   return true;
 }
 
@@ -8214,12 +8207,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Plan how to best vectorize.
   LVP.plan(UserVF, UserIC);
-  if (EpilogueTailFoldingCM.has_value())
-    if (!LVP.planForEpilogueTF(UserVF, UserIC, EpilogueVectorizationForceVF,
-                               EpilogueTailFoldingCM.value())) {
+  if (EpilogueTailFoldingCM)
+    if (!LVP.planForEpilogueTF(UserVF, UserIC, EpilogueTailFoldingCM.value())) {
       // we can't apply epilogue TF:
-      LLVM_DEBUG(
-          dbgs() << "LV: Applying epilogue tail-folding failed, disable it.\n");
+      reportVectorizationInfo(
+          "Applying epilogue tail-folding failed, disable it.",
+          "InvalidTailFoldedEpilogue", ORE, L);
       EpilogueTailFoldingCM.reset();
     }
 
