@@ -67,6 +67,45 @@ func.func @test_iterator_descriptor_map_is_not_expanded(%arg0: !fir.box<!fir.arr
 
 // -----
 
+func.func @test_iterator_member_map_is_not_finalized(
+    %arg0: !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %it = omp.iterator(%iv: index) = (%c1 to %c10 step %c1) {
+    %member = fir.coordinate_of %arg0, x :
+        (!fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>) -> !fir.ref<i32>
+    %member_map = omp.map.info
+        var_ptr(%member : !fir.ref<i32>, i32)
+        map_clauses(close, to) capture(ByRef) -> !fir.ref<i32>
+        {name = "record%x"}
+    %parent_map = omp.map.info
+        var_ptr(%arg0 :
+          !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>,
+          !fir.type<_QFiterator_memberTt{x:i32}>)
+        map_clauses(to) capture(ByRef)
+        members(%member_map : [0] : !fir.ref<i32>)
+        -> !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>
+        {name = "record", partial_map = true}
+    omp.yield(
+      %parent_map : !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>)
+  } -> !omp.iterated<
+    !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>>
+  omp.target_enter_data map_iterated(
+    %it : !omp.iterated<
+      !fir.ref<!fir.type<_QFiterator_memberTt{x:i32}>>>) {}
+  return
+}
+
+// CHECK-LABEL: func.func @test_iterator_member_map_is_not_finalized
+// CHECK: omp.iterator
+// CHECK: omp.map.info
+// CHECK-SAME: map_clauses(close, to)
+// CHECK: omp.map.info
+// CHECK-SAME: members(
+// CHECK: omp.target_enter_data map_iterated
+
+// -----
+
 func.func @test_derived_type_map_operand_and_block_addition(%arg0: !fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) {
   %0 = hlfir.designate %arg0{"rx"}   : (!fir.ref<!fir.type<_QFTdtype{ix:i32,rx:f32,zx:complex<f32>,nested:!fir.box<!fir.heap<!fir.type<_QFTdtype>>>,ry:f32}>>) -> !fir.ref<f32>
   %1 = omp.map.info var_ptr(%0 : !fir.ref<f32>, f32) map_clauses(from) capture(ByRef) -> !fir.ref<f32> {name = "scalar_struct%rx"}
