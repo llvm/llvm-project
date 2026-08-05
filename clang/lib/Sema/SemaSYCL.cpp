@@ -718,7 +718,8 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
   template <typename Func, typename... Ts>
   void emitDiagnosticImpl(clang::diag::kind DiagId, Func additionalDiagnostics,
                           Ts &&...Args) {
-    const auto &Detail = getObjectAccessDiagDetails(ObjectAccessPath.back());
+    const DiagDetails &Detail =
+        getObjectAccessDiagDetails(ObjectAccessPath.back());
     {
       ((SemaSYCLRef.Diag(Detail.Loc, DiagId) << Detail.Type) << ... << Args);
     }
