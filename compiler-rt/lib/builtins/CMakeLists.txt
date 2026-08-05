@@ -243,6 +243,72 @@ set(GENERIC_TF_SOURCES
   trunctfsf2.c
 )
 
+# Implement extended-precision builtins, assuming long double is 80 bits.
+# long double is not 80 bits on Android or MSVC.
+set(x86_80_BIT_SOURCES
+  divxc3.c
+  extendhfxf2.c
+  extendxftf2.c
+  fixxfdi.c
+  fixxfti.c
+  fixunsxfdi.c
+  fixunsxfsi.c
+  fixunsxfti.c
+  floatdixf.c
+  floattixf.c
+  floatundixf.c
+  floatuntixf.c
+  mulxc3.c
+  powixf2.c
+  trunctfxf2.c
+  truncxfhf2.c
+)
+
+option(COMPILER_RT_USE_LIBC_MATH
+      "Use LLVM libc math routines for floating-point builtins" OFF)
+
+# Swap the legacy soft-float <name>.c builtin in <list> for the libc-backed
+# <name>.cpp implementation (which delegates to LIBC_NAMESPACE::shared::*).
+macro(use_libc_builtin list_var name)
+  list(REMOVE_ITEM ${list_var} ${name}.c)
+  list(APPEND ${list_var} ${name}.cpp)
+endmacro()
+
+if(COMPILER_RT_USE_LIBC_MATH)
+  include(FindLibcCommonUtils)
+  if(NOT TARGET llvm-libc-common-utilities)
+    message(FATAL_ERROR "LLVM libc is not found at ${libc_path}.")
+  endif()
+
+  get_target_property(_libc_include_dirs llvm-libc-common-utilities
+                      INTERFACE_INCLUDE_DIRECTORIES)
+  include_directories(SYSTEM ${_libc_include_dirs})
+  add_definitions(-DCOMPILER_RT_USE_LIBC_MATH)
+
+  use_libc_builtin(GENERIC_SOURCES    adddf3)
+  use_libc_builtin(GENERIC_SOURCES    addsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES addtf3)
+  use_libc_builtin(GENERIC_SOURCES    divdf3)
+  use_libc_builtin(GENERIC_SOURCES    divsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES divtf3)
+  use_libc_builtin(GENERIC_TF_SOURCES extenddftf2)
+  use_libc_builtin(GENERIC_SOURCES    extendsfdf2)
+  use_libc_builtin(GENERIC_TF_SOURCES extendsftf2)
+  use_libc_builtin(x86_80_BIT_SOURCES extendxftf2)
+  use_libc_builtin(GENERIC_SOURCES    muldf3)
+  use_libc_builtin(GENERIC_SOURCES    mulsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES multf3)
+  use_libc_builtin(GENERIC_SOURCES    negdf2)
+  use_libc_builtin(GENERIC_SOURCES    negsf2)
+  use_libc_builtin(GENERIC_SOURCES    subdf3)
+  use_libc_builtin(GENERIC_SOURCES    subsf3)
+  use_libc_builtin(GENERIC_TF_SOURCES subtf3)
+  use_libc_builtin(GENERIC_SOURCES    truncdfsf2)  
+  use_libc_builtin(GENERIC_TF_SOURCES trunctfdf2)
+  use_libc_builtin(GENERIC_TF_SOURCES trunctfsf2)
+  use_libc_builtin(x86_80_BIT_SOURCES trunctfxf2)
+endif()
+
 option(COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN
   "Skip the atomic builtin (these should normally be provided by a shared library)"
   On)
@@ -311,27 +377,6 @@ if (NOT MSVC)
     i386/fp_mode.c
   )
 endif ()
-
-# Implement extended-precision builtins, assuming long double is 80 bits.
-# long double is not 80 bits on Android or MSVC.
-set(x86_80_BIT_SOURCES
-  divxc3.c
-  extendhfxf2.c
-  extendxftf2.c
-  fixxfdi.c
-  fixxfti.c
-  fixunsxfdi.c
-  fixunsxfsi.c
-  fixunsxfti.c
-  floatdixf.c
-  floattixf.c
-  floatundixf.c
-  floatuntixf.c
-  mulxc3.c
-  powixf2.c
-  trunctfxf2.c
-  truncxfhf2.c
-)
 
 if (NOT MSVC)
   set(x86_64_SOURCES
@@ -808,6 +853,7 @@ if (APPLE)
 endif()
 
 set(amdgcn_SOURCES ${GENERIC_SOURCES})
+set(amdgpu_SOURCES ${GENERIC_SOURCES})
 
 set(armv4t_SOURCES ${arm_min_SOURCES})
 set(armv5te_SOURCES ${arm_min_SOURCES})

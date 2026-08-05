@@ -60,7 +60,6 @@ end program
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'func.func' Pipeline
-! ALL-NEXT:   ArrayValueCopy
 ! ALL-NEXT:   CharacterConversion
 ! ALL-NEXT: 'omp.declare_mapper' Pipeline
 ! ALL-NEXT:   CharacterConversion
@@ -85,6 +84,8 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: PolymorphicOpConversion
+! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT: SelectOpsConversion
 ! ALL-NEXT: AssumedRankOpConversion
 ! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations

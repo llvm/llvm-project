@@ -176,10 +176,6 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
   return Requested;
 }
 
-bool AMDGPUSubtarget::isSingleWavefrontWorkgroup(const Function &F) const {
-  return getFlatWorkGroupSizes(F).second <= getWavefrontSize();
-}
-
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
     std::pair<unsigned, unsigned> RequestedWavesPerEU,
     std::pair<unsigned, unsigned> FlatWorkGroupSizes, unsigned LDSBytes) const {
@@ -432,11 +428,4 @@ const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Funct
     return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<GCNSubtarget>(F));
   return static_cast<const AMDGPUSubtarget &>(
       TM.getSubtarget<R600Subtarget>(F));
-}
-
-// FIXME: This has no reason to be in subtarget
-SmallVector<unsigned>
-AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
-  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3,
-                                        std::numeric_limits<uint32_t>::max());
 }

@@ -113,7 +113,9 @@ class OpenMP_AllocateClauseSkip<
                     extraClassDeclaration> {
   let arguments = (ins
     Variadic<AnyType>:$allocate_vars,
-    Variadic<AnyType>:$allocator_vars
+    Variadic<AnyType>:$allocator_vars,
+    OptionalAttr<DenseI64ArrayAttr>:$allocate_alignments,
+    OptionalAttr<DenseI64ArrayAttr>:$allocate_private_indices
   );
 
   let extraClassDeclaration = [{
@@ -128,9 +130,13 @@ class OpenMP_AllocateClauseSkip<
   }];
 
   let description = [{
-    The `allocator_vars` and `allocate_vars` parameters are a variadic list of
-    values that specify the memory allocator to be used to obtain storage for
-    private values.
+    The `allocate_vars` and `allocator_vars` parameters are parallel lists that
+    pair each allocated private value with the allocator used to obtain its
+    storage. When present, `allocate_alignments` has one entry per allocate
+    variable; zero means omitted alignment, and nonzero entries must be powers
+    of two.
+    `allocate_private_indices` maps each allocate variable to the corresponding
+    position in the operation's private variables.
   }];
 }
 
@@ -764,9 +770,17 @@ class OpenMP_InReductionClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
   );
 
-  // Description varies depending on the operation. Assembly format not defined
-  // because this clause must be processed together with the first region of the
-  // operation, as it defines entry block arguments.
+  // This assembly format should only be used by operations where `in_reduction`
+  // does not define entry block arguments (e.g. `omp.target`). Otherwise, it
+  // must be printed and parsed together with the corresponding region, because
+  // it defines entry block arguments.
+  let optAssemblyFormat = [{
+    `in_reduction` `(`
+      custom<InReductionClause>($in_reduction_vars, type($in_reduction_vars),
+                                $in_reduction_byref, $in_reduction_syms) `)`
+  }];
+
+  // Description varies depending on the operation.
 }
 
 def OpenMP_InReductionClause : OpenMP_InReductionClauseSkip<>;

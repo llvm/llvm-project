@@ -245,3 +245,13 @@ struct HasUniquePtrField {
   }
 };
 } // namespace MakeUnique
+
+namespace DtorNoWarn {
+struct DtorSet {
+  std::string_view view;
+  ~DtorSet() {
+    std::string s;
+    view = s;
+  }
+};
+} // namespace DtorNoWarn

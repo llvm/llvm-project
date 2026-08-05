@@ -28,6 +28,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
@@ -1003,6 +1004,15 @@ LogicalResult MmaOp::verify() {
     case MMATypes::f16:
       kFactor = 8;
       multiplicandFragType = f16x2Ty;
+      expectedResult.push_back(f16x2x2StructTy);
+      expectedResult.push_back(f32x4StructTy);
+      break;
+    case MMATypes::e4m3:
+    case MMATypes::e5m2:
+      // FP8 (m16n8k16 / m16n8k32) packs 4 values per 32-bit register, same
+      // as s8/u8, but the accumulator is f16 or f32 (not integer).
+      kFactor = 16;
+      multiplicandFragType = i32Ty;
       expectedResult.push_back(f16x2x2StructTy);
       expectedResult.push_back(f32x4StructTy);
       break;
@@ -6330,6 +6340,15 @@ LogicalResult Tcgen05LdRedOp::verify() {
 // NVVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
+namespace {
+struct NVVMInlinerInterface final : DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
   addOperations<
@@ -6344,6 +6363,7 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
+  addInterfaces<NVVMInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, NVVMDialect>();
   declarePromisedInterface<gpu::TargetAttrInterface, NVVMTargetAttr>();
 }

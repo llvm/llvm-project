@@ -14,6 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -809,6 +810,14 @@ LogicalResult GPUSharedMemoryOp::verify() {
         "dynamic_shared_memory_scaling_bytes and "
         "dynamic_shared_memory_fixed_bytes must both be present or both be "
         "absent");
+  if (auto scalingAttr = getDynamicSharedMemoryScalingBytesAttr())
+    if (scalingAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_scaling_bytes must be "
+                         "non-negative");
+  if (auto fixedAttr = getDynamicSharedMemoryFixedBytesAttr())
+    if (fixedAttr.getValue().isNegative())
+      return emitOpError("dynamic_shared_memory_fixed_bytes must be "
+                         "non-negative");
 
   auto resultTy = cast<MemRefType>(getResult().getType());
   auto addrSpace =

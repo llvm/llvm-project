@@ -386,7 +386,7 @@ bool Address::GetDescription(Stream &s, Target &target,
          "Non-brief descriptions not implemented");
   LineEntry line_entry;
   if (CalculateSymbolContextLineEntry(line_entry)) {
-    s.Printf(" (%s:%u:%u)", line_entry.GetFile().GetFilename().GetCString(),
+    s.Format(" ({0}:{1}:{2})", line_entry.GetFile().GetFilename(),
              line_entry.line, line_entry.column);
     return true;
   }
@@ -437,8 +437,8 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
     if (section_sp) {
       ModuleSP module_sp = section_sp->GetModule();
       if (module_sp)
-        s->Printf("%s[", module_sp->GetFileSpec().GetFilename().AsCString(
-                             "<Unknown>"));
+        s->Format("{0}[", module_sp->GetFileSpec().GetFilename().nonEmptyOr(
+                              "<Unknown>"));
       else
         s->Printf("%s[", "<Unknown>");
     }

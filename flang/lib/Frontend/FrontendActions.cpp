@@ -59,7 +59,6 @@
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
-#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -72,7 +71,6 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
-#include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <memory>
 #include <system_error>
@@ -762,6 +760,10 @@ void CodeGenAction::generateLLVMIR() {
   config.PreferVectorWidth = opts.PreferVectorWidth;
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenACC))
+    config.EnableOpenACC = true;
+
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
 
@@ -1420,6 +1422,8 @@ void CodeGenAction::executeAction() {
 
   targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
   targetMachine.Options.MCOptions.SplitDwarfFile = codeGenOpts.SplitDwarfFile;
+  targetMachine.Options.MCOptions.CompressDebugSections =
+      codeGenOpts.getCompressDebugSections();
 
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 

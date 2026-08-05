@@ -1099,8 +1099,7 @@ namespace Virtual {
   static_assert(d.b == 'B');
   static_assert(d.c == 'C');
   // During the construction of C, the dynamic type of B's A is B.
-  static_assert(d.ba == 'B'); // expected-error {{failed}} \
-                              // expected-note {{expression evaluates to}}
+  static_assert(d.ba == 'B');
   static_assert(d.d == 'D');
   static_assert(d.f() == 'D');
   constexpr const A &a = (B&)d;
@@ -1461,4 +1460,74 @@ namespace ConstWrites {
   static_assert(b.a.n == 2, "");
   constexpr B bad(true); // both-error {{must be initialized by a constant expression}} \
                          // both-note {{in call to 'B(true)'}}
+}
+
+namespace SubPtr {
+#define fold(x) (__builtin_constant_p(x) ? (x) : (x))
+  struct A { int a; };
+
+  struct B : A {
+    char Padding[12] = {};
+    constexpr B() : A{127} {}
+  };
+
+  struct C : B {
+    int c;
+    constexpr C(int) : B(), c(1000) {}
+  };
+
+  constexpr C c(123);
+
+  static_assert(fold((&c.c - &c.a)) == 4, "");
+  static_assert(fold(((char*)&c.c - (char*)&c.a)) == 16, "");
+
+  constexpr const B* b1 = (B*)&c;
+  constexpr const B* b2 = (B*)&c + 1;
+  static_assert(fold((char*)b2) - fold((char*)b1) == sizeof(B), "");
+
+
+  constexpr int arr[] = {1,2,3};
+  static_assert(&arr[1] - &arr[0] == 1, "");
+  static_assert(&arr[3] - &arr[0] == 3, "");
+
+  constexpr double arr2[] = {1,2,3};
+  static_assert(&arr2[1] - &arr2[0] == 1, "");
+  static_assert(&arr2[3] - &arr2[0] == 3, "");
+
+  struct S {
+    char c[3];
+    int a;
+  };
+  constexpr S s[] = {{}, {}};
+  static_assert(&s[1] - &s[0] == 1, "");
+  static_assert(&s[2] - &s[0] == 2, "");
+  static_assert(fold((char*)&s[1]) - fold((char*)&s[0]) ==     sizeof(S), "");
+  static_assert(fold((char*)&s[2]) - fold((char*)&s[0]) == 2 * sizeof(S), "");
+
+
+  constexpr int m = 10;
+  constexpr const int *p = &m;
+  constexpr const int *p2 = &m + 1;
+  static_assert( p2 - p == 1, "");
+
+
+  struct Ints {
+    int a;
+    int b;
+  };
+  constexpr Ints I = {};
+  static_assert(&I.a + 1 - &I.a == 1, "");
+
+
+  constexpr int **intptr[] = {nullptr};
+  static_assert(&intptr[1] - &intptr[0] == 1, "");
+
+  constexpr int dynAlloc() {
+    int **p = new int*[1];
+    int r = &p[1] - &p[0];
+    delete[] p;
+
+    return r;
+  }
+  static_assert(dynAlloc() == 1);
 }

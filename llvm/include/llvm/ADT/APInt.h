@@ -952,6 +952,8 @@ public:
   /// equivalent to:
   ///   (this->zext(NewWidth) << NewLSB.getBitWidth()) | NewLSB.zext(NewWidth)
   APInt concat(const APInt &NewLSB) const {
+    if (getBitWidth() == 0)
+      return NewLSB;
     /// If the result will be small, then both the merged values are small.
     unsigned NewWidth = getBitWidth() + NewLSB.getBitWidth();
     if (NewWidth <= APINT_BITS_PER_WORD)

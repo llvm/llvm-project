@@ -705,7 +705,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::Type,
                      SanitizerKind::Address | SanitizerKind::KernelAddress |
                          SanitizerKind::Memory | SanitizerKind::Leak |
-                         SanitizerKind::Thread | SanitizerKind::KernelAddress),
+                         SanitizerKind::Thread),
       std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),

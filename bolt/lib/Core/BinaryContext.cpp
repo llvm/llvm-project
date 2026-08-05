@@ -49,6 +49,7 @@ using namespace llvm;
 namespace opts {
 
 extern cl::opt<bool> LargeCodeModel;
+extern cl::opt<bool> UpdateDebugSections;
 
 static cl::opt<bool>
     NoHugePages("no-huge-pages",
@@ -781,6 +782,9 @@ void BinaryContext::populateJumpTables() {
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
                          NextJTAddress, &JT->EntriesAsAddress, &JT->IsSplit);
     if (!Success) {
+      // Re-analysis here is stricter than during disassembly (the referenced
+      // function is now disassembled), so it may fail on a table we accepted
+      // earlier. Ignore the owning function(s) instead of aborting.
       LLVM_DEBUG({
         dbgs() << "failed to analyze ";
         JT->print(dbgs());
@@ -789,7 +793,16 @@ void BinaryContext::populateJumpTables() {
           NextJTI->second->print(dbgs());
         }
       });
-      llvm_unreachable("jump table heuristic failure");
+      JT->EntriesAsAddress.clear();
+      JT->IsSplit = false;
+      // Keep JT in the map so it is still freed by ~BinaryContext.
+      for (BinaryFunction *Frag : JT->Parents) {
+        this->errs()
+            << "BOLT-WARNING: unable to analyze jump table in function "
+            << *Frag << "; ignoring the function\n";
+        Frag->setIgnored();
+      }
+      continue;
     }
     for (BinaryFunction *Frag : JT->Parents) {
       if (JT->IsSplit)
@@ -1778,8 +1791,15 @@ void BinaryContext::preprocessDWODebugInfo() {
       }
       // Prevent failures when DWOName is already an absolute path.
       sys::path::make_absolute(DWOCompDir, AbsolutePath);
+      // Extract only the .dwo CU DIE here: we just need the DWO unit pointer
+      // (for DWOCUs) and the isDWOUnit()/DWOId checks. The full DIE vector is
+      // never read off this cached array -- every consumer streams the DIEs on
+      // demand with DWARFDebugInfoEntry::extractFast (DIEBuilder::
+      // constructFromUnit / collectReferencedTypeSignatures).
       DWARFUnit *DWOCU =
-          DwarfUnit->getNonSkeletonUnitDIE(false, AbsolutePath).getDwarfUnit();
+          DwarfUnit
+              ->getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true, AbsolutePath)
+              .getDwarfUnit();
       if (!DWOCU->isDWOUnit()) {
         this->outs()
             << "BOLT-WARNING: Debug Fission: DWO debug information for "
@@ -1897,6 +1917,7 @@ void BinaryContext::preprocessDebugInfo() {
         LineTable->Prologue.FileNames;
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
+    BinaryLineTable.setFormat(LineTable->Prologue.getFormParams().Format);
     if (DwarfVersion >= 5) {
       std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
@@ -1959,6 +1980,59 @@ void BinaryContext::preprocessDebugInfo() {
                     " info. Use --comp-dir-override to locate the file(s) or"
                     " --update-debug-sections=0 to remove debug info\n";
     exit(1);
+  }
+}
+
+void BinaryContext::collectDebugScopeBoundaries() {
+  // Record DWARF lexical-scope boundaries (inlined_subroutine / lexical_block)
+  // into each containing BinaryFunction, so disassembly keeps an offset for the
+  // boundary instructions (see BinaryFunction::DebugScopeBoundaryOffsets) and
+  // translateInputToOutputRange() can map scope ranges precisely.
+
+  auto recordRange = [&](uint64_t LowPC, uint64_t HighPC) {
+    BinaryFunction *BF = getBinaryFunctionContainingAddress(LowPC);
+    if (!BF)
+      return;
+    BF->addDebugScopeBoundaryOffset(
+        static_cast<uint32_t>(LowPC - BF->getAddress()));
+    // Mark HighPC only if it lies strictly inside the same function.
+    if (HighPC > LowPC && getBinaryFunctionContainingAddress(HighPC) == BF)
+      BF->addDebugScopeBoundaryOffset(
+          static_cast<uint32_t>(HighPC - BF->getAddress()));
+  };
+
+  // Record the boundaries of a single scope DIE.
+  auto processScopeDie = [&](const DWARFDie &Die) {
+    const dwarf::Tag Tag = Die.getTag();
+    if (Tag != dwarf::DW_TAG_inlined_subroutine &&
+        Tag != dwarf::DW_TAG_lexical_block && Tag != dwarf::DW_TAG_try_block &&
+        Tag != dwarf::DW_TAG_catch_block)
+      return;
+    if (Expected<DWARFAddressRangesVector> Ranges = Die.getAddressRanges()) {
+      for (const DWARFAddressRange &R : *Ranges)
+        recordRange(R.LowPC, R.HighPC);
+    } else {
+      consumeError(Ranges.takeError());
+    }
+  };
+
+  for (const std::unique_ptr<DWARFUnit> &CUPtr : DwCtx->compile_units()) {
+    DWARFUnit *CU = CUPtr.get();
+    if (!ProcessedCUs.count(CU))
+      continue;
+
+    // Extract only the CU DIE (the .dwo's, for split DWARF). This is cheap (one
+    // DIE) and sets the unit's range/addr/str-offset bases that
+    // getAddressRanges needs, without materializing the full DIE array.
+    DWARFDie CUDie = CU->getNonSkeletonUnitDIE(/*ExtractUnitDIEOnly=*/true);
+    if (!CUDie)
+      continue;
+    DWARFUnit *DIEUnit = CUDie.getDwarfUnit();
+
+    // Stream the unit's DIEs one at a time rather than recording them all in a
+    // vector (as DWARFUnit's extractDIEsToVector() does): only DIE tags/ranges
+    // are inspected, so the tree structure is not needed.
+    forEachDIEInUnit(*DIEUnit, processScopeDie);
   }
 }
 
@@ -2462,11 +2536,11 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
                                          uint32_t Type, uint64_t Addend,
-                                         uint64_t Value) {
+                                         uint64_t Value, bool IsRELR) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
   Section->addDynamicRelocation(Address - Section->getAddress(), Symbol, Type,
-                                Addend, Value);
+                                Addend, Value, IsRELR);
 }
 
 bool BinaryContext::removeRelocationAt(uint64_t Address) {

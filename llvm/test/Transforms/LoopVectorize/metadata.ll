@@ -501,11 +501,9 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; CHECK-LABEL: define void @noalias_metadata(
 ; CHECK-SAME: ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SRC4:%.*]] = ptrtoint ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST3:%.*]] = ptrtoint ptr [[DST]] to i64
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST3]], [[SRC4]]
+; CHECK-NEXT:    [[SRC4:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[DST1]], [[SRC4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 2
@@ -513,7 +511,7 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[DST1]], 8
-; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP5]], [[SRC2]]
+; CHECK-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP5]], [[SRC4]]
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP5]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]
@@ -554,11 +552,9 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; INTERLEAVE-LABEL: define void @noalias_metadata(
 ; INTERLEAVE-SAME: ptr align 8 [[DST:%.*]], ptr align 8 [[SRC:%.*]]) {
 ; INTERLEAVE-NEXT:  [[ENTRY:.*]]:
-; INTERLEAVE-NEXT:    [[SRC4:%.*]] = ptrtoint ptr [[SRC]] to i64
-; INTERLEAVE-NEXT:    [[DST3:%.*]] = ptrtoint ptr [[DST]] to i64
-; INTERLEAVE-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; INTERLEAVE-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = sub i64 [[DST3]], [[SRC4]]
+; INTERLEAVE-NEXT:    [[SRC4:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; INTERLEAVE-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; INTERLEAVE-NEXT:    [[TMP2:%.*]] = sub i64 [[DST1]], [[SRC4]]
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 3
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; INTERLEAVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
@@ -566,7 +562,7 @@ define void @noalias_metadata(ptr align 8 %dst, ptr align 8 %src) {
 ; INTERLEAVE:       [[VECTOR_MEMCHECK]]:
 ; INTERLEAVE-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 8
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = add i64 [[DST1]], 8
-; INTERLEAVE-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP5]], [[SRC2]]
+; INTERLEAVE-NEXT:    [[TMP22:%.*]] = sub i64 [[TMP5]], [[SRC4]]
 ; INTERLEAVE-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP22]]
 ; INTERLEAVE-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP5]]
 ; INTERLEAVE-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP]]

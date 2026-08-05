@@ -52,6 +52,7 @@
 #include "clang/Lex/ScratchBuffer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -79,7 +80,7 @@ using namespace clang;
 /// Minimum distance between two check points, in tokens.
 static constexpr unsigned CheckPointStepSize = 1024;
 
-LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
@@ -100,6 +101,9 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
       TUKind(TUKind), SkipMainFilePreamble(0, true),
       CurSubmoduleState(&NullSubmoduleState) {
   OwnsHeaderSearch = OwnsHeaders;
+
+  // Only record check points if we might highlight diagnostic snippets.
+  RecordCheckPoints = getDiagnostics().getShowColors();
 
   // Default to discarding comments.
   KeepComments = false;
@@ -154,6 +158,8 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
     Ident_GetExceptionInfo = Ident_GetExceptionCode = nullptr;
     Ident_AbnormalTermination = nullptr;
   }
+
+  Ident__GLIBCXX__ = getIdentifierInfo("__GLIBCXX__");
 
   // Default incremental processing to -fincremental-extensions, clients can
   // override with `enableIncrementalProcessing` if desired.
@@ -1013,7 +1019,8 @@ void Preprocessor::Lex(Token &Result) {
     }
   }
 
-  if (CurLexer && ++CheckPointCounter == CheckPointStepSize) {
+  if (RecordCheckPoints && CurLexer &&
+      ++CheckPointCounter == CheckPointStepSize) {
     CheckPoints[CurLexer->getFileID()].push_back(CurLexer->BufferPtr);
     CheckPointCounter = 0;
   }
@@ -1347,6 +1354,8 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
       return false;
   } else if (!Result.isAtPhysicalStartOfLine())
     return false;
+
+  assert(CurPPLexer && "CurPPLexer must not be null");
 
   llvm::SaveAndRestore<bool> SavedParsingPreprocessorDirective(
       CurPPLexer->ParsingPreprocessorDirective, true);

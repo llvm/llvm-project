@@ -208,7 +208,8 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
     }
 
-    if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
+    if (!Ptr.isLive() || !Ptr.isInitialized() || Ptr.isUnknownSizeArray() ||
+        !Ptr.getFieldDesc()->isPrimitiveArray())
       return false;
 
     // Must be char.
@@ -400,6 +401,33 @@ Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
   return Result;
 }
 
+std::optional<bool>
+Context::evaluateWithSubstitution(State &Parent, const FunctionDecl *Callee,
+                                  ArrayRef<const Expr *> Args, const Expr *This,
+                                  const Expr *Condition) {
+  if (OptPrimType ConditionT = classify(Condition);
+      !ConditionT || ConditionT != PT_Bool) {
+    return std::nullopt;
+  }
+
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+  std::optional<bool> Result =
+      C.interpretWithSubstitutions(Callee, Args, This, Condition);
+
+  // This is somewhat of a special case here. We don't allow
+  // evaluateWithSubstitution to recurse (see the Stk.empty() assertion above),
+  // BUT we allow the args to fail evaluation, which means they can leave some
+  // garbage on the stack. So we always clear() here, not only if the evaluation
+  // failed.
+  Stk.clear();
+  if (!Result) {
+    C.cleanup();
+    return std::nullopt;
+  }
+  return Result;
+}
+
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 static PrimType integralTypeToPrimTypeS(unsigned BitWidth) {
@@ -544,7 +572,6 @@ bool Context::Run(State &Parent, const Function *Func) {
   return false;
 }
 
-// TODO: Virtual bases?
 const CXXMethodDecl *
 Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                                const CXXRecordDecl *StaticDecl,
@@ -653,7 +680,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     bool IsConst = PD->getType().isConstQualified();
     bool IsVolatile = PD->getType().isVolatileQualified();
 
-    if (!getASTContext().hasSameType(PD->getType(),
+    if (PD->isInvalidDecl() ||
+        !getASTContext().hasSameType(PD->getType(),
                                      FuncProto->getParamType(ParamIndex)))
       return nullptr;
 

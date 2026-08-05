@@ -261,9 +261,16 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   }
 
   if (const AttributedType *AT = dyn_cast<AttributedType>(T)) {
-    // FIXME: Serialize Attributes correctly
     Fragments.append(
         getFragmentsForType(AT->getModifiedType(), Context, After));
+
+    // Render explicit nullability annotations after the modified type.
+    // FIXME: Other AttributedType kinds are not rendered.
+    if (auto Nullability = AT->getImmediateNullability())
+      Fragments.appendSpace().append(
+          getNullabilitySpelling(*Nullability, /*isContextSensitive=*/false),
+          DeclarationFragments::FragmentKind::Keyword);
+
     return Fragments;
   }
 
@@ -632,11 +639,15 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
         .append(Param->getName(),
                 DeclarationFragments::FragmentKind::InternalParam);
   } else {
+    // Pointer types should typically not have a space between the * and
+    // the parameter name. However, if a keyword sits in between, then
+    // a space must be inserted to avoid joining the keyword and the name.
+    bool TrailingKeyword = TypeFragments.endsWithKeyword();
     Fragments.append(std::move(TypeFragments));
     // If the type is a type alias, append the space
     // even if the underlying type is a pointer type.
     if (T->isTypedefNameType() ||
-        (!T->isAnyPointerType() && !T->isBlockPointerType()))
+        (!T->isAnyPointerType() && !T->isBlockPointerType()) || TrailingKeyword)
       Fragments.appendSpace();
     Fragments
         .append(Param->getName(),
@@ -720,8 +731,12 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
     ReturnValueFragment.begin()->Spelling.swap(ProperArgName);
   }
 
+  // Pointer types should typically not have a space between the * and
+  // the function name. However, if a keyword sits in between, then
+  // a space must be inserted to avoid joining the keyword and the name.
+  bool ReturnTrailingKeyword = ReturnValueFragment.endsWithKeyword();
   Fragments.append(std::move(ReturnValueFragment));
-  if (!ReturnType->isAnyPointerType())
+  if (!ReturnType->isAnyPointerType() || ReturnTrailingKeyword)
     Fragments.appendSpace();
   Fragments.append(Func->getNameAsString(),
                    DeclarationFragments::FragmentKind::Identifier);

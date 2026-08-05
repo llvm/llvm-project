@@ -260,7 +260,8 @@ let isPseudo = 1, isMeta = 1, isNotDuplicable = 1, SchedRW = [WriteSystem] in {
                             "#SEH_PushFrame $mode", []>;
   def SEH_EndPrologue : I<0, Pseudo, (outs), (ins),
                             "#SEH_EndPrologue", []>;
-  def SEH_UnwindVersion : I<0, Pseudo, (outs), (ins i1imm:$version),
+  // Widened from i1imm to i8imm to hold V3 (the version can be 1, 2 or 3).
+  def SEH_UnwindVersion : I<0, Pseudo, (outs), (ins i8imm:$version),
                             "#SEH_UnwindVersion $version", []>;
 }
 
@@ -1680,17 +1681,38 @@ def : Pat<(or (and GR64:$dst, -256),
               (i64 (zextloadi8 addr:$src))),
           (INSERT_SUBREG (i64 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
 
-def : Pat<(or (and GR32:$dst, -256),
-              (i32 (zextloadi8 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
-
 def : Pat<(or (and GR64:$dst, -65536),
               (i64 (zextloadi16 addr:$src))),
           (INSERT_SUBREG (i64 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
 
-def : Pat<(or (and GR32:$dst, -65536),
-              (i32 (zextloadi16 addr:$src))),
-          (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
+let Predicates = [Not64BitMode] in {
+  def : Pat<(or (and GR32:$dst, -256),
+                (i32 (zextloadi8 addr:$src))),
+            (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
+
+  def : Pat<(or (and GR32:$dst, -65536),
+                (i32 (zextloadi16 addr:$src))),
+            (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
+}
+
+let Predicates = [In64BitMode] in {
+  def : Pat<(or (and def32:$dst, -256),
+                (i32 (zextloadi8 addr:$src))),
+            (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit)>;
+
+  def : Pat<(or (and def32:$dst, -65536),
+                (i32 (zextloadi16 addr:$src))),
+            (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit)>;
+
+  // These patterns use MOV32rr since GR32 could have junk in the upper 32-bits.
+  def : Pat<(or (and GR32:$dst, -256),
+                (i32 (zextloadi8 addr:$src))),
+            (MOV32rr (INSERT_SUBREG (i32 (COPY $dst)), (MOV8rm  i8mem:$src), sub_8bit))>;
+
+  def : Pat<(or (and GR32:$dst, -65536),
+                (i32 (zextloadi16 addr:$src))),
+            (MOV32rr (INSERT_SUBREG (i32 (COPY $dst)), (MOV16rm  i16mem:$src), sub_16bit))>;
+}
 
 // To avoid needing to materialize an immediate in a register, use a 32-bit and
 // with implicit zero-extension instead of a 64-bit and if the immediate has at

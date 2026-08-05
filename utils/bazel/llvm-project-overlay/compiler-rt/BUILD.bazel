@@ -470,6 +470,11 @@ filegroup(
     ),
 )
 
+BUILTINS_LIBC_MATH_EXCLUDES = [
+    # Sources requiring COMPILER_RT_USE_LIBC_MATH (e.g. LIBC_NAMESPACE::shared::*).
+    "lib/builtins/addtf3.cpp",
+]
+
 # Source files for portable components of the compiler builtins library.
 filegroup(
     name = "builtins_generic_srcs",
@@ -487,7 +492,8 @@ filegroup(
             BUILTINS_TF_EXCLUDES +
             BUILTINS_TF_SRCS_PATTERNS +
             BUILTNS_ATOMICS_SRCS +
-            BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS
+            BUILTINS_MACOS_ATOMIC_SRCS_PATTERNS +
+            BUILTINS_LIBC_MATH_EXCLUDES
         ),
     ),
 )

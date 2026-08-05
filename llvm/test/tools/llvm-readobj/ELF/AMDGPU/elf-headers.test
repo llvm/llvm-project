@@ -538,7 +538,7 @@ FileHeader:
 
 # ALL:                      File: [[FILE]]
 # ALL-NEXT:                 Format: elf64-amdgpu
-# ALL-NEXT:                 Arch: amdgcn
+# ALL-NEXT:                 Arch: amdgpu
 # ALL-NEXT:                 AddressSize: 64bit
 # ALL-NEXT:                 LoadName: <Not found>
 # ALL-NEXT:                 ElfHeader {
