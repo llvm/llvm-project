@@ -32,8 +32,7 @@ define amdgpu_ps i32 @constant_defined_on_non_dominating_path(i32 %x) #0 {
 ; OPT:       if:
 ; OPT-NEXT:    br label [[END]]
 ; OPT:       end:
-; OPT-NEXT:    [[RESULT:%.*]] = phi i32 [ 42, [[IF]] ], [ poison, [[ENTRY:%.*]] ]
-; OPT-NEXT:    ret i32 [[RESULT]]
+; OPT-NEXT:    ret i32 42
 ;
 entry:
   %cc = icmp slt i32 %x, 0
