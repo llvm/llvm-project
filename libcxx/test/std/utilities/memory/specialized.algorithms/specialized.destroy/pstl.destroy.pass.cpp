@@ -106,7 +106,7 @@ struct TestArrayCounted3 {
 };
 
 template <class Iter>
-struct TestArrayCounted32 {
+struct TestArrayCounted3x2 {
   template <class ExecutionPolicy>
   void operator()(ExecutionPolicy&& policy) {
     {
@@ -143,8 +143,8 @@ int main(int, char**) {
 #if TEST_STD_VER >= 20
   using CountedArray3 = Counted[3];
   types::for_each(types::forward_iterator_list<CountedArray3*>{}, TestIteratorWithPolicies<TestArrayCounted3>{});
-  using CountedArray32 = Counted[3][2];
-  types::for_each(types::forward_iterator_list<CountedArray32*>{}, TestIteratorWithPolicies<TestArrayCounted32>{});
+  using CountedArray3x2 = Counted[3][2];
+  types::for_each(types::forward_iterator_list<CountedArray3x2*>{}, TestIteratorWithPolicies<TestArrayCounted3x2>{});
 #endif // TEST_STD_VER >= 20
   return 0;
 }
