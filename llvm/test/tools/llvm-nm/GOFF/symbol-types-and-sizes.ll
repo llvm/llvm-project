@@ -26,9 +26,9 @@ entry:
   ret void
 }
 
-; CHECK-DAG: {{^[0-9A-Fa-f]+}} {{0*4}} D GlobalData
-; CHECK-DAG: {{^[0-9A-Fa-f]+}} {{0*4}} d LocalData
-; CHECK-DAG: {{^[0-9A-Fa-f]+}} {{[0-9A-Fa-f]+}} T GlobalFunc
-; CHECK-DAG: {{^[0-9A-Fa-f]+}} {{[0-9A-Fa-f]+}} t LocalFunc
-; CHECK-DAG: {{^[0-9A-Fa-f]+}} {{[0-9A-Fa-f]+}} T UseExternFunc
-; CHECK-DAG: {{^ *}}U ExternFunc
+; CHECK-DAG: {{^[0-9A-Fa-f]+}} 0000000000000004 D GlobalData
+; CHECK-DAG: {{^[0-9A-Fa-f]+}} 0000000000000004 d LocalData
+; CHECK-DAG: {{^[0-9A-Fa-f]+}} 0000000000000000 T GlobalFunc
+; CHECK-DAG: {{^[0-9A-Fa-f]+}} 0000000000000000 t LocalFunc
+; CHECK-DAG: {{^[0-9A-Fa-f]+}} 0000000000000000 T UseExternFunc
+; CHECK-DAG:                                   U ExternFunc
