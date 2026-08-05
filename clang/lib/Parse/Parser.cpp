@@ -83,6 +83,8 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
       [this](StringRef TypeStr, StringRef Context, SourceLocation IncludeLoc) {
         return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
       };
+
+  Initialize();
 }
 
 DiagnosticBuilder Parser::Diag(SourceLocation Loc, unsigned DiagID) {
@@ -578,9 +580,6 @@ void Parser::Initialize() {
   }
 
   Actions.Initialize();
-
-  // Prime the lexer look-ahead.
-  ConsumeToken();
 }
 
 void Parser::DestroyTemplateIds() {
@@ -1307,12 +1306,14 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
+      D.SetRangeEnd(PrevTokLocation);
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
                       : diag::ext_defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
+      D.SetRangeEnd(PrevTokLocation);
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
     }

@@ -16,7 +16,7 @@ end subroutine
 
 subroutine f02(n, a)
   integer :: n, a(n, n), i, j
-  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !ERROR: This construct requires a nest of depth 3, but the associated nest is a nest of depth 2
   !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp metadirective when(implementation={vendor(llvm)}: do collapse(3)) default(nothing)
   do i = 1, n
@@ -30,7 +30,7 @@ end subroutine
 subroutine f03(n, a, flag)
   integer :: n, a(n, n), i, j
   logical :: flag
-  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !ERROR: This construct requires a nest of depth 3, but the associated nest is a nest of depth 2
   !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp metadirective when(user={condition(flag)}: do collapse(3)) default(nothing)
   do i = 1, n
@@ -43,7 +43,7 @@ end subroutine
 ! A dead WHEN clause must not suppress the unguarded DEFAULT variant.
 subroutine f04(n, a)
   integer :: n, a(n, n), i, j
-  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !ERROR: This construct requires a nest of depth 3, but the associated nest is a nest of depth 2
   !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp metadirective when(device={kind(nohost)}: nothing) default(do collapse(3))
   do i = 1, n
@@ -71,7 +71,7 @@ end subroutine
 subroutine f06(n, a)
   integer :: n, a(n, n), i, j
   logical, parameter :: use_variant = .true.
-  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !ERROR: This construct requires a nest of depth 3, but the associated nest is a nest of depth 2
   !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp metadirective when(user={condition(use_variant)}: do collapse(3)) default(nothing)
   do i = 1, n
@@ -107,7 +107,7 @@ end subroutine
 ! stays selectable and its loop must still be checked.
 subroutine f09(n, a)
   integer :: n, a(n, n), i, j
-  !ERROR: This construct requires a perfect nest of depth 3, but the associated nest is a perfect nest of depth 2
+  !ERROR: This construct requires a nest of depth 3, but the associated nest is a nest of depth 2
   !BECAUSE: COLLAPSE clause was specified with argument 3
   !$omp metadirective when(implementation={vendor(bogus_vendor), extension(match_none)}: do collapse(3)) default(nothing)
   do i = 1, n

@@ -2074,9 +2074,8 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
         if (bytes_read > 0)
           return bytes_read;
         else
-          error = Status::FromErrorStringWithFormat(
-              "error reading data from section %s",
-              section_sp->GetName().GetCString());
+          error = Status::FromErrorStringWithFormatv(
+              "error reading data from section {0}", section_sp->GetName());
       } else
         error = Status::FromErrorString("address isn't from a object file");
     } else
@@ -2210,7 +2209,17 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (!file_cache_read_buffer && resolved_addr.IsSectionOffset()) {
     // If we didn't already try and read from the object file cache, then try
     // it after failing to read from the process.
-    return ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    error.Clear();
+    bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    // A short read here is only a failure if a live read already failed too.
+    // Reaching this point with a valid process means the process contributed
+    // nothing.
+    if (bytes_read > 0 && bytes_read != dst_len && error.Success() &&
+        ProcessIsValid())
+      error = Status::FromErrorStringWithFormatv(
+          "only {0} of {1} bytes were read from the object file cache",
+          bytes_read, dst_len);
+    return bytes_read;
   }
   return 0;
 }
@@ -2730,9 +2739,10 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                                             create_on_demand);
 }
 
-CompilerType Target::GetRegisterType(const std::string &name,
-                                     const lldb_private::RegisterFlags &flags,
-                                     uint32_t byte_size) {
+CompilerType
+Target::GetRegisterType(const std::string &name,
+                        const lldb_private::RegisterTypeFlags &flags,
+                        uint32_t byte_size) {
   if (!m_register_type_builder_sp)
     m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
   assert(m_register_type_builder_sp);
@@ -3120,11 +3130,13 @@ Target::ReadInstructions(const Address &start_addr, uint32_t count,
       ReadMemory(start_addr, data.GetBytes(), data.GetByteSize(), error,
                  force_live_memory, &load_addr);
 
-  if (error.Fail())
-    return llvm::createStringErrorV(
-        error.AsCString(
-            "Target::ReadInstructions failed to read memory at {:x}"),
-        start_addr.GetLoadAddress(this));
+  if (error.Fail()) {
+    return llvm::joinErrors(
+        llvm::createStringErrorV(
+            "Target::ReadInstructions failed to read memory at {:x}: ",
+            start_addr.GetLoadAddress(this)),
+        error.takeError());
+  }
 
   const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
   if (!flavor_string || flavor_string[0] == '\0') {
@@ -4148,8 +4160,8 @@ void Target::ClearDummySignals(Args &signal_names) {
 }
 
 void Target::PrintDummySignals(Stream &strm, Args &signal_args) {
-  strm.Printf("NAME         PASS     STOP     NOTIFY\n");
-  strm.Printf("===========  =======  =======  =======\n");
+  strm.PutCString("NAME         PASS     STOP     NOTIFY\n");
+  strm.PutCString("===========  =======  =======  =======\n");
 
   auto str_for_lazy = [] (LazyBool lazy) -> const char * {
     switch (lazy) {
@@ -4291,6 +4303,7 @@ Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;
@@ -4605,6 +4618,7 @@ Target::HookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;
@@ -4907,6 +4921,19 @@ static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
         eX86DisFlavorATT,
         "att",
         "AT&T disassembler flavor.",
+    },
+};
+
+static constexpr OptionEnumValueElement g_jit_engine_value_types[] = {
+    {
+        eJITEngineMCJIT,
+        "mcjit",
+        "Use LLVM's MCJIT execution engine.",
+    },
+    {
+        eJITEngineORC,
+        "orc",
+        "Use LLVM's ORC execution engine.",
     },
 };
 
@@ -5527,6 +5554,12 @@ bool TargetProperties::GetEnableNotifyAboutFixIts() const {
 FileSpec TargetProperties::GetSaveJITObjectsDir() const {
   const uint32_t idx = ePropertySaveObjectsDir;
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+JITEngine TargetProperties::GetJITEngine() const {
+  const uint32_t idx = ePropertyJITEngine;
+  return GetPropertyAtIndexAs<JITEngine>(
+      idx, static_cast<JITEngine>(g_target_properties[idx].default_uint_value));
 }
 
 void TargetProperties::CheckJITObjectsDir() {

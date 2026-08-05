@@ -1180,6 +1180,12 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   KnownFPClass Known =
       computeKnownFPClass(Src0, Mask, SQ.getWithInstruction(&II));
 
+  // If none of the tests which can return false are possible, fold to true.
+  // fp_class (nnan x), ~(qnan|snan) -> true
+  // fp_class (ninf x), ~(ninf|pinf) -> true
+  if (Known.isKnownAlways(Mask))
+    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
+
   // Clear test bits we know must be false from the source value.
   // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
   // fp_class (ninf x), ninf|pinf|other -> fp_class (ninf x), other
@@ -1188,12 +1194,6 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
         1, ConstantInt::get(Src1->getType(), Mask & Known.KnownFPClasses));
     return &II;
   }
-
-  // If none of the tests which can return false are possible, fold to true.
-  // fp_class (nnan x), ~(qnan|snan) -> true
-  // fp_class (ninf x), ~(ninf|pinf) -> true
-  if (Mask == Known.KnownFPClasses)
-    return replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
 
   return nullptr;
 }
@@ -1948,13 +1948,11 @@ static Value *foldSinAndCosToSinCos(IntrinsicInst *II, IRBuilderBase &B,
   // Insert sincos right after the argument definition.
   IRBuilderBase::InsertPointGuard Guard(B);
   if (auto *ArgInst = dyn_cast<Instruction>(Arg)) {
-    BasicBlock *ArgBB = ArgInst->getParent();
-    // Need skip whole PHIs if Arg is PHI to prevent insert in the middle
-    // of PHIs.
-    if (isa<PHINode>(ArgInst))
-      B.SetInsertPoint(ArgBB, ArgBB->getFirstInsertionPt());
-    else
-      B.SetInsertPoint(ArgBB, std::next(ArgInst->getIterator()));
+    std::optional<BasicBlock::iterator> InsertPt =
+        ArgInst->getInsertionPointAfterDef();
+    if (!InsertPt)
+      return nullptr;
+    B.SetInsertPoint(*InsertPt);
   } else {
     BasicBlock &EntryBB = II->getFunction()->getEntryBlock();
     B.SetInsertPoint(&EntryBB, EntryBB.begin());
@@ -2670,7 +2668,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // fshl(0, X, C) --> lshr X, (BW-C)
       // fshl(undef, X, C) --> lshr X, (BW-C)
-      if (match(Op0, m_ZeroInt()) || match(Op0, m_Undef()))
+      // Similar to fshr -> fshl fold above, this is only valid if C is not zero
+      if ((match(Op0, m_ZeroInt()) || match(Op0, m_Undef())) &&
+          isKnownNonZero(ShAmtC, SQ.getWithInstruction(II)))
         return BinaryOperator::CreateLShr(Op1,
                                           ConstantExpr::getSub(WidthC, ShAmtC));
 
