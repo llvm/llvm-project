@@ -1100,7 +1100,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   } else {
     getActionDefinitionsBuilder(G_FSQRT)
         .customFor({F32, F64, F16})
-        .legalFor(ST.hasBF16TransInsts(), {BF16})
         .scalarize(0)
         .widenScalarFor({BF16}, changeElementTo(0, F32))
         .unsupported();
