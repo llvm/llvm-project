@@ -15502,8 +15502,15 @@ static ExprResult convertHalfVecBinOp(Sema &S, ExprResult LHS, ExprResult RHS,
 /// Returns true if conversion between vectors of halfs and vectors of floats
 /// is needed.
 static bool needsConversionOfHalfVec(bool OpRequiresConversion, ASTContext &Ctx,
-                                     Expr *E0, Expr *E1 = nullptr) {
+                                     QualType ResultTy, Expr *E0,
+                                     Expr *E1 = nullptr) {
   if (!OpRequiresConversion || Ctx.getLangOpts().NativeHalfType)
+    return false;
+
+  // The conversion truncates the result to a half/short vector, so it shouldn't
+  // apply when the result is not that type (e.g. HLSL comparisons).
+  if (ResultTy->isVectorType() && !isVector(ResultTy, Ctx.HalfTy) &&
+      !isVector(ResultTy, Ctx.ShortTy))
     return false;
 
   auto HasVectorOfHalfType = [&Ctx](Expr *E) {
@@ -15750,15 +15757,8 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       (Opc == BO_Comma || isVector(RHS.get()->getType(), Context.HalfTy) ==
                               isVector(LHS.get()->getType(), Context.HalfTy)) &&
       "both sides are half vectors or neither sides are");
-  ConvertHalfVec =
-      needsConversionOfHalfVec(ConvertHalfVec, Context, LHS.get(), RHS.get());
-
-  // Skip the vector conversion when the result is not a half/short vector (e.g.
-  // HLSL comparisons).
-  if (ConvertHalfVec && ResultTy->isVectorType() &&
-      !isVector(ResultTy, Context.HalfTy) &&
-      !isVector(ResultTy, Context.ShortTy))
-    ConvertHalfVec = false;
+  ConvertHalfVec = needsConversionOfHalfVec(ConvertHalfVec, Context, ResultTy,
+                                            LHS.get(), RHS.get());
 
   // Check for array bounds violations for both sides of the BinaryOperator
   CheckArrayAccess(LHS.get());
@@ -16311,7 +16311,8 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       // float vector and truncating the result back to a half vector. For now,
       // we do this only when HalfArgsAndReturns is set (that is, when the
       // target is arm or arm64).
-      ConvertHalfVec = needsConversionOfHalfVec(true, Context, Input.get());
+      ConvertHalfVec = needsConversionOfHalfVec(
+          true, Context, Input.get()->getType(), Input.get());
 
       // If the operand is a half vector, promote it to a float vector.
       if (ConvertHalfVec)
