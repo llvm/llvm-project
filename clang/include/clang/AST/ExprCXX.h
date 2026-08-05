@@ -5540,7 +5540,7 @@ public:
   /// Returns location of the '^^'-operator.
   SourceLocation getOperatorLoc() const { return CaretCaretLoc; }
   ReflectionKind getKind() const { return Kind; }
-  void *getOpaqueValue() const { return Operand.getOpaqueValue(); }
+  const void *getOpaqueValue() const { return Operand.getOpaqueValue(); }
   const TypeSourceInfo *getTypeSourceInfo() const {
     return cast<const TypeSourceInfo *>(Operand);
   }
