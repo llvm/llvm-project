@@ -928,6 +928,7 @@ bool VPlanTransforms::createHeaderPhiRecipes(
     const VPDominatorTree &VPDT,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
+    const MapVector<PHINode *, MonotonicDescriptor> &MonotonicPHIs,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
     const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
   // Retrieve the header manually from the intial plain-CFG VPlan.
@@ -959,6 +960,11 @@ bool VPlanTransforms::createHeaderPhiRecipes(
       return createWidenInductionRecipe(Phi, PhiR, Start, InductionIt->second,
                                         Plan, PSE, OrigLoop,
                                         PhiR->getDebugLoc());
+
+    auto MonotonicIt = MonotonicPHIs.find(Phi);
+    if (MonotonicIt != MonotonicPHIs.end())
+      return new VPMonotonicPHIRecipe(Phi, MonotonicIt->second, *Start,
+                                      *BackedgeValue);
 
     assert(Reductions.contains(Phi) && "only reductions are expected now");
     const RecurrenceDescriptor &RdxDesc = Reductions.lookup(Phi);
