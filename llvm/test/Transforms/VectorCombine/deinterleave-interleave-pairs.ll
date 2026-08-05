@@ -370,6 +370,20 @@ define <vscale x 8 x float> @fpmath_metadata(<vscale x 8 x float> %v) {
   ret <vscale x 8 x float> %r
 }
 
+define <8 x i1> @icmp_i1_fields(<8 x i1> %v) {
+; CHECK-LABEL: define <8 x i1> @icmp_i1_fields(
+; CHECK-SAME: <8 x i1> [[V:%.*]]) {
+; CHECK-NEXT:    ret <8 x i1> [[V]]
+;
+  %d = call { <4 x i1>, <4 x i1> } @llvm.vector.deinterleave2.v8i1(<8 x i1> %v)
+  %f0 = extractvalue { <4 x i1>, <4 x i1> } %d, 0
+  %f1 = extractvalue { <4 x i1>, <4 x i1> } %d, 1
+  %u0 = icmp eq <4 x i1> %f0, splat (i1 true)
+  %u1 = icmp eq <4 x i1> %f1, splat (i1 true)
+  %r = call <8 x i1> @llvm.vector.interleave2.v8i1(<4 x i1> %u0, <4 x i1> %u1)
+  ret <8 x i1> %r
+}
+
 ; Negative test: operand bundles on the deinterleave must be preserved.
 define <vscale x 8 x i16> @negative_deinterleave2_operand_bundle(<vscale x 8 x i16> %v) {
 ; CHECK-LABEL: define <vscale x 8 x i16> @negative_deinterleave2_operand_bundle(
