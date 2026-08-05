@@ -196,10 +196,7 @@ namespace atomic1 {
 template<typename KNT, typename T>
 [[clang::sycl_kernel_entry_point(KNT)]]
 void kernel_single_task(T t) {}
-// expected-note-re@-1 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-// expected-note-re@-2 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-// expected-note-re@-3 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
-// expected-note-re@-4 {{within parameter 't' of type '(lambda at {{.*}})' declared here}}
+// expected-note-re@-1 4{{within parameter 't' of type '(lambda at {{.*}})' declared here}}
 // expected-note@-5 {{within parameter 't' of type 'atomic1::Kernel' declared here}}
 
 struct Sa { 
