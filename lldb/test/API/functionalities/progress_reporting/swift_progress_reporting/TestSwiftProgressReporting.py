@@ -15,7 +15,7 @@ class TestSwiftProgressReporting(TestBase):
         self.listener = lldbutil.start_listening_from(self.broadcaster,
                                         lldb.SBDebugger.eBroadcastBitProgress)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin

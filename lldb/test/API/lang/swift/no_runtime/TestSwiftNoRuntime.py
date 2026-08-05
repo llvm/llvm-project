@@ -6,7 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftNoRuntime(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift strips functions the program never calls, so test() is not in the binary to call
     @swiftTest
     def test(self):
         """Test running a Swift expression in a C program"""

@@ -20,7 +20,7 @@ import os
 
 
 class TestExpressionsInSwiftMethodsFromObjC(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_swift_expressions_from_objc(self):

@@ -22,7 +22,7 @@ import os
 class TestSwiftDeploymentTarget(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
     @skipIf(macos_version=["<", "11.1"])
@@ -34,7 +34,7 @@ class TestSwiftDeploymentTarget(TestBase):
                                           lldb.SBFileSpec('main.swift'))
         self.expect("expression f", substrs=['i = 23'])
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
     @skipIf(macos_version=["<", "11.1"])
@@ -48,7 +48,7 @@ class TestSwiftDeploymentTarget(TestBase):
         lldbutil.continue_to_breakpoint(process, bkpt)
         self.expect("expression self", substrs=['i = 23'])
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @skipIfDarwinEmbedded # This test uses macOS triples explicitly.
     @skipIf(macos_version=["<", "11.1"])
@@ -69,7 +69,7 @@ class TestSwiftDeploymentTarget(TestBase):
 #       CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::SetTriple({{.*}}apple-macosx11.0.0
 #       CHECK-NOT: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::RegisterSectionModules("a.out"){{.*}} AST Data blobs
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin  # This test uses macOS triples explicitly.
     @skipIfDarwinEmbedded
     @skipIf(macos_version=["<", "11.1"])

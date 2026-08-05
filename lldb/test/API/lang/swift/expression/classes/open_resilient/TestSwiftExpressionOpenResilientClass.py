@@ -5,7 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestExpressionOpenResilientClass(TestBase):
     NO_DEBUG_INFO_TEST = True
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test(self):
         """Tests calling an open resilient function"""

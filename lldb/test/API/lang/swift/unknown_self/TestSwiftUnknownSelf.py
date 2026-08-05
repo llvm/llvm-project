@@ -33,7 +33,7 @@ class TestSwiftUnknownSelf(lldbtest.TestBase):
                     substrs=["hello"])
 
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipIf(bugnumber="SR-10216", archs=['ppc64le'])
     @skipUnlessFoundationEssentials
     @skipIfLinux  # https://github.com/swiftlang/llvm-project/issues/13465

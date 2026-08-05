@@ -133,7 +133,7 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
                             "Swiftmodule file was regenerated rather than reused")
 
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipUnlessPlatform(["macosx"])
     def test_prebuilt_cache_location(self):

@@ -16,7 +16,7 @@ class TestCase(TestBase):
         self.filecheck_log(self.log, __file__, f"-check-prefix=CHECK-{key}")
 
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     def test_described_struct(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -27,7 +27,7 @@ class TestCase(TestBase):
         # CHECK-DESC-STRUCT: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "1a15DescribedStructVD")
 
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     def test_described_class(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -38,7 +38,7 @@ class TestCase(TestBase):
         # CHECK-DESC-CLASS: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "1a14DescribedClassCD")
 
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     def test_described_enum(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -49,7 +49,7 @@ class TestCase(TestBase):
         # CHECK-DESC-ENUM: stringForPrintObject(UnsafeRawPointer(bitPattern: {{.*}}), mangledTypeName: "1a13DescribedEnumOD")
 
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     def test_class_only_protocol(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

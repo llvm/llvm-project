@@ -6,7 +6,7 @@ import re
 
 
 class TestCase(lldbtest.TestBase):
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     @skipIf(oslist=["windows", "linux"])
     def test(self):

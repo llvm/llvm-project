@@ -22,7 +22,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class TestCase(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @expectedFailureAll(archs=["arm64_32"], bugnumber="<rdar://problem/58065423>")
     @skipUnlessFoundationEssentials
     @skipIfLinux  # https://github.com/swiftlang/llvm-project/issues/13465

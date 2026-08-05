@@ -36,7 +36,7 @@ class TestNonREPLPlayground(TestBase):
     @skipIf(
         debug_info=decorators.no_match("dsym"),
         bugnumber="This test only builds one way")
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     def test_playgrounds(self):
         """Test that playgrounds work"""
         self.build()

@@ -40,7 +40,7 @@ class TestSwiftMetadataCache(TestBase):
         return False
             
         
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_metadata_cache(self):
         """Test the swift metadata cache."""

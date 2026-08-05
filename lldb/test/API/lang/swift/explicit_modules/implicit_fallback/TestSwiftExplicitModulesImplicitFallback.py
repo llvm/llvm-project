@@ -8,7 +8,7 @@ import lldbsuite.test.lldbutil as lldbutil
 @skipIfWindows
 class TestCase(lldbtest.TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_missing(self):
         """Test missing explicit Swift modules and fallback to implicit modules."""
@@ -32,7 +32,7 @@ class TestCase(lldbtest.TestBase):
         # CHECK: Nonexistent explicit module file
         # CHECK: Explicit modules : false (downgraded
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_sanity(self):
         """Check the normal behavior."""
@@ -60,7 +60,7 @@ class TestCase(lldbtest.TestBase):
         # CHECK-SANITY: Turning off implicit modules
         # CHECK-SANITY: Turning on implicit modules
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_setting(self):
         """Check the normal behavior."""

@@ -34,7 +34,7 @@ class TestAvailability(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift strips functions the program never calls, so f() is not in the binary to call
     @swiftTest
     @skipIf(oslist=['linux', 'windows'])
     def testAvailability(self):

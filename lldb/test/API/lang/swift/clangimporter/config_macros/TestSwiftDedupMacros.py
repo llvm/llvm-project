@@ -17,7 +17,7 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 
 class TestSwiftDedupMacros(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     # NOTE: rdar://44201206 - This test may sporadically segfault. It's likely

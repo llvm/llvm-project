@@ -101,7 +101,7 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
             self.assertTrue(is_old(file), "Swiftmodule file was regenerated rather than reused")
 
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIfWindows
     def test_swift_interface(self):

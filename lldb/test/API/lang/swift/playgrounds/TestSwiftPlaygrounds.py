@@ -62,7 +62,7 @@ class TestSwiftPlaygrounds(TestBase):
             triple = '{}-apple-macosx{}'.format(machine, version)
         return triple
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
@@ -72,7 +72,7 @@ class TestSwiftPlaygrounds(TestBase):
         self.launch(True)
         self.do_basic_test(True)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
@@ -82,7 +82,7 @@ class TestSwiftPlaygrounds(TestBase):
         self.launch(False)
         self.do_basic_test(False)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
@@ -93,7 +93,7 @@ class TestSwiftPlaygrounds(TestBase):
         self.launch(True)
         self.do_concurrency_test()
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))

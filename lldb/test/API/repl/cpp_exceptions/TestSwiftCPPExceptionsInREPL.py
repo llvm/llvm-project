@@ -31,7 +31,7 @@ class TestSwiftREPLExceptions(TestBase):
         self.main_source_file = lldb.SBFileSpec("main.swift")
         self.do_repl_mode_test()
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test_repl_exceptions(self):

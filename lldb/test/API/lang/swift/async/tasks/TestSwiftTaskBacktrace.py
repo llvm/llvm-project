@@ -5,7 +5,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestCase(TestBase):
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_backtrace_task_variable(self):
         self.build()
@@ -14,7 +14,7 @@ class TestCase(TestBase):
         )
         self.do_backtrace("task")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_backtrace_task_address(self):
         self.build()

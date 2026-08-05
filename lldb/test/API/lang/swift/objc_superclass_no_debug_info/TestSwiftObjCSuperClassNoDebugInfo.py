@@ -7,7 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftObjCSuperClassNoDebugInfo(TestBase):
     @swiftTest
     @skipUnlessDarwin
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     def test(self):
         self.build()
         self.runCmd("settings set symbols.swift-enable-ast-context false")

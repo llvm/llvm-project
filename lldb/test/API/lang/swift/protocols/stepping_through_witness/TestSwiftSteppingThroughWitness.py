@@ -14,7 +14,7 @@ class TestSwiftSteppingThroughWitness(TestBase):
             "settings set target.process.thread.step-avoid-libraries libswift_Concurrency.dylib"
         )
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_step_in_and_out(self):
         """Test that stepping in and out of protocol methods work"""
@@ -44,7 +44,7 @@ class TestSwiftSteppingThroughWitness(TestBase):
         frame0 = thread.frames[0]
         self.assertIn("doMath", frame0.GetFunctionName())
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_step_over(self):
         """Test that stepping over protocol methods work"""

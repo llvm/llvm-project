@@ -21,7 +21,7 @@ import os
 
 @skipIfWindows
 class TestSwiftErrorBreakpoint(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @decorators.skipIfLinux  # <rdar://problem/30909618>
     @swiftTest
     def test_swift_error_no_typename(self):
@@ -29,21 +29,21 @@ class TestSwiftErrorBreakpoint(TestBase):
         self.build()
         self.do_tests(None)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_error_matching_base_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
         self.do_tests("EnumError")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_error_matching_full_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""
         self.build()
         self.do_tests("a.EnumError")
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_swift_error_bogus_typename(self):
         """Tests that swift error throws are correctly caught by the Swift Error breakpoint"""

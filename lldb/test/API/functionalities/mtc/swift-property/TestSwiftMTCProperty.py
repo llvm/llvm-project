@@ -13,7 +13,7 @@ import json
 
 
 class MTCSwiftPropertyTestCase(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @skipUnlessDarwin
     @swiftTest
     def test(self):

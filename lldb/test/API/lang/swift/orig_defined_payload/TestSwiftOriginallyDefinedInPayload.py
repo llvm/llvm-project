@@ -6,7 +6,7 @@ import os
 
 
 class TestSwiftOriginallyDefinedInPayload(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test(self):
         self.build()

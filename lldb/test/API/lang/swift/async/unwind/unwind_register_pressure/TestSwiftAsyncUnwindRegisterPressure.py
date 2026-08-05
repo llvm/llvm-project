@@ -60,7 +60,7 @@ class TestCase(lldbtest.TestBase):
                 return thread, bpid
         return None, None
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIf(oslist=["windows"])
     def test(self):

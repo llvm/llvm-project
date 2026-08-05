@@ -23,7 +23,7 @@ class TestSwiftDWARFImporter_Swift(lldbtest.TestBase):
         self.assertTrue(os.path.isdir(include))
         shutil.rmtree(include)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift disables ObjC interop, so this test's Foundation import does not compile
     @skipUnlessDarwin
     @swiftTest
     def test(self):

@@ -7,7 +7,7 @@ class TestSwiftExpressionErrorReporting(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     def test_missing_location(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -32,7 +32,7 @@ class TestSwiftExpressionErrorReporting(TestBase):
         self.assertIn("no location for 'self' in debug info", all_messages)
 
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     def test_missing_var(self):
         """Test error reporting in expressions reports
         only diagnostics in user code"""
@@ -118,7 +118,7 @@ class TestSwiftExpressionErrorReporting(TestBase):
                     substrs=['self', 'not', 'found'])
 
     @swiftTest
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift # embedded Swift monomorphizes every generic, so there is no archetype T left to diagnose
     def test_syntax(self):
         """Test syntax errors are being diagnosed"""
         self.build()

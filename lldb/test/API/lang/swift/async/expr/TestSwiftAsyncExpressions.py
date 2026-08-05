@@ -8,7 +8,7 @@ class TestSwiftAsyncExpressions(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     @skipIf(archs=no_match(["aarch", "arm64", "arm64e", "arm64_32", "x86_64"]))
     def test_actor(self):

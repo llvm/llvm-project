@@ -10,7 +10,7 @@ class TestCase(lldbtest.TestBase):
 
     unwind_fail_range_cache = dict()
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwift  # rdar://183960945 (Fix async tests running in embedded mode)
     @swiftTest
     @skipIf(oslist=["windows",])
     @skipIf(archs=["arm64e"])

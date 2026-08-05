@@ -21,7 +21,7 @@ import sys
 
 
 class TestSwiftSimpleExpressions(TestBase):
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_simple_swift_expressions(self):
         """Tests that we can run simple Swift expressions correctly"""

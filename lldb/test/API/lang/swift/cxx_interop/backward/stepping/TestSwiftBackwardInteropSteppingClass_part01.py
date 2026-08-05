@@ -32,25 +32,25 @@ class TestSwiftBackwardInteropSteppingClass(TestBase):
         name = thread.frames[0].GetFunctionName()
         self.assertIn(func, name)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_method_step_in_class(self):
         thread = self.setup('Break here for method - class')
         self.check_step_in(thread, 'testMethod', 'SwiftClass.swiftMethod')
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_method_step_over_class(self):
         thread = self.setup('Break here for method - class')
         self.check_step_over(thread, 'testMethod')
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_init_step_in_class(self):
         thread = self.setup('Break here for constructor - class')
         self.check_step_in(thread, 'testConstructor', 'SwiftClass.init')
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     def test_init_step_over_class(self):
         thread = self.setup('Break here for constructor - class')

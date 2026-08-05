@@ -16,7 +16,7 @@ class TestCase(TestBase):
         self.filecheck_log(self.log, __file__, f"-check-prefix=CHECK-{key}")
 
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     def test_int(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -27,7 +27,7 @@ class TestCase(TestBase):
         # CHECK-INT: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "SiD")
 
     @swiftTest
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     def test_string(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

@@ -5,7 +5,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftExplicitModuleCaching(TestBase):
 
-    @skipEmbeddedSwift
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @skipIf(setting=('symbols.swift-precise-compiler-invocation', 'false'))

@@ -25,7 +25,7 @@ class TsanSwiftAccessRaceTestCase(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @skipEmbeddedSwift
+    @requireNotEmbeddedSwift
     @swiftTest
     @skipIfWindows
     @skipIfLinux
