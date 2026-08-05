@@ -36,8 +36,8 @@ TEST(AtomicScopeTest, NonGPUTargetIsNone) {
 
 TEST(AtomicScopeTest, RoundTrip) {
   static constexpr AtomicScope Scopes[] = {
-      AtomicScope::System,    AtomicScope::Device,    AtomicScope::Workgroup,
-      AtomicScope::Wavefront, AtomicScope::Single,    AtomicScope::Cluster};
+      AtomicScope::System,    AtomicScope::Device, AtomicScope::Workgroup,
+      AtomicScope::Wavefront, AtomicScope::Single, AtomicScope::Cluster};
   const Triple Targets[] = {Triple("amdgcn-amd-amdhsa"),
                             Triple("nvptx64-nvidia-cuda"),
                             Triple("spirv64-unknown-unknown")};
