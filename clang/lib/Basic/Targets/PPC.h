@@ -98,7 +98,7 @@ public:
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(const std::string &Name) override {
+  bool setCPU(StringRef Name) override {
     bool CPUKnown = isValidCPUName(Name);
     if (CPUKnown) {
       CPU = Name;
@@ -201,6 +201,8 @@ public:
   bool supportsTargetAttributeTune() const override { return true; }
 
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
+
+  bool isValidFeatureName(StringRef Name) const override;
 
   llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 

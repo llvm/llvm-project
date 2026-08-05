@@ -609,18 +609,18 @@ define void @vlmax(i64 %N, ptr %c, ptr %a, ptr %b) {
 ; CHECK-NEXT:    blez a0, .LBB12_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    vsetvli a6, zero, e64, m1, ta, ma
-; CHECK-NEXT:    slli a5, a6, 3
+; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, ma
+; CHECK-NEXT:    slli a6, a5, 3
 ; CHECK-NEXT:  .LBB12_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vle64.v v8, (a2)
 ; CHECK-NEXT:    vle64.v v9, (a3)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    add a4, a4, a6
+; CHECK-NEXT:    add a4, a4, a5
 ; CHECK-NEXT:    vse64.v v8, (a1)
-; CHECK-NEXT:    add a1, a1, a5
-; CHECK-NEXT:    add a3, a3, a5
-; CHECK-NEXT:    add a2, a2, a5
+; CHECK-NEXT:    add a1, a1, a6
+; CHECK-NEXT:    add a3, a3, a6
+; CHECK-NEXT:    add a2, a2, a6
 ; CHECK-NEXT:    blt a4, a0, .LBB12_2
 ; CHECK-NEXT:  .LBB12_3: # %for.end
 ; CHECK-NEXT:    ret

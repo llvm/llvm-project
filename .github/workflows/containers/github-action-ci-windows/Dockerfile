@@ -48,6 +48,15 @@ RUN choco install -y ninja --version 1.13.1 && \
     choco install -y python3 --version 3.12.3 && \
     choco install -y make --version 4.4.1
 
+# libxml2 is not available on choco. Install it using vcpkg.
+RUN git clone --depth 1 --branch 2026.06.24 https://github.com/microsoft/vcpkg.git C:\vcpkg && \
+    C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics && \
+    C:\vcpkg\vcpkg.exe install libxml2:x64-windows && \
+    rmdir /S /Q C:\vcpkg\buildtrees && \
+    rmdir /S /Q C:\vcpkg\packages && \
+    rmdir /S /Q C:\vcpkg\downloads && \
+    rmdir /S /Q C:\vcpkg\.git
+
 # Testing requires psutil
 RUN pip install psutil
 
@@ -66,6 +75,7 @@ ENV PYTHONIOENCODING=UTF-8
 RUN powershell -Command \
     [System.Environment]::SetEnvironmentVariable('PATH', \
     [System.Environment]::GetEnvironmentVariable('PATH', 'machine') + ';C:\Program Files\Git\usr\bin;C:\llvm-mingw\bin' \
+    + ';C:\vcpkg\installed\x64-windows\bin' \
     + ';C:\BuildTools\Common7\IDE\' \
     + ';C:\BuildTools\Common7\IDE\CommonExt ensions\Microsoft\TeamFoundation\Team Explorer' \
     + ';C:\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin' \
@@ -93,7 +103,7 @@ RUN powershell -Command \
     New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" \
     -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
 
-ARG RUNNER_VERSION=2.335.0
+ARG RUNNER_VERSION=2.335.1
 ENV RUNNER_VERSION=$RUNNER_VERSION
 
 RUN powershell -Command \

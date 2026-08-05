@@ -248,9 +248,15 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   auto &Context = getContext();
   auto &VMContext = getVMContext();
 
-  uint64_t Size = Context.getTypeSize(Ty);
+  // FIXME: the GCC-style `aligned` attribute on typedefs is not taken into
+  // account here, because the canonicalized type no longer has that
+  // information. Hence such over-aligned typedefs are not ABI-compatible with
+  // GCC.
+  //
+  // This is different from the `aligned` attribute on structs or fields, which
+  // is taken into account.
   unsigned Alignment = Context.getTypeAlign(Ty);
-  bool NeedPadding = (Alignment > 64) && (RegOffset % 2 != 0);
+  uint64_t Size = Context.getTypeSize(Ty);
 
   // Anything too big to fit in registers is passed with an explicit indirect
   // pointer / sret pointer.
@@ -261,26 +267,37 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
         /*ByVal=*/false);
   }
 
+  // An argument that is passed in registers but has an alignment higher than 8
+  // bytes must be register-aligned. Insert a dummy i64 argument to fill the
+  // odd-numbered register.
+  //
+  // See SCD 2.4.1, pages 3P-11 and 3P-12.
+  llvm::Type *Padding = (Alignment > 64 && RegOffset % 2 != 0)
+                            ? llvm::Type::getInt64Ty(VMContext)
+                            : nullptr;
+  unsigned PaddingSlots = Padding ? 1 : 0;
+  unsigned SizeSlots = llvm::divideCeil(Size, 64);
+
   // Treat an enum type as its underlying type.
   if (const auto *ED = Ty->getAsEnumDecl())
     Ty = ED->getIntegerType();
 
   // Integer types smaller than a register are extended.
   if (Size < 64 && Ty->isIntegerType()) {
-    RegOffset += 1;
-    return ABIArgInfo::getExtend(Ty);
+    RegOffset += PaddingSlots + SizeSlots;
+    return ABIArgInfo::getExtend(Ty, /*T=*/nullptr, Padding);
   }
 
   if (const auto *EIT = Ty->getAs<BitIntType>())
     if (EIT->getNumBits() < 64) {
-      RegOffset += 1;
-      return ABIArgInfo::getExtend(Ty);
+      RegOffset += PaddingSlots + SizeSlots;
+      return ABIArgInfo::getExtend(Ty, /*T=*/nullptr, Padding);
     }
 
   // Other non-aggregates go in registers.
   if (!isAggregateTypeForABI(Ty)) {
-    RegOffset += Size / 64;
-    return ABIArgInfo::getDirect();
+    RegOffset += PaddingSlots + SizeSlots;
+    return ABIArgInfo::getDirect(/*T=*/nullptr, /*Offset=*/0, Padding);
   }
 
   // If a C++ object has either a non-trivial copy constructor or a non-trivial
@@ -295,8 +312,8 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   // Build a coercion type from the LLVM struct type.
   llvm::StructType *StrTy = dyn_cast<llvm::StructType>(CGT.ConvertType(Ty));
   if (!StrTy) {
-    RegOffset += Size / 64;
-    return ABIArgInfo::getDirect();
+    RegOffset += PaddingSlots + SizeSlots;
+    return ABIArgInfo::getDirect(/*T=*/nullptr, /*Offset=*/0, Padding);
   }
 
   CoerceBuilder CB(VMContext, getDataLayout());
@@ -306,15 +323,7 @@ ABIArgInfo SparcV9ABIInfo::classifyType(QualType Ty, unsigned SizeLimit,
   CB.pad(llvm::alignTo(
       std::max(CB.DL.getTypeSizeInBits(StrTy).getKnownMinValue(), uint64_t(1)),
       64));
-  RegOffset += CB.Size / 64;
-
-  // If we're dealing with overaligned structs we may need to add a padding in
-  // the front, to preserve the correct register-memory mapping.
-  //
-  // See SCD 2.4.1, pages 3P-11 and 3P-12.
-  llvm::Type *Padding =
-      NeedPadding ? llvm::Type::getInt64Ty(VMContext) : nullptr;
-  RegOffset += NeedPadding ? 1 : 0;
+  RegOffset += PaddingSlots + CB.Size / 64;
 
   // Try to use the original type for coercion.
   llvm::Type *CoerceTy = CB.isUsableType(StrTy) ? StrTy : CB.getType();

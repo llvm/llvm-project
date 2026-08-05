@@ -37,7 +37,6 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   DataBufferLLVM.cpp
   DataEncoder.cpp
   DataExtractor.cpp
-  Diagnostics.cpp
   Environment.cpp
   ErrorMessages.cpp
   Event.cpp
@@ -54,6 +53,8 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   Policy.cpp
   ProcessInfo.cpp
   RealpathPrefixes.cpp
+  RegisterType.cpp
+  RegisterTypeFlags.cpp
   RegisterValue.cpp
   RegularExpression.cpp
   Instrumentation.cpp

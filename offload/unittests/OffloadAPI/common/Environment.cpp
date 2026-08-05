@@ -11,7 +11,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <OffloadAPI.h>
+#include <cstdlib>
 #include <fstream>
+#include <optional>
 
 using namespace llvm;
 
@@ -19,8 +21,22 @@ using namespace llvm;
 // test, while having sensible lifetime for the platform environment
 #ifndef DISABLE_WRAPPER
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { olInit(nullptr); }
-  ~OffloadInitWrapper() { olShutDown(); }
+  OffloadInitWrapper() {
+    if (ol_result_t Res = olInit(nullptr)) {
+      errs() << "olInit failed: "
+             << (Res->Details ? Res->Details : "(no details)") << " (code "
+             << Res->Code << ")\n";
+      std::abort();
+    }
+  }
+  ~OffloadInitWrapper() {
+    if (ol_result_t Res = olShutDown()) {
+      errs() << "olShutDown failed: "
+             << (Res->Details ? Res->Details : "(no details)") << " (code "
+             << Res->Code << ")\n";
+      std::abort();
+    }
+  }
 };
 static OffloadInitWrapper Wrapper{};
 #endif
@@ -166,14 +182,17 @@ const std::string DeviceBinsDirectory = DEVICE_CODE_PATH;
 
 bool TestEnvironment::loadDeviceBinary(
     const std::string &BinaryName, ol_device_handle_t Device,
-    std::unique_ptr<MemoryBuffer> &BinaryOut) {
+    std::unique_ptr<MemoryBuffer> &BinaryOut,
+    std::optional<ol_platform_backend_t> OverrideBackend) {
+  ol_platform_backend_t DeviceBackend = OL_PLATFORM_BACKEND_UNKNOWN;
 
-  // Get the platform type
   ol_platform_handle_t Platform;
   olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform), &Platform);
-  ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
-  olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
-                    &Backend);
+  olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(DeviceBackend),
+                    &DeviceBackend);
+
+  ol_platform_backend_t Backend = OverrideBackend.value_or(DeviceBackend);
+
   std::string FileExtension;
   if (Backend == OL_PLATFORM_BACKEND_AMDGPU) {
     FileExtension = ".amdgpu.bin";

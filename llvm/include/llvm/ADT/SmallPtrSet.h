@@ -245,7 +245,6 @@ private:
   LLVM_ABI std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
   LLVM_ABI const void *const *doFind(const void *Ptr) const;
-  const void *const *FindBucketFor(const void *Ptr) const;
   LLVM_ABI void shrink_and_clear();
 
 protected:

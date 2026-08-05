@@ -353,7 +353,7 @@ void l5() {
 // LLVM:   %[[X_ADDR:.*]] = alloca i32
 // LLVM:   br label %[[SETUP:.*]]
 // LLVM: [[SETUP]]:
-// LLVM:   call void @llvm.memcpy{{.*}}(ptr %[[ARR_ADDR]], ptr @[[L5_ARR]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy{{.*}}(ptr align 4 %[[ARR_ADDR]], ptr align 4 @[[L5_ARR]], i64 16, i1 false)
 // LLVM:   store ptr %[[ARR_ADDR]], ptr %[[RANGE_ADDR]]
 // LLVM:   %[[BEGIN:.*]] = load ptr, ptr %[[RANGE_ADDR]]
 // LLVM:   %[[BEGIN_CAST:.*]] = getelementptr i32, ptr %[[BEGIN]], i32 0

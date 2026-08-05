@@ -17,6 +17,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
 #define DEBUG_TYPE "clang-tidy"
@@ -118,6 +119,8 @@ static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
   return ND;
 }
 
+using RecursionProtectionSet = llvm::SmallPtrSet<const CXXRecordDecl *, 4>;
+
 /// Returns a decl matching the \p DeclName in \p Parent or one of its base
 /// classes. If \p AggressiveTemplateLookup is `true` then it will check
 /// template dependent base classes as well.
@@ -125,9 +128,17 @@ static const NamedDecl *getFailureForNamedDecl(const NamedDecl *ND) {
 /// flag indicating the multiple resolutions.
 static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
                                   StringRef DeclName,
-                                  bool AggressiveTemplateLookup) {
+                                  bool AggressiveTemplateLookup,
+                                  RecursionProtectionSet &Visited) {
   if (!Parent.hasDefinition())
     return NameLookup(nullptr);
+
+  const auto *Definition = Parent.getDefinition();
+  if (!Visited.insert(Definition).second)
+    return NameLookup(nullptr);
+  const auto RemoveFromVisited =
+      llvm::scope_exit([&Visited, Definition] { Visited.erase(Definition); });
+
   if (const NamedDecl *InClassRef = findDecl(Parent, DeclName))
     return NameLookup(InClassRef);
   const NamedDecl *Found = nullptr;
@@ -144,8 +155,8 @@ static NameLookup findDeclInBases(const CXXRecordDecl &Parent,
     }
     if (!Record)
       continue;
-    if (auto Search =
-            findDeclInBases(*Record, DeclName, AggressiveTemplateLookup)) {
+    if (const auto Search = findDeclInBases(
+            *Record, DeclName, AggressiveTemplateLookup, Visited)) {
       if (*Search) {
         if (Found)
           return NameLookup(
@@ -301,8 +312,9 @@ public:
       return true;
     const StringRef DependentName = DeclName.getAsIdentifierInfo()->getName();
 
+    RecursionProtectionSet Visited;
     if (const NameLookup Resolved = findDeclInBases(
-            *Base, DependentName, AggressiveDependentMemberLookup)) {
+            *Base, DependentName, AggressiveDependentMemberLookup, Visited)) {
       if (*Resolved)
         Check->addUsage(*Resolved,
                         DepMemberRef->getMemberNameInfo().getSourceRange(), SM);
@@ -481,7 +493,7 @@ void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl,
   if (!Failure.shouldFix())
     return;
   const IdentifierTable &Idents = FailureDecl->getASTContext().Idents;
-  auto CheckNewIdentifier = Idents.find(Failure.Info.Fixup);
+  const auto CheckNewIdentifier = Idents.find(Failure.Info.Fixup);
   if (CheckNewIdentifier != Idents.end()) {
     const IdentifierInfo *Ident = CheckNewIdentifier->second;
     if (Ident->isKeyword(getLangOpts()))
@@ -531,7 +543,7 @@ void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
   const StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
   const NamingCheckId ID(MI->getDefinitionLoc(), Name);
 
-  auto Failure = NamingCheckFailures.find(ID);
+  const auto Failure = NamingCheckFailures.find(ID);
   if (Failure == NamingCheckFailures.end())
     return;
 
@@ -561,10 +573,7 @@ getDiagnosticSuffix(const RenamerClangTidyCheck::ShouldFixStatus FixStatus,
 }
 
 void RenamerClangTidyCheck::onEndOfTranslationUnit() {
-  for (const auto &Pair : NamingCheckFailures) {
-    const NamingCheckId &Decl = Pair.first;
-    const NamingCheckFailure &Failure = Pair.second;
-
+  for (const auto &[Decl, Failure] : NamingCheckFailures) {
     if (Failure.Info.KindName.empty())
       continue;
 

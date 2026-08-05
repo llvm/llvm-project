@@ -114,6 +114,18 @@ struct ConvolutionDimensions {
 /// Returns a failure if `output_image` (and implicitly `filter_loop`) is empty.
 FailureOr<ConvolutionDimensions> inferConvolutionDims(LinalgOp linalgOp);
 
+/// Maps-based overload of `inferConvolutionDims`. The `indexingMaps` are
+/// expected in operand order: input, filter, output. The iterator types are
+/// inferred from the output map: dimensions that appear in the output are
+/// parallel, all others are reduction. Since there is no operation to carry
+/// native `strides`/`dilations` attributes, the strides and dilations are
+/// derived from the convolution access pattern in the input indexing map.
+/// Returns a failure if there are not exactly 3 maps, the output map is not a
+/// projected permutation, or `output_image` (and implicitly `filter_loop`) is
+/// empty.
+FailureOr<ConvolutionDimensions>
+inferConvolutionDims(ArrayRef<AffineMap> indexingMaps);
+
 /// Checks whether `linalgOp` conforms to ConvolutionOpInterface.
 /// By default, we require the `linalgOp` to have non-empty convolved dims
 /// (implicitly non-empty `output_image` and `filter_loop`).
@@ -142,7 +154,7 @@ isaTransposeOpInterface(GenericOp genericOp);
 /// the category op.
 /// A linalg.generic body could be a series of unary elementwise ops e.g.
 /// `exp(neg(x))`, such as formed by linalg op fusion. Here we restrict it to
-/// detecting cases where body is is a single computation op.
+/// detecting cases where body is a single computation op.
 bool isaElemwiseSingleUnaryOpInterface(GenericOp genericOp,
                                        bool allowNonIdentityMaps = false);
 

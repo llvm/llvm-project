@@ -48,8 +48,8 @@ entry:
   ret void
 }
 
-; Should no be vectorized with a undef/poison element as padding, as
-; division by undef/poison may cause UB.  Must use VL predication or
+; Should no be vectorized with a poison element as padding, as
+; division by poison may cause UB.  Must use VL predication or
 ; masking instead, where RISCV wins.
 define void @v3_load_i32_udiv_by_constant_store(ptr %src, ptr %dst) {
 ; NON-POW2-LABEL: @v3_load_i32_udiv_by_constant_store(
@@ -340,7 +340,7 @@ entry:
 define void @vec3_fpext_cost(ptr %Colour, float %0) {
 ; NON-POW2-LABEL: @vec3_fpext_cost(
 ; NON-POW2-NEXT:  entry:
-; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[TMP0:%.*]], i32 0
+; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <3 x float> poison, float [[TMP0:%.*]], i64 0
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <3 x i32> zeroinitializer
 ; NON-POW2-NEXT:    [[TMP3:%.*]] = fpext <3 x float> [[TMP2]] to <3 x double>
 ; NON-POW2-NEXT:    [[TMP4:%.*]] = call <3 x double> @llvm.fmuladd.v3f64(<3 x double> [[TMP3]], <3 x double> zeroinitializer, <3 x double> zeroinitializer)
@@ -351,7 +351,7 @@ define void @vec3_fpext_cost(ptr %Colour, float %0) {
 ; POW2-ONLY-LABEL: @vec3_fpext_cost(
 ; POW2-ONLY-NEXT:  entry:
 ; POW2-ONLY-NEXT:    [[ARRAYIDX80:%.*]] = getelementptr float, ptr [[COLOUR:%.*]], i64 2
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0:%.*]], i32 0
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0:%.*]], i64 0
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
 ; POW2-ONLY-NEXT:    [[TMP3:%.*]] = fpext <2 x float> [[TMP2]] to <2 x double>
 ; POW2-ONLY-NEXT:    [[TMP4:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP3]], <2 x double> zeroinitializer, <2 x double> zeroinitializer)

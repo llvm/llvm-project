@@ -156,15 +156,16 @@ static StatementMatcher makeArrayLoopMatcher() {
 /// Client code will need to make sure that:
 ///   - The two containers on which 'begin' and 'end' are called are the same.
 static StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
-  auto BeginNameMatcher = IsReverse ? hasAnyName("rbegin", "crbegin")
-                                    : hasAnyName("begin", "cbegin");
-  auto BeginNameMatcherStd = IsReverse
-                                 ? hasAnyName("::std::rbegin", "::std::crbegin")
-                                 : hasAnyName("::std::begin", "::std::cbegin");
+  const auto BeginNameMatcher = IsReverse ? hasAnyName("rbegin", "crbegin")
+                                          : hasAnyName("begin", "cbegin");
+  const auto BeginNameMatcherStd =
+      IsReverse ? hasAnyName("::std::rbegin", "::std::crbegin")
+                : hasAnyName("::std::begin", "::std::cbegin");
 
-  auto EndNameMatcher =
+  const auto EndNameMatcher =
       IsReverse ? hasAnyName("rend", "crend") : hasAnyName("end", "cend");
-  auto EndNameMatcherStd = IsReverse ? hasAnyName("::std::rend", "::std::crend")
+  const auto EndNameMatcherStd = IsReverse
+                                     ? hasAnyName("::std::rend", "::std::crend")
                                      : hasAnyName("::std::end", "::std::cend");
 
   const StatementMatcher BeginCallMatcher =
@@ -432,8 +433,8 @@ getContainerFromBeginEndCall(const Expr *Init, bool IsBegin, bool *IsArrow,
 ///
 /// BeginExpr must be a member call to a function named "begin()", and EndExpr
 /// must be a member.
-static const Expr *findContainer(ASTContext *Context, const Expr *BeginExpr,
-                                 const Expr *EndExpr,
+static const Expr *findContainer(const ASTContext *Context,
+                                 const Expr *BeginExpr, const Expr *EndExpr,
                                  bool *ContainerNeedsDereference,
                                  bool IsReverse) {
   // Now that we know the loop variable and test expression, make sure they are
@@ -461,7 +462,7 @@ static const Expr *findContainer(ASTContext *Context, const Expr *BeginExpr,
 }
 
 /// Obtain the original source code text from a SourceRange.
-static StringRef getStringFromRange(SourceManager &SourceMgr,
+static StringRef getStringFromRange(const SourceManager &SourceMgr,
                                     const LangOptions &LangOpts,
                                     SourceRange Range) {
   if (SourceMgr.getFileID(Range.getBegin()) !=
@@ -497,7 +498,7 @@ static bool isDirectMemberExpr(const Expr *E) {
 static bool canBeModified(ASTContext *Context, const Expr *E) {
   if (E->getType().isConstQualified())
     return false;
-  auto Parents = Context->getParents(*E);
+  const auto Parents = Context->getParents(*E);
   if (Parents.size() != 1)
     return true;
   if (const auto *Cast = Parents[0].get<ImplicitCastExpr>()) {
@@ -918,7 +919,7 @@ void LoopConvertCheck::getIteratorLoopQualifiers(ASTContext *Context,
     // A node will only be bound with DerefByRefResultName if we're dealing
     // with a user-defined iterator type. Test the const qualification of
     // the reference type.
-    auto ValueType = DerefType->getNonReferenceType();
+    const auto ValueType = DerefType->getNonReferenceType();
 
     Descriptor.DerefByConstRef = ValueType.isConstQualified();
     Descriptor.ElemType = ValueType;
