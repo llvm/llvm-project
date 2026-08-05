@@ -17,10 +17,9 @@
 
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 
@@ -653,6 +652,10 @@ class CGFunctionInfo final
   /// Log 2 of the maximum vector width.
   unsigned MaxVectorWidth : 4;
 
+  /// X86 AVX Level, can be different from global / module level AVX level
+  /// because of target attributes.
+  unsigned X86ABIAVXLevel = 0;
+
   RequiredArgs Required;
 
   /// The struct representing all arguments passed in memory.  Only used when
@@ -683,7 +686,8 @@ class CGFunctionInfo final
 public:
   static CGFunctionInfo *
   create(unsigned llvmCC, bool instanceMethod, bool chainCall,
-         bool delegateCall, const FunctionType::ExtInfo &extInfo,
+         bool delegateCall, unsigned X86ABIAVXLevel,
+         const FunctionType::ExtInfo &extInfo,
          ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
          ArrayRef<CanQualType> argTypes, RequiredArgs required);
   void operator delete(void *p) { ::operator delete(p); }
@@ -809,6 +813,8 @@ public:
     MaxVectorWidth = llvm::countr_zero(Width) + 1;
   }
 
+  unsigned getX86ABIAVXLevel() const { return X86ABIAVXLevel; }
+
   void Profile(llvm::FoldingSetNodeID &ID) {
     ID.AddInteger(getASTCallingConvention());
     ID.AddBoolean(InstanceMethod);
@@ -821,6 +827,7 @@ public:
     ID.AddInteger(RegParm);
     ID.AddBoolean(NoCfCheck);
     ID.AddBoolean(CmseNSCall);
+    ID.AddInteger(X86ABIAVXLevel);
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
@@ -833,6 +840,7 @@ public:
   }
   static void Profile(llvm::FoldingSetNodeID &ID, bool InstanceMethod,
                       bool ChainCall, bool IsDelegateCall,
+                      unsigned X86ABIAVXLevel,
                       const FunctionType::ExtInfo &info,
                       ArrayRef<ExtParameterInfo> paramInfos,
                       RequiredArgs required, CanQualType resultType,
@@ -848,6 +856,7 @@ public:
     ID.AddInteger(info.getRegParm());
     ID.AddBoolean(info.getNoCfCheck());
     ID.AddBoolean(info.getCmseNSCall());
+    ID.AddInteger(X86ABIAVXLevel);
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {

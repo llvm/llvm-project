@@ -234,7 +234,7 @@ for.end:
 }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.enable"}
 ;.
 ; IF-EVL-OUTLOOP: [[META0]] = !{[[META1:![0-9]+]]}
 ; IF-EVL-OUTLOOP: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}

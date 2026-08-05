@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // A pass that vectorizes short store-load chains.
-// Unlike generic bottom-up vectorization, this pass can vectorize instructions
+// Unlike generic bundle vectorization, this pass can vectorize instructions
 // of different types.
 //
 
@@ -39,7 +39,9 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
                           ArrayRef<Value *> Operands);
 
 public:
-  LoadStoreVec() : RegionPass("load-store-vec") {}
+  LoadStoreVec(StringRef AuxArg) : RegionPass("load-store-vec") {
+    assert(AuxArg.empty() && "This pass ignores aux arg!");
+  }
   bool runOnRegion(Region &Rgn, const Analyses &A) final;
 };
 

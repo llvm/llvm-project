@@ -236,6 +236,23 @@ is `ParseSyntaxOnlyAction`, which corresponds to `-fsyntax-only`. In other
 words, `flang -fc1 <input-file>` is equivalent to `flang -fc1 -fsyntax-only
 <input-file>`.
 
+## Dependency File Generation
+Flang can emit Makefile-style dependency rules with `-M`, `-MM`, `-MD` and
+`-MMD` (paired with `-MF`, `-MT` and `-MQ` to control the output file and the
+rule target).
+
+Both `-M`/`-MM` and `-MD`/`-MMD` run through semantic analysis (equivalent to
+`-fsyntax-only`), so `use` statements are resolved and the `.mod` files opened
+during semantic analysis are recorded and appear in the dependency rule.
+
+The one behavioural difference between `-M`/`-MM` and `-MD`/`-MMD` is the
+output destination and whether object code is emitted:
+
+* `-MD` and `-MMD` run a full compilation and emit object code; the dependency
+  file is written alongside the object file.
+* `-M` and `-MM` skip code generation and write the dependency rule to stdout
+  (or to the file named by `-MF` / `-o`).
+
 ## Adding new Compiler Options
 Adding a new compiler option in Flang consists of two steps:
 * define the new option in a dedicated TableGen file,
@@ -463,9 +480,9 @@ static FrontendPluginRegistry::Add<PrintFunctionNamesAction> X(
 ### Loading and Running a Plugin
 In order to use plugins, there are 2 command line options made available to the
 frontend driver, `flang -fc1`:
-* [`-load <dsopath>`](#the--load-dsopath-option) for loading the dynamic shared
+* [`-load <dsopath>`](#the-load-dsopath-option) for loading the dynamic shared
   object of the plugin
-* [`-plugin <name>`](#the--plugin-name-option) for calling the registered plugin
+* [`-plugin <name>`](#the-plugin-name-option) for calling the registered plugin
 
 Invocation of the example plugin is done through:
 ```bash

@@ -312,20 +312,13 @@ bool Constant::isElementWiseEqual(Value *Y) const {
 static bool
 containsUndefinedElement(const Constant *C,
                          function_ref<bool(const Constant *)> HasFn) {
-  if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
+  if (C->getType()->isVectorTy()) {
     if (HasFn(C))
       return true;
     if (isa<ConstantAggregateZero>(C))
       return false;
-    if (isa<ScalableVectorType>(C->getType()))
-      return false;
 
-    for (unsigned i = 0, e = cast<FixedVectorType>(VTy)->getNumElements();
-         i != e; ++i) {
-      if (Constant *Elem = C->getAggregateElement(i))
-        if (HasFn(Elem))
-          return true;
-    }
+    return C->containsMatchingVectorElement(HasFn);
   }
 
   return false;
@@ -351,11 +344,22 @@ bool Constant::containsConstantExpression() const {
   if (isa<ConstantInt>(this) || isa<ConstantFP>(this))
     return false;
 
-  if (auto *VTy = dyn_cast<FixedVectorType>(getType())) {
-    for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i)
-      if (isa<ConstantExpr>(getAggregateElement(i)))
-        return true;
+  return containsMatchingVectorElement(IsaPred<ConstantExpr>);
+}
+
+bool Constant::containsMatchingVectorElement(
+    function_ref<bool(Constant *)> PredFn) const {
+  auto *FVTy = dyn_cast<FixedVectorType>(getType());
+  if (!FVTy)
+    return false;
+
+  unsigned NumElts = FVTy->getNumElements();
+  for (unsigned I = 0; I != NumElts; ++I) {
+    Constant *Elem = getAggregateElement(I);
+    if (Elem && PredFn(Elem))
+      return true;
   }
+
   return false;
 }
 
@@ -378,10 +382,14 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID:
-    if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
+  case Type::ScalableVectorTyID: {
+    Type *EltTy = cast<VectorType>(Ty)->getElementType();
+    if (EltTy->isFloatingPointTy())
+      return ConstantFP::get(Ty, APFloat::getZero(EltTy->getFltSemantics()));
+    if (EltTy->isPointerTy())
       return ConstantPointerNull::get(Ty);
     return ConstantAggregateZero::get(Ty);
+  }
   case Type::StructTyID:
   case Type::ArrayTyID:
     return ConstantAggregateZero::get(Ty);
@@ -2892,10 +2900,10 @@ Constant *ConstantExpr::getIntrinsicIdentity(Intrinsic::ID ID, Type *Ty) {
     return Constant::getAllOnesValue(Ty);
   case Intrinsic::smax:
     return Constant::getIntegerValue(
-        Ty, APInt::getSignedMinValue(Ty->getIntegerBitWidth()));
+        Ty, APInt::getSignedMinValue(Ty->getScalarSizeInBits()));
   case Intrinsic::smin:
     return Constant::getIntegerValue(
-        Ty, APInt::getSignedMaxValue(Ty->getIntegerBitWidth()));
+        Ty, APInt::getSignedMaxValue(Ty->getScalarSizeInBits()));
   default:
     return nullptr;
   }
@@ -3365,15 +3373,15 @@ uint64_t ConstantDataSequential::getElementAsInteger(uint64_t Elt) const {
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getScalarSizeInBits()) {
+  switch (getElementByteSize()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
-  case 8:
+  case 1:
     return *reinterpret_cast<const uint8_t *>(EltPtr);
-  case 16:
+  case 2:
     return *reinterpret_cast<const uint16_t *>(EltPtr);
-  case 32:
+  case 4:
     return *reinterpret_cast<const uint32_t *>(EltPtr);
-  case 64:
+  case 8:
     return *reinterpret_cast<const uint64_t *>(EltPtr);
   }
 }
@@ -3386,21 +3394,21 @@ APInt ConstantDataSequential::getElementAsAPInt(uint64_t Elt) const {
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getScalarSizeInBits()) {
+  switch (getElementByteSize()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
-  case 8: {
+  case 1: {
     auto EltVal = *reinterpret_cast<const uint8_t *>(EltPtr);
     return APInt(8, EltVal);
   }
-  case 16: {
+  case 2: {
     auto EltVal = *reinterpret_cast<const uint16_t *>(EltPtr);
     return APInt(16, EltVal);
   }
-  case 32: {
+  case 4: {
     auto EltVal = *reinterpret_cast<const uint32_t *>(EltPtr);
     return APInt(32, EltVal);
   }
-  case 64: {
+  case 8: {
     auto EltVal = *reinterpret_cast<const uint64_t *>(EltPtr);
     return APInt(64, EltVal);
   }

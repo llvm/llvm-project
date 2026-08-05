@@ -89,6 +89,9 @@
 //      of the same width
 //   S: given a vector type, computes its equivalent one for LMUL=1. This is a
 //      no-op if the vector was already LMUL=1
+//   A: given a vector type whose element type is one of the OFP8 formats
+//      (float8e4m3 or float8e5m2), computes the vector type with the
+//      alternative OFP8 element type (e4m3 <-> e5m2).
 //   (Log2EEW:Value): Log2EEW value could be 3/4/5/6 (8/16/32/64), given a
 //      vector type (SEW and LMUL) and EEW (8/16/32/64), computes its
 //      equivalent integer vector type with EEW and corresponding ELMUL (elmul =

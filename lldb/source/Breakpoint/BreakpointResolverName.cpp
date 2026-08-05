@@ -41,7 +41,7 @@ BreakpointResolverName::BreakpointResolverName(
                 name_cstr);
     }
   } else {
-    AddNameLookup(ConstString(name_cstr), name_type_mask);
+    AddNameLookup(name_cstr, name_type_mask);
   }
 }
 
@@ -53,7 +53,7 @@ BreakpointResolverName::BreakpointResolverName(
       m_match_type(Breakpoint::Exact), m_language(language),
       m_skip_prologue(skip_prologue) {
   for (size_t i = 0; i < num_names; i++) {
-    AddNameLookup(ConstString(names[i]), name_type_mask);
+    AddNameLookup(names[i], name_type_mask);
   }
 }
 
@@ -65,7 +65,7 @@ BreakpointResolverName::BreakpointResolverName(
       m_match_type(Breakpoint::Exact), m_language(language),
       m_skip_prologue(skip_prologue) {
   for (const std::string &name : names) {
-    AddNameLookup(ConstString(name), name_type_mask);
+    AddNameLookup(name, name_type_mask);
   }
 }
 
@@ -180,7 +180,7 @@ BreakpointResolverSP BreakpointResolverName::CreateFromStructuredData(
             Breakpoint::MatchType::Exact, offset,
             /*offset_is_insn_count = */ false, skip_prologue);
     for (size_t i = 1; i < num_elem; i++) {
-      resolver_sp->AddNameLookup(ConstString(names[i]), name_masks[i]);
+      resolver_sp->AddNameLookup(names[i], name_masks[i]);
     }
     return resolver_sp;
 }
@@ -214,10 +214,10 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
   return WrapOptionsDict(options_dict_sp);
 }
 
-void BreakpointResolverName::AddNameLookup(ConstString name,
+void BreakpointResolverName::AddNameLookup(llvm::StringRef name,
                                            FunctionNameType name_type_mask) {
-  std::vector<Module::LookupInfo> infos =
-      Module::LookupInfo::MakeLookupInfos(name, name_type_mask, m_language);
+  std::vector<Module::LookupInfo> infos = Module::LookupInfo::MakeLookupInfos(
+      ConstString(name), name_type_mask, m_language);
   llvm::append_range(m_lookups, infos);
 
   auto add_variant_funcs = [&](Language *lang) {
@@ -226,9 +226,9 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
       // FIXME: Should we be adding variants that aren't of type Full?
       if (variant.GetType() & lldb::eFunctionNameTypeFull) {
         std::vector<Module::LookupInfo> variant_lookups =
-            Module::LookupInfo::MakeLookupInfos(name, variant.GetType(),
-                                                lang->GetLanguageType(),
-                                                variant.GetName());
+            Module::LookupInfo::MakeLookupInfos(
+                ConstString(name), variant.GetType(), lang->GetLanguageType(),
+                ConstString(variant.GetName()));
         llvm::append_range(m_lookups, variant_lookups);
       }
     }
@@ -405,12 +405,12 @@ void BreakpointResolverName::GetDescription(Stream *s) {
       s->Printf("name = '%s'", unique_lookups[0].GetCString());
     else {
       size_t num_names = unique_lookups.size();
-      s->Printf("names = {");
+      s->PutCString("names = {");
       for (size_t i = 0; i < num_names; i++) {
         s->Printf("%s'%s'", (i == 0 ? "" : ", "),
                   unique_lookups[i].GetCString());
       }
-      s->Printf("}");
+      s->PutCString("}");
     }
   }
   if (m_language != eLanguageTypeUnknown) {

@@ -14,8 +14,8 @@ define void @foo() personality ptr @bar {
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP3:%.*]], [[BB6:%.*]] ], [ poison, [[BB1:%.*]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = invoke i32 poison(ptr addrspace(1) nonnull poison, i32 0, i32 0, i32 poison) [ "deopt"() ]
 ; CHECK-NEXT:            to label [[BB4:%.*]] unwind label [[BB10:%.*]]
 ; CHECK:       bb4:
@@ -40,8 +40,8 @@ define void @foo() personality ptr @bar {
 ; CHECK-NEXT:    [[LOCAL_5_33118_LCSSA:%.*]] = phi i32 [ [[TMP4]], [[BB3]] ]
 ; CHECK-NEXT:    [[LANDING_PAD68:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[LOCAL_10_38123_LCSSA]], i32 2
-; CHECK-NEXT:    [[TMP9]] = insertelement <4 x i32> [[TMP8]], i32 [[LOCAL_5_33118_LCSSA]], i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[LOCAL_10_38123_LCSSA]], i64 2
+; CHECK-NEXT:    [[TMP9]] = insertelement <4 x i32> [[TMP8]], i32 [[LOCAL_5_33118_LCSSA]], i64 3
 ; CHECK-NEXT:    br label [[BB9]]
 ; CHECK:       bb11:
 ; CHECK-NEXT:    ret void
@@ -50,8 +50,8 @@ define void @foo() personality ptr @bar {
 ; CHECK-NEXT:    [[LOCAL_5_84111_LCSSA:%.*]] = phi i32 [ [[LOCAL_5_84111]], [[BB7]] ]
 ; CHECK-NEXT:    [[LANDING_PAD149:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:            cleanup
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[LOCAL_10_89113_LCSSA]], i32 2
-; CHECK-NEXT:    [[TMP11]] = insertelement <4 x i32> [[TMP12]], i32 [[LOCAL_5_84111_LCSSA]], i32 3
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> poison, i32 [[LOCAL_10_89113_LCSSA]], i64 2
+; CHECK-NEXT:    [[TMP11]] = insertelement <4 x i32> [[TMP12]], i32 [[LOCAL_5_84111_LCSSA]], i64 3
 ; CHECK-NEXT:    br label [[BB9]]
 ;
 bb1:

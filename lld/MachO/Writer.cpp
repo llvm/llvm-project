@@ -1007,12 +1007,16 @@ static void sortSegmentsAndSections() {
         osec->align = tlvAlign;
       }
 
-      if (!isecPriorities.empty()) {
-        if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
-          llvm::stable_sort(
-              merged->inputs, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) < isecPriorities.lookup(b);
-              });
+      if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
+        auto coldIt = std::stable_partition(
+            merged->inputs.begin(), merged->inputs.end(),
+            [](InputSection *isec) { return !isec->isCold; });
+        if (!isecPriorities.empty()) {
+          std::stable_sort(merged->inputs.begin(), coldIt,
+                           [&](InputSection *a, InputSection *b) {
+                             return isecPriorities.lookup(a) <
+                                    isecPriorities.lookup(b);
+                           });
         }
       }
     }

@@ -169,6 +169,17 @@ public:
     return I != Map.end() ? I->second : ValueT();
   }
 
+  /// Return the entry for the specified key, or \p Default. This variant is
+  /// useful, because `lookup` cannot be used with non-default-constructible
+  /// values.
+  template <typename U = std::remove_cv_t<ValueT>>
+  ValueT lookup_or(const KeyT &Val, U &&Default) const {
+    typename MapT::const_iterator I = Map.find_as(Val);
+    if (I != Map.end())
+      return I->second;
+    return std::forward<U>(Default);
+  }
+
   // Inserts key,value pair into the map if the key isn't already in the map.
   // If the key is already in the map, it returns false and doesn't update the
   // value.
@@ -291,10 +302,6 @@ public:
 template <typename KeyT, typename ValueT, typename Config>
 struct DenseMapInfo<ValueMapCallbackVH<KeyT, ValueT, Config>> {
   using VH = ValueMapCallbackVH<KeyT, ValueT, Config>;
-
-  static inline VH getEmptyKey() {
-    return VH(DenseMapInfo<Value *>::getEmptyKey());
-  }
 
   static unsigned getHashValue(const VH &Val) {
     return DenseMapInfo<KeyT>::getHashValue(Val.Unwrap());

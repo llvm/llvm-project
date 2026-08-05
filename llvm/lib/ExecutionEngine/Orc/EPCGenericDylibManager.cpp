@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericDylibManager.h"
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 
@@ -53,6 +54,28 @@ EPCGenericDylibManager::CreateWithDefaultBootstrapSymbols(
   return EPCGenericDylibManager(EPC, std::move(SAs));
 }
 
+Expected<EPCGenericDylibManager>
+EPCGenericDylibManager::Create(JITDylib &JD,
+                               rt::SimpleExecutorDylibManagerSymbolNames SNs) {
+  auto &ES = JD.getExecutionSession();
+  SymbolAddrs SAs;
+  if (auto Err = lookupAndRecordAddrs(
+          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
+          {
+              {ES.intern(SNs.InstanceName), &SAs.Instance},
+              {ES.intern(SNs.OpenName), &SAs.Open},
+              {ES.intern(SNs.ResolveName), &SAs.Resolve},
+          }))
+    return std::move(Err);
+  return EPCGenericDylibManager(ES.getExecutorProcessControl(), std::move(SAs));
+}
+
+Expected<EPCGenericDylibManager>
+EPCGenericDylibManager::Create(ExecutionSession &ES,
+                               rt::SimpleExecutorDylibManagerSymbolNames SNs) {
+  return Create(ES.getBootstrapJITDylib(), std::move(SNs));
+}
+
 Expected<tpctypes::DylibHandle> EPCGenericDylibManager::open(StringRef Path,
                                                              uint64_t Mode) {
   Expected<tpctypes::DylibHandle> H((ExecutorAddr()));
@@ -70,8 +93,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
       SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
-              Result) mutable {
+          Expected<std::vector<std::optional<ExecutorAddr>>> Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));
@@ -89,8 +111,7 @@ void EPCGenericDylibManager::lookupAsync(tpctypes::DylibHandle H,
       SAs.Resolve,
       [Complete = std::move(Complete)](
           Error SerializationErr,
-          Expected<std::vector<std::optional<ExecutorSymbolDef>>>
-              Result) mutable {
+          Expected<std::vector<std::optional<ExecutorAddr>>> Result) mutable {
         if (SerializationErr) {
           cantFail(Result.takeError());
           Complete(std::move(SerializationErr));

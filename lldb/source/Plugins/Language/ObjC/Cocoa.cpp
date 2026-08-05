@@ -11,7 +11,6 @@
 #include "ObjCConstants.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
@@ -927,15 +926,15 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   uint64_t date_value_bits = 0;
   double date_value = 0.0;
 
-  ConstString class_name = descriptor->GetClassName();
+  llvm::StringRef class_name = descriptor->GetClassName().GetStringRef();
 
-  static const ConstString g_NSDate("NSDate");
-  static const ConstString g_dunder_NSDate("__NSDate");
-  static const ConstString g_NSTaggedDate("__NSTaggedDate");
-  static const ConstString g_NSCalendarDate("NSCalendarDate");
-  static const ConstString g_NSConstantDate("NSConstantDate");
+  static constexpr llvm::StringLiteral g_NSDate("NSDate");
+  static constexpr llvm::StringLiteral g_dunder_NSDate("__NSDate");
+  static constexpr llvm::StringLiteral g_NSTaggedDate("__NSTaggedDate");
+  static constexpr llvm::StringLiteral g_NSCalendarDate("NSCalendarDate");
+  static constexpr llvm::StringLiteral g_NSConstantDate("NSConstantDate");
 
-  if (class_name.IsEmpty())
+  if (class_name.empty())
     return false;
 
   uint64_t info_bits = 0, value_bits = 0;
