@@ -57,25 +57,22 @@ int main() {
     }
   }
 
-  // Both pointers were attached to the close buffer.
-  // CHECK: in tgt: p1 != &arr[0], p2 != &arr[0]
+  // p2 has no device storage of its own, so the pointee was kept on the host
+  // path and both pointers designate it there.
+  // CHECK: in tgt: p1 == &arr[0], p2 == &arr[0]
   printf(
       "in tgt: p1 %s &arr[0], p2 %s &arr[0]\n",
       p1_device == &arr[0] ? "==" : "!=", p2_device == &arr[0] ? "==" : "!=");
 
-  // p1 has device storage of its own, so the original is intact.
   // CHECK: after: p1 == &arr[0]
   printf("after: p1 %s &arr[0]\n", p1 == &arr[0] ? "==" : "!=");
 
-  // EXPECTED: after: p2 == &arr[0]
-  // CHECK:    after: p2 != &arr[0]
-  // FIXME: p2's storage is shared with the original, so attachment wrote the
-  // device pointee address into the original p2.
+  // CHECK: after: p2 == &arr[0]
   printf("after: p2 %s &arr[0]\n", p2 == &arr[0] ? "==" : "!=");
 
-  // The pointee is mapped with alloc, which never assigns, so the value written
-  // into the device buffer is not copied back.
-  // CHECK: arr[0] = 0
+  // The pointee stayed on the host path, so the write is to arr itself and
+  // there is no separate buffer for it to be stranded in.
+  // CHECK: arr[0] = 55
   printf("arr[0] = %d\n", arr[0]);
 
   // CHECK: Done!

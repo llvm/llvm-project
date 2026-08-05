@@ -70,19 +70,15 @@ int main() {
     p2_device = p1->p2;
   }
 
-  // EXPECTED: device p1 != &inner
-  // CHECK:    device p1 == &inner
-  // FIXME: p1's storage is shared with the original, so it was never given a
-  // device value and still designates the original structure.
+  // The structure was kept on the host path, so p1 designates it there and the
+  // original p1 is unchanged.
+  // CHECK: device p1 == &inner
   printf("device p1 %s &inner\n", p1_device == &inner ? "==" : "!=");
 
-  // CHECK: device p1->p2 != &leaf[0]
+  // CHECK: device p1->p2 == &leaf[0]
   printf("device p1->p2 %s &leaf[0]\n", p2_device == &leaf[0] ? "==" : "!=");
 
-  // EXPECTED: host: p1 == &inner, inner.p2 == &leaf[0]
-  // CHECK:    host: p1 == &inner, inner.p2 != &leaf[0]
-  // FIXME: the structure's storage is shared with the original, so attachment of
-  // its member wrote the device pointee address into the original inner.p2.
+  // CHECK: host: p1 == &inner, inner.p2 == &leaf[0]
   printf("host: p1 %s &inner, inner.p2 %s &leaf[0]\n",
          p1 == &inner ? "==" : "!=", inner.p2 == &leaf[0] ? "==" : "!=");
 

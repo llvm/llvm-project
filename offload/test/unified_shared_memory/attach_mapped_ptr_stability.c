@@ -14,14 +14,15 @@
 //
 // A program can obtain it with omp_get_mapped_ptr, and can also hold it from
 // use_device_ptr or use_device_addr, or have passed it to a device already. So
-// whether an entry's storage is shared with the original can only be decided when
-// the entry is created: giving an already-present entry a device allocation later
-// would invalidate every device address obtained for it beforehand.
+// whether an entry's storage is shared with the original can only be decided
+// when the entry is created: giving an already-present entry a device
+// allocation later would invalidate every device address obtained for it
+// beforehand.
 //
-// This matters for pointer attachment under unified shared memory, where a pointer
-// whose storage is shared with the original cannot be attached without writing a
-// device address into the original pointer. Resolving that by giving the pointer
-// storage after the fact is what this test rules out.
+// This matters for pointer attachment under unified shared memory, where a
+// pointer whose storage is shared with the original cannot be attached without
+// writing a device address into the original pointer. Resolving that by giving
+// the pointer storage after the fact is what this test rules out.
 
 #include <omp.h>
 #include <stdio.h>
@@ -44,9 +45,9 @@ int main() {
 
   void *Before = omp_get_mapped_ptr(&p, dev);
 
-  // Attaching p to a pointee that has its own device storage must not change the
-  // device address of p itself. Here the pointee is newly mapped with close,
-  // which is what prescribes the attachment.
+  // Attaching p to a pointee that has its own device storage must not change
+  // the device address of p itself. Here the pointee is newly mapped with
+  // close, which is what prescribes the attachment.
 #pragma omp target enter data map(close, alloc : p[0 : 10])
 
   void *After = omp_get_mapped_ptr(&p, dev);

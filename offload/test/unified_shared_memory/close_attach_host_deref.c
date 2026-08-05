@@ -1,9 +1,11 @@
 // RUN: %libomptarget-compile-generic
-// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: %libomptarget-run-generic 2>&1 \
+// RUN: | %fcheck-generic -check-prefixes=CHECK,DEFAULT
 //
 // RUN: %libomptarget-compile-generic -DVIA_ALWAYS=1
 // RUN: env LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS=1 \
-// RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: %libomptarget-run-generic 2>&1 \
+// RUN: | %fcheck-generic -check-prefixes=CHECK,ALWAYS
 
 // REQUIRES: unified_shared_memory
 // UNSUPPORTED: clang-6, clang-7, clang-8, clang-9
@@ -69,10 +71,18 @@ int main() {
 #pragma omp target enter data map(close, alloc : p[0 : 10])
 #endif
 
+#if VIA_ALWAYS
   // EXPECTED: after attach: p == &x[0]
-  // CHECK:    after attach: p != &x[0]
-  // FIXME: the pointer's storage is shared with the original, so attachment wrote
-  // the device pointee address into the original p.
+  // ALWAYS:   after attach: p != &x[0]
+  // FIXME: here the pointer and the pointee were both already present when the
+  // attachment was prescribed, so neither could be given a different backing at
+  // creation time, and the device address was written into the original p. This
+  // case needs a diagnostic rather than a silent choice.
+#else
+  // The pointee was kept on the host path, because attaching the pointer would
+  // otherwise have written a device address into the original p.
+  // DEFAULT: after attach: p == &x[0]
+#endif
   printf("after attach: p %s &x[0]\n", p == &x[0] ? "==" : "!=");
 
   // CHECK: Done!

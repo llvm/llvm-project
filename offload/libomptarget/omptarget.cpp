@@ -515,6 +515,50 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     StateInfoTy *StateInfo, bool FromMapper) {
   assert(StateInfo && "StateInfo must be available for targetDataBegin for "
                       "handling ATTACH and TO/TOFROM map-types.");
+
+  // Whether an entry's storage is shared with the original can only be decided
+  // when the entry is created, since the device address of a mapped list item
+  // must not change while it is mapped. So before creating anything, find the
+  // pointees that this construct will attach a pointer to whose own storage is
+  // shared with the original: giving such a pointee a device allocation would
+  // mean writing a device address into the original pointer.
+  //
+  // Only the map types are inspected here, so this costs nothing for constructs
+  // that prescribe no attachment.
+  for (int32_t I = 0; I < ArgNum; ++I) {
+    if (!(ArgTypes[I] & OMP_TGT_MAPTYPE_ATTACH) ||
+        (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
+      continue;
+
+    void **HstPtr = reinterpret_cast<void **>(ArgsBase[I]);
+    void *HstPteeBegin = Args[I];
+
+    // The pointee only has to stay on the host path if the pointer will really
+    // be attached, and if doing so would write into storage shared with the
+    // original. A pointer that is not mapped at all is not attached, and one
+    // that has a device allocation of its own can be attached without touching
+    // the original, so neither places any requirement on the pointee.
+    MappingInfoTy::HDTTMapAccessorTy HDTTMap =
+        Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
+    LookupResult LR =
+        Device.getMappingInfo().lookupMapping(HDTTMap, HstPtr, sizeof(void *));
+    const bool PtrIsMapped = LR.Flags.IsContained && LR.TPR.getEntry();
+    const bool PtrIsHostBacked =
+        PtrIsMapped &&
+        LR.TPR.getEntry()->TgtPtrBegin == LR.TPR.getEntry()->HstPtrBegin;
+    LR.TPR.setEntry(nullptr);
+    HDTTMap.destroy();
+
+    if (!PtrIsHostBacked)
+      continue;
+
+    ODBG(ODT_Mapping) << "Pointee " << HstPteeBegin
+                      << " will have a pointer attached to it whose storage is "
+                         "shared with the original, so it has to stay on the "
+                         "host path";
+    StateInfo->PointeesToKeepOnHostPath.insert(HstPteeBegin);
+  }
+
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
     // Ignore private variables and arrays - there is no mapping for them.

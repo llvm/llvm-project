@@ -278,7 +278,19 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
                // change.
                (LR.TPR.getEntry() != nullptr &&
                 (LR.Flags.IsContained || LR.Flags.ExtendsBefore ||
-                 LR.Flags.ExtendsAfter)))) ||
+                 LR.Flags.ExtendsAfter)) ||
+               // A pointer whose storage is shared with the original cannot be
+               // attached to a device allocation: the assignment would write a
+               // device address into the original pointer. When this construct
+               // will attach such a pointer to this storage, keep it on the
+               // host path, so that the address attached to the pointer is the
+               // original one.
+               //
+               // Giving the pointer a device allocation instead is not possible
+               // here, because it is already mapped and the device address of a
+               // mapped list item must not change.
+               (StateInfo &&
+                StateInfo->PointeesToKeepOnHostPath.contains(HstPtrBegin)))) ||
              (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)) {
 
     // If unified shared memory is active, implicitly mapped variables that are

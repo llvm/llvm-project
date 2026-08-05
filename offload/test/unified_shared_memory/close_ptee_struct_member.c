@@ -65,18 +65,17 @@ int main() {
     }
   }
 
-  // The member pointer was attached to the close buffer.
-  // CHECK: in tgt: s.p != &arr[0]
+  // The pointee was kept on the host path, since attaching the member pointer
+  // would otherwise have written a device address into the original s.p.
+  // CHECK: in tgt: s.p == &arr[0]
   printf("in tgt: s.p %s &arr[0]\n", p_device == &arr[0] ? "==" : "!=");
 
   // The original member pointer is intact afterwards.
   // CHECK: after: s.p == &arr[0]
   printf("after: s.p %s &arr[0]\n", s.p == &arr[0] ? "==" : "!=");
 
-  // bar() wrote through the attached member pointer, i.e. into the device
-  // buffer for the pointee. That buffer is mapped with alloc, which never
-  // assigns, so the value is not copied back.
-  // CHECK: arr[0] = 0
+  // bar() wrote through the member pointer, which designates arr itself.
+  // CHECK: arr[0] = 77
   printf("arr[0] = %d\n", arr[0]);
 
   // CHECK: Done!

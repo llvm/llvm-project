@@ -21,6 +21,7 @@
 #include <mutex>
 #include <string>
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 
 struct DeviceTy;
@@ -501,6 +502,13 @@ struct AttachMapInfo {
 struct StateInfoTy {
   /// ATTACH map entries for deferred processing until all other maps are done.
   llvm::SmallVector<AttachMapInfo> AttachEntries;
+
+  /// Pointees that this construct will attach a pointer to whose own storage is
+  /// shared with the original. Such a pointee has to stay on the host path, so
+  /// that attaching the pointer does not write a device address into the
+  /// original pointer. Populated before any entry is created, since the device
+  /// address of a mapped list item must not change while it is mapped.
+  llvm::SmallPtrSet<void *, 4> PointeesToKeepOnHostPath;
 
   /// Host pointers for which new device memory was allocated.
   /// Key: host pointer, Value: allocation size.

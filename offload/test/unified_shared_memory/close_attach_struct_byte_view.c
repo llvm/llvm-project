@@ -62,10 +62,8 @@ int main() {
   // The pointee is newly mapped with close, which triggers the attachment.
 #pragma omp target enter data map(close, alloc : s.p[0 : 10])
 
-  // EXPECTED: after attach: s.p == &arr[0]
-  // CHECK:    after attach: s.p != &arr[0]
-  // FIXME: the byte range's storage is shared with the original, so attachment
-  // wrote the device pointee address into the original s.p.
+  // The pointee was kept on the host path, so the original s.p is unchanged.
+  // CHECK: after attach: s.p == &arr[0]
   printf("after attach: s.p %s &arr[0]\n", s.p == &arr[0] ? "==" : "!=");
 
   // CHECK: Done!

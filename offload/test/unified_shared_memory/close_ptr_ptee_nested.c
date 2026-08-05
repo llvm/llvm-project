@@ -95,9 +95,9 @@ int main() {
 
   // ALL: Before tgt: p == p_host
 
-  // The pointer is attached to the close-allocated device pointee, so its
-  // device value differs from the host address.
-  // V1: In tgt: p_device != p_host
+  // The pointer has no device storage of its own, so the pointee is kept on the
+  // host path and the pointer designates it there.
+  // V1: In tgt: p_device == p_host
   // V1: In tgt: paddr_device == &p_host
 
   // p itself is close-allocated, giving the pointer variable its own device
