@@ -983,7 +983,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .widenScalarToNextPow2(0, 32)
       .clampMaxNumElements(0, S32, 16);
 
-  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({PrivatePtr});
+  // An alloca in the VGPR ("as memory") address space is custom-lowered to the
+  // address it was allocated; see legalizeFrameIndexVGPR.
+  getActionDefinitionsBuilder(G_FRAME_INDEX)
+      .legalFor({PrivatePtr})
+      .customFor({VGPRPtr});
 
   // If the amount is divergent, we have to do a wave reduction to get the
   // maximum value, so this is expanded during RegBankSelect.
@@ -2380,6 +2384,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   switch (MI.getOpcode()) {
   case TargetOpcode::G_ADDRSPACE_CAST:
     return legalizeAddrSpaceCast(MI, MRI, B);
+  case TargetOpcode::G_FRAME_INDEX:
+    return legalizeFrameIndexVGPR(MI, B);
   case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
     return legalizeFroundeven(MI, MRI, B);
   case TargetOpcode::G_FCEIL:
@@ -3524,6 +3530,22 @@ static LLT widenToNextPowerOf2(LLT Ty) {
     return Ty.changeElementCount(
         ElementCount::getFixed(PowerOf2Ceil(Ty.getNumElements())));
   return Ty.changeElementSize(PowerOf2Ceil(Ty.getSizeInBits()));
+}
+
+// The address of an object in the VGPR ("as memory") address space is where
+// AMDGPUPromoteAlloca placed it, recorded on the alloca. Parallels
+// SITargetLowering::lowerFrameIndex.
+bool AMDGPULegalizerInfo::legalizeFrameIndexVGPR(MachineInstr &MI,
+                                                 MachineIRBuilder &B) const {
+  MachineFunction &MF = B.getMF();
+  int FI = MI.getOperand(1).getIndex();
+  const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI);
+  assert(Alloca && Alloca->getAddressSpace() == AMDGPUAS::VGPR);
+
+  const auto &MD = AMDGPU::AllocatedVGPRsMetadata::get(*Alloca);
+  B.buildConstant(MI.getOperand(0), MD.getAddress());
+  MI.eraseFromParent();
+  return true;
 }
 
 /// Lower a G_LOAD / G_STORE / G_SEXTLOAD / G_ZEXTLOAD on AMDGPUAS::VGPR into
@@ -9042,6 +9064,16 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     // TODO: Use poison instead of undef
     for (const MachineOperand &Def : MI.defs())
       B.buildUndef(Def);
+    MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::amdgcn_vgpr_lifetime_start:
+  case Intrinsic::amdgcn_vgpr_lifetime_end: {
+    assert(MI.hasOneMemOperand() && "Expected IRTranslator to set MemOp!");
+    unsigned Opc = IntrID == Intrinsic::amdgcn_vgpr_lifetime_start
+                       ? AMDGPU::VGPR_LIFETIME_START
+                       : AMDGPU::VGPR_LIFETIME_END;
+    B.buildInstr(Opc).cloneMemRefs(MI);
     MI.eraseFromParent();
     return true;
   }

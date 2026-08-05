@@ -38,6 +38,7 @@
 ; GCN-O0-SDAG-NEXT: amdgpu-lower-module-lds
 ; GCN-O0-SDAG-NEXT: function
 ; GCN-O0-SDAG-NEXT:   atomic-expand
+; GCN-O0-SDAG-NEXT:   amdgpu-vgpr-allocate
 ; GCN-O0-SDAG-NEXT:   verify
 ; GCN-O0-SDAG-NEXT:   unreachableblockelim
 ; GCN-O0-SDAG-NEXT:   ee-instrument<post-inline>
@@ -80,6 +81,7 @@
 ; GCN-O0-SDAG-NEXT:       amdgpu-lower-idx-ops
 ; GCN-O0-SDAG-NEXT:       phi-node-elimination
 ; GCN-O0-SDAG-NEXT:       si-lower-control-flow
+; GCN-O0-SDAG-NEXT:       amdgpu-private-object-vgprs
 ; GCN-O0-SDAG-NEXT:       two-address-instruction
 ; GCN-O0-SDAG-NEXT:       si-wqm
 ; GCN-O0-SDAG-NEXT:       amdgpu-pre-ra-long-branch-reg
@@ -138,6 +140,7 @@
 ; GCN-O0-GISEL-NEXT: amdgpu-lower-module-lds
 ; GCN-O0-GISEL-NEXT: function
 ; GCN-O0-GISEL-NEXT:   atomic-expand
+; GCN-O0-GISEL-NEXT:   amdgpu-vgpr-allocate
 ; GCN-O0-GISEL-NEXT:   verify
 ; GCN-O0-GISEL-NEXT:   unreachableblockelim
 ; GCN-O0-GISEL-NEXT:   ee-instrument<post-inline>
@@ -187,6 +190,7 @@
 ; GCN-O0-GISEL-NEXT:       amdgpu-lower-idx-ops
 ; GCN-O0-GISEL-NEXT:       phi-node-elimination
 ; GCN-O0-GISEL-NEXT:       si-lower-control-flow
+; GCN-O0-GISEL-NEXT:       amdgpu-private-object-vgprs
 ; GCN-O0-GISEL-NEXT:       two-address-instruction
 ; GCN-O0-GISEL-NEXT:       si-wqm
 ; GCN-O0-GISEL-NEXT:       amdgpu-pre-ra-long-branch-reg
@@ -344,6 +348,7 @@
 ; GCN-O2-SDAG-NEXT:       require<machine-loops>
 ; GCN-O2-SDAG-NEXT:       phi-node-elimination
 ; GCN-O2-SDAG-NEXT:       si-lower-control-flow
+; GCN-O2-SDAG-NEXT:       amdgpu-private-object-vgprs
 ; GCN-O2-SDAG-NEXT:       two-address-instruction
 ; GCN-O2-SDAG-NEXT:       register-coalescer
 ; GCN-O2-SDAG-NEXT:       rename-independent-subregs
@@ -539,6 +544,7 @@
 ; GCN-O2-GISEL-NEXT:       require<machine-loops>
 ; GCN-O2-GISEL-NEXT:       phi-node-elimination
 ; GCN-O2-GISEL-NEXT:       si-lower-control-flow
+; GCN-O2-GISEL-NEXT:       amdgpu-private-object-vgprs
 ; GCN-O2-GISEL-NEXT:       two-address-instruction
 ; GCN-O2-GISEL-NEXT:       register-coalescer
 ; GCN-O2-GISEL-NEXT:       rename-independent-subregs
@@ -727,6 +733,7 @@
 ; GCN-O3-SDAG-NEXT:       require<machine-loops>
 ; GCN-O3-SDAG-NEXT:       phi-node-elimination
 ; GCN-O3-SDAG-NEXT:       si-lower-control-flow
+; GCN-O3-SDAG-NEXT:       amdgpu-private-object-vgprs
 ; GCN-O3-SDAG-NEXT:       two-address-instruction
 ; GCN-O3-SDAG-NEXT:       register-coalescer
 ; GCN-O3-SDAG-NEXT:       rename-independent-subregs
@@ -922,6 +929,7 @@
 ; GCN-O3-GISEL-NEXT:       require<machine-loops>
 ; GCN-O3-GISEL-NEXT:       phi-node-elimination
 ; GCN-O3-GISEL-NEXT:       si-lower-control-flow
+; GCN-O3-GISEL-NEXT:       amdgpu-private-object-vgprs
 ; GCN-O3-GISEL-NEXT:       two-address-instruction
 ; GCN-O3-GISEL-NEXT:       register-coalescer
 ; GCN-O3-GISEL-NEXT:       rename-independent-subregs
