@@ -13399,7 +13399,7 @@ ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   switch (E->getKind()) {
   case ReflectionKind::Type: {
     TypeSourceInfo *NewT = getDerived().TransformType(
-        const_cast<TypeSourceInfo*>(E->getTypeSourceInfo()));
+        const_cast<TypeSourceInfo *>(E->getTypeSourceInfo()));
     if (!NewT)
       return ExprError();
     return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);

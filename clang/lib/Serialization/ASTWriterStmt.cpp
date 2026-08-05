@@ -486,7 +486,8 @@ void ASTStmtWriter::VisitCXXReflectExpr(CXXReflectExpr *E) {
                     "reflection operand");
     break;
   case ReflectionKind::Type:
-    Record.AddTypeSourceInfo(const_cast<TypeSourceInfo*>(E->getTypeSourceInfo()));
+    Record.AddTypeSourceInfo(
+        const_cast<TypeSourceInfo *>(E->getTypeSourceInfo()));
     break;
   }
   Code = serialization::EXPR_REFLECT;
