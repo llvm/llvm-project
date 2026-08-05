@@ -928,6 +928,12 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
     NumVOPD3Mods = 2;
     if (IsVOP3)
       SrcOperandsNum = 3;
+  } else if (Opcode == AMDGPU::V_DOT2_F32_F16 ||
+             Opcode == AMDGPU::V_DOT2_F32_BF16) {
+    // VOP3P opcodes that have VOPD but don't have VOP2 version. Using VOPD3
+    // path in getIndexOfSrcInMCOperands to get correct src operand indexes,
+    // but generating VOPD, not VOPD3.
+    NumVOPD3Mods = SrcOperandsNum;
   } else if (isSISrcFPOperand(OpDesc,
                               getNamedOperandIdx(Opcode, OpName::src0))) {
     // All FP VOPD instructions have Neg modifiers for all operands except
@@ -1257,35 +1263,7 @@ unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
   return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));
 }
 
-unsigned getSGPRAllocGranule(const MCSubtargetInfo &STI) {
-  IsaVersion Version = getIsaVersion(STI.getCPU());
-  if (Version.Major >= 10)
-    return getAddressableNumSGPRs(STI);
-  if (Version.Major >= 8)
-    return 16;
-  return 8;
-}
-
 unsigned getSGPREncodingGranule(const MCSubtargetInfo &STI) { return 8; }
-
-unsigned getTotalNumSGPRs(const MCSubtargetInfo &STI) {
-  IsaVersion Version = getIsaVersion(STI.getCPU());
-  if (Version.Major >= 8)
-    return 800;
-  return 512;
-}
-
-unsigned getAddressableNumSGPRs(const MCSubtargetInfo &STI) {
-  if (STI.getFeatureBits().test(FeatureSGPRInitBug))
-    return FIXED_NUM_SGPRS_FOR_INIT_BUG;
-
-  IsaVersion Version = getIsaVersion(STI.getCPU());
-  if (Version.Major >= 10)
-    return 106;
-  if (Version.Major >= 8)
-    return 102;
-  return 104;
-}
 
 // Per-wave SGPRs reserved for the trap handler when enabled.
 static unsigned getSGPRTrapHandlerReserve(const MCSubtargetInfo &STI) {
@@ -1316,27 +1294,29 @@ unsigned getMinNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU) {
   if (WavesPerEU >= getMaxWavesPerEU(STI))
     return 0;
 
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
   unsigned MinNumSGPRs =
-      getSGPRBudgetPerWave(getTotalNumSGPRs(STI), WavesPerEU + 1,
+      getSGPRBudgetPerWave(getTotalNumSGPRs(Kind), WavesPerEU + 1,
                            getSGPRTrapHandlerReserve(STI),
-                           getSGPRAllocGranule(STI)) +
+                           getSGPRAllocGranule(Kind)) +
       1;
-  return std::min(MinNumSGPRs, getAddressableNumSGPRs(STI));
+  return std::min(MinNumSGPRs, getAddressableNumSGPRs(Kind));
 }
 
 unsigned getMaxNumSGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         bool Addressable) {
   assert(WavesPerEU != 0);
 
-  unsigned AddressableNumSGPRs = getAddressableNumSGPRs(STI);
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  unsigned AddressableNumSGPRs = getAddressableNumSGPRs(Kind);
   IsaVersion Version = getIsaVersion(STI.getCPU());
   if (Version.Major >= 10)
     return Addressable ? AddressableNumSGPRs : 108;
   if (Version.Major >= 8 && !Addressable)
     AddressableNumSGPRs = 112;
-  unsigned MaxNumSGPRs = getSGPRBudgetPerWave(getTotalNumSGPRs(STI), WavesPerEU,
-                                              getSGPRTrapHandlerReserve(STI),
-                                              getSGPRAllocGranule(STI));
+  unsigned MaxNumSGPRs = getSGPRBudgetPerWave(
+      getTotalNumSGPRs(Kind), WavesPerEU, getSGPRTrapHandlerReserve(STI),
+      getSGPRAllocGranule(Kind));
   return std::min(MaxNumSGPRs, AddressableNumSGPRs);
 }
 
@@ -1492,8 +1472,9 @@ unsigned getOccupancyWithNumSGPRs(const MCSubtargetInfo &STI, unsigned SGPRs) {
   if (!isSGPROccupancyLimited(STI))
     return MaxWaves;
 
-  return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(STI),
-                                  getSGPRAllocGranule(STI),
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  return getOccupancyWithNumSGPRs(SGPRs, MaxWaves, getTotalNumSGPRs(Kind),
+                                  getSGPRAllocGranule(Kind),
                                   getSGPRTrapHandlerReserve(STI));
 }
 
@@ -2576,6 +2557,10 @@ bool isGFX9Plus(const MCSubtargetInfo &STI) {
 }
 
 bool isNotGFX9Plus(const MCSubtargetInfo &STI) { return !isGFX9Plus(STI); }
+
+bool hasPopsExitingWaveID(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeaturePopsExitingWaveID);
+}
 
 bool isGFX10(const MCSubtargetInfo &STI) {
   return STI.hasFeature(AMDGPU::FeatureGFX10);
@@ -3747,21 +3732,21 @@ unsigned getLdsDwGranularity(const MCSubtargetInfo &ST) {
   return 64; // In sync with getAddressableLocalMemorySize
 }
 
-bool isPackedFP32Inst(unsigned Opc) {
+bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
   switch (Opc) {
-  case AMDGPU::V_PK_ADD_F32:
-  case AMDGPU::V_PK_ADD_F32_gfx12:
-  case AMDGPU::V_PK_MUL_F32:
-  case AMDGPU::V_PK_MUL_F32_gfx12:
-  case AMDGPU::V_PK_FMA_F32:
-  case AMDGPU::V_PK_FMA_F32_gfx12:
+  case AMDGPU::V_PK_ADD_F32_gfx1250:
+  case AMDGPU::V_PK_ADD_F32_gfx1250_gfx12:
+  case AMDGPU::V_PK_MUL_F32_gfx1250:
+  case AMDGPU::V_PK_MUL_F32_gfx1250_gfx12:
+  case AMDGPU::V_PK_FMA_F32_gfx1250:
+  case AMDGPU::V_PK_FMA_F32_gfx1250_gfx12:
     return true;
   default:
     return false;
   }
 }
 
-bool isPacked64BitInst(unsigned Opc) {
+bool isPackedSingleSGPR64BitInst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F64:
   case AMDGPU::V_PK_ADD_F64_gfx1250:
@@ -3785,8 +3770,8 @@ bool isPacked64BitInst(unsigned Opc) {
   }
 }
 
-bool isPackedFP32or64BitInst(unsigned Opc) {
-  return isPackedFP32Inst(Opc) || isPacked64BitInst(Opc);
+bool isSingleSGPRReadInst(unsigned Opc) {
+  return isPackedSingleSGPRFP32Inst(Opc) || isPackedSingleSGPR64BitInst(Opc);
 }
 
 const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {
@@ -3835,6 +3820,34 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
     A.Dims = {(*Attr)[0], (*Attr)[1], (*Attr)[2]};
 
   return A;
+}
+
+std::optional<APFloat> evaluateRcp(const APFloat &Val) {
+  const fltSemantics &Sem = Val.getSemantics();
+
+  // v_rcp_f16/bf16 are correctly rounded.
+  if (&Sem == &APFloat::IEEEhalf() || &Sem == &APFloat::BFloat())
+    return APFloat::getOne(Sem) / Val;
+
+  // v_rcp_f32/f64 always flush a denormal input to zero (preserving sign)
+  // before reciprocating.
+  APFloat Arg = Val;
+  if (Arg.isDenormal())
+    Arg = APFloat::getZero(Sem, Arg.isNegative());
+
+  APFloat Result = APFloat::getOne(Sem) / Arg;
+
+  // v_rcp_f32/f64 always flush a denormal result to zero (preserving sign).
+  if (Result.isDenormal())
+    Result = APFloat::getZero(Sem, Result.isNegative());
+
+  // v_rcp_f32/f64 only approximate the reciprocal, except for these special
+  // cases where the result is exact.
+  if (!Result.isZero() && !Result.isInfinity() && !Result.isNaN() &&
+      !Result.isOne() && !Result.isMinusOne())
+    return std::nullopt;
+
+  return Result;
 }
 
 } // namespace AMDGPU

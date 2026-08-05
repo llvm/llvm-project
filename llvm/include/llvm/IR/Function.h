@@ -632,6 +632,9 @@ public:
     addFnAttr(Attribute::NoRecurse);
   }
 
+  /// Determine if the function has strict floating point sematics.
+  bool isStrictFP() const { return hasFnAttribute(Attribute::StrictFP); }
+
   /// Determine if the function is required to make forward progress.
   bool mustProgress() const {
     return hasFnAttribute(Attribute::MustProgress) ||

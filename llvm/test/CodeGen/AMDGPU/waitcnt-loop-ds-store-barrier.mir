@@ -28,7 +28,7 @@ body: |
   ; GFX1250-NEXT:   successors: %bb.1(0x80000000)
   ; GFX1250-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   GLOBAL_WB 0, implicit $exec
+  ; GFX1250-NEXT:   GLOBAL_PREFETCH_B8_SADDR undef $sgpr0_sgpr1, undef $vgpr0, 0, 8, implicit $exec
   ; GFX1250-NEXT:   V_NOP_e32 implicit $exec
   ; GFX1250-NEXT:   $vgpr10_vgpr11_vgpr12_vgpr13 = DS_READ_B128 $vgpr0, 0, 0, implicit $m0, implicit $exec
   ; GFX1250-NEXT:   S_BRANCH %bb.1

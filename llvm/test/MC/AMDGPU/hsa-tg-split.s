@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack -filetype=obj < %s > %t
+// RUN: llvm-mc -triple=amdgpu9.0a-amd-amdhsa -mattr=+xnack < %s | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -triple=amdgpu9.0a-amd-amdhsa -mattr=+xnack -filetype=obj < %s > %t
 // RUN: llvm-objdump -s -j .rodata %t | FileCheck --check-prefix=OBJDUMP %s
 
 // OBJDUMP: Contents of section .rodata
@@ -12,7 +12,7 @@
 
 .amdhsa_code_object_version 4
 // ASM: .amdhsa_code_object_version 4
-// ASM: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx90a:xnack+"
+// ASM: .amdgcn_target "amdgpu9.0a-amd-amdhsa-unknown-gfx90a:xnack+"
 
 .p2align 8
 .type minimal,@function
