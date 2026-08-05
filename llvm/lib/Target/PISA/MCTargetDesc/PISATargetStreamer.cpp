@@ -290,8 +290,8 @@ public:
           OS << ".align(" << Param.Align << ") ";
         if (Param.hasAS())
           OS << ".addrspace("
-              << getParamASRepr(static_cast<PISAAS::AddressSpace>(Param.AS))
-              << ") ";
+             << getParamASRepr(static_cast<PISAAS::AddressSpace>(Param.AS))
+             << ") ";
         if (Param.hasPtrAlign())
           OS << ".ptr_align(" << Param.PtrAlign << ") ";
         if (!Param.ArgName.empty())
