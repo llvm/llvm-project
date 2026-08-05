@@ -24,20 +24,20 @@
 // CHECK: !llvm.raw.sections = !{[[ADT_SEC:![0-9]+]]}
 // CHECK: [[ADT_SEC]] = !{!"__clangast",
 
-// B
+// B — named metadata first, then numbered nodes (DICompositeType before blob)
 // CHECK: !llvm.raw.sections = !{[[B_SEC:![0-9]+]]}
-// CHECK: [[B_SEC]] = !{!"__clangast",
 
 // This type isn't anchored anywhere, expect a full definition.
 // CHECK: !DICompositeType({{.*}}, name: "AlignedCharArray<4U, 16U>",
 // CHECK-SAME:             elements:
+// CHECK: [[B_SEC]] = !{!"__clangast",
 
-// C
+// C — same ordering
 // CHECK: !llvm.raw.sections = !{[[C_SEC:![0-9]+]]}
-// CHECK: [[C_SEC]] = !{!"__clangast",
 
 // Here, too.
 // CHECK: !DICompositeType({{.*}}, name: "AlignedCharArray<4U, 16U>",
 // CHECK-SAME:             elements:
+// CHECK: [[C_SEC]] = !{!"__clangast",
 
 #include <B/B.h>
