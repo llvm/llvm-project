@@ -1506,6 +1506,9 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
           }
         }
 
+        if (UsesDominatedByCurMI.empty())
+          continue;
+
         // Assign groups to the uses.
         std::vector<DomGroup> GroupOfUses;
         assignUsesToGroups(CandidateReg, CurMI, UsesDominatedByCurMI,
