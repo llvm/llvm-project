@@ -40,8 +40,6 @@ inline constexpr auto func = []<class T>(const T p) {};
 }
 
 void import_api(int v);
-void trigger_api();
-void trigger_isolate();
 
 void entrypoint() {
   import_api(0); // expected-warning@isolate.cpp:20 {{Division by zero}}
