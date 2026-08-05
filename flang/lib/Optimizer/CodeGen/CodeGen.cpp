@@ -3664,7 +3664,7 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     auto g = mlir::LLVM::GlobalOp::create(
         rewriter, loc, tyAttr, isConst, linkage, global.getSymName(), initAttr,
         0, getGlobalAddressSpace(rewriter), false,
-        ThreadLocalMode::NotThreadLocal, comdat, attrs, dbgExprs);
+        mlir::LLVM::ThreadLocalMode::NotThreadLocal, comdat, attrs, dbgExprs);
 
     if (global.getAlignment() && *global.getAlignment() > 0)
       g.setAlignment(*global.getAlignment());
