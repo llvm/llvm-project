@@ -326,15 +326,15 @@ def parseOptionsAndInitTestdirs():
     if args.out_of_tree_debugserver:
         lldbtest_config.out_of_tree_debugserver = args.out_of_tree_debugserver
 
-    # Set SDKROOT if we are using an Apple SDK
     if args.sysroot:
         configuration.sdkroot = args.sysroot
-    elif platform_system == "Darwin" and args.apple_sdk:
+    elif platform_system == "Darwin":
+        sdk = args.apple_sdk if args.apple_sdk else "macosx"
         configuration.sdkroot = seven.get_command_output(
-            'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' % (args.apple_sdk)
+            'xcrun --sdk "%s" --show-sdk-path 2> /dev/null' % (sdk)
         )
         if not configuration.sdkroot:
-            logging.error("No SDK found with the name %s; aborting...", args.apple_sdk)
+            logging.error('xcrun found no SDK for "%s"', sdk)
             sys.exit(-1)
 
     if args.triple:
@@ -1254,6 +1254,12 @@ def run_suite():
             ).run(configuration.suite)
 
     configuration.failed = not result.wasSuccessful()
+
+    if getattr(result, "skipped", None):
+        sys.stderr.write(
+            "Skip breakdown (unsupported=%d, skipped=%d)\n"
+            % (result.countUnsupported(), result.countSkipped())
+        )
 
     if configuration.sdir_has_content and configuration.verbose:
         sys.stderr.write(
