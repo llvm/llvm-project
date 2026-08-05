@@ -32,8 +32,7 @@ class L0CmdListManagerTy {
   std::mutex Mtx;
 
 public:
-  L0CmdListManagerTy(ze_command_list_handle_t CmdList)
-      : CmdList(CmdList) {}
+  L0CmdListManagerTy(ze_command_list_handle_t CmdList) : CmdList(CmdList) {}
 
   ze_command_list_handle_t getCmdList() const { return CmdList; }
 
