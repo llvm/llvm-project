@@ -1717,9 +1717,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
 
   unsigned NumVectorRegs = 1;
 
-  // Scalable vectors cannot be scalarized, so handle the legalisation of the
-  // types like done elsewhere in SelectionDAG.
-  if (EltCnt.isScalable()) {
+  auto GetLegalVectorBreakdown = [&]() -> std::optional<unsigned> {
     LegalizeKind LK;
     EVT PartVT = VT;
     do {
@@ -1728,17 +1726,25 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
       PartVT = LK.second;
     } while (LK.first != TypeLegal);
 
-    if (!PartVT.isVector()) {
-      report_fatal_error(
-          "Don't know how to legalize this scalable vector type");
-    }
+    if (!PartVT.isVector())
+      return std::nullopt;
 
+    assert(PartVT.isScalableVector() == VT.isScalableVector() &&
+           "Vector legalization changed scalability");
     NumIntermediates =
         divideCeil(VT.getVectorElementCount().getKnownMinValue(),
                    PartVT.getVectorElementCount().getKnownMinValue());
     IntermediateVT = PartVT;
     RegisterVT = getRegisterType(Context, IntermediateVT);
     return NumIntermediates;
+  };
+
+  // Scalable vectors cannot be scalarized, so handle the legalisation of the
+  // types like done elsewhere in SelectionDAG.
+  if (EltCnt.isScalable()) {
+    if (std::optional<unsigned> NumRegs = GetLegalVectorBreakdown())
+      return *NumRegs;
+    report_fatal_error("Don't know how to legalize this scalable vector type");
   }
 
   // FIXME: We don't generically support non-power-of-2-sized vectors for now.
@@ -1747,27 +1753,11 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
     assert(VT.isFixedLengthVector() && "Expected a fixed-length vector VT");
     unsigned NumElts = EltCnt.getKnownMinValue();
 
-    // Find the largest legal vector type that exactly divides a
-    // non-power-of-two vector.
-    if (!ForCallingConv && preferVectorizedNonPowerOfTwoTypeBreakdown()) {
-      for (unsigned PartElts = llvm::bit_floor(NumElts); PartElts > 1;
-           PartElts >>= 1) {
-        if (NumElts % PartElts != 0)
-          continue;
+    if (!ForCallingConv && preferVectorizedNonPowerOfTwoTypeBreakdown())
+      if (std::optional<unsigned> NumRegs = GetLegalVectorBreakdown())
+        return *NumRegs;
 
-        EVT PartVT =
-            EVT::getVectorVT(Context, EltTy, ElementCount::getFixed(PartElts));
-        if (!isTypeLegal(PartVT))
-          continue;
-
-        IntermediateVT = PartVT;
-        NumIntermediates = NumElts / PartElts;
-        RegisterVT = PartVT.getSimpleVT();
-        return NumIntermediates;
-      }
-    }
-
-    // Fall back to scalars if there is no exact legal vector decomposition.
+    // Fall back to scalars if there is no legal vector decomposition.
     NumVectorRegs = NumElts;
     EltCnt = ElementCount::getFixed(1);
   }

@@ -4,41 +4,19 @@
 define void @v5i32_internal(ptr %c, ptr %in, ptr %out, i64 %n) {
 ; CHECK-LABEL: v5i32_internal:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldp w12, w13, [x0]
-; CHECK-NEXT:    mov w1, wzr
-; CHECK-NEXT:    mov w11, wzr
-; CHECK-NEXT:    mov w9, wzr
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    mov w10, wzr
-; CHECK-NEXT:    fmov s0, w12
-; CHECK-NEXT:    mov v0.s[1], w13
-; CHECK-NEXT:    ldp w13, w12, [x0, #8]
-; CHECK-NEXT:    mov v0.s[2], w13
-; CHECK-NEXT:    mov v0.s[3], w12
-; CHECK-NEXT:    ldr w12, [x0, #16]
-; CHECK-NEXT:    fmov s1, w12
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr s3, [x0, #16]
 ; CHECK-NEXT:  .LBB0_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    fmov s2, w1
-; CHECK-NEXT:    fmov s3, w10
+; CHECK-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    subs x3, x3, #1
-; CHECK-NEXT:    mov v2.s[1], w11
-; CHECK-NEXT:    add v3.4s, v3.4s, v1.4s
-; CHECK-NEXT:    fmov w10, s3
-; CHECK-NEXT:    mov v2.s[2], w9
-; CHECK-NEXT:    mov v2.s[3], w8
-; CHECK-NEXT:    add v2.4s, v2.4s, v0.4s
-; CHECK-NEXT:    mov w8, v2.s[3]
-; CHECK-NEXT:    mov w9, v2.s[2]
-; CHECK-NEXT:    mov w11, v2.s[1]
-; CHECK-NEXT:    fmov w1, s2
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit
-; CHECK-NEXT:    mov v2.s[1], w11
-; CHECK-NEXT:    str w10, [x2, #16]
-; CHECK-NEXT:    mov v2.s[2], w9
-; CHECK-NEXT:    mov v2.s[3], w8
-; CHECK-NEXT:    str q2, [x2]
+; CHECK-NEXT:    str q1, [x2]
+; CHECK-NEXT:    str s0, [x2, #16]
 ; CHECK-NEXT:    ret
 entry:
   %c.val = load <5 x i32>, ptr %c
@@ -60,23 +38,18 @@ exit:
 define void @v6i32_internal(ptr %c, ptr %in, ptr %out, i64 %n) {
 ; CHECK-LABEL: v6i32_internal:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    ldr d5, [x0, #16]
-; CHECK-NEXT:    mov d3, v1.d[1]
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    ldp q3, q2, [x0]
 ; CHECK-NEXT:  .LBB1_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    add v4.2s, v4.2s, v3.2s
+; CHECK-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    subs x3, x3, #1
-; CHECK-NEXT:    add v2.2s, v2.2s, v5.2s
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %exit
-; CHECK-NEXT:    mov v0.d[1], v4.d[0]
-; CHECK-NEXT:    str d2, [x2, #16]
-; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    str q1, [x2]
+; CHECK-NEXT:    str d0, [x2, #16]
 ; CHECK-NEXT:    ret
 entry:
   %c.val = load <6 x i32>, ptr %c
@@ -98,30 +71,28 @@ exit:
 define <6 x i32> @v6i32_cc(<6 x i32> %c.val, ptr %in, ptr %out, i64 %n) {
 ; CHECK-LABEL: v6i32_cc:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmov s0, w4
-; CHECK-NEXT:    fmov s1, w2
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    fmov s2, w4
 ; CHECK-NEXT:    ldr x8, [sp]
-; CHECK-NEXT:    fmov s3, w0
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    movi v4.2d, #0000000000000000
-; CHECK-NEXT:    movi v5.2d, #0000000000000000
-; CHECK-NEXT:    mov v0.s[1], w5
-; CHECK-NEXT:    mov v1.s[1], w3
-; CHECK-NEXT:    mov v3.s[1], w1
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    mov v0.s[1], w1
+; CHECK-NEXT:    mov v2.s[1], w5
+; CHECK-NEXT:    mov v0.s[2], w2
+; CHECK-NEXT:    mov v0.s[3], w3
 ; CHECK-NEXT:  .LBB2_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add v2.2s, v2.2s, v3.2s
-; CHECK-NEXT:    add v4.2s, v4.2s, v1.2s
+; CHECK-NEXT:    add v1.4s, v1.4s, v0.4s
+; CHECK-NEXT:    add v3.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    add v5.2s, v5.2s, v0.2s
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit
-; CHECK-NEXT:    mov w1, v2.s[1]
-; CHECK-NEXT:    mov w3, v4.s[1]
-; CHECK-NEXT:    mov w5, v5.s[1]
-; CHECK-NEXT:    fmov w0, s2
-; CHECK-NEXT:    fmov w2, s4
-; CHECK-NEXT:    fmov w4, s5
+; CHECK-NEXT:    mov w1, v1.s[1]
+; CHECK-NEXT:    mov w2, v1.s[2]
+; CHECK-NEXT:    mov w3, v1.s[3]
+; CHECK-NEXT:    mov w5, v3.s[1]
+; CHECK-NEXT:    fmov w0, s1
+; CHECK-NEXT:    fmov w4, s3
 ; CHECK-NEXT:    ret
 entry:
   br label %loop
@@ -141,29 +112,21 @@ exit:
 define void @v5i64_internal(ptr %c, ptr %in, ptr %out, i64 %n) {
 ; CHECK-LABEL: v5i64_internal:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    ldp q2, q1, [x0]
-; CHECK-NEXT:    ldr d7, [x0, #32]
-; CHECK-NEXT:    mov d3, v1.d[1]
-; CHECK-NEXT:    mov d6, v2.d[1]
-; CHECK-NEXT:    fmov d17, d0
-; CHECK-NEXT:    fmov d4, d0
-; CHECK-NEXT:    fmov d16, d0
-; CHECK-NEXT:    fmov d5, d0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    ldr d5, [x0, #32]
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    ldp q4, q3, [x0]
 ; CHECK-NEXT:  .LBB3_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add d0, d0, d2
-; CHECK-NEXT:    add d17, d17, d6
+; CHECK-NEXT:    add v1.2d, v1.2d, v4.2d
+; CHECK-NEXT:    add v2.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    subs x3, x3, #1
-; CHECK-NEXT:    add d4, d4, d1
-; CHECK-NEXT:    add d16, d16, d3
-; CHECK-NEXT:    add d5, d5, d7
+; CHECK-NEXT:    add v0.2d, v0.2d, v5.2d
 ; CHECK-NEXT:    b.ne .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %exit
-; CHECK-NEXT:    mov v0.d[1], v17.d[0]
-; CHECK-NEXT:    mov v4.d[1], v16.d[0]
-; CHECK-NEXT:    str d5, [x2, #32]
-; CHECK-NEXT:    stp q0, q4, [x2]
+; CHECK-NEXT:    stp q1, q2, [x2]
+; CHECK-NEXT:    str d0, [x2, #32]
 ; CHECK-NEXT:    ret
 entry:
   %c.val = load <5 x i64>, ptr %c
@@ -266,37 +229,19 @@ exit:
 define void @v5f32_internal(ptr %c, ptr %in, ptr %out, i64 %n) {
 ; CHECK-LABEL: v5f32_internal:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    movi d5, #0000000000000000
-; CHECK-NEXT:    movi d4, #0000000000000000
-; CHECK-NEXT:    ldr s6, [x0, #16]
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    mov s2, v0.s[3]
-; CHECK-NEXT:    mov s3, v0.s[2]
-; CHECK-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    mov v0.s[2], v3.s[0]
-; CHECK-NEXT:    movi d3, #0000000000000000
-; CHECK-NEXT:    mov v0.s[3], v2.s[0]
-; CHECK-NEXT:    movi d2, #0000000000000000
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr s3, [x0, #16]
 ; CHECK-NEXT:  .LBB6_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov v1.s[1], v5.s[0]
-; CHECK-NEXT:    fadd v2.4s, v2.4s, v6.4s
+; CHECK-NEXT:    fadd v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v3.4s
 ; CHECK-NEXT:    subs x3, x3, #1
-; CHECK-NEXT:    mov v1.s[2], v4.s[0]
-; CHECK-NEXT:    mov v1.s[3], v3.s[0]
-; CHECK-NEXT:    fadd v1.4s, v1.4s, v0.4s
-; CHECK-NEXT:    mov s3, v1.s[3]
-; CHECK-NEXT:    mov s4, v1.s[2]
-; CHECK-NEXT:    mov s5, v1.s[1]
 ; CHECK-NEXT:    b.ne .LBB6_1
 ; CHECK-NEXT:  // %bb.2: // %exit
-; CHECK-NEXT:    mov v1.s[1], v5.s[0]
-; CHECK-NEXT:    str s2, [x2, #16]
-; CHECK-NEXT:    mov v1.s[2], v4.s[0]
-; CHECK-NEXT:    mov v1.s[3], v3.s[0]
 ; CHECK-NEXT:    str q1, [x2]
+; CHECK-NEXT:    str s0, [x2, #16]
 ; CHECK-NEXT:    ret
 entry:
   %c.val = load <5 x float>, ptr %c
@@ -318,23 +263,18 @@ exit:
 define void @v6f32_internal(ptr %c, ptr %in, ptr %out, i64 %n) {
 ; CHECK-LABEL: v6f32_internal:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    movi d4, #0000000000000000
-; CHECK-NEXT:    movi d2, #0000000000000000
-; CHECK-NEXT:    ldr d5, [x0, #16]
-; CHECK-NEXT:    mov d3, v1.d[1]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    ldp q3, q2, [x0]
 ; CHECK-NEXT:  .LBB7_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    fadd v4.2s, v4.2s, v3.2s
+; CHECK-NEXT:    fadd v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    fadd v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    subs x3, x3, #1
-; CHECK-NEXT:    fadd v2.2s, v2.2s, v5.2s
 ; CHECK-NEXT:    b.ne .LBB7_1
 ; CHECK-NEXT:  // %bb.2: // %exit
-; CHECK-NEXT:    mov v0.d[1], v4.d[0]
-; CHECK-NEXT:    str d2, [x2, #16]
-; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    str q1, [x2]
+; CHECK-NEXT:    str d0, [x2, #16]
 ; CHECK-NEXT:    ret
 entry:
   %c.val = load <6 x float>, ptr %c
@@ -356,32 +296,31 @@ exit:
 define <6 x float> @v6f32_cc(<6 x float> %c.val, ptr %in, ptr %out, i64 %n) {
 ; CHECK-LABEL: v6f32_cc:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $s4 killed $s4 def $q4
-; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $q0
+; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
+; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
+; CHECK-NEXT:    // kill: def $s4 killed $s4 def $q4
 ; CHECK-NEXT:    // kill: def $s5 killed $s5 def $q5
 ; CHECK-NEXT:    // kill: def $s3 killed $s3 def $q3
-; CHECK-NEXT:    // kill: def $s1 killed $s1 def $q1
-; CHECK-NEXT:    movi d6, #0000000000000000
-; CHECK-NEXT:    movi d7, #0000000000000000
-; CHECK-NEXT:    movi d16, #0000000000000000
-; CHECK-NEXT:    mov v4.s[1], v5.s[0]
-; CHECK-NEXT:    mov v2.s[1], v3.s[0]
+; CHECK-NEXT:    movi v6.2d, #0000000000000000
+; CHECK-NEXT:    movi v7.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    mov v4.s[1], v5.s[0]
+; CHECK-NEXT:    mov v0.s[2], v2.s[0]
+; CHECK-NEXT:    mov v0.s[3], v3.s[0]
 ; CHECK-NEXT:  .LBB8_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    fadd v6.2s, v6.2s, v0.2s
-; CHECK-NEXT:    fadd v7.2s, v7.2s, v2.2s
+; CHECK-NEXT:    fadd v6.4s, v6.4s, v0.4s
+; CHECK-NEXT:    fadd v7.4s, v7.4s, v4.4s
 ; CHECK-NEXT:    subs x2, x2, #1
-; CHECK-NEXT:    fadd v16.2s, v16.2s, v4.2s
 ; CHECK-NEXT:    b.ne .LBB8_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    mov s1, v6.s[1]
-; CHECK-NEXT:    mov s3, v7.s[1]
-; CHECK-NEXT:    mov s5, v16.s[1]
+; CHECK-NEXT:    mov s2, v6.s[2]
+; CHECK-NEXT:    mov s3, v6.s[3]
+; CHECK-NEXT:    mov s5, v7.s[1]
 ; CHECK-NEXT:    fmov s0, s6
-; CHECK-NEXT:    fmov s2, s7
-; CHECK-NEXT:    fmov s4, s16
+; CHECK-NEXT:    fmov s4, s7
 ; CHECK-NEXT:    ret
 entry:
   br label %loop
