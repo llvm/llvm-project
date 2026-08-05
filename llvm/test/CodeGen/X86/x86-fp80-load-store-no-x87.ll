@@ -35,7 +35,7 @@ define void @test_load_store_f80(ptr %p, ptr %q) #0 {
 ; x87 disabled.
 define { x86_fp80, x86_fp80 } @test_struct_ret_f80() #0 {
 ; X64-LABEL: test_struct_ret_f80:
-; X64:       # %bb.0: # %entry
+; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    movl 8, %ecx
 ; X64-NEXT:    movq 0, %rdx
@@ -44,7 +44,7 @@ define { x86_fp80, x86_fp80 } @test_struct_ret_f80() #0 {
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_struct_ret_f80:
-; X86:       # %bb.0: # %entry
+; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl 8, %ecx
@@ -55,7 +55,6 @@ define { x86_fp80, x86_fp80 } @test_struct_ret_f80() #0 {
 ; X86-NEXT:    movw %cx, 8(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl $4
-entry:
   %r.real = load x86_fp80, ptr null, align 16
   %.fca.0.insert = insertvalue { x86_fp80, x86_fp80 } zeroinitializer, x86_fp80 %r.real, 0
   %.fca.1.insert = insertvalue { x86_fp80, x86_fp80 } %.fca.0.insert, x86_fp80 poison, 1
