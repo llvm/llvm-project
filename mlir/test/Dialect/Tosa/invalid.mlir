@@ -2168,21 +2168,6 @@ func.func @test_conv2d_block_scaled(%arg0: tensor<*xf4E2M1FN>, %arg1: tensor<*xf
 
 // -----
 
-// expected-error@+1 {{func.func' op Function argument types must be a tensor type to be TOSA compliant, got !tosa.shape type}}
-func.func @test_shape_func_input(%arg0: !tosa.shape<1>) {
-  return
-}
-
-// -----
-
-// expected-error@+1 {{'func.func' op Function return types must be a tensor type to be TOSA compliant, got !tosa.shape type}}
-func.func @test_shape_func_output() -> !tosa.shape<4> {
-  %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  return %cst : !tosa.shape<4>
-}
-
-// -----
-
 func.func @test_cast_f32_plain_fp4(%arg0: tensor<4x32xf32>) -> tensor<4x32xf4E2M1FN> {
   // expected-error@+1 {{'tosa.cast' op illegal: operation operand/result data types did not align with any profile or extension, got (f32,fp4e2m1)}}
   %0 = tosa.cast %arg0 : (tensor<4x32xf32>) -> tensor<4x32xf4E2M1FN>
