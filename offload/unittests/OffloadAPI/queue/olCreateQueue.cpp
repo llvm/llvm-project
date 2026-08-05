@@ -38,8 +38,6 @@ TEST_P(olCreateQueueTest, InvalidNullPointerQueue) {
 }
 
 TEST_P(olCreateQueueTest, InvalidDeviceNotInContext) {
-  if (Host == Device)
-    GTEST_SKIP() << "Host device is the fixture device; cannot test.";
   ol_queue_handle_t Queue = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_DEVICE, olCreateQueue(Context, Host, &Queue));
 }
