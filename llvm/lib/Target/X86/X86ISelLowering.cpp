@@ -1176,15 +1176,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SMIN, VT, VT == MVT::v8i16 ? Legal : Custom);
       setOperationAction(ISD::UMAX, VT, VT == MVT::v16i8 ? Legal : Custom);
       setOperationAction(ISD::UMIN, VT, VT == MVT::v16i8 ? Legal : Custom);
-      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
-      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
     }
 
     // SSE2 can use basic vector unrolling.
     // SSE41 can use PHMINPOS to perform v16i8/v8i16 minmax reductions.
     // Fallback to ReplaceNodeResults for vXi64 reductions on 32-bit targets.
     for (auto VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::i64}) {
+      setOperationAction(ISD::VECREDUCE_AND, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_OR, VT, Custom);
+      setOperationAction(ISD::VECREDUCE_XOR, VT, Custom);
       setOperationAction(ISD::VECREDUCE_MUL,  VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
@@ -2836,6 +2836,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::ANY_EXTEND_VECTOR_INREG,
                        ISD::SIGN_EXTEND_VECTOR_INREG,
                        ISD::ZERO_EXTEND_VECTOR_INREG,
+                       ISD::VECREDUCE_AND,
+                       ISD::VECREDUCE_OR,
+                       ISD::VECREDUCE_XOR,
                        ISD::VECREDUCE_MUL,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
@@ -23673,16 +23676,13 @@ static SDValue MatchVectorAllEqualTest(SDValue OrigLHS, SDValue OrigRHS,
 
   // Match icmp(reduce_or(X),0) anyof reduction patterns.
   // Match icmp(reduce_and(X),-1) allof reduction patterns.
-  if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-    ISD::NodeType BinOp;
-    if (SDValue Match =
-            DAG.matchBinOpReduction(Op.getNode(), BinOp, {LogicOp})) {
-      EVT MatchVT = Match.getValueType();
-      return LowerVectorAllEqual(DL, Match,
-                                 CmpNull ? DAG.getConstant(0, DL, MatchVT)
-                                         : DAG.getAllOnesConstant(DL, MatchVT),
-                                 CC, Mask, Subtarget, DAG, X86CC);
-    }
+  if (Op.getOpcode() == (CmpNull ? ISD::VECREDUCE_OR : ISD::VECREDUCE_AND)) {
+    SDValue Match = Op.getOperand(0);
+    EVT MatchVT = Match.getValueType();
+    return LowerVectorAllEqual(DL, Match,
+                               CmpNull ? DAG.getConstant(0, DL, MatchVT)
+                                       : DAG.getAllOnesConstant(DL, MatchVT),
+                               CC, Mask, Subtarget, DAG, X86CC);
   }
 
   if (Mask.isAllOnes()) {
@@ -35332,6 +35332,14 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, Lo, Hi);
       Results.push_back(Res);
     }
+    return;
+  }
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR: {
+    assert(N->getValueType(0) == MVT::i64 && "Unexpected vector reduction");
+    if (SDValue Res = LowerVECREDUCE(SDValue(N, 0), Subtarget, DAG, true))
+      Results.push_back(Res);
     return;
   }
   case ISD::VECREDUCE_MUL: {
@@ -47163,33 +47171,33 @@ static SDValue createPSADBW(SelectionDAG &DAG, SDValue N0, SDValue N1,
 }
 
 // Attempt to replace an all_of/any_of/parity style horizontal reduction with a MOVMSK.
-static SDValue combinePredicateReduction(SDNode *Extract, SelectionDAG &DAG,
-                                         const X86Subtarget &Subtarget) {
+static SDValue combineVECREDUCE_LOGIC(SDNode *Reduce, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget) {
   // Bail without SSE2.
   if (!Subtarget.hasSSE2())
     return SDValue();
 
-  EVT ExtractVT = Extract->getValueType(0);
+  // Check for OR(any_of)/AND(all_of)/XOR(parity) horizontal reduction patterns.
+  if (Reduce->getOpcode() != ISD::VECREDUCE_AND &&
+      Reduce->getOpcode() != ISD::VECREDUCE_OR &&
+      Reduce->getOpcode() != ISD::VECREDUCE_XOR)
+    return SDValue();
+
+  ISD::NodeType BinOp = ISD::getVecReduceBaseOpcode(Reduce->getOpcode());
+  SDValue Match = Reduce->getOperand(0);
+  EVT ExtractVT = Reduce->getValueType(0);
   unsigned BitWidth = ExtractVT.getSizeInBits();
   if (ExtractVT != MVT::i64 && ExtractVT != MVT::i32 && ExtractVT != MVT::i16 &&
       ExtractVT != MVT::i8 && ExtractVT != MVT::i1)
     return SDValue();
 
-  // Check for OR(any_of)/AND(all_of)/XOR(parity) horizontal reduction patterns.
-  ISD::NodeType BinOp;
-  SDValue Match = DAG.matchBinOpReduction(Extract, BinOp, {ISD::OR, ISD::AND});
-  if (!Match && ExtractVT == MVT::i1)
-    Match = DAG.matchBinOpReduction(Extract, BinOp, {ISD::XOR});
-  if (!Match)
-    return SDValue();
-
-  // EXTRACT_VECTOR_ELT can require implicit extension of the vector element
+  // ISD::VECREDUCE_* can require implicit extension of the vector element
   // which we can't support here for now.
   if (Match.getScalarValueSizeInBits() != BitWidth)
     return SDValue();
 
   SDValue Movmsk;
-  SDLoc DL(Extract);
+  SDLoc DL(Reduce);
   EVT MatchVT = Match.getValueType();
   unsigned NumElts = MatchVT.getVectorNumElements();
   unsigned MaxElts = Subtarget.hasInt256() ? 32 : 16;
@@ -48079,10 +48087,6 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue VPDPBUSD = combineVPDPBUSDPattern(N, DAG, Subtarget))
     return VPDPBUSD;
-
-  // Attempt to replace an all_of/any_of horizontal reduction with a MOVMSK.
-  if (SDValue Cmp = combinePredicateReduction(N, DAG, Subtarget))
-    return Cmp;
 
   // Attempt to optimize ADD/FADD reductions with HADD, promotion etc..
   if (SDValue V = combineArithReduction(N, DAG, Subtarget))
@@ -63121,6 +63125,9 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::VFCMULC:
   case X86ISD::VFMULC:      return combineFMulcFCMulc(N, DAG, Subtarget);
   case ISD::FNEG:           return combineFneg(N, DAG, DCI, Subtarget);
+  case ISD::VECREDUCE_AND:
+  case ISD::VECREDUCE_OR:
+  case ISD::VECREDUCE_XOR:  return combineVECREDUCE_LOGIC(N, DAG, Subtarget);
   case ISD::VECREDUCE_MUL:  return combineVECREDUCE_MUL(N, DAG, Subtarget);
   case ISD::TRUNCATE:       return combineTruncate(N, DAG, Subtarget);
   case X86ISD::VTRUNC:      return combineVTRUNC(N, DAG, DCI);

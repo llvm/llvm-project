@@ -14345,6 +14345,13 @@ def note_amdgcn_unguarded_builtin_silence
 
 def err_amdgcn_global_or_flat_pointer_required : Error<"builtin requires a global or generic pointer">;
 
+def warn_amdgpu_av_requires_expr : Warning<
+  "%0 attribute can only be applied to an expression">,
+  InGroup<AvailableVisibleAMDGPU>;
+def warn_amdgpu_av_requires_atomic : Warning<
+  "%0 attribute only applies to atomic expressions or Clang atomic builtins">,
+  InGroup<AvailableVisibleAMDGPU>;
+
 def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "
             "in return type">;

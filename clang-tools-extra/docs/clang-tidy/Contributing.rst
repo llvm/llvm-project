@@ -648,13 +648,17 @@ Here's an example:
    // CHECK-FIXES-NOT: using a::C;$
 
 The ``-std`` flag controls which C or C++ standard(s) the test is compiled
-under. It accepts a comma-separated list of standards and supports an
-``-or-later`` suffix:
+under. It accepts a comma-separated list of standards and supports
+``-or-later`` and ``-or-earlier`` suffixes:
 
 - ``-std=c++17``: runs the test **only** with C++17.
 - ``-std=c++17-or-later``: runs the test once for each standard from C++17
   onwards (currently C++17, C++20, C++23, and C++26), in separate invocations.
   Use this when a check should work correctly on all modern standards.
+- ``-std=c++17-or-earlier``: runs the test once for each standard up to and
+  including C++17 (currently C++98, C++11, C++14, and C++17), in separate
+  invocations. Use this when a check should work correctly on all older
+  standards.
 - ``-std=c++14,c++17``: runs the test once with C++14 and once with C++17.
 
 When no ``-std`` is given, ``check_clang_tidy.py`` defaults to

@@ -2539,6 +2539,12 @@ def AMDGPUNamedBarrierWrapper : InheritableAttr {
   let SemaHandler = 0;
 }
 
+def AMDGPUAvailableVisible : StmtAttr, TargetSpecificAttr<TargetAMDGPU> {
+  let Spellings = [Clang<"amdgpu_av">];
+  let Args = [StringArgument<"Mode">];
+  let Documentation = [AMDGPUAvailableVisibleDocs];
+}
+
 def BPFPreserveAccessIndex : InheritableAttr,
                              TargetSpecificAttr<TargetBPF>  {
   let Spellings = [Clang<"preserve_access_index">];

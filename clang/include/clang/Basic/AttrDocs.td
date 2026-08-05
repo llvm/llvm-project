@@ -3604,6 +3604,32 @@ An error will be given if:
   }];
 }
 
+def AMDGPUAvailableVisibleDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+
+This attribute controls availability and visibility as described in the `AMDGPU
+Memory Model <https://llvm.org/docs/AMDGPUMemoryModel.html>`__. When placed on
+an atomic expression or fence, the resulting atomic or fence instruction carries
+the corresponding *AV Metadata*.
+
+The attribute takes a string literal as an argument, which currently has only
+one supported value:
+
+- ``"none"``: Disable MakeAvailable and MakeVisible semantics on release and
+  acquire operations respectively.
+
+.. code-block:: c++
+
+  [[clang::amdgpu_av("none")]] __atomic_thread_fence(__ATOMIC_SEQ_CST);
+  [[clang::amdgpu_av("none")]] __atomic_fetch_add(ptr, 1, __ATOMIC_ACQ_REL);
+
+  // Also works with _Atomic type qualifier operations.
+  _Atomic int *p;
+  [[clang::amdgpu_av("none")]] *p += 1;
+  }];
+}
+
 def DocCatCallingConvs : DocumentationCategory<"Calling Conventions"> {
   let Content = [{
 Clang supports several different calling conventions, depending on the target
