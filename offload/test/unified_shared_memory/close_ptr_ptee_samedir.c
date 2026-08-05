@@ -73,14 +73,20 @@ int main() {
 
   // When the pointee has a device allocation of its own, the pointer is
   // attached to it and its original host value is restored at the end of the
-  // region. ATTACHED: ATTACH entry {{.*}} processed successfully ATTACHED:
-  // Restoring host pointer
+  // region.
+  //
+  // clang-format off
+  // ATTACHED: ATTACH entry {{.*}} processed successfully
+  // ATTACHED: Restoring host pointer
+  // clang-format on
 
   // ALL: Before tgt: p == p_host
 
   // The close pointee is device-allocated and p (host path) is attached to it.
+  // A pointer that gets attached is given device storage of its own first, so
+  // its address on the device always differs from the host address.
   // V1: In tgt: p_device != p_host
-  // V1: In tgt: paddr_device == &p_host
+  // V1: In tgt: paddr_device != &p_host
 
   // p is close-allocated (own device storage, so &p differs); the pointee is a
   // plain USM mapping, so the device pointer value equals the host address.
