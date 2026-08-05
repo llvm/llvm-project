@@ -141,6 +141,7 @@ def : SysReg<"sstatus", 0x100>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;
+def : SysReg<"sijt", 0x107>;
 def : SysReg<"sieh", 0x114, RV32Only=true>;
 
 //===----------------------------------------------------------------------===//
@@ -358,6 +359,7 @@ def : SysReg<"mideleg", 0x303>;
 def : SysReg<"mie", 0x304>;
 def : SysReg<"mtvec", 0x305>;
 def : SysReg<"mcounteren", 0x306>;
+def : SysReg<"mijt", 0x307>;
 def : SysReg<"mvien", 0x308>;
 def : SysReg<"mvip", 0x309>;
 def : SysReg<"mstatush", 0x310, RV32Only=true>;

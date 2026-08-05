@@ -595,294 +595,6 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
               : TargetTransformInfo::SK_PermuteSingleSrc;
 }
 
-namespace {
-
-std::pair<Instruction *, SmallVector<Value *>>
-convertTo(Instruction *I, const InstructionsState &S) {
-  Instruction *SelectedOp = S.getMatchingMainOpOrAltOp(I);
-  assert(SelectedOp && "Cannot convert the instruction.");
-  if (I->isBinaryOp()) {
-    BinOpSameOpcodeHelper Converter(I);
-    return std::make_pair(SelectedOp, Converter.getOperand(SelectedOp));
-  }
-  // Use args() to skip the trailing callee operand in CallInst::operands().
-  if (auto *CI = dyn_cast<CallInst>(I))
-    return std::make_pair(SelectedOp, SmallVector<Value *>(CI->args()));
-  return std::make_pair(SelectedOp, SmallVector<Value *>(I->operands()));
-}
-
-} // end anonymous namespace
-
-static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
-                                       const TargetLibraryInfo &TLI);
-
-/// Find an instruction with a specific opcode in VL.
-/// \param VL Array of values to search through. Must contain only Instructions
-///           and PoisonValues.
-/// \param Opcode The instruction opcode to search for
-/// \returns
-/// - The first instruction found with matching opcode
-/// - nullptr if no matching instruction is found
-static Instruction *findInstructionWithOpcode(ArrayRef<Value *> VL,
-                                              unsigned Opcode) {
-  for (Value *V : VL) {
-    if (isa<PoisonValue>(V))
-      continue;
-    assert(isa<Instruction>(V) && "Only accepts PoisonValue and Instruction.");
-    auto *Inst = cast<Instruction>(V);
-    if (Inst->getOpcode() == Opcode)
-      return Inst;
-  }
-  return nullptr;
-}
-
-/// Checks if the provided operands of 2 cmp instructions are compatible, i.e.
-/// compatible instructions or constants, or just some other regular values.
-static bool areCompatibleCmpOps(Value *BaseOp0, Value *BaseOp1, Value *Op0,
-                                Value *Op1, const TargetLibraryInfo &TLI) {
-  return (isConstant(BaseOp0) && isConstant(Op0)) ||
-         (isConstant(BaseOp1) && isConstant(Op1)) ||
-         (!isa<Instruction>(BaseOp0) && !isa<Instruction>(Op0) &&
-          !isa<Instruction>(BaseOp1) && !isa<Instruction>(Op1)) ||
-         BaseOp0 == Op0 || BaseOp1 == Op1 ||
-         getSameOpcode({BaseOp0, Op0}, TLI) ||
-         getSameOpcode({BaseOp1, Op1}, TLI);
-}
-
-/// \returns true if a compare instruction \p CI has similar "look" and
-/// same predicate as \p BaseCI, "as is" or with its operands and predicate
-/// swapped, false otherwise.
-static bool isCmpSameOrSwapped(const CmpInst *BaseCI, const CmpInst *CI,
-                               const TargetLibraryInfo &TLI) {
-  assert(BaseCI->getOperand(0)->getType() == CI->getOperand(0)->getType() &&
-         "Assessing comparisons of different types?");
-  CmpInst::Predicate BasePred = BaseCI->getPredicate();
-  CmpInst::Predicate Pred = CI->getPredicate();
-  CmpInst::Predicate SwappedPred = CmpInst::getSwappedPredicate(Pred);
-
-  Value *BaseOp0 = BaseCI->getOperand(0);
-  Value *BaseOp1 = BaseCI->getOperand(1);
-  Value *Op0 = CI->getOperand(0);
-  Value *Op1 = CI->getOperand(1);
-
-  return (BasePred == Pred &&
-          areCompatibleCmpOps(BaseOp0, BaseOp1, Op0, Op1, TLI)) ||
-         (BasePred == SwappedPred &&
-          areCompatibleCmpOps(BaseOp0, BaseOp1, Op1, Op0, TLI));
-}
-
-/// \returns analysis of the Instructions in \p VL described in
-/// InstructionsState, the Opcode that we suppose the whole list
-/// could be vectorized even if its structure is diverse.
-static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
-                                       const TargetLibraryInfo &TLI) {
-  // Make sure these are all Instructions.
-  if (!all_of(VL, IsaPred<Instruction, PoisonValue>))
-    return InstructionsState::invalid();
-
-  auto *It = find_if(VL, IsaPred<Instruction>);
-  if (It == VL.end())
-    return InstructionsState::invalid();
-
-  Instruction *MainOp = cast<Instruction>(*It);
-  unsigned InstCnt = std::count_if(It, VL.end(), IsaPred<Instruction>);
-  if ((VL.size() > 2 && !isa<PHINode>(MainOp) && InstCnt < VL.size() / 2) ||
-      (VL.size() == 2 && InstCnt < 2))
-    return InstructionsState::invalid();
-
-  bool IsCastOp = isa<CastInst>(MainOp);
-  bool IsBinOp = isa<BinaryOperator>(MainOp);
-  bool IsCmpOp = isa<CmpInst>(MainOp);
-  CmpInst::Predicate BasePred = IsCmpOp ? cast<CmpInst>(MainOp)->getPredicate()
-                                        : CmpInst::BAD_ICMP_PREDICATE;
-  Instruction *AltOp = MainOp;
-  unsigned Opcode = MainOp->getOpcode();
-  unsigned AltOpcode = Opcode;
-
-  BinOpSameOpcodeHelper BinOpHelper(MainOp);
-  bool SwappedPredsCompatible = IsCmpOp && [&]() {
-    SetVector<unsigned> UniquePreds, UniqueNonSwappedPreds;
-    UniquePreds.insert(BasePred);
-    UniqueNonSwappedPreds.insert(BasePred);
-    for (Value *V : VL) {
-      auto *I = dyn_cast<CmpInst>(V);
-      if (!I)
-        return false;
-      CmpInst::Predicate CurrentPred = I->getPredicate();
-      CmpInst::Predicate SwappedCurrentPred =
-          CmpInst::getSwappedPredicate(CurrentPred);
-      UniqueNonSwappedPreds.insert(CurrentPred);
-      if (!UniquePreds.contains(CurrentPred) &&
-          !UniquePreds.contains(SwappedCurrentPred))
-        UniquePreds.insert(CurrentPred);
-    }
-    // Total number of predicates > 2, but if consider swapped predicates
-    // compatible only 2, consider swappable predicates as compatible opcodes,
-    // not alternate.
-    return UniqueNonSwappedPreds.size() > 2 && UniquePreds.size() == 2;
-  }();
-  // Check for one alternate opcode from another BinaryOperator.
-  // TODO - generalize to support all operators (types, calls etc.).
-  Intrinsic::ID BaseID = 0;
-  SmallVector<VFInfo> BaseMappings;
-  if (auto *CallBase = dyn_cast<CallInst>(MainOp)) {
-    BaseID = getVectorIntrinsicIDForCall(CallBase, &TLI);
-    BaseMappings = VFDatabase(*CallBase).getMappings(*CallBase);
-    if (!isTriviallyVectorizable(BaseID) && BaseMappings.empty())
-      return InstructionsState::invalid();
-  }
-  bool AnyPoison = InstCnt != VL.size();
-  // Check MainOp too to be sure that it matches the requirements for the
-  // instructions.
-  for (Value *V : iterator_range(It, VL.end())) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      continue;
-
-    // Cannot combine poison and divisions.
-    // TODO: do some smart analysis of the CallInsts to exclude divide-like
-    // intrinsics/functions only.
-    if (AnyPoison && (I->isIntDivRem() || I->isFPDivRem() || isa<CallInst>(I)))
-      return InstructionsState::invalid();
-    unsigned InstOpcode = I->getOpcode();
-    if (IsBinOp && isa<BinaryOperator>(I)) {
-      if (BinOpHelper.add(I))
-        continue;
-    } else if (IsCastOp && isa<CastInst>(I)) {
-      Value *Op0 = MainOp->getOperand(0);
-      Type *Ty0 = Op0->getType();
-      Value *Op1 = I->getOperand(0);
-      Type *Ty1 = Op1->getType();
-      if (Ty0 == Ty1) {
-        if (InstOpcode == Opcode || InstOpcode == AltOpcode)
-          continue;
-        if (Opcode == AltOpcode) {
-          assert(isValidForAlternation(Opcode) &&
-                 isValidForAlternation(InstOpcode) &&
-                 "Cast isn't safe for alternation, logic needs to be updated!");
-          AltOpcode = InstOpcode;
-          AltOp = I;
-          continue;
-        }
-      }
-    } else if (auto *Inst = dyn_cast<CmpInst>(I); Inst && IsCmpOp) {
-      auto *BaseInst = cast<CmpInst>(MainOp);
-      Type *Ty0 = BaseInst->getOperand(0)->getType();
-      Type *Ty1 = Inst->getOperand(0)->getType();
-      if (Ty0 == Ty1) {
-        assert(InstOpcode == Opcode && "Expected same CmpInst opcode.");
-        assert(InstOpcode == AltOpcode &&
-               "Alternate instructions are only supported by BinaryOperator "
-               "and CastInst.");
-        // Check for compatible operands. If the corresponding operands are not
-        // compatible - need to perform alternate vectorization.
-        CmpInst::Predicate CurrentPred = Inst->getPredicate();
-        CmpInst::Predicate SwappedCurrentPred =
-            CmpInst::getSwappedPredicate(CurrentPred);
-
-        if ((VL.size() == 2 || SwappedPredsCompatible) &&
-            (BasePred == CurrentPred || BasePred == SwappedCurrentPred))
-          continue;
-
-        if (isCmpSameOrSwapped(BaseInst, Inst, TLI))
-          continue;
-        auto *AltInst = cast<CmpInst>(AltOp);
-        if (MainOp != AltOp) {
-          if (isCmpSameOrSwapped(AltInst, Inst, TLI))
-            continue;
-        } else if (BasePred != CurrentPred) {
-          assert(
-              isValidForAlternation(InstOpcode) &&
-              "CmpInst isn't safe for alternation, logic needs to be updated!");
-          AltOp = I;
-          continue;
-        }
-        CmpInst::Predicate AltPred = AltInst->getPredicate();
-        if (BasePred == CurrentPred || BasePred == SwappedCurrentPred ||
-            AltPred == CurrentPred || AltPred == SwappedCurrentPred)
-          continue;
-      }
-    } else if (InstOpcode == Opcode) {
-      assert(InstOpcode == AltOpcode &&
-             "Alternate instructions are only supported by BinaryOperator and "
-             "CastInst.");
-      if (auto *Gep = dyn_cast<GetElementPtrInst>(I)) {
-        if (Gep->getNumOperands() != 2 ||
-            Gep->getOperand(0)->getType() != MainOp->getOperand(0)->getType())
-          return InstructionsState::invalid();
-      } else if (auto *EI = dyn_cast<ExtractElementInst>(I)) {
-        if (!isVectorLikeInstWithConstOps(EI))
-          return InstructionsState::invalid();
-      } else if (auto *LI = dyn_cast<LoadInst>(I)) {
-        auto *BaseLI = cast<LoadInst>(MainOp);
-        if (!LI->isSimple() || !BaseLI->isSimple())
-          return InstructionsState::invalid();
-      } else if (auto *Call = dyn_cast<CallInst>(I)) {
-        auto *CallBase = cast<CallInst>(MainOp);
-        Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, &TLI);
-        Intrinsic::ID Equivalent = isEquivalentIntrinsicID(ID, BaseID);
-        if (Call->getCalledFunction() != CallBase->getCalledFunction() &&
-            isEquivalentIntrinsicID(Equivalent, Intrinsic::fmuladd) ==
-                Intrinsic::not_intrinsic)
-          return InstructionsState::invalid();
-        if (Call->hasOperandBundles() &&
-            (!CallBase->hasOperandBundles() ||
-             !std::equal(Call->op_begin() + Call->getBundleOperandsStartIndex(),
-                         Call->op_begin() + Call->getBundleOperandsEndIndex(),
-                         CallBase->op_begin() +
-                             CallBase->getBundleOperandsStartIndex())))
-          return InstructionsState::invalid();
-        if (ID != BaseID && Equivalent == Intrinsic::not_intrinsic)
-          return InstructionsState::invalid();
-        if (!ID) {
-          SmallVector<VFInfo> Mappings = VFDatabase(*Call).getMappings(*Call);
-          if (Mappings.size() != BaseMappings.size() ||
-              Mappings.front().ISA != BaseMappings.front().ISA ||
-              Mappings.front().ScalarName != BaseMappings.front().ScalarName ||
-              Mappings.front().VectorName != BaseMappings.front().VectorName ||
-              Mappings.front().Shape.VF != BaseMappings.front().Shape.VF ||
-              Mappings.front().Shape.Parameters !=
-                  BaseMappings.front().Shape.Parameters)
-            return InstructionsState::invalid();
-        }
-      }
-      continue;
-    }
-    return InstructionsState::invalid();
-  }
-
-  if (IsBinOp) {
-    if (!BinOpHelper.hasDefinedMainOpcode() ||
-        !BinOpHelper.hasDefinedAltOpcode())
-      return InstructionsState::invalid();
-    MainOp = findInstructionWithOpcode(VL, BinOpHelper.getMainOpcode());
-    assert(MainOp && "Cannot find MainOp with Opcode from BinOpHelper.");
-    AltOp = findInstructionWithOpcode(VL, BinOpHelper.getAltOpcode());
-    assert(AltOp && "Cannot find AltOp with Opcode from BinOpHelper.");
-  } else if (auto *CB = dyn_cast<CallInst>(MainOp);
-             CB &&
-             getVectorIntrinsicIDForCall(CB, &TLI) == Intrinsic::fmuladd) {
-    // fma and fmuladd share a single vector fma node; use the fma as the
-    // representative so the fused form is not weakened to fmuladd.
-    auto *It = find_if(VL, [&](Value *V) {
-      auto *CI = dyn_cast<CallInst>(V);
-      return CI && getVectorIntrinsicIDForCall(CI, &TLI) == Intrinsic::fma;
-    });
-    if (It != VL.end())
-      MainOp = AltOp = cast<Instruction>(*It);
-  }
-  assert((MainOp == AltOp || !allSameOpcode(VL)) &&
-         "Incorrect implementation of allSameOpcode.");
-  InstructionsState S(MainOp, AltOp);
-  assert(all_of(VL,
-                [&](Value *V) {
-                  return isa<PoisonValue>(V) ||
-                         S.getMatchingMainOpOrAltOp(cast<Instruction>(V));
-                }) &&
-         "Invalid InstructionsState.");
-  return S;
-}
-
 /// Returns true if widened type of \p Ty elements with size \p Sz represents
 /// full vector type, i.e. adding extra element results in extra parts upon type
 /// legalization.
@@ -3402,6 +3114,11 @@ private:
     /// inner add in add(add(v0,x),v1)). Not part of Scalars.
     SmallVector<Value *, 4> ReassocScalars;
 
+    /// Sign of each flattened operand column of a reassociated add/sub
+    /// chain, parallel to the operand columns: a negated column is
+    /// subtracted from the positive total. Empty when no column is negated.
+    SmallBitVector ReassocNegatedOps;
+
     /// MainOp and AltOp are recorded inside. S should be obtained from
     /// newTreeEntry.
     InstructionsState S = InstructionsState::invalid();
@@ -3547,6 +3264,18 @@ private:
 
     /// Returns peeled reassociated scalars.
     ArrayRef<Value *> getReassocScalars() const { return ReassocScalars; }
+
+    /// Records the signs of the flattened operand columns.
+    void setReassocNegatedOps(const SmallBitVector &NegatedOps) {
+      assert(NegatedOps.size() == getNumOperands() &&
+             "Signs must cover all operand columns.");
+      ReassocNegatedOps = NegatedOps;
+    }
+
+    /// True if operand column \p Idx is subtracted rather than added.
+    bool isReassocNegatedOp(unsigned Idx) const {
+      return Idx < ReassocNegatedOps.size() && ReassocNegatedOps[Idx];
+    }
 
     /// Returns the state of the operations.
     const InstructionsState &getOperations() const { return S; }
@@ -5128,15 +4857,19 @@ private:
           if (!ScheduleCopyableDataMap.empty()) {
             SmallVector<ScheduleCopyableData *> CopyableData =
                 getScheduleCopyableData(User, OpIdx, I);
+            bool ReleasedAsCopyable = false;
             for (ScheduleCopyableData *CD : CopyableData) {
               // Copyable elements modeled on a copyable user lane depend on
               // the user's copyable scheduling data, not on the user itself,
-              // and are released when that copyable data is scheduled.
+              // and are released when that copyable data is scheduled. The
+              // user's own schedule data still carries the def-use dependency
+              // in this case, so it must be released below.
               if (CD->getEdgeInfo().UserTE->isCopyableElement(User))
                 continue;
               DecrUnsched(CD, /*IsControl=*/false);
+              ReleasedAsCopyable = true;
             }
-            if (!CopyableData.empty())
+            if (ReleasedAsCopyable)
               return;
           }
           if (ScheduleData *OpSD = getScheduleData(I))
@@ -5307,8 +5040,15 @@ private:
           // copyable fmul turned into fmuladd(a, b, -0.0)) does not appear in
           // the operand columns of its own node, so the scan above never
           // releases the schedule data of the copyable instruction itself.
-          // Release it here to keep the unscheduled-deps counters balanced.
+          // Release it here to keep the unscheduled-deps counters balanced,
+          // consuming its self-use count so the reassociated-operand release
+          // below cannot release the same schedule data twice.
           if (isa<ScheduleCopyableData>(BundleMember) && !FoundInOpColumns) {
+            auto UseIt = OperandsUses.find(In);
+            if (UseIt != OperandsUses.end() && UseIt->second > 0) {
+              --UseIt->getSecond();
+              --TotalOpCount;
+            }
             if (ScheduleData *OpSD = getScheduleData(In))
               DecrUnsched(OpSD, /*IsControl=*/false);
           }
@@ -7586,12 +7326,6 @@ static bool areTwoInsertFromSameBuildVector(
   return false;
 }
 
-/// Checks if the specified instruction \p I is an alternate operation for
-/// the given \p MainOp and \p AltOp instructions.
-static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
-                                   Instruction *AltOp,
-                                   const TargetLibraryInfo &TLI);
-
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
                            bool IgnoreReorder) {
@@ -8968,13 +8702,18 @@ void BoUpSLP::buildExternalUses(
     const ExtraValueToDebugLocsMap &ExternallyUsedValues) {
   const size_t NumVectScalars = ScalarToTreeEntries.size() + 1;
   DenseMap<Value *, unsigned> ScalarToExtUses;
-  // Peeled scalars still claimed by the tree (gathered or listed in some
-  // entry's scalars) survive as plain code, along with the peeled scalars
+  // Peeled scalars still claimed by the tree (gathered, listed in some
+  // entry's scalars, or modeled as a copyable element, which is emitted as
+  // a scalar) survive as plain code, along with the peeled scalars
   // in their operand chains, which no vector node can rematerialize.
   KeptReassocScalars.clear();
   SmallVector<const Value *, 8> KeptWorklist;
-  for (const Value *V : ReassocScalarToTreeEntries.keys())
-    if ((isGathered(V) || !getTreeEntries(V).empty()) &&
+  for (const auto &[V, Owners] : ReassocScalarToTreeEntries)
+    if ((isGathered(V) || !getTreeEntries(V).empty() ||
+         any_of(Owners,
+                [V = V](const TreeEntry *TE) {
+                  return TE->isCopyableElement(const_cast<Value *>(V));
+                })) &&
         KeptReassocScalars.insert(V).second)
       KeptWorklist.push_back(V);
   while (!KeptWorklist.empty()) {
@@ -12495,21 +12234,41 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
 /// Poison lanes are allowed through; a lane that is not itself a matching
 /// real instruction can still be peeled as a copyable identity leaf, as
 /// long as some other lane anchors the opcode.
-static void
-scanAssociativeOperands(const InstructionsState &S, DominatorTree &DT,
-                        const DataLayout &DL, const TargetTransformInfo &TTI,
-                        const TargetLibraryInfo &TLI, const BoUpSLP &R,
-                        SmallVectorImpl<BoUpSLP::ValueList> &Operands,
-                        SmallVectorImpl<Value *> &ReassocScalars) {
-  assert(Operands.size() == 2 && "Expected the initial 2 operand columns.");
+/// Add/sub (and fadd/fsub) chains peel together: a peeled subtract keeps
+/// the column sign for its first operand and flips it for the second one,
+/// recorded per column in \p NegatedColumns, so subtracted leaves stay out
+/// of the positive total.
+static void scanAssociativeOperands(
+    const InstructionsState &S, DominatorTree &DT, const DataLayout &DL,
+    const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
+    const BoUpSLP &R, SmallVectorImpl<BoUpSLP::ValueList> &Operands,
+    SmallBitVector &NegatedColumns, SmallVectorImpl<Value *> &ReassocScalars) {
+  assert(Operands.size() == 2 && NegatedColumns.empty() &&
+         "Expected the initial 2 operand columns.");
+  // The subtract family flips the sign of its second operand column.
+  auto IsSub = [](unsigned Opcode) {
+    return Opcode == Instruction::Sub || Opcode == Instruction::FSub;
+  };
+  // Signs ride with the columns so the parallel lists cannot drift apart.
+  struct SignedColumn {
+    BoUpSLP::ValueList Col;
+    bool Negated;
+  };
+  SmallVector<SignedColumn, 4> Columns = {
+      {std::move(Operands[0]), false},
+      {std::move(Operands[1]), IsSub(S.getOpcode())}};
   InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
-  // A lane whose value is itself a single-use associative instruction with
-  // S's opcode; block placement does not matter here (buildTreeRec
-  // re-checks that later for whatever columns end up as real leaves).
+  // The opcode family a column may peel into: subtracts flatten as adds of
+  // a negated leaf, other opcodes peel only into their own kind.
+  const unsigned RootFamily = getReassocCombineOpcode(S.getOpcode());
+  // A lane whose value is itself a single-use chain link; block placement
+  // does not matter here (buildTreeRec re-checks that later for whatever
+  // columns end up as real leaves).
   auto IsRealLane = [&](Value *V) {
     auto *I = dyn_cast<Instruction>(V);
-    return I && I->getOpcode() == S.getOpcode() && I->isAssociative() &&
-           I->hasOneUse();
+    return I && I->hasOneUse() &&
+           getReassocCombineOpcode(I->getOpcode()) == RootFamily &&
+           isReassocChainLink(I);
   };
   // Builds on InstructionsCompatibilityAnalysis's own opcode matching
   // (rather than the more permissive getSameOpcode()) so a column that
@@ -12517,7 +12276,8 @@ scanAssociativeOperands(const InstructionsState &S, DominatorTree &DT,
   // that InstructionsCompatibilityAnalysis::isSupportedOpcode() accepts.
   auto CanPeel = [&](ArrayRef<Value *> Column) {
     InstructionsState ColS = Analysis.buildInstructionsState(Column, R);
-    if (!ColS || ColS.getOpcode() != S.getOpcode() || ColS.isAltShuffle())
+    if (!ColS || getReassocCombineOpcode(ColS.getOpcode()) != RootFamily ||
+        ColS.isAltShuffle())
       return InstructionsState::invalid();
     // Every lane must be poison, a genuine matching real lane, or (only for
     // a copyable ColS) stand in as a copyable identity leaf
@@ -12530,26 +12290,34 @@ scanAssociativeOperands(const InstructionsState &S, DominatorTree &DT,
       return InstructionsState::invalid();
     return ColS;
   };
-  for (unsigned Idx = 0; Idx != Operands.size();) {
-    InstructionsState ColS = CanPeel(Operands[Idx]);
+  for (unsigned Idx = 0; Idx != Columns.size();) {
+    InstructionsState ColS = CanPeel(Columns[Idx].Col);
     if (!ColS) {
       ++Idx;
       continue;
     }
-    BoUpSLP::ValueList Column = std::move(Operands[Idx]);
+    BoUpSLP::ValueList Column = std::move(Columns[Idx].Col);
     SmallVector<BoUpSLP::ValueList> SubOperands =
         Analysis.buildOperands(ColS, Column);
+    assert(SubOperands.size() == 2 && "Expected 2 operand columns.");
     // Poison and copyable lanes have no real instruction left to erase
     // later: a copyable V is used as-is, not subsumed by the flattened
     // combine.
     for (Value *V : Column)
       if (!isa<PoisonValue>(V) && !ColS.isCopyableElement(V))
         ReassocScalars.push_back(V);
-    Operands[Idx] = std::move(SubOperands.front());
-    Operands.insert(std::next(Operands.begin(), Idx + 1),
-                    std::make_move_iterator(std::next(SubOperands.begin())),
-                    std::make_move_iterator(SubOperands.end()));
+    // A peeled subtract negates its second operand column.
+    const bool Negated = Columns[Idx].Negated;
+    Columns[Idx].Col = std::move(SubOperands.front());
+    Columns.insert(
+        std::next(Columns.begin(), Idx + 1),
+        {std::move(SubOperands.back()), IsSub(ColS.getOpcode()) != Negated});
     // Do not advance Idx: re-examine the column that was just placed here.
+  }
+  Operands.clear();
+  for (auto &[Col, Negated] : Columns) {
+    Operands.push_back(std::move(Col));
+    NegatedColumns.push_back(Negated);
   }
 }
 
@@ -12558,8 +12326,11 @@ scanAssociativeOperands(const InstructionsState &S, DominatorTree &DT,
 /// only (never compare hash values). Columns sharing a key are paired by the
 /// family of their first operand where available, so e.g. shifts fed by the
 /// same load family land in one column instead of pairing by encounter order.
+/// Values move between columns only within the same sign: a subtracted leaf
+/// never lands in an added column.
 static SmallVector<BoUpSLP::ValueList>
 alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
+                               const SmallBitVector &NegatedColumns,
                                const TargetLibraryInfo &TLI) {
   const unsigned NumCols = Operands.size();
   const unsigned NumLanes = Operands.front().size();
@@ -12591,18 +12362,21 @@ alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
     Aligned[Col][0] = Operands[Col][0];
 
   for (unsigned Lane : seq<unsigned>(1, NumLanes)) {
-    SmallDenseMap<std::pair<size_t, size_t>, SmallVector<unsigned, 2>, 8>
-        Buckets;
+    // Buckets are keyed by the value key and the column sign.
+    using Key = std::pair<std::pair<size_t, size_t>, unsigned>;
+    auto Sign = [&](unsigned Col) { return NegatedColumns[Col] ? 1U : 0U; };
+    SmallDenseMap<Key, SmallVector<unsigned, 2>, 8> Buckets;
     for (unsigned Col : seq<unsigned>(NumCols))
-      Buckets[GetKey(Operands[Col][Lane])].push_back(Col);
-    SmallDenseMap<std::pair<size_t, size_t>, unsigned, 8> BucketCursor;
+      Buckets[{GetKey(Operands[Col][Lane]), Sign(Col)}].push_back(Col);
+    SmallDenseMap<Key, unsigned, 8> NextInBucket;
     SmallVector<unsigned> SlotSrcCol(NumCols, NumCols);
     SmallBitVector ColClaimed(NumCols, false);
     for (unsigned Slot : seq<unsigned>(NumCols)) {
-      auto BucketIt = Buckets.find(Lane0Keys[Slot]);
+      const auto SlotKey = std::make_pair(Lane0Keys[Slot], Sign(Slot));
+      auto BucketIt = Buckets.find(SlotKey);
       if (BucketIt == Buckets.end())
         continue;
-      unsigned &Cursor = BucketCursor[Lane0Keys[Slot]];
+      unsigned &Cursor = NextInBucket[SlotKey];
       if (Cursor >= BucketIt->second.size())
         continue;
       // Among the remaining same-key columns prefer the one whose operand
@@ -12620,14 +12394,18 @@ alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
       SlotSrcCol[Slot] = SrcCol;
       ColClaimed[SrcCol] = true;
     }
-    unsigned NextLeftover = 0;
+    // Leftover slots take leftover columns of the same sign; per-lane sign
+    // counts match, so every slot finds one.
     for (unsigned Slot : seq<unsigned>(NumCols)) {
       if (SlotSrcCol[Slot] != NumCols)
         continue;
-      while (ColClaimed[NextLeftover])
-        ++NextLeftover;
-      SlotSrcCol[Slot] = NextLeftover;
-      ColClaimed[NextLeftover] = true;
+      for (unsigned Col : seq<unsigned>(NumCols)) {
+        if (!ColClaimed[Col] && NegatedColumns[Col] == NegatedColumns[Slot]) {
+          SlotSrcCol[Slot] = Col;
+          ColClaimed[Col] = true;
+          break;
+        }
+      }
     }
     for (unsigned Slot : seq<unsigned>(NumCols))
       Aligned[Slot][Lane] = Operands[SlotSrcCol[Slot]][Lane];
@@ -12637,6 +12415,7 @@ alignReassociatedOperandsByKey(ArrayRef<BoUpSLP::ValueList> Operands,
 
 /// Rank reassociated operand layouts by vectorizable load columns, other load
 /// patterns, broadcast/constant columns, then fewer unique values per column.
+/// Identity columns are scored by the opcode of the emitted combines.
 static std::tuple<unsigned, unsigned, unsigned, int>
 getReassocColumnsQuality(ArrayRef<BoUpSLP::ValueList> Columns, const BoUpSLP &R,
                          unsigned Opcode) {
@@ -12644,6 +12423,7 @@ getReassocColumnsQuality(ArrayRef<BoUpSLP::ValueList> Columns, const BoUpSLP &R,
   unsigned NumOtherVecLoadCols = 0;
   unsigned NumBroadcastOrConstCols = 0;
   int NumUniqueValues = 0;
+  const unsigned CombineOpcode = getReassocCombineOpcode(Opcode);
   for (ArrayRef<Value *> Col : Columns) {
     if (all_of(Col, IsaPred<Constant>)) {
       ++NumBroadcastOrConstCols;
@@ -12652,7 +12432,7 @@ getReassocColumnsQuality(ArrayRef<BoUpSLP::ValueList> Columns, const BoUpSLP &R,
     // Identity constants are free beyond the base they are inserted into.
     SmallPtrSet<Value *, 8> UniqueValues;
     for (Value *V : Col)
-      if (!isBinOpIdentityConstant(V, Opcode))
+      if (!isBinOpIdentityConstant(V, CombineOpcode))
         UniqueValues.insert(V);
     NumUniqueValues += UniqueValues.size();
     if (UniqueValues.size() <= 1) {
@@ -12919,32 +12699,35 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   SmallVector<ValueList> Operands = Analysis.buildOperands(S, VL);
   // Flatten associative binary chains into operand columns. Only the peeled
   // chain links are required to be single-use (they are erased); the root
-  // being flattened may have other uses. Skip alt-shuffle, copyable, and
-  // non-associative nodes. Restricted to BinaryOperator: isAssociative() is
-  // also true for associative intrinsics (e.g. smax/smin/umax/umin), which are
-  // CallInst, not BinaryOperator, and are not supported by the
-  // copyable-identity machinery used below (ConstantExpr::getBinOpIdentity,
-  // isSupportedOpcode, isBinOpIdentityConstant).
+  // being flattened may have other uses. Skip alt-shuffle nodes and lanes
+  // that are neither chain links nor copyable identity leaves. Restricted to
+  // BinaryOperator: isAssociative() is also true for associative intrinsics
+  // (e.g. smax/smin/umax/umin), which are CallInst, not BinaryOperator, and
+  // are not supported by the copyable-identity machinery used below
+  // (ConstantExpr::getBinOpIdentity, isSupportedOpcode,
+  // isBinOpIdentityConstant).
   SmallVector<Value *> ReassocScalars;
+  // Sign of each flattened operand column (a subtracted leaf is negated).
+  SmallBitVector NegatedColumns;
   // Cached below (when the peel is kept) so the reorder step further down
   // does not need to redo the aligning/scoring work.
   SmallVector<ValueList> ReassocAlignedOperands;
   // Snapshot of the pre-flatten operand columns, used by both revert points.
   SmallVector<ValueList> NaturalTwoColumns;
   std::tuple<unsigned, unsigned, unsigned, int> ReassocPeeledQuality;
-  if (VectorizeReassociatedOps && !S.isAltShuffle() &&
-      !S.areInstructionsWithCopyableElements() && Operands.size() == 2 &&
-      all_of(VL, [](Value *V) {
+  if (VectorizeReassociatedOps && !S.isAltShuffle() && Operands.size() == 2 &&
+      all_of(VL, [&](Value *V) {
         auto *I = dyn_cast<BinaryOperator>(V);
-        return I && I->isAssociative();
+        return S.isCopyableElement(V) || (I && isReassocChainLink(I));
       })) {
     NaturalTwoColumns = Operands;
     scanAssociativeOperands(S, *DT, *DL, *TTI, *TLI, *this, Operands,
-                            ReassocScalars);
+                            NegatedColumns, ReassocScalars);
     // Drop flattening unless realigning improves load or broadcast column
     // structure; an unimproved peel ties and reverts to natural columns.
     if (!ReassocScalars.empty()) {
-      ReassocAlignedOperands = alignReassociatedOperandsByKey(Operands, *TLI);
+      ReassocAlignedOperands =
+          alignReassociatedOperandsByKey(Operands, NegatedColumns, *TLI);
       ReassocPeeledQuality =
           getReassocColumnsQuality(Operands, *this, S.getOpcode());
       // The unique-value count (4th field) is only a tie-break for the
@@ -13278,13 +13061,24 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         // keeping the polish only if the column-quality score does not regress
         // vs the peeled order. That polish is quadratic in the column count, so
         // past ReassocReorderColumnLimit keep the realigned seed, which already
-        // groups the vectorizable columns.
+        // groups the vectorizable columns. The polish swaps values between
+        // columns per lane, which must not mix added and subtracted leaves in
+        // one column, so signed nodes polish each sign group separately.
         if (Operands.size() <= ReassocReorderColumnLimit) {
-          VLOperands Ops(ReassocAlignedOperands, VL0->getParent(), *this);
-          Ops.reorder();
-          SmallVector<ValueList> Reordered =
-              map_to_vector(seq<unsigned>(Operands.size()),
-                            [&](unsigned I) { return Ops.getVL(I); });
+          SmallVector<ValueList> Reordered = ReassocAlignedOperands;
+          SmallVector<unsigned> GroupIds[2];
+          for (unsigned I : seq<unsigned>(NegatedColumns.size()))
+            GroupIds[NegatedColumns[I]].push_back(I);
+          for (ArrayRef<unsigned> Group : GroupIds) {
+            if (Group.size() <= 1)
+              continue;
+            SmallVector<ValueList> GroupCols = map_to_vector(
+                Group, [&](unsigned I) { return ReassocAlignedOperands[I]; });
+            VLOperands Ops(GroupCols, VL0->getParent(), *this);
+            Ops.reorder();
+            for (unsigned Pos : seq<unsigned>(Group.size()))
+              Reordered[Group[Pos]] = Ops.getVL(Pos);
+          }
           if (getReassocColumnsQuality(Reordered, *this, S.getOpcode()) >=
               ReassocPeeledQuality)
             Operands = std::move(Reordered);
@@ -13324,6 +13118,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         Operands[1] = Ops.getVL(1);
       }
       TE->setOperands(Operands);
+      if (!ReassocScalars.empty() && NegatedColumns.any())
+        TE->setReassocNegatedOps(NegatedColumns);
       for (unsigned I : seq<unsigned>(TE->getNumOperands()))
         buildTreeRec(TE->getOperand(I), Depth + 1, {TE, I});
       return;
@@ -13872,30 +13668,6 @@ static bool isMainInstruction(Instruction *I, Instruction *MainOp,
                               Instruction *AltOp,
                               const TargetLibraryInfo &TLI) {
   return InstructionsState(MainOp, AltOp).getMatchingMainOpOrAltOp(I) == MainOp;
-}
-
-static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
-                                   Instruction *AltOp,
-                                   const TargetLibraryInfo &TLI) {
-  if (auto *MainCI = dyn_cast<CmpInst>(MainOp)) {
-    auto *AltCI = cast<CmpInst>(AltOp);
-    CmpInst::Predicate MainP = MainCI->getPredicate();
-    [[maybe_unused]] CmpInst::Predicate AltP = AltCI->getPredicate();
-    assert(MainP != AltP && "Expected different main/alternate predicates.");
-    auto *CI = cast<CmpInst>(I);
-    if (isCmpSameOrSwapped(MainCI, CI, TLI))
-      return false;
-    if (isCmpSameOrSwapped(AltCI, CI, TLI))
-      return true;
-    CmpInst::Predicate P = CI->getPredicate();
-    CmpInst::Predicate SwappedP = CmpInst::getSwappedPredicate(P);
-
-    assert((MainP == P || AltP == P || MainP == SwappedP || AltP == SwappedP) &&
-           "CmpInst expected to match either main or alternate predicate or "
-           "their swap.");
-    return MainP != P && MainP != SwappedP;
-  }
-  return InstructionsState(MainOp, AltOp).getMatchingMainOpOrAltOp(I) == AltOp;
 }
 
 TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) const {
@@ -17668,22 +17440,24 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // N columns need N-1 vector combines; price extra columns
       // conservatively, skipping identity-only columns (not combined by
       // codegen).
-      if (E->hasReassocScalars())
+      if (E->hasReassocScalars()) {
+        const unsigned CombineOpcode = getReassocCombineOpcode(E->getOpcode());
         for (unsigned Idx : seq<unsigned>(2, E->getNumOperands())) {
           if (all_of(E->getOperand(Idx), [&](Value *V) {
-                return isBinOpIdentityConstant(V, E->getOpcode());
+                return isBinOpIdentityConstant(V, CombineOpcode);
               }))
             continue;
           Cost += TTI->getArithmeticInstrCost(
               ShuffleOrOp, VecTy, CostKind, {},
               getOperandInfo(E->getOperand(Idx)), {}, nullptr, TLI);
         }
+      }
       return Cost + CommonCost;
     };
     // Price peeled intermediate instructions on the scalar side: they are
     // erased when the node vectorizes. Folded into the first scalar-cost
     // query so the cost dump reports the full scalar cost. These are always
-    // 2-operand associative binops (isAssociative() excludes UnaryOperator),
+    // 2-operand chain links (adds, subtracts, or other associative binops),
     // so operand 1 is always the second operand.
     InstructionCost PeeledScalarCost = 0;
     for (Value *V : E->getReassocScalars()) {
@@ -17691,7 +17465,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(I->getOperand(0));
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(I->getOperand(1));
       PeeledScalarCost += TTI->getArithmeticInstrCost(
-          ShuffleOrOp, OrigScalarTy, CostKind, Op1Info, Op2Info);
+          I->getOpcode(), OrigScalarTy, CostKind, Op1Info, Op2Info);
     }
     bool PeeledCostAdded = false;
     InstructionCost CostDiff = GetCostDiff(
@@ -23921,21 +23695,34 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       setInsertPointAfterBundle(E);
 
       if (E->hasReassocScalars()) {
-        // Vectorize operand columns, then combine pairwise in a balanced tree.
+        // Vectorize operand columns, then combine pairwise in a balanced
+        // tree; negated columns (flattened subtracts) are subtracted from
+        // the positive total at the end.
         SmallVector<Value *> CombinedScalars = to_vector(E->Scalars);
         append_range(CombinedScalars, E->getReassocScalars());
         // Reuse flags when a combine exactly matches a subsumed scalar pair.
-        auto MakeOperandKey = [](Value *A, Value *B) {
-          return A <= B ? std::make_pair(A, B) : std::make_pair(B, A);
+        // Commutative scalars are keyed operand-order independently,
+        // subtracts keep their operand order.
+        auto MakeOperandKey = [](Value *A, Value *B, unsigned Opcode) {
+          return Instruction::isCommutative(Opcode) && B < A
+                     ? std::make_pair(B, A)
+                     : std::make_pair(A, B);
         };
-        SmallDenseMap<std::pair<Value *, Value *>,
+        SmallDenseMap<std::pair<std::pair<Value *, Value *>, unsigned>,
                       SmallVector<Instruction *, 1>>
             ByOperands;
         for (Value *V : CombinedScalars) {
+          // Copyable leaves are used as-is, they are never combine targets.
+          if (E->isCopyableElement(V))
+            continue;
           auto *I = cast<Instruction>(V);
-          ByOperands[MakeOperandKey(I->getOperand(0), I->getOperand(1))]
+          const unsigned Opcode = I->getOpcode();
+          ByOperands[{MakeOperandKey(I->getOperand(0), I->getOperand(1),
+                                     Opcode),
+                      Opcode}]
               .push_back(I);
         }
+        const unsigned CombineOpcode = getReassocCombineOpcode(E->getOpcode());
         // Cast operand columns to VecTy when bit-width demotion changed types.
         auto GetCastOperand = [&](unsigned Idx, Value *Op) {
           if (Op->getType() == VecTy)
@@ -23943,83 +23730,155 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           return Builder.CreateIntCast(Op, VecTy, GetOperandSignedness(Idx));
         };
         SmallVector<Value *> Ops;
+        SmallVector<Value *> NegOps;
         // Track which scalar each partial result still represents for flag
         // reuse.
         SmallVector<SmallVector<Value *>> ScalarOps;
+        SmallVector<SmallVector<Value *>> NegScalarOps;
         for (unsigned Idx : seq<unsigned>(E->getNumOperands())) {
           // Identity-only columns combine to a no-op; skip them rather than
           // emitting a real binop against an identity vector.
           if (all_of(E->getOperand(Idx), [&](Value *V) {
-                return isBinOpIdentityConstant(V, E->getOpcode());
+                return isBinOpIdentityConstant(V, CombineOpcode);
               }))
             continue;
-          Ops.push_back(GetCastOperand(Idx, vectorizeOperand(E, Idx)));
-          ScalarOps.emplace_back(E->getOperand(Idx).begin(),
-                                 E->getOperand(Idx).end());
+          const bool Negated = E->isReassocNegatedOp(Idx);
+          (Negated ? NegOps : Ops)
+              .push_back(GetCastOperand(Idx, vectorizeOperand(E, Idx)));
+          (Negated ? NegScalarOps : ScalarOps)
+              .emplace_back(E->getOperand(Idx).begin(),
+                            E->getOperand(Idx).end());
         }
-        assert(!Ops.empty() && "Expected at least one non-identity column.");
-        while (Ops.size() > 1) {
-          SmallVector<Value *> NextOps((Ops.size() + 1) / 2);
-          SmallVector<SmallVector<Value *>> NextScalarOps(NextOps.size());
-          for (unsigned Idx : seq<unsigned>(NextOps.size())) {
-            if (2 * Idx + 1 == Ops.size()) {
-              // Odd one out this round: carry it over unpaired.
-              NextOps[Idx] = Ops[2 * Idx];
-              NextScalarOps[Idx] = std::move(ScalarOps[2 * Idx]);
-              continue;
-            }
-            Value *Combined = Builder.CreateBinOp(
-                static_cast<Instruction::BinaryOps>(E->getOpcode()),
-                Ops[2 * Idx], Ops[2 * Idx + 1]);
-            // Check whether this combine exactly matches a subsumed scalar.
-            const ArrayRef<Value *> LHSScalars = ScalarOps[2 * Idx];
-            const ArrayRef<Value *> RHSScalars = ScalarOps[2 * Idx + 1];
-            SmallVector<Value *> ExactMatches;
-            // Cache per-lane representatives for the next combine round.
-            SmallVector<Value *> Representatives(LHSScalars.size());
-            // Either side may be empty after a non-exact combine.
-            bool IsExact =
-                !LHSScalars.empty() && LHSScalars.size() == RHSScalars.size() &&
-                all_of(seq<unsigned>(LHSScalars.size()), [&](unsigned Lane) {
-                  if (!LHSScalars[Lane] || !RHSScalars[Lane])
-                    return false;
-                  auto It = ByOperands.find(
-                      MakeOperandKey(LHSScalars[Lane], RHSScalars[Lane]));
-                  if (It == ByOperands.end())
-                    return false;
-                  append_range(ExactMatches, It->second);
-                  Representatives[Lane] = It->second.front();
-                  return true;
-                });
-            if (IsExact) {
-              NextOps[Idx] =
-                  PropagateIRFlags(Combined, E->getOpcode(), ExactMatches);
-              NextScalarOps[Idx] = std::move(Representatives);
-              continue;
-            }
-            NextOps[Idx] =
-                PropagateIRFlags(Combined, E->getOpcode(), CombinedScalars);
-            // Drop overflow/fast-math flags not proven exact; regrouping can
-            // invalidate nsw/nuw and nnan/ninf even when each step was safe.
-            if (auto *CombinedI = dyn_cast<Instruction>(NextOps[Idx])) {
-              if (E->getOpcode() == Instruction::Add ||
-                  E->getOpcode() == Instruction::Mul) {
-                CombinedI->setHasNoSignedWrap(false);
-                if (E->getOpcode() != Instruction::Add)
-                  CombinedI->setHasNoUnsignedWrap(false);
-              } else if (E->getOpcode() == Instruction::FAdd ||
-                         E->getOpcode() == Instruction::FMul) {
-                CombinedI->setHasNoNaNs(false);
-                CombinedI->setHasNoInfs(false);
-              }
-            }
-            // No scalar match: deeper combines from this result cannot be
-            // exact.
+        const bool HasNegatedOps = !NegOps.empty();
+        // Check whether combining the partial results of \p LHSScalars and
+        // \p RHSScalars reproduces a subsumed scalar pair lane by lane, so
+        // the matched scalars' flags can be reused. Fills per-lane
+        // representatives for the next combine round on an exact match.
+        auto TryExactCombine =
+            [&](Value *Combined, unsigned Opcode, ArrayRef<Value *> LHSScalars,
+                ArrayRef<Value *> RHSScalars,
+                SmallVectorImpl<Value *> &Representatives) -> Value * {
+          // Either side may be empty after a non-exact combine.
+          if (LHSScalars.empty() || LHSScalars.size() != RHSScalars.size())
+            return nullptr;
+          SmallVector<Value *> ExactMatches;
+          Representatives.resize(LHSScalars.size());
+          bool IsExact =
+              all_of(seq<unsigned>(LHSScalars.size()), [&](unsigned Lane) {
+                if (!LHSScalars[Lane] || !RHSScalars[Lane])
+                  return false;
+                auto It = ByOperands.find(
+                    {MakeOperandKey(LHSScalars[Lane], RHSScalars[Lane], Opcode),
+                     Opcode});
+                if (It == ByOperands.end())
+                  return false;
+                append_range(ExactMatches, It->second);
+                Representatives[Lane] = It->second.front();
+                return true;
+              });
+          if (!IsExact)
+            return nullptr;
+          return PropagateIRFlags(Combined, Opcode, ExactMatches);
+        };
+        auto CombineFallback = [&](Value *Combined, unsigned Opcode) {
+          Value *V = PropagateIRFlags(Combined, Opcode, CombinedScalars);
+          // Drop overflow/fast-math flags not proven exact; regrouping can
+          // invalidate nsw/nuw and nnan/ninf even when each step was safe.
+          // nuw is kept for pure add trees only: a negated leaf can make a
+          // re-paired partial sum exceed the original running total.
+          auto *CombinedI = dyn_cast<Instruction>(V);
+          if (!CombinedI)
+            return V;
+          if (isa<FPBinaryOperator>(CombinedI)) {
+            CombinedI->setHasNoNaNs(false);
+            CombinedI->setHasNoInfs(false);
+          } else if (isa<OverflowingBinaryOperator>(CombinedI)) {
+            CombinedI->setHasNoSignedWrap(false);
+            if (Opcode != Instruction::Add || HasNegatedOps)
+              CombinedI->setHasNoUnsignedWrap(false);
           }
-          Ops = std::move(NextOps);
-          ScalarOps = std::move(NextScalarOps);
+          return V;
+        };
+        // Combine the group columns pairwise in a balanced tree and return
+        // the total with the per-lane scalars it still represents.
+        auto CombineColumns =
+            [&](SmallVector<Value *> GroupOps,
+                SmallVector<SmallVector<Value *>> GroupScalarOps,
+                unsigned Opcode) -> std::pair<Value *, SmallVector<Value *>> {
+          while (GroupOps.size() > 1) {
+            SmallVector<Value *> NextOps((GroupOps.size() + 1) / 2);
+            SmallVector<SmallVector<Value *>> NextScalarOps(NextOps.size());
+            for (unsigned Idx : seq<unsigned>(NextOps.size())) {
+              if (2 * Idx + 1 == GroupOps.size()) {
+                // Odd one out this round: carry it over unpaired.
+                NextOps[Idx] = GroupOps[2 * Idx];
+                NextScalarOps[Idx] = std::move(GroupScalarOps[2 * Idx]);
+                continue;
+              }
+              Value *Combined = Builder.CreateBinOp(
+                  static_cast<Instruction::BinaryOps>(Opcode),
+                  GroupOps[2 * Idx], GroupOps[2 * Idx + 1]);
+              // Check whether this combine exactly matches a subsumed
+              // scalar.
+              SmallVector<Value *> Representatives;
+              if (Value *Exact = TryExactCombine(
+                      Combined, Opcode, GroupScalarOps[2 * Idx],
+                      GroupScalarOps[2 * Idx + 1], Representatives)) {
+                NextOps[Idx] = Exact;
+                NextScalarOps[Idx] = std::move(Representatives);
+                continue;
+              }
+              NextOps[Idx] = CombineFallback(Combined, Opcode);
+              // No scalar match: deeper combines from this result cannot be
+              // exact.
+            }
+            GroupOps = std::move(NextOps);
+            GroupScalarOps = std::move(NextScalarOps);
+          }
+          return {GroupOps.front(), GroupScalarOps.front()};
+        };
+        // -(a+b) differs from -a + -b in the sign of a zero result, so the
+        // negated columns are summed only for integers or with nsz on every
+        // link; without it each is subtracted in turn.
+        const bool CanSumNegated =
+            CombineOpcode != Instruction::FAdd ||
+            all_of(CombinedScalars, [&](Value *V) {
+              auto *I = dyn_cast<Instruction>(V);
+              return !I || E->isCopyableElement(V) || I->hasNoSignedZeros();
+            });
+        const unsigned SubOpcode = CombineOpcode == Instruction::FAdd
+                                       ? Instruction::FSub
+                                       : Instruction::Sub;
+        Value *V;
+        SmallVector<Value *> PosReps;
+        if (Ops.empty()) {
+          // Every positive column was an identity: the total is the identity.
+          V = ConstantExpr::getBinOpIdentity(CombineOpcode, VecTy);
+        } else {
+          std::tie(V, PosReps) = CombineColumns(
+              std::move(Ops), std::move(ScalarOps), CombineOpcode);
         }
-        Value *V = FinalShuffle(Ops.front(), E);
+        if (CanSumNegated && !NegOps.empty()) {
+          auto [NegTotal, NegReps] = CombineColumns(
+              std::move(NegOps), std::move(NegScalarOps), CombineOpcode);
+          NegOps = {NegTotal};
+          NegScalarOps.clear();
+          NegScalarOps.push_back(std::move(NegReps));
+        }
+        for (auto [NegOp, NegScalars] : zip(NegOps, NegScalarOps)) {
+          Value *Combined = Builder.CreateBinOp(
+              static_cast<Instruction::BinaryOps>(SubOpcode), V, NegOp);
+          SmallVector<Value *> NextReps;
+          if (Value *Exact = TryExactCombine(Combined, SubOpcode, PosReps,
+                                             NegScalars, NextReps)) {
+            V = Exact;
+            PosReps = std::move(NextReps);
+            continue;
+          }
+          V = CombineFallback(Combined, SubOpcode);
+          PosReps.clear();
+        }
+        V = FinalShuffle(V, E);
         E->VectorizedValue = V;
         ++NumVectorInstructions;
         return V;
@@ -25026,8 +24885,10 @@ void BoUpSLP::versionBlocksForRuntimeChecks() {
 
   // Emit the runtime alias check while the block is still fully connected:
   // LCSSA-preserving SCEV expansion rewrites out-of-loop uses of
-  // loop-defined bases to poison in predecessor-less blocks.
-  IRBuilder<> ChkBuilder(Term);
+  // loop-defined bases to poison in predecessor-less blocks. Expand at the
+  // first insertion point, where no body instruction dominates, so the check
+  // cannot reuse scalars that are moved into the vector block and deleted.
+  IRBuilder<> ChkBuilder(BB, BB->getFirstInsertionPt());
   ChkBuilder.SetCurrentDebugLocation(Term->getDebugLoc());
   SCEVExpander Exp(*SE, "slp.rtcheck");
   Value *Cond = emitRuntimeAliasCheck(ChkBuilder, Exp);

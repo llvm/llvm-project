@@ -982,7 +982,7 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
   if (Options.UseBFIInPromotion) {
     std::unique_ptr<BranchProbabilityInfo> BPI;
     BPI.reset(new BranchProbabilityInfo(*F, CI, &GetTLI(*F)));
-    BFI.reset(new BlockFrequencyInfo(*F, *BPI, LI));
+    BFI.reset(new BlockFrequencyInfo(*F, *BPI, CI));
   }
 
   for (const auto &LoadStore : PromotionCandidates) {

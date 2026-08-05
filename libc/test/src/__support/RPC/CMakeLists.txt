@@ -9,3 +9,13 @@ add_libc_test(
   DEPENDS
    libc.src.__support.RPC.rpc
 )
+
+add_libc_test(
+  rpc_doorbell_test
+  SUITE
+    libc-rpc-tests
+  SRCS
+    rpc_doorbell_test.cpp
+  DEPENDS
+   libc.src.__support.RPC.rpc
+)

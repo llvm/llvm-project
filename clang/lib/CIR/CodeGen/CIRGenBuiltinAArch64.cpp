@@ -84,17 +84,6 @@ findARMVectorIntrinsicInMap(ArrayRef<IntrinsicInfo> intrinsicMap,
 //===----------------------------------------------------------------------===//
 //  Generic helpers
 //===----------------------------------------------------------------------===//
-// Emit an intrinsic where all operands are of the same type as the result.
-// Depending on mode, this may be a constrained floating-point intrinsic.
-static mlir::Value
-emitCallMaybeConstrainedBuiltin(CIRGenBuilderTy &builder, mlir::Location loc,
-                                StringRef intrName, mlir::Type retTy,
-                                llvm::SmallVector<mlir::Value> &ops) {
-  assert(!cir::MissingFeatures::emitConstrainedFPCall());
-
-  return builder.emitIntrinsicCallOp(loc, intrName, retTy, ops);
-}
-
 static llvm::StringRef getLLVMIntrNameNoPrefix(llvm::Intrinsic::ID intrID) {
   llvm::StringRef llvmIntrName = llvm::Intrinsic::getBaseName(intrID);
   assert(llvmIntrName.starts_with("llvm.") && "Not an LLVM intrinsic!");
@@ -512,6 +501,14 @@ emitCommonNeonSISDBuiltinExpr(CIRGenFunction &cgf,
   case NEON::BI__builtin_neon_vqshrns_n_s32:
   case NEON::BI__builtin_neon_vqshrnh_n_u16:
   case NEON::BI__builtin_neon_vqshrns_n_u32:
+  case NEON::BI__builtin_neon_vqsubb_s8:
+  case NEON::BI__builtin_neon_vqsubb_u8:
+  case NEON::BI__builtin_neon_vqsubh_s16:
+  case NEON::BI__builtin_neon_vqsubh_u16:
+  case NEON::BI__builtin_neon_vqsubs_s32:
+  case NEON::BI__builtin_neon_vqsubs_u32:
+  case NEON::BI__builtin_neon_vqsubd_s64:
+  case NEON::BI__builtin_neon_vqsubd_u64:
     break;
   }
 
@@ -980,14 +977,14 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vfma_v:
   case NEON::BI__builtin_neon_vfmaq_v: {
     // NEON intrinsic: vfma(q)(accumulator, multiplicand1, multiplicand2)
-    // LLVM intrinsic: fma(multiplicand1, multiplicand2, accumulator)
-    // Reorder arguments to match LLVM fma signature.
+    // CIR fma: fma(multiplicand1, multiplicand2, accumulator)
+    // Reorder arguments to match fma signature.
     mlir::Value op0 = cgf.getBuilder().createBitcast(ops[0], ty);
     mlir::Value op1 = cgf.getBuilder().createBitcast(ops[1], ty);
     mlir::Value op2 = cgf.getBuilder().createBitcast(ops[2], ty);
     llvm::SmallVector<mlir::Value> fmaOps = {op1, op2, op0};
-    return emitCallMaybeConstrainedBuiltin(cgf.getBuilder(), loc, "fma", ty,
-                                           fmaOps);
+    return emitNeonCallToOp<cir::FMAOp>(cgf.cgm, cgf.getBuilder(), {ty, ty, ty},
+                                        fmaOps, std::nullopt, ty, loc);
   }
   case NEON::BI__builtin_neon_vld1_v:
   case NEON::BI__builtin_neon_vld1q_v:
@@ -2468,6 +2465,18 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       case NEON::BI__builtin_neon_vst1_lane_v:
       case NEON::BI__builtin_neon_vst1q_lane_v:
       case NEON::BI__builtin_neon_vstrq_p128:
+      case NEON::BI__builtin_neon_vst2_v:
+      case NEON::BI__builtin_neon_vst2q_v:
+      case NEON::BI__builtin_neon_vst2_lane_v:
+      case NEON::BI__builtin_neon_vst2q_lane_v:
+      case NEON::BI__builtin_neon_vst3_v:
+      case NEON::BI__builtin_neon_vst3q_v:
+      case NEON::BI__builtin_neon_vst3_lane_v:
+      case NEON::BI__builtin_neon_vst3q_lane_v:
+      case NEON::BI__builtin_neon_vst4_v:
+      case NEON::BI__builtin_neon_vst4q_v:
+      case NEON::BI__builtin_neon_vst4_lane_v:
+      case NEON::BI__builtin_neon_vst4q_lane_v:
         // Get the alignment for the argument in addition to the value;
         // we'll use it later.
         ptrOp0 = emitPointerWithAlignment(expr->getArg(0));
@@ -2706,18 +2715,21 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return builder.createFMul(loc, ops[0], ops[1]);
   case NEON::BI__builtin_neon_vdivh_f16:
     return builder.createFDiv(loc, ops[0], ops[1]);
-  case NEON::BI__builtin_neon_vfmah_f16:
-    // NEON intrinsic puts accumulator first, unlike the LLVM fma.
+  case NEON::BI__builtin_neon_vfmah_f16: {
+    // NEON intrinsic puts accumulator first, unlike fma.
     std::rotate(ops.begin(), ops.begin() + 1, ops.end());
-    return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
-                                           convertType(expr->getType()), ops);
-    break;
-  case NEON::BI__builtin_neon_vfmsh_f16:
-    // NEON intrinsic puts accumulator first, unlike the LLVM fma.
+    mlir::Type ty = convertType(expr->getType());
+    return emitNeonCallToOp<cir::FMAOp>(cgm, builder, {ty, ty, ty}, ops,
+                                        std::nullopt, ty, loc);
+  }
+  case NEON::BI__builtin_neon_vfmsh_f16: {
+    // NEON intrinsic puts accumulator first, unlike fma.
     std::rotate(ops.begin(), ops.begin() + 1, ops.end());
     ops[0] = builder.createFNeg(loc, ops[0]);
-    return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
-                                           convertType(expr->getType()), ops);
+    mlir::Type ty = convertType(expr->getType());
+    return emitNeonCallToOp<cir::FMAOp>(cgm, builder, {ty, ty, ty}, ops,
+                                        std::nullopt, ty, loc);
+  }
   case NEON::BI__builtin_neon_vaddd_s64:
   case NEON::BI__builtin_neon_vaddd_u64:
     return builder.createAdd(loc, ops[0], ops[1]);
@@ -2906,7 +2918,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     laneSource = emitNeonSplat(builder, loc, laneSource, ops[3], ty.getSize());
 
     llvm::SmallVector<mlir::Value> fmaOps = {multiplicand, laneSource, addend};
-    return emitCallMaybeConstrainedBuiltin(builder, loc, "fma", ty, fmaOps);
+    return emitNeonCallToOp<cir::FMAOp>(cgm, builder, {ty, ty, ty}, fmaOps,
+                                        std::nullopt, ty, loc);
   }
   case NEON::BI__builtin_neon_vfma_laneq_v: {
     // v1f64 fma should be mapped to Neon scalar f64 fma.
@@ -2924,8 +2937,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       llvm::SmallVector<mlir::Value> fmaOps = {multiplicand, laneSource,
                                                addend};
       return builder.createBitcast(
-          emitCallMaybeConstrainedBuiltin(builder, loc, "fma", cgm.doubleTy,
-                                          fmaOps),
+          emitNeonCallToOp<cir::FMAOp>(
+              cgm, builder, {cgm.doubleTy, cgm.doubleTy, cgm.doubleTy}, fmaOps,
+              std::nullopt, cgm.doubleTy, loc),
           ty);
     }
 
@@ -2939,7 +2953,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     laneSource = emitNeonSplat(builder, loc, laneSource, ops[3], ty.getSize());
 
     llvm::SmallVector<mlir::Value> fmaOps = {laneSource, multiplicand, addend};
-    return emitCallMaybeConstrainedBuiltin(builder, loc, "fma", ty, fmaOps);
+    return emitNeonCallToOp<cir::FMAOp>(cgm, builder, {ty, ty, ty}, fmaOps,
+                                        std::nullopt, ty, loc);
   }
   case NEON::BI__builtin_neon_vfmaq_laneq_v: {
     mlir::Value addend = builder.createBitcast(ops[0], ty);
@@ -2948,7 +2963,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     laneSource = emitNeonSplat(builder, loc, laneSource, ops[3], ty.getSize());
 
     llvm::SmallVector<mlir::Value> fmaOps = {laneSource, multiplicand, addend};
-    return emitCallMaybeConstrainedBuiltin(builder, loc, "fma", ty, fmaOps);
+    return emitNeonCallToOp<cir::FMAOp>(cgm, builder, {ty, ty, ty}, fmaOps,
+                                        std::nullopt, ty, loc);
   }
   case NEON::BI__builtin_neon_vfmah_lane_f16:
   case NEON::BI__builtin_neon_vfmas_lane_f32:
@@ -2959,8 +2975,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
         loc, ops[2], static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
 
     llvm::SmallVector<mlir::Value> fmaOps = {ops[1], laneSource, ops[0]};
-    return emitCallMaybeConstrainedBuiltin(
-        builder, loc, "fma", convertType(expr->getType()), fmaOps);
+    mlir::Type ty = convertType(expr->getType());
+    return emitNeonCallToOp<cir::FMAOp>(cgm, builder, {ty, ty, ty}, fmaOps,
+                                        std::nullopt, ty, loc);
   }
   case NEON::BI__builtin_neon_vfmad_lane_f64:
   case NEON::BI__builtin_neon_vfmad_laneq_f64: {
@@ -2970,8 +2987,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
         loc, ops[2], static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
 
     llvm::SmallVector<mlir::Value> fmaOps = {ops[1], laneSource, ops[0]};
-    return emitCallMaybeConstrainedBuiltin(builder, loc, "fma", cgm.doubleTy,
-                                           fmaOps);
+    return emitNeonCallToOp<cir::FMAOp>(
+        cgm, builder, {cgm.doubleTy, cgm.doubleTy, cgm.doubleTy}, fmaOps,
+        std::nullopt, cgm.doubleTy, loc);
   }
   case NEON::BI__builtin_neon_vmull_v: {
     intrName = usgn ? "aarch64.neon.umull" : "aarch64.neon.smull";
@@ -3229,13 +3247,15 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     intrName = "aarch64.neon.fminnmp";
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vsqrth_f16: {
-    auto halfTy = builder.getFp16Ty();
-    return emitCallMaybeConstrainedBuiltin(builder, loc, "sqrt", {halfTy}, ops);
+    mlir::Type halfTy = builder.getFp16Ty();
+    return emitNeonCallToOp<cir::SqrtOp>(cgm, builder, {halfTy}, ops,
+                                         std::nullopt, halfTy, loc);
   }
   case NEON::BI__builtin_neon_vsqrt_v:
   case NEON::BI__builtin_neon_vsqrtq_v:
     assert(!cir::MissingFeatures::emitConstrainedFPCall());
-    return emitNeonCall(cgm, builder, {ty}, ops, "sqrt", ty, loc);
+    return emitNeonCallToOp<cir::SqrtOp>(cgm, builder, {ty}, ops, std::nullopt,
+                                         ty, loc);
   case NEON::BI__builtin_neon_vrbit_v:
   case NEON::BI__builtin_neon_vrbitq_v:
   case NEON::BI__builtin_neon_vmaxv_f16:
@@ -3368,22 +3388,62 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vld3q_lane_v:
   case NEON::BI__builtin_neon_vld4_lane_v:
   case NEON::BI__builtin_neon_vld4q_lane_v:
-  case NEON::BI__builtin_neon_vst2_v:
-  case NEON::BI__builtin_neon_vst2q_v:
-  case NEON::BI__builtin_neon_vst2_lane_v:
-  case NEON::BI__builtin_neon_vst2q_lane_v:
-  case NEON::BI__builtin_neon_vst3_v:
-  case NEON::BI__builtin_neon_vst3q_v:
-  case NEON::BI__builtin_neon_vst3_lane_v:
-  case NEON::BI__builtin_neon_vst3q_lane_v:
-  case NEON::BI__builtin_neon_vst4_v:
-  case NEON::BI__builtin_neon_vst4q_v:
-  case NEON::BI__builtin_neon_vst4_lane_v:
-  case NEON::BI__builtin_neon_vst4q_lane_v:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  case NEON::BI__builtin_neon_vst2_v:
+  case NEON::BI__builtin_neon_vst2q_v: {
+    // The builtin call has the pointer first, but the AArch64 st2 intrinsic
+    // takes the vector operands first and the pointer last.
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st2",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst2_lane_v:
+  case NEON::BI__builtin_neon_vst2q_lane_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    ops[2] = builder.createIntCast(ops[2], sInt64Ty);
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, sInt64Ty,
+                                              builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st2lane",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst3_v:
+  case NEON::BI__builtin_neon_vst3q_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, ty,
+                                              builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st3",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst3_lane_v:
+  case NEON::BI__builtin_neon_vst3q_lane_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    ops[3] = builder.createIntCast(ops[3], sInt64Ty);
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, ty, sInt64Ty,
+                                              builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st3lane",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst4_v:
+  case NEON::BI__builtin_neon_vst4q_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    llvm::SmallVector<mlir::Type> argTypes = {ty, ty, ty, ty,
+                                              builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st4",
+                        cgm.voidTy, loc);
+  }
+  case NEON::BI__builtin_neon_vst4_lane_v:
+  case NEON::BI__builtin_neon_vst4q_lane_v: {
+    std::rotate(ops.begin(), ops.begin() + 1, ops.end());
+    ops[4] = builder.createIntCast(ops[4], sInt64Ty);
+    llvm::SmallVector<mlir::Type> argTypes = {
+        ty, ty, ty, ty, sInt64Ty, builder.getVoidPtrTy()};
+    return emitNeonCall(cgm, builder, argTypes, ops, "aarch64.neon.st4lane",
+                        cgm.voidTy, loc);
+  }
   case NEON::BI__builtin_neon_vtrn_v:
   case NEON::BI__builtin_neon_vtrnq_v: {
     ops[1] = builder.createBitcast(ops[1], ty);

@@ -187,6 +187,20 @@ csrrs t1, mcounteren, zero
 # uimm12
 csrrs t2, 0x306, zero
 
+# mijt
+# name
+# CHECK-INST: csrrs t1, mijt, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x70,0x30]
+# CHECK-INST-ALIAS: csrr t1, mijt
+# uimm12
+# CHECK-INST: csrrs t2, mijt, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x70,0x30]
+# CHECK-INST-ALIAS: csrr t2, mijt
+# name
+csrrs t1, mijt, zero
+# uimm12
+csrrs t2, 0x307, zero
+
 # mscratch
 # name
 # CHECK-INST: csrrs t1, mscratch, zero

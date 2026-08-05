@@ -20,6 +20,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
@@ -394,6 +395,12 @@ public:
   OriginManager &getOriginMgr() { return OriginMgr; }
   const OriginManager &getOriginMgr() const { return OriginMgr; }
 
+  void addCapturedField(const FieldDecl *FD) { CapturedFields.insert(FD); }
+  bool isFieldCapturedByLambda(const FieldDecl *FD) const {
+    return IsThisCapturedByLambda || CapturedFields.contains(FD);
+  }
+  void setThisCapturedByLambda() { IsThisCapturedByLambda = true; }
+
 private:
   FactID NextFactID{0};
   LoanManager LoanMgr;
@@ -401,6 +408,13 @@ private:
   /// Facts for each CFG block, indexed by block ID.
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
+
+  /// Set of field declarations that are explicitly or init-captured in any
+  /// lambda within the analyzed function.
+  llvm::DenseSet<const FieldDecl *> CapturedFields;
+  /// Whether the 'this' pointer is captured by any lambda within the analyzed
+  /// function. When true, any field of 'this' is considered captured.
+  bool IsThisCapturedByLambda = false;
 };
 } // namespace clang::lifetimes::internal
 

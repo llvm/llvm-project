@@ -10,7 +10,9 @@
 #define _LIBCPP___RANDOM_CLAMP_TO_INTEGRAL_H
 
 #include <__config>
-#include <cmath>
+#include <__math/rounding_functions.h>
+#include <__type_traits/is_floating_point.h>
+#include <__type_traits/is_integral.h>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -42,12 +44,13 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _IntT __max_representable_int_for_float(
 // The behavior is undefined if `__r` is NaN.
 template <class _IntT, class _RealT>
 _LIBCPP_HIDE_FROM_ABI _IntT __clamp_to_integral(_RealT __r) _NOEXCEPT {
-  using _Lim            = numeric_limits<_IntT>;
+  using _IntLim         = numeric_limits<_IntT>;
+  using _RealLim        = numeric_limits<_RealT>;
   const _IntT __max_val = std::__max_representable_int_for_float<_IntT, _RealT>();
-  if (__r >= ::nextafter(static_cast<_RealT>(__max_val), INFINITY)) {
-    return _Lim::max();
-  } else if (__r <= _Lim::lowest()) {
-    return _Lim::min();
+  if (__r >= __math::nextafter(static_cast<_RealT>(__max_val), _RealLim::infinity())) {
+    return _IntLim::max();
+  } else if (__r <= _IntLim::lowest()) {
+    return _IntLim::min();
   }
   return static_cast<_IntT>(__r);
 }

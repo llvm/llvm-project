@@ -262,13 +262,18 @@ void ARMSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
   }
 
   // AEABI provides an ordered-equal compare (__aeabi_{f,d}cmpeq) but no
-  // not-equal compare. Clear the unordered-not-equal libcall so UNE will lower
-  // as !OEQ using the AEABI compare, rather than emitting the now-available
-  // generic __nesf2/__nedf2.
-  if (RTLCI.isAvailable(RTLIB::impl___aeabi_fcmpeq))
+  // not-equal compare. Clear the not-equal libcalls so UNE will lower as !OEQ
+  // using the AEABI compare, rather than emitting the generic not-equal helper
+  // which would otherwise be preferred.
+  if (RTLCI.isAvailable(RTLIB::impl___aeabi_fcmpeq)) {
     Info.setLibcallImpl(RTLIB::UNE_F32, RTLIB::Unsupported);
-  if (RTLCI.isAvailable(RTLIB::impl___aeabi_dcmpeq))
+    Info.setLibcallImpl(RTLIB::FCMP3_PRED_UNE_F32, RTLIB::Unsupported);
+  }
+
+  if (RTLCI.isAvailable(RTLIB::impl___aeabi_dcmpeq)) {
     Info.setLibcallImpl(RTLIB::UNE_F64, RTLIB::Unsupported);
+    Info.setLibcallImpl(RTLIB::FCMP3_PRED_UNE_F64, RTLIB::Unsupported);
+  }
 }
 
 bool ARMSubtarget::isXRaySupported() const {

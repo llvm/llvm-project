@@ -8,6 +8,10 @@ is where libc++'s pre-defined LNT bot configurations are defined. To benchmark s
 commits:
 
 ```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r libcxx/utils/requirements.txt
+
 libcxx/utils/ci/lnt/run-benchbot --llvm-root <monorepo> <builder> -- <commit1> <commit2> ...
 ```
 

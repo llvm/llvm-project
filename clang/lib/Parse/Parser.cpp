@@ -2506,6 +2506,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   }
 
+  // FIXME: If the previous token is tok::header_name like the following:
+  //
+  //  import <%%>
+  //
+  // The diagnostic location is incorrect.
+  //
+  //  <source file>:1:10: error: import directive must end with a ';'
+  //   1 | import <%%>
+  //     |          ^
+  //     |          ;
   bool LexedSemi = false;
   if (getLangOpts().CPlusPlusModules)
     LexedSemi =

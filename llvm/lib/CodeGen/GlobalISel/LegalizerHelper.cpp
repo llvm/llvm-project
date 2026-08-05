@@ -1136,19 +1136,21 @@ getFCMPLibcallDesc(const CmpInst::Predicate Pred, unsigned Size) {
     }                                                                          \
   } while (0)
 
+  // These use the three-way (-1/0/1) compare libcalls, whose result is tested
+  // against 0 with a signed integer predicate. Unordered (UO) is a boolean.
   switch (Pred) {
   case CmpInst::FCMP_OEQ:
-    RTLIBCASE_CMP(OEQ_F, CmpInst::ICMP_EQ);
+    RTLIBCASE_CMP(FCMP3_PRED_OEQ_F, CmpInst::ICMP_EQ);
   case CmpInst::FCMP_UNE:
-    RTLIBCASE_CMP(UNE_F, CmpInst::ICMP_NE);
+    RTLIBCASE_CMP(FCMP3_PRED_UNE_F, CmpInst::ICMP_NE);
   case CmpInst::FCMP_OGE:
-    RTLIBCASE_CMP(OGE_F, CmpInst::ICMP_SGE);
+    RTLIBCASE_CMP(FCMP3_PRED_OGE_F, CmpInst::ICMP_SGE);
   case CmpInst::FCMP_OLT:
-    RTLIBCASE_CMP(OLT_F, CmpInst::ICMP_SLT);
+    RTLIBCASE_CMP(FCMP3_PRED_OLT_F, CmpInst::ICMP_SLT);
   case CmpInst::FCMP_OLE:
-    RTLIBCASE_CMP(OLE_F, CmpInst::ICMP_SLE);
+    RTLIBCASE_CMP(FCMP3_PRED_OLE_F, CmpInst::ICMP_SLE);
   case CmpInst::FCMP_OGT:
-    RTLIBCASE_CMP(OGT_F, CmpInst::ICMP_SGT);
+    RTLIBCASE_CMP(FCMP3_PRED_OGT_F, CmpInst::ICMP_SGT);
   case CmpInst::FCMP_UNO:
     RTLIBCASE_CMP(UO_F, CmpInst::ICMP_NE);
   default:
@@ -9221,7 +9223,7 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
     auto ShiftAmt = MIRBuilder.buildConstant(Src0IntTy, Src0Size - Src1Size);
     auto Zext = MIRBuilder.buildZExt(Src0IntTy, Src1Int);
     auto Shift = MIRBuilder.buildShl(Src0IntTy, Zext, ShiftAmt);
-    And1 = MIRBuilder.buildAnd(Src0Ty, Shift, SignBitMask).getReg(0);
+    And1 = MIRBuilder.buildAnd(Src0IntTy, Shift, SignBitMask).getReg(0);
   } else {
     auto ShiftAmt = MIRBuilder.buildConstant(Src1IntTy, Src1Size - Src0Size);
     auto Shift = MIRBuilder.buildLShr(Src1IntTy, Src1Int, ShiftAmt);

@@ -329,6 +329,7 @@ bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
            << " [" << Type << "] weight = " << Weight;
     if (!isLoopHeader(Resolved))
       dbgs() << ", succ = " << getBlockName(Succ);
+    dbgs() << ", pred = " << getBlockName(Pred);
     if (Resolved != Succ)
       dbgs() << ", resolved = " << getBlockName(Resolved);
     dbgs() << "\n";
@@ -350,12 +351,12 @@ bool BlockFrequencyInfoImplBase::addToDist(Distribution &Dist,
 
   if (Resolved < Pred) {
     if (!isLoopHeader(Pred)) {
-      // If OuterLoop is an irreducible loop, we can't actually handle this.
-      assert((!OuterLoop || !OuterLoop->isIrreducible()) &&
-             "unhandled irreducible control flow");
 
       // Irreducible backedge.  Abort.
       LLVM_DEBUG(debugSuccessor("abort!!!"));
+      // If OuterLoop is an irreducible loop, we can't actually handle this.
+      assert((!OuterLoop || !OuterLoop->isIrreducible()) &&
+             "unhandled irreducible control flow");
       return false;
     }
 

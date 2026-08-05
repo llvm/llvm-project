@@ -4795,6 +4795,47 @@ TEST_F(DIExpressionTest, appendToStackAssert) {
   EXPECT_EQ(Expr->getElements(), ArrayRef<uint64_t>(Expected));
 }
 
+TEST_F(DIExpressionTest, appendToStackSkipsTagOffset) {
+  // DW_OP_LLVM_tag_offset doesn't emit anything, so it shouldn't make
+  // appendToStack add a DW_OP_deref.
+  DIExpression *Expr =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{3}});
+  uint64_t Ops[] = {
+      dwarf::DW_OP_LLVM_convert, 32, dwarf::DW_ATE_signed,
+      dwarf::DW_OP_LLVM_convert, 64, dwarf::DW_ATE_signed,
+  };
+  Expr = DIExpression::appendToStack(Expr, Ops);
+
+  uint64_t Expected[] = {dwarf::DW_OP_LLVM_tag_offset,
+                         3,
+                         dwarf::DW_OP_LLVM_convert,
+                         32,
+                         dwarf::DW_ATE_signed,
+                         dwarf::DW_OP_LLVM_convert,
+                         64,
+                         dwarf::DW_ATE_signed,
+                         dwarf::DW_OP_stack_value};
+  EXPECT_EQ(Expr->getElements(), ArrayRef<uint64_t>(Expected));
+}
+
+TEST_F(DIExpressionTest, TagOffsetsAreNotComplex) {
+  // Tag offsets don't emit anything, so they don't make an expression complex.
+  // Keep looking past them for an operation that does.
+  auto *TagOffset =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{1}});
+  EXPECT_FALSE(TagOffset->isComplex());
+
+  auto *TagOffsetAndFragment = DIExpression::get(
+      Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{1},
+                dwarf::DW_OP_LLVM_fragment, uint64_t{0}, uint64_t{32}});
+  EXPECT_FALSE(TagOffsetAndFragment->isComplex());
+
+  auto *TagOffsetAndOperation =
+      DIExpression::get(Context, {dwarf::DW_OP_LLVM_tag_offset, uint64_t{1},
+                                  dwarf::DW_OP_plus_uconst, uint64_t{1}});
+  EXPECT_TRUE(TagOffsetAndOperation->isComplex());
+}
+
 typedef MetadataTest DIObjCPropertyTest;
 
 TEST_F(DIObjCPropertyTest, get) {

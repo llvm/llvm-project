@@ -573,10 +573,7 @@ getDiagnosticSuffix(const RenamerClangTidyCheck::ShouldFixStatus FixStatus,
 }
 
 void RenamerClangTidyCheck::onEndOfTranslationUnit() {
-  for (const auto &Pair : NamingCheckFailures) {
-    const NamingCheckId &Decl = Pair.first;
-    const NamingCheckFailure &Failure = Pair.second;
-
+  for (const auto &[Decl, Failure] : NamingCheckFailures) {
     if (Failure.Info.KindName.empty())
       continue;
 

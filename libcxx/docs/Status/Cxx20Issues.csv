@@ -231,7 +231,7 @@
 "`LWG3300 <https://wg21.link/LWG3300>`__","Non-array ``ssize``\  overload is underconstrained","2020-02 (Prague)","|Nothing To Do|","","`#103929 <https://github.com/llvm/llvm-project/issues/103929>`__",""
 "`LWG3301 <https://wg21.link/LWG3301>`__","``transform_view::iterator``\  has incorrect ``iterator_category``\ ","2020-02 (Prague)","|Complete|","15","`#103932 <https://github.com/llvm/llvm-project/issues/103932>`__",""
 "`LWG3302 <https://wg21.link/LWG3302>`__","Range adaptor objects ``keys``\  and ``values``\  are unspecified","2020-02 (Prague)","|Complete|","16","`#103933 <https://github.com/llvm/llvm-project/issues/103933>`__",""
-"`LWG3303 <https://wg21.link/LWG3303>`__","Bad ""``constexpr``\ "" marker for ``destroy/destroy_n``\ ","2020-02 (Prague)","","","`#101693 <https://github.com/llvm/llvm-project/issues/101693>`__",""
+"`LWG3303 <https://wg21.link/LWG3303>`__","Bad ""``constexpr``\ "" marker for ``destroy/destroy_n``\ ","2020-02 (Prague)","|Complete|","24","`#101693 <https://github.com/llvm/llvm-project/issues/101693>`__",""
 "`LWG3304 <https://wg21.link/LWG3304>`__","Allocate functions of ``std::polymorphic_allocator``\  should require ``[[nodiscard]]``\ ","2020-02 (Prague)","|Complete|","16","`#103934 <https://github.com/llvm/llvm-project/issues/103934>`__",""
 "`LWG3307 <https://wg21.link/LWG3307>`__","``std::allocator<void>().allocate(n)``\ ","2020-02 (Prague)","|Complete|","20","`#100422 <https://github.com/llvm/llvm-project/issues/100422>`__",""
 "`LWG3310 <https://wg21.link/LWG3310>`__","Replace ``SIZE_MAX``\  with ``numeric_limits<size_t>::max()``\ ","2020-02 (Prague)","|Complete|","16","`#103936 <https://github.com/llvm/llvm-project/issues/103936>`__",""

@@ -24,5 +24,5 @@ test_wrong_after:
 .end_amdhsa_kernel
 
 test_correct:
-  global_prefetch_b8 v0, s[0:1] scope:SCOPE_SE
+  global_prefetch_b8 v0, null scope:SCOPE_SE
   v_nop

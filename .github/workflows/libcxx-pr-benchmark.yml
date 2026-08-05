@@ -146,7 +146,7 @@ jobs:
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
-          python -m pip install -r libcxx/utils/requirements.txt
+          pip install -r libcxx/utils/requirements.txt
 
       - name: Build the baseline and the candidate
         run: |

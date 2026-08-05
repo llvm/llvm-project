@@ -156,8 +156,10 @@ template <bool Invert> struct Process {
 
     uint32_t event_id = rpc::broadcast_value(lane_mask, doorbell->event_id);
     if (rpc::is_first_lane(lane_mask)) {
+      // The interrupt is optional and is skipped if there is no mailbox.
       if (!__scoped_atomic_fetch_add(doorbell->value, 1UL, __ATOMIC_RELAXED,
-                                     __MEMORY_SCOPE_SYSTEM)) {
+                                     __MEMORY_SCOPE_SYSTEM) &&
+          doorbell->mailbox) {
         __scoped_atomic_store_n(doorbell->mailbox,
                                 static_cast<uint64_t>(doorbell->event_id),
                                 __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);

@@ -43,3 +43,35 @@ entry:
 declare double @llvm.fmuladd.f64(double, double, double) #0
 
 attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+
+; The operand of the absorbed copyable fmul is itself a copyable lane of the
+; child node; the def-use dependency of that operand on the absorbed fmul must
+; be released when the fmul is scheduled.
+define void @absorbed_fmul_copyable_operand() {
+; CHECK-LABEL: define void @absorbed_fmul_copyable_operand() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr poison, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[TMP0]], <float 1.000000e+00, float 0.000000e+00, float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP1]], <4 x float> zeroinitializer, <4 x float> <float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr poison, align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load float, ptr poison, align 4
+  %mul60 = fmul float %0, 0.000000e+00
+  store float %mul60, ptr poison, align 4
+  %arrayidx65 = getelementptr i8, ptr poison, i64 4
+  %1 = load float, ptr %arrayidx65, align 4
+  %neg = fmul float %1, 0.000000e+00
+  %2 = call float @llvm.fmuladd.f32(float %neg, float 0.000000e+00, float 0.000000e+00)
+  store float %2, ptr %arrayidx65, align 4
+  %arrayidx65.1 = getelementptr i8, ptr poison, i64 8
+  %3 = load float, ptr %arrayidx65.1, align 4
+  %4 = call float @llvm.fmuladd.f32(float %3, float 0.000000e+00, float 0.000000e+00)
+  store float %4, ptr %arrayidx65.1, align 4
+  %arrayidx65.2 = getelementptr i8, ptr poison, i64 12
+  %5 = load float, ptr %arrayidx65.2, align 4
+  %6 = call float @llvm.fmuladd.f32(float %5, float 0.000000e+00, float 0.000000e+00)
+  store float %6, ptr %arrayidx65.2, align 4
+  ret void
+}

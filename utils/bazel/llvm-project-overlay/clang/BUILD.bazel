@@ -1444,6 +1444,7 @@ cc_library(
         ":basic",
         ":frontend",
         ":lex",
+        ":sema",
         ":serialization",
         "//llvm:Option",
         "//llvm:Support",

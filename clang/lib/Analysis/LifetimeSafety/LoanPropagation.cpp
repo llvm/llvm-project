@@ -148,8 +148,9 @@ public:
   Lattice getInitialState() { return Lattice{}; }
 
   /// Merges two lattices by taking the union of loans for each origin.
-  /// Only persistent origins are joined; block-local origins are discarded.
   Lattice join(Lattice A, Lattice B) {
+    assert(A.BlockLocalOrigins.isEmpty() && B.BlockLocalOrigins.isEmpty() &&
+           "block-local origins must not reach a block boundary");
     OriginLoanMap JoinedOrigins = utils::join(
         A.PersistentOrigins, B.PersistentOrigins, OriginLoanMapFactory,
         [&](const LoanSet *S1, const LoanSet *S2) {
@@ -164,6 +165,14 @@ public:
         // branch, the loan set can be carried over as-is.
         utils::JoinKind::Asymmetric);
     return Lattice(JoinedOrigins, OriginLoanMapFactory.getEmptyMap());
+  }
+
+  /// Block-local origins are not referenced outside the block that computed
+  /// them, so they are dropped here rather than propagated to adjacent blocks.
+  /// Dropping them at the boundary (instead of in `join`) also covers edges
+  /// where `join` is never called, such as blocks with a single predecessor.
+  Lattice transferAtBlockExit(Lattice L) {
+    return Lattice(L.PersistentOrigins, OriginLoanMapFactory.getEmptyMap());
   }
 
   /// A new loan is issued to the origin. Old loans are erased.
