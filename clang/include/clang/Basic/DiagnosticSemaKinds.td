@@ -11057,6 +11057,12 @@ def warn_lifetime_safety_dangling_field_moved
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
+def warn_lifetime_safety_dangling_field_lambda_capture
+    : Warning<"stack memory associated with %0 may escape to the %1 which will dangle. "
+      "This could be a false positive as the field was captured by a lambda and "
+      "may have been reset before escaping">,
+      InGroup<LifetimeSafetyDanglingFieldLambdaCapture>,
+      DefaultIgnore;
 def warn_lifetime_safety_dangling_global
     : Warning<"stack memory associated with %0 escapes to the %1 which will dangle">,
       InGroup<LifetimeSafetyDanglingGlobal>,
