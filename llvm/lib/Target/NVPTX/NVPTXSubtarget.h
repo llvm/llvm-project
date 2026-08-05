@@ -186,6 +186,10 @@ public:
     return PTXVersion >= 88 && hasAnyFeature({NVPTX::SM103f, NVPTX::SM110f});
   }
 
+  bool hasTcgen05RubinFamily() const {
+    return hasAnyFeature({NVPTX::SM107f});
+  }
+
   bool hasReduxSyncF32() const { return hasAnyFeature({NVPTX::SM100f}); }
 
   bool hasMMABlockScale() const { return hasAnyFeature({NVPTX::SM120f}); }
