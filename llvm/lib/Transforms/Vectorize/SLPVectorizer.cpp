@@ -27857,6 +27857,7 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
         PickedInst->moveAfter(LastScheduledInst->getPrevNode());
       LastScheduledInst = PickedInst;
       if (auto *EI = DE.CouldBeExtract.lookup(PickedInst)) {
+        assert(EI->getParent() == PickedInst->getParent() && "Expected extract to be in same block as rematerialize version");
         // Keep deferred extract/remat instructions contiguous in the scheduled
         // suffix so the scheduling frontier always points at a valid anchor.
         if (EI->getNextNode() != LastScheduledInst)
