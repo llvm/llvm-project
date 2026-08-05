@@ -29,8 +29,8 @@ Example of member data being overwritten:
 
   class foo{
   public:
-    foo(llvm::StringRef regex_ptrn) : regex_prtn(regex_prtn){};
-    const llvm_StringRef regex_prtn = "("; // invalid regex pattern
+    foo(llvm::StringRef regex_pat) : regex_p(regex_pat){};
+    const llvm_StringRef regex_pat = "("; // invalid regex pattern
   };
   foo bar("[0-9]");
-  llvm::Regex my_regex(bar.regex_prtn);
+  llvm::Regex my_regex(bar.regex_pat);
