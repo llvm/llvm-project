@@ -818,6 +818,30 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
       M->getOperand(2) && isa<MDNode>(M->getOperand(2)))
     New.TBAA = cast<MDNode>(M->getOperand(2));
 
+  // The access may cover several !tbaa.struct fields (e.g. a {int, int} copy
+  // widened to an i64 load/store). If those fields share a single tag and tile
+  // [0, AccessSize) with no gaps, that tag still describes the whole access.
+  if (!New.TBAA && M) {
+    MDNode *CommonTag = nullptr;
+    uint64_t Offset = 0;
+    for (size_t I = 0, E = M->getNumOperands(); I < E; I += 3) {
+      ConstantInt *FieldOffset =
+          mdconst::extract<ConstantInt>(M->getOperand(I));
+      ConstantInt *FieldSize =
+          mdconst::extract<ConstantInt>(M->getOperand(I + 1));
+      MDNode *FieldTag = dyn_cast_or_null<MDNode>(M->getOperand(I + 2));
+      if (!FieldTag || FieldOffset->getZExtValue() != Offset ||
+          (CommonTag && FieldTag != CommonTag))
+        break;
+      CommonTag = FieldTag;
+      Offset += FieldSize->getZExtValue();
+      if (Offset >= AccessSize)
+        break;
+    }
+    if (Offset == AccessSize)
+      New.TBAA = CommonTag;
+  }
+
   New.TBAAStruct = nullptr;
   return New;
 }

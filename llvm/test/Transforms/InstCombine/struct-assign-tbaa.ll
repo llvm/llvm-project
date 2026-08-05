@@ -40,8 +40,8 @@ define void @test3_multiple_fields(ptr nocapture %a, ptr nocapture %b) {
 ; CHECK-LABEL: define void @test3_multiple_fields(
 ; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B]], align 4
-; CHECK-NEXT:    store i64 [[TMP0]], ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B]], align 4, !tbaa [[FLOAT_TBAA0]]
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[A]], align 4, !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -75,6 +75,32 @@ entry:
   ret void
 }
 
+define void @test6_int_int(ptr nocapture %a, ptr nocapture %b) {
+; CHECK-LABEL: define void @test6_int_int(
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[A]], align 4, !tbaa [[INT_TBAA3]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 8, i1 false), !tbaa.struct !8
+  ret void
+}
+
+define void @test7_mixed_type(ptr nocapture %a, ptr nocapture %b) {
+; CHECK-LABEL: define void @test7_mixed_type(
+; CHECK-SAME: ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[B]], align 4
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[A]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 %a, ptr align 4 %b, i64 8, i1 false), !tbaa.struct !11
+  ret void
+}
+
 !0 = !{!"Simple C/C++ TBAA"}
 !1 = !{!"omnipotent char", !0}
 !2 = !{!5, !5, i64 0}
@@ -83,6 +109,10 @@ entry:
 !5 = !{!"float", !0}
 !6 = !{i64 0, i64 4, !2, i64 4, i64 4, !2}
 !7 = !{i64 0, i64 2, !2, i64 4, i64 6, !2}
+!8 = !{i64 0, i64 4, !9, i64 4, i64 4, !9}
+!9 = !{!10, !10, i64 0}
+!10 = !{!"int", !0}
+!11 = !{i64 0, i64 4, !9, i64 4, i64 4, !2}
 
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
@@ -90,4 +120,6 @@ entry:
 ; CHECK: [[FLOAT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"float", [[META2:![0-9]+]]}
 ; CHECK: [[META2]] = !{!"Simple C/C++ TBAA"}
+; CHECK: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+; CHECK: [[META4]] = !{!"int", [[META2]]}
 ;.
