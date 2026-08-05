@@ -894,21 +894,20 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__ATOMIC_SEQ_CST", "5");
 
   // Define macros for the clang atomic scopes.
-  Builder.defineMacro("__MEMORY_SCOPE_SYSTEM", "0");
-  Builder.defineMacro("__MEMORY_SCOPE_DEVICE", "1");
-  Builder.defineMacro("__MEMORY_SCOPE_WRKGRP", "2");
-  Builder.defineMacro("__MEMORY_SCOPE_WVFRNT", "3");
-  Builder.defineMacro("__MEMORY_SCOPE_SINGLE", "4");
-  Builder.defineMacro("__MEMORY_SCOPE_CLUSTR", "5");
+  Builder.defineMacro("__MEMORY_SCOPE_SYSTEM",
+                      Twine(AtomicScopeGenericModel::System));
+  Builder.defineMacro("__MEMORY_SCOPE_DEVICE",
+                      Twine(AtomicScopeGenericModel::Device));
+  Builder.defineMacro("__MEMORY_SCOPE_WRKGRP",
+                      Twine(AtomicScopeGenericModel::Workgroup));
+  Builder.defineMacro("__MEMORY_SCOPE_WVFRNT",
+                      Twine(AtomicScopeGenericModel::Wavefront));
+  Builder.defineMacro("__MEMORY_SCOPE_SINGLE",
+                      Twine(AtomicScopeGenericModel::Single));
+  Builder.defineMacro("__MEMORY_SCOPE_CLUSTR",
+                      Twine(AtomicScopeGenericModel::Cluster));
 
   // Define macros for the OpenCL memory scope.
-  // The values should match AtomicScopeOpenCLModel::ID enum.
-  static_assert(
-      static_cast<unsigned>(AtomicScopeOpenCLModel::WorkGroup) == 1 &&
-          static_cast<unsigned>(AtomicScopeOpenCLModel::Device) == 2 &&
-          static_cast<unsigned>(AtomicScopeOpenCLModel::AllSVMDevices) == 3 &&
-          static_cast<unsigned>(AtomicScopeOpenCLModel::SubGroup) == 4,
-      "Invalid OpenCL memory scope enum definition");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_WORK_ITEM", "0");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_WORK_GROUP", "1");
   Builder.defineMacro("__OPENCL_MEMORY_SCOPE_DEVICE", "2");
