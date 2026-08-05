@@ -413,6 +413,11 @@ void test_trylock_void_conditional_via_var(void) {
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}
 
+// Under late parsing, a guarded_by written in the type-qualifier position of
+// a function parameter used to be captured by the type-attr-only late list
+// and silently dropped, losing the warning below.
+void misplaced_in_param(int *__attribute__((guarded_by(mu1))) p); // expected-warning {{only applies to non-static data members and global variables}}
+
 int value_with_multiple_guarded_args GUARDED_BY(mu1, mu2);
 
 int *ptr_with_multiple_guarded_args PT_GUARDED_BY(mu1, mu2);

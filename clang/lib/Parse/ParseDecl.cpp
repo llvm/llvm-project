@@ -118,6 +118,15 @@ static bool IsAttributeArgsParsedInFunctionScope(const IdentifierInfo &II) {
 #undef CLANG_ATTR_PARSE_ARGS_IN_FUNCTION_SCOPE_LIST
 }
 
+/// Returns true iff the attribute kind corresponds to a TypeAttr or
+/// DeclOrTypeAttr in Attr.td.
+static bool IsAttributeTypeAttr(ParsedAttr::Kind Kind) {
+  const auto &Infos = ParsedAttrInfo::getAllBuiltin();
+  if ((size_t)Kind < Infos.size())
+    return Infos[Kind]->IsType;
+  return false;
+}
+
 /// Check if the a start and end source location expand to the same macro.
 static bool FindLocsWithCommonFileID(Preprocessor &PP, SourceLocation StartLoc,
                                      SourceLocation EndLoc) {
@@ -174,8 +183,14 @@ bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
     // The caller requested that this attribute **only** be late
     // parsed for `LateAttrParseExperimentalExt` attributes. This will
     // only be late parsed if the experimental language option is enabled.
+    // A type-attr-only list takes type attributes only; a decl attribute like
+    // `guarded_by` captured there would be silently dropped.
+    ParsedAttr::Kind AttrKind = ParsedAttr::getParsedKind(
+        AttrName, nullptr, ParsedAttr::Form::GNU().getSyntax());
     LateParse = getLangOpts().ExperimentalLateParseAttributes &&
-                IsAttributeLateParsedExperimentalExt(*AttrName);
+                IsAttributeLateParsedExperimentalExt(*AttrName) &&
+                (IsAttributeTypeAttr(AttrKind) ||
+                 !LateAttrs->lateAttrParseTypeAttrOnly());
   } else {
     // The caller did not restrict late parsing to only
     // `LateAttrParseExperimentalExt` attributes so late parse
@@ -194,7 +209,9 @@ bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
 
   // Handle attributes with arguments that require late parsing.
   LateParsedAttribute *LA =
-      new LateParsedAttribute(this, *AttrName, AttrNameLoc);
+      LateAttrs->lateAttrParseTypeAttrOnly()
+          ? new LateParsedTypeAttribute(this, *AttrName, AttrNameLoc)
+          : new LateParsedAttribute(this, *AttrName, AttrNameLoc);
   LateAttrs->push_back(LA);
 
   // Attributes in a class are parsed at the end of the class, along
@@ -4933,6 +4950,35 @@ void LateParsedTypeAttribute::ParseInto(ParsedAttributes &OutAttrs) {
   Self->ParseLexedTypeAttribute(*this, OutAttrs);
 }
 
+void Parser::ParseLateParsedTypeAttributeCallback(LateParsedTypeAttribute *LTA,
+                                                  ParsedAttributes *OutAttrs) {
+  LTA->ParseInto(*OutAttrs);
+  delete LTA;
+}
+
+SourceLocation Parser::GetLateParsedAttributeLocationCallback(
+    const LateParsedTypeAttribute *LTA) {
+  assert(LTA);
+  return LTA->AttrNameLoc;
+}
+
+bool Parser::ProcessLateParsedTypeAttrCallback(LateParsedAttribute *LA,
+                                               QualType &type) {
+  auto *LTA = dyn_cast_if_present<LateParsedTypeAttribute>(LA);
+  if (!LTA)
+    return true;
+
+  ParsedAttr::Kind AttrKind = ParsedAttr::getParsedKind(
+      &LTA->AttrName, nullptr, ParsedAttr::Form::GNU().getSyntax());
+  if (LTA->Self->Actions.ActOnLateParsedTypeAttr(AttrKind, LTA->AttrNameLoc,
+                                                 type, LTA))
+    return true;
+
+  // No placeholder was built, so nothing else will ever own these tokens.
+  delete LTA;
+  return false;
+}
+
 void Parser::TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
                                         LateParsedAttrList &From) {
   LateParsedAttrList::iterator It =
@@ -6255,7 +6301,8 @@ bool Parser::isConstructorDeclarator(bool IsUnqualified, bool DeductionGuide,
 
 void Parser::ParseTypeQualifierListOpt(
     DeclSpec &DS, unsigned AttrReqs, bool AtomicOrPtrauthAllowed,
-    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler) {
+    bool IdentifierRequired, llvm::function_ref<void()> CodeCompletionHandler,
+    LateParsedAttrList *LateAttrs) {
   if ((AttrReqs & AR_CXX11AttributesParsed) &&
       isAllowedCXX11AttributeSpecifier()) {
     ParsedAttributes Attrs(AttrFactory);
@@ -6417,7 +6464,7 @@ void Parser::ParseTypeQualifierListOpt(
       // recovery is graceful.
       if (AttrReqs & AR_GNUAttributesParsed ||
           AttrReqs & AR_GNUAttributesParsedAndRejected) {
-        ParseGNUAttributes(DS.getAttributes());
+        ParseGNUAttributes(DS.getAttributes(), LateAttrs);
         continue; // do *not* consume the next token!
       }
       // otherwise, FALL THROUGH!
@@ -6604,8 +6651,19 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                     ((D.getContext() != DeclaratorContext::CXXNew)
                          ? AR_GNUAttributesParsed
                          : AR_GNUAttributesParsedAndRejected);
+
+    LateParsedAttrList LateAttrs(/*PSoon=*/true,
+                                 /*LateAttrParseExperimentalExtOnly=*/true,
+                                 /*LateAttrParseTypeAttrOnly=*/true);
+
+    LateParsedAttrList *LateAttrsPtr =
+        D.getContext() == DeclaratorContext::Prototype &&
+                !getLangOpts().CPlusPlus
+            ? &LateAttrs
+            : nullptr;
+
     ParseTypeQualifierListOpt(DS, Reqs, /*AtomicOrPtrauthAllowed=*/true,
-                              !D.mayOmitIdentifier());
+                              !D.mayOmitIdentifier(), {}, LateAttrsPtr);
     D.ExtendWithDeclSpec(DS);
 
     // Recursively parse the declarator.
@@ -6618,12 +6676,12 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                         DS.getVolatileSpecLoc(), DS.getRestrictSpecLoc(),
                         DS.getAtomicSpecLoc(), DS.getUnalignedSpecLoc(),
                         DS.getOverflowBehaviorLoc(), DS.isWrapSpecified()),
-                    std::move(DS.getAttributes()), SourceLocation());
+                    std::move(DS.getAttributes()), SourceLocation(), LateAttrs);
     else
       // Remember that we parsed a Block type, and remember the type-quals.
       D.AddTypeInfo(
           DeclaratorChunk::getBlockPointer(DS.getTypeQualifiers(), Loc),
-          std::move(DS.getAttributes()), SourceLocation());
+          std::move(DS.getAttributes()), SourceLocation(), LateAttrs);
   } else {
     // Is a reference
     DeclSpec DS(AttrFactory);
@@ -7373,6 +7431,16 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc);
     else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
+
+    // Every parameter is now declared and the prototype scope is still active,
+    // so resolve late-parsed attributes here.
+    if (getLangOpts().ExperimentalLateParseAttributes && !ParamInfo.empty()) {
+      SmallVector<Decl *, 16> Params;
+      for (const DeclaratorChunk::ParamInfo &PI : ParamInfo)
+        Params.push_back(PI.Param);
+      Actions.ProcessLateParsedTypeAttributesForParams(
+          Params, &Parser::ParseLateParsedTypeAttributeCallback);
+    }
 
     // OpenCL disallows functions without a prototype, but it doesn't enforce
     // strict prototypes as in C23 because it allows a function definition to

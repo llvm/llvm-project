@@ -400,10 +400,20 @@ enum TypeAttrLocation {
   TAL_DeclName
 };
 
+static void fillAttrNameLocForLateParsedAttrTypeLoc(Sema &S,
+                                                    LateParsedAttrTypeLoc TL) {
+  if (auto *LateAttr = TL.getLateParsedAttribute())
+    if (S.GetLateParsedAttributeLocationCallback)
+      TL.setAttrNameLoc(S.GetLateParsedAttributeLocationCallback(LateAttr));
+}
+
 static void
 processTypeAttrs(TypeProcessingState &state, QualType &type,
                  TypeAttrLocation TAL, const ParsedAttributesView &attrs,
                  CUDAFunctionTarget CFT = CUDAFunctionTarget::HostDevice);
+
+static void processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+                                 const LateParsedAttrList &LateAttrs);
 
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                    QualType &type, CUDAFunctionTarget CFT);
@@ -5477,6 +5487,10 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs(),
                      S.CUDA().IdentifyTarget(D.getAttributes()));
 
+    // Wrap the type in a LateParsedAttrType placeholder for any not-yet-parsed
+    // attribute on this chunk, to be resolved once its arguments are in scope.
+    processLateTypeAttrs(state, T, DeclType.LateAttrList);
+
     if (DeclType.Kind != DeclaratorChunk::Paren) {
       if (ExpectNoDerefChunk && !IsNoDerefableChunk(DeclType))
         S.Diag(DeclType.Loc, diag::warn_noderef_on_non_pointer_or_array);
@@ -6248,6 +6262,9 @@ namespace {
     void VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
       // nothing
     }
+    void VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
+      fillAttrNameLocForLateParsedAttrTypeLoc(State.getSema(), TL);
+    }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       // nothing
     }
@@ -6411,6 +6428,13 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
       case TypeLoc::Attributed: {
         auto TL = CurrTL.castAs<AttributedTypeLoc>();
         fillAttributedTypeLoc(TL, State);
+        CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
+        break;
+      }
+
+      case TypeLoc::LateParsedAttr: {
+        auto TL = CurrTL.castAs<LateParsedAttrTypeLoc>();
+        fillAttrNameLocForLateParsedAttrTypeLoc(S, TL);
         CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
         break;
       }
@@ -9382,6 +9406,21 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
           attr.getMacroExpansionLoc());
     }
   }
+}
+
+static void processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+                                 const LateParsedAttrList &LateAttrs) {
+  if (LateAttrs.empty())
+    return;
+
+  Sema &S = state.getSema();
+  assert(S.ProcessLateParsedTypeAttrCallback &&
+         "late-parsed type attribute without a parser callback");
+
+  // Every attribute has to be offered, even after one is rejected: the
+  // callback is what hands each one to a placeholder or destroys it.
+  for (auto *LA : LateAttrs)
+    S.ProcessLateParsedTypeAttrCallback(LA, type);
 }
 
 void Sema::completeExprArrayBound(Expr *E) {

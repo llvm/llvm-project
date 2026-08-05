@@ -84,6 +84,11 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
         return this->ParseTypeFromString(TypeStr, Context, IncludeLoc);
       };
 
+  Actions.ProcessLateParsedTypeAttrCallback =
+      &Parser::ProcessLateParsedTypeAttrCallback;
+  Actions.GetLateParsedAttributeLocationCallback =
+      &Parser::GetLateParsedAttributeLocationCallback;
+
   Initialize();
 }
 

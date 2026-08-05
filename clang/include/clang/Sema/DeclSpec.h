@@ -1352,6 +1352,7 @@ struct DeclaratorChunk {
   }
 
   ParsedAttributesView AttrList;
+  LateParsedAttrList LateAttrList;
 
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
@@ -2452,13 +2453,16 @@ public:
   /// This function takes attrs by R-Value reference because it takes ownership
   /// of those attributes from the parameter.
   void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
-                   SourceLocation EndLoc) {
+                   SourceLocation EndLoc,
+                   const LateParsedAttrList &LateAttrs = {}) {
     DeclTypeInfo.push_back(TI);
     DeclTypeInfo.back().getAttrs().prepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
 
     if (!EndLoc.isInvalid())
       SetRangeEnd(EndLoc);
+
+    DeclTypeInfo.back().LateAttrList.append(LateAttrs);
   }
 
   /// AddTypeInfo - Add a chunk to this declarator. Also extend the range to
