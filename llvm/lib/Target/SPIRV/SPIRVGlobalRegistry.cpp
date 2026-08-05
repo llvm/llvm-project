@@ -840,8 +840,6 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
 
   // Pointers to opaque types stay typed even with the extension on, so emit the
   // untyped variant only when the result is actually an untyped pointer.
-  const SPIRVSubtarget &Subtarget =
-      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   const bool UseUntypedPointers =
       BaseType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
   const unsigned VariableOpcode =
@@ -861,10 +859,17 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
                                       SPIRV::AccessQualifier::ReadWrite,
                                       /*EmitIR=*/false);
     if (!DataType) {
-      // Use i8 as a last resort.
-      const SPIRVInstrInfo &TII = *Subtarget.getInstrInfo();
-      MachineInstr &EntryBBFirstInst = EntryBB.front();
-      DataType = getOrCreateSPIRVIntegerType(8, EntryBBFirstInst, TII);
+      const Function &F = MIRBuilder.getMF().getFunction();
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F,
+          "Could not deduce the data type of untyped global variable '" +
+              GVar->getName() + "'",
+          DebugLoc(), DS_Error));
+      // Recover with i8 so that codegen can finish and report the error.
+      DataType =
+          getOrCreateSPIRVType(Type::getInt8Ty(F.getContext()), GVBuilder,
+                               SPIRV::AccessQualifier::ReadWrite,
+                               /*EmitIR=*/false);
     }
     MIB.addUse(getSPIRVTypeID(DataType));
   }
@@ -1497,8 +1502,7 @@ unsigned SPIRVGlobalRegistry::getNumScalarOrVectorTotalBitWidth(
              : 0;
 }
 
-bool SPIRVGlobalRegistry::isSpecialOpaqueElementType(
-    SPIRVTypeInst ElemType) const {
+bool SPIRVGlobalRegistry::shouldKeepTypedPtrType(SPIRVTypeInst ElemType) const {
   // A function pointer has to keep its function type, which an untyped pointer
   // cannot express.
   if (ElemType && ElemType->getOpcode() == SPIRV::OpTypeFunction)
@@ -1510,8 +1514,9 @@ bool SPIRVGlobalRegistry::isSpecialOpaqueElementType(
 
 bool SPIRVGlobalRegistry::shouldUseUntypedPointer(
     SPIRVTypeInst ElemType, const SPIRVSubtarget &ST) const {
+  // Shaders keep typed pointers, as this implementation targets compute.
   return ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
-         !ST.isShader() && !isSpecialOpaqueElementType(ElemType);
+         !ST.isShader() && !shouldKeepTypedPtrType(ElemType);
 }
 
 SPIRVTypeInst
@@ -2121,7 +2126,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVUntypedPointerType(
   assert(ST.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
          !ST.isShader() && "Untyped pointers are not available");
   unsigned AddressSpace = storageClassToAddressSpace(SC);
-  // Use STK_UntypedPointer handle keyed by address space only
+  // Use STK_UntypedPointer handle keyed by address space only.
   auto Handle = SPIRV::irhandle_untyped_pointer(AddressSpace);
   if (const MachineInstr *MI = findMI(Handle, CurMF))
     return MI;

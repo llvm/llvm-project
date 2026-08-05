@@ -10,7 +10,8 @@
 ; CHECK-DAG: %[[#FPTY:]] = OpTypePointer CodeSectionINTEL %[[#FNTY]]
 ; CHECK: %[[#BAR:]] = OpConstantFunctionPointerINTEL %[[#FPTY]]
 ; CHECK: %[[#BAZ:]] = OpConstantFunctionPointerINTEL %[[#FPTY]]
-; CHECK: OpSelect %[[#]] %[[#]] %[[#BAZ]] %[[#BAR]]
+; The result type must match the operand type, which selectSelect asserts on.
+; CHECK: %[[#]] = OpSelect %[[#FPTY]] %[[#]] %[[#BAZ]] %[[#BAR]]
 ; CHECK: OpFunctionPointerCallINTEL
 define spir_func i32 @caller(i1 %c, i32 %a, i32 %b) {
   %fp = select i1 %c, ptr @bar, ptr @baz

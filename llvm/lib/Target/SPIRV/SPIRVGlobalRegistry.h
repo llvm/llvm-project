@@ -424,7 +424,7 @@ public:
   // OpTypeUntypedPointerKHR. Such an element type is either a function type,
   // which an untyped pointer cannot express, or an opaque builtin type such as
   // an image or a sampler.
-  bool isSpecialOpaqueElementType(SPIRVTypeInst ElemType) const;
+  bool shouldKeepTypedPtrType(SPIRVTypeInst ElemType) const;
 
   // True if a pointer to this element type should be emitted as
   // OpTypeUntypedPointerKHR rather than OpTypePointer.

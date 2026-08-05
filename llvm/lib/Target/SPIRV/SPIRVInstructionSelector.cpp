@@ -7057,10 +7057,9 @@ bool SPIRVInstructionSelector::selectFrameIndex(Register ResVReg,
   if (UseUntypedPointers) {
     // Get the element type that was stored when processing spv_assign_ptr_type.
     SPIRVTypeInst DataType = GR.getUntypedPtrElementType(ResVReg);
-    if (!DataType) {
-      // Use i8 as a last resort.
-      DataType = GR.getOrCreateSPIRVIntegerType(8, I, TII);
-    }
+    if (!DataType)
+      return diagnoseUnsupported(
+          I, "could not deduce the data type of an untyped variable");
     MIB.addUse(GR.getSPIRVTypeID(DataType));
   }
   MIB.constrainAllUses(TII, TRI, RBI);

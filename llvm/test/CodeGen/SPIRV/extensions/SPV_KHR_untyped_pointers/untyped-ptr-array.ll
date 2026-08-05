@@ -1,17 +1,25 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val %}
 
-; Test untyped pointers with array accesses.
+; Test untyped pointers with array accesses. The Base Type operand is the GEP
+; source element type, so an array of arrays carries the array type.
 
 ; CHECK: OpCapability UntypedPointersKHR
 ; CHECK: OpExtension "SPV_KHR_untyped_pointers"
 
-; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
-; CHECK-DAG: %[[#I64:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#CROSS_PTR:]] = OpTypeUntypedPointerKHR CrossWorkgroup
+; CHECK-DAG: %[[#I64:]] = OpTypeInt 64 0
+; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#LEN10:]] = OpConstant %[[#I32]] 10
+; CHECK-DAG: %[[#ARR10:]] = OpTypeArray %[[#I32]] %[[#LEN10]]
+; CHECK-DAG: %[[#CONST10:]] = OpConstant %[[#I64]] 10
+; CHECK-DAG: %[[#CONST3:]] = OpConstant %[[#I64]] 3
+; CHECK-DAG: %[[#CONST2:]] = OpConstant %[[#I64]] 2
+; CHECK-DAG: %[[#NULL64:]] = OpConstantNull %[[#I64]]
 
 ; CHECK: OpFunction
-; CHECK: OpUntypedPtrAccessChainKHR %[[#CROSS_PTR]]
+; CHECK: %[[#ARR:]] = OpFunctionParameter %[[#CROSS_PTR]]
+; CHECK: %[[#]] = OpUntypedPtrAccessChainKHR %[[#CROSS_PTR]] %[[#I32]] %[[#ARR]] %[[#CONST10]]
 define spir_kernel void @test_array_const_idx(ptr addrspace(1) %arr, ptr addrspace(1) %out) {
 entry:
   %elem = getelementptr i32, ptr addrspace(1) %arr, i64 10
@@ -21,7 +29,9 @@ entry:
 }
 
 ; CHECK: OpFunction
-; CHECK: OpUntypedPtrAccessChainKHR %[[#CROSS_PTR]]
+; CHECK: %[[#ARR:]] = OpFunctionParameter %[[#CROSS_PTR]]
+; CHECK: %[[#IDX:]] = OpFunctionParameter %[[#I64]]
+; CHECK: %[[#]] = OpUntypedPtrAccessChainKHR %[[#CROSS_PTR]] %[[#I32]] %[[#ARR]] %[[#IDX]]
 define spir_kernel void @test_array_var_idx(ptr addrspace(1) %arr, i64 %idx, ptr addrspace(1) %out) {
 entry:
   %elem = getelementptr i32, ptr addrspace(1) %arr, i64 %idx
@@ -30,8 +40,12 @@ entry:
   ret void
 }
 
+; The row access indexes the [10 x i32] array itself, the element access adds a
+; second index into that row.
 ; CHECK: OpFunction
-; CHECK: OpUntypedPtrAccessChainKHR
+; CHECK: %[[#ARR:]] = OpFunctionParameter %[[#CROSS_PTR]]
+; CHECK: %[[#ROW:]] = OpUntypedPtrAccessChainKHR %[[#CROSS_PTR]] %[[#ARR10]] %[[#ARR]] %[[#CONST2]]
+; CHECK: %[[#]] = OpUntypedPtrAccessChainKHR %[[#CROSS_PTR]] %[[#ARR10]] %[[#ROW]] %[[#NULL64]] %[[#CONST3]]
 define spir_kernel void @test_2d_array(ptr addrspace(1) %arr, ptr addrspace(1) %out) {
 entry:
   ; Access arr[2][3] where arr is [10 x [10 x i32]]
@@ -43,7 +57,9 @@ entry:
 }
 
 ; CHECK: OpFunction
-; CHECK: OpUntypedPtrAccessChainKHR
+; CHECK: %[[#ARR:]] = OpFunctionParameter %[[#CROSS_PTR]]
+; CHECK: %[[#PHI:]] = OpPhi %[[#I64]]
+; CHECK: %[[#]] = OpUntypedPtrAccessChainKHR %[[#CROSS_PTR]] %[[#I32]] %[[#ARR]] %[[#PHI]]
 define spir_kernel void @test_array_loop(ptr addrspace(1) %arr, i64 %n, ptr addrspace(1) %out) {
 entry:
   br label %loop
