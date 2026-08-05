@@ -272,7 +272,7 @@ using AsanAllocatorASVT =
 #if SANITIZER_AMDHSA
     DeviceCombinedAllocator<
         CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>,
-        __sanitizer::AmdgpuDeviceAllocatorT<
+        __sanitizer::AmdHsaDeviceAllocatorT<
             PrimaryAllocatorASVT<AddressSpaceView>>>;
 #else
     CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>;

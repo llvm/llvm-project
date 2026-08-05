@@ -15,10 +15,10 @@
 
 #if SANITIZER_AMDHSA
 
-static const DeviceAllocationType DAT_AMDGPU =
+static const DeviceAllocationType DAT_AMDHSA =
     static_cast<DeviceAllocationType>(1);
 
-class AmdgpuDeviceAllocator {
+class AmdHsaDeviceAllocator {
  public:
   static constexpr bool kEnableDeviceBackend = true;
 
@@ -91,12 +91,12 @@ class VmemGpuReserveTracker {
 };
 
 // True when ROCr reserves host-accessible VA (e.g. HIP managed / SVM).
-inline bool AmdgpuVmemReserveUsesHostMapping(u64 flags) {
+inline bool AmdHsaVmemReserveUsesHostMapping(u64 flags) {
   return (flags & HSA_AMD_VMEM_ADDRESS_NO_REGISTER) != 0;
 }
 
-struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
-  AmdgpuAllocationInfo() : DeviceAllocationInfo(DAT_AMDGPU) {
+struct AmdHsaAllocationInfo : public DeviceAllocationInfo {
+  AmdHsaAllocationInfo() : DeviceAllocationInfo(DAT_AMDHSA) {
     status = HSA_STATUS_SUCCESS;
     alloc_func = nullptr;
   }
@@ -119,9 +119,9 @@ struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
 };
 
 // AMDGPU device heap for CombinedAllocator's third template parameter:
-// DeviceAllocatorT<Primary, AmdgpuDeviceAllocator>.
+// DeviceAllocatorT<Primary, AmdHsaDeviceAllocator>.
 template <class PrimaryAllocator>
-using AmdgpuDeviceAllocatorT =
-    DeviceAllocatorT<PrimaryAllocator, AmdgpuDeviceAllocator>;
+using AmdHsaDeviceAllocatorT =
+    DeviceAllocatorT<PrimaryAllocator, AmdHsaDeviceAllocator>;
 
 #endif  // SANITIZER_AMDHSA
