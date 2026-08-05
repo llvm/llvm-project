@@ -431,10 +431,10 @@ class value(object):
         return int(self) % int(other)
 
     def __divmod__(self, other):
-        return int(self) % int(other)
+        return divmod(int(self), int(other))
 
-    def __pow__(self, other):
-        return int(self) ** int(other)
+    def __pow__(self, other, modulo=None):
+        return pow(int(self), int(other), modulo)
 
     def __lshift__(self, other):
         return int(self) << int(other)
@@ -480,22 +480,22 @@ class value(object):
         return result
 
     def __ifloordiv__(self, other):
-        result =  self.__floordiv__(self, other)
+        result =  self.__floordiv__(other)
         self.sbvalue.SetValueFromCString (str(result))
         return result
 
     def __imod__(self, other):
-        result =  self.__and__(self, other)
+        result =  self.__mod__(other)
         self.sbvalue.SetValueFromCString (str(result))
         return result
 
     def __ipow__(self, other):
-        result = self.__pow__(self, other)
+        result = self.__pow__(other)
         self.sbvalue.SetValueFromCString (str(result))
         return result
 
-    def __ipow__(self, other, modulo):
-        result = self.__pow__(self, other, modulo)
+    def __ipow__(self, other, modulo=None):
+        result = self.__pow__(other, modulo)
         self.sbvalue.SetValueFromCString (str(result))
         return result
 
@@ -510,17 +510,17 @@ class value(object):
         return result
 
     def __iand__(self, other):
-        result =  self.__and__(self, other)
+        result =  self.__and__(other)
         self.sbvalue.SetValueFromCString (str(result))
         return result
 
     def __ixor__(self, other):
-        result =  self.__xor__(self, other)
+        result =  self.__xor__(other)
         self.sbvalue.SetValueFromCString (str(result))
         return result
 
     def __ior__(self, other):
-        result =  self.__ior__(self, other)
+        result =  self.__or__(other)
         self.sbvalue.SetValueFromCString (str(result))
         return result
 
@@ -544,7 +544,7 @@ class value(object):
         if is_num and not is_sign: return self.sbvalue.GetValueAsUnsigned()
         return self.sbvalue.GetValueAsSigned()
 
-    def __long__(self):
+    def __index__(self):
         return self.__int__()
 
     def __float__(self):
