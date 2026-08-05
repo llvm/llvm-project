@@ -1964,6 +1964,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs(
+      {amdgcn_msad_u8, amdgcn_sad_hi_u8, amdgcn_sad_u16, amdgcn_sad_u8},
+      Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs(
       {amdgcn_wave_reduce_add, amdgcn_wave_reduce_and, amdgcn_wave_reduce_fadd,
        amdgcn_wave_reduce_fmax, amdgcn_wave_reduce_fmin,
        amdgcn_wave_reduce_fsub, amdgcn_wave_reduce_max, amdgcn_wave_reduce_min,
