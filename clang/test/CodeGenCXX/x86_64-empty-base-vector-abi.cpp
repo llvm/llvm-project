@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm -o - %s -target-feature +avx | FileCheck %s --check-prefix=SYSV
 // RUN: %clang_cc1 -triple x86_64-sie-ps5 -std=c++20 -emit-llvm -o - %s -target-feature +avx | FileCheck %s --check-prefix=PS
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclang-abi-compat=22 -emit-llvm -o - %s -target-feature +avx | FileCheck %s --check-prefix=CLANG22
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -fclang-abi-compat=23 -emit-llvm -o - %s -target-feature +avx | FileCheck %s --check-prefix=CLANG22
 
 typedef unsigned long long v4ull __attribute__((vector_size(32)));
 
