@@ -86,6 +86,10 @@ namespace __pstl {
 // ------------
 // No other algorithms based on merge
 //
+// reverse family
+// ------------
+// No other algorithms based on reverse
+//
 // stable_sort family
 // ------------------
 // - sort

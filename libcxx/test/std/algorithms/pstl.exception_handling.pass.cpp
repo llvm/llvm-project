@@ -227,6 +227,11 @@ int main(int, char**) {
       }
 
       {
+        // reverse(first, last)
+        assert_non_throwing([=, &policy] { std::reverse(policy, std::move(first1), std::move(last1)); });
+      }
+
+      {
         // reverse_copy(first, last, dest)
         assert_non_throwing([=, &policy] {
           (void)std::reverse_copy(policy, std::move(first1), std::move(last1), std::move(dest));
