@@ -313,6 +313,15 @@ macro(load_llvm_config)
       "You are not using the monorepo layout. This configuration is DEPRECATED.")
   endif()
 
+  # Exports from LLVM and Clang may contain shared libraries. When targeting
+  # platforms that lack shared library support, importing such
+  # exports unrestrictedly will trigger an error. Set
+  # LLVM_OMIT_EXPORTS_FROM_CONFIG flag to skip importing these exports
+  # when the target platform does not support shared libraries.
+  get_property(HAS_SHARED_SUPPORT GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+  if (NOT HAS_SHARED_SUPPORT)
+    set(LLVM_OMIT_EXPORTS_FROM_CONFIG ON)
+  endif()
   find_package(LLVM HINTS "${LLVM_CMAKE_DIR}")
   if (NOT LLVM_FOUND)
      message(WARNING "UNSUPPORTED COMPILER-RT CONFIGURATION DETECTED: "
