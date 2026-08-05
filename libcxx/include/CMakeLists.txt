@@ -535,7 +535,6 @@ set(files
   __iterator/static_bounded_iter.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
-  __locale
   __locale_dir/check_grouping.h
   __locale_dir/codecvt.h
   __locale_dir/collate.h
