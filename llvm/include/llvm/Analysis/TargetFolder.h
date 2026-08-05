@@ -196,7 +196,8 @@ public:
                        Function *CxtF = nullptr) const override {
     if (all_of(Ops, IsaPred<Constant>))
       return ConstantFoldIntrinsic(
-          ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty, CxtF);
+          ID, ArrayRef((Constant *const *)Ops.data(), Ops.size()), Ty, DL,
+          CxtF);
     return nullptr;
   }
 
