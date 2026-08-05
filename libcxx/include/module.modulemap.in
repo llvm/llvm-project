@@ -1635,9 +1635,17 @@ module std {
     export *
   }
 
-  // TODO: Understand why this needs to live in its own module
+  // These headers can't be submodules of std.locale: they are used by <ios> and <streambuf>,
+  // which are in turn used by the facet headers that make up std.locale, so making them part
+  // of std.locale would create a cycle.
   module locale_base {
     header "__locale"
+    module codecvt          { header "__locale_dir/codecvt.h"          export * }
+    module collate          { header "__locale_dir/collate.h"          export * }
+    module ctype            { header "__locale_dir/ctype.h"            export * }
+    module ctype_base       { header "__locale_dir/ctype_base.h"       export * }
+    module locale           { header "__locale_dir/locale.h"           export * }
+    module utf8_conversions { header "__locale_dir/utf8_conversions.h" export * }
     export *
   }
 
