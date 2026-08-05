@@ -727,7 +727,10 @@ class RegisterCommandsTestCase(TestBase):
             self.build()
             self.common_setup()
 
-        expected = "0x1122334455667788"
+        # Top 20 bits zeroed: a non-canonical x86_64 address fails to write to
+        # rsp, and Darwin AArch64 masks non-addressing bits off pc/lr/sp/fp
+        # on read, so anything higher isn't safe to round-trip here.
+        expected = "0x0000034455667788"
 
         if self.getArchitecture() in ["amd64", "x86_64"]:
             setup()

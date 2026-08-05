@@ -1625,4 +1625,4 @@ attributes #1 = { "target-cpu"="grace" }
 
 !0 = distinct !{!0, !1, !2}
 !1 = !{!"llvm.loop.mustprogress"}
-!2 = !{!"llvm.loop.vectorize.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.enable"}
